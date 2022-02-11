@@ -1,0 +1,24 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks>netstandard2.0;netstandard2.1;net461</TargetFrameworks>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="3.1.4" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="3.1.4" />
+        <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+        <PackageReference Include="fiskaltrust.interface" Version="1.3.1" />
+        <PackageReference Include="fiskaltrust.storage" Version="1.3.21" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(TargetFramework)' != 'netstandard2.1'">
+        <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="1.1.1" />
+        <PackageReference Include="System.ValueTuple" Version="4.5.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\fiskaltrust.Middleware.Localization.QueueDE\fiskaltrust.Middleware.Localization.QueueDE.csproj" />
+        <ProjectReference Include="..\fiskaltrust.Middleware.QueueSynchronizer\fiskaltrust.Middleware.QueueSynchronizer.csproj" />
+    </ItemGroup>
+</Project>

@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="3.1.4" />
+    <PackageReference Include="System.Linq.Async" Version="4.1.1" />
+    <PackageReference Include="fiskaltrust.storage" Version="1.3.21" />
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="1.1.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\fiskaltrust.Middleware.Contracts\fiskaltrust.Middleware.Contracts.csproj" />
+    <ProjectReference Include="..\fiskaltrust.Middleware.Storage.Base\fiskaltrust.Middleware.Storage.Base.csproj" />
+  </ItemGroup>
+
+</Project>

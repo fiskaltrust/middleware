@@ -1,0 +1,20 @@
+{
+  "ftCashBoxID": "fb1b79e2-f269-4fc0-9065-4821fed073d0",
+  "ftQueueID": "b00f3da1-5a6e-4a2d-8fdf-6c3d8900d2c1",
+  "ftQueueItemID": "3b17546f-d6a9-4900-b770-8ceba050d9e4",
+  "ftQueueRow": 96,
+  "cbTerminalID": "369a013a-37e2-4c23-8614-6a8f282e6330",
+  "cbReceiptReference": "233348",
+  "ftCashBoxIdentification": "ddffc471-b101-4b89-8761-dd3c7f779f7c",
+  "ftReceiptIdentification": "ftA#T18",
+  "ftReceiptMoment": "2019-10-25T13:32:46.133Z",
+  "ftSignatures": [
+    {
+      "ftSignatureFormat": 13,
+      "ftSignatureType": 4919338167972134928,
+      "Caption": "start-transaction-signature",
+      "Data": "c+3+k0v3bycwayxb8oyB01WgMNVmZEPMH9ink2XDY3z57g/IfX2kfH9xxDYcGbc2wEF9UbCSG1DLjtJAlpENvQ=="
+    }
+  ],
+  "ftState": 4919338167972134912
+}

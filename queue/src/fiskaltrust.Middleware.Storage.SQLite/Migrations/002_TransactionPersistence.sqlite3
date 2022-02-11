@@ -1,0 +1,25 @@
+CREATE TABLE IF NOT EXISTS FailedFinishTransaction
+(
+    cbReceiptReference     NVARCHAR(2147483647) PRIMARY KEY NOT NULL,
+    TransactionNumber      BIGINT NULL,
+    FinishMoment           BIGINT NOT NULL, 
+    ftQueueItemId          NVARCHAR(36) NOT NULL, 
+    CashBoxIdentification  NVARCHAR(2147483647) NULL 
+);
+
+CREATE TABLE IF NOT EXISTS FailedStartTransaction
+(
+    cbReceiptReference     NVARCHAR(2147483647) PRIMARY KEY NOT NULL,
+    StartMoment            BIGINT NOT NULL, 
+    ftQueueItemId          NVARCHAR(36) NOT NULL, 
+    Request                NVARCHAR(2147483647) NULL, 
+    CashBoxIdentification  NVARCHAR(2147483647) NULL 
+);
+
+CREATE TABLE IF NOT EXISTS OpenTransaction
+(
+    cbReceiptReference               NVARCHAR(2147483647) PRIMARY KEY NOT NULL,
+    TransactionNumber                BIGINT NULL,
+    StartMoment                      BIGINT NOT NULL, 
+    StartTransactionSignatureBase64  NVARCHAR(2147483647) NULL 
+);

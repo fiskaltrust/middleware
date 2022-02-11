@@ -1,0 +1,204 @@
+resources:
+- repo: self
+
+trigger:
+  batch: true
+  branches:
+    include:
+    - master
+    - refs/tags/*
+
+pr: none
+
+variables:
+- name: BuildConfiguration
+  value: release
+- name: BuildPlatform
+  value: any cpu
+- name: Solution
+  value: 'fiskaltrust.Middleware.sln'
+- name: vmImageName 
+  value: 'windows-latest'
+
+jobs:  
+- job: Build
+  displayName: Build job
+  pool:
+    vmImage: $(vmImageName)
+  steps:
+  - script: |
+      dotnet tool install --tool-path tools dotnet-reportgenerator-globaltool
+    displayName: Install report generator
+    workingDirectory: '/'
+
+  - task: yavt@1
+    inputs:
+      mode: 'Multi'
+      updateNuspecFiles: true
+      updateBuildNumber: false
+      semverVersion: 'v1'
+
+  - powershell: |   
+      $nugetFeed = if ($Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/release/") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/master") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/tags")) { "release" } else { "dev" }
+      Write-Host "##vso[task.setvariable variable=NuGetFeed;]$nugetFeed"
+    displayName: Set NuGet feed
+
+  - task: UseDotNet@2
+    inputs:
+      version: 5.0.x
+      includePreviewVersions: true
+
+  - task: UseDotNet@2
+    inputs:
+      version: 3.1.x
+
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: 'restore'
+      projects: '$(Solution)'
+      feedsToUse: 'select'
+      vstsFeed: '$(NuGetFeed)'
+      verbosityRestore: 'minimal'
+    displayName: 'Restore'
+
+  - task: DotNetCoreCLI@2
+    displayName: Build
+    inputs:
+      projects: $(Solution)
+      arguments: '--configuration $(BuildConfiguration) --no-restore'
+
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: 'test'
+      projects: '**/*.UnitTest.csproj'
+      arguments: '--configuration $(BuildConfiguration) --no-restore /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:Include=[fiskaltrust.*]*'
+      nobuild: true
+    displayName: 'Run unit tests'   
+
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: 'test'
+      projects: '**/*.IntegrationTest.csproj'
+      arguments: '--configuration $(BuildConfiguration) --no-restore /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:Include=[fiskaltrust.*]*'
+      nobuild: true
+    displayName: 'Run integration tests'
+
+  - script: |
+      dotnet publish --configuration $(buildConfiguration) -f net461
+      dotnet publish --configuration $(buildConfiguration) -f netstandard2.0
+      dotnet publish --configuration $(buildConfiguration) -f netstandard2.1
+    displayName: 'dotnet publish fiskaltrust.Middleware.Queue.SQLite'
+    workingDirectory: 'src/fiskaltrust.Middleware.Queue.SQLite'
+
+  - script: |
+      /tools/reportgenerator -reports:$(Build.SourcesDirectory)/test/**/*.opencover.xml -targetdir:$(Build.SourcesDirectory)/CodeCoverage -reporttypes:"Cobertura;HTMLInline;HTMLChart"
+    displayName: Create Code coverage report
+    workingDirectory: '/'
+
+  - task: PublishCodeCoverageResults@1
+    displayName: 'Publish code coverage'
+    inputs:
+      codeCoverageTool: Cobertura
+      summaryFileLocation: '$(Build.SourcesDirectory)/CodeCoverage/Cobertura.xml'
+      reportDirectory: '$(Build.SourcesDirectory)/CodeCoverage'        
+
+  - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --configuration $(buildConfiguration) --no-restore
+    displayName: 'dotnet pack fiskaltrust.Middleware.Queue.InMemory'
+    workingDirectory: 'src/fiskaltrust.Middleware.Queue.InMemory'
+
+  - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --configuration $(buildConfiguration) --no-restore /p:NuspecFile=.nuspec
+    displayName: 'dotnet pack fiskaltrust.Middleware.Queue.SQLite'
+    workingDirectory: 'src/fiskaltrust.Middleware.Queue.SQLite'
+
+  - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --configuration $(buildConfiguration) --no-restore
+    displayName: 'dotnet pack fiskaltrust.Middleware.Queue.EF'
+    workingDirectory: 'src/fiskaltrust.Middleware.Queue.EF'
+    
+  - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --configuration $(buildConfiguration) --no-restore
+    displayName: 'dotnet pack fiskaltrust.Middleware.Queue.PostgreSQL'
+    workingDirectory: 'src/fiskaltrust.Middleware.Queue.PostgreSQL'
+
+  - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --configuration $(buildConfiguration) --no-restore
+    displayName: 'dotnet pack fiskaltrust.Middleware.Abstractions'
+    workingDirectory: 'src/fiskaltrust.Middleware.Abstractions'
+    
+  - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --configuration $(buildConfiguration) --no-restore
+    displayName: 'dotnet pack fiskaltrust.Middleware.Queue.MySQL'
+    workingDirectory: 'src/fiskaltrust.Middleware.Queue.MySQL'
+
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish Artifact: drop'
+    inputs:
+      PathtoPublish: '$(build.artifactstagingdirectory)'
+
+
+- job: AcceptanceTest
+  dependsOn: Build
+  displayName: Acceptance test
+  pool:
+    vmImage: $(vmImageName)
+  strategy:
+    maxParallel: 4
+    matrix: 
+      # AzureQueue:
+      #   Project: 'fiskaltrust.Middleware.Storage.Azure.AcceptanceTest'
+      EFQueue:
+        Project: 'fiskaltrust.Middleware.Storage.EF.AcceptanceTest'
+      EFCoreQueue:
+        Project: 'fiskaltrust.Middleware.Storage.EFCore.AcceptanceTest'
+      SQLiteQueue:
+        Project: 'fiskaltrust.Middleware.Storage.SQLite.AcceptanceTest'
+      MySQLQueue:
+        Project: 'fiskaltrust.Middleware.Storage.MySQL.AcceptanceTest'
+      InMemoryQueue:
+        Project: 'fiskaltrust.Middleware.Storage.InMemory.AcceptanceTest'
+      QueueSynchronizer:
+        Project: 'fiskaltrust.Middleware.QueueSynchronizer.AcceptanceTest'
+      Queue:
+        Project: 'fiskaltrust.Middleware.Queue.AcceptanceTest'
+        
+  steps:
+  - script: |
+      dotnet tool install --tool-path tools dotnet-reportgenerator-globaltool
+    displayName: Install report generator
+    workingDirectory: '/'
+  - powershell: |   
+      $nugetFeed = if ($Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/release/") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/master") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/tags")) { "release" } else { "dev" }
+      Write-Host "##vso[task.setvariable variable=NuGetFeed;]$nugetFeed"
+    displayName: Set NuGet feed
+
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: 'restore'
+      projects: '$(Solution)'
+      feedsToUse: 'select'
+      vstsFeed: '$(NuGetFeed)'
+      verbosityRestore: 'minimal'
+    displayName: 'Restore'
+
+  - task: DotNetCoreCLI@2
+    displayName: Build
+    inputs:
+      projects: $(Solution)
+      arguments: '--configuration $(BuildConfiguration) --no-restore'
+
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: 'test'
+      projects: |
+        **/$(Project).csproj
+      arguments: '--configuration $(BuildConfiguration) --no-restore /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:Include=[fiskaltrust.*]*'
+      nobuild: true
+    displayName: 'Run acceptance tests'   
+  
+  - script: |
+      /tools/reportgenerator -reports:$(Build.SourcesDirectory)/test/**/*.opencover.xml -targetdir:$(Build.SourcesDirectory)/CodeCoverage -reporttypes:"Cobertura;HTMLInline;HTMLChart"
+    displayName: Create Code coverage report
+    workingDirectory: '/'
+
+  - task: PublishCodeCoverageResults@1
+    displayName: 'Publish code coverage'
+    inputs:
+      codeCoverageTool: Cobertura
+      summaryFileLocation: '$(Build.SourcesDirectory)/CodeCoverage/Cobertura.xml'
+      reportDirectory: '$(Build.SourcesDirectory)/CodeCoverage'        

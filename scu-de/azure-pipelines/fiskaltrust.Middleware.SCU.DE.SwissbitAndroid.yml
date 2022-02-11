@@ -1,0 +1,112 @@
+resources:
+- repo: self
+
+trigger:
+  batch: true
+  branches:
+    include:
+    - master
+    - refs/tags/*
+
+pr: none
+
+variables:
+- group: 'Code Signing Certificates'
+- name: BuildConfiguration
+  value: release
+- name: BuildPlatform
+  value: any cpu
+- name: Solution
+  value: 'fiskaltrust.Middleware.SCU.DE.SwissbitAndroid.sln'
+- name: vmImageName 
+  value: 'windows-latest'
+- name: netCoreVersion
+  value: '3.1.100'
+
+stages:
+- stage: Build
+  displayName: Build stage
+  jobs:  
+  - job: Build
+    displayName: Build job
+    pool:
+      vmImage: $(vmImageName)
+
+    steps:    
+
+    - task: yavt@1
+      inputs:
+        mode: 'Multi'
+        semverVersion: 'v1'
+
+    - powershell: |   
+        $nugetFeed = if ($Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/release/") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/tags/v")) { "release" } else { "dev" }
+        Write-Host "##vso[task.setvariable variable=NuGetFeed;]$nugetFeed"
+      displayName: Set NuGet feed
+
+    - task: NuGetCommand@2
+      inputs:
+        command: 'restore'
+        restoreSolution: '$(Solution)'
+        feedsToUse: 'select'
+        vstsFeed: '$(NuGetFeed)'
+
+    - task: VSBuild@1
+      inputs:
+        solution: '$(Solution)'
+        configuration: '$(BuildConfiguration)'
+
+    - task: DotNetCoreCLI@2
+      inputs:
+        command: 'test'
+        projects: '**/*Swissbit*.UnitTest.csproj'
+        arguments: '--configuration $(BuildConfiguration) --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:Include=[fiskaltrust.*]*'
+        nobuild: true
+      displayName: 'Run unit tests'   
+
+    - task: DotNetCoreCLI@2
+      inputs:
+        command: 'test'
+        projects: '**/*Swissbit*.IntegrationTest.csproj'
+        arguments: '--configuration $(BuildConfiguration) --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:Include=[fiskaltrust.*]*'
+        nobuild: true
+      displayName: 'Run integration tests'
+
+    - task: codesigning@2
+      displayName: 'Code Signing '
+      inputs:
+        secureFileId: 'codesigning.pfx'
+        signCertPassword: '$(Code_Signing_Password)'
+        filePaths: |
+         src/**/*.dll
+
+    - script: |
+        dotnet tool install -g dotnet-reportgenerator-globaltool
+      displayName: Install report generator
+      workingDirectory: '/'
+
+    - script: |
+        reportgenerator -reports:$(Build.SourcesDirectory)/test/**/*.opencover.xml -targetdir:$(Build.SourcesDirectory)/CodeCoverage -reporttypes:"Cobertura;HTMLInline;HTMLChart"
+      displayName: Create Code coverage report
+      workingDirectory: '/'
+      continueOnError: true
+
+    - task: PublishCodeCoverageResults@1
+      displayName: 'Publish code coverage'
+      continueOnError: true
+      inputs:
+        codeCoverageTool: Cobertura
+        summaryFileLocation: '$(Build.SourcesDirectory)/CodeCoverage/Cobertura.xml'
+        reportDirectory: '$(Build.SourcesDirectory)/CodeCoverage' 
+
+    - task: NuGetCommand@2
+      inputs:
+        command: 'pack'
+        packagesToPack: 'src/fiskaltrust.Middleware.SCU.DE.SwissbitAndroid/.nuspec'
+        versioningScheme: 'off'
+        basePath: 'src/fiskaltrust.Middleware.SCU.DE.SwissbitAndroid/'
+
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish Artifact: drop'
+      inputs:
+        PathtoPublish: '$(build.artifactstagingdirectory)'

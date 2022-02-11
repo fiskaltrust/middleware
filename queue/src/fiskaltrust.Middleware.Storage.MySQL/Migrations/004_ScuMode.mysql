@@ -1,0 +1,2 @@
+ALTER TABLE ftSignaturCreationUnitDE ADD COLUMN Mode INT NOT NULL DEFAULT 0;
+ALTER TABLE ftSignaturCreationUnitDE ADD COLUMN ModeConfigurationJson LONGTEXT NULL;

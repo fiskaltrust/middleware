@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;net461</TargetFrameworks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="sharpcompress" Version="0.24.0" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+    <PackageReference Include="Portable.BouncyCastle" Version="1.8.1.2" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net461'">
+    <PackageReference Include="BouncyCastle" Version="1.7.0" />
+  </ItemGroup>
+    <ItemGroup>
+        <_Licenses Include="$(SolutionDir)/LICENSES/**" />
+    </ItemGroup>
+    <Target Name="CopyLicensesOnPublish" AfterTargets="Publish">
+        <Copy SourceFiles="@(_Licenses)" DestinationFolder="$(PublishDir)/LICENSES" />
+    </Target>
+</Project>

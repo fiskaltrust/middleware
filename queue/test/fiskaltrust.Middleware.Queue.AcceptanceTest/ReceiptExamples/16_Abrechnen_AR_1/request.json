@@ -1,0 +1,31 @@
+{
+    "ftCashBoxID": "c094f242-91d5-4343-9c54-bce85f70d0d6",
+    "ftPosSystemId": "b3dc6573-96d9-e611-80f7-5065f38adae1",
+    "cbTerminalID": "1",
+    "cbReceiptReference": "1",
+    "cbReceiptMoment": "2019-10-25T13:43:21.29Z",
+    "cbChargeItems": [],
+    "cbPayItems": [
+        {
+            "Quantity": 1.0,
+            "Description": "Konto",
+            "Amount": 52.0000,
+            "ftPayItemCase": 4919338167972134920,
+            "ftPayItemCaseData": "",
+            "MoneyGroup": "7",
+            "MoneyNumber": ""
+        },
+        {
+            "Quantity": 1.0,
+            "Description": "AR",
+            "Amount": -52.0000,
+            "ftPayItemCase": 4919338167972134923,
+            "ftPayItemCaseData": "",
+            "MoneyGroup": "6",
+            "MoneyNumber": ""
+        }
+    ],
+    "ftReceiptCase": 4919338172267102209,
+    "cbReceiptAmount": 0.00,
+    "cbUser": "Chef"
+}

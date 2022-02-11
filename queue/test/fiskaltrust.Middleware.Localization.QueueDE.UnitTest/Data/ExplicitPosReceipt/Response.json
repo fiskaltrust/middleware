@@ -1,0 +1,122 @@
+{
+  "ftCashBoxID": "fb1b79e2-f269-4fc0-9065-4821fed073d0",
+  "ftQueueID": "b00f3da1-5a6e-4a2d-8fdf-6c3d8900d2c1",
+  "ftQueueItemID": "3b17546f-d6a9-4900-b770-8ceba050d9e4",
+  "ftQueueRow": 96,
+  "cbTerminalID": "369a013a-37e2-4c23-8614-6a8f282e6330",
+  "cbReceiptReference": "233348",
+  "ftCashBoxIdentification": "955002-00",
+  "ftReceiptIdentification": "ftA#T18",
+  "ftReceiptMoment": "2019-10-25T13:32:46.133Z",
+  "ftSignatures": [
+    {
+      "ftSignatureFormat": 3,
+      "ftSignatureType": 4919338167972134913,
+      "Caption": "www.fiskaltrust.de",
+      "Data": "V0;955002-00;Kassenbeleg-V1;Beleg^0.00_2.55_0.00_0.00_0.00^2.55:Bar;18;112;2019-07-10T18:41:02.000Z;2019-07-10T18:41:04.000Z;ecdsa-plain-SHA256;unixTime;MEQCIAy4P9k+7x9saDO0uRZ4El8QwN+qTgYiv1DIaJIMWRiuAiAt+saFDGjK2Yi5Cxgy7PprXQ5O0seRgx4ltdpW9REvwA==;BHhWOeisRpPBTGQ1W4VUH95TXx2GARf8e2NYZXJoInjtGqnxJ8sZ3CQpYgjI+LYEmW5A37sLWHsyU7nSJUBemyU="
+    },
+    {
+      "ftSignatureFormat": 65549,
+      "ftSignatureType": 4919338167972134928,
+      "Caption": "start-transaction-signature",
+      "Data": "c+3+k0v3bycwayxb8oyB01WgMNVmZEPMH9ink2XDY3z57g/IfX2kfH9xxDYcGbc2wEF9UbCSG1DLjtJAlpENvQ=="
+    },
+    {
+      "ftSignatureFormat": 65549,
+      "ftSignatureType": 4919338167972134929,
+      "Caption": "finish-transaction-payload",
+      "Data": "QmVsZWdeMC4wMF8yLjU1XzAuMDBfMC4wMF8wLjAwXjIuNTU6QmFy"
+    },
+    {
+      "ftSignatureFormat": 65549,
+      "ftSignatureType": 4919338167972134930,
+      "Caption": "finish-transaction-signature",
+      "Data": "MEQCIAy4P9k+7x9saDO0uRZ4El8QwN+qTgYiv1DIaJIMWRiuAiAt+saFDGjK2Yi5Cxgy7PprXQ5O0seRgx4ltdpW9REvwA=="
+    },
+    {
+      "ftSignatureFormat": 1,
+      "ftSignatureType": 4919338167972134946,
+      "Caption": "<certification-id>",
+      "Data": "BSI-TK-0000-0000"
+    },
+    {
+      "ftSignatureFormat": 65537,
+      "ftSignatureType": 4919338167972134931,
+      "Caption": "<qr-code-version>",
+      "Data": "V0"
+    },
+    {
+      "ftSignatureFormat": 65537,
+      "ftSignatureType": 4919338167972134932,
+      "Caption": "<kassen-seriennummer>",
+      "Data": "955002-00"
+    },
+    {
+      "ftSignatureFormat": 65537,
+      "ftSignatureType": 4919338167972134933,
+      "Caption": "<processType>",
+      "Data": "Kassenbeleg-V1"
+    },
+    {
+      "ftSignatureFormat": 65537,
+      "ftSignatureType": 4919338167972134934,
+      "Caption": "<processData>",
+      "Data": "Beleg^0.00_2.55_0.00_0.00_0.00^2.55:Bar"
+    },
+    {
+      "ftSignatureFormat": 65537,
+      "ftSignatureType": 4919338167972134935,
+      "Caption": "<transaktions-nummer>",
+      "Data": "18"
+    },
+    {
+      "ftSignatureFormat": 65537,
+      "ftSignatureType": 4919338167972134936,
+      "Caption": "<signatur-zaehler>",
+      "Data": "112"
+    },
+    {
+      "ftSignatureFormat": 65537,
+      "ftSignatureType": 4919338167972134937,
+      "Caption": "<start-zeit>",
+      "Data": "2019-07-10T18:41:02.000Z"
+    },
+    {
+      "ftSignatureFormat": 65537,
+      "ftSignatureType": 4919338167972134938,
+      "Caption": "<log-time>",
+      "Data": "2019-07-10T18:41:04.000Z"
+    },
+    {
+      "ftSignatureFormat": 65537,
+      "ftSignatureType": 4919338167972134939,
+      "Caption": "<sig-alg>",
+      "Data": "ecdsa-plain-SHA256"
+    },
+    {
+      "ftSignatureFormat": 65537,
+      "ftSignatureType": 4919338167972134940,
+      "Caption": "<log-time-format>",
+      "Data": "unixTime"
+    },
+    {
+      "ftSignatureFormat": 65537,
+      "ftSignatureType": 4919338167972134941,
+      "Caption": "<signatur>",
+      "Data": "MEQCIAy4P9k+7x9saDO0uRZ4El8QwN+qTgYiv1DIaJIMWRiuAiAt+saFDGjK2Yi5Cxgy7PprXQ5O0seRgx4ltdpW9REvwA=="
+    },
+    {
+      "ftSignatureFormat": 65537,
+      "ftSignatureType": 4919338167972134942,
+      "Caption": "<public-key>",
+      "Data": "BHhWOeisRpPBTGQ1W4VUH95TXx2GARf8e2NYZXJoInjtGqnxJ8sZ3CQpYgjI+LYEmW5A37sLWHsyU7nSJUBemyU="
+    },
+    {
+      "ftSignatureFormat": 1,
+      "ftSignatureType": 4919338167972134943,
+      "Caption": "<vorgangsbeginn>",
+      "Data": "2019-10-25T13:32:45.133Z"
+    }
+  ],
+  "ftState": 4919338167972134912
+}

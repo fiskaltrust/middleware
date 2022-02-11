@@ -1,0 +1,9 @@
+ALTER TABLE ftQueueDE ADD COLUMN DailyClosingNumber INT NOT NULL DEFAULT 0;
+
+UPDATE ftQueueDE SET DailyClosingNumber =
+(
+    SELECT COUNT(*) from ftActionJournal
+    WHERE ftActionJournal.ftQueueId = ftQueueDE.ftQueueDEId 
+    AND (ftActionJournal.Type = '4445000008000007' OR ftActionJournal.Type = '4445000000000007')
+)
+WHERE DailyClosingNumber = 0;

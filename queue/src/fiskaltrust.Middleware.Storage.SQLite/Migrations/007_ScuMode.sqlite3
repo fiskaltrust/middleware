@@ -1,0 +1,2 @@
+ALTER TABLE ftSignaturCreationUnitDE ADD Mode BIGINT DEFAULT 0 NOT NULL;
+ALTER TABLE ftSignaturCreationUnitDE ADD ModeConfigurationJson NVARCHAR(2147483647) NULL; 

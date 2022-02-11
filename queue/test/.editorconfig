@@ -1,0 +1,44 @@
+############################### 
+# C# code style settings      # 
+############################### 
+[*.cs] 
+csharp_style_unused_value_expression_statement_preference = discard_variable:silent
+csharp_style_unused_value_assignment_preference = discard_variable:silent
+
+# CA1707: Identifiers should not contain underscores
+dotnet_diagnostic.CA1707.severity = silent
+
+# CA2007: Do not directly await a Task
+dotnet_diagnostic.CA2007.severity = silent
+
+# CA1307: Specify StringComparison
+dotnet_diagnostic.CA1307.severity = silent
+
+# CA1304: Specify CultureInfo
+dotnet_diagnostic.CA1304.severity = silent
+
+# CA1305: Specify IFormatProvider
+dotnet_diagnostic.CA1305.severity = silent
+
+# CA1063: Implement IDisposable Correctly
+dotnet_diagnostic.CA1063.severity = silent
+
+# CA1816: Dispose methods should call SuppressFinalize
+dotnet_diagnostic.CA1816.severity = silent
+
+# CA2234: Pass system uri objects instead of strings
+dotnet_diagnostic.CA2234.severity = suggestion
+
+# CA2008 Do not create tasks without passing a TaskScheduler
+dotnet_diagnostic.CA2008.severity = suggestion
+
+# CA2214 Do not call overridable methods in constructors
+dotnet_diagnostic.CA2214.severity = suggestion
+
+
+# CA2100: Review SQL queries for security vulnerabilities
+dotnet_diagnostic.CA2100.severity = suggestion
+
+
+# CS0618: Type or member is obsolete
+dotnet_diagnostic.CS0618.severity = suggestion

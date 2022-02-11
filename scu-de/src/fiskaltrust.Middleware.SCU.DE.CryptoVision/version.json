@@ -1,0 +1,7 @@
+{
+  "version": "1.3.28-rc1",
+  "releaseBranches": [
+    "^refs/heads/release/cryptovision/\\d+(?:\\.\\d+)*(?:-.*)?$",
+    "^refs/tags/cryptovision/v\\d+(?:\\.\\d+)*(?:-.*)?$"
+  ]
+}

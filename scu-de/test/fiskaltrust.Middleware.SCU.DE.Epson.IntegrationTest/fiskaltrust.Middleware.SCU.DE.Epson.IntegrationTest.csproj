@@ -1,0 +1,13 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks>netcoreapp3.1;net461</TargetFrameworks>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.DE.Epson\fiskaltrust.Middleware.SCU.DE.Epson.csproj" />
+        <ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser\fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser.csproj" />
+    </ItemGroup>
+
+</Project>

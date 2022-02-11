@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net461;netcoreapp3.1</TargetFrameworks>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\fiskaltrust.Middleware.QueueSynchronizer\fiskaltrust.Middleware.QueueSynchronizer.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Update="fiskaltrust.storage" Version="1.3.21" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFrameworks>netcoreapp3.0;net461</TargetFrameworks>
+		<IsPackable>false</IsPackable>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.DE.SwissbitCloud\fiskaltrust.Middleware.SCU.DE.SwissbitCloud.csproj" />
+		<ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.DE.DeutscheFiskal\fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.csproj" />
+		<ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser\fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser.csproj" />
+	</ItemGroup>
+
+</Project>

@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks>netcoreapp3.0;net461</TargetFrameworks>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+    
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.DE.DeutscheFiskal\fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.csproj" />
+        <ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser\fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Update="lib\fiskal-cloud-connector-service.jar">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="lib\run_fcc.bat">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
+
+</Project>

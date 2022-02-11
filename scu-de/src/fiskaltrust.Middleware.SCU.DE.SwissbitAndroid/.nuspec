@@ -1,0 +1,33 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>fiskaltrust.Middleware.SCU.DE.SwissbitAndroid</id>
+    <version>0.0.0</version>
+    <authors>fiskaltrust</authors>
+    <owners>fiskaltrust</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>The fiskaltrust middleware implementation for the Swissbit TSE.</description>
+    <dependencies>
+      <group targetFramework="MonoAndroid9.0">
+        <dependency id="Portable.BouncyCastle" version="1.8.1.2" exclude="Build,Analyzers" />
+        <dependency id="fiskaltrust.Middleware.Abstractions" version="1.3.1" />
+        <dependency id="fiskaltrust.interface" version="1.3.1" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.Bcl.AsyncInterfaces" version="1.1.1" />
+        <dependency id="System.Linq.Async" version="4.1.1" />
+        <dependency id="Microsoft.Extensions.Logging" version="3.1.4" />
+        <dependency id="sharpcompress" version="0.24.0" exclude="Build,Analyzers" />
+        <dependency id="Xamarin.Android.Support.v7.AppCompat" version="28.0.0.3" exclude="Build,Analyzers" />
+      </group>
+    </dependencies>
+  </metadata>
+  <files>
+    <!--- assemblies -->
+    <file src="bin\Release\fiskaltrust.Middleware.SCU.DE.*.dll" target="lib\MonoAndroid90" />
+
+    <!-- runtime assets -->
+    <file src="lib\**" target="native\android "/>
+
+    <!-- build targets -->
+    <file src="build\**" target="build\MonoAndroid90"/>
+  </files>
+</package>

@@ -1,0 +1,39 @@
+{
+    "ftCashBoxID": "c094f242-91d5-4343-9c54-bce85f70d0d6",
+    "ftPosSystemId": "b3dc6573-96d9-e611-80f7-5065f38adae1",
+    "cbTerminalID": "1",
+    "cbReceiptReference": "6",
+    "cbReceiptMoment": "2019-10-25T13:45:18.013Z",
+    "cbChargeItems": [
+        {
+            "Quantity": 1.0,
+            "Description": "Gutscheine KA-501",
+            "Amount": 20.00000000000000000000000000,
+            "VATRate": 0.0000,
+            "ftChargeItemCase": 4919338167972134912,
+            "ftChargeItemCaseData": "",
+            "VATAmount": 0.00000000000000000000000000,
+            "CostCenter": "1",
+            "ProductGroup": "Gutscheine",
+            "ProductNumber": "1",
+            "ProductBarcode": "",
+            "Unit": "Stk",
+            "UnitQuantity": 1.0000
+        }
+    ],
+    "cbPayItems": [
+        {
+            "Quantity": 1.0,
+            "Description": "Bar",
+            "Amount": 20.0000,
+            "ftPayItemCase": 4919338167972134913,
+            "ftPayItemCaseData": "",
+            "CostCenter": "1",
+            "MoneyGroup": "1",
+            "MoneyNumber": ""
+        }
+    ],
+    "ftReceiptCase": 4919338172267102209,
+    "cbReceiptAmount": 20.00,
+    "cbUser": "Chef"
+}

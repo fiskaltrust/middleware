@@ -1,0 +1,13 @@
+{
+  "ftCashBoxID": "fb1b79e2-f269-4fc0-9065-4821fed073d0",
+  "ftQueueID": "b00f3da1-5a6e-4a2d-8fdf-6c3d8900d2c1",
+  "ftPosSystemId": "fa3630e4-7d7e-4da5-b5b1-f45602081e40",
+  "cbTerminalID": "369a013a-37e2-4c23-8614-6a8f282e6330",
+  "cbReceiptReference": "OutOfOperation",
+  "cbReceiptMoment": "2019-10-25T13:32:45.133Z",
+  "cbChargeItems": [],
+  "cbPayItems": [],
+  "ftReceiptCase": 4919338172283879428,
+  "ftReceiptCaseData": "",
+  "cbUser": "Chef",
+}

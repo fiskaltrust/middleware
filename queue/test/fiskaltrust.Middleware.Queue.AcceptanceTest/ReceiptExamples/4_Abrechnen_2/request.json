@@ -1,0 +1,54 @@
+{
+    "ftCashBoxID": "c094f242-91d5-4343-9c54-bce85f70d0d6",
+    "ftPosSystemId": "b3dc6573-96d9-e611-80f7-5065f38adae1",
+    "cbTerminalID": "1",
+    "cbReceiptReference": "2",
+    "cbReceiptMoment": "2019-10-25T13:33:03.06Z",
+    "cbChargeItems": [
+        {
+            "Quantity": 1.0,
+            "Description": "Bier 0,5 lt",
+            "Amount": 3.80000000000000000000000000,
+            "VATRate": 19.0000,
+            "ftChargeItemCase": 4919338167972134913,
+            "ftChargeItemCaseData": "",
+            "VATAmount": 0.6067226890756302521008403361,
+            "CostCenter": "1",
+            "ProductGroup": "Bier",
+            "ProductNumber": "101",
+            "ProductBarcode": "",
+            "Unit": "Liter",
+            "UnitQuantity": 1.0000
+        },
+        {
+            "Quantity": 1.0,
+            "Description": "Schnitzel",
+            "Amount": 9.20000000000000000000000000,
+            "VATRate": 7.0000,
+            "ftChargeItemCase": 4919338167972134914,
+            "ftChargeItemCaseData": "",
+            "VATAmount": 0.601869158878504672897196262,
+            "CostCenter": "1",
+            "ProductGroup": "Speisen",
+            "ProductNumber": "102",
+            "ProductBarcode": "",
+            "Unit": "Stk",
+            "UnitQuantity": 1.0000
+        }
+    ],
+    "cbPayItems": [
+        {
+            "Quantity": 1.0,
+            "Description": "Bankomat",
+            "Amount": 13.0000,
+            "ftPayItemCase": 4919338167972134913,
+            "ftPayItemCaseData": "",
+            "CostCenter": "1",
+            "MoneyGroup": "1",
+            "MoneyNumber": ""
+        }
+    ],
+    "ftReceiptCase": 4919338172267102209,
+    "cbReceiptAmount": 13.00,
+    "cbUser": "Chef"
+}

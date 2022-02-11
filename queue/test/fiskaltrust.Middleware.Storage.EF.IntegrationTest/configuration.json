@@ -1,0 +1,79 @@
+{
+  "helpers": [
+    {
+      "Id": "c32204ee-63d9-48c2-b548-acfb389fa713",
+      "Package": "fiskaltrust.service.helper.helipad",
+      "Version": "1.3.19125.13769-dev",
+      "Configuration": {},
+      "Url": []
+    }
+  ],
+  "ftCashBoxId": "9a5acb59-5d61-4885-9f01-013780d22633",
+  "ftSignaturCreationDevices": [
+    {
+      "Id": "fc7e366a-7e8a-427a-984e-1455cef8a14a",
+      "Package": "fiskaltrust.Middleware.SCU.DE.Fiskaly",
+      "Version": "1.3.1-rc1-gb4e76d551b",
+      "Configuration": {
+        "TssId": "8f23353c-67b3-4af9-8b54-3370034328b7",
+        "ApiKey": "test_1iwrxfk97b9qx6ufn9q9yw8ce_ftfiskalytest",
+        "ApiSecret": "UOPJZwvNfZRxQyMaEQwglJ5TmJBNZDe0VBfZZrQTePq"
+      },
+      "Url": [
+        "grpc://localhost:10301/"
+      ]
+    }
+  ],
+  "ftQueues": [
+    {
+      "Id": "23bf7cbb-a78c-4528-aba9-10a54fc6c0aa",
+      "Package": "fiskaltrust.Middleware.Queue.EF",
+      "Version": "1.3.1-rc1",
+      "Configuration": {
+        "connectionstring": "UPcz3A982UmvXxF5ly0mWgDbWDr8rhRg7f1xEwwpIdXmSls8gajoWWV99x4KTA9nIjAu5LjftkZVDmYkZ2Mj1J44SbwXgJ9vj3Yj7lurpCZQj8vqnlWJvbZ8S1ysDXmTPpGPAtmdr6fX1JoDhCGfXA==",
+        "init_ftCashBox": {
+          "ftCashBoxId": "9a5acb59-5d61-4885-9f01-013780d22633",
+          "TimeStamp": 637172999288703005
+        },
+        "init_ftQueue": [
+          {
+            "ftQueueId": "23bf7cbb-a78c-4528-aba9-10a54fc6c0aa",
+            "ftCashBoxId": "9a5acb59-5d61-4885-9f01-013780d22633",
+            "ftCurrentRow": 0,
+            "ftQueuedRow": 0,
+            "ftReceiptNumerator": 0,
+            "ftReceiptTotalizer": 0.0,
+            "ftReceiptHash": null,
+            "StartMoment": null,
+            "StopMoment": null,
+            "CountryCode": "DE",
+            "Timeout": 15000,
+            "TimeStamp": 637173000322015695
+          }
+        ],
+        "init_ftQueueDE": [
+          {
+            "ftQueueDEId": "23bf7cbb-a78c-4528-aba9-10a54fc6c0aa",
+            "ftSignaturCreationUnitDEId": "fc7e366a-7e8a-427a-984e-1455cef8a14a",
+            "LastHash": null,
+            "CashBoxIdentification": "475a8a11-6b88-49b7-98be-1f72852be1e6",
+            "TimeStamp": 637172923728496548
+          }
+        ],
+        "init_ftSignaturCreationUnitAT": [],
+        "init_ftSignaturCreationUnitDE": [
+          {
+            "ftSignaturCreationUnitDEId": "fc7e366a-7e8a-427a-984e-1455cef8a14a",
+            "Url": "[\"grpc://localhost:10301/\"]",
+            "TimeStamp": 637172923585679170
+          }
+        ],
+        "init_ftSignaturCreationUnitFR": []
+      },
+      "Url": [
+        "net.pipe://localhost/23bf7cbb-a78c-4528-aba9-10a54fc6c0aa"
+      ]
+    }
+  ],
+  "TimeStamp": 637173000337144123
+}

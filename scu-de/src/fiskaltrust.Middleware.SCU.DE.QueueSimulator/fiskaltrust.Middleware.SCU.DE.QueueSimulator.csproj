@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFrameworks>netcoreapp3.1</TargetFrameworks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="protobuf-net.Grpc.Native" Version="1.0.26" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.DE.DiboldNixdorf\fiskaltrust.Middleware.SCU.DE.DiboldNixdorf.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>fiskaltrust.Middleware.SCU.DE.Swissbit</id>
+    <version>1.3.0-local</version>
+    <authors>fiskaltrust</authors>
+    <owners>fiskaltrust</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>The fiskaltrust middleware implementation for the Swissbit TSE.</description>
+    <dependencies>
+      <group targetFramework=".NETFramework4.6.1">
+        <dependency id="BouncyCastle" version="1.7.0" exclude="Build,Analyzers" />
+        <dependency Id="fiskaltrust.Middleware.Abstractions" Version="1.3.1" />
+        <dependency id="fiskaltrust.interface" version="1.3.1" exclude="Build,Analyzers" />
+        <dependency Id="Microsoft.Bcl.AsyncInterfaces" Version="1.1.1" />
+        <dependency Id="System.Linq.Async" Version="4.1.1" />
+        <dependency Id="Microsoft.Extensions.Logging" Version="3.1.4" />
+        <dependency Id="Mono.Posix.NETStandard" Version="1.0.0" />
+        <dependency id="sharpcompress" version="0.24.0" exclude="Build,Analyzers" />
+        <dependency Id="Newtonsoft.Json" Version="12.0.3" />
+      </group>
+      <group targetFramework=".NETStandard2.0">
+        <dependency id="Portable.BouncyCastle" version="1.8.1.2" exclude="Build,Analyzers" />
+        <dependency id="fiskaltrust.interface" version="1.3.1" exclude="Build,Analyzers" />
+        <dependency Id="fiskaltrust.Middleware.Abstractions" Version="1.3.1" />
+        <dependency Id="Microsoft.Bcl.AsyncInterfaces" Version="1.1.1" />
+        <dependency Id="System.Linq.Async" Version="4.1.1" />
+        <dependency Id="Microsoft.Extensions.Logging" Version="3.1.4" />
+        <dependency Id="Mono.Posix.NETStandard" Version="1.0.0" />
+        <dependency id="sharpcompress" version="0.24.0" exclude="Build,Analyzers" />
+        <dependency Id="Newtonsoft.Json" Version="12.0.3" />
+      </group>
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="bin\Release\net461\fiskaltrust.Middleware.SCU.DE.*.dll" target="lib\net461" />
+    <file src="bin\Release\netstandard2.0\fiskaltrust.Middleware.SCU.DE.*.dll" target="lib\netstandard2.0" />
+
+    <!-- native binaries used by fiskaltrust-launcher out of lib/ folder -->
+    <!-- the subfolders are not created on output and not used by visual-studio, project.asset.json is not updated -->
+    <!-- directory-structure runtimes\{runtime-identifier}\native should follow  .net5 System.Runtime.InteropServices.NativeLibrary -->
+    <file src="bin\Release\net461\runtimes\**" target="lib\net461\runtimes "/>
+    <file src="bin\Release\netstandard2.0\runtimes\**" target="lib\netstandard2.0\runtimes "/>
+    <file src="bin\Release\net461\LICENSES\**" target="LICENSES "/>
+  </files>
+</package>

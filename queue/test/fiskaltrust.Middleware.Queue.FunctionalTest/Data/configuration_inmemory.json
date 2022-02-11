@@ -1,0 +1,73 @@
+{
+  "helpers": [],
+  "ftCashBoxId": "54c602a9-1493-4d98-a022-9d11ad0e189f",
+  "ftSignaturCreationDevices": [
+    {
+      "Id": "675f3ab2-f407-4263-ba0b-4fdaf2c7a4ab",
+      "Package": "fiskaltrust.Middleware.SCU.DE.Fiskaly",
+      "Version": "1.3.1-rc1-20148-30434",
+      "Configuration": {
+        "TssId": "8f23353c-67b3-4af9-8b54-3370034328b7",
+        "ApiKey": "test_1iwrxfk97b9qx6ufn9q9yw8ce_ftfiskalytest",
+        "ApiSecret": "UOPJZwvNfZRxQyMaEQwglJ5TmJBNZDe0VBfZZrQTePq",
+        "test": "test"
+      },
+      "Url": [
+        "grpc://localhost:10301"
+      ]
+    }
+  ],
+  "ftQueues": [
+    {
+      "Id": "b510bc0c-af2b-4133-b588-9f6ab42f7fbd",
+      "Package": "fiskaltrust.Middleware.Queue.InMemory",
+      "Version": "0.0.0.0",
+      "Configuration": {
+        "connectionstring": "UPcz3A982UmvXxF5ly0mWgDbWDr8rhRg7f1xEwwpIdXmSls8gajoWWV99x4KTA9nIjAu5LjftkZVDmYkZ2Mj1J44SbwXgJ9vj3Yj7lurpCZQj8vqnlWJvbZ8S1ysDXmTPpGPAtmdr6fX1JoDhCGfXA==",
+        "init_ftCashBox": {
+          "ftCashBoxId": "54c602a9-1493-4d98-a022-9d11ad0e189f",
+          "TimeStamp": 637173856684469990
+        },
+        "init_ftQueue": [
+          {
+            "ftQueueId": "b510bc0c-af2b-4133-b588-9f6ab42f7fbd",
+            "ftCashBoxId": "54c602a9-1493-4d98-a022-9d11ad0e189f",
+            "ftCurrentRow": 0,
+            "ftQueuedRow": 0,
+            "ftReceiptNumerator": 0,
+            "ftReceiptTotalizer": 0.0,
+            "ftReceiptHash": null,
+            "StartMoment": null,
+            "StopMoment": null,
+            "CountryCode": "DE",
+            "Timeout": 15000,
+            "TimeStamp": 637173723196714614
+          }
+        ],
+        "init_ftQueueDE": [
+          {
+            "ftQueueDEId": "b510bc0c-af2b-4133-b588-9f6ab42f7fbd",
+            "ftSignaturCreationUnitDEId": "675f3ab2-f407-4263-ba0b-4fdaf2c7a4ab",
+            "LastHash": null,
+            "CashBoxIdentification": "475a8a11-6b88-49b7-98be-1f72852be1e6",
+            "TimeStamp": 637173618228639776
+          }
+        ],
+        "init_ftSignaturCreationUnitAT": [],
+        "init_ftSignaturCreationUnitDE": [
+          {
+            "ftSignaturCreationUnitDEId": "675f3ab2-f407-4263-ba0b-4fdaf2c7a4ab",
+            "Url": "[\"grpc://localhost:10301\"]",
+            "TimeStamp": 637173856608128962
+          }
+        ],
+        "init_ftSignaturCreationUnitFR": []
+      },
+      "Url": [
+        "grpc://localhost:14005",
+        "net.pipe://localhost/74c91a32-fb58-46d1-a6f6-085ab2327e35"
+      ]
+    }
+  ],
+  "TimeStamp": 637173893392226560
+}

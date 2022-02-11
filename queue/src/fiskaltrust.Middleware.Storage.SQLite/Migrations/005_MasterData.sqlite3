@@ -1,0 +1,43 @@
+CREATE TABLE IF NOT EXISTS AccountMasterData
+(
+    AccountId        NVARCHAR(36) PRIMARY KEY NOT NULL,
+    AccountName      NVARCHAR(2147483647) NULL,
+    Street           NVARCHAR(2147483647) NULL,
+    Zip              NVARCHAR(2147483647) NULL,
+    City             NVARCHAR(2147483647) NULL,
+    Country          NVARCHAR(2147483647) NULL,
+    VatId            NVARCHAR(2147483647) NULL,
+    TaxId            NVARCHAR(2147483647) NULL 
+);
+
+CREATE TABLE IF NOT EXISTS OutletMasterData
+(
+    OutletId         NVARCHAR(36) PRIMARY KEY NOT NULL,
+    OutletName       NVARCHAR(2147483647) NULL,
+    Street           NVARCHAR(2147483647) NULL,
+    Zip              NVARCHAR(2147483647) NULL,
+    City             NVARCHAR(2147483647) NULL,
+    Country          NVARCHAR(2147483647) NULL,
+    VatId            NVARCHAR(2147483647) NULL
+);
+
+CREATE TABLE IF NOT EXISTS AgencyMasterData
+(
+    AgencyId         NVARCHAR(36) PRIMARY KEY NOT NULL, 
+    Name             NVARCHAR(2147483647) NULL,
+    Street           NVARCHAR(2147483647) NULL,
+    Zip              NVARCHAR(2147483647) NULL,
+    City             NVARCHAR(2147483647) NULL,
+    Country          NVARCHAR(2147483647) NULL,
+    VatId            NVARCHAR(2147483647) NULL,
+    TaxId            NVARCHAR(2147483647) NULL 
+);
+
+CREATE TABLE IF NOT EXISTS PosSystemMasterData
+(
+    PosSystemId      NVARCHAR(36) PRIMARY KEY NOT NULL, 
+    Brand            NVARCHAR(2147483647) NULL,
+    Model            NVARCHAR(2147483647) NULL,
+    SoftwareVersion  NVARCHAR(2147483647) NULL,
+    BaseCurrency     NVARCHAR(2147483647) NULL
+);

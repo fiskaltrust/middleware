@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFrameworks>netcoreapp3.1;net461</TargetFrameworks>
+		<IsPackable>false</IsPackable>
+		<LangVersion>8.0</LangVersion>
+	</PropertyGroup>
+
+	<ItemGroup Condition="'$(TargetFramework)' == 'net461'">
+		<PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.DE.FiskalyCertified\fiskaltrust.Middleware.SCU.DE.FiskalyCertified.csproj" />
+		<ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser\fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser.csproj" />
+	</ItemGroup>
+
+</Project>

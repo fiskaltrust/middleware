@@ -1,0 +1,8 @@
+﻿namespace fiskaltrust.Middleware.Queue.AcceptanceTest
+{
+    public static class Constants
+    {
+        public const string ReceiptRequest1 = "{\"ftCashBoxID\":\"990a678b-b0f2-4ed2-bd6b-6fd7d221be7c\",\"ftPosSystemId\":\"1871657f-c4f2-e611-80fb-5065f38b4681\",\"cbTerminalID\":\"29449\",\"cbReceiptReference\":\"5137-VCH_RG\",\"cbReceiptMoment\":\"2019-12-03T03:00:29.681Z\",\"cbChargeItems\":[{\"Quantity\":1.0,\"Description\":\"Umsatz MWSt 13,0\",\"Amount\":900.00,\"VATRate\":13.0000,\"ftChargeItemCase\":4707387510509010944,\"VATAmount\":103.54,\"Moment\":\"0001-01-01T00:00:00Z\"}],\"cbPayItems\":[{\"Position\":6,\"Quantity\":1.0,\"Description\":\"Visa\",\"Amount\":-900.00,\"ftPayItemCase\":4707387510509010944,\"MoneyNumber\":\"3\",\"Moment\":\"2018-01-05T04:00:00Z\"}],\"ftReceiptCase\":4707387510509010945,\"cbReceiptAmount\":900.00,\"cbUser\":\"protel (Master)\",\"cbCustomer\":\"nachname, anrede vorname\"}";
+        public const string ReceiptResponse1 = "{\"ftCashBoxID\":\"990a678b-b0f2-4ed2-bd6b-6fd7d221be7c\",\"ftQueueID\":\"a02ec195-078a-4a3e-b2e5-9b39f72dc8ac\",\"ftQueueItemID\":\"fd428082-5b5a-4b14-823a-b9d82356e8fa\",\"ftQueueRow\":4,\"cbTerminalID\":\"29449\",\"cbReceiptReference\":\"5137-VCH_RG\",\"ftCashBoxIdentification\":\"fiskaltrust3\",\"ftReceiptIdentification\":\"ft3#\",\"ftReceiptMoment\":\"2019-12-03T03:00:29.8637373Z\",\"ftSignatures\":[],\"ftState\":4707387510509010945}";
+    }
+}

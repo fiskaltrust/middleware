@@ -1,0 +1,1 @@
+"./bin/jre/bin/java.exe" "-DFCC_ROOT_DIR=C:\ProgramData\fiskaltrust\FCC\sfcc-ftde-6rdx-so0d\" -Dfiskal.configuration.service.host=fiskal.cloud -cp lib/fiskal-cloud-connector-service.jar -Xmx256m de.fiskal.connector.client.Bootstrap start

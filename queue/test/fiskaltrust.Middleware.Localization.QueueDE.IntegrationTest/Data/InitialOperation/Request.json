@@ -1,0 +1,11 @@
+﻿{
+  "ftCashBoxID": "fb1b79e2-f269-4fc0-9065-4821fed073d0",
+  "ftPosSystemId": "fa3630e4-7d7e-4da5-b5b1-f45602081e40",
+  "cbTerminalID": "369a013a-37e2-4c23-8614-6a8f282e6330",
+  "cbReceiptReference": "INIT",
+  "cbReceiptMoment": "2021-09-08T13:32:45.133Z",
+  "cbChargeItems": [],
+  "cbPayItems": [],
+  "ftReceiptCase": 4919338172267102211,
+  "cbUser": "Admin"
+}

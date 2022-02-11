@@ -1,0 +1,85 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <Description>The fiskaltrust Middleware Queue with an SQLite storage provider.</Description>
+        <TargetFrameworks>netstandard2.0;netstandard2.1;net461</TargetFrameworks>
+        <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);CopyProjectReferencesToPackage</TargetsForTfmSpecificBuildOutput>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="3.1.4" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="3.1.4" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="3.1.4" />
+        <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+        <PackageReference Include="fiskaltrust.Middleware.Abstractions" Version="1.3.3" />
+        <PackageReference Include="fiskaltrust.storage.encryption" Version="1.3.1" />
+        <PackageReference Include="fiskaltrust.storage.serialization" Version="1.3.1" />
+        <PackageReference Include="fiskaltrust.interface" Version="1.3.1" />
+        <PackageReference Include="fiskaltrust.storage" Version="1.3.21" />
+        <PackageReference Include="Dapper" Version="2.0.35" />
+        <PackageReference Include="fiskaltrust.Exports.DSFinVK" Version="1.3.5" />
+        <PackageReference Include="fiskaltrust.Exports.TAR" Version="1.1.0" />
+        <PackageReference Include="System.Linq.Async" Version="4.1.1" />
+        <PackageReference Include="SharpCompress" Version="0.28.2" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(TargetFramework)' != 'netstandard2.1'">
+        <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="1.1.1" />
+        <PackageReference Include="System.ValueTuple" Version="4.5.0" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(TargetFramework)' == 'net461'">
+        <PackageReference Include="BouncyCastle" version="1.7.0" />
+        <PackageReference Include="System.Data.SQLite" Version="1.0.112.2" />
+        <PackageReference Include="System.Data.SQLite.Core" version="1.0.112.2" />
+        <PackageReference Include="System.Data.SQLite.EF6" version="1.0.112.2" />
+        <PackageReference Include="System.Data.SQLite.Linq" version="1.0.112.2" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(TargetFramework)' != 'netst461'">
+        <PackageReference Include="Portable.BouncyCastle" version="1.8.1.2" />
+        <PackageReference Include="Microsoft.Data.Sqlite" Version="3.1.4" />
+        <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="2.0.3" GeneratePathProperty="true" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\fiskaltrust.Middleware.Contracts\fiskaltrust.Middleware.Contracts.csproj" PrivateAssets="all" />
+        <ProjectReference Include="..\fiskaltrust.Middleware.Queue\fiskaltrust.Middleware.Queue.csproj" PrivateAssets="all" />
+        <ProjectReference Include="..\fiskaltrust.Middleware.Storage.SQLite\fiskaltrust.Middleware.Storage.SQLite.csproj" PrivateAssets="all" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="..\fiskaltrust.Middleware.Storage.SQLite\Migrations\*" LinkBase="Migrations">
+            <Pack>true</Pack>
+            <PackagePath>lib\net461\Migrations;lib\netstandard2.0\Migrations</PackagePath>
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Include="..\..\LICENSES\*" LinkBase="LICENSES">
+            <Pack>true</Pack>
+            <PackagePath>LICENSES</PackagePath>
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
+
+    <Target DependsOnTargets="ResolveReferences" Name="CopyProjectReferencesToPackage">
+        <ItemGroup>
+            <BuildOutputInPackage Include="@(ReferenceCopyLocalPaths-&gt;WithMetadataValue('ReferenceSourceTarget', 'ProjectReference'))" />
+        </ItemGroup>
+    </Target>
+
+    <Target Name="CopyNativeSqliteFiles" AfterTargets="Build" Condition="'$(TargetFramework)' == 'netstandard2.0' or '$(TargetFramework)' == 'netstandard2.1'">
+        <ItemGroup>
+            <SQLITE_LINUX_X64 Include="$(PkgSQLitePCLRaw_lib_e_sqlite3)\runtimes\linux-x64\**\*.*" />
+            <SQLITE_LINUX_X86 Include="$(PkgSQLitePCLRaw_lib_e_sqlite3)\runtimes\linux-x86\**\*.*" />
+            <SQLITE_WIN_X64 Include="$(PkgSQLitePCLRaw_lib_e_sqlite3)\runtimes\win-x64\**\*.*" />
+            <SQLITE_WIN_X86 Include="$(PkgSQLitePCLRaw_lib_e_sqlite3)\runtimes\win-x86\**\*.*" />
+            <SQLITE_OSX_X64 Include="$(PkgSQLitePCLRaw_lib_e_sqlite3)\runtimes\osx-x64\**\*.*" />
+        </ItemGroup>
+        <Copy SourceFiles="@(SQLITE_LINUX_X64)" DestinationFolder="$(TargetDir)\runtimes\linux-x64\%(RecursiveDir)" SkipUnchangedFiles="true" />
+        <Copy SourceFiles="@(SQLITE_LINUX_X86)" DestinationFolder="$(TargetDir)\runtimes\linux-x86\%(RecursiveDir)" SkipUnchangedFiles="true" />
+        <Copy SourceFiles="@(SQLITE_WIN_X64)" DestinationFolder="$(TargetDir)\runtimes\win-x64\%(RecursiveDir)" SkipUnchangedFiles="true" />
+        <Copy SourceFiles="@(SQLITE_WIN_X86)" DestinationFolder="$(TargetDir)\runtimes\win-x86\%(RecursiveDir)" SkipUnchangedFiles="true" />
+        <Copy SourceFiles="@(SQLITE_OSX_X64)" DestinationFolder="$(TargetDir)\runtimes\osx-x64\%(RecursiveDir)" SkipUnchangedFiles="true" />
+    </Target>
+
+</Project>

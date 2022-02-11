@@ -1,0 +1,28 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks>net5.0</TargetFrameworks>
+        <DisableImplicitNamespaceImports>true</DisableImplicitNamespaceImports>
+        <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);CopyProjectReferencesToPackage</TargetsForTfmSpecificBuildOutput>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="5.0.10">
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="5.0.10" />
+    </ItemGroup>
+
+    <Target DependsOnTargets="ResolveReferences" Name="CopyProjectReferencesToPackage">
+        <ItemGroup>
+            <BuildOutputInPackage Include="@(ReferenceCopyLocalPaths-&gt;WithMetadataValue('ReferenceSourceTarget', 'ProjectReference'))" />
+        </ItemGroup>
+    </Target>
+    
+    <ItemGroup>
+        <ProjectReference Include="..\fiskaltrust.Middleware.Storage.Base\fiskaltrust.Middleware.Storage.Base.csproj" />
+        <ProjectReference Include="..\fiskaltrust.Middleware.Storage.EFCore\fiskaltrust.Middleware.Storage.EFCore.csproj" PrivateAssets="all"/>
+    </ItemGroup>
+
+</Project>

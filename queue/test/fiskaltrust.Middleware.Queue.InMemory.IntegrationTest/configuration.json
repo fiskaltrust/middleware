@@ -1,0 +1,66 @@
+{
+  "helpers": [],
+  "ftCashBoxId": "c094f242-91d5-4343-9c54-bce85f70d0d6",
+  "ftSignaturCreationDevices": [
+    {
+      "Id": "bd2283cb-88eb-4519-9b6b-42f59cd18278",
+      "Configuration": {
+        "ApiKey": "test_1iwrxfk97b9qx6ufn9q9yw8ce_ftfiskalytest",
+        "ApiSecret": "UOPJZwvNfZRxQyMaEQwglJ5TmJBNZDe0VBfZZrQTePq",
+        "TssId": "514c0930-2ce6-4edb-86b4-5f80936a4ce2"
+      },
+      "Url": [ "grpc://localhost:10081" ]
+    }
+  ],
+  "ftQueues": [
+    {
+      "Id": "31e7eeb6-d0a9-402b-9417-e0dcf1139ead",
+      "Configuration": {
+        "init_ftQueue": [
+          {
+            "ftQueueId": "31e7eeb6-d0a9-402b-9417-e0dcf1139ead",
+            "ftCashBoxId": "c094f242-91d5-4343-9c54-bce85f70d0d6",
+            "ftCurrentRow": 0,
+            "ftQueuedRow": 0,
+            "ftReceiptNumerator": 0,
+            "ftReceiptTotalizer": 0.000000,
+            "ftReceiptHash": null,
+            "StartMoment": null,
+            "StopMoment": null,
+            "CountryCode": "DE",
+            "Timeout": 15000,
+            "TimeStamp": 637086208376583025
+          }
+        ],
+        "init_ftQueueDE": [
+          {
+            "ftQueueDEId": "31e7eeb6-d0a9-402b-9417-e0dcf1139ead",
+            "ftSignaturCreationUnitDEId": "bd2283cb-88eb-4519-9b6b-42f59cd18278",
+            "CashBoxIdentification": "ddffc471-b101-4b89-8761-dd3c7f779f7c",
+            "LastHash": null,
+            "TimeStamp": 637086208235458437
+          }
+        ],
+        "init_ftQueueAT": [],
+        "init_ftQueueFR": [],
+        "init_ftSignaturCreationUnitAT": [],
+        "init_ftSignaturCreationUnitFR": [],
+        "init_ftSignaturCreationUnitDE": [
+          {
+            "ftSignaturCreationUnitDEId": "bd2283cb-88eb-4519-9b6b-42f59cd18278",
+            "Url": "grpc://localhost:10081",
+            "TimeStamp": 636816872660010703
+          }
+        ],
+        "init_ftCashBox": 
+          {
+            "ftCashBoxId": "c094f242-91d5-4343-9c54-bce85f70d0d6",
+            "TimeStamp": 636817938185646258
+          }
+        
+      },
+      "Url": [ "grpc://localhost:10082" ]
+    }
+  ],
+  "TimeStamp": 636817938192629910
+}

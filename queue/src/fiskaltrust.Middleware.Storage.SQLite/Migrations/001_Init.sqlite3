@@ -1,0 +1,318 @@
+﻿CREATE TABLE IF NOT EXISTS ftJournalAT
+(
+    ftJournalATId                NVARCHAR(36) PRIMARY KEY NOT NULL,
+    ftSignaturCreationUnitId     NVARCHAR(36) NOT NULL,
+    Number                       BIGINT NOT NULL, 
+    JWSHeaderBase64url           NVARCHAR(2147483647) NULL,
+    JWSPayloadBase64url          NVARCHAR(2147483647) NULL,
+    JWSSignatureBase64url        NVARCHAR(2147483647) NULL,
+    ftQueueId                    NVARCHAR(36) NOT NULL,
+    TimeStamp                    BIGINT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS ftJournalFR
+(
+    ftJournalFRId        NVARCHAR(36) PRIMARY KEY NOT NULL,
+    JWT                  NVARCHAR(2147483647) NULL,
+    JsonData             NVARCHAR(2147483647) NULL,
+    ReceiptType          NVARCHAR(2147483647) NULL,
+    Number               BIGINT NOT NULL,                      
+    ftQueueItemId        NVARCHAR(36) NOT NULL,
+    ftQueueId            NVARCHAR(36) NOT NULL,
+    TimeStamp            BIGINT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS ftJournalDE
+(
+    ftJournalDEId         NVARCHAR(36) PRIMARY KEY NOT NULL,
+    Number                BIGINT NOT NULL,
+    FileName              NVARCHAR(2147483647) NULL,
+    FileExtension         NVARCHAR(2147483647) NULL,
+    FileContentBase64     NVARCHAR(2147483647) NULL,
+    ftQueueItemId         NVARCHAR(36) NOT NULL,
+    ftQueueId             NVARCHAR(36) NOT NULL,
+    TimeStamp             BIGINT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS ftActionJournal
+(
+    ftActionJournalId     NVARCHAR(36) PRIMARY KEY NOT NULL,
+    ftQueueId             NVARCHAR(36)  NOT NULL,
+    ftQueueItemId         NVARCHAR(36)  NOT NULL,
+    Moment                BIGINT NOT NULL,
+    Priority              BIGINT NOT NULL, 
+    Type                  NVARCHAR(2147483647) NULL,  
+    Message               NVARCHAR(2147483647) NULL, 
+    DataBase64            NVARCHAR(2147483647) NULL, 
+    DataJson              NVARCHAR(2147483647) NULL,
+    TimeStamp             BIGINT NOT NULL 
+);
+
+CREATE TABLE IF NOT EXISTS ftQueueItem
+(
+    ftQueueItemId      NVARCHAR(36)  PRIMARY KEY NOT NULL,
+    ftQueueId          NVARCHAR(36)  NOT NULL,
+    ftQueueRow         BIGINT NOT NULL,
+    ftQueueTimeout     BIGINT NOT NULL,
+    ftWorkMoment       BIGINT NULL,
+    ftDoneMoment       BIGINT NULL,
+    ftQueueMoment      BIGINT NOT NULL,
+    cbReceiptMoment    BIGINT NOT NULL,
+    cbTerminalID       NVARCHAR(2147483647) NULL,
+    cbReceiptReference NVARCHAR(2147483647) NULL,
+    country            NVARCHAR(2147483647) NULL,
+    version            NVARCHAR(2147483647) NULL,
+    request            NVARCHAR(2147483647) NULL,
+    requestHash        NVARCHAR(2147483647) NULL,
+    response           NVARCHAR(2147483647) NULL,
+    responseHash       NVARCHAR(2147483647) NULL,
+    TimeStamp          BIGINT NOT NULL
+);
+
+ CREATE TABLE IF NOT EXISTS ftReceiptJournal
+(
+    ftReceiptJournalId     NVARCHAR(36)          PRIMARY KEY NOT NULL,
+    ftReceiptMoment        BIGINT                NOT NULL,
+    ftReceiptNumber        BIGINT                NOT NULL,
+    ftReceiptTotal         FLOAT                 NOT NULL,
+    ftQueueId              NVARCHAR(36)          NOT NULL,
+    ftQueueItemId          NVARCHAR(36)          NOT NULL,
+    ftReceiptHash          NVARCHAR(2147483647)  NULL,
+    TimeStamp              BIGINT                NOT NULL                        
+);
+
+CREATE TABLE IF NOT EXISTS ftCashBox
+(
+    ftCashBoxId    NVARCHAR(36) PRIMARY KEY    NOT NULL,
+    TimeStamp      BIGINT                      NOT NULL                  
+);
+
+CREATE TABLE IF NOT EXISTS ftQueue
+(
+    ftQueueId           NVARCHAR(36) PRIMARY KEY NOT NULL,
+    ftCashBoxId         NVARCHAR(36)             NOT NULL,
+    ftCurrentRow        BIGINT                   NOT NULL,
+    ftQueuedRow         BIGINT                   NOT NULL,
+    ftReceiptNumerator  BIGINT                   NOT NULL,
+    ftReceiptTotalizer  FLOAT                    NOT NULL,
+    ftReceiptHash       NVARCHAR(2147483647)     NULL,
+    StartMoment         BIGINT                   NULL,
+    StopMoment          BIGINT                   NULL,
+    CountryCode         NVARCHAR(2147483647)     NULL,    
+    Timeout             BIGINT DEFAULT 1500      NOT NULL,
+    TimeStamp           BIGINT                   NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS ftQueueAT
+(
+    ftQueueATId                           NVARCHAR(36)  PRIMARY KEY  NOT NULL,     
+    CashBoxIdentification                 NVARCHAR(2147483647)       NULL,
+    EncryptionKeyBase64                   NVARCHAR(2147483647)       NULL,
+    SignAll                               BIGINT                     NOT NULL,           
+    ClosedSystemKind                      NVARCHAR(2147483647)       NULL,
+    ClosedSystemValue                     NVARCHAR(2147483647)       NULL,
+    ClosedSystemNote                      NVARCHAR(2147483647)       NULL,
+    LastSettlementMonth                   BIGINT                     NOT NULL,           
+    LastSettlementMoment                  BIGINT                     NULL,                   
+    LastSettlementQueueItemId             NVARCHAR(36)               NULL, 
+    SSCDFailCount                         BIGINT                     NOT NULL,            
+    SSCDFailMoment                        BIGINT                     NULL,                    
+    SSCDFailQueueItemId                   NVARCHAR(36)               NULL, 
+    SSCDFailMessageSent                   BIGINT                     NULL,                    
+    UsedFailedCount                       BIGINT                     NOT NULL,           
+    UsedFailedMomentMin                   BIGINT                     NULL,                    
+    UsedFailedMomentMax                   BIGINT                     NULL,                    
+    UsedFailedQueueItemId                 NVARCHAR(36)               NULL, 
+    UsedMobileCount                       BIGINT                     NOT NULL,           
+    UsedMobileMoment                      BIGINT                     NULL,                   
+    UsedMobileQueueItemId                 NVARCHAR(36)               NULL,              
+    MessageCount                          BIGINT                     NOT NULL,           
+    MessageMoment                         BIGINT                     NULL,                    
+    LastSignatureHash                     NVARCHAR(2147483647)       NULL,
+    LastSignatureZDA                      NVARCHAR(2147483647)       NULL,
+    LastSignatureCertificateSerialNumber  NVARCHAR(2147483647)       NULL,
+    ftCashNumerator                       BIGINT                     NOT NULL,
+    ftCashTotalizer                       FLOAT                      NOT NULL,
+    TimeStamp                             BIGINT                     NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS ftQueueDE
+(
+    ftQueueDEId                  NVARCHAR(36) PRIMARY KEY  NOT NULL,
+    ftSignaturCreationUnitDEId   NVARCHAR(36)              NULL,
+    LastHash                     NVARCHAR(2147483647)      NULL,
+    CashBoxIdentification        NVARCHAR(2147483647)      NULL,
+    SSCDFailCount                BIGINT                    NOT NULL,            
+    SSCDFailMoment               BIGINT                    NULL,                    
+    SSCDFailQueueItemId          NVARCHAR(36)              NULL, 
+    UsedFailedCount              BIGINT                    NOT NULL,           
+    UsedFailedMomentMin          BIGINT                    NULL,                    
+    UsedFailedMomentMax          BIGINT                    NULL,                    
+    UsedFailedQueueItemId        NVARCHAR(36)              NULL, 
+    TimeStamp                    BIGINT                    NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS ftQueueFR
+(
+    ftQueueFRId                 NVARCHAR(36) PRIMARY KEY NOT NULL,
+    ftSignaturCreationUnitFRId  NVARCHAR(36) NOT NULL,
+    Siret                       NVARCHAR(2147483647) NOT NULL, 
+    CashBoxIdentification       NVARCHAR(2147483647) NOT NULL, 
+    TNumerator                  BIGINT NOT NULL,
+    TTotalizer                  FLOAT NOT NULL,
+    TCITotalNormal              FLOAT NOT NULL,
+    TCITotalReduced1            FLOAT NOT NULL,
+    TCITotalReduced2            FLOAT NOT NULL,
+    TCITotalReducedS            FLOAT NOT NULL,
+    TCITotalZero                FLOAT NOT NULL,
+    TCITotalUnknown             FLOAT NOT NULL,
+    TPITotalCash                FLOAT NOT NULL,
+    TPITotalNonCash             FLOAT NOT NULL,
+    TPITotalInternal            FLOAT NOT NULL,
+    TPITotalUnknown             FLOAT NOT NULL,
+    TLastHash                   NVARCHAR(2147483647) NOT NULL, 
+    PNumerator                  BIGINT NOT NULL,
+    PTotalizer                  FLOAT NOT NULL,
+    PPITotalCash                FLOAT NOT NULL,
+    PPITotalNonCash             FLOAT NOT NULL,
+    PPITotalInternal            FLOAT NOT NULL,
+    PPITotalUnknown             FLOAT NOT NULL,
+    PLastHash                   NVARCHAR(2147483647) NOT NULL,  
+    INumerator                  BIGINT NOT NULL,
+    ITotalizer                  FLOAT NOT NULL,
+    ICITotalNormal              FLOAT NOT NULL,
+    ICITotalReduced1            FLOAT NOT NULL,
+    ICITotalReduced2            FLOAT NOT NULL,
+    ICITotalReducedS            FLOAT NOT NULL,
+    ICITotalZero                FLOAT NOT NULL,
+    ICITotalUnknown             FLOAT NOT NULL,
+    IPITotalCash                FLOAT NOT NULL,
+    IPITotalNonCash             FLOAT NOT NULL,
+    IPITotalInternal            FLOAT NOT NULL,
+    IPITotalUnknown             FLOAT NOT NULL,
+    ILastHash                   NVARCHAR(2147483647) NOT NULL,  
+    GNumerator                  BIGINT NOT NULL,
+    GLastHash                   NVARCHAR(2147483647) NOT NULL,  
+    GShiftTotalizer             FLOAT NOT NULL,
+    GShiftCITotalNormal         FLOAT NOT NULL,
+    GShiftCITotalReduced1       FLOAT NOT NULL,
+    GShiftCITotalReduced2       FLOAT NOT NULL,
+    GShiftCITotalReducedS       FLOAT NOT NULL,
+    GShiftCITotalZero           FLOAT NOT NULL,
+    GShiftCITotalUnknown        FLOAT NOT NULL,
+    GShiftPITotalCash           FLOAT NOT NULL,
+    GShiftPITotalNonCash        FLOAT NOT NULL,
+    GShiftPITotalInternal       FLOAT NOT NULL,
+    GShiftPITotalUnknown        FLOAT NOT NULL,
+    GLastShiftMoment            BIGINT NULL,
+    GLastShiftQueueItemId       NVARCHAR(36) NULL,
+    GDayTotalizer               FLOAT NOT NULL,
+    GDayCITotalNormal           FLOAT NOT NULL,
+    GDayCITotalReduced1         FLOAT NOT NULL,
+    GDayCITotalReduced2         FLOAT NOT NULL,
+    GDayCITotalReducedS         FLOAT NOT NULL,
+    GDayCITotalZero             FLOAT NOT NULL,
+    GDayCITotalUnknown          FLOAT NOT NULL,
+    GDayPITotalCash             FLOAT NOT NULL,
+    GDayPITotalNonCash          FLOAT NOT NULL,
+    GDayPITotalInternal         FLOAT NOT NULL,
+    GDayPITotalUnknown          FLOAT NOT NULL,
+    GLastDayMoment              BIGINT NULL,
+    GLastDayQueueItemId         NVARCHAR(36) NULL,
+    GMonthTotalizer             FLOAT NOT NULL,
+    GMonthCITotalNormal         FLOAT NOT NULL,
+    GMonthCITotalReduced1       FLOAT NOT NULL,
+    GMonthCITotalReduced2       FLOAT NOT NULL,
+    GMonthCITotalReducedS       FLOAT NOT NULL,
+    GMonthCITotalZero           FLOAT NOT NULL,
+    GMonthCITotalUnknown        FLOAT NOT NULL,
+    GMonthPITotalCash           FLOAT NOT NULL,
+    GMonthPITotalNonCash        FLOAT NOT NULL,
+    GMonthPITotalInternal       FLOAT NOT NULL,
+    GMonthPITotalUnknown        FLOAT NOT NULL,
+    GLastMonthMoment            BIGINT NULL,
+    GLastMonthQueueItemId       NVARCHAR(36) NULL,
+    GYearTotalizer              FLOAT NOT NULL,
+    GYearCITotalNormal          FLOAT NOT NULL,
+    GYearCITotalReduced1        FLOAT NOT NULL,
+    GYearCITotalReduced2        FLOAT NOT NULL,
+    GYearCITotalReducedS        FLOAT NOT NULL,
+    GYearCITotalZero            FLOAT NOT NULL,
+    GYearCITotalUnknown         FLOAT NOT NULL,
+    GYearPITotalCash            FLOAT NOT NULL,
+    GYearPITotalNonCash         FLOAT NOT NULL,
+    GYearPITotalInternal        FLOAT NOT NULL,
+    GYearPITotalUnknown         FLOAT NOT NULL,
+    GLastYearMoment             BIGINT NULL,
+    GLastYearQueueItemId        NVARCHAR(36) NULL,
+    BNumerator                  BIGINT NOT NULL,
+    BTotalizer                  FLOAT NOT NULL,
+    BCITotalNormal              FLOAT NOT NULL,
+    BCITotalReduced1            FLOAT NOT NULL,
+    BCITotalReduced2            FLOAT NOT NULL,
+    BCITotalReducedS            FLOAT NOT NULL,
+    BCITotalZero                FLOAT NOT NULL,
+    BCITotalUnknown             FLOAT NOT NULL,
+    BPITotalCash                FLOAT NOT NULL,
+    BPITotalNonCash             FLOAT NOT NULL,
+    BPITotalInternal            FLOAT NOT NULL,
+    BPITotalUnknown             FLOAT NOT NULL,
+    BLastHash                   NVARCHAR(2147483647) NOT NULL,  
+    LNumerator                  BIGINT NOT NULL,
+    LLastHash                   NVARCHAR(2147483647) NOT NULL,  
+    ANumerator                  BIGINT NOT NULL,                    
+    ALastHash                   NVARCHAR(2147483647) NOT NULL,  
+    ATotalizer                  FLOAT NOT NULL,
+    ACITotalNormal              FLOAT NOT NULL,
+    ACITotalReduced1            FLOAT NOT NULL,
+    ACITotalReduced2            FLOAT NOT NULL,
+    ACITotalReducedS            FLOAT NOT NULL,
+    ACITotalZero                FLOAT NOT NULL,
+    ACITotalUnknown             FLOAT NOT NULL,
+    APITotalCash                FLOAT NOT NULL,
+    APITotalNonCash             FLOAT NOT NULL,
+    APITotalInternal            FLOAT NOT NULL,
+    APITotalUnknown             FLOAT NOT NULL,
+    ALastMoment                 BIGINT NULL,
+    ALastQueueItemId            NVARCHAR(36) NULL,
+    XNumerator                  BIGINT NOT NULL,
+    XTotalizer                  FLOAT NOT NULL,
+    XLastHash                   NVARCHAR(2147483647) NOT NULL,  
+    CNumerator                  BIGINT NOT NULL,
+    CTotalizer                  FLOAT NOT NULL,
+    CLastHash                   NVARCHAR(2147483647) NOT NULL,  
+    UsedFailedCount             BIGINT NOT NULL,
+    UsedFailedMomentMin         BIGINT NULL,
+    UsedFailedMomentMax         BIGINT NULL,
+    UsedFailedQueueItemId       NVARCHAR(36) NULL,
+    MessageCount                BIGINT NOT NULL,
+    MessageMoment               BIGINT NULL,
+    TimeStamp                   BIGINT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS ftSignaturCreationUnitAT
+(
+    ftSignaturCreationUnitATId   NVARCHAR(36) PRIMARY KEY  NOT NULL,
+    Url                          NVARCHAR(2147483647)      NULL,
+    ZDA                          NVARCHAR(2147483647)      NULL,
+    SN                           NVARCHAR(2147483647)      NULL,
+    CertificateBase64            NVARCHAR(2147483647)      NULL,
+    Mode                         BIGINT                    NOT NULL,
+    TimeStamp                    BIGINT                    NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS ftSignaturCreationUnitDE
+(
+    ftSignaturCreationUnitDEId   NVARCHAR(36) PRIMARY KEY  NOT NULL,
+    Url                          NVARCHAR(2147483647)      NULL,                        
+    TimeStamp                    BIGINT                    NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS ftSignaturCreationUnitFR
+(
+    ftSignaturCreationUnitFRId   NVARCHAR(36) PRIMARY KEY  NOT NULL,
+    Siret                        NVARCHAR(2147483647)      NULL,
+    PrivateKey                   NVARCHAR(2147483647)      NULL, 
+    CertificateBase64            NVARCHAR(2147483647)      NULL, 
+    CertificateSerialNumber      NVARCHAR(2147483647)      NULL, 
+    TimeStamp                    BIGINT                    NOT NULL
+);

@@ -1,0 +1,111 @@
+﻿{
+  "ftCashBoxID": "fb1b79e2-f269-4fc0-9065-4821fed073d0",
+  "ftQueueID": "b00f3da1-5a6e-4a2d-8fdf-6c3d8900d2c1",
+  "ftQueueItemID": "3b17546f-d6a9-4900-b770-8ceba050d9e4",
+  "ftQueueRow": 96,
+  "cbTerminalID": "369a013a-37e2-4c23-8614-6a8f282e6330",
+  "cbReceiptReference": "OutOfOperation",
+  "ftCashBoxIdentification": "ddffc471-b101-4b89-8761-dd3c7f779f7c",
+  "ftReceiptIdentification": "ft0#IT0",
+  "ftReceiptMoment": "2021-05-28T08:55:13.4974194Z",
+  "ftSignatures": [
+    {
+      "ftSignatureFormat": 13,
+      "ftSignatureType": 4919338167972134929,
+      "Caption": "finish-transaction-payload",
+      "Data": "MEQCIAy4P9k+7x9saDO0uRZ4El8QwN+qTgYiv1DIaJIMWRiuAiAt+saFDGjK2Yi5Cxgy7PprXQ5O0seRgx4ltdpW9REvwA=="
+    },
+    {
+      "ftSignatureFormat": 13,
+      "ftSignatureType": 4919338167972134930,
+      "Caption": "finish-transaction-result",
+      "Data": null
+    },
+    {
+      "ftSignatureFormat": 1,
+      "ftSignatureType": 4919338167972134933,
+      "Caption": "<processType>",
+      "Data": "SonstigerVorgang"
+    },
+    {
+      "ftSignatureFormat": 1,
+      "ftSignatureType": 4919338167972134932,
+      "Caption": "<kassen-seriennummer>",
+      "Data": null
+    },
+    {
+      "ftSignatureFormat": 1,
+      "ftSignatureType": 4919338167972134934,
+      "Caption": "<processData>",
+      "Data": "0D\u0002 \f�?�>�\u001flh3��\u0016x\u0012_\u0010�ߪN\u0006\"�P�h�\fY\u0018�\u0002 -�ƅ\fh�و�\u000b\u00182��k]\u000eN�Ǒ�\u001e%��V�\u0011/�"
+    },
+    {
+      "ftSignatureFormat": 1,
+      "ftSignatureType": 4919338167972134935,
+      "Caption": "<transaktions-nummer>",
+      "Data": "0"
+    },
+    {
+      "ftSignatureFormat": 1,
+      "ftSignatureType": 4919338167972134936,
+      "Caption": "<signatur-zaehler>",
+      "Data": "0"
+    },
+    {
+      "ftSignatureFormat": 1,
+      "ftSignatureType": 4919338167972134937,
+      "Caption": "<start-zeit>",
+      "Data": "0001-01-01T00:00:00.000Z"
+    },
+    {
+      "ftSignatureFormat": 1,
+      "ftSignatureType": 4919338167972134938,
+      "Caption": "<log-time>",
+      "Data": "0001-01-01T00:00:00.000Z"
+    },
+    {
+      "ftSignatureFormat": 1,
+      "ftSignatureType": 4919338167972134941,
+      "Caption": "<signatur>",
+      "Data": null
+    },
+    {
+      "ftSignatureFormat": 1,
+      "ftSignatureType": 4919338167972134939,
+      "Caption": "<sig-alg>",
+      "Data": null
+    },
+    {
+      "ftSignatureFormat": 1,
+      "ftSignatureType": 4919338167972134940,
+      "Caption": "<log-time-format>",
+      "Data": null
+    },
+    {
+      "ftSignatureFormat": 1,
+      "ftSignatureType": 4919338167972134946,
+      "Caption": "<certification-id>",
+      "Data": "BSI-TK-0000-0000"
+    },
+    {
+      "ftSignatureFormat": 1,
+      "ftSignatureType": 4919338167972134942,
+      "Caption": "<public-key>",
+      "Data": null
+    },
+    {
+      "ftSignatureFormat": 1,
+      "ftSignatureType": 4919338167972134914,
+      "Caption": "Außer-Betriebnahme-Beleg",
+      "Data": "Kassenseriennummer: , TSE-Seriennummer: , Queue-ID: b00f3da1-5a6e-4a2d-8fdf-6c3d8900d2c1"
+    },
+    {
+      "ftSignatureFormat": 8,
+      "ftSignatureType": 4919338167972134915,
+      "Caption": "Außer-Betriebnahme-Beleg. Kassenseriennummer: , TSE-Seriennummer: , Queue-ID: b00f3da1-5a6e-4a2d-8fdf-6c3d8900d2c1",
+      "Data": "{\"CashBoxId\":\"fb1b79e2-f269-4fc0-9065-4821fed073d0\",\"QueueId\":\"b00f3da1-5a6e-4a2d-8fdf-6c3d8900d2c1\",\"Moment\":\"2021-05-28T08:55:13.7582126Z\",\"CashBoxIdentification\":null,\"SCUId\":\"4b674b5d-17a1-4e43-a04d-af1ad54d2500\",\"SCUPackageName\":null,\"SCUSignatureAlgorithm\":null,\"SCUPublicKeyBase64\":null,\"SCUSerialNumberBase64\":null,\"IsStopReceipt\":true,\"Version\":\"V0\"}"
+    }
+  ],
+  "ftState": 4919338167972134912,
+  "ftStateData": "{\"TseInfo\":{\"MaxNumberOfClients\":0,\"CurrentNumberOfClients\":0,\"CurrentClientIds\":null,\"MaxNumberOfStartedTransactions\":0,\"CurrentNumberOfStartedTransactions\":0,\"CurrentStartedTransactionNumbers\":null,\"MaxNumberOfSignatures\":0,\"CurrentNumberOfSignatures\":0,\"MaxLogMemorySize\":0,\"CurrentLogMemorySize\":0,\"CurrentState\":0,\"FirmwareIdentification\":null,\"CertificationIdentification\":\"BSI-TK-0000-0000\",\"SignatureAlgorithm\":null,\"LogTimeFormat\":null,\"SerialNumberOctet\":null,\"PublicKeyBase64\":null,\"CertificatesBase64\":null,\"Info\":null}}"
+}

@@ -1,0 +1,28 @@
+{
+  "ftCashBoxID": "fb1b79e2-f269-4fc0-9065-4821fed073d0",
+  "ftQueueID": "b00f3da1-5a6e-4a2d-8fdf-6c3d8900d2c1",
+  "ftPosSystemId": "fa3630e4-7d7e-4da5-b5b1-f45602081e40",
+  "cbTerminalID": "369a013a-37e2-4c23-8614-6a8f282e6330",
+  "cbReceiptReference": "233348",
+  "cbReceiptMoment": "2019-10-25T13:32:45.133Z",
+  "cbChargeItems": [
+    {
+      "Quantity": 2.0,
+      "Description": "0,5 Soda Zitrone",
+      "Amount": 5.6,
+      "VATRate": 19.0000,
+      "ftChargeItemCase": 4919338167972134913
+    }
+  ],
+  "cbPayItems": [
+    {
+      "Quantity": 1.0,
+      "Description": "Internal",
+      "Amount": 5.6,
+      "ftPayItemCase": 4919338167972134922
+    }
+  ],
+  "ftReceiptCase": 4919338172267102224,
+  "cbArea": "Tisch 56",
+  "cbPreviousReceiptReference": "233347"
+}

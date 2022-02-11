@@ -1,0 +1,5 @@
+transport=MscJna
+path=E:/
+timeout=10
+delay=0
+alignment=512

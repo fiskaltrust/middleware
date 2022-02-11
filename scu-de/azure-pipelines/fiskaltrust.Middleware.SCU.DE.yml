@@ -1,0 +1,216 @@
+resources:
+- repo: self
+
+trigger:
+  batch: true
+  branches:
+    include:
+    - master
+    - refs/tags/*
+
+pr: none
+
+variables:
+- group: 'Code Signing Certificates'
+- name: BuildConfiguration
+  value: release
+- name: Solution
+  value: 'fiskaltrust.Middleware.SCU.DE.sln'
+- name: vmImageName 
+  value: 'windows-latest'
+
+stages:
+- stage: Build
+  displayName: Build stage
+  jobs:  
+  - job: Build
+    displayName: Build job
+    pool:
+      vmImage: $(vmImageName)
+
+    steps:    
+    - script: |
+        dotnet tool install --tool-path tools dotnet-reportgenerator-globaltool
+      displayName: Install report generator
+      workingDirectory: '/'
+
+    - task: yavt@1
+      inputs:
+        mode: 'Multi'
+        semverVersion: 'v1'
+
+    - powershell: |   
+        $nugetFeed = if ($Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/release/") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/master") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/tags/")) { "release" } else { "dev" }
+        Write-Host "##vso[task.setvariable variable=NuGetFeed;]$nugetFeed"
+      displayName: Set NuGet feed
+
+    - task: DotNetCoreCLI@2
+      inputs:
+        command: 'restore'
+        projects: $(Solution)
+        vstsFeed: $(NuGetFeed)
+        verbosityRestore: 'minimal'
+        arguments: '--configuration $(BuildConfiguration)' 
+      displayName: 'Restore'
+
+    - task: DotNetCoreCLI@2
+      displayName: Build
+      inputs:
+        projects: $(Solution)
+        arguments: '--configuration $(BuildConfiguration)'
+
+    - task: DotNetCoreCLI@2
+      inputs:
+        command: 'test'
+        projects: |
+          **/*.UnitTest.csproj
+        arguments: '--configuration $(BuildConfiguration) --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:Include=[fiskaltrust.*]*'
+        nobuild: true
+      displayName: 'Run unit tests'   
+
+    - task: DotNetCoreCLI@2
+      inputs:
+        command: 'test'
+        projects: |
+          **/*.IntegrationTest.csproj
+          !**/*.DeutscheFiskal.IntegrationTest.csproj
+          !**/*.DieboldNixdorf.IntegrationTest.csproj
+          !**/*.SwissbitCloud.IntegrationTest.csproj
+          !**/*.CryptoVision.IntegrationTest.csproj
+          !**/*.Swissbit.IntegrationTest.csproj
+          !**/*.Epson.IntegrationTest.csproj
+          !**/*.ATrust.IntegrationTest.csproj
+        arguments: '--filter "(os=windows&tse-hardware=none)|TseCategory=Cloud" --configuration $(BuildConfiguration) --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:Include=[fiskaltrust.*]*'
+        nobuild: true
+      displayName: 'Run integration tests'
+      continueOnError: true
+
+    - task: DotNetCoreCLI@2
+      inputs:
+        command: 'test'
+        projects: '**/*.AcceptanceTest.csproj'
+        arguments: '--filter "(os=windows&tse-hardware=none)|TseCategory=Cloud" --configuration $(BuildConfiguration) /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:Include=[fiskaltrust.*]*'
+        nobuild: true
+      displayName: 'Run acceptance tests'   
+      continueOnError: true
+
+    - task: codesigning@2
+      displayName: 'Code Signing '
+      inputs:
+        secureFileId: 'codesigning.pfx'
+        signCertPassword: '$(Code_Signing_Password)'
+        filePaths: |
+         src/**/*fiskaltrust*.dll
+         src/**/*fiskaltrust*.exe
+
+    - script: |
+        /tools/reportgenerator -reports:$(Build.SourcesDirectory)/test/**/*.opencover.xml -targetdir:$(Build.SourcesDirectory)/CodeCoverage -reporttypes:"Cobertura;HTMLInline;HTMLChart"
+      displayName: Create Code coverage report
+      workingDirectory: '/'
+
+    - task: PublishCodeCoverageResults@1
+      displayName: 'Publish code coverage'
+      inputs:
+        codeCoverageTool: Cobertura
+        summaryFileLocation: '$(Build.SourcesDirectory)/CodeCoverage/Cobertura.xml'
+        reportDirectory: '$(Build.SourcesDirectory)/CodeCoverage'        
+
+    - task: DotNetCoreCLI@2
+      inputs:
+        command: 'restore'
+        projects: 'src/fiskaltrust.Middleware.SCU.DE.ATrust.Service/fiskaltrust.Middleware.SCU.DE.ATrust.Service.csproj'
+        restoreArguments: '-r win-x86'
+        feedsToUse: 'select'
+        vstsFeed: '$(NuGetFeed)'
+        verbosityRestore: 'minimal'
+      displayName: 'dotnet restore fiskaltrust.Middleware.SCU.DE.ATrust.Service'      
+      
+    - powershell: |
+        dotnet publish -r win-x86 -c $(BuildConfiguration) -p:PublishSingleFile=true --self-contained true -p:PublishTrimmed=true --no-restore
+        Compress-Archive -Path bin/$(BuildConfiguration)/net5.0-windows/win-x86/publish/* -DestinationPath ../fiskaltrust.Middleware.SCU.DE.ATrust/lib/service.zip -CompressionLevel Optimal -Force
+      failOnStderr: true
+      displayName: 'dotnet publish fiskaltrust.Middleware.SCU.DE.ATrust.Service'
+      workingDirectory: 'src/fiskaltrust.Middleware.SCU.DE.ATrust.Service'
+
+    - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-build --configuration $(buildConfiguration) /p:NuspecFile=.nuspec
+      displayName: 'dotnet pack fiskaltrust.Middleware.SCU.DE.CryptoVision'
+      workingDirectory: 'src/fiskaltrust.Middleware.SCU.DE.CryptoVision'
+
+    - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --configuration $(buildConfiguration)
+      displayName: 'dotnet pack fiskaltrust.Middleware.SCU.DE.DieboldNixdorf'
+      workingDirectory: 'src/fiskaltrust.Middleware.SCU.DE.DieboldNixdorf'
+
+    - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --configuration $(buildConfiguration)
+      displayName: 'dotnet pack fiskaltrust.Middleware.SCU.DE.Epson'
+      workingDirectory: 'src/fiskaltrust.Middleware.SCU.DE.Epson'
+
+    - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --configuration $(buildConfiguration)
+      displayName: 'dotnet pack fiskaltrust.Middleware.SCU.DE.Fiskaly'
+      workingDirectory: 'src/fiskaltrust.Middleware.SCU.DE.Fiskaly'
+
+    - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --configuration $(buildConfiguration)
+      displayName: 'dotnet pack fiskaltrust.Middleware.SCU.DE.FiskalyCertified'
+      workingDirectory: 'src/fiskaltrust.Middleware.SCU.DE.FiskalyCertified'
+
+    - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-build --configuration $(buildConfiguration) /p:NuspecFile=.nuspec
+      displayName: 'dotnet pack fiskaltrust.Middleware.SCU.DE.Swissbit'
+      workingDirectory: 'src/fiskaltrust.Middleware.SCU.DE.Swissbit'
+
+    - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --configuration $(buildConfiguration)
+      displayName: 'dotnet pack fiskaltrust.Middleware.SCU.DE.ATrust'
+      workingDirectory: 'src/fiskaltrust.Middleware.SCU.DE.ATrust'
+
+    - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --configuration $(buildConfiguration)
+      displayName: 'dotnet pack fiskaltrust.Middleware.SCU.DE.DeutscheFiskal'
+      workingDirectory: 'src/fiskaltrust.Middleware.SCU.DE.DeutscheFiskal'
+
+    - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --configuration $(buildConfiguration)
+      displayName: 'dotnet pack fiskaltrust.Middleware.SCU.DE.SwissbitCloud'
+      workingDirectory: 'src/fiskaltrust.Middleware.SCU.DE.SwissbitCloud'
+      
+    - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --configuration $(buildConfiguration)
+      displayName: 'dotnet pack fiskaltrust.Middleware.SCU.DE.InMemory'
+      workingDirectory: 'src/fiskaltrust.Middleware.SCU.DE.InMemory'
+
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish Artifact: drop'
+      inputs:
+        PathtoPublish: '$(build.artifactstagingdirectory)'
+
+# - stage: FunctionalTest
+#   displayName: FunctionalTest
+#   dependsOn: Build
+#   jobs:
+#   - job: FunctionalTest
+#     displayName: FunctionalTest
+#     strategy:
+#       matrix:
+#         Fiskaly:
+#           MIDDLEWARE_CONFIGURATION: 'configuration_fiskaly.json'
+#       maxParallel: 2
+#     pool: 
+#       vmImage: windows-latest
+#     steps: 
+#     - task: DownloadPipelineArtifact@2
+#       inputs:
+#         artifact: 'drop'
+#         path: $(Build.SourcesDirectory)/test/fiskaltrust.Middleware.SCU.DE..FunctionalTest/Packages
+
+#     - task: DotNetCoreCLI@2
+#       inputs:
+#         command: 'restore'
+#         projects: |
+#           **/*.FunctionalTest.csproj
+#         vstsFeed: dev
+#         verbosityRestore: 'minimal'
+#         arguments: '--configuration $(BuildConfiguration)' 
+#       displayName: 'Restore'
+
+#     - task: DotNetCoreCLI@2
+#       inputs:
+#         command: 'test'
+#         projects: |
+#           **/*.FunctionalTest.csproj
+#         arguments: '--configuration $(BuildConfiguration) /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:Include=[fiskaltrust.*]*'
+#         nobuild: true
+#       displayName: 'Run acceptance tests'   

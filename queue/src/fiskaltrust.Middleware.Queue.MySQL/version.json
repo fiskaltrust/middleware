@@ -1,0 +1,8 @@
+{
+  "version": "1.3.25",
+  "releaseBranches": [
+    "^refs/heads/master$",
+    "^refs/heads/release/\\d+(?:\\.\\d+)*(?:-.*)?$",
+    "^refs/tags/mysql/v\\d+(?:\\.\\d+)*(?:-.*)?$"
+  ]
+}
