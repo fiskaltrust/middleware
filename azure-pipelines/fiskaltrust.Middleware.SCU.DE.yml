@@ -122,35 +122,35 @@ stages:
         summaryFileLocation: '$(Build.SourcesDirectory)/$(WorkingDirectory)/CodeCoverage/Cobertura.xml'
         reportDirectory: '$(Build.SourcesDirectory)/$(WorkingDirectory)/CodeCoverage'
 
-    - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-build --configuration $(buildConfiguration) /p:NuspecFile=.nuspec
+    - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration) /p:NuspecFile=.nuspec
       displayName: 'dotnet pack fiskaltrust.Middleware.SCU.DE.CryptoVision'
       workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.CryptoVision'
 
-    - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-build --configuration $(buildConfiguration)
+    - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
       displayName: 'dotnet pack fiskaltrust.Middleware.SCU.DE.DieboldNixdorf'
       workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.DieboldNixdorf'
 
-    - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-build --configuration $(buildConfiguration)
+    - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
       displayName: 'dotnet pack fiskaltrust.Middleware.SCU.DE.Epson'
       workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.Epson'
 
-    - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-build --configuration $(buildConfiguration)
+    - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
       displayName: 'dotnet pack fiskaltrust.Middleware.SCU.DE.FiskalyCertified'
       workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.FiskalyCertified'
 
-    - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-build --configuration $(buildConfiguration) /p:NuspecFile=.nuspec
+    - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration) /p:NuspecFile=.nuspec
       displayName: 'dotnet pack fiskaltrust.Middleware.SCU.DE.Swissbit'
       workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.Swissbit'
 
-    - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-build --configuration $(buildConfiguration)
+    - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
       displayName: 'dotnet pack fiskaltrust.Middleware.SCU.DE.DeutscheFiskal'
       workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.DeutscheFiskal'
 
-    - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-build --configuration $(buildConfiguration)
+    - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
       displayName: 'dotnet pack fiskaltrust.Middleware.SCU.DE.SwissbitCloud'
       workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.SwissbitCloud'
       
-    - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-build --configuration $(buildConfiguration)
+    - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
       displayName: 'dotnet pack fiskaltrust.Middleware.SCU.DE.InMemory'
       workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.InMemory'
 

@@ -115,27 +115,27 @@ jobs:
         $(WorkingDirectory)/src/**/*.dll
         $(WorkingDirectory)/src/**/*fiskaltrust*.exe
 
-  - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-build --configuration $(buildConfiguration)
+  - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
     displayName: 'dotnet pack fiskaltrust.Middleware.Queue.InMemory'
     workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.InMemory'
 
-  - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-build --configuration $(buildConfiguration) /p:NuspecFile=.nuspec
+  - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration) /p:NuspecFile=.nuspec
     displayName: 'dotnet pack fiskaltrust.Middleware.Queue.SQLite'
     workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.SQLite'
 
-  - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-build --configuration $(buildConfiguration)
+  - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
     displayName: 'dotnet pack fiskaltrust.Middleware.Queue.EF'
     workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.EF'
     
-  - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-build --configuration $(buildConfiguration)
+  - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
     displayName: 'dotnet pack fiskaltrust.Middleware.Queue.PostgreSQL'
     workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.PostgreSQL'
 
-  - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-build --configuration $(buildConfiguration)
+  - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
     displayName: 'dotnet pack fiskaltrust.Middleware.Abstractions'
     workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Abstractions'
     
-  - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-build --configuration $(buildConfiguration)
+  - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
     displayName: 'dotnet pack fiskaltrust.Middleware.Queue.MySQL'
     workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.MySQL'
 
