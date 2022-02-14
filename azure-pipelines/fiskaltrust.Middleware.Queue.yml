@@ -32,8 +32,7 @@ jobs:
     displayName: Install report generator
     workingDirectory: '$(WorkingDirectory)'
 
-  - task: yavt@1
-    workingDirectory: 'queue/'
+  - task: yavt@1 
     inputs:
       mode: 'Multi'
       updateNuspecFiles: true
@@ -60,15 +59,15 @@ jobs:
       feedsToUse: 'select'
       vstsFeed: '$(NuGetFeed)'
       verbosityRestore: 'minimal'
+      workingDirectory: '$(WorkingDirectory)'
     displayName: 'Restore'
-    workingDirectory: '$(WorkingDirectory)'
 
   - task: DotNetCoreCLI@2
     displayName: Build
     inputs:
       projects: $(Solution)
       arguments: '--configuration $(BuildConfiguration) --no-restore'
-    workingDirectory: '$(WorkingDirectory)'
+      workingDirectory: '$(WorkingDirectory)'
 
   - task: DotNetCoreCLI@2
     inputs:
@@ -76,8 +75,8 @@ jobs:
       projects: '**/*.UnitTest.csproj'
       arguments: '--configuration $(BuildConfiguration) --no-restore /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:Include=[fiskaltrust.*]*'
       nobuild: true
+      workingDirectory: '$(WorkingDirectory)'
     displayName: 'Run unit tests'
-    workingDirectory: '$(WorkingDirectory)'
 
   - task: DotNetCoreCLI@2
     inputs:
@@ -85,8 +84,8 @@ jobs:
       projects: '**/*.IntegrationTest.csproj'
       arguments: '--configuration $(BuildConfiguration) --no-restore /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:Include=[fiskaltrust.*]*'
       nobuild: true
+      workingDirectory: '$(WorkingDirectory)'
     displayName: 'Run integration tests'
-    workingDirectory: '$(WorkingDirectory)'
 
   - script: |
       dotnet publish --configuration $(buildConfiguration) -f net461
@@ -113,9 +112,8 @@ jobs:
       secureFileId: 'codesigning.pfx'
       signCertPassword: '$(Code_Signing_Password)'
       filePaths: |
-        src/**/*.dll
-        src/**/*fiskaltrust*.exe
-    workingDirectory: '$(WorkingDirectory)'
+        $(WorkingDirectory)/src/**/*.dll
+        $(WorkingDirectory)/src/**/*fiskaltrust*.exe
 
   - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-build --configuration $(buildConfiguration)
     displayName: 'dotnet pack fiskaltrust.Middleware.Queue.InMemory'
@@ -187,15 +185,15 @@ jobs:
       feedsToUse: 'select'
       vstsFeed: '$(NuGetFeed)'
       verbosityRestore: 'minimal'
+      workingDirectory: '$(WorkingDirectory)'
     displayName: 'Restore'
-    workingDirectory: '$(WorkingDirectory)'
 
   - task: DotNetCoreCLI@2
     displayName: Build
     inputs:
       projects: $(Solution)
       arguments: '--configuration $(BuildConfiguration) --no-restore'
-    workingDirectory: '$(WorkingDirectory)'
+      workingDirectory: '$(WorkingDirectory)'
 
   - task: DotNetCoreCLI@2
     inputs:
@@ -204,8 +202,8 @@ jobs:
         **/$(Project).csproj
       arguments: '--configuration $(BuildConfiguration) --no-restore /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:Include=[fiskaltrust.*]*'
       nobuild: true
-    displayName: 'Run acceptance tests'   
-    workingDirectory: '$(WorkingDirectory)'
+      workingDirectory: '$(WorkingDirectory)'
+    displayName: 'Run acceptance tests'
   
   - script: |
       /tools/reportgenerator -reports:$(Build.SourcesDirectory)/$(WorkingDirectory)/test/**/*.opencover.xml -targetdir:$(Build.SourcesDirectory)/$(WorkingDirectory)/CodeCoverage -reporttypes:"Cobertura;HTMLInline;HTMLChart"
