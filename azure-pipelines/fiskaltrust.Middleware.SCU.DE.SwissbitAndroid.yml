@@ -14,14 +14,12 @@ variables:
 - group: 'Code Signing Certificates'
 - name: BuildConfiguration
   value: release
-- name: BuildPlatform
-  value: any cpu
 - name: Solution
   value: 'fiskaltrust.Middleware.SCU.DE.SwissbitAndroid.sln'
 - name: vmImageName 
   value: 'windows-latest'
-- name: netCoreVersion
-  value: '3.1.100'
+- name: WorkingDirectory
+  value: 'scu-de'
 
 stages:
 - stage: Build
@@ -31,13 +29,12 @@ stages:
     displayName: Build job
     pool:
       vmImage: $(vmImageName)
-
     steps:    
-
     - task: yavt@1
       inputs:
         mode: 'Multi'
         semverVersion: 'v1'
+      workingDirectory: '$(WorkingDirectory)'
 
     - powershell: |   
         $nugetFeed = if ($Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/release/") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/tags/v")) { "release" } else { "dev" }
@@ -55,6 +52,7 @@ stages:
       inputs:
         solution: '$(Solution)'
         configuration: '$(BuildConfiguration)'
+      workingDirectory: '$(WorkingDirectory)'
 
     - task: DotNetCoreCLI@2
       inputs:
@@ -63,6 +61,7 @@ stages:
         arguments: '--configuration $(BuildConfiguration) --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:Include=[fiskaltrust.*]*'
         nobuild: true
       displayName: 'Run unit tests'   
+      workingDirectory: '$(WorkingDirectory)'
 
     - task: DotNetCoreCLI@2
       inputs:
@@ -71,14 +70,16 @@ stages:
         arguments: '--configuration $(BuildConfiguration) --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:Include=[fiskaltrust.*]*'
         nobuild: true
       displayName: 'Run integration tests'
+      workingDirectory: '$(WorkingDirectory)'
 
     - task: codesigning@2
-      displayName: 'Code Signing '
+      displayName: 'Code Signing'
       inputs:
         secureFileId: 'codesigning.pfx'
         signCertPassword: '$(Code_Signing_Password)'
         filePaths: |
          src/**/*.dll
+      workingDirectory: '$(WorkingDirectory)'
 
     - script: |
         dotnet tool install -g dotnet-reportgenerator-globaltool
@@ -86,7 +87,7 @@ stages:
       workingDirectory: '/'
 
     - script: |
-        reportgenerator -reports:$(Build.SourcesDirectory)/test/**/*.opencover.xml -targetdir:$(Build.SourcesDirectory)/CodeCoverage -reporttypes:"Cobertura;HTMLInline;HTMLChart"
+        reportgenerator -reports:$(Build.SourcesDirectory)/$(WorkingDirectory)/test/**/*.opencover.xml -targetdir:$(Build.SourcesDirectory)/$(WorkingDirectory)/CodeCoverage -reporttypes:"Cobertura;HTMLInline;HTMLChart"
       displayName: Create Code coverage report
       workingDirectory: '/'
       continueOnError: true
@@ -96,8 +97,8 @@ stages:
       continueOnError: true
       inputs:
         codeCoverageTool: Cobertura
-        summaryFileLocation: '$(Build.SourcesDirectory)/CodeCoverage/Cobertura.xml'
-        reportDirectory: '$(Build.SourcesDirectory)/CodeCoverage' 
+        summaryFileLocation: '$(Build.SourcesDirectory)/$(WorkingDirectory)/CodeCoverage/Cobertura.xml'
+        reportDirectory: '$(Build.SourcesDirectory)/$(WorkingDirectory)/CodeCoverage' 
 
     - task: NuGetCommand@2
       inputs:
@@ -105,8 +106,10 @@ stages:
         packagesToPack: 'src/fiskaltrust.Middleware.SCU.DE.SwissbitAndroid/.nuspec'
         versioningScheme: 'off'
         basePath: 'src/fiskaltrust.Middleware.SCU.DE.SwissbitAndroid/'
+      workingDirectory: '$(WorkingDirectory)'
 
     - task: PublishBuildArtifacts@1
       displayName: 'Publish Artifact: drop'
       inputs:
         PathtoPublish: '$(build.artifactstagingdirectory)'
+      workingDirectory: '$(WorkingDirectory)'
