@@ -5,8 +5,11 @@ trigger:
   batch: true
   branches:
     include:
-    - master
-    - refs/tags/*
+    - main
+    - refs/tags/scu-de/*
+  paths:
+    include:
+      - scu-de
 
 pr: none
 
@@ -39,7 +42,6 @@ stages:
       inputs:
         mode: 'Multi'
         semverVersion: 'v1'
-      workingDirectory: '$(WorkingDirectory)'
 
     - powershell: |   
         $nugetFeed = if ($Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/release/") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/master") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/tags/")) { "release" } else { "dev" }
@@ -52,16 +54,16 @@ stages:
         projects: $(Solution)
         vstsFeed: $(NuGetFeed)
         verbosityRestore: 'minimal'
-        arguments: '--configuration $(BuildConfiguration)' 
+        arguments: '--configuration $(BuildConfiguration)'
+        workingDirectory: '$(WorkingDirectory)'
       displayName: 'Restore'
-      workingDirectory: '$(WorkingDirectory)'
 
     - task: DotNetCoreCLI@2
       displayName: Build
       inputs:
         projects: $(Solution)
         arguments: '--configuration $(BuildConfiguration)'
-      workingDirectory: '$(WorkingDirectory)'
+        workingDirectory: '$(WorkingDirectory)'
 
     - task: DotNetCoreCLI@2
       inputs:
@@ -70,8 +72,8 @@ stages:
           **/*.UnitTest.csproj
         arguments: '--configuration $(BuildConfiguration) --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:Include=[fiskaltrust.*]*'
         nobuild: true
+        workingDirectory: '$(WorkingDirectory)'
       displayName: 'Run unit tests'   
-      workingDirectory: '$(WorkingDirectory)'
 
     - task: DotNetCoreCLI@2
       inputs:
@@ -87,9 +89,9 @@ stages:
           !**/*.ATrust.IntegrationTest.csproj
         arguments: '--filter "(os=windows&tse-hardware=none)|TseCategory=Cloud" --configuration $(BuildConfiguration) --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:Include=[fiskaltrust.*]*'
         nobuild: true
+        workingDirectory: '$(WorkingDirectory)'
       displayName: 'Run integration tests'
       continueOnError: true
-      workingDirectory: '$(WorkingDirectory)'
 
     - task: DotNetCoreCLI@2
       inputs:
@@ -97,9 +99,9 @@ stages:
         projects: '**/*.AcceptanceTest.csproj'
         arguments: '--filter "(os=windows&tse-hardware=none)|TseCategory=Cloud" --configuration $(BuildConfiguration) /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:Include=[fiskaltrust.*]*'
         nobuild: true
+        workingDirectory: '$(WorkingDirectory)'
       displayName: 'Run acceptance tests'   
       continueOnError: true
-      workingDirectory: '$(WorkingDirectory)'
 
     - task: codesigning@2
       displayName: 'Code Signing'
@@ -107,9 +109,8 @@ stages:
         secureFileId: 'codesigning.pfx'
         signCertPassword: '$(Code_Signing_Password)'
         filePaths: |
-         src/**/*fiskaltrust*.dll
-         src/**/*fiskaltrust*.exe
-      workingDirectory: '$(WorkingDirectory)'
+         $(WorkingDirectory)/src/**/*fiskaltrust*.dll
+         $(WorkingDirectory)/src/**/*fiskaltrust*.exe
 
     - script: |
         /tools/reportgenerator -reports:$(Build.SourcesDirectory)/$(WorkingDirectory)/test/**/*.opencover.xml -targetdir:$(Build.SourcesDirectory)/$(WorkingDirectory)/CodeCoverage -reporttypes:"Cobertura;HTMLInline;HTMLChart"
