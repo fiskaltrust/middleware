@@ -27,6 +27,8 @@ jobs:
   pool:
     vmImage: $(vmImageName)
   steps:
+  - task: NuGetToolInstaller@1
+  
   - script: |
       dotnet tool install --tool-path tools dotnet-reportgenerator-globaltool
     displayName: Install report generator
