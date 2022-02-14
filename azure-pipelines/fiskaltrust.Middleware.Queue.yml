@@ -7,6 +7,9 @@ trigger:
     include:
     - master
     - refs/tags/*
+  paths:
+    include:
+      - queue
 
 pr: none
 
