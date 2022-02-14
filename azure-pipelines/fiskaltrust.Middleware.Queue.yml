@@ -35,7 +35,7 @@ jobs:
   - script: |
       dotnet tool install --tool-path tools dotnet-reportgenerator-globaltool
     displayName: Install report generator
-    workingDirectory: '$(WorkingDirectory)'
+    workingDirectory: '/'
 
   - task: yavt@1 
     inputs:
@@ -60,11 +60,9 @@ jobs:
   - task: DotNetCoreCLI@2
     inputs:
       command: 'restore'
-      projects: '$(Solution)'
+      projects: '$(WorkingDirectory)/$(Solution)'
       feedsToUse: 'select'
       vstsFeed: '$(NuGetFeed)'
-      verbosityRestore: 'minimal'
-      workingDirectory: '$(WorkingDirectory)'
     displayName: 'Restore'
 
   - task: DotNetCoreCLI@2
@@ -186,11 +184,9 @@ jobs:
   - task: DotNetCoreCLI@2
     inputs:
       command: 'restore'
-      projects: '$(Solution)'
+      projects: '$(WorkingDirectory)/$(Solution)'
       feedsToUse: 'select'
       vstsFeed: '$(NuGetFeed)'
-      verbosityRestore: 'minimal'
-      workingDirectory: '$(WorkingDirectory)'
     displayName: 'Restore'
 
   - task: DotNetCoreCLI@2

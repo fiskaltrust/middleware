@@ -51,11 +51,9 @@ stages:
     - task: DotNetCoreCLI@2
       inputs:
         command: 'restore'
-        projects: $(Solution)
+        projects: '$(WorkingDirectory)/$(Solution)'
         vstsFeed: $(NuGetFeed)
-        verbosityRestore: 'minimal'
         arguments: '--configuration $(BuildConfiguration)'
-        workingDirectory: '$(WorkingDirectory)'
       displayName: 'Restore'
 
     - task: DotNetCoreCLI@2
