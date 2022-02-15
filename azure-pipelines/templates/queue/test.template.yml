@@ -39,6 +39,10 @@ steps:
     arguments: '--configuration $(BuildConfiguration) --no-restore /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:Include=[fiskaltrust.*]*'
     nobuild: true
   displayName: 'Run unit tests'
+  env:
+    CONNECTIONSTRING_AZURE_STORAGE_TESTS: $(CONNECTIONSTRING_AZURE_STORAGE_TESTS)
+    CONNECTIONSTRING_POSTGRESQL_TESTS: $(CONNECTIONSTRING_POSTGRESQL_TESTS)
+    CONNECTIONSTRING_MYSQL_TESTS: $(CONNECTIONSTRING_MYSQL_TESTS)
 
 - task: DotNetCoreCLI@2
   inputs:
@@ -47,6 +51,10 @@ steps:
     arguments: '--configuration $(BuildConfiguration) --no-restore /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:Include=[fiskaltrust.*]*'
     nobuild: true
   displayName: 'Run integration tests'
+  env:
+    CONNECTIONSTRING_AZURE_STORAGE_TESTS: $(CONNECTIONSTRING_AZURE_STORAGE_TESTS)
+    CONNECTIONSTRING_POSTGRESQL_TESTS: $(CONNECTIONSTRING_POSTGRESQL_TESTS)
+    CONNECTIONSTRING_MYSQL_TESTS: $(CONNECTIONSTRING_MYSQL_TESTS)
 
 - script: |
     /tools/reportgenerator -reports:$(Build.SourcesDirectory)/$(WorkingDirectory)/test/**/*.opencover.xml -targetdir:$(Build.SourcesDirectory)/$(WorkingDirectory)/CodeCoverage -reporttypes:"Cobertura;HTMLInline;HTMLChart"
