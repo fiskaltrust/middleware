@@ -15,6 +15,7 @@ pr: none
 
 variables:
 - group: 'Code Signing Certificates'
+- group: 'Middleware Tests'
 - name: BuildConfiguration
   value: release
 - name: Solution
