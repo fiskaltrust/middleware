@@ -6,7 +6,7 @@ trigger:
   branches:
     include:
     - master
-    - refs/tags/*
+    - refs/tags/queue/*
   paths:
     include:
       - queue
@@ -25,37 +25,20 @@ variables:
   value: 'windows-latest'
 
 jobs:  
-- job: Build
-  displayName: Build job
+- job: Test
+  displayName: Unit and integration tests
   pool:
     vmImage: $(vmImageName)
   steps:
-  - task: NuGetToolInstaller@1
-  
   - script: |
       dotnet tool install --tool-path tools dotnet-reportgenerator-globaltool
     displayName: Install report generator
     workingDirectory: '/'
 
-  - task: yavt@1 
-    inputs:
-      mode: 'Multi'
-      updateNuspecFiles: true
-      updateBuildNumber: false
-      semverVersion: 'v1'
-
   - powershell: |   
       $nugetFeed = if ($Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/release/") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/master") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/tags")) { "release" } else { "dev" }
       Write-Host "##vso[task.setvariable variable=NuGetFeed;]$nugetFeed"
     displayName: Set NuGet feed
-
-  - task: UseDotNet@2
-    inputs:
-      version: 5.0.x
-
-  - task: UseDotNet@2
-    inputs:
-      version: 3.1.x
 
   - task: DotNetCoreCLI@2
     inputs:
@@ -88,13 +71,6 @@ jobs:
     displayName: 'Run integration tests'
 
   - script: |
-      dotnet publish --configuration $(buildConfiguration) -f net461
-      dotnet publish --configuration $(buildConfiguration) -f netstandard2.0
-      dotnet publish --configuration $(buildConfiguration) -f netstandard2.1
-    displayName: 'dotnet publish fiskaltrust.Middleware.Queue.SQLite'
-    workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.SQLite'
-
-  - script: |
       /tools/reportgenerator -reports:$(Build.SourcesDirectory)/$(WorkingDirectory)/test/**/*.opencover.xml -targetdir:$(Build.SourcesDirectory)/$(WorkingDirectory)/CodeCoverage -reporttypes:"Cobertura;HTMLInline;HTMLChart"
     displayName: Create Code coverage report
     workingDirectory: '/'
@@ -106,48 +82,11 @@ jobs:
       summaryFileLocation: '$(Build.SourcesDirectory)/$(WorkingDirectory)/CodeCoverage/Cobertura.xml'
       reportDirectory: '$(Build.SourcesDirectory)/$(WorkingDirectory)/CodeCoverage'
 
-  - task: codesigning@2
-    displayName: 'Code Signing'
-    inputs:
-      secureFileId: 'codesigning.pfx'
-      signCertPassword: '$(Code_Signing_Password)'
-      filePaths: |
-        $(WorkingDirectory)/src/**/*.dll
-        $(WorkingDirectory)/src/**/*fiskaltrust*.exe
-
-  - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
-    displayName: 'dotnet pack fiskaltrust.Middleware.Queue.InMemory'
-    workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.InMemory'
-
-  - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration) /p:NuspecFile=.nuspec
-    displayName: 'dotnet pack fiskaltrust.Middleware.Queue.SQLite'
-    workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.SQLite'
-
-  - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
-    displayName: 'dotnet pack fiskaltrust.Middleware.Queue.EF'
-    workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.EF'
-    
-  - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
-    displayName: 'dotnet pack fiskaltrust.Middleware.Queue.PostgreSQL'
-    workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.PostgreSQL'
-
-  - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
-    displayName: 'dotnet pack fiskaltrust.Middleware.Abstractions'
-    workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Abstractions'
-    
-  - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
-    displayName: 'dotnet pack fiskaltrust.Middleware.Queue.MySQL'
-    workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.MySQL'
-
-  - task: PublishBuildArtifacts@1
-    displayName: 'Publish Artifact: drop'
-    inputs:
-      PathtoPublish: '$(build.artifactstagingdirectory)'
-
 
 - job: AcceptanceTest
-  dependsOn: Build
-  displayName: Acceptance test
+  dependsOn: Test
+  displayName: Acceptance tests
+  condition: and(succeeded(), or(eq(variables['Build.SourceBranch'], 'refs/heads/main'), startsWith(variables['Build.SourceBranch'], 'refs/tags/queue/')))
   pool:
     vmImage: $(vmImageName)
   strategy:
@@ -212,3 +151,168 @@ jobs:
       codeCoverageTool: Cobertura
       summaryFileLocation: '$(Build.SourcesDirectory)/$(WorkingDirectory)/CodeCoverage/Cobertura.xml'
       reportDirectory: '$(Build.SourcesDirectory)/$(WorkingDirectory)/CodeCoverage'        
+
+
+- job: BuildNugetPackages
+  displayName: Build v1 NuGet packages
+  dependsOn: 
+  - Test
+  - AcceptanceTest
+  condition: and(eq(dependencies.Test.result, 'Succeeded'), in(dependencies.AcceptanceTest.result, 'Succeeded', 'Skipped'))
+  pool:
+    vmImage: $(vmImageName)
+  steps:
+  - task: yavt@1 
+    inputs:
+      mode: 'Multi'
+      updateNuspecFiles: true
+      updateBuildNumber: false
+      semverVersion: 'v1'
+
+  - powershell: |   
+      $nugetFeed = if ($Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/release/") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/master") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/tags")) { "release" } else { "dev" }
+      Write-Host "##vso[task.setvariable variable=NuGetFeed;]$nugetFeed"
+    displayName: Set NuGet feed
+
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: 'restore'
+      projects: '$(WorkingDirectory)/$(Solution)'
+      feedsToUse: 'select'
+      vstsFeed: '$(NuGetFeed)'
+    displayName: 'Restore'
+
+  - task: DotNetCoreCLI@2
+    displayName: Build
+    inputs:
+      projects: '$(WorkingDirectory)/$(Solution)'
+      arguments: '--configuration $(BuildConfiguration) --no-restore'
+
+  - script: |
+      dotnet publish --configuration $(buildConfiguration) -f net461
+      dotnet publish --configuration $(buildConfiguration) -f netstandard2.0
+      dotnet publish --configuration $(buildConfiguration) -f netstandard2.1
+    displayName: 'dotnet publish fiskaltrust.Middleware.Queue.SQLite'
+    workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.SQLite'
+
+  - task: codesigning@2
+    displayName: 'Code Signing'
+    inputs:
+      secureFileId: 'codesigning.pfx'
+      signCertPassword: '$(Code_Signing_Password)'
+      filePaths: |
+        $(WorkingDirectory)/src/**/*.dll
+        $(WorkingDirectory)/src/**/*fiskaltrust*.exe
+
+  - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
+    displayName: 'dotnet pack fiskaltrust.Middleware.Queue.InMemory'
+    workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.InMemory'
+
+  - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration) /p:NuspecFile=.nuspec
+    displayName: 'dotnet pack fiskaltrust.Middleware.Queue.SQLite'
+    workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.SQLite'
+
+  - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
+    displayName: 'dotnet pack fiskaltrust.Middleware.Queue.EF'
+    workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.EF'
+    
+  - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
+    displayName: 'dotnet pack fiskaltrust.Middleware.Queue.PostgreSQL'
+    workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.PostgreSQL'
+
+  - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
+    displayName: 'dotnet pack fiskaltrust.Middleware.Abstractions'
+    workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Abstractions'
+    
+  - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
+    displayName: 'dotnet pack fiskaltrust.Middleware.Queue.MySQL'
+    workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.MySQL'
+
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish Artifact: drop'
+    inputs:
+      pathToPublish: '$(build.artifactstagingdirectory)'
+      artifactName: packages-v1
+
+
+- job: BuildZipPackages
+  displayName: Build v2 zip packages
+  dependsOn: 
+  - Test
+  - AcceptanceTest
+  condition: and(eq(dependencies.Test.result, 'Succeeded'), in(dependencies.AcceptanceTest.result, 'Succeeded', 'Skipped'))
+  pool:
+    vmImage: $(vmImageName)
+  steps:
+  - task: yavt@1 
+    inputs:
+      mode: 'Multi'
+      updateNuspecFiles: true
+      updateBuildNumber: false
+      semverVersion: 'v1'
+
+  - powershell: |   
+      $nugetFeed = if ($Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/release/") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/master") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/tags")) { "release" } else { "dev" }
+      Write-Host "##vso[task.setvariable variable=NuGetFeed;]$nugetFeed"
+    displayName: Set NuGet feed
+
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: 'restore'
+      projects: '$(WorkingDirectory)/$(Solution)'
+      feedsToUse: 'select'
+      vstsFeed: '$(NuGetFeed)'
+    displayName: 'Restore'
+
+  - task: DotNetCoreCLI@2
+    displayName: Build
+    inputs:
+      projects: '$(WorkingDirectory)/$(Solution)'
+      arguments: '--configuration $(BuildConfiguration) --no-restore'
+
+  - task: codesigning@2
+    displayName: 'Code Signing'
+    inputs:
+      secureFileId: 'codesigning.pfx'
+      signCertPassword: '$(Code_Signing_Password)'
+      filePaths: |
+        $(WorkingDirectory)/src/**/*fiskaltrust*.dll
+        $(WorkingDirectory)/src/**/*fiskaltrust*.exe
+
+  - script: |
+      $packageName = "fiskaltrust.Middleware.Queue.InMemory"
+      $version = ((Get-Content "version.json" -Raw) | ConvertFrom-Json).version
+      dotnet publish --configuration $(buildConfiguration) -f net6 --output $(Build.ArtifactStagingDirectory)/raw/$packageName --no-build /p:DebugType=None /p:DebugSymbols=false
+      Compress-Archive -Path $(Build.ArtifactStagingDirectory)/raw/$packageName/* -DestinationPath $(Build.ArtifactStagingDirectory)/packages/$packageName$version.zip
+    displayName: 'Publish fiskaltrust.Middleware.Queue.InMemory'
+    workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.InMemory'
+
+  - script: |
+      $packageName = "fiskaltrust.Middleware.Queue.SQLite"
+      $version = ((Get-Content "version.json" -Raw) | ConvertFrom-Json).version
+      dotnet publish --configuration $(buildConfiguration) -f net6 --output $(Build.ArtifactStagingDirectory)/raw/$packageName --no-build /p:DebugType=None /p:DebugSymbols=false
+      Compress-Archive -Path $(Build.ArtifactStagingDirectory)/raw/$packageName/* -DestinationPath $(Build.ArtifactStagingDirectory)/packages/$packageName$version.zip
+    displayName: 'Publish fiskaltrust.Middleware.Queue.SQLite'
+    workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.SQLite'
+
+  - script: |
+      $packageName = "fiskaltrust.Middleware.Queue.PostgreSQL"
+      $version = ((Get-Content "version.json" -Raw) | ConvertFrom-Json).version
+      dotnet publish --configuration $(buildConfiguration) -f net6 --output $(Build.ArtifactStagingDirectory)/raw/$packageName --no-build /p:DebugType=None /p:DebugSymbols=false
+      Compress-Archive -Path $(Build.ArtifactStagingDirectory)/raw/$packageName/* -DestinationPath $(Build.ArtifactStagingDirectory)/packages/$packageName$version.zip
+    displayName: 'Publish fiskaltrust.Middleware.Queue.PostgreSQL'
+    workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.PostgreSQL'
+
+  - script: |
+      $packageName = "fiskaltrust.Middleware.Queue.MySQL"
+      $version = ((Get-Content "version.json" -Raw) | ConvertFrom-Json).version
+      dotnet publish --configuration $(buildConfiguration) -f net6 --output $(Build.ArtifactStagingDirectory)/raw/$packageName --no-build /p:DebugType=None /p:DebugSymbols=false
+      Compress-Archive -Path $(Build.ArtifactStagingDirectory)/raw/$packageName/* -DestinationPath $(Build.ArtifactStagingDirectory)/packages/$packageName$version.zip
+    displayName: 'Publish fiskaltrust.Middleware.Queue.MySQL'
+    workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.MySQL'
+
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish Artifact: packages'
+    inputs:
+      pathToPublish: '$(build.artifactstagingdirectory)/packages'
+      artifactName: packages-v2
