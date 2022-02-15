@@ -45,7 +45,7 @@ steps:
 
 - powershell: |
     $packageName = "fiskaltrust.Middleware.Queue.InMemory"
-    $version = ((Get-Content "version.json" -Raw) | ConvertFrom-Json).version
+    $version = (Select-Xml -Path ./Directory.Build.props -XPath 'Project/PropertyGroup/Version').Node.InnerText
     dotnet publish --configuration $(buildConfiguration) -f net6 --output $(Build.ArtifactStagingDirectory)/raw/$packageName --no-build /p:DebugType=None /p:DebugSymbols=false
     Compress-Archive -Path $(Build.ArtifactStagingDirectory)/raw/$packageName/* -DestinationPath $(Build.ArtifactStagingDirectory)/packages/$packageName$version.zip
   displayName: 'Publish fiskaltrust.Middleware.Queue.InMemory'
@@ -53,7 +53,7 @@ steps:
 
 - powershell: |
     $packageName = "fiskaltrust.Middleware.Queue.SQLite"
-    $version = ((Get-Content "version.json" -Raw) | ConvertFrom-Json).version
+    $version = (Select-Xml -Path ./Directory.Build.props -XPath 'Project/PropertyGroup/Version').Node.InnerText
     dotnet publish --configuration $(buildConfiguration) -f net6 --output $(Build.ArtifactStagingDirectory)/raw/$packageName --no-build /p:DebugType=None /p:DebugSymbols=false
     Compress-Archive -Path $(Build.ArtifactStagingDirectory)/raw/$packageName/* -DestinationPath $(Build.ArtifactStagingDirectory)/packages/$packageName$version.zip
   displayName: 'Publish fiskaltrust.Middleware.Queue.SQLite'
@@ -61,7 +61,7 @@ steps:
 
 - powershell: |
     $packageName = "fiskaltrust.Middleware.Queue.PostgreSQL"
-    $version = ((Get-Content "version.json" -Raw) | ConvertFrom-Json).version
+    $version = (Select-Xml -Path ./Directory.Build.props -XPath 'Project/PropertyGroup/Version').Node.InnerText
     dotnet publish --configuration $(buildConfiguration) -f net6 --output $(Build.ArtifactStagingDirectory)/raw/$packageName --no-build /p:DebugType=None /p:DebugSymbols=false
     Compress-Archive -Path $(Build.ArtifactStagingDirectory)/raw/$packageName/* -DestinationPath $(Build.ArtifactStagingDirectory)/packages/$packageName$version.zip
   displayName: 'Publish fiskaltrust.Middleware.Queue.PostgreSQL'
@@ -69,7 +69,7 @@ steps:
 
 - powershell: |
     $packageName = "fiskaltrust.Middleware.Queue.MySQL"
-    $version = ((Get-Content "version.json" -Raw) | ConvertFrom-Json).version
+    $version = (Select-Xml -Path ./Directory.Build.props -XPath 'Project/PropertyGroup/Version').Node.InnerText
     dotnet publish --configuration $(buildConfiguration) -f net6 --output $(Build.ArtifactStagingDirectory)/raw/$packageName --no-build /p:DebugType=None /p:DebugSymbols=false
     Compress-Archive -Path $(Build.ArtifactStagingDirectory)/raw/$packageName/* -DestinationPath $(Build.ArtifactStagingDirectory)/packages/$packageName$version.zip
   displayName: 'Publish fiskaltrust.Middleware.Queue.MySQL'
