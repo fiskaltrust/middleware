@@ -8,7 +8,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Extensions
     {
         public static string GetDirectoryPath(this Assembly assembly)
         {
-            var filePath = new Uri(assembly.CodeBase).LocalPath;
+            var filePath = new Uri(assembly.Location).LocalPath;
             return Path.GetDirectoryName(filePath);
         }
     }

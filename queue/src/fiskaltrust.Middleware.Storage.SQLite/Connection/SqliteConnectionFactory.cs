@@ -7,7 +7,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Connection
     {
         private bool _disposed = false;
 
-#if NETSTANDARD
+#if NETSTANDARD || NET6_0_OR_GREATER
         private Microsoft.Data.Sqlite.SqliteConnection _sqliteConnection;
 #else
         private System.Data.SQLite.SQLiteConnection _sqliteConnection;
@@ -15,7 +15,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Connection
 
         public string BuildConnectionString(string path)
         {
-#if NETSTANDARD
+#if NETSTANDARD || NET6_0_OR_GREATER
             var builder = new Microsoft.Data.Sqlite.SqliteConnectionStringBuilder
             {
                 DataSource = path
@@ -33,7 +33,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Connection
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0022:Use expression body for methods")]
         public IDbConnection GetConnection(string connectionString)
         {
-#if NETSTANDARD
+#if NETSTANDARD || NET6_0_OR_GREATER
             if (_sqliteConnection == null)
             {
                 _sqliteConnection = new Microsoft.Data.Sqlite.SqliteConnection(connectionString);
@@ -51,7 +51,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Connection
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0022:Use expression body for methods")]
         public IDbConnection GetNewConnection(string connectionString)
         {
-#if NETSTANDARD
+#if NETSTANDARD || NET6_0_OR_GREATER
             return new Microsoft.Data.Sqlite.SqliteConnection(connectionString);
 #else
             return new System.Data.SQLite.SQLiteConnection(connectionString);
@@ -70,7 +70,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Connection
             {
                 if (disposing)
                 {
-#if NETSTANDARD
+#if NETSTANDARD || NET6_0_OR_GREATER
                     if (_sqliteConnection != null)
                     {
                         _sqliteConnection.Dispose();

@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <Description>The fiskaltrust Middleware Queue with an in-memory storage provider.e. Data is not persisted - for testing purposes only.</Description>
-        <TargetFrameworks>netstandard2.0;net461</TargetFrameworks>
+        <TargetFrameworks>netstandard2.0;net461;net6</TargetFrameworks>
         <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);CopyProjectReferencesToPackage</TargetsForTfmSpecificBuildOutput>
     </PropertyGroup>
 
@@ -23,11 +23,11 @@
         <PackageReference Include="fiskaltrust.Exports.TAR" Version="1.1.0" />
     </ItemGroup>
 
-    <ItemGroup Condition="'$(TargetFramework)' != 'netstandard2.0'">
+    <ItemGroup Condition="'$(TargetFramework)' == 'net461'">
         <PackageReference Include="BouncyCastle" version="1.7.0" />
     </ItemGroup>
 
-    <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+    <ItemGroup Condition="'$(TargetFramework)' != 'net461'">
         <PackageReference Include="Portable.BouncyCastle" version="1.8.1.2" />
     </ItemGroup>
 
