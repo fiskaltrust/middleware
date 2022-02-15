@@ -30,7 +30,7 @@ namespace fiskaltrust.Middleware.Storage.MySQL.IntegrationTest
             var dbName = queueId.ToString().Replace("-", string.Empty);
 
             var connectionString = Environment.GetEnvironmentVariable("CONNECTIONSTRING_MYSQL_TESTS");
-            queueConfiguration["connectionstring"] = Encryption.Encrypt(Encoding.UTF8.GetBytes(connectionString), queueId.ToByteArray());
+            queueConfiguration["connectionstring"] = Convert.ToBase64String(Encryption.Encrypt(Encoding.UTF8.GetBytes(connectionString), queueId.ToByteArray()));
             
             try
             {
