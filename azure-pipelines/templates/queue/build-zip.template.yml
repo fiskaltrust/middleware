@@ -43,7 +43,7 @@ steps:
       $(WorkingDirectory)/src/**/*fiskaltrust*.dll
       $(WorkingDirectory)/src/**/*fiskaltrust*.exe
 
-- script: |
+- powershell: |
     $packageName = "fiskaltrust.Middleware.Queue.InMemory"
     $version = ((Get-Content "version.json" -Raw) | ConvertFrom-Json).version
     dotnet publish --configuration $(buildConfiguration) -f net6 --output $(Build.ArtifactStagingDirectory)/raw/$packageName --no-build /p:DebugType=None /p:DebugSymbols=false
@@ -51,7 +51,7 @@ steps:
   displayName: 'Publish fiskaltrust.Middleware.Queue.InMemory'
   workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.InMemory'
 
-- script: |
+- powershell: |
     $packageName = "fiskaltrust.Middleware.Queue.SQLite"
     $version = ((Get-Content "version.json" -Raw) | ConvertFrom-Json).version
     dotnet publish --configuration $(buildConfiguration) -f net6 --output $(Build.ArtifactStagingDirectory)/raw/$packageName --no-build /p:DebugType=None /p:DebugSymbols=false
@@ -59,7 +59,7 @@ steps:
   displayName: 'Publish fiskaltrust.Middleware.Queue.SQLite'
   workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.SQLite'
 
-- script: |
+- powershell: |
     $packageName = "fiskaltrust.Middleware.Queue.PostgreSQL"
     $version = ((Get-Content "version.json" -Raw) | ConvertFrom-Json).version
     dotnet publish --configuration $(buildConfiguration) -f net6 --output $(Build.ArtifactStagingDirectory)/raw/$packageName --no-build /p:DebugType=None /p:DebugSymbols=false
@@ -67,7 +67,7 @@ steps:
   displayName: 'Publish fiskaltrust.Middleware.Queue.PostgreSQL'
   workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.PostgreSQL'
 
-- script: |
+- powershell: |
     $packageName = "fiskaltrust.Middleware.Queue.MySQL"
     $version = ((Get-Content "version.json" -Raw) | ConvertFrom-Json).version
     dotnet publish --configuration $(buildConfiguration) -f net6 --output $(Build.ArtifactStagingDirectory)/raw/$packageName --no-build /p:DebugType=None /p:DebugSymbols=false
