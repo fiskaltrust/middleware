@@ -7,6 +7,16 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="xunit.runner.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="xunit.runner.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\fiskaltrust.Middleware.Storage.MySQL\fiskaltrust.Middleware.Storage.MySQL.csproj" />
     <ProjectReference Include="..\fiskaltrust.Middleware.Storage.AcceptanceTest\fiskaltrust.Middleware.Storage.AcceptanceTest.csproj" />
   </ItemGroup>
