@@ -42,11 +42,11 @@ jobs:
 
   - task: Cache@2
     inputs:
-      key: 'nuget | "$(Agent.OS)" | **/*.csproj'
+      key: 'nuget | "$(Agent.OS)" | queue/**/*.csproj'
       restoreKeys: |
         nuget | "$(Agent.OS)"
         nuget
-      path: $(Pipeline.Workspace)/.nuget/packages
+      path: $(UserProfile)/.nuget/packages
     displayName: Cache NuGet packages
 
   - task: DotNetCoreCLI@2
@@ -128,11 +128,11 @@ jobs:
 
   - task: Cache@2
     inputs:
-      key: 'nuget | "$(Agent.OS)" | **/*.csproj'
+      key: 'nuget | "$(Agent.OS)" | queue/**/*.csproj'
       restoreKeys: |
         nuget | "$(Agent.OS)"
         nuget
-      path: $(Pipeline.Workspace)/.nuget/packages
+      path: $(UserProfile)/.nuget/packages
     displayName: Cache NuGet packages
     
   - task: DotNetCoreCLI@2
@@ -194,11 +194,11 @@ jobs:
     
   - task: Cache@2
     inputs:
-      key: 'nuget | "$(Agent.OS)" | **/*.csproj'
+      key: 'nuget | "$(Agent.OS)" | queue/**/*.csproj'
       restoreKeys: |
         nuget | "$(Agent.OS)"
         nuget
-      path: $(Pipeline.Workspace)/.nuget/packages
+      path: $(UserProfile)/.nuget/packages
     displayName: Cache NuGet packages
 
   - task: DotNetCoreCLI@2
@@ -293,11 +293,11 @@ jobs:
     
   - task: Cache@2
     inputs:
-      key: 'nuget | "$(Agent.OS)" | **/*.csproj'
+      key: 'nuget | "$(Agent.OS)" | queue/**/*.csproj'
       restoreKeys: |
         nuget | "$(Agent.OS)"
         nuget
-      path: $(Pipeline.Workspace)/.nuget/packages
+      path: $(UserProfile)/.nuget/packages
     displayName: Cache NuGet packages
 
   - task: DotNetCoreCLI@2
