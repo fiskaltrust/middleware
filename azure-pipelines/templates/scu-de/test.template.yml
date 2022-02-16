@@ -29,18 +29,16 @@ steps:
 - task: DotNetCoreCLI@2
   displayName: Build
   inputs:
-    projects: $(Solution)
+    projects: '$(WorkingDirectory)/$(Solution)'
     arguments: '--configuration $(BuildConfiguration)'
-    workingDirectory: '$(WorkingDirectory)'
 
 - task: DotNetCoreCLI@2
   inputs:
     command: 'test'
     projects: |
-      **/*.UnitTest.csproj
+      $(WorkingDirectory)/**/*.UnitTest.csproj
     arguments: '--configuration $(BuildConfiguration) --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:Include=[fiskaltrust.*]*'
     nobuild: true
-    workingDirectory: '$(WorkingDirectory)'
   displayName: 'Run unit tests'   
 
 - script: |

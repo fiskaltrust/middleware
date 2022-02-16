@@ -29,9 +29,8 @@ steps:
 - task: DotNetCoreCLI@2
   displayName: Build
   inputs:
-    projects: $(Solution)
+    projects: '$(WorkingDirectory)/$(Solution)'
     arguments: '--configuration $(BuildConfiguration)'
-    workingDirectory: '$(WorkingDirectory)'
 
 - task: codesigning@2
   displayName: 'Code Signing'
