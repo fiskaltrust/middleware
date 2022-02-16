@@ -818,7 +818,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to execute {Operation} - TempFileName: {TempFileName}", nameof(CacheExportAsync), exportId.ToString(), clientId);
+                    _logger.LogError(ex, "Failed to execute {Operation} - TempFileName: {TempFileName}, ClientId: {ClientId}", nameof(CacheExportAsync), exportId.ToString(), clientId);
                     SetExportState(exportId, ExportState.Failed, ex);
                 }
             });

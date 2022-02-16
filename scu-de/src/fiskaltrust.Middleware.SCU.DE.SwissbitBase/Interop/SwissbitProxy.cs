@@ -13,6 +13,9 @@ using fiskaltrust.Middleware.SCU.DE.SwissbitBase.Helpers;
 using Microsoft.Extensions.Logging;
 using static fiskaltrust.Middleware.SCU.DE.Swissbit.Interop.NativeFunctionPointer;
 
+// IntPtr might be null in < NET6
+#pragma warning disable CS8073 // The result of the expression is always the same since a value of this type is never equal to 'null'
+
 namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
 {
     public class SwissbitProxy : ISwissbitProxy, IDisposable
