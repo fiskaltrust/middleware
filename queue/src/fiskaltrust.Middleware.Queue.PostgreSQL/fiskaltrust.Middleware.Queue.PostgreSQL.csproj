@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <Description>The fiskaltrust Middleware Queue with an PostgreSQL storage provider.</Description>
-        <TargetFrameworks>net5.0</TargetFrameworks>
+        <TargetFrameworks>net5.0;net6</TargetFrameworks>
         <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);CopyProjectReferencesToPackage</TargetsForTfmSpecificBuildOutput>
     </PropertyGroup>
 
