@@ -20,141 +20,34 @@ variables:
 - name: Solution
   value: 'fiskaltrust.Middleware.SCU.DE.sln'
 - name: vmImageName 
-  value: 'windows-latest'
+  value: 'windows-2022'
 - name: WorkingDirectory
   value: 'scu-de'
 
-stages:
-- stage: Build
-  displayName: Build stage
-  jobs:  
-  - job: Build
-    displayName: Build job
-    pool:
-      vmImage: $(vmImageName)
-    steps:    
-    - script: |
-        dotnet tool install --tool-path tools dotnet-reportgenerator-globaltool
-      displayName: Install report generator
-      workingDirectory: '/'
+jobs:  
+- job: Test
+  displayName: Unit and integration tests
+  pool:
+    vmImage: $(vmImageName)
+  steps:
+  - template: templates/scu-de/test.template.yml
 
-    - task: yavt@1
-      inputs:
-        mode: 'Multi'
-        semverVersion: 'v1'
+- job: BuildNugetPackages
+  displayName: Build v1 NuGet packages
+  dependsOn: 
+  - Test
+  condition: succeeded()
+  pool:
+    vmImage: $(vmImageName)
+  steps:
+  - template: templates/scu-de/build-nuget.template.yml
 
-    - powershell: |   
-        $nugetFeed = if ($Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/release/") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/master") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/tags/")) { "release" } else { "dev" }
-        Write-Host "##vso[task.setvariable variable=NuGetFeed;]$nugetFeed"
-      displayName: Set NuGet feed
-
-    - task: DotNetCoreCLI@2
-      inputs:
-        command: 'restore'
-        projects: '$(WorkingDirectory)/$(Solution)'
-        vstsFeed: $(NuGetFeed)
-        arguments: '--configuration $(BuildConfiguration)'
-      displayName: 'Restore'
-
-    - task: DotNetCoreCLI@2
-      displayName: Build
-      inputs:
-        projects: $(Solution)
-        arguments: '--configuration $(BuildConfiguration)'
-        workingDirectory: '$(WorkingDirectory)'
-
-    - task: DotNetCoreCLI@2
-      inputs:
-        command: 'test'
-        projects: |
-          **/*.UnitTest.csproj
-        arguments: '--configuration $(BuildConfiguration) --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:Include=[fiskaltrust.*]*'
-        nobuild: true
-        workingDirectory: '$(WorkingDirectory)'
-      displayName: 'Run unit tests'   
-
-    - task: DotNetCoreCLI@2
-      inputs:
-        command: 'test'
-        projects: |
-          **/*.IntegrationTest.csproj
-          !**/*.DeutscheFiskal.IntegrationTest.csproj
-          !**/*.DieboldNixdorf.IntegrationTest.csproj
-          !**/*.SwissbitCloud.IntegrationTest.csproj
-          !**/*.CryptoVision.IntegrationTest.csproj
-          !**/*.Swissbit.IntegrationTest.csproj
-          !**/*.Epson.IntegrationTest.csproj
-          !**/*.ATrust.IntegrationTest.csproj
-        arguments: '--filter "(os=windows&tse-hardware=none)|TseCategory=Cloud" --configuration $(BuildConfiguration) --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:Include=[fiskaltrust.*]*'
-        nobuild: true
-        workingDirectory: '$(WorkingDirectory)'
-      displayName: 'Run integration tests'
-      continueOnError: true
-
-    - task: DotNetCoreCLI@2
-      inputs:
-        command: 'test'
-        projects: '**/*.AcceptanceTest.csproj'
-        arguments: '--filter "(os=windows&tse-hardware=none)|TseCategory=Cloud" --configuration $(BuildConfiguration) /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:Include=[fiskaltrust.*]*'
-        nobuild: true
-        workingDirectory: '$(WorkingDirectory)'
-      displayName: 'Run acceptance tests'   
-      continueOnError: true
-
-    - task: codesigning@2
-      displayName: 'Code Signing'
-      inputs:
-        secureFileId: 'codesigning.pfx'
-        signCertPassword: '$(Code_Signing_Password)'
-        filePaths: |
-         $(WorkingDirectory)/src/**/*fiskaltrust*.dll
-         $(WorkingDirectory)/src/**/*fiskaltrust*.exe
-
-    - script: |
-        /tools/reportgenerator -reports:$(Build.SourcesDirectory)/$(WorkingDirectory)/test/**/*.opencover.xml -targetdir:$(Build.SourcesDirectory)/$(WorkingDirectory)/CodeCoverage -reporttypes:"Cobertura;HTMLInline;HTMLChart"
-      displayName: Create Code coverage report
-      workingDirectory: '/'
-
-    - task: PublishCodeCoverageResults@1
-      displayName: 'Publish code coverage'
-      inputs:
-        codeCoverageTool: Cobertura
-        summaryFileLocation: '$(Build.SourcesDirectory)/$(WorkingDirectory)/CodeCoverage/Cobertura.xml'
-        reportDirectory: '$(Build.SourcesDirectory)/$(WorkingDirectory)/CodeCoverage'
-
-    - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration) /p:NuspecFile=.nuspec
-      displayName: 'dotnet pack fiskaltrust.Middleware.SCU.DE.CryptoVision'
-      workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.CryptoVision'
-
-    - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
-      displayName: 'dotnet pack fiskaltrust.Middleware.SCU.DE.DieboldNixdorf'
-      workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.DieboldNixdorf'
-
-    - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
-      displayName: 'dotnet pack fiskaltrust.Middleware.SCU.DE.Epson'
-      workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.Epson'
-
-    - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
-      displayName: 'dotnet pack fiskaltrust.Middleware.SCU.DE.FiskalyCertified'
-      workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.FiskalyCertified'
-
-    - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration) /p:NuspecFile=.nuspec
-      displayName: 'dotnet pack fiskaltrust.Middleware.SCU.DE.Swissbit'
-      workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.Swissbit'
-
-    - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
-      displayName: 'dotnet pack fiskaltrust.Middleware.SCU.DE.DeutscheFiskal'
-      workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.DeutscheFiskal'
-
-    - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
-      displayName: 'dotnet pack fiskaltrust.Middleware.SCU.DE.SwissbitCloud'
-      workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.SwissbitCloud'
-      
-    - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
-      displayName: 'dotnet pack fiskaltrust.Middleware.SCU.DE.InMemory'
-      workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.InMemory'
-
-    - task: PublishBuildArtifacts@1
-      displayName: 'Publish Artifact: drop'
-      inputs:
-        PathtoPublish: '$(build.artifactstagingdirectory)'
+- job: BuildZipPackages
+  displayName: Build v2 zip packages
+  dependsOn: 
+  - Test
+  condition: succeeded()
+  pool:
+    vmImage: $(vmImageName)
+  steps:
+  - template: templates/scu-de/build-zip.template.yml

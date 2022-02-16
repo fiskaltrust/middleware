@@ -11,14 +11,6 @@ steps:
     Write-Host "##vso[task.setvariable variable=NuGetFeed;]$nugetFeed"
   displayName: Set NuGet feed
 
-- task: DotNetCoreCLI@2
-  inputs:
-    command: 'restore'
-    projects: '$(WorkingDirectory)/$(Solution)'
-    feedsToUse: 'select'
-    vstsFeed: '$(NuGetFeed)'
-  displayName: 'Restore'
-  
 - task: Cache@2
   inputs:
     key: 'nuget | "$(Agent.OS)" | queue/**/*.csproj'
@@ -28,6 +20,14 @@ steps:
     path: $(UserProfile)/.nuget/packages
   displayName: Cache NuGet packages
 
+- task: DotNetCoreCLI@2
+  inputs:
+    command: 'restore'
+    projects: '$(WorkingDirectory)/$(Solution)'
+    feedsToUse: 'select'
+    vstsFeed: '$(NuGetFeed)'
+  displayName: 'Restore'
+  
 - task: DotNetCoreCLI@2
   displayName: Build
   inputs:
@@ -45,11 +45,13 @@ steps:
 
 - powershell: |
     mkdir $(Build.ArtifactStagingDirectory)/packages/
+  displayName: Create target directory
 
+- powershell: |
     $packageName = "fiskaltrust.Middleware.Queue.InMemory"
     $version = (Select-Xml -Path ./Directory.Build.props -XPath 'Project/PropertyGroup/Version').Node.InnerText
     dotnet publish --configuration $(buildConfiguration) -f net6 --output $(Build.ArtifactStagingDirectory)/raw/$packageName --no-build /p:DebugType=None /p:DebugSymbols=false
-    Compress-Archive -Path $(Build.ArtifactStagingDirectory)/raw/$packageName/* -DestinationPath $(Build.ArtifactStagingDirectory)/packages/$packageName$version.zip
+    Compress-Archive -Path $(Build.ArtifactStagingDirectory)/raw/$packageName/* -DestinationPath $(Build.ArtifactStagingDirectory)/packages/$packageName.$version.zip
   displayName: 'Publish fiskaltrust.Middleware.Queue.InMemory'
   workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.InMemory'
 
@@ -57,7 +59,7 @@ steps:
     $packageName = "fiskaltrust.Middleware.Queue.SQLite"
     $version = (Select-Xml -Path ./Directory.Build.props -XPath 'Project/PropertyGroup/Version').Node.InnerText
     dotnet publish --configuration $(buildConfiguration) -f net6 --output $(Build.ArtifactStagingDirectory)/raw/$packageName --no-build /p:DebugType=None /p:DebugSymbols=false
-    Compress-Archive -Path $(Build.ArtifactStagingDirectory)/raw/$packageName/* -DestinationPath $(Build.ArtifactStagingDirectory)/packages/$packageName$version.zip
+    Compress-Archive -Path $(Build.ArtifactStagingDirectory)/raw/$packageName/* -DestinationPath $(Build.ArtifactStagingDirectory)/packages/$packageName.$version.zip
   displayName: 'Publish fiskaltrust.Middleware.Queue.SQLite'
   workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.SQLite'
 
@@ -65,7 +67,7 @@ steps:
     $packageName = "fiskaltrust.Middleware.Queue.PostgreSQL"
     $version = (Select-Xml -Path ./Directory.Build.props -XPath 'Project/PropertyGroup/Version').Node.InnerText
     dotnet publish --configuration $(buildConfiguration) -f net6 --output $(Build.ArtifactStagingDirectory)/raw/$packageName --no-build /p:DebugType=None /p:DebugSymbols=false
-    Compress-Archive -Path $(Build.ArtifactStagingDirectory)/raw/$packageName/* -DestinationPath $(Build.ArtifactStagingDirectory)/packages/$packageName$version.zip
+    Compress-Archive -Path $(Build.ArtifactStagingDirectory)/raw/$packageName/* -DestinationPath $(Build.ArtifactStagingDirectory)/packages/$packageName.$version.zip
   displayName: 'Publish fiskaltrust.Middleware.Queue.PostgreSQL'
   workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.PostgreSQL'
 
@@ -73,7 +75,7 @@ steps:
     $packageName = "fiskaltrust.Middleware.Queue.MySQL"
     $version = (Select-Xml -Path ./Directory.Build.props -XPath 'Project/PropertyGroup/Version').Node.InnerText
     dotnet publish --configuration $(buildConfiguration) -f net6 --output $(Build.ArtifactStagingDirectory)/raw/$packageName --no-build /p:DebugType=None /p:DebugSymbols=false
-    Compress-Archive -Path $(Build.ArtifactStagingDirectory)/raw/$packageName/* -DestinationPath $(Build.ArtifactStagingDirectory)/packages/$packageName$version.zip
+    Compress-Archive -Path $(Build.ArtifactStagingDirectory)/raw/$packageName/* -DestinationPath $(Build.ArtifactStagingDirectory)/packages/$packageName.$version.zip
   displayName: 'Publish fiskaltrust.Middleware.Queue.MySQL'
   workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.MySQL'
 
