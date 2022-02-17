@@ -1,6 +1,7 @@
 {
   "version": "1.3.21",
   "releaseBranches": [
+    "^refs/heads/main$",
     "^refs/heads/release/inmemory/\\d+(?:\\.\\d+)*(?:-.*)?$",
     "^refs/tags/inmemory/v\\d+(?:\\.\\d+)*(?:-.*)?$"
   ]

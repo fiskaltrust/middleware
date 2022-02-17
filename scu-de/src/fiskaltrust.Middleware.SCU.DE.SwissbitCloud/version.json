@@ -1,6 +1,7 @@
 {
   "version": "1.3.27",
   "releaseBranches": [
+    "^refs/heads/main$",
     "^refs/heads/release/swissbitcloud/\\d+(?:\\.\\d+)*(?:-.*)?$",
     "^refs/tags/swissbitcloud/v\\d+(?:\\.\\d+)*(?:-.*)?$"
   ]

@@ -1,6 +1,7 @@
 {
   "version": "1.3.27",
   "releaseBranches": [
+    "^refs/heads/main$",
     "^refs/heads/release/deutschefiskal/\\d+(?:\\.\\d+)*(?:-.*)?$",
     "^refs/tags/deutschefiskal/v\\d+(?:\\.\\d+)*(?:-.*)?$"
   ]
