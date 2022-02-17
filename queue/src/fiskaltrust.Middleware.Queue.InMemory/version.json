@@ -1,7 +1,7 @@
 {
   "version": "1.3.28",
   "releaseBranches": [
-    "^refs/heads/master$",
+    "^refs/heads/main$",
     "^refs/heads/release/\\d+(?:\\.\\d+)*(?:-.*)?$",
     "^refs/tags/inmemory/v\\d+(?:\\.\\d+)*(?:-.*)?$"
   ]
