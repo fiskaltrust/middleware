@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
-using System.IO.Compression;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.de;
@@ -71,25 +69,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             }
 
             return await command.ExecuteAsync(queue, queueDE, client, request, queueItem);
-        }
-
-
-        public static byte[] Compress(string sourcePath)
-        {
-            if (sourcePath == null)
-            {
-                throw new ArgumentNullException(nameof(sourcePath));
-            }
-
-            using (var ms = new MemoryStream())
-            {
-                using (var arch = new ZipArchive(ms, ZipArchiveMode.Create))
-                {
-                    arch.CreateEntryFromFile(sourcePath, Path.GetFileName(sourcePath), CompressionLevel.Optimal);
-                }
-
-                return ms.ToArray();
-            }
         }
     }
 }

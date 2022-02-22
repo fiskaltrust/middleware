@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
@@ -96,7 +96,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                     var journalDE = new ftJournalDE
                     {
                         ftJournalDEId = Guid.NewGuid(),
-                        FileContentBase64 = Convert.ToBase64String(SignProcessorDE.Compress(filePath)),
+                        FileContentBase64 = Convert.ToBase64String(Compress(filePath)),
                         FileExtension = ".zip",
                         FileName = Path.GetFileNameWithoutExtension(filePath),
                         ftQueueId = queueItem.ftQueueId,
@@ -110,9 +110,9 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                     if (journalDE.ftJournalDEId == dbJournalDE.ftJournalDEId && journalDE.GetHashCode() == dbJournalDE?.GetHashCode())
                     {
                         var storeTemporaryExportFiles = false;
-                        if (_middlewareConfiguration.Configuration.ContainsKey(JournalProcessorDE.STORE_TEMPORARY_FILES_KEY))
+                        if (_middlewareConfiguration.Configuration.ContainsKey(ConfigurationKeys.STORE_TEMPORARY_FILES_KEY))
                         {
-                            storeTemporaryExportFiles = bool.TryParse(_middlewareConfiguration.Configuration[JournalProcessorDE.STORE_TEMPORARY_FILES_KEY].ToString(), out var val) && val;
+                            storeTemporaryExportFiles = bool.TryParse(_middlewareConfiguration.Configuration[ConfigurationKeys.STORE_TEMPORARY_FILES_KEY].ToString(), out var val) && val;
                         }
 
                         if (!storeTemporaryExportFiles && File.Exists(filePath))
@@ -359,6 +359,24 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 {
                     await client.SetTseStateAsync(new TseState { CurrentState = TseStates.Terminated }).ConfigureAwait(false);
                 }
+            }
+        }
+
+        public static byte[] Compress(string sourcePath)
+        {
+            if (sourcePath == null)
+            {
+                throw new ArgumentNullException(nameof(sourcePath));
+            }
+
+            using (var ms = new MemoryStream())
+            {
+                using (var arch = new ZipArchive(ms, ZipArchiveMode.Create))
+                {
+                    arch.CreateEntryFromFile(sourcePath, Path.GetFileName(sourcePath), CompressionLevel.Optimal);
+                }
+
+                return ms.ToArray();
             }
         }
     }
