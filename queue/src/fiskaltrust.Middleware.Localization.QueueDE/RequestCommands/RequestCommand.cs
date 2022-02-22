@@ -105,15 +105,24 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                     };
                     await _journalDERepository.InsertAsync(journalDE).ConfigureAwait(false);
 
-                    var storeTemporaryExportFiles = false;
-                    if (_middlewareConfiguration.Configuration.ContainsKey(JournalProcessorDE.STORE_TEMPORARY_FILES_KEY))
-                    {
-                        storeTemporaryExportFiles = bool.TryParse(_middlewareConfiguration.Configuration[STORE_TEMPORARY_FILES_KEY].ToString(), out var val) && val;
-                    }
+                    var dbJournalDE = await _journalDERepository.GetAsync(journalDE.ftJournalDEId).ConfigureAwait(false);
 
-                    if (!storeTemporaryExportFiles && File.Exists(filePath))
+                    if (journalDE.ftJournalDEId == dbJournalDE.ftJournalDEId && journalDE.GetHashCode() == dbJournalDE?.GetHashCode())
                     {
-                        File.Delete(filePath);
+                        var storeTemporaryExportFiles = false;
+                        if (_middlewareConfiguration.Configuration.ContainsKey(JournalProcessorDE.STORE_TEMPORARY_FILES_KEY))
+                        {
+                            storeTemporaryExportFiles = bool.TryParse(_middlewareConfiguration.Configuration[JournalProcessorDE.STORE_TEMPORARY_FILES_KEY].ToString(), out var val) && val;
+                        }
+
+                        if (!storeTemporaryExportFiles && File.Exists(filePath))
+                        {
+                            File.Delete(filePath);
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Failed to insert Tar export into database. Tar export file can be found here {file}", filePath);
                     }
                 }
                 else
