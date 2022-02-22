@@ -39,7 +39,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
         private readonly IMiddlewareRepository<ftJournalDE> _middlewareJournalDERepository;
         private readonly IReadOnlyActionJournalRepository _actionJournalRepository;
         private readonly IDESSCDProvider _deSSCDProvider;
-        private readonly MiddlewareConfiguration _configuration;
+        private readonly MiddlewareConfiguration _middlewareConfiguration;
         private readonly IMasterDataService _masterDataService;
         private readonly IMiddlewareQueueItemRepository _middlewareQueueItemRepository;
 
@@ -55,7 +55,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             IMiddlewareRepository<ftJournalDE> middlewareJournalDERepository,
             IReadOnlyActionJournalRepository actionJournalRepository,
             IDESSCDProvider deSSCDProvider,
-            MiddlewareConfiguration configuration,
+            MiddlewareConfiguration middlewareConfiguration,
             IMasterDataService masterDataService,
             IMiddlewareQueueItemRepository middlewareQueueItemRepository)
         {
@@ -68,13 +68,13 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             _middlewareJournalDERepository = middlewareJournalDERepository;
             _actionJournalRepository = actionJournalRepository;
             _deSSCDProvider = deSSCDProvider;
-            _configuration = configuration;
+            _middlewareConfiguration = middlewareConfiguration;
             _masterDataService = masterDataService;
             _middlewareQueueItemRepository = middlewareQueueItemRepository;
 
-            if (_configuration.Configuration.ContainsKey(STORE_TEMPORARY_FILES_KEY))
+            if (_middlewareConfiguration.Configuration.ContainsKey(STORE_TEMPORARY_FILES_KEY))
             {
-                _storeTemporaryExportFiles = bool.TryParse(_configuration.Configuration[STORE_TEMPORARY_FILES_KEY].ToString(), out var val) && val;
+                _storeTemporaryExportFiles = bool.TryParse(_middlewareConfiguration.Configuration[STORE_TEMPORARY_FILES_KEY].ToString(), out var val) && val;
             }
         }
 
@@ -120,7 +120,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             var journalDERepository = new JournalDERepositoryRangeDecorator(_middlewareJournalDERepository, _journalDERepository, request.From, request.To);
             var archiveRepository = new ArchiveFactory();
 
-            var workingDirectory = Path.Combine(_configuration.ServiceFolder, "Exports", _configuration.QueueId.ToString(), "TAR", DateTime.Now.ToString("yyyyMMddhhmmssfff"));
+            var workingDirectory = Path.Combine(_middlewareConfiguration.ServiceFolder, "Exports", _middlewareConfiguration.QueueId.ToString(), "TAR", DateTime.Now.ToString("yyyyMMddhhmmssfff"));
             Directory.CreateDirectory(workingDirectory);
 
             try
@@ -209,9 +209,9 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
 
             var receiptJournalRepository = new ReceiptJournalRepositoryRangeDecorator(_middlewareReceiptJournalRepository, _receiptJournalRepository, request.From, request.To);
 
-            var queueDE = await _configurationRepository.GetQueueDEAsync(_configuration.QueueId).ConfigureAwait(false);
+            var queueDE = await _configurationRepository.GetQueueDEAsync(_middlewareConfiguration.QueueId).ConfigureAwait(false);
 
-            var workingDirectory = Path.Combine(_configuration.ServiceFolder, "Exports", queueDE.ftQueueDEId.ToString(), "DSFinV-K", DateTime.Now.ToString("yyyyMMddhhmmssfff"));
+            var workingDirectory = Path.Combine(_middlewareConfiguration.ServiceFolder, "Exports", queueDE.ftQueueDEId.ToString(), "DSFinV-K", DateTime.Now.ToString("yyyyMMddhhmmssfff"));
             Directory.CreateDirectory(workingDirectory);
 
             try
