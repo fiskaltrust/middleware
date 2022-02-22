@@ -2,7 +2,6 @@
   "version": "1.3.20",
   "releaseBranches": [
     "^refs/heads/main$",
-    "^refs/heads/release/dibold/\\d+(?:\\.\\d+)*(?:-.*)?$",
-    "^refs/tags/dieboldnixdorf/v\\d+(?:\\.\\d+)*(?:-.*)?$"
+    "^refs/tags/scu-de/dieboldnixdorf/v\\d+(?:\\.\\d+)*(?:-.*)?$"
   ]
 }

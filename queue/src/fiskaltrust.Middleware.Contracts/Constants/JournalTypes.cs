@@ -11,8 +11,8 @@
         JournalDE =             0x0000000000004445,
         JournalFR =             0x0000000000004652,
         QueueDEStatus =         0x4445000000000000,
-        TarFileExport =         0x4445000000000001,
+        TarExportFromTSE =      0x4445000000000001,
         DSFinVKExport =         0x4445000000000002,
-        TarFileRangeExport =    0x4445000000000003,
+        TarExportFromDatabase = 0x4445000000000003,
     }
 }
