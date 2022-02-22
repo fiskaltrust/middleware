@@ -1,10 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.de;
+using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Localization.QueueDE.MasterData;
 using fiskaltrust.Middleware.Localization.QueueDE.Services;
 using fiskaltrust.Middleware.Queue;
@@ -45,7 +47,12 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest
 
             var configurationRepositoryMock = new Mock<IReadOnlyConfigurationRepository>(MockBehavior.Strict);
 
-            var sut = new JournalProcessorDE(Mock.Of<ILogger<JournalProcessorDE>>(), configurationRepositoryMock.Object, null, null, null, null, null, null, deSSCDProviderMock.Object, null, Mock.Of<IMasterDataService>(), null);
+            var mwConfiguration = new MiddlewareConfiguration
+            {
+                Configuration = new Dictionary<string, object>()
+            };
+
+            var sut = new JournalProcessorDE(Mock.Of<ILogger<JournalProcessorDE>>(), configurationRepositoryMock.Object, null, null, null, null, null, null, deSSCDProviderMock.Object, mwConfiguration, Mock.Of<IMasterDataService>(), null);
 
             var chunks = await sut.ProcessAsync(new JournalRequest
             {
