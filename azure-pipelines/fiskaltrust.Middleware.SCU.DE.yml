@@ -12,7 +12,6 @@ trigger:
       - scu-de
 
 pr:
-  batch: true
   branches:
     include:
     - main

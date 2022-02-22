@@ -9,7 +9,6 @@ trigger:
     - refs/tags/*
 
 pr:
-  batch: true
   branches:
     include:
     - main
