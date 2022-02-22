@@ -104,6 +104,17 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                         Number = queue.ftReceiptNumerator + 1
                     };
                     await _journalDERepository.InsertAsync(journalDE).ConfigureAwait(false);
+
+                    var storeTemporaryExportFiles = false;
+                    if (_middlewareConfiguration.Configuration.ContainsKey(JournalProcessorDE.STORE_TEMPORARY_FILES_KEY))
+                    {
+                        storeTemporaryExportFiles = bool.TryParse(_middlewareConfiguration.Configuration[STORE_TEMPORARY_FILES_KEY].ToString(), out var val) && val;
+                    }
+
+                    if (!storeTemporaryExportFiles && File.Exists(filePath))
+                    {
+                        File.Delete(filePath);
+                    }
                 }
                 else
                 {

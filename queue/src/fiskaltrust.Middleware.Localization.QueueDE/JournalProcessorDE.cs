@@ -28,7 +28,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
 {
     public class JournalProcessorDE : IJournalProcessor
     {
-        private const string STORE_TEMPORARY_FILES_KEY = "StoreTemporaryExportFiles";
+        public const string STORE_TEMPORARY_FILES_KEY = "StoreTemporaryExportFiles";
 
         private readonly ILogger<JournalProcessorDE> _logger;
         private readonly IReadOnlyConfigurationRepository _configurationRepository;
