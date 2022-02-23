@@ -43,6 +43,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
         private readonly MiddlewareConfiguration _middlewareConfiguration;
 
         protected string _certificationIdentification = null;
+        protected bool _storeTemporaryExportFiles = false;
 
         public abstract string ReceiptName { get; }
 
@@ -63,6 +64,12 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             _failedFinishTransactionRepo = failedFinishTransactionRepo;
             _openTransactionRepo = openTransactionRepo;
             _transactionFactory = new TransactionFactory(_deSSCDProvider.Instance);
+
+            if (_middlewareConfiguration.Configuration.ContainsKey(ConfigurationKeys.STORE_TEMPORARY_FILES_KEY))
+            {
+                _storeTemporaryExportFiles = bool.TryParse(_middlewareConfiguration.Configuration[ConfigurationKeys.STORE_TEMPORARY_FILES_KEY].ToString(), out var val) && val;
+            }
+
         }
 
         public abstract Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueDE queueDE, IDESSCD client, ReceiptRequest request, ftQueueItem queueItem);
@@ -131,13 +138,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
                     if (uploadSuccess)
                     {
-                        var storeTemporaryExportFiles = false;
-                        if (_middlewareConfiguration.Configuration.ContainsKey(ConfigurationKeys.STORE_TEMPORARY_FILES_KEY))
-                        {
-                            storeTemporaryExportFiles = bool.TryParse(_middlewareConfiguration.Configuration[ConfigurationKeys.STORE_TEMPORARY_FILES_KEY].ToString(), out var val) && val;
-                        }
-
-                        if (!storeTemporaryExportFiles && File.Exists(filePath))
+                        if (!_storeTemporaryExportFiles && File.Exists(filePath))
                         {
                             File.Delete(filePath);
                         }
