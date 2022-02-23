@@ -412,7 +412,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
             try
             {
                 var filePath = GetTempPath(exportId.ToString());
-                await _fccAdminApiProvider.RequestExportAsync(filePath, startDate, endDate, clientId);
+                await _fccAdminApiProvider.RequestExportAsync(exportId, filePath, startDate, endDate, clientId);
                 SetExportState(exportId, ExportState.Succeeded);
             }
             catch (Exception ex)
@@ -558,10 +558,17 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
                             if (request.Erase)
                             {
                                 var exportDetails = GetExportDetails(request.TokenId);
-                                // Necessary because of how the DF handles acknowledging transactions.
-                                // It seems like it's required to go at least one minute back to not return a HTTP 500
-                                var endDate = exportDetails.EndDate.AddMinutes(-1);
-                                await _fccAdminApiProvider.AcknowledgeAllTransactionsAsync(_minExportDateTime, endDate, exportDetails.ClientId);
+                                if (_fccAdminApiProvider.IsSplitExport(Guid.Parse(request.TokenId)))
+                                {
+                                    await _fccAdminApiProvider.AcknowledgeSplitTransactionsAsync(Guid.Parse(request.TokenId), exportDetails.ClientId).ConfigureAwait(false);
+                                }
+                                else
+                                {
+                                    // Necessary because of how the DF handles acknowledging transactions.
+                                    // It seems like it's required to go at least one minute back to not return a HTTP 500
+                                    var endDate = exportDetails.EndDate.AddMinutes(-1);
+                                    await _fccAdminApiProvider.AcknowledgeAllTransactionsAsync(_minExportDateTime, endDate, exportDetails.ClientId);
+                                }
                             }
 
                             return sessionResponse;

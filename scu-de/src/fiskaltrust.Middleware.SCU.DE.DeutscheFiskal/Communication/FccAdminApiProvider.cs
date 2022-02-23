@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -20,6 +21,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Communication
     {
         private readonly DeutscheFiskalSCUConfiguration _configuration;
         private readonly Uri _baseAddress;
+        private readonly ConcurrentDictionary<Guid, List<(DateTime, DateTime)>> _splitExports = new ConcurrentDictionary<Guid, List<(DateTime, DateTime)>>();
 
         public FccAdminApiProvider(DeutscheFiskalSCUConfiguration configuration)
         {
@@ -30,8 +32,8 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Communication
         public async Task<List<ClientResponseDto>> GetClientsAsync()
         {
             using var client = GetBasicAuthAdminClient();
-            var response = await client.GetAsync("clients");
-            var responseContent = await response.Content.ReadAsStringAsync();
+            var response = await client.GetAsync("clients").ConfigureAwait(false);
+            var responseContent = await response.Content.ReadAsStringAsync().ConfigureAwait(false); ;
             if (response.IsSuccessStatusCode)
             {
                 return JsonConvert.DeserializeObject<List<ClientResponseDto>>(responseContent);
@@ -124,7 +126,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Communication
                 (int) response.StatusCode, ErrorHelper.GetErrorType(responseContent), $"GET /export/transactions/{transactionNumber}");
         }
 
-        public async Task RequestExportAsync(string targetFile, DateTime startDate, DateTime endDate, string clientId = null)
+        public async Task RequestExportAsync(Guid exportId, string targetFile, DateTime startDate, DateTime endDate, string clientId = null, bool isSplit = false)
         {
             var url = $"export/transactions/time?startDate={startDate:yyyy-MM-dd'T'HH:mm:ss'Z'}&endDate={endDate:yyyy-MM-dd'T'HH:mm:ss'Z'}";
             if (clientId != null)
@@ -135,19 +137,82 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Communication
             var response = await GetOAuthAdminClient().GetAsync(url);
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
-                File.WriteAllBytes(targetFile, Array.Empty<byte>());
+                if (!isSplit)
+                {
+                    File.WriteAllBytes(targetFile, Array.Empty<byte>());
+                }
                 return;
             }
 
-            var responseContent = await response.Content.ReadAsStringAsync();
+            var responseContent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             if (response.IsSuccessStatusCode)
             {
-                File.WriteAllBytes(targetFile, Convert.FromBase64String(responseContent));
+                using (var stream = new FileStream(targetFile, FileMode.Append))
+                {                                                                                                   
+                    var bytes = Convert.FromBase64String(responseContent);
+                    stream.Write(bytes, 0, bytes.Length);
+                    stream.Flush();
+                    stream.Close();
+                }
+                if (isSplit)
+                {
+                    AddSplitAcknowledgment(exportId, startDate, endDate);
+                }
             }
             else
             {
-                throw new FiskalCloudException($"Communication error ({response.StatusCode}) while requesting export (GET {url}). Response: '{responseContent}", 
-                    (int) response.StatusCode, ErrorHelper.GetErrorType(responseContent), $"GET /{url}");
+                if (response.StatusCode.Equals(HttpStatusCode.RequestEntityTooLarge))
+                {
+                    await SplitTimeRange(exportId, targetFile, startDate, endDate, clientId).ConfigureAwait(false);
+                }
+                else
+                {
+                    throw new FiskalCloudException($"Communication error ({response.StatusCode}) while requesting export (GET {url}). Response: '{responseContent}",
+                        (int) response.StatusCode, ErrorHelper.GetErrorType(responseContent), $"GET /{url}");
+                }
+            }
+        }
+
+        public bool IsSplitExport(Guid exportId)
+        {
+            return _splitExports.ContainsKey(exportId);
+        }
+
+        private void AddSplitAcknowledgment(Guid exportId, DateTime startDate, DateTime endDate)
+        {
+            _splitExports.AddOrUpdate(exportId, new List<(DateTime, DateTime)>() {(startDate, endDate) },(k, v) => { v.Add((startDate, endDate)); return v; });
+        }
+
+        private async Task SplitTimeRange(Guid exportId, string targetFile, DateTime startDate, DateTime endDate, string clientId)
+        {
+            var difference = endDate - startDate;
+            if (difference.Days > 1)
+            {
+                var half = difference.Days / 2;
+                var newStartDate = startDate.AddDays(half);
+                var newEndDate = startDate.AddDays(half - 1);
+                await RequestExportAsync(exportId, targetFile, newStartDate.Date, endDate.Date, clientId, true).ConfigureAwait(false);
+                await RequestExportAsync(exportId, targetFile, startDate.Date, newEndDate.Date, clientId, true).ConfigureAwait(false);
+            }
+            else if (difference.Days == 1)
+            {
+                var half = difference.TotalSeconds / 2;
+                var newStartDate = startDate.AddSeconds(half);
+                var newEndDate = startDate.AddSeconds(half - 1);
+                await RequestExportAsync(exportId, targetFile, newStartDate, endDate, clientId, true).ConfigureAwait(false);
+                await RequestExportAsync(exportId, targetFile, startDate, newEndDate, clientId, true).ConfigureAwait(false);
+            }
+        }
+
+        public async Task AcknowledgeSplitTransactionsAsync(Guid exportId, string clientId = null)
+        {
+            if(_splitExports.TryGetValue(exportId, out var _splitExportDatetimes))
+            {
+                foreach ((var startDateTime, var endDateTime) in _splitExportDatetimes)
+                {
+                    await AcknowledgeAllTransactionsAsync(startDateTime, endDateTime, clientId).ConfigureAwait(false);
+                }
+                _splitExports.TryRemove(exportId, out _);
             }
         }
 
