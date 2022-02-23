@@ -393,23 +393,21 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             }
 
             using var ms = new MemoryStream();
-            using var arch = new ZipArchive(ms, ZipArchiveMode.Create);
-
-            arch.CreateEntryFromFile(sourcePath, Path.GetFileName(sourcePath), CompressionLevel.Optimal);
+            using (var arch = new ZipArchive(ms, ZipArchiveMode.Create))
+            {
+                arch.CreateEntryFromFile(sourcePath, Path.GetFileName(sourcePath), CompressionLevel.Optimal);
+            }
 
             return ms.ToArray();
         }
 
         public static string GetHashFromCompressedBase64(string zippedBase64)
         {
-            using Stream archive = new MemoryStream(Convert.FromBase64String(zippedBase64));
-            using var reader = ReaderFactory.Open(archive);
-
-            reader.MoveToNextEntry();
-            using var stream = reader.OpenEntryStream();
+            using var ms = new MemoryStream(Convert.FromBase64String(zippedBase64));
+            using var arch = new ZipArchive(ms);
 
             using var sha256 = SHA256.Create();
-            var dbCheckSum = Convert.ToBase64String(sha256.ComputeHash(stream));
+            var dbCheckSum = Convert.ToBase64String(sha256.ComputeHash(arch.Entries.First().Open()));
 
             return dbCheckSum;
         }
