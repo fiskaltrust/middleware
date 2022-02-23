@@ -119,10 +119,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                     {
                         try
                         {
-                            var dbFileContent = Decompress(Convert.FromBase64String(dbJournalDE.FileContentBase64));
-
-                            using var sha256 = SHA256.Create();
-                            var dbCheckSum = Convert.ToBase64String(sha256.ComputeHash(dbFileContent));
+                            var dbCheckSum = GetHashFromCompressedBase64(dbJournalDE.FileContentBase64);
 
                             uploadSuccess = checkSum == dbCheckSum;
                         }
@@ -402,22 +399,18 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             return ms.ToArray();
         }
 
-        public static byte[] Decompress(byte[] zippedBuffer)
+        public static string GetHashFromCompressedBase64(string zippedBase64)
         {
-            using Stream archive = new MemoryStream(zippedBuffer);
+            using Stream archive = new MemoryStream(Convert.FromBase64String(zippedBase64));
             using var reader = ReaderFactory.Open(archive);
 
             reader.MoveToNextEntry();
-            
             using var stream = reader.OpenEntryStream();
-            byte[] bytes;
 
-            using var ms = new MemoryStream();
-            
-            stream.CopyTo(ms);
-            bytes = ms.ToArray();
-            
-            return bytes;
+            using var sha256 = SHA256.Create();
+            var dbCheckSum = Convert.ToBase64String(sha256.ComputeHash(stream));
+
+            return dbCheckSum;
         }
     }
 }
