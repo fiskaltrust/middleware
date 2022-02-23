@@ -9,7 +9,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
 {
     public class TarFileExportService
     {
-        public async Task<(string filePath, bool success)> ProcessTarFileExportAsync(IDESSCD client, Guid queueId, string cashboxIdentification, bool erase, string serviceFolder, int tarFileChunkSize)
+        public async Task<(string filePath, bool success, string checkSum)> ProcessTarFileExportAsync(IDESSCD client, Guid queueId, string cashboxIdentification, bool erase, string serviceFolder, int tarFileChunkSize)
         {
             var exportSession = await client.StartExportSessionAsync(new StartExportSessionRequest
             {
@@ -53,9 +53,9 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
             var endExportSessionResult = await client.EndExportSessionAsync(endSessionRequest).ConfigureAwait(false);
             if (!endExportSessionResult.IsValid)
             {
-                return (null, false);
+                return (null, false, null);
             }
-            return (filePath, true);
+            return (filePath, true, sha256CheckSum);
         }
     }
 }

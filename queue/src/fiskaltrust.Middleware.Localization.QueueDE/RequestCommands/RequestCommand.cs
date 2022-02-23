@@ -1,12 +1,17 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
+using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.de;
 using fiskaltrust.Middleware.Contracts.Data;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Models.Transactions;
+using fiskaltrust.Middleware.Localization.QueueDE.Constants;
 using fiskaltrust.Middleware.Localization.QueueDE.Extensions;
 using fiskaltrust.Middleware.Localization.QueueDE.Models;
 using fiskaltrust.Middleware.Localization.QueueDE.Services;
@@ -14,6 +19,7 @@ using fiskaltrust.Middleware.Localization.QueueDE.Transactions;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using SharpCompress.Readers;
 
 namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 {
@@ -90,7 +96,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             try
             {
                 var exportService = new TarFileExportService();
-                (var filePath, var success) = await exportService.ProcessTarFileExportAsync(client, queueDE.ftQueueDEId, queueDE.CashBoxIdentification, erase, _middlewareConfiguration.ServiceFolder, _middlewareConfiguration.TarFileChunkSize).ConfigureAwait(false);
+                (var filePath, var success, var checkSum) = await exportService.ProcessTarFileExportAsync(client, queueDE.ftQueueDEId, queueDE.CashBoxIdentification, erase, _middlewareConfiguration.ServiceFolder, _middlewareConfiguration.TarFileChunkSize).ConfigureAwait(false);
                 if (success)
                 {
                     var journalDE = new ftJournalDE
@@ -107,7 +113,26 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
                     var dbJournalDE = await _journalDERepository.GetAsync(journalDE.ftJournalDEId).ConfigureAwait(false);
 
-                    if (journalDE.ftJournalDEId == dbJournalDE.ftJournalDEId && journalDE.GetHashCode() == dbJournalDE?.GetHashCode())
+                    var uploadSuccess = false;
+
+                    if (journalDE.ftJournalDEId == dbJournalDE.ftJournalDEId)
+                    {
+                        try
+                        {
+                            var dbFileContent = Decompress(Convert.FromBase64String(dbJournalDE.FileContentBase64));
+
+                            using var sha256 = SHA256.Create();
+                            var dbCheckSum = Convert.ToBase64String(sha256.ComputeHash(dbFileContent));
+
+                            uploadSuccess = checkSum == dbCheckSum;
+                        }
+                        catch (Exception e)
+                        {
+                            _logger.LogWarning(e, "Failed to check content equality.");
+                        }
+                    }
+
+                    if (uploadSuccess)
                     {
                         var storeTemporaryExportFiles = false;
                         if (_middlewareConfiguration.Configuration.ContainsKey(ConfigurationKeys.STORE_TEMPORARY_FILES_KEY))
@@ -369,15 +394,30 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 throw new ArgumentNullException(nameof(sourcePath));
             }
 
-            using (var ms = new MemoryStream())
-            {
-                using (var arch = new ZipArchive(ms, ZipArchiveMode.Create))
-                {
-                    arch.CreateEntryFromFile(sourcePath, Path.GetFileName(sourcePath), CompressionLevel.Optimal);
-                }
+            using var ms = new MemoryStream();
+            using var arch = new ZipArchive(ms, ZipArchiveMode.Create);
 
-                return ms.ToArray();
-            }
+            arch.CreateEntryFromFile(sourcePath, Path.GetFileName(sourcePath), CompressionLevel.Optimal);
+
+            return ms.ToArray();
+        }
+
+        public static byte[] Decompress(byte[] zippedBuffer)
+        {
+            using Stream archive = new MemoryStream(zippedBuffer);
+            using var reader = ReaderFactory.Open(archive);
+
+            reader.MoveToNextEntry();
+            
+            using var stream = reader.OpenEntryStream();
+            byte[] bytes;
+
+            using var ms = new MemoryStream();
+            
+            stream.CopyTo(ms);
+            bytes = ms.ToArray();
+            
+            return bytes;
         }
     }
 }
