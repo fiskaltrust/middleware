@@ -30,6 +30,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
 
                 return sscdProvider;
             });
+            services.AddSingleton<ITarFileCleanupService, TarFileCleanupService>();
 
             services.AddSingleton<IRequestCommandFactory, RequestCommandFactory>();
             services.ConfigureReceiptCommands();

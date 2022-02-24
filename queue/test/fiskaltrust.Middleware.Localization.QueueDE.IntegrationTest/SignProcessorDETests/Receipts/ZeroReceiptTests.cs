@@ -22,6 +22,7 @@ using Newtonsoft.Json;
 using Xunit;
 using fiskaltrust.Middleware.Contracts.Data;
 using fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProcessorDETests.Helpers;
+using fiskaltrust.Middleware.Contracts.Repositories;
 
 namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProcessorDETests.Receipts
 {
@@ -210,7 +211,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
 
         private SignProcessorDE GetSUT()
         {
-            var journalRepositoryMock = new Mock<IJournalDERepository>(MockBehavior.Strict);
+            var journalRepositoryMock = new Mock<IMiddlewareJournalDERepository>(MockBehavior.Strict);
             _fixture.InMemorySCU.OpenTans = false;
             var actionJournalRepositoryMock = new Mock<IActionJournalRepository>(MockBehavior.Strict);
             var config = new MiddlewareConfiguration { Configuration = new Dictionary<string, object>() };

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Threading;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.de;
@@ -12,6 +13,7 @@ using fiskaltrust.Middleware.Localization.QueueDE.Services;
 using fiskaltrust.Middleware.Queue;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -52,7 +54,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest
                 Configuration = new Dictionary<string, object>()
             };
 
-            var sut = new JournalProcessorDE(Mock.Of<ILogger<JournalProcessorDE>>(), configurationRepositoryMock.Object, null, null, null, null, null, null, deSSCDProviderMock.Object, mwConfiguration, Mock.Of<IMasterDataService>(), null);
+            var tarFileCleanupService = Mock.Of<ITarFileCleanupService>();
+            var sut = new JournalProcessorDE(Mock.Of<ILogger<JournalProcessorDE>>(), configurationRepositoryMock.Object, null, null, null, null, null, null, deSSCDProviderMock.Object, mwConfiguration, Mock.Of<IMasterDataService>(), null, tarFileCleanupService);
 
             var chunks = await sut.ProcessAsync(new JournalRequest
             {

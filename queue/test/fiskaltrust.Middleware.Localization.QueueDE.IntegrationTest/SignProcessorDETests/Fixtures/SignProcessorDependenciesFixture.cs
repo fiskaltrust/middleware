@@ -106,7 +106,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             bool masterdataUpdate = false, bool openTrans = false, bool sourceIsScuSwitch = false, bool targetIsScuSwitch = false, bool queueDECreationUnitIsNull = false)
         {
             InMemorySCU.OpenTans = openTrans;
-            var journalRepositoryMock = new Mock<IJournalDERepository>(MockBehavior.Strict);
+            var journalRepositoryMock = new Mock<IMiddlewareJournalDERepository>(MockBehavior.Strict);
             var configuration = configs ?? new Dictionary<string, object>();
             var config = new MiddlewareConfiguration { Configuration = configuration };
             config.CashBoxId = CASHBOXID;

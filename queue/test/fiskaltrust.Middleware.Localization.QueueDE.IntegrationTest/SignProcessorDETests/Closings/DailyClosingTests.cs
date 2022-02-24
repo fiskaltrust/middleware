@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Models;
@@ -10,12 +11,14 @@ using fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProcessorD
 using fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProcessorDETests.Receipts;
 using fiskaltrust.Middleware.Localization.QueueDE.MasterData;
 using fiskaltrust.Middleware.Localization.QueueDE.RequestCommands;
+using fiskaltrust.Middleware.Localization.QueueDE.Services;
 using fiskaltrust.Middleware.Localization.QueueDE.Transactions;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories.DE;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Newtonsoft.Json;
@@ -67,12 +70,20 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             };
             journalRepositoryMock.Setup(x => x.InsertAsync(It.IsAny<ftJournalDE>())).CallBase().Verifiable();
             var actionJournalRepositoryMock = new Mock<IActionJournalRepository>(MockBehavior.Strict);
-            var config = new MiddlewareConfiguration { Configuration = new Dictionary<string, object>(), ServiceFolder = Directory.GetCurrentDirectory() };
+            var config = new MiddlewareConfiguration { Configuration = new Dictionary<string, object>(), QueueId = queue.ftQueueId, ServiceFolder = Directory.GetCurrentDirectory() };
 
+            var lifetime = Mock.Of<IHostApplicationLifetime>();
+            var cancallationTokenSource = new CancellationTokenSource();
+            Mock.Get(lifetime).Setup(x => x.ApplicationStarted).Returns(() => cancallationTokenSource.Token);
+
+
+            var tarFileCleanupService = new TarFileCleanupService(Mock.Of<ILogger<TarFileCleanupService>>(), lifetime, journalRepositoryMock.Object, config);
             var sut = RequestCommandFactoryHelper.ConstructSignProcessor(Mock.Of<ILogger<SignProcessorDE>>(), _fixture.CreateConfigurationRepository(), journalRepositoryMock.Object, actionJournalRepositoryMock.Object,
                 _fixture.DeSSCDProvider, new DSFinVKTransactionPayloadFactory(), new InMemoryFailedFinishTransactionRepository(), new InMemoryFailedStartTransactionRepository(),
-                _fixture.openTransactionRepository, Mock.Of<IMasterDataService>(), config, new InMemoryQueueItemRepository(), new SignatureFactoryDE(config));
-
+                _fixture.openTransactionRepository, Mock.Of<IMasterDataService>(), config, new InMemoryQueueItemRepository(), new SignatureFactoryDE(config), tarFileCleanupService);
+            
+            cancallationTokenSource.Cancel();
+            
             var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
 
             receiptResponse.Should().BeEquivalentTo(expectedResponse, x => x.Excluding(x => x.ftReceiptMoment));

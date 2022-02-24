@@ -1,15 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography;
+using System.Threading;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueDE.MasterData;
-using fiskaltrust.Middleware.Queue;
+using fiskaltrust.Middleware.Localization.QueueDE.Services;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -27,7 +28,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
             var expectedByteLength = 3072;
 
             var configurationRepositoryMock = new Mock<IReadOnlyConfigurationRepository>(MockBehavior.Strict);
-            var journalDERepository = new Mock<IReadOnlyJournalDERepository>(MockBehavior.Strict);
+            var journalDERepository = new Mock<IMiddlewareJournalDERepository>(MockBehavior.Strict);
 
             var journals = new List<ftJournalDE>() {
 
@@ -50,7 +51,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
             var middlewareRepo = new Mock<IMiddlewareRepository<ftJournalDE>>();
             middlewareRepo.Setup(x => x.GetEntriesOnOrAfterTimeStampAsync(It.IsAny<long>(), It.IsAny<int?>())).Returns(journals.ToAsyncEnumerable());
 
-            var sut = new JournalProcessorDE(Mock.Of<ILogger<JournalProcessorDE>>(), configurationRepositoryMock.Object, null, null, journalDERepository.Object, null, middlewareRepo.Object, null, null, middlewareConfiguration, Mock.Of<IMasterDataService>(), null);
+            var tarFileCleanupService = Mock.Of<ITarFileCleanupService>();
+            var sut = new JournalProcessorDE(Mock.Of<ILogger<JournalProcessorDE>>(), configurationRepositoryMock.Object, null, null, journalDERepository.Object, null, middlewareRepo.Object, null, null, middlewareConfiguration, Mock.Of<IMasterDataService>(), null, tarFileCleanupService);
 
             var chunks = await sut.ProcessAsync(new JournalRequest
             {
@@ -68,7 +70,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
             var expectedByteLength = 5120;
 
             var configurationRepositoryMock = new Mock<IReadOnlyConfigurationRepository>(MockBehavior.Strict);
-            var journalDERepository = new Mock<IReadOnlyJournalDERepository>(MockBehavior.Strict);
+            var journalDERepository = new Mock<IMiddlewareJournalDERepository>(MockBehavior.Strict);
 
             var journals = new List<ftJournalDE>() {
 
@@ -95,7 +97,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
             var middlewareRepo = new Mock<IMiddlewareRepository<ftJournalDE>>();
             middlewareRepo.Setup(x => x.GetEntriesOnOrAfterTimeStampAsync(It.IsAny<long>(), It.IsAny<int?>())).Returns(journals.ToAsyncEnumerable());
 
-            var sut = new JournalProcessorDE(Mock.Of<ILogger<JournalProcessorDE>>(), configurationRepositoryMock.Object, null, null, journalDERepository.Object, null, middlewareRepo.Object, null, null, middlewareConfiguration, Mock.Of<IMasterDataService>(), null);
+            var tarFileCleanupService = Mock.Of<ITarFileCleanupService>();
+            var sut = new JournalProcessorDE(Mock.Of<ILogger<JournalProcessorDE>>(), configurationRepositoryMock.Object, null, null, journalDERepository.Object, null, middlewareRepo.Object, null, null, middlewareConfiguration, Mock.Of<IMasterDataService>(), null, tarFileCleanupService);
 
             var chunks = await sut.ProcessAsync(new JournalRequest
             {
@@ -113,7 +116,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
             var expectedByteLength = 5120;
 
             var configurationRepositoryMock = new Mock<IReadOnlyConfigurationRepository>(MockBehavior.Strict);
-            var journalDERepository = new Mock<IReadOnlyJournalDERepository>(MockBehavior.Strict);
+            var journalDERepository = new Mock<IMiddlewareJournalDERepository>(MockBehavior.Strict);
 
             var journals = new List<ftJournalDE>() {
 
@@ -140,7 +143,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
             var middlewareRepo = new Mock<IMiddlewareRepository<ftJournalDE>>();
             middlewareRepo.Setup(x => x.GetByTimeStampRangeAsync(It.IsAny<long>(), It.IsAny<long>())).Returns(journals.ToAsyncEnumerable());
 
-            var sut = new JournalProcessorDE(Mock.Of<ILogger<JournalProcessorDE>>(), configurationRepositoryMock.Object, null, null, journalDERepository.Object, null, middlewareRepo.Object, null, null, middlewareConfiguration, Mock.Of<IMasterDataService>(), null);
+            var tarFileCleanupService = Mock.Of<ITarFileCleanupService>();
+            var sut = new JournalProcessorDE(Mock.Of<ILogger<JournalProcessorDE>>(), configurationRepositoryMock.Object, null, null, journalDERepository.Object, null, middlewareRepo.Object, null, null, middlewareConfiguration, Mock.Of<IMasterDataService>(), null, tarFileCleanupService);
 
             var chunks = await sut.ProcessAsync(new JournalRequest
             {
@@ -160,7 +164,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
             var chunkBytes = Convert.FromBase64String(string.Empty);
 
             var configurationRepositoryMock = new Mock<IReadOnlyConfigurationRepository>(MockBehavior.Strict);
-            var journalDERepository = new Mock<IReadOnlyJournalDERepository>(MockBehavior.Strict);
+            var journalDERepository = new Mock<IMiddlewareJournalDERepository>(MockBehavior.Strict);
 
             var journals = new List<ftJournalDE>() {};
 
@@ -176,7 +180,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
             var middlewareRepo = new Mock<IMiddlewareRepository<ftJournalDE>>();
             middlewareRepo.Setup(x => x.GetByTimeStampRangeAsync(It.IsAny<long>(), It.IsAny<long>())).Returns(journals.ToAsyncEnumerable());
 
-            var sut = new JournalProcessorDE(Mock.Of<ILogger<JournalProcessorDE>>(), configurationRepositoryMock.Object, null, null, journalDERepository.Object, null, middlewareRepo.Object, null, null, middlewareConfiguration, Mock.Of<IMasterDataService>(), null);
+            var tarFileCleanupService = Mock.Of<ITarFileCleanupService>();
+            var sut = new JournalProcessorDE(Mock.Of<ILogger<JournalProcessorDE>>(), configurationRepositoryMock.Object, null, null, journalDERepository.Object, null, middlewareRepo.Object, null, null, middlewareConfiguration, Mock.Of<IMasterDataService>(), null, tarFileCleanupService);
 
             var chunks = await sut.ProcessAsync(new JournalRequest
             {

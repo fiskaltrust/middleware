@@ -1,13 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
+using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0;
 using MySqlConnector;
 
 namespace fiskaltrust.Middleware.Storage.MySQL.Repositories.DE
 {
-    public class MySQLJournalDERepository : AbstractMySQLRepository<Guid, ftJournalDE>, IJournalDERepository
+    public class MySQLJournalDERepository : AbstractMySQLRepository<Guid, ftJournalDE>, IJournalDERepository, IMiddlewareJournalDERepository
     {
         public MySQLJournalDERepository(string connectionString) : base(connectionString) { }
 
@@ -28,6 +30,19 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories.DE
             {
                 await connection.OpenAsync().ConfigureAwait(false);
                 return await connection.QueryAsync<ftJournalDE>("select * from ftJournalDE").ConfigureAwait(false);
+            }
+        }
+
+        public async IAsyncEnumerable<ftJournalDE> GetByFileName(string fileName)
+        {
+            var query = $"SELECT * FROM {typeof(ftJournalDE).Name} WHERE FileName = @fileName";
+            using (var connection = new MySqlConnection(ConnectionString))
+            {
+                await connection.OpenAsync().ConfigureAwait(false);
+                await foreach (var entry in connection.Query<ftJournalDE>(query, new { fileName = fileName }, buffered: false).ToAsyncEnumerable().ConfigureAwait(false))
+                {
+                    yield return entry;
+                }
             }
         }
 

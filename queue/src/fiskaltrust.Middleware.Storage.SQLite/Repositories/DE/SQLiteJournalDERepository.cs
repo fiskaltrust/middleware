@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
+using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Storage.SQLite.Repositories.DE
 {
-    public class SQLiteJournalDERepository : AbstractSQLiteRepository<Guid, ftJournalDE>, IJournalDERepository
+    public class SQLiteJournalDERepository : AbstractSQLiteRepository<Guid, ftJournalDE>, IJournalDERepository, IMiddlewareJournalDERepository
     {
         public SQLiteJournalDERepository(ISqliteConnectionFactory connectionFactory, string path) : base(connectionFactory, path) { }
 
@@ -15,6 +17,15 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Repositories.DE
         public override async Task<ftJournalDE> GetAsync(Guid id) => await DbConnection.QueryFirstOrDefaultAsync<ftJournalDE>("Select * from ftJournalDE where ftJournalDEId = @JournalDEId", new { JournalDEId = id }).ConfigureAwait(false);
 
         public override async Task<IEnumerable<ftJournalDE>> GetAsync() => await DbConnection.QueryAsync<ftJournalDE>("select * from ftJournalDE").ConfigureAwait(false);
+
+        public async IAsyncEnumerable<ftJournalDE> GetByFileName(string fileName)
+        {
+            var query = $"SELECT * FROM {typeof(ftJournalDE).Name} WHERE FileName = @fileName";
+            await foreach (var entry in DbConnection.Query<ftJournalDE>(query, new { fileName = fileName }, buffered: false).ToAsyncEnumerable().ConfigureAwait(false))
+            {
+                yield return entry;
+            }
+        }
 
         public async Task InsertAsync(ftJournalDE journal)
         {
