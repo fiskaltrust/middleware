@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using fiskaltrust.Middleware.Queue.Bootstrapper;
-using fiskaltrust.Middleware.Queue.Bootstrapper.Interfaces;
-using fiskaltrust.Middleware.Queue.Bootstrapper.Localization;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
 using Xunit;
@@ -10,8 +8,6 @@ using Newtonsoft.Json;
 using Microsoft.Extensions.DependencyInjection;
 using fiskaltrust.Middleware.Localization.QueueDE.Transactions;
 using fiskaltrust.Middleware.Contracts;
-using fiskaltrust.Middleware.Abstractions;
-using fiskaltrust.ifPOS.v1.de;
 
 namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
 {
