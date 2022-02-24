@@ -186,15 +186,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Communication
         private async Task SplitTimeRange(Guid exportId, string targetFile, DateTime startDate, DateTime endDate, string clientId)
         {
             var difference = endDate - startDate;
-            if (difference.Days > 1)
-            {
-                var half = difference.Days / 2;
-                var newStartDate = startDate.AddDays(half);
-                var newEndDate = startDate.AddDays(half - 1);
-                await RequestExportAsync(exportId, targetFile, newStartDate.Date, endDate.Date, clientId, true).ConfigureAwait(false);
-                await RequestExportAsync(exportId, targetFile, startDate.Date, newEndDate.Date, clientId, true).ConfigureAwait(false);
-            }
-            else if (difference.Days == 1)
+            if (difference.TotalSeconds > 0)
             {
                 var half = difference.TotalSeconds / 2;
                 var newStartDate = startDate.AddSeconds(half);
