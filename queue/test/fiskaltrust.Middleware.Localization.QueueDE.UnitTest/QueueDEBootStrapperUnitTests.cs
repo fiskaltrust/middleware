@@ -51,7 +51,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
             var sut = new QueueDEBootstrapper();
             sut.ConfigureServices(serviceCollection);
 
-            serviceCollection.Should().HaveCount(27);
+            serviceCollection.Should().HaveCount(28);
 
             var tranactionPayloadFactory = new ServiceDescriptor(typeof(ITransactionPayloadFactory), typeof(DSFinVKTransactionPayloadFactory), ServiceLifetime.Scoped);
             var signProcessorDE = new ServiceDescriptor(typeof(IMarketSpecificSignProcessor), typeof(SignProcessorDE), ServiceLifetime.Scoped);
