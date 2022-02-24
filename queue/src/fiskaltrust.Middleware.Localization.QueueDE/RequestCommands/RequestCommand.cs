@@ -1,12 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
+using System.Linq;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.de;
 using fiskaltrust.Middleware.Contracts.Data;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Models.Transactions;
+using fiskaltrust.Middleware.Localization.QueueDE.Constants;
 using fiskaltrust.Middleware.Localization.QueueDE.Extensions;
 using fiskaltrust.Middleware.Localization.QueueDE.Models;
 using fiskaltrust.Middleware.Localization.QueueDE.Services;
@@ -37,6 +41,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
         private readonly MiddlewareConfiguration _middlewareConfiguration;
 
         protected string _certificationIdentification = null;
+        protected bool _storeTemporaryExportFiles = false;
 
         public abstract string ReceiptName { get; }
 
@@ -57,6 +62,12 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             _failedFinishTransactionRepo = failedFinishTransactionRepo;
             _openTransactionRepo = openTransactionRepo;
             _transactionFactory = new TransactionFactory(_deSSCDProvider.Instance);
+
+            if (_middlewareConfiguration.Configuration.ContainsKey(ConfigurationKeys.STORE_TEMPORARY_FILES_KEY))
+            {
+                _storeTemporaryExportFiles = bool.TryParse(_middlewareConfiguration.Configuration[ConfigurationKeys.STORE_TEMPORARY_FILES_KEY].ToString(), out var val) && val;
+            }
+
         }
 
         public abstract Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueDE queueDE, IDESSCD client, ReceiptRequest request, ftQueueItem queueItem);
@@ -90,13 +101,13 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             try
             {
                 var exportService = new TarFileExportService();
-                (var filePath, var success) = await exportService.ProcessTarFileExportAsync(client, queueDE.ftQueueDEId, queueDE.CashBoxIdentification, erase, _middlewareConfiguration.ServiceFolder, _middlewareConfiguration.TarFileChunkSize).ConfigureAwait(false);
+                (var filePath, var success, var checkSum) = await exportService.ProcessTarFileExportAsync(client, queueDE.ftQueueDEId, queueDE.CashBoxIdentification, erase, _middlewareConfiguration.ServiceFolder, _middlewareConfiguration.TarFileChunkSize).ConfigureAwait(false);
                 if (success)
                 {
                     var journalDE = new ftJournalDE
                     {
                         ftJournalDEId = Guid.NewGuid(),
-                        FileContentBase64 = Convert.ToBase64String(SignProcessorDE.Compress(filePath)),
+                        FileContentBase64 = Convert.ToBase64String(Compress(filePath)),
                         FileExtension = ".zip",
                         FileName = Path.GetFileNameWithoutExtension(filePath),
                         ftQueueId = queueItem.ftQueueId,
@@ -104,6 +115,36 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                         Number = queue.ftReceiptNumerator + 1
                     };
                     await _journalDERepository.InsertAsync(journalDE).ConfigureAwait(false);
+
+                    var dbJournalDE = await _journalDERepository.GetAsync(journalDE.ftJournalDEId).ConfigureAwait(false);
+
+                    var uploadSuccess = false;
+
+                    if (journalDE.ftJournalDEId == dbJournalDE.ftJournalDEId)
+                    {
+                        try
+                        {
+                            var dbCheckSum = GetHashFromCompressedBase64(dbJournalDE.FileContentBase64);
+
+                            uploadSuccess = checkSum == dbCheckSum;
+                        }
+                        catch (Exception e)
+                        {
+                            _logger.LogWarning(e, "Failed to check content equality.");
+                        }
+                    }
+
+                    if (uploadSuccess)
+                    {
+                        if (!_storeTemporaryExportFiles && File.Exists(filePath))
+                        {
+                            File.Delete(filePath);
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Failed to insert Tar export into database. Tar export file can be found here {file}", filePath);
+                    }
                 }
                 else
                 {
@@ -340,6 +381,33 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                     await client.SetTseStateAsync(new TseState { CurrentState = TseStates.Terminated }).ConfigureAwait(false);
                 }
             }
+        }
+
+        public static byte[] Compress(string sourcePath)
+        {
+            if (sourcePath == null)
+            {
+                throw new ArgumentNullException(nameof(sourcePath));
+            }
+
+            using var ms = new MemoryStream();
+            using (var arch = new ZipArchive(ms, ZipArchiveMode.Create))
+            {
+                arch.CreateEntryFromFile(sourcePath, Path.GetFileName(sourcePath), CompressionLevel.Optimal);
+            }
+
+            return ms.ToArray();
+        }
+
+        public static string GetHashFromCompressedBase64(string zippedBase64)
+        {
+            using var ms = new MemoryStream(Convert.FromBase64String(zippedBase64));
+            using var arch = new ZipArchive(ms);
+
+            using var sha256 = SHA256.Create();
+            var dbCheckSum = Convert.ToBase64String(sha256.ComputeHash(arch.Entries.First().Open()));
+
+            return dbCheckSum;
         }
     }
 }

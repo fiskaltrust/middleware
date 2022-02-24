@@ -20,6 +20,7 @@ using fiskaltrust.Middleware.Localization.QueueDE.Helpers;
 using fiskaltrust.Middleware.Localization.QueueDE.MasterData;
 using fiskaltrust.Middleware.Localization.QueueDE.Repositories;
 using fiskaltrust.Middleware.Localization.QueueDE.Services;
+using fiskaltrust.Middleware.Localization.QueueDE.Constants;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -28,8 +29,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
 {
     public class JournalProcessorDE : IJournalProcessor
     {
-        private const string STORE_TEMPORARY_FILES_KEY = "StoreTemporaryExportFiles";
-
         private readonly ILogger<JournalProcessorDE> _logger;
         private readonly IReadOnlyConfigurationRepository _configurationRepository;
         private readonly IReadOnlyQueueItemRepository _queueItemRepository;
@@ -72,9 +71,9 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             _masterDataService = masterDataService;
             _middlewareQueueItemRepository = middlewareQueueItemRepository;
 
-            if (_middlewareConfiguration.Configuration.ContainsKey(STORE_TEMPORARY_FILES_KEY))
+            if (_middlewareConfiguration.Configuration.ContainsKey(ConfigurationKeys.STORE_TEMPORARY_FILES_KEY))
             {
-                _storeTemporaryExportFiles = bool.TryParse(_middlewareConfiguration.Configuration[STORE_TEMPORARY_FILES_KEY].ToString(), out var val) && val;
+                _storeTemporaryExportFiles = bool.TryParse(_middlewareConfiguration.Configuration[ConfigurationKeys.STORE_TEMPORARY_FILES_KEY].ToString(), out var val) && val;
             }
         }
 

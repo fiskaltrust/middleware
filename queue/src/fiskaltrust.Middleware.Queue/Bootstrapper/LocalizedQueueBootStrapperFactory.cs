@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using fiskaltrust.Middleware.Queue.Bootstrapper.Interfaces;
-using fiskaltrust.Middleware.Queue.Bootstrapper.Localization;
+using fiskaltrust.Middleware.Contracts;
+using fiskaltrust.Middleware.Localization.QueueDE;
 using fiskaltrust.storage.V0;
 using Newtonsoft.Json;
 

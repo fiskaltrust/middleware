@@ -8,7 +8,11 @@ trigger:
     - main
     - refs/tags/*
 
-pr: none
+pr:
+  branches:
+    include:
+    - main
+    - refs/tags/*
 
 variables:
 - group: 'Code Signing Certificates'

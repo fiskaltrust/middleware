@@ -61,8 +61,11 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
 
             await AddOpenOrdersAsync();
 
-            var journalRepositoryMock = new Mock<IJournalDERepository>(MockBehavior.Strict);
-            journalRepositoryMock.Setup(x => x.InsertAsync(It.IsAny<ftJournalDE>())).Returns(Task.CompletedTask).Verifiable();
+            var journalRepositoryMock = new Mock<InMemoryJournalDERepository>()
+            {
+                CallBase = true
+            };
+            journalRepositoryMock.Setup(x => x.InsertAsync(It.IsAny<ftJournalDE>())).CallBase().Verifiable();
             var actionJournalRepositoryMock = new Mock<IActionJournalRepository>(MockBehavior.Strict);
             var config = new MiddlewareConfiguration { Configuration = new Dictionary<string, object>(), ServiceFolder = Directory.GetCurrentDirectory() };
 
