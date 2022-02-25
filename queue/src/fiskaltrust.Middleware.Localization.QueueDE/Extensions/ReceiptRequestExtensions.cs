@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Localization.QueueDE.Constants;
+using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
 {
@@ -413,7 +414,16 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
                 request.cbReceiptMoment
             }).Min();
         }
-
-        public static decimal GetSignForAmount(decimal quantity, decimal amount)  => quantity < 0 && amount >= 0 ? -1 : 1;
+        private static decimal GetSignForAmount(decimal quantity, decimal amount)  => quantity < 0 && amount >= 0 ? -1 : 1;
+        public static void CheckForEqualSumChargePayItems(this ReceiptRequest request, ILogger logger)
+        {
+            var chargeAmount = request.cbChargeItems.Sum( x => x.Amount);
+            var payAmount = request.cbPayItems.Sum(x => x.Amount);
+            if (chargeAmount != payAmount)
+            {
+                var _differentPayChargeAmount = $"ChargeItem Amount: {chargeAmount} does not match PayItem Amount: {payAmount}. See https://docs.fiskaltrust.cloud/docs/poscreators/middleware-doc for more details.";
+                logger.LogWarning(_differentPayChargeAmount);
+            }
+        }
     }
 }
