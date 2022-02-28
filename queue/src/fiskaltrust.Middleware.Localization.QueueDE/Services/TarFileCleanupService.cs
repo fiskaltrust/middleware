@@ -74,7 +74,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
             }
         }
 
-        public async Task CleanupAllTarFilesAsync(CancellationToken cancellationToken)
+        public async Task CleanupAllTarFilesAsync()
         {
             if (_storeTemporaryExportFiles) { return; }
 
@@ -83,25 +83,25 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
 
             foreach (var directory in Directory.GetDirectories(basePath))
             {
-                if(cancellationToken.IsCancellationRequested) { return; }
                 CleanupTarFileDirectory(directory);
             }
 
             foreach (var export in Directory.GetFiles(basePath))
             {
-                if(cancellationToken.IsCancellationRequested) { return; }
                 var journalDE = await _journalDERepository.GetByFileName(Path.GetFileNameWithoutExtension(export)).FirstOrDefaultAsync();
                 if(journalDE == null)
                 {
                     continue;
                 }
 
-                using var stream = new FileStream(export, FileMode.Open, FileAccess.Read);
+                string checkSum = null;
+                using (var stream = new FileStream(export, FileMode.Open, FileAccess.Read))
+                {
+                    using var sha256 = SHA256.Create();
+                    checkSum = Convert.ToBase64String(sha256.ComputeHash(stream));
+                }
 
-                using var sha256 = SHA256.Create();
-                var checkSum = Convert.ToBase64String(sha256.ComputeHash(stream));
-
-                await CleanupTarFileAsync(journalDE.ftJournalDEId, $"{journalDE.FileName}.zip", checkSum, useSharpCompress: true);
+                await CleanupTarFileAsync(journalDE.ftJournalDEId, Path.Combine(basePath, $"{journalDE.FileName}.tar"), checkSum, useSharpCompress: true);
             }
         }
 

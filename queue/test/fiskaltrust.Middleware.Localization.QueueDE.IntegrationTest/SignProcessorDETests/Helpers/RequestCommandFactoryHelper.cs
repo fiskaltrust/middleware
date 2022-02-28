@@ -66,12 +66,10 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             services.AddSingleton(tarFileCleanupService);
 
             var signProcessor =  new SignProcessorDE(
-                logger,
                 configurationRepository,
                 dESSCDProvider,
                 transactionPayloadFactory,
-                new RequestCommandFactory(services.BuildServiceProvider()),
-                tarFileCleanupService
+                new RequestCommandFactory(services.BuildServiceProvider())
             );
 
             return signProcessor;

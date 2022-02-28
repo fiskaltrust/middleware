@@ -10,6 +10,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
 
         void CleanupTarFileDirectory(string workingDirectory);
 
-        Task CleanupAllTarFilesAsync(CancellationToken cancellationToken);
+        Task CleanupAllTarFilesAsync();
     }
 }
