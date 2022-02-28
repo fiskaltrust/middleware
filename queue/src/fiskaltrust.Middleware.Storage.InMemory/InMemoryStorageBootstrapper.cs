@@ -64,7 +64,7 @@ namespace fiskaltrust.Middleware.Storage.InMemory
 
             services.AddSingleton<IMiddlewareJournalDERepository, InMemoryJournalDERepository >();
             services.AddSingleton<IReadOnlyJournalDERepository, InMemoryJournalDERepository>();
-            services.AddSingleton<IJournalDERepository, IMiddlewareJournalDERepository>();
+            services.AddSingleton<IJournalDERepository, InMemoryJournalDERepository>();
             services.AddSingleton<IMiddlewareRepository<ftJournalDE>, InMemoryJournalDERepository>();
 
             services.AddSingleton<IJournalFRRepository, InMemoryJournalFRRepository>();
