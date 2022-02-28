@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.de;
@@ -11,31 +12,63 @@ using fiskaltrust.Middleware.Localization.QueueDE.RequestCommands.Factories;
 using fiskaltrust.Middleware.Localization.QueueDE.Services;
 using fiskaltrust.Middleware.Localization.QueueDE.Transactions;
 using fiskaltrust.storage.V0;
+using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.QueueDE
 {
     public class SignProcessorDE : IMarketSpecificSignProcessor
     {
+        private readonly ILogger<SignProcessorDE> _logger;
         private readonly IConfigurationRepository _configurationRepository;
         private readonly ITransactionPayloadFactory _transactionPayloadFactory;
         private readonly IDESSCDProvider _deSSCDProvider;
         private readonly IRequestCommandFactory _requestCommandFactory;
+        private readonly TaskCompletionSource<object> _startUpTasks;
+        private readonly CancellationTokenSource _startUpTasksCancellation;
+        // TODO: use IHostApplicationLifetime in MW 2.0 instead of TaskCompletionSource and CancellationTokenSource
 
         public SignProcessorDE(
+            ILogger<SignProcessorDE> logger,
             IConfigurationRepository configurationRepository,
             IDESSCDProvider dESSCDProvider,
             ITransactionPayloadFactory transactionPayloadFactory,
-            IRequestCommandFactory requestCommandFactory)
+            IRequestCommandFactory requestCommandFactory,
+            ITarFileCleanupService tarFileCleanupService)
         {
+            _logger = logger;
             _configurationRepository = configurationRepository;
             _deSSCDProvider = dESSCDProvider;
             _transactionPayloadFactory = transactionPayloadFactory;
             _requestCommandFactory = requestCommandFactory;
+
+            _startUpTasks = new TaskCompletionSource<object>();
+            _startUpTasksCancellation = new CancellationTokenSource();
+
+            var _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await tarFileCleanupService.CleanupAllTarFilesAsync(_startUpTasksCancellation.Token);
+                }
+                catch (Exception e)
+                {
+                    _startUpTasks.SetException(e);
+                    return;
+                }
+                _startUpTasks.SetResult(null);
+            });
         }
 
         public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ftQueue queue, ftQueueItem queueItem)
         {
-            if (string.IsNullOrEmpty(request.cbReceiptReference) && !request.IsFailTransactionReceipt() &&  !string.IsNullOrEmpty(request.ftReceiptCaseData) && !request.ftReceiptCaseData.Contains("CurrentStartedTransactionNumbers"))
+            if(_startUpTasks.Task.Status == TaskStatus.Running)
+            {
+                _startUpTasksCancellation.Cancel();
+                _logger.LogInformation("StartUp tasks are not yet finished. Request will return shortly.");
+            }
+            await _startUpTasks.Task;
+
+            if (string.IsNullOrEmpty(request.cbReceiptReference) && !request.IsFailTransactionReceipt() && !string.IsNullOrEmpty(request.ftReceiptCaseData) && !request.ftReceiptCaseData.Contains("CurrentStartedTransactionNumbers"))
             {
                 throw new ArgumentException($"CbReceiptReference must be set for one transaction! If you want to close multiple transactions, pass an array value for 'CurrentStartedTransactionNumbers' via ftReceiptCaseData.");
             }

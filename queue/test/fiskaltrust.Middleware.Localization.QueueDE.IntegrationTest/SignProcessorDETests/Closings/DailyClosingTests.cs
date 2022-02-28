@@ -18,7 +18,6 @@ using fiskaltrust.Middleware.Storage.InMemory.Repositories.DE;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Newtonsoft.Json;
@@ -72,17 +71,12 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             var actionJournalRepositoryMock = new Mock<IActionJournalRepository>(MockBehavior.Strict);
             var config = new MiddlewareConfiguration { Configuration = new Dictionary<string, object>(), QueueId = queue.ftQueueId, ServiceFolder = Directory.GetCurrentDirectory() };
 
-            var lifetime = Mock.Of<IHostApplicationLifetime>();
-            var cancallationTokenSource = new CancellationTokenSource();
-            Mock.Get(lifetime).Setup(x => x.ApplicationStarted).Returns(() => cancallationTokenSource.Token);
 
-
-            var tarFileCleanupService = new TarFileCleanupService(Mock.Of<ILogger<TarFileCleanupService>>(), lifetime, journalRepositoryMock.Object, config);
+            var tarFileCleanupService = new TarFileCleanupService(Mock.Of<ILogger<TarFileCleanupService>>(), journalRepositoryMock.Object, config);
             var sut = RequestCommandFactoryHelper.ConstructSignProcessor(Mock.Of<ILogger<SignProcessorDE>>(), _fixture.CreateConfigurationRepository(), journalRepositoryMock.Object, actionJournalRepositoryMock.Object,
                 _fixture.DeSSCDProvider, new DSFinVKTransactionPayloadFactory(), new InMemoryFailedFinishTransactionRepository(), new InMemoryFailedStartTransactionRepository(),
                 _fixture.openTransactionRepository, Mock.Of<IMasterDataService>(), config, new InMemoryQueueItemRepository(), new SignatureFactoryDE(config), tarFileCleanupService);
             
-            cancallationTokenSource.Cancel();
             
             var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
 

@@ -3,11 +3,11 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Threading;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueDE.Constants;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SharpCompress.Readers;
 
@@ -21,7 +21,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
 
         protected bool _storeTemporaryExportFiles = false;
 
-        public TarFileCleanupService(ILogger<TarFileCleanupService> logger, IHostApplicationLifetime lifetime, IMiddlewareJournalDERepository journalDERepository, MiddlewareConfiguration middlewareConfiguration)
+        public TarFileCleanupService(ILogger<TarFileCleanupService> logger, IMiddlewareJournalDERepository journalDERepository, MiddlewareConfiguration middlewareConfiguration)
         {
             _logger = logger;
             _journalDERepository = journalDERepository;
@@ -31,11 +31,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
             if (_middlewareConfiguration.Configuration.ContainsKey(ConfigurationKeys.STORE_TEMPORARY_FILES_KEY))
             {
                 _storeTemporaryExportFiles = bool.TryParse(_middlewareConfiguration.Configuration[ConfigurationKeys.STORE_TEMPORARY_FILES_KEY].ToString(), out var val) && val;
-            }
-
-            if (!_storeTemporaryExportFiles)
-            {
-                lifetime.ApplicationStarted.Register(CleanupAllTarFilesAsync);
             }
         }
 
@@ -79,16 +74,22 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
             }
         }
 
-        private async void CleanupAllTarFilesAsync()
+        public async Task CleanupAllTarFilesAsync(CancellationToken cancellationToken)
         {
+            if (_storeTemporaryExportFiles) { return; }
+
             var basePath = Path.Combine(_middlewareConfiguration.ServiceFolder, "Exports", _middlewareConfiguration.QueueId.ToString(), "TAR");
+            if(!Directory.Exists(basePath)) { return; }
+
             foreach (var directory in Directory.GetDirectories(basePath))
             {
+                if(cancellationToken.IsCancellationRequested) { return; }
                 CleanupTarFileDirectory(directory);
             }
 
             foreach (var export in Directory.GetFiles(basePath))
             {
+                if(cancellationToken.IsCancellationRequested) { return; }
                 var journalDE = await _journalDERepository.GetByFileName(Path.GetFileNameWithoutExtension(export)).FirstOrDefaultAsync();
                 if(journalDE == null)
                 {

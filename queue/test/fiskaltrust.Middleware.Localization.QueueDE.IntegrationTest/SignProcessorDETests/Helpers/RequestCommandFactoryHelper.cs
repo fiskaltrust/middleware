@@ -17,31 +17,11 @@ using fiskaltrust.Middleware.Localization.QueueDE.Services;
 using fiskaltrust.Middleware.Localization.QueueDE.Transactions;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Moq;
 
 namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProcessorDETests.Helpers
 {
-    public class Lifetime : IHostApplicationLifetime
-    {
-        private readonly CancellationTokenSource _source;
-        public Lifetime()
-        {
-            _source = new CancellationTokenSource();
-        }
-
-        public CancellationToken ApplicationStarted => _source.Token;
-
-        public CancellationToken ApplicationStopping => throw new NotImplementedException();
-
-        public CancellationToken ApplicationStopped => throw new NotImplementedException();
-
-        public void StopApplication() => throw new NotImplementedException();
-
-        public void StartApplication() => _source.Cancel();
-
-    }
     public static class RequestCommandFactoryHelper
     {
         public static SignProcessorDE ConstructSignProcessor(
@@ -86,10 +66,12 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             services.AddSingleton(tarFileCleanupService);
 
             var signProcessor =  new SignProcessorDE(
+                logger,
                 configurationRepository,
                 dESSCDProvider,
                 transactionPayloadFactory,
-                new RequestCommandFactory(services.BuildServiceProvider())
+                new RequestCommandFactory(services.BuildServiceProvider()),
+                tarFileCleanupService
             );
 
             return signProcessor;

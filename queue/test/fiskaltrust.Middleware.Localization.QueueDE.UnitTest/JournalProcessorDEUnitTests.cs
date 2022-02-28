@@ -10,7 +10,6 @@ using fiskaltrust.Middleware.Localization.QueueDE.MasterData;
 using fiskaltrust.Middleware.Localization.QueueDE.Services;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
