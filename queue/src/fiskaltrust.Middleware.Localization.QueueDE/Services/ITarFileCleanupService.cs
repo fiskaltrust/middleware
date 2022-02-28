@@ -5,7 +5,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
 {
     public interface ITarFileCleanupService
     {
-        Task CleanupTarFile(Guid journalDEId, string filePath, string checkSum);
+        Task CleanupTarFileAsync(Guid journalDEId, string filePath, string checkSum, bool useSharpCompress = false);
 
         void CleanupTarFileDirectory(string workingDirectory);
     }

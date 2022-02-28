@@ -9,6 +9,7 @@ using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueDE.Constants;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using SharpCompress.Readers;
 
 namespace fiskaltrust.Middleware.Localization.QueueDE.Services
 {
@@ -34,11 +35,11 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
 
             if (!_storeTemporaryExportFiles)
             {
-                lifetime.ApplicationStarted.Register(CleanupAllTarFiles);
+                lifetime.ApplicationStarted.Register(CleanupAllTarFilesAsync);
             }
         }
 
-        public async Task CleanupTarFile(Guid journalDEId, string filePath, string checkSum)
+        public async Task CleanupTarFileAsync(Guid journalDEId, string filePath, string checkSum, bool useSharpCompress = false)
         {
             var dbJournalDE = await _journalDERepository.GetAsync(journalDEId).ConfigureAwait(false);
 
@@ -46,7 +47,9 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
 
             try
             {
-                var dbCheckSum = GetHashFromCompressedBase64(dbJournalDE.FileContentBase64);
+                var dbCheckSum = useSharpCompress
+                                    ? GetHashFromCompressedBase64WithSharpCompress(dbJournalDE.FileContentBase64)
+                                    : GetHashFromCompressedBase64(dbJournalDE.FileContentBase64);
 
                 uploadSuccess = checkSum == dbCheckSum;
             }
@@ -76,7 +79,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
             }
         }
 
-        private async void CleanupAllTarFiles()
+        private async void CleanupAllTarFilesAsync()
         {
             var basePath = Path.Combine(_middlewareConfiguration.ServiceFolder, "Exports", _middlewareConfiguration.QueueId.ToString(), "TAR");
             foreach (var directory in Directory.GetDirectories(basePath))
@@ -87,14 +90,30 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
             foreach (var export in Directory.GetFiles(basePath))
             {
                 var journalDE = await _journalDERepository.GetByFileName(Path.GetFileNameWithoutExtension(export)).FirstOrDefaultAsync();
+                if(journalDE == null)
+                {
+                    continue;
+                }
 
                 using var stream = new FileStream(export, FileMode.Open, FileAccess.Read);
 
                 using var sha256 = SHA256.Create();
                 var checkSum = Convert.ToBase64String(sha256.ComputeHash(stream));
 
-                await CleanupTarFile(journalDE.ftJournalDEId, $"{journalDE.FileName}.zip", checkSum);
+                await CleanupTarFileAsync(journalDE.ftJournalDEId, $"{journalDE.FileName}.zip", checkSum, useSharpCompress: true);
             }
+        }
+
+        private static string GetHashFromCompressedBase64WithSharpCompress(string zippedBase64)
+        {
+            using Stream archive = new MemoryStream(Convert.FromBase64String(zippedBase64));
+            using var reader = ReaderFactory.Open(archive);
+
+            reader.MoveToNextEntry();
+            using var stream = reader.OpenEntryStream();
+
+            using var sha256 = SHA256.Create();
+            return Convert.ToBase64String(sha256.ComputeHash(stream));
         }
 
         private static string GetHashFromCompressedBase64(string zippedBase64)
@@ -103,9 +122,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
             using var arch = new ZipArchive(ms);
 
             using var sha256 = SHA256.Create();
-            var dbCheckSum = Convert.ToBase64String(sha256.ComputeHash(arch.Entries.First().Open()));
-
-            return dbCheckSum;
+            return Convert.ToBase64String(sha256.ComputeHash(arch.Entries.First().Open()));
         }
     }
 }

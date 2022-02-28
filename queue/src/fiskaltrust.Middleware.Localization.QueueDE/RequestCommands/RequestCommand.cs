@@ -110,7 +110,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                     };
                     await _journalDERepository.InsertAsync(journalDE).ConfigureAwait(false);
 
-                    await _tarFileCleanupService.CleanupTarFile(journalDE.ftJournalDEId, filePath, checkSum);
+                    await _tarFileCleanupService.CleanupTarFileAsync(journalDE.ftJournalDEId, filePath, checkSum);
                 }
                 else
                 {
