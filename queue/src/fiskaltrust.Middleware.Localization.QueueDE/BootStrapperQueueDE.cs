@@ -2,6 +2,7 @@
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts;
 using fiskaltrust.Middleware.Contracts.Models;
+using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueDE.Extensions;
 using fiskaltrust.Middleware.Localization.QueueDE.MasterData;
 using fiskaltrust.Middleware.Localization.QueueDE.RequestCommands.Factories;
@@ -29,6 +30,17 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
                 sscdProvider.RegisterCurrentScuAsync().Wait();
 
                 return sscdProvider;
+            });
+            services.AddSingleton<ITarFileCleanupService>(sp =>
+            {
+                var tarFileCleanupService = new TarFileCleanupService(
+                    sp.GetRequiredService<ILogger<TarFileCleanupService>>(),
+                    sp.GetRequiredService<IMiddlewareJournalDERepository>(),
+                    sp.GetRequiredService<MiddlewareConfiguration>());
+
+                tarFileCleanupService.CleanupAllTarFilesAsync().Wait();
+
+                return tarFileCleanupService;
             });
 
             services.AddSingleton<IRequestCommandFactory, RequestCommandFactory>();

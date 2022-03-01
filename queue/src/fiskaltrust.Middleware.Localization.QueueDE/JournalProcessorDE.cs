@@ -41,8 +41,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
         private readonly MiddlewareConfiguration _middlewareConfiguration;
         private readonly IMasterDataService _masterDataService;
         private readonly IMiddlewareQueueItemRepository _middlewareQueueItemRepository;
-
-        private readonly bool _storeTemporaryExportFiles = false;
+        private readonly ITarFileCleanupService _tarFileCleanupService;
 
         public JournalProcessorDE(
             ILogger<JournalProcessorDE> logger,
@@ -56,7 +55,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             IDESSCDProvider deSSCDProvider,
             MiddlewareConfiguration middlewareConfiguration,
             IMasterDataService masterDataService,
-            IMiddlewareQueueItemRepository middlewareQueueItemRepository)
+            IMiddlewareQueueItemRepository middlewareQueueItemRepository,
+            ITarFileCleanupService tarFileCleanupService)
         {
             _logger = logger;
             _configurationRepository = configurationRepository;
@@ -70,11 +70,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             _middlewareConfiguration = middlewareConfiguration;
             _masterDataService = masterDataService;
             _middlewareQueueItemRepository = middlewareQueueItemRepository;
-
-            if (_middlewareConfiguration.Configuration.ContainsKey(ConfigurationKeys.STORE_TEMPORARY_FILES_KEY))
-            {
-                _storeTemporaryExportFiles = bool.TryParse(_middlewareConfiguration.Configuration[ConfigurationKeys.STORE_TEMPORARY_FILES_KEY].ToString(), out var val) && val;
-            }
+            _tarFileCleanupService = tarFileCleanupService;
         }
 
         public async IAsyncEnumerable<JournalResponse> ProcessAsync(JournalRequest request)
@@ -152,10 +148,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             }
             finally
             {
-                if (!_storeTemporaryExportFiles && Directory.Exists(workingDirectory))
-                {
-                    Directory.Delete(workingDirectory, true);
-                }
+                _tarFileCleanupService.CleanupTarFileDirectory(workingDirectory);
             }
         }
 
@@ -253,10 +246,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             }
             finally
             {
-                if (!_storeTemporaryExportFiles && Directory.Exists(workingDirectory))
-                {
-                    Directory.Delete(workingDirectory, true);
-                }
+                _tarFileCleanupService.CleanupTarFileDirectory(workingDirectory);
             }
         }
 

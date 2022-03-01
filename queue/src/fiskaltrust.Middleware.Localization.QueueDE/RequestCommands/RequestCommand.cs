@@ -10,7 +10,6 @@ using fiskaltrust.ifPOS.v1.de;
 using fiskaltrust.Middleware.Contracts.Data;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Models.Transactions;
-using fiskaltrust.Middleware.Localization.QueueDE.Constants;
 using fiskaltrust.Middleware.Localization.QueueDE.Extensions;
 using fiskaltrust.Middleware.Localization.QueueDE.Models;
 using fiskaltrust.Middleware.Localization.QueueDE.Services;
@@ -39,16 +38,16 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
         protected readonly IPersistentTransactionRepository<OpenTransaction> _openTransactionRepo;
         private readonly IJournalDERepository _journalDERepository;
         private readonly MiddlewareConfiguration _middlewareConfiguration;
+        private readonly ITarFileCleanupService _tarFileCleanupService;
 
         protected string _certificationIdentification = null;
-        protected bool _storeTemporaryExportFiles = false;
 
         public abstract string ReceiptName { get; }
 
         public RequestCommand(ILogger<RequestCommand> logger, SignatureFactoryDE signatureFactory, IDESSCDProvider deSSCDProvider,
             ITransactionPayloadFactory transactionPayloadFactory, IReadOnlyQueueItemRepository queueItemRepository, IConfigurationRepository configurationRepository,
             IJournalDERepository journalDERepository, MiddlewareConfiguration middlewareConfiguration, IPersistentTransactionRepository<FailedStartTransaction> failedStartTransactionRepo,
-            IPersistentTransactionRepository<FailedFinishTransaction> failedFinishTransactionRepo, IPersistentTransactionRepository<OpenTransaction> openTransactionRepo)
+            IPersistentTransactionRepository<FailedFinishTransaction> failedFinishTransactionRepo, IPersistentTransactionRepository<OpenTransaction> openTransactionRepo, ITarFileCleanupService tarFileCleanupService)
         {
             _logger = logger;
             _signatureFactory = signatureFactory;
@@ -62,12 +61,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             _failedFinishTransactionRepo = failedFinishTransactionRepo;
             _openTransactionRepo = openTransactionRepo;
             _transactionFactory = new TransactionFactory(_deSSCDProvider.Instance);
-
-            if (_middlewareConfiguration.Configuration.ContainsKey(ConfigurationKeys.STORE_TEMPORARY_FILES_KEY))
-            {
-                _storeTemporaryExportFiles = bool.TryParse(_middlewareConfiguration.Configuration[ConfigurationKeys.STORE_TEMPORARY_FILES_KEY].ToString(), out var val) && val;
-            }
-
+            _tarFileCleanupService = tarFileCleanupService;
         }
 
         public abstract Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueDE queueDE, IDESSCD client, ReceiptRequest request, ftQueueItem queueItem);
@@ -116,35 +110,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                     };
                     await _journalDERepository.InsertAsync(journalDE).ConfigureAwait(false);
 
-                    var dbJournalDE = await _journalDERepository.GetAsync(journalDE.ftJournalDEId).ConfigureAwait(false);
-
-                    var uploadSuccess = false;
-
-                    if (journalDE.ftJournalDEId == dbJournalDE.ftJournalDEId)
-                    {
-                        try
-                        {
-                            var dbCheckSum = GetHashFromCompressedBase64(dbJournalDE.FileContentBase64);
-
-                            uploadSuccess = checkSum == dbCheckSum;
-                        }
-                        catch (Exception e)
-                        {
-                            _logger.LogWarning(e, "Failed to check content equality.");
-                        }
-                    }
-
-                    if (uploadSuccess)
-                    {
-                        if (!_storeTemporaryExportFiles && File.Exists(filePath))
-                        {
-                            File.Delete(filePath);
-                        }
-                    }
-                    else
-                    {
-                        _logger.LogWarning("Failed to insert Tar export into database. Tar export file can be found here {file}", filePath);
-                    }
+                    await _tarFileCleanupService.CleanupTarFileAsync(journalDE.ftJournalDEId, filePath, checkSum);
                 }
                 else
                 {
@@ -397,17 +363,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             }
 
             return ms.ToArray();
-        }
-
-        public static string GetHashFromCompressedBase64(string zippedBase64)
-        {
-            using var ms = new MemoryStream(Convert.FromBase64String(zippedBase64));
-            using var arch = new ZipArchive(ms);
-
-            using var sha256 = SHA256.Create();
-            var dbCheckSum = Convert.ToBase64String(sha256.ComputeHash(arch.Entries.First().Open()));
-
-            return dbCheckSum;
         }
     }
 }

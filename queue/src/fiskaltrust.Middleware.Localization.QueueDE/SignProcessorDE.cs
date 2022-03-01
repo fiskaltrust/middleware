@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.de;
@@ -11,6 +12,7 @@ using fiskaltrust.Middleware.Localization.QueueDE.RequestCommands.Factories;
 using fiskaltrust.Middleware.Localization.QueueDE.Services;
 using fiskaltrust.Middleware.Localization.QueueDE.Transactions;
 using fiskaltrust.storage.V0;
+using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.QueueDE
 {
@@ -35,7 +37,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
 
         public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ftQueue queue, ftQueueItem queueItem)
         {
-            if (string.IsNullOrEmpty(request.cbReceiptReference) && !request.IsFailTransactionReceipt() &&  !string.IsNullOrEmpty(request.ftReceiptCaseData) && !request.ftReceiptCaseData.Contains("CurrentStartedTransactionNumbers"))
+            if (string.IsNullOrEmpty(request.cbReceiptReference) && !request.IsFailTransactionReceipt() && !string.IsNullOrEmpty(request.ftReceiptCaseData) && !request.ftReceiptCaseData.Contains("CurrentStartedTransactionNumbers"))
             {
                 throw new ArgumentException($"CbReceiptReference must be set for one transaction! If you want to close multiple transactions, pass an array value for 'CurrentStartedTransactionNumbers' via ftReceiptCaseData.");
             }

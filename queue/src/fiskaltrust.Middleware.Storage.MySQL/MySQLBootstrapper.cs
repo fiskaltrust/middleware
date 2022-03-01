@@ -81,6 +81,7 @@ namespace fiskaltrust.Middleware.Storage.MySQL
             services.AddSingleton<IReadOnlyJournalATRepository>(x => new MySQLJournalATRepository(_connectionString));
             services.AddSingleton<IMiddlewareRepository<ftJournalAT>>(x => new MySQLJournalATRepository(_connectionString));
 
+            services.AddSingleton<IMiddlewareJournalDERepository>(x => new MySQLJournalDERepository(_connectionString));
             services.AddSingleton<IJournalDERepository>(x => new MySQLJournalDERepository(_connectionString));
             services.AddSingleton<IReadOnlyJournalDERepository>(x => new MySQLJournalDERepository(_connectionString));
             services.AddSingleton<IMiddlewareRepository<ftJournalDE>>(x => new MySQLJournalDERepository(_connectionString));
