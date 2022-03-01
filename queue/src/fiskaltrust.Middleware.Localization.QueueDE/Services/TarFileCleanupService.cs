@@ -62,7 +62,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
             }
             else
             {
-                _logger.LogWarning("Failed to insert Tar export into database. Tar export file can be found here {file}", filePath);
+                _logger.LogWarning("A content mismatch between the temporary local TAR file and the database was detected. The local TAR file will not be deleted and can be found at '{file}'", filePath);
             }
         }
 
