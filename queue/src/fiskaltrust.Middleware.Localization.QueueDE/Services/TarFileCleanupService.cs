@@ -101,6 +101,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
                     checkSum = Convert.ToBase64String(sha256.ComputeHash(stream));
                 }
 
+               // Use SharpCompress to be compatible with old archives without proper footer data
                 await CleanupTarFileAsync(journalDE.ftJournalDEId, Path.Combine(basePath, $"{journalDE.FileName}.tar"), checkSum, useSharpCompress: true);
             }
         }
