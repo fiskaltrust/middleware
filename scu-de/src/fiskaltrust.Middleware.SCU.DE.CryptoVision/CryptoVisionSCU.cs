@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -737,13 +738,69 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to execute {Operation} - TempFileName: {TempFileName}", nameof(CacheExportAsync), exportId.ToString());
-                    SetExportState(exportId, ExportState.Failed, ex);
+                    if (ex is TimeoutException)
+                    {
+                        await StartExportMoreDataAsync(exportId, tseSerialNumber).ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        _logger.LogError(ex, "Failed to execute {Operation} - TempFileName: {TempFileName}", nameof(CacheExportAsync), exportId.ToString());
+                        SetExportState(exportId, ExportState.Failed, ex);
+                    }
                 }
             });
         }
 
-        private void SetEraseEnabledForExportState(Guid tokenId, ExportState exportState, Exception error = null)
+        private async Task StartExportMoreDataAsync(Guid exportId, byte[] serialNumber)
+        {
+            try
+            {
+                (_, var currentNumberOfSignatures) = await _proxy.SeGetSignatureCounterAsync(tseSerialNumber);
+                await CacheExportMoreDataAsync(exportId.ToString(), serialNumber, 145000, 5000, currentNumberOfSignatures).ConfigureAwait(false);
+                SetExportState(exportId, ExportState.Succeeded);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to execute {Operation} - TempFileName: {TempFileName}", nameof(CacheExportMoreDataAsync), exportId.ToString());
+                SetExportState(exportId, ExportState.Failed, ex);
+            }
+        }
+
+        private async Task CacheExportMoreDataAsync(string targetFile, byte[] serialNumber, long previousSignatureCounter, long maxNumberOfRecords, uint currentNumberOfSignatures)
+        {
+            try
+            {
+                using (var stream = new FileStream(targetFile, FileMode.Append))
+                {
+                    maxNumberOfRecords = CalcMaxNumberOfRecords(previousSignatureCounter, maxNumberOfRecords, currentNumberOfSignatures);
+                    (await _proxy.SeExportMoreDataAsync(stream, serialNumber, previousSignatureCounter, maxNumberOfRecords)).ThrowIfError();
+                    stream.Flush();
+                    stream.Close();
+                }
+            if ((previousSignatureCounter + maxNumberOfRecords) < currentNumberOfSignatures)
+            {
+
+                maxNumberOfRecords = CalcMaxNumberOfRecords(previousSignatureCounter, maxNumberOfRecords, currentNumberOfSignatures);
+                await CacheExportMoreDataAsync(targetFile, serialNumber, previousSignatureCounter+maxNumberOfRecords, maxNumberOfRecords, currentNumberOfSignatures).ConfigureAwait(false);
+            }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to execute {Operation} - TempFileName: {TempFileName}", nameof(CacheExportMoreDataAsync), targetFile);
+
+            }
+        }
+
+        private long CalcMaxNumberOfRecords(long previousSignatureCounter, long maxNumberOfRecords, uint currentNumberOfSignatures)
+        {
+            if ((previousSignatureCounter + maxNumberOfRecords) > currentNumberOfSignatures)
+            {
+                return currentNumberOfSignatures - previousSignatureCounter;
+            }
+            return maxNumberOfRecords;
+        }
+
+    private void SetEraseEnabledForExportState(Guid tokenId, ExportState exportState, Exception error = null)
         {
             _readStreamPointer.AddOrUpdate(tokenId.ToString(), new ExportStateData
             {

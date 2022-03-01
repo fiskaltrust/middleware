@@ -87,7 +87,7 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision.Interop
         public abstract Task<SeResult> SeMapERStoKeyAsync(string clientId, byte[] serialNumber);
         public abstract Task<SeResult> SeDeactivateAsync();
         public abstract Task<SeResult> SeActivateAsync();
-        public abstract Task<SeResult> SeExportMoreDataAsync(Stream stream, byte[] serialNumber, UInt32 previousSignatureCounter, Int32 maxNumberOfRecords);
+        public abstract Task<SeResult> SeExportMoreDataAsync(Stream stream, byte[] serialNumber, long previousSignatureCounter, long maxNumberOfRecords);
         public abstract Task<SeResult> SeDeleteDataUpToAsync(byte[] serialNumber, UInt32 signatureCounter);
         public abstract Task<(SeResult, byte[])> SeGetERSMappingsAsync();
 

@@ -85,6 +85,7 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision.Interop
             return await CommandRunner.ExecuteAsync(async () =>
             {
                 var command = new ExportCommands.ExportDataTseCommand(clientId, (uint) maximumNumberOfRecords);
+
                 foreach (var item in await _transportAdapter.ExecuteAsync(command))
                 {
                     stream.Write(item.DataBytes, 0, item.DataBytes.Length);
@@ -92,6 +93,21 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision.Interop
                 return SeResult.ExecutionOk;
             });
         }
+
+        public async Task<SeResult> SeExportMoreDataAsync(Stream stream, byte[] serialNumber, long previousSignatureCounter, long maxNumberOfRecords)
+        {
+            return await CommandRunner.ExecuteAsync(async () =>
+            {
+                var command = AdditionalCommands.CreateExportMoreDataTseCommand(serialNumber, (uint) previousSignatureCounter, (uint) maxNumberOfRecords);
+
+                foreach (var item in await _transportAdapter.ExecuteAsync(command))
+                {
+                    stream.Write(item.DataBytes, 0, item.DataBytes.Length);
+                }
+                return SeResult.ExecutionOk;
+            });
+        }
+
 
         public async Task<SeResult> SeExportDateRangeDataAsync(Stream stream, ulong startUnixTime, ulong endUnixTime, string clientId = null, int maximumNumberOfRecords = 0)
         {
@@ -106,11 +122,11 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision.Interop
             });
         }
 
-        public async Task<SeResult> SeExportMoreDataAsync(Stream stream, byte[] serialNumber, uint previousSignatureCounter, int maxNumberOfRecords)
+        public async Task<SeResult> SeExportMoreDataAsync(Stream stream, byte[] serialNumber, uint previousSignatureCounter)
         {
             return await CommandRunner.ExecuteAsync(async () =>
             {
-                var command = AdditionalCommands.CreateExportMoreDataTseCommand(serialNumber, previousSignatureCounter, (uint) maxNumberOfRecords);
+                var command = AdditionalCommands.CreateExportMoreDataTseCommand(serialNumber, previousSignatureCounter, 0);
                 foreach (var item in await _transportAdapter.ExecuteAsync(command))
                 {
                     await stream.WriteAsync(item.DataBytes, 0, item.DataBytes.Length);
