@@ -756,7 +756,7 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision
             try
             {
                 (_, var currentNumberOfSignatures) = await _proxy.SeGetSignatureCounterAsync(tseSerialNumber);
-                await CacheExportMoreDataAsync(exportId.ToString(), serialNumber, 145000, 5000, currentNumberOfSignatures).ConfigureAwait(false);
+                await CacheExportMoreDataAsync(exportId.ToString(), serialNumber, 0, 5000, currentNumberOfSignatures).ConfigureAwait(false);
                 SetExportState(exportId, ExportState.Succeeded);
             }
             catch (Exception ex)
@@ -768,26 +768,17 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision
 
         private async Task CacheExportMoreDataAsync(string targetFile, byte[] serialNumber, long previousSignatureCounter, long maxNumberOfRecords, uint currentNumberOfSignatures)
         {
-            try
+            using (var stream = new FileStream(targetFile, FileMode.Append))
             {
-                using (var stream = new FileStream(targetFile, FileMode.Append))
-                {
-                    maxNumberOfRecords = CalcMaxNumberOfRecords(previousSignatureCounter, maxNumberOfRecords, currentNumberOfSignatures);
-                    (await _proxy.SeExportMoreDataAsync(stream, serialNumber, previousSignatureCounter, maxNumberOfRecords)).ThrowIfError();
-                    stream.Flush();
-                    stream.Close();
-                }
-            if ((previousSignatureCounter + maxNumberOfRecords) < currentNumberOfSignatures)
-            {
-
                 maxNumberOfRecords = CalcMaxNumberOfRecords(previousSignatureCounter, maxNumberOfRecords, currentNumberOfSignatures);
-                await CacheExportMoreDataAsync(targetFile, serialNumber, previousSignatureCounter+maxNumberOfRecords, maxNumberOfRecords, currentNumberOfSignatures).ConfigureAwait(false);
+                (await _proxy.SeExportMoreDataAsync(stream, serialNumber, previousSignatureCounter, maxNumberOfRecords)).ThrowIfError();
+                stream.Flush();
+                stream.Close();
             }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to execute {Operation} - TempFileName: {TempFileName}", nameof(CacheExportMoreDataAsync), targetFile);
 
+            if ((previousSignatureCounter + maxNumberOfRecords) < currentNumberOfSignatures)
+            { 
+                await CacheExportMoreDataAsync(targetFile, serialNumber, previousSignatureCounter+maxNumberOfRecords, maxNumberOfRecords, currentNumberOfSignatures).ConfigureAwait(false);
             }
         }
 
@@ -800,7 +791,7 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision
             return maxNumberOfRecords;
         }
 
-    private void SetEraseEnabledForExportState(Guid tokenId, ExportState exportState, Exception error = null)
+        private void SetEraseEnabledForExportState(Guid tokenId, ExportState exportState, Exception error = null)
         {
             _readStreamPointer.AddOrUpdate(tokenId.ToString(), new ExportStateData
             {
