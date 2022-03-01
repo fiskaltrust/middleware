@@ -36,6 +36,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
 
         public async Task CleanupTarFileAsync(Guid journalDEId, string filePath, string checkSum, bool useSharpCompress = false)
         {
+            if(_storeTemporaryExportFiles) { return; }
+
             var dbJournalDE = await _journalDERepository.GetAsync(journalDEId).ConfigureAwait(false);
 
             var uploadSuccess = false;
@@ -55,7 +57,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
 
             if (uploadSuccess)
             {
-                if (!_storeTemporaryExportFiles && File.Exists(filePath))
+                if (File.Exists(filePath))
                 {
                     File.Delete(filePath);
                 }
