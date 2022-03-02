@@ -421,7 +421,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
             var payAmount = request.cbPayItems != null ? request.cbPayItems.Sum(x => x.Amount != null ? x.Amount : 0) : 0;
             if (chargeAmount != payAmount)
             {
-                var _differentPayChargeAmount = $"ChargeItem Amount: {chargeAmount} does not match PayItem Amount: {payAmount}. See https://docs.fiskaltrust.cloud/docs/poscreators/middleware-doc for more details.";
+                var _differentPayChargeAmount = $"Aggregated sum of ChargeItem amounts ({chargeAmount}) does not match the sum of PayItem amount ({payAmount}). This is usually a hint for an implementation issue. Please see https://docs.fiskaltrust.cloud/docs/poscreators/middleware-doc for more details.";
                 logger.LogWarning(_differentPayChargeAmount);
             }
         }
