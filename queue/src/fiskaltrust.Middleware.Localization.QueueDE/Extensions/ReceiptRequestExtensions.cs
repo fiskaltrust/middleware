@@ -417,8 +417,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
         private static decimal GetSignForAmount(decimal quantity, decimal amount)  => quantity < 0 && amount >= 0 ? -1 : 1;
         public static void CheckForEqualSumChargePayItems(this ReceiptRequest request, ILogger logger)
         {
-            var chargeAmount = request.cbChargeItems != null ? request.cbChargeItems.Sum( x => x.Amount != null ? x.Amount : 0) : 0;
-            var payAmount = request.cbPayItems != null ? request.cbPayItems.Sum(x => x.Amount != null ? x.Amount : 0) : 0;
+            var chargeAmount = request.cbChargeItems != null ? request.cbChargeItems.Sum( x => x.Amount != null ? x.Amount * GetSignForAmount(x.Quantity, x.Amount) : 0) : 0;
+            var payAmount = request.cbPayItems != null ? request.cbPayItems.Sum(x => x.Amount != null ? x.Amount * GetSignForAmount(x.Quantity, x.Amount) : 0) : 0;
             if (chargeAmount != payAmount)
             {
                 var _differentPayChargeAmount = $"Aggregated sum of ChargeItem amounts ({chargeAmount}) does not match the sum of PayItem amount ({payAmount}). This is usually a hint for an implementation issue. Please see https://docs.fiskaltrust.cloud/docs/poscreators/middleware-doc for more details.";
