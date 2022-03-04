@@ -35,7 +35,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                     throw new ArgumentException($"No transactionnumber found for cbReceiptReference '{request.cbReceiptReference}'.");
                 }
             }
-
+            request.CheckForEqualSumChargePayItems(_logger);
             var (processType, payload) = _transactionPayloadFactory.CreateReceiptPayload(request);
             var receiptResponse = CreateReceiptResponse(request, queueItem, queueDE);
 
