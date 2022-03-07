@@ -38,6 +38,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
         protected readonly IPersistentTransactionRepository<OpenTransaction> _openTransactionRepo;
         private readonly IJournalDERepository _journalDERepository;
         private readonly MiddlewareConfiguration _middlewareConfiguration;
+        private readonly QueueDEConfiguration _queueDEConfiguration;
         private readonly ITarFileCleanupService _tarFileCleanupService;
 
         protected string _certificationIdentification = null;
@@ -47,7 +48,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
         public RequestCommand(ILogger<RequestCommand> logger, SignatureFactoryDE signatureFactory, IDESSCDProvider deSSCDProvider,
             ITransactionPayloadFactory transactionPayloadFactory, IReadOnlyQueueItemRepository queueItemRepository, IConfigurationRepository configurationRepository,
             IJournalDERepository journalDERepository, MiddlewareConfiguration middlewareConfiguration, IPersistentTransactionRepository<FailedStartTransaction> failedStartTransactionRepo,
-            IPersistentTransactionRepository<FailedFinishTransaction> failedFinishTransactionRepo, IPersistentTransactionRepository<OpenTransaction> openTransactionRepo, ITarFileCleanupService tarFileCleanupService)
+            IPersistentTransactionRepository<FailedFinishTransaction> failedFinishTransactionRepo, IPersistentTransactionRepository<OpenTransaction> openTransactionRepo, ITarFileCleanupService tarFileCleanupService, QueueDEConfiguration queueDEConfiguration)
         {
             _logger = logger;
             _signatureFactory = signatureFactory;
@@ -62,6 +63,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             _openTransactionRepo = openTransactionRepo;
             _transactionFactory = new TransactionFactory(_deSSCDProvider.Instance);
             _tarFileCleanupService = tarFileCleanupService;
+            _queueDEConfiguration = queueDEConfiguration;
         }
 
         public abstract Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueDE queueDE, IDESSCD client, ReceiptRequest request, ftQueueItem queueItem);
@@ -92,6 +94,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
         public async Task PerformTarFileExportAsync(ftQueueItem queueItem, ftQueue queue, ftQueueDE queueDE, IDESSCD client, bool erase)
         {
+            if(!_queueDEConfiguration.EnableTarFileExport) { return; }
             try
             {
                 var exportService = new TarFileExportService();

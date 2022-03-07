@@ -14,6 +14,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
         public int? ScuMaxRetries;
 
         public bool StoreTemporaryExportFiles = false;
+        
+        public bool EnableTarFileExport = true;
 
         public static QueueDEConfiguration FromMiddlewareConfiguration(MiddlewareConfiguration middlewareConfiguration) => JsonConvert.DeserializeObject<QueueDEConfiguration>(JsonConvert.SerializeObject(middlewareConfiguration.Configuration));
     }
