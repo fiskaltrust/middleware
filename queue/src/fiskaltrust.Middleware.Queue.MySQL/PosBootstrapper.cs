@@ -25,7 +25,7 @@ namespace fiskaltrust.Middleware.Queue.MySQL
             var queueBootstrapper = new QueueBootstrapper(Id, Configuration);
             queueBootstrapper.ConfigureServices(serviceCollection);
 
-            serviceCollection.AddSingleton(sp => JsonConvert.DeserializeObject<MySQLQueueConfiguration>(JsonConvert.SerializeObject(sp.GetRequiredService<MiddlewareConfiguration>().Configuration)));
+            serviceCollection.AddSingleton(sp => MySQLQueueConfiguration.FromMiddlewareConfiguration(sp.GetRequiredService<MiddlewareConfiguration>()));
         }
     }
 }

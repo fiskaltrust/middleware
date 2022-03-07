@@ -25,7 +25,8 @@ namespace fiskaltrust.Middleware.Queue.EF
             var queueBootstrapper = new QueueBootstrapper(Id, Configuration);
             queueBootstrapper.ConfigureServices(serviceCollection);
 
-            serviceCollection.AddSingleton(sp => JsonConvert.DeserializeObject<EFQueueConfiguration>(JsonConvert.SerializeObject(sp.GetRequiredService<MiddlewareConfiguration>().Configuration)));
+                
+            serviceCollection.AddSingleton(sp => EFQueueConfiguration.FromMiddlewareConfiguration(sp.GetRequiredService<MiddlewareConfiguration>()));
         }
     }
 }

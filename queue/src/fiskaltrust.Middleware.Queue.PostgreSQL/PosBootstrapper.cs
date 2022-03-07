@@ -25,7 +25,7 @@ namespace fiskaltrust.Middleware.Queue.PostgreSQL
             var queueBootstrapper = new QueueBootstrapper(Id, Configuration);
             queueBootstrapper.ConfigureServices(serviceCollection);
             
-            serviceCollection.AddSingleton(sp => JsonConvert.DeserializeObject<PostgreSQLQueueConfiguration>(JsonConvert.SerializeObject(sp.GetRequiredService<MiddlewareConfiguration>().Configuration)));
+            serviceCollection.AddSingleton(sp => PostgreSQLQueueConfiguration.FromMiddlewareConfiguration(sp.GetRequiredService<MiddlewareConfiguration>()));
         }
     }
 }

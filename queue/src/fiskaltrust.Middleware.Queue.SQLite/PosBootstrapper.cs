@@ -25,7 +25,7 @@ namespace fiskaltrust.Middleware.Queue.SQLite
             var queueBootstrapper = new QueueBootstrapper(Id, Configuration);
             queueBootstrapper.ConfigureServices(serviceCollection);
 
-            serviceCollection.AddSingleton(sp => JsonConvert.DeserializeObject<SQLiteQueueConfiguration>(JsonConvert.SerializeObject(sp.GetRequiredService<MiddlewareConfiguration>().Configuration)));
+            serviceCollection.AddSingleton(sp => SQLiteQueueConfiguration.FromMiddlewareConfiguration(sp.GetRequiredService<MiddlewareConfiguration>()));
         }
     }
 }

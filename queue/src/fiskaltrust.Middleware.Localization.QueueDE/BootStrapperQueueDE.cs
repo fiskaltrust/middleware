@@ -25,10 +25,15 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
                 .AddScoped<IMarketSpecificSignProcessor, SignProcessorDE>()
                 .AddScoped<JournalProcessorDE>()
                 .AddScoped<IMasterDataService, MasterDataService>()
+                .AddSingleton(sp => QueueDEConfiguration.FromMiddlewareConfiguration(sp.GetRequiredService<MiddlewareConfiguration>()))
                 .AddSingleton<IDESSCDProvider>(sp =>
                 {
-                    var sscdProvider = new DESSCDProvider(sp.GetRequiredService<ILogger<DESSCDProvider>>(), sp.GetRequiredService<IClientFactory<IDESSCD>>(),
-                        sp.GetRequiredService<IConfigurationRepository>(), sp.GetRequiredService<MiddlewareConfiguration>());
+                    var sscdProvider = new DESSCDProvider(
+                        sp.GetRequiredService<ILogger<DESSCDProvider>>(),
+                        sp.GetRequiredService<IClientFactory<IDESSCD>>(),
+                        sp.GetRequiredService<IConfigurationRepository>(),
+                        sp.GetRequiredService<MiddlewareConfiguration>(),
+                        sp.GetRequiredService<QueueDEConfiguration>());
                     sscdProvider.RegisterCurrentScuAsync().Wait();
 
                     return sscdProvider;
@@ -38,13 +43,13 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
                     var tarFileCleanupService = new TarFileCleanupService(
                         sp.GetRequiredService<ILogger<TarFileCleanupService>>(),
                         sp.GetRequiredService<IMiddlewareJournalDERepository>(),
-                        sp.GetRequiredService<MiddlewareConfiguration>());
+                        sp.GetRequiredService<MiddlewareConfiguration>(),
+                        sp.GetRequiredService<QueueDEConfiguration>());
 
                     tarFileCleanupService.CleanupAllTarFilesAsync().Wait();
 
                     return tarFileCleanupService;
                 })
-                .AddSingleton(sp => JsonConvert.DeserializeObject<QueueDEConfiguration>(JsonConvert.SerializeObject(sp.GetRequiredService<MiddlewareConfiguration>().Configuration)))
                 .AddSingleton<IRequestCommandFactory, RequestCommandFactory>()
                 .ConfigureReceiptCommands();
         }

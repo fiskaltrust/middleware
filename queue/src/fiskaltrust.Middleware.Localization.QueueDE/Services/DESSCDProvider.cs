@@ -13,13 +13,12 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
 {
     public class DESSCDProvider : IDESSCDProvider
     {
-        private const string SCU_TIMEOUT_KEY = "scu-timeout-ms";
-        private const string SCU_MAX_RETRIES_KEY = "scu-max-retries";
-
         private readonly ILogger<DESSCDProvider> _logger;
         private readonly IClientFactory<IDESSCD> _clientFactory;
         private readonly IConfigurationRepository _configurationRepository;
         private readonly MiddlewareConfiguration _middlewareConfiguration;
+        private readonly QueueDEConfiguration _queueDEConfiguration;
+
         private readonly SemaphoreSlim _semaphoreInstance = new SemaphoreSlim(1, 1);
         private readonly SemaphoreSlim _semaphoreRegister = new SemaphoreSlim(1, 1);
 
@@ -46,12 +45,13 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
             }
         }
 
-        public DESSCDProvider(ILogger<DESSCDProvider> logger, IClientFactory<IDESSCD> clientFactory, IConfigurationRepository configurationRepository, MiddlewareConfiguration middlewareConfiguration)
+        public DESSCDProvider(ILogger<DESSCDProvider> logger, IClientFactory<IDESSCD> clientFactory, IConfigurationRepository configurationRepository, MiddlewareConfiguration middlewareConfiguration, QueueDEConfiguration queueDEConfiguration)
         {
             _logger = logger;
             _clientFactory = clientFactory;
             _configurationRepository = configurationRepository;
             _middlewareConfiguration = middlewareConfiguration;
+            _queueDEConfiguration = queueDEConfiguration;
         }
 
         public async Task RegisterCurrentScuAsync()
@@ -75,13 +75,13 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
                     UrlType = uri.Scheme
                 };
 
-                if (_middlewareConfiguration.Configuration.ContainsKey(SCU_TIMEOUT_KEY))
+                if (_queueDEConfiguration.ScuTimeoutMs.HasValue)
                 {
-                    config.Timeout = TimeSpan.FromMilliseconds(long.Parse(_middlewareConfiguration.Configuration[SCU_TIMEOUT_KEY].ToString()));
+                    config.Timeout = TimeSpan.FromMilliseconds(_queueDEConfiguration.ScuTimeoutMs.Value);
                 }
-                if (_middlewareConfiguration.Configuration.ContainsKey(SCU_MAX_RETRIES_KEY))
+                if (_queueDEConfiguration.ScuMaxRetries.HasValue)
                 {
-                    config.RetryCount = int.Parse(_middlewareConfiguration.Configuration[SCU_MAX_RETRIES_KEY].ToString());
+                    config.RetryCount = _queueDEConfiguration.ScuMaxRetries.Value;
                 }
 
                 _instance = _clientFactory.CreateClient(config);
