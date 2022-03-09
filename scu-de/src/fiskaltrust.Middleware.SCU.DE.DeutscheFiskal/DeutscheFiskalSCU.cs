@@ -526,7 +526,6 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
             }
         }
 
-        // TODO validate export and delete from TSE
         public async Task<EndExportSessionResponse> EndExportSessionAsync(EndExportSessionRequest request)
         {
             if (request.TokenId.StartsWith(NO_EXPORT_PREFIX))

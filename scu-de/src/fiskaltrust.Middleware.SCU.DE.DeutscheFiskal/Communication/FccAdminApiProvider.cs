@@ -2,15 +2,15 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Communication.Helpers;
-using fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Constants;
 using fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Exceptions;
+using fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Helpers;
 using fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Models;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -20,12 +20,14 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Communication
     public class FccAdminApiProvider
     {
         private readonly DeutscheFiskalSCUConfiguration _configuration;
+        private readonly ILogger<FccAdminApiProvider> _logger;
         private readonly Uri _baseAddress;
         private readonly ConcurrentDictionary<Guid, List<(DateTime, DateTime)>> _splitExports = new ConcurrentDictionary<Guid, List<(DateTime, DateTime)>>();
 
-        public FccAdminApiProvider(DeutscheFiskalSCUConfiguration configuration)
+        public FccAdminApiProvider(DeutscheFiskalSCUConfiguration configuration, ILogger<FccAdminApiProvider> logger)
         {
             _configuration = configuration;
+            _logger = logger;
             _baseAddress = FccUriHelper.GetFccUri(configuration);
         }
 
@@ -33,13 +35,13 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Communication
         {
             using var client = GetBasicAuthAdminClient();
             var response = await client.GetAsync("clients").ConfigureAwait(false);
-            var responseContent = await response.Content.ReadAsStringAsync().ConfigureAwait(false); ;
+            var responseContent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             if (response.IsSuccessStatusCode)
             {
                 return JsonConvert.DeserializeObject<List<ClientResponseDto>>(responseContent);
             }
 
-            throw new FiskalCloudException($"Communication error ({response.StatusCode}) while getting registered clients (GET /clients). Response: {responseContent}", 
+            throw new FiskalCloudException($"Communication error ({response.StatusCode}) while getting registered clients (GET /clients). Response: {responseContent}",
                 (int) response.StatusCode, ErrorHelper.GetErrorType(responseContent), "GET /clients");
         }
 
@@ -60,7 +62,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Communication
             if (!response.IsSuccessStatusCode)
             {
                 var responseContent = await response.Content.ReadAsStringAsync();
-                throw new FiskalCloudException($"Communication error ({response.StatusCode}) while registering client (POST /registration). Request: '{requestContent}', Response: '{responseContent}'", 
+                throw new FiskalCloudException($"Communication error ({response.StatusCode}) while registering client (POST /registration). Request: '{requestContent}', Response: '{responseContent}'",
                     (int) response.StatusCode, ErrorHelper.GetErrorType(responseContent), "POST /registration");
             }
         }
@@ -79,7 +81,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Communication
                 return JsonConvert.DeserializeObject<FccInfoResponseDto>(responseContent);
             }
 
-            throw new FiskalCloudException($"Communication error ({response.StatusCode}) while requesting FCC info (GET /info). Response: '{responseContent}'", 
+            throw new FiskalCloudException($"Communication error ({response.StatusCode}) while requesting FCC info (GET /info). Response: '{responseContent}'",
                 (int) response.StatusCode, ErrorHelper.GetErrorType(responseContent), "GET /info");
         }
 
@@ -93,7 +95,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Communication
                 return JsonConvert.DeserializeObject<SelfCheckResponseDto>(responseContent);
             }
 
-            throw new FiskalCloudException($"Communication error ({response.StatusCode}) while getting self check result (GET /selfcheck). Response: '{responseContent}'", 
+            throw new FiskalCloudException($"Communication error ({response.StatusCode}) while getting self check result (GET /selfcheck). Response: '{responseContent}'",
                 (int) response.StatusCode, ErrorHelper.GetErrorType(responseContent), "GET /selfcheck");
         }
 
@@ -107,7 +109,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Communication
                 return JsonConvert.DeserializeObject<TssDetailsResponseDto>(responseContent);
             }
 
-            throw new FiskalCloudException($"Communication error ({response.StatusCode}) while getting TSS details (GET /tssdetails). Response: '{responseContent}'", 
+            throw new FiskalCloudException($"Communication error ({response.StatusCode}) while getting TSS details (GET /tssdetails). Response: '{responseContent}'",
                 (int) response.StatusCode, ErrorHelper.GetErrorType(responseContent), "GET /tssdetails");
         }
 
@@ -122,7 +124,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Communication
                 return Convert.FromBase64String(responseContent);
             }
 
-            throw new FiskalCloudException($"Communication error ({response.StatusCode}) while exporting single transaction (GET /export/transactions/{transactionNumber}). Response: '{responseContent}'", 
+            throw new FiskalCloudException($"Communication error ({response.StatusCode}) while exporting single transaction (GET /export/transactions/{transactionNumber}). Response: '{responseContent}'",
                 (int) response.StatusCode, ErrorHelper.GetErrorType(responseContent), $"GET /export/transactions/{transactionNumber}");
         }
 
@@ -144,32 +146,41 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Communication
                 return;
             }
 
-            var responseContent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             if (response.IsSuccessStatusCode)
             {
-                using (var stream = new FileStream(targetFile, FileMode.Append))
-                {                                                                                                   
-                    var bytes = Convert.FromBase64String(responseContent);
-                    stream.Write(bytes, 0, bytes.Length);
-                    stream.Flush();
-                    stream.Close();
-                }
+                // Deserialize base64 response without loading it into memory. Bold move of Microsoft to call this "CryptoStream", but who am I to judge.
+                using var contentStream = new CryptoStream(await response.Content.ReadAsStreamAsync(), new FromBase64Transform(), CryptoStreamMode.Read);
                 if (isSplit)
                 {
+                    TarHelper.AppendToTarFile(targetFile, contentStream);
                     AddSplitAcknowledgment(exportId, startDate, endDate);
+                }
+                else
+                {
+                    using var fileStream = File.Create(targetFile);
+                    contentStream.CopyTo(fileStream);
                 }
             }
             else
             {
                 if (response.StatusCode.Equals(HttpStatusCode.RequestEntityTooLarge))
                 {
-                    await SplitTimeRange(exportId, targetFile, startDate, endDate, clientId).ConfigureAwait(false);
+                    _logger.LogDebug("Requested export was too large to be processed by the FCC, splitting into multiple export requests.");
+                    await RequestSplitExportAsync(exportId, targetFile, startDate, endDate, clientId).ConfigureAwait(false);
                 }
                 else
                 {
+                    var responseContent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                     throw new FiskalCloudException($"Communication error ({response.StatusCode}) while requesting export (GET {url}). Response: '{responseContent}",
                         (int) response.StatusCode, ErrorHelper.GetErrorType(responseContent), $"GET /{url}");
                 }
+            }
+
+            // Finalize merged TAR file after last batch was processed
+            if (IsSplitExport(exportId) && !isSplit)
+            {
+                TarHelper.FinalizeTarFile(targetFile);
+                _logger.LogDebug("Finalized merged TAR file {fileName}.", targetFile);
             }
         }
 
@@ -180,10 +191,10 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Communication
 
         private void AddSplitAcknowledgment(Guid exportId, DateTime startDate, DateTime endDate)
         {
-            _splitExports.AddOrUpdate(exportId, new List<(DateTime, DateTime)>() {(startDate, endDate) },(k, v) => { v.Add((startDate, endDate)); return v; });
+            _splitExports.AddOrUpdate(exportId, new List<(DateTime, DateTime)>() { (startDate, endDate) }, (k, v) => { v.Add((startDate, endDate)); return v; });
         }
 
-        private async Task SplitTimeRange(Guid exportId, string targetFile, DateTime startDate, DateTime endDate, string clientId)
+        private async Task RequestSplitExportAsync(Guid exportId, string targetFile, DateTime startDate, DateTime endDate, string clientId)
         {
             var difference = endDate - startDate;
             if (difference.TotalSeconds > 0)
@@ -191,6 +202,8 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Communication
                 var half = difference.TotalSeconds / 2;
                 var newStartDate = startDate.AddSeconds(half);
                 var newEndDate = startDate.AddSeconds(half - 1);
+
+                _logger.LogDebug("Split large export into two parts: 1) {firstStartDate}-{firstEndDate}, 2) {firstStartDate}-{secondEndDate}", newStartDate, endDate, startDate, newEndDate);
                 await RequestExportAsync(exportId, targetFile, newStartDate, endDate, clientId, true).ConfigureAwait(false);
                 await RequestExportAsync(exportId, targetFile, startDate, newEndDate, clientId, true).ConfigureAwait(false);
             }
@@ -198,7 +211,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Communication
 
         public async Task AcknowledgeSplitTransactionsAsync(Guid exportId, string clientId = null)
         {
-            if(_splitExports.TryGetValue(exportId, out var _splitExportDatetimes))
+            if (_splitExports.TryGetValue(exportId, out var _splitExportDatetimes))
             {
                 foreach ((var startDateTime, var endDateTime) in _splitExportDatetimes)
                 {
@@ -220,7 +233,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Communication
             var responseContent = await response.Content.ReadAsStringAsync();
             if (!response.IsSuccessStatusCode && response.StatusCode != HttpStatusCode.NotFound)
             {
-                throw new FiskalCloudException($"Communication error ({response.StatusCode}): {responseContent}", 
+                throw new FiskalCloudException($"Communication error ({response.StatusCode}): {responseContent}",
                     (int) response.StatusCode, ErrorHelper.GetErrorType(responseContent), $"POST /{url}");
             }
         }
