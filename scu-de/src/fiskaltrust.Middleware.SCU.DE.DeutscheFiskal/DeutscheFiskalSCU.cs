@@ -569,7 +569,6 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
                                     await _fccAdminApiProvider.AcknowledgeAllTransactionsAsync(_minExportDateTime, endDate, exportDetails.ClientId);
                                 }
                             }
-
                             return sessionResponse;
                         }
                     }
@@ -591,6 +590,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
             }
             finally
             {
+                _fccAdminApiProvider.RemoveSplitExportIfExists(request.TokenId);
                 try
                 {
                     if (File.Exists(filePath))

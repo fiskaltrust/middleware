@@ -221,6 +221,18 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Communication
             }
         }
 
+        public void RemoveSplitExportIfExists(string exportId)
+        {
+            try
+            {
+                var gExportID = Guid.Parse(exportId);
+                if (_splitExports.ContainsKey(gExportID))
+                {
+                    _splitExports.TryRemove(gExportID, out _);
+                }
+            }catch{}
+        } 
+
         public async Task AcknowledgeAllTransactionsAsync(DateTime startDate, DateTime endDate, string clientId = null)
         {
             var url = $"export/transactions/time?startDate={startDate:yyyy-MM-dd'T'HH:mm:ss'Z'}&endDate={endDate:yyyy-MM-dd'T'HH:mm:ss'Z'}";
