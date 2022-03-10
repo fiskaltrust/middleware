@@ -21,7 +21,7 @@ schedules:
   always: true
 
 stages:
-- template: smoketests/templates/smoke-test.yaml
+- template: templates/smoketests/smoke-test.yaml
   parameters:
     agents:
     - os: windows10-x64
