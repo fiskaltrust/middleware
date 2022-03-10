@@ -28,7 +28,7 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision.Interop
         #region Export Functions
 
         public abstract Task<SeResult> SeExportDataAsync(Stream stream, string clientId = null, int maximumNumberOfRecords = 0);
-        public abstract Task<SeResult> SeExportTransactionDataAsync(Stream stream, UInt32 transactionNumber, string clientId = null, int maximumNumberOfRecords = 0);
+        public abstract Task<SeResult> SeExportTransactionDataAsync(Stream stream, uint transactionNumber, string clientId = null, int maximumNumberOfRecords = 0);
         public abstract Task<SeResult> SeExportTransactionRangeDataAsync(Stream stream, UInt32 startTransactionNumber, UInt32 endTransactionNumber, string clientId = null, int maximumNumberOfRecords = 0);
         public abstract Task<SeResult> SeExportDateRangeDataAsync(Stream stream, UInt64 startUnixTime, UInt64 endUnixTime, string clientId = null, int maximumNumberOfRecords = 0);
         public abstract Task<(SeResult, byte[])> SeExportCertificatesAsync();
@@ -110,6 +110,7 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision.Interop
 
         public abstract Task ResetSeConnectionAsync();
         public abstract Task CloseSeConnectionAsync();
+        public abstract void ReOpen();
 
     }
 }

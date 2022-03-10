@@ -8,7 +8,7 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision.Models.Commands
 {
     public static class AdditionalCommands
     {
-        public static TseCommand CreateDeleteDataUpToTseCommand(byte[] serialNumber, long signatureCounter) => new TseCommand(TseCommandCodeEnum.DeleteDataUpTo, 0x0000, new TseByteArrayParameter(serialNumber), new TseByteArrayParameter(signatureCounter.ToByteArray()));
+        public static TseCommand CreateDeleteDataUpToTseCommand(byte[] serialNumber, uint signatureCounter) => new TseCommand(TseCommandCodeEnum.DeleteDataUpTo, 0x0000, new TseByteArrayParameter(serialNumber), new TseByteArrayParameter(signatureCounter.ToByteArray()));
 
         public static TseCommand CreateExportMoreDataTseCommand(byte[] serialNumber, uint previousSignatureCounter, uint maxNumberOfRecords) => new TseCommand(TseCommandCodeEnum.ExportMoreData, 0x0000, new TseByteArrayParameter(serialNumber), new TseByteArrayParameter(previousSignatureCounter.ToByteArray()), new TseByteArrayParameter(maxNumberOfRecords.ToByteArray()));
 
