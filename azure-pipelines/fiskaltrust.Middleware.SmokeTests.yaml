@@ -1,7 +1,7 @@
 resources:
   pipelines:
   - pipeline: queues
-    source: fiskaltrust.Middleware
+    source: fiskaltrust.Middleware.Queue
     branch: main
   - pipeline: scus
     source: fiskaltrust.Middleware.SCU.DE
