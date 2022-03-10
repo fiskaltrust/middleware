@@ -30,12 +30,14 @@ namespace fiskaltrust.Middleware.Storage.Ef
     {
         private string _connectionString;
         private readonly Dictionary<string, object> _configuration;
+        private readonly EFStorageConfiguration _efStorageConfiguration;
         private readonly ILogger<IMiddlewareBootstrapper> _logger;
         private readonly Guid _queueId;
 
-        public EfStorageBootstrapper(Guid queueId, Dictionary<string, object> configuration, ILogger<IMiddlewareBootstrapper> logger)
+        public EfStorageBootstrapper(Guid queueId, Dictionary<string, object> configuration, EFStorageConfiguration efStorageConfiguration, ILogger<IMiddlewareBootstrapper> logger)
         {
             _configuration = configuration;
+            _efStorageConfiguration = efStorageConfiguration;
             _logger = logger;
             _queueId = queueId;
         }
@@ -48,11 +50,11 @@ namespace fiskaltrust.Middleware.Storage.Ef
 
         private async Task InitAsync(Guid queueId, Dictionary<string, object> configuration, ILogger<IMiddlewareBootstrapper> logger)
         {
-            if (!configuration.ContainsKey("connectionstring"))
+            if (string.IsNullOrEmpty(_efStorageConfiguration.ConnectionString))
             {
                 throw new Exception("Database connectionstring not defined");
             }
-            _connectionString = Encoding.UTF8.GetString(Encryption.Decrypt(Convert.FromBase64String((string) configuration["connectionstring"]), queueId.ToByteArray()));
+            _connectionString = Encoding.UTF8.GetString(Encryption.Decrypt(Convert.FromBase64String(_efStorageConfiguration.ConnectionString), queueId.ToByteArray()));
             Update(_connectionString, queueId, logger);
 
             var configurationRepository = new EfConfigurationRepository(new MiddlewareDbContext(_connectionString, _queueId));

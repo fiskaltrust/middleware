@@ -18,6 +18,8 @@ namespace fiskaltrust.Middleware.Queue.SQLite
         public void ConfigureServices(IServiceCollection serviceCollection)
         {
             var logger = serviceCollection.BuildServiceProvider().GetRequiredService<ILogger<IMiddlewareBootstrapper>>();
+            
+            serviceCollection.AddSingleton(sp => SQLiteQueueConfiguration.FromConfigurationDictionary(Configuration));
 
             var storageBootStrapper = new SQLiteStorageBootstrapper(Id, Configuration, logger);
             storageBootStrapper.ConfigureStorageServices(serviceCollection);
@@ -25,7 +27,6 @@ namespace fiskaltrust.Middleware.Queue.SQLite
             var queueBootstrapper = new QueueBootstrapper(Id, Configuration);
             queueBootstrapper.ConfigureServices(serviceCollection);
 
-            serviceCollection.AddSingleton(sp => SQLiteQueueConfiguration.FromMiddlewareConfiguration(sp.GetRequiredService<MiddlewareConfiguration>()));
         }
     }
 }
