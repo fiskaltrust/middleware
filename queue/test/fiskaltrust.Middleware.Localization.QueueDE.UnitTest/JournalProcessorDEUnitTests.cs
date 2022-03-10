@@ -43,7 +43,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
             var middlewareConfiguration = new MiddlewareConfiguration
             {
                 QueueId = Guid.NewGuid(),
-                ServiceFolder = @".\"
+                ServiceFolder = @".\",
+                Configuration = new Dictionary<string, object>()
             };
 
             var middlewareRepo = new Mock<IMiddlewareRepository<ftJournalDE>>();
@@ -87,7 +88,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
             var middlewareConfiguration = new MiddlewareConfiguration
             {
                 QueueId = Guid.NewGuid(),
-                ServiceFolder = @".\"
+                ServiceFolder = @".\",
+                Configuration = new Dictionary<string, object>()
             };
 
             var middlewareRepo = new Mock<IMiddlewareRepository<ftJournalDE>>();
@@ -131,7 +133,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
             var middlewareConfiguration = new MiddlewareConfiguration
             {
                 QueueId = Guid.NewGuid(),
-                ServiceFolder = @".\"
+                ServiceFolder = @".\",
+                Configuration = new Dictionary<string, object>()
             };
 
             var middlewareRepo = new Mock<IMiddlewareRepository<ftJournalDE>>();
@@ -166,7 +169,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
             var middlewareConfiguration = new MiddlewareConfiguration
             {
                 QueueId = Guid.NewGuid(),
-                ServiceFolder = @".\"
+                ServiceFolder = @".\",
+                Configuration = new Dictionary<string, object>()
             };
 
             var middlewareRepo = new Mock<IMiddlewareRepository<ftJournalDE>>();

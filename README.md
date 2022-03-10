@@ -1,4 +1,6 @@
 # fiskaltrust.Middleware
+[![Build Status](https://img.shields.io/azure-devops/build/fiskaltrust/29af887e-c4f1-46d9-bcd8-323f3f3ea149/441/main?label=Build%20%28Queue%29&logo=azurepipelines)](https://dev.azure.com/fiskaltrust/fiskaltrust/_build/latest?definitionId=441&branchName=main) [![Build Status](https://img.shields.io/azure-devops/build/fiskaltrust/29af887e-c4f1-46d9-bcd8-323f3f3ea149/442/main?label=Build%20%28SCU%20DE%29&logo=azurepipelines)](https://dev.azure.com/fiskaltrust/fiskaltrust/_build/latest?definitionId=442&branchName=main)
+
 The fiskaltrust.Middleware is an integrated set of highly configurable software components for POS systems to abstract the complexity of national fiscalization laws.
 
 ## Introduction

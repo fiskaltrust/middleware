@@ -47,7 +47,7 @@ steps:
     secureFileId: 'codesigning.pfx'
     signCertPassword: '$(Code_Signing_Password)'
     filePaths: |
-      $(WorkingDirectory)/src/**/*.dll
+      $(WorkingDirectory)/src/**/*fiskaltrust*.dll
       $(WorkingDirectory)/src/**/*fiskaltrust*.exe
 
 - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)

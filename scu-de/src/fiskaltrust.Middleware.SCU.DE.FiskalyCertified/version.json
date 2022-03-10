@@ -2,7 +2,6 @@
   "version": "1.3.26",
   "releaseBranches": [
     "^refs/heads/main$",
-    "^refs/heads/release/fiskalycertified/\\d+(?:\\.\\d+)*(?:-.*)?$",
-    "^refs/tags/fiskalycertified/v\\d+(?:\\.\\d+)*(?:-.*)?$"
+    "^refs/tags/scu-de/fiskalycertified/v\\d+(?:\\.\\d+)*(?:-.*)?$"
   ]
 }
