@@ -19,13 +19,14 @@ namespace fiskaltrust.Middleware.Queue.PostgreSQL
         {
             var logger = serviceCollection.BuildServiceProvider().GetRequiredService<ILogger<IMiddlewareBootstrapper>>();
 
-            var storageBootStrapper = new EFCorePostgreSQLStorageBootstrapper(Id, Configuration, logger);
+            var storageConfiguration = PostgreSQLStorageConfiguration.FromConfigurationDictionary(Configuration);
+            serviceCollection.AddSingleton(sp => storageConfiguration);
+
+            var storageBootStrapper = new EFCorePostgreSQLStorageBootstrapper(Id, Configuration, storageConfiguration, logger);
             storageBootStrapper.ConfigureStorageServices(serviceCollection);
 
             var queueBootstrapper = new QueueBootstrapper(Id, Configuration);
             queueBootstrapper.ConfigureServices(serviceCollection);
-            
-            serviceCollection.AddSingleton(sp => PostgreSQLQueueConfiguration.FromMiddlewareConfiguration(sp.GetRequiredService<MiddlewareConfiguration>()));
         }
     }
 }

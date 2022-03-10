@@ -34,7 +34,7 @@ namespace fiskaltrust.Middleware.Storage.MySQL.IntegrationTest
             
             try
             {
-                var efBootSTrapper = new MySQLBootstrapper(queueId, queueConfiguration, Mock.Of<ILogger<IMiddlewareBootstrapper>>());
+                var efBootSTrapper = new MySQLBootstrapper(queueId, queueConfiguration, MySQLStorageConfiguration.FromConfigurationDictionary(queueConfiguration), Mock.Of<ILogger<IMiddlewareBootstrapper>>());
 
                 var serviceCollection = new ServiceCollection();
                 serviceCollection.AddLogging();
