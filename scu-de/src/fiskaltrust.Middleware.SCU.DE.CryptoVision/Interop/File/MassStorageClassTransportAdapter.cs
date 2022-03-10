@@ -196,6 +196,7 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision.Interop.File
                 {
                     if (DateTimeOffset.UtcNow > maxTimeStamp)
                     {
+                        //here we are
                         throw new TimeoutException($"The timeout of {_tseIoTimeout} for reading data from the TSE has expired.");
                     }
                     continue;
@@ -224,14 +225,6 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision.Interop.File
 
                 var responseData = readBuffer.Skip(34).Take(responseDataLength).ToArray();
 
-                var resultLength = responseData.ToUInt16();
-
-                if (resultLength == 0)
-                {
-                    // no data to respond
-                    return new List<ITseData>();
-                }
-
                 if (exportData)
                 {
                     var rawData = new TseRawData();
@@ -239,7 +232,13 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision.Interop.File
                     return new List<ITseData> { rawData };
                 }
 
-                if (resultLength < 0x8000)
+                var resultLength = responseData.ToUInt16();
+
+                if (resultLength == 0)
+                {
+                    // no data to respond
+                    return new List<ITseData>();
+                }else if (resultLength < 0x8000)
                 {
                     var responseBytes = new List<byte>();
                     if (resultLength > responseData.Length - 2)
