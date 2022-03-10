@@ -27,12 +27,14 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL
         private string _connectionString;
         private DbContextOptionsBuilder<PostgreSQLMiddlewareDbContext> _optionsBuilder;
         private readonly Dictionary<string, object> _configuration;
+        private readonly PostgreSQLStorageConfiguration _posgresQLStorageConfiguration;
         private readonly ILogger<IMiddlewareBootstrapper> _logger;
         private readonly Guid _queueId;
 
-        public EFCorePostgreSQLStorageBootstrapper(Guid queueId, Dictionary<string, object> configuration, ILogger<IMiddlewareBootstrapper> logger)
+        public EFCorePostgreSQLStorageBootstrapper(Guid queueId, Dictionary<string, object> configuration, PostgreSQLStorageConfiguration posgresQLStorageConfiguration, ILogger<IMiddlewareBootstrapper> logger)
         {
             _configuration = configuration;
+            _posgresQLStorageConfiguration = posgresQLStorageConfiguration;
             _logger = logger;
             _queueId = queueId;
         }
@@ -45,11 +47,11 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL
 
         private async Task InitAsync(Guid queueId, Dictionary<string, object> configuration, ILogger<IMiddlewareBootstrapper> logger)
         {
-            if (!configuration.ContainsKey("connectionstring"))
+            if (string.IsNullOrEmpty(_posgresQLStorageConfiguration.ConnectionString))
             {
                 throw new Exception("Database connectionstring not defined");
             }
-            _connectionString = Encoding.UTF8.GetString(Encryption.Decrypt(Convert.FromBase64String((string) configuration["connectionstring"]), queueId.ToByteArray()));
+            _connectionString = Encoding.UTF8.GetString(Encryption.Decrypt(Convert.FromBase64String(_posgresQLStorageConfiguration.ConnectionString), queueId.ToByteArray()));
             _optionsBuilder = new DbContextOptionsBuilder<PostgreSQLMiddlewareDbContext>();
             _optionsBuilder.UseNpgsql(_connectionString);
             Update(_optionsBuilder.Options, queueId, logger);

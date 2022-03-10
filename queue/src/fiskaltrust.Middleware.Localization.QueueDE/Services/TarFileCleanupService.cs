@@ -18,25 +18,19 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
         private readonly ILogger<TarFileCleanupService> _logger;
         private readonly IMiddlewareJournalDERepository _journalDERepository;
         private readonly MiddlewareConfiguration _middlewareConfiguration;
+        private readonly QueueDEConfiguration _queueDEConfiguration;
 
-        protected bool _storeTemporaryExportFiles = false;
-
-        public TarFileCleanupService(ILogger<TarFileCleanupService> logger, IMiddlewareJournalDERepository journalDERepository, MiddlewareConfiguration middlewareConfiguration)
+        public TarFileCleanupService(ILogger<TarFileCleanupService> logger, IMiddlewareJournalDERepository journalDERepository, MiddlewareConfiguration middlewareConfiguration, QueueDEConfiguration queueDEConfiguration)
         {
             _logger = logger;
             _journalDERepository = journalDERepository;
             _middlewareConfiguration = middlewareConfiguration;
-
-
-            if (_middlewareConfiguration.Configuration.ContainsKey(ConfigurationKeys.STORE_TEMPORARY_FILES_KEY))
-            {
-                _storeTemporaryExportFiles = bool.TryParse(_middlewareConfiguration.Configuration[ConfigurationKeys.STORE_TEMPORARY_FILES_KEY].ToString(), out var val) && val;
-            }
+            _queueDEConfiguration = queueDEConfiguration;
         }
 
         public async Task CleanupTarFileAsync(Guid journalDEId, string filePath, string checkSum, bool useSharpCompress = false)
         {
-            if(_storeTemporaryExportFiles) { return; }
+            if(_queueDEConfiguration.StoreTemporaryExportFiles) { return; }
 
             var dbJournalDE = await _journalDERepository.GetAsync(journalDEId).ConfigureAwait(false);
 
@@ -70,7 +64,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
 
         public void CleanupTarFileDirectory(string workingDirectory)
         {
-            if (!_storeTemporaryExportFiles && Directory.Exists(workingDirectory))
+            if (!_queueDEConfiguration.StoreTemporaryExportFiles && Directory.Exists(workingDirectory))
             {
                 Directory.Delete(workingDirectory, true);
             }
@@ -78,7 +72,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
 
         public async Task CleanupAllTarFilesAsync()
         {
-            if (_storeTemporaryExportFiles) { return; }
+            if (_queueDEConfiguration.StoreTemporaryExportFiles) { return; }
 
             var basePath = Path.Combine(_middlewareConfiguration.ServiceFolder, "Exports", _middlewareConfiguration.QueueId.ToString(), "TAR");
             if(!Directory.Exists(basePath)) { return; }

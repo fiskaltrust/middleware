@@ -31,7 +31,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
             };
 
 
-            var sut = new SignatureFactoryDE(new MiddlewareConfiguration { Configuration = new Dictionary<string, object>() });
+            var sut = new SignatureFactoryDE(new QueueDEConfiguration { });
 
             var signature = sut.GetSignaturForStartTransaction(startTransactionResponse);
 
@@ -63,7 +63,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
                 TransactionNumber = 2425
             };
 
-            var sut = new SignatureFactoryDE(new MiddlewareConfiguration { Configuration = new Dictionary<string, object>() });
+            var sut = new SignatureFactoryDE(new QueueDEConfiguration { });
 
             var signatures = sut.GetSignaturesForFinishTransaction(finishResultResponse);
             signatures.Should().HaveCount(3);
@@ -120,7 +120,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
                 TransactionNumber = 18
             };
 
-            var sut = new SignatureFactoryDE(new MiddlewareConfiguration { Configuration = new Dictionary<string, object>() });
+            var sut = new SignatureFactoryDE(new QueueDEConfiguration { });
 
             var signatures = sut.GetSignaturesForPosReceiptTransaction(startTransactionResponse.SignatureData.SignatureBase64, finishResultResponse, certificationIdentification);
             signatures.Should().HaveCount(17);
@@ -216,7 +216,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
         {
             var mandatoryCaptions = new[] { "<certification-id>", "www.fiskaltrust.de", "<vorgangsbeginn>" };
 
-            var sut = new SignatureFactoryDE(new MiddlewareConfiguration { Configuration = new Dictionary<string, object>() });
+            var sut = new SignatureFactoryDE(new QueueDEConfiguration { });
             var result = sut.GetSignaturesForTransaction("DoesntMatter", new FinishTransactionResponse { SignatureData = new TseSignatureData(), ProcessDataBase64 = "QQ==" }, "DoesntMatter");
 
             var mandatoryItems = result.Where(x => mandatoryCaptions.Contains(x.Caption));
@@ -231,12 +231,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
         {
             var mandatoryCaptions = new[] { "<certification-id>", "www.fiskaltrust.de", "<vorgangsbeginn>" };
 
-            var sut = new SignatureFactoryDE(new MiddlewareConfiguration
-            {
-                Configuration = new Dictionary<string, object>
-                {
-                    { "FlagOptionalSignatures", false }
-                }
+            var sut = new SignatureFactoryDE(new QueueDEConfiguration {
+                FlagOptionalSignatures = false
             });
             var result = sut.GetSignaturesForTransaction("DoesntMatter", new FinishTransactionResponse { SignatureData = new TseSignatureData(), ProcessDataBase64 = "QQ==" }, "DoesntMatter");
 

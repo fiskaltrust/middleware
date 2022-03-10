@@ -27,12 +27,14 @@ namespace fiskaltrust.Middleware.Storage.MySQL
         private string _connectionString;
         private MySQLConfigurationRepository _configurationRepository;
         private readonly Dictionary<string, object> _configuration;
+        private readonly MySQLStorageConfiguration _mySQLStorageConfiguration;
         private readonly Guid _queueId;
         private readonly ILogger<IMiddlewareBootstrapper> _logger;
 
-        public MySQLBootstrapper(Guid queueId, Dictionary<string, object> configuration, ILogger<IMiddlewareBootstrapper> logger)
+        public MySQLBootstrapper(Guid queueId, Dictionary<string, object> configuration, MySQLStorageConfiguration mySQLStorageConfiguration, ILogger<IMiddlewareBootstrapper> logger)
         {
             _configuration = configuration;
+            _mySQLStorageConfiguration = mySQLStorageConfiguration;
             _logger = logger;
             _queueId = queueId;
         }
@@ -45,12 +47,12 @@ namespace fiskaltrust.Middleware.Storage.MySQL
 
         private async Task InitAsync(Guid queueId, Dictionary<string, object> configuration, ILogger<IMiddlewareBootstrapper> logger)
         {
-            if (!configuration.ContainsKey("connectionstring"))
+            if (string.IsNullOrEmpty(_mySQLStorageConfiguration.ConnectionString))
             {
                 throw new Exception("Database connectionstring not defined");
             }
 
-            _connectionString = Encoding.UTF8.GetString(Encryption.Decrypt(Convert.FromBase64String((string) configuration["connectionstring"]), queueId.ToByteArray()));
+            _connectionString = Encoding.UTF8.GetString(Encryption.Decrypt(Convert.FromBase64String(_mySQLStorageConfiguration.ConnectionString), queueId.ToByteArray()));
 
             var databaseMigrator = new DatabaseMigrator(_connectionString, queueId, logger);
             var dbName = await databaseMigrator.MigrateAsync().ConfigureAwait(false);

@@ -65,7 +65,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             };
             journalRepositoryMock.Setup(x => x.InsertAsync(It.IsAny<ftJournalDE>())).CallBase();
             var actionJournalRepositoryMock = new Mock<IActionJournalRepository>(MockBehavior.Strict);
-            var config = new MiddlewareConfiguration { Configuration = new Dictionary<string, object>() { { Constants.ConfigurationKeys.STORE_TEMPORARY_FILES_KEY, false } }, QueueId = queue.ftQueueId, ServiceFolder = Directory.GetCurrentDirectory() };
+            var config = new MiddlewareConfiguration { Configuration = new Dictionary<string, object>() { { nameof(QueueDEConfiguration.StoreTemporaryExportFiles), false } }, QueueId = queue.ftQueueId, ServiceFolder = Directory.GetCurrentDirectory() };
             var configurationRepository = _fixture.CreateConfigurationRepository();
 
             if (Directory.Exists(Path.Combine(config.ServiceFolder, "Exports", config.QueueId.ToString(), "TAR")))
@@ -81,10 +81,10 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                 }
             }
 
-            var tarFileCleanupService = new TarFileCleanupService(Mock.Of<ILogger<TarFileCleanupService>>(), journalRepositoryMock.Object, config);
+            var tarFileCleanupService = new TarFileCleanupService(Mock.Of<ILogger<TarFileCleanupService>>(), journalRepositoryMock.Object, config, QueueDEConfiguration.FromMiddlewareConfiguration(config));
             var sut = RequestCommandFactoryHelper.ConstructSignProcessor(Mock.Of<ILogger<SignProcessorDE>>(), configurationRepository, journalRepositoryMock.Object, actionJournalRepositoryMock.Object,
                 _fixture.DeSSCDProvider, new DSFinVKTransactionPayloadFactory(), new InMemoryFailedFinishTransactionRepository(), new InMemoryFailedStartTransactionRepository(),
-                _fixture.openTransactionRepository, Mock.Of<IMasterDataService>(), config, new InMemoryQueueItemRepository(), new SignatureFactoryDE(config), tarFileCleanupService);
+                _fixture.openTransactionRepository, Mock.Of<IMasterDataService>(), config, new InMemoryQueueItemRepository(), new SignatureFactoryDE(QueueDEConfiguration.FromMiddlewareConfiguration(config)), tarFileCleanupService);
 
 
             var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
@@ -125,7 +125,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             };
             journalRepositoryMock.Setup(x => x.InsertAsync(It.IsAny<ftJournalDE>())).CallBase();
             var actionJournalRepositoryMock = new Mock<IActionJournalRepository>(MockBehavior.Strict);
-            var config = new MiddlewareConfiguration { Configuration = new Dictionary<string, object>() { { Constants.ConfigurationKeys.STORE_TEMPORARY_FILES_KEY, true } }, QueueId = queue.ftQueueId, ServiceFolder = Directory.GetCurrentDirectory() };
+            var config = new MiddlewareConfiguration { Configuration = new Dictionary<string, object>() { { nameof(QueueDEConfiguration.StoreTemporaryExportFiles), true } }, QueueId = queue.ftQueueId, ServiceFolder = Directory.GetCurrentDirectory() };
             var configurationRepository = _fixture.CreateConfigurationRepository();
 
             if (Directory.Exists(Path.Combine(config.ServiceFolder, "Exports", config.QueueId.ToString(), "TAR")))
@@ -141,15 +141,15 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                 }
             }
 
-            var tarFileCleanupService = new TarFileCleanupService(Mock.Of<ILogger<TarFileCleanupService>>(), journalRepositoryMock.Object, config);
+            var tarFileCleanupService = new TarFileCleanupService(Mock.Of<ILogger<TarFileCleanupService>>(), journalRepositoryMock.Object, config, QueueDEConfiguration.FromMiddlewareConfiguration(config));
             var sut = RequestCommandFactoryHelper.ConstructSignProcessor(Mock.Of<ILogger<SignProcessorDE>>(), configurationRepository, journalRepositoryMock.Object, actionJournalRepositoryMock.Object,
                 _fixture.DeSSCDProvider, new DSFinVKTransactionPayloadFactory(), new InMemoryFailedFinishTransactionRepository(), new InMemoryFailedStartTransactionRepository(),
-                _fixture.openTransactionRepository, Mock.Of<IMasterDataService>(), config, new InMemoryQueueItemRepository(), new SignatureFactoryDE(config), tarFileCleanupService);
+                _fixture.openTransactionRepository, Mock.Of<IMasterDataService>(), config, new InMemoryQueueItemRepository(), new SignatureFactoryDE(QueueDEConfiguration.FromMiddlewareConfiguration(config)), tarFileCleanupService);
 
 
             var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
 
-            config.Configuration[Constants.ConfigurationKeys.STORE_TEMPORARY_FILES_KEY] = false;
+            config.Configuration[nameof(QueueDEConfiguration.StoreTemporaryExportFiles)] = false;
 
             var bootstrapper = new QueueDEBootstrapper();
             var services = new ServiceCollection();
