@@ -6,9 +6,9 @@ using SharpCompress.Common;
 using SharpCompress.Readers;
 using SharpCompress.Writers.Tar;
 
-namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Helpers
+namespace fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser.Tar
 {
-    internal static class TarHelper
+    public static class TarFileHelper
     {
         public static void FinalizeTarFile(string targetFile)
         {
@@ -17,7 +17,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Helpers
             using var tarWriter = new TarWriter(targetStream, new TarWriterOptions(CompressionType.None, finalizeArchiveOnClose: true));
         }
 
-        public static void AppendToTarFile(string targetFile, Stream inputTarStream)
+        public static void AppendTarStreamToTarFile(string targetFile, Stream inputTarStream)
         {
             using var reader = ReaderFactory.Open(inputTarStream);
 
@@ -39,7 +39,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Helpers
         private static List<string> GetNonSignatureEntriesFromTarFile(string targetFile)
         {
             using var tarArchive = TarArchive.Open(targetFile, new ReaderOptions { LeaveStreamOpen = false });
-            return tarArchive.Entries.Where(x => x.Key.EndsWith(".csv") || x.Key.EndsWith(".crt")).Select(x => x.Key).ToList();
+            return tarArchive.Entries.Where(x => x.Key.EndsWith(".csv") || x.Key.EndsWith(".crt") || x.Key.EndsWith(".pem")).Select(x => x.Key).ToList();
         }
     }
 }

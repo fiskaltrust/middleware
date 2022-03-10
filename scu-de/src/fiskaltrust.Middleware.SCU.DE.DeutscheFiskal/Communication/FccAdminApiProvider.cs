@@ -10,8 +10,8 @@ using System.Text;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Communication.Helpers;
 using fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Exceptions;
-using fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Helpers;
 using fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Models;
+using fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser.Tar;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -152,7 +152,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Communication
                 using var contentStream = new CryptoStream(await response.Content.ReadAsStreamAsync(), new FromBase64Transform(), CryptoStreamMode.Read);
                 if (isSplit)
                 {
-                    TarHelper.AppendToTarFile(targetFile, contentStream);
+                    TarFileHelper.AppendTarStreamToTarFile(targetFile, contentStream);
                     AddSplitAcknowledgment(exportId, startDate, endDate);
                 }
                 else
@@ -179,7 +179,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Communication
             // Finalize merged TAR file after last batch was processed
             if (IsSplitExport(exportId) && !isSplit)
             {
-                TarHelper.FinalizeTarFile(targetFile);
+                TarFileHelper.FinalizeTarFile(targetFile);
                 _logger.LogDebug("Finalized merged TAR file {fileName}.", targetFile);
             }
         }
