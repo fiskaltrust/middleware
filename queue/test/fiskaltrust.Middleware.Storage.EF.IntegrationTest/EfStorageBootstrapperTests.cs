@@ -25,7 +25,7 @@ namespace fiskaltrust.Middleware.Storage.EF.AcceptanceTest
             var azureQueue = JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(queues[0]));
             var queueConfiguration = JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(azureQueue["Configuration"]));
 
-            var efBootSTrapper = new EfStorageBootstrapper(Guid.Parse(azureQueue["Id"].ToString()), queueConfiguration, Mock.Of<ILogger<IMiddlewareBootstrapper>>());
+            var efBootSTrapper = new EfStorageBootstrapper(Guid.Parse(azureQueue["Id"].ToString()), queueConfiguration, EfStorageConfiguration.FromConfigurationDictionary(queueConfiguration), Mock.Of<ILogger<IMiddlewareBootstrapper>>());
 
             var serviceCollection = new ServiceCollection();
             serviceCollection.AddLogging();

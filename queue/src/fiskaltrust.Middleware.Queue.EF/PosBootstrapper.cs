@@ -20,7 +20,7 @@ namespace fiskaltrust.Middleware.Queue.EF
         {
             var logger = serviceCollection.BuildServiceProvider().GetRequiredService<ILogger<IMiddlewareBootstrapper>>();
 
-            var storageConfiguration = EFStorageConfiguration.FromConfigurationDictionary(Configuration);
+            var storageConfiguration = EfStorageConfiguration.FromConfigurationDictionary(Configuration);
             serviceCollection.AddSingleton(sp => storageConfiguration);
 
             var storageBootStrapper = new EfStorageBootstrapper(Id, Configuration, storageConfiguration, logger);

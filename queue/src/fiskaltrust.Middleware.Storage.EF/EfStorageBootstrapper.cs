@@ -30,11 +30,11 @@ namespace fiskaltrust.Middleware.Storage.Ef
     {
         private string _connectionString;
         private readonly Dictionary<string, object> _configuration;
-        private readonly EFStorageConfiguration _efStorageConfiguration;
+        private readonly EfStorageConfiguration _efStorageConfiguration;
         private readonly ILogger<IMiddlewareBootstrapper> _logger;
         private readonly Guid _queueId;
 
-        public EfStorageBootstrapper(Guid queueId, Dictionary<string, object> configuration, EFStorageConfiguration efStorageConfiguration, ILogger<IMiddlewareBootstrapper> logger)
+        public EfStorageBootstrapper(Guid queueId, Dictionary<string, object> configuration, EfStorageConfiguration efStorageConfiguration, ILogger<IMiddlewareBootstrapper> logger)
         {
             _configuration = configuration;
             _efStorageConfiguration = efStorageConfiguration;
