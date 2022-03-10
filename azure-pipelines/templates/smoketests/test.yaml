@@ -26,12 +26,12 @@ steps:
     - ${{ init }}
 
 - download: queues
-  artifact: drop
+  artifact: packages-v1
   patterns: "**/fiskaltrust.Middleware.Queue.${{ parameters.queue }}.*.nupkg"
   displayName: Download Queue Artifact
 
 - download: scus
-  artifact: drop
+  artifact: packages-v1
   patterns: "**/fiskaltrust.Middleware.SCU.${{ parameters.scu }}.*.nupkg"
   displayName: Download Scu Artifact
 

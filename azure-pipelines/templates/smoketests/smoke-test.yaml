@@ -30,7 +30,7 @@ stages:
             - pwsh: New-Item -ItemType directory -Path "$(Build.SourcesDirectory)/logs"
               displayName: Setup Directories
 
-            - template: test.yaml
+            - template: smoketests/test.yaml
               parameters:
                 queue: ${{ config.queue }}
                 scu: ${{ config.scu }}
