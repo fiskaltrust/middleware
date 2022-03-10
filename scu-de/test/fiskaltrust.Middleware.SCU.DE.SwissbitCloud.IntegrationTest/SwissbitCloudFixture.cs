@@ -28,7 +28,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloud.IntegrationTest
 
         public SwissbitCloudSCU GetSut() => _instance ?? (_instance = new SwissbitCloudSCU(Mock.Of<ILogger<DeutscheFiskalSCU>>(), Configuration,
             new DeutscheFiskalFccInitializationService(Configuration, Mock.Of<ILogger<DeutscheFiskalFccInitializationService>>(), new FirewallHelper()), new DeutscheFiskalFccProcessHost(Configuration, Mock.Of<ILogger<DeutscheFiskalFccProcessHost>>()),
-            new DeutscheFiskalFccDownloadService(Configuration, Mock.Of<ILogger<IFccDownloadService>>()), new FccErsApiProvider(Configuration), new FccAdminApiProvider(Configuration)));
+            new DeutscheFiskalFccDownloadService(Configuration, Mock.Of<ILogger<IFccDownloadService>>()), new FccErsApiProvider(Configuration), new FccAdminApiProvider(Configuration, Mock.Of<ILogger<FccAdminApiProvider>>())));
 
 
         public void Dispose() => _instance?.Dispose();

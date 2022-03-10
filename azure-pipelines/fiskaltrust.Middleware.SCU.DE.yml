@@ -11,7 +11,14 @@ trigger:
     include:
       - scu-de
 
-pr: none
+pr:
+  branches:
+    include:
+    - main
+    - refs/tags/scu-de/*
+  paths:
+    include:
+      - scu-de
 
 variables:
 - group: 'Code Signing Certificates'

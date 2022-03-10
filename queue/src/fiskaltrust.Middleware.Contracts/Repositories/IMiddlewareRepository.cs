@@ -18,4 +18,9 @@ namespace fiskaltrust.Middleware.Contracts.Repositories
 
         IAsyncEnumerable<ftQueueItem> GetPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem);
     }
+
+    public interface IMiddlewareJournalDERepository : IJournalDERepository
+    {
+        IAsyncEnumerable<ftJournalDE> GetByFileName(string fileName);
+    }
 }

@@ -9,8 +9,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Xunit;
 using fiskaltrust.Middleware.Queue.Bootstrapper;
-using fiskaltrust.Middleware.Queue.Bootstrapper.Localization;
-using System.Threading.Tasks;
 using fiskaltrust.Middleware.Contracts;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Abstractions;
@@ -19,6 +17,7 @@ using Moq;
 using Microsoft.Extensions.Logging;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Localization.QueueDE.RequestCommands.Factories;
+using fiskaltrust.Middleware.Localization.QueueDE;
 
 namespace fiskaltrust.Middleware.Queue.InMemory.IntegrationTest
 {
@@ -48,7 +47,7 @@ namespace fiskaltrust.Middleware.Queue.InMemory.IntegrationTest
             var storageBootStrapper = new InMemoryStorageBootstrapper(values.ftQueues[0].Id, dictionary, Mock.Of<ILogger<IMiddlewareBootstrapper>>());
             storageBootStrapper.ConfigureStorageServices(serviceCollection);
 
-            serviceCollection.Count.Should().Be(36);
+            serviceCollection.Count.Should().Be(37);
 
             CheckServiceType(serviceCollection, typeof(IConfigurationRepository)).Should().BeTrue();
             CheckServiceType(serviceCollection, typeof(IReadOnlyConfigurationRepository)).Should().BeTrue();
@@ -91,7 +90,7 @@ namespace fiskaltrust.Middleware.Queue.InMemory.IntegrationTest
             queueBootstrapper.ConfigureServices(serviceCollection);
 
 
-            serviceCollection.Count.Should().Be(33);
+            serviceCollection.Count.Should().Be(34);
 
             CheckServiceType(serviceCollection, typeof(ICryptoHelper)).Should().BeTrue();
             CheckServiceType(serviceCollection, typeof(ISignProcessor)).Should().BeTrue();

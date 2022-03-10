@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
+using System.Linq;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.de;
@@ -35,6 +38,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
         protected readonly IPersistentTransactionRepository<OpenTransaction> _openTransactionRepo;
         private readonly IJournalDERepository _journalDERepository;
         private readonly MiddlewareConfiguration _middlewareConfiguration;
+        private readonly ITarFileCleanupService _tarFileCleanupService;
 
         protected string _certificationIdentification = null;
 
@@ -43,7 +47,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
         public RequestCommand(ILogger<RequestCommand> logger, SignatureFactoryDE signatureFactory, IDESSCDProvider deSSCDProvider,
             ITransactionPayloadFactory transactionPayloadFactory, IReadOnlyQueueItemRepository queueItemRepository, IConfigurationRepository configurationRepository,
             IJournalDERepository journalDERepository, MiddlewareConfiguration middlewareConfiguration, IPersistentTransactionRepository<FailedStartTransaction> failedStartTransactionRepo,
-            IPersistentTransactionRepository<FailedFinishTransaction> failedFinishTransactionRepo, IPersistentTransactionRepository<OpenTransaction> openTransactionRepo)
+            IPersistentTransactionRepository<FailedFinishTransaction> failedFinishTransactionRepo, IPersistentTransactionRepository<OpenTransaction> openTransactionRepo, ITarFileCleanupService tarFileCleanupService)
         {
             _logger = logger;
             _signatureFactory = signatureFactory;
@@ -57,6 +61,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             _failedFinishTransactionRepo = failedFinishTransactionRepo;
             _openTransactionRepo = openTransactionRepo;
             _transactionFactory = new TransactionFactory(_deSSCDProvider.Instance);
+            _tarFileCleanupService = tarFileCleanupService;
         }
 
         public abstract Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueDE queueDE, IDESSCD client, ReceiptRequest request, ftQueueItem queueItem);
@@ -90,13 +95,13 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             try
             {
                 var exportService = new TarFileExportService();
-                (var filePath, var success) = await exportService.ProcessTarFileExportAsync(client, queueDE.ftQueueDEId, queueDE.CashBoxIdentification, erase, _middlewareConfiguration.ServiceFolder, _middlewareConfiguration.TarFileChunkSize).ConfigureAwait(false);
+                (var filePath, var success, var checkSum) = await exportService.ProcessTarFileExportAsync(client, queueDE.ftQueueDEId, queueDE.CashBoxIdentification, erase, _middlewareConfiguration.ServiceFolder, _middlewareConfiguration.TarFileChunkSize).ConfigureAwait(false);
                 if (success)
                 {
                     var journalDE = new ftJournalDE
                     {
                         ftJournalDEId = Guid.NewGuid(),
-                        FileContentBase64 = Convert.ToBase64String(SignProcessorDE.Compress(filePath)),
+                        FileContentBase64 = Convert.ToBase64String(Compress(filePath)),
                         FileExtension = ".zip",
                         FileName = Path.GetFileNameWithoutExtension(filePath),
                         ftQueueId = queueItem.ftQueueId,
@@ -104,6 +109,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                         Number = queue.ftReceiptNumerator + 1
                     };
                     await _journalDERepository.InsertAsync(journalDE).ConfigureAwait(false);
+
+                    await _tarFileCleanupService.CleanupTarFileAsync(journalDE.ftJournalDEId, filePath, checkSum);
                 }
                 else
                 {
@@ -340,6 +347,22 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                     await client.SetTseStateAsync(new TseState { CurrentState = TseStates.Terminated }).ConfigureAwait(false);
                 }
             }
+        }
+
+        public static byte[] Compress(string sourcePath)
+        {
+            if (sourcePath == null)
+            {
+                throw new ArgumentNullException(nameof(sourcePath));
+            }
+
+            using var ms = new MemoryStream();
+            using (var arch = new ZipArchive(ms, ZipArchiveMode.Create))
+            {
+                arch.CreateEntryFromFile(sourcePath, Path.GetFileName(sourcePath), CompressionLevel.Optimal);
+            }
+
+            return ms.ToArray();
         }
     }
 }

@@ -18,6 +18,7 @@ using Moq;
 using Newtonsoft.Json;
 using Xunit;
 using fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProcessorDETests.Helpers;
+using fiskaltrust.Middleware.Contracts.Repositories;
 
 namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProcessorDETests.Receipts
 {
@@ -55,7 +56,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                 StartMoment = DateTime.UtcNow
             };
 
-            var journalRepositoryMock = new Mock<IJournalDERepository>(MockBehavior.Strict);
+            var journalRepositoryMock = new Mock<IMiddlewareJournalDERepository>(MockBehavior.Strict);
             var actionJournalRepositoryMock = new Mock<IActionJournalRepository>(MockBehavior.Strict);
 
             actionJournalRepositoryMock.Setup(a => a.GetAsync()).ReturnsAsync(new List<ftActionJournal>
@@ -103,7 +104,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                 StartMoment = DateTime.UtcNow
             };
 
-            var journalRepositoryMock = new Mock<IJournalDERepository>(MockBehavior.Strict);
+            var journalRepositoryMock = new Mock<IMiddlewareJournalDERepository>(MockBehavior.Strict);
             var actionJournalRepositoryMock = new Mock<IActionJournalRepository>(MockBehavior.Strict);
 
             actionJournalRepositoryMock.Setup(a => a.GetAsync()).ReturnsAsync(new List<ftActionJournal>

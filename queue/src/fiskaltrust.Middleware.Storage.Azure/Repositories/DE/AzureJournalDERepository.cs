@@ -5,10 +5,11 @@ using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Storage.Azure.Mapping;
 using fiskaltrust.Middleware.Storage.Azure.TableEntities;
 using fiskaltrust.storage.V0;
+using Microsoft.Azure.Cosmos.Table;
 
 namespace fiskaltrust.Middleware.Storage.Azure.Repositories.DE
 {
-    public class AzureJournalDERepository : BaseAzureTableRepository<Guid, AzureFtJournalDE, ftJournalDE>, IJournalDERepository, IMiddlewareRepository<ftJournalDE>
+    public class AzureJournalDERepository : BaseAzureTableRepository<Guid, AzureFtJournalDE, ftJournalDE>, IJournalDERepository, IMiddlewareRepository<ftJournalDE>, IMiddlewareJournalDERepository
     {
         public AzureJournalDERepository(Guid queueId, string connectionString)
             : base(queueId, connectionString, nameof(ftJournalDE)) { }
@@ -28,6 +29,14 @@ namespace fiskaltrust.Middleware.Storage.Azure.Repositories.DE
             {
                 return result.Take(take.Value).ToAsyncEnumerable();
             }
+            return result.ToAsyncEnumerable();
+        }
+
+        public IAsyncEnumerable<ftJournalDE> GetByFileName(string fileName)
+        {
+            var tableQuery = new TableQuery<AzureFtJournalDE>();
+            tableQuery = tableQuery.Where(TableQuery.GenerateFilterCondition("FileName", QueryComparisons.Equal, fileName));
+            var result = GetAllByTableFilterAsync(tableQuery).ToListAsync().Result;
             return result.ToAsyncEnumerable();
         }
     }

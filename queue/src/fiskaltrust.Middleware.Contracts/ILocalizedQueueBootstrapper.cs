@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 
-namespace fiskaltrust.Middleware.Queue.Bootstrapper.Interfaces
+namespace fiskaltrust.Middleware.Contracts
 {
     public interface ILocalizedQueueBootstrapper
     {

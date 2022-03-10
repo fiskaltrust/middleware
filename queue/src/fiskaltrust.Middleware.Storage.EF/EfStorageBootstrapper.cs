@@ -82,6 +82,7 @@ namespace fiskaltrust.Middleware.Storage.Ef
             services.AddTransient<IReadOnlyJournalATRepository, EfJournalATRepository>();
             services.AddTransient<IMiddlewareRepository<ftJournalAT>, EfJournalATRepository>();
 
+            services.AddTransient<IMiddlewareJournalDERepository, EfJournalDERepository>();
             services.AddTransient<IJournalDERepository, EfJournalDERepository>();
             services.AddTransient<IReadOnlyJournalDERepository, EfJournalDERepository>();
             services.AddTransient<IMiddlewareRepository<ftJournalDE>, EfJournalDERepository>();

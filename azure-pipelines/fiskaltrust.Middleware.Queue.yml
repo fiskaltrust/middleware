@@ -11,7 +11,14 @@ trigger:
     include:
       - queue
 
-pr: none
+pr:
+  branches:
+    include:
+    - main
+    - refs/tags/queue/*
+  paths:
+    include:
+      - queue
 
 variables:
 - group: 'Code Signing Certificates'

@@ -66,7 +66,8 @@ namespace fiskaltrust.Middleware.Storage.Azure
             services.AddSingleton<IMiddlewareRepository<ftJournalAT>>(x => new AzureJournalATRepository(_queueId, _connectionString));
 
             services.AddSingleton<IJournalDERepository>(x => new AzureJournalDERepository(_queueId, _connectionString));
-            services.AddSingleton<IReadOnlyJournalDERepository>(x => new AzureJournalDERepository(_queueId, _connectionString));
+            services.AddSingleton<IMiddlewareJournalDERepository>(x => new AzureJournalDERepository(_queueId, _connectionString));
+            services.AddSingleton<IJournalDERepository>(x => new AzureJournalDERepository(_queueId, _connectionString));
             services.AddSingleton<IMiddlewareRepository<ftJournalDE>>(x => new AzureJournalDERepository(_queueId, _connectionString));
 
             services.AddSingleton<IJournalFRRepository>(x => new AzureJournalFRRepository(_queueId, _connectionString));
