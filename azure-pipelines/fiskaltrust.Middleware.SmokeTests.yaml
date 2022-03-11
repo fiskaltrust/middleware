@@ -11,6 +11,7 @@ variables:
 - group: SmokeTests-Middleware
 
 trigger: none
+pr: none
 
 schedules:
 - cron: 0 0 * * *
