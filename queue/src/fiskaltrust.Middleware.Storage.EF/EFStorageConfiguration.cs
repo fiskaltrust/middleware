@@ -6,7 +6,7 @@ namespace fiskaltrust.Middleware.Storage.EF
     public class EfStorageConfiguration
     {
         [JsonProperty("connectionstring")]
-        public string ConnectionString;
+        public string ConnectionString { get; set; }
 
         public static EfStorageConfiguration FromConfigurationDictionary(Dictionary<string, object> configuration) => JsonConvert.DeserializeObject<EfStorageConfiguration>(JsonConvert.SerializeObject(configuration));
     }
