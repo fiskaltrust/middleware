@@ -196,7 +196,6 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision.Interop.File
                 {
                     if (DateTimeOffset.UtcNow > maxTimeStamp)
                     {
-                        //here we are
                         throw new TimeoutException($"The timeout of {_tseIoTimeout} for reading data from the TSE has expired.");
                     }
                     continue;
@@ -246,9 +245,7 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision.Interop.File
                         _fragmentedReadInProgress = true;
                         responseBytes.AddRange(responseData);
                         var readNextCommand = new ReadNextFragmentTseCommand();
-           
                         Write(readNextCommand.GetCommandDataBytes(), readNextCommand.ResponseModeBytes, _tseIoRandomTokenBytes);
-
                         foreach (var item in await ReadTseDataAsync(_tseIoRandomTokenBytes, true))
                         {
                             responseBytes.AddRange(item.DataBytes);

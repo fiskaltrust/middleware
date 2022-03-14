@@ -125,19 +125,6 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision.Interop
             });
         }
 
-        public async Task<SeResult> SeExportMoreDataAsync(Stream stream, byte[] serialNumber, uint previousSignatureCounter)
-        {
-            return await CommandRunner.ExecuteAsync(async () =>
-            {
-                var command = AdditionalCommands.CreateExportMoreDataTseCommand(serialNumber, previousSignatureCounter, 0);
-                foreach (var item in await _transportAdapter.ExecuteAsync(command))
-                {
-                    await stream.WriteAsync(item.DataBytes, 0, item.DataBytes.Length);
-                }
-                return SeResult.ExecutionOk;
-            });
-        }
-
         public async Task<(SeResult, byte[])> SeExportPublicKeyAsync(byte[] serialNumber)
         {
             return await CommandRunner.ExecuteAsync(async () =>
