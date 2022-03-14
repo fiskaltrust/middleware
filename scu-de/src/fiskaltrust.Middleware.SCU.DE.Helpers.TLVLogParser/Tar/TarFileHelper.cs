@@ -22,6 +22,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser.Tar
             using var reader = ReaderFactory.Open(inputTarStream);
 
             var existingEntries = File.Exists(targetFile) ? GetNonSignatureEntriesFromTarFile(targetFile) : new List<string>();
+
             using var targetStream = File.OpenWrite(targetFile);
             targetStream.Position = targetStream.Length;
             using var tarWriter = new TarWriter(targetStream, new TarWriterOptions(CompressionType.None, finalizeArchiveOnClose: false) { LeaveStreamOpen = false });
@@ -39,7 +40,13 @@ namespace fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser.Tar
         private static List<string> GetNonSignatureEntriesFromTarFile(string targetFile)
         {
             using var tarArchive = TarArchive.Open(targetFile, new ReaderOptions { LeaveStreamOpen = false });
-            return tarArchive.Entries.Where(x => x.Key.EndsWith(".csv") || x.Key.EndsWith(".crt") || x.Key.EndsWith(".pem")).Select(x => x.Key).ToList();
+            return tarArchive.Entries.Where(x => x.Key.EndsWith(".csv") || x.Key.EndsWith(".crt") || x.Key.EndsWith(".pem") || x.Key.EndsWith(".cer")).Select(x => x.Key).ToList();
+        }
+
+        public static string GetLastLogEntryFromTarFile(string targetFile)
+        {
+            using var tarArchive = TarArchive.Open(targetFile, new ReaderOptions { LeaveStreamOpen = false });
+            return tarArchive.Entries.Last(x => x.Key.EndsWith(".log")).Key;
         }
     }
 }

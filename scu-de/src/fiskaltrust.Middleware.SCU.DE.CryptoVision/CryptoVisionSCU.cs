@@ -758,7 +758,7 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision
                     SetEraseEnabledForExportState(exportId, ExportState.Running);
                 }
                 (_, var currentNumberOfSignatures) = await _proxy.SeGetSignatureCounterAsync(tseSerialNumber);
-                await CacheExportMoreDataAsync(exportId.ToString(), tseSerialNumber, 0, 5000, currentNumberOfSignatures).ConfigureAwait(false);
+                await CacheExportMoreDataAsync(exportId.ToString(), tseSerialNumber, 0, 10000, currentNumberOfSignatures).ConfigureAwait(false);
                 TarFileHelper.FinalizeTarFile(exportId.ToString());
                 _logger.LogDebug("Finalized merged TAR file {fileName}.", exportId.ToString());
                 SetExportState(exportId, ExportState.Succeeded);
@@ -773,6 +773,7 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision
         private async Task CacheExportMoreDataAsync(string targetFile, byte[] serialNumber, long previousSignatureCounter, long maxNumberOfRecords, uint currentNumberOfSignatures)
         {
             maxNumberOfRecords = CalcMaxNumberOfRecords(previousSignatureCounter, maxNumberOfRecords, currentNumberOfSignatures);
+            long newPreviousSignatureCounter = -1;
             try
             {
                 _logger.LogInformation($"Export total {currentNumberOfSignatures} partial Export from {previousSignatureCounter}, number of records: {maxNumberOfRecords}");
@@ -780,6 +781,13 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision
                 (await _proxy.SeExportMoreDataAsync(stream, serialNumber, previousSignatureCounter, maxNumberOfRecords)).ThrowIfError();
                 stream.Position = 0;
                 TarFileHelper.AppendTarStreamToTarFile(targetFile, stream);
+                var lastlog = TarFileHelper.GetLastLogEntryFromTarFile(targetFile);
+
+                //Unixt_1646299459_Sig-50307_Log - Tra_No - 24371_Start_Client - V8uVQZBZzkmULvYaA2sjQ.log
+                var iSigStart = lastlog.IndexOf('-');
+                var iSigEnd = lastlog.IndexOf('_', iSigStart);
+                var lastSigCount =  lastlog.Substring(iSigStart + 1, iSigEnd - iSigStart-1);
+                newPreviousSignatureCounter = long.Parse(lastSigCount);
             }
             catch (CryptoVisionException ex)
             {
@@ -788,10 +796,13 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision
                     throw;
                 }
             }
-            var newStart = previousSignatureCounter + maxNumberOfRecords;
-            if (newStart < currentNumberOfSignatures)
+            if (newPreviousSignatureCounter == -1)
             {
-                await CacheExportMoreDataAsync(targetFile, serialNumber, newStart, maxNumberOfRecords, currentNumberOfSignatures).ConfigureAwait(false);
+                newPreviousSignatureCounter = previousSignatureCounter + maxNumberOfRecords;
+            }
+            if (newPreviousSignatureCounter < currentNumberOfSignatures)
+            {
+                await CacheExportMoreDataAsync(targetFile, serialNumber, newPreviousSignatureCounter, maxNumberOfRecords, currentNumberOfSignatures).ConfigureAwait(false);
             }
         }
 
