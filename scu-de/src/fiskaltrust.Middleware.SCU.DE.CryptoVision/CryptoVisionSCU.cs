@@ -758,7 +758,7 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision
                     SetEraseEnabledForExportState(exportId, ExportState.Running);
                 }
                 (_, var currentNumberOfSignatures) = await _proxy.SeGetSignatureCounterAsync(tseSerialNumber);
-                await CacheExportMoreDataAsync(exportId.ToString(), tseSerialNumber, 0, 10000, currentNumberOfSignatures).ConfigureAwait(false);
+                await CacheExportMoreDataAsync(exportId.ToString(), serialNumber, 0, 10000, currentNumberOfSignatures).ConfigureAwait(false);
                 TarFileHelper.FinalizeTarFile(exportId.ToString());
                 _logger.LogDebug("Finalized merged TAR file {fileName}.", exportId.ToString());
                 SetExportState(exportId, ExportState.Succeeded);
