@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using fiskaltrust.Middleware.Contracts;
 using fiskaltrust.Middleware.Localization.QueueDE;
+using fiskaltrust.Middleware.Localization.QueueME;
 using fiskaltrust.storage.V0;
 using Newtonsoft.Json;
 
@@ -18,6 +19,7 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
                 "AT" => throw new NotImplementedException("AT IS NOT IMPLEMENTED"),
                 "DE" => new QueueDEBootstrapper(),
                 "FR" => throw new NotImplementedException("FR IS NOT IMPLEMENTED"),
+                "ME" => new QueueMEBootstrapper(),
                 _ => throw new ArgumentException($"unkown countryCode: {countyCode}"),
             };
         }

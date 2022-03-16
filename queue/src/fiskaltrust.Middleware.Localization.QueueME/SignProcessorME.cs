@@ -1,13 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts;
-using fiskaltrust.Middleware.Localization.QueueME.RequestCommands;
 using fiskaltrust.Middleware.Localization.QueueME.RequestCommands.Factories;
 using fiskaltrust.storage.V0;
-using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.QueueME
 {

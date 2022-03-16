@@ -1,18 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.IO.Compression;
-using System.Linq;
-using System.Security.Cryptography;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.Middleware.Contracts.Data;
-using fiskaltrust.Middleware.Contracts.Models;
-using fiskaltrust.Middleware.Contracts.Models.Transactions;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 using fiskaltrust.Middleware.Localization.QueueME.Models;
-using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 {

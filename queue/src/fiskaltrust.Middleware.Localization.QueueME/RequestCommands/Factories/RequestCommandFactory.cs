@@ -1,7 +1,6 @@
 ﻿using System;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.storage.V0;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands.Factories
 {
