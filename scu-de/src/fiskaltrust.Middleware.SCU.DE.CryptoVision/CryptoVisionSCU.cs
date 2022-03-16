@@ -719,7 +719,7 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision
                     if (ex is TimeoutException)
                     {
                         _logger.LogDebug("Requested export was too large to be processed by CryptoVision, splitting into multiple export requests.");
-                        await StartExportMoreDataAsync(exportId, tseSerialNumber, eraseData).ConfigureAwait(false);
+                        await StartExportMoreDataAsync(exportId, tseSerialNumber).ConfigureAwait(false);
                     }
                     else
                     {
@@ -740,7 +740,7 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision
             }
         }
 
-        private async Task StartExportMoreDataAsync(Guid exportId, byte[] serialNumber, bool eraseData)
+        private async Task StartExportMoreDataAsync(Guid exportId, byte[] serialNumber)
         {
             try
             {
@@ -974,14 +974,16 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision
                                 {
                                     try
                                     {
-                                        await DeleteData(request, sessionResponse);
+                                        await DeleteData(request);
+                                        sessionResponse.IsErased = true;
                                     }
                                     catch (CryptoVisionException ex)
                                     {
                                         if (ex.Message.Equals("the user who has invoked a restricted SE API function has not the status \"authenticated\""))
                                         {
                                             await AuthenicateAdmin().ConfigureAwait(false);
-                                            await DeleteData(request, sessionResponse);
+                                            await DeleteData(request);
+                                            sessionResponse.IsErased = true;
                                         }
                                         else
                                         {
@@ -1030,18 +1032,16 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision
             }
         }
 
-        private async Task DeleteData(EndExportSessionRequest request, EndExportSessionResponse sessionResponse)
+        private async Task DeleteData(EndExportSessionRequest request)
         {
             if (_splitExportLastSigCounter.ContainsKey(request.TokenId))
             {
                 _splitExportLastSigCounter.TryGetValue(request.TokenId, out var lastsigCount);
                 (await _proxy.SeDeleteDataUpToAsync(tseSerialNumber, (uint) lastsigCount)).ThrowIfError();
-                sessionResponse.IsErased = true;
             }
             else
             {
                 (await _proxy.SeDeleteStoredDataAsync()).ThrowIfError();
-                sessionResponse.IsErased = true;
             }
         }
 
