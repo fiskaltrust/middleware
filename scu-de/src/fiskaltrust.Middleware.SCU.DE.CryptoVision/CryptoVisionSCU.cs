@@ -48,6 +48,7 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision
         private readonly ConcurrentDictionary<string, string> publicKeyBase64Cache = new ConcurrentDictionary<string, string>();
         private readonly ConcurrentDictionary<string, ExportStateData> _readStreamPointer = new ConcurrentDictionary<string, ExportStateData>();
         private readonly ConcurrentDictionary<ulong, DateTime> StartTransactionTimeStampCache = new ConcurrentDictionary<ulong, DateTime>();
+        private readonly ConcurrentDictionary<string, long> _splitExportLastSigCounter = new ConcurrentDictionary<string, long>();
         private readonly KeepAliveTimer _keepAliveTimer;
 
         private bool disposedValue;
@@ -706,7 +707,6 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision
                         await AuthenicateAdmin().ConfigureAwait(false);
                         SetEraseEnabledForExportState(exportId, ExportState.Running);
                     }
-
                     using (var tempStream = File.Open(exportId.ToString(), FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read))
                     {
                         (await _proxy.SeExportDataAsync(tempStream, clientId)).ThrowIfError();
@@ -752,11 +752,6 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision
                 _proxy.ReOpen();
                 _initialized = false;
                 await EnsureInitializedAsync();
-                if (eraseData)
-                {
-                    await AuthenicateAdmin().ConfigureAwait(false);
-                    SetEraseEnabledForExportState(exportId, ExportState.Running);
-                }
                 (_, var currentNumberOfSignatures) = await _proxy.SeGetSignatureCounterAsync(tseSerialNumber);
                 await CacheExportMoreDataAsync(exportId.ToString(), serialNumber, 0, 10000, currentNumberOfSignatures).ConfigureAwait(false);
                 TarFileHelper.FinalizeTarFile(exportId.ToString());
@@ -781,13 +776,8 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision
                 (await _proxy.SeExportMoreDataAsync(stream, serialNumber, previousSignatureCounter, maxNumberOfRecords)).ThrowIfError();
                 stream.Position = 0;
                 TarFileHelper.AppendTarStreamToTarFile(targetFile, stream);
-                var lastlog = TarFileHelper.GetLastLogEntryFromTarFile(targetFile);
-
-                //Unixt_1646299459_Sig-50307_Log - Tra_No - 24371_Start_Client - V8uVQZBZzkmULvYaA2sjQ.log
-                var iSigStart = lastlog.IndexOf('-');
-                var iSigEnd = lastlog.IndexOf('_', iSigStart);
-                var lastSigCount =  lastlog.Substring(iSigStart + 1, iSigEnd - iSigStart-1);
-                newPreviousSignatureCounter = long.Parse(lastSigCount);
+                newPreviousSignatureCounter = GetLastExportetSignature(targetFile);
+                _splitExportLastSigCounter.AddOrUpdate(targetFile, newPreviousSignatureCounter, (k, v) => { v = newPreviousSignatureCounter; return v; });
             }
             catch (CryptoVisionException ex)
             {
@@ -802,8 +792,19 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision
             }
             if (newPreviousSignatureCounter < currentNumberOfSignatures)
             {
-                await CacheExportMoreDataAsync(targetFile, serialNumber, newPreviousSignatureCounter, maxNumberOfRecords, currentNumberOfSignatures).ConfigureAwait(false);
+               await CacheExportMoreDataAsync(targetFile, serialNumber, newPreviousSignatureCounter, maxNumberOfRecords, currentNumberOfSignatures).ConfigureAwait(false);
             }
+        }
+
+        private long GetLastExportetSignature(string targetFile)
+        {
+            var lastlog = TarFileHelper.GetLastLogEntryFromTarFile(targetFile);
+
+            //Unixt_1646299459_Sig-50307_Log - Tra_No - 24371_Start_Client - V8uVQZBZzkmULvYaA2sjQ.log
+            var iSigStart = lastlog.IndexOf('-');
+            var iSigEnd = lastlog.IndexOf('_', iSigStart);
+            var lastSigCount = lastlog.Substring(iSigStart + 1, iSigEnd - iSigStart - 1);
+            return long.Parse(lastSigCount);
         }
 
         private long CalcMaxNumberOfRecords(long previousSignatureCounter, long maxNumberOfRecords, uint currentNumberOfSignatures)
@@ -971,9 +972,22 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision
                             {
                                 if (exportStateData.EraseEnabled)
                                 {
-                                    
-                                    (await _proxy.SeDeleteStoredDataAsync()).ThrowIfError();
-                                    sessionResponse.IsErased = true;
+                                    try
+                                    {
+                                        await DeleteData(request, sessionResponse);
+                                    }
+                                    catch (CryptoVisionException ex)
+                                    {
+                                        if (ex.Message.Equals("the user who has invoked a restricted SE API function has not the status \"authenticated\""))
+                                        {
+                                            await AuthenicateAdmin().ConfigureAwait(false);
+                                            await DeleteData(request, sessionResponse);
+                                        }
+                                        else
+                                        {
+                                            throw;
+                                        };
+                                    }
                                 }
                                 else
                                 {
@@ -1001,6 +1015,11 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision
                             catch { }
                         }
                         catch { }
+
+                        if (_splitExportLastSigCounter.ContainsKey(request.TokenId))
+                        {
+                            _ = _splitExportLastSigCounter.TryRemove(request.TokenId, out _);
+                        }
                     }
                 });
             }
@@ -1008,6 +1027,21 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision
             {
                 _logger.LogError(ex, "Failed to execute {Operation}", nameof(EndExportSessionAsync));
                 throw;
+            }
+        }
+
+        private async Task DeleteData(EndExportSessionRequest request, EndExportSessionResponse sessionResponse)
+        {
+            if (_splitExportLastSigCounter.ContainsKey(request.TokenId))
+            {
+                _splitExportLastSigCounter.TryGetValue(request.TokenId, out var lastsigCount);
+                (await _proxy.SeDeleteDataUpToAsync(tseSerialNumber, (uint) lastsigCount)).ThrowIfError();
+                sessionResponse.IsErased = true;
+            }
+            else
+            {
+                (await _proxy.SeDeleteStoredDataAsync()).ThrowIfError();
+                sessionResponse.IsErased = true;
             }
         }
 
