@@ -251,7 +251,7 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision.Interop.File
                         {
                             responseBytes.AddRange(item.DataBytes);
                         }
-                        var readNext = await ReadNextCommandAsync(readNextCommand);
+                        var readNext = await ReadNextCommandAsync(readNextCommand, resultLength, responseBytes.Count - 2);
                         responseBytes.AddRange(readNext);
                     }
                     else
@@ -326,12 +326,12 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision.Interop.File
             } while (true);
         }
 
-        private async Task<List<byte>> ReadNextCommandAsync(ReadNextFragmentTseCommand readNextCommand)
+        private async Task<List<byte>> ReadNextCommandAsync(ReadNextFragmentTseCommand readNextCommand,ushort resultLength, int responseBytesCount)
         {
             Write(readNextCommand.GetCommandDataBytes(), readNextCommand.ResponseModeBytes, _tseIoRandomTokenBytes);
             var readItems = await ReadTseDataAsync(_tseIoRandomTokenBytes, true);
             var responseBytes = new List<byte>();
-            if (readItems.Count == 0 || readItems.Count == 1 & readItems[0].DataBytes.Length == 2)
+            if (responseBytesCount >= resultLength)
             {
                 return new List<byte>();
             }
@@ -339,7 +339,7 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision.Interop.File
             {
                 responseBytes.AddRange(item.DataBytes);
             }
-            var readNext = await ReadNextCommandAsync(readNextCommand);
+            var readNext = await ReadNextCommandAsync(readNextCommand, resultLength, responseBytesCount+ responseBytes.Count);
             responseBytes.AddRange(readNext);
             return responseBytes;
         }
