@@ -237,7 +237,8 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision.Interop.File
                 {
                     // no data to respond
                     return new List<ITseData>();
-                }else if (resultLength < 0x8000)
+                }
+                else if (resultLength < 0x8000)
                 {
                     var responseBytes = new List<byte>();
                     if (resultLength > responseData.Length - 2)
@@ -250,7 +251,7 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision.Interop.File
                         {
                             responseBytes.AddRange(item.DataBytes);
                         }
-                        var readNext = await ReadNextCommandAsync(readNextCommand);
+                        var readNext = await ReadNextCommandAsync(readNextCommand, resultLength, responseBytes.Count - 2);
                         responseBytes.AddRange(readNext);
                     }
                     else
@@ -325,12 +326,12 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision.Interop.File
             } while (true);
         }
 
-        private async Task<List<byte>> ReadNextCommandAsync(ReadNextFragmentTseCommand readNextCommand)
+        private async Task<List<byte>> ReadNextCommandAsync(ReadNextFragmentTseCommand readNextCommand, ushort resultLength, int responseBytesCount)
         {
             Write(readNextCommand.GetCommandDataBytes(), readNextCommand.ResponseModeBytes, _tseIoRandomTokenBytes);
             var readItems = await ReadTseDataAsync(_tseIoRandomTokenBytes, true);
             var responseBytes = new List<byte>();
-            if (readItems.Count == 0 || readItems.Count == 1 & readItems[0].DataBytes.Length == 2)
+            if (responseBytesCount >= resultLength)
             {
                 return new List<byte>();
             }
@@ -338,12 +339,12 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision.Interop.File
             {
                 responseBytes.AddRange(item.DataBytes);
             }
-            var readNext = await ReadNextCommandAsync(readNextCommand);
+            var readNext = await ReadNextCommandAsync(readNextCommand, resultLength, responseBytesCount + responseBytes.Count);
             responseBytes.AddRange(readNext);
             return responseBytes;
         }
 
-    private SeResult MapIoResult(ushort result)
+        private SeResult MapIoResult(ushort result)
         {
             const ushort SE_ERROR_TIMEOUT = 0x8100;
             const ushort SE_ERROR_STREAM_WRITE = 0x8101;
