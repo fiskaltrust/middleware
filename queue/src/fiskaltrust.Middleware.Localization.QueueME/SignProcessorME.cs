@@ -21,9 +21,11 @@ namespace fiskaltrust.Middleware.Localization.QueueME
             _requestCommandFactory = requestCommandFactory;
         }
 
-        public Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ftQueue queue, ftQueueItem queueItem)
+        public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ftQueue queue, ftQueueItem queueItem)
         {
-            throw new NotImplementedException();
+            var response = await _requestCommandFactory.Create(request).ExecuteAsync(queue, request, queueItem);
+
+            return (response.ReceiptResponse, response.ActionJournals);
         }
     }
 }
