@@ -70,7 +70,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                 configurationRepository,
                 dESSCDProvider,
                 transactionPayloadFactory,
-                new RequestCommandFactory(services.BuildServiceProvider())
+                new RequestCommandFactory(services.BuildServiceProvider()),
+                logger
             );
 
             return signProcessor;
