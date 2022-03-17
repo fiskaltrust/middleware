@@ -17,7 +17,7 @@
         public bool DisplayCertificationIdAddition { get; set; } = true;
         public string CertificationIdAddition { get; set; } = "USK ausgesetzt";
         public string ServiceFolder { get; set; }
-        public string FccVersion { get; set; } = "3.2.4";
+        public string FccVersion { get; set; } = "3.2.5";
         public string ProxyServer { get; set; }
         public int? ProxyPort { get; set; }
         public string ProxyUsername { get; set; }
