@@ -22,26 +22,31 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
         private readonly ITransactionPayloadFactory _transactionPayloadFactory;
         private readonly IDESSCDProvider _deSSCDProvider;
         private readonly IRequestCommandFactory _requestCommandFactory;
+        private readonly ILogger<SignProcessorDE> _logger;
 
-        public SignProcessorDE(
+        public SignProcessorDE(            
             IConfigurationRepository configurationRepository,
             IDESSCDProvider dESSCDProvider,
             ITransactionPayloadFactory transactionPayloadFactory,
-            IRequestCommandFactory requestCommandFactory)
+            IRequestCommandFactory requestCommandFactory,
+            ILogger<SignProcessorDE> logger)
         {
             _configurationRepository = configurationRepository;
             _deSSCDProvider = dESSCDProvider;
             _transactionPayloadFactory = transactionPayloadFactory;
             _requestCommandFactory = requestCommandFactory;
+            _logger = logger;
         }
 
         public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ftQueue queue, ftQueueItem queueItem)
         {
+            _logger.LogTrace("SignProcessorDE.ProcessAsync called.");
             if (string.IsNullOrEmpty(request.cbReceiptReference) && !request.IsFailTransactionReceipt() && !string.IsNullOrEmpty(request.ftReceiptCaseData) && !request.ftReceiptCaseData.Contains("CurrentStartedTransactionNumbers"))
             {
                 throw new ArgumentException($"CbReceiptReference must be set for one transaction! If you want to close multiple transactions, pass an array value for 'CurrentStartedTransactionNumbers' via ftReceiptCaseData.");
             }
 
+            _logger.LogTrace("SignProcessorDE.ProcessAsync: Getting QueueDE from database.");
             var queueDE = await _configurationRepository.GetQueueDEAsync(queueItem.ftQueueId).ConfigureAwait(false);
 
             if (!queueDE.ftSignaturCreationUnitDEId.HasValue && !queue.IsActive())
@@ -58,6 +63,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
 
         private async Task<RequestCommandResponse> PerformReceiptRequest(ReceiptRequest request, ftQueueItem queueItem, ftQueue queue, ftQueueDE queueDE, IDESSCD client)
         {
+            _logger.LogTrace("SignProcessorDE.PerformReceiptRequest called.");
             var (processType, payload) = _transactionPayloadFactory.CreateReceiptPayload(request);
 
             RequestCommand command;
@@ -70,6 +76,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
                 throw new ArgumentException($"ReceiptCase {request.ftReceiptCase:X} unknown. ProcessType {processType}, ProcessData {payload}");
             }
 
+            _logger.LogTrace("SignProcessorDE.PerformReceiptRequest: Executing command {CommandName}.", command.ReceiptName);
             return await command.ExecuteAsync(queue, queueDE, client, request, queueItem);
         }
     }
