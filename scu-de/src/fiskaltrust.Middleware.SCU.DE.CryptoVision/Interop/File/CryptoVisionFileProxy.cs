@@ -91,7 +91,7 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision.Interop
 
                 foreach (var item in await _transportAdapter.ExecuteAsync(command))
                 {
-                    stream.Write(item.DataBytes, 0, item.DataBytes.Length);
+                    await stream.WriteAsync(item.DataBytes, 0, item.DataBytes.Length);
                 }
                 return SeResult.ExecutionOk;
             });
@@ -105,7 +105,7 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision.Interop
 
                 foreach (var item in await _transportAdapter.ExecuteAsync(command))
                 {
-                    stream.Write(item.DataBytes, 0, item.DataBytes.Length);
+                    await stream.WriteAsync(item.DataBytes, 0, item.DataBytes.Length);
                 }
                 return SeResult.ExecutionOk;
             });

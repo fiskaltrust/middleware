@@ -174,7 +174,7 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision.Interop.File
                 {
                     if (DateTimeOffset.UtcNow > maxTimeStamp)
                     {
-                        throw new TimeoutException($"The timeout of {_tseIoTimeout} for reading data from the TSE has expired.");
+                        throw new CryptoVisionTimeoutException($"The timeout of {_tseIoTimeout} for reading data from the TSE has expired.");
                     }
                     continue;
                 }
@@ -196,7 +196,7 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision.Interop.File
                 {
                     if (DateTimeOffset.UtcNow > maxTimeStamp)
                     {
-                        throw new TimeoutException($"The timeout of {_tseIoTimeout} for reading data from the TSE has expired.");
+                        throw new CryptoVisionTimeoutException($"The timeout of {_tseIoTimeout} for reading data from the TSE has expired.");
                     }
                     continue;
                 }

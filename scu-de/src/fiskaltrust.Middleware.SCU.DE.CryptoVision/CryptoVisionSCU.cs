@@ -716,7 +716,7 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision
                 }
                 catch (Exception ex)
                 {
-                    if (ex is TimeoutException)
+                    if (ex is CryptoVisionTimeoutException)
                     {
                         _logger.LogDebug("Requested export was too large to be processed by CryptoVision, splitting into multiple export requests.");
                         await StartExportMoreDataAsync(exportId, tseSerialNumber).ConfigureAwait(false);
@@ -776,7 +776,7 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision
                 (await _proxy.SeExportMoreDataAsync(stream, serialNumber, previousSignatureCounter, maxNumberOfRecords)).ThrowIfError();
                 stream.Position = 0;
                 TarFileHelper.AppendTarStreamToTarFile(targetFile, stream);
-                newPreviousSignatureCounter = GetLastExportetSignature(targetFile);
+                newPreviousSignatureCounter = GetLastExportedSignature(targetFile);
                 _splitExportLastSigCounter.AddOrUpdate(targetFile, newPreviousSignatureCounter, (k, v) => { v = newPreviousSignatureCounter; return v; });
             }
             catch (CryptoVisionException ex)
@@ -796,7 +796,7 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision
             }
         }
 
-        private long GetLastExportetSignature(string targetFile)
+        private long GetLastExportedSignature(string targetFile)
         {
             var lastlog = TarFileHelper.GetLastLogEntryFromTarFile(targetFile);
 
@@ -977,18 +977,11 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision
                                         await DeleteData(request);
                                         sessionResponse.IsErased = true;
                                     }
-                                    catch (CryptoVisionException ex)
+                                    catch (CryptoVisionNotAuthenticatedException)
                                     {
-                                        if (ex.Message.Equals("the user who has invoked a restricted SE API function has not the status \"authenticated\""))
-                                        {
-                                            await AuthenicateAdmin().ConfigureAwait(false);
-                                            await DeleteData(request);
-                                            sessionResponse.IsErased = true;
-                                        }
-                                        else
-                                        {
-                                            throw;
-                                        };
+                                        await AuthenicateAdmin().ConfigureAwait(false);
+                                        await DeleteData(request);
+                                        sessionResponse.IsErased = true;
                                     }
                                 }
                                 else
