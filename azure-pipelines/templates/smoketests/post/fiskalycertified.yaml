@@ -1,0 +1,47 @@
+parameters:
+- name: apikey
+  type: string
+- name: apisecret
+  type: string
+- name: apiuri
+  default: https://kassensichv-middleware.fiskaly.com/api/v2
+  type: string
+
+steps:
+- pwsh: |
+    $body = @{
+      "api_key" = "${{ parameters.apikey }}"; 
+      "api_secret" = "${{ parameters.apisecret }}";
+    } | ConvertTo-Json
+    $headers = @{ "Content-Type" = "application/json" }
+    $result = Invoke-WebRequest -Method POST -Uri ${{ parameters.apiuri }}/auth -Headers $headers -Body $body -UseBasicParsing  | ConvertFrom-Json
+    
+    $default = @{
+      "Authentication" = "Bearer";
+      "Token" = $(ConvertTo-SecureString $result.access_token -AsPlainText);
+      "Headers" = $headers;
+    }
+
+    $tss = Get-Content "$(Build.SourcesDirectory)/logs/tss.json" -Encoding utf8 | ConvertFrom-Json
+
+    $body = @{
+      "admin_pin" = "abc123";
+    } | ConvertTo-Json
+
+    $response = Invoke-WebRequest @default -Method POST -Uri ${{ parameters.apiuri }}/tss/$($tss._id)/admin/auth -Body $body -UseBasicParsing 
+
+    if($response.StatusCode -ne 200) {
+      throw "Could not login admin"
+    }
+
+    $body = @{
+      "state" = "DISABLED";
+    } | ConvertTo-Json
+
+    $response = Invoke-WebRequest @default -Method PATCH -Uri ${{ parameters.apiuri }}/tss/$($tss._id) -Body $body -UseBasicParsing 
+
+    if($response.StatusCode -ne 200) {
+      throw "Could not disable TSS state"
+    }
+  displayName: Cleanup FiskalyCertified
+  condition: succeededOrFailed()

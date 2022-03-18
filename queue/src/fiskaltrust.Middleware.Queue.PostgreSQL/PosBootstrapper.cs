@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using fiskaltrust.Middleware.Abstractions;
+using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Queue.Bootstrapper;
 using fiskaltrust.Middleware.Storage.EFCore.PostgreSQL;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Queue.PostgreSQL
 {
@@ -17,7 +19,10 @@ namespace fiskaltrust.Middleware.Queue.PostgreSQL
         {
             var logger = serviceCollection.BuildServiceProvider().GetRequiredService<ILogger<IMiddlewareBootstrapper>>();
 
-            var storageBootStrapper = new EFCorePostgreSQLStorageBootstrapper(Id, Configuration, logger);
+            var storageConfiguration = PostgreSQLStorageConfiguration.FromConfigurationDictionary(Configuration);
+            serviceCollection.AddSingleton(sp => storageConfiguration);
+
+            var storageBootStrapper = new EFCorePostgreSQLStorageBootstrapper(Id, Configuration, storageConfiguration, logger);
             storageBootStrapper.ConfigureStorageServices(serviceCollection);
 
             var queueBootstrapper = new QueueBootstrapper(Id, Configuration);

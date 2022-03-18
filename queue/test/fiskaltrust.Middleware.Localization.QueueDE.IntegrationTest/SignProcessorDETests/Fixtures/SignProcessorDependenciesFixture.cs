@@ -126,7 +126,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             var signProcessorDE = RequestCommandFactoryHelper.ConstructSignProcessor(Mock.Of<ILogger<SignProcessorDE>>(), configurationRepository, journalRepositoryMock.Object,
                 actionJournalRepository, DeSSCDProvider, new DSFinVKTransactionPayloadFactory(), failedFinishTransactionRepository,
                 failedStartTransactionRepository, openTransactionRepository, masterDataService, config,
-                queueItemRepository, new SignatureFactoryDE(config));
+                queueItemRepository, new SignatureFactoryDE(QueueDEConfiguration.FromMiddlewareConfiguration(config)));
             var signProcessor = new SignProcessor(Mock.Of<ILogger<SignProcessor>>(), configurationRepository, queueItemRepository, receiptJournalRepository,
                 actionJournalRepository, new CryptoHelper(), signProcessorDE, config);
             return signProcessor;

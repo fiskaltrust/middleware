@@ -1,0 +1,69 @@
+parameters:
+- name: apiuri
+  default: https://swissbit-cloud-tse.com/api/management
+  type: string
+- name: tokenuri
+  default: ../../auth/realms/sb/protocol/openid-connect/token
+  type: string
+- name: apiusername
+  type: string
+- name: apipassword
+  type: string
+- name: tenantid
+  type: string
+
+steps:
+- pwsh: |
+    $body = @{
+      "grant_type" = "password";
+      "username" = "${{ parameters.apiusername }}";
+      "password" = $env:apipassword;
+      "client_id" = "sb-api";
+    }
+
+    $response = Invoke-RestMethod -Method POST -Headers @{ "Content-type" = "application/x-www-form-urlencoded" } -Uri ${{ parameters.apiuri }}/${{ parameters.tokenuri}} -Body $body -UseBasicParsing 
+
+    $default = @{
+      "Headers" = @{
+        "X-Managed-Tenant" = "${{ parameters.tenantid }}";
+        "Content-Type" = "application/json"
+      };
+      "Authentication" = "Bearer";
+      "Token" = $(ConvertTo-SecureString $response.access_token -AsPlainText);
+    }
+
+    $tss = Get-Content "$(Build.SourcesDirectory)/logs/tss.json" -Encoding utf8 | ConvertFrom-Json
+
+    $body = @{
+      "status" = "disabled";
+    } | ConvertTo-Json
+
+    $response = Invoke-WebRequest @default -Method GET -Uri https://swissbit-cloud-tse.com/api/management/tss/$($tss.id) -UseBasicParsing 
+
+    $try = 3
+    while($try -gt 0)
+    {
+      try {
+        $response = Invoke-WebRequest @default -Method PATCH -Uri https://swissbit-cloud-tse.com/api/management/tss/$($tss.id)/status -Body $body -UseBasicParsing -Headers @{
+          "X-Managed-Tenant" = "${{ parameters.tenantid }}";
+          "Content-Type" = "application/json";
+          "If-Match" = $response.Headers.ETag[0]
+        }
+
+        break
+      } catch {}
+
+      $try -= 1
+    }
+
+    if($response.StatusCode -ne 200) {
+      throw "Could not delete TSS"
+    }
+  condition: succeededOrFailed()
+  displayName: Cleanup SwissbitCloud
+  env:
+    apipassword: ${{ parameters.apipassword }}
+
+- pwsh: Copy-Item $(Build.SourcesDirectory)/service/fiskaltrust/FCC/*/.fccdata/log/* $(Build.SourcesDirectory)/logs
+  condition: succeededOrFailed()
+  displayName: Copy FCC logs

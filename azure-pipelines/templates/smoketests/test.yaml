@@ -1,0 +1,120 @@
+parameters:
+- name: queue
+  type: string
+
+- name: scu
+  type: string
+
+- name: cashbox
+  type: object
+
+- name: init
+  type: object
+
+- name: pre
+  type: object
+
+- name: post
+  type: object
+
+- name: mono
+  type: boolean
+
+steps:
+- ${{ if ne(length(parameters.init), 0) }}:
+  - ${{ each init in parameters.init }}:
+    - ${{ init }}
+
+- download: queues
+  artifact: packages-v1
+  patterns: "**/fiskaltrust.Middleware.Queue.${{ parameters.queue }}.*.nupkg"
+  displayName: Download Queue Artifact
+
+- download: scus
+  artifact: packages-v1
+  patterns: "**/fiskaltrust.Middleware.SCU.${{ parameters.scu }}.*.nupkg"
+  displayName: Download Scu Artifact
+
+- pwsh: |
+    $basicAuthBytes = [System.Text.Encoding]::ASCII.GetBytes("${{ parameters.cashbox.cashboxid}}:${{ parameters.cashbox.accesstoken }}")
+    $basicAuthBase64 = [System.Convert]::ToBase64String($basicAuthBytes)
+    $basicAuthValue = "Basic ${basicAuthBase64}"
+    $headers = @{ Authorization = $basicAuthValue ; cashboxid = "${{ parameters.cashbox.cashboxid}}" }
+    $uri = "https://packages-sandbox.fiskaltrust.cloud/${{ parameters.cashbox.cashboxid }}.download?offline=true"
+
+    Invoke-WebRequest -uri $uri -Headers $headers -OutFile "launcher.zip"
+
+    Expand-Archive launcher.zip -DestinationPath $(Build.SourcesDirectory)/launcher -Force
+
+    Write-Host "Downloaded Launcher"
+  displayName: Download Offline Launcher
+  
+- pwsh: |
+    $queueFile = "$(Pipeline.Workspace)/queues/packages-v1/fiskaltrust.Middleware.Queue.${{ parameters.queue }}.*.nupkg"
+    $queueName = $(Get-Item $queueFile).Name
+    $queueVersion = $queueName -replace 'fiskaltrust\.Middleware\.Queue\.${{ parameters.queue }}\.(.*)\.nupkg', '$1'
+    Move-Item $queueFile $(Build.SourcesDirectory)/launcher/packages -Force
+    Write-Host "Moved $queueFile"
+    
+    $scuFile = "$(Pipeline.Workspace)/scus/packages-v1/fiskaltrust.Middleware.SCU.${{ parameters.scu }}.*.nupkg"
+    $scuName = $(Get-Item $scuFile).Name
+    $scuVersion = $scuName -replace 'fiskaltrust\.Middleware\.SCU\.${{ parameters.scu }}\.(.*)\.nupkg', '$1'
+    Move-Item $scuFile $(Build.SourcesDirectory)/launcher/packages -Force
+    Write-Host "Moved $scuFile"
+
+    $configuration = ConvertFrom-Json $(Get-Content $(Build.SourcesDirectory)/launcher/configuration.json)
+    $configuration.ftQueues[0].Version = $queueVersion
+    $configuration.ftSignaturCreationDevices[0].Version = $scuVersion
+
+    ConvertTo-Json $configuration -Depth 100 | Set-Content -Path $(Build.SourcesDirectory)/launcher/configuration.json -Encoding utf8
+    Write-Host "Replaced Versions in Config"
+
+  displayName: Replace Launcher Packages
+
+- pwsh: |
+    Set-Content -Path "$(Build.SourcesDirectory)/environment.json" -Value '{"id": "","name":"local","values":[{"key":"base_url","value":"${{ parameters.cashbox.baseurl }}","enabled":true},{"key":"cashbox_id","value":"${{ parameters.cashbox.cashboxid }}","enabled":true},{"key":"access_token","value":"${{ parameters.cashbox.accesstoken }}","enabled":true}]}'
+  displayName: Create newman Environment
+
+- ${{ if ne(length(parameters.pre), 0) }}:
+  - ${{ each pre in parameters.pre }}:
+    - ${{ pre }}
+
+- pwsh: |
+    $process = $Null
+    if("${{ parameters.mono }}" -eq "True") {
+    } else {
+      $process = Start-Process -PassThru -WorkingDirectory "$(Build.SourcesDirectory)/launcher" -FilePath "$(Build.SourcesDirectory)/launcher/fiskaltrust.exe" -ArgumentList @("-cashboxid=${{ parameters.cashbox.cashboxid }}"; "-accesstoken=${{ parameters.cashbox.accesstoken }}"; "-sandbox"; "-useoffline"; "-servicefolder=$(Build.SourcesDirectory)/service"; "-logfile=$(Build.SourcesDirectory)/logs/log.txt"; "-verbosity=Debug"; "-test")
+    }
+
+    $count = 0
+    $step = 5
+    $max = 10 * 60
+
+    while($True) {
+      Start-Sleep -Seconds $step
+      $count += $step
+      if($count -gt $max) {
+        Write-Error "Launcher did not complete startup."
+        exit 1
+      }
+      if($process.HasExited) {
+        Write-Error "Launcher has exited."
+        exit 1
+      }
+      if(!(Test-Path $(Build.SourcesDirectory)/logs/log.txt)) {
+        continue
+      }
+      $log = Get-Content $(Build.SourcesDirectory)/logs/log.txt
+      if($log -like "*fiskaltrust.Middleware started. Press a button to stop...*") {
+        break
+      }
+    }
+    
+    newman run https://www.getpostman.com/collections/cb26765356b4bf4d133d -e "$(Build.SourcesDirectory)/environment.json" --reporters 'cli,junit' --reporter-junit-export "$(Build.SourcesDirectory)/newman.xml"
+
+    Stop-Process $process
+  displayName: Run Tests
+
+- ${{ if ne(length(parameters.post), 0) }}:
+  - ${{ each post in parameters.post }}:
+    - ${{ post }}

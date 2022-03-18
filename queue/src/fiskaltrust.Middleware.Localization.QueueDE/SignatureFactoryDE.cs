@@ -10,17 +10,12 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
 {
     public class SignatureFactoryDE
     {
-        private const string FLAG_OPTIONAL_SIGNATUREFORMATS_KEY = "FlagOptionalSignatures";
         private const long OPTIONAL_FLAG = 0x10000;
+        private readonly QueueDEConfiguration _queueDEConfiguration;
 
-        private readonly bool _flagOptionalSignatureFormats = true;
-
-        public SignatureFactoryDE(MiddlewareConfiguration middlewareConfiguration)
+        public SignatureFactoryDE(QueueDEConfiguration queueDEConfiguration)
         {
-            if (middlewareConfiguration.Configuration.ContainsKey(FLAG_OPTIONAL_SIGNATUREFORMATS_KEY))
-            {
-                _flagOptionalSignatureFormats = bool.Parse(middlewareConfiguration.Configuration[FLAG_OPTIONAL_SIGNATUREFORMATS_KEY].ToString());
-            }
+            _queueDEConfiguration = queueDEConfiguration;
         }
 
         public SignaturItem CreateInitialOperationSignature(Guid queueId, string clientId, string serialnumberOctet)
@@ -184,6 +179,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
         };
 
         private long AddOptionalFlagIfRequired(SignaturItem.Formats format, bool optional) 
-            => _flagOptionalSignatureFormats && optional ? (long) format | OPTIONAL_FLAG : (long) format;
+            => _queueDEConfiguration.FlagOptionalSignatures && optional ? (long) format | OPTIONAL_FLAG : (long) format;
     }
 }

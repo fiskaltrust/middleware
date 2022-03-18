@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
@@ -23,8 +22,8 @@ namespace fiskaltrust.Middleware.Queue
         private readonly IReceiptJournalRepository _receiptJournalRepository;
         private readonly IActionJournalRepository _actionJournalRepository;
         private readonly ICryptoHelper _cryptoHelper;
-        private Guid _queueId = Guid.Empty;
-        private Guid _cashBoxId = Guid.Empty;
+        private readonly Guid _queueId = Guid.Empty;
+        private readonly Guid _cashBoxId = Guid.Empty;
         private readonly bool _isSandbox;
         private readonly int _receiptRequestMode = 0;
         private readonly SignatureFactory _signatureFactory;
@@ -55,6 +54,7 @@ namespace fiskaltrust.Middleware.Queue
 
         public async Task<ReceiptResponse> ProcessAsync(ReceiptRequest request)
         {
+            _logger.LogTrace("SignProcessor.ProcessAsync called.");
             try
             {
                 if (request == null)
@@ -82,13 +82,14 @@ namespace fiskaltrust.Middleware.Queue
 
         private async Task<ReceiptResponse> InternalSign(ftQueue queue, ReceiptRequest data)
         {
+            _logger.LogTrace("SignProcessor.InternalSign called.");
             if ((data.ftReceiptCase & 0x0000800000000000L) > 0)
             {
                 try
                 {
                     var foundQueueItem = await GetExistingQueueItemOrNullAsync(data).ConfigureAwait(false);
                     if (foundQueueItem != null)
-                    {
+                    {                        
                         var message = $"Queue {_queueId} found cbReceiptReference \"{foundQueueItem.cbReceiptReference}\"";
                         _logger.LogWarning(message);
                         await CreateActionJournalAsync(message, "", foundQueueItem.ftQueueItemId).ConfigureAwait(false);
@@ -134,14 +135,18 @@ namespace fiskaltrust.Middleware.Queue
             queueItem.version = ReceiptRequestHelper.GetRequestVersion(data);
             queueItem.request = JsonConvert.SerializeObject(data);
             queueItem.requestHash = _cryptoHelper.GenerateBase64Hash(queueItem.request);
+            _logger.LogTrace("SignProcessor.InternalSign: Adding QueueItem to database.");
             await _queueItemRepository.InsertOrUpdateAsync(queueItem).ConfigureAwait(false);
+            _logger.LogTrace("SignProcessor.InternalSign: Updating Queue in database.");
             await _configurationRepository.InsertOrUpdateQueueAsync(queue).ConfigureAwait(false);
 
             var actionjournals = new List<ftActionJournal>();
             try
             {
                 queueItem.ftWorkMoment = DateTime.UtcNow;
+                _logger.LogTrace("SignProcessor.InternalSign: Calling country specific SignProcessor.");
                 (var receiptResponse, var countrySpecificActionJournals) = await _countrySpecificSignProcessor.ProcessAsync(data, queue, queueItem).ConfigureAwait(false);
+                _logger.LogTrace("SignProcessor.InternalSign: Country specific SignProcessor finished.");
 
                 actionjournals.AddRange(countrySpecificActionJournals);
 
@@ -155,9 +160,13 @@ namespace fiskaltrust.Middleware.Queue
                 queueItem.ftDoneMoment = DateTime.UtcNow;
                 queue.ftCurrentRow++;
 
+                _logger.LogTrace("SignProcessor.InternalSign: Updating QueueItem in database.");
                 await _queueItemRepository.InsertOrUpdateAsync(queueItem).ConfigureAwait(false);
+                _logger.LogTrace("SignProcessor.InternalSign: Updating Queue in database.");
                 await _configurationRepository.InsertOrUpdateQueueAsync(queue).ConfigureAwait(false);
+                _logger.LogTrace("SignProcessor.InternalSign: Adding ReceiptJournal to database.");
                 await CreateReceiptJournalAsync(queue, queueItem, data).ConfigureAwait(false);
+
                 return receiptResponse;
             }
             finally
@@ -171,6 +180,7 @@ namespace fiskaltrust.Middleware.Queue
 
         private async Task<ftQueueItem> GetExistingQueueItemOrNullAsync(ReceiptRequest data)
         {
+            _logger.LogTrace("SignProcessor.GetExistingQueueItemOrNullAsync called.");
             var queueItems = (await _queueItemRepository.GetByReceiptReferenceAsync(data.cbReceiptReference, data.cbTerminalID).ToListAsync().ConfigureAwait(false))
                 .OrderByDescending(x => x.TimeStamp);
 

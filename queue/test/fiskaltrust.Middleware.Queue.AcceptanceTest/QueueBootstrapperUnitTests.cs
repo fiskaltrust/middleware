@@ -9,6 +9,7 @@ using fiskaltrust.Middleware.QueueSynchronizer;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Xunit;
 
@@ -53,11 +54,11 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
             var sut = new QueueBootstrapper(queueId, config);
             sut.ConfigureServices(serviceCollection);
 
-            serviceCollection.Should().HaveCount(34);
+            serviceCollection.Should().HaveCount(35);
 
             var signProcessorConfiguration = ServiceDescriptor.Singleton(typeof(MiddlewareConfiguration), implementationInstance: signProcessorConfig);
             var cryptoHelper = new ServiceDescriptor(typeof(ICryptoHelper), typeof(CryptoHelper), ServiceLifetime.Scoped);
-            var signProcessorDecorator =  new ServiceDescriptor(typeof(ISignProcessor), x => new LocalQueueSynchronizationDecorator(x.GetRequiredService<ISignProcessor>()), ServiceLifetime.Scoped);
+            var signProcessorDecorator =  new ServiceDescriptor(typeof(ISignProcessor), x => new LocalQueueSynchronizationDecorator(x.GetRequiredService<ISignProcessor>(), x.GetRequiredService<ILogger<LocalQueueSynchronizationDecorator>>()), ServiceLifetime.Scoped);
             var signProcessor =  new ServiceDescriptor(typeof(SignProcessor), typeof(SignProcessor), ServiceLifetime.Scoped);
             var journalProcessor = new ServiceDescriptor(typeof(IJournalProcessor), typeof(JournalProcessor), ServiceLifetime.Scoped);
             var iPos = new ServiceDescriptor(typeof(IPOS), typeof(Queue), ServiceLifetime.Scoped);

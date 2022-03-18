@@ -9,6 +9,7 @@ using fiskaltrust.Middleware.Queue.Helpers;
 using fiskaltrust.Middleware.QueueSynchronizer;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Queue.Bootstrapper
@@ -37,7 +38,7 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
             services.AddSingleton(middlewareConfiguration);
             services.AddScoped<ICryptoHelper, CryptoHelper>();
             services.AddScoped<SignProcessor>();
-            services.AddScoped<ISignProcessor>(x => new LocalQueueSynchronizationDecorator(x.GetRequiredService<SignProcessor>()));
+            services.AddScoped<ISignProcessor>(x => new LocalQueueSynchronizationDecorator(x.GetRequiredService<SignProcessor>(), x.GetRequiredService<ILogger<LocalQueueSynchronizationDecorator>>()));
             services.AddScoped<IJournalProcessor, JournalProcessor>();
             services.AddScoped<IPOS, Queue>();
 

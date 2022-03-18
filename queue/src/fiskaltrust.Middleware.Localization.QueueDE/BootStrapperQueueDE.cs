@@ -11,6 +11,7 @@ using fiskaltrust.Middleware.Localization.QueueDE.Transactions;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueueDE
 {
@@ -18,33 +19,39 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
     {
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddScoped<ITransactionPayloadFactory, DSFinVKTransactionPayloadFactory>();
-            services.AddScoped<SignatureFactoryDE>();
-            services.AddScoped<IMarketSpecificSignProcessor, SignProcessorDE>();
-            services.AddScoped<JournalProcessorDE>();
-            services.AddScoped<IMasterDataService, MasterDataService>();
-            services.AddSingleton<IDESSCDProvider>(sp =>
-            {
-                var sscdProvider = new DESSCDProvider(sp.GetRequiredService<ILogger<DESSCDProvider>>(), sp.GetRequiredService<IClientFactory<IDESSCD>>(),
-                    sp.GetRequiredService<IConfigurationRepository>(), sp.GetRequiredService<MiddlewareConfiguration>());
-                sscdProvider.RegisterCurrentScuAsync().Wait();
+            var _ = services
+                .AddScoped<ITransactionPayloadFactory, DSFinVKTransactionPayloadFactory>()
+                .AddScoped<SignatureFactoryDE>()
+                .AddScoped<IMarketSpecificSignProcessor, SignProcessorDE>()
+                .AddScoped<JournalProcessorDE>()
+                .AddScoped<IMasterDataService, MasterDataService>()
+                .AddSingleton(sp => QueueDEConfiguration.FromMiddlewareConfiguration(sp.GetRequiredService<MiddlewareConfiguration>()))
+                .AddSingleton<IDESSCDProvider>(sp =>
+                {
+                    var sscdProvider = new DESSCDProvider(
+                        sp.GetRequiredService<ILogger<DESSCDProvider>>(),
+                        sp.GetRequiredService<IClientFactory<IDESSCD>>(),
+                        sp.GetRequiredService<IConfigurationRepository>(),
+                        sp.GetRequiredService<MiddlewareConfiguration>(),
+                        sp.GetRequiredService<QueueDEConfiguration>());
+                    sscdProvider.RegisterCurrentScuAsync().Wait();
 
-                return sscdProvider;
-            });
-            services.AddSingleton<ITarFileCleanupService>(sp =>
-            {
-                var tarFileCleanupService = new TarFileCleanupService(
-                    sp.GetRequiredService<ILogger<TarFileCleanupService>>(),
-                    sp.GetRequiredService<IMiddlewareJournalDERepository>(),
-                    sp.GetRequiredService<MiddlewareConfiguration>());
+                    return sscdProvider;
+                })
+                .AddSingleton<ITarFileCleanupService>(sp =>
+                {
+                    var tarFileCleanupService = new TarFileCleanupService(
+                        sp.GetRequiredService<ILogger<TarFileCleanupService>>(),
+                        sp.GetRequiredService<IMiddlewareJournalDERepository>(),
+                        sp.GetRequiredService<MiddlewareConfiguration>(),
+                        sp.GetRequiredService<QueueDEConfiguration>());
 
-                tarFileCleanupService.CleanupAllTarFilesAsync().Wait();
+                    tarFileCleanupService.CleanupAllTarFilesAsync().Wait();
 
-                return tarFileCleanupService;
-            });
-
-            services.AddSingleton<IRequestCommandFactory, RequestCommandFactory>();
-            services.ConfigureReceiptCommands();
+                    return tarFileCleanupService;
+                })
+                .AddSingleton<IRequestCommandFactory, RequestCommandFactory>()
+                .ConfigureReceiptCommands();
         }
     }
 }

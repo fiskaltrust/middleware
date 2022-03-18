@@ -56,6 +56,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             services.AddSingleton(_ => journalDERepository);
             services.AddSingleton<IJournalDERepository>(_ => journalDERepository);
             services.AddSingleton(_ => middlewareConfiguration);
+            services.AddSingleton(_ => QueueDEConfiguration.FromMiddlewareConfiguration(middlewareConfiguration));
             services.AddSingleton(_ => masterDataService);
 
             if(tarFileCleanupService == null)
@@ -69,7 +70,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                 configurationRepository,
                 dESSCDProvider,
                 transactionPayloadFactory,
-                new RequestCommandFactory(services.BuildServiceProvider())
+                new RequestCommandFactory(services.BuildServiceProvider()),
+                logger
             );
 
             return signProcessor;
