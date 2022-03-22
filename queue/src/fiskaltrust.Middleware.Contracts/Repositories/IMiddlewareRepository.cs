@@ -5,6 +5,11 @@ using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Contracts.Repositories
 {
+    public interface IDatabaseCleanUp
+    {
+        Task Vacuum();
+    }
+
     public interface IMiddlewareRepository<T>
     {
         IAsyncEnumerable<T> GetByTimeStampRangeAsync(long fromInclusive, long toInclusive);
@@ -22,5 +27,7 @@ namespace fiskaltrust.Middleware.Contracts.Repositories
     public interface IMiddlewareJournalDERepository : IJournalDERepository
     {
         IAsyncEnumerable<ftJournalDE> GetByFileName(string fileName);
+
+        Task InsertOrUpdateAsync(ftJournalDE journalDE);
     }
 }

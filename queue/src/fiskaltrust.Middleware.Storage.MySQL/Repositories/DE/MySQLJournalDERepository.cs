@@ -64,6 +64,19 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories.DE
             }
         }
 
+        public async Task InsertOrUpdateAsync(ftJournalDE entity)
+        {
+            EntityUpdated(entity);
+            var sql = "REPLACE INTO ftJournalDE " +
+                          "(ftJournalDEId, Number, FileName, FileExtension, FileContentBase64, ftQueueItemId, ftQueueId) " +
+                          "Values (@ftJournalDEId, @Number, @FileName, @FileExtension, @FileContentBase64, @ftQueueItemId, @ftQueueId);";
+            using (var connection = new MySqlConnection(ConnectionString))
+            {
+                await connection.OpenAsync().ConfigureAwait(false);
+                await connection.ExecuteAsync(sql, entity).ConfigureAwait(false);
+            }
+        }
+
         protected override Guid GetIdForEntity(ftJournalDE entity) => entity.ftJournalDEId;
     }
 }
