@@ -27,14 +27,11 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
             _logger = logger;
         }
 
-        public bool IsDownloadRequired(string fccDirectory)
+        public bool IsInstalled(string fccDirectory) => File.Exists(GetCloudConnectorPath(fccDirectory));
+
+        public bool IsLatestVersion(string fccDirectory, Version latestVersion)
         {
-            var cloudConnectorPath = Path.Combine(fccDirectory, "lib", "fiskal-cloud-connector-service.jar");
-            if (!File.Exists(cloudConnectorPath))
-            {
-                return true;
-            }
-            using (var archive = ZipFile.OpenRead(cloudConnectorPath))
+            using (var archive = ZipFile.OpenRead(GetCloudConnectorPath(fccDirectory)))
             {
                 var entry = archive.GetEntry("META-INF/MANIFEST.MF");
                 using (var sr = new StreamReader(entry.Open()))
@@ -45,15 +42,15 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
                         if (line.Contains("Implementation-Version"))
                         {
                             var version = line.Split(':')[1].Trim();
-                            var givenVersion = int.Parse(version.Replace(".", ""));
-                            var iniVersion = int.Parse(_configuration.FccVersion.Replace(".", ""));
+                            var currentVersion = new Version(version);
 
-                            return givenVersion < iniVersion;
+                            return currentVersion >= latestVersion;
                         }
                     }
                 }
             }
-            _logger.LogWarning("Installed FCC version could not be detected.");
+            
+            _logger.LogWarning("Installed FCC version could not be detected; skipping update.");
             return false;
         }
 
@@ -94,17 +91,9 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
             return string.Equals(path, pathInFile, StringComparison.OrdinalIgnoreCase);
         }
 
-        private string DeleteLastSlash(string path) => path.TrimEnd('/').TrimEnd('\\');
-
-        public async Task DownloadAndSetupIfRequiredAsync(string fccDirectory)
+        public async Task DownloadFccAsync(string fccDirectory)
         {
-            if (!IsDownloadRequired(fccDirectory))
-            {
-                _logger.LogInformation("FCC download not required, files are already present at {FccDirectory}.", fccDirectory);
-                await LogWarningIfFccPathsDontMatchAsync(fccDirectory).ConfigureAwait(false);
-                return;
-            }
-            _logger.LogWarning("FCC download required. This will take some time, depending on your internet connection.");
+            _logger.LogWarning("Downloading and extracting FCC - this will take some time, depending on your internet connection.");
             var tempZipPath = Path.GetTempFileName();
             try
             {
@@ -131,6 +120,8 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
                 }
             }
         }
+        
+        private string GetCloudConnectorPath(string fccDirectory) => Path.Combine(fccDirectory, "lib", "fiskal-cloud-connector-service.jar");
 
         private async Task DownloadAndExtractAsync(string tempZipPath, string fccDirectory)
         {
@@ -151,7 +142,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
             var baseDir = new DirectoryInfo(fccDirectory);
             if (fccdataDir.Exists)
             {
-                UpdateFCC(tempZipPath, fccDirectory, baseDir);
+                UpdateFCCFiles(tempZipPath, fccDirectory, baseDir);
             }
             else
             {
@@ -170,7 +161,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
             }
         }
 
-        private void UpdateFCC(string tempZipPath, string fccDirectory, DirectoryInfo baseDir)
+        private void UpdateFCCFiles(string tempZipPath, string fccDirectory, DirectoryInfo baseDir)
         {
             var runningProcess = DeutscheFiskalFccProcessHost.GetProcessIfRunning(fccDirectory, _logger);
             if (runningProcess != null)
@@ -194,8 +185,8 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
             foreach (var dir in folderDir.EnumerateDirectories())
             {
                 var folderPath = Path.Combine(fccDirectory, dir.Name);
-                DirectoryCopy(dir.FullName, folderPath);
-                _logger.LogDebug("Update {dir}", dir);
+                FileSystemHelper.CopyDirectoryRecursively(dir.FullName, folderPath);
+                _logger.LogDebug("Updated FCC directory '{dir}'.", dir);
             }
             Directory.Delete(tempDir, true);
         }
@@ -245,28 +236,6 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
                 }
             }
         }
-        private static void DirectoryCopy(string sourceDirName, string destDirName)
-        {
-            var dir = new DirectoryInfo(sourceDirName);
-            if (!dir.Exists)
-            {
-                throw new DirectoryNotFoundException(
-                    "Source directory does not exist or could not be found: "
-                    + sourceDirName);
-            }
-            var dirs = dir.GetDirectories();
-            Directory.CreateDirectory(destDirName);
-            var files = dir.GetFiles();
-            foreach (var file in files)
-            {
-                var tempPath = Path.Combine(destDirName, file.Name);
-                file.CopyTo(tempPath, false);
-            }
-            foreach (var subdir in dirs)
-            {
-                var tempPath = Path.Combine(destDirName, subdir.Name);
-                DirectoryCopy(subdir.FullName, tempPath);
-            }
-        }
+        private string DeleteLastSlash(string path) => path.TrimEnd('/').TrimEnd('\\');
     }
 }

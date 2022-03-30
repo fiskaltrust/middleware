@@ -1,9 +1,14 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 
 namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services.Interfaces
 {
     public interface IFccDownloadService
     {
-        Task DownloadAndSetupIfRequiredAsync(string fccDirectory);
+        Task DownloadFccAsync(string fccDirectory);
+        bool IsInstalled(string fccDirectory);
+        bool IsLatestVersion(string fccDirectory, Version latestVersion);
+        Task LogWarningIfFccPathsDontMatchAsync(string fccDirectory);
+        bool IsPathInRunFccIdent(string path, string content, out string pathInFile);
     }
 }
