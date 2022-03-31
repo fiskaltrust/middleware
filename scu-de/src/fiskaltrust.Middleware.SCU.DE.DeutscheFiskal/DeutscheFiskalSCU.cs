@@ -79,14 +79,11 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
                     _fccDownloadService.DownloadFccAsync(_fccDirectory).Wait();
                     _fccInitializationService.Update(_fccDirectory);
                 }
-                else
+                else if (!_fccInitializationService.IsInitialized(_fccDirectory))
                 {
-                    if (!_fccInitializationService.IsInitialized(_fccDirectory))
-                    {
-                        _fccInitializationService.Initialize(_fccDirectory);
-                    }
+                    _fccInitializationService.Initialize(_fccDirectory);
                 }
-                
+
                 StartFccIfNotRunning().Wait();
             }
             catch (Exception ex)

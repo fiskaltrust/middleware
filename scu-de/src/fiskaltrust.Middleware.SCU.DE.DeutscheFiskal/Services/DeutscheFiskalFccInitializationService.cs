@@ -168,6 +168,5 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
 
             return arguments;
         }
-
     }
 }
