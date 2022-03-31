@@ -49,7 +49,34 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
                 arguments += GetProxyArguments(_configuration);
             }
 
-            using var process = new Process
+            RunJavaProcess(fccDirectory, javaPath, arguments);
+
+            _logger.LogInformation("Succesfully initialized FCC from {FccPath}.", fccDirectory);
+        }
+
+        public void Update(string fccDirectory)
+        {
+            _logger.LogInformation("Updating FCC in {FccPath}, this may take a few seconds..", fccDirectory);
+            if (!Directory.Exists(fccDirectory))
+            {
+                throw new DirectoryNotFoundException($"The given fccDirectory '{fccDirectory}' does not exist.");
+            }
+
+            var javaPath = Path.Combine(fccDirectory, DeutscheFiskalConstants.Paths.EmbeddedJava);
+            var jarPath = Path.Combine(fccDirectory, DeutscheFiskalConstants.Paths.FccDeployJar);
+
+            AddFirewallExceptionIfApplicable(javaPath);
+
+            var arguments = $"-cp \"{jarPath}\" de.fiskal.connector.init.UpdateCLIApplication";
+
+            RunJavaProcess(fccDirectory, javaPath, arguments);
+
+            _logger.LogInformation("Succesfully updated FCC in {FccPath}.", fccDirectory);
+        }
+
+        private void RunJavaProcess(string fccDirectory, string javaPath, string arguments)
+        {
+            var process = new Process
             {
                 StartInfo = new ProcessStartInfo
                 {
@@ -78,20 +105,18 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
             {
                 process.Kill();
                 _logger.LogError(stdout);
-                throw new TimeoutException($"Initializing the FCC connector took longer than {DeutscheFiskalConstants.DefaultProcessTimeoutMs} ms, hence the process was canceled. Please refer to the ERROR messages in the FCC logs above to detect the issue.");
+                throw new TimeoutException($"Initializing or updating the FCC connector took longer than {DeutscheFiskalConstants.DefaultProcessTimeoutMs} ms, hence the process was canceled. Please refer to the ERROR messages in the FCC logs above to detect the issue.");
             }
 
-            if(process.ExitCode != 0)
+            if (process.ExitCode != 0)
             {
                 _logger.LogError(stdout);
-                throw new FiskalCloudException("An error occured while initializing the Fiskal Cloud Connector. Please refer to the ERROR messages in the FCC logs above to detect the issue.");
+                throw new FiskalCloudException("An error occured while initializing or updating the Fiskal Cloud Connector. Please refer to the ERROR messages in the FCC logs above to detect the issue.");
             }
             else
             {
                 _logger.LogDebug(stdout);
             }
-
-            _logger.LogInformation("Succesfully initialized FCC from {FccPath}.", fccDirectory);
         }
 
         private void AddFirewallExceptionIfApplicable(string javaPath)

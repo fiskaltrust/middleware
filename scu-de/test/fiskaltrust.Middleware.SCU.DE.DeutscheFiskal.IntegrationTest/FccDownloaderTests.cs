@@ -23,22 +23,22 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.IntegrationTest
             };
             DeleteNotExistingFolder(notExistingPath);
             var sut = new DeutscheFiskalFccDownloadService(config, Mock.Of<ILogger<DeutscheFiskalFccDownloadService>>());
-            await sut.DownloadAndSetupIfRequiredAsync(config.FccDirectory);
+            await sut.DownloadFccAsync(config.FccDirectory);
         }
 
         [Fact]
-        public void IsDownloadRequired_SameVersion_NotRequired()
+        public void IsLatestVersion_SameVersion_IsTrue()
         {
             var config = new DeutscheFiskalSCUConfiguration
             {
                 FccVersion = "3.2.3"
             };
             var sut = new DeutscheFiskalFccDownloadService(config, Mock.Of<ILogger<DeutscheFiskalFccDownloadService>>());
-            sut.IsDownloadRequired("./").Should().BeFalse();
+            sut.IsLatestVersion("./", new Version(config.FccVersion)).Should().BeTrue();
         }
 
         [Fact]
-        public void IsDownloadRequired_NotExistingFolder_isRequired()
+        public void IsInstalled_NotExistingFolder_IsFalse()
         {
             var config = new DeutscheFiskalSCUConfiguration
             {
@@ -47,18 +47,18 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.IntegrationTest
             var sut = new DeutscheFiskalFccDownloadService(config, Mock.Of<ILogger<DeutscheFiskalFccDownloadService>>());
             var notExistingPath = "notExistingFolder";
             DeleteNotExistingFolder(notExistingPath);
-            sut.IsDownloadRequired(notExistingPath).Should().BeTrue();
+            sut.IsInstalled(notExistingPath).Should().BeFalse();
         }
 
         [Fact]
-        public void IsDownloadRequired_SmallerIniVersion_NotRequired()
+        public void IsLatestVersion_SmallerIniVersion_IsTrue()
         {
             var config = new DeutscheFiskalSCUConfiguration
             {
                 FccVersion = "1.0.0"
             };
             var sut = new DeutscheFiskalFccDownloadService(config, Mock.Of<ILogger<DeutscheFiskalFccDownloadService>>());
-            sut.IsDownloadRequired("./").Should().BeFalse();
+            sut.IsLatestVersion("./", new Version(config.FccVersion)).Should().BeTrue();
         }
 
         [Fact]
