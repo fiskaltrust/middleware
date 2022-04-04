@@ -1,7 +1,5 @@
 ﻿namespace fiskaltrust.Middleware.Contracts.Constants
 {
-#pragma warning disable CA1717
-#pragma warning disable CA1028
     public enum JournalTypes : long
     {
         VersionInformation =    0x0000000000000000,
@@ -17,6 +15,4 @@
         DSFinVKExport =         0x4445000000000002,
         TarExportFromDatabase = 0x4445000000000003,
     }
-#pragma warning restore CA1717
-#pragma warning restore CA1028
 }
