@@ -45,8 +45,8 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Repositories.DE
         {
             EntityUpdated(entity);
             var sql = "INSERT OR REPLACE INTO ftJournalDE " +
-                          "(ftJournalDEId, Number, FileName, FileExtension, FileContentBase64, ftQueueItemId, ftQueueId) " +
-                          "Values (@ftJournalDEId, @Number, @FileName, @FileExtension, @FileContentBase64, @ftQueueItemId, @ftQueueId);";
+                          "(ftJournalDEId, Number, FileName, FileExtension, FileContentBase64, ftQueueItemId, ftQueueId, TimeStamp) " +
+                          "Values (@ftJournalDEId, @Number, @FileName, @FileExtension, @FileContentBase64, @ftQueueItemId, @ftQueueId, @TimeStamp);";
             await DbConnection.ExecuteAsync(sql, entity).ConfigureAwait(false);
         }
 
