@@ -389,6 +389,74 @@ namespace fiskaltrust.Middleware.Storage.Azure.Mapping
             };
         }
 
+        public static AzureFtQueueME Map(ftQueueME src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+
+            return new AzureFtQueueME
+            {
+                PartitionKey = src.ftQueueMEId.ToString(),
+                RowKey = src.ftQueueMEId.ToString(),
+                ftQueueMEId = src.ftQueueMEId,
+                ftSignaturCreationUnitMEId = src.ftSignaturCreationUnitMEId,
+                LastHash = src.LastHash,
+                SSCDFailCount = src.SSCDFailCount,
+                SSCDFailMoment = src.SSCDFailMoment,
+                SSCDFailQueueItemId = src.SSCDFailQueueItemId,
+                UsedFailedCount = src.UsedFailedCount,
+                UsedFailedMomentMin = src.UsedFailedMomentMin,
+                UsedFailedMomentMax = src.UsedFailedMomentMax,
+                UsedFailedQueueItemId = src.UsedFailedQueueItemId,
+                TimeStamp = src.TimeStamp,
+                DailyClosingNumber = src.DailyClosingNumber,
+                IssuerTIN = src.IssuerTIN,
+                BusinUnitCode = src.BusinUnitCode,
+                TCRIntID = src.TCRIntID,
+                SoftCode = src.SoftCode,
+                MaintainerCode = src.MaintainerCode,
+                ValidFrom = src.ValidFrom,
+                ValidTo = src.ValidTo,
+                EnuType = src.EnuType,
+                TCRCode = src.TCRCode
+            };
+        }
+
+        public static ftQueueME Map(AzureFtQueueME src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+
+            return new ftQueueME
+            {
+                ftQueueMEId = src.ftQueueMEId,
+                ftSignaturCreationUnitMEId = src.ftSignaturCreationUnitMEId,
+                LastHash = src.LastHash,
+                SSCDFailCount = src.SSCDFailCount,
+                SSCDFailMoment = src.SSCDFailMoment,
+                SSCDFailQueueItemId = src.SSCDFailQueueItemId,
+                UsedFailedCount = src.UsedFailedCount,
+                UsedFailedMomentMin = src.UsedFailedMomentMin,
+                UsedFailedMomentMax = src.UsedFailedMomentMax,
+                UsedFailedQueueItemId = src.UsedFailedQueueItemId,
+                TimeStamp = src.TimeStamp,
+                DailyClosingNumber = src.DailyClosingNumber,
+                IssuerTIN = src.IssuerTIN,
+                BusinUnitCode = src.BusinUnitCode,
+                TCRIntID = src.TCRIntID,
+                SoftCode = src.SoftCode,
+                MaintainerCode = src.MaintainerCode,
+                ValidFrom = src.ValidFrom,
+                ValidTo = src.ValidTo,
+                EnuType = src.EnuType,
+                TCRCode = src.TCRCode
+            };
+        }
+
         public static AzureFtQueueFR Map(ftQueueFR src)
         {
             if (src == null)
@@ -803,7 +871,42 @@ namespace fiskaltrust.Middleware.Storage.Azure.Mapping
             return new ftSignaturCreationUnitDE
             {
                 ftSignaturCreationUnitDEId = src.ftSignaturCreationUnitDEId,
-                Url = src.Url,
+                TseInfoJson = src.TseInfoJson,
+                TimeStamp = src.TimeStamp,
+                Mode = src.Mode,
+                ModeConfigurationJson = src.ModeConfigurationJson
+            };
+        }
+
+        public static AzureFtSignaturCreationUnitME Map(ftSignaturCreationUnitME src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+
+            return new AzureFtSignaturCreationUnitME
+            {
+                PartitionKey = src.ftSignaturCreationUnitMEId.ToString(),
+                RowKey = src.ftSignaturCreationUnitMEId.ToString(),
+                ftSignaturCreationUnitMEId = src.ftSignaturCreationUnitMEId,
+                TseInfoJson = src.TseInfoJson,
+                TimeStamp = src.TimeStamp,
+                Mode = src.Mode,
+                ModeConfigurationJson = src.ModeConfigurationJson
+            };
+        }
+
+        public static ftSignaturCreationUnitME Map(AzureFtSignaturCreationUnitME src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+
+            return new ftSignaturCreationUnitME
+            {
+                ftSignaturCreationUnitMEId = src.ftSignaturCreationUnitMEId,
                 TseInfoJson = src.TseInfoJson,
                 TimeStamp = src.TimeStamp,
                 Mode = src.Mode,

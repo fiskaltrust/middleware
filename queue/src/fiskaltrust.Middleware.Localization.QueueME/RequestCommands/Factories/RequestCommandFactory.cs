@@ -1,6 +1,6 @@
 ﻿using System;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.storage.V0;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands.Factories
 {
@@ -12,7 +12,13 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands.Factories
 
         public RequestCommand Create(ReceiptRequest request)
         {
-            throw new NotImplementedException($"The given receipt case 0x{request.ftReceiptCase:x} could not be processed by the Middleware.");
+            RequestCommand command = (request.ftReceiptCase & 0xFFFF) switch
+            {
+                0x0003 => _serviceProvider.GetRequiredService<InitialOperationReceiptCommand>(),
+                _ => null
+            };
+            return command;
+
         }
     }
 }

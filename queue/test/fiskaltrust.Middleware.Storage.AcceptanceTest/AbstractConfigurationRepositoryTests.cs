@@ -16,18 +16,22 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             IEnumerable<ftQueueAT> queuesAT = null,
             IEnumerable<ftQueueDE> queuesDE = null,
             IEnumerable<ftQueueFR> queuesFR = null,
+            IEnumerable<ftQueueME> queuesME = null,
             IEnumerable<ftSignaturCreationUnitAT> signatureCreateUnitsAT = null,
             IEnumerable<ftSignaturCreationUnitDE> signatureCreateUnitsDE = null,
-            IEnumerable<ftSignaturCreationUnitFR> signatureCreateUnitsFR = null);
+            IEnumerable<ftSignaturCreationUnitFR> signatureCreateUnitsFR = null,
+            IEnumerable<ftSignaturCreationUnitME> signatureCreateUnitsME = null);
 
         public abstract Task<IReadOnlyConfigurationRepository> CreateReadOnlyRepository(IEnumerable<ftCashBox> cashBoxes = null,
             IEnumerable<ftQueue> queues = null,
             IEnumerable<ftQueueAT> queuesAT = null,
             IEnumerable<ftQueueDE> queuesDE = null,
             IEnumerable<ftQueueFR> queuesFR = null,
+            IEnumerable<ftQueueME> queuesME = null,
             IEnumerable<ftSignaturCreationUnitAT> signatureCreateUnitsAT = null,
             IEnumerable<ftSignaturCreationUnitDE> signatureCreateUnitsDE = null,
-            IEnumerable<ftSignaturCreationUnitFR> signatureCreateUnitsFR = null);
+            IEnumerable<ftSignaturCreationUnitFR> signatureCreateUnitsFR = null,
+            IEnumerable<ftSignaturCreationUnitME> signatureCreateUnitsME = null);
 
         public virtual void DisposeDatabase() { return; }
 

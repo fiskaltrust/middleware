@@ -289,6 +289,21 @@ CREATE TABLE IF NOT EXISTS ftQueueFR
     TimeStamp                   BIGINT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS ftQueueME
+(
+    ftQueueDEId                  NVARCHAR(36) PRIMARY KEY  NOT NULL,
+    ftSignaturCreationUnitMEId   NVARCHAR(36)              NULL,
+    LastHash                     NVARCHAR(2147483647)      NULL,
+    SSCDFailCount                BIGINT                    NOT NULL,            
+    SSCDFailMoment               BIGINT                    NULL,                    
+    SSCDFailQueueItemId          NVARCHAR(36)              NULL, 
+    UsedFailedCount              BIGINT                    NOT NULL,           
+    UsedFailedMomentMin          BIGINT                    NULL,                    
+    UsedFailedMomentMax          BIGINT                    NULL,                    
+    UsedFailedQueueItemId        NVARCHAR(36)              NULL, 
+    TimeStamp                    BIGINT                    NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS ftSignaturCreationUnitAT
 (
     ftSignaturCreationUnitATId   NVARCHAR(36) PRIMARY KEY  NOT NULL,
@@ -314,5 +329,12 @@ CREATE TABLE IF NOT EXISTS ftSignaturCreationUnitFR
     PrivateKey                   NVARCHAR(2147483647)      NULL, 
     CertificateBase64            NVARCHAR(2147483647)      NULL, 
     CertificateSerialNumber      NVARCHAR(2147483647)      NULL, 
+    TimeStamp                    BIGINT                    NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS ftSignaturCreationUnitDE
+(
+    ftSignaturCreationUnitDEId   NVARCHAR(36) PRIMARY KEY  NOT NULL,
+    TseInfoJson				     NVARCHAR(2147483647)      NULL,                     
     TimeStamp                    BIGINT                    NOT NULL
 );

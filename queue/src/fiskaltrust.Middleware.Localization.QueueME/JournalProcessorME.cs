@@ -8,7 +8,9 @@ namespace fiskaltrust.Middleware.Localization.QueueME
 {
     public class JournalProcessorME : IJournalProcessor
     {
+#pragma warning disable IDE0052 // Remove unread private members
         private readonly ILogger<JournalProcessorME> _logger;
+#pragma warning restore IDE0052 // Remove unread private members
 
         public JournalProcessorME(
             ILogger<JournalProcessorME> logger)

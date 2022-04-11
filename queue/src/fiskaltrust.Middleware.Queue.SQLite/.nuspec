@@ -20,7 +20,8 @@
         <dependency id="fiskaltrust.storage.encryption" version="1.3.1" />
         <dependency id="fiskaltrust.storage.serialization" version="1.3.1" />
         <dependency id="fiskaltrust.interface" version="1.3.1" />
-        <dependency id="fiskaltrust.storage" version="1.3.21" />
+        <dependency id="fiskaltrust.storage" version="1.3.21-ci-22098-52730" ><NoWarn>NU1605</NoWarn>
+        </dependency>
         <dependency id="Dapper" version="2.0.35" />
         <dependency id="fiskaltrust.Exports.DSFinVK" Version="1.3.6" />
         <dependency id="fiskaltrust.Exports.TAR" version="1.0.1" />

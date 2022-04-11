@@ -12,10 +12,12 @@ namespace fiskaltrust.Middleware.Storage.EFCore.Repositories
         private readonly AbstractEFCoreRepostiory<Guid, ftQueue> _queueRepository;
         private readonly AbstractEFCoreRepostiory<Guid, ftQueueAT> _queueATRepository;
         private readonly AbstractEFCoreRepostiory<Guid, ftQueueDE> _queueDERepository;
+        private readonly AbstractEFCoreRepostiory<Guid, ftQueueME> _queueMERepository;
         private readonly AbstractEFCoreRepostiory<Guid, ftQueueFR> _queueFRRepository;
         private readonly AbstractEFCoreRepostiory<Guid, ftSignaturCreationUnitAT> _signaturCreationUnitATRepository;
         private readonly EFCoreSignaturCreationUnitDERepository _signaturCreationUnitDERepository;
         private readonly EFCoreSignaturCreationUnitFRRepository _signaturCreationUnitFRRepository;
+        private readonly EFCoreSignaturCreationUnitMERepository _signaturCreationUnitMERepository;
 
         public EFCoreConfigurationRepository() { }
 
@@ -26,9 +28,11 @@ namespace fiskaltrust.Middleware.Storage.EFCore.Repositories
             _queueATRepository = new EFCoreQueueATRepository(dbContext);
             _queueDERepository = new EFCoreQueueDERepository(dbContext);
             _queueFRRepository = new EFCoreQueueFRRepository(dbContext);
+            _queueMERepository = new EFCoreQueueMERepository(dbContext);
             _signaturCreationUnitATRepository = new EFCoreSignaturCreationUnitATRepository(dbContext);
             _signaturCreationUnitDERepository = new EFCoreSignaturCreationUnitDERepository(dbContext);
             _signaturCreationUnitFRRepository = new EFCoreSignaturCreationUnitFRRepository(dbContext);
+            _signaturCreationUnitMERepository = new EFCoreSignaturCreationUnitMERepository(dbContext);
         }
 
         public async Task<ftCashBox> GetCashBoxAsync(Guid cashBoxId) => await _cashBoxRepository.GetAsync(cashBoxId);
@@ -51,6 +55,8 @@ namespace fiskaltrust.Middleware.Storage.EFCore.Repositories
         public async Task<IEnumerable<ftQueueFR>> GetQueueFRListAsync() => await _queueFRRepository.GetAsync();
         public async Task InsertOrUpdateQueueFRAsync(ftQueueFR queueFR) => await _queueFRRepository.InsertOrUpdateAsync(queueFR);
 
+        public async Task InsertOrUpdateQueueMEAsync(ftQueueME queue) => await _queueMERepository.InsertOrUpdateAsync(queue);   
+
         public async Task<ftSignaturCreationUnitAT> GetSignaturCreationUnitATAsync(Guid id) => await _signaturCreationUnitATRepository.GetAsync(id);
         public async Task<IEnumerable<ftSignaturCreationUnitAT>> GetSignaturCreationUnitATListAsync() => await _signaturCreationUnitATRepository.GetAsync();
         public async Task InsertOrUpdateSignaturCreationUnitATAsync(ftSignaturCreationUnitAT scu) => await _signaturCreationUnitATRepository.InsertOrUpdateAsync(scu);
@@ -62,5 +68,11 @@ namespace fiskaltrust.Middleware.Storage.EFCore.Repositories
         public async Task<ftSignaturCreationUnitFR> GetSignaturCreationUnitFRAsync(Guid id) => await _signaturCreationUnitFRRepository.GetAsync(id);
         public async Task<IEnumerable<ftSignaturCreationUnitFR>> GetSignaturCreationUnitFRListAsync() => await _signaturCreationUnitFRRepository.GetAsync();
         public async Task InsertOrUpdateSignaturCreationUnitFRAsync(ftSignaturCreationUnitFR scu) => await _signaturCreationUnitFRRepository.InsertOrUpdateAsync(scu);
+
+        public async Task InsertOrUpdateSignaturCreationUnitMEAsync(ftSignaturCreationUnitME scu) => await _signaturCreationUnitMERepository.InsertOrUpdateAsync(scu);
+        public Task<IEnumerable<ftSignaturCreationUnitME>> GetSignaturCreationUnitMEListAsync() => throw new NotImplementedException();
+        public Task<ftSignaturCreationUnitME> GetSignaturCreationUnitMEAsync(Guid signaturCreationUnitDEId) => throw new NotImplementedException();
+        public Task<IEnumerable<ftQueueME>> GetQueueMEListAsync() => throw new NotImplementedException();
+        public Task<ftQueueME> GetQueueMEAsync(Guid queueMEId) => throw new NotImplementedException();
     }
 }

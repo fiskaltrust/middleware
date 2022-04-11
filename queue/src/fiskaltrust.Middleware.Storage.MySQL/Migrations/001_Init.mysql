@@ -289,6 +289,30 @@ CREATE TABLE IF NOT EXISTS ftQueueFR
     TimeStamp                   BIGINT                   NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS ftQueueME
+(
+    ftQueueMEId                  NVARCHAR(36) PRIMARY KEY  NOT NULL,
+    ftSignaturCreationUnitDEId   NVARCHAR(36)              NULL,
+    LastHash                     LONGTEXT				   NULL,
+    SSCDFailCount                BIGINT                    NOT NULL,            
+    SSCDFailMoment               BIGINT                    NULL,                    
+    SSCDFailQueueItemId          NVARCHAR(36)              NULL, 
+    UsedFailedCount              BIGINT                    NOT NULL,           
+    UsedFailedMomentMin          BIGINT                    NULL,                    
+    UsedFailedMomentMax          BIGINT                    NULL,                    
+    UsedFailedQueueItemId        NVARCHAR(36)              NULL, 
+    TimeStamp                    BIGINT                    NOT NULL,
+    IssuerTIN                    NVARCHAR(13)              NULL,
+    BusinUnitCode                NVARCHAR(10)              NULL,
+    TCRIntID                     NVARCHAR(50)              NULL,
+    SoftCode                     NVARCHAR(10)              NULL,
+    MaintainerCode               NVARCHAR(10)              NULL,
+    ValidFrom                    BIGINT                    NULL, 
+    ValidTo                      BIGINT                    NULL,
+    EnuType                      NVARCHAR(10)              NULL,
+    TCRCode                      NVARCHAR(10)              NULL
+);
+
 CREATE TABLE IF NOT EXISTS ftSignaturCreationUnitAT
 (
     ftSignaturCreationUnitATId   NVARCHAR(36) PRIMARY KEY  NOT NULL,
@@ -301,6 +325,14 @@ CREATE TABLE IF NOT EXISTS ftSignaturCreationUnitAT
 );
 
 CREATE TABLE IF NOT EXISTS ftSignaturCreationUnitDE
+(
+    ftSignaturCreationUnitDEId   NVARCHAR(36) PRIMARY KEY  NOT NULL,
+    Url                          LONGTEXT				   NULL,  
+    TseInfoJson				     LONGTEXT				   NULL,                     
+    TimeStamp                    BIGINT                    NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS ftSignaturCreationUnitME
 (
     ftSignaturCreationUnitDEId   NVARCHAR(36) PRIMARY KEY  NOT NULL,
     Url                          LONGTEXT				   NULL,  
