@@ -12,10 +12,12 @@ using fiskaltrust.Middleware.Contracts.Data;
 using fiskaltrust.Middleware.Localization.QueueME.Models;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v2.me;
+using System.Linq;
+using fiskaltrust.Middleware.Localization.QueueME.Exceptions;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 {
-    internal class InitialOperationReceiptCommand : RequestCommand
+    public class InitialOperationReceiptCommand : RequestCommand
     {
         public InitialOperationReceiptCommand(ILogger<RequestCommand> logger, SignatureFactoryME signatureFactory, IConfigurationRepository configurationRepository) : base(logger, signatureFactory, configurationRepository)
         { }
@@ -25,14 +27,19 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             try
             {
                 var enu = JsonConvert.DeserializeObject<TCR>(request.ftReceiptCaseData);
+                var queueMEs = await _configurationRepository.GetQueueMEListAsync().ConfigureAwait(false);
+                var queueME = queueMEs.ToList().Where(x => x.IssuerTIN.Equals(enu.IssuerTIN) && x.TCRIntID.Equals(enu.TCRIntID)).FirstOrDefault();
+                if (queueME != null)
+                {
+                    throw new ENUAlreadyRegisteredException();
+                }
+
                 var tcr = new TCRType()
                 {
-                    TCRIntID = request.cbTerminalID,
+                    TCRIntID = enu.TCRIntID,
                     IssuerTIN = enu.IssuerTIN,
                     BusinUnitCode = enu.BusinUnitCode
                 };
-
-                //check if already registered
 
                 var registerTCRRequest = new RegisterTCRRequest()
                 {
@@ -43,17 +50,19 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 
                 var signaturCreationUnitME = new ftSignaturCreationUnitME()
                 {
-                    ftSignaturCreationUnitMEId = Guid.NewGuid()
+                    ftSignaturCreationUnitMEId = Guid.NewGuid(),
+                    TimeStamp = DateTime.Now.Ticks,
                 };
                 await _configurationRepository.InsertOrUpdateSignaturCreationUnitMEAsync(signaturCreationUnitME).ConfigureAwait(false);
 
-                var queueME = new ftQueueME()
+                queueME = new ftQueueME()
                 {
+                    ftQueueMEId = queue.ftQueueId,
                     TCRIntID = tcr.TCRIntID,
                     BusinUnitCode = tcr.BusinUnitCode,
                     IssuerTIN = tcr.IssuerTIN,
                     TCRCode = registerTCRResponse.TCRCode,
-                    ftSignaturCreationUnitMEId = signaturCreationUnitME.ftSignaturCreationUnitMEId
+                    ftSignaturCreationUnitMEId = signaturCreationUnitME.ftSignaturCreationUnitMEId,
                 };
                 await _configurationRepository.InsertOrUpdateQueueMEAsync(queueME).ConfigureAwait(false);
 
