@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.29721.120
+# Visual Studio Version 17
+VisualStudioVersion = 17.2.32210.308
 MinimumVisualStudioVersion = 15.0.26124.0
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{2F690A2B-96D1-45AC-BD36-E27D68422352}"
 EndProject
@@ -26,6 +26,16 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fiskaltrust.Middleware.SCU.DE.SwissbitAndroid", "src\fiskaltrust.Middleware.SCU.DE.SwissbitAndroid\fiskaltrust.Middleware.SCU.DE.SwissbitAndroid.csproj", "{05DC89A3-8C70-43B6-8FEB-52A25FF3C0F2}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.SCU.DE.Swissbit.Interop.StaticLib", "src\fiskaltrust.Middleware.SCU.DE.Swissbit.Interop.StaticLib\fiskaltrust.Middleware.SCU.DE.Swissbit.Interop.StaticLib.csproj", "{C3D38400-3F35-4138-8F8C-B85CFA96EAAC}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SwissbitAndroid", "SwissbitAndroid", "{90E6BC2C-F687-4448-8F81-B9F3635DF79E}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SwissbitCloudAndroid", "SwissbitCloudAndroid", "{1A14AD0C-A09E-4F8F-81DE-6958AA9F3907}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fiskaltrust.Middleware.SCU.DE.SwissbitCloudAndroid.Bindings.FccLibrary", "src\fiskaltrust.Middleware.SCU.DE.SwissbitCloudAndroid.Bindings.FccLibrary\fiskaltrust.Middleware.SCU.DE.SwissbitCloudAndroid.Bindings.FccLibrary.csproj", "{737C7190-D5E3-44BB-A049-ED1D36AD7C95}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fiskaltrust.Middleware.SCU.DE.SwissbitCloudAndroid.Bindings.FccApi", "src\fiskaltrust.Middleware.SCU.DE.SwissbitCloudAndroid.Bindings.FccApi\fiskaltrust.Middleware.SCU.DE.SwissbitCloudAndroid.Bindings.FccApi.csproj", "{DA07A1A6-5301-43CE-A15D-94D32F3B357A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fiskaltrust.Middleware.SCU.DE.SwissbitCloudAndroid", "src\fiskaltrust.Middleware.SCU.DE.SwissbitCloudAndroid\fiskaltrust.Middleware.SCU.DE.SwissbitCloudAndroid.csproj", "{F9A0B22D-31F7-4323-BF69-4C74333EEA29}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -97,6 +107,42 @@ Global
 		{C3D38400-3F35-4138-8F8C-B85CFA96EAAC}.Release|x64.Build.0 = Release|Any CPU
 		{C3D38400-3F35-4138-8F8C-B85CFA96EAAC}.Release|x86.ActiveCfg = Release|Any CPU
 		{C3D38400-3F35-4138-8F8C-B85CFA96EAAC}.Release|x86.Build.0 = Release|Any CPU
+		{737C7190-D5E3-44BB-A049-ED1D36AD7C95}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{737C7190-D5E3-44BB-A049-ED1D36AD7C95}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{737C7190-D5E3-44BB-A049-ED1D36AD7C95}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{737C7190-D5E3-44BB-A049-ED1D36AD7C95}.Debug|x64.Build.0 = Debug|Any CPU
+		{737C7190-D5E3-44BB-A049-ED1D36AD7C95}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{737C7190-D5E3-44BB-A049-ED1D36AD7C95}.Debug|x86.Build.0 = Debug|Any CPU
+		{737C7190-D5E3-44BB-A049-ED1D36AD7C95}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{737C7190-D5E3-44BB-A049-ED1D36AD7C95}.Release|Any CPU.Build.0 = Release|Any CPU
+		{737C7190-D5E3-44BB-A049-ED1D36AD7C95}.Release|x64.ActiveCfg = Release|Any CPU
+		{737C7190-D5E3-44BB-A049-ED1D36AD7C95}.Release|x64.Build.0 = Release|Any CPU
+		{737C7190-D5E3-44BB-A049-ED1D36AD7C95}.Release|x86.ActiveCfg = Release|Any CPU
+		{737C7190-D5E3-44BB-A049-ED1D36AD7C95}.Release|x86.Build.0 = Release|Any CPU
+		{DA07A1A6-5301-43CE-A15D-94D32F3B357A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DA07A1A6-5301-43CE-A15D-94D32F3B357A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DA07A1A6-5301-43CE-A15D-94D32F3B357A}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{DA07A1A6-5301-43CE-A15D-94D32F3B357A}.Debug|x64.Build.0 = Debug|Any CPU
+		{DA07A1A6-5301-43CE-A15D-94D32F3B357A}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{DA07A1A6-5301-43CE-A15D-94D32F3B357A}.Debug|x86.Build.0 = Debug|Any CPU
+		{DA07A1A6-5301-43CE-A15D-94D32F3B357A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DA07A1A6-5301-43CE-A15D-94D32F3B357A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DA07A1A6-5301-43CE-A15D-94D32F3B357A}.Release|x64.ActiveCfg = Release|Any CPU
+		{DA07A1A6-5301-43CE-A15D-94D32F3B357A}.Release|x64.Build.0 = Release|Any CPU
+		{DA07A1A6-5301-43CE-A15D-94D32F3B357A}.Release|x86.ActiveCfg = Release|Any CPU
+		{DA07A1A6-5301-43CE-A15D-94D32F3B357A}.Release|x86.Build.0 = Release|Any CPU
+		{F9A0B22D-31F7-4323-BF69-4C74333EEA29}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F9A0B22D-31F7-4323-BF69-4C74333EEA29}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F9A0B22D-31F7-4323-BF69-4C74333EEA29}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{F9A0B22D-31F7-4323-BF69-4C74333EEA29}.Debug|x64.Build.0 = Debug|Any CPU
+		{F9A0B22D-31F7-4323-BF69-4C74333EEA29}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{F9A0B22D-31F7-4323-BF69-4C74333EEA29}.Debug|x86.Build.0 = Debug|Any CPU
+		{F9A0B22D-31F7-4323-BF69-4C74333EEA29}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F9A0B22D-31F7-4323-BF69-4C74333EEA29}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F9A0B22D-31F7-4323-BF69-4C74333EEA29}.Release|x64.ActiveCfg = Release|Any CPU
+		{F9A0B22D-31F7-4323-BF69-4C74333EEA29}.Release|x64.Build.0 = Release|Any CPU
+		{F9A0B22D-31F7-4323-BF69-4C74333EEA29}.Release|x86.ActiveCfg = Release|Any CPU
+		{F9A0B22D-31F7-4323-BF69-4C74333EEA29}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -104,10 +150,15 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{B8B0F806-BB44-4C0E-8327-26119DEA0DAE} = {860D3016-9A5C-4162-ACC8-B2031B80F697}
 		{860D3016-9A5C-4162-ACC8-B2031B80F697} = {2F690A2B-96D1-45AC-BD36-E27D68422352}
-		{44CE148A-988A-4E11-B9EB-EE3C64543447} = {2F690A2B-96D1-45AC-BD36-E27D68422352}
-		{188A6FAD-777C-4F20-8448-A97E3E5C9356} = {2F690A2B-96D1-45AC-BD36-E27D68422352}
-		{05DC89A3-8C70-43B6-8FEB-52A25FF3C0F2} = {2F690A2B-96D1-45AC-BD36-E27D68422352}
-		{C3D38400-3F35-4138-8F8C-B85CFA96EAAC} = {2F690A2B-96D1-45AC-BD36-E27D68422352}
+		{44CE148A-988A-4E11-B9EB-EE3C64543447} = {90E6BC2C-F687-4448-8F81-B9F3635DF79E}
+		{188A6FAD-777C-4F20-8448-A97E3E5C9356} = {90E6BC2C-F687-4448-8F81-B9F3635DF79E}
+		{05DC89A3-8C70-43B6-8FEB-52A25FF3C0F2} = {90E6BC2C-F687-4448-8F81-B9F3635DF79E}
+		{C3D38400-3F35-4138-8F8C-B85CFA96EAAC} = {90E6BC2C-F687-4448-8F81-B9F3635DF79E}
+		{90E6BC2C-F687-4448-8F81-B9F3635DF79E} = {2F690A2B-96D1-45AC-BD36-E27D68422352}
+		{1A14AD0C-A09E-4F8F-81DE-6958AA9F3907} = {2F690A2B-96D1-45AC-BD36-E27D68422352}
+		{737C7190-D5E3-44BB-A049-ED1D36AD7C95} = {1A14AD0C-A09E-4F8F-81DE-6958AA9F3907}
+		{DA07A1A6-5301-43CE-A15D-94D32F3B357A} = {1A14AD0C-A09E-4F8F-81DE-6958AA9F3907}
+		{F9A0B22D-31F7-4323-BF69-4C74333EEA29} = {1A14AD0C-A09E-4F8F-81DE-6958AA9F3907}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {C5E269B8-4A21-4B1B-8805-C8193C08FE3E}
