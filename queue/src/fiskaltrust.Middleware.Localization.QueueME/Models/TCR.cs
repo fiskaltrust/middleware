@@ -1,4 +1,5 @@
-﻿using System.Runtime.Serialization;
+﻿using System;
+using System.Runtime.Serialization;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.Models
 {
@@ -19,6 +20,18 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Models
         }
         [DataMember]
         public string TCRIntID
+        {
+            get;
+            set;
+        }
+        [DataMember]
+        public DateTime? ValidFrom
+        {
+            get;
+            set;
+        }
+        [DataMember]
+        public DateTime? ValidTo
         {
             get;
             set;

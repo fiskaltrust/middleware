@@ -33,12 +33,13 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 {
                     throw new ENUAlreadyRegisteredException();
                 }
-
                 var tcr = new TCRType()
                 {
                     TCRIntID = enu.TCRIntID,
                     IssuerTIN = enu.IssuerTIN,
-                    BusinUnitCode = enu.BusinUnitCode
+                    BusinUnitCode = enu.BusinUnitCode,
+                    ValidFrom = enu.ValidFrom ?? DateTime.Now,
+                    ValidTo = enu.ValidTo,
                 };
 
                 var registerTCRRequest = new RegisterTCRRequest()
@@ -63,6 +64,8 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                     IssuerTIN = tcr.IssuerTIN,
                     TCRCode = registerTCRResponse.TCRCode,
                     ftSignaturCreationUnitMEId = signaturCreationUnitME.ftSignaturCreationUnitMEId,
+                    ValidFrom = tcr.ValidFrom,
+                    ValidTo = tcr.ValidTo
                 };
                 await _configurationRepository.InsertOrUpdateQueueMEAsync(queueME).ConfigureAwait(false);
 

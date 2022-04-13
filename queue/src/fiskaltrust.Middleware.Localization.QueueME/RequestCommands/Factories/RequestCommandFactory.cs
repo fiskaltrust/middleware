@@ -12,9 +12,12 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands.Factories
 
         public RequestCommand Create(ReceiptRequest request)
         {
+            //TODO check if ValidTo is in time
+
             RequestCommand command = (request.ftReceiptCase & 0xFFFF) switch
             {
                 0x0003 => _serviceProvider.GetRequiredService<InitialOperationReceiptCommand>(),
+                0x0004 => _serviceProvider.GetRequiredService<OutOfOperationReceiptCommand>(),
                 _ => null
             };
             return command;
