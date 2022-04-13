@@ -3,11 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
+using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Storage.SQLite.Repositories
 {
-    public class SQLiteReceiptJournalRepository : AbstractSQLiteRepository<Guid, ftReceiptJournal>, IReceiptJournalRepository
+    public class SQLiteReceiptJournalRepository : AbstractSQLiteRepository<Guid, ftReceiptJournal>, IReceiptJournalRepository, IMiddlewareReceiptJournalRepository
     {
         public SQLiteReceiptJournalRepository(ISqliteConnectionFactory connectionFactory, string path) : base(connectionFactory, path) { }
 
@@ -56,5 +57,11 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Repositories
                 yield return entry;
             }
         }
+
+        public async Task<ftReceiptJournal> GetByQueueItemId(Guid ftQueueItemId) => await DbConnection.QueryFirstOrDefaultAsync<ftReceiptJournal>("Select ftReceiptJournalId, ftReceiptMoment, ftReceiptNumber, CAST(ftReceiptTotal AS FLOAT) AS ftReceiptTotal, ftQueueId, ftQueueItemId, ftReceiptHash, TimeStamp from ftReceiptJournal where ftQueueItemId = @ftQueueItemId", new { ftQueueItemId }).ConfigureAwait(false);
+
+        public async Task<ftReceiptJournal> GetByReceiptNumber(long ftReceiptNumber) => await DbConnection.QueryFirstOrDefaultAsync<ftReceiptJournal>("Select ftReceiptJournalId, ftReceiptMoment, ftReceiptNumber, CAST(ftReceiptTotal AS FLOAT) AS ftReceiptTotal, ftQueueId, ftQueueItemId, ftReceiptHash, TimeStamp from ftReceiptJournal where ftReceiptNumber = @ftReceiptNumber", new { ftReceiptNumber }).ConfigureAwait(false);
+
+        public async Task<ftReceiptJournal> GetWithLastTimestampAsync() => await DbConnection.QueryFirstOrDefaultAsync<ftReceiptJournal>("Select ftReceiptJournalId, ftReceiptMoment, ftReceiptNumber, CAST(ftReceiptTotal AS FLOAT) AS ftReceiptTotal, ftQueueId, ftQueueItemId, ftReceiptHash, TimeStamp from ftReceiptJournal ORDER BY TimeStamp DESC LIMIT 1").ConfigureAwait(false);
     }
 }

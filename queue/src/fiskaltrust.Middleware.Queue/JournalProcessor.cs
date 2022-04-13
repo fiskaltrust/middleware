@@ -9,7 +9,6 @@ using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts;
 using fiskaltrust.Middleware.Contracts.Constants;
 using fiskaltrust.Middleware.Contracts.Repositories;
-using fiskaltrust.Middleware.Localization.QueueDE;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -25,7 +24,7 @@ namespace fiskaltrust.Middleware.Queue
         private readonly IMiddlewareRepository<ftJournalAT> _journalATRepository;
         private readonly IMiddlewareRepository<ftJournalDE> _journalDERepository;
         private readonly IMiddlewareRepository<ftJournalFR> _journalFRRepository;
-        private readonly JournalProcessorDE _journalDEProcessor;
+        private readonly IMarketSpecificJournalProcessor _marketSpecificJournalProcessor;
         private readonly ILogger<JournalProcessor> _logger;
 
         public JournalProcessor(
@@ -36,7 +35,7 @@ namespace fiskaltrust.Middleware.Queue
             IMiddlewareRepository<ftJournalAT> journalATRepository,
             IMiddlewareRepository<ftJournalDE> journalDERepository,
             IMiddlewareRepository<ftJournalFR> journalFRRepository,
-            JournalProcessorDE journalDEProcessor,
+            IMarketSpecificJournalProcessor marketSpecificJournalProcessor,
             ILogger<JournalProcessor> logger)
         {
             _configurationRepository = configurationRepository;
@@ -46,7 +45,7 @@ namespace fiskaltrust.Middleware.Queue
             _journalATRepository = journalATRepository;
             _journalDERepository = journalDERepository;
             _journalFRRepository = journalFRRepository;
-            _journalDEProcessor = journalDEProcessor;
+            _marketSpecificJournalProcessor = marketSpecificJournalProcessor;
             _logger = logger;
         }
 
@@ -54,9 +53,9 @@ namespace fiskaltrust.Middleware.Queue
         {
             try
             {
-                if ((0xFFFF000000000000 & (ulong) request.ftJournalType) == 0x4445000000000000)
+                if ((0xFFFF000000000000 & (ulong) request.ftJournalType) != 0)
                 {
-                    return _journalDEProcessor.ProcessAsync(request);
+                    return _marketSpecificJournalProcessor.ProcessAsync(request);
                 }
 
                 return request.ftJournalType switch

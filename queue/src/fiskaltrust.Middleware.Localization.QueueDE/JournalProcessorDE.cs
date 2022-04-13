@@ -27,7 +27,7 @@ using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueueDE
 {
-    public class JournalProcessorDE : IJournalProcessor
+    public class JournalProcessorDE : IJournalProcessor, IMarketSpecificJournalProcessor
     {
         private readonly ILogger<JournalProcessorDE> _logger;
         private readonly IReadOnlyConfigurationRepository _configurationRepository;

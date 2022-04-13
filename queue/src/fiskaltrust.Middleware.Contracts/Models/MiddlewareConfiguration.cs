@@ -13,5 +13,6 @@ namespace fiskaltrust.Middleware.Contracts.Models
         public bool IsSandbox { get; set; }
         public string ServiceFolder { get; set; }
         public Dictionary<string, object> Configuration { get; set; }
+        public Dictionary<string, bool> PreviewFeatures { get; set; }
     }
 }

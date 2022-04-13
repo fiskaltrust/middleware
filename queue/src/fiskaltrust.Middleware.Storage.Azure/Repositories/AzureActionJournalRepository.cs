@@ -10,7 +10,7 @@ using Microsoft.Azure.Cosmos.Table;
 
 namespace fiskaltrust.Middleware.Storage.Azure.Repositories
 {
-    public class AzureActionJournalRepository : BaseAzureTableRepository<Guid, AzureFtActionJournal, ftActionJournal>, IActionJournalRepository, IMiddlewareRepository<ftActionJournal>
+    public class AzureActionJournalRepository : BaseAzureTableRepository<Guid, AzureFtActionJournal, ftActionJournal>, IActionJournalRepository, IMiddlewareRepository<ftActionJournal>, IMiddlewareActionJournalRepository
     {
         public AzureActionJournalRepository(Guid queueId, string connectionString)
             : base(queueId, connectionString, nameof(ftActionJournal)) { }

@@ -153,7 +153,7 @@ namespace fiskaltrust.Middleware.Queue.InMemory.IntegrationTest
             var json = File.ReadAllText(configuration);
             var values = JsonConvert.DeserializeObject<ConfigFile>(json);
 
-            var dictionary = new Dictionary<string, object>
+            var config = new Dictionary<string, object>
             {
                 { "init_ftQueueAT", JsonConvert.SerializeObject(values.ftQueues[0].Configuration.init_ftQueueAT) },
                 { "init_ftQueueDE", JsonConvert.SerializeObject(values.ftQueues[0].Configuration.init_ftQueueDE) },
@@ -165,7 +165,7 @@ namespace fiskaltrust.Middleware.Queue.InMemory.IntegrationTest
                 { "init_ftQueue", JsonConvert.SerializeObject(values.ftQueues[0].Configuration.init_ftQueue) }
             };
 
-            var businessLogicFactoryBoostrapper = LocalizedQueueBootStrapperFactory.GetBootstrapperForLocalizedQueue(values.ftQueues[0].Configuration.init_ftQueue[0].ftQueueId, dictionary);
+            var businessLogicFactoryBoostrapper = LocalizedQueueBootStrapperFactory.GetBootstrapperForLocalizedQueue(values.ftQueues[0].Configuration.init_ftQueue[0].ftQueueId, new MiddlewareConfiguration { Configuration = config });
             businessLogicFactoryBoostrapper.Should().BeOfType(typeof(QueueDEBootstrapper));
         }
     }

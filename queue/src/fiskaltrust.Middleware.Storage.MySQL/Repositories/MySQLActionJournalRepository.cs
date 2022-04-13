@@ -4,10 +4,11 @@ using System.Threading.Tasks;
 using Dapper;
 using MySqlConnector;
 using fiskaltrust.storage.V0;
+using fiskaltrust.Middleware.Contracts.Repositories;
 
 namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
 {
-    public class MySQLActionJournalRepository : AbstractMySQLRepository<Guid, ftActionJournal>, IActionJournalRepository
+    public class MySQLActionJournalRepository : AbstractMySQLRepository<Guid, ftActionJournal>, IActionJournalRepository, IMiddlewareActionJournalRepository
     {
         public MySQLActionJournalRepository(string connectionString) : base(connectionString) { }
 
@@ -47,6 +48,15 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
             {
                 await connection.OpenAsync().ConfigureAwait(false);
                 await connection.ExecuteAsync(sql, entity).ConfigureAwait(false);
+            }
+        }
+
+        public async Task<ftActionJournal> GetWithLastTimestampAsync()
+        {
+            using (var connection = new MySqlConnection(ConnectionString))
+            {
+                await connection.OpenAsync().ConfigureAwait(false);
+                return await connection.QueryFirstOrDefaultAsync<ftActionJournal>("SELECT * FROM ftActionJournal ORDER BY TimeStamp DESC LIMIT 1").ConfigureAwait(false);
             }
         }
     }
