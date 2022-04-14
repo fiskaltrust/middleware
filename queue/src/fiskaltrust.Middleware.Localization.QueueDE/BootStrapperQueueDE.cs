@@ -23,6 +23,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
                 .AddScoped<ITransactionPayloadFactory, DSFinVKTransactionPayloadFactory>()
                 .AddScoped<SignatureFactoryDE>()
                 .AddScoped<IMarketSpecificSignProcessor, SignProcessorDE>()
+                .AddScoped<IMarketSpecificJournalProcessor, JournalProcessorDE>()
                 .AddScoped<JournalProcessorDE>()
                 .AddScoped<IMasterDataService, MasterDataService>()
                 .AddSingleton(sp => QueueDEConfiguration.FromMiddlewareConfiguration(sp.GetRequiredService<MiddlewareConfiguration>()))
