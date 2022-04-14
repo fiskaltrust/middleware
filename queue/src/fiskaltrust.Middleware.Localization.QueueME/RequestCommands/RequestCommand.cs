@@ -5,6 +5,8 @@ using Microsoft.Extensions.Logging;
 using fiskaltrust.Middleware.Localization.QueueME.Models;
 using System;
 using fiskaltrust.ifPOS.v2.me;
+using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.storage.V0.MasterData;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 {
@@ -14,13 +16,15 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
         protected readonly ILogger<RequestCommand> _logger;
         protected readonly SignatureFactoryME _signatureFactory;
         protected readonly IConfigurationRepository _configurationRepository;
+        protected readonly IMasterDataRepository<OutletMasterData> _outletMasterDataRepository;
 
 
-        public RequestCommand(ILogger<RequestCommand> logger, SignatureFactoryME signatureFactory, IConfigurationRepository configurationRepository)
+        public RequestCommand(ILogger<RequestCommand> logger, SignatureFactoryME signatureFactory, IConfigurationRepository configurationRepository, IMasterDataRepository<OutletMasterData> outletMasterDataRepository)
         {
             _logger = logger;
             _signatureFactory = signatureFactory;
             _configurationRepository = configurationRepository;
+            _outletMasterDataRepository = outletMasterDataRepository;
         }
 
         public abstract Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem);

@@ -19,6 +19,12 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Models
             set;
         }
         [DataMember]
+        public string SoftwareCode
+        {
+            get;
+            set;
+        }
+        [DataMember]
         public string TCRIntID
         {
             get;

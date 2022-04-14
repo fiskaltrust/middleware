@@ -13,6 +13,8 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands.Factories
         public RequestCommand Create(ReceiptRequest request)
         {
             //TODO check if ValidTo is in time
+            //CorrectiveInvType
+            //Voucher
 
             RequestCommand command = (request.ftReceiptCase & 0xFFFF) switch
             {

@@ -1,4 +1,6 @@
-﻿using fiskaltrust.ifPOS.v2.me;
+﻿using System;
+using System.Text;
+using fiskaltrust.ifPOS.v2.me;
 
 namespace fiskaltrust.Middleware.Localization.QueueME
 {
@@ -11,6 +13,17 @@ namespace fiskaltrust.Middleware.Localization.QueueME
         public SignatureType CreateSignature()
         {
             return new SignatureType();
+        }
+
+
+        public string ICCConcatenate(string issuerTIN, DateTime issuesDateTime, int invOrdNum, string businUnitCode, string enuCode, string softwareCode, decimal totPrice)
+        {
+            return ConvertToUTF8(string.Concat(issuerTIN,'|', issuesDateTime.ToString("u"), '|', invOrdNum.ToString(), '|', businUnitCode, '|', enuCode, '|', softwareCode, '|', totPrice));
+        }
+
+        private string ConvertToUTF8(string input) {
+            var bytes = Encoding.Default.GetBytes(input);
+            return Encoding.UTF8.GetString(bytes);
         }
     }
 }

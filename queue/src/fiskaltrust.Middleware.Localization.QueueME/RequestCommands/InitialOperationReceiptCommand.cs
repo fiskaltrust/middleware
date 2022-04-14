@@ -14,12 +14,14 @@ using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v2.me;
 using System.Linq;
 using fiskaltrust.Middleware.Localization.QueueME.Exceptions;
+using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.storage.V0.MasterData;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 {
     public class InitialOperationReceiptCommand : RequestCommand
     {
-        public InitialOperationReceiptCommand(ILogger<RequestCommand> logger, SignatureFactoryME signatureFactory, IConfigurationRepository configurationRepository) : base(logger, signatureFactory, configurationRepository)
+        public InitialOperationReceiptCommand(ILogger<RequestCommand> logger, SignatureFactoryME signatureFactory, IConfigurationRepository configurationRepository, IMasterDataRepository<OutletMasterData> outletMasterDataRepository) : base(logger, signatureFactory, configurationRepository, outletMasterDataRepository)
         { }
 
         public override async Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
@@ -40,6 +42,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                     BusinUnitCode = enu.BusinUnitCode,
                     ValidFrom = enu.ValidFrom ?? DateTime.Now,
                     ValidTo = enu.ValidTo,
+                    SoftCode = enu.SoftwareCode
                 };
 
                 var registerTCRRequest = new RegisterTCRRequest()
@@ -62,6 +65,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                     TCRIntID = tcr.TCRIntID,
                     BusinUnitCode = tcr.BusinUnitCode,
                     IssuerTIN = tcr.IssuerTIN,
+                    SoftCode= tcr.SoftCode,
                     TCRCode = registerTCRResponse.TCRCode,
                     ftSignaturCreationUnitMEId = signaturCreationUnitME.ftSignaturCreationUnitMEId,
                     ValidFrom = tcr.ValidFrom,
