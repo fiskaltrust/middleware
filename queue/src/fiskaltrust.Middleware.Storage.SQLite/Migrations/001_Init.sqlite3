@@ -155,7 +155,7 @@ CREATE TABLE IF NOT EXISTS ftQueueFR
 (
     ftQueueFRId                 NVARCHAR(36) PRIMARY KEY NOT NULL,
     ftSignaturCreationUnitFRId  NVARCHAR(36) NOT NULL,
-    Siret                       NVARCHAR(2147483647) NOT NULL, 
+    Siret                       NVARCHAR(2147483647) NULL, 
     CashBoxIdentification       NVARCHAR(2147483647) NOT NULL, 
     TNumerator                  BIGINT NOT NULL,
     TTotalizer                  FLOAT NOT NULL,

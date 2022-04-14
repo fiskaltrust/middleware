@@ -1,0 +1,478 @@
+BEGIN TRANSACTION;
+
+-- Create new tables
+
+CREATE TABLE AccountMasterData
+(
+    AccountId        NVARCHAR(36) PRIMARY KEY NOT NULL,
+    AccountName      NVARCHAR(2147483647) NULL,
+    Street           NVARCHAR(2147483647) NULL,
+    Zip              NVARCHAR(2147483647) NULL,
+    City             NVARCHAR(2147483647) NULL,
+    Country          NVARCHAR(2147483647) NULL,
+    VatId            NVARCHAR(2147483647) NULL,
+    TaxId            NVARCHAR(2147483647) NULL 
+);
+
+CREATE TABLE AgencyMasterData
+(
+    AgencyId         NVARCHAR(36) PRIMARY KEY NOT NULL, 
+    Name             NVARCHAR(2147483647) NULL,
+    Street           NVARCHAR(2147483647) NULL,
+    Zip              NVARCHAR(2147483647) NULL,
+    City             NVARCHAR(2147483647) NULL,
+    Country          NVARCHAR(2147483647) NULL,
+    VatId            NVARCHAR(2147483647) NULL,
+    TaxId            NVARCHAR(2147483647) NULL 
+);
+
+CREATE TABLE FailedFinishTransaction
+(
+    cbReceiptReference     NVARCHAR(2147483647) PRIMARY KEY NOT NULL,
+    TransactionNumber      BIGINT NULL,
+    FinishMoment           BIGINT NOT NULL, 
+    ftQueueItemId          NVARCHAR(36) NOT NULL, 
+    CashBoxIdentification  NVARCHAR(2147483647) NULL, 
+    Request                NVARCHAR(2147483647) NULL
+);
+
+CREATE TABLE FailedStartTransaction
+(
+    cbReceiptReference     NVARCHAR(2147483647) PRIMARY KEY NOT NULL,
+    StartMoment            BIGINT NOT NULL, 
+    ftQueueItemId          NVARCHAR(36) NOT NULL, 
+    Request                NVARCHAR(2147483647) NULL, 
+    CashBoxIdentification  NVARCHAR(2147483647) NULL 
+);
+
+CREATE TABLE OpenTransaction
+(
+    cbReceiptReference               NVARCHAR(2147483647) PRIMARY KEY NOT NULL,
+    TransactionNumber                BIGINT NULL,
+    StartMoment                      BIGINT NOT NULL, 
+    StartTransactionSignatureBase64  NVARCHAR(2147483647) NULL 
+);
+
+CREATE TABLE OutletMasterData
+(
+    OutletId         NVARCHAR(36) PRIMARY KEY NOT NULL,
+    OutletName       NVARCHAR(2147483647) NULL,
+    Street           NVARCHAR(2147483647) NULL,
+    Zip              NVARCHAR(2147483647) NULL,
+    City             NVARCHAR(2147483647) NULL,
+    Country          NVARCHAR(2147483647) NULL,
+    VatId            NVARCHAR(2147483647) NULL
+);
+
+CREATE TABLE PosSystemMasterData
+(
+    PosSystemId      NVARCHAR(36) PRIMARY KEY NOT NULL, 
+    Brand            NVARCHAR(2147483647) NULL,
+    Model            NVARCHAR(2147483647) NULL,
+    SoftwareVersion  NVARCHAR(2147483647) NULL,
+    BaseCurrency     NVARCHAR(2147483647) NULL
+);
+
+CREATE TABLE ftDatabaseSchema
+(
+    CurrentVersion  NVARCHAR(256)    
+);
+
+CREATE TABLE ftSignaturCreationUnitDE
+(
+    ftSignaturCreationUnitDEId   NVARCHAR(36) PRIMARY KEY  NOT NULL,
+    Url                          NVARCHAR(2147483647)      NULL,                        
+    TimeStamp                    BIGINT                    NOT NULL, 
+    TseInfoJson                  NVARCHAR(2147483647)      NULL, 
+    Mode                         BIGINT       DEFAULT 0    NOT NULL, 
+    ModeConfigurationJson        NVARCHAR(2147483647)      NULL
+);
+
+
+-- No data is stored in these tables
+
+DROP TABLE ftJournalDE;
+CREATE TABLE ftJournalDE
+(
+    ftJournalDEId         NVARCHAR(36) PRIMARY KEY NOT NULL,
+    Number                BIGINT NOT NULL,
+    FileName              NVARCHAR(2147483647) NULL,
+    FileExtension         NVARCHAR(2147483647) NULL,
+    FileContentBase64     NVARCHAR(2147483647) NULL,
+    ftQueueItemId         NVARCHAR(36) NOT NULL,
+    ftQueueId             NVARCHAR(36) NOT NULL,
+    TimeStamp             BIGINT NOT NULL
+);
+
+DROP TABLE ftQueueDE;
+CREATE TABLE ftQueueDE
+(
+    ftQueueDEId                  NVARCHAR(36) PRIMARY KEY  NOT NULL,
+    ftSignaturCreationUnitDEId   NVARCHAR(36)              NULL,
+    LastHash                     NVARCHAR(2147483647)      NULL,
+    CashBoxIdentification        NVARCHAR(2147483647)      NULL,
+    SSCDFailCount                BIGINT                    NOT NULL,            
+    SSCDFailMoment               BIGINT                    NULL,                    
+    SSCDFailQueueItemId          NVARCHAR(36)              NULL, 
+    UsedFailedCount              BIGINT                    NOT NULL,           
+    UsedFailedMomentMin          BIGINT                    NULL,                    
+    UsedFailedMomentMax          BIGINT                    NULL,                    
+    UsedFailedQueueItemId        NVARCHAR(36)              NULL, 
+    TimeStamp                    BIGINT                    NOT NULL, 
+    DailyClosingNumber           INT                       NOT NULL DEFAULT 0
+);
+
+
+-- Migrate existing data
+
+CREATE TABLE ftActionJournal_new
+(
+    ftActionJournalId     NVARCHAR(36) PRIMARY KEY NOT NULL,
+    ftQueueId             NVARCHAR(36)  NOT NULL,
+    ftQueueItemId         NVARCHAR(36)  NOT NULL,
+    Moment                BIGINT NOT NULL,
+    Priority              BIGINT NOT NULL, 
+    Type                  NVARCHAR(2147483647) NULL,  
+    Message               NVARCHAR(2147483647) NULL, 
+    DataBase64            NVARCHAR(2147483647) NULL, 
+    DataJson              NVARCHAR(2147483647) NULL,
+    TimeStamp             BIGINT NOT NULL 
+);
+
+INSERT INTO ftActionJournal_new (ftActionJournalId, ftQueueId, ftQueueItemId, Moment, Priority, Type, Message, DataBase64, DataJson, TimeStamp)
+   SELECT ftActionJournalId, ftQueueId, ftQueueItemId, Moment, Priority, Type, Message, DataBase64, DataJson, TimeStamp FROM ftActionJournal;
+DROP TABLE ftActionJournal;
+ALTER TABLE ftActionJournal_new RENAME TO ftActionJournal;
+
+
+CREATE TABLE ftCashBox_new
+(
+    ftCashBoxId    NVARCHAR(36) PRIMARY KEY    NOT NULL,
+    TimeStamp      BIGINT                      NOT NULL                  
+);
+
+INSERT INTO ftCashBox_new (ftCashBoxId, TimeStamp)
+   SELECT ftCashBoxId, TimeStamp FROM ftCashBox;
+DROP TABLE ftCashBox;
+ALTER TABLE ftCashBox_new RENAME TO ftCashBox;
+
+
+CREATE TABLE ftJournalAT_new
+(
+    ftJournalATId                NVARCHAR(36) PRIMARY KEY NOT NULL,
+    ftSignaturCreationUnitId     NVARCHAR(36) NOT NULL,
+    Number                       BIGINT NOT NULL, 
+    JWSHeaderBase64url           NVARCHAR(2147483647) NULL,
+    JWSPayloadBase64url          NVARCHAR(2147483647) NULL,
+    JWSSignatureBase64url        NVARCHAR(2147483647) NULL,
+    ftQueueId                    NVARCHAR(36) NOT NULL,
+    TimeStamp                    BIGINT NOT NULL
+);
+
+INSERT INTO ftJournalAT_new (ftJournalATId, ftSignaturCreationUnitId, Number, JWSHeaderBase64url, JWSPayloadBase64url, JWSSignatureBase64url, ftQueueId, TimeStamp)
+   SELECT ftJournalATId, ftSignaturCreationUnitId, Number, JWSHeaderBase64url, JWSPayloadBase64url, JWSSignatureBase64url, ftQueueId, TimeStamp FROM ftJournalAT;
+DROP TABLE ftJournalAT;
+ALTER TABLE ftJournalAT_new RENAME TO ftJournalAT;
+
+CREATE TABLE ftJournalFR_new
+(
+    ftJournalFRId        NVARCHAR(36) PRIMARY KEY NOT NULL,
+    JWT                  NVARCHAR(2147483647) NULL,
+    JsonData             NVARCHAR(2147483647) NULL,
+    ReceiptType          NVARCHAR(2147483647) NULL,
+    Number               BIGINT NOT NULL,                      
+    ftQueueItemId        NVARCHAR(36) NOT NULL,
+    ftQueueId            NVARCHAR(36) NOT NULL,
+    TimeStamp            BIGINT NOT NULL
+);
+
+INSERT INTO ftJournalFR_new (ftJournalFRId, JWT, JsonData, ReceiptType, Number, ftQueueItemId, ftQueueId, TimeStamp)
+   SELECT ftJournalFRId, JWT, JsonData, ReceiptType, Number, ftQueueItemId, ftQueueId, TimeStamp FROM ftJournalFR;
+DROP TABLE ftJournalFR;
+ALTER TABLE ftJournalFR_new RENAME TO ftJournalFR;
+
+
+CREATE TABLE ftQueue_new
+(
+    ftQueueId           NVARCHAR(36) PRIMARY KEY NOT NULL,
+    ftCashBoxId         NVARCHAR(36)             NOT NULL,
+    ftCurrentRow        BIGINT                   NOT NULL,
+    ftQueuedRow         BIGINT                   NOT NULL,
+    ftReceiptNumerator  BIGINT                   NOT NULL,
+    ftReceiptTotalizer  FLOAT                    NOT NULL,
+    ftReceiptHash       NVARCHAR(2147483647)     NULL,
+    StartMoment         BIGINT                   NULL,
+    StopMoment          BIGINT                   NULL,
+    CountryCode         NVARCHAR(2147483647)     NULL,    
+    Timeout             BIGINT DEFAULT 1500      NOT NULL,
+    TimeStamp           BIGINT                   NOT NULL
+);
+
+INSERT INTO ftQueue_new (ftQueueId, ftCashBoxId, ftCurrentRow, ftQueuedRow, ftReceiptNumerator, ftReceiptTotalizer, ftReceiptHash, StartMoment, StopMoment, CountryCode, Timeout, TimeStamp)
+   SELECT ftQueueId, ftCashBoxId, ftCurrentRow, ftQueuedRow, ftReceiptNumerator, ftReceiptTotalizer, ftReceiptHash, StartMoment, StopMoment, CountryCode, Timeout, TimeStamp FROM ftQueue;
+DROP TABLE ftQueue;
+ALTER TABLE ftQueue_new RENAME TO ftQueue;
+
+
+CREATE TABLE ftQueueAT_new
+(
+    ftQueueATId                           NVARCHAR(36)  PRIMARY KEY  NOT NULL,     
+    CashBoxIdentification                 NVARCHAR(2147483647)       NULL,
+    EncryptionKeyBase64                   NVARCHAR(2147483647)       NULL,
+    SignAll                               BIGINT                     NOT NULL,           
+    ClosedSystemKind                      NVARCHAR(2147483647)       NULL,
+    ClosedSystemValue                     NVARCHAR(2147483647)       NULL,
+    ClosedSystemNote                      NVARCHAR(2147483647)       NULL,
+    LastSettlementMonth                   BIGINT                     NOT NULL,           
+    LastSettlementMoment                  BIGINT                     NULL,                   
+    LastSettlementQueueItemId             NVARCHAR(36)               NULL, 
+    SSCDFailCount                         BIGINT                     NOT NULL,            
+    SSCDFailMoment                        BIGINT                     NULL,                    
+    SSCDFailQueueItemId                   NVARCHAR(36)               NULL, 
+    SSCDFailMessageSent                   BIGINT                     NULL,                    
+    UsedFailedCount                       BIGINT                     NOT NULL,           
+    UsedFailedMomentMin                   BIGINT                     NULL,                    
+    UsedFailedMomentMax                   BIGINT                     NULL,                    
+    UsedFailedQueueItemId                 NVARCHAR(36)               NULL, 
+    UsedMobileCount                       BIGINT                     NOT NULL,           
+    UsedMobileMoment                      BIGINT                     NULL,                   
+    UsedMobileQueueItemId                 NVARCHAR(36)               NULL,              
+    MessageCount                          BIGINT                     NOT NULL,           
+    MessageMoment                         BIGINT                     NULL,                    
+    LastSignatureHash                     NVARCHAR(2147483647)       NULL,
+    LastSignatureZDA                      NVARCHAR(2147483647)       NULL,
+    LastSignatureCertificateSerialNumber  NVARCHAR(2147483647)       NULL,
+    ftCashNumerator                       BIGINT                     NOT NULL,
+    ftCashTotalizer                       FLOAT                      NOT NULL,
+    TimeStamp                             BIGINT                     NOT NULL
+);
+
+INSERT INTO ftQueueAT_new (ftQueueATId, CashBoxIdentification, EncryptionKeyBase64, SignAll, ClosedSystemKind, ClosedSystemValue, ClosedSystemNote, LastSettlementMonth, LastSettlementMoment, LastSettlementQueueItemId, SSCDFailCount, SSCDFailMoment, SSCDFailQueueItemId, SSCDFailMessageSent, UsedFailedCount, UsedFailedMomentMin, UsedFailedMomentMax, UsedFailedQueueItemId, UsedMobileCount, UsedMobileMoment, UsedMobileQueueItemId, MessageCount, MessageMoment, LastSignatureHash, LastSignatureZDA, LastSignatureCertificateSerialNumber, ftCashNumerator, ftCashTotalizer, TimeStamp)
+   SELECT ftQueueATId, CashBoxIdentification, EncryptionKeyBase64, SignAll, ClosedSystemKind, ClosedSystemValue, ClosedSystemNote, LastSettlementMonth, LastSettlementMoment, LastSettlementQueueItemId, SSCDFailCount, SSCDFailMoment, SSCDFailQueueItemId, SSCDFailMessageSent, UsedFailedCount, UsedFailedMomentMin, UsedFailedMomentMax, UsedFailedQueueItemId, UsedMobileCount, UsedMobileMoment, UsedMobileQueueItemId, MessageCount, MessageMoment, LastSignatureHash, LastSignatureZDA, LastSignatureCertificateSerialNumber, ftCashNumerator, ftCashTotalizer, TimeStamp FROM ftQueueAT;
+DROP TABLE ftQueueAT;
+ALTER TABLE ftQueueAT_new RENAME TO ftQueueAT;
+
+
+CREATE TABLE ftQueueFR_new
+(
+    ftQueueFRId                 NVARCHAR(36) PRIMARY KEY NOT NULL,
+    ftSignaturCreationUnitFRId  NVARCHAR(36) NOT NULL,
+    Siret                       NVARCHAR(2147483647) NULL, 
+    CashBoxIdentification       NVARCHAR(2147483647) NOT NULL, 
+    TNumerator                  BIGINT NOT NULL,
+    TTotalizer                  FLOAT NOT NULL,
+    TCITotalNormal              FLOAT NOT NULL,
+    TCITotalReduced1            FLOAT NOT NULL,
+    TCITotalReduced2            FLOAT NOT NULL,
+    TCITotalReducedS            FLOAT NOT NULL,
+    TCITotalZero                FLOAT NOT NULL,
+    TCITotalUnknown             FLOAT NOT NULL,
+    TPITotalCash                FLOAT NOT NULL,
+    TPITotalNonCash             FLOAT NOT NULL,
+    TPITotalInternal            FLOAT NOT NULL,
+    TPITotalUnknown             FLOAT NOT NULL,
+    TLastHash                   NVARCHAR(2147483647) NULL, 
+    PNumerator                  BIGINT NOT NULL,
+    PTotalizer                  FLOAT NOT NULL,
+    PPITotalCash                FLOAT NOT NULL,
+    PPITotalNonCash             FLOAT NOT NULL,
+    PPITotalInternal            FLOAT NOT NULL,
+    PPITotalUnknown             FLOAT NOT NULL,
+    PLastHash                   NVARCHAR(2147483647) NULL,  
+    INumerator                  BIGINT NOT NULL,
+    ITotalizer                  FLOAT NOT NULL,
+    ICITotalNormal              FLOAT NOT NULL,
+    ICITotalReduced1            FLOAT NOT NULL,
+    ICITotalReduced2            FLOAT NOT NULL,
+    ICITotalReducedS            FLOAT NOT NULL,
+    ICITotalZero                FLOAT NOT NULL,
+    ICITotalUnknown             FLOAT NOT NULL,
+    IPITotalCash                FLOAT NOT NULL,
+    IPITotalNonCash             FLOAT NOT NULL,
+    IPITotalInternal            FLOAT NOT NULL,
+    IPITotalUnknown             FLOAT NOT NULL,
+    ILastHash                   NVARCHAR(2147483647) NULL,  
+    GNumerator                  BIGINT NOT NULL,
+    GLastHash                   NVARCHAR(2147483647) NULL,  
+    GShiftTotalizer             FLOAT NOT NULL,
+    GShiftCITotalNormal         FLOAT NOT NULL,
+    GShiftCITotalReduced1       FLOAT NOT NULL,
+    GShiftCITotalReduced2       FLOAT NOT NULL,
+    GShiftCITotalReducedS       FLOAT NOT NULL,
+    GShiftCITotalZero           FLOAT NOT NULL,
+    GShiftCITotalUnknown        FLOAT NOT NULL,
+    GShiftPITotalCash           FLOAT NOT NULL,
+    GShiftPITotalNonCash        FLOAT NOT NULL,
+    GShiftPITotalInternal       FLOAT NOT NULL,
+    GShiftPITotalUnknown        FLOAT NOT NULL,
+    GLastShiftMoment            BIGINT NULL,
+    GLastShiftQueueItemId       NVARCHAR(36) NULL,
+    GDayTotalizer               FLOAT NOT NULL,
+    GDayCITotalNormal           FLOAT NOT NULL,
+    GDayCITotalReduced1         FLOAT NOT NULL,
+    GDayCITotalReduced2         FLOAT NOT NULL,
+    GDayCITotalReducedS         FLOAT NOT NULL,
+    GDayCITotalZero             FLOAT NOT NULL,
+    GDayCITotalUnknown          FLOAT NOT NULL,
+    GDayPITotalCash             FLOAT NOT NULL,
+    GDayPITotalNonCash          FLOAT NOT NULL,
+    GDayPITotalInternal         FLOAT NOT NULL,
+    GDayPITotalUnknown          FLOAT NOT NULL,
+    GLastDayMoment              BIGINT NULL,
+    GLastDayQueueItemId         NVARCHAR(36) NULL,
+    GMonthTotalizer             FLOAT NOT NULL,
+    GMonthCITotalNormal         FLOAT NOT NULL,
+    GMonthCITotalReduced1       FLOAT NOT NULL,
+    GMonthCITotalReduced2       FLOAT NOT NULL,
+    GMonthCITotalReducedS       FLOAT NOT NULL,
+    GMonthCITotalZero           FLOAT NOT NULL,
+    GMonthCITotalUnknown        FLOAT NOT NULL,
+    GMonthPITotalCash           FLOAT NOT NULL,
+    GMonthPITotalNonCash        FLOAT NOT NULL,
+    GMonthPITotalInternal       FLOAT NOT NULL,
+    GMonthPITotalUnknown        FLOAT NOT NULL,
+    GLastMonthMoment            BIGINT NULL,
+    GLastMonthQueueItemId       NVARCHAR(36) NULL,
+    GYearTotalizer              FLOAT NOT NULL,
+    GYearCITotalNormal          FLOAT NOT NULL,
+    GYearCITotalReduced1        FLOAT NOT NULL,
+    GYearCITotalReduced2        FLOAT NOT NULL,
+    GYearCITotalReducedS        FLOAT NOT NULL,
+    GYearCITotalZero            FLOAT NOT NULL,
+    GYearCITotalUnknown         FLOAT NOT NULL,
+    GYearPITotalCash            FLOAT NOT NULL,
+    GYearPITotalNonCash         FLOAT NOT NULL,
+    GYearPITotalInternal        FLOAT NOT NULL,
+    GYearPITotalUnknown         FLOAT NOT NULL,
+    GLastYearMoment             BIGINT NULL,
+    GLastYearQueueItemId        NVARCHAR(36) NULL,
+    BNumerator                  BIGINT NOT NULL,
+    BTotalizer                  FLOAT NOT NULL,
+    BCITotalNormal              FLOAT NOT NULL,
+    BCITotalReduced1            FLOAT NOT NULL,
+    BCITotalReduced2            FLOAT NOT NULL,
+    BCITotalReducedS            FLOAT NOT NULL,
+    BCITotalZero                FLOAT NOT NULL,
+    BCITotalUnknown             FLOAT NOT NULL,
+    BPITotalCash                FLOAT NOT NULL,
+    BPITotalNonCash             FLOAT NOT NULL,
+    BPITotalInternal            FLOAT NOT NULL,
+    BPITotalUnknown             FLOAT NOT NULL,
+    BLastHash                   NVARCHAR(2147483647) NULL,  
+    LNumerator                  BIGINT NOT NULL,
+    LLastHash                   NVARCHAR(2147483647) NULL,  
+    ANumerator                  BIGINT NOT NULL,                    
+    ALastHash                   NVARCHAR(2147483647) NULL,  
+    ATotalizer                  FLOAT NOT NULL,
+    ACITotalNormal              FLOAT NOT NULL,
+    ACITotalReduced1            FLOAT NOT NULL,
+    ACITotalReduced2            FLOAT NOT NULL,
+    ACITotalReducedS            FLOAT NOT NULL,
+    ACITotalZero                FLOAT NOT NULL,
+    ACITotalUnknown             FLOAT NOT NULL,
+    APITotalCash                FLOAT NOT NULL,
+    APITotalNonCash             FLOAT NOT NULL,
+    APITotalInternal            FLOAT NOT NULL,
+    APITotalUnknown             FLOAT NOT NULL,
+    ALastMoment                 BIGINT NULL,
+    ALastQueueItemId            NVARCHAR(36) NULL,
+    XNumerator                  BIGINT NOT NULL,
+    XTotalizer                  FLOAT NOT NULL,
+    XLastHash                   NVARCHAR(2147483647) NULL,  
+    CNumerator                  BIGINT NOT NULL,
+    CTotalizer                  FLOAT NOT NULL,
+    CLastHash                   NVARCHAR(2147483647) NULL,  
+    UsedFailedCount             BIGINT NOT NULL,
+    UsedFailedMomentMin         BIGINT NULL,
+    UsedFailedMomentMax         BIGINT NULL,
+    UsedFailedQueueItemId       NVARCHAR(36) NULL,
+    MessageCount                BIGINT NOT NULL,
+    MessageMoment               BIGINT NULL,
+    TimeStamp                   BIGINT NOT NULL
+);
+
+INSERT INTO ftQueueFR_new (ftQueueFRId, ftSignaturCreationUnitFRId, CashBoxIdentification, TNumerator, TTotalizer, TCITotalNormal, TCITotalReduced1, TCITotalReduced2, TCITotalReducedS, TCITotalZero, TCITotalUnknown, TPITotalCash, TPITotalNonCash, TPITotalInternal, TPITotalUnknown, TLastHash, PNumerator, PTotalizer, PPITotalCash, PPITotalNonCash, PPITotalInternal, PPITotalUnknown, PLastHash, INumerator, ITotalizer, ICITotalNormal, ICITotalReduced1, ICITotalReduced2, ICITotalReducedS, ICITotalZero, ICITotalUnknown, IPITotalCash, IPITotalNonCash, IPITotalInternal, IPITotalUnknown, ILastHash, GNumerator, GLastHash, GShiftTotalizer, GShiftCITotalNormal, GShiftCITotalReduced1, GShiftCITotalReduced2, GShiftCITotalReducedS, GShiftCITotalZero, GShiftCITotalUnknown, GShiftPITotalCash, GShiftPITotalNonCash, GShiftPITotalInternal, GShiftPITotalUnknown, GLastShiftMoment, GLastShiftQueueItemId, GDayTotalizer, GDayCITotalNormal, GDayCITotalReduced1, GDayCITotalReduced2, GDayCITotalReducedS, GDayCITotalZero, GDayCITotalUnknown, GDayPITotalCash, GDayPITotalNonCash, GDayPITotalInternal, GDayPITotalUnknown, GLastDayMoment, GLastDayQueueItemId, GMonthTotalizer, GMonthCITotalNormal, GMonthCITotalReduced1, GMonthCITotalReduced2, GMonthCITotalReducedS, GMonthCITotalZero, GMonthCITotalUnknown, GMonthPITotalCash, GMonthPITotalNonCash, GMonthPITotalInternal, GMonthPITotalUnknown, GLastMonthMoment, GLastMonthQueueItemId, GYearTotalizer, GYearCITotalNormal, GYearCITotalReduced1, GYearCITotalReduced2, GYearCITotalReducedS, GYearCITotalZero, GYearCITotalUnknown, GYearPITotalCash, GYearPITotalNonCash, GYearPITotalInternal, GYearPITotalUnknown, GLastYearMoment, GLastYearQueueItemId, BNumerator, BTotalizer, BCITotalNormal, BCITotalReduced1, BCITotalReduced2, BCITotalReducedS, BCITotalZero, BCITotalUnknown, BPITotalCash, BPITotalNonCash, BPITotalInternal, BPITotalUnknown, BLastHash, LNumerator, LLastHash, ANumerator, ALastHash, ATotalizer, ACITotalNormal, ACITotalReduced1, ACITotalReduced2, ACITotalReducedS, ACITotalZero, ACITotalUnknown, APITotalCash, APITotalNonCash, APITotalInternal, APITotalUnknown, ALastMoment, ALastQueueItemId, XNumerator, XTotalizer, XLastHash, CNumerator, CTotalizer, CLastHash, UsedFailedCount, UsedFailedMomentMin, UsedFailedMomentMax, UsedFailedQueueItemId, MessageCount, MessageMoment, TimeStamp)
+   SELECT  ftQueueFRId, ftSignaturCreationUnitFRId, CashBoxIdentification, TNumerator, TTotalizer, TCITotalNormal, TCITotalReduced1, TCITotalReduced2, TCITotalReducedS, TCITotalZero, TCITotalUnknown, TPITotalCash, TPITotalNonCash, TPITotalInternal, TPITotalUnknown, TLastHash, PNumerator, PTotalizer, PPITotalCash, PPITotalNonCash, PPITotalInternal, PPITotalUnknown, PLastHash, INumerator, ITotalizer, ICITotalNormal, ICITotalReduced1, ICITotalReduced2, ICITotalReducedS, ICITotalZero, ICITotalUnknown, IPITotalCash, IPITotalNonCash, IPITotalInternal, IPITotalUnknown, ILastHash, GNumerator, GLastHash, GShiftTotalizer, GShiftCITotalNormal, GShiftCITotalReduced1, GShiftCITotalReduced2, GShiftCITotalReducedS, GShiftCITotalZero, GShiftCITotalUnknown, GShiftPITotalCash, GShiftPITotalNonCash, GShiftPITotalInternal, GShiftPITotalUnknown, GLastShiftMoment, GLastShiftQueueItemId, GDayTotalizer, GDayCITotalNormal, GDayCITotalReduced1, GDayCITotalReduced2, GDayCITotalReducedS, GDayCITotalZero, GDayCITotalUnknown, GDayPITotalCash, GDayPITotalNonCash, GDayPITotalInternal, GDayPITotalUnknown, GLastDayMoment, GLastDayQueueItemId, GMonthTotalizer, GMonthCITotalNormal, GMonthCITotalReduced1, GMonthCITotalReduced2, GMonthCITotalReducedS, GMonthCITotalZero, GMonthCITotalUnknown, GMonthPITotalCash, GMonthPITotalNonCash, GMonthPITotalInternal, GMonthPITotalUnknown, GLastMonthMoment, GLastMonthQueueItemId, GYearTotalizer, GYearCITotalNormal, GYearCITotalReduced1, GYearCITotalReduced2, GYearCITotalReducedS, GYearCITotalZero, GYearCITotalUnknown, GYearPITotalCash, GYearPITotalNonCash, GYearPITotalInternal, GYearPITotalUnknown, GLastYearMoment, GLastYearQueueItemId, BNumerator, BTotalizer, BCITotalNormal, BCITotalReduced1, BCITotalReduced2, BCITotalReducedS, BCITotalZero, BCITotalUnknown, BPITotalCash, BPITotalNonCash, BPITotalInternal, BPITotalUnknown, BLastHash, LNumerator, LLastHash, ANumerator, ALastHash, ATotalizer, ACITotalNormal, ACITotalReduced1, ACITotalReduced2, ACITotalReducedS, ACITotalZero, ACITotalUnknown, APITotalCash, APITotalNonCash, APITotalInternal, APITotalUnknown, ALastMoment, ALastQueueItemId, XNumerator, XTotalizer, XLastHash, CNumerator, CTotalizer, CLastHash, UsedFailedCount, UsedFailedMomentMin, UsedFailedMomentMax, UsedFailedQueueItemId, MessageCount, MessageMoment, TimeStamp FROM ftQueueFR;
+DROP TABLE ftQueueFR;
+ALTER TABLE ftQueueFR_new RENAME TO ftQueueFR;
+
+
+CREATE TABLE ftQueueItem_new
+(
+    ftQueueItemId      NVARCHAR(36)  PRIMARY KEY NOT NULL,
+    ftQueueId          NVARCHAR(36)  NOT NULL,
+    ftQueueRow         BIGINT NOT NULL,
+    ftQueueTimeout     BIGINT NOT NULL,
+    ftWorkMoment       BIGINT NULL,
+    ftDoneMoment       BIGINT NULL,
+    ftQueueMoment      BIGINT NOT NULL,
+    cbReceiptMoment    BIGINT NOT NULL,
+    cbTerminalID       NVARCHAR(2147483647) NULL,
+    cbReceiptReference NVARCHAR(2147483647) NULL,
+    country            NVARCHAR(2147483647) NULL,
+    version            NVARCHAR(2147483647) NULL,
+    request            NVARCHAR(2147483647) NULL,
+    requestHash        NVARCHAR(2147483647) NULL,
+    response           NVARCHAR(2147483647) NULL,
+    responseHash       NVARCHAR(2147483647) NULL,
+    TimeStamp          BIGINT NOT NULL
+);
+
+INSERT INTO ftQueueItem_new (ftQueueItemId, ftQueueId, ftQueueRow, ftQueueTimeout, ftWorkMoment, ftDoneMoment, ftQueueMoment, cbReceiptMoment, cbTerminalID, cbReceiptReference, country, version, request, requestHash, response, responseHash, TimeStamp)
+   SELECT ftQueueItemId, ftQueueId, ftQueueRow, ftQueueTimeout, ftWorkMoment, ftDoneMoment, ftQueueMoment, cbReceiptMoment, cbTerminalID, cbReceiptReference, country, version, request, requestHash, response, responseHash, TimeStamp FROM ftQueueItem;
+DROP TABLE ftQueueItem;
+ALTER TABLE ftQueueItem_new RENAME TO ftQueueItem;
+
+
+CREATE TABLE ftReceiptJournal_new
+(
+    ftReceiptJournalId     NVARCHAR(36)          PRIMARY KEY NOT NULL,
+    ftReceiptMoment        BIGINT                NOT NULL,
+    ftReceiptNumber        BIGINT                NOT NULL,
+    ftReceiptTotal         FLOAT                 NOT NULL,
+    ftQueueId              NVARCHAR(36)          NOT NULL,
+    ftQueueItemId          NVARCHAR(36)          NOT NULL,
+    ftReceiptHash          NVARCHAR(2147483647)  NULL,
+    TimeStamp              BIGINT                NOT NULL                        
+);
+
+INSERT INTO ftReceiptJournal_new (ftReceiptJournalId, ftReceiptMoment, ftReceiptNumber, ftReceiptTotal, ftQueueId, ftQueueItemId, ftReceiptHash, TimeStamp)
+   SELECT ftReceiptJournalId, ftReceiptMoment, ftReceiptNumber, ftReceiptTotal, ftQueueId, ftQueueItemId, ftReceiptHash, TimeStamp FROM ftReceiptJournal;
+DROP TABLE ftReceiptJournal;
+ALTER TABLE ftReceiptJournal_new RENAME TO ftReceiptJournal;
+
+
+CREATE TABLE ftSignaturCreationUnitAT_new
+(
+    ftSignaturCreationUnitATId   NVARCHAR(36) PRIMARY KEY  NOT NULL,
+    Url                          NVARCHAR(2147483647)      NULL,
+    ZDA                          NVARCHAR(2147483647)      NULL,
+    SN                           NVARCHAR(2147483647)      NULL,
+    CertificateBase64            NVARCHAR(2147483647)      NULL,
+    Mode                         BIGINT                    NOT NULL,
+    TimeStamp                    BIGINT                    NOT NULL
+);
+
+INSERT INTO ftSignaturCreationUnitAT_new (ftSignaturCreationUnitATId, Url, ZDA, SN, CertificateBase64, Mode, TimeStamp)
+   SELECT ftSignaturCreationUnitATId, Url, ZDA, SN, CertificateBase64, Mode, TimeStamp FROM ftSignaturCreationUnitAT;
+DROP TABLE ftSignaturCreationUnitAT;
+ALTER TABLE ftSignaturCreationUnitAT_new RENAME TO ftSignaturCreationUnitAT;
+
+
+CREATE TABLE ftSignaturCreationUnitFR_new
+(
+    ftSignaturCreationUnitFRId   NVARCHAR(36) PRIMARY KEY  NOT NULL,
+    Siret                        NVARCHAR(2147483647)      NULL,
+    PrivateKey                   NVARCHAR(2147483647)      NULL, 
+    CertificateBase64            NVARCHAR(2147483647)      NULL, 
+    CertificateSerialNumber      NVARCHAR(2147483647)      NULL, 
+    TimeStamp                    BIGINT                    NOT NULL
+);
+
+INSERT INTO ftSignaturCreationUnitFR_new (ftSignaturCreationUnitFRId, Siret, PrivateKey, CertificateBase64, CertificateSerialNumber, TimeStamp)
+   SELECT ftSignaturCreationUnitFRId, Siret, PrivateKey, CertificateBase64, CertificateSerialNumber, TimeStamp FROM ftSignaturCreationUnitFR;
+DROP TABLE ftSignaturCreationUnitFR;
+ALTER TABLE ftSignaturCreationUnitFR_new RENAME TO ftSignaturCreationUnitFR;
+
+
+COMMIT;
