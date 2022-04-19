@@ -27,6 +27,10 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Models
         public string TaxPeriod { get; set; }
         [DataMember]
         public CorrectiveInv CorrectiveInv { get; set; }
+        [DataMember]
+        public Fee[] Fees { get; set; }
+        [DataMember]
+        public BadDebt BadDebt { get; set; }
 
     }
 }

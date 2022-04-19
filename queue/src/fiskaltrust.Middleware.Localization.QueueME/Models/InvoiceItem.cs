@@ -25,5 +25,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Models
 
         [DataMember]
         public string EX { get; set; }
+
+
     }
 }

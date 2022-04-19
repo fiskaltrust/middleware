@@ -15,7 +15,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME
             return new SignatureType();
         }
 
-
         public string ICCConcatenate(string issuerTIN, DateTime issuesDateTime, int invOrdNum, string businUnitCode, string enuCode, string softwareCode, decimal totPrice)
         {
             return ConvertToUTF8(string.Concat(issuerTIN,'|', issuesDateTime.ToString("u"), '|', invOrdNum.ToString(), '|', businUnitCode, '|', enuCode, '|', softwareCode, '|', totPrice));

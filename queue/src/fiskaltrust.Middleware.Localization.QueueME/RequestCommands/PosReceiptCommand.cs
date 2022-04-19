@@ -83,7 +83,9 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                         Country = CountryCodeSType.MNE
                     },
                     Buyer = GetBuyer(request),
-                    Items = GetInvoiceItem(request)
+                    Items = GetInvoiceItems(request),
+                    Fees = GetFees(invoice),
+                    BadDebtInv = GetBadDebtInv(invoice)
                 };
 
                 if (!string.IsNullOrEmpty(invoice.TypeOfSelfiss))
@@ -93,11 +95,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                         throw new ArgumentException($"Unknown TypeOfSelfiss {invoice.TypeOfSelfiss}!");
                     }
                 }
-
-
-
                 var receiptResponse = CreateReceiptResponse(request, queueItem);
-
                 return new RequestCommandResponse()
                 {
                     ReceiptResponse = receiptResponse
@@ -110,7 +108,39 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             }
         }
 
-        private InvoiceItemType[] GetInvoiceItem(ReceiptRequest request)
+        private BadDebtInvType GetBadDebtInv(Invoice invoice)
+        {
+            if(invoice.BadDebt is null)
+            {
+                return null;
+            }
+            return new BadDebtInvType()
+            {
+                IICRef = invoice.BadDebt.IICRef,
+                IssueDateTime = invoice.BadDebt.IssueDateTime
+            };
+        }
+
+        private FeeType[] GetFees(Invoice invoice)
+        {
+            if(invoice.Fees is null)
+            {
+                return null;
+            }
+            var result = new FeeType[invoice.Fees.Count()];
+            var i=0;
+            foreach(var fee in invoice.Fees)
+            {
+                result[i] = new FeeType()
+                {
+                    Amt = fee.Amt,
+                    Type = (FeeTypeSType) Enum.Parse(typeof(FeeTypeSType), fee.Type)
+                };
+            }
+            return result;
+        }
+
+        private InvoiceItemType[] GetInvoiceItems(ReceiptRequest request)
         {
             if (request.cbChargeItems.Count() > 1000)
             {
