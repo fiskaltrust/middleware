@@ -35,10 +35,13 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 {
                     throw new ArgumentNullException(nameof(invoice.OperatorCode));
                 }
+                var outlets = await _outletMasterDataRepository.GetAsync().ConfigureAwait(false);
+                var outlet = outlets.Where(x => x.VatId.Equals(queueME.IssuerTIN)).FirstOrDefault();
 
                 var invOrdNum = GetOrdNum(request.cbReceiptReference);
                 var totPRice = request.cbChargeItems.Sum(x => x.Amount);
                 var registerInvoiceRequest = new RegisterInvoiceRequest();
+
 
                 var invoiceType = new InvoiceType()
                 {
@@ -69,14 +72,19 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                         Type = (CorrectiveInvTypeSType) Enum.Parse(typeof(CorrectiveInvTypeSType), invoice.CorrectiveInv.Type),
                     } : null,
                     PayMethods = request.GetPaymentMethodTypes(),
-                    Currency = new CurrencyType() { Code = CurrencyCodeSType.EUR},
-                    Seller = new SellerType(),
-
-                    
+                    Currency = new CurrencyType() { Code = CurrencyCodeSType.EUR },
+                    Seller = new SellerType()
+                    {
+                        Name = outlet.OutletName,
+                        Address = outlet.Street,
+                        IDType = IDTypeSType.TIN,
+                        IDNum = queueME.IssuerTIN,
+                        Town = outlet.City,
+                        Country = CountryCodeSType.MNE
+                    },
+                    Buyer = GetBuyer(request),
+                    Items = GetInvoiceItem(request)
                 };
-
-
-
 
                 if (!string.IsNullOrEmpty(invoice.TypeOfSelfiss))
                 {
@@ -102,6 +110,22 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             }
         }
 
+        private InvoiceItemType[] GetInvoiceItem(ReceiptRequest request)
+        {
+            if (request.cbChargeItems.Count() > 1000)
+            {
+                throw new MaxInvoiceItemsExceededException();
+            }
+            var items = new InvoiceItemType[request.cbChargeItems.Count()];
+            var i = 0;
+            foreach(var chargeItem in request.cbChargeItems)
+            {
+                items[i] = chargeItem.GetInvoiceItemType();
+                i++;
+            }
+            return items;
+        }
+
         private int GetOrdNum(string invNum)
         {
             try
@@ -113,6 +137,36 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             {
                 throw new InvoiceNumIncorrectException(string.Format(errorInvNum, invNum), ex);
             }
+        }
+
+        private BuyerType GetBuyer(ReceiptRequest request)
+        {
+            if (string.IsNullOrEmpty(request.cbCustomer))
+            {
+                return null;
+            }
+            try
+            {
+                var buyer = JsonConvert.DeserializeObject<Buyer>(request.ftReceiptCaseData);
+                if (buyer == null)
+                {
+                    throw new Exception("Value in Field cbCustomer could not be parsed");
+                }
+                return new BuyerType()
+                {
+                    IDNum = buyer.IDNum,
+                    IDType = (IDTypeSType) Enum.Parse(typeof(IDTypeSType), buyer.IDType),
+                    Name = buyer.Name,
+                    Address = buyer.Address,
+                    Town = buyer.Town,
+                    Country = (CountryCodeSType) Enum.Parse(typeof(CountryCodeSType), buyer.Country),
+                };
+            }
+            catch (Exception ex)
+            {
+                throw new BuyerParseException("Error when parsing Buyer in cbCustomer field!", ex);
+            }
+
         }
     }
 }
