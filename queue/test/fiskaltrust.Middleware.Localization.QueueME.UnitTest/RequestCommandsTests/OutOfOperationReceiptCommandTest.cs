@@ -1,26 +1,17 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
-
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
-using fiskaltrust.Middleware.Contracts.Models.Transactions;
 using Newtonsoft.Json;
-using fiskaltrust.Middleware.Contracts.Models;
-using fiskaltrust.storage.serialization.DE.V0;
-using fiskaltrust.Middleware.Contracts.Data;
 using fiskaltrust.Middleware.Localization.QueueME.Models;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.ifPOS.v2.me;
-using System.Linq;
-using fiskaltrust.Middleware.Localization.QueueME.Exceptions;
-
 using Xunit;
 using FluentAssertions;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories;
 using fiskaltrust.Middleware.Localization.QueueME.RequestCommands;
 using Moq;
 using fiskaltrust.Middleware.Localization.QueueME.UnitTest.Helper;
+using fiskaltrust.Middleware.Storage.InMemory.Repositories.DE.MasterData;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTests
 {
@@ -38,11 +29,11 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
                 ftQueueId = Guid.NewGuid()
             };
             await InsertQueueSCU(tcr, inMemoryConfigurationRepository, testTcr, queue.ftQueueId);
-
+ 
             tcr.ValidTo = DateTime.Now.Date;
             var receiptRequest = CreateReceiptRequest(tcr);
-            var outOfOperationReceiptCommand = new OutOfOperationReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), new SignatureFactoryME(), inMemoryConfigurationRepository);
-            
+            var inMemoryMasterOutlet = new InMemoryOutletMasterDataRepository();
+            var outOfOperationReceiptCommand = new OutOfOperationReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), new SignatureFactoryME(), inMemoryConfigurationRepository, inMemoryMasterOutlet);
             var inMemoryMESSCD = new InMemoryMESSCD(testTcr);
             await outOfOperationReceiptCommand.ExecuteAsync(inMemoryMESSCD, queue, receiptRequest, new ftQueueItem()).ConfigureAwait(false);
 

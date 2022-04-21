@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v2.me;
 
@@ -9,21 +6,26 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.Helper
 {
     public class InMemoryMESSCD : IMESSCD
     {
-        private readonly string _tcrCode;
+        private readonly string _tcrCodeOrFIC;
 
-        public InMemoryMESSCD (string tcrCode)
+        public InMemoryMESSCD (string tcrCodeOrFIC)
         {
-            _tcrCode = tcrCode;
+            _tcrCodeOrFIC = tcrCodeOrFIC;
         }
-
-        public RegisterCashDepositResponse RegisterCashDeposit(RegisterCashDepositRequest registerCashDepositRequest) => throw new NotImplementedException();
-        public RegisterInvoiceResponse RegisterInvoice(RegisterInvoiceRequest registerInvoiceRequest) => throw new NotImplementedException();
-        public RegisterTCRResponse RegisterTCR(RegisterTCRRequest registerTCRRequest)
+        public Task<RegisterCashDepositResponse> RegisterCashDepositAsync(RegisterCashDepositRequest registerCashDepositRequest) => throw new NotImplementedException();
+        public Task<RegisterInvoiceResponse> RegisterInvoiceAsync(RegisterInvoiceRequest registerInvoiceRequest)
         {
-            return new RegisterTCRResponse()
+            return Task.FromResult(new RegisterInvoiceResponse()
             {
-                TCRCode = _tcrCode
-            };
+                FIC = _tcrCodeOrFIC
+            });
+        }
+        public Task<RegisterTCRResponse> RegisterTCRAsync(RegisterTCRRequest registerTCRRequest)
+        {
+            return Task.FromResult(new RegisterTCRResponse()
+            {
+                TCRCode = _tcrCodeOrFIC
+            });
         }
     }
 }

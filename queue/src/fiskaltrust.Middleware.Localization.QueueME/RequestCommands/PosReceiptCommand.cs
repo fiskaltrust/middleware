@@ -16,8 +16,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 {
     public class PosReceiptCommand : RequestCommand
     {
-
-        private readonly string errorInvNum = $"Incorrect Invoice Number (ReceiptReference) {0}! Expected: invoice ordinal number, year of issuing. Ex: pp123pp123/9934/2019/ab123ab123";
         public PosReceiptCommand(ILogger<RequestCommand> logger, SignatureFactoryME signatureFactory, IConfigurationRepository configurationRepository, IMasterDataRepository<OutletMasterData> outletMasterDataRepository) : base(logger, signatureFactory, configurationRepository, outletMasterDataRepository)
         { }
 
@@ -38,30 +36,34 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 var outlets = await _outletMasterDataRepository.GetAsync().ConfigureAwait(false);
                 var outlet = outlets.Where(x => x.VatId.Equals(queueME.IssuerTIN)).FirstOrDefault();
 
-                var invOrdNum = GetOrdNum(request.cbReceiptReference);
                 var totPRice = request.cbChargeItems.Sum(x => x.Amount);
                 var registerInvoiceRequest = new RegisterInvoiceRequest();
 
 
                 var invoiceType = new InvoiceType()
                 {
-                    InvType = InvoiceTSType.INVOICE,
-                    //isIsSimplifiedInv?
+                    TypeOfInv = request.GetInvoiceSType(),
+                    InvType = request.GetInvoiceTSType(),
+                    IsSimplifiedInv = invoice.IsSimplifiedInv,
                     IssueDateTime = request.cbReceiptMoment,
-                    InvNum = request.cbReceiptReference,
-                    InvOrdNum = invOrdNum,
+                    InvNum = string.Concat(queueME.BusinUnitCode,"/", request.cbReceiptReference, "/", request.cbReceiptMoment.Year, "/", queueME.TCRCode),
+                    InvOrdNum = int.Parse(request.cbReceiptReference),
                     TCRCode = queueME.TCRCode,
                     IsIssuerInVAT = invoice.IsIssuerInVAT,
-                    TaxFreeAmt = request.cbChargeItems.Where(x => x.VATRate.Equals(0)).Sum(x => x.Amount),
+                    TaxFreeAmt = request.cbChargeItems.Where(x => x.GetVatRate().Equals(0)).Sum(x => x.Amount*x.Quantity),
                     MarkUpAmt = invoice.MarkUpAmt,
                     GoodsExAmt = invoice.GoodsExAmt,
-                    TotPriceWoVAT = request.cbChargeItems.Sum(x => x.Amount - x.VATAmount).Value,
-                    TotVATAmt = request.cbChargeItems.Sum(x => x.VATAmount).Value,
+                    TotPriceWoVAT = request.cbChargeItems.Sum(x => x.Amount / (1 + (x.GetVatRate() / 100))),
+                    TotVATAmt = request.cbChargeItems.Sum(x => x.Amount * x.GetVatRate() / (100 + x.GetVatRate())),
                     TotPrice = request.cbChargeItems.Sum(x => x.Amount),
                     OperatorCode = invoice.OperatorCode,
                     BusinUnitCode = queueME.BusinUnitCode,
                     SoftCode = queueME.SoftCode,
-                    IIC = _signatureFactory.ICCConcatenate(queueME.IssuerTIN, request.cbReceiptMoment, invOrdNum, queueME.BusinUnitCode, queueME.TCRCode, queueME.SoftCode, totPRice),
+                    IICRefs = new IICRefType[] {new IICRefType()
+                    {
+                        IIC = "Not implemented yet",
+                    } },
+                    IIC = _signatureFactory.ICCConcatenate(queueME.IssuerTIN, request.cbReceiptMoment, request.cbReceiptReference, queueME.BusinUnitCode, queueME.TCRCode, queueME.SoftCode, totPRice),
                     IICSignature = "Not implemented yet",
                     IsReverseCharge = false,
                     PayDeadline = invoice.PayDeadline,
@@ -87,7 +89,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                     Fees = GetFees(invoice),
                     BadDebtInv = GetBadDebtInv(invoice)
                 };
-
+               
                 if (!string.IsNullOrEmpty(invoice.TypeOfSelfiss))
                 {
                     if (Enum.TryParse(invoice.TypeOfSelfiss, out SelfIssSType result))
@@ -95,6 +97,9 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                         throw new ArgumentException($"Unknown TypeOfSelfiss {invoice.TypeOfSelfiss}!");
                     }
                 }
+                registerInvoiceRequest.Invoice = invoiceType;
+                registerInvoiceRequest.Signature = _signatureFactory.CreateSignature();
+                var registerInvoiceResponse = await client.RegisterInvoiceAsync(registerInvoiceRequest).ConfigureAwait(false);
                 var receiptResponse = CreateReceiptResponse(request, queueItem);
                 return new RequestCommandResponse()
                 {
@@ -156,19 +161,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             return items;
         }
 
-        private int GetOrdNum(string invNum)
-        {
-            try
-            {
-                var temp = invNum.Split('/');
-                return int.Parse(temp[0]);
-            }
-            catch (Exception ex)
-            {
-                throw new InvoiceNumIncorrectException(string.Format(errorInvNum, invNum), ex);
-            }
-        }
-
         private BuyerType GetBuyer(ReceiptRequest request)
         {
             if (string.IsNullOrEmpty(request.cbCustomer))
@@ -177,7 +169,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             }
             try
             {
-                var buyer = JsonConvert.DeserializeObject<Buyer>(request.ftReceiptCaseData);
+                var buyer = JsonConvert.DeserializeObject<Buyer>(request.cbCustomer);
                 if (buyer == null)
                 {
                     throw new Exception("Value in Field cbCustomer could not be parsed");

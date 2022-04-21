@@ -8,11 +8,12 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Models
     [DataContract]
     public class Invoice
     {
-        
         [DataMember]
         public string OperatorCode { get; set; }
         [DataMember]
         public bool IsIssuerInVAT { get; set; } = true;
+        [DataMember]
+        public bool IsSimplifiedInv { get; set; } = true;
         [DataMember]
         public string TypeOfSelfiss { get; set; }
         [DataMember]
@@ -31,6 +32,5 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Models
         public Fee[] Fees { get; set; }
         [DataMember]
         public BadDebt BadDebt { get; set; }
-
     }
 }

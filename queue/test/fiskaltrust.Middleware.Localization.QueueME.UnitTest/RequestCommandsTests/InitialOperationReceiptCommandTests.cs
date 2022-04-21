@@ -1,10 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.ifPOS.v2.me;
 using fiskaltrust.Middleware.Localization.QueueME.Models;
 using fiskaltrust.Middleware.Localization.QueueME.RequestCommands;
 using fiskaltrust.Middleware.Localization.QueueME.UnitTest.Helper;
@@ -16,6 +12,7 @@ using Newtonsoft.Json;
 using Xunit;
 using FluentAssertions;
 using fiskaltrust.Middleware.Localization.QueueME.Exceptions;
+using fiskaltrust.Middleware.Storage.InMemory.Repositories.DE.MasterData;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTests
 {
@@ -29,7 +26,8 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             var receiptRequest = CreateReceiptRequest(tcr);
 
             var inMemoryConfigurationRepository = new InMemoryConfigurationRepository();
-            var initialOperationReceiptCommand = new InitialOperationReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), new SignatureFactoryME(), inMemoryConfigurationRepository);
+            var inMemoryMasterOutlet = new InMemoryOutletMasterDataRepository();
+            var initialOperationReceiptCommand = new InitialOperationReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), new SignatureFactoryME(), inMemoryConfigurationRepository, inMemoryMasterOutlet);
 
             var testTcr = "TestTCRCode";
             var inMemoryMESSCD = new InMemoryMESSCD(testTcr);
@@ -59,6 +57,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             var tcr = CreateTCR();
             var receiptRequest = CreateReceiptRequest(tcr);
             var inMemoryConfigurationRepository = new InMemoryConfigurationRepository();
+            var inMemoryMasterOutlet = new InMemoryOutletMasterDataRepository();
             var queueME = new ftQueueME()
             {
                 TCRIntID = tcr.TCRIntID,
@@ -67,7 +66,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
                 TCRCode = "TestTCRCode007",
             };
             await inMemoryConfigurationRepository.InsertOrUpdateQueueMEAsync(queueME);
-            var InitialOperationReceiptCommand = new InitialOperationReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), new SignatureFactoryME(), inMemoryConfigurationRepository);
+            var InitialOperationReceiptCommand = new InitialOperationReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), new SignatureFactoryME(), inMemoryConfigurationRepository, inMemoryMasterOutlet);
             var sutMethod = CallInitialOperationReceiptCommand(InitialOperationReceiptCommand,receiptRequest);
             await sutMethod.Should().ThrowAsync<ENUAlreadyRegisteredException>().ConfigureAwait(false);
         }

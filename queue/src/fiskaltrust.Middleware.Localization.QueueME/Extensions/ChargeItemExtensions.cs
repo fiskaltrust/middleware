@@ -27,7 +27,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Extensions
                 case 0x0003:
                     return 0;
                 default:
-                    throw new UnkownVATRateSetException("ChargeItemCase holds unkown Vat Rate!");
+                    throw new UnkownInvoiceTypeException("ChargeItemCase holds unkown Vat Rate!");
             }
         }
 
@@ -57,7 +57,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Extensions
                                   "yyy-MM-dd",
                                    CultureInfo.InvariantCulture);
                 invoiceItemType.VD = newDate;
-                //invoiceItemType.VN = chargeItem.Amount,
+                invoiceItemType.VN = chargeItem.Amount;
                 invoiceItemType.VSN = invoiceItem.VSN;
             }
             return invoiceItemType;

@@ -50,7 +50,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                     TCR = tcr,
                     Signature = _signatureFactory.CreateSignature()
                 };
-                var registerTCRResponse = client.RegisterTCR(registerTCRRequest);
+                var registerTCRResponse = await client.RegisterTCRAsync(registerTCRRequest).ConfigureAwait(false);
 
                 var signaturCreationUnitME = new ftSignaturCreationUnitME()
                 {
