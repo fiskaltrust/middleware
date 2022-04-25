@@ -20,10 +20,10 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Repositories.Configuration
         {
             EntityUpdated(entity);
             var sql = "INSERT OR REPLACE INTO ftQueueME " +
-                      "(ftQueueMEId, ftSignaturCreationUnitMEId, LastHash, CashBoxIdentification, SSCDFailCount, SSCDFailMoment, SSCDFailQueueItemId, UsedFailedCount, UsedFailedMomentMin, UsedFailedMomentMax, UsedFailedQueueItemId, TimeStamp, DailyClosingNumber, " +
-                      "IssuerTIN, BusinUnitCode, TCRIntID, SoftCode, MaintainerCode, ValidFrom, ValidTo, Type, TCRCode) " +
-                      "Values (@ftQueueDEId, @ftSignaturCreationUnitDEId, @LastHash, @CashBoxIdentification, @SSCDFailCount, @SSCDFailMoment, @SSCDFailQueueItemId, @UsedFailedCount, @UsedFailedMomentMin, @UsedFailedMomentMax, @UsedFailedQueueItemId, @TimeStamp, @DailyClosingNumber, " +
-                      "@IssuerTIN, @BusinUnitCode, @TCRIntID, @SoftCode, @MaintainerCode, @ValidFrom, @ValidTo, @Type, @TCRCode); ";
+                      "(ftQueueMEId, ftSignaturCreationUnitMEId, LastHash, SSCDFailCount, SSCDFailMoment, SSCDFailQueueItemId, UsedFailedCount, UsedFailedMomentMin, UsedFailedMomentMax, UsedFailedQueueItemId, TimeStamp, " +
+                      "IssuerTIN, BusinUnitCode, TCRIntID, SoftCode, MaintainerCode, ValidFrom, ValidTo, EnuType, TCRCode) " +
+                      "Values (@ftQueueMEId, @ftSignaturCreationUnitMEId, @LastHash, @SSCDFailCount, @SSCDFailMoment, @SSCDFailQueueItemId, @UsedFailedCount, @UsedFailedMomentMin, @UsedFailedMomentMax, @UsedFailedQueueItemId, @TimeStamp, " +
+                      "@IssuerTIN, @BusinUnitCode, @TCRIntID, @SoftCode, @MaintainerCode, @ValidFrom, @ValidTo, @EnuType, @TCRCode); ";
                        await DbConnection.ExecuteAsync(sql, entity).ConfigureAwait(false);
         }
 

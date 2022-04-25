@@ -5,6 +5,7 @@ using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v2.me;
 using fiskaltrust.Middleware.Contracts;
 using fiskaltrust.Middleware.Localization.QueueME.RequestCommands.Factories;
+using fiskaltrust.Middleware.Localization.QueueME.Services;
 using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueueME
@@ -16,10 +17,10 @@ namespace fiskaltrust.Middleware.Localization.QueueME
 
         public SignProcessorME(
             IRequestCommandFactory requestCommandFactory,
-            IMESSCD client)
+            IMESSCDProvider mESSCDProvider)
         {
             _requestCommandFactory = requestCommandFactory;
-            _client = client;
+            _client = mESSCDProvider.Instance;
         }
 
         public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ftQueue queue, ftQueueItem queueItem)

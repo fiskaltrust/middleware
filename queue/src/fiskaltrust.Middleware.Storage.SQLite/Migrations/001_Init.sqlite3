@@ -291,7 +291,7 @@ CREATE TABLE IF NOT EXISTS ftQueueFR
 
 CREATE TABLE IF NOT EXISTS ftQueueME
 (
-    ftQueueDEId                  NVARCHAR(36) PRIMARY KEY  NOT NULL,
+    ftQueueMEId                  NVARCHAR(36) PRIMARY KEY  NOT NULL,
     ftSignaturCreationUnitMEId   NVARCHAR(36)              NULL,
     LastHash                     NVARCHAR(2147483647)      NULL,
     SSCDFailCount                BIGINT                    NOT NULL,            
@@ -301,7 +301,16 @@ CREATE TABLE IF NOT EXISTS ftQueueME
     UsedFailedMomentMin          BIGINT                    NULL,                    
     UsedFailedMomentMax          BIGINT                    NULL,                    
     UsedFailedQueueItemId        NVARCHAR(36)              NULL, 
-    TimeStamp                    BIGINT                    NOT NULL
+    TimeStamp                    BIGINT                    NOT NULL,
+    IssuerTIN                    NVARCHAR(13)              NULL,
+    BusinUnitCode                NVARCHAR(10)              NULL,
+    TCRIntID                     NVARCHAR(50)              NULL,
+    SoftCode                     NVARCHAR(10)              NULL,
+    MaintainerCode               NVARCHAR(10)              NULL,
+    ValidFrom                    BIGINT                    NULL, 
+    ValidTo                      BIGINT                    NULL,
+    EnuType                      NVARCHAR(10)              NULL,
+    TCRCode                      NVARCHAR(10)              NULL
 );
 
 CREATE TABLE IF NOT EXISTS ftSignaturCreationUnitAT
@@ -332,9 +341,10 @@ CREATE TABLE IF NOT EXISTS ftSignaturCreationUnitFR
     TimeStamp                    BIGINT                    NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS ftSignaturCreationUnitDE
+CREATE TABLE IF NOT EXISTS ftSignaturCreationUnitME
 (
-    ftSignaturCreationUnitDEId   NVARCHAR(36) PRIMARY KEY  NOT NULL,
+    ftSignaturCreationUnitMEId   NVARCHAR(36) PRIMARY KEY  NOT NULL,
+    Url                          NVARCHAR(2147483647)      NULL,    
     TseInfoJson				     NVARCHAR(2147483647)      NULL,                     
     TimeStamp                    BIGINT                    NOT NULL
 );
