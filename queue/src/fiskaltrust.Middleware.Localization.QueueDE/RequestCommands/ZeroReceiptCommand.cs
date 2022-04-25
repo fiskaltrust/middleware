@@ -31,7 +31,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
         {
         }
 
-        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueDE queueDE, IDESSCD client, ReceiptRequest request, ftQueueItem queueItem)
+        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueDE queueDE, ReceiptRequest request, ftQueueItem queueItem)
         {
             ThrowIfNoImplicitFlow(request);
 
@@ -52,7 +52,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
                     if (request.IsRemoveOpenTransactionsWhichAreNotOnTse())
                     {
-                        var tseInfo = await client.GetTseInfoAsync().ConfigureAwait(false);
+                        var tseInfo = await _deSSCDProvider.Instance.GetTseInfoAsync().ConfigureAwait(false);
                         var failedFinishTransactionsNotExistingOnTse = tseInfo.CurrentStartedTransactionNumbers != null
                             ? failedFinishTransactions.Where(ft => ft != null && !tseInfo.CurrentStartedTransactionNumbers.Contains((ulong) ((FailedFinishTransaction) ft).TransactionNumber))
                             : failedFinishTransactions;
@@ -156,19 +156,19 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
                 if (request.IsTseInfoRequest())
                 {
-                    await UpdateTseInfoAsync(client, queueDE.ftSignaturCreationUnitDEId.GetValueOrDefault()).ConfigureAwait(false);
-                    receiptResponse.ftStateData = await StateDataFactory.AppendTseInfoAsync(client, receiptResponse.ftStateData).ConfigureAwait(false);
+                    await UpdateTseInfoAsync(queueDE.ftSignaturCreationUnitDEId.GetValueOrDefault()).ConfigureAwait(false);
+                    receiptResponse.ftStateData = await StateDataFactory.AppendTseInfoAsync(_deSSCDProvider.Instance, receiptResponse.ftStateData).ConfigureAwait(false);
                     receiptResponse.ftStateData = StateDataFactory.ApendOpenTransactionState(await _openTransactionRepo.GetAsync().ConfigureAwait(false), receiptResponse.ftStateData);
                 }
 
                 if (request.IsTseSelftestRequest())
                 {
-                    await client.ExecuteSelfTestAsync().ConfigureAwait(false);
+                    await _deSSCDProvider.Instance.ExecuteSelfTestAsync().ConfigureAwait(false);
                 }
 
                 if (request.IsTseTarDownloadRequest())
                 {
-                    await PerformTarFileExportAsync(queueItem, queue, queueDE, client, erase: true).ConfigureAwait(false);
+                    await PerformTarFileExportAsync(queueItem, queue, queueDE, erase: true).ConfigureAwait(false);
                 }
 
                 if (request.IsTraining())

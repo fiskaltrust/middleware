@@ -35,7 +35,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             _actionJournalRepository = actionJournalRepository;
         }
 
-        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueDE queueDE, IDESSCD client, ReceiptRequest request, ftQueueItem queueItem)
+        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueDE queueDE, ReceiptRequest request, ftQueueItem queueItem)
         {
             ThrowIfNoImplicitFlow(request);
             ThrowIfTraining(request);
@@ -54,7 +54,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 var reachable = false;
                 try
                 {
-                    await client.GetTseInfoAsync().ConfigureAwait(false);
+                    await _deSSCDProvider.Instance.GetTseInfoAsync().ConfigureAwait(false);
                     reachable = true;
                 }
                 catch { }
@@ -91,7 +91,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
             try
             {
-                (var returnedTransactionNumber, var returnedSignatures, var clientId, var signatureAlgorithm, var publicKeyBase64, var retuenedSerialnumberOctet) = await ProcessOutOfOperationReceiptAsync(client, request.cbReceiptReference, processType, payload, queueItem, queueDE, request.IsModifyClientIdOnlyRequest()).ConfigureAwait(false);
+                (var returnedTransactionNumber, var returnedSignatures, var clientId, var signatureAlgorithm, var publicKeyBase64, var retuenedSerialnumberOctet) = await ProcessOutOfOperationReceiptAsync(request.cbReceiptReference, processType, payload, queueItem, queueDE, request.IsModifyClientIdOnlyRequest()).ConfigureAwait(false);
                 signatures = returnedSignatures;
                 transactionNumber = returnedTransactionNumber;
                 serialnumberOctet = retuenedSerialnumberOctet;
@@ -121,7 +121,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                     }
                 );
 
-                receiptResponse.ftStateData = await StateDataFactory.AppendTseInfoAsync(client, receiptResponse.ftStateData).ConfigureAwait(false);
+                receiptResponse.ftStateData = await StateDataFactory.AppendTseInfoAsync(_deSSCDProvider.Instance, receiptResponse.ftStateData).ConfigureAwait(false);
 
             }
             catch (Exception ex)
@@ -184,7 +184,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
             if (!request.IsTseTarDownloadBypass())
             {
-                await PerformTarFileExportAsync(queueItem, queue, queueDE, client, erase: true).ConfigureAwait(false);
+                await PerformTarFileExportAsync(queueItem, queue, queueDE, erase: true).ConfigureAwait(false);
             }
 
             queueDE.ftSignaturCreationUnitDEId = null;

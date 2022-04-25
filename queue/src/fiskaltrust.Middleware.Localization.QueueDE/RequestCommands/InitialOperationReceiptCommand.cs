@@ -24,7 +24,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
         public InitialOperationReceiptCommand(ILogger<RequestCommand> logger, SignatureFactoryDE signatureFactory, IDESSCDProvider deSSCDProvider, ITransactionPayloadFactory transactionPayloadFactory, IReadOnlyQueueItemRepository queueItemRepository, IConfigurationRepository configurationRepository, IJournalDERepository journalDERepository, MiddlewareConfiguration middlewareConfiguration, IPersistentTransactionRepository<FailedStartTransaction> failedStartTransactionRepo, IPersistentTransactionRepository<FailedFinishTransaction> failedFinishTransactionRepo, IPersistentTransactionRepository<OpenTransaction> openTransactionRepo, ITarFileCleanupService tarFileCleanupService, QueueDEConfiguration queueDEConfiguration) : base(logger, signatureFactory, deSSCDProvider, transactionPayloadFactory, queueItemRepository, configurationRepository, journalDERepository, middlewareConfiguration, failedStartTransactionRepo, failedFinishTransactionRepo, openTransactionRepo, tarFileCleanupService, queueDEConfiguration)
         { }
 
-        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueDE queueDE, IDESSCD client, ReceiptRequest request, ftQueueItem queueItem)
+        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueDE queueDE, ReceiptRequest request, ftQueueItem queueItem)
         {
             ThrowIfNoImplicitFlow(request);
             ThrowIfTraining(request);
@@ -39,7 +39,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 if (queue.IsNew())
                 {
 
-                    (var transactionNumber, var signatures, var clientId, var signatureAlgorithm, var publicKeyBase64, var serialnumberOctet) = await ProcessInitialOperationReceiptAsync(client, request.cbReceiptReference, processType, payload, queueItem, queueDE, request.IsModifyClientIdOnlyRequest()).ConfigureAwait(false);
+                    (var transactionNumber, var signatures, var clientId, var signatureAlgorithm, var publicKeyBase64, var serialnumberOctet) = await ProcessInitialOperationReceiptAsync(request.cbReceiptReference, processType, payload, queueItem, queueDE, request.IsModifyClientIdOnlyRequest()).ConfigureAwait(false);
 
                     var typeNumber = 0x4445000000000003;
 
@@ -84,7 +84,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
                     receiptResponse.ftReceiptIdentification = request.GetReceiptIdentification(queue.ftReceiptNumerator, transactionNumber);
                     receiptResponse.ftSignatures = signatures.ToArray();
-                    receiptResponse.ftStateData = await StateDataFactory.AppendTseInfoAsync(client, receiptResponse.ftStateData).ConfigureAwait(false);
+                    receiptResponse.ftStateData = await StateDataFactory.AppendTseInfoAsync(_deSSCDProvider.Instance, receiptResponse.ftStateData).ConfigureAwait(false);
                     queue.StartMoment = DateTime.UtcNow;
                     return new RequestCommandResponse()
                     {

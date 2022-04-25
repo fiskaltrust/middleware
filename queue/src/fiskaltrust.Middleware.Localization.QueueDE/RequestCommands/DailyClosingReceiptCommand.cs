@@ -26,7 +26,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
         {
         }
 
-        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueDE queueDE, IDESSCD client, ReceiptRequest request, ftQueueItem queueItem)
+        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueDE queueDE, ReceiptRequest request, ftQueueItem queueItem)
         {
             ThrowIfNoImplicitFlow(request);
             ThrowIfTraining(request);
@@ -42,7 +42,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
                 if (request.IsRemoveOpenTransactionsWhichAreNotOnTse())
                 {
-                    var tseInfo = await client.GetTseInfoAsync().ConfigureAwait(false);
+                    var tseInfo = await _deSSCDProvider.Instance.GetTseInfoAsync().ConfigureAwait(false);
                     var openTransactionsNotExistingOnTse = tseInfo.CurrentStartedTransactionNumbers != null
                         ? openTransactions.Where(ot => ot != null && !tseInfo.CurrentStartedTransactionNumbers.Contains((ulong) ((OpenTransaction) ot).TransactionNumber))
                         : openTransactions;
@@ -65,7 +65,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                                 DataJson = JsonConvert.SerializeObject(openTransaction)
                             }
                         );
-                    } 
+                    }
 
                     openTransactions = (await _openTransactionRepo.GetAsync().ConfigureAwait(false)).ToList();
                 }
@@ -94,10 +94,10 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
                 if (!request.IsTseTarDownloadBypass())
                 {
-                    await PerformTarFileExportAsync(queueItem, queue, queueDE, client, erase: true).ConfigureAwait(false);
+                    await PerformTarFileExportAsync(queueItem, queue, queueDE, erase: true).ConfigureAwait(false);
                 }
 
-                await UpdateTseInfoAsync(client, queueDE.ftSignaturCreationUnitDEId.GetValueOrDefault()).ConfigureAwait(false);
+                await UpdateTseInfoAsync(queueDE.ftSignaturCreationUnitDEId.GetValueOrDefault()).ConfigureAwait(false);
 
                 var masterDataChanged = false;
                 if (request.IsMasterDataUpdate() && await _masterDataService.HasDataChangedAsync().ConfigureAwait(false))
