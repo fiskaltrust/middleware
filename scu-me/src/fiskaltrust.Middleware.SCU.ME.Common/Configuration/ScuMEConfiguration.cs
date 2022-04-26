@@ -1,39 +1,35 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace fiskaltrust.Middleware.SCU.ME.InMemory
+﻿namespace fiskaltrust.Middleware.SCU.ME.Common.Configuration
 {
-    internal class InMemorySCUConfiguration
+    public class ScuMEConfiguration
     {
         /// <summary>
         /// Tax identification number (TIN) of the PosOperator.
         /// </summary>
-        public string TIN { get; set; }
+        public string TIN { get; set; } = null!;
 
         /// <summary>
         /// VAT number of the PosOperator.
         /// </summary>
-        public string VatNumber { get; set; }
+        public string VatNumber { get; set; } = null!;
 
         /// <summary>
         /// Name of the PosOperator.
         /// </summary>
-        public string PosOperatorName { get; set; }
+        public string PosOperatorName { get; set; } = null!;
 
         /// <summary>
         /// Address of the PosOperator.
         /// </summary>
-        public string PosOperatorAddress { get; set; }
+        public string PosOperatorAddress { get; set; } = null!;
 
         /// <summary>
         /// Town of the PosOperator.
         /// </summary>
-        public string PosOperatorTown { get; set; }
+        public string PosOperatorTown { get; set; } = null!;
 
         /// <summary>
         /// Country of the PosOperator.
         /// </summary>
-        public string PosOperatorCountry { get; set; }
+        public string PosOperatorCountry { get; set; } = null!;
     }
 }
