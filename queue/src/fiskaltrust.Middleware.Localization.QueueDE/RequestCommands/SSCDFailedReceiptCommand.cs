@@ -24,6 +24,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                   middlewareConfiguration, failedStartTransactionRepo, failedFinishTransactionRepo, openTransactionRepo, tarFileCleanupService, queueDEConfiguration)
         { }
 
-        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueDE queueDE, IDESSCD client, ReceiptRequest request, ftQueueItem queueItem) => await ProcessSSCDFailedReceiptRequest(request, queueItem, queue, queueDE);
+        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueDE queueDE, ReceiptRequest request, ftQueueItem queueItem) => await ProcessSSCDFailedReceiptRequest(request, queueItem, queue, queueDE);
     }
 }

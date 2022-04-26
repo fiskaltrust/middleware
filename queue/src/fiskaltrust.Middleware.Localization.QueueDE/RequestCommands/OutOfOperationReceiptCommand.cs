@@ -29,7 +29,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                   middlewareConfiguration, failedStartTransactionRepo, failedFinishTransactionRepo, openTransactionRepo, tarFileCleanupService, queueDEConfiguration)
         { }
 
-        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueDE queueDE, IDESSCD client, ReceiptRequest request, ftQueueItem queueItem)
+        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueDE queueDE, ReceiptRequest request, ftQueueItem queueItem)
         {
             ThrowIfNoImplicitFlow(request);
             ThrowIfTraining(request);
@@ -48,7 +48,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
             try
             {
-                (var returnedTransactionNumber, var returnedSignatures, var clientId, var signatureAlgorithm, var publicKeyBase64, var returnedSerialnumberOctet) = await ProcessOutOfOperationReceiptAsync(client, request.cbReceiptReference, processType, payload, queueItem, queueDE, request.IsModifyClientIdOnlyRequest()).ConfigureAwait(false);
+                (var returnedTransactionNumber, var returnedSignatures, var clientId, var signatureAlgorithm, var publicKeyBase64, var returnedSerialnumberOctet) = await ProcessOutOfOperationReceiptAsync(request.cbReceiptReference, processType, payload, queueItem, queueDE, request.IsModifyClientIdOnlyRequest()).ConfigureAwait(false);
                 signatures = returnedSignatures;
                 transactionNumber = returnedTransactionNumber;
                 serialnumberOctet = returnedSerialnumberOctet;
@@ -78,7 +78,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                     }
                 );
 
-                receiptResponse.ftStateData = await StateDataFactory.AppendTseInfoAsync(client, receiptResponse.ftStateData).ConfigureAwait(false);
+                receiptResponse.ftStateData = await StateDataFactory.AppendTseInfoAsync(_deSSCDProvider.Instance, receiptResponse.ftStateData).ConfigureAwait(false);
             }
             catch (Exception ex)
             {

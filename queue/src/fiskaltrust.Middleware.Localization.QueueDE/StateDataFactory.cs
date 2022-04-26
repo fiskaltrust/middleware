@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1.de;
-using fiskaltrust.Middleware.Contracts.Data;
 using fiskaltrust.Middleware.Contracts.Models.Transactions;
 using fiskaltrust.Middleware.Localization.QueueDE.MasterData;
 using Newtonsoft.Json;

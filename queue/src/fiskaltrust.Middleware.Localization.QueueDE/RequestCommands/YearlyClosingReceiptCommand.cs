@@ -28,7 +28,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                   journalDERepository, middlewareConfiguration, failedStartTransactionRepo, failedFinishTransactionRepo, openTransactionRepo, tarFileCleanupService, queueDEConfiguration)
         { }
 
-        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueDE queueDE, IDESSCD client, ReceiptRequest request, ftQueueItem queueItem)
+        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueDE queueDE, ReceiptRequest request, ftQueueItem queueItem)
         {
             ThrowIfNoImplicitFlow(request);
             ThrowIfTraining(request);
@@ -45,7 +45,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
                 if (!request.IsTseTarDownloadBypass())
                 {
-                    await PerformTarFileExportAsync(queueItem, queue, queueDE, client, erase: true).ConfigureAwait(false);
+                    await PerformTarFileExportAsync(queueItem, queue, queueDE, erase: true).ConfigureAwait(false);
                 }
 
                 var masterDataChanged = false;
