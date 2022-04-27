@@ -1,0 +1,52 @@
+steps:    
+- task: yavt@1
+  inputs:
+    mode: 'Multi'
+    semverVersion: 'v1'
+
+- powershell: |   
+    $nugetFeed = if ($Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/release/") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/main") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/tags/")) { "release" } else { "dev" }
+    Write-Host "##vso[task.setvariable variable=NuGetFeed;]$nugetFeed"
+  displayName: Set NuGet feed
+
+- task: Cache@2
+  inputs:
+    key: 'nuget | "$(Agent.OS)" | scu-me/**/*.csproj'
+    restoreKeys: |
+      nuget | "$(Agent.OS)"
+      nuget
+    path: $(UserProfile)/.nuget/packages
+  displayName: Cache NuGet packages
+
+- task: DotNetCoreCLI@2
+  inputs:
+    command: 'restore'
+    projects: '$(WorkingDirectory)/$(Solution)'
+    vstsFeed: $(NuGetFeed)
+    arguments: '--configuration $(BuildConfiguration)'
+  displayName: 'Restore'
+
+- task: DotNetCoreCLI@2
+  displayName: Build
+  inputs:
+    projects: '$(WorkingDirectory)/$(Solution)'
+    arguments: '--configuration $(BuildConfiguration)'
+
+- task: codesigning@2
+  displayName: 'Code Signing'
+  inputs:
+    secureFileId: 'codesigning.pfx'
+    signCertPassword: '$(Code_Signing_Password)'
+    filePaths: |
+      $(WorkingDirectory)/src/**/*fiskaltrust*.dll
+      $(WorkingDirectory)/src/**/*fiskaltrust*.exe
+
+- script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
+  displayName: 'dotnet pack fiskaltrust.Middleware.SCU.ME.InMemory'
+  workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.ME.InMemory'
+
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish Artifact: drop'
+  inputs:
+    PathtoPublish: '$(build.artifactstagingdirectory)'
+    artifactName: packages-v1
