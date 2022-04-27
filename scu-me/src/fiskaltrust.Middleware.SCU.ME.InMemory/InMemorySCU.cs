@@ -27,7 +27,7 @@ public class InMemorySCU : IMESSCD
     public Task<RegisterCashDepositResponse> RegisterCashDepositAsync(RegisterCashDepositRequest registerCashDepositRequest) =>
         Task.FromResult(new RegisterCashDepositResponse
         {
-            FCDC = _faker.Random.Guid().ToString()
+            FCDC = Guid.NewGuid().ToString()
         });
     public Task<RegisterCashWithdrawalResponse> RegisterCashWithdrawalAsync(RegisterCashWithdrawalRequest registerCashDepositRequest) =>
         Task.FromResult(new RegisterCashWithdrawalResponse());
@@ -51,7 +51,7 @@ public class InMemorySCU : IMESSCD
 
         return Task.FromResult(new RegisterInvoiceResponse
         {
-            FIC = _faker.Random.Guid().ToString(),
+            FIC = Guid.NewGuid().ToString(),
             IIC = BitConverter.ToString(iic).Replace("-", string.Empty)
         });
     }
