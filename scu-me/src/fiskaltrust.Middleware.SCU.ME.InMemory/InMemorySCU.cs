@@ -45,9 +45,9 @@ public class InMemorySCU : IMESSCD
             registerInvoiceRequest.InvoiceDetails.GrossAmount
         }.Select(o => o.ToString()));
 
-        var iicSignature = _configuration.Certificate.GetRSAPrivateKey().SignData(Encoding.ASCII.GetBytes(iicInput), HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        var iicSignature = _configuration.Certificate.GetRSAPrivateKey()!.SignData(Encoding.ASCII.GetBytes(iicInput), HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
 
-        var iic = ((HashAlgorithm) CryptoConfig.CreateFromName("MD5")).ComputeHash(iicSignature);
+        var iic = ((HashAlgorithm) CryptoConfig.CreateFromName("MD5")!).ComputeHash(iicSignature);
 
         return Task.FromResult(new RegisterInvoiceResponse
         {
