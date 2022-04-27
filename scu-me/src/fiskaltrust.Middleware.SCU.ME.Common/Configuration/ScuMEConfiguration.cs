@@ -1,4 +1,6 @@
-﻿namespace fiskaltrust.Middleware.SCU.ME.Common.Configuration
+﻿using System.Security.Cryptography.X509Certificates;
+
+namespace fiskaltrust.Middleware.SCU.ME.Common.Configuration
 {
     public class ScuMEConfiguration
     {
@@ -31,5 +33,10 @@
         /// Country of the PosOperator.
         /// </summary>
         public string PosOperatorCountry { get; set; } = null!;
+
+        /// <summary>
+        /// Certificate used for signing.
+        /// </summary>
+        public X509Certificate2 Certificate { get; set; } = null!;
     }
 }
