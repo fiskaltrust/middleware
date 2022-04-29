@@ -31,6 +31,8 @@ namespace fiskaltrust.Middleware.Contracts.Repositories
     public interface IMiddlewareActionJournalRepository : IActionJournalRepository, IMiddlewareRepository<ftActionJournal>
     {
         Task<ftActionJournal> GetWithLastTimestampAsync();
+        
+        IAsyncEnumerable<ftActionJournal> GetByPriorityAfterTimestampAsync(int lowerThanPriority, long fromTimestampInclusive);
     }
 
     public interface IMiddlewareJournalFRRepository : IJournalFRRepository, IMiddlewareRepository<ftJournalFR>

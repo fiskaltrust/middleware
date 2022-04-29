@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
+using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueFR.Extensions;
 using fiskaltrust.Middleware.Localization.QueueFR.Models;
 using fiskaltrust.storage.V0;
@@ -13,30 +15,33 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
     {
         private readonly ActionJournalFactory _actionJournalFactory;
         private readonly IReadOnlyQueueItemRepository _queueItemRepository;
+        private readonly IMiddlewareActionJournalRepository _actionJournalRepository;
 
-        public ZeroReceiptCommand(SignatureFactoryFR signatureFactoryFR, ActionJournalFactory actionJournalFactory, IReadOnlyQueueItemRepository queueItemRepository) : base(signatureFactoryFR)
+        public ZeroReceiptCommand(SignatureFactoryFR signatureFactoryFR, ActionJournalFactory actionJournalFactory, IReadOnlyQueueItemRepository queueItemRepository,
+            IMiddlewareActionJournalRepository actionJournalRepository) : base(signatureFactoryFR)
         {
             _actionJournalFactory = actionJournalFactory;
             _queueItemRepository = queueItemRepository;
+            _actionJournalRepository = actionJournalRepository;
         }
 
-        public override Task<(ReceiptResponse receiptResponse, ftJournalFR journalFR, List<ftActionJournal> actionJournals)> ExecuteAsync(ftQueue queue, ftQueueFR queueFR, ftSignaturCreationUnitFR signaturCreationUnitFR, ReceiptRequest request, ftQueueItem queueItem)
+        public override async Task<(ReceiptResponse receiptResponse, ftJournalFR journalFR, List<ftActionJournal> actionJournals)> ExecuteAsync(ftQueue queue, ftQueueFR queueFR, ftSignaturCreationUnitFR signaturCreationUnitFR, ReceiptRequest request, ftQueueItem queueItem)
         {
             if (request.HasTrainingReceiptFlag())
             {
                 var totals = request.GetTotals();
 
                 var (response, journalFR) = CreateTrainingReceiptResponse(queue, queueFR, request, queueItem, totals, signaturCreationUnitFR);
-                response.ftSignatures = response.ftSignatures.Extend(GetPendingMessageSignatures(queueFR, request, response));
-                
+                response.ftSignatures = response.ftSignatures.Extend(await GetPendingMessageSignatures(queueFR, request));
+
                 var actionJournals = ResetFailedMode(request, response, queue, queueFR, queueItem);
 
-                return Task.FromResult<(ReceiptResponse, ftJournalFR, List<ftActionJournal>)>((response, journalFR, actionJournals));
+                return (response, journalFR, actionJournals);
             }
             else
             {
                 var response = CreateDefaultReceiptResponse(queue, queueFR, request, queueItem);
-                response.ftSignatures = response.ftSignatures.Extend(GetPendingMessageSignatures(queueFR, request, response));
+                response.ftSignatures = response.ftSignatures.Extend(await GetPendingMessageSignatures(queueFR, request));
                 response.ftReceiptIdentification += $"G{++queueFR.BNumerator}";
 
                 var payload = PayloadFactory.GetGrandTotalPayload(request, response, queueFR, signaturCreationUnitFR, queueFR.GLastHash);
@@ -50,7 +55,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
                 response.ftSignatures = response.ftSignatures.Extend(signatureItem);
 
                 actionJournals.Add(_actionJournalFactory.Create(queue, queueItem, "Zero receipt", payload));
-                return Task.FromResult<(ReceiptResponse, ftJournalFR, List<ftActionJournal>)>((response, journalFR, actionJournals));
+                return (response, journalFR, actionJournals);
             }
         }
 
@@ -116,57 +121,40 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
             return actionJournals;
         }
 
-#pragma warning disable
-        private List<SignaturItem> GetPendingMessageSignatures(ftQueueFR queueFR, ReceiptRequest request, ReceiptResponse response)
+        private async Task<List<SignaturItem>> GetPendingMessageSignatures(ftQueueFR queueFR, ReceiptRequest request)
         {
-            return new();
-            // TODO
-            //if (queueFR.MessageCount > 0)
-            //{
-            //    var localSignatures = new List<SignaturItem>(response.ftSignatures);
+            var localSignatures = new List<SignaturItem>();
+            if (queueFR.MessageCount > 0)
+            {
 
-            //    //return pending messages, add signatures to receiptresponse
-            //    DateTime NowMoment = new DateTime(parentStorage.ActionJournalTimeStamp(queueFR.ftQueueFRId));
+                long messageMoment = 0;
+                if (queueFR.MessageMoment.HasValue)
+                {
+                    messageMoment = queueFR.MessageMoment.Value.Ticks;
+                }
 
-            //    //find messages since messagemoment timestamp
-            //    //long MessageMomentTimeStamp = DateTime.UtcNow.Subtract(new TimeSpan(72, 0, 0)).Ticks;
-            //    long MessageMomentTimeStamp = 0;
-            //    if (queueFR.MessageMoment.HasValue)
-            //    {
-            //        //should be always set when messagecount is set. when not all messages are shown?!
-            //        MessageMomentTimeStamp = queueFR.MessageMoment.Value.Ticks;
-            //    }
+                await foreach (var item in _actionJournalRepository.GetByPriorityAfterTimestampAsync(lowerThanPriority: 0, messageMoment))
+                {
+                    var signaturItem = new SignaturItem
+                    {
+                        Caption = item.Message,
+                        Data = item.DataJson,
+                        ftSignatureFormat = (long) SignaturItem.Formats.AZTEC,
+                        ftSignatureType = 0x4652000000000000
+                    };
 
-            //    foreach (var item in parentStorage.ActionJournalTableByTimeStamp(MessageMomentTimeStamp).Where(aj => aj.Priority < 0).ToArray().Concat(LocalActionJournals.Where(j => j.Priority < 0).ToArray()))
-            //    {
-            //        var signaturItem = new SignaturItem()
-            //        {
-            //            Caption = item.Message,
-            //            Data = item.DataJson
-            //        };
+                    localSignatures.Add(signaturItem);
+                }
 
-            //        signaturItem.ftSignatureFormat = (long) SignaturItem.Formats.AZTEC;
-            //        signaturItem.ftSignatureType = (long) 0x4652000000000000;
+                //if it is not a training receit, the counter will be updated
+                if ((request.ftReceiptCase & 0x0000000000020000) == 0)
+                {
+                    queueFR.MessageCount = 0;
+                    queueFR.MessageMoment = null;
+                }
+            }
 
-            //        localSignatures.Add(signaturItem);
-            //    }
-
-            //    //if it is not a training receit, the counter will be updated
-            //    if ((request.ftReceiptCase & 0x0000000000020000) == 0)
-            //    {
-            //        queueFR.MessageCount = parentStorage.ActionJournalTableByTimeStamp(NowMoment.Ticks).Count(aj => aj.Priority < 0) + LocalActionJournals.Count(j => j.TimeStamp >= NowMoment.Ticks && j.Priority < 0);
-            //        if (queueFR.MessageCount == 0)
-            //        {
-            //            queueFR.MessageMoment = null;
-            //        }
-            //        else
-            //        {
-            //            queueFR.MessageMoment = NowMoment;
-            //        }
-            //    }
-
-            //    response.ftSignatures = localSignatures.ToArray();
-            //}
+            return localSignatures;
         }
     }
 }

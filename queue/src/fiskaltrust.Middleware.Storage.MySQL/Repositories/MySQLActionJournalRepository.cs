@@ -5,6 +5,7 @@ using Dapper;
 using MySqlConnector;
 using fiskaltrust.storage.V0;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using System.Linq;
 
 namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
 {
@@ -57,6 +58,14 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
             {
                 await connection.OpenAsync().ConfigureAwait(false);
                 return await connection.QueryFirstOrDefaultAsync<ftActionJournal>("SELECT * FROM ftActionJournal ORDER BY TimeStamp DESC LIMIT 1").ConfigureAwait(false);
+            }
+        }
+
+        public IAsyncEnumerable<ftActionJournal> GetByPriorityAfterTimestampAsync(int lowerThanPriority, long fromTimestampInclusive)
+        {
+            using (var connection = new MySqlConnection(ConnectionString))
+            {
+                return connection.Query<ftActionJournal>($"SELECT * FROM ftActionJournal WHERE TimeStamp >= @from AND Priority <= @prio ORDER BY TimeStamp", new { from = fromTimestampInclusive, prio = lowerThanPriority }, buffered: false).ToAsyncEnumerable();
             }
         }
     }

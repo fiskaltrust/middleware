@@ -32,5 +32,16 @@ namespace fiskaltrust.Middleware.Storage.Azure.Repositories
             }
             return result.ToAsyncEnumerable();
         }
+
+        public IAsyncEnumerable<ftActionJournal> GetByPriorityAfterTimestampAsync(int lowerThanPriority, long fromTimestampInclusive)
+        {
+            var tableQuery = new TableQuery<AzureFtActionJournal>();
+            tableQuery = tableQuery.Where(TableQuery.CombineFilters(
+              TableQuery.GenerateFilterConditionForLong("TimeStamp", QueryComparisons.GreaterThanOrEqual, fromTimestampInclusive),
+              TableOperators.And,
+              TableQuery.GenerateFilterConditionForLong("Priority", QueryComparisons.LessThan, lowerThanPriority)));
+            
+            return GetAllByTableFilterAsync(tableQuery);
+        }
     }
 }

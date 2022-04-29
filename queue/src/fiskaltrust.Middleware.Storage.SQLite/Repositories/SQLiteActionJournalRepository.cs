@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
 using fiskaltrust.Middleware.Contracts.Repositories;
@@ -32,6 +33,10 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Repositories
             await DbConnection.ExecuteAsync(sql, entity).ConfigureAwait(false);
         }
 
-        public async Task<ftActionJournal> GetWithLastTimestampAsync() => await DbConnection.QueryFirstOrDefaultAsync<ftActionJournal>("Select * from ftActionJournal ORDER BY TimeStamp DESC LIMIT 1").ConfigureAwait(false);
+        public async Task<ftActionJournal> GetWithLastTimestampAsync() 
+            => await DbConnection.QueryFirstOrDefaultAsync<ftActionJournal>("Select * from ftActionJournal ORDER BY TimeStamp DESC LIMIT 1").ConfigureAwait(false);
+
+        public IAsyncEnumerable<ftActionJournal> GetByPriorityAfterTimestampAsync(int lowerThanPriority, long fromTimestampInclusive) 
+            => DbConnection.Query<ftActionJournal>($"SELECT * FROM ftActionJournal WHERE TimeStamp >= @from AND Priority <= @prio ORDER BY TimeStamp", new { from = fromTimestampInclusive, prio = lowerThanPriority }, buffered: false).ToAsyncEnumerable();
     }
 }
