@@ -1,13 +1,13 @@
 ﻿using System;
-using System.Threading.Tasks;
-using fiskaltrust.ifPOS.v2.me;
-using FluentAssertions;
-using Xunit;
-using fiskaltrust.Middleware.SCU.ME.Common.Configuration;
-using Bogus;
-using System.Security.Cryptography.X509Certificates;
 using System.Net;
 using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
+using System.Threading.Tasks;
+using Bogus;
+using fiskaltrust.ifPOS.v2.me;
+using fiskaltrust.Middleware.SCU.ME.Common.Configuration;
+using FluentAssertions;
+using Xunit;
 
 namespace fiskaltrust.Middleware.SCU.ME.InMemory.UnitTest
 {
@@ -71,7 +71,7 @@ namespace fiskaltrust.Middleware.SCU.ME.InMemory.UnitTest
             Guid.Parse(response.FCDC);
         }
 
-                [Fact]
+        [Fact]
         public async Task RegisterCashWithdrawal()
         {
 
@@ -88,7 +88,7 @@ namespace fiskaltrust.Middleware.SCU.ME.InMemory.UnitTest
             _ = await meSSCD.RegisterCashWithdrawalAsync(request);
         }
 
-                [Fact]
+        [Fact]
         public async Task RegisterInvoice()
         {
 
