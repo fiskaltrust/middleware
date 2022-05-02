@@ -3,12 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using fiskaltrust.ifPOS.v1.de;
-using fiskaltrust.ifPOS.v2.me;
+using fiskaltrust.ifPOS.v1.me;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.storage.V0;
-using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.Services
@@ -17,7 +15,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Services
     {
 
         private readonly IClientFactory<IMESSCD> _clientFactory;
-        private readonly IConfigurationRepository _configurationRepository;
         private readonly MiddlewareConfiguration _middlewareConfiguration;
 
         private readonly SemaphoreSlim _semaphoreInstance = new SemaphoreSlim(1, 1);
@@ -46,10 +43,9 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Services
             }
         }
 
-        public MESSCDProvider(IClientFactory<IMESSCD> clientFactory, IConfigurationRepository configurationRepository, MiddlewareConfiguration middlewareConfiguration)
+        public MESSCDProvider(IClientFactory<IMESSCD> clientFactory, MiddlewareConfiguration middlewareConfiguration)
         {
             _clientFactory = clientFactory;
-            _configurationRepository = configurationRepository;
             _middlewareConfiguration = middlewareConfiguration;
         }
 

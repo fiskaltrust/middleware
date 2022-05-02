@@ -4,7 +4,7 @@ using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 using fiskaltrust.Middleware.Localization.QueueME.Models;
 using System;
-using fiskaltrust.ifPOS.v2.me;
+using fiskaltrust.ifPOS.v1.me;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0.MasterData;
 

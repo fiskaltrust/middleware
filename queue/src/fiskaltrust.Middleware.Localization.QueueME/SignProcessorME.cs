@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.ifPOS.v2.me;
+using fiskaltrust.ifPOS.v1.me;
 using fiskaltrust.Middleware.Contracts;
 using fiskaltrust.Middleware.Localization.QueueME.RequestCommands.Factories;
 using fiskaltrust.Middleware.Localization.QueueME.Services;

@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.ifPOS.v2.me;
+using fiskaltrust.ifPOS.v1.me;
 using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.Extensions

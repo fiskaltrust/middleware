@@ -1,6 +1,6 @@
 ﻿using System;
 using fiskaltrust.ifPOS.v1.de;
-using fiskaltrust.ifPOS.v2.me;
+using fiskaltrust.ifPOS.v1.me;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Interface.Client;
 using fiskaltrust.Middleware.Interface.Client.Grpc;

@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.de;
-using fiskaltrust.ifPOS.v2.me;
+using fiskaltrust.ifPOS.v1.me;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Queue.Test.Launcher.Grpc;
 using fiskaltrust.Middleware.Queue.Test.Launcher.Helpers;

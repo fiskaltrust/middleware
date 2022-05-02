@@ -5,7 +5,7 @@ using fiskaltrust.Middleware.Localization.QueueME.Extensions;
 using fiskaltrust.Middleware.Localization.QueueME.RequestCommands.Factories;
 using fiskaltrust.Middleware.Localization.QueueME.Services;
 using fiskaltrust.Middleware.Abstractions;
-using fiskaltrust.ifPOS.v2.me;
+using fiskaltrust.ifPOS.v1.me;
 using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueueME
@@ -23,7 +23,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME
                 {
                     var sscdProvider = new MESSCDProvider(
                         sp.GetRequiredService<IClientFactory<IMESSCD>>(),
-                        sp.GetRequiredService<IConfigurationRepository>(),
                         sp.GetRequiredService<MiddlewareConfiguration>());
                     sscdProvider.RegisterCurrentScuAsync().Wait();
 

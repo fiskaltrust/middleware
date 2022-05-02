@@ -1,6 +1,6 @@
 ﻿using System.Linq;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.ifPOS.v2.me;
+using fiskaltrust.ifPOS.v1.me;
 using fiskaltrust.Middleware.Localization.QueueME.Exceptions;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.Extensions

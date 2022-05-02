@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Text;
-using fiskaltrust.ifPOS.v2.me;
+using fiskaltrust.ifPOS.v1.me;
 
 namespace fiskaltrust.Middleware.Localization.QueueME
 {

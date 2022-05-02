@@ -11,7 +11,7 @@ using fiskaltrust.storage.serialization.DE.V0;
 using fiskaltrust.Middleware.Contracts.Data;
 using fiskaltrust.Middleware.Localization.QueueME.Models;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.ifPOS.v2.me;
+using fiskaltrust.ifPOS.v1.me;
 using System.Linq;
 using fiskaltrust.Middleware.Localization.QueueME.Exceptions;
 using fiskaltrust.Middleware.Contracts.Repositories;
