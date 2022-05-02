@@ -40,7 +40,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Extensions
 
         public static InvoiceItem GetInvoiceItemType(this ChargeItem chargeItem)
         {
-            var invoiceItemRequest = JsonConvert.DeserializeObject<InvoiceItemRequest>(chargeItem.ftChargeItemCaseData);
+            var invoiceItemRequest = string.IsNullOrEmpty(chargeItem.ftChargeItemCaseData) ? new InvoiceItemRequest () : JsonConvert.DeserializeObject<InvoiceItemRequest>(chargeItem.ftChargeItemCaseData);
             var invoiceItem = new InvoiceItem()
             {
                 Name = chargeItem.Description,

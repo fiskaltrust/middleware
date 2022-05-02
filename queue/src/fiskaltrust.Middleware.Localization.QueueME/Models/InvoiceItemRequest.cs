@@ -18,9 +18,5 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Models
         public string ExemptFromVatReason { get; set; }
         [DataMember]
         public string[] VoucherSerialNumbers { get; set; }
-
-        
-
-
     }
 }

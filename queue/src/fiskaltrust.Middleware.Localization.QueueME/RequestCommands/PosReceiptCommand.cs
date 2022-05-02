@@ -41,7 +41,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 var invoiceDetails = new InvoiceDetails()
                 {
                     InvoiceType = request.GetInvoiceType(),
-                    SelfIssuedInvoiceType = (SelfIssuedInvoiceType) Enum.Parse(typeof(SelfIssuedInvoiceType), invoice.TypeOfSelfiss),
+                    SelfIssuedInvoiceType = invoice.TypeOfSelfiss == null ? null : (SelfIssuedInvoiceType) Enum.Parse(typeof(SelfIssuedInvoiceType), invoice.TypeOfSelfiss),
                     TaxFreeAmount = request.cbChargeItems.Where(x => x.GetVatRate().Equals(0)).Sum(x => x.Amount * x.Quantity),
                     NetAmount = request.cbChargeItems.Sum(x => x.Amount / (1 + (x.GetVatRate() / 100))),
                     TotalVatAmount = request.cbChargeItems.Sum(x => x.Amount * x.GetVatRate() / (100 + x.GetVatRate())),
@@ -77,7 +77,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                     Moment = request.cbReceiptMoment,
                     OperatorCode = operatorCode.OperatorCode,
                     RequestId = queueItem.ftQueueItemId,
-                    SubsequentDeliveryType = (SubsequentDeliveryType) Enum.Parse(typeof(SubsequentDeliveryType), invoice.SubsequentDeliveryType)
+                    SubsequentDeliveryType = invoice.SubsequentDeliveryType == null ? null :(SubsequentDeliveryType) Enum.Parse(typeof(SubsequentDeliveryType), invoice.SubsequentDeliveryType)
                 };
 
                 //invoiceDetails.YearlyOrdinalNumber;
@@ -122,11 +122,9 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 throw new MaxInvoiceItemsExceededException();
             }
             var items = new List<InvoiceItem>();
-            var i = 0;
             foreach(var chargeItem in request.cbChargeItems)
             {
-                items[i] = chargeItem.GetInvoiceItemType();
-                i++;
+                items.Add(chargeItem.GetInvoiceItemType());
             }
             return items;
         }

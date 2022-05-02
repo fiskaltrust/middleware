@@ -46,6 +46,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Extensions
                     invoicePayment.CompanyCardNumber = compCardNumbers;
                 }else if (paymentType is PaymentType.Voucher)
                 {
+                    invoicePayment.VoucherNumbers = new List<string>();
                     var definition = new { VoucherNumber = "" };
                     foreach (var voucher in items)
                     {  

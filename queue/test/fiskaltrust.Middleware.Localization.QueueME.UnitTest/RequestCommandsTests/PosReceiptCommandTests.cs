@@ -141,13 +141,13 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
                 {
                     ReferencedIKOF = "TestIICRef",
                     ReferencedMoment = DateTime.Now.AddDays(-2),
-                    Type = "CORRECTIVE",
+                    Type = "Corrective",
                 },
                 Fees = new Fee[] {
                     new Fee()
                     {
                         Amount = 4,
-                        FeeType = "PACK",
+                        FeeType = "Pack",
                     }
                 },
             };

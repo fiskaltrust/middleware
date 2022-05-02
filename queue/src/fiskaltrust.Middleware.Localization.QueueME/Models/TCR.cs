@@ -7,7 +7,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Models
     public class TCR
     {
         [DataMember]
-        public string tcrType
+        public string TcrType
         {
             get;
             set;

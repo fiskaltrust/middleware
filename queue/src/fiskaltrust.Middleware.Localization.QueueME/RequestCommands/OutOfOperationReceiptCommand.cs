@@ -47,7 +47,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                     InternalTcrIdentifier = queueME.TCRIntID,
                     TcrSoftwareCode = queueME.SoftCode,
                     TcrSoftwareMaintainerCode = queueME.MaintainerCode,
-                    TcrType = (TcrType) Enum.Parse(typeof(TcrType), enu.tcrType)
+                    TcrType = enu.TcrType == null ? TcrType.Regular : (TcrType) Enum.Parse(typeof(TcrType), enu.TcrType)
                     
                 };
                 var registerTCRResponse = await client.RegisterTcrAsync(registerTCRRequest).ConfigureAwait(false);

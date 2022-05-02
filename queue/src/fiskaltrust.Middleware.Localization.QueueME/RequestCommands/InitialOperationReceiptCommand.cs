@@ -38,7 +38,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 
                 var registerTCRRequest = new RegisterTcrRequest()
                 {
-                    TcrType = string.IsNullOrEmpty(enu.tcrType) ? TcrType.Regular : (TcrType) Enum.Parse(typeof(TcrType), enu.tcrType),
+                    TcrType = string.IsNullOrEmpty(enu.TcrType) ? TcrType.Regular : (TcrType) Enum.Parse(typeof(TcrType), enu.TcrType),
                     BusinessUnitCode = enu.BusinUnitCode,
                     TcrSoftwareCode = enu.SoftwareCode,
                     TcrSoftwareMaintainerCode = enu.SoftwareCode,
