@@ -61,12 +61,12 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             _failedStartTransactionRepo = failedStartTransactionRepo;
             _failedFinishTransactionRepo = failedFinishTransactionRepo;
             _openTransactionRepo = openTransactionRepo;
-            _transactionFactory = new TransactionFactory(_deSSCDProvider.Instance);
+            _transactionFactory = new TransactionFactory(_deSSCDProvider);
             _tarFileCleanupService = tarFileCleanupService;
             _queueDEConfiguration = queueDEConfiguration;
         }
 
-        public abstract Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueDE queueDE, IDESSCD client, ReceiptRequest request, ftQueueItem queueItem);
+        public abstract Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueDE queueDE, ReceiptRequest request, ftQueueItem queueItem);
 
         protected void ThrowIfImplicitFlow(ReceiptRequest request)
         {
@@ -92,13 +92,13 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             }
         }
 
-        public async Task PerformTarFileExportAsync(ftQueueItem queueItem, ftQueue queue, ftQueueDE queueDE, IDESSCD client, bool erase)
+        public async Task PerformTarFileExportAsync(ftQueueItem queueItem, ftQueue queue, ftQueueDE queueDE, bool erase)
         {
             if(!_queueDEConfiguration.EnableTarFileExport) { return; }
             try
             {
                 var exportService = new TarFileExportService();
-                (var filePath, var success, var checkSum) = await exportService.ProcessTarFileExportAsync(client, queueDE.ftQueueDEId, queueDE.CashBoxIdentification, erase, _middlewareConfiguration.ServiceFolder, _middlewareConfiguration.TarFileChunkSize).ConfigureAwait(false);
+                (var filePath, var success, var checkSum) = await exportService.ProcessTarFileExportAsync(_deSSCDProvider.Instance, queueDE.ftQueueDEId, queueDE.CashBoxIdentification, erase, _middlewareConfiguration.ServiceFolder, _middlewareConfiguration.TarFileChunkSize).ConfigureAwait(false);
                 if (success)
                 {
                     var journalDE = new ftJournalDE
@@ -126,12 +126,12 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             }
         }
 
-        protected async Task UpdateTseInfoAsync(IDESSCD client, Guid signaturCreationUnitDEID)
+        protected async Task UpdateTseInfoAsync(Guid signaturCreationUnitDEID)
         {
             try
             {
                 var signaturCreationUnitDE = await _configurationRepository.GetSignaturCreationUnitDEAsync(signaturCreationUnitDEID).ConfigureAwait(false);
-                var tseInfo = await client.GetTseInfoAsync().ConfigureAwait(false);
+                var tseInfo = await _deSSCDProvider.Instance.GetTseInfoAsync().ConfigureAwait(false);
                 signaturCreationUnitDE.TseInfoJson = JsonConvert.SerializeObject(tseInfo);
                 await _configurationRepository.InsertOrUpdateSignaturCreationUnitDEAsync(signaturCreationUnitDE).ConfigureAwait(false);
             }
@@ -305,15 +305,15 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             return (updatTransactionResult.TransactionNumber, signatures);
         }
 
-        protected async Task<(ulong transactionNumber, List<SignaturItem> signatures, string clientId, string signatureAlgorithm, string publicKeyBase64, string serialNumberOctet)> ProcessInitialOperationReceiptAsync(IDESSCD client, string transactionIdentifier, string processType, string payload, ftQueueItem queueItem, ftQueueDE queueDE, bool clientIdRegistrationOnly)
+        protected async Task<(ulong transactionNumber, List<SignaturItem> signatures, string clientId, string signatureAlgorithm, string publicKeyBase64, string serialNumberOctet)> ProcessInitialOperationReceiptAsync(string transactionIdentifier, string processType, string payload, ftQueueItem queueItem, ftQueueDE queueDE, bool clientIdRegistrationOnly)
         {
             if (!clientIdRegistrationOnly)
             {
-                await client.SetTseStateAsync(new TseState { CurrentState = TseStates.Initialized }).ConfigureAwait(false);
+                await _deSSCDProvider.Instance.SetTseStateAsync(new TseState { CurrentState = TseStates.Initialized }).ConfigureAwait(false);
                 _logger.LogInformation("Successfully initialized TSE device");
             }
 
-            var tseInfo = await client.GetTseInfoAsync().ConfigureAwait(false);
+            var tseInfo = await _deSSCDProvider.Instance.GetTseInfoAsync().ConfigureAwait(false);
 
             if (tseInfo.CurrentState != TseStates.Initialized)
             {
@@ -322,7 +322,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
             try
             {
-                await client.RegisterClientIdAsync(new RegisterClientIdRequest { ClientId = queueDE.CashBoxIdentification }).ConfigureAwait(false);
+                await _deSSCDProvider.Instance.RegisterClientIdAsync(new RegisterClientIdRequest { ClientId = queueDE.CashBoxIdentification }).ConfigureAwait(false);
                 _logger.LogInformation("Successfully registered TSE client. ClientId: {ClientId}", queueDE.CashBoxIdentification);
             }
             catch (Exception ex)
@@ -335,7 +335,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             return (processReceiptResponse.TransactionNumber, processReceiptResponse.Signatures, processReceiptResponse.ClientId, processReceiptResponse.SignatureAlgorithm, processReceiptResponse.PublicKeyBase64, processReceiptResponse.SerialNumberOctet);
         }
 
-        protected async Task<(ulong transactionNumber, List<SignaturItem> signatures, string clientId, string signatureAlgorithm, string publicKeyBase64, string serialNumberOctet)> ProcessOutOfOperationReceiptAsync(IDESSCD client, string transactionIdentifier, string processType, string payload, ftQueueItem queueItem, ftQueueDE queueDE, bool isClientIdOnlyRequest)
+        protected async Task<(ulong transactionNumber, List<SignaturItem> signatures, string clientId, string signatureAlgorithm, string publicKeyBase64, string serialNumberOctet)> ProcessOutOfOperationReceiptAsync(string transactionIdentifier, string processType, string payload, ftQueueItem queueItem, ftQueueDE queueDE, bool isClientIdOnlyRequest)
         {
             try
             {
@@ -344,10 +344,10 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             }
             finally
             {
-                await client.UnregisterClientIdAsync(new UnregisterClientIdRequest { ClientId = queueDE.CashBoxIdentification }).ConfigureAwait(false);
+                await _deSSCDProvider.Instance.UnregisterClientIdAsync(new UnregisterClientIdRequest { ClientId = queueDE.CashBoxIdentification }).ConfigureAwait(false);
                 if (!isClientIdOnlyRequest)
                 {
-                    await client.SetTseStateAsync(new TseState { CurrentState = TseStates.Terminated }).ConfigureAwait(false);
+                    await _deSSCDProvider.Instance.SetTseStateAsync(new TseState { CurrentState = TseStates.Terminated }).ConfigureAwait(false);
                 }
             }
         }

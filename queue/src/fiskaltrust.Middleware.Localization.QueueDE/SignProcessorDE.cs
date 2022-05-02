@@ -20,19 +20,16 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
     {
         private readonly IConfigurationRepository _configurationRepository;
         private readonly ITransactionPayloadFactory _transactionPayloadFactory;
-        private readonly IDESSCDProvider _deSSCDProvider;
         private readonly IRequestCommandFactory _requestCommandFactory;
         private readonly ILogger<SignProcessorDE> _logger;
 
         public SignProcessorDE(            
             IConfigurationRepository configurationRepository,
-            IDESSCDProvider dESSCDProvider,
             ITransactionPayloadFactory transactionPayloadFactory,
             IRequestCommandFactory requestCommandFactory,
             ILogger<SignProcessorDE> logger)
         {
             _configurationRepository = configurationRepository;
-            _deSSCDProvider = dESSCDProvider;
             _transactionPayloadFactory = transactionPayloadFactory;
             _requestCommandFactory = requestCommandFactory;
             _logger = logger;
@@ -54,14 +51,14 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
                 throw new NullReferenceException(nameof(queueDE.ftSignaturCreationUnitDEId));
             }
 
-            var requestCommandResponse = await PerformReceiptRequest(request, queueItem, queue, queueDE, _deSSCDProvider.Instance).ConfigureAwait(false);
+            var requestCommandResponse = await PerformReceiptRequest(request, queueItem, queue, queueDE).ConfigureAwait(false);
 
             await _configurationRepository.InsertOrUpdateQueueDEAsync(queueDE).ConfigureAwait(false);
 
             return (requestCommandResponse.ReceiptResponse, requestCommandResponse.ActionJournals);
         }
 
-        private async Task<RequestCommandResponse> PerformReceiptRequest(ReceiptRequest request, ftQueueItem queueItem, ftQueue queue, ftQueueDE queueDE, IDESSCD client)
+        private async Task<RequestCommandResponse> PerformReceiptRequest(ReceiptRequest request, ftQueueItem queueItem, ftQueue queue, ftQueueDE queueDE)
         {
             _logger.LogTrace("SignProcessorDE.PerformReceiptRequest called.");
             var (processType, payload) = _transactionPayloadFactory.CreateReceiptPayload(request);
@@ -77,7 +74,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             }
 
             _logger.LogTrace("SignProcessorDE.PerformReceiptRequest: Executing command {CommandName}.", command.ReceiptName);
-            return await command.ExecuteAsync(queue, queueDE, client, request, queueItem);
+            return await command.ExecuteAsync(queue, queueDE, request, queueItem);
         }
     }
 }

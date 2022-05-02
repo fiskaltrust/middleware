@@ -68,7 +68,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
 
             var signProcessor =  new SignProcessorDE(
                 configurationRepository,
-                dESSCDProvider,
                 transactionPayloadFactory,
                 new RequestCommandFactory(services.BuildServiceProvider()),
                 logger
