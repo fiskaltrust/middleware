@@ -4,7 +4,7 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Bogus;
-using fiskaltrust.ifPOS.v2.me;
+using fiskaltrust.ifPOS.v1.me;
 using fiskaltrust.Middleware.SCU.ME.Common.Configuration;
 using FluentAssertions;
 using Xunit;
@@ -32,7 +32,7 @@ namespace fiskaltrust.Middleware.SCU.ME.InMemory.UnitTest
 
             var response = await meSSCD.RegisterTcrAsync(request);
 
-            response.TcrCode.Should().MatchRegex("[a-z]{2}[0-9]{3}[a-z]{2}[0-9]{3}");
+            _ = response.TcrCode.Should().MatchRegex("[a-z]{2}[0-9]{3}[a-z]{2}[0-9]{3}");
         }
 
         [Fact]
@@ -68,7 +68,7 @@ namespace fiskaltrust.Middleware.SCU.ME.InMemory.UnitTest
 
             var response = await meSSCD.RegisterCashDepositAsync(request);
 
-            Guid.Parse(response.FCDC);
+            _ = Guid.Parse(response.FCDC);
         }
 
         [Fact]
@@ -112,8 +112,8 @@ namespace fiskaltrust.Middleware.SCU.ME.InMemory.UnitTest
 
             var response = await meSSCD.RegisterInvoiceAsync(request);
 
-            Guid.Parse(response.FIC);
-            response.IIC.Should().HaveLength(32);
+            _ = Guid.Parse(response.FIC);
+            _ = response.IIC.Should().HaveLength(32);
         }
 
         private InMemorySCU CreateSCU()

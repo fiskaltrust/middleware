@@ -11,12 +11,11 @@ using SoapFiscalizationService = FiscalizationService;
 namespace fiskaltrust.Middleware.SCU.ME.FiscalizationService;
 
 #nullable enable
-public class FiscalizationServiceSCU : IMESSCD
+public class FiscalizationServiceSCU : IMESSCD, IDisposable
 {
     private readonly SoapFiscalizationService.FiscalizationServicePortTypeClient _fiscalizationServiceClient;
     private readonly ScuMEConfiguration _configuration;
     private readonly ILogger<FiscalizationServiceSCU> _logger;
-
     public FiscalizationServiceSCU(ILogger<FiscalizationServiceSCU> logger, ScuMEConfiguration configuration)
     {
         _logger = logger;
@@ -155,4 +154,6 @@ public class FiscalizationServiceSCU : IMESSCD
 
         return;
     }
+
+    public void Dispose() => ((IDisposable) _fiscalizationServiceClient).Dispose();
 }

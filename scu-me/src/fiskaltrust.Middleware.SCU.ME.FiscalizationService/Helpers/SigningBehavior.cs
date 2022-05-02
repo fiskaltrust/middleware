@@ -39,7 +39,7 @@ namespace fiskaltrust.Middleware.SCU.ME.FiscalizationService.Helpers
                 var oldMessage = msgbuf.CreateMessage();
                 var xdr = oldMessage.GetReaderAtBodyContents();
 
-                var xmlRequest = new XmlDocument();
+                var xmlRequest = new XmlDocument() { XmlResolver = new XmlUrlResolver() };
                 xmlRequest.Load(xdr);
                 xdr.Close();
 
@@ -67,7 +67,7 @@ namespace fiskaltrust.Middleware.SCU.ME.FiscalizationService.Helpers
                 xml.ComputeSignature();
 
                 var signature = xml.GetXml();
-                xmlRequest.DocumentElement.AppendChild(signature);
+                _ = xmlRequest.DocumentElement.AppendChild(signature);
 
                 var ms = new MemoryStream();
                 var xw = XmlWriter.Create(ms);

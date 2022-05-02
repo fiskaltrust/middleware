@@ -39,7 +39,7 @@ namespace fiskaltrust.Middleware.SCU.ME.FiscalizationService.UnitTest
             }
             catch (Exception ex)
             {
-                ex.Message.Should().StartWith("Received certificate doesn't contain TIN number.");
+                _ = ex.Message.Should().StartWith("Received certificate doesn't contain TIN number.");
             }
         }
 
