@@ -8,7 +8,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="fiskaltrust.interface" Version="1.3.1-ci-22116-53194" />
+        <PackageReference Include="fiskaltrust.interface" Version="1.3.1-ci-22115-53151" />
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.7.1" />
         <PackageReference Include="xunit" Version="2.4.1" />
         <PackageReference Include="xunit.analyzers" Version="0.10.0" />
