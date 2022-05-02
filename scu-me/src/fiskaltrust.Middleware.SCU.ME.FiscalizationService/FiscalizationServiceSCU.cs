@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using fiskaltrust.ifPOS.v2.me;
+using fiskaltrust.ifPOS.v1.me;
 using fiskaltrust.Middleware.SCU.ME.Common.Configuration;
 using fiskaltrust.Middleware.SCU.ME.FiscalizationService.Helpers;
 using Microsoft.Extensions.Logging;
@@ -23,6 +23,7 @@ public class FiscalizationServiceSCU : IMESSCD
         _configuration = configuration;
         _fiscalizationServiceClient = new SoapFiscalizationService.FiscalizationServicePortTypeClient();
         
+        _fiscalizationServiceClient.Endpoint.EndpointBehaviors.Add(new DateTimeBehaviour());
         _fiscalizationServiceClient.Endpoint.EndpointBehaviors.Add(new SigningBehaviour(_configuration.Certificate));
     }
 
@@ -120,6 +121,7 @@ public class FiscalizationServiceSCU : IMESSCD
             TcrCode = response.RegisterTCRResponse.TCRCode,
         };
     }
+
     public async Task UnregisterTcrAsync(RegisterTcrRequest registerTCRRequest)
     {
         var sendDateTime = DateTime.Now;

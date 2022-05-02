@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using fiskaltrust.ifPOS.v2.me;
+using fiskaltrust.ifPOS.v1.me;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.SCU.ME.Common.Configuration;
 using Microsoft.Extensions.DependencyInjection;

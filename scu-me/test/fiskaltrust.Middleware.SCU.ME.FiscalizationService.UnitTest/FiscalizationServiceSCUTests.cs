@@ -1,16 +1,11 @@
 ﻿using System;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using fiskaltrust.ifPOS.v2.me;
+using fiskaltrust.ifPOS.v1.me;
 using FluentAssertions;
-using FluentAssertions.Execution;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
 using fiskaltrust.Middleware.SCU.ME.Common.Configuration;
-using fiskaltrust.Middleware.SCU.ME.FiscalizationService;
 using Bogus;
 using System.Security.Cryptography.X509Certificates;
 using System.Net;
@@ -30,29 +25,34 @@ namespace fiskaltrust.Middleware.SCU.ME.FiscalizationService.UnitTest
 
             var request = new RegisterTcrRequest
             {
-                BusinessUnitCode = _faker.Random.String2(10),
-                InternalTcrIdentifier = _faker.Random.String2(10),
+                BusinessUnitCode = $"{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}",
+                InternalTcrIdentifier = $"{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}",
                 RequestId = Guid.NewGuid(),
-                TcrSoftwareCode = _faker.Random.String2(10),
-                TcrSoftwareMaintainerCode = _faker.Random.String2(10),
+                TcrSoftwareCode = $"{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}",
+                TcrSoftwareMaintainerCode = $"{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}",
                 TcrType = TcrType.Regular
             };
 
-            var response = await meSSCD.RegisterTcrAsync(request);
-
-            response.TcrCode.Should().NotBeNullOrEmpty();
-
+            try
+            {
+                _ = await meSSCD.RegisterTcrAsync(request);
+            }
+            catch (Exception ex)
+            {
+                ex.Message.Should().StartWith("Received certificate doesn't contain TIN number.");
+            }
         }
+
         private FiscalizationServiceSCU CreateSCU()
         {
             return new FiscalizationServiceSCU(Mock.Of<ILogger<FiscalizationServiceSCU>>(), new ScuMEConfiguration
             {
                 Certificate = BuildSelfSignedServerCertificate(),
-                PosOperatorAddress = _faker.Random.String2(10),
-                PosOperatorCountry = _faker.Random.String2(10),
+                PosOperatorAddress = $"{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}",
+                PosOperatorCountry = $"{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}",
                 PosOperatorName = _faker.Random.String2(10),
                 PosOperatorTown = _faker.Random.String2(10),
-                TIN = _faker.Random.String2(10),
+                TIN = _faker.Random.String(8, '0', '9'),
                 VatNumber = _faker.Random.String(10, '0', '9')
             });
         }

@@ -45,20 +45,17 @@ namespace fiskaltrust.Middleware.SCU.ME.FiscalizationService.Helpers
 
                 var privateKey = _certificate.GetRSAPrivateKey();
 
-                // Create key info element
                 var keyInfo = new KeyInfo();
                 var keyInfoData = new KeyInfoX509Data();
                 keyInfoData.AddCertificate(_certificate);
                 keyInfo.AddClause(keyInfoData);
 
-                // Create signature reference
                 var reference = new Reference("");
                 reference.AddTransform(new XmlDsigEnvelopedSignatureTransform(false));
                 reference.AddTransform(new XmlDsigExcC14NTransform(false));
                 reference.DigestMethod = "http://www.w3.org/2001/04/xmlenc#sha256";
                 reference.Uri = "#Request";
 
-                // Create signature
                 var xml = new SignedXml(xmlRequest)
                 {
                     SigningKey = privateKey
@@ -69,11 +66,9 @@ namespace fiskaltrust.Middleware.SCU.ME.FiscalizationService.Helpers
                 xml.AddReference(reference);
                 xml.ComputeSignature();
 
-                // Add signature element to the request
                 var signature = xml.GetXml();
                 xmlRequest.DocumentElement.AppendChild(signature);
 
-                // Convert signed request to string and print
                 var ms = new MemoryStream();
                 var xw = XmlWriter.Create(ms);
                 xmlRequest.Save(xw);

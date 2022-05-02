@@ -6,7 +6,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 using Bogus;
-using fiskaltrust.ifPOS.v2.me;
+using fiskaltrust.ifPOS.v1.me;
 using fiskaltrust.Middleware.SCU.ME.Common.Configuration;
 
 namespace fiskaltrust.Middleware.SCU.ME.InMemory;
