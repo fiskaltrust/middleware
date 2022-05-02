@@ -66,7 +66,8 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
                     queues.FirstOrDefault().CountryCode = "ME";
                     config.Configuration[key] = JsonConvert.SerializeObject(queues);
                 }
-                config.Configuration["init_ftQueueME"] = config.Configuration["init_ftQueueDE"];
+                var temp = config.Configuration["init_ftQueueDE"];
+                config.Configuration["init_ftQueueME"] = temp.ToString().Replace("DE", "ME");
                 config.Configuration["init_ftSignaturCreationUnitME"] = config.Configuration["init_ftSignaturCreationUnitDE"];
             }
             else

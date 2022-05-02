@@ -65,8 +65,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                         Year = (uint) request.cbReceiptMoment.Year
                     }
                 };
-                var definition = new { OperatorCode = "" };
-                var operatorCode = JsonConvert.DeserializeAnonymousType(request.cbCustomer, definition);
+
                 var registerInvoiceRequest = new RegisterInvoiceRequest()
                 {
                     InvoiceDetails = invoiceDetails,
@@ -75,7 +74,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                     IsIssuerInVATSystem = true,
                     BusinessUnitCode = queueME.BusinUnitCode,
                     Moment = request.cbReceiptMoment,
-                    OperatorCode = operatorCode.OperatorCode,
+                    OperatorCode = invoice.OperatorCode,
                     RequestId = queueItem.ftQueueItemId,
                     SubsequentDeliveryType = invoice.SubsequentDeliveryType == null ? null :(SubsequentDeliveryType) Enum.Parse(typeof(SubsequentDeliveryType), invoice.SubsequentDeliveryType)
                 };
@@ -124,7 +123,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             var items = new List<InvoiceItem>();
             foreach(var chargeItem in request.cbChargeItems)
             {
-                items.Add(chargeItem.GetInvoiceItemType());
+                items.Add(chargeItem.GetInvoiceItem());
             }
             return items;
         }

@@ -28,9 +28,10 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
         {
             try
             {
+                //Validate must fields
                 var enu = JsonConvert.DeserializeObject<TCR>(request.ftReceiptCaseData);
                 var queueMEs = await _configurationRepository.GetQueueMEListAsync().ConfigureAwait(false);
-                var queueME = queueMEs.ToList().Where(x => x.IssuerTIN.Equals(enu.IssuerTIN) && x.TCRIntID.Equals(enu.TCRIntID)).FirstOrDefault();
+                var queueME = queueMEs.ToList().Where(x => x.IssuerTIN != null && x.IssuerTIN.Equals(enu.IssuerTIN) && x.TCRIntID!= null && x.TCRIntID.Equals(enu.TCRIntID)).FirstOrDefault();
                 if (queueME != null)
                 {
                     throw new ENUAlreadyRegisteredException();
