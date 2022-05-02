@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using fiskaltrust.ifPOS.v1;
@@ -16,6 +17,11 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Extensions
             return (chargeItem.ftChargeItemCase & 0x0_0001_0000) == 0x0_0001_0000;
         }
 
+        public static bool IsExportGood(this ChargeItem chargeItem)
+        {
+            return (chargeItem.ftChargeItemCase & 0xFFFF) == 0x0004;
+        }
+
         public static decimal GetVatRate(this ChargeItem chargeItem)
         {
             switch (chargeItem.ftChargeItemCase & 0xFFFF)
@@ -25,42 +31,46 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Extensions
                 case 0x0002:
                     return 7;
                 case 0x0003:
+                case 0x0004:
                     return 0;
                 default:
                     throw new UnkownInvoiceTypeException("ChargeItemCase holds unkown Vat Rate!");
             }
         }
 
-        public static InvoiceItemType GetInvoiceItemType(this ChargeItem chargeItem)
+        public static InvoiceItem GetInvoiceItemType(this ChargeItem chargeItem)
         {
-            var invoiceItem = JsonConvert.DeserializeObject<InvoiceItem>(chargeItem.ftChargeItemCaseData);
-            var invoiceItemType = new InvoiceItemType()
+            var invoiceItemRequest = JsonConvert.DeserializeObject<InvoiceItemRequest>(chargeItem.ftChargeItemCaseData);
+            var invoiceItem = new InvoiceItem()
             {
-                N = chargeItem.Description,
-                C = chargeItem.ProductBarcode,
-                IN = invoiceItem.IN,
-                U = chargeItem.Unit,
-                Q = (double) chargeItem.Quantity,
-                UPB = chargeItem.UnitPrice.HasValue ? (decimal) (chargeItem.UnitPrice * (chargeItem.GetVatRate() / 100)) : 0,
-                UPA = chargeItem.UnitPrice.HasValue ? (decimal) chargeItem.UnitPrice : 0,
-                R = invoiceItem.R,
-                RR = invoiceItem.RR,
-                VR = chargeItem.GetVatRate(),
-                EX = string.IsNullOrEmpty(invoiceItem.EX) ? null: (ExemptFromVATSType) Enum.Parse(typeof(ExemptFromVATSType), invoiceItem.EX),
-                PA = chargeItem.Amount,
+                Name = chargeItem.Description,
+                Code = chargeItem.ProductBarcode,
+                IsInvestment = invoiceItemRequest.IsInvestment,
+                Unit = chargeItem.Unit,
+                Quantity = chargeItem.Quantity,
+                NetUnitPrice = chargeItem.UnitPrice.HasValue ? (decimal) (chargeItem.UnitPrice * (chargeItem.GetVatRate() / 100)) : 0,
+                GrossUnitPrice = chargeItem.UnitPrice.HasValue ? (decimal) chargeItem.UnitPrice : 0,
+                DiscountPercentage = invoiceItemRequest.DiscountPercentage,
+                IsDiscountReducingBasePrice = invoiceItemRequest.IsDiscountReducingBasePrice,
+                VatRate = chargeItem.GetVatRate(),
+                ExemptFromVatReason = string.IsNullOrEmpty(invoiceItemRequest.ExemptFromVatReason) ? null : (ExemptFromVatReasons)Enum.Parse(typeof(ExemptFromVatReasons), invoiceItemRequest.ExemptFromVatReason),
+                GrossAmount = chargeItem.Amount,
             };
-            invoiceItemType.PB = invoiceItemType.UPB  * (decimal) invoiceItemType.Q;
-            invoiceItemType.VA = (invoiceItemType.UPA - invoiceItemType.UPB) * (decimal) invoiceItemType.Q;
+            invoiceItem.NetAmount = invoiceItem.NetUnitPrice  * invoiceItem.Quantity;
+            invoiceItem.GrossAmount = (invoiceItem.GrossUnitPrice - invoiceItem.NetUnitPrice) * invoiceItem.Quantity;
             if (chargeItem.IsVoucher())
             {
-                var newDate = DateTime.ParseExact(invoiceItem.VD,
-                                  "yyy-MM-dd",
-                                   CultureInfo.InvariantCulture);
-                invoiceItemType.VD = newDate;
-                invoiceItemType.VN = chargeItem.Amount;
-                invoiceItemType.VSN = invoiceItem.VSN;
+                 invoiceItem.Vouchers = new List<VoucherItem>()
+                {
+                    new VoucherItem()
+                    {
+                        ExpirationDate = chargeItem.Moment.Value,
+                        NominalValue = chargeItem.Amount,
+                        SerialNumbers = invoiceItemRequest.VoucherSerialNumbers.ToList()
+                    }
+                };
             }
-            return invoiceItemType;
+            return invoiceItem;
         }
     }
 }

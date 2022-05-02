@@ -68,7 +68,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
                     new ChargeItem() {
                         Amount = 221,
                         ftChargeItemCase = 0x44D5_0000_0000_0001,
-                        ftChargeItemCaseData = JsonConvert.SerializeObject(CreateInvoiceItem(2)),
                         ProductBarcode = "Testbarcode1",
                         Unit = "piece",
                         Quantity = 2,
@@ -78,7 +77,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
                     new ChargeItem() {
                         Amount = 107,
                         ftChargeItemCase = 0x44D5_0000_0000_0002,
-                        ftChargeItemCaseData = JsonConvert.SerializeObject(CreateInvoiceItem(null)),
                         ProductBarcode = "Testbarcode2",
                         Unit = "piece",
                         Quantity = 1,
@@ -137,38 +135,21 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
         {
             return new Invoice()
             {
-                IsIssuerInVAT = true,
-                GoodsExAmt = 0,
                 OperatorCode = "ab123ab123",
                 PayDeadline = DateTime.Now.AddDays(30),
-                ParagonBlockNum = "5",
                 CorrectiveInv = new CorrectiveInv()
                 {
-                    IICRef = "TestIICRef",
-                    IssueDateTime = DateTime.Now.AddDays(-2),
+                    ReferencedIKOF = "TestIICRef",
+                    ReferencedMoment = DateTime.Now.AddDays(-2),
                     Type = "CORRECTIVE",
                 },
                 Fees = new Fee[] {
                     new Fee()
                     {
-                        Amt = 4,
-                        Type = "PACK",
+                        Amount = 4,
+                        FeeType = "PACK",
                     }
                 },
-                BadDebt = new BadDebt() {
-                    IICRef = "TestRef",
-                    IssueDateTime = DateTime.Now,
-                },    
-            };
-        }
-
-        private InvoiceItem CreateInvoiceItem(decimal? r)
-        {
-            return new InvoiceItem()
-            {
-                IN = false,
-                R = r,
-                RR = false
             };
         }
 
@@ -176,19 +157,13 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
         {
             return new Buyer()
             {
-                IDNum = "72001008",
-                IDType = "TIN",
+                IdentificationNumber = "72001008",
+                BuyerIdentificationType = "TIN",
                 Address = "Mustergasse 8",
                 Name = "Mr. Mad",
                 Town = "City",
                 Country = "MNE"
             };
         }
-
-        private Func<Task> CallInitialOperationReceiptCommand(InitialOperationReceiptCommand initialOperationReceiptCommand, ReceiptRequest receiptRequest)
-        {
-            return async () => { var receiptResponse = await initialOperationReceiptCommand.ExecuteAsync(new InMemoryMESSCD("testTcr"), new ftQueue(), receiptRequest, new ftQueueItem()); };
-        }
-
     }
 }

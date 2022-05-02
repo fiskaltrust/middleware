@@ -40,23 +40,19 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                     throw new ENUValidToNotSetException();
                 }
 
-                var tcr = new TCRType()
+                var registerTCRRequest = new RegisterTcrRequest()
                 {
-                    TCRIntID = enu.TCRIntID,
-                    IssuerTIN = enu.IssuerTIN,
-                    BusinUnitCode = enu.BusinUnitCode,
-                    ValidFrom = queueME.ValidFrom,
-                    ValidTo = enu.ValidTo,
+                    RequestId = queueItem.ftQueueItemId,
+                    BusinessUnitCode = queueME.BusinUnitCode,
+                    InternalTcrIdentifier = queueME.TCRIntID,
+                    TcrSoftwareCode = queueME.SoftCode,
+                    TcrSoftwareMaintainerCode = queueME.MaintainerCode,
+                    TcrType = (TcrType) Enum.Parse(typeof(TcrType), enu.tcrType)
+                    
                 };
+                var registerTCRResponse = await client.RegisterTcrAsync(registerTCRRequest).ConfigureAwait(false);
 
-                var registerTCRRequest = new RegisterTCRRequest()
-                {
-                    TCR = tcr,
-                    Signature = _signatureFactory.CreateSignature()
-                };
-                var registerTCRResponse = await client.RegisterTCRAsync(registerTCRRequest).ConfigureAwait(false);
-
-                queueME.ValidTo = tcr.ValidTo;
+                queueME.ValidTo = enu.ValidTo;
                 await _configurationRepository.InsertOrUpdateQueueMEAsync(queueME).ConfigureAwait(false);
 
                 var receiptResponse = CreateReceiptResponse(request, queueItem);

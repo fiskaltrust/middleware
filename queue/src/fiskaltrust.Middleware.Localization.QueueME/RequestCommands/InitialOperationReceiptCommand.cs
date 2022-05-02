@@ -35,22 +35,18 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 {
                     throw new ENUAlreadyRegisteredException();
                 }
-                var tcr = new TCRType()
-                {
-                    TCRIntID = enu.TCRIntID,
-                    IssuerTIN = enu.IssuerTIN,
-                    BusinUnitCode = enu.BusinUnitCode,
-                    ValidFrom = enu.ValidFrom ?? DateTime.Now,
-                    ValidTo = enu.ValidTo,
-                    SoftCode = enu.SoftwareCode
-                };
 
-                var registerTCRRequest = new RegisterTCRRequest()
+                var registerTCRRequest = new RegisterTcrRequest()
                 {
-                    TCR = tcr,
-                    Signature = _signatureFactory.CreateSignature()
+                    TcrType = string.IsNullOrEmpty(enu.tcrType) ? TcrType.Regular : (TcrType) Enum.Parse(typeof(TcrType), enu.tcrType),
+                    BusinessUnitCode = enu.BusinUnitCode,
+                    TcrSoftwareCode = enu.SoftwareCode,
+                    TcrSoftwareMaintainerCode = enu.SoftwareCode,
+                    InternalTcrIdentifier = queueItem.ftQueueItemId.ToString(),
+                    RequestId = Guid.NewGuid(),
+
                 };
-                var registerTCRResponse = await client.RegisterTCRAsync(registerTCRRequest).ConfigureAwait(false);
+                var registerTCRResponse = await client.RegisterTcrAsync(registerTCRRequest).ConfigureAwait(false);
 
                 var signaturCreationUnitME = new ftSignaturCreationUnitME()
                 {
@@ -62,14 +58,14 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 queueME = new ftQueueME()
                 {
                     ftQueueMEId = queue.ftQueueId,
-                    TCRIntID = tcr.TCRIntID,
-                    BusinUnitCode = tcr.BusinUnitCode,
-                    IssuerTIN = tcr.IssuerTIN,
-                    SoftCode= tcr.SoftCode,
-                    TCRCode = registerTCRResponse.TCRCode,
+                    TCRIntID = enu.TCRIntID,
+                    BusinUnitCode = enu.BusinUnitCode,
+                    IssuerTIN = enu.IssuerTIN,
+                    SoftCode= enu.SoftwareCode,
+                    TCRCode = registerTCRResponse.TcrCode,
                     ftSignaturCreationUnitMEId = signaturCreationUnitME.ftSignaturCreationUnitMEId,
-                    ValidFrom = tcr.ValidFrom,
-                    ValidTo = tcr.ValidTo
+                    ValidFrom = enu.ValidFrom,
+                    ValidTo = enu.ValidTo
                 };
                 await _configurationRepository.InsertOrUpdateQueueMEAsync(queueME).ConfigureAwait(false);
 

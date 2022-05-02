@@ -7,6 +7,12 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Models
     public class TCR
     {
         [DataMember]
+        public string tcrType
+        {
+            get;
+            set;
+        }
+        [DataMember]
         public string IssuerTIN
         {
             get;

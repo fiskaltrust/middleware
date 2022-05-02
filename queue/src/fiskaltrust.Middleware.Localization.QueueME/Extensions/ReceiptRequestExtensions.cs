@@ -2,71 +2,39 @@
 using System.Linq;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v2.me;
-using fiskaltrust.Middleware.Localization.QueueME.Exceptions;
 using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.Extensions
 {
     public static class ReceiptRequestExtensions
     {
-
-        public static InvoiceSType GetInvoiceSType(this ReceiptRequest receiptRequest)
+        public static InvoiceType GetInvoiceType(this ReceiptRequest receiptRequest)
         {
-            var result = InvoiceSType.CASH;
+            var result = InvoiceType.Cash;
 
             foreach(var pay in receiptRequest.cbPayItems)
             {
                 if (pay.IsNonCashLocalCurrency())
                 {
-                    result = InvoiceSType.NONCASH;
+                    result = InvoiceType.NonCash;
                     break;
                 }
             }
             return result;
         }
-
-        public static InvoiceTSType GetInvoiceTSType(this ReceiptRequest receiptRequest)
+        public static List<InvoicePayment> GetPaymentMethodTypes(this ReceiptRequest item)
         {
-            if ((receiptRequest.ftReceiptCase & 0x0_0001_0000) == 0x0_0001_0000)
+            var paymentTypes = item.cbPayItems.GroupBy(x => x.GetPaymentMethodType()).Select(x => x.Key) ;
+            var result = new List<InvoicePayment>();
+            foreach (var paymentType in paymentTypes)
             {
-                return InvoiceTSType.INVOICE;
-            }
-            else if ((receiptRequest.ftReceiptCase & 0x0_0002_0000) == 0x0_0002_0000)
-            {
-                return InvoiceTSType.CORRECTIVE;
-            }
-            else if ((receiptRequest.ftReceiptCase & 0x0_0003_0000) == 0x0_0003_0000)
-            {
-                return InvoiceTSType.SUMMARY;
-            }
-            else if ((receiptRequest.ftReceiptCase & 0x0_0004_0000) == 0x0_0004_0000)
-            {
-                return InvoiceTSType.PERIODICAL;
-            }
-            else if ((receiptRequest.ftReceiptCase & 0x0_0005_0000) == 0x0_0005_0000)
-            {
-                return InvoiceTSType.ADVANCE;
-            }
-            else if ((receiptRequest.ftReceiptCase & 0x0_0006_0000) == 0x0_0006_0000)
-            {
-                return InvoiceTSType.CORRECTIVE;
-            };
-            throw new UnkownInvoiceTypeException("ChargeItemCase holds unkown Invoice Type!");
-        }
-
-        public static PayMethodType[] GetPaymentMethodTypes(this ReceiptRequest item)
-        {
-            var payMethodTypeSs = item.cbPayItems.GroupBy(x => x.GetPaymentMethodType()).Select(x => x.Key) ;
-            var result = new List<PayMethodType>();
-            foreach (var payMethodTypeS in payMethodTypeSs)
-            {
-                var items = item.cbPayItems.Where(x => x.GetPaymentMethodType().Equals(payMethodTypeS));
-                var payMethodType = new PayMethodType()
+                var items = item.cbPayItems.Where(x => x.GetPaymentMethodType().Equals(paymentType));
+                var invoicePayment = new InvoicePayment()
                 {
-                    Type = payMethodTypeS,
-                    Amt = items.Sum(x => x.Amount)
+                    Type = paymentType,
+                    Amount = items.Sum(x => x.Amount)
                 };
-                if (payMethodTypeS is PaymentMethodTypeSType.COMPANY)
+                if (paymentType is PaymentType.Company)
                 {
                     var definition = new { CompCardNumber = "" };
                     var compCardNumbers = "";
@@ -75,24 +43,19 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Extensions
                         var compCardNumber = JsonConvert.DeserializeAnonymousType(companyCard.ftPayItemCaseData, definition);
                         compCardNumbers += compCardNumber + "/";
                     }
-                    payMethodType.CompCard = compCardNumbers;
-                }else if (payMethodTypeS is PaymentMethodTypeSType.SVOUCHER)
+                    invoicePayment.CompanyCardNumber = compCardNumbers;
+                }else if (paymentType is PaymentType.Voucher)
                 {
                     var definition = new { VoucherNumber = "" };
-                    var voucherTypes = new List<VoucherType>();
                     foreach (var voucher in items)
                     {  
                         var compCardNumber = JsonConvert.DeserializeAnonymousType(voucher.ftPayItemCaseData, definition);
-                        voucherTypes.Add(new VoucherType()
-                        {
-                            Num = compCardNumber.VoucherNumber
-                        });
+                        invoicePayment.VoucherNumbers.Add(compCardNumber.VoucherNumber);
                     }
-                    payMethodType.Vouchers = voucherTypes.ToArray();
                 }
-                result.Add(payMethodType);
+                result.Add(invoicePayment);
             }
-            return result.ToArray();
+            return result;
         }
     }
 }

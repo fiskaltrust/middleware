@@ -8,36 +8,35 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Extensions
 #pragma warning disable
     public static class PayItemExtensions
     {
-        private static readonly long[] _cashLocalPayItemCases = { 0x0000, 0x0001, 0x0005, 0x0010};
+        private static readonly long[] _cashLocalPayItemCases = { 0x0000, 0x0001, 0x0005, 0x0010 };
         private static readonly long[] _nonCashPayItemCases = { 0x0002, 0x0003, 0x0004, 0x0005, 0x0006, 0x0007, 0x0008, 0x0009 };
 
-
-        public static PaymentMethodTypeSType GetPaymentMethodType(this PayItem item)
+        public static PaymentType GetPaymentMethodType(this PayItem item)
         {
             switch (item.ftPayItemCase & 0xFFFF)
             {
                 case 0x0000:
-                    return PaymentMethodTypeSType.BANKNOTE;
+                    return PaymentType.Banknote;
                 case 0x0001:
-                    return PaymentMethodTypeSType.CARD;
+                    return PaymentType.Card;
                 case 0x0002:
-                    return PaymentMethodTypeSType.BUSINESSCARD;
+                    return PaymentType.BusinessCard;
                 case 0x0003:
-                    return PaymentMethodTypeSType.SVOUCHER;
+                    return PaymentType.Voucher;
                 case 0x0004:
-                    return PaymentMethodTypeSType.COMPANY;
+                    return PaymentType.Company;
                 case 0x0005:
-                    return PaymentMethodTypeSType.ORDER;
+                    return PaymentType.Order;
                 case 0x0006:
-                    return PaymentMethodTypeSType.ADVANCE;
+                    return PaymentType.Advance;
                 case 0x0007:
-                    return PaymentMethodTypeSType.ACCOUNT;
+                    return PaymentType.Account;
                 case 0x0008:
-                    return PaymentMethodTypeSType.FACTORING;
+                    return PaymentType.Factoring;
                 case 0x0009:
-                    return PaymentMethodTypeSType.OTHER;
+                    return PaymentType.OtherNonCash;
                 case 0x0010:
-                    return PaymentMethodTypeSType.OTHERCASH;
+                    return PaymentType.OtherCash;
                 default:
                     throw new UnknownPaymentMethodeTypeException($"PayItemCase {item.ftPayItemCase} incorrect!");
 
@@ -55,7 +54,5 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Extensions
             var payItemCase = item.ftPayItemCase & 0xFFFF;
             return _nonCashPayItemCases.Any(x => x == payItemCase);
         }
-
-
     }
 }

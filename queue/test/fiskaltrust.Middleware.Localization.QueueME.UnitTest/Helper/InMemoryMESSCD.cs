@@ -14,11 +14,15 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.Helper
         {
             _tcrCodeOrFIC = tcrCodeOrFIC;
         }
+
+        public Task<ScuMeEchoResponse> EchoAsync(ScuMeEchoRequest request) => throw new NotImplementedException();
         public Task<RegisterCashDepositResponse> RegisterCashDepositAsync(RegisterCashDepositRequest registerCashDepositRequest) => throw new NotImplementedException();
+        public Task<RegisterCashWithdrawalResponse> RegisterCashWithdrawalAsync(RegisterCashWithdrawalRequest registerCashDepositRequest) => throw new NotImplementedException();
+
         public Task<RegisterInvoiceResponse> RegisterInvoiceAsync(RegisterInvoiceRequest registerInvoiceRequest)
         {
-            var invoiceType = registerInvoiceRequest.Invoice;
-            invoiceType.TotPrice.Should().Be(invoiceType.TotPriceWoVAT+ invoiceType.TotVATAmt);
+            var invoiceDetails = registerInvoiceRequest.InvoiceDetails;
+            invoiceDetails.GrossAmount.Should().Be(invoiceDetails.NetAmount + invoiceDetails.TotalVatAmount);
 
 
             return Task.FromResult(new RegisterInvoiceResponse()
@@ -26,12 +30,14 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.Helper
                 FIC = _tcrCodeOrFIC
             });
         }
-        public Task<RegisterTCRResponse> RegisterTCRAsync(RegisterTCRRequest registerTCRRequest)
+        public Task<RegisterTcrResponse> RegisterTcrAsync(RegisterTcrRequest registerTcrequest)
         {
-            return Task.FromResult(new RegisterTCRResponse()
+            return Task.FromResult(new RegisterTcrResponse()
             {
-                TCRCode = _tcrCodeOrFIC
+                TcrCode = _tcrCodeOrFIC
             });
         }
+
+        public Task UnregisterTcrAsync(RegisterTcrRequest registerTCRRequest) => throw new NotImplementedException();
     }
 }

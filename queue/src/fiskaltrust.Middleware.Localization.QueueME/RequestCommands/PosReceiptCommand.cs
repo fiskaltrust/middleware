@@ -11,6 +11,7 @@ using fiskaltrust.Middleware.Localization.QueueME.Exceptions;
 using fiskaltrust.Middleware.Localization.QueueME.Extensions;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0.MasterData;
+using System.Collections.Generic;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 {
@@ -37,70 +38,53 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 var outlet = outlets.Where(x => x.VatId.Equals(queueME.IssuerTIN)).FirstOrDefault();
 
                 var totPRice = request.cbChargeItems.Sum(x => x.Amount);
-                var registerInvoiceRequest = new RegisterInvoiceRequest();
-
-
-                var invoiceType = new InvoiceType()
+                var invoiceDetails = new InvoiceDetails()
                 {
-                    TypeOfInv = request.GetInvoiceSType(),
-                    InvType = request.GetInvoiceTSType(),
-                    IsSimplifiedInv = invoice.IsSimplifiedInv,
-                    IssueDateTime = request.cbReceiptMoment,
-                    InvNum = string.Concat(queueME.BusinUnitCode,"/", request.cbReceiptReference, "/", request.cbReceiptMoment.Year, "/", queueME.TCRCode),
-                    InvOrdNum = int.Parse(request.cbReceiptReference),
-                    TCRCode = queueME.TCRCode,
-                    IsIssuerInVAT = invoice.IsIssuerInVAT,
-                    TaxFreeAmt = request.cbChargeItems.Where(x => x.GetVatRate().Equals(0)).Sum(x => x.Amount*x.Quantity),
-                    MarkUpAmt = invoice.MarkUpAmt,
-                    GoodsExAmt = invoice.GoodsExAmt,
-                    TotPriceWoVAT = request.cbChargeItems.Sum(x => x.Amount / (1 + (x.GetVatRate() / 100))),
-                    TotVATAmt = request.cbChargeItems.Sum(x => x.Amount * x.GetVatRate() / (100 + x.GetVatRate())),
-                    TotPrice = request.cbChargeItems.Sum(x => x.Amount),
-                    OperatorCode = invoice.OperatorCode,
-                    BusinUnitCode = queueME.BusinUnitCode,
-                    SoftCode = queueME.SoftCode,
-                    IICRefs = new IICRefType[] {new IICRefType()
+                    InvoiceType = request.GetInvoiceType(),
+                    SelfIssuedInvoiceType = (SelfIssuedInvoiceType) Enum.Parse(typeof(SelfIssuedInvoiceType), invoice.TypeOfSelfiss),
+                    TaxFreeAmount = request.cbChargeItems.Where(x => x.GetVatRate().Equals(0)).Sum(x => x.Amount * x.Quantity),
+                    NetAmount = request.cbChargeItems.Sum(x => x.Amount / (1 + (x.GetVatRate() / 100))),
+                    TotalVatAmount = request.cbChargeItems.Sum(x => x.Amount * x.GetVatRate() / (100 + x.GetVatRate())),
+                    GrossAmount = request.cbChargeItems.Sum(x => x.Amount),
+                    PaymentDeadline = invoice.PayDeadline,
+                    InvoiceCorrectionDetails = invoice.CorrectiveInv != null ? new InvoiceCorrectionDetails()
                     {
-                        IIC = "Not implemented yet",
-                    } },
-                    IIC = _signatureFactory.ICCConcatenate(queueME.IssuerTIN, request.cbReceiptMoment, request.cbReceiptReference, queueME.BusinUnitCode, queueME.TCRCode, queueME.SoftCode, totPRice),
-                    IICSignature = "Not implemented yet",
-                    IsReverseCharge = false,
-                    PayDeadline = invoice.PayDeadline,
-                    ParagonBlockNum = invoice.ParagonBlockNum,
-                    CorrectiveInv = invoice.CorrectiveInv != null ? new CorrectiveInvType() {
-                        IICRef = invoice.CorrectiveInv.IICRef,
-                        IssueDateTime = invoice.CorrectiveInv.IssueDateTime,
-                        Type = (CorrectiveInvTypeSType) Enum.Parse(typeof(CorrectiveInvTypeSType), invoice.CorrectiveInv.Type),
+                        ReferencedIKOF = invoice.CorrectiveInv.ReferencedIKOF,
+                        ReferencedMoment = invoice.CorrectiveInv.ReferencedMoment,
+                        CorrectionType = (InvoiceCorrectionType) Enum.Parse(typeof(InvoiceCorrectionType), invoice.CorrectiveInv.Type),
                     } : null,
-                    PayMethods = request.GetPaymentMethodTypes(),
-                    Currency = new CurrencyType() { Code = CurrencyCodeSType.EUR },
-                    Seller = new SellerType()
-                    {
-                        Name = outlet.OutletName,
-                        Address = outlet.Street,
-                        IDType = IDTypeSType.TIN,
-                        IDNum = queueME.IssuerTIN,
-                        Town = outlet.City,
-                        Country = CountryCodeSType.MNE
-                    },
+                    PaymentDetails = request.GetPaymentMethodTypes(),
+                    Currency = new CurrencyDetails() { CurrencyCode = "EUR" },
                     Buyer = GetBuyer(request),
-                    Items = GetInvoiceItems(request),
+                    ItemDetails = GetInvoiceItems(request),
                     Fees = GetFees(invoice),
-                    BadDebtInv = GetBadDebtInv(invoice)
-                };
-               
-                if (!string.IsNullOrEmpty(invoice.TypeOfSelfiss))
-                {
-                    if (Enum.TryParse(invoice.TypeOfSelfiss, out SelfIssSType result))
+                    ExportedGoodsAmount = request.cbChargeItems.Where(x => x.IsExportGood()).Sum(x => x.Amount),
+                    TaxPeriod = new TaxPeriod()
                     {
-                        throw new ArgumentException($"Unknown TypeOfSelfiss {invoice.TypeOfSelfiss}!");
+                        Month = (uint) request.cbReceiptMoment.Month,
+                        Year = (uint) request.cbReceiptMoment.Year
                     }
-                }
-                registerInvoiceRequest.Invoice = invoiceType;
-                registerInvoiceRequest.Signature = _signatureFactory.CreateSignature();
+                };
+                var definition = new { OperatorCode = "" };
+                var operatorCode = JsonConvert.DeserializeAnonymousType(request.cbCustomer, definition);
+                var registerInvoiceRequest = new RegisterInvoiceRequest()
+                {
+                    InvoiceDetails = invoiceDetails,
+                    SoftwareCode = queueME.SoftCode,
+                    TcrCode = queueME.TCRCode,
+                    IsIssuerInVATSystem = true,
+                    BusinessUnitCode = queueME.BusinUnitCode,
+                    Moment = request.cbReceiptMoment,
+                    OperatorCode = operatorCode.OperatorCode,
+                    RequestId = queueItem.ftQueueItemId,
+                    SubsequentDeliveryType = (SubsequentDeliveryType) Enum.Parse(typeof(SubsequentDeliveryType), invoice.SubsequentDeliveryType)
+                };
+
+                //invoiceDetails.YearlyOrdinalNumber;
+
                 var registerInvoiceResponse = await client.RegisterInvoiceAsync(registerInvoiceRequest).ConfigureAwait(false);
                 var receiptResponse = CreateReceiptResponse(request, queueItem);
+
                 return new RequestCommandResponse()
                 {
                     ReceiptResponse = receiptResponse
@@ -113,45 +97,31 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             }
         }
 
-        private BadDebtInvType GetBadDebtInv(Invoice invoice)
-        {
-            if(invoice.BadDebt is null)
-            {
-                return null;
-            }
-            return new BadDebtInvType()
-            {
-                IICRef = invoice.BadDebt.IICRef,
-                IssueDateTime = invoice.BadDebt.IssueDateTime
-            };
-        }
-
-        private FeeType[] GetFees(Invoice invoice)
+        private List<InvoiceFee> GetFees(Invoice invoice)
         {
             if(invoice.Fees is null)
             {
                 return null;
             }
-            var result = new FeeType[invoice.Fees.Count()];
-            var i=0;
+            var result = new List<InvoiceFee>();
             foreach(var fee in invoice.Fees)
             {
-                result[i] = new FeeType()
+                result.Add(new InvoiceFee()
                 {
-                    Amt = fee.Amt,
-                    Type = (FeeTypeSType) Enum.Parse(typeof(FeeTypeSType), fee.Type)
-                };
+                    Amount = fee.Amount,
+                    FeeType = (FeeType) Enum.Parse(typeof(FeeType), fee.FeeType)
+                });
             }
             return result;
         }
 
-        private InvoiceItemType[] GetInvoiceItems(ReceiptRequest request)
+        private List<InvoiceItem> GetInvoiceItems(ReceiptRequest request)
         {
             if (request.cbChargeItems.Count() > 1000)
             {
                 throw new MaxInvoiceItemsExceededException();
             }
-            var items = new InvoiceItemType[request.cbChargeItems.Count()];
+            var items = new List<InvoiceItem>();
             var i = 0;
             foreach(var chargeItem in request.cbChargeItems)
             {
@@ -161,7 +131,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             return items;
         }
 
-        private BuyerType GetBuyer(ReceiptRequest request)
+        private BuyerDetails GetBuyer(ReceiptRequest request)
         {
             if (string.IsNullOrEmpty(request.cbCustomer))
             {
@@ -174,14 +144,14 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 {
                     throw new Exception("Value in Field cbCustomer could not be parsed");
                 }
-                return new BuyerType()
+                return new BuyerDetails()
                 {
-                    IDNum = buyer.IDNum,
-                    IDType = (IDTypeSType) Enum.Parse(typeof(IDTypeSType), buyer.IDType),
+                    IdentificationNumber = buyer.IdentificationNumber,
+                    IdentificationType = (BuyerIdentificationType) Enum.Parse(typeof(BuyerIdentificationType), buyer.BuyerIdentificationType),
                     Name = buyer.Name,
                     Address = buyer.Address,
                     Town = buyer.Town,
-                    Country = (CountryCodeSType) Enum.Parse(typeof(CountryCodeSType), buyer.Country),
+                    Country = buyer.Country,
                 };
             }
             catch (Exception ex)

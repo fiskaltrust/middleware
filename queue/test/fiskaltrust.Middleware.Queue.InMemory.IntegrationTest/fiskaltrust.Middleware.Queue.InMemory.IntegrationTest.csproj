@@ -24,7 +24,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Update="fiskaltrust.storage" Version="1.3.21-ci-22098-52730" ><NoWarn>NU1605</NoWarn></PackageReference>
+    <PackageReference Update="fiskaltrust.storage" Version="1.3.21-ci-22115-53166" ><NoWarn>NU1605</NoWarn></PackageReference>
   </ItemGroup>
 
 </Project>

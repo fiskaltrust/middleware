@@ -6,13 +6,13 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Models
     public class Buyer
     {
         [DataMember]
-        public string IDType
+        public string BuyerIdentificationType
         {
             get;
             set;
         }
         [DataMember]
-        public string IDNum
+        public string IdentificationNumber
         {
             get;
             set;
