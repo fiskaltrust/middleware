@@ -13,11 +13,11 @@ namespace fiskaltrust.Middleware.SCU.ME.FiscalizationService
         public Guid Id { get; set; }
         public Dictionary<string, object> Configuration { get; set; }
 
-        public void ConfigureServices(IServiceCollection services)
+        public void ConfigureServices(IServiceCollection serviceCollection)
         {
             var scuMeConfig = JsonConvert.DeserializeObject<ScuMEConfiguration>(JsonConvert.SerializeObject(Configuration));
 
-            _ = services
+            _ = serviceCollection
                 .AddSingleton(scuMeConfig)
                 .AddScoped<IMESSCD, FiscalizationServiceSCU>();
         }

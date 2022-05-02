@@ -1,5 +1,7 @@
-﻿using System.Security.Cryptography.X509Certificates;
+﻿using System;
+using System.Security.Cryptography.X509Certificates;
 
+[assembly:CLSCompliant(true)]
 namespace fiskaltrust.Middleware.SCU.ME.Common.Configuration
 {
     public class ScuMEConfiguration

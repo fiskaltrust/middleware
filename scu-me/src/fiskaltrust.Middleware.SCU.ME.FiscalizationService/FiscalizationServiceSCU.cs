@@ -11,7 +11,7 @@ using SoapFiscalizationService = FiscalizationService;
 namespace fiskaltrust.Middleware.SCU.ME.FiscalizationService;
 
 #nullable enable
-public class FiscalizationServiceSCU : IMESSCD, IDisposable
+public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
 {
     private readonly SoapFiscalizationService.FiscalizationServicePortTypeClient _fiscalizationServiceClient;
     private readonly ScuMEConfiguration _configuration;
@@ -56,7 +56,7 @@ public class FiscalizationServiceSCU : IMESSCD, IDisposable
         };
     }
 
-    public async Task<RegisterCashWithdrawalResponse> RegisterCashWithdrawalAsync(RegisterCashWithdrawalRequest registerCashWithdrawalRequest)
+    public async Task<RegisterCashWithdrawalResponse> RegisterCashWithdrawalAsync(RegisterCashWithdrawalRequest registerCashDepositRequest)
     {
         var sendDateTime = DateTime.Now;
         var request = new SoapFiscalizationService.RegisterCashDepositRequest
@@ -64,15 +64,15 @@ public class FiscalizationServiceSCU : IMESSCD, IDisposable
             Header = new SoapFiscalizationService.RegisterCashDepositRequestHeaderType
             {
                 SendDateTime = sendDateTime,
-                UUID = registerCashWithdrawalRequest.RequestId.ToString()
+                UUID = registerCashDepositRequest.RequestId.ToString()
             },
             CashDeposit = new SoapFiscalizationService.CashDepositType
             {
-                CashAmt = registerCashWithdrawalRequest.Amount,
-                ChangeDateTime = registerCashWithdrawalRequest.Moment,
+                CashAmt = registerCashDepositRequest.Amount,
+                ChangeDateTime = registerCashDepositRequest.Moment,
                 IssuerTIN = _configuration.TIN,
                 Operation = SoapFiscalizationService.CashDepositOperationSType.WITHDRAW,
-                TCRCode = registerCashWithdrawalRequest.TcrCode
+                TCRCode = registerCashDepositRequest.TcrCode
             }
         };
 
@@ -155,5 +155,8 @@ public class FiscalizationServiceSCU : IMESSCD, IDisposable
         return;
     }
 
-    public void Dispose() => ((IDisposable) _fiscalizationServiceClient).Dispose();
+    public void Dispose()
+    {
+        ((IDisposable) _fiscalizationServiceClient).Dispose();
+    }
 }
