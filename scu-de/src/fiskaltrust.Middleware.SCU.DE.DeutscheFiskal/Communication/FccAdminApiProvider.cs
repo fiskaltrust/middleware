@@ -67,6 +67,24 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Communication
             }
         }
 
+        public async Task DeregisterClientAsync(string clientId)
+        {
+            var request = new DeregisterClientRequestDto
+            {
+                ClientId = clientId
+            };
+
+            using var client = GetBasicAuthAdminClient();
+            var requestContent = JsonConvert.SerializeObject(request);
+            var response = await client.PostAsync("deregistration", new StringContent(requestContent, Encoding.UTF8, "application/json"));
+            if (!response.IsSuccessStatusCode)
+            {
+                var responseContent = await response.Content.ReadAsStringAsync();
+                throw new FiskalCloudException($"Communication error ({response.StatusCode}) while deregistering client (POST /deregistration). Request: '{requestContent}', Response: '{responseContent}'",
+                    (int) response.StatusCode, ErrorHelper.GetErrorType(responseContent), "POST /registration");
+            }
+        }
+
         public async Task<FccInfoResponseDto> GetFccInfoAsync()
         {
             using var client = new HttpClient

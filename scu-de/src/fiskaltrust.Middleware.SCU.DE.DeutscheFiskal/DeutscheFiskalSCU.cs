@@ -322,9 +322,16 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
         {
             try
             {
+                await StartFccIfNotRunning();
+                var existingClients = await _fccAdminApiProvider.GetClientsAsync();
+
+                if (existingClients.Any(x => x.ClientId == request.ClientId))
+                {
+                    await _fccAdminApiProvider.DeregisterClientAsync(request.ClientId);
+                }
+
                 return new UnregisterClientIdResponse
                 {
-                    // Removing is not supported, return existing clients untouched
                     ClientIds = (await _fccAdminApiProvider.GetClientsAsync()).Select(x => x.ClientId)
                 };
             }
