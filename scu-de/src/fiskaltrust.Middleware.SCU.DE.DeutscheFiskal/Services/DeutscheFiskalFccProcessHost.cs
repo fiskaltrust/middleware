@@ -43,17 +43,18 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
             }
             try
             {
-                _process = new Process
+                var shellProcess = new Process
                 {
                     StartInfo = GetProcessStartInfo(fccDirectory)
                 };
-                _process.Start();
-                _process.OutputDataReceived += (_, e) => LogFcc(LogLevel.Debug, e?.Data);
-                _process.ErrorDataReceived += (_, e) => LogFcc(LogLevel.Error, e?.Data);
-                _process.BeginOutputReadLine();
-                _process.BeginErrorReadLine();
+                shellProcess.Start();
+                shellProcess.OutputDataReceived += (_, e) => LogFcc(LogLevel.Debug, e?.Data);
+                shellProcess.ErrorDataReceived += (_, e) => LogFcc(LogLevel.Error, e?.Data);
+                shellProcess.BeginOutputReadLine();
+                shellProcess.BeginErrorReadLine();
 
                 await WaitUntilFccIsAvailable(DeutscheFiskalConstants.DefaultProcessTimeoutMs);
+                _process = GetProcessIfRunning(fccDirectory, _logger);
                 _startedProcessInline = true;
             }
             catch (Exception)
@@ -98,7 +99,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
 
         public void Dispose()
         {
-            if (_startedProcessInline)
+            if (_startedProcessInline && _process != null)
             {
                 _logger.LogInformation("Stopping FCC with process ID {FccProcessId}...", _process.Id);
                 _process.Kill();
