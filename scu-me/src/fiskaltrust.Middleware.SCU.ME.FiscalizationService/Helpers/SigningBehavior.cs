@@ -1,5 +1,8 @@
 ﻿using System.IO;
+using System.Linq;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Security.Cryptography.Xml;
 using System.ServiceModel;
 using System.ServiceModel.Channels;
 using System.ServiceModel.Description;
@@ -7,9 +10,6 @@ using System.ServiceModel.Dispatcher;
 using System.Text;
 using System.Xml;
 using System.Xml.Linq;
-using System.Linq;
-using System.Security.Cryptography;
-using System.Security.Cryptography.Xml;
 
 namespace fiskaltrust.Middleware.SCU.ME.FiscalizationService.Helpers
 {

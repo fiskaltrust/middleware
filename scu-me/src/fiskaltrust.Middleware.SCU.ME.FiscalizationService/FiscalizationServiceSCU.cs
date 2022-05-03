@@ -21,7 +21,7 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
         _logger = logger;
         _configuration = configuration;
         _fiscalizationServiceClient = new SoapFiscalizationService.FiscalizationServicePortTypeClient();
-        
+
         _fiscalizationServiceClient.Endpoint.EndpointBehaviors.Add(new DateTimeBehaviour());
         _fiscalizationServiceClient.Endpoint.EndpointBehaviors.Add(new SigningBehaviour(_configuration.Certificate));
     }
@@ -107,9 +107,9 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
             },
         };
 
-        if(registerTCRRequest.TcrType is not null)
+        if (registerTCRRequest.TcrType is not null)
         {
-            request.TCR.Type =(SoapFiscalizationService.TCRSType)registerTCRRequest.TcrType;
+            request.TCR.Type = (SoapFiscalizationService.TCRSType) registerTCRRequest.TcrType;
         }
 
 
@@ -145,9 +145,9 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
             },
         };
 
-        if(registerTCRRequest.TcrType is not null)
+        if (registerTCRRequest.TcrType is not null)
         {
-            request.TCR.Type =(SoapFiscalizationService.TCRSType)registerTCRRequest.TcrType;
+            request.TCR.Type = (SoapFiscalizationService.TCRSType) registerTCRRequest.TcrType;
         }
 
         _ = await _fiscalizationServiceClient.registerTCRAsync(request);

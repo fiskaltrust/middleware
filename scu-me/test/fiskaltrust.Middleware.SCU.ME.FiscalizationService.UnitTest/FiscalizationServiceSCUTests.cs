@@ -1,17 +1,18 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Net;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
+using Bogus;
 using fiskaltrust.ifPOS.v1.me;
+using fiskaltrust.Middleware.SCU.ME.Common.Configuration;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
-using fiskaltrust.Middleware.SCU.ME.Common.Configuration;
-using Bogus;
-using System.Security.Cryptography.X509Certificates;
-using System.Net;
-using System.Security.Cryptography;
-using System.Collections.Generic;
 
+#pragma warning disable CA2007
 namespace fiskaltrust.Middleware.SCU.ME.FiscalizationService.UnitTest
 {
     public class InMemorySCUTests
@@ -21,7 +22,7 @@ namespace fiskaltrust.Middleware.SCU.ME.FiscalizationService.UnitTest
         [Fact]
         public async Task RegisterTcrRequest()
         {
-            IMESSCD meSSCD = CreateSCU();
+            var meSSCD = CreateSCU();
 
             var request = new RegisterTcrRequest
             {
@@ -37,16 +38,20 @@ namespace fiskaltrust.Middleware.SCU.ME.FiscalizationService.UnitTest
             {
                 _ = await meSSCD.RegisterTcrAsync(request);
             }
-            catch (Exception ex)
+            catch (System.ServiceModel.FaultException ex)
             {
                 _ = ex.Message.Should().StartWith("Received certificate doesn't contain TIN number.");
+            }
+            finally
+            {
+                meSSCD.Dispose();
             }
         }
 
         [Fact]
         public async Task UnregisterTcrRequest()
         {
-            IMESSCD meSSCD = CreateSCU();
+            var meSSCD = CreateSCU();
 
             var request = new RegisterTcrRequest
             {
@@ -59,16 +64,20 @@ namespace fiskaltrust.Middleware.SCU.ME.FiscalizationService.UnitTest
             {
                 await meSSCD.UnregisterTcrAsync(request);
             }
-            catch (Exception ex)
+            catch (System.ServiceModel.FaultException ex)
             {
                 _ = ex.Message.Should().StartWith("Received certificate doesn't contain TIN number.");
+            }
+            finally
+            {
+                meSSCD.Dispose();
             }
         }
 
         [Fact]
         public async Task RegisterCashDepositRequest()
         {
-            IMESSCD meSSCD = CreateSCU();
+            var meSSCD = CreateSCU();
 
             var request = new RegisterCashDepositRequest
             {
@@ -82,16 +91,20 @@ namespace fiskaltrust.Middleware.SCU.ME.FiscalizationService.UnitTest
             {
                 _ = await meSSCD.RegisterCashDepositAsync(request);
             }
-            catch (Exception ex)
+            catch (System.ServiceModel.FaultException ex)
             {
                 _ = ex.Message.Should().StartWith("Received certificate doesn't contain TIN number.");
+            }
+            finally
+            {
+                meSSCD.Dispose();
             }
         }
 
         [Fact]
         public async Task RegisterCashWithdrawalRequest()
         {
-            IMESSCD meSSCD = CreateSCU();
+            var meSSCD = CreateSCU();
 
             var request = new RegisterCashWithdrawalRequest
             {
@@ -105,16 +118,20 @@ namespace fiskaltrust.Middleware.SCU.ME.FiscalizationService.UnitTest
             {
                 _ = await meSSCD.RegisterCashWithdrawalAsync(request);
             }
-            catch (Exception ex)
+            catch (System.ServiceModel.FaultException ex)
             {
                 _ = ex.Message.Should().StartWith("Received certificate doesn't contain TIN number.");
+            }
+            finally
+            {
+                meSSCD.Dispose();
             }
         }
 
         [Fact(Skip = "Not Implemented Yet")]
         public async Task RegisterInvoiceRequest()
         {
-            IMESSCD meSSCD = CreateSCU();
+            var meSSCD = CreateSCU();
 
             var request = new RegisterInvoiceRequest
             {
@@ -127,22 +144,22 @@ namespace fiskaltrust.Middleware.SCU.ME.FiscalizationService.UnitTest
                 IsIssuerInVATSystem = true,
                 InvoiceDetails = new InvoiceDetails
                 {
-                     GrossAmount = Math.Round(_faker.Random.Decimal(1000), 2),
-                     InvoiceType = InvoiceType.Cash,
-                     Fees = new List<InvoiceFee>
-                     {
+                    GrossAmount = Math.Round(_faker.Random.Decimal(1000), 2),
+                    InvoiceType = InvoiceType.Cash,
+                    Fees = new List<InvoiceFee>
+                    {
 
-                     },
-                     ItemDetails = new List<InvoiceItem>
-                     {
+                    },
+                    ItemDetails = new List<InvoiceItem>
+                    {
 
-                     },
-                     NetAmount = Math.Round(_faker.Random.Decimal(1000), 2),
-                     PaymentDetails = new List<InvoicePayment>
-                     {
+                    },
+                    NetAmount = Math.Round(_faker.Random.Decimal(1000), 2),
+                    PaymentDetails = new List<InvoicePayment>
+                    {
 
-                     },
-                     YearlyOrdinalNumber = _faker.Random.ULong()
+                    },
+                    YearlyOrdinalNumber = _faker.Random.ULong()
                 }
             };
 
@@ -150,9 +167,13 @@ namespace fiskaltrust.Middleware.SCU.ME.FiscalizationService.UnitTest
             {
                 _ = await meSSCD.RegisterInvoiceAsync(request);
             }
-            catch (Exception ex)
+            catch (System.ServiceModel.FaultException ex)
             {
                 _ = ex.Message.Should().StartWith("Received certificate doesn't contain TIN number.");
+            }
+            finally
+            {
+                meSSCD.Dispose();
             }
         }
 
@@ -170,7 +191,7 @@ namespace fiskaltrust.Middleware.SCU.ME.FiscalizationService.UnitTest
             });
         }
 
-        private X509Certificate2 BuildSelfSignedServerCertificate()
+        private static X509Certificate2 BuildSelfSignedServerCertificate()
         {
             var certificateName = "UnitTests";
             var sanBuilder = new SubjectAlternativeNameBuilder();

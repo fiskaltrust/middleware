@@ -9,6 +9,7 @@ using fiskaltrust.Middleware.SCU.ME.Common.Configuration;
 using FluentAssertions;
 using Xunit;
 
+#pragma warning disable CA2007
 namespace fiskaltrust.Middleware.SCU.ME.InMemory.UnitTest
 {
     public class InMemorySCUTests
@@ -130,7 +131,7 @@ namespace fiskaltrust.Middleware.SCU.ME.InMemory.UnitTest
             });
         }
 
-        private X509Certificate2 BuildSelfSignedServerCertificate()
+        private static X509Certificate2 BuildSelfSignedServerCertificate()
         {
             var certificateName = "UnitTests";
             var sanBuilder = new SubjectAlternativeNameBuilder();
