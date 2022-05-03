@@ -100,7 +100,9 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
         {
             if (_startedProcessInline)
             {
+                _logger.LogInformation("Stopping FCC with process ID {FccProcessId}...", _process.Id);
                 _process.Kill();
+                _logger.LogInformation("Stopped FCC with process ID {FccProcessId}.", _process.Id);
             }
             _process?.Dispose();
         }
