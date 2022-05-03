@@ -82,7 +82,7 @@ namespace fiskaltrust.Middleware.SCU.ME.FiscalizationService.UnitTest
             var request = new RegisterCashDepositRequest
             {
                 RequestId = Guid.NewGuid(),
-                Amount = Math.Round(_faker.Random.Decimal(1000), 2),
+                Amount = Math.Round(_faker.Random.Decimal(max: 1000), 2),
                 Moment = DateTime.Now,
                 TcrCode = $"{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}"
             };
@@ -109,7 +109,7 @@ namespace fiskaltrust.Middleware.SCU.ME.FiscalizationService.UnitTest
             var request = new RegisterCashWithdrawalRequest
             {
                 RequestId = Guid.NewGuid(),
-                Amount = Math.Round(_faker.Random.Decimal(1000), 2),
+                Amount = Math.Round(_faker.Random.Decimal(max: 1000), 2),
                 Moment = DateTime.Now,
                 TcrCode = $"{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}"
             };
@@ -144,20 +144,37 @@ namespace fiskaltrust.Middleware.SCU.ME.FiscalizationService.UnitTest
                 IsIssuerInVATSystem = true,
                 InvoiceDetails = new InvoiceDetails
                 {
-                    GrossAmount = Math.Round(_faker.Random.Decimal(1000), 2),
+                    GrossAmount = Math.Round(_faker.Random.Decimal(max: 1000), 2),
                     InvoiceType = InvoiceType.Cash,
                     Fees = new List<InvoiceFee>
                     {
-
+                        new InvoiceFee
+                        {
+                            Amount = Math.Round(_faker.Random.Decimal(max: 1000), 2),
+                            FeeType = FeeType.Bottle
+                        }
                     },
                     ItemDetails = new List<InvoiceItem>
                     {
-
+                        new InvoiceItem
+                        {
+                            GrossAmount = Math.Round(_faker.Random.Decimal(max: 1000), 2),
+                            GrossUnitPrice = Math.Round(_faker.Random.Decimal(max: 1000), 2),
+                            Name = _faker.Random.String2(15),
+                            NetAmount = Math.Round(_faker.Random.Decimal(max: 1000), 2),
+                            NetUnitPrice = Math.Round(_faker.Random.Decimal(max: 1000), 2),
+                            Quantity = _faker.Random.Decimal(max: 10),
+                            Unit = _faker.Random.String(2, 'a', 'z'),
+                        }
                     },
-                    NetAmount = Math.Round(_faker.Random.Decimal(1000), 2),
+                    NetAmount = Math.Round(_faker.Random.Decimal(max: 1000), 2),
                     PaymentDetails = new List<InvoicePayment>
                     {
-
+                        new InvoicePayment
+                        {
+                            Amount = Math.Round(_faker.Random.Decimal(max: 1000), 2),
+                            Type = PaymentType.Card,
+                        }
                     },
                     YearlyOrdinalNumber = _faker.Random.ULong()
                 }
