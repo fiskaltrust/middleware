@@ -238,3 +238,5 @@ dotnet_diagnostic.CS1591.severity = none
 
 # IDE0057: Use range operator
 dotnet_diagnostic.IDE0057.severity = suggestion
+
+dotnet_diagnostic.CA1014.severity = none
