@@ -1,14 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
-using fiskaltrust.Middleware.Contracts.Models.Transactions;
 using Newtonsoft.Json;
-using fiskaltrust.Middleware.Contracts.Models;
-using fiskaltrust.storage.serialization.DE.V0;
-using fiskaltrust.Middleware.Contracts.Data;
 using fiskaltrust.Middleware.Localization.QueueME.Models;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.me;

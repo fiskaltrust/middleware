@@ -32,18 +32,41 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Extensions
             return (chargeItem.ftChargeItemCase & 0x0_0008_0000) == 0x0_0008_0000;
         }
 
+        public static bool IsCashDeposite(this ChargeItem chargeItem)
+        {
+            return (chargeItem.ftChargeItemCase & 0xFFFF) == 0x0020;
+        }
+
+        public static bool IsCashWithdrawal(this ChargeItem chargeItem)
+        {
+            return (chargeItem.ftChargeItemCase & 0xFFFF) == 0x0021;
+        }
+
         public static decimal GetVatRate(this ChargeItem chargeItem)
         {
             switch (chargeItem.ftChargeItemCase & 0xFFFF)
             {
+                case 0x0000:
+                case 0x0005:
+                case 0x0015:
+                case 0x001D:
+                    return chargeItem.VATRate;
                 case 0x0001:
+                case 0x0011:
+                case 0x0019:
                     return 21;
                 case 0x0002:
+                case 0x0012:
+                case 0x001A:
                     return 7;
                 case 0x0003:
                 case 0x0004:
+                case 0x0013:
+                case 0x0014:
+                case 0x001B:
+                case 0x001C:
                     return 0;
-                default:
+                   default:
                     throw new UnkownInvoiceTypeException("ChargeItemCase holds unkown Vat Rate!");
             }
         }
