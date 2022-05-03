@@ -68,9 +68,16 @@ namespace fiskaltrust.Middleware.SCU.ME.FiscalizationService.Helpers
             {
                 try
                 {
-                    attribute.SetValue(DateTime.ParseExact(attribute.Value, "o", System.Globalization.CultureInfo.CurrentCulture).ToUniversalTime().ToString(@"yyyy-MM-dd\Thh:mm:ss\Z"));
+                    attribute.SetValue(DateTime.ParseExact(attribute.Value, "O", System.Globalization.CultureInfo.CurrentCulture).ToUniversalTime().ToString(@"yyyy-MM-dd\THH:mm:ss\Z"));
                 }
-                catch { }
+                catch
+                {
+                    try
+                    {
+                        attribute.SetValue(DateTime.ParseExact(attribute.Value, @"yyyy-MM-dd\THH:mm:ss.ffffffzzz", System.Globalization.CultureInfo.CurrentCulture).ToUniversalTime().ToString(@"yyyy-MM-dd\THH:mm:ss\Z"));
+                    }
+                    catch { }
+                }
             }
         }
     }
