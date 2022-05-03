@@ -82,13 +82,21 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
                         Quantity = 1,
                         UnitPrice = 107,
                         Description = "TestChargeItem2"
+                    },
+                    new ChargeItem() {
+                        Amount = 100,
+                        ftChargeItemCase = 0x44D5_0000_0001_0001,
+                        ftChargeItemCaseData = JsonConvert.SerializeObject(createVoucherInvoiceItemRequest()),
+                        ProductBarcode = "Voucher",
+                        Quantity = 1,
+                        Description = "Voucher"
                     }
                 },
                 cbPayItems = new PayItem[]
                 {
                     new PayItem()
                     {
-                       Amount = 208,
+                       Amount = 308,
                        ftPayItemCase = 0x44D5_0000_0000_0000,
                     },
                     //Voucher
@@ -118,6 +126,15 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
                        ftPayItemCaseData =  @"{'CompCardNumber' : '71234'}",
                     }
                 }
+            };
+        }
+
+        private InvoiceItemRequest createVoucherInvoiceItemRequest()
+        {
+            return new InvoiceItemRequest()
+            {
+                VoucherExpirationDate = "2023-01-01",
+                VoucherSerialNumbers = new string[] { "Voucher", "Voucher2" }
             };
         }
 

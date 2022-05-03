@@ -19,7 +19,17 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Extensions
 
         public static bool IsExportGood(this ChargeItem chargeItem)
         {
-            return (chargeItem.ftChargeItemCase & 0xFFFF) == 0x0004;
+            return (chargeItem.ftChargeItemCase & 0x0_0002_0000) == 0x0_0002_0000;
+        }
+
+        public static bool IsNoInvestment(this ChargeItem chargeItem)
+        {
+            return (chargeItem.ftChargeItemCase & 0x0_0004_0000) == 0x0_0004_0000;
+        }
+
+        public static bool DiscountIsNotReducingBasePrice(this ChargeItem chargeItem)
+        {
+            return (chargeItem.ftChargeItemCase & 0x0_0008_0000) == 0x0_0008_0000;
         }
 
         public static decimal GetVatRate(this ChargeItem chargeItem)
@@ -45,13 +55,13 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Extensions
             {
                 Name = chargeItem.Description,
                 Code = chargeItem.ProductBarcode,
-                IsInvestment = invoiceItemRequest.IsInvestment,
+                IsInvestment = !chargeItem.IsNoInvestment(),
                 Unit = chargeItem.Unit,
                 Quantity = chargeItem.Quantity,
                 NetUnitPrice = chargeItem.UnitPrice.HasValue ? (decimal) (chargeItem.UnitPrice * (chargeItem.GetVatRate() / 100)) : 0,
                 GrossUnitPrice = chargeItem.UnitPrice.HasValue ? (decimal) chargeItem.UnitPrice : 0,
                 DiscountPercentage = invoiceItemRequest.DiscountPercentage,
-                IsDiscountReducingBasePrice = invoiceItemRequest.IsDiscountReducingBasePrice,
+                IsDiscountReducingBasePrice = !chargeItem.DiscountIsNotReducingBasePrice(),
                 VatRate = chargeItem.GetVatRate(),
                 ExemptFromVatReason = string.IsNullOrEmpty(invoiceItemRequest.ExemptFromVatReason) ? null : (ExemptFromVatReasons)Enum.Parse(typeof(ExemptFromVatReasons), invoiceItemRequest.ExemptFromVatReason),
                 GrossAmount = chargeItem.Amount,
@@ -60,14 +70,22 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Extensions
             invoiceItem.GrossAmount = (invoiceItem.GrossUnitPrice - invoiceItem.NetUnitPrice) * invoiceItem.Quantity;
             if (chargeItem.IsVoucher())
             {
-                 invoiceItem.Vouchers = new List<VoucherItem>()
+                var voucher = new VoucherItem()
                 {
-                    new VoucherItem()
+                    NominalValue = chargeItem.Amount,
+                    SerialNumbers = invoiceItemRequest.VoucherSerialNumbers.ToList()
+                };
+                if (!string.IsNullOrEmpty(invoiceItemRequest.VoucherExpirationDate))
+                {
+                    if (DateTime.TryParseExact(invoiceItemRequest.VoucherExpirationDate, "yyyy-mm-dd", CultureInfo.InvariantCulture,
+                        DateTimeStyles.RoundtripKind, out var dateValue))
                     {
-                        ExpirationDate = chargeItem.Moment.Value,
-                        NominalValue = chargeItem.Amount,
-                        SerialNumbers = invoiceItemRequest.VoucherSerialNumbers.ToList()
+                        voucher.ExpirationDate = dateValue;
                     }
+                }
+                invoiceItem.Vouchers = new List<VoucherItem>()
+                {
+                    voucher
                 };
             }
             return invoiceItem;

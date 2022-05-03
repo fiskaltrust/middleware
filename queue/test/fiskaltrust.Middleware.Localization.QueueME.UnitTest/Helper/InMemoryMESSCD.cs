@@ -22,9 +22,8 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.Helper
         public Task<RegisterInvoiceResponse> RegisterInvoiceAsync(RegisterInvoiceRequest registerInvoiceRequest)
         {
             var invoiceDetails = registerInvoiceRequest.InvoiceDetails;
-            invoiceDetails.GrossAmount.Should().Be(invoiceDetails.NetAmount + invoiceDetails.TotalVatAmount);
-
-
+            var rounded = (decimal)Math.Round((double) (invoiceDetails.NetAmount + invoiceDetails.TotalVatAmount));
+            invoiceDetails.GrossAmount.Should().Be(rounded);
             return Task.FromResult(new RegisterInvoiceResponse()
             {
                 FIC = _tcrCodeOrFIC
