@@ -10,6 +10,7 @@ using Bogus;
 using System.Security.Cryptography.X509Certificates;
 using System.Net;
 using System.Security.Cryptography;
+using System.Collections.Generic;
 
 namespace fiskaltrust.Middleware.SCU.ME.FiscalizationService.UnitTest
 {
@@ -20,7 +21,6 @@ namespace fiskaltrust.Middleware.SCU.ME.FiscalizationService.UnitTest
         [Fact]
         public async Task RegisterTcrRequest()
         {
-
             IMESSCD meSSCD = CreateSCU();
 
             var request = new RegisterTcrRequest
@@ -36,6 +36,119 @@ namespace fiskaltrust.Middleware.SCU.ME.FiscalizationService.UnitTest
             try
             {
                 _ = await meSSCD.RegisterTcrAsync(request);
+            }
+            catch (Exception ex)
+            {
+                _ = ex.Message.Should().StartWith("Received certificate doesn't contain TIN number.");
+            }
+        }
+
+        [Fact]
+        public async Task UnregisterTcrRequest()
+        {
+            IMESSCD meSSCD = CreateSCU();
+
+            var request = new RegisterTcrRequest
+            {
+                BusinessUnitCode = $"{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}",
+                InternalTcrIdentifier = $"{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}",
+                RequestId = Guid.NewGuid(),
+            };
+
+            try
+            {
+                await meSSCD.UnregisterTcrAsync(request);
+            }
+            catch (Exception ex)
+            {
+                _ = ex.Message.Should().StartWith("Received certificate doesn't contain TIN number.");
+            }
+        }
+
+        [Fact]
+        public async Task RegisterCashDepositRequest()
+        {
+            IMESSCD meSSCD = CreateSCU();
+
+            var request = new RegisterCashDepositRequest
+            {
+                RequestId = Guid.NewGuid(),
+                Amount = Math.Round(_faker.Random.Decimal(1000), 2),
+                Moment = DateTime.Now,
+                TcrCode = $"{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}"
+            };
+
+            try
+            {
+                _ = await meSSCD.RegisterCashDepositAsync(request);
+            }
+            catch (Exception ex)
+            {
+                _ = ex.Message.Should().StartWith("Received certificate doesn't contain TIN number.");
+            }
+        }
+
+        [Fact]
+        public async Task RegisterCashWithdrawalRequest()
+        {
+            IMESSCD meSSCD = CreateSCU();
+
+            var request = new RegisterCashWithdrawalRequest
+            {
+                RequestId = Guid.NewGuid(),
+                Amount = Math.Round(_faker.Random.Decimal(1000), 2),
+                Moment = DateTime.Now,
+                TcrCode = $"{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}"
+            };
+
+            try
+            {
+                _ = await meSSCD.RegisterCashWithdrawalAsync(request);
+            }
+            catch (Exception ex)
+            {
+                _ = ex.Message.Should().StartWith("Received certificate doesn't contain TIN number.");
+            }
+        }
+
+        [Fact(Skip = "Not Implemented Yet")]
+        public async Task RegisterInvoiceRequest()
+        {
+            IMESSCD meSSCD = CreateSCU();
+
+            var request = new RegisterInvoiceRequest
+            {
+                RequestId = Guid.NewGuid(),
+                Moment = DateTime.Now,
+                TcrCode = $"{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}",
+                BusinessUnitCode = $"{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}",
+                OperatorCode = $"{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}",
+                SoftwareCode = $"{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}",
+                IsIssuerInVATSystem = true,
+                InvoiceDetails = new InvoiceDetails
+                {
+                     GrossAmount = Math.Round(_faker.Random.Decimal(1000), 2),
+                     InvoiceType = InvoiceType.Cash,
+                     Fees = new List<InvoiceFee>
+                     {
+
+                     },
+                     ItemDetails = new List<InvoiceItem>
+                     {
+
+                     },
+                     NetAmount = Math.Round(_faker.Random.Decimal(1000), 2),
+                     PaymentDetails = new List<InvoicePayment>
+                     {
+
+                     },
+                     YearlyOrdinalNumber = _faker.Random.ULong()
+                }
+            };
+
+            try
+            {
+                _ = await meSSCD.RegisterInvoiceAsync(request);
             }
             catch (Exception ex)
             {
