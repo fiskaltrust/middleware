@@ -10,11 +10,11 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="1.1.1" />
+        <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="6.0.0" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="3.1.4" />
         <PackageReference Include="Microsoft.Extensions.Logging" Version="3.1.4" />
-        <PackageReference Include="Microsoft.Data.Sqlite" Version="3.1.4" Condition="'$(TargetFramework)' == 'netstandard2.0'" />
-        <PackageReference Include="System.Data.SQLite" Version="1.0.112.2" Condition="'$(TargetFramework)' != 'netstandard2.0'" />
+        <PackageReference Include="Microsoft.Data.Sqlite" Version="6.0.4" />
+        <PackageReference Include="System.Data.SQLite" Version="1.0.115.5" Condition="'$(TargetFramework)' != 'netstandard2.0'" />
     </ItemGroup>
 
     <ItemGroup>
