@@ -9,7 +9,6 @@ using fiskaltrust.storage.V0;
 using Newtonsoft.Json;
 using Xunit;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories.DE.MasterData;
-using fiskaltrust.storage.V0.MasterData;
 using Moq;
 using Microsoft.Extensions.Logging;
 
@@ -22,32 +21,29 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
         public async Task ExecuteAsync_RegisterInvoice_ValidResultAsync()
         {
             var inMemoryConfigurationRepository = new InMemoryConfigurationRepository();
-            var inMemoryMasterOutlet = new InMemoryOutletMasterDataRepository();
             var tcr = CreateTCR();
-            var outlet = new OutletMasterData()
-            {
-                OutletName = "TesrOutlet",
-                Street = "Mustergasse 5",
-                City = "Wien",
-                VatId = tcr.IssuerTIN,
-            };
-            await inMemoryMasterOutlet.InsertOrUpdateAsync(outlet).ConfigureAwait(false);
-
             var queue = new ftQueue()
             {
                 ftQueueId = Guid.NewGuid()
             };
+            var scu = new ftSignaturCreationUnitME()
+            {
+                ftSignaturCreationUnitMEId = Guid.NewGuid(),
+                TcrIntId = tcr.TCRIntID,
+                BusinessUnitCode = tcr.BusinUnitCode,
+                IssuerTin = tcr.IssuerTIN,
+                TcrCode = "TestTCRCode008",
+                EnuType = "Regular"
+            };
+            await inMemoryConfigurationRepository.InsertOrUpdateSignaturCreationUnitMEAsync(scu).ConfigureAwait(false);
             var queueME = new ftQueueME()
             {
                 ftQueueMEId = queue.ftQueueId,
-                TCRIntID = tcr.TCRIntID,
-                BusinUnitCode = tcr.BusinUnitCode,
-                IssuerTIN = tcr.IssuerTIN,
-                TCRCode = "TestTCRCode008",
+                ftSignaturCreationUnitMEId = scu.ftSignaturCreationUnitMEId
             };
             await inMemoryConfigurationRepository.InsertOrUpdateQueueMEAsync(queueME);
             var receiptRequest = CreateReceiptRequest();
-            var posReceiptCommand = new PosReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), new SignatureFactoryME(), inMemoryConfigurationRepository, inMemoryMasterOutlet);
+            var posReceiptCommand = new PosReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), new SignatureFactoryME(), inMemoryConfigurationRepository, Mock.Of<IJournalMERepository>());
             var testTcr = "TestTCRCodePos";
             var inMemoryMESSCD = new InMemoryMESSCD(testTcr);
 

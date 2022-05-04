@@ -15,7 +15,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 {
     public class OutOfOperationReceiptCommand : RequestCommand
     {
-        public OutOfOperationReceiptCommand(ILogger<RequestCommand> logger, SignatureFactoryME signatureFactory, IConfigurationRepository configurationRepository, IMasterDataRepository<OutletMasterData> outletMasterDataRepository) : base(logger, signatureFactory, configurationRepository, outletMasterDataRepository)
+        public OutOfOperationReceiptCommand(ILogger<RequestCommand> logger, SignatureFactoryME signatureFactory, IConfigurationRepository configurationRepository, IJournalMERepository journalMERepository) : base(logger, signatureFactory, configurationRepository, journalMERepository)
         { }
 
         public override async Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
@@ -29,9 +29,11 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                     throw new ENUNotRegisteredException();
                 }
 
-                if (!enu.IssuerTIN.Trim().Equals(queueME.IssuerTIN.Trim()) || !enu.TCRIntID.Trim().Equals(queueME.TCRIntID.Trim()))
+                var scuME = await _configurationRepository.GetSignaturCreationUnitMEAsync(queueME.ftSignaturCreationUnitMEId.Value).ConfigureAwait(false);
+
+                if (!enu.IssuerTIN.Equals(scuME.IssuerTin) || !enu.TCRIntID.Equals(scuME.TcrIntId))
                 {
-                    var errormessage = $"Request TCRIntID {enu.TCRIntID} and IssuerTIN {enu.IssuerTIN} don´t match Queue initialisation with {queueME.TCRIntID} and IssuerTIN {queueME.IssuerTIN}";
+                    var errormessage = $"Request TCRIntID {enu.TCRIntID} and IssuerTIN {enu.IssuerTIN} don´t match Queue initialisation with {enu.TCRIntID} and IssuerTIN {scuME.IssuerTin}";
                     throw new ENUIIDDontMatchException(errormessage);
                 }
 
@@ -43,16 +45,15 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 var registerTCRRequest = new RegisterTcrRequest()
                 {
                     RequestId = queueItem.ftQueueItemId,
-                    BusinessUnitCode = queueME.BusinUnitCode,
-                    InternalTcrIdentifier = queueME.TCRIntID,
-                    TcrSoftwareCode = queueME.SoftCode,
-                    TcrSoftwareMaintainerCode = queueME.MaintainerCode,
-                    TcrType = enu.TcrType == null ? TcrType.Regular : (TcrType) Enum.Parse(typeof(TcrType), enu.TcrType)
-                    
+                    BusinessUnitCode = scuME.BusinessUnitCode,
+                    InternalTcrIdentifier = scuME.TcrIntId               ,
+                    TcrSoftwareCode = scuME.SoftwareCode,
+                    TcrSoftwareMaintainerCode = scuME.MaintainerCode,
+                    TcrType = enu.TcrType == null ? TcrType.Regular : (TcrType) Enum.Parse(typeof(TcrType), enu.TcrType),    
                 };
                 var registerTCRResponse = await client.RegisterTcrAsync(registerTCRRequest).ConfigureAwait(false);
 
-                queueME.ValidTo = enu.ValidTo;
+                scuME.ValidTo = enu.ValidTo;
                 await _configurationRepository.InsertOrUpdateQueueMEAsync(queueME).ConfigureAwait(false);
 
                 var receiptResponse = CreateReceiptResponse(request, queueItem);

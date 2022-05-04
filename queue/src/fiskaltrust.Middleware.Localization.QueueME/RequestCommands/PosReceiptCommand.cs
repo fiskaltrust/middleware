@@ -17,7 +17,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 {
     public class PosReceiptCommand : RequestCommand
     {
-        public PosReceiptCommand(ILogger<RequestCommand> logger, SignatureFactoryME signatureFactory, IConfigurationRepository configurationRepository, IMasterDataRepository<OutletMasterData> outletMasterDataRepository) : base(logger, signatureFactory, configurationRepository, outletMasterDataRepository)
+        public PosReceiptCommand(ILogger<RequestCommand> logger, SignatureFactoryME signatureFactory, IConfigurationRepository configurationRepository, IJournalMERepository journalMERepository) : base(logger, signatureFactory, configurationRepository, journalMERepository)
         { }
 
         public override async Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
@@ -28,15 +28,21 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 var queueME = await _configurationRepository.GetQueueMEAsync(queue.ftQueueId).ConfigureAwait(false);
                 if (queueME == null)
                 {
-                    throw new ENUNotRegisteredException();
+                    throw new ENUNotRegisteredException("No QueueME!");
+                }
+                if (queueME.ftSignaturCreationUnitMEId == null)
+                {
+                    throw new ArgumentNullException(nameof(queueME.ftSignaturCreationUnitMEId));
                 }
                 if (string.IsNullOrEmpty(invoice.OperatorCode))
                 {
                     throw new ArgumentNullException(nameof(invoice.OperatorCode));
                 }
-                var outlets = await _outletMasterDataRepository.GetAsync().ConfigureAwait(false);
-                var outlet = outlets.Where(x => x.VatId.Equals(queueME.IssuerTIN)).FirstOrDefault();
-
+                var scu = await _configurationRepository.GetSignaturCreationUnitMEAsync(queueME.ftSignaturCreationUnitMEId.Value).ConfigureAwait(false);
+                if (scu == null)
+                {
+                    throw new ENUNotRegisteredException("No SignaturCreationUnitME!");
+                }
                 var totPRice = request.cbChargeItems.Sum(x => x.Amount);
                 var invoiceDetails = new InvoiceDetails()
                 {
@@ -65,25 +71,31 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                         Year = (uint) request.cbReceiptMoment.Year
                     }
                 };
-
                 var registerInvoiceRequest = new RegisterInvoiceRequest()
                 {
                     InvoiceDetails = invoiceDetails,
-                    SoftwareCode = queueME.SoftCode,
-                    TcrCode = queueME.TCRCode,
+                    SoftwareCode = scu.SoftwareCode,
+                    TcrCode = scu.TcrCode,
                     IsIssuerInVATSystem = true,
-                    BusinessUnitCode = queueME.BusinUnitCode,
+                    BusinessUnitCode = scu.BusinessUnitCode,
                     Moment = request.cbReceiptMoment,
                     OperatorCode = invoice.OperatorCode,
                     RequestId = queueItem.ftQueueItemId,
                     SubsequentDeliveryType = invoice.SubsequentDeliveryType == null ? null :(SubsequentDeliveryType) Enum.Parse(typeof(SubsequentDeliveryType), invoice.SubsequentDeliveryType)
                 };
-
-                //invoiceDetails.YearlyOrdinalNumber;
-
                 var registerInvoiceResponse = await client.RegisterInvoiceAsync(registerInvoiceRequest).ConfigureAwait(false);
+                var lastJournal = await _journalMERepository.GetLastEntryAsync();
+                var journal = new ftJournalME()
+                {
+                    ftJournalMEId = Guid.NewGuid(),
+                    ftQueueId = queue.ftQueueId,
+                    ftQueueItemId = queueItem.ftQueueItemId,
+                    cbReference = request.cbReceiptReference,
+                    ftOrdinalNumber = lastJournal == null ? 1 : lastJournal.ftOrdinalNumber++                    
+                };
+                journal.ftInvoiceNumber = string.Concat(scu.BusinessUnitCode, '/', journal.ftOrdinalNumber, '/', request.cbReceiptMoment.Year, '/', scu.TcrCode);
+                await _journalMERepository.InsertAsync(journal).ConfigureAwait(false);
                 var receiptResponse = CreateReceiptResponse(request, queueItem);
-
                 return new RequestCommandResponse()
                 {
                     ReceiptResponse = receiptResponse

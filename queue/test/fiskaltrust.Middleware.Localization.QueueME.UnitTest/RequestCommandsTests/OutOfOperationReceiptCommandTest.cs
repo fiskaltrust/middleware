@@ -32,21 +32,20 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
  
             tcr.ValidTo = DateTime.Now.Date;
             var receiptRequest = CreateReceiptRequest(tcr);
-            var inMemoryMasterOutlet = new InMemoryOutletMasterDataRepository();
-            var outOfOperationReceiptCommand = new OutOfOperationReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), new SignatureFactoryME(), inMemoryConfigurationRepository, inMemoryMasterOutlet);
+            var outOfOperationReceiptCommand = new OutOfOperationReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), new SignatureFactoryME(), inMemoryConfigurationRepository, Mock.Of<IJournalMERepository>());
             var inMemoryMESSCD = new InMemoryMESSCD(testTcr);
             await outOfOperationReceiptCommand.ExecuteAsync(inMemoryMESSCD, queue, receiptRequest, new ftQueueItem()).ConfigureAwait(false);
 
             var queuMe = await inMemoryConfigurationRepository.GetQueueMEAsync(queue.ftQueueId).ConfigureAwait(false);
             queuMe.Should().NotBeNull();
-            queuMe.IssuerTIN.Should().Equals(tcr.IssuerTIN);
-            queuMe.BusinUnitCode.Should().Equals(tcr.BusinUnitCode);
-            queuMe.TCRIntID.Should().Equals(tcr.TCRIntID);
-            queuMe.TCRCode.Should().Equals(testTcr);
             queuMe.ftSignaturCreationUnitMEId.HasValue.Should().BeTrue();
 
             var signaturCreationUnitME = await inMemoryConfigurationRepository.GetSignaturCreationUnitMEAsync(queuMe.ftSignaturCreationUnitMEId.Value).ConfigureAwait(false);
             signaturCreationUnitME.Should().NotBeNull();
+            signaturCreationUnitME.IssuerTin.Should().Equals(tcr.IssuerTIN);
+            signaturCreationUnitME.BusinessUnitCode.Should().Equals(tcr.BusinUnitCode);
+            signaturCreationUnitME.TcrIntId.Should().Equals(tcr.TCRIntID);
+            signaturCreationUnitME.TcrCode.Should().Equals(testTcr);
 
         }
         private TCR CreateTCR()
@@ -82,19 +81,20 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             {
                 ftSignaturCreationUnitMEId = Guid.NewGuid(),
                 TimeStamp = DateTime.Now.AddDays(-10).Ticks,
+                TcrIntId = tcr.TCRIntID,
+                BusinessUnitCode = tcr.BusinUnitCode,
+                IssuerTin = tcr.IssuerTIN,
+                TcrCode = testTcr,
+                ValidFrom = tcr.ValidFrom,
+                ValidTo = tcr.ValidTo
             };
             await configurationRepository.InsertOrUpdateSignaturCreationUnitMEAsync(signaturCreationUnitME).ConfigureAwait(false);
 
             var queueME = new ftQueueME()
             {
                 ftQueueMEId = ftQueueId,
-                TCRIntID = tcr.TCRIntID,
-                BusinUnitCode = tcr.BusinUnitCode,
-                IssuerTIN = tcr.IssuerTIN,
-                TCRCode = testTcr,
-                ftSignaturCreationUnitMEId = signaturCreationUnitME.ftSignaturCreationUnitMEId,
-                ValidFrom = tcr.ValidFrom,
-                ValidTo = tcr.ValidTo
+                ftSignaturCreationUnitMEId = signaturCreationUnitME.ftSignaturCreationUnitMEId
+
             };
             await configurationRepository.InsertOrUpdateQueueMEAsync(queueME).ConfigureAwait(false);
         }

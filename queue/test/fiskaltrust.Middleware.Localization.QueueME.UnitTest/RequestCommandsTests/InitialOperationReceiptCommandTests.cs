@@ -26,8 +26,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             var receiptRequest = CreateReceiptRequest(tcr);
 
             var inMemoryConfigurationRepository = new InMemoryConfigurationRepository();
-            var inMemoryMasterOutlet = new InMemoryOutletMasterDataRepository();
-            var initialOperationReceiptCommand = new InitialOperationReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), new SignatureFactoryME(), inMemoryConfigurationRepository, inMemoryMasterOutlet);
+            var initialOperationReceiptCommand = new InitialOperationReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), new SignatureFactoryME(), inMemoryConfigurationRepository, Mock.Of<IJournalMERepository>());
 
             var testTcr = "TestTCRCode";
             var inMemoryMESSCD = new InMemoryMESSCD(testTcr);
@@ -39,13 +38,13 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
 
             var queuMe = await inMemoryConfigurationRepository.GetQueueMEAsync(queue.ftQueueId).ConfigureAwait(false);
             queuMe.Should().NotBeNull();
-            queuMe.IssuerTIN.Should().Equals(tcr.IssuerTIN);
-            queuMe.BusinUnitCode.Should().Equals(tcr.BusinUnitCode);
-            queuMe.TCRIntID.Should().Equals(tcr.TCRIntID);
-            queuMe.TCRCode.Should().Equals(testTcr);
             queuMe.ftSignaturCreationUnitMEId.HasValue.Should().BeTrue();
 
             var signaturCreationUnitME = await inMemoryConfigurationRepository.GetSignaturCreationUnitMEAsync(queuMe.ftSignaturCreationUnitMEId.Value).ConfigureAwait(false);
+            signaturCreationUnitME.IssuerTin.Should().Equals(tcr.IssuerTIN);
+            signaturCreationUnitME.BusinessUnitCode.Should().Equals(tcr.BusinUnitCode);
+            signaturCreationUnitME.TcrIntId.Should().Equals(tcr.TCRIntID);
+            signaturCreationUnitME.TcrCode.Should().Equals(testTcr);
             signaturCreationUnitME.Should().NotBeNull();
 
         }
@@ -57,16 +56,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             var tcr = CreateTCR();
             var receiptRequest = CreateReceiptRequest(tcr);
             var inMemoryConfigurationRepository = new InMemoryConfigurationRepository();
-            var inMemoryMasterOutlet = new InMemoryOutletMasterDataRepository();
-            var queueME = new ftQueueME()
-            {
-                TCRIntID = tcr.TCRIntID,
-                BusinUnitCode = tcr.BusinUnitCode,
-                IssuerTIN = tcr.IssuerTIN,
-                TCRCode = "TestTCRCode007",
-            };
-            await inMemoryConfigurationRepository.InsertOrUpdateQueueMEAsync(queueME);
-            var InitialOperationReceiptCommand = new InitialOperationReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), new SignatureFactoryME(), inMemoryConfigurationRepository, inMemoryMasterOutlet);
+            var InitialOperationReceiptCommand = new InitialOperationReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), new SignatureFactoryME(), inMemoryConfigurationRepository, Mock.Of<IJournalMERepository>());
             var sutMethod = CallInitialOperationReceiptCommand(InitialOperationReceiptCommand,receiptRequest);
             await sutMethod.Should().ThrowAsync<ENUAlreadyRegisteredException>().ConfigureAwait(false);
         }

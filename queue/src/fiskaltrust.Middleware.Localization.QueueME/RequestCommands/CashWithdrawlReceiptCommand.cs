@@ -1,27 +1,19 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
-using fiskaltrust.Middleware.Contracts.Models.Transactions;
-using Newtonsoft.Json;
-using fiskaltrust.Middleware.Contracts.Models;
-using fiskaltrust.storage.serialization.DE.V0;
-using fiskaltrust.Middleware.Contracts.Data;
 using fiskaltrust.Middleware.Localization.QueueME.Models;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.me;
-using System.Linq;
-using fiskaltrust.Middleware.Localization.QueueME.Exceptions;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0.MasterData;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 {
-    public class CashDepositWithdrawlReceiptCommand : RequestCommand
+    public class CashWithdrawlReceiptCommand : RequestCommand
     {
-        public CashDepositWithdrawlReceiptCommand(ILogger<RequestCommand> logger, SignatureFactoryME signatureFactory, IConfigurationRepository configurationRepository, IMasterDataRepository<OutletMasterData> outletMasterDataRepository) : base(logger, signatureFactory, configurationRepository, outletMasterDataRepository)
+        public CashWithdrawlReceiptCommand(ILogger<RequestCommand> logger, SignatureFactoryME signatureFactory, IConfigurationRepository configurationRepository, IJournalMERepository journalMERepository) : base(logger, signatureFactory, configurationRepository, journalMERepository)
         { }
 
         public override async Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
