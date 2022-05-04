@@ -203,6 +203,46 @@ namespace fiskaltrust.Middleware.Storage.Azure.Mapping
             };
         }
 
+        public static AzureFtJournalME Map(ftJournalME src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+
+            return new AzureFtJournalME
+            {
+                PartitionKey = GetHashString(src.TimeStamp),
+                ftJournalMEId = src.ftJournalMEId,
+                ftQueueItemId = src.ftQueueItemId,
+                cbReference = src.cbReference,
+                ftInvoiceNumber = src.ftInvoiceNumber,
+                ftOrdinalNumber = src.ftOrdinalNumber,
+                ftQueueId = src.ftQueueId,
+                TimeStamp = src.TimeStamp
+            };
+        }
+
+        public static ftJournalME Map(AzureFtJournalME src)
+        {
+            if (src == null)
+
+            {
+                return null;
+            }
+
+            return new ftJournalME
+            {
+                ftJournalMEId = src.ftJournalMEId,
+                ftQueueItemId = src.ftQueueItemId,
+                cbReference = src.cbReference,
+                ftInvoiceNumber = src.ftInvoiceNumber,
+                ftOrdinalNumber = src.ftOrdinalNumber,
+                ftQueueId = src.ftQueueId,
+                TimeStamp = src.TimeStamp
+            };
+        }
+
         public static ftJournalFR Map(AzureFtJournalFR src)
         {
             if (src == null)
