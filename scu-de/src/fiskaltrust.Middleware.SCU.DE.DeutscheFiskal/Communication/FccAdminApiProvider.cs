@@ -81,7 +81,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Communication
             {
                 var responseContent = await response.Content.ReadAsStringAsync();
                 throw new FiskalCloudException($"Communication error ({response.StatusCode}) while deregistering client (POST /deregistration). Request: '{requestContent}', Response: '{responseContent}'",
-                    (int) response.StatusCode, ErrorHelper.GetErrorType(responseContent), "POST /registration");
+                    (int) response.StatusCode, ErrorHelper.GetErrorType(responseContent), "POST /deregistration");
             }
         }
 
