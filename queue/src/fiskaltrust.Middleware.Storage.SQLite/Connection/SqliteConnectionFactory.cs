@@ -73,6 +73,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Connection
 #if NETSTANDARD || NET6_0_OR_GREATER
                     if (_sqliteConnection != null)
                     {
+                        Microsoft.Data.Sqlite.SqliteConnection.ClearPool(_sqliteConnection);
                         _sqliteConnection.Dispose();
                     }
 #else
