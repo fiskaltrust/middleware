@@ -18,7 +18,8 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Connection
 #if NETSTANDARD || NET6_0_OR_GREATER
             var builder = new Microsoft.Data.Sqlite.SqliteConnectionStringBuilder
             {
-                DataSource = path
+                DataSource = path,
+                Pooling = false,
             };
 #else
             var builder = new System.Data.SQLite.SQLiteConnectionStringBuilder
@@ -73,7 +74,6 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Connection
 #if NETSTANDARD || NET6_0_OR_GREATER
                     if (_sqliteConnection != null)
                     {
-                        Microsoft.Data.Sqlite.SqliteConnection.ClearPool(_sqliteConnection);
                         _sqliteConnection.Dispose();
                     }
 #else
