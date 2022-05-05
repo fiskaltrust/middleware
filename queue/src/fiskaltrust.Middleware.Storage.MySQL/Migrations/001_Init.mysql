@@ -20,7 +20,6 @@ CREATE TABLE IF NOT EXISTS ftJournalFR
     ftQueueId            NVARCHAR(36) NOT NULL,
     TimeStamp            BIGINT NOT NULL
 );
-
 CREATE TABLE IF NOT EXISTS ftJournalDE
 (
     ftJournalDEId         NVARCHAR(36) PRIMARY KEY NOT NULL,
@@ -32,7 +31,17 @@ CREATE TABLE IF NOT EXISTS ftJournalDE
     ftQueueId             NVARCHAR(36) NOT NULL,
     TimeStamp             BIGINT NOT NULL
 );
-
+CREATE TABLE IF NOT EXISTS ftJournalME
+(
+    ftJournalMEId         NVARCHAR(36) PRIMARY KEY NOT NULL,
+    Number                BIGINT NOT NULL,
+    cbReference           NVARCHAR(2147483647) NULL,
+    ftInvoiceNumber       NVARCHAR(2147483647) NULL,
+    ftOrdinalNumber       BIGINT NOT NULL
+    ftQueueItemId         NVARCHAR(36) NOT NULL,
+    ftQueueId             NVARCHAR(36) NOT NULL,
+    TimeStamp             BIGINT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS ftActionJournal
 (
     ftActionJournalId     NVARCHAR(36) PRIMARY KEY NOT NULL,

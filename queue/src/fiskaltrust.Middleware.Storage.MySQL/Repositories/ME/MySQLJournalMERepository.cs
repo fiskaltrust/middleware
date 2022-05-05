@@ -32,7 +32,7 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories.DE
             using (var connection = new MySqlConnection(ConnectionString))
             {
                 await connection.OpenAsync().ConfigureAwait(false);
-                return await connection.QueryFirstOrDefaultAsync<ftJournalME>("Select * from ftJournalME order by TimeStamp desc limit 1").ConfigureAwait(false);
+                return await connection.QueryFirstOrDefaultAsync<ftJournalME>("Select * from ftJournalME order by Number desc limit 1").ConfigureAwait(false);
             }
         }
         public async Task InsertAsync(ftJournalME journal)
@@ -43,8 +43,8 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories.DE
             }
             EntityUpdated(journal);
             var sql = "INSERT INTO ftJournalME " +
-                      "(ftJournalMEId, cbReference, ftInvoiceNumber, ftOrdinalNumber, ftQueueItemId, ftQueueId, TimeStamp) " +
-                      "Values (@ftJournalMEId, @cbReference, @ftInvoiceNumber, @ftOrdinalNumber, @ftQueueItemId, @ftQueueId, @TimeStamp);";
+                      "(ftJournalMEId, cbReference, ftInvoiceNumber, ftOrdinalNumber, ftQueueItemId, ftQueueId, TimeStamp, Number) " +
+                      "Values (@ftJournalMEId, @cbReference, @ftInvoiceNumber, @ftOrdinalNumber, @ftQueueItemId, @ftQueueId, @TimeStamp, @Number);";
             using (var connection = new MySqlConnection(ConnectionString))
             {
                 await connection.OpenAsync().ConfigureAwait(false);

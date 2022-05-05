@@ -29,7 +29,7 @@ namespace fiskaltrust.Middleware.Storage.InMemory.Repositories.ME
         }
         public Task<ftJournalME> GetLastEntryAsync()
         {
-            var result = Data.Select(x => x.Value).OrderByDescending(x => x.TimeStamp).FirstOrDefault();
+            var result = Data.Select(x => x.Value).OrderByDescending(x => x.Number).FirstOrDefault();
             return Task.FromResult(result);
         }
     }

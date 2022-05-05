@@ -7,16 +7,13 @@ using Newtonsoft.Json;
 using fiskaltrust.Middleware.Localization.QueueME.Models;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.me;
-using System.Linq;
 using fiskaltrust.Middleware.Localization.QueueME.Exceptions;
-using fiskaltrust.Middleware.Contracts.Repositories;
-using fiskaltrust.storage.V0.MasterData;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 {
     public class InitialOperationReceiptCommand : RequestCommand
     {
-        public InitialOperationReceiptCommand(ILogger<RequestCommand> logger, SignatureFactoryME signatureFactory, IConfigurationRepository configurationRepository, IJournalMERepository journalMERepository) : base(logger, signatureFactory, configurationRepository, journalMERepository)
+        public InitialOperationReceiptCommand(ILogger<RequestCommand> logger, SignatureFactoryME signatureFactory, IConfigurationRepository configurationRepository, IJournalMERepository journalMERepository, IQueueItemRepository queueItemRepository) : base(logger, signatureFactory, configurationRepository, journalMERepository, queueItemRepository)
         { }
 
         public override async Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
@@ -24,19 +21,19 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             try
             {
                 //Validate must fields
-                var enu = JsonConvert.DeserializeObject<TCR>(request.ftReceiptCaseData);
+                var enu = JsonConvert.DeserializeObject<Tcr>(request.ftReceiptCaseData);
                 var queueME = await _configurationRepository.GetQueueMEAsync(queue.ftQueueId).ConfigureAwait(false);
                 if (queueME != null && queueME.ftSignaturCreationUnitMEId.HasValue)
                 {
                     var scuME = await _configurationRepository.GetSignaturCreationUnitMEAsync(queueME.ftSignaturCreationUnitMEId.Value).ConfigureAwait(false);
-                    if(scuME.IssuerTin != null && scuME.IssuerTin.Equals(enu.IssuerTIN) && scuME.TcrIntId != null && scuME.TcrIntId.Equals(enu.TCRIntID))
+                    if(scuME.IssuerTin != null && scuME.IssuerTin.Equals(enu.IssuerTin) && scuME.TcrIntId != null && scuME.TcrIntId.Equals(enu.TcrIntId))
                     {
                         throw new ENUAlreadyRegisteredException();
                     }
                 }
                 var registerTCRRequest = new RegisterTcrRequest()
                 {
-                    BusinessUnitCode = enu.BusinUnitCode,
+                    BusinessUnitCode = enu.BusinessUnitCode,
                     TcrSoftwareCode = enu.SoftwareCode,
                     TcrSoftwareMaintainerCode = enu.SoftwareCode,
                     InternalTcrIdentifier = queueItem.ftQueueItemId.ToString(),
@@ -53,9 +50,9 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 {
                     ftSignaturCreationUnitMEId = Guid.NewGuid(),
                     TimeStamp = DateTime.Now.Ticks,
-                    TcrIntId = enu.TCRIntID,
-                    BusinessUnitCode = enu.BusinUnitCode,
-                    IssuerTin = enu.IssuerTIN,
+                    TcrIntId = enu.TcrIntId,
+                    BusinessUnitCode = enu.BusinessUnitCode,
+                    IssuerTin = enu.IssuerTin,
                     SoftwareCode = enu.SoftwareCode,
                     TcrCode = registerTCRResponse.TcrCode,                    
                     ValidFrom = enu.ValidFrom,

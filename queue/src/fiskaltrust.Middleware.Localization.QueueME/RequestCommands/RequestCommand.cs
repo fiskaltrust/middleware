@@ -15,14 +15,15 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
         protected readonly SignatureFactoryME _signatureFactory;
         protected readonly IConfigurationRepository _configurationRepository;
         protected readonly IJournalMERepository _journalMERepository;
+        protected readonly IQueueItemRepository _queueItemRepository;
 
-
-        public RequestCommand(ILogger<RequestCommand> logger, SignatureFactoryME signatureFactory, IConfigurationRepository configurationRepository, IJournalMERepository journalMERepository)
+        public RequestCommand(ILogger<RequestCommand> logger, SignatureFactoryME signatureFactory, IConfigurationRepository configurationRepository, IJournalMERepository journalMERepository, IQueueItemRepository queueItemRepository)
         {
             _logger = logger;
             _signatureFactory = signatureFactory;
             _configurationRepository = configurationRepository;
             _journalMERepository = journalMERepository;
+            _queueItemRepository = queueItemRepository;
         }
 
         public abstract Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem);

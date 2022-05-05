@@ -8,21 +8,19 @@ using fiskaltrust.Middleware.Localization.QueueME.Models;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.me;
 using fiskaltrust.Middleware.Localization.QueueME.Exceptions;
-using fiskaltrust.Middleware.Contracts.Repositories;
-using fiskaltrust.storage.V0.MasterData;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 {
     public class OutOfOperationReceiptCommand : RequestCommand
     {
-        public OutOfOperationReceiptCommand(ILogger<RequestCommand> logger, SignatureFactoryME signatureFactory, IConfigurationRepository configurationRepository, IJournalMERepository journalMERepository) : base(logger, signatureFactory, configurationRepository, journalMERepository)
+        public OutOfOperationReceiptCommand(ILogger<RequestCommand> logger, SignatureFactoryME signatureFactory, IConfigurationRepository configurationRepository, IJournalMERepository journalMERepository, IQueueItemRepository queueItemRepository) : base(logger, signatureFactory, configurationRepository, journalMERepository, queueItemRepository)
         { }
 
         public override async Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
         {
             try
             {
-                var enu = JsonConvert.DeserializeObject<TCR>(request.ftReceiptCaseData);
+                var enu = JsonConvert.DeserializeObject<Tcr>(request.ftReceiptCaseData);
                 var queueME = await _configurationRepository.GetQueueMEAsync(queue.ftQueueId).ConfigureAwait(false);
                 if(queueME == null)
                 {
@@ -31,9 +29,9 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 
                 var scuME = await _configurationRepository.GetSignaturCreationUnitMEAsync(queueME.ftSignaturCreationUnitMEId.Value).ConfigureAwait(false);
 
-                if (!enu.IssuerTIN.Equals(scuME.IssuerTin) || !enu.TCRIntID.Equals(scuME.TcrIntId))
+                if (!enu.IssuerTin.Equals(scuME.IssuerTin) || !enu.TcrIntId.Equals(scuME.TcrIntId))
                 {
-                    var errormessage = $"Request TCRIntID {enu.TCRIntID} and IssuerTIN {enu.IssuerTIN} don´t match Queue initialisation with {enu.TCRIntID} and IssuerTIN {scuME.IssuerTin}";
+                    var errormessage = $"Request TCRIntID {enu.TcrIntId} and IssuerTIN {enu.IssuerTin} don´t match Queue initialisation with {enu.TcrIntId} and IssuerTIN {scuME.IssuerTin}";
                     throw new ENUIIDDontMatchException(errormessage);
                 }
 

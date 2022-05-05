@@ -4,7 +4,7 @@ using System.Runtime.Serialization;
 namespace fiskaltrust.Middleware.Localization.QueueME.Models
 {
     [DataContract]
-    public class TCR
+    public class Tcr
     {
         [DataMember]
         public string TcrType
@@ -13,13 +13,13 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Models
             set;
         }
         [DataMember]
-        public string IssuerTIN
+        public string IssuerTin
         {
             get;
             set;
         }
         [DataMember]
-        public string BusinUnitCode
+        public string BusinessUnitCode
         {
             get;
             set;
@@ -31,7 +31,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Models
             set;
         }
         [DataMember]
-        public string TCRIntID
+        public string TcrIntId
         {
             get;
             set;

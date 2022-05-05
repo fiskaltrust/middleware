@@ -12,6 +12,7 @@ using fiskaltrust.Middleware.Localization.QueueME.RequestCommands;
 using Moq;
 using fiskaltrust.Middleware.Localization.QueueME.UnitTest.Helper;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories.DE.MasterData;
+using fiskaltrust.Middleware.Storage.InMemory.Repositories.ME;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTests
 {
@@ -32,7 +33,9 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
  
             tcr.ValidTo = DateTime.Now.Date;
             var receiptRequest = CreateReceiptRequest(tcr);
-            var outOfOperationReceiptCommand = new OutOfOperationReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), new SignatureFactoryME(), inMemoryConfigurationRepository, Mock.Of<IJournalMERepository>());
+            var inMemoryJournalMERepository = new InMemoryJournalMERepository();
+            var inMemoryQueueItemRepository = new InMemoryQueueItemRepository();
+            var outOfOperationReceiptCommand = new OutOfOperationReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), new SignatureFactoryME(), inMemoryConfigurationRepository, inMemoryJournalMERepository, inMemoryQueueItemRepository);
             var inMemoryMESSCD = new InMemoryMESSCD(testTcr);
             await outOfOperationReceiptCommand.ExecuteAsync(inMemoryMESSCD, queue, receiptRequest, new ftQueueItem()).ConfigureAwait(false);
 
@@ -42,24 +45,24 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
 
             var signaturCreationUnitME = await inMemoryConfigurationRepository.GetSignaturCreationUnitMEAsync(queuMe.ftSignaturCreationUnitMEId.Value).ConfigureAwait(false);
             signaturCreationUnitME.Should().NotBeNull();
-            signaturCreationUnitME.IssuerTin.Should().Equals(tcr.IssuerTIN);
-            signaturCreationUnitME.BusinessUnitCode.Should().Equals(tcr.BusinUnitCode);
-            signaturCreationUnitME.TcrIntId.Should().Equals(tcr.TCRIntID);
+            signaturCreationUnitME.IssuerTin.Should().Equals(tcr.IssuerTin);
+            signaturCreationUnitME.BusinessUnitCode.Should().Equals(tcr.BusinessUnitCode);
+            signaturCreationUnitME.TcrIntId.Should().Equals(tcr.TcrIntId);
             signaturCreationUnitME.TcrCode.Should().Equals(testTcr);
 
         }
-        private TCR CreateTCR()
+        private Tcr CreateTCR()
         {
-            return new TCR()
+            return new Tcr()
             {
-                BusinUnitCode = "aT007FT885",
-                IssuerTIN = "02657594",
-                TCRIntID = Guid.NewGuid().ToString(),
+                BusinessUnitCode = "aT007FT885",
+                IssuerTin = "02657594",
+                TcrIntId = Guid.NewGuid().ToString(),
                 ValidFrom = DateTime.Now.AddDays(-10)
             };
         }
 
-        private ReceiptRequest CreateReceiptRequest(TCR tcr)
+        private ReceiptRequest CreateReceiptRequest(Tcr tcr)
         {
             var tcrJson = JsonConvert.SerializeObject(tcr);
             return new ReceiptRequest
@@ -74,16 +77,16 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             };
         }
 
-        private async Task InsertQueueSCU(TCR  tcr, IConfigurationRepository configurationRepository, string testTcr, Guid ftQueueId)
+        private async Task InsertQueueSCU(Tcr tcr, IConfigurationRepository configurationRepository, string testTcr, Guid ftQueueId)
         {
 
             var signaturCreationUnitME = new ftSignaturCreationUnitME()
             {
                 ftSignaturCreationUnitMEId = Guid.NewGuid(),
                 TimeStamp = DateTime.Now.AddDays(-10).Ticks,
-                TcrIntId = tcr.TCRIntID,
-                BusinessUnitCode = tcr.BusinUnitCode,
-                IssuerTin = tcr.IssuerTIN,
+                TcrIntId = tcr.TcrIntId,
+                BusinessUnitCode = tcr.BusinessUnitCode,
+                IssuerTin = tcr.IssuerTin,
                 TcrCode = testTcr,
                 ValidFrom = tcr.ValidFrom,
                 ValidTo = tcr.ValidTo

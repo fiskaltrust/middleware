@@ -32,6 +32,6 @@ namespace fiskaltrust.Middleware.Storage.EF.Repositories.ME
             }
             return result.ToAsyncEnumerable();
         }
-        public Task<ftJournalME> GetLastEntryAsync() => Task.FromResult(DbContext.JournalMEList.AsQueryable().OrderByDescending(x => x.TimeStamp).Take(1).FirstOrDefault());
+        public Task<ftJournalME> GetLastEntryAsync() => Task.FromResult(DbContext.JournalMEList.AsQueryable().OrderByDescending(x => x.Number).Take(1).FirstOrDefault());
     }
 }

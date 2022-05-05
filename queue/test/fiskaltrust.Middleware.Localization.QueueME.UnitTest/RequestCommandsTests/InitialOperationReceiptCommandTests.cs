@@ -12,7 +12,7 @@ using Newtonsoft.Json;
 using Xunit;
 using FluentAssertions;
 using fiskaltrust.Middleware.Localization.QueueME.Exceptions;
-using fiskaltrust.Middleware.Storage.InMemory.Repositories.DE.MasterData;
+using fiskaltrust.Middleware.Storage.InMemory.Repositories.ME;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTests
 {
@@ -26,7 +26,9 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             var receiptRequest = CreateReceiptRequest(tcr);
 
             var inMemoryConfigurationRepository = new InMemoryConfigurationRepository();
-            var initialOperationReceiptCommand = new InitialOperationReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), new SignatureFactoryME(), inMemoryConfigurationRepository, Mock.Of<IJournalMERepository>());
+            var inMemoryJournalMERepository = new InMemoryJournalMERepository();
+            var inMemoryQueueItemRepository = new InMemoryQueueItemRepository();
+            var initialOperationReceiptCommand = new InitialOperationReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), new SignatureFactoryME(), inMemoryConfigurationRepository, inMemoryJournalMERepository, inMemoryQueueItemRepository);
 
             var testTcr = "TestTCRCode";
             var inMemoryMESSCD = new InMemoryMESSCD(testTcr);
@@ -41,14 +43,13 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             queuMe.ftSignaturCreationUnitMEId.HasValue.Should().BeTrue();
 
             var signaturCreationUnitME = await inMemoryConfigurationRepository.GetSignaturCreationUnitMEAsync(queuMe.ftSignaturCreationUnitMEId.Value).ConfigureAwait(false);
-            signaturCreationUnitME.IssuerTin.Should().Equals(tcr.IssuerTIN);
-            signaturCreationUnitME.BusinessUnitCode.Should().Equals(tcr.BusinUnitCode);
-            signaturCreationUnitME.TcrIntId.Should().Equals(tcr.TCRIntID);
+            signaturCreationUnitME.IssuerTin.Should().Equals(tcr.IssuerTin);
+            signaturCreationUnitME.BusinessUnitCode.Should().Equals(tcr.BusinessUnitCode);
+            signaturCreationUnitME.TcrIntId.Should().Equals(tcr.TcrIntId);
             signaturCreationUnitME.TcrCode.Should().Equals(testTcr);
             signaturCreationUnitME.Should().NotBeNull();
 
         }
-
 
         [Fact]
         public async Task ExecuteAsync_RegisterENU_ENUAlreadyRegisteredException()
@@ -56,28 +57,49 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             var tcr = CreateTCR();
             var receiptRequest = CreateReceiptRequest(tcr);
             var inMemoryConfigurationRepository = new InMemoryConfigurationRepository();
-            var InitialOperationReceiptCommand = new InitialOperationReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), new SignatureFactoryME(), inMemoryConfigurationRepository, Mock.Of<IJournalMERepository>());
-            var sutMethod = CallInitialOperationReceiptCommand(InitialOperationReceiptCommand,receiptRequest);
+            var scu = new ftSignaturCreationUnitME()
+            {
+                ftSignaturCreationUnitMEId = Guid.NewGuid(),        
+                IssuerTin = tcr.IssuerTin,
+                BusinessUnitCode = tcr.BusinessUnitCode,
+                TcrIntId = tcr.TcrIntId,
+                TcrCode = "TestTcr"
+            };
+            await inMemoryConfigurationRepository.InsertOrUpdateSignaturCreationUnitMEAsync(scu).ConfigureAwait(false);
+            var queue = new ftQueue()
+            {
+                ftQueueId = Guid.NewGuid(),
+            };
+            await inMemoryConfigurationRepository.InsertOrUpdateQueueAsync(queue).ConfigureAwait(false);
+            var queueME = new ftQueueME()
+            {
+                ftQueueMEId = queue.ftQueueId,
+                ftSignaturCreationUnitMEId = scu.ftSignaturCreationUnitMEId
+            };
+            await inMemoryConfigurationRepository.InsertOrUpdateQueueMEAsync(queueME).ConfigureAwait(false);
+            var inMemoryJournalMERepository = new InMemoryJournalMERepository();
+            var inMemoryQueueItemRepository = new InMemoryQueueItemRepository();
+            var InitialOperationReceiptCommand = new InitialOperationReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), new SignatureFactoryME(), inMemoryConfigurationRepository, inMemoryJournalMERepository, inMemoryQueueItemRepository);
+            var sutMethod = CallInitialOperationReceiptCommand(InitialOperationReceiptCommand, queue, receiptRequest);
             await sutMethod.Should().ThrowAsync<ENUAlreadyRegisteredException>().ConfigureAwait(false);
         }
 
-
-        private Func<Task> CallInitialOperationReceiptCommand(InitialOperationReceiptCommand initialOperationReceiptCommand, ReceiptRequest receiptRequest)
+        private Func<Task> CallInitialOperationReceiptCommand(InitialOperationReceiptCommand initialOperationReceiptCommand, ftQueue queue, ReceiptRequest receiptRequest)
         {
-            return async () => { var receiptResponse = await initialOperationReceiptCommand.ExecuteAsync(new InMemoryMESSCD("testTcr"), new ftQueue(), receiptRequest, new ftQueueItem()); };
+            return async () => { var receiptResponse = await initialOperationReceiptCommand.ExecuteAsync(new InMemoryMESSCD("testTcr"), queue, receiptRequest, new ftQueueItem()); };
         }
 
-        private TCR CreateTCR()
+        private Tcr CreateTCR()
         {
-            return new TCR()
+            return new Tcr()
             {
-                BusinUnitCode = "aT007FT888",
-                IssuerTIN = "02657597",
-                TCRIntID = Guid.NewGuid().ToString()
+                BusinessUnitCode = "aT007FT888",
+                IssuerTin = "02657597",
+                TcrIntId = Guid.NewGuid().ToString()
             };
         }
 
-        private ReceiptRequest CreateReceiptRequest(TCR tcr)
+        private ReceiptRequest CreateReceiptRequest(Tcr tcr)
         {
             var tcrJson = JsonConvert.SerializeObject(tcr);
             return new ReceiptRequest

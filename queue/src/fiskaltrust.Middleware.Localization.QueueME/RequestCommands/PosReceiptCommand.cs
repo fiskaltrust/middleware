@@ -9,15 +9,13 @@ using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.me;
 using fiskaltrust.Middleware.Localization.QueueME.Exceptions;
 using fiskaltrust.Middleware.Localization.QueueME.Extensions;
-using fiskaltrust.Middleware.Contracts.Repositories;
-using fiskaltrust.storage.V0.MasterData;
 using System.Collections.Generic;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 {
     public class PosReceiptCommand : RequestCommand
     {
-        public PosReceiptCommand(ILogger<RequestCommand> logger, SignatureFactoryME signatureFactory, IConfigurationRepository configurationRepository, IJournalMERepository journalMERepository) : base(logger, signatureFactory, configurationRepository, journalMERepository)
+        public PosReceiptCommand(ILogger<RequestCommand> logger, SignatureFactoryME signatureFactory, IConfigurationRepository configurationRepository, IJournalMERepository journalMERepository, IQueueItemRepository queueItemRepository) : base(logger, signatureFactory, configurationRepository, journalMERepository, queueItemRepository)
         { }
 
         public override async Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
@@ -43,58 +41,10 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 {
                     throw new ENUNotRegisteredException("No SignaturCreationUnitME!");
                 }
-                var totPRice = request.cbChargeItems.Sum(x => x.Amount);
-                var invoiceDetails = new InvoiceDetails()
-                {
-                    InvoiceType = request.GetInvoiceType(),
-                    SelfIssuedInvoiceType = invoice.TypeOfSelfiss == null ? null : (SelfIssuedInvoiceType) Enum.Parse(typeof(SelfIssuedInvoiceType), invoice.TypeOfSelfiss),
-                    TaxFreeAmount = request.cbChargeItems.Where(x => x.GetVatRate().Equals(0)).Sum(x => x.Amount * x.Quantity),
-                    NetAmount = request.cbChargeItems.Sum(x => x.Amount / (1 + (x.GetVatRate() / 100))),
-                    TotalVatAmount = request.cbChargeItems.Sum(x => x.Amount * x.GetVatRate() / (100 + x.GetVatRate())),
-                    GrossAmount = request.cbChargeItems.Sum(x => x.Amount),
-                    PaymentDeadline = invoice.PayDeadline,
-                    InvoiceCorrectionDetails = invoice.CorrectiveInv != null ? new InvoiceCorrectionDetails()
-                    {
-                        ReferencedIKOF = invoice.CorrectiveInv.ReferencedIKOF,
-                        ReferencedMoment = invoice.CorrectiveInv.ReferencedMoment,
-                        CorrectionType = (InvoiceCorrectionType) Enum.Parse(typeof(InvoiceCorrectionType), invoice.CorrectiveInv.Type),
-                    } : null,
-                    PaymentDetails = request.GetPaymentMethodTypes(),
-                    Currency = new CurrencyDetails() { CurrencyCode = "EUR" },
-                    Buyer = GetBuyer(request),
-                    ItemDetails = GetInvoiceItems(request),
-                    Fees = GetFees(invoice),
-                    ExportedGoodsAmount = request.cbChargeItems.Where(x => x.IsExportGood()).Sum(x => x.Amount),
-                    TaxPeriod = new TaxPeriod()
-                    {
-                        Month = (uint) request.cbReceiptMoment.Month,
-                        Year = (uint) request.cbReceiptMoment.Year
-                    }
-                };
-                var registerInvoiceRequest = new RegisterInvoiceRequest()
-                {
-                    InvoiceDetails = invoiceDetails,
-                    SoftwareCode = scu.SoftwareCode,
-                    TcrCode = scu.TcrCode,
-                    IsIssuerInVATSystem = true,
-                    BusinessUnitCode = scu.BusinessUnitCode,
-                    Moment = request.cbReceiptMoment,
-                    OperatorCode = invoice.OperatorCode,
-                    RequestId = queueItem.ftQueueItemId,
-                    SubsequentDeliveryType = invoice.SubsequentDeliveryType == null ? null :(SubsequentDeliveryType) Enum.Parse(typeof(SubsequentDeliveryType), invoice.SubsequentDeliveryType)
-                };
+                var invoiceDetails = CreateInvoiceDetail(request, invoice);
+                var registerInvoiceRequest = CreateInvoiceReqest(request, queueItem, invoice, scu, invoiceDetails);
                 var registerInvoiceResponse = await client.RegisterInvoiceAsync(registerInvoiceRequest).ConfigureAwait(false);
-                var lastJournal = await _journalMERepository.GetLastEntryAsync();
-                var journal = new ftJournalME()
-                {
-                    ftJournalMEId = Guid.NewGuid(),
-                    ftQueueId = queue.ftQueueId,
-                    ftQueueItemId = queueItem.ftQueueItemId,
-                    cbReference = request.cbReceiptReference,
-                    ftOrdinalNumber = lastJournal == null ? 1 : lastJournal.ftOrdinalNumber++                    
-                };
-                journal.ftInvoiceNumber = string.Concat(scu.BusinessUnitCode, '/', journal.ftOrdinalNumber, '/', request.cbReceiptMoment.Year, '/', scu.TcrCode);
-                await _journalMERepository.InsertAsync(journal).ConfigureAwait(false);
+                await InsertJournalME(queue, request, queueItem, scu).ConfigureAwait(false);
                 var receiptResponse = CreateReceiptResponse(request, queueItem);
                 return new RequestCommandResponse()
                 {
@@ -107,7 +57,79 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 throw;
             }
         }
-
+        private InvoiceDetails CreateInvoiceDetail(ReceiptRequest request, Invoice invoice)
+        {
+            return new InvoiceDetails()
+            {
+                InvoiceType = request.GetInvoiceType(),
+                SelfIssuedInvoiceType = invoice.TypeOfSelfiss == null ? null : (SelfIssuedInvoiceType) Enum.Parse(typeof(SelfIssuedInvoiceType), invoice.TypeOfSelfiss),
+                TaxFreeAmount = request.cbChargeItems.Where(x => x.GetVatRate().Equals(0)).Sum(x => x.Amount * x.Quantity),
+                NetAmount = request.cbChargeItems.Sum(x => x.Amount / (1 + (x.GetVatRate() / 100))),
+                TotalVatAmount = request.cbChargeItems.Sum(x => x.Amount * x.GetVatRate() / (100 + x.GetVatRate())),
+                GrossAmount = request.cbChargeItems.Sum(x => x.Amount),
+                PaymentDeadline = invoice.PayDeadline,
+                InvoiceCorrectionDetails = invoice.CorrectiveInv != null ? new InvoiceCorrectionDetails()
+                {
+                    ReferencedIKOF = invoice.CorrectiveInv.ReferencedIKOF,
+                    ReferencedMoment = invoice.CorrectiveInv.ReferencedMoment,
+                    CorrectionType = (InvoiceCorrectionType) Enum.Parse(typeof(InvoiceCorrectionType), invoice.CorrectiveInv.Type),
+                } : null,
+                PaymentDetails = request.GetPaymentMethodTypes(),
+                Currency = new CurrencyDetails() { CurrencyCode = "EUR" },
+                Buyer = GetBuyer(request),
+                ItemDetails = GetInvoiceItems(request),
+                Fees = GetFees(invoice),
+                ExportedGoodsAmount = request.cbChargeItems.Where(x => x.IsExportGood()).Sum(x => x.Amount),
+                TaxPeriod = new TaxPeriod()
+                {
+                    Month = (uint) request.cbReceiptMoment.Month,
+                    Year = (uint) request.cbReceiptMoment.Year
+                }
+            };
+        }
+        private async Task InsertJournalME(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftSignaturCreationUnitME scu)
+        {
+            var lastJournal = await _journalMERepository.GetLastEntryAsync();
+            var journal = new ftJournalME()
+            {
+                ftJournalMEId = Guid.NewGuid(),
+                ftQueueId = queue.ftQueueId,
+                ftQueueItemId = queueItem.ftQueueItemId,
+                cbReference = request.cbReceiptReference,
+                Number = queue.ftReceiptNumerator
+            };
+            if (lastJournal == null)
+            {
+                journal.ftOrdinalNumber = 1;
+            }else{ 
+                var lastqueuItem = await _queueItemRepository.GetAsync(lastJournal.ftQueueItemId);
+                if (queueItem.ftWorkMoment.Value.Year != lastqueuItem.ftWorkMoment.Value.Year)
+                {
+                    journal.ftOrdinalNumber = 1;
+                }
+                else
+                {
+                    journal.ftOrdinalNumber = lastJournal.ftOrdinalNumber +1;
+                }
+             }
+            journal.ftInvoiceNumber = string.Concat(scu.BusinessUnitCode, '/', journal.ftOrdinalNumber, '/', queueItem.ftWorkMoment.Value.Year, '/', scu.TcrCode);
+            await _journalMERepository.InsertAsync(journal).ConfigureAwait(false);
+        }
+        private static RegisterInvoiceRequest CreateInvoiceReqest(ReceiptRequest request, ftQueueItem queueItem, Invoice invoice, ftSignaturCreationUnitME scu, InvoiceDetails invoiceDetails)
+        {
+            return new RegisterInvoiceRequest()
+            {
+                InvoiceDetails = invoiceDetails,
+                SoftwareCode = scu.SoftwareCode,
+                TcrCode = scu.TcrCode,
+                IsIssuerInVATSystem = true,
+                BusinessUnitCode = scu.BusinessUnitCode,
+                Moment = request.cbReceiptMoment,
+                OperatorCode = invoice.OperatorCode,
+                RequestId = queueItem.ftQueueItemId,
+                SubsequentDeliveryType = invoice.SubsequentDeliveryType == null ? null : (SubsequentDeliveryType) Enum.Parse(typeof(SubsequentDeliveryType), invoice.SubsequentDeliveryType)
+            };
+        }
         private List<InvoiceFee> GetFees(Invoice invoice)
         {
             if(invoice.Fees is null)
@@ -125,7 +147,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             }
             return result;
         }
-
         private List<InvoiceItem> GetInvoiceItems(ReceiptRequest request)
         {
             if (request.cbChargeItems.Count() > 1000)
@@ -139,7 +160,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             }
             return items;
         }
-
         private BuyerDetails GetBuyer(ReceiptRequest request)
         {
             if (string.IsNullOrEmpty(request.cbCustomer))
@@ -167,7 +187,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             {
                 throw new BuyerParseException("Error when parsing Buyer in cbCustomer field!", ex);
             }
-
         }
     }
 }

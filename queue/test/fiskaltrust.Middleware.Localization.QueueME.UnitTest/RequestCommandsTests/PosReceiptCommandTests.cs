@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using System.Linq;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Localization.QueueME.Models;
 using fiskaltrust.Middleware.Localization.QueueME.RequestCommands;
@@ -11,6 +12,8 @@ using Xunit;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories.DE.MasterData;
 using Moq;
 using Microsoft.Extensions.Logging;
+using fiskaltrust.Middleware.Storage.InMemory.Repositories.ME;
+using FluentAssertions;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTests
 {
@@ -20,18 +23,106 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
         [Fact]
         public async Task ExecuteAsync_RegisterInvoice_ValidResultAsync()
         {
-            var inMemoryConfigurationRepository = new InMemoryConfigurationRepository();
-            var tcr = CreateTCR();
             var queue = new ftQueue()
             {
                 ftQueueId = Guid.NewGuid()
             };
+            var posReceiptCommand = await InitializePosReceipt(queue, new ftQueueItem(), new InMemoryJournalMERepository()).ConfigureAwait(false);
+            var receiptRequest = CreateReceiptRequest();
+            var inMemoryMESSCD = new InMemoryMESSCD("TestTCRCodePos");
+            var queueItem = new ftQueueItem()
+            {
+                ftWorkMoment = DateTime.Now
+            };
+            await posReceiptCommand.ExecuteAsync(inMemoryMESSCD, queue, receiptRequest, queueItem).ConfigureAwait(false);
+
+        }
+
+        [Fact]
+        public async Task ExecuteAsync_RegisterSecondInvoice_IncrementOrdNr()
+        {
+            var queue = new ftQueue()
+            {
+                ftQueueId = Guid.NewGuid()
+            };
+            var existingQueueItem = new ftQueueItem()
+            {
+                ftQueueItemId = Guid.NewGuid(),
+                ftQueueId = queue.ftQueueId,
+                ftWorkMoment = DateTime.Now
+            };
+            var inMemoryJournalMERepository = new InMemoryJournalMERepository();
+            var journal = new ftJournalME()
+            {
+                ftQueueItemId = existingQueueItem.ftQueueItemId,
+                ftQueueId = existingQueueItem.ftQueueId,
+                ftOrdinalNumber = 8
+            };
+            await inMemoryJournalMERepository.InsertAsync(journal).ConfigureAwait(false);
+            var posReceiptCommand = await InitializePosReceipt(queue, existingQueueItem, inMemoryJournalMERepository).ConfigureAwait(false);
+            var receiptRequest = CreateReceiptRequest();
+            var inMemoryMESSCD = new InMemoryMESSCD("TestTCRCodePos");
+            var queueItem = new ftQueueItem()
+            {
+                ftQueueItemId = Guid.NewGuid(),
+                ftQueueId = queue.ftQueueId,
+                ftWorkMoment = DateTime.Now
+            };
+            await posReceiptCommand.ExecuteAsync(inMemoryMESSCD, queue, receiptRequest, queueItem).ConfigureAwait(false);
+            var journalMEs = await inMemoryJournalMERepository.GetAsync().ConfigureAwait(false);
+            var journalME = journalMEs.Where(x => x.ftQueueItemId.Equals(queueItem.ftQueueItemId));
+            Assert.Single(journalME);
+            journalME.FirstOrDefault().ftOrdinalNumber.Should().Be(9);
+        }
+
+
+        [Fact]
+        public async Task ExecuteAsync_RegisterInvoiceNextYear_ResetOrdNr()
+        {
+            var queue = new ftQueue()
+            {
+                ftQueueId = Guid.NewGuid()
+            };
+            var existingQueueItem = new ftQueueItem()
+            {
+                ftQueueItemId = Guid.NewGuid(),
+                ftQueueId = queue.ftQueueId,
+                ftWorkMoment = DateTime.Now.AddYears(-1)
+            };
+            var inMemoryJournalMERepository = new InMemoryJournalMERepository();
+            var journal = new ftJournalME()
+            {
+                ftQueueItemId = existingQueueItem.ftQueueItemId,
+                ftQueueId = existingQueueItem.ftQueueId,
+                ftOrdinalNumber = 8
+            };
+            await inMemoryJournalMERepository.InsertAsync(journal).ConfigureAwait(false);
+            var posReceiptCommand = await InitializePosReceipt(queue, existingQueueItem, inMemoryJournalMERepository).ConfigureAwait(false);
+            var receiptRequest = CreateReceiptRequest();
+            var inMemoryMESSCD = new InMemoryMESSCD("TestTCRCodePos");
+            var queueItem = new ftQueueItem()
+            {
+                ftQueueItemId = Guid.NewGuid(),
+                ftQueueId = queue.ftQueueId,
+                ftWorkMoment = DateTime.Now
+            };
+            await posReceiptCommand.ExecuteAsync(inMemoryMESSCD, queue, receiptRequest, queueItem).ConfigureAwait(false);
+            var journalMEs = await inMemoryJournalMERepository.GetAsync().ConfigureAwait(false);
+            var journalME = journalMEs.Where(x => x.ftQueueItemId.Equals(queueItem.ftQueueItemId));
+            Assert.Single(journalME);
+            journalME.FirstOrDefault().ftOrdinalNumber.Should().Be(1);
+        }
+
+        private async Task<PosReceiptCommand> InitializePosReceipt(ftQueue queue, ftQueueItem existingQueueItem, InMemoryJournalMERepository inMemoryJournalMERepository)
+        {
+            var inMemoryConfigurationRepository = new InMemoryConfigurationRepository();
+            var tcr = CreateTcr();
             var scu = new ftSignaturCreationUnitME()
             {
                 ftSignaturCreationUnitMEId = Guid.NewGuid(),
-                TcrIntId = tcr.TCRIntID,
-                BusinessUnitCode = tcr.BusinUnitCode,
-                IssuerTin = tcr.IssuerTIN,
+                TcrIntId = tcr.TcrIntId,
+                BusinessUnitCode = tcr.BusinessUnitCode,
+                IssuerTin = tcr.IssuerTin,
                 TcrCode = "TestTCRCode008",
                 EnuType = "Regular"
             };
@@ -42,14 +133,16 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
                 ftSignaturCreationUnitMEId = scu.ftSignaturCreationUnitMEId
             };
             await inMemoryConfigurationRepository.InsertOrUpdateQueueMEAsync(queueME);
-            var receiptRequest = CreateReceiptRequest();
-            var posReceiptCommand = new PosReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), new SignatureFactoryME(), inMemoryConfigurationRepository, Mock.Of<IJournalMERepository>());
-            var testTcr = "TestTCRCodePos";
-            var inMemoryMESSCD = new InMemoryMESSCD(testTcr);
+            var inMemoryQueueItemRepository = new InMemoryQueueItemRepository();
 
-            await posReceiptCommand.ExecuteAsync(inMemoryMESSCD, queue, receiptRequest, new ftQueueItem()).ConfigureAwait(false);
-
+            if (existingQueueItem != null)
+            {
+                await inMemoryQueueItemRepository.InsertOrUpdateAsync(existingQueueItem).ConfigureAwait(false);
+            }
+            var posReceiptCommand = new PosReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), new SignatureFactoryME(), inMemoryConfigurationRepository, inMemoryJournalMERepository, inMemoryQueueItemRepository);
+            return posReceiptCommand;
         }
+
 
         private ReceiptRequest CreateReceiptRequest()
         {
@@ -134,13 +227,13 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             };
         }
 
-        private TCR CreateTCR()
+        private Tcr CreateTcr()
         {
-            return new TCR()
+            return new Tcr()
             {
-                BusinUnitCode = "aT007FT889",
-                IssuerTIN = "02657598",
-                TCRIntID = Guid.NewGuid().ToString()
+                BusinessUnitCode = "aT007FT889",
+                IssuerTin = "02657598",
+                TcrIntId = Guid.NewGuid().ToString()
             };
         }
 

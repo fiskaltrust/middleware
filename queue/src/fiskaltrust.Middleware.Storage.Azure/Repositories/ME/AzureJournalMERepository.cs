@@ -37,7 +37,7 @@ namespace fiskaltrust.Middleware.Storage.Azure.Repositories.ME
         public Task<ftJournalME> GetLastEntryAsync()
         {
             var tableQuery = new TableQuery<AzureFtJournalME>();
-            tableQuery = tableQuery.OrderByDesc("TimeStamp");
+            tableQuery = tableQuery.OrderByDesc("Number");
             return Task.FromResult(GetAllByTableFilterAsync(tableQuery).Take(1).ToListAsync().Result.FirstOrDefault());
         }
     }
