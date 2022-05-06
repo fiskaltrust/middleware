@@ -10,18 +10,25 @@ using fiskaltrust.ifPOS.v1.me;
 using fiskaltrust.Middleware.Localization.QueueME.Exceptions;
 using fiskaltrust.Middleware.Localization.QueueME.Extensions;
 using System.Collections.Generic;
+using fiskaltrust.Middleware.Contracts.Constants;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 {
     public class PosReceiptCommand : RequestCommand
     {
-        public PosReceiptCommand(ILogger<RequestCommand> logger, SignatureFactoryME signatureFactory, IConfigurationRepository configurationRepository, IJournalMERepository journalMERepository, IQueueItemRepository queueItemRepository) : base(logger, signatureFactory, configurationRepository, journalMERepository, queueItemRepository)
+        public PosReceiptCommand(ILogger<RequestCommand> logger, SignatureFactoryME signatureFactory, IConfigurationRepository configurationRepository,
+            IJournalMERepository journalMERepository, IQueueItemRepository queueItemRepository, IActionJournalRepository actionJournalRepository) :
+            base(logger, signatureFactory, configurationRepository, journalMERepository, queueItemRepository, actionJournalRepository)
         { }
 
         public override async Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
         {
             try
             {
+                if (await CashDepositeOutstanding().ConfigureAwait(false))
+                {
+                    throw new CashDepositOutstandingException("Register initial amount with Cash Deposit Receipt for today!");
+                }
                 var invoice = JsonConvert.DeserializeObject<Invoice>(request.ftReceiptCaseData);
                 var queueME = await _configurationRepository.GetQueueMEAsync(queue.ftQueueId).ConfigureAwait(false);
                 if (queueME == null)
@@ -57,6 +64,18 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 throw;
             }
         }
+
+        private async Task<bool> CashDepositeOutstanding()
+        {
+            var actionJournals = await _actionJournalRepository.GetAsync().ConfigureAwait(false);
+            var lastActionJournal = actionJournals.Where(x => x.Type == JournalTypes.CashDepositME.ToString()).OrderByDescending(x => x.TimeStamp).LastOrDefault();
+            if (lastActionJournal == null || lastActionJournal.Moment.Date != DateTime.UtcNow.Date)
+            {
+                return true;           
+            }
+            return false;
+        }
+
         private InvoiceDetails CreateInvoiceDetail(ReceiptRequest request, Invoice invoice)
         {
             return new InvoiceDetails()

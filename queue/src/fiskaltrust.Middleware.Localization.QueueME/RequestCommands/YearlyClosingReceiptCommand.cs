@@ -11,7 +11,9 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 {
     public class YearlyClosingReceiptCommand : RequestCommand
     {
-        public YearlyClosingReceiptCommand(ILogger<RequestCommand> logger, SignatureFactoryME signatureFactory, IConfigurationRepository configurationRepository, IJournalMERepository journalMERepository, IQueueItemRepository queueItemRepository) : base(logger, signatureFactory, configurationRepository, journalMERepository, queueItemRepository)
+        public YearlyClosingReceiptCommand(ILogger<RequestCommand> logger, SignatureFactoryME signatureFactory, IConfigurationRepository configurationRepository,
+            IJournalMERepository journalMERepository, IQueueItemRepository queueItemRepository, IActionJournalRepository actionJournalRepository) :
+            base(logger, signatureFactory, configurationRepository, journalMERepository, queueItemRepository, actionJournalRepository)
         { }
 
         public override async Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)

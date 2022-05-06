@@ -14,6 +14,8 @@ using Moq;
 using Microsoft.Extensions.Logging;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories.ME;
 using FluentAssertions;
+using fiskaltrust.Middleware.Contracts.Constants;
+using fiskaltrust.Middleware.Localization.QueueME.Exceptions;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTests
 {
@@ -27,7 +29,8 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             {
                 ftQueueId = Guid.NewGuid()
             };
-            var posReceiptCommand = await InitializePosReceipt(queue, new ftQueueItem(), new InMemoryJournalMERepository()).ConfigureAwait(false);
+            var inMemoryActionJournalRepository = await IniActionJournalRepo(queue, Guid.NewGuid(), DateTime.UtcNow).ConfigureAwait(false);
+            var posReceiptCommand = await InitializePosReceipt(queue, new ftQueueItem(), new InMemoryJournalMERepository(), inMemoryActionJournalRepository).ConfigureAwait(false);
             var receiptRequest = CreateReceiptRequest();
             var inMemoryMESSCD = new InMemoryMESSCD("TestTCRCodePos");
             var queueItem = new ftQueueItem()
@@ -59,7 +62,8 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
                 ftOrdinalNumber = 8
             };
             await inMemoryJournalMERepository.InsertAsync(journal).ConfigureAwait(false);
-            var posReceiptCommand = await InitializePosReceipt(queue, existingQueueItem, inMemoryJournalMERepository).ConfigureAwait(false);
+            var inMemoryActionJournalRepository = await IniActionJournalRepo(queue, Guid.NewGuid(), DateTime.UtcNow).ConfigureAwait(false);
+            var posReceiptCommand = await InitializePosReceipt(queue, existingQueueItem, inMemoryJournalMERepository, inMemoryActionJournalRepository).ConfigureAwait(false);
             var receiptRequest = CreateReceiptRequest();
             var inMemoryMESSCD = new InMemoryMESSCD("TestTCRCodePos");
             var queueItem = new ftQueueItem()
@@ -73,6 +77,55 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             var journalME = journalMEs.Where(x => x.ftQueueItemId.Equals(queueItem.ftQueueItemId));
             Assert.Single(journalME);
             journalME.FirstOrDefault().ftOrdinalNumber.Should().Be(9);
+        }
+
+        [Fact]
+        public async Task ExecuteAsync_CashDepositOutstanding_Exception()
+        {
+            var queue = new ftQueue()
+            {
+                ftQueueId = Guid.NewGuid()
+            };
+            var existingQueueItem = new ftQueueItem()
+            {
+                ftQueueItemId = Guid.NewGuid(),
+                ftQueueId = queue.ftQueueId,
+                ftWorkMoment = DateTime.UtcNow.AddDays(-1)
+            };
+            var inMemoryJournalMERepository = new InMemoryJournalMERepository();
+            var journal = new ftJournalME()
+            {
+                ftQueueItemId = existingQueueItem.ftQueueItemId,
+                ftQueueId = existingQueueItem.ftQueueId,
+                ftOrdinalNumber = 8
+            };
+            var inMemoryActionJournalRepository = await IniActionJournalRepo(queue, existingQueueItem.ftQueueItemId, DateTime.UtcNow.AddDays(-1)).ConfigureAwait(false);
+            await inMemoryJournalMERepository.InsertAsync(journal).ConfigureAwait(false);
+            var receiptRequest = CreateReceiptRequest();
+            var posReceiptCommand = new PosReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), new SignatureFactoryME(),
+                new InMemoryConfigurationRepository(), inMemoryJournalMERepository, new InMemoryQueueItemRepository(), inMemoryActionJournalRepository);
+            var sutMethod = CallInitialOperationReceiptCommand(posReceiptCommand, queue, receiptRequest);
+            await sutMethod.Should().ThrowAsync<CashDepositOutstandingException>().ConfigureAwait(false);
+        }
+
+        private static async Task<InMemoryActionJournalRepository> IniActionJournalRepo(ftQueue queue, Guid ftQueueItemId, DateTime datetime)
+        {
+            var inMemoryActionJournalRepository = new InMemoryActionJournalRepository();
+            var actionjounal = new ftActionJournal()
+            {
+                ftActionJournalId = Guid.NewGuid(),
+                ftQueueId = queue.ftQueueId,
+                ftQueueItemId = ftQueueItemId,
+                Type = JournalTypes.CashDepositME.ToString(),
+                Moment = datetime
+            };
+            await inMemoryActionJournalRepository.InsertAsync(actionjounal).ConfigureAwait(false);
+            return inMemoryActionJournalRepository;
+        }
+
+        private Func<Task> CallInitialOperationReceiptCommand(PosReceiptCommand posReceiptCommand, ftQueue queue, ReceiptRequest receiptRequest)
+        {
+            return async () => { var receiptResponse = await posReceiptCommand.ExecuteAsync(new InMemoryMESSCD("testTcr"), queue, receiptRequest, new ftQueueItem()); };
         }
 
 
@@ -97,7 +150,8 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
                 ftOrdinalNumber = 8
             };
             await inMemoryJournalMERepository.InsertAsync(journal).ConfigureAwait(false);
-            var posReceiptCommand = await InitializePosReceipt(queue, existingQueueItem, inMemoryJournalMERepository).ConfigureAwait(false);
+            var inMemoryActionJournalRepository = await IniActionJournalRepo(queue, Guid.NewGuid(), DateTime.UtcNow).ConfigureAwait(false);
+            var posReceiptCommand = await InitializePosReceipt(queue, existingQueueItem, inMemoryJournalMERepository, inMemoryActionJournalRepository).ConfigureAwait(false);
             var receiptRequest = CreateReceiptRequest();
             var inMemoryMESSCD = new InMemoryMESSCD("TestTCRCodePos");
             var queueItem = new ftQueueItem()
@@ -113,7 +167,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             journalME.FirstOrDefault().ftOrdinalNumber.Should().Be(1);
         }
 
-        private async Task<PosReceiptCommand> InitializePosReceipt(ftQueue queue, ftQueueItem existingQueueItem, InMemoryJournalMERepository inMemoryJournalMERepository)
+        private async Task<PosReceiptCommand> InitializePosReceipt(ftQueue queue, ftQueueItem existingQueueItem, InMemoryJournalMERepository inMemoryJournalMERepository, InMemoryActionJournalRepository inMemoryActionJournalRepository)
         {
             var inMemoryConfigurationRepository = new InMemoryConfigurationRepository();
             var tcr = CreateTcr();
@@ -139,7 +193,8 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             {
                 await inMemoryQueueItemRepository.InsertOrUpdateAsync(existingQueueItem).ConfigureAwait(false);
             }
-            var posReceiptCommand = new PosReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), new SignatureFactoryME(), inMemoryConfigurationRepository, inMemoryJournalMERepository, inMemoryQueueItemRepository);
+            var posReceiptCommand = new PosReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), new SignatureFactoryME(), 
+                inMemoryConfigurationRepository, inMemoryJournalMERepository, inMemoryQueueItemRepository, inMemoryActionJournalRepository);
             return posReceiptCommand;
         }
 

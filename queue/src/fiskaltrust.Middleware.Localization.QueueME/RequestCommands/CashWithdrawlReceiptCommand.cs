@@ -7,12 +7,15 @@ using fiskaltrust.Middleware.Localization.QueueME.Models;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.me;
 using fiskaltrust.Middleware.Localization.QueueME.Exceptions;
+using fiskaltrust.Middleware.Contracts.Constants;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 {
     public class CashWithdrawlReceiptCommand : RequestCommand
     {
-        public CashWithdrawlReceiptCommand(ILogger<RequestCommand> logger, SignatureFactoryME signatureFactory, IConfigurationRepository configurationRepository, IJournalMERepository journalMERepository, IQueueItemRepository queueItemRepository) : base(logger, signatureFactory, configurationRepository, journalMERepository, queueItemRepository)
+        public CashWithdrawlReceiptCommand(ILogger<RequestCommand> logger, SignatureFactoryME signatureFactory, IConfigurationRepository configurationRepository,
+            IJournalMERepository journalMERepository, IQueueItemRepository queueItemRepository, IActionJournalRepository actionJournalRepository) :
+            base(logger, signatureFactory, configurationRepository, journalMERepository, queueItemRepository, actionJournalRepository)
         { }
 
         public override async Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
@@ -35,6 +38,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 };
                 await client.RegisterCashWithdrawalAsync(registerCashWithdrawalRequest).ConfigureAwait(false);
                 var receiptResponse = CreateReceiptResponse(request, queueItem);
+                await CreateActionJournal(queue, (long) JournalTypes.CashWithdrawlME, queueItem).ConfigureAwait(false);
                 return new RequestCommandResponse()
                 {
                     ReceiptResponse = receiptResponse
@@ -45,7 +49,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 _logger.LogDebug(ex, "TSE not reachable.");
                 throw;
             }
-
         }
     }
 }

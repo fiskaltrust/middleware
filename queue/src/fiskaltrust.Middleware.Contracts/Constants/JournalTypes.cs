@@ -14,5 +14,7 @@
         TarExportFromTSE =      0x4445000000000001,
         DSFinVKExport =         0x4445000000000002,
         TarExportFromDatabase = 0x4445000000000003,
+        CashDepositME =         0x44D5000000010007,
+        CashWithdrawlME =       0x44D5000000010008,
     }
 }

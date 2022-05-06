@@ -28,7 +28,8 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             var inMemoryConfigurationRepository = new InMemoryConfigurationRepository();
             var inMemoryJournalMERepository = new InMemoryJournalMERepository();
             var inMemoryQueueItemRepository = new InMemoryQueueItemRepository();
-            var initialOperationReceiptCommand = new InitialOperationReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), new SignatureFactoryME(), inMemoryConfigurationRepository, inMemoryJournalMERepository, inMemoryQueueItemRepository);
+            var initialOperationReceiptCommand = new InitialOperationReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), new SignatureFactoryME(), inMemoryConfigurationRepository, 
+                inMemoryJournalMERepository, inMemoryQueueItemRepository, new InMemoryActionJournalRepository());
 
             var testTcr = "TestTCRCode";
             var inMemoryMESSCD = new InMemoryMESSCD(testTcr);
@@ -79,7 +80,8 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             await inMemoryConfigurationRepository.InsertOrUpdateQueueMEAsync(queueME).ConfigureAwait(false);
             var inMemoryJournalMERepository = new InMemoryJournalMERepository();
             var inMemoryQueueItemRepository = new InMemoryQueueItemRepository();
-            var InitialOperationReceiptCommand = new InitialOperationReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), new SignatureFactoryME(), inMemoryConfigurationRepository, inMemoryJournalMERepository, inMemoryQueueItemRepository);
+            var InitialOperationReceiptCommand = new InitialOperationReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), new SignatureFactoryME(), inMemoryConfigurationRepository, 
+                inMemoryJournalMERepository, inMemoryQueueItemRepository, new InMemoryActionJournalRepository());
             var sutMethod = CallInitialOperationReceiptCommand(InitialOperationReceiptCommand, queue, receiptRequest);
             await sutMethod.Should().ThrowAsync<ENUAlreadyRegisteredException>().ConfigureAwait(false);
         }

@@ -24,3 +24,4 @@ namespace fiskaltrust.Middleware.Contracts.Repositories
         IAsyncEnumerable<ftJournalDE> GetByFileName(string fileName);
     }
 }
+
