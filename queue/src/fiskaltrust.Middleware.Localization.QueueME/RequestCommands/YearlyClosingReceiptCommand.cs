@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading.Tasks;
-
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 using fiskaltrust.Middleware.Localization.QueueME.Models;
@@ -20,9 +19,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
         {
             try
             {
-                return await Task.FromResult(new RequestCommandResponse()
-                {
-                });
+                return await CreateClosing(queue, request, queueItem).ConfigureAwait(false);
             }
             catch (Exception ex) when (ex.GetType().Name == RETRYPOLICYEXCEPTION_NAME)
             {

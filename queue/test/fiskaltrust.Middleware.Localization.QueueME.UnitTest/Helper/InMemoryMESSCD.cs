@@ -16,8 +16,19 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.Helper
         }
 
         public Task<ScuMeEchoResponse> EchoAsync(ScuMeEchoRequest request) => throw new NotImplementedException();
-        public Task<RegisterCashDepositResponse> RegisterCashDepositAsync(RegisterCashDepositRequest registerCashDepositRequest) => throw new NotImplementedException();
-        public Task<RegisterCashWithdrawalResponse> RegisterCashWithdrawalAsync(RegisterCashWithdrawalRequest registerCashDepositRequest) => throw new NotImplementedException();
+        public Task<RegisterCashDepositResponse> RegisterCashDepositAsync(RegisterCashDepositRequest registerCashDepositRequest)
+        {
+            return Task.FromResult(new RegisterCashDepositResponse()
+            {
+                FCDC = "1111"
+            });
+        }
+        public Task<RegisterCashWithdrawalResponse> RegisterCashWithdrawalAsync(RegisterCashWithdrawalRequest registerCashDepositRequest)
+        {
+            return Task.FromResult(new RegisterCashWithdrawalResponse()
+            {
+            });
+        }
 
         public Task<RegisterInvoiceResponse> RegisterInvoiceAsync(RegisterInvoiceRequest registerInvoiceRequest)
         {

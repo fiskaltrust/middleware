@@ -8,6 +8,7 @@ using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.me;
 using fiskaltrust.Middleware.Localization.QueueME.Exceptions;
 using fiskaltrust.Middleware.Contracts.Constants;
+using System.Collections.Generic;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 {
@@ -38,10 +39,14 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 };
                 await client.RegisterCashDepositAsync(registerCashWithdrawalRequest).ConfigureAwait(false);
                 var receiptResponse = CreateReceiptResponse(request, queueItem);
-                await CreateActionJournal(queue, (long)JournalTypes.CashDepositME, queueItem).ConfigureAwait(false);
+                var actionJournalEntry =  await CreateActionJournal(queue, (long)JournalTypes.CashDepositME, queueItem).ConfigureAwait(false);
                 return new RequestCommandResponse()
                 {
-                    ReceiptResponse = receiptResponse
+                    ReceiptResponse = receiptResponse,
+                    ActionJournals = new List<ftActionJournal>()
+                    {
+                        actionJournalEntry
+                    }
                 };
             }
             catch (Exception ex) when (ex.GetType().Name == RETRYPOLICYEXCEPTION_NAME)

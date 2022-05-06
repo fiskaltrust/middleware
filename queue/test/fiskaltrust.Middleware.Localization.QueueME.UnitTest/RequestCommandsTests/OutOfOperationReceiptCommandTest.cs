@@ -11,7 +11,6 @@ using fiskaltrust.Middleware.Storage.InMemory.Repositories;
 using fiskaltrust.Middleware.Localization.QueueME.RequestCommands;
 using Moq;
 using fiskaltrust.Middleware.Localization.QueueME.UnitTest.Helper;
-using fiskaltrust.Middleware.Storage.InMemory.Repositories.DE.MasterData;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories.ME;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTests

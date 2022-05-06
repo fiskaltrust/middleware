@@ -9,7 +9,6 @@ using fiskaltrust.Middleware.Storage.InMemory.Repositories;
 using fiskaltrust.storage.V0;
 using Newtonsoft.Json;
 using Xunit;
-using fiskaltrust.Middleware.Storage.InMemory.Repositories.DE.MasterData;
 using Moq;
 using Microsoft.Extensions.Logging;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories.ME;
@@ -197,7 +196,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
                 inMemoryConfigurationRepository, inMemoryJournalMERepository, inMemoryQueueItemRepository, inMemoryActionJournalRepository);
             return posReceiptCommand;
         }
-
 
         private ReceiptRequest CreateReceiptRequest()
         {

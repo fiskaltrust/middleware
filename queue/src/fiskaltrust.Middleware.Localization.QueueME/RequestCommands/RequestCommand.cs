@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using fiskaltrust.Middleware.Localization.QueueME.Models;
 using System;
 using fiskaltrust.ifPOS.v1.me;
+using System.Collections.Generic;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 {
@@ -17,8 +18,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
         protected readonly IJournalMERepository _journalMERepository;
         protected readonly IQueueItemRepository _queueItemRepository;
         protected readonly IActionJournalRepository _actionJournalRepository;
-
-
         public RequestCommand(ILogger<RequestCommand> logger, SignatureFactoryME signatureFactory, IConfigurationRepository configurationRepository, 
             IJournalMERepository journalMERepository, IQueueItemRepository queueItemRepository, IActionJournalRepository actionJournalRepository)
         {
@@ -47,7 +46,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             };
         }
 
-        protected async Task CreateActionJournal(ftQueue queue, long journalType, ftQueueItem queueItem)
+        protected async Task<ftActionJournal> CreateActionJournal(ftQueue queue, long journalType, ftQueueItem queueItem)
         {
             var actionjounal = new ftActionJournal()
             {
@@ -58,6 +57,38 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 Moment = DateTime.UtcNow,
             };
             await _actionJournalRepository.InsertAsync(actionjounal).ConfigureAwait(false);
+            return actionjounal;
+        }
+
+        protected static List<ftActionJournal> CreateClosingActionJournals(ftQueueItem queueItem, ftQueue queue, string message, long type)
+        {
+            return new List<ftActionJournal>
+            {
+                new ftActionJournal
+                {
+                    ftActionJournalId = Guid.NewGuid(),
+                    Message = message,
+                    Type = $"{type:X}",
+                    ftQueueId = queue.ftQueueId,
+                    ftQueueItemId = queueItem.ftQueueItemId,
+                    Moment = DateTime.UtcNow,
+                    TimeStamp = DateTime.UtcNow.Ticks,
+                    Priority = -1
+                }
+            };
+        }
+        protected async Task<RequestCommandResponse> CreateClosing(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
+        {
+            var receiptResponse = CreateReceiptResponse(request, queueItem);
+            var actionJournalEntry = await CreateActionJournal(queue, request.ftReceiptCase, queueItem).ConfigureAwait(false);
+            return new RequestCommandResponse()
+            {
+                ReceiptResponse = receiptResponse,
+                ActionJournals = new List<ftActionJournal>()
+                    {
+                        actionJournalEntry
+                    }
+            };
         }
     }
 }
