@@ -17,8 +17,6 @@ namespace fiskaltrust.Middleware.Queue.SQLite
 
         public void ConfigureServices(IServiceCollection serviceCollection)
         {
-            SQLitePCL.raw.sqlite3_config(2 /*SQLITE_CONFIG_MULTITHREAD*/);
-
             var logger = serviceCollection.BuildServiceProvider().GetRequiredService<ILogger<IMiddlewareBootstrapper>>();
             
             var storageBootStrapper = new SQLiteStorageBootstrapper(Id, Configuration, logger);

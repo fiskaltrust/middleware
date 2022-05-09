@@ -50,23 +50,23 @@ namespace fiskaltrust.Middleware.Storage.SQLite.DatabaseInitialization
 
             _logger.LogDebug($"Found {migrations.Count()} migration files.");
 
-            using (var connection = _connectionFactory.GetNewConnection(_connectionString))
-            {
-                var currentVersion = await GetCurrentVersionAsync(connection).ConfigureAwait(false);
-                var notAppliedMigrations = migrations.Where(x => string.Compare(Path.GetFileNameWithoutExtension(x), currentVersion, true) > 0);
+            var connection = _connectionFactory.GetConnection(_connectionString);
+            
+            var currentVersion = await GetCurrentVersionAsync(connection).ConfigureAwait(false);
+            var notAppliedMigrations = migrations.Where(x => string.Compare(Path.GetFileNameWithoutExtension(x), currentVersion, true) > 0);
 
-                if (notAppliedMigrations.Any())
-                {
-                    _logger.LogInformation($"{notAppliedMigrations.Count()} pending database updates were detected. Updating database now.");
-                }
-                foreach (var migrationScript in notAppliedMigrations)
-                {
-                    _logger.LogDebug($"Updating database with migration script {migrationScript}..");
-                    await connection.ExecuteAsync(File.ReadAllText(migrationScript)).ConfigureAwait(false);
-                    await SetCurrentVersionAsync(connection, Path.GetFileNameWithoutExtension(migrationScript)).ConfigureAwait(false);
-                    _logger.LogDebug($"Applying the migration script was successful. Set current version to {Path.GetFileNameWithoutExtension(migrationScript)}.");
-                }
+            if (notAppliedMigrations.Any())
+            {
+                _logger.LogInformation($"{notAppliedMigrations.Count()} pending database updates were detected. Updating database now.");
             }
+            foreach (var migrationScript in notAppliedMigrations)
+            {
+                _logger.LogDebug($"Updating database with migration script {migrationScript}..");
+                await connection.ExecuteAsync(File.ReadAllText(migrationScript)).ConfigureAwait(false);
+                await SetCurrentVersionAsync(connection, Path.GetFileNameWithoutExtension(migrationScript)).ConfigureAwait(false);
+                _logger.LogDebug($"Applying the migration script was successful. Set current version to {Path.GetFileNameWithoutExtension(migrationScript)}.");
+            }
+            
         }
 
         private async Task<string> GetCurrentVersionAsync(IDbConnection connection)
