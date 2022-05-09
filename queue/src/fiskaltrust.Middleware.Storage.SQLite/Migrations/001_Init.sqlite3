@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS ftJournalME
     ftQueueItemId         NVARCHAR(36) NOT NULL,
     ftQueueId             NVARCHAR(36) NOT NULL,
     TimeStamp             BIGINT NOT NULL
-)
+);
 CREATE TABLE IF NOT EXISTS ftActionJournal
 (
     ftActionJournalId     NVARCHAR(36) PRIMARY KEY NOT NULL,
