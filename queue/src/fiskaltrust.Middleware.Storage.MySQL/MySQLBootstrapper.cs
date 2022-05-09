@@ -51,7 +51,6 @@ namespace fiskaltrust.Middleware.Storage.MySQL
             {
                 throw new Exception("Database connectionstring not defined");
             }
-
             _connectionString = Encoding.UTF8.GetString(Encryption.Decrypt(Convert.FromBase64String(_mySQLStorageConfiguration.ConnectionString), queueId.ToByteArray()));
 
             var databaseMigrator = new DatabaseMigrator(_connectionString, queueId, logger);

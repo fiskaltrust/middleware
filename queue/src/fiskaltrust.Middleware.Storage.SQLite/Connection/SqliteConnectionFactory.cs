@@ -25,7 +25,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Connection
             var builder = new System.Data.SQLite.SQLiteConnectionStringBuilder
             {
                 DataSource = path,
-                Version = 3
+                Version = 3,
             };
 #endif
             return builder.ConnectionString;
