@@ -65,5 +65,10 @@ namespace fiskaltrust.Middleware.Storage.EF.Repositories
             return DbContext.QueueItemList.Where(x => x.ftQueueRow < ftQueueItem.ftQueueRow && 
                 (x.cbReceiptReference == receiptRequest.cbPreviousReceiptReference || x.cbReceiptReference == ftQueueItem.cbReceiptReference)).ToAsyncEnumerable();
         }
+
+        public IAsyncEnumerable<ftQueueItem> GetQueueItemsAfterQueueItem(ftQueueItem ftQueueItem)
+        {
+            return DbContext.QueueItemList.Where(x => x.ftQueueRow >= ftQueueItem.ftQueueRow).ToAsyncEnumerable();
+        }
     }
 }

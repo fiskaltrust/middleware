@@ -2,11 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Storage.InMemory.Repositories
 {
-    public class InMemoryActionJournalRepository : AbstractInMemoryRepository<Guid, ftActionJournal>, IActionJournalRepository
+    public class InMemoryActionJournalRepository : AbstractInMemoryRepository<Guid, ftActionJournal>, IActionJournalRepository, IMiddlewareActionJournalRepository
     {
         public InMemoryActionJournalRepository() : base(new List<ftActionJournal>()) { }
 
@@ -26,6 +27,12 @@ namespace fiskaltrust.Middleware.Storage.InMemory.Repositories
                 return result.Take(take.Value).ToAsyncEnumerable();
             }
             return result.ToAsyncEnumerable();
-        } 
+        }
+
+        public IAsyncEnumerable<ftActionJournal> GetByQueueItemId(Guid queueItemId)
+        {
+            var result = Data.Select(x => x.Value).Where(x => x.ftQueueItemId == queueItemId).OrderByDescending(x => x.TimeStamp);
+            return result.ToAsyncEnumerable();
+        }
     }
 }

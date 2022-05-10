@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
+using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Storage.SQLite.Repositories.ME
 {
-    public class SQLiteJournalMERepository : AbstractSQLiteRepository<Guid, ftJournalME>, IJournalMERepository
+    public class SQLiteJournalMERepository : AbstractSQLiteRepository<Guid, ftJournalME>, IJournalMERepository, IMiddlewareJournalMERepository
     {
         public SQLiteJournalMERepository(ISqliteConnectionFactory connectionFactory, string path) : base(connectionFactory, path) { }
         public override void EntityUpdated(ftJournalME entity) => entity.TimeStamp = DateTime.UtcNow.Ticks;
@@ -26,5 +28,13 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Repositories.ME
             await DbConnection.ExecuteAsync(sql, journal).ConfigureAwait(false);
         }
         protected override Guid GetIdForEntity(ftJournalME entity) => entity.ftJournalMEId;
+        public async IAsyncEnumerable<ftJournalME> GetByQueueItemId(Guid queueItemId)
+        {
+            var query = "Select * from ftJournalME where ftQueueItemId = @queueItemId;";
+            await foreach (var entry in DbConnection.Query<ftJournalME>(query, new { queueItemId }, buffered: false).ToAsyncEnumerable().ConfigureAwait(false))
+            {
+                yield return entry;
+            }
+        }
     }
 }

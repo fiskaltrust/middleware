@@ -28,7 +28,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             var inMemoryConfigurationRepository = new InMemoryConfigurationRepository();
             var inMemoryJournalMERepository = new InMemoryJournalMERepository();
             var inMemoryQueueItemRepository = new InMemoryQueueItemRepository();
-            var initialOperationReceiptCommand = new InitialOperationReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), new SignatureFactoryME(), inMemoryConfigurationRepository, 
+            var initialOperationReceiptCommand = new InitialOperationReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), inMemoryConfigurationRepository, 
                 inMemoryJournalMERepository, inMemoryQueueItemRepository, new InMemoryActionJournalRepository());
 
             var testTcr = "TestTCRCode";
@@ -84,7 +84,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             await inMemoryConfigurationRepository.InsertOrUpdateQueueMEAsync(queueME).ConfigureAwait(false);
             var inMemoryJournalMERepository = new InMemoryJournalMERepository();
             var inMemoryQueueItemRepository = new InMemoryQueueItemRepository();
-            var InitialOperationReceiptCommand = new InitialOperationReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), new SignatureFactoryME(), inMemoryConfigurationRepository, 
+            var InitialOperationReceiptCommand = new InitialOperationReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), inMemoryConfigurationRepository, 
                 inMemoryJournalMERepository, inMemoryQueueItemRepository, new InMemoryActionJournalRepository());
             var sutMethod = CallInitialOperationReceiptCommand(InitialOperationReceiptCommand, queue, receiptRequest, queueME);
             await sutMethod.Should().ThrowAsync<ENUAlreadyRegisteredException>().ConfigureAwait(false);

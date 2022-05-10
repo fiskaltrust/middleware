@@ -15,7 +15,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME
         public void ConfigureServices(IServiceCollection services)
         {
             var _ = services
-                .AddScoped<SignatureFactoryME>()
                 .AddScoped<IMarketSpecificSignProcessor, SignProcessorME>()
                 .AddSingleton(sp => QueueMEConfiguration.FromMiddlewareConfiguration(sp.GetRequiredService<MiddlewareConfiguration>()))
                 .AddSingleton<IMESSCDProvider>(sp =>

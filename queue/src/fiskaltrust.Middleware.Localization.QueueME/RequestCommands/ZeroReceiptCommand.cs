@@ -11,15 +11,18 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 {
     public class ZeroReceiptCommand : RequestCommand
     {
-        public ZeroReceiptCommand(ILogger<RequestCommand> logger, SignatureFactoryME signatureFactory, IConfigurationRepository configurationRepository,
+        public ZeroReceiptCommand(ILogger<RequestCommand> logger, IConfigurationRepository configurationRepository,
             IJournalMERepository journalMERepository, IQueueItemRepository queueItemRepository, IActionJournalRepository actionJournalRepository) :
-            base(logger, signatureFactory, configurationRepository, journalMERepository, queueItemRepository, actionJournalRepository)
+            base(logger, configurationRepository, journalMERepository, queueItemRepository, actionJournalRepository)
         { }
 
         public override async Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftQueueME queueME)
         {
             try
             {
+
+
+
                 return await Task.FromResult(new RequestCommandResponse()
                 {
                 });

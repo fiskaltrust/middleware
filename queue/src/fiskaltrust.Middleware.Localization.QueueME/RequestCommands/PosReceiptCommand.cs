@@ -16,9 +16,9 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 {
     public class PosReceiptCommand : RequestCommand
     {
-        public PosReceiptCommand(ILogger<RequestCommand> logger, SignatureFactoryME signatureFactory, IConfigurationRepository configurationRepository,
+        public PosReceiptCommand(ILogger<RequestCommand> logger, IConfigurationRepository configurationRepository,
             IJournalMERepository journalMERepository, IQueueItemRepository queueItemRepository, IActionJournalRepository actionJournalRepository) :
-            base(logger, signatureFactory, configurationRepository, journalMERepository, queueItemRepository, actionJournalRepository)
+            base(logger, configurationRepository, journalMERepository, queueItemRepository, actionJournalRepository)
         { }
 
         public override async Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftQueueME queueME)
@@ -50,7 +50,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 var invoiceDetails = CreateInvoiceDetail(request, invoice);
                 var registerInvoiceRequest = CreateInvoiceReqest(request, queueItem, invoice, scu, invoiceDetails);
                 var registerInvoiceResponse = await client.RegisterInvoiceAsync(registerInvoiceRequest).ConfigureAwait(false);
-                await InsertJournalME(queue, request, queueItem, scu).ConfigureAwait(false);
+                await InsertJournalME(queue, request, queueItem, scu, registerInvoiceResponse).ConfigureAwait(false);
                 var receiptResponse = CreateReceiptResponse(request, queueItem);
                 return new RequestCommandResponse()
                 {
@@ -114,7 +114,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 }
             };
         }
-        private async Task InsertJournalME(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftSignaturCreationUnitME scu)
+        private async Task InsertJournalME(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftSignaturCreationUnitME scu, RegisterInvoiceResponse registerInvoiceResponse)
         {
             var lastJournal = await _journalMERepository.GetLastEntryAsync();
             var journal = new ftJournalME()
@@ -123,7 +123,10 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 ftQueueId = queue.ftQueueId,
                 ftQueueItemId = queueItem.ftQueueItemId,
                 cbReference = request.cbReceiptReference,
-                Number = queue.ftReceiptNumerator
+                Number = queue.ftReceiptNumerator,
+                FIC = registerInvoiceResponse.FIC,
+                IIC = registerInvoiceResponse.IIC,
+                JournalType = (long)JournalTypes.JournalME
             };
             if (lastJournal == null)
             {

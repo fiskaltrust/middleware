@@ -10,6 +10,7 @@
         JournalAT =             0x0000000000004154,
         JournalDE =             0x0000000000004445,
         JournalFR =             0x0000000000004652,
+        JournalME =             0x00000000000044D5,
         QueueDEStatus =         0x4445000000000000,
         TarExportFromTSE =      0x4445000000000001,
         DSFinVKExport =         0x4445000000000002,

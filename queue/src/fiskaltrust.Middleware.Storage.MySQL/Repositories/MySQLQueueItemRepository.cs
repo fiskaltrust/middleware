@@ -94,5 +94,18 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
                 }
             }
         }
+
+        public async IAsyncEnumerable<ftQueueItem> GetQueueItemsAfterQueueItem(ftQueueItem ftQueueItem)
+        {
+            var query = "SELECT * FROM ftQueueItem WHERE ftQueueRow >= @ftQueueRow";
+            using (var connection = new MySqlConnection(ConnectionString))
+            {
+                await connection.OpenAsync().ConfigureAwait(false);
+                await foreach (var entry in connection.Query<ftQueueItem>(query, new { ftQueueItem.ftQueueRow}, buffered: false).ToAsyncEnumerable().ConfigureAwait(false))
+                {
+                    yield return entry;
+                }
+            }
+        }
     }
 }

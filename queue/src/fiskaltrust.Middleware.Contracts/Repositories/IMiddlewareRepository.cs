@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Contracts.Repositories
@@ -17,11 +16,23 @@ namespace fiskaltrust.Middleware.Contracts.Repositories
         IAsyncEnumerable<ftQueueItem> GetByReceiptReferenceAsync(string cbReceiptReference, string cbTerminalId = null);
 
         IAsyncEnumerable<ftQueueItem> GetPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem);
+
+        IAsyncEnumerable<ftQueueItem> GetQueueItemsAfterQueueItem(ftQueueItem ftQueueItem);
     }
 
     public interface IMiddlewareJournalDERepository : IJournalDERepository
     {
         IAsyncEnumerable<ftJournalDE> GetByFileName(string fileName);
+    }
+
+    public interface IMiddlewareJournalMERepository : IJournalMERepository
+    {
+        IAsyncEnumerable<ftJournalME> GetByQueueItemId(Guid queueItemId);
+    }
+
+    public interface IMiddlewareActionJournalRepository : IActionJournalRepository
+    {
+        IAsyncEnumerable<ftActionJournal> GetByQueueItemId(Guid queueItemId);
     }
 }
 

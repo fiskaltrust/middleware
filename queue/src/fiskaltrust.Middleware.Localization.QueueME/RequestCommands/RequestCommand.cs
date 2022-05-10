@@ -13,16 +13,14 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
     {
         protected const string RETRYPOLICYEXCEPTION_NAME = "RetryPolicyException";
         protected readonly ILogger<RequestCommand> _logger;
-        protected readonly SignatureFactoryME _signatureFactory;
         protected readonly IConfigurationRepository _configurationRepository;
         protected readonly IJournalMERepository _journalMERepository;
         protected readonly IQueueItemRepository _queueItemRepository;
         protected readonly IActionJournalRepository _actionJournalRepository;
-        public RequestCommand(ILogger<RequestCommand> logger, SignatureFactoryME signatureFactory, IConfigurationRepository configurationRepository, 
+        public RequestCommand(ILogger<RequestCommand> logger, IConfigurationRepository configurationRepository, 
             IJournalMERepository journalMERepository, IQueueItemRepository queueItemRepository, IActionJournalRepository actionJournalRepository)
         {
             _logger = logger;
-            _signatureFactory = signatureFactory;
             _configurationRepository = configurationRepository;
             _journalMERepository = journalMERepository;
             _queueItemRepository = queueItemRepository;

@@ -14,9 +14,9 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 {
     public class CashDepositReceiptCommand : RequestCommand
     {
-        public CashDepositReceiptCommand(ILogger<RequestCommand> logger, SignatureFactoryME signatureFactory, IConfigurationRepository configurationRepository, 
+        public CashDepositReceiptCommand(ILogger<RequestCommand> logger, IConfigurationRepository configurationRepository, 
             IJournalMERepository journalMERepository, IQueueItemRepository queueItemRepository,IActionJournalRepository actionJournalRepository) :
-            base(logger, signatureFactory, configurationRepository, journalMERepository, queueItemRepository, actionJournalRepository)
+            base(logger, configurationRepository, journalMERepository, queueItemRepository, actionJournalRepository)
         { }
 
         public override async Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftQueueME queueME)
@@ -36,7 +36,8 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                     SubsequentDeliveryType = null,
                     TcrCode = scu.TcrCode
                 };
-                await client.RegisterCashDepositAsync(registerCashWithdrawalRequest).ConfigureAwait(false);
+                var registerCashDepositResponse = await client.RegisterCashDepositAsync(registerCashWithdrawalRequest).ConfigureAwait(false);
+                await InsertJournalME(queue, request, queueItem, registerCashDepositResponse).ConfigureAwait(false);
                 var receiptResponse = CreateReceiptResponse(request, queueItem);
                 var actionJournalEntry =  await CreateActionJournal(queue, (long)JournalTypes.CashDepositME, queueItem).ConfigureAwait(false);
                 return new RequestCommandResponse()
@@ -58,6 +59,21 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 _logger.LogCritical(ex, "An exception occured while processing this request.");
                 return await ProcessFailedReceiptRequest(queueItem, request, queueME).ConfigureAwait(false);
             }
+        }
+
+        private async Task InsertJournalME(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, RegisterCashDepositResponse registerCashDepositResponse)
+        {
+            var journal = new ftJournalME()
+            {
+                ftJournalMEId = Guid.NewGuid(),
+                ftQueueId = queue.ftQueueId,
+                ftQueueItemId = queueItem.ftQueueItemId,
+                cbReference = request.cbReceiptReference,
+                Number = queue.ftReceiptNumerator,
+                FCDC = registerCashDepositResponse.FCDC,
+                JournalType = (long) JournalTypes.CashDepositME
+            };
+            await _journalMERepository.InsertAsync(journal).ConfigureAwait(false);
         }
     }
 }

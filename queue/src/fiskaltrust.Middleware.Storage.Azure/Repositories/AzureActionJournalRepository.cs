@@ -10,7 +10,7 @@ using Microsoft.Azure.Cosmos.Table;
 
 namespace fiskaltrust.Middleware.Storage.Azure.Repositories
 {
-    public class AzureActionJournalRepository : BaseAzureTableRepository<Guid, AzureFtActionJournal, ftActionJournal>, IActionJournalRepository, IMiddlewareRepository<ftActionJournal>
+    public class AzureActionJournalRepository : BaseAzureTableRepository<Guid, AzureFtActionJournal, ftActionJournal>, IActionJournalRepository, IMiddlewareRepository<ftActionJournal>, IMiddlewareActionJournalRepository
     {
         public AzureActionJournalRepository(Guid queueId, string connectionString)
             : base(queueId, connectionString, nameof(ftActionJournal)) { }
@@ -31,6 +31,16 @@ namespace fiskaltrust.Middleware.Storage.Azure.Repositories
                 return result.Take(take.Value).ToAsyncEnumerable();
             }
             return result.ToAsyncEnumerable();
+        }
+
+        public async IAsyncEnumerable<ftActionJournal> GetByQueueItemId(Guid queueItemId)
+        {
+            var filter = TableQuery.GenerateFilterCondition(nameof(ftActionJournal.ftQueueItemId), QueryComparisons.Equal, queueItemId.ToString());
+            var result = await GetAllAsync(filter).ToListAsync();
+            foreach (var item in result)
+            {
+                yield return MapToStorageEntity(item);
+            }
         }
     }
 }

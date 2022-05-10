@@ -2,12 +2,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0;
 using Microsoft.EntityFrameworkCore;
 
 namespace fiskaltrust.Middleware.Storage.EFCore.Repositories.ME
 {
-    public class EFCoreJournalMERepository : AbstractEFCoreRepostiory<Guid, ftJournalME>, IJournalMERepository
+    public class EFCoreJournalMERepository : AbstractEFCoreRepostiory<Guid, ftJournalME>, IJournalMERepository, IMiddlewareJournalMERepository
     {
         private long _lastInsertedTimeStamp;
 
@@ -38,5 +39,11 @@ namespace fiskaltrust.Middleware.Storage.EFCore.Repositories.ME
         }
 
         public Task<ftJournalME> GetLastEntryAsync() => Task.FromResult(DbContext.JournalMEList.AsQueryable().OrderByDescending(x => x.Number).Take(1).FirstOrDefault());
+        
+        public IAsyncEnumerable<ftJournalME> GetByQueueItemId(Guid queueItemId)
+        {
+            var result = DbContext.JournalMEList.AsQueryable().Where(x => x.ftQueueItemId == queueItemId).OrderBy(x => x.TimeStamp);
+            return result.AsAsyncEnumerable();
+        }
     }
 }

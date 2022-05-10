@@ -39,7 +39,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             var receiptRequest = CreateReceiptRequest(tcr);
             var inMemoryJournalMERepository = new InMemoryJournalMERepository();
             var inMemoryQueueItemRepository = new InMemoryQueueItemRepository();
-            var outOfOperationReceiptCommand = new OutOfOperationReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), new SignatureFactoryME(), inMemoryConfigurationRepository, 
+            var outOfOperationReceiptCommand = new OutOfOperationReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), inMemoryConfigurationRepository, 
                 inMemoryJournalMERepository, inMemoryQueueItemRepository, new InMemoryActionJournalRepository());
             var inMemoryMESSCD = new InMemoryMESSCD(testTcr);
             await outOfOperationReceiptCommand.ExecuteAsync(inMemoryMESSCD, queue, receiptRequest, new ftQueueItem(), queueME).ConfigureAwait(false);

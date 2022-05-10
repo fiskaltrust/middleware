@@ -14,9 +14,9 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 {
     public class CashWithdrawlReceiptCommand : RequestCommand
     {
-        public CashWithdrawlReceiptCommand(ILogger<RequestCommand> logger, SignatureFactoryME signatureFactory, IConfigurationRepository configurationRepository,
+        public CashWithdrawlReceiptCommand(ILogger<RequestCommand> logger, IConfigurationRepository configurationRepository,
             IJournalMERepository journalMERepository, IQueueItemRepository queueItemRepository, IActionJournalRepository actionJournalRepository) :
-            base(logger, signatureFactory, configurationRepository, journalMERepository, queueItemRepository, actionJournalRepository)
+            base(logger, configurationRepository, journalMERepository, queueItemRepository, actionJournalRepository)
         { }
 
         public override async Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftQueueME queueME)
@@ -38,7 +38,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 };
                 await client.RegisterCashWithdrawalAsync(registerCashWithdrawalRequest).ConfigureAwait(false);
                 var receiptResponse = CreateReceiptResponse(request, queueItem);
-                var actionJournalEntry = await CreateActionJournal(queue, (long) JournalTypes.CashDepositME, queueItem).ConfigureAwait(false);
+                var actionJournalEntry = await CreateActionJournal(queue, (long) JournalTypes.CashWithdrawlME, queueItem).ConfigureAwait(false);
                 return new RequestCommandResponse()
                 {
                     ReceiptResponse = receiptResponse,
