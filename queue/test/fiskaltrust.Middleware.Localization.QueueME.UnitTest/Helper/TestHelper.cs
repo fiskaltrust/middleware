@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Localization.QueueME.RequestCommands;
@@ -12,30 +10,24 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using FluentAssertions;
 using fiskaltrust.Middleware.Localization.QueueME.Models;
-using fiskaltrust.Middleware.Contracts.Constants;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.Helper
 {
     public class TestHelper
     {
-        public static async Task<T> InitializeRequestCommand<T>(Guid queueId, string tcrCode, IActionJournalRepository actionJournalRepository) 
+        public static async Task<T> InitializeRequestCommand<T>(ftQueueME queueME, string tcrCode, IActionJournalRepository actionJournalRepository) 
             where T : RequestCommand
         {
             var inMemoryConfigurationRepository = new InMemoryConfigurationRepository();
             var scu = new ftSignaturCreationUnitME()
             {
-                ftSignaturCreationUnitMEId = Guid.NewGuid(),
+                ftSignaturCreationUnitMEId = queueME.ftSignaturCreationUnitMEId.Value,
                 TcrIntId = "TcrIntId",
                 IssuerTin = "4524689",
                 TcrCode = tcrCode,
                 EnuType = "Regular"
             };
             await inMemoryConfigurationRepository.InsertOrUpdateSignaturCreationUnitMEAsync(scu).ConfigureAwait(false);
-            var queueME = new ftQueueME()
-            {
-                ftQueueMEId = queueId,
-                ftSignaturCreationUnitMEId = scu.ftSignaturCreationUnitMEId
-            };
             await inMemoryConfigurationRepository.InsertOrUpdateQueueMEAsync(queueME);
             var requ = typeof(T);
             return (T) Activator.CreateInstance(requ, new object[] {

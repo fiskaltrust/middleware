@@ -28,7 +28,12 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             {
                 ftQueueId = Guid.NewGuid()
             };
-            await InsertQueueSCU(tcr, inMemoryConfigurationRepository, testTcr, queue.ftQueueId);
+            var queueME = new ftQueueME()
+            {
+                ftQueueMEId = queue.ftQueueId,
+                ftSignaturCreationUnitMEId = Guid.NewGuid(),
+            };
+            await InsertQueueMESCU(tcr, inMemoryConfigurationRepository, testTcr, queueME);
  
             tcr.ValidTo = DateTime.Now.Date;
             var receiptRequest = CreateReceiptRequest(tcr);
@@ -37,7 +42,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             var outOfOperationReceiptCommand = new OutOfOperationReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), new SignatureFactoryME(), inMemoryConfigurationRepository, 
                 inMemoryJournalMERepository, inMemoryQueueItemRepository, new InMemoryActionJournalRepository());
             var inMemoryMESSCD = new InMemoryMESSCD(testTcr);
-            await outOfOperationReceiptCommand.ExecuteAsync(inMemoryMESSCD, queue, receiptRequest, new ftQueueItem()).ConfigureAwait(false);
+            await outOfOperationReceiptCommand.ExecuteAsync(inMemoryMESSCD, queue, receiptRequest, new ftQueueItem(), queueME).ConfigureAwait(false);
 
             var queuMe = await inMemoryConfigurationRepository.GetQueueMEAsync(queue.ftQueueId).ConfigureAwait(false);
             queuMe.Should().NotBeNull();
@@ -77,12 +82,12 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             };
         }
 
-        private async Task InsertQueueSCU(Tcr tcr, IConfigurationRepository configurationRepository, string testTcr, Guid ftQueueId)
+        private async Task InsertQueueMESCU(Tcr tcr, IConfigurationRepository configurationRepository, string testTcr, ftQueueME queueME)
         {
 
             var signaturCreationUnitME = new ftSignaturCreationUnitME()
             {
-                ftSignaturCreationUnitMEId = Guid.NewGuid(),
+                ftSignaturCreationUnitMEId = queueME.ftSignaturCreationUnitMEId.Value,
                 TimeStamp = DateTime.Now.AddDays(-10).Ticks,
                 TcrIntId = tcr.TcrIntId,
                 BusinessUnitCode = tcr.BusinessUnitCode,
@@ -92,13 +97,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
                 ValidTo = tcr.ValidTo
             };
             await configurationRepository.InsertOrUpdateSignaturCreationUnitMEAsync(signaturCreationUnitME).ConfigureAwait(false);
-
-            var queueME = new ftQueueME()
-            {
-                ftQueueMEId = ftQueueId,
-                ftSignaturCreationUnitMEId = signaturCreationUnitME.ftSignaturCreationUnitMEId
-
-            };
             await configurationRepository.InsertOrUpdateQueueMEAsync(queueME).ConfigureAwait(false);
         }
     }

@@ -18,12 +18,11 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             base(logger, signatureFactory, configurationRepository, journalMERepository, queueItemRepository, actionJournalRepository)
         { }
 
-        public override async Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
+        public override async Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftQueueME queueME)
         {
             try
             {
                 var enu = JsonConvert.DeserializeObject<Tcr>(request.ftReceiptCaseData);
-                var queueME = await _configurationRepository.GetQueueMEAsync(queue.ftQueueId).ConfigureAwait(false);
                 if(queueME == null)
                 {
                     throw new ENUNotRegisteredException();

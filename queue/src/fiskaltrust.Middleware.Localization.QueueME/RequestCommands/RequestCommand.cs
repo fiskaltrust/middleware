@@ -28,10 +28,8 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             _queueItemRepository = queueItemRepository;
             _actionJournalRepository = actionJournalRepository;
         }
-
-        public abstract Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem);
-
-        protected static ReceiptResponse CreateReceiptResponse(ReceiptRequest request, ftQueueItem queueItem)
+        public abstract Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftQueueME queueME);
+        protected static ReceiptResponse CreateReceiptResponse(ReceiptRequest request, ftQueueItem queueItem, long state = 0x4D45000000000000)
         {
             return new ReceiptResponse
             {
@@ -42,10 +40,9 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 cbTerminalID = request.cbTerminalID,
                 cbReceiptReference = request.cbReceiptReference,
                 ftReceiptMoment = DateTime.UtcNow,
-                ftState = 0x44D5000000000000
+                ftState = state
             };
         }
-
         protected async Task<ftActionJournal> CreateActionJournal(ftQueue queue, long journalType, ftQueueItem queueItem)
         {
             var actionjounal = new ftActionJournal()
@@ -59,7 +56,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             await _actionJournalRepository.InsertAsync(actionjounal).ConfigureAwait(false);
             return actionjounal;
         }
-
         protected static List<ftActionJournal> CreateClosingActionJournals(ftQueueItem queueItem, ftQueue queue, string message, long type)
         {
             return new List<ftActionJournal>
@@ -88,6 +84,22 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                     {
                         actionJournalEntry
                     }
+            };
+        }
+        protected async Task<RequestCommandResponse> ProcessFailedReceiptRequest(ftQueueItem queueItem, ReceiptRequest request, ftQueueME queueME)
+        {
+            if (queueME.SSCDFailCount == 0)
+            {
+                queueME.SSCDFailMoment = DateTime.UtcNow;
+                queueME.SSCDFailQueueItemId = queueItem.ftQueueItemId;
+            }
+            queueME.SSCDFailCount++;
+            await _configurationRepository.InsertOrUpdateQueueMEAsync(queueME).ConfigureAwait(false);
+            var receiptResponse = CreateReceiptResponse(request, queueItem, 0x4D45000000000002);
+
+            return new RequestCommandResponse()
+            {
+                ReceiptResponse = receiptResponse
             };
         }
     }

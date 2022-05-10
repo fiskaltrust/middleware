@@ -23,9 +23,14 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
                 ftQueueId = queue.ftQueueId,
                 ftWorkMoment = DateTime.Now
             };
+            var queueME = new ftQueueME()
+            {
+                ftQueueMEId = queue.ftQueueId,
+                ftSignaturCreationUnitMEId = Guid.NewGuid(),
+            };
             var actionJournalRep = new InMemoryActionJournalRepository();
-            var cashDepositReceiptCommand = await TestHelper.InitializeRequestCommand<MonthlyClosingReceiptCommand>(queue.ftQueueId, "TestTCRCodePos", actionJournalRep).ConfigureAwait(false);
-            var requestResponse = await cashDepositReceiptCommand.ExecuteAsync(new InMemoryMESSCD("TestTCRCodePos"), queue, TestHelper.CreateReceiptRequest(0x44D5_0000_0000_0005), queueItem);
+            var cashDepositReceiptCommand = await TestHelper.InitializeRequestCommand<MonthlyClosingReceiptCommand>(queueME, "TestTCRCodePos", actionJournalRep).ConfigureAwait(false);
+            var requestResponse = await cashDepositReceiptCommand.ExecuteAsync(new InMemoryMESSCD("TestTCRCodePos"), queue, TestHelper.CreateReceiptRequest(0x44D5_0000_0000_0005), queueItem, queueME);
             await TestHelper.CheckResultActionJournal(queue, queueItem, actionJournalRep, requestResponse, 0x44D5_0000_0000_0005).ConfigureAwait(false);
         }
     }

@@ -19,16 +19,15 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             base(logger, signatureFactory, configurationRepository, journalMERepository, queueItemRepository, actionJournalRepository)
         { }
 
-        public override async Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
+        public override async Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftQueueME queueME)
         {
             try
             {
-                var queueMe = await _configurationRepository.GetQueueMEAsync(queue.ftQueueId).ConfigureAwait(false);
-                if (queueMe == null || !queueMe.ftSignaturCreationUnitMEId.HasValue)
+                if (queueME == null || !queueME.ftSignaturCreationUnitMEId.HasValue)
                 {
                     throw new ENUNotRegisteredException();
                 }
-                var scu = await _configurationRepository.GetSignaturCreationUnitMEAsync(queueMe.ftSignaturCreationUnitMEId.Value).ConfigureAwait(false);
+                var scu = await _configurationRepository.GetSignaturCreationUnitMEAsync(queueME.ftSignaturCreationUnitMEId.Value).ConfigureAwait(false);
                 var registerCashWithdrawalRequest = new RegisterCashWithdrawalRequest()
                 {
                     Amount = request.cbReceiptAmount ?? request.cbChargeItems.Sum(x => x.Amount),
@@ -52,7 +51,12 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             catch (Exception ex) when (ex.GetType().Name == RETRYPOLICYEXCEPTION_NAME)
             {
                 _logger.LogDebug(ex, "TSE not reachable.");
-                throw;
+                return await ProcessFailedReceiptRequest(queueItem, request, queueME).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogCritical(ex, "An exception occured while processing this request.");
+                return await ProcessFailedReceiptRequest(queueItem, request, queueME).ConfigureAwait(false);
             }
         }
     }

@@ -21,7 +21,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             base(logger, signatureFactory, configurationRepository, journalMERepository, queueItemRepository, actionJournalRepository)
         { }
 
-        public override async Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
+        public override async Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftQueueME queueME)
         {
             try
             {
@@ -30,7 +30,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                     throw new CashDepositOutstandingException("Register initial amount with Cash Deposit Receipt for today!");
                 }
                 var invoice = JsonConvert.DeserializeObject<Invoice>(request.ftReceiptCaseData);
-                var queueME = await _configurationRepository.GetQueueMEAsync(queue.ftQueueId).ConfigureAwait(false);
                 if (queueME == null)
                 {
                     throw new ENUNotRegisteredException("No QueueME!");
@@ -61,10 +60,19 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             catch (Exception ex) when (ex.GetType().Name == RETRYPOLICYEXCEPTION_NAME)
             {
                 _logger.LogDebug(ex, "TSE not reachable.");
-                throw;
+                return await ProcessFailedReceiptRequest(queueItem, request, queueME).ConfigureAwait(false);
+            }
+            catch (CashDepositOutstandingException ex)
+            {
+                _logger.LogCritical(ex, "An exception occured while processing this request.");
+                throw ex;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogCritical(ex, "An exception occured while processing this request.");
+                return await ProcessFailedReceiptRequest( queueItem, request, queueME).ConfigureAwait(false);
             }
         }
-
         private async Task<bool> CashDepositeOutstanding()
         {
             var actionJournals = await _actionJournalRepository.GetAsync().ConfigureAwait(false);
