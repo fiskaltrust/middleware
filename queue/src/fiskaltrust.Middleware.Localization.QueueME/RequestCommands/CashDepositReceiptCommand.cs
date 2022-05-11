@@ -9,13 +9,14 @@ using fiskaltrust.ifPOS.v1.me;
 using fiskaltrust.Middleware.Localization.QueueME.Exceptions;
 using fiskaltrust.Middleware.Contracts.Constants;
 using System.Collections.Generic;
+using fiskaltrust.Middleware.Contracts.Repositories;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 {
     public class CashDepositReceiptCommand : RequestCommand
     {
-        public CashDepositReceiptCommand(ILogger<RequestCommand> logger, IConfigurationRepository configurationRepository, 
-            IJournalMERepository journalMERepository, IQueueItemRepository queueItemRepository,IActionJournalRepository actionJournalRepository) :
+        public CashDepositReceiptCommand(ILogger<RequestCommand> logger, IConfigurationRepository configurationRepository,IMiddlewareJournalMERepository journalMERepository, 
+            IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareActionJournalRepository actionJournalRepository) :
             base(logger, configurationRepository, journalMERepository, queueItemRepository, actionJournalRepository)
         { }
 
@@ -60,6 +61,16 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 return await ProcessFailedReceiptRequest(queueItem, request, queueME).ConfigureAwait(false);
             }
         }
+
+        public override async Task<bool> ReceiptNeedsReprocessing(ftQueueME queueME, ftQueueItem queueItem, ReceiptRequest request)
+        {
+            var journalME = await _journalMERepository.GetByQueueItemId(queueItem.ftQueueItemId).FirstOrDefaultAsync().ConfigureAwait(false);
+            if (journalME == null || string.IsNullOrEmpty(journalME.FCDC))
+            {
+                return true;
+            }
+            return false;
+       }
 
         private async Task InsertJournalME(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, RegisterCashDepositResponse registerCashDepositResponse)
         {

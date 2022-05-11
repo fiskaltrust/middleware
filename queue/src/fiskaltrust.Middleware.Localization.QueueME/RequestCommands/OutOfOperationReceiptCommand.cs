@@ -8,13 +8,14 @@ using fiskaltrust.Middleware.Localization.QueueME.Models;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.me;
 using fiskaltrust.Middleware.Localization.QueueME.Exceptions;
+using fiskaltrust.Middleware.Contracts.Repositories;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 {
     public class OutOfOperationReceiptCommand : RequestCommand
     {
         public OutOfOperationReceiptCommand(ILogger<RequestCommand> logger, IConfigurationRepository configurationRepository,
-            IJournalMERepository journalMERepository, IQueueItemRepository queueItemRepository, IActionJournalRepository actionJournalRepository) :
+            IMiddlewareJournalMERepository journalMERepository, IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareActionJournalRepository actionJournalRepository) :
             base(logger, configurationRepository, journalMERepository, queueItemRepository, actionJournalRepository)
         { }
 
@@ -23,24 +24,20 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             try
             {
                 var enu = JsonConvert.DeserializeObject<Tcr>(request.ftReceiptCaseData);
-                if(queueME == null)
+                if(queueME == null || !queueME.ftSignaturCreationUnitMEId.HasValue)
                 {
                     throw new ENUNotRegisteredException();
                 }
-
                 var scuME = await _configurationRepository.GetSignaturCreationUnitMEAsync(queueME.ftSignaturCreationUnitMEId.Value).ConfigureAwait(false);
-
                 if (!enu.IssuerTin.Equals(scuME.IssuerTin) || !enu.TcrIntId.Equals(scuME.TcrIntId))
                 {
                     var errormessage = $"Request TCRIntID {enu.TcrIntId} and IssuerTIN {enu.IssuerTin} don´t match Queue initialisation with {enu.TcrIntId} and IssuerTIN {scuME.IssuerTin}";
                     throw new ENUIIDDontMatchException(errormessage);
                 }
-
                 if (!enu.ValidTo.HasValue)
                 {
                     throw new ENUValidToNotSetException();
                 }
-
                 var registerTCRRequest = new RegisterTcrRequest()
                 {
                     RequestId = queueItem.ftQueueItemId,
@@ -68,5 +65,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 throw;
             }
         }
+        public override Task<bool> ReceiptNeedsReprocessing(ftQueueME queueME, ftQueueItem queueItem, ReceiptRequest request) => Task.FromResult(false);
     }
 }

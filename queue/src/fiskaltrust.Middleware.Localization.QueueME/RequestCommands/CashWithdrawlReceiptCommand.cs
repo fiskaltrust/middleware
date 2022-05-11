@@ -9,13 +9,14 @@ using fiskaltrust.ifPOS.v1.me;
 using fiskaltrust.Middleware.Localization.QueueME.Exceptions;
 using fiskaltrust.Middleware.Contracts.Constants;
 using System.Collections.Generic;
+using fiskaltrust.Middleware.Contracts.Repositories;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 {
     public class CashWithdrawlReceiptCommand : RequestCommand
     {
         public CashWithdrawlReceiptCommand(ILogger<RequestCommand> logger, IConfigurationRepository configurationRepository,
-            IJournalMERepository journalMERepository, IQueueItemRepository queueItemRepository, IActionJournalRepository actionJournalRepository) :
+            IMiddlewareJournalMERepository journalMERepository, IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareActionJournalRepository actionJournalRepository) :
             base(logger, configurationRepository, journalMERepository, queueItemRepository, actionJournalRepository)
         { }
 
@@ -58,6 +59,11 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 _logger.LogCritical(ex, "An exception occured while processing this request.");
                 return await ProcessFailedReceiptRequest(queueItem, request, queueME).ConfigureAwait(false);
             }
+        }
+
+        public override async Task<bool> ReceiptNeedsReprocessing(ftQueueME queueME, ftQueueItem queueItem, ReceiptRequest request)
+        {
+            return await ActionJournalExists(queueItem, request.ftReceiptCase).ConfigureAwait(false) == false;
         }
     }
 }

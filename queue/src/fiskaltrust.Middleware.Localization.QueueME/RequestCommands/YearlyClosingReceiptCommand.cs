@@ -5,13 +5,14 @@ using Microsoft.Extensions.Logging;
 using fiskaltrust.Middleware.Localization.QueueME.Models;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.me;
+using fiskaltrust.Middleware.Contracts.Repositories;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 {
     public class YearlyClosingReceiptCommand : RequestCommand
     {
         public YearlyClosingReceiptCommand(ILogger<RequestCommand> logger, IConfigurationRepository configurationRepository,
-            IJournalMERepository journalMERepository, IQueueItemRepository queueItemRepository, IActionJournalRepository actionJournalRepository) :
+            IMiddlewareJournalMERepository journalMERepository, IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareActionJournalRepository actionJournalRepository) :
             base(logger, configurationRepository, journalMERepository, queueItemRepository, actionJournalRepository)
         { }
 
@@ -26,7 +27,10 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 _logger.LogDebug(ex, "TSE not reachable.");
                 throw;
             }
-
+        }
+        public override async Task<bool> ReceiptNeedsReprocessing(ftQueueME queueME, ftQueueItem queueItem, ReceiptRequest request)
+        {
+            return await ActionJournalExists(queueItem, request.ftReceiptCase).ConfigureAwait(false) == false;
         }
     }
 }

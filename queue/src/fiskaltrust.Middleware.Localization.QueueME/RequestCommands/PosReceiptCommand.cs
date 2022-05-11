@@ -11,13 +11,14 @@ using fiskaltrust.Middleware.Localization.QueueME.Exceptions;
 using fiskaltrust.Middleware.Localization.QueueME.Extensions;
 using System.Collections.Generic;
 using fiskaltrust.Middleware.Contracts.Constants;
+using fiskaltrust.Middleware.Contracts.Repositories;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 {
     public class PosReceiptCommand : RequestCommand
     {
         public PosReceiptCommand(ILogger<RequestCommand> logger, IConfigurationRepository configurationRepository,
-            IJournalMERepository journalMERepository, IQueueItemRepository queueItemRepository, IActionJournalRepository actionJournalRepository) :
+            IMiddlewareJournalMERepository journalMERepository, IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareActionJournalRepository actionJournalRepository) :
             base(logger, configurationRepository, journalMERepository, queueItemRepository, actionJournalRepository)
         { }
 
@@ -218,5 +219,14 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 throw new BuyerParseException("Error when parsing Buyer in cbCustomer field!", ex);
             }
         }
+        public override async Task<bool> ReceiptNeedsReprocessing(ftQueueME queueME, ftQueueItem queueItem, ReceiptRequest request)
+        {
+            var journalME = await _journalMERepository.GetByQueueItemId(queueItem.ftQueueItemId).FirstOrDefaultAsync().ConfigureAwait(false);
+            if (journalME == null || string.IsNullOrEmpty(journalME.IIC) || string.IsNullOrEmpty(journalME.FIC))
+            {
+                return true;
+            }
+            return false;
+       }
     }
 }

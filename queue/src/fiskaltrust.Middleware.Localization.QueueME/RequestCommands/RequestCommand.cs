@@ -6,6 +6,8 @@ using fiskaltrust.Middleware.Localization.QueueME.Models;
 using System;
 using fiskaltrust.ifPOS.v1.me;
 using System.Collections.Generic;
+using fiskaltrust.Middleware.Contracts.Repositories;
+using System.Linq;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 {
@@ -14,11 +16,12 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
         protected const string RETRYPOLICYEXCEPTION_NAME = "RetryPolicyException";
         protected readonly ILogger<RequestCommand> _logger;
         protected readonly IConfigurationRepository _configurationRepository;
-        protected readonly IJournalMERepository _journalMERepository;
-        protected readonly IQueueItemRepository _queueItemRepository;
-        protected readonly IActionJournalRepository _actionJournalRepository;
-        public RequestCommand(ILogger<RequestCommand> logger, IConfigurationRepository configurationRepository, 
-            IJournalMERepository journalMERepository, IQueueItemRepository queueItemRepository, IActionJournalRepository actionJournalRepository)
+        protected readonly IMiddlewareJournalMERepository _journalMERepository;
+        protected readonly IMiddlewareQueueItemRepository _queueItemRepository;
+        protected readonly IMiddlewareActionJournalRepository _actionJournalRepository;
+
+        public RequestCommand(ILogger<RequestCommand> logger, IConfigurationRepository configurationRepository, IMiddlewareJournalMERepository journalMERepository, IMiddlewareQueueItemRepository queueItemRepository, 
+            IMiddlewareActionJournalRepository actionJournalRepository)
         {
             _logger = logger;
             _configurationRepository = configurationRepository;
@@ -26,6 +29,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             _queueItemRepository = queueItemRepository;
             _actionJournalRepository = actionJournalRepository;
         }
+        public abstract Task<bool> ReceiptNeedsReprocessing(ftQueueME queueME, ftQueueItem queueItem, ReceiptRequest request);
         public abstract Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftQueueME queueME);
         protected static ReceiptResponse CreateReceiptResponse(ReceiptRequest request, ftQueueItem queueItem, long state = 0x4D45000000000000)
         {
@@ -99,6 +103,15 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             {
                 ReceiptResponse = receiptResponse
             };
+        }
+        protected async Task<bool> ActionJournalExists(ftQueueItem queueItem, long type)
+        {
+            var actionJournal = await _actionJournalRepository.GetByQueueItemId(queueItem.ftQueueItemId).FirstOrDefaultAsync().ConfigureAwait(false);
+            if (actionJournal != null && actionJournal.Type == $"{type:X}")
+            {
+                return true;
+            }
+            return false;
         }
     }
 }

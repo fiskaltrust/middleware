@@ -8,13 +8,14 @@ using fiskaltrust.Middleware.Localization.QueueME.Models;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.me;
 using fiskaltrust.Middleware.Localization.QueueME.Exceptions;
+using fiskaltrust.Middleware.Contracts.Repositories;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 {
     public class InitialOperationReceiptCommand : RequestCommand
     {
         public InitialOperationReceiptCommand(ILogger<RequestCommand> logger, IConfigurationRepository configurationRepository,
-            IJournalMERepository journalMERepository, IQueueItemRepository queueItemRepository, IActionJournalRepository actionJournalRepository) :
+            IMiddlewareJournalMERepository journalMERepository, IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareActionJournalRepository actionJournalRepository) :
             base(logger, configurationRepository, journalMERepository, queueItemRepository, actionJournalRepository)
         { }
 
@@ -24,14 +25,10 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             {
                 //Validate must fields
                 var enu = JsonConvert.DeserializeObject<Tcr>(request.ftReceiptCaseData);
-                if (queueME != null && queueME.ftSignaturCreationUnitMEId.HasValue)
+                if (await EnuExists(queueME, enu).ConfigureAwait(false))
                 {
-                    var scuME = await _configurationRepository.GetSignaturCreationUnitMEAsync(queueME.ftSignaturCreationUnitMEId.Value).ConfigureAwait(false);
-                    if(scuME.IssuerTin != null && scuME.IssuerTin.Equals(enu.IssuerTin) && scuME.TcrIntId != null && scuME.TcrIntId.Equals(enu.TcrIntId))
-                    {
-                        throw new ENUAlreadyRegisteredException();
-                    }
-                }
+                    throw new ENUAlreadyRegisteredException();
+                };
                 var registerTCRRequest = new RegisterTcrRequest()
                 {
                     BusinessUnitCode = enu.BusinessUnitCode,
@@ -55,7 +52,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                     BusinessUnitCode = enu.BusinessUnitCode,
                     IssuerTin = enu.IssuerTin,
                     SoftwareCode = enu.SoftwareCode,
-                    TcrCode = registerTCRResponse.TcrCode,                    
+                    TcrCode = registerTCRResponse.TcrCode,
                     ValidFrom = enu.ValidFrom,
                     ValidTo = enu.ValidTo
                 };
@@ -77,7 +74,25 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 _logger.LogDebug(ex, "TSE not reachable.");
                 throw;
             }
+        }
 
+        private async Task<bool> EnuExists(ftQueueME queueME, Tcr enu)
+        {
+            if (queueME != null && queueME.ftSignaturCreationUnitMEId.HasValue)
+            {
+                var scuME = await _configurationRepository.GetSignaturCreationUnitMEAsync(queueME.ftSignaturCreationUnitMEId.Value).ConfigureAwait(false);
+                if (scuME.IssuerTin != null && scuME.IssuerTin.Equals(enu.IssuerTin) && scuME.TcrIntId != null && scuME.TcrIntId.Equals(enu.TcrIntId))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public override async Task<bool> ReceiptNeedsReprocessing(ftQueueME queueME, ftQueueItem queueItem, ReceiptRequest request)
+        {
+            var enu = JsonConvert.DeserializeObject<Tcr>(request.ftReceiptCaseData);
+            return await EnuExists(queueME, enu).ConfigureAwait(false) == false;
         }
     }
 }
