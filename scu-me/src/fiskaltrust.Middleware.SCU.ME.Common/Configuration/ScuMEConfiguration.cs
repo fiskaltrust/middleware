@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Net;
 using System.Security.Cryptography.X509Certificates;
+using fiskaltrust.Middleware.SCU.ME.Common.Helpers;
+using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.SCU.ME.Common.Configuration
 {
@@ -38,6 +41,18 @@ namespace fiskaltrust.Middleware.SCU.ME.Common.Configuration
         /// <summary>
         /// Certificate used for signing.
         /// </summary>
+        [JsonConverter(typeof(X509Certificate2Converter))]
         public X509Certificate2 Certificate { get; set; } = null!;
+
+        /// <summary>
+        /// Use test environment.
+        /// </summary>
+        public bool Sandbox { get; set; } = false;
+
+        /// <summary>
+        /// Proxy to use for external endpoints.
+        /// </summary>
+        [JsonConverter(typeof(WebProxyConverter))]
+        public WebProxy Proxy { get; set; } = null!;
     }
 }

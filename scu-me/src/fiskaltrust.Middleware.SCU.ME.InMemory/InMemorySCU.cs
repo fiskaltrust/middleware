@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Bogus;
 using fiskaltrust.ifPOS.v1.me;
 using fiskaltrust.Middleware.SCU.ME.Common.Configuration;
+using fiskaltrust.Middleware.SCU.ME.Common.Helpers;
 
 namespace fiskaltrust.Middleware.SCU.ME.InMemory;
 
@@ -34,25 +35,10 @@ public class InMemorySCU : IMESSCD
 
     public Task<RegisterInvoiceResponse> RegisterInvoiceAsync(RegisterInvoiceRequest registerInvoiceRequest)
     {
-        var iicInput = string.Join("|", new List<object>
-        {
-            _configuration.TIN,
-            registerInvoiceRequest.Moment,
-            registerInvoiceRequest.InvoiceDetails.YearlyOrdinalNumber,
-            registerInvoiceRequest.BusinessUnitCode,
-            registerInvoiceRequest.TcrCode,
-            registerInvoiceRequest.SoftwareCode,
-            registerInvoiceRequest.InvoiceDetails.GrossAmount
-        }.Select(o => o.ToString()));
-
-        var iicSignature = _configuration.Certificate.GetRSAPrivateKey()!.SignData(Encoding.ASCII.GetBytes(iicInput), HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-
-        var iic = ((HashAlgorithm) CryptoConfig.CreateFromName("MD5")!).ComputeHash(iicSignature);
-
         return Task.FromResult(new RegisterInvoiceResponse
         {
             FIC = Guid.NewGuid().ToString(),
-            IIC = BitConverter.ToString(iic).Replace("-", string.Empty)
+            IIC = SigningHelper.CreateIIC(_configuration, registerInvoiceRequest)
         });
     }
 

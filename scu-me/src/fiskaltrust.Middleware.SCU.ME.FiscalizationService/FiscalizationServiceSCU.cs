@@ -20,7 +20,12 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
     {
         _logger = logger;
         _configuration = configuration;
-        _fiscalizationServiceClient = new SoapFiscalizationService.FiscalizationServicePortTypeClient();
+        _fiscalizationServiceClient = new SoapFiscalizationService.FiscalizationServicePortTypeClient(
+            SoapFiscalizationService.FiscalizationServicePortTypeClient.EndpointConfiguration.FiscalizationServicePort,
+            _configuration.Sandbox
+                ? "https://efitest.tax.gov.me/fs-v1/FiscalizationService.wsdl"
+                : "https://efi.tax.gov.me/fs-v1/FiscalizationService.wsdl"
+        );
 
         _fiscalizationServiceClient.Endpoint.EndpointBehaviors.Add(new DateTimeBehaviour());
         _fiscalizationServiceClient.Endpoint.EndpointBehaviors.Add(new SigningBehaviour(_configuration.Certificate));
