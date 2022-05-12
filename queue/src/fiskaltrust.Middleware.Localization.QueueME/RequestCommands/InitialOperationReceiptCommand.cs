@@ -23,7 +23,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
         {
             try
             {
-                //Validate must fields
                 var enu = JsonConvert.DeserializeObject<Tcr>(request.ftReceiptCaseData);
                 if (await EnuExists(queueME, enu).ConfigureAwait(false))
                 {
@@ -57,11 +56,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                     ValidTo = enu.ValidTo
                 };
                 await _configurationRepository.InsertOrUpdateSignaturCreationUnitMEAsync(signaturCreationUnitME).ConfigureAwait(false);
-                queueME = new ftQueueME()
-                {
-                    ftQueueMEId = queue.ftQueueId,
-                    ftSignaturCreationUnitMEId = signaturCreationUnitME.ftSignaturCreationUnitMEId
-                };
+                queueME.ftSignaturCreationUnitMEId = signaturCreationUnitME.ftSignaturCreationUnitMEId;
                 await _configurationRepository.InsertOrUpdateQueueMEAsync(queueME).ConfigureAwait(false);
                 var receiptResponse = CreateReceiptResponse(request, queueItem);
                 return new RequestCommandResponse()
@@ -69,9 +64,9 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                     ReceiptResponse = receiptResponse
                 };
             }
-            catch (Exception ex) when (ex.GetType().Name == RETRYPOLICYEXCEPTION_NAME)
+            catch (Exception ex)
             {
-                _logger.LogDebug(ex, "TSE not reachable.");
+                _logger.LogCritical(ex, "An exception occured while processing this request.");
                 throw;
             }
         }
@@ -81,18 +76,22 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             if (queueME != null && queueME.ftSignaturCreationUnitMEId.HasValue)
             {
                 var scuME = await _configurationRepository.GetSignaturCreationUnitMEAsync(queueME.ftSignaturCreationUnitMEId.Value).ConfigureAwait(false);
+                if(scuME == null)
+                {
+                    return false;
+                }
                 if (scuME.IssuerTin != null && scuME.IssuerTin.Equals(enu.IssuerTin) && scuME.TcrIntId != null && scuME.TcrIntId.Equals(enu.TcrIntId))
                 {
-                    return true;
+                    throw new ENUAlreadyRegisteredException();
+                }
+                else if (scuME.IssuerTin != null && !scuME.IssuerTin.Equals(enu.IssuerTin) && scuME.TcrIntId != null && !scuME.TcrIntId.Equals(enu.TcrIntId))
+                {
+                    throw new ENUAlreadyRegisteredException($"Another Enu for Queue was already registered with IssuerTin: {scuME.IssuerTin} TcrIntId {scuME.TcrIntId}");
                 }
             }
             return false;
         }
 
-        public override async Task<bool> ReceiptNeedsReprocessing(ftQueueME queueME, ftQueueItem queueItem, ReceiptRequest request)
-        {
-            var enu = JsonConvert.DeserializeObject<Tcr>(request.ftReceiptCaseData);
-            return await EnuExists(queueME, enu).ConfigureAwait(false) == false;
-        }
+        public override Task<bool> ReceiptNeedsReprocessing(ftQueueME queueME, ftQueueItem queueItem, ReceiptRequest request) => Task.FromResult(false);
     }
 }

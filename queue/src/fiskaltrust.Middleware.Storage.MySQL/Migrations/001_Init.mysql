@@ -40,6 +40,10 @@ CREATE TABLE IF NOT EXISTS ftJournalME
     ftOrdinalNumber       BIGINT NOT NULL,
     ftQueueItemId         NVARCHAR(36) NOT NULL,
     ftQueueId             NVARCHAR(36) NOT NULL,
+    FCDC                  NVARCHAR(36) NULL,
+    FIC                   NVARCHAR(36) NULL,
+    IIC                   NVARCHAR(36) NULL,
+    JournalType           BIGINT NOT NULL,
     TimeStamp             BIGINT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS ftActionJournal
@@ -310,16 +314,7 @@ CREATE TABLE IF NOT EXISTS ftQueueME
     UsedFailedMomentMin          BIGINT                    NULL,                    
     UsedFailedMomentMax          BIGINT                    NULL,                    
     UsedFailedQueueItemId        NVARCHAR(36)              NULL, 
-    TimeStamp                    BIGINT                    NOT NULL,
-    IssuerTIN                    NVARCHAR(13)              NULL,
-    BusinUnitCode                NVARCHAR(10)              NULL,
-    TCRIntID                     NVARCHAR(50)              NULL,
-    SoftCode                     NVARCHAR(10)              NULL,
-    MaintainerCode               NVARCHAR(10)              NULL,
-    ValidFrom                    BIGINT                    NULL, 
-    ValidTo                      BIGINT                    NULL,
-    EnuType                      NVARCHAR(10)              NULL,
-    TCRCode                      NVARCHAR(10)              NULL
+    DailyClosingNumber           BIGINT                    NULL
 );
 
 CREATE TABLE IF NOT EXISTS ftSignaturCreationUnitAT
@@ -346,7 +341,16 @@ CREATE TABLE IF NOT EXISTS ftSignaturCreationUnitME
     ftSignaturCreationUnitDEId   NVARCHAR(36) PRIMARY KEY  NOT NULL,
     Url                          LONGTEXT				   NULL,  
     TseInfoJson				     LONGTEXT				   NULL,                     
-    TimeStamp                    BIGINT                    NOT NULL
+    TimeStamp                    BIGINT                    NOT NULL,
+    IssuerTin                    LONGTEXT                  NULL,  
+    BusinessUnitCode             LONGTEXT                  NULL,
+    TcrIntId                     LONGTEXT                  NULL,
+    SoftwareCode                 LONGTEXT                  NULL,
+    MaintainerCode               LONGTEXT                  NULL,
+    ValidFrom                    BIGINT                    NULL,
+    ValidTo                      BIGINT                    NULL,
+    EnuType                      LONGTEXT                  NULL,
+    TcrCode                      LONGTEXT                  NULL
 );
 
 CREATE TABLE IF NOT EXISTS ftSignaturCreationUnitFR

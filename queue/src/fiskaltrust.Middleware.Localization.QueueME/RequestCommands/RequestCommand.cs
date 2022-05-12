@@ -13,7 +13,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 {
     public abstract class RequestCommand
     {
-        protected const string RETRYPOLICYEXCEPTION_NAME = "RetryPolicyException";
+        protected const string ENDPOINTNOTFOUND = "EndpointNotFoundException";
         protected readonly ILogger<RequestCommand> _logger;
         protected readonly IConfigurationRepository _configurationRepository;
         protected readonly IMiddlewareJournalMERepository _journalMERepository;
@@ -31,7 +31,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
         }
         public abstract Task<bool> ReceiptNeedsReprocessing(ftQueueME queueME, ftQueueItem queueItem, ReceiptRequest request);
         public abstract Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftQueueME queueME);
-        protected static ReceiptResponse CreateReceiptResponse(ReceiptRequest request, ftQueueItem queueItem, long state = 0x4D45000000000000)
+        public static ReceiptResponse CreateReceiptResponse(ReceiptRequest request, ftQueueItem queueItem,string[] receiptHeader = null, long state = 0x4D45000000000000)
         {
             return new ReceiptResponse
             {
@@ -42,10 +42,11 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 cbTerminalID = request.cbTerminalID,
                 cbReceiptReference = request.cbReceiptReference,
                 ftReceiptMoment = DateTime.UtcNow,
+                ftReceiptHeader = receiptHeader,
                 ftState = state
             };
         }
-        protected async Task<ftActionJournal> CreateActionJournal(ftQueue queue, long journalType, ftQueueItem queueItem)
+        protected ftActionJournal CreateActionJournal(ftQueue queue, long journalType, ftQueueItem queueItem)
         {
             var actionjounal = new ftActionJournal()
             {
@@ -55,7 +56,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 Type = journalType.ToString(),
                 Moment = DateTime.UtcNow,
             };
-            await _actionJournalRepository.InsertAsync(actionjounal).ConfigureAwait(false);
             return actionjounal;
         }
         protected static List<ftActionJournal> CreateClosingActionJournals(ftQueueItem queueItem, ftQueue queue, string message, long type)
@@ -78,8 +78,8 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
         protected async Task<RequestCommandResponse> CreateClosing(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
         {
             var receiptResponse = CreateReceiptResponse(request, queueItem);
-            var actionJournalEntry = await CreateActionJournal(queue, request.ftReceiptCase, queueItem).ConfigureAwait(false);
-            return new RequestCommandResponse()
+            var actionJournalEntry = CreateActionJournal(queue, request.ftReceiptCase, queueItem);
+            var requestCommandResponse = new RequestCommandResponse()
             {
                 ReceiptResponse = receiptResponse,
                 ActionJournals = new List<ftActionJournal>()
@@ -87,8 +87,9 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                         actionJournalEntry
                     }
             };
+            return await Task.FromResult(requestCommandResponse).ConfigureAwait(false);
         }
-        protected async Task<RequestCommandResponse> ProcessFailedReceiptRequest(ftQueueItem queueItem, ReceiptRequest request, ftQueueME queueME)
+        public async Task<RequestCommandResponse> ProcessFailedReceiptRequest(ftQueueItem queueItem, ReceiptRequest request, ftQueueME queueME)
         {
             if (queueME.SSCDFailCount == 0)
             {
@@ -97,7 +98,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             }
             queueME.SSCDFailCount++;
             await _configurationRepository.InsertOrUpdateQueueMEAsync(queueME).ConfigureAwait(false);
-            var receiptResponse = CreateReceiptResponse(request, queueItem, 0x4D45000000000002);
+            var receiptResponse = CreateReceiptResponse(request, queueItem, new string[] { "Queue in failed mode, use Zeroreceipt to process Failed Requests." }, 0x4D45000000000002);
 
             return new RequestCommandResponse()
             {

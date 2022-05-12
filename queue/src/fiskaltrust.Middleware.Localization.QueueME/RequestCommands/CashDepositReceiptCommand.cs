@@ -40,7 +40,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 var registerCashDepositResponse = await client.RegisterCashDepositAsync(registerCashWithdrawalRequest).ConfigureAwait(false);
                 await InsertJournalME(queue, request, queueItem, registerCashDepositResponse).ConfigureAwait(false);
                 var receiptResponse = CreateReceiptResponse(request, queueItem);
-                var actionJournalEntry =  await CreateActionJournal(queue, (long)JournalTypes.CashDepositME, queueItem).ConfigureAwait(false);
+                var actionJournalEntry =  CreateActionJournal(queue, (long)JournalTypes.CashDepositME, queueItem);
                 return new RequestCommandResponse()
                 {
                     ReceiptResponse = receiptResponse,
@@ -50,15 +50,16 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                     }
                 };
             }
-            catch (Exception ex) when (ex.GetType().Name == RETRYPOLICYEXCEPTION_NAME)
+            catch (Exception ex) 
             {
-                _logger.LogDebug(ex, "TSE not reachable.");
-                return await ProcessFailedReceiptRequest(queueItem, request, queueME).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
+                var t = ex.GetType().Name;
+                if (ex.GetType().Name == ENDPOINTNOTFOUND)
+                {
+                    _logger.LogDebug(ex, "TSE not reachable.");
+                    return await ProcessFailedReceiptRequest(queueItem, request, queueME).ConfigureAwait(false);
+                }
                 _logger.LogCritical(ex, "An exception occured while processing this request.");
-                return await ProcessFailedReceiptRequest(queueItem, request, queueME).ConfigureAwait(false);
+                throw;
             }
         }
 
@@ -82,7 +83,8 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 cbReference = request.cbReceiptReference,
                 Number = queue.ftReceiptNumerator,
                 FCDC = registerCashDepositResponse.FCDC,
-                JournalType = (long) JournalTypes.CashDepositME
+                JournalType = (long) JournalTypes.CashDepositME,
+                TimeStamp = DateTime.UtcNow.Ticks
             };
             await _journalMERepository.InsertAsync(journal).ConfigureAwait(false);
         }

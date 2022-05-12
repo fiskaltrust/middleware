@@ -37,16 +37,16 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 }
                 if (queueME.ftSignaturCreationUnitMEId == null)
                 {
-                    throw new ArgumentNullException(nameof(queueME.ftSignaturCreationUnitMEId));
-                }
-                if (string.IsNullOrEmpty(invoice.OperatorCode))
-                {
-                    throw new ArgumentNullException(nameof(invoice.OperatorCode));
+                    throw new ENUNotRegisteredException("No SignaturCreationUnitME!");
                 }
                 var scu = await _configurationRepository.GetSignaturCreationUnitMEAsync(queueME.ftSignaturCreationUnitMEId.Value).ConfigureAwait(false);
                 if (scu == null)
                 {
                     throw new ENUNotRegisteredException("No SignaturCreationUnitME!");
+                }
+                if (string.IsNullOrEmpty(invoice.OperatorCode))
+                {
+                    throw new ArgumentNullException(nameof(invoice.OperatorCode));
                 }
                 var invoiceDetails = CreateInvoiceDetail(request, invoice);
                 var registerInvoiceRequest = CreateInvoiceReqest(request, queueItem, invoice, scu, invoiceDetails);
@@ -58,27 +58,24 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                     ReceiptResponse = receiptResponse
                 };
             }
-            catch (Exception ex) when (ex.GetType().Name == RETRYPOLICYEXCEPTION_NAME)
-            {
-                _logger.LogDebug(ex, "TSE not reachable.");
-                return await ProcessFailedReceiptRequest(queueItem, request, queueME).ConfigureAwait(false);
-            }
-            catch (CashDepositOutstandingException ex)
-            {
-                _logger.LogCritical(ex, "An exception occured while processing this request.");
-                throw ex;
-            }
             catch (Exception ex)
             {
+                if (ex.GetType().Name == ENDPOINTNOTFOUND)
+                {
+                    _logger.LogDebug(ex, "TSE not reachable.");
+                    return await ProcessFailedReceiptRequest(queueItem, request, queueME).ConfigureAwait(false);
+                }
                 _logger.LogCritical(ex, "An exception occured while processing this request.");
-                return await ProcessFailedReceiptRequest( queueItem, request, queueME).ConfigureAwait(false);
+                throw;
             }
+
         }
         private async Task<bool> CashDepositeOutstanding()
         {
-            var actionJournals = await _actionJournalRepository.GetAsync().ConfigureAwait(false);
-            var lastActionJournal = actionJournals.Where(x => x.Type == JournalTypes.CashDepositME.ToString()).OrderByDescending(x => x.TimeStamp).LastOrDefault();
-            if (lastActionJournal == null || lastActionJournal.Moment.Date != DateTime.UtcNow.Date)
+            var _journalME = await _journalMERepository.GetAsync().ConfigureAwait(false);
+            var journalME = _journalME.Where(x => x.JournalType == (long)JournalTypes.CashDepositME).OrderByDescending(x => x.TimeStamp).LastOrDefault();
+            var date = new DateTime(journalME.TimeStamp);
+            if (journalME == null || date.Date != DateTime.UtcNow.Date)
             {
                 return true;           
             }
@@ -124,7 +121,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 ftQueueId = queue.ftQueueId,
                 ftQueueItemId = queueItem.ftQueueItemId,
                 cbReference = request.cbReceiptReference,
-                Number = queue.ftReceiptNumerator,
+                Number = queue.ftReceiptNumerator+1,
                 FIC = registerInvoiceResponse.FIC,
                 IIC = registerInvoiceResponse.IIC,
                 JournalType = (long)JournalTypes.JournalME

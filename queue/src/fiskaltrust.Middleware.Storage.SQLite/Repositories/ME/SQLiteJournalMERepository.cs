@@ -23,10 +23,11 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Repositories.ME
             }
             EntityUpdated(journal);
             var sql = "INSERT INTO ftJournalME " +
-                      "(ftJournalMEId, cbReference, ftInvoiceNumber, ftOrdinalNumber, ftQueueItemId, ftQueueId, TimeStamp, Number) " +
-                      "Values (@ftJournalMEId, @cbReference, @ftInvoiceNumber, @ftOrdinalNumber, @ftQueueItemId, @ftQueueId, @TimeStamp, @Number);";
+                      "(ftJournalMEId, cbReference, ftInvoiceNumber, ftOrdinalNumber, ftQueueItemId, ftQueueId, TimeStamp, Number, FCDC, JournalType, FIC, IIC) " +
+                      "Values (@ftJournalMEId, @cbReference, @ftInvoiceNumber, @ftOrdinalNumber, @ftQueueItemId, @ftQueueId, @TimeStamp, @Number, @FCDC, @JournalType, @FIC, @IIC);";
             await DbConnection.ExecuteAsync(sql, journal).ConfigureAwait(false);
         }
+    
         protected override Guid GetIdForEntity(ftJournalME entity) => entity.ftJournalMEId;
         public async IAsyncEnumerable<ftJournalME> GetByQueueItemId(Guid queueItemId)
         {

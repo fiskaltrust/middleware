@@ -35,8 +35,8 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories.Configuration
         {
             EntityUpdated(entity);
             var sql = "REPLACE INTO ftSignaturCreationUnitME " +
-                            "(ftSignaturCreationUnitMEId, TimeStamp, TseInfoJson, Mode, ModeConfigurationJson) " +
-                            "Values (@ftSignaturCreationUnitMEId, @TimeStamp, @TseInfoJson, @Mode, @ModeConfigurationJson);";
+                            "(ftSignaturCreationUnitMEId, TimeStamp, TseInfoJson, IssuerTin, BusinessUnitCode, TcrIntId, SoftwareCode, MaintainerCode, ValidFrom, ValidTo, EnuType, TcrCode) " +
+                            "Values (@ftSignaturCreationUnitMEId,  @TimeStamp, @TseInfoJson, @IssuerTin, @BusinessUnitCode, @TcrIntId, @SoftwareCode, @MaintainerCode, @ValidFrom, @ValidTo, @EnuType, @TcrCode);";
             using (var connection = new MySqlConnection(ConnectionString))
             {
                 await connection.OpenAsync().ConfigureAwait(false);

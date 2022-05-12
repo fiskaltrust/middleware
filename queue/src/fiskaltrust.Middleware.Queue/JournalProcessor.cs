@@ -25,7 +25,7 @@ namespace fiskaltrust.Middleware.Queue
         private readonly IMiddlewareRepository<ftJournalAT> _journalATRepository;
         private readonly IMiddlewareRepository<ftJournalDE> _journalDERepository;
         private readonly IMiddlewareRepository<ftJournalFR> _journalFRRepository;
-        private readonly JournalProcessorDE _journalDEProcessor;
+        private readonly IJournalProcessor _journalDEProcessor;
         private readonly ILogger<JournalProcessor> _logger;
 
         public JournalProcessor(
@@ -36,7 +36,7 @@ namespace fiskaltrust.Middleware.Queue
             IMiddlewareRepository<ftJournalAT> journalATRepository,
             IMiddlewareRepository<ftJournalDE> journalDERepository,
             IMiddlewareRepository<ftJournalFR> journalFRRepository,
-            JournalProcessorDE journalDEProcessor,
+            IJournalProcessor journalDEProcessor,
             ILogger<JournalProcessor> logger)
         {
             _configurationRepository = configurationRepository;

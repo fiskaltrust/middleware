@@ -35,10 +35,9 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories.Configuration
         {
             EntityUpdated(entity);
             var sql = "REPLACE INTO ftQueueME " +
-                      "(ftQueueMEId, ftSignaturCreationUnitMEId, LastHash, SSCDFailCount, SSCDFailMoment, SSCDFailQueueItemId, UsedFailedCount, UsedFailedMomentMin, UsedFailedMomentMax, UsedFailedQueueItemId, TimeStamp, " +
-                      "IssuerTIN, BusinUnitCode, TCRIntID, SoftCode, MaintainerCode, ValidFrom, ValidTo, EnuType, TCRCode) " +
-                      "Values (@ftQueueMEId, @ftSignaturCreationUnitMEId, @LastHash, @SSCDFailCount, @SSCDFailMoment, @SSCDFailQueueItemId, @UsedFailedCount, @UsedFailedMomentMin, @UsedFailedMomentMax, @UsedFailedQueueItemId, @TimeStamp, " +
-                      "@IssuerTIN, @BusinUnitCode, @TCRIntID, @SoftCode, @MaintainerCode, @ValidFrom, @ValidTo, @EnuType, @TCRCode); ";
+                      "(ftQueueMEId, ftSignaturCreationUnitMEId, LastHash, SSCDFailCount, SSCDFailMoment, SSCDFailQueueItemId, UsedFailedCount, UsedFailedMomentMin, UsedFailedMomentMax, UsedFailedQueueItemId, DailyClosingNumber ) " +
+                      "Values (@ftQueueMEId, @ftSignaturCreationUnitMEId, @LastHash, @SSCDFailCount, @SSCDFailMoment, @SSCDFailQueueItemId, @UsedFailedCount, @UsedFailedMomentMin, @UsedFailedMomentMax, @UsedFailedQueueItemId, @DailyClosingNumber ); ";
+
             using (var connection = new MySqlConnection(ConnectionString))
             {
                 await connection.OpenAsync().ConfigureAwait(false);

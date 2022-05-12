@@ -22,9 +22,9 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             {
                 return await CreateClosing(queue, request, queueItem).ConfigureAwait(false);
             }
-            catch (Exception ex) when (ex.GetType().Name == RETRYPOLICYEXCEPTION_NAME)
+            catch (Exception ex)
             {
-                _logger.LogDebug(ex, "TSE not reachable.");
+                _logger.LogCritical(ex, "An exception occured while processing this request.");
                 throw;
             }
         }

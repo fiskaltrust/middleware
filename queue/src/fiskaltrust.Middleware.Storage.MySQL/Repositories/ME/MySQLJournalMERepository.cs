@@ -45,8 +45,8 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories.DE
             }
             EntityUpdated(journal);
             var sql = "INSERT INTO ftJournalME " +
-                      "(ftJournalMEId, cbReference, ftInvoiceNumber, ftOrdinalNumber, ftQueueItemId, ftQueueId, TimeStamp, Number) " +
-                      "Values (@ftJournalMEId, @cbReference, @ftInvoiceNumber, @ftOrdinalNumber, @ftQueueItemId, @ftQueueId, @TimeStamp, @Number);";
+                      "(ftJournalMEId, cbReference, ftInvoiceNumber, ftOrdinalNumber, ftQueueItemId, ftQueueId, TimeStamp, Number, FCDC, JournalType, FIC, IIC) " +
+                      "Values (@ftJournalMEId, @cbReference, @ftInvoiceNumber, @ftOrdinalNumber, @ftQueueItemId, @ftQueueId, @TimeStamp, @Number, @FCDC, @JournalType, @FIC, @IIC);";
             using (var connection = new MySqlConnection(ConnectionString))
             {
                 await connection.OpenAsync().ConfigureAwait(false);

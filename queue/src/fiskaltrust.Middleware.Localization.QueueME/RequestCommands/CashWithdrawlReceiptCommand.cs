@@ -39,7 +39,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 };
                 await client.RegisterCashWithdrawalAsync(registerCashWithdrawalRequest).ConfigureAwait(false);
                 var receiptResponse = CreateReceiptResponse(request, queueItem);
-                var actionJournalEntry = await CreateActionJournal(queue, (long) JournalTypes.CashWithdrawlME, queueItem).ConfigureAwait(false);
+                var actionJournalEntry = CreateActionJournal(queue, (long) JournalTypes.CashWithdrawlME, queueItem);
                 return new RequestCommandResponse()
                 {
                     ReceiptResponse = receiptResponse,
@@ -49,15 +49,15 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                     }
                 };
             }
-            catch (Exception ex) when (ex.GetType().Name == RETRYPOLICYEXCEPTION_NAME)
-            {
-                _logger.LogDebug(ex, "TSE not reachable.");
-                return await ProcessFailedReceiptRequest(queueItem, request, queueME).ConfigureAwait(false);
-            }
             catch (Exception ex)
             {
+                if (ex.GetType().Name == ENDPOINTNOTFOUND)
+                {
+                    _logger.LogDebug(ex, "TSE not reachable.");
+                    return await ProcessFailedReceiptRequest(queueItem, request, queueME).ConfigureAwait(false);
+                }
                 _logger.LogCritical(ex, "An exception occured while processing this request.");
-                return await ProcessFailedReceiptRequest(queueItem, request, queueME).ConfigureAwait(false);
+                throw;
             }
         }
 

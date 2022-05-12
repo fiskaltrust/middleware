@@ -40,6 +40,10 @@ CREATE TABLE IF NOT EXISTS ftJournalME
     ftOrdinalNumber       BIGINT NOT NULL,
     ftQueueItemId         NVARCHAR(36) NOT NULL,
     ftQueueId             NVARCHAR(36) NOT NULL,
+    FCDC                  NVARCHAR(36) NULL,
+    FIC                   NVARCHAR(36) NULL,
+    IIC                   NVARCHAR(36) NULL,
+    JournalType           BIGINT NOT NULL,
     TimeStamp             BIGINT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS ftActionJournal
@@ -301,17 +305,8 @@ CREATE TABLE IF NOT EXISTS ftQueueME
     UsedFailedCount              BIGINT                    NOT NULL,           
     UsedFailedMomentMin          BIGINT                    NULL,                    
     UsedFailedMomentMax          BIGINT                    NULL,                    
-    UsedFailedQueueItemId        NVARCHAR(36)              NULL, 
-    TimeStamp                    BIGINT                    NOT NULL,
-    IssuerTIN                    NVARCHAR(13)              NULL,
-    BusinUnitCode                NVARCHAR(10)              NULL,
-    TCRIntID                     NVARCHAR(50)              NULL,
-    SoftCode                     NVARCHAR(10)              NULL,
-    MaintainerCode               NVARCHAR(10)              NULL,
-    ValidFrom                    BIGINT                    NULL, 
-    ValidTo                      BIGINT                    NULL,
-    EnuType                      NVARCHAR(10)              NULL,
-    TCRCode                      NVARCHAR(10)              NULL
+    UsedFailedQueueItemId        NVARCHAR(36)              NULL,
+    DailyClosingNumber           BIGINT                    NULL
 );
 CREATE TABLE IF NOT EXISTS ftSignaturCreationUnitAT
 (
@@ -343,5 +338,14 @@ CREATE TABLE IF NOT EXISTS ftSignaturCreationUnitME
     ftSignaturCreationUnitMEId   NVARCHAR(36) PRIMARY KEY  NOT NULL,
     Url                          NVARCHAR(2147483647)      NULL,    
     TseInfoJson				     NVARCHAR(2147483647)      NULL,                     
-    TimeStamp                    BIGINT                    NOT NULL
+    TimeStamp                    BIGINT                    NOT NULL,
+    IssuerTin                    NVARCHAR(2147483647)      NULL,  
+    BusinessUnitCode             NVARCHAR(2147483647)      NULL,
+    TcrIntId                     NVARCHAR(2147483647)      NULL,
+    SoftwareCode                 NVARCHAR(2147483647)      NULL,
+    MaintainerCode               NVARCHAR(2147483647)      NULL,
+    ValidFrom                    BIGINT                    NULL,
+    ValidTo                      BIGINT                    NULL,
+    EnuType                      NVARCHAR(2147483647)      NULL,
+    TcrCode                      NVARCHAR(2147483647)      NULL
 );

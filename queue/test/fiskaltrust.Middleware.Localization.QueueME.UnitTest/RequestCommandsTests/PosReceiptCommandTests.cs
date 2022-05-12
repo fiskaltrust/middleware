@@ -205,7 +205,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             return posReceiptCommand;
         }
 
-        private ReceiptRequest CreateReceiptRequest()
+        public static ReceiptRequest CreateReceiptRequest()
         {
             return new ReceiptRequest()
             {
@@ -279,7 +279,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             };
         }
 
-        private InvoiceItemRequest createVoucherInvoiceItemRequest()
+        private static InvoiceItemRequest createVoucherInvoiceItemRequest()
         {
             return new InvoiceItemRequest()
             {
@@ -288,7 +288,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             };
         }
 
-        private Tcr CreateTcr()
+        private static Tcr CreateTcr()
         {
             return new Tcr()
             {
@@ -298,7 +298,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             };
         }
 
-        private Invoice CreateInvoice()
+        private static Invoice CreateInvoice()
         {
             return new Invoice()
             {
@@ -320,7 +320,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             };
         }
 
-        private Buyer CreateBuyer()
+        private static Buyer CreateBuyer()
         {
             return new Buyer()
             {

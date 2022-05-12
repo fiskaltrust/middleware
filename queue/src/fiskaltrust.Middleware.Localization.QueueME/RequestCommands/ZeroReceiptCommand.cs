@@ -47,11 +47,13 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                         await command.ExecuteAsync(client, queue, request, queueItem, queueME).ConfigureAwait(false);
                     }
                 }
+
+
                 return await Task.FromResult(new RequestCommandResponse()
                 {
                 });
             }
-            catch (Exception ex) when (ex.GetType().Name == RETRYPOLICYEXCEPTION_NAME)
+            catch (Exception ex) when (ex.GetType().Name == ENDPOINTNOTFOUND)
             {
                 _logger.LogDebug(ex, "TSE not reachable.");
                 throw;

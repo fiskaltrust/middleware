@@ -59,7 +59,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                     ReceiptResponse = receiptResponse
                 };
             }
-            catch (Exception ex) when (ex.GetType().Name == RETRYPOLICYEXCEPTION_NAME)
+            catch (Exception ex) when (ex.GetType().Name == ENDPOINTNOTFOUND)
             {
                 _logger.LogDebug(ex, "TSE not reachable.");
                 throw;
