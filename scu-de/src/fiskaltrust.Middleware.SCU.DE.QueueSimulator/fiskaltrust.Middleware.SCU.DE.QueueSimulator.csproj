@@ -10,7 +10,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.DE.DiboldNixdorf\fiskaltrust.Middleware.SCU.DE.DiboldNixdorf.csproj" />
+    <ProjectReference Include="../../src/fiskaltrust.Middleware.SCU.DE.DiboldNixdorf/fiskaltrust.Middleware.SCU.DE.DiboldNixdorf.csproj" />
   </ItemGroup>
 
 </Project>

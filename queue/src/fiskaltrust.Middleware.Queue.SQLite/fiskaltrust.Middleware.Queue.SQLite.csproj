@@ -43,18 +43,18 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\fiskaltrust.Middleware.Contracts\fiskaltrust.Middleware.Contracts.csproj" PrivateAssets="all" />
-        <ProjectReference Include="..\fiskaltrust.Middleware.Queue\fiskaltrust.Middleware.Queue.csproj" PrivateAssets="all" />
-        <ProjectReference Include="..\fiskaltrust.Middleware.Storage.SQLite\fiskaltrust.Middleware.Storage.SQLite.csproj" PrivateAssets="all" />
+        <ProjectReference Include="../fiskaltrust.Middleware.Contracts/fiskaltrust.Middleware.Contracts.csproj" PrivateAssets="all" />
+        <ProjectReference Include="../fiskaltrust.Middleware.Queue/fiskaltrust.Middleware.Queue.csproj" PrivateAssets="all" />
+        <ProjectReference Include="../fiskaltrust.Middleware.Storage.SQLite/fiskaltrust.Middleware.Storage.SQLite.csproj" PrivateAssets="all" />
     </ItemGroup>
 
     <ItemGroup>
-        <None Include="..\fiskaltrust.Middleware.Storage.SQLite\Migrations\*" LinkBase="Migrations">
+        <None Include="../fiskaltrust.Middleware.Storage.SQLite/Migrations/*" LinkBase="Migrations">
             <Pack>true</Pack>
-            <PackagePath>lib\net461\Migrations;lib\netstandard2.0\Migrations</PackagePath>
+            <PackagePath>lib/net461/Migrations;lib/netstandard2.0/Migrations</PackagePath>
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
-        <None Include="..\..\LICENSES\*" LinkBase="LICENSES">
+        <None Include="../../LICENSES/*" LinkBase="LICENSES">
             <Pack>true</Pack>
             <PackagePath>LICENSES</PackagePath>
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -69,17 +69,17 @@
 
     <Target Name="CopyNativeSqliteFiles" AfterTargets="Build" Condition="'$(TargetFramework)' == 'netstandard2.0' or '$(TargetFramework)' == 'netstandard2.1'">
         <ItemGroup>
-            <SQLITE_LINUX_X64 Include="$(PkgSQLitePCLRaw_lib_e_sqlite3)\runtimes\linux-x64\**\*.*" />
-            <SQLITE_LINUX_X86 Include="$(PkgSQLitePCLRaw_lib_e_sqlite3)\runtimes\linux-x86\**\*.*" />
-            <SQLITE_WIN_X64 Include="$(PkgSQLitePCLRaw_lib_e_sqlite3)\runtimes\win-x64\**\*.*" />
-            <SQLITE_WIN_X86 Include="$(PkgSQLitePCLRaw_lib_e_sqlite3)\runtimes\win-x86\**\*.*" />
-            <SQLITE_OSX_X64 Include="$(PkgSQLitePCLRaw_lib_e_sqlite3)\runtimes\osx-x64\**\*.*" />
+            <SQLITE_LINUX_X64 Include="$(PkgSQLitePCLRaw_lib_e_sqlite3)/runtimes/linux-x64/**/*.*" />
+            <SQLITE_LINUX_X86 Include="$(PkgSQLitePCLRaw_lib_e_sqlite3)/runtimes/linux-x86/**/*.*" />
+            <SQLITE_WIN_X64 Include="$(PkgSQLitePCLRaw_lib_e_sqlite3)/runtimes/win-x64/**/*.*" />
+            <SQLITE_WIN_X86 Include="$(PkgSQLitePCLRaw_lib_e_sqlite3)/runtimes/win-x86/**/*.*" />
+            <SQLITE_OSX_X64 Include="$(PkgSQLitePCLRaw_lib_e_sqlite3)/runtimes/osx-x64/**/*.*" />
         </ItemGroup>
-        <Copy SourceFiles="@(SQLITE_LINUX_X64)" DestinationFolder="$(TargetDir)\runtimes\linux-x64\%(RecursiveDir)" SkipUnchangedFiles="true" />
-        <Copy SourceFiles="@(SQLITE_LINUX_X86)" DestinationFolder="$(TargetDir)\runtimes\linux-x86\%(RecursiveDir)" SkipUnchangedFiles="true" />
-        <Copy SourceFiles="@(SQLITE_WIN_X64)" DestinationFolder="$(TargetDir)\runtimes\win-x64\%(RecursiveDir)" SkipUnchangedFiles="true" />
-        <Copy SourceFiles="@(SQLITE_WIN_X86)" DestinationFolder="$(TargetDir)\runtimes\win-x86\%(RecursiveDir)" SkipUnchangedFiles="true" />
-        <Copy SourceFiles="@(SQLITE_OSX_X64)" DestinationFolder="$(TargetDir)\runtimes\osx-x64\%(RecursiveDir)" SkipUnchangedFiles="true" />
+        <Copy SourceFiles="@(SQLITE_LINUX_X64)" DestinationFolder="$(TargetDir)/runtimes/linux-x64/%(RecursiveDir)" SkipUnchangedFiles="true" />
+        <Copy SourceFiles="@(SQLITE_LINUX_X86)" DestinationFolder="$(TargetDir)/runtimes/linux-x86/%(RecursiveDir)" SkipUnchangedFiles="true" />
+        <Copy SourceFiles="@(SQLITE_WIN_X64)" DestinationFolder="$(TargetDir)/runtimes/win-x64/%(RecursiveDir)" SkipUnchangedFiles="true" />
+        <Copy SourceFiles="@(SQLITE_WIN_X86)" DestinationFolder="$(TargetDir)/runtimes/win-x86/%(RecursiveDir)" SkipUnchangedFiles="true" />
+        <Copy SourceFiles="@(SQLITE_OSX_X64)" DestinationFolder="$(TargetDir)/runtimes/osx-x64/%(RecursiveDir)" SkipUnchangedFiles="true" />
     </Target>
 
 </Project>

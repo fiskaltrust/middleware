@@ -12,7 +12,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.DE.Swissbit.Interop.StaticLib\fiskaltrust.Middleware.SCU.DE.Swissbit.Interop.StaticLib.csproj" />
+        <ProjectReference Include="../../src/fiskaltrust.Middleware.SCU.DE.Swissbit.Interop.StaticLib/fiskaltrust.Middleware.SCU.DE.Swissbit.Interop.StaticLib.csproj" />
     </ItemGroup>
 
 </Project>

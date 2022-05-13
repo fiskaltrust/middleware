@@ -34,7 +34,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.DE.Swissbit\fiskaltrust.Middleware.SCU.DE.Swissbit.csproj" />
+    <ProjectReference Include="../../src/fiskaltrust.Middleware.SCU.DE.Swissbit/fiskaltrust.Middleware.SCU.DE.Swissbit.csproj" />
   </ItemGroup>
 
 </Project>

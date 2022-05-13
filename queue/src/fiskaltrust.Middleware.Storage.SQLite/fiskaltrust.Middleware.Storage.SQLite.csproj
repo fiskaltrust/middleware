@@ -22,12 +22,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\fiskaltrust.Middleware.Contracts\fiskaltrust.Middleware.Contracts.csproj" />
-    <ProjectReference Include="..\fiskaltrust.Middleware.Storage.Base\fiskaltrust.Middleware.Storage.Base.csproj" />
+    <ProjectReference Include="../fiskaltrust.Middleware.Contracts/fiskaltrust.Middleware.Contracts.csproj" />
+    <ProjectReference Include="../fiskaltrust.Middleware.Storage.Base/fiskaltrust.Middleware.Storage.Base.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Migrations\*">
+    <None Update="Migrations/*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

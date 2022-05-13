@@ -31,34 +31,34 @@
     </dependencies>
   </metadata>
   <files>
-    <file src="bin\Release\net461\publish\**\*.config" target="lib\net461" />
-    <file src="bin\Release\net461\publish\**\*.exe" target="lib\net461" />
-    <file src="bin\Release\net461\publish\**\*.dll" target="lib\net461" />
-    <file src="bin\Release\net461\publish\Migrations\*.*" target="lib\net461\Migrations" />
-    <file src="bin\Release\net461\x64\SQLite.Interop.dll" target="lib\net461\x64" />
-    <file src="bin\Release\net461\x86\SQLite.Interop.dll" target="lib\net461\x86" />
+    <file src="bin/Release/net461/publish/**/*.config" target="lib/net461" />
+    <file src="bin/Release/net461/publish/**/*.exe" target="lib/net461" />
+    <file src="bin/Release/net461/publish/**/*.dll" target="lib/net461" />
+    <file src="bin/Release/net461/publish/Migrations/*.*" target="lib/net461/Migrations" />
+    <file src="bin/Release/net461/x64/SQLite.Interop.dll" target="lib/net461/x64" />
+    <file src="bin/Release/net461/x86/SQLite.Interop.dll" target="lib/net461/x86" />
 
-    <file src="bin\Release\netstandard2.0\publish\**\*.config" target="lib\netstandard2.0" />
-    <file src="bin\Release\netstandard2.0\publish\**\*.exe" target="lib\netstandard2.0" />
-    <file src="bin\Release\netstandard2.0\publish\**\*.dll" target="lib\netstandard2.0" />
-    <file src="bin\Release\netstandard2.0\publish\Migrations\*.*" target="lib\netstandard2.0\Migrations" />
+    <file src="bin/Release/netstandard2.0/publish/**/*.config" target="lib/netstandard2.0" />
+    <file src="bin/Release/netstandard2.0/publish/**/*.exe" target="lib/netstandard2.0" />
+    <file src="bin/Release/netstandard2.0/publish/**/*.dll" target="lib/netstandard2.0" />
+    <file src="bin/Release/netstandard2.0/publish/Migrations/*.*" target="lib/netstandard2.0/Migrations" />
 
 
-    <file src="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Contracts.dll" target="lib\netstandard2.1" />
-    <file src="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Localization.QueueDE.dll" target="lib\netstandard2.1" />
-    <file src="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Localization.QueueME.dll" target="lib\netstandard2.1" />
-    <file src="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Queue.dll" target="lib\netstandard2.1" />
-    <file src="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Queue.SQLite.dll" target="lib\netstandard2.1" />
-    <file src="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.QueueSynchronizer.dll" target="lib\netstandard2.1" />
-    <file src="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Storage.Base.dll" target="lib\netstandard2.1" />
-    <file src="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Storage.SQLite.dll" target="lib\netstandard2.1" />
+    <file src="bin/Release/netstandard2.1/publish/fiskaltrust.Middleware.Contracts.dll" target="lib/netstandard2.1" />
+    <file src="bin/Release/netstandard2.1/publish/fiskaltrust.Middleware.Localization.QueueDE.dll" target="lib/netstandard2.1" />
+    <file src="bin/Release/netstandard2.1/publish/fiskaltrust.Middleware.Localization.QueueME.dll" target="lib/netstandard2.1" />
+    <file src="bin/Release/netstandard2.1/publish/fiskaltrust.Middleware.Queue.dll" target="lib/netstandard2.1" />
+    <file src="bin/Release/netstandard2.1/publish/fiskaltrust.Middleware.Queue.SQLite.dll" target="lib/netstandard2.1" />
+    <file src="bin/Release/netstandard2.1/publish/fiskaltrust.Middleware.QueueSynchronizer.dll" target="lib/netstandard2.1" />
+    <file src="bin/Release/netstandard2.1/publish/fiskaltrust.Middleware.Storage.Base.dll" target="lib/netstandard2.1" />
+    <file src="bin/Release/netstandard2.1/publish/fiskaltrust.Middleware.Storage.SQLite.dll" target="lib/netstandard2.1" />
     
-    <file src="bin\Release\netstandard2.1\publish\Migrations\*.*" target="lib\netstandard2.1\Migrations" />
+    <file src="bin/Release/netstandard2.1/publish/Migrations/*.*" target="lib/netstandard2.1/Migrations" />
 
-    <file src="bin\Release\netstandard2.0\runtimes\**\*.*" target="runtimes" />
+    <file src="bin/Release/netstandard2.0/runtimes/**/*.*" target="runtimes" />
 
-    <file src="fiskaltrust.Middleware.Queue.SQLite.targets" target="build\fiskaltrust.Middleware.Queue.SQLite.targets" />
-    <file src="bin\Release\netstandard2.0\publish\Migrations\*.*" target="contentFiles\Migrations" />
-    <file src="bin\Release\netstandard2.0\publish\LICENSES\**" target="LICENSES" />
+    <file src="fiskaltrust.Middleware.Queue.SQLite.targets" target="build/fiskaltrust.Middleware.Queue.SQLite.targets" />
+    <file src="bin/Release/netstandard2.0/publish/Migrations/*.*" target="contentFiles/Migrations" />
+    <file src="bin/Release/netstandard2.0/publish/LICENSES/**" target="LICENSES" />
   </files>
 </package>

@@ -10,9 +10,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\fiskaltrust.Middleware.Storage.EFCore.PostgreSQL\fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.csproj" />
-    <ProjectReference Include="..\..\src\fiskaltrust.Middleware.Storage.EFCore.SQLServer\fiskaltrust.Middleware.Storage.EFCore.SQLServer.csproj" />
-    <ProjectReference Include="..\fiskaltrust.Middleware.Storage.AcceptanceTest\fiskaltrust.Middleware.Storage.AcceptanceTest.csproj" />
+    <ProjectReference Include="../../src/fiskaltrust.Middleware.Storage.EFCore.PostgreSQL/fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.csproj" />
+    <ProjectReference Include="../../src/fiskaltrust.Middleware.Storage.EFCore.SQLServer/fiskaltrust.Middleware.Storage.EFCore.SQLServer.csproj" />
+    <ProjectReference Include="../fiskaltrust.Middleware.Storage.AcceptanceTest/fiskaltrust.Middleware.Storage.AcceptanceTest.csproj" />
   </ItemGroup>
 
 </Project>

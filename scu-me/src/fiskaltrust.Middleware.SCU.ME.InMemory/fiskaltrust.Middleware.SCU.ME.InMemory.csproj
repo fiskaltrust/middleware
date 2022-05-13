@@ -31,7 +31,7 @@
     </Target>
 
     <ItemGroup Label="FilesToCopy">
-        <Content Include="..\..\LICENSES\**" Pack="true" PackagePath="LICENSES" LinkBase="LICENSES">
+        <Content Include="../../LICENSES/**" Pack="true" PackagePath="LICENSES" LinkBase="LICENSES">
             <PackageCopyToOutput>true</PackageCopyToOutput>
         </Content>
     </ItemGroup>

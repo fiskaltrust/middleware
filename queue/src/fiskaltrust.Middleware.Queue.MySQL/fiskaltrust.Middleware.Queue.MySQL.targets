@@ -1,8 +1,8 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <ItemGroup>
-        <Migrations Include="$(MSBuildThisFileDirectory)\..\contentFiles\Migrations\*.mysql" />
+        <Migrations Include="$(MSBuildThisFileDirectory)/../contentFiles/Migrations/*.mysql" />
     </ItemGroup>
     <Target Name="CopyMigrations" BeforeTargets="Build">
-        <Copy SourceFiles="@(Migrations)" DestinationFolder="$(TargetDir)Migrations\" />
+        <Copy SourceFiles="@(Migrations)" DestinationFolder="$(TargetDir)Migrations/" />
     </Target>
 </Project>

@@ -26,7 +26,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser\fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser.csproj" PrivateAssets="all" />
+        <ProjectReference Include="../fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser/fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser.csproj" PrivateAssets="all" />
     </ItemGroup>
 
     <Target DependsOnTargets="ResolveReferences" Name="CopyProjectReferencesToPackage">
@@ -35,7 +35,7 @@
         </ItemGroup>
     </Target>
     <ItemGroup Label="FilesToCopy">
-        <Content Include="..\..\LICENSES\**" Pack="true" PackagePath="LICENSES" LinkBase="LICENSES">
+        <Content Include="../../LICENSES/**" Pack="true" PackagePath="LICENSES" LinkBase="LICENSES">
             <PackageCopyToOutput>true</PackageCopyToOutput>
         </Content>
     </ItemGroup>

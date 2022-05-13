@@ -1,15 +1,15 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <ItemGroup>
-        <Migrations Include="$(MSBuildThisFileDirectory)\..\contentFiles\Migrations\*.sqlite3" />
+        <Migrations Include="$(MSBuildThisFileDirectory)/../contentFiles/Migrations/*.sqlite3" />
     </ItemGroup>
     <Target Name="CopyMigrations" BeforeTargets="Build">
-        <Copy SourceFiles="@(Migrations)" DestinationFolder="$(TargetDir)Migrations\" />
+        <Copy SourceFiles="@(Migrations)" DestinationFolder="$(TargetDir)Migrations/" />
     </Target>
 
     <ItemGroup>
-        <Licenses Include="$(MSBuildThisFileDirectory)\..\LICENSES\**" />
+        <Licenses Include="$(MSBuildThisFileDirectory)/../LICENSES/**" />
     </ItemGroup>
     <Target Name="CopyLicenses" BeforeTargets="Build">
-        <Copy SourceFiles="@(Licenses)" DestinationFolder="$(TargetDir)LICENSES\" />
+        <Copy SourceFiles="@(Licenses)" DestinationFolder="$(TargetDir)LICENSES/" />
     </Target>
 </Project>

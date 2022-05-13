@@ -13,11 +13,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="ReceiptExamples\" />
+    <Folder Include="ReceiptExamples/" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\fiskaltrust.Middleware.Queue\fiskaltrust.Middleware.Queue.csproj" />
+    <ProjectReference Include="../../src/fiskaltrust.Middleware.Queue/fiskaltrust.Middleware.Queue.csproj" />
   </ItemGroup>
 
   <ItemGroup>

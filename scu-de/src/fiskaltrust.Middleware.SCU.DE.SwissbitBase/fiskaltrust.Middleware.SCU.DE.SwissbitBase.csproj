@@ -15,8 +15,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser\fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser.csproj" />
-    <ProjectReference Include="..\fiskaltrust.Middleware.SCU.DE.Swissbit.Interop\fiskaltrust.Middleware.SCU.DE.Swissbit.Interop.csproj" />
+    <ProjectReference Include="../fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser/fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser.csproj" />
+    <ProjectReference Include="../fiskaltrust.Middleware.SCU.DE.Swissbit.Interop/fiskaltrust.Middleware.SCU.DE.Swissbit.Interop.csproj" />
   </ItemGroup>
     <ItemGroup>
         <_Licenses Include="$(SolutionDir)/LICENSES/**" />

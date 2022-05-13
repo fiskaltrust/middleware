@@ -22,12 +22,12 @@
   </metadata>
   <files>
     <!--- assemblies -->
-    <file src="bin\Release\fiskaltrust.Middleware.SCU.DE.*.dll" target="lib\MonoAndroid90" />
+    <file src="bin/Release/fiskaltrust.Middleware.SCU.DE.*.dll" target="lib/MonoAndroid90" />
 
     <!-- runtime assets -->
-    <file src="lib\**" target="native\android "/>
+    <file src="lib/**" target="native/android "/>
 
     <!-- build targets -->
-    <file src="build\**" target="build\MonoAndroid90"/>
+    <file src="build/**" target="build/MonoAndroid90"/>
   </files>
 </package>

@@ -6,7 +6,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.ME.InMemory\fiskaltrust.Middleware.SCU.ME.InMemory.csproj" />
+		<ProjectReference Include="../../src/fiskaltrust.Middleware.SCU.ME.InMemory/fiskaltrust.Middleware.SCU.ME.InMemory.csproj" />
 	</ItemGroup>
 
 </Project>

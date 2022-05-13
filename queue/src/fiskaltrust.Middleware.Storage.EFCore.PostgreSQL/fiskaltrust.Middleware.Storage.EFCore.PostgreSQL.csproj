@@ -21,8 +21,8 @@
     </Target>
     
     <ItemGroup>
-        <ProjectReference Include="..\fiskaltrust.Middleware.Storage.Base\fiskaltrust.Middleware.Storage.Base.csproj" />
-        <ProjectReference Include="..\fiskaltrust.Middleware.Storage.EFCore\fiskaltrust.Middleware.Storage.EFCore.csproj" PrivateAssets="all"/>
+        <ProjectReference Include="../fiskaltrust.Middleware.Storage.Base/fiskaltrust.Middleware.Storage.Base.csproj" />
+        <ProjectReference Include="../fiskaltrust.Middleware.Storage.EFCore/fiskaltrust.Middleware.Storage.EFCore.csproj" PrivateAssets="all"/>
     </ItemGroup>
 
 </Project>

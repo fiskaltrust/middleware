@@ -15,7 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\fiskaltrust.Middleware.Storage.MySQL\fiskaltrust.Middleware.Storage.MySQL.csproj" />
+    <ProjectReference Include="../../src/fiskaltrust.Middleware.Storage.MySQL/fiskaltrust.Middleware.Storage.MySQL.csproj" />
   </ItemGroup>
 
   <ItemGroup>

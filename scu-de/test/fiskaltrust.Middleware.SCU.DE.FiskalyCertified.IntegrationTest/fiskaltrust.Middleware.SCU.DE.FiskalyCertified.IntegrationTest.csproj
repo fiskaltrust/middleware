@@ -11,8 +11,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.DE.FiskalyCertified\fiskaltrust.Middleware.SCU.DE.FiskalyCertified.csproj" />
-		<ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser\fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser.csproj" />
+		<ProjectReference Include="../../src/fiskaltrust.Middleware.SCU.DE.FiskalyCertified/fiskaltrust.Middleware.SCU.DE.FiskalyCertified.csproj" />
+		<ProjectReference Include="../../src/fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser/fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser.csproj" />
 	</ItemGroup>
 
 </Project>

@@ -9,21 +9,21 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\fiskaltrust.Middleware.Contracts\fiskaltrust.Middleware.Contracts.csproj" />
-    <ProjectReference Include="..\fiskaltrust.Middleware.Storage.Base\fiskaltrust.Middleware.Storage.Base.csproj" />
+    <ProjectReference Include="../fiskaltrust.Middleware.Contracts/fiskaltrust.Middleware.Contracts.csproj" />
+    <ProjectReference Include="../fiskaltrust.Middleware.Storage.Base/fiskaltrust.Middleware.Storage.Base.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Migrations\000_ftSchema.mysql">
+    <None Update="Migrations/000_ftSchema.mysql">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Migrations\004_ScuMode.mysql">
+    <None Update="Migrations/004_ScuMode.mysql">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Migrations\003_DailyClosingNumber.mysql">
+    <None Update="Migrations/003_DailyClosingNumber.mysql">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Migrations\001_Init.mysql">
+    <None Update="Migrations/001_Init.mysql">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

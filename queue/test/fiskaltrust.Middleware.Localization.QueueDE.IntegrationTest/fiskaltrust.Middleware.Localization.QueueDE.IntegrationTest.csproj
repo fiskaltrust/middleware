@@ -22,22 +22,22 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\fiskaltrust.Middleware.Localization.QueueDE\fiskaltrust.Middleware.Localization.QueueDE.csproj" />
-    <ProjectReference Include="..\..\src\fiskaltrust.Middleware.Queue\fiskaltrust.Middleware.Queue.csproj" />
-    <ProjectReference Include="..\..\src\fiskaltrust.Middleware.Storage.InMemory\fiskaltrust.Middleware.Storage.InMemory.csproj" />
+    <ProjectReference Include="../../src/fiskaltrust.Middleware.Localization.QueueDE/fiskaltrust.Middleware.Localization.QueueDE.csproj" />
+    <ProjectReference Include="../../src/fiskaltrust.Middleware.Queue/fiskaltrust.Middleware.Queue.csproj" />
+    <ProjectReference Include="../../src/fiskaltrust.Middleware.Storage.InMemory/fiskaltrust.Middleware.Storage.InMemory.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Data\**">
+    <None Update="Data/**">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Data\DailyClosingReceipt\Request.json">
+    <None Update="Data/DailyClosingReceipt/Request.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Data\DailyClosingReceipt\Response.json">
+    <None Update="Data/DailyClosingReceipt/Response.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

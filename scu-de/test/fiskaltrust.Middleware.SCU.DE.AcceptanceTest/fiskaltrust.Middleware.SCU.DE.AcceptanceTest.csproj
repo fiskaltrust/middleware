@@ -12,24 +12,24 @@
 	</ItemGroup>
     
     <ItemGroup>
-		<ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.DE.CryptoVision\fiskaltrust.Middleware.SCU.DE.CryptoVision.csproj" />
-		<ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.DE.DieboldNixdorf\fiskaltrust.Middleware.SCU.DE.DieboldNixdorf.csproj" />
-		<ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.DE.FiskalyCertified\fiskaltrust.Middleware.SCU.DE.FiskalyCertified.csproj" />
-		<ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.DE.Epson\fiskaltrust.Middleware.SCU.DE.Epson.csproj" />
-		<ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.DE.Swissbit\fiskaltrust.Middleware.SCU.DE.Swissbit.csproj" />
+		<ProjectReference Include="../../src/fiskaltrust.Middleware.SCU.DE.CryptoVision/fiskaltrust.Middleware.SCU.DE.CryptoVision.csproj" />
+		<ProjectReference Include="../../src/fiskaltrust.Middleware.SCU.DE.DieboldNixdorf/fiskaltrust.Middleware.SCU.DE.DieboldNixdorf.csproj" />
+		<ProjectReference Include="../../src/fiskaltrust.Middleware.SCU.DE.FiskalyCertified/fiskaltrust.Middleware.SCU.DE.FiskalyCertified.csproj" />
+		<ProjectReference Include="../../src/fiskaltrust.Middleware.SCU.DE.Epson/fiskaltrust.Middleware.SCU.DE.Epson.csproj" />
+		<ProjectReference Include="../../src/fiskaltrust.Middleware.SCU.DE.Swissbit/fiskaltrust.Middleware.SCU.DE.Swissbit.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<None Update="tools\CryptoVision\config.txt">
+		<None Update="tools/CryptoVision/config.txt">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
-		<None Update="tools\CryptoVision\factoryReset.jar">
+		<None Update="tools/CryptoVision/factoryReset.jar">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
-		<None Update="tools\Swissbit\WormAPI.dll">
+		<None Update="tools/Swissbit/WormAPI.dll">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
-		<None Update="tools\Swissbit\wormCli.exe">
+		<None Update="tools/Swissbit/wormCli.exe">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
 		<None Update="xunit.runner.json">

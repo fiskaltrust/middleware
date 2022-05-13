@@ -6,7 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\fiskaltrust.Middleware.QueueSynchronizer\fiskaltrust.Middleware.QueueSynchronizer.csproj" />
+    <ProjectReference Include="../../src/fiskaltrust.Middleware.QueueSynchronizer/fiskaltrust.Middleware.QueueSynchronizer.csproj" />
   </ItemGroup>
 
   <ItemGroup>

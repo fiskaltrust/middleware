@@ -24,10 +24,10 @@
 
     <ItemGroup Label="FilesToCopy">
         <Content Include="fiskaltrust.Middleware.Queue.MySQL.targets" PackagePath="build/fiskaltrust.Middleware.Queue.MySQL.targets" />
-        <Content Include="..\fiskaltrust.Middleware.Storage.MySQL\Migrations\*" Pack="true" PackagePath="contentFiles\Migrations;lib\net461\Migrations;lib\netstandard2.0\Migrations" LinkBase="Migrations">
+        <Content Include="../fiskaltrust.Middleware.Storage.MySQL/Migrations/*" Pack="true" PackagePath="contentFiles/Migrations;lib/net461/Migrations;lib/netstandard2.0/Migrations" LinkBase="Migrations">
             <PackageCopyToOutput>true</PackageCopyToOutput>
         </Content>
-        <Content Include="..\..\LICENSES\*" Pack="true" PackagePath="LICENSES" LinkBase="LICENSES">
+        <Content Include="../../LICENSES/*" Pack="true" PackagePath="LICENSES" LinkBase="LICENSES">
             <PackageCopyToOutput>true</PackageCopyToOutput>
         </Content>
     </ItemGroup>
@@ -43,9 +43,9 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\fiskaltrust.Middleware.Contracts\fiskaltrust.Middleware.Contracts.csproj" PrivateAssets="all" />
-        <ProjectReference Include="..\fiskaltrust.Middleware.Queue\fiskaltrust.Middleware.Queue.csproj" PrivateAssets="all" />
-        <ProjectReference Include="..\fiskaltrust.Middleware.Storage.MySQL\fiskaltrust.Middleware.Storage.MySQL.csproj" PrivateAssets="all" />
+        <ProjectReference Include="../fiskaltrust.Middleware.Contracts/fiskaltrust.Middleware.Contracts.csproj" PrivateAssets="all" />
+        <ProjectReference Include="../fiskaltrust.Middleware.Queue/fiskaltrust.Middleware.Queue.csproj" PrivateAssets="all" />
+        <ProjectReference Include="../fiskaltrust.Middleware.Storage.MySQL/fiskaltrust.Middleware.Storage.MySQL.csproj" PrivateAssets="all" />
     </ItemGroup>
 
     <Target DependsOnTargets="ResolveReferences" Name="CopyProjectReferencesToPackage">

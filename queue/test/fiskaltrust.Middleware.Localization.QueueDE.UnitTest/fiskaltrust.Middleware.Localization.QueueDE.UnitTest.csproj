@@ -11,35 +11,35 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\fiskaltrust.Middleware.Localization.QueueDE\fiskaltrust.Middleware.Localization.QueueDE.csproj" />
-    <ProjectReference Include="..\..\src\fiskaltrust.Middleware.Queue\fiskaltrust.Middleware.Queue.csproj" />
-    <ProjectReference Include="..\..\src\fiskaltrust.Middleware.Storage.InMemory\fiskaltrust.Middleware.Storage.InMemory.csproj" />
-    <ProjectReference Include="..\fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest\fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.csproj" />
+    <ProjectReference Include="../../src/fiskaltrust.Middleware.Localization.QueueDE/fiskaltrust.Middleware.Localization.QueueDE.csproj" />
+    <ProjectReference Include="../../src/fiskaltrust.Middleware.Queue/fiskaltrust.Middleware.Queue.csproj" />
+    <ProjectReference Include="../../src/fiskaltrust.Middleware.Storage.InMemory/fiskaltrust.Middleware.Storage.InMemory.csproj" />
+    <ProjectReference Include="../fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest/fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Data\ExplicitPosReceipt\Request.json">
+    <None Update="Data/ExplicitPosReceipt/Request.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Data\ExplicitPosReceipt\Response.json">
+    <None Update="Data/ExplicitPosReceipt/Response.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Data\ImplicitOrderRequest\Request.json">
+    <None Update="Data/ImplicitOrderRequest/Request.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Data\ImplicitOrderRequest\Response.json">
+    <None Update="Data/ImplicitOrderRequest/Response.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Data\ImplicitPosReceipt\Request.json">
+    <None Update="Data/ImplicitPosReceipt/Request.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Data\ImplicitPosReceipt\Response.json">
+    <None Update="Data/ImplicitPosReceipt/Response.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Data\StartTransactionReceipt\Request.json">
+    <None Update="Data/StartTransactionReceipt/Request.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Data\StartTransactionReceipt\Response.json">
+    <None Update="Data/StartTransactionReceipt/Response.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

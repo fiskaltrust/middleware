@@ -6,8 +6,8 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.DE.InMemory\fiskaltrust.Middleware.SCU.DE.InMemory.csproj" />
-		<ProjectReference Include="..\fiskaltrust.Middleware.SCU.DE.AcceptanceTest\fiskaltrust.Middleware.SCU.DE.AcceptanceTest.csproj" />
+		<ProjectReference Include="../../src/fiskaltrust.Middleware.SCU.DE.InMemory/fiskaltrust.Middleware.SCU.DE.InMemory.csproj" />
+		<ProjectReference Include="../fiskaltrust.Middleware.SCU.DE.AcceptanceTest/fiskaltrust.Middleware.SCU.DE.AcceptanceTest.csproj" />
 	</ItemGroup>
 
 </Project>

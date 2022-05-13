@@ -9,11 +9,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\fiskaltrust.Middleware.SCU.DE.Swissbit.Interop\fiskaltrust.Middleware.SCU.DE.Swissbit.Interop.csproj" />
+    <ProjectReference Include="../fiskaltrust.Middleware.SCU.DE.Swissbit.Interop/fiskaltrust.Middleware.SCU.DE.Swissbit.Interop.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <NativeLibs Include="runtimes\**" />
+    <NativeLibs Include="runtimes/**" />
     <None Include="@(NativeLibs)" Pack="true" PackagePath="runtimes" Visible="true" CopyToOutputDirectory="Always" />
   </ItemGroup>
   

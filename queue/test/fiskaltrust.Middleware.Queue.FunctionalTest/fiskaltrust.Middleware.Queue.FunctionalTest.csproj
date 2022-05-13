@@ -7,9 +7,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Packages\**" />
-    <EmbeddedResource Remove="Packages\**" />
-    <None Remove="Packages\**" />
+    <Compile Remove="Packages/**" />
+    <EmbeddedResource Remove="Packages/**" />
+    <None Remove="Packages/**" />
   </ItemGroup>
 
   <ItemGroup>
@@ -23,13 +23,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Data\configuration_sqlite.json">
+    <None Update="Data/configuration_sqlite.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Data\configuration_inmemory.json">
+    <None Update="Data/configuration_inmemory.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Data\*">
+    <None Update="Data/*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

@@ -14,7 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\fiskaltrust.Middleware.Storage.Base\fiskaltrust.Middleware.Storage.Base.csproj" />
+    <ProjectReference Include="../fiskaltrust.Middleware.Storage.Base/fiskaltrust.Middleware.Storage.Base.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
