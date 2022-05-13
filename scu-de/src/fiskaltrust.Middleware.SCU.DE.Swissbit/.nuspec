@@ -36,11 +36,11 @@
     <file src="bin\Release\net461\fiskaltrust.Middleware.SCU.DE.*.dll" target="lib\net461" />
     <file src="bin\Release\netstandard2.0\fiskaltrust.Middleware.SCU.DE.*.dll" target="lib\netstandard2.0" />
 
-    <!-- native binaries used by fiskaltrust-launcher out of lib\ folder -->
+    <!-- native binaries used by fiskaltrust-launcher out of lib/ folder -->
     <!-- the subfolders are not created on output and not used by visual-studio, project.asset.json is not updated -->
     <!-- directory-structure runtimes\{runtime-identifier}\native should follow  .net5 System.Runtime.InteropServices.NativeLibrary -->
-    <file src="bin\Release\net461\runtimes\**" target="lib\net461\runtimes "\>
-    <file src="bin\Release\netstandard2.0\runtimes\**" target="lib\netstandard2.0\runtimes "\>
-    <file src="bin\Release\net461\LICENSES\**" target="LICENSES "\>
+    <file src="bin\Release\net461\runtimes\**" target="lib\net461\runtimes "/>
+    <file src="bin\Release\netstandard2.0\runtimes\**" target="lib\netstandard2.0\runtimes "/>
+    <file src="bin\Release\net461\LICENSES\**" target="LICENSES "/>
   </files>
 </package>
