@@ -36,7 +36,7 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
 
     public async Task<RegisterCashDepositResponse> RegisterCashDepositAsync(RegisterCashDepositRequest registerCashDepositRequest)
     {
-        var sendDateTime = DateTime.Now;
+        var sendDateTime = registerCashDepositRequest.SubsequentDeliveryType.HasValue ? DateTime.Now : registerCashDepositRequest.Moment;
         var request = new SoapFiscalizationService.RegisterCashDepositRequest
         {
             Header = new SoapFiscalizationService.RegisterCashDepositRequestHeaderType
@@ -46,7 +46,7 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
             },
             CashDeposit = new SoapFiscalizationService.CashDepositType
             {
-                CashAmt = registerCashDepositRequest.Amount,
+                CashAmt = registerCashDepositRequest.Amount + 0.00m,
                 ChangeDateTime = registerCashDepositRequest.Moment,
                 IssuerTIN = _configuration.TIN,
                 Operation = SoapFiscalizationService.CashDepositOperationSType.INITIAL,
@@ -64,7 +64,7 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
 
     public async Task<RegisterCashWithdrawalResponse> RegisterCashWithdrawalAsync(RegisterCashWithdrawalRequest registerCashDepositRequest)
     {
-        var sendDateTime = DateTime.Now;
+        var sendDateTime = registerCashDepositRequest.SubsequentDeliveryType.HasValue ? DateTime.Now : registerCashDepositRequest.Moment;
         var request = new SoapFiscalizationService.RegisterCashDepositRequest
         {
             Header = new SoapFiscalizationService.RegisterCashDepositRequestHeaderType
@@ -74,7 +74,7 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
             },
             CashDeposit = new SoapFiscalizationService.CashDepositType
             {
-                CashAmt = registerCashDepositRequest.Amount,
+                CashAmt = registerCashDepositRequest.Amount + 0.00m,
                 ChangeDateTime = registerCashDepositRequest.Moment,
                 IssuerTIN = _configuration.TIN,
                 Operation = SoapFiscalizationService.CashDepositOperationSType.WITHDRAW,
@@ -89,7 +89,7 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
 
     public async Task<RegisterInvoiceResponse> RegisterInvoiceAsync(RegisterInvoiceRequest registerInvoiceRequest)
     {
-        var sendDateTime = DateTime.Now;
+        var sendDateTime = registerInvoiceRequest.SubsequentDeliveryType.HasValue ? DateTime.Now : registerInvoiceRequest.Moment;
 
         var iic = SigningHelper.CreateIIC(_configuration, registerInvoiceRequest);
 
@@ -108,7 +108,7 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
             InvOrdNum = (int) registerInvoiceRequest.InvoiceDetails.YearlyOrdinalNumber,
             InvType = (SoapFiscalizationService.InvoiceTSType) registerInvoiceRequest.InvoiceDetails.InvoiceType,
             IsIssuerInVAT = registerInvoiceRequest.IsIssuerInVATSystem,
-            IsReverseChargeSpecified = null,
+            IsReverseChargeSpecified = default,
             IssueDateTime = registerInvoiceRequest.Moment,
             Items = registerInvoiceRequest.InvoiceDetails.ItemDetails.Select(i =>
             {
@@ -118,19 +118,19 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
                     EXSpecified = i.ExemptFromVatReason.HasValue,
                     INSpecified = i.IsInvestment.HasValue,
                     N = i.Name,
-                    PA = null,
-                    PB = null,
+                    PA = default,
+                    PB = default,
                     Q = (double) i.Quantity,
-                    R = null,
-                    RSpecified = null,
-                    RR = null,
-                    RRSpecified = null,
+                    R = default,
+                    RSpecified = default,
+                    RR = default,
+                    RRSpecified = default,
                     U = i.Unit,
-                    UPA = null,
-                    UPB = null,
+                    UPA = default,
+                    UPB = default,
                     VASpecified = i.VatAmount.HasValue,
-                    VD = null,
-                    VDSpecified = null,
+                    VD = default,
+                    VDSpecified = default,
                     VRSpecified = i.VatRate.HasValue,
                     VSN = null
                 };
@@ -156,8 +156,8 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
                 }
                 return invoiceItem;
             }).ToArray(),
-            MarkUpAmt = null,
-            MarkUpAmtSpecified = null,
+            MarkUpAmt = default,
+            MarkUpAmtSpecified = default,
             Note = null,
             OperatorCode = registerInvoiceRequest.OperatorCode,
             ParagonBlockNum = null,
@@ -169,18 +169,18 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
                 BankAcc = null,
                 CompCard = p.CompanyCardNumber,
                 Type = (SoapFiscalizationService.PaymentMethodTypeSType) p.Type,
-                Vouchers = p.VoucherNumbers.Select(v => new SoapFiscalizationService.VoucherType { Num = v }).ToArray()
+                Vouchers = p.VoucherNumbers?.Select(v => new SoapFiscalizationService.VoucherType { Num = v })?.ToArray() ?? new SoapFiscalizationService.VoucherType[0]
             }).ToArray(),
             SameTaxes = null,
             SoftCode = registerInvoiceRequest.SoftwareCode,
             Seller = null,
             SupplyDateOrPeriod = null,
             TaxFreeAmtSpecified = registerInvoiceRequest.InvoiceDetails.TaxFreeAmount.HasValue,
-            TaxPeriod = registerInvoiceRequest.InvoiceDetails.TaxPeriod,
+            TaxPeriod = default, //registerInvoiceRequest.InvoiceDetails.TaxPeriod,
             TCRCode = registerInvoiceRequest.TcrCode,
             TotPrice = registerInvoiceRequest.InvoiceDetails.GrossAmount,
-            TotPriceToPay = null,
-            TotPriceToPaySpecified = null,
+            TotPriceToPay = default,
+            TotPriceToPaySpecified = default,
             TotPriceWoVAT = registerInvoiceRequest.InvoiceDetails.NetAmount,
             TotVATAmtSpecified = registerInvoiceRequest.InvoiceDetails.TotalVatAmount.HasValue,
             TypeOfInv = (SoapFiscalizationService.InvoiceSType) registerInvoiceRequest.InvoiceDetails.InvoiceType,
