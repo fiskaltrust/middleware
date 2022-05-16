@@ -46,14 +46,13 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 var signaturCreationUnitME = new ftSignaturCreationUnitME()
                 {
                     ftSignaturCreationUnitMEId = Guid.NewGuid(),
-                    TimeStamp = DateTime.Now.Ticks,
+                    TimeStamp = DateTime.UtcNow.Ticks,
                     TcrIntId = enu.TcrIntId,
                     BusinessUnitCode = enu.BusinessUnitCode,
                     IssuerTin = enu.IssuerTin,
                     SoftwareCode = enu.SoftwareCode,
                     TcrCode = registerTCRResponse.TcrCode,
-                    ValidFrom = enu.ValidFrom,
-                    ValidTo = DateTime.UtcNow
+                    ValidFrom = enu.ValidFrom ?? DateTime.UtcNow
                 };
                 await _configurationRepository.InsertOrUpdateSignaturCreationUnitMEAsync(signaturCreationUnitME).ConfigureAwait(false);
                 queueME.ftSignaturCreationUnitMEId = signaturCreationUnitME.ftSignaturCreationUnitMEId;
