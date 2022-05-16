@@ -27,12 +27,10 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.Helper
                 FCDC = "1111"
             });
         }
-        public Task<RegisterCashWithdrawalResponse> RegisterCashWithdrawalAsync(RegisterCashWithdrawalRequest registerCashDepositRequest)
+        public Task RegisterCashWithdrawalAsync(RegisterCashWithdrawalRequest registerCashDepositRequest)
         {
             ThrowExceptinIfWanted();
-            return Task.FromResult(new RegisterCashWithdrawalResponse()
-            {
-            });
+            return Task.FromResult(true);
         }
 
         public Task<RegisterInvoiceResponse> RegisterInvoiceAsync(RegisterInvoiceRequest registerInvoiceRequest)
@@ -55,7 +53,10 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.Helper
             });
         }
 
-        public Task UnregisterTcrAsync(RegisterTcrRequest registerTCRRequest) => throw new NotImplementedException();
+        public Task UnregisterTcrAsync(UnregisterTcrRequest unregisterTCRRequest)
+        {
+            return Task.CompletedTask;
+        }
 
         public void ThrowExceptinIfWanted()
         {

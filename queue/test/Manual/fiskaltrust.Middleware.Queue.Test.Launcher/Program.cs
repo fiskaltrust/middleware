@@ -19,8 +19,8 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
 {
     public static class Program
     {
-        private static readonly string _cashBoxId = "74851323-a96e-48ab-ad20-29cb4d3def4d";
-        private static readonly string _accessToken = "BBJe5Byqji+p1Q7tlNOfJuoMRkT09RRlb29FLej4Nmy9KAF5WveTYg+E+dZhIe1EYsglKA2jrTKRw6lY4d7EgEE=";
+        private static readonly string _cashBoxId = "";
+        private static readonly string _accessToken = "";
         private static readonly string _localization = "ME";
 
         public static void Main(string configurationFilePath = "", string serviceFolder = @"C:\ProgramData\fiskaltrust\service")
@@ -68,7 +68,8 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
                 }
                 var temp = config.Configuration["init_ftQueueDE"];
                 config.Configuration["init_ftQueueME"] = temp.ToString().Replace("DE", "ME");
-                config.Configuration["init_ftSignaturCreationUnitME"] = config.Configuration["init_ftSignaturCreationUnitDE"];
+                temp = config.Configuration["init_ftSignaturCreationUnitDE"];
+                config.Configuration["init_ftSignaturCreationUnitME"] = temp.ToString().Replace("DE", "ME");
             }
             else
             { 

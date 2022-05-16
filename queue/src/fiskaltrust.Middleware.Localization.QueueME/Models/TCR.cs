@@ -42,11 +42,5 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Models
             get;
             set;
         }
-        [DataMember]
-        public DateTime? ValidTo
-        {
-            get;
-            set;
-        }
     }
 }

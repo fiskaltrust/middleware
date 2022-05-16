@@ -35,7 +35,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             };
             await InsertQueueMESCU(tcr, inMemoryConfigurationRepository, testTcr, queueME);
  
-            tcr.ValidTo = DateTime.Now.Date;
             var receiptRequest = CreateReceiptRequest(tcr);
             var inMemoryJournalMERepository = new InMemoryJournalMERepository();
             var inMemoryQueueItemRepository = new InMemoryQueueItemRepository();
@@ -94,7 +93,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
                 IssuerTin = tcr.IssuerTin,
                 TcrCode = testTcr,
                 ValidFrom = tcr.ValidFrom,
-                ValidTo = tcr.ValidTo
             };
             await configurationRepository.InsertOrUpdateSignaturCreationUnitMEAsync(signaturCreationUnitME).ConfigureAwait(false);
             await configurationRepository.InsertOrUpdateQueueMEAsync(queueME).ConfigureAwait(false);

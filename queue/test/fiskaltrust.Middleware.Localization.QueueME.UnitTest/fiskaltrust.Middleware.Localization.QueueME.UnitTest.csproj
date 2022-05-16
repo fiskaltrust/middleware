@@ -9,11 +9,13 @@
         <PackageReference Update="fiskaltrust.storage" Version="1.3.21-ci-22130-53496">
             <NoWarn>NU1605</NoWarn>
         </PackageReference>
-        <PackageReference Include="fiskaltrust.interface" Version="1.3.1-ci-22117-53232">
+        <PackageReference Include="fiskaltrust.interface" Version="1.3.1-ci-22133-53627">
             <NoWarn>NU1605</NoWarn>
         </PackageReference>
         <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
         <PackageReference Include="Serilog" Version="2.9.0" />
+        <PackageReference Include="Serilog.Extensions.Logging" Version="3.0.1" />
+        <PackageReference Include="Serilog.Sinks.Console" Version="3.1.1" />
     </ItemGroup>
 
     <ItemGroup>

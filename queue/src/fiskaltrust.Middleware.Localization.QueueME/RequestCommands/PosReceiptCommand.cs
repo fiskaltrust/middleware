@@ -73,9 +73,9 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
         private async Task<bool> CashDepositeOutstanding()
         {
             var _journalME = await _journalMERepository.GetAsync().ConfigureAwait(false);
-            var journalME = _journalME.Where(x => x.JournalType == (long)JournalTypes.CashDepositME).OrderByDescending(x => x.TimeStamp).LastOrDefault();
-            var date = new DateTime(journalME.TimeStamp);
-            if (journalME == null || date.Date != DateTime.UtcNow.Date)
+            var journalME = _journalME.Where(x => x.JournalType == 0x44D5_0000_0000_0007).OrderByDescending(x => x.TimeStamp).FirstOrDefault();
+            
+            if (journalME == null || new DateTime(journalME.TimeStamp).Date != DateTime.UtcNow.Date)
             {
                 return true;           
             }
@@ -114,7 +114,8 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
         }
         private async Task InsertJournalME(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftSignaturCreationUnitME scu, RegisterInvoiceResponse registerInvoiceResponse)
         {
-            var lastJournal = await _journalMERepository.GetLastEntryAsync();
+            var lastJournals = await _journalMERepository.GetAsync().ConfigureAwait(false);
+            var lastJournal = lastJournals.OrderByDescending(x => x.TimeStamp).Where(x => x.JournalType == (long) JournalTypes.JournalME).FirstOrDefault();
             var journal = new ftJournalME()
             {
                 ftJournalMEId = Guid.NewGuid(),

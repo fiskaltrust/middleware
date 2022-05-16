@@ -15,7 +15,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.Helper
 {
     public class TestHelper
     {
-        public static async Task<T> InitializeRequestCommand<T>(ftQueueME queueME, string tcrCode, IActionJournalRepository actionJournalRepository) 
+        public static async Task<T> InitializeRequestCommand<T>(ftQueueME queueME, string tcrCode, IJournalMERepository journalMERepository) 
             where T : RequestCommand
         {
             var inMemoryConfigurationRepository = new InMemoryConfigurationRepository();
@@ -31,21 +31,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.Helper
             await inMemoryConfigurationRepository.InsertOrUpdateQueueMEAsync(queueME);
             var requ = typeof(T);
             return (T) Activator.CreateInstance(requ, new object[] {
-                    Mock.Of<ILogger<RequestCommand>>(), inMemoryConfigurationRepository, new InMemoryJournalMERepository(), new InMemoryQueueItemRepository(), actionJournalRepository
-            });
-        }
-
-        public static async Task CheckResultActionJournal(ftQueue queue, ftQueueItem queueItem, InMemoryActionJournalRepository actionJournalRep, RequestCommandResponse requestResponse, long journalTypes)
-        {
-            requestResponse.ActionJournals.Count().Should().Be(1);
-            var actionJournals = await actionJournalRep.GetAsync().ConfigureAwait(false);
-            actionJournals.Count().Should().Be(1);
-            requestResponse.ActionJournals.FirstOrDefault().ftQueueId.Should().Be(queue.ftQueueId);
-            requestResponse.ActionJournals.FirstOrDefault().ftQueueItemId.Should().Be(queueItem.ftQueueItemId);
-            requestResponse.ActionJournals.FirstOrDefault().Type.Should().Be(journalTypes.ToString());
-            actionJournals.FirstOrDefault().ftQueueId.Should().Be(queue.ftQueueId);
-            actionJournals.FirstOrDefault().ftQueueItemId.Should().Be(queueItem.ftQueueItemId);
-            actionJournals.FirstOrDefault().Type.Should().Be(journalTypes.ToString());
+                    Mock.Of<ILogger<RequestCommand>>(), inMemoryConfigurationRepository, journalMERepository, new InMemoryQueueItemRepository(), new InMemoryActionJournalRepository()});
         }
         public static ReceiptRequest CreateReceiptRequest(long receiptCase)
         {

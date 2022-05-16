@@ -29,6 +29,10 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                     throw new ENUNotRegisteredException();
                 }
                 var scu = await _configurationRepository.GetSignaturCreationUnitMEAsync(queueME.ftSignaturCreationUnitMEId.Value).ConfigureAwait(false);
+                if (scu == null || string.IsNullOrEmpty(scu.TcrCode))
+                {
+                    throw new ENUNotRegisteredException();
+                }
                 var registerCashWithdrawalRequest = new RegisterCashDepositRequest()
                 {
                     Amount = request.cbReceiptAmount ?? request.cbChargeItems.Sum(x => x.Amount),
@@ -37,10 +41,11 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                     SubsequentDeliveryType = null,
                     TcrCode = scu.TcrCode
                 };
+
                 var registerCashDepositResponse = await client.RegisterCashDepositAsync(registerCashWithdrawalRequest).ConfigureAwait(false);
                 await InsertJournalME(queue, request, queueItem, registerCashDepositResponse).ConfigureAwait(false);
                 var receiptResponse = CreateReceiptResponse(request, queueItem);
-                var actionJournalEntry =  CreateActionJournal(queue, (long)JournalTypes.CashDepositME, queueItem);
+                var actionJournalEntry =  CreateActionJournal(queue, request.ftReceiptCase, queueItem);
                 return new RequestCommandResponse()
                 {
                     ReceiptResponse = receiptResponse,
@@ -83,7 +88,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 cbReference = request.cbReceiptReference,
                 Number = queue.ftReceiptNumerator,
                 FCDC = registerCashDepositResponse.FCDC,
-                JournalType = (long) JournalTypes.CashDepositME,
+                JournalType = request.ftReceiptCase,
                 TimeStamp = DateTime.UtcNow.Ticks
             };
             await _journalMERepository.InsertAsync(journal).ConfigureAwait(false);

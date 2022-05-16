@@ -53,7 +53,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                     SoftwareCode = enu.SoftwareCode,
                     TcrCode = registerTCRResponse.TcrCode,
                     ValidFrom = enu.ValidFrom,
-                    ValidTo = enu.ValidTo
+                    ValidTo = DateTime.UtcNow
                 };
                 await _configurationRepository.InsertOrUpdateSignaturCreationUnitMEAsync(signaturCreationUnitME).ConfigureAwait(false);
                 queueME.ftSignaturCreationUnitMEId = signaturCreationUnitME.ftSignaturCreationUnitMEId;

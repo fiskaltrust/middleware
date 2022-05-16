@@ -1,11 +1,13 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.Localization.QueueME.RequestCommands;
 using fiskaltrust.Middleware.Localization.QueueME.UnitTest.Helper;
-using fiskaltrust.Middleware.Storage.InMemory.Repositories;
 using fiskaltrust.storage.V0;
 using Xunit;
 using fiskaltrust.Middleware.Contracts.Constants;
+using fiskaltrust.Middleware.Storage.InMemory.Repositories.ME;
+using FluentAssertions;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTests
 {
@@ -29,10 +31,12 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
                 ftQueueMEId = queue.ftQueueId,
                 ftSignaturCreationUnitMEId = Guid.NewGuid(),
             };
-            var actionJournalRep = new InMemoryActionJournalRepository();
-            var cashDepositReceiptCommand = await TestHelper.InitializeRequestCommand<CashWithdrawlReceiptCommand>(queueME, "TestTCRCodePos", actionJournalRep).ConfigureAwait(false);
+            var journalMERepository = new InMemoryJournalMERepository();
+            var cashDepositReceiptCommand = await TestHelper.InitializeRequestCommand<CashWithdrawlReceiptCommand>(queueME, "TestTCRCodePos", journalMERepository).ConfigureAwait(false);
             var requestResponse = await cashDepositReceiptCommand.ExecuteAsync(new InMemoryMESSCD("TestTCRCodePos"), queue, TestHelper.CreateReceiptRequest(0x44D5_0000_0000_0008), queueItem, queueME);
-            await TestHelper.CheckResultActionJournal(queue, queueItem, actionJournalRep, requestResponse, (long)JournalTypes.CashDepositME).ConfigureAwait(false);
+            requestResponse.ActionJournals.Should().HaveCount(1);
+            requestResponse.ActionJournals.FirstOrDefault().ftQueueItemId.Should().Be(queueItem.ftQueueItemId);
+            requestResponse.ActionJournals.FirstOrDefault().Type.Should().Be(0x44D5_0000_0000_0008.ToString());
         }
     }
 }

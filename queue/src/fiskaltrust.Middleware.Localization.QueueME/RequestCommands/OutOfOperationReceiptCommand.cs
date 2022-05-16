@@ -34,26 +34,16 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                     var errormessage = $"Request TCRIntID {enu.TcrIntId} and IssuerTIN {enu.IssuerTin} don´t match Queue initialisation with {enu.TcrIntId} and IssuerTIN {scuME.IssuerTin}";
                     throw new ENUIIDDontMatchException(errormessage);
                 }
-                if (!enu.ValidTo.HasValue)
-                {
-                    throw new ENUValidToNotSetException();
-                }
-                var registerTCRRequest = new RegisterTcrRequest()
+                var unregisterTCRRequest = new UnregisterTcrRequest()
                 {
                     RequestId = queueItem.ftQueueItemId,
                     BusinessUnitCode = scuME.BusinessUnitCode,
-                    InternalTcrIdentifier = scuME.TcrIntId               ,
-                    TcrSoftwareCode = scuME.SoftwareCode,
-                    TcrSoftwareMaintainerCode = scuME.MaintainerCode,
-                    TcrType = enu.TcrType == null ? TcrType.Regular : (TcrType) Enum.Parse(typeof(TcrType), enu.TcrType),    
+                    InternalTcrIdentifier = scuME.TcrIntId,
                 };
-                var registerTCRResponse = await client.RegisterTcrAsync(registerTCRRequest).ConfigureAwait(false);
-
-                scuME.ValidTo = enu.ValidTo;
+                await client.UnregisterTcrAsync(unregisterTCRRequest).ConfigureAwait(false);
+                scuME.ValidTo = DateTime.UtcNow;
                 await _configurationRepository.InsertOrUpdateQueueMEAsync(queueME).ConfigureAwait(false);
-
                 var receiptResponse = CreateReceiptResponse(request, queueItem);
-
                 return new RequestCommandResponse()
                 {
                     ReceiptResponse = receiptResponse

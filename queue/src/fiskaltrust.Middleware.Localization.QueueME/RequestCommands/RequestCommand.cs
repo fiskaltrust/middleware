@@ -13,7 +13,8 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 {
     public abstract class RequestCommand
     {
-        protected const string ENDPOINTNOTFOUND = "EndpointNotFoundException";
+        protected const string ENDPOINTNOTFOUND = "EntryPointNotFoundException";
+        private const string QUEUEINFAILEDMODE = "Queue in failed mode, use Zeroreceipt to process failed requests. SSCDFailCount: {0}";
         protected readonly ILogger<RequestCommand> _logger;
         protected readonly IConfigurationRepository _configurationRepository;
         protected readonly IMiddlewareJournalMERepository _journalMERepository;
@@ -98,7 +99,8 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             }
             queueME.SSCDFailCount++;
             await _configurationRepository.InsertOrUpdateQueueMEAsync(queueME).ConfigureAwait(false);
-            var receiptResponse = CreateReceiptResponse(request, queueItem, new string[] { "Queue in failed mode, use Zeroreceipt to process Failed Requests." }, 0x4D45000000000002);
+            var receiptResponse = CreateReceiptResponse(request, queueItem, new string[] { string.Format(QUEUEINFAILEDMODE, queueME.SSCDFailCount)}, 0x4D45000000000002);
+            _logger.LogInformation(string.Format(QUEUEINFAILEDMODE, queueME.SSCDFailCount));
 
             return new RequestCommandResponse()
             {
@@ -108,7 +110,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
         protected async Task<bool> ActionJournalExists(ftQueueItem queueItem, long type)
         {
             var actionJournal = await _actionJournalRepository.GetByQueueItemId(queueItem.ftQueueItemId).FirstOrDefaultAsync().ConfigureAwait(false);
-            if (actionJournal != null && actionJournal.Type == $"{type:X}")
+            if (actionJournal != null && actionJournal.Type == type.ToString())
             {
                 return true;
             }

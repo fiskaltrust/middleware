@@ -33,7 +33,8 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
                 SoftwareCode = "ft54ft871",
                 MaintainerCode = "ft88fz999",
                 ValidFrom = DateTime.UtcNow.AddDays(-50),
-                EnuType = "REGULAR",               
+                EnuType = "REGULAR",     
+                TcrCode = "Testtcr"
             };
             var queueME = new ftQueueME()
             {
@@ -52,16 +53,9 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             queueItem.request = JsonConvert.SerializeObject(cdReceipRequest);
             await queueItemRepository.InsertAsync(queueItem).ConfigureAwait(false);
             var cashDepositReceiptCommand = new CashDepositReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), inMemoryConfigurationRepository, journalMERepository, queueItemRepository, actionJournalRepository);
-            await cashDepositReceiptCommand.ExecuteAsync(client, queue, cdReceipRequest, queueItem, queueME).ConfigureAwait(false);
-            var serviceCollection = new ServiceCollection();
-            /*
-            serviceCollection.AddLogging(builder =>
-            {
-                builder.AddSerilog(dispose: true);
-                builder.SetMinimumLevel(verbosity);
-            });*/
-            var sut = new QueueMEBootstrapper();
-            sut.ConfigureServices(serviceCollection);
+            await cashDepositReceiptCommand.ExecuteAsync(new InMemoryMESSCD("TestZeroTCRCode"), queue, cdReceipRequest, queueItem, queueME).ConfigureAwait(false);
+
+
 
             var zeroReceiptCommand = new ZeroReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), inMemoryConfigurationRepository, journalMERepository, queueItemRepository, actionJournalRepository, CreateRequestCommandFactory());
             var respond = await zeroReceiptCommand.ExecuteAsync(client, queue, cdReceipRequest, queueItem, queueME);
@@ -70,7 +64,12 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
         private IRequestCommandFactory CreateRequestCommandFactory()
         {
             var serviceCollection = new ServiceCollection();
-            
+            serviceCollection.AddLogging(builder =>
+            {
+                builder.AddSerilog(dispose: true);
+                builder.SetMinimumLevel(LogLevel.Debug);
+            });
+
             var sut = new QueueMEBootstrapper();
             sut.ConfigureServices(serviceCollection);
             return new RequestCommandFactory(serviceCollection.BuildServiceProvider());

@@ -39,7 +39,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 };
                 await client.RegisterCashWithdrawalAsync(registerCashWithdrawalRequest).ConfigureAwait(false);
                 var receiptResponse = CreateReceiptResponse(request, queueItem);
-                var actionJournalEntry = CreateActionJournal(queue, (long) JournalTypes.CashWithdrawlME, queueItem);
+                var actionJournalEntry = CreateActionJournal(queue, request.ftReceiptCase, queueItem);
                 return new RequestCommandResponse()
                 {
                     ReceiptResponse = receiptResponse,

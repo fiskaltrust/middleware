@@ -13,12 +13,12 @@
 
   <ItemGroup>
     <PackageReference Include="BouncyCastle" Version="1.7.0" />
-    <PackageReference Include="fiskaltrust.interface" Version="1.3.1-ci-22117-53232">
+    <PackageReference Include="fiskaltrust.interface" Version="1.3.1-ci-22133-53627">
         <NoWarn>NU1605</NoWarn>
     </PackageReference>
     <PackageReference Include="fiskaltrust.Middleware.Abstractions" Version="1.3.3" />
-    <PackageReference Include="fiskaltrust.Middleware.Interface.Client.Grpc" Version="1.3.3-ci-22122-53315" />
-    <PackageReference Include="fiskaltrust.Middleware.Interface.Client.Http" Version="1.3.11-ci-22122-53315" />
+    <PackageReference Include="fiskaltrust.Middleware.Interface.Client.Grpc" Version="1.3.3-ci-22133-53627" />
+    <PackageReference Include="fiskaltrust.Middleware.Interface.Client.Http" Version="1.3.11-ci-22133-53627" />
     <PackageReference Include="fiskaltrust.Middleware.Interface.Client.Soap" Version="1.3.3" />
     <PackageReference Include="fiskaltrust.service.Ihelper" Version="1.0.16322.1184" />
     <PackageReference Include="fiskaltrust.storage" Version="1.3.21-ci-22130-53496"><NoWarn>NU1605</NoWarn></PackageReference>
