@@ -1,0 +1,38 @@
+﻿using System;
+using System.Threading.Tasks;
+using fiskaltrust.ifPOS.v1.me;
+using fiskaltrust.Middleware.SCU.ME.FiscalizationService;
+using fiskaltrust.Middleware.SCU.ME.Test.Launcher.Helpers;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+
+namespace TestLauncher
+{
+    public class Program
+    {
+        private static readonly string cashBoxId = "74851323-a96e-48ab-ad20-29cb4d3def4d";
+        private static readonly string accessToken = "BBJe5Byqji+p1Q7tlNOfJuoMRkT09RRlb29FLej4Nmy9KAF5WveTYg+E+dZhIe1EYsglKA2jrTKRw6lY4d7EgEE=";
+
+        public static async Task Main()
+        {
+            var cashBoxConfiguration = await HelipadHelper.GetConfigurationAsync(cashBoxId, accessToken).ConfigureAwait(false);
+            var config = cashBoxConfiguration.ftSignaturCreationDevices[0];
+            config.Package = "fiskaltrust.Middleware.SCU.ME.FiscalizationService";
+            var serviceCollection = new ServiceCollection();
+            serviceCollection.AddStandardLoggers(LogLevel.Debug);
+            var bootStrapper = new ScuBootstrapper
+            {
+                Id = config.Id,
+                Configuration = config.Configuration
+            };
+            bootStrapper.ConfigureServices(serviceCollection);
+            var provider = serviceCollection.BuildServiceProvider();
+            var messcd = provider.GetRequiredService<IMESSCD>();
+            HostingHelper.SetupServiceForObject(config, messcd, provider.GetRequiredService<ILoggerFactory>());
+
+            Console.WriteLine("Press key to end program");
+            Console.ReadLine();
+
+        }
+    }
+}

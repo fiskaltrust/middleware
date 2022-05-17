@@ -8,6 +8,6 @@
 
   <ItemGroup>
       <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
-      <PackageReference Include="fiskaltrust.interface" Version="1.3.1-ci-22117-53232" />
+      <PackageReference Include="fiskaltrust.interface" Version="1.3.1-ci-22133-53627" />
   </ItemGroup>
 </Project>

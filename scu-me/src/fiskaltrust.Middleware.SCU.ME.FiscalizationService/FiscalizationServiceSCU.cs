@@ -62,7 +62,7 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
         };
     }
 
-    public async Task<RegisterCashWithdrawalResponse> RegisterCashWithdrawalAsync(RegisterCashWithdrawalRequest registerCashDepositRequest)
+    public async Task RegisterCashWithdrawalAsync(RegisterCashWithdrawalRequest registerCashDepositRequest)
     {
         var sendDateTime = registerCashDepositRequest.SubsequentDeliveryType.HasValue ? DateTime.Now : registerCashDepositRequest.Moment;
         var request = new SoapFiscalizationService.RegisterCashDepositRequest
@@ -83,8 +83,6 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
         };
 
         _ = await _fiscalizationServiceClient.registerCashDepositAsync(request);
-
-        return new RegisterCashWithdrawalResponse { };
     }
 
     public async Task<RegisterInvoiceResponse> RegisterInvoiceAsync(RegisterInvoiceRequest registerInvoiceRequest)
@@ -299,14 +297,14 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
 
 
         var response = await _fiscalizationServiceClient.registerTCRAsync(request);
-
+        _logger.LogInformation("Client registered!");
         return new RegisterTcrResponse
         {
             TcrCode = response.RegisterTCRResponse.TCRCode,
         };
     }
 
-    public async Task UnregisterTcrAsync(RegisterTcrRequest registerTCRRequest)
+    public async Task UnregisterTcrAsync(UnregisterTcrRequest registerTCRRequest)
     {
         var sendDateTime = DateTime.Now;
         var request = new SoapFiscalizationService.RegisterTCRRequest
