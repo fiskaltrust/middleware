@@ -7,6 +7,7 @@ using fiskaltrust.Middleware.Contracts;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Queue.Extensions;
+using fiskaltrust.Middleware.Queue.Models;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -27,6 +28,7 @@ namespace fiskaltrust.Middleware.Queue
         private readonly bool _isSandbox;
         private readonly int _receiptRequestMode = 0;
         private readonly SignatureFactory _signatureFactory;
+        private readonly Action<string> _onMessage;
 
         public SignProcessor(
             ILogger<SignProcessor> logger,
@@ -49,6 +51,7 @@ namespace fiskaltrust.Middleware.Queue
             _cashBoxId = configuration.CashBoxId;
             _isSandbox = configuration.IsSandbox;
             _receiptRequestMode = configuration.ReceiptRequestMode;
+            _onMessage = configuration.OnMessage;
             _signatureFactory = new SignatureFactory();
         }
 
@@ -71,16 +74,39 @@ namespace fiskaltrust.Middleware.Queue
                 }
 
                 var queue = await _configurationRepository.GetQueueAsync(_queueId).ConfigureAwait(false);
-                return await InternalSign(queue, request).ConfigureAwait(false);
+                var (response, receiptJournal) = await InternalSign(queue, request).ConfigureAwait(false);
+
+                OnMessage(request, response, receiptJournal);
+
+                return response;
             }
             catch (Exception ex)
             {
+                OnMessage(request, null, null);
                 _logger.LogError(ex, "");
                 throw;
             }
         }
 
-        private async Task<ReceiptResponse> InternalSign(ftQueue queue, ReceiptRequest data)
+        private void OnMessage(ReceiptRequest request, ReceiptResponse response, ftReceiptJournal receiptJournal)
+        {
+            try
+            {
+                _onMessage?.Invoke(JsonConvert.SerializeObject(new ReceiptProcessedMessage
+                {
+                    Request = request,
+                    Response = response,
+                    ReceiptJournal = receiptJournal
+                }));
+            }
+            catch(Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while executing the OnMessage event. This is most likely caused by an exception in another component.");
+            }
+            
+        }
+
+        private async Task<(ReceiptResponse response, ftReceiptJournal receiptJournal)> InternalSign(ftQueue queue, ReceiptRequest data)
         {
             _logger.LogTrace("SignProcessor.InternalSign called.");
             if ((data.ftReceiptCase & 0x0000800000000000L) > 0)
@@ -89,11 +115,11 @@ namespace fiskaltrust.Middleware.Queue
                 {
                     var foundQueueItem = await GetExistingQueueItemOrNullAsync(data).ConfigureAwait(false);
                     if (foundQueueItem != null)
-                    {                        
+                    {
                         var message = $"Queue {_queueId} found cbReceiptReference \"{foundQueueItem.cbReceiptReference}\"";
                         _logger.LogWarning(message);
                         await CreateActionJournalAsync(message, "", foundQueueItem.ftQueueItemId).ConfigureAwait(false);
-                        return JsonConvert.DeserializeObject<ReceiptResponse>(foundQueueItem.response);
+                        return (JsonConvert.DeserializeObject<ReceiptResponse>(foundQueueItem.response), null);
                     }
                 }
                 catch (Exception x)
@@ -111,7 +137,7 @@ namespace fiskaltrust.Middleware.Queue
                 }
                 else
                 {
-                    return null;
+                    return (null, null);
                 }
             }
             var queueItem = new ftQueueItem
@@ -123,9 +149,8 @@ namespace fiskaltrust.Middleware.Queue
                 cbReceiptMoment = data.cbReceiptMoment,
                 cbTerminalID = data.cbTerminalID,
                 cbReceiptReference = data.cbReceiptReference,
+                ftQueueRow = ++queue.ftQueuedRow
             };
-            queueItem.ftQueueRow = ++queue.ftQueuedRow;
-            queueItem.ftQueueTimeout = queue.Timeout;
             if (queueItem.ftQueueTimeout == 0)
             {
                 queueItem.ftQueueTimeout = 15000;
@@ -165,9 +190,9 @@ namespace fiskaltrust.Middleware.Queue
                 _logger.LogTrace("SignProcessor.InternalSign: Updating Queue in database.");
                 await _configurationRepository.InsertOrUpdateQueueAsync(queue).ConfigureAwait(false);
                 _logger.LogTrace("SignProcessor.InternalSign: Adding ReceiptJournal to database.");
-                await CreateReceiptJournalAsync(queue, queueItem, data).ConfigureAwait(false);
+                var receiptJournal = await CreateReceiptJournalAsync(queue, queueItem, data).ConfigureAwait(false);
 
-                return receiptResponse;
+                return (receiptResponse, receiptJournal);
             }
             finally
             {
@@ -258,7 +283,7 @@ namespace fiskaltrust.Middleware.Queue
 
         private static bool IsReceiptRequestFinished(ftQueueItem item) => item.ftDoneMoment != null && !string.IsNullOrWhiteSpace(item.response) && !string.IsNullOrWhiteSpace(item.responseHash);
 
-        public async Task CreateReceiptJournalAsync(ftQueue queue, ftQueueItem queueItem, ReceiptRequest receiptrequest)
+        public async Task<ftReceiptJournal> CreateReceiptJournalAsync(ftQueue queue, ftQueueItem queueItem, ReceiptRequest receiptrequest)
         {
             queue.ftReceiptNumerator++;
             var receiptjournal = new ftReceiptJournal
@@ -280,6 +305,8 @@ namespace fiskaltrust.Middleware.Queue
             receiptjournal.ftReceiptHash = _cryptoHelper.GenerateBase64ChainHash(queue.ftReceiptHash, receiptjournal, queueItem);
             await _receiptJournalRepository.InsertAsync(receiptjournal).ConfigureAwait(false);
             await UpdateQueuesLastReceipt(queue, receiptjournal).ConfigureAwait(false);
+
+            return receiptjournal;
         }
 
         private async Task UpdateQueuesLastReceipt(ftQueue queue, ftReceiptJournal receiptJournal)
