@@ -74,39 +74,17 @@ namespace fiskaltrust.Middleware.Queue
                 }
 
                 var queue = await _configurationRepository.GetQueueAsync(_queueId).ConfigureAwait(false);
-                var (response, receiptJournal) = await InternalSign(queue, request).ConfigureAwait(false);
 
-                OnMessage(request, response, receiptJournal);
-
-                return response;
+                return await InternalSign(queue, request).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
-                OnMessage(request, null, null);
                 _logger.LogError(ex, "");
                 throw;
             }
         }
 
-        private void OnMessage(ReceiptRequest request, ReceiptResponse response, ftReceiptJournal receiptJournal)
-        {
-            try
-            {
-                _onMessage?.Invoke(JsonConvert.SerializeObject(new ReceiptProcessedMessage
-                {
-                    Request = request,
-                    Response = response,
-                    ReceiptJournal = receiptJournal
-                }));
-            }
-            catch(Exception ex)
-            {
-                _logger.LogError(ex, "An error occurred while executing the OnMessage event. This is most likely caused by an exception in another component.");
-            }
-            
-        }
-
-        private async Task<(ReceiptResponse response, ftReceiptJournal receiptJournal)> InternalSign(ftQueue queue, ReceiptRequest data)
+        private async Task<ReceiptResponse> InternalSign(ftQueue queue, ReceiptRequest data)
         {
             _logger.LogTrace("SignProcessor.InternalSign called.");
             if ((data.ftReceiptCase & 0x0000800000000000L) > 0)
@@ -118,8 +96,8 @@ namespace fiskaltrust.Middleware.Queue
                     {
                         var message = $"Queue {_queueId} found cbReceiptReference \"{foundQueueItem.cbReceiptReference}\"";
                         _logger.LogWarning(message);
-                        await CreateActionJournalAsync(message, "", foundQueueItem.ftQueueItemId).ConfigureAwait(false);
-                        return (JsonConvert.DeserializeObject<ReceiptResponse>(foundQueueItem.response), null);
+                        await CreateActionJournalAsync(message, "", foundQueueItem.ftQueueItemId).ConfigureAwait(false);                        
+                        return JsonConvert.DeserializeObject<ReceiptResponse>(foundQueueItem.response);
                     }
                 }
                 catch (Exception x)
@@ -137,7 +115,7 @@ namespace fiskaltrust.Middleware.Queue
                 }
                 else
                 {
-                    return (null, null);
+                    return null;
                 }
             }
             var queueItem = new ftQueueItem
@@ -166,6 +144,7 @@ namespace fiskaltrust.Middleware.Queue
             await _configurationRepository.InsertOrUpdateQueueAsync(queue).ConfigureAwait(false);
 
             var actionjournals = new List<ftActionJournal>();
+            ftReceiptJournal receiptJournal = null;
             try
             {
                 queueItem.ftWorkMoment = DateTime.UtcNow;
@@ -190,17 +169,35 @@ namespace fiskaltrust.Middleware.Queue
                 _logger.LogTrace("SignProcessor.InternalSign: Updating Queue in database.");
                 await _configurationRepository.InsertOrUpdateQueueAsync(queue).ConfigureAwait(false);
                 _logger.LogTrace("SignProcessor.InternalSign: Adding ReceiptJournal to database.");
-                var receiptJournal = await CreateReceiptJournalAsync(queue, queueItem, data).ConfigureAwait(false);
-
-                return (receiptResponse, receiptJournal);
+                receiptJournal = await CreateReceiptJournalAsync(queue, queueItem, data).ConfigureAwait(false);
+                
+                return receiptResponse;
             }
             finally
             {
+                OnMessage(queueItem, receiptJournal);
                 foreach (var actionJournal in actionjournals)
                 {
                     await _actionJournalRepository.InsertAsync(actionJournal).ConfigureAwait(false);
                 }
             }
+        }
+
+        private void OnMessage(ftQueueItem queueItem, ftReceiptJournal receiptJournal)
+        {
+            try
+            {
+                _onMessage?.Invoke(JsonConvert.SerializeObject(new ReceiptProcessedMessage
+                {
+                    QueueItem = queueItem,
+                    ReceiptJournal = receiptJournal
+                }));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while executing the OnMessage event. This is most likely caused by an exception in another component.");
+            }
+
         }
 
         private async Task<ftQueueItem> GetExistingQueueItemOrNullAsync(ReceiptRequest data)
