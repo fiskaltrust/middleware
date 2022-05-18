@@ -30,8 +30,8 @@ public class InMemorySCU : IMESSCD
         {
             FCDC = Guid.NewGuid().ToString()
         });
-    public Task RegisterCashWithdrawalAsync(RegisterCashWithdrawalRequest registerCashDepositRequest) =>
-        Task.FromResult(0);
+    public Task RegisterCashWithdrawalAsync(RegisterCashWithdrawalRequest registerCashWithdrawalRequest) =>
+        Task.CompletedTask;
 
     public Task<RegisterInvoiceResponse> RegisterInvoiceAsync(RegisterInvoiceRequest registerInvoiceRequest)
     {
@@ -48,5 +48,5 @@ public class InMemorySCU : IMESSCD
             TcrCode = $"{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}",
         });
 
-    public Task UnregisterTcrAsync(UnregisterTcrRequest registerTCRRequest) => Task.CompletedTask;
+    public Task UnregisterTcrAsync(UnregisterTcrRequest unregisterTCRRequest) => Task.CompletedTask;
 }

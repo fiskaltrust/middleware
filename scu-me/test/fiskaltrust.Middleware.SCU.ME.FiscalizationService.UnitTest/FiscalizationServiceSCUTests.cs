@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Net;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -204,7 +206,8 @@ namespace fiskaltrust.Middleware.SCU.ME.FiscalizationService.UnitTest
                 PosOperatorName = _faker.Random.String2(10),
                 PosOperatorTown = _faker.Random.String2(10),
                 TIN = _faker.Random.String(8, '0', '9'),
-                VatNumber = _faker.Random.String(10, '0', '9')
+                VatNumber = _faker.Random.String(10, '0', '9'),
+                Sandbox = true
             });
         }
 

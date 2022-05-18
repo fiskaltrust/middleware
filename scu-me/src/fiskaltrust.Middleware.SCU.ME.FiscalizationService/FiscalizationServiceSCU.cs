@@ -62,23 +62,23 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
         };
     }
 
-    public async Task RegisterCashWithdrawalAsync(RegisterCashWithdrawalRequest registerCashDepositRequest)
+    public async Task RegisterCashWithdrawalAsync(RegisterCashWithdrawalRequest registerCashWithdrawalRequest)
     {
-        var sendDateTime = registerCashDepositRequest.SubsequentDeliveryType.HasValue ? DateTime.Now : registerCashDepositRequest.Moment;
+        var sendDateTime = registerCashWithdrawalRequest.SubsequentDeliveryType.HasValue ? DateTime.Now : registerCashWithdrawalRequest.Moment;
         var request = new SoapFiscalizationService.RegisterCashDepositRequest
         {
             Header = new SoapFiscalizationService.RegisterCashDepositRequestHeaderType
             {
                 SendDateTime = sendDateTime,
-                UUID = registerCashDepositRequest.RequestId.ToString()
+                UUID = registerCashWithdrawalRequest.RequestId.ToString()
             },
             CashDeposit = new SoapFiscalizationService.CashDepositType
             {
-                CashAmt = registerCashDepositRequest.Amount + 0.00m,
-                ChangeDateTime = registerCashDepositRequest.Moment,
+                CashAmt = registerCashWithdrawalRequest.Amount + 0.00m,
+                ChangeDateTime = registerCashWithdrawalRequest.Moment,
                 IssuerTIN = _configuration.TIN,
                 Operation = SoapFiscalizationService.CashDepositOperationSType.WITHDRAW,
-                TCRCode = registerCashDepositRequest.TcrCode
+                TCRCode = registerCashWithdrawalRequest.TcrCode
             }
         };
 
@@ -304,7 +304,7 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
         };
     }
 
-    public async Task UnregisterTcrAsync(UnregisterTcrRequest registerTCRRequest)
+    public async Task UnregisterTcrAsync(UnregisterTcrRequest unregisterTCRRequest)
     {
         var sendDateTime = DateTime.Now;
         var request = new SoapFiscalizationService.RegisterTCRRequest
@@ -312,30 +312,28 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
             Header = new SoapFiscalizationService.RegisterTCRRequestHeaderType
             {
                 SendDateTime = sendDateTime,
-                UUID = registerTCRRequest.RequestId.ToString()
+                UUID = unregisterTCRRequest.RequestId.ToString()
             },
             TCR = new SoapFiscalizationService.TCRType
             {
-                BusinUnitCode = registerTCRRequest.BusinessUnitCode,
+                BusinUnitCode = unregisterTCRRequest.BusinessUnitCode,
                 IssuerTIN = _configuration.TIN,
-                MaintainerCode = registerTCRRequest.TcrSoftwareMaintainerCode,
-                SoftCode = registerTCRRequest.TcrSoftwareCode,
-                TCRIntID = registerTCRRequest.InternalTcrIdentifier,
-                TypeSpecified = registerTCRRequest.TcrType is not null,
+                MaintainerCode = unregisterTCRRequest.TcrSoftwareMaintainerCode,
+                SoftCode = unregisterTCRRequest.TcrSoftwareCode,
+                TCRIntID = unregisterTCRRequest.InternalTcrIdentifier,
+                TypeSpecified = unregisterTCRRequest.TcrType is not null,
                 ValidFromSpecified = false,
                 ValidTo = sendDateTime,
                 ValidToSpecified = true
             },
         };
 
-        if (registerTCRRequest.TcrType is not null)
+        if (unregisterTCRRequest.TcrType is not null)
         {
-            request.TCR.Type = (SoapFiscalizationService.TCRSType) registerTCRRequest.TcrType;
+            request.TCR.Type = (SoapFiscalizationService.TCRSType) unregisterTCRRequest.TcrType;
         }
 
         _ = await _fiscalizationServiceClient.registerTCRAsync(request);
-
-        return;
     }
 
     public void Dispose()

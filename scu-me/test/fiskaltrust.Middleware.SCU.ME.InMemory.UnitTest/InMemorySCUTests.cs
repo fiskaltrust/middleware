@@ -41,7 +41,7 @@ namespace fiskaltrust.Middleware.SCU.ME.InMemory.UnitTest
         {
             IMESSCD meSSCD = CreateSCU();
 
-            var request = new RegisterTcrRequest
+            var request = new UnregisterTcrRequest
             {
                 BusinessUnitCode = _faker.Random.String2(10),
                 InternalTcrIdentifier = _faker.Random.String2(10),
@@ -86,7 +86,7 @@ namespace fiskaltrust.Middleware.SCU.ME.InMemory.UnitTest
                 TcrCode = $"{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}"
             };
 
-            _ = await meSSCD.RegisterCashWithdrawalAsync(request);
+            await meSSCD.RegisterCashWithdrawalAsync(request);
         }
 
         [Fact]
