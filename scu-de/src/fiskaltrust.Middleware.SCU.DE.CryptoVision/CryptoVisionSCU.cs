@@ -530,7 +530,7 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision
 
                     await UpdateTimeAsync(_proxy);
 
-                    (var result, var startTransactionResult) = await _proxy.SeStartTransactionAsync(request.ClientId, Convert.FromBase64String(request.ProcessDataBase64 ?? string.Empty), request.ProcessType, request.QueueItemId.ToByteArray());
+                    (var result, var startTransactionResult) = await _proxy.SeStartTransactionAsync(request.ClientId, Convert.FromBase64String(request.ProcessDataBase64 ?? string.Empty), request.ProcessType);
                     result.ThrowIfError();
 
                     var logTimeStamp = startTransactionResult.LogUnixTime.ToDateTime();
@@ -621,7 +621,7 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision
                     }
 
                     await UpdateTimeAsync(_proxy);
-                    (var result, var finishTransactionResult) = await _proxy.SeFinishTransactionAsync(request.ClientId, (UInt32) request.TransactionNumber, Convert.FromBase64String(request.ProcessDataBase64 ?? string.Empty), request.ProcessType, request.QueueItemId.ToByteArray());
+                    (var result, var finishTransactionResult) = await _proxy.SeFinishTransactionAsync(request.ClientId, (UInt32) request.TransactionNumber, Convert.FromBase64String(request.ProcessDataBase64 ?? string.Empty), request.ProcessType);
                     if (result == SeResult.ErrorNoTransaction)
                     {
                         throw new CryptoVisionException($"The transaction with the number {request.TransactionNumber} is either not started or has been finished already.");

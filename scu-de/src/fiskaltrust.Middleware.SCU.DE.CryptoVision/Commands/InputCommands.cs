@@ -6,10 +6,10 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision.Models.Commands
 {
     public static class InputCommands
     {
-        public static TseCommand CreateStartTransactionTseCommand(string clientId, byte[] processData, string processType, byte[] additionalData = null) => new TseCommand(TseCommandCodeEnum.StartTransaction, 0x0000, new TseStringParameter(clientId), new TseByteArrayParameter(processData), new TseStringParameter(processType), new TseByteArrayParameter(additionalData));
+        public static TseCommand CreateStartTransactionTseCommand(string clientId, byte[] processData, string processType) => new TseCommand(TseCommandCodeEnum.StartTransaction, 0x0000, new TseStringParameter(clientId), new TseByteArrayParameter(processData), new TseStringParameter(processType), new TseByteArrayParameter(null));
 
         public static TseCommand CreateUpdateTransactionTseCommand(string clientId, uint transactionNumber, byte[] processData, string processType) => new TseCommand(TseCommandCodeEnum.UpdateTransaction, 0x0000, new TseByteArrayParameter(transactionNumber.ToByteArray()), new TseStringParameter(clientId), new TseByteArrayParameter(processData), new TseStringParameter(processType));
         
-        public static TseCommand CreateFinishTransactionTseCommand(string clientId, uint transactionNumber, byte[] processData, string processType, byte[] additionalData = null) => new TseCommand(TseCommandCodeEnum.FinishTransaction, 0x0000, new TseByteArrayParameter(transactionNumber.ToByteArray()), new TseStringParameter(clientId), new TseByteArrayParameter(processData), new TseStringParameter(processType), new TseByteArrayParameter(additionalData));
+        public static TseCommand CreateFinishTransactionTseCommand(string clientId, uint transactionNumber, byte[] processData, string processType) => new TseCommand(TseCommandCodeEnum.FinishTransaction, 0x0000, new TseByteArrayParameter(transactionNumber.ToByteArray()), new TseStringParameter(clientId), new TseByteArrayParameter(processData), new TseStringParameter(processType), new TseByteArrayParameter(null));
     }
 }
