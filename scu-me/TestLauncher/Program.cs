@@ -47,7 +47,7 @@ namespace TestLauncher
                 { "PosOperatorCountry", "ME" },
                 { "PosOperatorName", "Hotel007" },
                 { "PosOperatorTown", "Beachtown" },
-                { "TIN", "55223377" },
+                { "TIN", "03102955" },
                 { "VatNumber", "1234567890" },
                 { "Sandbox", "true" }
             };
