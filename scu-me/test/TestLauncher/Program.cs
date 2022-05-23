@@ -14,6 +14,8 @@ namespace TestLauncher
     {
         private static readonly string cashBoxId = "";
         private static readonly string accessToken = "";
+        private static readonly string certificatePath = "";
+        private static readonly string certificatePassword = "";
         public static async Task Main()
         {
             var cashBoxConfiguration = await HelipadHelper.GetConfigurationAsync(cashBoxId, accessToken).ConfigureAwait(false);
@@ -39,7 +41,7 @@ namespace TestLauncher
 
         private static Dictionary<string, object> CreateScuConfig()
         {
-            var certificate = new X509Certificate2("", "", X509KeyStorageFlags.Exportable);
+            var certificate = new X509Certificate2(certificatePath, certificatePassword, X509KeyStorageFlags.Exportable);
             return new Dictionary<string, object>
             {
                 { "Certificate",  Convert.ToBase64String(certificate.Export(X509ContentType.Pfx)) },

@@ -24,7 +24,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.SCU.
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Manual", "Manual", "{2F539BD1-F168-476E-B675-C8E102854AE7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fiskaltrust.Middleware.SCU.ME.TestLauncher", "TestLauncher\fiskaltrust.Middleware.SCU.ME.TestLauncher.csproj", "{A60CC543-DC1C-4432-B360-A91DB2B87AD6}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fiskaltrust.Middleware.SCU.ME.TestLauncher", "test\TestLauncher\fiskaltrust.Middleware.SCU.ME.TestLauncher.csproj", "{A60CC543-DC1C-4432-B360-A91DB2B87AD6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
