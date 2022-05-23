@@ -33,8 +33,10 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
                 QueueId = _activeQueueId,
                 IsSandbox = _configuration.TryGetValue("sandbox", out var sandbox) && bool.TryParse(sandbox.ToString(), out var sandboxBool) && sandboxBool,
                 ServiceFolder = _configuration.TryGetValue("servicefolder", out var val) ? val.ToString() : GetServiceFolder(),
-                Configuration = _configuration
+                Configuration = _configuration,
+                OnMessage = _configuration.TryGetValue("OnMessage", out var onMessage) ? (Action<string>) onMessage : null
             };
+
             services.AddSingleton(middlewareConfiguration);
             services.AddScoped<ICryptoHelper, CryptoHelper>();
             services.AddScoped<SignProcessor>();
