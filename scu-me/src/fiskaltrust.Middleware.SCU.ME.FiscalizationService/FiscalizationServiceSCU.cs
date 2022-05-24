@@ -54,12 +54,20 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
             }
         };
 
-        var response = await _fiscalizationServiceClient.registerCashDepositAsync(request);
-
-        return new RegisterCashDepositResponse
+        try
         {
-            FCDC = response.RegisterCashDepositResponse.FCDC
-        };
+            var response = await _fiscalizationServiceClient.registerCashDepositAsync(request);
+
+            return new RegisterCashDepositResponse
+            {
+                FCDC = response.RegisterCashDepositResponse.FCDC
+            };
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Error sending request");
+            throw;
+        }
     }
 
     public async Task RegisterCashWithdrawalAsync(RegisterCashWithdrawalRequest registerCashWithdrawalRequest)
@@ -82,7 +90,15 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
             }
         };
 
-        _ = await _fiscalizationServiceClient.registerCashDepositAsync(request);
+        try
+        {
+            _ = await _fiscalizationServiceClient.registerCashDepositAsync(request);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Error sending request");
+            throw;
+        }
     }
 
     public async Task<RegisterInvoiceResponse> RegisterInvoiceAsync(RegisterInvoiceRequest registerInvoiceRequest)
@@ -256,14 +272,21 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
             },
             Invoice = invoice
         };
-
-        var response = await _fiscalizationServiceClient.registerInvoiceAsync(request);
-
-        return new RegisterInvoiceResponse
+        try
         {
-            FIC = response.RegisterInvoiceResponse.FIC,
-            IIC = iic
-        };
+            var response = await _fiscalizationServiceClient.registerInvoiceAsync(request);
+
+            return new RegisterInvoiceResponse
+            {
+                FIC = response.RegisterInvoiceResponse.FIC,
+                IIC = iic
+            };
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Error sending request");
+            throw;
+        }
     }
 
     public async Task<RegisterTcrResponse> RegisterTcrAsync(RegisterTcrRequest registerTCRRequest)
@@ -295,13 +318,20 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
             request.TCR.Type = (SoapFiscalizationService.TCRSType) registerTCRRequest.TcrType;
         }
 
-
-        var response = await _fiscalizationServiceClient.registerTCRAsync(request);
-        _logger.LogInformation("Client registered!");
-        return new RegisterTcrResponse
+        try
         {
-            TcrCode = response.RegisterTCRResponse.TCRCode,
-        };
+            var response = await _fiscalizationServiceClient.registerTCRAsync(request);
+            _logger.LogInformation("Client registered!");
+            return new RegisterTcrResponse
+            {
+                TcrCode = response.RegisterTCRResponse.TCRCode,
+            };
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Error sending request");
+            throw;
+        }
     }
 
     public async Task UnregisterTcrAsync(UnregisterTcrRequest unregisterTCRRequest)
@@ -332,8 +362,15 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
         {
             request.TCR.Type = (SoapFiscalizationService.TCRSType) unregisterTCRRequest.TcrType;
         }
-
-        _ = await _fiscalizationServiceClient.registerTCRAsync(request);
+        try
+        {
+            _ = await _fiscalizationServiceClient.registerTCRAsync(request);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Error sending request");
+            throw;
+        }
     }
 
     public void Dispose()

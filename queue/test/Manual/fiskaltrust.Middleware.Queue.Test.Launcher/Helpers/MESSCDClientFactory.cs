@@ -21,7 +21,7 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher.Helpers
             switch (configuration.UrlType)
             {
                 case "grpc":
-                    return GrpcMESSCDFactory.CreateSSCDAsync(new GrpcClientOptions { Url = new Uri(configuration.Url), RetryPolicyOptions = RetryPolicyOptions.Default }).Result;
+                    return GrpcMESSCDFactory.CreateSSCDAsync(new GrpcClientOptions { Url = new Uri(configuration.Url) }).Result;
                 case "rest":
                     var url = configuration.Url.Replace("rest://", "http://");
                     return HttpMESSCDFactory.CreateSSCDAsync(new ClientOptions { Url = new Uri(url), RetryPolicyOptions = RetryPolicyOptions.Default }).Result;

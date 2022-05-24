@@ -12,30 +12,42 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Models
             get;
             set;
         }
+
         [DataMember]
         public string IssuerTin
         {
             get;
             set;
         }
+
         [DataMember]
         public string BusinessUnitCode
         {
             get;
             set;
         }
+
         [DataMember]
         public string SoftwareCode
         {
             get;
             set;
         }
+
+        [DataMember]
+        public string MaintainerCode
+        {
+            get;
+            set;
+        }
+
         [DataMember]
         public string TcrIntId
         {
             get;
             set;
         }
+
         [DataMember]
         public DateTime? ValidFrom
         {

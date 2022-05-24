@@ -64,19 +64,47 @@ namespace fiskaltrust.Middleware.SCU.ME.FiscalizationService.Helpers
 
         private static void FormatAttributes(IEnumerable<XAttribute> attributes)
         {
+            var formats = new Dictionary<string, (bool, List<string>)>
+            {
+                { "MM/yyyy", (false, new List<string>
+                    {
+                        "TaxPeriod"
+                    })
+                },
+                { "yyyy-MM-dd", (false, new List<string>
+                    {
+                        "PayDeadline",
+                        "VD",
+                        "Start",
+                        "End",
+                        "ValidFrom",
+                        "ValidTo",
+                        "D",
+                    })
+                },
+                { @"yyyy-MM-dd\THH:mm:ss\Z", (true, new List<string>
+                    {
+                        "IssueDateTime",
+                        "ChangeDateTime",
+                        "SendDateTime",
+                        "IssueDateTime",
+                    })
+                },
+            };
+
             foreach (var attribute in attributes)
             {
-                try
+                foreach(var format in formats)
                 {
-                    attribute.SetValue(DateTime.ParseExact(attribute.Value, "O", System.Globalization.CultureInfo.CurrentCulture).ToUniversalTime().ToString(@"yyyy-MM-dd\THH:mm:ss\Z"));
-                }
-                catch
-                {
-                    try
+                    if(format.Value.Item2.Contains(attribute.Name.LocalName))
                     {
-                        attribute.SetValue(DateTime.ParseExact(attribute.Value, @"yyyy-MM-dd\THH:mm:ss.ffffffzzz", System.Globalization.CultureInfo.CurrentCulture).ToUniversalTime().ToString(@"yyyy-MM-dd\THH:mm:ss\Z"));
+                        var parsed = DateTime.Parse(attribute.Value, System.Globalization.CultureInfo.InvariantCulture);
+                        if(format.Value.Item1)
+                        {
+                            parsed = parsed.ToUniversalTime();
+                        }
+                        attribute.SetValue(parsed.ToString(format.Key));
                     }
-                    catch { }
                 }
             }
         }

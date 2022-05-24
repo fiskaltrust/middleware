@@ -32,7 +32,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 {
                     BusinessUnitCode = enu.BusinessUnitCode,
                     TcrSoftwareCode = enu.SoftwareCode,
-                    TcrSoftwareMaintainerCode = enu.SoftwareCode,
+                    TcrSoftwareMaintainerCode = enu.MaintainerCode,
                     InternalTcrIdentifier = queueItem.ftQueueItemId.ToString(),
                     RequestId = Guid.NewGuid(),
 
@@ -51,6 +51,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                     BusinessUnitCode = enu.BusinessUnitCode,
                     IssuerTin = enu.IssuerTin,
                     SoftwareCode = enu.SoftwareCode,
+                    MaintainerCode = enu.MaintainerCode,
                     TcrCode = registerTCRResponse.TcrCode,
                     ValidFrom = enu.ValidFrom ?? DateTime.UtcNow
                 };

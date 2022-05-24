@@ -27,7 +27,7 @@ namespace TestLauncher
             var bootStrapper = new ScuBootstrapper
             {
                 Id = config.Id,
-                Configuration = config.Configuration        
+                Configuration = config.Configuration
             };
             bootStrapper.ConfigureServices(serviceCollection);
             var provider = serviceCollection.BuildServiceProvider();

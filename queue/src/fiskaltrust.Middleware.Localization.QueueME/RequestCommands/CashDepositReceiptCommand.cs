@@ -39,7 +39,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                     Moment = request.cbReceiptMoment,
                     RequestId = queueItem.ftQueueItemId,
                     SubsequentDeliveryType = null,
-                    TcrCode = scu.TcrCode
+                    TcrCode = scu.TcrCode,
                 };
 
                 var registerCashDepositResponse = await client.RegisterCashDepositAsync(registerCashWithdrawalRequest).ConfigureAwait(false);
@@ -55,7 +55,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                     }
                 };
             }
-            catch (Exception ex) 
+            catch (Exception ex)
             {
                 var t = ex.GetType().Name;
                 if (ex.GetType().Name == ENDPOINTNOTFOUND)

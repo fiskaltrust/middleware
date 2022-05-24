@@ -42,7 +42,7 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
             var config = cashBoxConfiguration.ftQueues[0];
 
             config.Configuration.Add("cashboxid", cashBoxConfiguration.ftCashBoxId);
-            config.Configuration.Add("accesstoken", "");
+            config.Configuration.Add("accesstoken", _accessToken);
             config.Configuration.Add("useoffline", false);
             config.Configuration.Add("sandbox", true);
             config.Configuration.Add("servicefolder", serviceFolder);

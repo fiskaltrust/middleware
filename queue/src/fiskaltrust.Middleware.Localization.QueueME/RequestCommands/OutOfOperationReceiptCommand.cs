@@ -39,6 +39,8 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                     RequestId = queueItem.ftQueueItemId,
                     BusinessUnitCode = scuME.BusinessUnitCode,
                     InternalTcrIdentifier = scuME.TcrIntId,
+                    TcrSoftwareCode = scuME.SoftwareCode,
+                    TcrSoftwareMaintainerCode = scuME.MaintainerCode,
                 };
                 await client.UnregisterTcrAsync(unregisterTCRRequest).ConfigureAwait(false);
                 scuME.ValidTo = DateTime.UtcNow;
