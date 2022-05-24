@@ -20,7 +20,6 @@ CREATE TABLE IF NOT EXISTS ftJournalFR
     ftQueueId            NVARCHAR(36) NOT NULL,
     TimeStamp            BIGINT NOT NULL
 );
-
 CREATE TABLE IF NOT EXISTS ftJournalDE
 (
     ftJournalDEId         NVARCHAR(36) PRIMARY KEY NOT NULL,
@@ -32,7 +31,21 @@ CREATE TABLE IF NOT EXISTS ftJournalDE
     ftQueueId             NVARCHAR(36) NOT NULL,
     TimeStamp             BIGINT NOT NULL
 );
-
+CREATE TABLE IF NOT EXISTS ftJournalME
+(
+    ftJournalMEId         NVARCHAR(36) PRIMARY KEY NOT NULL,
+    Number                BIGINT NOT NULL,
+    cbReference           NVARCHAR(2147483647) NULL,
+    ftInvoiceNumber       NVARCHAR(2147483647) NULL,
+    ftOrdinalNumber       BIGINT NOT NULL,
+    ftQueueItemId         NVARCHAR(36) NOT NULL,
+    ftQueueId             NVARCHAR(36) NOT NULL,
+    FCDC                  NVARCHAR(36) NULL,
+    FIC                   NVARCHAR(36) NULL,
+    IIC                   NVARCHAR(36) NULL,
+    JournalType           BIGINT NOT NULL,
+    TimeStamp             BIGINT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS ftActionJournal
 (
     ftActionJournalId     NVARCHAR(36) PRIMARY KEY NOT NULL,
@@ -46,7 +59,6 @@ CREATE TABLE IF NOT EXISTS ftActionJournal
     DataJson              NVARCHAR(2147483647) NULL,
     TimeStamp             BIGINT NOT NULL 
 );
-
 CREATE TABLE IF NOT EXISTS ftQueueItem
 (
     ftQueueItemId      NVARCHAR(36)  PRIMARY KEY NOT NULL,
@@ -67,8 +79,7 @@ CREATE TABLE IF NOT EXISTS ftQueueItem
     responseHash       NVARCHAR(2147483647) NULL,
     TimeStamp          BIGINT NOT NULL
 );
-
- CREATE TABLE IF NOT EXISTS ftReceiptJournal
+CREATE TABLE IF NOT EXISTS ftReceiptJournal
 (
     ftReceiptJournalId     NVARCHAR(36)          PRIMARY KEY NOT NULL,
     ftReceiptMoment        BIGINT                NOT NULL,
@@ -79,13 +90,11 @@ CREATE TABLE IF NOT EXISTS ftQueueItem
     ftReceiptHash          NVARCHAR(2147483647)  NULL,
     TimeStamp              BIGINT                NOT NULL                        
 );
-
 CREATE TABLE IF NOT EXISTS ftCashBox
 (
     ftCashBoxId    NVARCHAR(36) PRIMARY KEY    NOT NULL,
     TimeStamp      BIGINT                      NOT NULL                  
 );
-
 CREATE TABLE IF NOT EXISTS ftQueue
 (
     ftQueueId           NVARCHAR(36) PRIMARY KEY NOT NULL,
@@ -101,7 +110,6 @@ CREATE TABLE IF NOT EXISTS ftQueue
     Timeout             BIGINT DEFAULT 1500      NOT NULL,
     TimeStamp           BIGINT                   NOT NULL
 );
-
 CREATE TABLE IF NOT EXISTS ftQueueAT
 (
     ftQueueATId                           NVARCHAR(36)  PRIMARY KEY  NOT NULL,     
@@ -134,7 +142,6 @@ CREATE TABLE IF NOT EXISTS ftQueueAT
     ftCashTotalizer                       FLOAT                      NOT NULL,
     TimeStamp                             BIGINT                     NOT NULL
 );
-
 CREATE TABLE IF NOT EXISTS ftQueueDE
 (
     ftQueueDEId                  NVARCHAR(36) PRIMARY KEY  NOT NULL,
@@ -150,7 +157,6 @@ CREATE TABLE IF NOT EXISTS ftQueueDE
     UsedFailedQueueItemId        NVARCHAR(36)              NULL, 
     TimeStamp                    BIGINT                    NOT NULL
 );
-
 CREATE TABLE IF NOT EXISTS ftQueueFR
 (
     ftQueueFRId                 NVARCHAR(36) PRIMARY KEY NOT NULL,
@@ -288,7 +294,20 @@ CREATE TABLE IF NOT EXISTS ftQueueFR
     MessageMoment               BIGINT NULL,
     TimeStamp                   BIGINT NOT NULL
 );
-
+CREATE TABLE IF NOT EXISTS ftQueueME
+(
+    ftQueueMEId                  NVARCHAR(36) PRIMARY KEY  NOT NULL,
+    ftSignaturCreationUnitMEId   NVARCHAR(36)              NULL,
+    LastHash                     NVARCHAR(2147483647)      NULL,
+    SSCDFailCount                BIGINT                    NOT NULL,            
+    SSCDFailMoment               BIGINT                    NULL,                    
+    SSCDFailQueueItemId          NVARCHAR(36)              NULL, 
+    UsedFailedCount              BIGINT                    NOT NULL,           
+    UsedFailedMomentMin          BIGINT                    NULL,                    
+    UsedFailedMomentMax          BIGINT                    NULL,                    
+    UsedFailedQueueItemId        NVARCHAR(36)              NULL,
+    DailyClosingNumber           BIGINT                    NULL
+);
 CREATE TABLE IF NOT EXISTS ftSignaturCreationUnitAT
 (
     ftSignaturCreationUnitATId   NVARCHAR(36) PRIMARY KEY  NOT NULL,
@@ -299,14 +318,12 @@ CREATE TABLE IF NOT EXISTS ftSignaturCreationUnitAT
     Mode                         BIGINT                    NOT NULL,
     TimeStamp                    BIGINT                    NOT NULL
 );
-
 CREATE TABLE IF NOT EXISTS ftSignaturCreationUnitDE
 (
     ftSignaturCreationUnitDEId   NVARCHAR(36) PRIMARY KEY  NOT NULL,
     Url                          NVARCHAR(2147483647)      NULL,                        
     TimeStamp                    BIGINT                    NOT NULL
 );
-
 CREATE TABLE IF NOT EXISTS ftSignaturCreationUnitFR
 (
     ftSignaturCreationUnitFRId   NVARCHAR(36) PRIMARY KEY  NOT NULL,
@@ -315,4 +332,20 @@ CREATE TABLE IF NOT EXISTS ftSignaturCreationUnitFR
     CertificateBase64            NVARCHAR(2147483647)      NULL, 
     CertificateSerialNumber      NVARCHAR(2147483647)      NULL, 
     TimeStamp                    BIGINT                    NOT NULL
+);
+CREATE TABLE IF NOT EXISTS ftSignaturCreationUnitME
+(
+    ftSignaturCreationUnitMEId   NVARCHAR(36) PRIMARY KEY  NOT NULL,
+    Url                          NVARCHAR(2147483647)      NULL,    
+    TseInfoJson				     NVARCHAR(2147483647)      NULL,                     
+    TimeStamp                    BIGINT                    NOT NULL,
+    IssuerTin                    NVARCHAR(2147483647)      NULL,  
+    BusinessUnitCode             NVARCHAR(2147483647)      NULL,
+    TcrIntId                     NVARCHAR(2147483647)      NULL,
+    SoftwareCode                 NVARCHAR(2147483647)      NULL,
+    MaintainerCode               NVARCHAR(2147483647)      NULL,
+    ValidFrom                    BIGINT                    NULL,
+    ValidTo                      BIGINT                    NULL,
+    EnuType                      NVARCHAR(2147483647)      NULL,
+    TcrCode                      NVARCHAR(2147483647)      NULL
 );

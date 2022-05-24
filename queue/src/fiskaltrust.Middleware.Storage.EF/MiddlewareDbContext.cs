@@ -36,6 +36,8 @@ namespace fiskaltrust.Middleware.Storage.EF
 
         public DbSet<ftJournalFR> JournalFRList { get; set; }
 
+        public DbSet<ftJournalME> JournalMEList { get; set; }
+
         public DbSet<ftQueueItem> QueueItemList { get; set; }
 
         public DbSet<ftReceiptJournal> ReceiptJournalList { get; set; }

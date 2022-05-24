@@ -13,9 +13,11 @@
         public static string FtQueueAT = "ftQueueAT";
         public static string FtQueueDE = "ftQueueDE";
         public static string FtQueueFR = "ftQueueFR";
+        public static string FtQueueME = "ftQueueME";
         public static string FtSignaturCreationUnitAT = "ftSignaturCreationUnitAT";
         public static string FtSignaturCreationUnitDE = "ftSignaturCreationUnitDE";
         public static string FtSignaturCreationUnitFR = "ftSignaturCreationUnitFR";
+        public static string FtSignaturCreationUnitME = "ftSignaturCreationUnitME";
         public static string FailedFinishTransaction = "FailedFinishTransaction";
         public static string FailedStartTransaction = "FailedStartTransaction";
         public static string OpenTransaction = "OpenTransaction";

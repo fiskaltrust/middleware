@@ -9,10 +9,10 @@ namespace fiskaltrust.Middleware.Storage.Azure.AcceptanceTest
 {
     public class AzureConfigurationRepositoryTests : AbstractConfigurationRepositoryTests
     {
-        public override async Task<IReadOnlyConfigurationRepository> CreateReadOnlyRepository(IEnumerable<ftCashBox> cashBoxes = null, IEnumerable<ftQueue> queues = null, IEnumerable<ftQueueAT> queuesAT = null, IEnumerable<ftQueueDE> queuesDE = null, IEnumerable<ftQueueFR> queuesFR = null, IEnumerable<ftSignaturCreationUnitAT> signatureCreateUnitsAT = null, IEnumerable<ftSignaturCreationUnitDE> signatureCreateUnitsDE = null, IEnumerable<ftSignaturCreationUnitFR> signatureCreateUnitsFR = null)
-            => await CreateRepository(cashBoxes, queues, queuesAT, queuesDE, queuesFR, signatureCreateUnitsAT, signatureCreateUnitsDE, signatureCreateUnitsFR);
+        public override async Task<IReadOnlyConfigurationRepository> CreateReadOnlyRepository(IEnumerable<ftCashBox> cashBoxes = null, IEnumerable<ftQueue> queues = null, IEnumerable<ftQueueAT> queuesAT = null, IEnumerable<ftQueueDE> queuesDE = null, IEnumerable<ftQueueFR> queuesFR = null, IEnumerable<ftQueueME> queuesME = null, IEnumerable<ftSignaturCreationUnitAT> signatureCreateUnitsAT = null, IEnumerable<ftSignaturCreationUnitDE> signatureCreateUnitsDE = null, IEnumerable<ftSignaturCreationUnitFR> signatureCreateUnitsFR = null, IEnumerable<ftSignaturCreationUnitME> signatureCreateUnitsME = null)
+            => await CreateRepository(cashBoxes, queues, queuesAT, queuesDE, queuesFR, queuesME, signatureCreateUnitsAT, signatureCreateUnitsDE, signatureCreateUnitsFR, signatureCreateUnitsME);
 
-        public override async Task<IConfigurationRepository> CreateRepository(IEnumerable<ftCashBox> cashBoxes = null, IEnumerable<ftQueue> queues = null, IEnumerable<ftQueueAT> queuesAT = null, IEnumerable<ftQueueDE> queuesDE = null, IEnumerable<ftQueueFR> queuesFR = null, IEnumerable<ftSignaturCreationUnitAT> signatureCreateUnitsAT = null, IEnumerable<ftSignaturCreationUnitDE> signatureCreateUnitsDE = null, IEnumerable<ftSignaturCreationUnitFR> signatureCreateUnitsFR = null)
+        public override async Task<IConfigurationRepository> CreateRepository(IEnumerable<ftCashBox> cashBoxes = null, IEnumerable<ftQueue> queues = null, IEnumerable<ftQueueAT> queuesAT = null, IEnumerable<ftQueueDE> queuesDE = null, IEnumerable<ftQueueFR> queuesFR = null, IEnumerable<ftQueueME> queuesME = null, IEnumerable<ftSignaturCreationUnitAT> signatureCreateUnitsAT = null, IEnumerable<ftSignaturCreationUnitDE> signatureCreateUnitsDE = null, IEnumerable<ftSignaturCreationUnitFR> signatureCreateUnitsFR = null, IEnumerable<ftSignaturCreationUnitME> signatureCreateUnitsME = null)
         {
             var azureConfigurationRepository = new AzureConfigurationRepository(Guid.NewGuid(), Constants.AzureStorageConnectionString);
 
@@ -36,6 +36,11 @@ namespace fiskaltrust.Middleware.Storage.Azure.AcceptanceTest
                 await azureConfigurationRepository.InsertOrUpdateQueueDEAsync(entry);
             }
 
+            foreach (var entry in queuesME ?? new List<ftQueueME>())
+            {
+                await azureConfigurationRepository.InsertOrUpdateQueueMEAsync(entry);
+            }
+
             foreach (var entry in queuesFR ?? new List<ftQueueFR>())
             {
                 await azureConfigurationRepository.InsertOrUpdateQueueFRAsync(entry);
@@ -54,6 +59,11 @@ namespace fiskaltrust.Middleware.Storage.Azure.AcceptanceTest
             foreach (var entry in signatureCreateUnitsFR ?? new List<ftSignaturCreationUnitFR>())
             {
                 await azureConfigurationRepository.InsertOrUpdateSignaturCreationUnitFRAsync(entry);
+            }
+
+            foreach (var entry in signatureCreateUnitsME ?? new List<ftSignaturCreationUnitME>())
+            {
+                await azureConfigurationRepository.InsertOrUpdateSignaturCreationUnitMEAsync(entry);
             }
 
             return azureConfigurationRepository;

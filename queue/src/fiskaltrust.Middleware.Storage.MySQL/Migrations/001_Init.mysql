@@ -20,7 +20,6 @@ CREATE TABLE IF NOT EXISTS ftJournalFR
     ftQueueId            NVARCHAR(36) NOT NULL,
     TimeStamp            BIGINT NOT NULL
 );
-
 CREATE TABLE IF NOT EXISTS ftJournalDE
 (
     ftJournalDEId         NVARCHAR(36) PRIMARY KEY NOT NULL,
@@ -32,7 +31,21 @@ CREATE TABLE IF NOT EXISTS ftJournalDE
     ftQueueId             NVARCHAR(36) NOT NULL,
     TimeStamp             BIGINT NOT NULL
 );
-
+CREATE TABLE IF NOT EXISTS ftJournalME
+(
+    ftJournalMEId         NVARCHAR(36) PRIMARY KEY NOT NULL,
+    Number                BIGINT NOT NULL,
+    cbReference           LONGTEXT NULL,
+    ftInvoiceNumber       LONGTEXT NULL,
+    ftOrdinalNumber       BIGINT NOT NULL,
+    ftQueueItemId         NVARCHAR(36) NOT NULL,
+    ftQueueId             NVARCHAR(36) NOT NULL,
+    FCDC                  NVARCHAR(36) NULL,
+    FIC                   NVARCHAR(36) NULL,
+    IIC                   NVARCHAR(36) NULL,
+    JournalType           BIGINT NOT NULL,
+    TimeStamp             BIGINT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS ftActionJournal
 (
     ftActionJournalId     NVARCHAR(36) PRIMARY KEY NOT NULL,
@@ -289,6 +302,21 @@ CREATE TABLE IF NOT EXISTS ftQueueFR
     TimeStamp                   BIGINT                   NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS ftQueueME
+(
+    ftQueueMEId                  NVARCHAR(36) PRIMARY KEY  NOT NULL,
+    ftSignaturCreationUnitDEId   NVARCHAR(36)              NULL,
+    LastHash                     LONGTEXT				   NULL,
+    SSCDFailCount                BIGINT                    NOT NULL,            
+    SSCDFailMoment               BIGINT                    NULL,                    
+    SSCDFailQueueItemId          NVARCHAR(36)              NULL, 
+    UsedFailedCount              BIGINT                    NOT NULL,           
+    UsedFailedMomentMin          BIGINT                    NULL,                    
+    UsedFailedMomentMax          BIGINT                    NULL,                    
+    UsedFailedQueueItemId        NVARCHAR(36)              NULL, 
+    DailyClosingNumber           BIGINT                    NULL
+);
+
 CREATE TABLE IF NOT EXISTS ftSignaturCreationUnitAT
 (
     ftSignaturCreationUnitATId   NVARCHAR(36) PRIMARY KEY  NOT NULL,
@@ -306,6 +334,23 @@ CREATE TABLE IF NOT EXISTS ftSignaturCreationUnitDE
     Url                          LONGTEXT				   NULL,  
     TseInfoJson				     LONGTEXT				   NULL,                     
     TimeStamp                    BIGINT                    NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS ftSignaturCreationUnitME
+(
+    ftSignaturCreationUnitDEId   NVARCHAR(36) PRIMARY KEY  NOT NULL,
+    Url                          LONGTEXT				   NULL,  
+    TseInfoJson				     LONGTEXT				   NULL,                     
+    TimeStamp                    BIGINT                    NOT NULL,
+    IssuerTin                    LONGTEXT                  NULL,  
+    BusinessUnitCode             LONGTEXT                  NULL,
+    TcrIntId                     LONGTEXT                  NULL,
+    SoftwareCode                 LONGTEXT                  NULL,
+    MaintainerCode               LONGTEXT                  NULL,
+    ValidFrom                    BIGINT                    NULL,
+    ValidTo                      BIGINT                    NULL,
+    EnuType                      LONGTEXT                  NULL,
+    TcrCode                      LONGTEXT                  NULL
 );
 
 CREATE TABLE IF NOT EXISTS ftSignaturCreationUnitFR

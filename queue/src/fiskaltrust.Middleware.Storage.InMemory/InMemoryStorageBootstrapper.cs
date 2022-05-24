@@ -11,6 +11,7 @@ using fiskaltrust.Middleware.Storage.InMemory.Repositories.AT;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories.DE;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories.DE.MasterData;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories.FR;
+using fiskaltrust.Middleware.Storage.InMemory.Repositories.ME;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 using Microsoft.Extensions.DependencyInjection;
@@ -71,10 +72,16 @@ namespace fiskaltrust.Middleware.Storage.InMemory
             services.AddSingleton<IReadOnlyJournalFRRepository, InMemoryJournalFRRepository>();
             services.AddSingleton<IMiddlewareRepository<ftJournalFR>, InMemoryJournalFRRepository>();
 
+            services.AddSingleton<IMiddlewareJournalMERepository, InMemoryJournalMERepository>();
+            services.AddSingleton<IJournalMERepository, InMemoryJournalMERepository>();
+            services.AddSingleton<IReadOnlyJournalMERepository, InMemoryJournalMERepository>();
+            services.AddSingleton<IMiddlewareRepository<ftJournalME>, InMemoryJournalMERepository>();
+
             services.AddSingleton<IReceiptJournalRepository, InMemoryReceiptJournalRepository>();
             services.AddSingleton<IReadOnlyReceiptJournalRepository, InMemoryReceiptJournalRepository>();
             services.AddSingleton<IMiddlewareRepository<ftReceiptJournal>, InMemoryReceiptJournalRepository>();
 
+            services.AddSingleton<IMiddlewareActionJournalRepository, InMemoryActionJournalRepository>();
             services.AddSingleton<IActionJournalRepository, InMemoryActionJournalRepository>();
             services.AddSingleton<IReadOnlyActionJournalRepository, InMemoryActionJournalRepository>();
             services.AddSingleton<IMiddlewareRepository<ftActionJournal>, InMemoryActionJournalRepository>();
