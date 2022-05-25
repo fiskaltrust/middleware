@@ -29,6 +29,7 @@ namespace fiskaltrust.Middleware.Queue
         private readonly int _receiptRequestMode = 0;
         private readonly SignatureFactory _signatureFactory;
         private readonly Action<string> _onMessage;
+        private readonly bool _addEReceiptLink;
 
         public SignProcessor(
             ILogger<SignProcessor> logger,
@@ -52,6 +53,7 @@ namespace fiskaltrust.Middleware.Queue
             _isSandbox = configuration.IsSandbox;
             _receiptRequestMode = configuration.ReceiptRequestMode;
             _onMessage = configuration.OnMessage;
+            _addEReceiptLink = configuration.AddEReceiptLink ?? false;
             _signatureFactory = new SignatureFactory();
         }
 
@@ -157,6 +159,11 @@ namespace fiskaltrust.Middleware.Queue
                 if (_isSandbox)
                 {
                     receiptResponse.ftSignatures = receiptResponse.ftSignatures.Concat(_signatureFactory.CreateSandboxSignature(_queueId));
+                }
+
+                if(_addEReceiptLink)
+                {
+                    receiptResponse.ftSignatures = receiptResponse.ftSignatures.Concat(_signatureFactory.CreateEReceiptLinkSignature(_isSandbox, _queueId, queueItem.ftQueueItemId));
                 }
 
                 queueItem.response = JsonConvert.SerializeObject(receiptResponse);
