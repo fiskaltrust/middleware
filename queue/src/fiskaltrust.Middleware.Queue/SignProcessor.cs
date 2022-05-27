@@ -53,7 +53,7 @@ namespace fiskaltrust.Middleware.Queue
             _isSandbox = configuration.IsSandbox;
             _receiptRequestMode = configuration.ReceiptRequestMode;
             _onMessage = configuration.OnMessage;
-            _addEReceiptLink = configuration.AddEReceiptLink ?? false;
+            _addEReceiptLink = configuration.AddEReceiptLink;
             _signatureFactory = new SignatureFactory();
         }
 

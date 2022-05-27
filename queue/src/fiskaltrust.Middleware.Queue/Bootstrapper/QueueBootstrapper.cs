@@ -5,6 +5,7 @@ using System.Linq;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts;
 using fiskaltrust.Middleware.Contracts.Models;
+using fiskaltrust.Middleware.Queue.Extensions;
 using fiskaltrust.Middleware.Queue.Helpers;
 using fiskaltrust.Middleware.QueueSynchronizer;
 using fiskaltrust.storage.V0;
@@ -27,15 +28,7 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
 
         public void ConfigureServices(IServiceCollection services)
         {
-            var middlewareConfiguration = new MiddlewareConfiguration
-            {
-                CashBoxId = GetQueueCashbox(_activeQueueId, _configuration),
-                QueueId = _activeQueueId,
-                IsSandbox = _configuration.TryGetValue("sandbox", out var sandbox) && bool.TryParse(sandbox.ToString(), out var sandboxBool) && sandboxBool,
-                ServiceFolder = _configuration.TryGetValue("servicefolder", out var val) ? val.ToString() : GetServiceFolder(),
-                Configuration = _configuration,
-                OnMessage = _configuration.TryGetValue("OnMessage", out var onMessage) ? (Action<string>) onMessage : null
-            };
+            var middlewareConfiguration = GetMiddlewareConfiguration();
 
             services.AddSingleton(middlewareConfiguration);
             services.AddScoped<ICryptoHelper, CryptoHelper>();
@@ -46,6 +39,24 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
 
             var businessLogicFactoryBoostrapper = LocalizedQueueBootStrapperFactory.GetBootstrapperForLocalizedQueue(_activeQueueId, _configuration);
             businessLogicFactoryBoostrapper.ConfigureServices(services);
+        }
+
+        private MiddlewareConfiguration GetMiddlewareConfiguration()
+        {
+            var middlewareConfiguration = new MiddlewareConfiguration
+            {
+                CashBoxId = GetQueueCashbox(_activeQueueId, _configuration),
+                QueueId = _activeQueueId,
+                IsSandbox = _configuration.GetBoolOrDefault("sandbox"),
+                ServiceFolder = _configuration.TryGetValue("servicefolder", out var val) ? val.ToString() : GetServiceFolder(),
+                Configuration = _configuration,
+                OnMessage = _configuration.TryGetValue("OnMessage", out var onMessage) ? (Action<string>) onMessage : null,
+                AddEReceiptLink = _configuration.GetBoolOrDefault("AddEReceiptLink"),
+                ReceiptRequestMode = _configuration.GetIntOrDefault("ReceiptRequestMode", default)
+            };
+            middlewareConfiguration.JournalChunkSize = _configuration.GetIntOrDefault("JournalChunkSize", middlewareConfiguration.JournalChunkSize);
+            
+            return middlewareConfiguration;
         }
 
         private static Guid GetQueueCashbox(Guid queueId, Dictionary<string, object> configuration)

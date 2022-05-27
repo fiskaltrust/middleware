@@ -98,7 +98,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             try
             {
                 var exportService = new TarFileExportService();
-                (var filePath, var success, var checkSum) = await exportService.ProcessTarFileExportAsync(_deSSCDProvider.Instance, queueDE.ftQueueDEId, queueDE.CashBoxIdentification, erase, _middlewareConfiguration.ServiceFolder, _middlewareConfiguration.TarFileChunkSize).ConfigureAwait(false);
+                (var filePath, var success, var checkSum) = await exportService.ProcessTarFileExportAsync(_deSSCDProvider.Instance, queueDE.ftQueueDEId, queueDE.CashBoxIdentification, erase, _middlewareConfiguration.ServiceFolder, _queueDEConfiguration.TarFileChunkSize).ConfigureAwait(false);
                 if (success)
                 {
                     var journalDE = new ftJournalDE

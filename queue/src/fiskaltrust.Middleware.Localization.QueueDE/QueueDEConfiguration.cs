@@ -17,6 +17,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
         
         public bool EnableTarFileExport { get; set; } = true;
 
+        public int TarFileChunkSize { get; set; } = 1024 * 1024;
+
         public static QueueDEConfiguration FromMiddlewareConfiguration(MiddlewareConfiguration middlewareConfiguration) => JsonConvert.DeserializeObject<QueueDEConfiguration>(JsonConvert.SerializeObject(middlewareConfiguration.Configuration));
     }
 }
