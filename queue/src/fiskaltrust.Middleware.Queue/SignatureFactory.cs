@@ -20,7 +20,7 @@ namespace fiskaltrust.Middleware.Queue
                 Caption = "Electronic receipt",
                 Data = isSandbox ? $"https://receipts-sandbox.fiskaltrust.cloud/v0/{queueId}/{queueItemId}" : $"https://receipts.fiskaltrust.cloud/v0/{queueId}/{queueItemId}",
                 ftSignatureFormat = (long) SignaturItem.Formats.QR_Code,
-                ftSignatureType = (long) SignaturItem.Types.Information
+                ftSignatureType = 0x4445000000000001
             };
     }
 }
