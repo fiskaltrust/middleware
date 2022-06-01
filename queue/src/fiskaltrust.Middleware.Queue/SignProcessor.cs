@@ -28,7 +28,7 @@ namespace fiskaltrust.Middleware.Queue
         private readonly bool _isSandbox;
         private readonly int _receiptRequestMode = 0;
         private readonly SignatureFactory _signatureFactory;
-        private readonly Action<string> _onMessage;
+        //private readonly Action<string> _onMessage;
 
         public SignProcessor(
             ILogger<SignProcessor> logger,
@@ -51,7 +51,7 @@ namespace fiskaltrust.Middleware.Queue
             _cashBoxId = configuration.CashBoxId;
             _isSandbox = configuration.IsSandbox;
             _receiptRequestMode = configuration.ReceiptRequestMode;
-            _onMessage = configuration.OnMessage;
+            //_onMessage = configuration.OnMessage;
             _signatureFactory = new SignatureFactory();
         }
 
@@ -183,22 +183,24 @@ namespace fiskaltrust.Middleware.Queue
             }
         }
 
+#pragma warning disable IDE0060 // Remove unused parameter
         private void OnMessage(ftQueueItem queueItem, ftReceiptJournal receiptJournal)
         {
-            try
-            {
-                _onMessage?.Invoke(JsonConvert.SerializeObject(new ReceiptProcessedMessage
-                {
-                    QueueItem = queueItem,
-                    ReceiptJournal = receiptJournal
-                }));
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "An error occurred while executing the OnMessage event. This is most likely caused by an exception in another component.");
-            }
-
+            // Temporary uncomment this, as it's throwing an exception when used after 5 minutes due to the runtime service object being disposed
+            //try
+            //{
+            //    _onMessage?.Invoke(JsonConvert.SerializeObject(new ReceiptProcessedMessage
+            //    {
+            //        QueueItem = queueItem,
+            //        ReceiptJournal = receiptJournal
+            //    }));
+            //}
+            //catch (Exception ex)
+            //{
+            //    _logger.LogError(ex, "An error occurred while executing the OnMessage event. This is most likely caused by an exception in another component.");
+            //}
         }
+#pragma warning restore IDE0060 // Remove unused parameter
 
         private async Task<ftQueueItem> GetExistingQueueItemOrNullAsync(ReceiptRequest data)
         {
