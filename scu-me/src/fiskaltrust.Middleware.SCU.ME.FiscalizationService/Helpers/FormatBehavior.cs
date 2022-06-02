@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.ServiceModel;
 using System.ServiceModel.Channels;
@@ -11,15 +12,15 @@ using System.Xml.Linq;
 
 namespace fiskaltrust.Middleware.SCU.ME.FiscalizationService.Helpers
 {
-    public class DateTimeBehaviour : IEndpointBehavior
+    public class FormatBehaviour : IEndpointBehavior
     {
         public void AddBindingParameters(ServiceEndpoint endpoint, BindingParameterCollection bindingParameters) { }
-        public void ApplyClientBehavior(ServiceEndpoint endpoint, ClientRuntime clientRuntime) => clientRuntime.ClientMessageInspectors.Add(new DateTimeFormatter());
+        public void ApplyClientBehavior(ServiceEndpoint endpoint, ClientRuntime clientRuntime) => clientRuntime.ClientMessageInspectors.Add(new MeFormatter());
 
         public void ApplyDispatchBehavior(ServiceEndpoint endpoint, EndpointDispatcher endpointDispatcher) { }
         public void Validate(ServiceEndpoint endpoint) { }
 
-        public class DateTimeFormatter : IClientMessageInspector
+        public class MeFormatter : IClientMessageInspector
         {
             public void AfterReceiveReply(ref Message reply, object correlationState) { }
 
@@ -40,7 +41,6 @@ namespace fiskaltrust.Middleware.SCU.ME.FiscalizationService.Helpers
                 xmlRequest.WriteTo(xw);
                 xw.Flush();
                 xw.Close();
-
                 ms.Position = 0;
                 var xr = XmlReader.Create(ms);
 
@@ -91,15 +91,47 @@ namespace fiskaltrust.Middleware.SCU.ME.FiscalizationService.Helpers
                     })
                 },
             };
+            var formatdecs = new Dictionary<string, List<string>>
+            {
+                { "{0:0.00}",  new List<string>
+                    {
+                        "Amt",
+                        "PA",
+                        "PB",
+                        "UPA",
+                        "UPB",
+                        "VA",
+                        "VR",
+                        "TotPriceWoVAT",
+                        "GoodsExAmt",
+                        "TaxFreeAmt",
+                        "TotVATAmt",
+                        "VATRate",
+                        "PriceBefVAT",
+                        "TotPrice",
+                    }
+                },
+            };
+
 
             foreach (var attribute in attributes)
             {
-                foreach(var format in formats)
+                foreach ( var formatdec in formatdecs)
                 {
-                    if(format.Value.Item2.Contains(attribute.Name.LocalName))
+                    if (formatdec.Value.Contains(attribute.Name.LocalName))
                     {
-                        var parsed = DateTime.Parse(attribute.Value, System.Globalization.CultureInfo.InvariantCulture);
-                        if(format.Value.Item1)
+                        var decVal = decimal.Parse(attribute.Value, CultureInfo.GetCultureInfo("en-EN"));
+                        decVal = Math.Round(decVal,2);
+                        var parsed = string.Format(CultureInfo.GetCultureInfo("en-EN"), formatdec.Key, decVal);
+                        attribute.SetValue(parsed);
+                    }
+                }
+                foreach (var format in formats)
+                {
+                    if (format.Value.Item2.Contains(attribute.Name.LocalName))
+                    {
+                        var parsed = DateTime.Parse(attribute.Value, CultureInfo.InvariantCulture);
+                        if (format.Value.Item1)
                         {
                             parsed = parsed.ToUniversalTime();
                         }

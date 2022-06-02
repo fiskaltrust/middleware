@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1.me;
 using fiskaltrust.Middleware.SCU.ME.Common.Configuration;
@@ -28,7 +30,7 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
                 : "https://efi.tax.gov.me/fs-v1/FiscalizationService.wsdl"
         );
 
-        _fiscalizationServiceClient.Endpoint.EndpointBehaviors.Add(new DateTimeBehaviour());
+        _fiscalizationServiceClient.Endpoint.EndpointBehaviors.Add(new FormatBehaviour());
         _fiscalizationServiceClient.Endpoint.EndpointBehaviors.Add(new SigningBehaviour(_configuration.Certificate));
     }
 
@@ -36,7 +38,8 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
 
     public async Task<RegisterCashDepositResponse> RegisterCashDepositAsync(RegisterCashDepositRequest registerCashDepositRequest)
     {
-        var sendDateTime = registerCashDepositRequest.SubsequentDeliveryType.HasValue ? DateTime.Now : registerCashDepositRequest.Moment;
+        //var sendDateTime = registerCashDepositRequest.SubsequentDeliveryType.HasValue ? DateTime.Now : registerCashDepositRequest.Moment;
+        var sendDateTime = DateTime.Now;
         var request = new SoapFiscalizationService.RegisterCashDepositRequest
         {
             Header = new SoapFiscalizationService.RegisterCashDepositRequestHeaderType
@@ -47,7 +50,7 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
             CashDeposit = new SoapFiscalizationService.CashDepositType
             {
                 CashAmt = registerCashDepositRequest.Amount + 0.00m,
-                ChangeDateTime = registerCashDepositRequest.Moment,
+                ChangeDateTime = sendDateTime,// registerCashDepositRequest.Moment,
                 IssuerTIN = _configuration.TIN,
                 Operation = SoapFiscalizationService.CashDepositOperationSType.INITIAL,
                 TCRCode = registerCashDepositRequest.TcrCode
@@ -103,93 +106,123 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
 
     public async Task<RegisterInvoiceResponse> RegisterInvoiceAsync(RegisterInvoiceRequest registerInvoiceRequest)
     {
-        var sendDateTime = registerInvoiceRequest.SubsequentDeliveryType.HasValue ? DateTime.Now : registerInvoiceRequest.Moment;
+        try
+        {
+            //var sendDateTime = registerInvoiceRequest.SubsequentDeliveryType.HasValue ? DateTime.Now : registerInvoiceRequest.Moment;
+            var sendDateTime = DateTime.Now;
+            registerInvoiceRequest.Moment = sendDateTime;
 
         var iic = SigningHelper.CreateIIC(_configuration, registerInvoiceRequest);
-
-        var invoice = new SoapFiscalizationService.InvoiceType
-        {
-            Approvals = null,
-            BadDebtInv = null,
-            BankAccNum = null,
-            BusinUnitCode = registerInvoiceRequest.BusinessUnitCode,
-            Fees = null,
-            GoodsExAmtSpecified = registerInvoiceRequest.InvoiceDetails.ExportedGoodsAmount is not null,
-            IICRefs = null,
-            IICSignature = null,
-            IIC = iic,
-            InvNum = registerInvoiceRequest.RequestId.ToString(),
-            InvOrdNum = (int) registerInvoiceRequest.InvoiceDetails.YearlyOrdinalNumber,
-            InvType = (SoapFiscalizationService.InvoiceTSType) registerInvoiceRequest.InvoiceDetails.InvoiceType,
-            IsIssuerInVAT = registerInvoiceRequest.IsIssuerInVATSystem,
-            IsReverseChargeSpecified = default,
-            IssueDateTime = registerInvoiceRequest.Moment,
-            Items = registerInvoiceRequest.InvoiceDetails.ItemDetails.Select(i =>
+        var iicSig = BitConverter.ToString(SigningHelper.CreateIicSignature(_configuration, registerInvoiceRequest)).Replace("-", string.Empty);
+            var invoice = new SoapFiscalizationService.InvoiceType
             {
-                var invoiceItem = new SoapFiscalizationService.InvoiceItemType
+                BankAccNum = null,
+                BusinUnitCode = registerInvoiceRequest.BusinessUnitCode,
+                /*
+                //GoodsExAmtSpecified = registerInvoiceRequest.InvoiceDetails.ExportedGoodsAmount is not null,
+                /*IICRefs = new SoapFiscalizationService.IICRefType[]
                 {
-                    C = i.Code,
-                    EXSpecified = i.ExemptFromVatReason.HasValue,
-                    INSpecified = i.IsInvestment.HasValue,
-                    N = i.Name,
-                    PA = default,
-                    PB = default,
-                    Q = (double) i.Quantity,
-                    R = default,
-                    RSpecified = default,
-                    RR = default,
-                    RRSpecified = default,
-                    U = i.Unit,
-                    UPA = default,
-                    UPB = default,
-                    VASpecified = i.VatAmount.HasValue,
-                    VD = default,
-                    VDSpecified = default,
-                    VRSpecified = i.VatRate.HasValue,
-                    VSN = null
-                };
+                    new SoapFiscalizationService.IICRefType()
+                    {
+                        IIC = iic
+                    }
+                },*/
+                IICSignature = iicSig,
+                IIC = iic,
+                InvNum = string.Join("/", registerInvoiceRequest.BusinessUnitCode, registerInvoiceRequest.InvoiceDetails.YearlyOrdinalNumber, sendDateTime.Year, registerInvoiceRequest.TcrCode),
+                InvOrdNum = (int) registerInvoiceRequest.InvoiceDetails.YearlyOrdinalNumber,
+                InvType = SoapFiscalizationService.InvoiceTSType.INVOICE,
+                IsIssuerInVAT = registerInvoiceRequest.IsIssuerInVATSystem,
+                IsReverseChargeSpecified = default,
+                IssueDateTime = sendDateTime,
+                Items = registerInvoiceRequest.InvoiceDetails.ItemDetails.Select(i =>
+                {
+                    var invoiceItem = new SoapFiscalizationService.InvoiceItemType
+                    {
+                        C = i.Code,
+                        EXSpecified = i.ExemptFromVatReason.HasValue,
+                        INSpecified = i.IsInvestment.HasValue,
+                        N = i.Name,
+                        PA = i.GrossAmount,
+                        PB = i.NetAmount,
+                        Q = (double) i.Quantity,
+                        R = i.DiscountPercentage ?? 0,
+                        RSpecified = i.DiscountPercentage.HasValue,
+                        RR = i.IsDiscountReducingBasePrice ?? false,
+                        RRSpecified = i.IsDiscountReducingBasePrice.HasValue,
+                        U = i.Unit,
+                        UPA = i.GrossUnitPrice,
+                        UPB = i.NetUnitPrice,
+                        VASpecified = i.VatAmount.HasValue,
+                        VRSpecified = i.VatRate.HasValue,
+                    };
 
-                if (i.ExemptFromVatReason.HasValue)
-                {
-                    invoiceItem.EX = (SoapFiscalizationService.ExemptFromVATSType) i.ExemptFromVatReason.Value;
-                }
+                    if (i.Vouchers != null && i.Vouchers.Any())
+                    {
+                        var voucher = i.Vouchers.FirstOrDefault();
+                        if (voucher != null)
+                        {
+                            invoiceItem.VD = voucher.ExpirationDate;
+                            invoiceItem.VDSpecified = true;
+                        }
+                        invoiceItem.VSN = string.Join(Environment.NewLine, i.Vouchers.Select(i => i.SerialNumbers));
+                    }
 
-                if (i.IsInvestment.HasValue)
-                {
-                    invoiceItem.IN = i.IsInvestment.Value;
-                }
+                    if (i.ExemptFromVatReason.HasValue)
+                    {
+                        invoiceItem.EX = (SoapFiscalizationService.ExemptFromVATSType) i.ExemptFromVatReason.Value;
+                    }
 
-                if (i.VatAmount.HasValue)
-                {
-                    invoiceItem.VA = i.VatAmount.Value;
-                }
+                    if (i.IsInvestment.HasValue)
+                    {
+                        invoiceItem.IN = i.IsInvestment.Value;
+                    }
 
-                if (i.VatRate.HasValue)
+                    if (i.VatAmount.HasValue)
+                    {
+                        invoiceItem.VA = i.VatAmount.Value;
+                    }
+
+                    if (i.VatRate.HasValue)
+                    {
+                        invoiceItem.VR = i.VatRate.Value;
+                    }
+                    return invoiceItem;
+                }).ToArray(),
+                MarkUpAmt = default,
+                MarkUpAmtSpecified = default,
+                Note = null,
+                OperatorCode = registerInvoiceRequest.OperatorCode,
+                ParagonBlockNum = null,
+                PayDeadlineSpecified = registerInvoiceRequest.InvoiceDetails.PaymentDeadline is not null,
+                PayMethods = registerInvoiceRequest.InvoiceDetails.PaymentDetails.Select(p => new SoapFiscalizationService.PayMethodType
                 {
-                    invoiceItem.VR = i.VatRate.Value;
-                }
-                return invoiceItem;
-            }).ToArray(),
-            MarkUpAmt = default,
-            MarkUpAmtSpecified = default,
-            Note = null,
-            OperatorCode = registerInvoiceRequest.OperatorCode,
-            ParagonBlockNum = null,
-            PayDeadlineSpecified = registerInvoiceRequest.InvoiceDetails.PaymentDeadline is not null,
-            PayMethods = registerInvoiceRequest.InvoiceDetails.PaymentDetails.Select(p => new SoapFiscalizationService.PayMethodType
-            {
-                AdvIIC = null,
-                Amt = p.Amount,
-                BankAcc = null,
-                CompCard = p.CompanyCardNumber,
-                Type = (SoapFiscalizationService.PaymentMethodTypeSType) p.Type,
-                Vouchers = p.VoucherNumbers?.Select(v => new SoapFiscalizationService.VoucherType { Num = v })?.ToArray() ?? new SoapFiscalizationService.VoucherType[0]
-            }).ToArray(),
-            SameTaxes = null,
-            SoftCode = registerInvoiceRequest.SoftwareCode,
-            Seller = null,
-            SupplyDateOrPeriod = null,
-            TaxFreeAmtSpecified = registerInvoiceRequest.InvoiceDetails.TaxFreeAmount.HasValue,
+                    AdvIIC = null,
+                    Amt = p.Amount,
+                    BankAcc = null,
+                    CompCard = p.CompanyCardNumber,
+                    Type = (SoapFiscalizationService.PaymentMethodTypeSType) p.Type,
+                    //Vouchers = p.VoucherNumbers?.Select(v => new SoapFiscalizationService.VoucherType { Num = v })?.ToArray() ?? new SoapFiscalizationService.VoucherType[0]
+                }).ToArray(),
+                SameTaxes = registerInvoiceRequest.InvoiceDetails.ItemDetails.Where(x => x.VatRate.HasValue).GroupBy(g => g.VatRate).Select(s => new SoapFiscalizationService.SameTaxType
+                {
+                    VATRate = s.First().VatRate ?? 0,
+                    VATRateSpecified = true,
+                    NumOfItems = (int) s.Sum(x => x.Quantity),
+                    ExemptFromVATSpecified = false,
+                    PriceBefVAT = s.Sum(x => x.NetUnitPrice),
+                    VATAmtSpecified = false
+                }).ToArray(),
+                SoftCode = registerInvoiceRequest.SoftwareCode,
+                Seller = new SoapFiscalizationService.SellerType() {
+                                IDType = SoapFiscalizationService.IDTypeSType.TIN,
+                                IDNum = _configuration.TIN,
+                                Name = _configuration.PosOperatorName,
+                                Address = _configuration.PosOperatorAddress,
+                                Town = _configuration.PosOperatorTown,
+                                CountrySpecified = false
+                },
+            TaxFreeAmtSpecified = registerInvoiceRequest.InvoiceDetails.TaxFreeAmount.HasValue && registerInvoiceRequest.InvoiceDetails.TaxFreeAmount.Value > 0,
             TaxPeriod = default, //registerInvoiceRequest.InvoiceDetails.TaxPeriod,
             TCRCode = registerInvoiceRequest.TcrCode,
             TotPrice = registerInvoiceRequest.InvoiceDetails.GrossAmount,
@@ -197,7 +230,7 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
             TotPriceToPaySpecified = default,
             TotPriceWoVAT = registerInvoiceRequest.InvoiceDetails.NetAmount,
             TotVATAmtSpecified = registerInvoiceRequest.InvoiceDetails.TotalVatAmount.HasValue,
-            TypeOfInv = (SoapFiscalizationService.InvoiceSType) registerInvoiceRequest.InvoiceDetails.InvoiceType,
+            TypeOfInv = (SoapFiscalizationService.InvoiceSType) Enum.Parse(typeof(SoapFiscalizationService.InvoiceSType), registerInvoiceRequest.InvoiceDetails.InvoiceType.ToString().ToUpper()),
             TypeOfSelfIssSpecified = registerInvoiceRequest.InvoiceDetails.SelfIssuedInvoiceType.HasValue,
         };
 
@@ -230,7 +263,7 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
         }
 
         if (registerInvoiceRequest.InvoiceDetails.Currency is not null)
-        {
+            {
             invoice.Currency = new SoapFiscalizationService.CurrencyType
             {
                 Code = (SoapFiscalizationService.CurrencyCodeSType) Enum.Parse(typeof(SoapFiscalizationService.CurrencyCodeSType), registerInvoiceRequest.InvoiceDetails.Currency.CurrencyCode),
@@ -272,8 +305,7 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
             },
             Invoice = invoice
         };
-        try
-        {
+
             var response = await _fiscalizationServiceClient.registerInvoiceAsync(request);
 
             return new RegisterInvoiceResponse
@@ -288,7 +320,6 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
             throw;
         }
     }
-
     public async Task<RegisterTcrResponse> RegisterTcrAsync(RegisterTcrRequest registerTCRRequest)
     {
         var sendDateTime = DateTime.Now;

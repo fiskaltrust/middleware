@@ -64,8 +64,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Extensions
 
         public static bool IsNonCashLocalCurrency(this PayItem item)
         {
-            var payItemCase = item.ftPayItemCase & 0xFFFF;
-            return _nonCashPayItemCases.Any(x => x == payItemCase);
+            return !item.IsCashLocalCurrency();
         }
     }
 }

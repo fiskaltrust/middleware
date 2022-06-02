@@ -74,23 +74,22 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Extensions
         public static InvoiceItem GetInvoiceItem(this ChargeItem chargeItem)
         {
             var invoiceItemRequest = string.IsNullOrEmpty(chargeItem.ftChargeItemCaseData) ? new InvoiceItemRequest () : JsonConvert.DeserializeObject<InvoiceItemRequest>(chargeItem.ftChargeItemCaseData);
-            var invoiceItem = new InvoiceItem()
+            var invoiceItem = new InvoiceItem
             {
                 Name = chargeItem.Description,
                 Code = chargeItem.ProductBarcode,
                 IsInvestment = !chargeItem.IsNoInvestment(),
                 Unit = chargeItem.Unit,
                 Quantity = chargeItem.Quantity,
-                NetUnitPrice = chargeItem.UnitPrice.HasValue ? (decimal) (chargeItem.UnitPrice * (chargeItem.GetVatRate() / 100)) : 0,
+                NetUnitPrice = chargeItem.UnitPrice.HasValue ? (decimal) (chargeItem.UnitPrice / (1 + (chargeItem.GetVatRate() / 100))) : 0,
                 GrossUnitPrice = chargeItem.UnitPrice.HasValue ? (decimal) chargeItem.UnitPrice : 0,
                 DiscountPercentage = invoiceItemRequest.DiscountPercentage,
                 IsDiscountReducingBasePrice = !chargeItem.DiscountIsNotReducingBasePrice(),
                 VatRate = chargeItem.GetVatRate(),
-                ExemptFromVatReason = string.IsNullOrEmpty(invoiceItemRequest.ExemptFromVatReason) ? null : (ExemptFromVatReasons)Enum.Parse(typeof(ExemptFromVatReasons), invoiceItemRequest.ExemptFromVatReason),
+                ExemptFromVatReason = string.IsNullOrEmpty(invoiceItemRequest.ExemptFromVatReason) ? null : (ExemptFromVatReasons) Enum.Parse(typeof(ExemptFromVatReasons), invoiceItemRequest.ExemptFromVatReason),
                 GrossAmount = chargeItem.Amount,
+                NetAmount = chargeItem.Amount / (1 + (chargeItem.GetVatRate() / 100))
             };
-            invoiceItem.NetAmount = invoiceItem.NetUnitPrice  * invoiceItem.Quantity;
-            invoiceItem.GrossAmount = (invoiceItem.GrossUnitPrice - invoiceItem.NetUnitPrice) * invoiceItem.Quantity;
             if (chargeItem.IsVoucher())
             {
                 var voucher = new VoucherItem()

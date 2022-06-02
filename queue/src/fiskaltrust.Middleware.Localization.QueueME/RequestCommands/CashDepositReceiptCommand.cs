@@ -33,7 +33,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 {
                     throw new ENUNotRegisteredException();
                 }
-                var registerCashWithdrawalRequest = new RegisterCashDepositRequest()
+                var registerCashDepositRequest = new RegisterCashDepositRequest()
                 {
                     Amount = request.cbReceiptAmount ?? request.cbChargeItems.Sum(x => x.Amount),
                     Moment = request.cbReceiptMoment,
@@ -42,7 +42,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                     TcrCode = scu.TcrCode,
                 };
 
-                var registerCashDepositResponse = await client.RegisterCashDepositAsync(registerCashWithdrawalRequest).ConfigureAwait(false);
+                var registerCashDepositResponse = await client.RegisterCashDepositAsync(registerCashDepositRequest).ConfigureAwait(false);
                 await InsertJournalME(queue, request, queueItem, registerCashDepositResponse).ConfigureAwait(false);
                 var receiptResponse = CreateReceiptResponse(request, queueItem);
                 var actionJournalEntry =  CreateActionJournal(queue, request.ftReceiptCase, queueItem);
