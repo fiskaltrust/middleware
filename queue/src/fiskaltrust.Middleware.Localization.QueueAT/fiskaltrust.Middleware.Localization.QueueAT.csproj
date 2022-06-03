@@ -1,3 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="3.1.4" />
+        <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+    </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\fiskaltrust.Middleware.Contracts\fiskaltrust.Middleware.Contracts.csproj" />
+    </ItemGroup>
 </Project>
