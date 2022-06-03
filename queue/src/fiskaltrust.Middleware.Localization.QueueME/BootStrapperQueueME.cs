@@ -6,7 +6,6 @@ using fiskaltrust.Middleware.Localization.QueueME.RequestCommands.Factories;
 using fiskaltrust.Middleware.Localization.QueueME.Services;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.ifPOS.v1.me;
-using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueueME
 {
@@ -16,7 +15,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME
         {
             var _ = services
                 .AddScoped<IMarketSpecificSignProcessor, SignProcessorME>()
-                .AddScoped<IJournalProcessor, JournalProcessorME>()
+                .AddScoped<JournalProcessorME>()
                 .AddSingleton(sp => QueueMEConfiguration.FromMiddlewareConfiguration(sp.GetRequiredService<MiddlewareConfiguration>()))
                 .AddSingleton<IMESSCDProvider>(sp =>
                 {
