@@ -6,10 +6,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
     public class QueueATConfiguration
     {
         public bool FlagOptionalSignatures { get; set; } = true;
-        
-        [JsonProperty("scu-timeout-ms")]
-        public long? ScuTimeoutMs { get; set; }
-        
+                
         [JsonProperty("scu-max-retries")]
         public int? ScuMaxRetries { get; set; } 
 
