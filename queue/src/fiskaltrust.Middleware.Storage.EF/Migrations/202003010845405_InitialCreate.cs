@@ -433,7 +433,7 @@ namespace fiskaltrust.Middleware.Storage.EF.Migrations
             DropTable("dbo.ftSignaturCreationUnitFR");
             DropTable("dbo.ftSignaturCreationUnitDE");
             DropTable("dbo.ftSignaturCreationUnitAT");
-            DropTable("dbo.ftSignaturCreationUnitmE");
+            DropTable("dbo.ftSignaturCreationUnitME");
             DropTable("dbo.ftReceiptJournal");
             DropTable("dbo.ftQueue");
             DropTable("dbo.ftQueueItem");
