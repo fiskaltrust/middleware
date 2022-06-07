@@ -79,25 +79,6 @@ namespace fiskaltrust.Middleware.Storage.EF.Migrations
                 .PrimaryKey(t => t.ftJournalFRId, clustered: false);
 
             CreateTable(
-                "dbo.ftJournalME",
-                c => new
-                {
-                    ftJournalMEId = c.Guid(nullable: false),
-                    cbReference = c.String(),
-                    ftInvoiceNumber = c.String(),
-                    ftOrdinalNumber = c.Int(),
-                    ftQueueItemId = c.Guid(nullable: false),
-                    ftQueueId = c.Guid(nullable: false),
-                    Number = c.Long(nullable: false),
-                    TimeStamp = c.Long(nullable: false),
-                    IIC = c.String(),
-                    FIC = c.String(),
-                    FCDC = c.String(),
-                    JournalType = c.Long(nullable: false)
-                })
-                .PrimaryKey(t => t.ftJournalMEId, clustered: false);
-
-            CreateTable(
                 "dbo.ftQueueAT",
                 c => new
                     {
@@ -294,24 +275,6 @@ namespace fiskaltrust.Middleware.Storage.EF.Migrations
                 .PrimaryKey(t => t.ftQueueFRId, clustered: false);
 
             CreateTable(
-                "dbo.ftQueueME",
-                c => new
-                {
-                    ftQueueMEId = c.Guid(nullable: false),
-                    ftSignaturCreationUnitMEId = c.Guid(),
-                    LastHash = c.String(),
-                    SSCDFailCount = c.Int(),
-                    SSCDFailMoment = c.Long(),
-                    SSCDFailQueueItemId = c.Guid(),
-                    UsedFailedCount = c.Int(),
-                    UsedFailedMomentMin = c.Long(nullable: false),
-                    UsedFailedMomentMax = c.Long(nullable: false),
-                    UsedFailedQueueItemId = c.Guid(),
-                    DailyClosingNumber = c.Int(),
-                })
-                .PrimaryKey(t => t.ftQueueMEId, clustered: false);
-
-            CreateTable(
                 "dbo.ftQueueItem",
                 c => new
                     {
@@ -405,27 +368,6 @@ namespace fiskaltrust.Middleware.Storage.EF.Migrations
                         TimeStamp = c.Long(nullable: false),
                     })
                 .PrimaryKey(t => t.ftSignaturCreationUnitFRId, clustered: false);
-
-            CreateTable(
-                "dbo.ftSignaturCreationUnitME",
-                c => new
-                {
-                    ftSignaturCreationUnitMEId = c.Guid(nullable: false),
-                    Url = c.String(),
-                    TimeStamp = c.Long(nullable: false),
-                    Mode = c.Int(),
-                    ModeConfigurationJson = c.String(),
-                    IssuerTin = c.String(),
-                    BusinessUnitCode = c.String(),
-                    TcrIntId = c.String(),
-                    SoftwareCode = c.String(),
-                    MaintainerCode = c.String(),
-                    ValidFrom = c.Long(),
-                    ValidTo = c.Long(),
-                    EnuType = c.String(),
-                    TcrCode = c.String(),
-                })
-                .PrimaryKey(t => t.ftSignaturCreationUnitMEId, clustered: false);
     }
         
         public override void Down()
@@ -433,18 +375,15 @@ namespace fiskaltrust.Middleware.Storage.EF.Migrations
             DropTable("dbo.ftSignaturCreationUnitFR");
             DropTable("dbo.ftSignaturCreationUnitDE");
             DropTable("dbo.ftSignaturCreationUnitAT");
-            DropTable("dbo.ftSignaturCreationUnitME");
             DropTable("dbo.ftReceiptJournal");
             DropTable("dbo.ftQueue");
             DropTable("dbo.ftQueueItem");
             DropTable("dbo.ftQueueFR");
             DropTable("dbo.ftQueueDE");
             DropTable("dbo.ftQueueAT");
-            DropTable("dbo.ftQueueME");
             DropTable("dbo.ftJournalFR");
             DropTable("dbo.ftJournalDE");
             DropTable("dbo.ftJournalAT");
-            DropTable("dbo.ftJournalME");
             DropTable("dbo.ftCashBox");
             DropTable("dbo.ftActionJournal");
         }

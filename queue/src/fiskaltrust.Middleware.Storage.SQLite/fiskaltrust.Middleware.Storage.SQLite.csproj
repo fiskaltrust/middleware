@@ -32,4 +32,10 @@
     </None>
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Migrations\008_QueueME.sqlite3">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
