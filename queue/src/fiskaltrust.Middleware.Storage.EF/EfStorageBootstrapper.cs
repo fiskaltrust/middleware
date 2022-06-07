@@ -123,7 +123,7 @@ namespace fiskaltrust.Middleware.Storage.Ef
             var schemaString = queueId.ToString("D");
             var contextMigrationsConfiguration = new DbMigrationsConfiguration<MiddlewareDbContext>
             {
-                AutomaticMigrationsEnabled = true,
+                AutomaticMigrationsEnabled = false,
                 TargetDatabase = new DbConnectionInfo(connectionString, "System.Data.SqlClient"),
                 MigrationsAssembly = typeof(MiddlewareDbContext).Assembly,
                 MigrationsNamespace = "fiskaltrust.Middleware.Storage.EF.Migrations"
