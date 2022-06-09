@@ -24,11 +24,15 @@ namespace fiskaltrust.Middleware.Storage.EF
 
         public DbSet<ftQueueFR> QueueFRList { get; set; }
 
+        public DbSet<ftQueueME> QueueMEList { get; set; }
+
         public DbSet<ftSignaturCreationUnitAT> SignatureCreationUnitATList { get; set; }
 
         public DbSet<ftSignaturCreationUnitDE> SignatureCreationUnitDEList { get; set; }
 
         public DbSet<ftSignaturCreationUnitFR> SignatureCreationUnitFRList { get; set; }
+
+        public DbSet<ftSignaturCreationUnitME> SignatureCreationUnitMEList { get; set; }
 
         public DbSet<ftJournalAT> JournalATList { get; set; }
 
@@ -98,6 +102,9 @@ namespace fiskaltrust.Middleware.Storage.EF
             modelBuilder.Entity<ftQueueFR>().ToTable(nameof(ftQueueFR));
             modelBuilder.Entity<ftQueueFR>().HasKey(x => x.ftQueueFRId, x => x.IsClustered(false));
 
+            modelBuilder.Entity<ftQueueME>().ToTable(nameof(ftQueueME));
+            modelBuilder.Entity<ftQueueME>().HasKey(x => x.ftQueueMEId, x => x.IsClustered(false));
+
             modelBuilder.Entity<ftSignaturCreationUnitAT>().ToTable(nameof(ftSignaturCreationUnitAT));
             modelBuilder.Entity<ftSignaturCreationUnitAT>().HasKey(x => x.ftSignaturCreationUnitATId, x => x.IsClustered(false));
 
@@ -107,6 +114,9 @@ namespace fiskaltrust.Middleware.Storage.EF
             modelBuilder.Entity<ftSignaturCreationUnitFR>().ToTable(nameof(ftSignaturCreationUnitFR));
             modelBuilder.Entity<ftSignaturCreationUnitFR>().HasKey(x => x.ftSignaturCreationUnitFRId, x => x.IsClustered(false));
 
+            modelBuilder.Entity<ftSignaturCreationUnitME>().ToTable(nameof(ftSignaturCreationUnitME));
+            modelBuilder.Entity<ftSignaturCreationUnitME>().HasKey(x => x.ftSignaturCreationUnitMEId, x => x.IsClustered(false));
+
             modelBuilder.Entity<ftJournalAT>().ToTable(nameof(ftJournalAT));
             modelBuilder.Entity<ftJournalAT>().HasKey(x => x.ftJournalATId, x => x.IsClustered(false));
 
@@ -115,6 +125,9 @@ namespace fiskaltrust.Middleware.Storage.EF
 
             modelBuilder.Entity<ftJournalFR>().ToTable(nameof(ftJournalFR));
             modelBuilder.Entity<ftJournalFR>().HasKey(x => x.ftJournalFRId, x => x.IsClustered(false));
+
+            modelBuilder.Entity<ftJournalME>().ToTable(nameof(ftJournalME));
+            modelBuilder.Entity<ftJournalME>().HasKey(x => x.ftJournalMEId, x => x.IsClustered(false));
 
             modelBuilder.Entity<ftQueueItem>().ToTable(nameof(ftQueueItem));
             modelBuilder.Entity<ftQueueItem>().HasKey(x => x.ftQueueItemId, x => x.IsClustered(false));

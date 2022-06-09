@@ -1204,6 +1204,59 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
 
                     b.ToTable("ftSignaturCreationUnitFR");
                 });
+
+            modelBuilder.Entity("fiskaltrust.storage.V0.ftSignaturCreationUnitME", b =>
+                {
+                    b.Property<Guid>("ftSignaturCreationUnitMEId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("BusinessUnitCode")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EnuType")
+                        .HasColumnType("text");
+
+                    b.Property<string>("IssuerTin")
+                        .HasColumnType("text");
+
+                    b.Property<string>("MaintainerCode")
+                        .HasColumnType("text");
+
+                    b.Property<int>("Mode")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ModeConfigurationJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SoftwareCode")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TcrCode")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TcrIntId")
+                        .HasColumnType("text");
+
+                    b.Property<long>("TimeStamp")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("TseInfoJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Url")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("ValidFrom")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("ValidTo")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("ftSignaturCreationUnitMEId");
+
+                    b.ToTable("ftSignaturCreationUnitME");
+                });
 #pragma warning restore 612, 618
         }
     }

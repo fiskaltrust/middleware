@@ -50,6 +50,31 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
                 {
                     table.PrimaryKey("PK_ftQueueME", x => x.ftQueueMEId);
                 });
+
+            migrationBuilder.CreateTable(
+                name: "ftSignaturCreationUnitME",
+                columns: table => new
+                {
+                    ftSignaturCreationUnitMEId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Url = table.Column<string>(type: "text", nullable: true),
+                    TimeStamp = table.Column<long>(type: "bigint", nullable: false),
+                    TseInfoJson = table.Column<string>(type: "text", nullable: true),
+                    Mode = table.Column<int>(type: "integer", nullable: false),
+                    ModeConfigurationJson = table.Column<string>(type: "text", nullable: true),
+                    IssuerTin = table.Column<string>(type: "text", nullable: true),
+                    BusinessUnitCode = table.Column<string>(type: "text", nullable: true),
+                    TcrIntId = table.Column<string>(type: "text", nullable: true),
+                    SoftwareCode = table.Column<string>(type: "text", nullable: true),
+                    MaintainerCode = table.Column<string>(type: "text", nullable: true),
+                    ValidFrom = table.Column<DateTime>(type: "timestamp without time zone", nullable: true),
+                    ValidTo = table.Column<DateTime>(type: "timestamp without time zone", nullable: true),
+                    EnuType = table.Column<string>(type: "text", nullable: true),
+                    TcrCode = table.Column<string>(type: "text", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ftSignaturCreationUnitME", x => x.ftSignaturCreationUnitMEId);
+                });
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
@@ -59,6 +84,9 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
 
             migrationBuilder.DropTable(
                 name: "ftQueueME");
+
+            migrationBuilder.DropTable(
+                name: "ftSignaturCreationUnitME");
         }
     }
 }

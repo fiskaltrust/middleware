@@ -52,6 +52,9 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL
             modelBuilder.Entity<ftSignaturCreationUnitFR>().ToTable(nameof(ftSignaturCreationUnitFR));
             modelBuilder.Entity<ftSignaturCreationUnitFR>().HasKey(x => x.ftSignaturCreationUnitFRId);
 
+            modelBuilder.Entity<ftSignaturCreationUnitME>().ToTable(nameof(ftSignaturCreationUnitME));
+            modelBuilder.Entity<ftSignaturCreationUnitME>().HasKey(x => x.ftSignaturCreationUnitMEId);
+
             modelBuilder.Entity<ftJournalAT>().ToTable(nameof(ftJournalAT));
             modelBuilder.Entity<ftJournalAT>().HasKey(x => x.ftJournalATId);
 
@@ -62,7 +65,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL
             modelBuilder.Entity<ftJournalFR>().HasKey(x => x.ftJournalFRId);
 
             modelBuilder.Entity<ftJournalME>().ToTable(nameof(ftJournalME));
-            modelBuilder.Entity < ftJournalME>().HasKey(x => x.ftJournalMEId);
+            modelBuilder.Entity<ftJournalME>().HasKey(x => x.ftJournalMEId);
             
             modelBuilder.Entity<ftQueueItem>().ToTable(nameof(ftQueueItem));
             modelBuilder.Entity<ftQueueItem>().HasKey(x => x.ftQueueItemId);
