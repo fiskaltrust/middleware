@@ -42,8 +42,8 @@ steps:
       $(WorkingDirectory)/src/**/*fiskaltrust*.exe
 
 - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
-  displayName: 'dotnet pack fiskaltrust.Middleware.SCU.ME.InMemory'
-  workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.ME.InMemory'
+  displayName: 'dotnet pack fiskaltrust.Middleware.SCU.ME.FiscalizationService'
+  workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.ME.FiscalizationService'
 
 - task: PublishBuildArtifacts@1
   displayName: 'Publish Artifact: drop'

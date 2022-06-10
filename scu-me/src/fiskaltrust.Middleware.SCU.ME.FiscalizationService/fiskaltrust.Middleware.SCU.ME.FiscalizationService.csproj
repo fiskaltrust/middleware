@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <Description>The fiskaltrust Middleware implementation of an in-memory demo SCU for Montenegro. Not intended for production usage.</Description>
+        <Description>The fiskaltrust Middleware implementation of the Fiscalization SCU for Montenegro.</Description>
         <TargetFrameworks>netstandard2.0;net461;net6</TargetFrameworks>
         <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);CopyProjectReferencesToPackage</TargetsForTfmSpecificBuildOutput>
     </PropertyGroup>
@@ -19,6 +19,11 @@
         <PackageReference Include="System.ServiceModel.Security" Version="4.4.*" />
     </ItemGroup>
 
+
+    <ItemGroup>
+        <ProjectReference Include="..\fiskaltrust.Middleware.SCU.ME.Common\fiskaltrust.Middleware.SCU.ME.Common.csproj" />
+    </ItemGroup>
+
     <Target DependsOnTargets="ResolveReferences" Name="CopyProjectReferencesToPackage">
         <ItemGroup>
             <BuildOutputInPackage Include="@(ReferenceCopyLocalPaths-&gt;WithMetadataValue('ReferenceSourceTarget', 'ProjectReference'))" />
@@ -31,8 +36,5 @@
         </Content>
     </ItemGroup>
 
-    <ItemGroup>
-      <ProjectReference Include="..\fiskaltrust.Middleware.SCU.ME.Common\fiskaltrust.Middleware.SCU.ME.Common.csproj" />
-    </ItemGroup>
 
 </Project>
