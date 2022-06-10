@@ -55,6 +55,14 @@ steps:
   displayName: 'Publish fiskaltrust.Middleware.SCU.ME.InMemory'
   workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.ME.InMemory'
 
+- powershell: |
+    $packageName = "fiskaltrust.Middleware.SCU.ME.FiscalizationService"
+    $version = (Select-Xml -Path ./Directory.Build.props -XPath 'Project/PropertyGroup/Version').Node.InnerText
+    dotnet publish --configuration $(buildConfiguration) -f net6 --output $(Build.ArtifactStagingDirectory)/raw/$packageName --no-build /p:DebugType=None /p:DebugSymbols=false
+    Compress-Archive -Path $(Build.ArtifactStagingDirectory)/raw/$packageName/* -DestinationPath $(Build.ArtifactStagingDirectory)/packages/$packageName.$version.zip
+  displayName: 'Publish fiskaltrust.Middleware.SCU.ME.FiscalizationService'
+  workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.ME.FiscalizationService'
+
 - task: PublishBuildArtifacts@1
   displayName: 'Publish Artifact: packages'
   inputs:
