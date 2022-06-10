@@ -32,7 +32,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\fiskaltrust.Middleware.SCU.ME.Common\fiskaltrust.Middleware.SCU.ME.Common.csproj" />
+      <ProjectReference Include="..\fiskaltrust.Middleware.SCU.ME.Common\fiskaltrust.Middleware.SCU.ME.Common.csproj" PrivateAssets="all" />
     </ItemGroup>
 
 
