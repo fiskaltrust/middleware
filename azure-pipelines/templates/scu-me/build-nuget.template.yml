@@ -42,6 +42,10 @@ steps:
       $(WorkingDirectory)/src/**/*fiskaltrust*.exe
 
 - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
+  displayName: 'dotnet pack fiskaltrust.Middleware.SCU.ME.InMemory'
+  workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.ME.InMemory'
+
+- script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
   displayName: 'dotnet pack fiskaltrust.Middleware.SCU.ME.FiscalizationService'
   workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.ME.FiscalizationService'
 
