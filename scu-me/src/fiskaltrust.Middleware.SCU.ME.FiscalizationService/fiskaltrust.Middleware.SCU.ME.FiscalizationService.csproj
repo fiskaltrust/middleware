@@ -19,10 +19,6 @@
         <PackageReference Include="System.ServiceModel.Security" Version="4.4.*" />
     </ItemGroup>
 
-    <ItemGroup>
-        <ProjectReference Include="../fiskaltrust.Middleware.SCU.ME.Common/fiskaltrust.Middleware.SCU.ME.Common.csproj" />
-    </ItemGroup>
-
     <Target DependsOnTargets="ResolveReferences" Name="CopyProjectReferencesToPackage">
         <ItemGroup>
             <BuildOutputInPackage Include="@(ReferenceCopyLocalPaths-&gt;WithMetadataValue('ReferenceSourceTarget', 'ProjectReference'))" />
@@ -33,6 +29,10 @@
         <Content Include="..\..\LICENSES\**" Pack="true" PackagePath="LICENSES" LinkBase="LICENSES">
             <PackageCopyToOutput>true</PackageCopyToOutput>
         </Content>
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\fiskaltrust.Middleware.SCU.ME.Common\fiskaltrust.Middleware.SCU.ME.Common.csproj" />
     </ItemGroup>
 
 </Project>
