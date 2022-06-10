@@ -6,7 +6,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.ME.FiscalizationService\fiskaltrust.Middleware.SCU.ME.FiscalizationService.csproj" />
+		<ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.ME.FiscalizationService\fiskaltrust.Middleware.SCU.ME.FiscalizationService.csproj" PrivateAssets="all" />
 	</ItemGroup>
 
 	<ItemGroup>
