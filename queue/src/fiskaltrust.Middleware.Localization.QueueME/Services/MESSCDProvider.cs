@@ -54,7 +54,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Services
             try
             {
                 await _semaphoreRegister.WaitAsync().ConfigureAwait(false);
-                var ftSignaturCreationUnitME = JsonConvert.DeserializeObject<List<ftSignaturCreationUnitDE>>(_middlewareConfiguration.Configuration["init_ftSignaturCreationUnitDE"].ToString());
+                var ftSignaturCreationUnitME = JsonConvert.DeserializeObject<List<ftSignaturCreationUnitDE>>(_middlewareConfiguration.Configuration["init_ftSignaturCreationUnitME"].ToString());
 
                 var uri = GetUriForSignaturCreationUnit(ftSignaturCreationUnitME.FirstOrDefault().Url);
                 var config = new ClientConfiguration
