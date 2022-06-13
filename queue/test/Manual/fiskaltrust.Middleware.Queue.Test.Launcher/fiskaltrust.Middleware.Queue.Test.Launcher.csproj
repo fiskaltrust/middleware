@@ -46,6 +46,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\src\fiskaltrust.Middleware.Localization.QueueDE\fiskaltrust.Middleware.Localization.QueueDE.csproj" />
     <ProjectReference Include="..\..\..\src\fiskaltrust.Middleware.Queue.InMemory\fiskaltrust.Middleware.Queue.InMemory.csproj" />
     <ProjectReference Include="..\..\..\src\fiskaltrust.Middleware.Queue.SQLite\fiskaltrust.Middleware.Queue.SQLite.csproj" />
   </ItemGroup>

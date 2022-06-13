@@ -6,7 +6,7 @@ using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.de;
 using fiskaltrust.ifPOS.v1.me;
 using fiskaltrust.Middleware.Abstractions;
-using fiskaltrust.Middleware.Queue.Test.Launcher.Grpc;
+using fiskaltrust.Middleware.Localization.QueueDE;
 using fiskaltrust.Middleware.Queue.Test.Launcher.Helpers;
 using fiskaltrust.storage.serialization.V0;
 using fiskaltrust.storage.V0;
@@ -70,6 +70,7 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
                 config.Configuration["init_ftQueueME"] = temp.ToString().Replace("DE", "ME");
                 temp = config.Configuration["init_ftSignaturCreationUnitDE"];
                 config.Configuration["init_ftSignaturCreationUnitME"] = temp.ToString().Replace("DE", "ME");
+                serviceCollection.AddScoped<IClientFactory<IDESSCD>, DESSCDClientFactory>();
             }
             else
             { 
