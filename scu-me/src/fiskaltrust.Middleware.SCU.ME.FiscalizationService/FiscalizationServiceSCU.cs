@@ -38,19 +38,17 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
 
     public async Task<RegisterCashDepositResponse> RegisterCashDepositAsync(RegisterCashDepositRequest registerCashDepositRequest)
     {
-        //var sendDateTime = registerCashDepositRequest.SubsequentDeliveryType.HasValue ? DateTime.Now : registerCashDepositRequest.Moment;
-        var sendDateTime = DateTime.Now;
         var request = new SoapFiscalizationService.RegisterCashDepositRequest
         {
             Header = new SoapFiscalizationService.RegisterCashDepositRequestHeaderType
             {
-                SendDateTime = sendDateTime,
+                SendDateTime = registerCashDepositRequest.SubsequentDeliveryType.HasValue ? DateTime.Now : ConvertToCETFromUtc(registerCashDepositRequest.Moment),
                 UUID = registerCashDepositRequest.RequestId.ToString(),
             },
             CashDeposit = new SoapFiscalizationService.CashDepositType
             {
                 CashAmt = registerCashDepositRequest.Amount + 0.00m,
-                ChangeDateTime = sendDateTime,// registerCashDepositRequest.Moment,
+                ChangeDateTime = ConvertToCETFromUtc(registerCashDepositRequest.Moment),
                 IssuerTIN = _configuration.TIN,
                 Operation = SoapFiscalizationService.CashDepositOperationSType.INITIAL,
                 TCRCode = registerCashDepositRequest.TcrCode
@@ -75,7 +73,7 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
 
     public async Task RegisterCashWithdrawalAsync(RegisterCashWithdrawalRequest registerCashWithdrawalRequest)
     {
-        var sendDateTime = registerCashWithdrawalRequest.SubsequentDeliveryType.HasValue ? DateTime.Now : registerCashWithdrawalRequest.Moment;
+        var sendDateTime = registerCashWithdrawalRequest.SubsequentDeliveryType.HasValue ? DateTime.Now : ConvertToCETFromUtc(registerCashWithdrawalRequest.Moment);
         var request = new SoapFiscalizationService.RegisterCashDepositRequest
         {
             Header = new SoapFiscalizationService.RegisterCashDepositRequestHeaderType
@@ -86,7 +84,7 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
             CashDeposit = new SoapFiscalizationService.CashDepositType
             {
                 CashAmt = registerCashWithdrawalRequest.Amount + 0.00m,
-                ChangeDateTime = registerCashWithdrawalRequest.Moment,
+                ChangeDateTime = ConvertToCETFromUtc(registerCashWithdrawalRequest.Moment),
                 IssuerTIN = _configuration.TIN,
                 Operation = SoapFiscalizationService.CashDepositOperationSType.WITHDRAW,
                 TCRCode = registerCashWithdrawalRequest.TcrCode
@@ -108,12 +106,10 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
     {
         try
         {
-            //var sendDateTime = registerInvoiceRequest.SubsequentDeliveryType.HasValue ? DateTime.Now : registerInvoiceRequest.Moment;
-            var sendDateTime = DateTime.Now;
-            registerInvoiceRequest.Moment = sendDateTime;
+            var sendDateTime = registerInvoiceRequest.SubsequentDeliveryType.HasValue ? DateTime.Now : ConvertToCETFromUtc(registerInvoiceRequest.Moment);
 
-        var iic = SigningHelper.CreateIIC(_configuration, registerInvoiceRequest);
-        var iicSig = BitConverter.ToString(SigningHelper.CreateIicSignature(_configuration, registerInvoiceRequest)).Replace("-", string.Empty);
+            var iic = SigningHelper.CreateIIC(_configuration, registerInvoiceRequest);
+            var iicSig = BitConverter.ToString(SigningHelper.CreateIicSignature(_configuration, registerInvoiceRequest)).Replace("-", string.Empty);
             var invoice = new SoapFiscalizationService.InvoiceType
             {
                 BankAccNum = null,
@@ -134,7 +130,7 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
                 InvType = SoapFiscalizationService.InvoiceTSType.INVOICE,
                 IsIssuerInVAT = registerInvoiceRequest.IsIssuerInVATSystem,
                 IsReverseChargeSpecified = default,
-                IssueDateTime = sendDateTime,
+                IssueDateTime = ConvertToCETFromUtc(registerInvoiceRequest.Moment),
                 Items = registerInvoiceRequest.InvoiceDetails.ItemDetails.Select(i =>
                 {
                     var invoiceItem = new SoapFiscalizationService.InvoiceItemType
@@ -407,5 +403,12 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
     public void Dispose()
     {
         ((IDisposable) _fiscalizationServiceClient).Dispose();
+    }
+
+    private DateTime ConvertToCETFromUtc(DateTime dateTime)
+    {
+        DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
+        var cstZone = TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
+        return TimeZoneInfo.ConvertTimeFromUtc(dateTime, cstZone);
     }
 }
