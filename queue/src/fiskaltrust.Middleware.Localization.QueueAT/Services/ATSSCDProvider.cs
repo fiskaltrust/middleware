@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Org.BouncyCastle.X509;
 
-namespace fiskaltrust.Middleware.Localization.QueueDE.Services
+namespace fiskaltrust.Middleware.Localization.QueueAT.Services
 {
     public class ATSSCDProvider : IATSSCDProvider
     {
@@ -33,7 +33,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
             _queueDEConfiguration = queueDEConfiguration;
         }
 
-        public async Task<IATSSCD> GetCurrentlyActiveInstanceAsync()
+        public async Task<(ftSignaturCreationUnitAT scu, IATSSCD sscd, int currentIndex)> GetCurrentlyActiveInstanceAsync()
         {
             try
             {
@@ -43,7 +43,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
                     _instances = await GetScusFromConfigurationAsync().ToListAsync();
                 }
 
-                return _instances[_currentlyActiveInstance].client;
+                return (_instances[_currentlyActiveInstance].scu, _instances[_currentlyActiveInstance].client, _currentlyActiveInstance);
             }
             finally
             {
@@ -51,9 +51,27 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
             }
         }
 
-        public void SwitchToNextScu()
+        public async Task<List<ftSignaturCreationUnitAT>> GetAllInstances()
         {
-            if(_instances == null || !_instances.Any())
+            try
+            {
+                _semaphoreInstance.Wait();
+                if (_instances == null)
+                {
+                    _instances = await GetScusFromConfigurationAsync().ToListAsync();
+                }
+
+                return _instances.Select(x => x.scu).ToList();
+            }
+            finally
+            {
+                _semaphoreInstance.Release();
+            }
+        }
+
+        public int SwitchToNextScu()
+        {
+            if (_instances == null || !_instances.Any())
             {
                 _currentlyActiveInstance = 0;
             }
@@ -67,7 +85,10 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
                 _currentlyActiveInstance = 0;
             }
 
+            return _currentlyActiveInstance;
         }
+
+        public void SwitchToFirstScu() => _currentlyActiveInstance = 0;
 
         private async IAsyncEnumerable<(ftSignaturCreationUnitAT scu, IATSSCD client)> GetScusFromConfigurationAsync()
         {
