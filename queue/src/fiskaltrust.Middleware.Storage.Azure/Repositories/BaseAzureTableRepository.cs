@@ -1,12 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Net;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
-using fiskaltrust.Middleware.Contracts.Repositories;
-using fiskaltrust.Middleware.Storage.Azure.Mapping;
 using Microsoft.Azure.Cosmos.Table;
 
 namespace fiskaltrust.Middleware.Storage.Azure.Repositories
@@ -116,6 +112,16 @@ namespace fiskaltrust.Middleware.Storage.Azure.Repositories
             var tableQuery = new TableQuery<TAzureEntity>();
             tableQuery = tableQuery.Where(TableQuery.GenerateFilterConditionForLong("TimeStamp", QueryComparisons.GreaterThanOrEqual, fromInclusive));
             return GetAllByTableFilterAsync(tableQuery);
+        }
+
+        public async Task<TStorageEntity> GetWithLastTimestampAsync()
+        {
+            if (!_tableCreated)
+            {
+                _tableCreated = await CreateTableAsync(_tableName).ConfigureAwait(false);
+            }
+
+            return await GetAllAsync().Select(MapToStorageEntity).FirstOrDefaultAsync().ConfigureAwait(false);
         }
 
         protected abstract TKey GetIdForEntity(TStorageEntity entity);

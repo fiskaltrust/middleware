@@ -47,7 +47,7 @@ namespace fiskaltrust.Middleware.Queue.InMemory.IntegrationTest
             var storageBootStrapper = new InMemoryStorageBootstrapper(values.ftQueues[0].Id, dictionary, Mock.Of<ILogger<IMiddlewareBootstrapper>>());
             storageBootStrapper.ConfigureStorageServices(serviceCollection);
 
-            serviceCollection.Count.Should().Be(37);
+            serviceCollection.Count.Should().Be(41);
 
             CheckServiceType(serviceCollection, typeof(IConfigurationRepository)).Should().BeTrue();
             CheckServiceType(serviceCollection, typeof(IReadOnlyConfigurationRepository)).Should().BeTrue();
@@ -90,7 +90,7 @@ namespace fiskaltrust.Middleware.Queue.InMemory.IntegrationTest
             queueBootstrapper.ConfigureServices(serviceCollection);
 
 
-            serviceCollection.Count.Should().Be(35);
+            serviceCollection.Count.Should().Be(36);
 
             CheckServiceType(serviceCollection, typeof(ICryptoHelper)).Should().BeTrue();
             CheckServiceType(serviceCollection, typeof(ISignProcessor)).Should().BeTrue();
@@ -153,7 +153,7 @@ namespace fiskaltrust.Middleware.Queue.InMemory.IntegrationTest
             var json = File.ReadAllText(configuration);
             var values = JsonConvert.DeserializeObject<ConfigFile>(json);
 
-            var dictionary = new Dictionary<string, object>
+            var config = new Dictionary<string, object>
             {
                 { "init_ftQueueAT", JsonConvert.SerializeObject(values.ftQueues[0].Configuration.init_ftQueueAT) },
                 { "init_ftQueueDE", JsonConvert.SerializeObject(values.ftQueues[0].Configuration.init_ftQueueDE) },
@@ -165,7 +165,7 @@ namespace fiskaltrust.Middleware.Queue.InMemory.IntegrationTest
                 { "init_ftQueue", JsonConvert.SerializeObject(values.ftQueues[0].Configuration.init_ftQueue) }
             };
 
-            var businessLogicFactoryBoostrapper = LocalizedQueueBootStrapperFactory.GetBootstrapperForLocalizedQueue(values.ftQueues[0].Configuration.init_ftQueue[0].ftQueueId, dictionary);
+            var businessLogicFactoryBoostrapper = LocalizedQueueBootStrapperFactory.GetBootstrapperForLocalizedQueue(values.ftQueues[0].Configuration.init_ftQueue[0].ftQueueId, new MiddlewareConfiguration { Configuration = config });
             businessLogicFactoryBoostrapper.Should().BeOfType(typeof(QueueDEBootstrapper));
         }
     }

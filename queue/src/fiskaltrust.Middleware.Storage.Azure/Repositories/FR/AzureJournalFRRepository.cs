@@ -8,7 +8,7 @@ using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Storage.Azure.Repositories.FR
 {
-    public class AzureJournalFRRepository : BaseAzureTableRepository<Guid, AzureFtJournalFR, ftJournalFR>, IJournalFRRepository, IMiddlewareRepository<ftJournalFR>
+    public class AzureJournalFRRepository : BaseAzureTableRepository<Guid, AzureFtJournalFR, ftJournalFR>, IJournalFRRepository, IMiddlewareRepository<ftJournalFR>, IMiddlewareJournalFRRepository
     {
         public AzureJournalFRRepository(Guid queueId, string connectionString)
             : base(queueId, connectionString, nameof(ftJournalFR)) { }

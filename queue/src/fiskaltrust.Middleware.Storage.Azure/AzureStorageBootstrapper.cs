@@ -57,7 +57,7 @@ namespace fiskaltrust.Middleware.Storage.Azure
             services.AddSingleton<IReadOnlyConfigurationRepository>(_configurationRepository);
 
             services.AddSingleton<IQueueItemRepository>(x => new AzureQueueItemRepository(_queueId, _connectionString));
-            services.AddScoped<IMiddlewareQueueItemRepository>(x => new AzureQueueItemRepository(_queueId, _connectionString));
+            services.AddSingleton<IMiddlewareQueueItemRepository>(x => new AzureQueueItemRepository(_queueId, _connectionString));
             services.AddSingleton<IReadOnlyQueueItemRepository>(x => new AzureQueueItemRepository(_queueId, _connectionString));
             services.AddSingleton<IMiddlewareRepository<ftQueueItem>>(x => new AzureQueueItemRepository(_queueId, _connectionString));
 
@@ -68,18 +68,22 @@ namespace fiskaltrust.Middleware.Storage.Azure
             services.AddSingleton<IJournalDERepository>(x => new AzureJournalDERepository(_queueId, _connectionString));
             services.AddSingleton<IMiddlewareJournalDERepository>(x => new AzureJournalDERepository(_queueId, _connectionString));
             services.AddSingleton<IJournalDERepository>(x => new AzureJournalDERepository(_queueId, _connectionString));
+            services.AddSingleton<IReadOnlyJournalDERepository>(x => new AzureJournalDERepository(_queueId, _connectionString));
             services.AddSingleton<IMiddlewareRepository<ftJournalDE>>(x => new AzureJournalDERepository(_queueId, _connectionString));
 
             services.AddSingleton<IJournalFRRepository>(x => new AzureJournalFRRepository(_queueId, _connectionString));
             services.AddSingleton<IReadOnlyJournalFRRepository>(x => new AzureJournalFRRepository(_queueId, _connectionString));
+            services.AddSingleton<IMiddlewareJournalFRRepository>(x => new AzureJournalFRRepository(_queueId, _connectionString));
             services.AddSingleton<IMiddlewareRepository<ftJournalFR>>(x => new AzureJournalFRRepository(_queueId, _connectionString));
 
             services.AddSingleton<IReceiptJournalRepository>(x => new AzureReceiptJournalRepository(_queueId, _connectionString));
             services.AddSingleton<IReadOnlyReceiptJournalRepository>(x => new AzureReceiptJournalRepository(_queueId, _connectionString));
+            services.AddSingleton<IMiddlewareReceiptJournalRepository>(x => new AzureReceiptJournalRepository(_queueId, _connectionString));
             services.AddSingleton<IMiddlewareRepository<ftReceiptJournal>>(x => new AzureReceiptJournalRepository(_queueId, _connectionString));
 
             services.AddSingleton<IActionJournalRepository>(x => new AzureActionJournalRepository(_queueId, _connectionString));
             services.AddSingleton<IReadOnlyActionJournalRepository>(x => new AzureActionJournalRepository(_queueId, _connectionString));
+            services.AddSingleton<IMiddlewareActionJournalRepository>(x => new AzureActionJournalRepository(_queueId, _connectionString));
             services.AddSingleton<IMiddlewareRepository<ftActionJournal>>(x => new AzureActionJournalRepository(_queueId, _connectionString));
 
             services.AddSingleton<IPersistentTransactionRepository<FailedFinishTransaction>, AzureFailedFinishTransactionRepository>(x => new AzureFailedFinishTransactionRepository(_queueId, _connectionString));

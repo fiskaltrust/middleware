@@ -90,14 +90,17 @@ namespace fiskaltrust.Middleware.Storage.MySQL
 
             services.AddSingleton<IJournalFRRepository>(x => new MySQLJournalFRRepository(_connectionString));
             services.AddSingleton<IReadOnlyJournalFRRepository>(x => new MySQLJournalFRRepository(_connectionString));
+            services.AddSingleton<IMiddlewareJournalFRRepository>(x => new MySQLJournalFRRepository(_connectionString));
             services.AddSingleton<IMiddlewareRepository<ftJournalFR>>(x => new MySQLJournalFRRepository(_connectionString));
 
             services.AddSingleton<IReceiptJournalRepository>(x => new MySQLReceiptJournalRepository(_connectionString));
             services.AddSingleton<IReadOnlyReceiptJournalRepository>(x => new MySQLReceiptJournalRepository(_connectionString));
+            services.AddSingleton<IMiddlewareReceiptJournalRepository>(x => new MySQLReceiptJournalRepository(_connectionString));
             services.AddSingleton<IMiddlewareRepository<ftReceiptJournal>>(x => new MySQLReceiptJournalRepository(_connectionString));
 
             services.AddSingleton<IActionJournalRepository>(x => new MySQLActionJournalRepository(_connectionString));
             services.AddSingleton<IReadOnlyActionJournalRepository>(x => new MySQLActionJournalRepository(_connectionString));
+            services.AddSingleton<IMiddlewareActionJournalRepository>(x => new MySQLActionJournalRepository(_connectionString));
             services.AddSingleton<IMiddlewareRepository<ftActionJournal>>(x => new MySQLActionJournalRepository(_connectionString));
 
             services.AddSingleton<IPersistentTransactionRepository<OpenTransaction>, MySQLOpenTransactionRepository>(x => new MySQLOpenTransactionRepository(_connectionString));

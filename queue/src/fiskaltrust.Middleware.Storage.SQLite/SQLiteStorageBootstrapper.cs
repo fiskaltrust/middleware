@@ -43,7 +43,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite
             AddRepositories(serviceCollection);
         }
 
-        private async Task InitAsync(Guid queueId, Dictionary<string,object> configuration, ILogger<IMiddlewareBootstrapper> logger)
+        private async Task InitAsync(Guid queueId, Dictionary<string, object> configuration, ILogger<IMiddlewareBootstrapper> logger)
         {
             _sqliteFile = Path.Combine(configuration["servicefolder"].ToString(), $"{queueId}.sqlite");
             _connectionFactory = new SqliteConnectionFactory();
@@ -81,14 +81,17 @@ namespace fiskaltrust.Middleware.Storage.SQLite
 
             services.AddSingleton<IJournalFRRepository>(x => new SQLiteJournalFRRepository(_connectionFactory, _sqliteFile));
             services.AddSingleton<IReadOnlyJournalFRRepository>(x => new SQLiteJournalFRRepository(_connectionFactory, _sqliteFile));
+            services.AddSingleton<IMiddlewareJournalFRRepository>(x => new SQLiteJournalFRRepository(_connectionFactory, _sqliteFile));
             services.AddSingleton<IMiddlewareRepository<ftJournalFR>>(x => new SQLiteJournalFRRepository(_connectionFactory, _sqliteFile));
 
             services.AddSingleton<IReceiptJournalRepository>(x => new SQLiteReceiptJournalRepository(_connectionFactory, _sqliteFile));
             services.AddSingleton<IReadOnlyReceiptJournalRepository>(x => new SQLiteReceiptJournalRepository(_connectionFactory, _sqliteFile));
+            services.AddSingleton<IMiddlewareReceiptJournalRepository>(x => new SQLiteReceiptJournalRepository(_connectionFactory, _sqliteFile));
             services.AddSingleton<IMiddlewareRepository<ftReceiptJournal>>(x => new SQLiteReceiptJournalRepository(_connectionFactory, _sqliteFile));
 
             services.AddSingleton<IActionJournalRepository>(x => new SQLiteActionJournalRepository(_connectionFactory, _sqliteFile));
             services.AddSingleton<IReadOnlyActionJournalRepository>(x => new SQLiteActionJournalRepository(_connectionFactory, _sqliteFile));
+            services.AddSingleton<IMiddlewareActionJournalRepository>(x => new SQLiteActionJournalRepository(_connectionFactory, _sqliteFile));
             services.AddSingleton<IMiddlewareRepository<ftActionJournal>>(x => new SQLiteActionJournalRepository(_connectionFactory, _sqliteFile));
 
             services.AddSingleton<IPersistentTransactionRepository<OpenTransaction>, SQLiteOpenTransactionRepository>(x => new SQLiteOpenTransactionRepository(_connectionFactory, _sqliteFile));

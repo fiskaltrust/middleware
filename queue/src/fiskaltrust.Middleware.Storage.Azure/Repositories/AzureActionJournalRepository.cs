@@ -10,7 +10,7 @@ using Microsoft.Azure.Cosmos.Table;
 
 namespace fiskaltrust.Middleware.Storage.Azure.Repositories
 {
-    public class AzureActionJournalRepository : BaseAzureTableRepository<Guid, AzureFtActionJournal, ftActionJournal>, IActionJournalRepository, IMiddlewareRepository<ftActionJournal>
+    public class AzureActionJournalRepository : BaseAzureTableRepository<Guid, AzureFtActionJournal, ftActionJournal>, IActionJournalRepository, IMiddlewareRepository<ftActionJournal>, IMiddlewareActionJournalRepository
     {
         public AzureActionJournalRepository(Guid queueId, string connectionString)
             : base(queueId, connectionString, nameof(ftActionJournal)) { }
@@ -31,6 +31,17 @@ namespace fiskaltrust.Middleware.Storage.Azure.Repositories
                 return result.Take(take.Value).ToAsyncEnumerable();
             }
             return result.ToAsyncEnumerable();
+        }
+
+        public IAsyncEnumerable<ftActionJournal> GetByPriorityAfterTimestampAsync(int lowerThanPriority, long fromTimestampInclusive)
+        {
+            var tableQuery = new TableQuery<AzureFtActionJournal>();
+            tableQuery = tableQuery.Where(TableQuery.CombineFilters(
+              TableQuery.GenerateFilterConditionForLong("TimeStamp", QueryComparisons.GreaterThanOrEqual, fromTimestampInclusive),
+              TableOperators.And,
+              TableQuery.GenerateFilterConditionForLong("Priority", QueryComparisons.LessThan, lowerThanPriority)));
+            
+            return GetAllByTableFilterAsync(tableQuery);
         }
     }
 }

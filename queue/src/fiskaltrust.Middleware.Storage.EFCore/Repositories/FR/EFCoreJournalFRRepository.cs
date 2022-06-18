@@ -2,12 +2,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0;
 using Microsoft.EntityFrameworkCore;
 
 namespace fiskaltrust.Middleware.Storage.EFCore.Repositories.FR
 {
-    public class EFCoreJournalFRRepository : AbstractEFCoreRepostiory<Guid, ftJournalFR>, IJournalFRRepository
+    public class EFCoreJournalFRRepository : AbstractEFCoreRepostiory<Guid, ftJournalFR>, IJournalFRRepository, IMiddlewareJournalFRRepository
     {
         private long _lastInsertedTimeStamp;
 
@@ -36,5 +37,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.Repositories.FR
             }
             return result.AsAsyncEnumerable();
         }
+
+        public async Task<ftJournalFR> GetWithLastTimestampAsync() => await DbContext.JournalFRList.AsQueryable().OrderByDescending(x => x.TimeStamp).FirstOrDefaultAsync().ConfigureAwait(false);
     }
 }
