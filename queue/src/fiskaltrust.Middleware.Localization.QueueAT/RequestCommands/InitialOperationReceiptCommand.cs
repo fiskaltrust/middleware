@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Models;
+using fiskaltrust.Middleware.Localization.QueueAT.Extensions;
 using fiskaltrust.Middleware.Localization.QueueAT.Helpers;
 using fiskaltrust.Middleware.Localization.QueueAT.Models;
 using fiskaltrust.Middleware.Localization.QueueAT.Services;
@@ -19,7 +20,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
     {
         public override string ReceiptName => "Initial-operation receipt";
 
-        public InitialOperationReceiptCommand(IATSSCDProvider sscdProvider, MiddlewareConfiguration middlewareConfiguration, QueueATConfiguration queueATConfiguration, ILogger<RequestCommand> logger) 
+        public InitialOperationReceiptCommand(IATSSCDProvider sscdProvider, MiddlewareConfiguration middlewareConfiguration, QueueATConfiguration queueATConfiguration, ILogger<RequestCommand> logger)
             : base(sscdProvider, middlewareConfiguration, queueATConfiguration, logger) { }
 
         public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueAT queueAT, ReceiptRequest request, ftQueueItem queueItem)
@@ -55,7 +56,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 
             var (actionJournals, journalAT) = await SignReceiptAndEnableQueueAsync(queue, queueAT, queueItem, request, response);
             actionJournals.Add(aj);
-            
+
             var notificationSignatures = CreateNotificationSignatures(actionJournals);
             response.ftSignatures = response.ftSignatures.Concat(notificationSignatures).ToArray();
 
@@ -66,7 +67,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                 JournalAT = journalAT
             };
         }
-        
+
         internal async Task<(List<ftActionJournal> actionJournals, ftJournalAT journalAT)> SignReceiptAndEnableQueueAsync(ftQueue queue, ftQueueAT queueAT, ftQueueItem queueItem, ReceiptRequest request, ReceiptResponse response)
         {
             var actionJournals = new List<ftActionJournal>();
@@ -126,11 +127,13 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
             {
                 // Receipt successfully signed, activate Queue
                 queue.StartMoment = DateTime.UtcNow;
-                var signatures = new List<SignaturItem>
+                response.ftSignatures = response.ftSignatures.Extend(new SignaturItem
                 {
-                    new SignaturItem() { Caption = "Startbeleg", Data = "Startbeleg", ftSignatureFormat = (long) SignaturItem.Formats.Text, ftSignatureType = (long) SignaturItem.Types.AT_StorageObligation }
-                };
-                response.ftSignatures = signatures.ToArray();
+                    Caption = "Startbeleg",
+                    Data = "Startbeleg",
+                    ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                    ftSignatureType = (long) SignaturItem.Types.AT_StorageObligation
+                });
 
                 var fonActivateQueueActionJournal = ATFONRegistrationHelper.CreateQueueActivationJournal(queue, queueAT, queueItem, journalAT);
                 _logger.LogInformation(fonActivateQueueActionJournal.Message);

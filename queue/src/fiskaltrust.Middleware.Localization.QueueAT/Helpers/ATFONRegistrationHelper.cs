@@ -38,6 +38,34 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.Helpers
                 DataBase64 = "jws"
             };
         }
+        public static ftActionJournal CreateQueueDeactivationJournal(ftQueue queue, ftQueueAT queueAT, ftQueueItem queueItem, ftJournalAT journalAT)
+        {
+            var fonDeactivateQueue = new FonDeactivateQueue()
+            {
+                CashBoxId = queue.ftCashBoxId,
+                QueueId = queue.ftQueueId,
+                Moment = DateTime.UtcNow,
+                CashBoxIdentification = queueAT.CashBoxIdentification,
+                DEPValue = $"{journalAT?.JWSHeaderBase64url}.{journalAT?.JWSPayloadBase64url}.{journalAT?.JWSSignatureBase64url}",
+                ClosedSystemKind = queueAT.ClosedSystemKind,
+                ClosedSystemValue = queueAT.ClosedSystemValue,
+                IsStopReceipt = true
+            };
+
+            return new ftActionJournal
+            {
+                ftActionJournalId = Guid.NewGuid(),
+                ftQueueId = queue.ftQueueId,
+                ftQueueItemId = (queueItem?.ftQueueItemId).GetValueOrDefault(),
+                Moment = DateTime.UtcNow,
+                TimeStamp = 0,
+                Priority = -1,
+                Type = $"{_fonSignatureType}-{nameof(FonDeactivateQueue)}",
+                Message = $"De-Aktivierung (Ausserbetriebnahme) einer Sicherheitseinrichtung {queue.ftQueueId} nach RKSV. (Queue)",
+                DataJson = JsonConvert.SerializeObject(fonDeactivateQueue),
+                DataBase64 = "jws"
+            };
+        }
 
         public static ftActionJournal CreateQueueVerificationJournal(ftQueue queue, ftQueueAT queueAT, ftQueueItem queueItem, ftJournalAT journalAT)
         {

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
@@ -18,7 +19,7 @@ using Org.BouncyCastle.X509;
 
 namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 {
-    public abstract class RequestCommand
+    public abstract partial class RequestCommand
     {
         private const string JSWS_PAYLOAD_COUNTER_TRAINING = "VFJB";
         private const string JWS_PAYLOAD_COUNTER_STORNO = "U1RP";
@@ -26,8 +27,8 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
         private const string SSCD_JWS_SIGNATURE_FAILED = "U2ljaGVyaGVpdHNlaW5yaWNodHVuZyBhdXNnZWZhbGxlbg";
 
         private readonly IATSSCDProvider _sscdProvider;
-        private readonly MiddlewareConfiguration _middlewareConfiguration;
-        private readonly QueueATConfiguration _queueATConfiguration;
+        protected readonly MiddlewareConfiguration _middlewareConfiguration;
+        protected readonly QueueATConfiguration _queueATConfiguration;
         protected readonly ILogger<RequestCommand> _logger;
 
         public RequestCommand(IATSSCDProvider sscdProvider, MiddlewareConfiguration middlewareConfiguration, QueueATConfiguration queueATConfiguration, ILogger<RequestCommand> logger)
@@ -55,7 +56,8 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                 cbReceiptReference = request.cbReceiptReference,
                 ftReceiptMoment = DateTime.UtcNow,
                 ftState = 0x4445000000000000,
-                ftReceiptIdentification = $"ft{queue.ftReceiptNumerator:X}#"
+                ftReceiptIdentification = $"ft{queue.ftReceiptNumerator:X}#",
+                ftSignatures = Array.Empty<SignaturItem>()
             };
         }
 
@@ -632,6 +634,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
             }
         }
 
+        
         // TODO: Refactor and put directly into the places where we are generating the action journals.
         // This was taken from the previous service code for simplicity reasons for now.
         protected IEnumerable<SignaturItem> CreateNotificationSignatures(List<ftActionJournal> actionJournals)
@@ -766,15 +769,6 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                     };
                 }
             }
-        }
-
-        private class AddSignatureDecision
-        {
-            public int Number { get; set; }
-            public string Exception { get; set; }
-            public bool Signing { get; set; }
-            public bool Counting { get; set; }
-            public bool ZeroReceipt { get; set; }
         }
     }
 }
