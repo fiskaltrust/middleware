@@ -64,6 +64,19 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await GetToken().ConfigureAwait(false));
+            if (RuntimeHelper.IsMono)
+            {
+                var sendAsync = base.SendAsync(request, cancellationToken);
+                var result = await Task.WhenAny(sendAsync, Task.Delay(TimeSpan.FromSeconds(_config.FiskalyClientTimeout))).ConfigureAwait(false);
+                if (result == sendAsync)
+                {
+                    return sendAsync.Result;
+                }
+                else
+                {
+                    throw new TimeoutException("The client did not response in the configured time!");
+                }
+            }
             return await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
         }
 

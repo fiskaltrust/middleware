@@ -17,13 +17,13 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
         private const int EXPORT_TIMEOUT_MS = 18000 * 1000;
 
         private readonly FiskalySCUConfiguration _configuration;
-        private readonly HttpClient _httpClient;
+        private readonly HttpClientWrapper _httpClient;
         private readonly JsonSerializerSettings _serializerSettings;
 
         public FiskalyV2ApiProvider(FiskalySCUConfiguration configuration)
         {
             _configuration = configuration;
-            _httpClient = GetOAuthHttpClient(configuration);
+            _httpClient = new HttpClientWrapper(configuration);
             _serializerSettings = new JsonSerializerSettings
             {
                 DefaultValueHandling = DefaultValueHandling.Ignore
@@ -373,16 +373,6 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
                 throw new FiskalyException($"Communication error ({response.StatusCode}) while performing admin logout (POST tss/{tssId}/admin/logout). Response: {responseContent}",
                     (int) response.StatusCode, $"POST tss/{tssId}/admin/logout");
             }
-        }
-
-        private HttpClient GetOAuthHttpClient(FiskalySCUConfiguration configuration)
-        {
-            var url = configuration.ApiEndpoint.EndsWith("/") ? configuration.ApiEndpoint : $"{configuration.ApiEndpoint}/";
-            return new HttpClient(new AuthenticatedHttpClientHandler(configuration) { Proxy = ConfigurationHelper.CreateProxy(configuration) })
-            {
-                BaseAddress = new Uri(url),
-                Timeout = TimeSpan.FromMilliseconds(configuration.FiskalyClientTimeout)
-            };
         }
 
         private async Task<T> RunAsAdminAsync<T>(Guid tssId, Func<Task<T>> method)
