@@ -34,7 +34,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.IntegrationTest
 
         private async Task RegisterClientAsync()
         {
-            var apiProvider = new FiskalyV2ApiProvider(Configuration);
+            var apiProvider = new FiskalyV2ApiProvider(Configuration, Mock.Of<ILogger<FiskalySCU>>());
             var scu = new FiskalySCU(Mock.Of<ILogger<FiskalySCU>>(), apiProvider, new ClientCache(apiProvider), Configuration);
 
             await scu.RegisterClientIdAsync(new RegisterClientIdRequest { ClientId = ClientId.ToString() });
@@ -100,7 +100,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.IntegrationTest
         private HttpClient GetOAuthHttpClient(FiskalySCUConfiguration configuration)
         {
             var url = configuration.ApiEndpoint.EndsWith("/") ? configuration.ApiEndpoint : $"{configuration.ApiEndpoint}/";
-            return new HttpClient(new AuthenticatedHttpClientHandler(configuration))
+            return new HttpClient(new AuthenticatedHttpClientHandler(configuration, Mock.Of<ILogger<FiskalySCU>>()))
             {
                 BaseAddress = new Uri(url)
             };

@@ -1,19 +1,23 @@
 ﻿using System;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
 {
     public sealed class HttpClientWrapper : IDisposable
     {
+        public static string Timoutlog = "TimeoutException: The client did not response in the configured time!";
         private readonly HttpClient _httpClient;
         private readonly FiskalySCUConfiguration _configuration;
+        private readonly ILogger _logger;
 
-        public HttpClientWrapper (FiskalySCUConfiguration configuration)
+        public HttpClientWrapper (FiskalySCUConfiguration configuration, ILogger logger)
         {
             _configuration = configuration;
+            _logger = logger;
             var url = configuration.ApiEndpoint.EndsWith("/") ? configuration.ApiEndpoint : $"{configuration.ApiEndpoint}/";
-            _httpClient =  new HttpClient(new AuthenticatedHttpClientHandler(configuration) { Proxy = ConfigurationHelper.CreateProxy(configuration) })
+            _httpClient =  new HttpClient(new AuthenticatedHttpClientHandler(configuration, logger) { Proxy = ConfigurationHelper.CreateProxy(configuration) })
             {
                 BaseAddress = new Uri(url),
                 Timeout = TimeSpan.FromMilliseconds(configuration.FiskalyClientTimeout)
@@ -31,7 +35,8 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
                 }
                 else
                 {
-                    throw new TimeoutException("The client did not response in the configured timeout!");
+                    _logger.LogError(Timoutlog);
+                    throw new TimeoutException();
                 }
             }
             return await _httpClient.PutAsync(requestUri, content).ConfigureAwait(false);
@@ -48,7 +53,8 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
                 }
                 else
                 {
-                    throw new TimeoutException("The client did not response in the configured timeout!");
+                    _logger.LogError(Timoutlog);
+                    throw new TimeoutException();
                 }
             }
             return await _httpClient.GetAsync(requestUri).ConfigureAwait(false);
@@ -65,7 +71,8 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
                 }
                 else
                 {
-                    throw new TimeoutException("The client did not response in the configured timeout!");
+                    _logger.LogError(Timoutlog);
+                    throw new TimeoutException();
                 }
             }
             return await _httpClient.SendAsync(request).ConfigureAwait(false);
@@ -83,7 +90,8 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
                 }
                 else
                 {
-                    throw new TimeoutException("The client did not response in the configured timeout!");
+                    _logger.LogError(Timoutlog);
+                    throw new TimeoutException();
                 }
             }
             return await _httpClient.PostAsync(requestUri, content).ConfigureAwait(false);

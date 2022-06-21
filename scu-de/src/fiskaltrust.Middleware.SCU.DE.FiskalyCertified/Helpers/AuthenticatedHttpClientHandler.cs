@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Exceptions;
 using fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Models;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
@@ -17,10 +18,12 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
         private readonly FiskalySCUConfiguration _config;
         private string _accessToken;
         private DateTime? _expiresOn;
+        private readonly ILogger _logger;
 
-        public AuthenticatedHttpClientHandler(FiskalySCUConfiguration config)
+        public AuthenticatedHttpClientHandler(FiskalySCUConfiguration config, ILogger logger)
         {
             _config = config;
+            _logger = logger;
         }
 
         internal async Task<string> GetToken()
@@ -74,7 +77,8 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
                 }
                 else
                 {
-                    throw new TimeoutException("The client did not response in the configured time!");
+                    _logger.LogError(HttpClientWrapper.Timoutlog);
+                    throw new TimeoutException();
                 }
             }
             return await base.SendAsync(request, cancellationToken).ConfigureAwait(false);

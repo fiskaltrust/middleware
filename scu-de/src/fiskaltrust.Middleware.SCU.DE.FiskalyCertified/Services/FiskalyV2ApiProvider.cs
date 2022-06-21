@@ -9,6 +9,7 @@ using fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Exceptions;
 using fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Models;
 using Newtonsoft.Json;
 using fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers;
+using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
 {
@@ -20,10 +21,10 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
         private readonly HttpClientWrapper _httpClient;
         private readonly JsonSerializerSettings _serializerSettings;
 
-        public FiskalyV2ApiProvider(FiskalySCUConfiguration configuration)
+        public FiskalyV2ApiProvider(FiskalySCUConfiguration configuration, ILogger logger)
         {
             _configuration = configuration;
-            _httpClient = new HttpClientWrapper(configuration);
+            _httpClient = new HttpClientWrapper(configuration, logger);
             _serializerSettings = new JsonSerializerSettings
             {
                 DefaultValueHandling = DefaultValueHandling.Ignore
