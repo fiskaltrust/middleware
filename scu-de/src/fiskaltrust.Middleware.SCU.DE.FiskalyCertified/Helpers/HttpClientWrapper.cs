@@ -23,79 +23,34 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
                 Timeout = TimeSpan.FromMilliseconds(configuration.FiskalyClientTimeout)
             };
         }
-        public async Task<HttpResponseMessage> PutAsync(string requestUri, HttpContent content)
+
+        public async Task<T> WrapCall<T>(Task<T> task)
         {
             if (RuntimeHelper.IsMono)
             {
-                var putAsync = _httpClient.PutAsync(requestUri, content);
-                var result = await Task.WhenAny(putAsync, Task.Delay(TimeSpan.FromSeconds(_configuration.FiskalyClientTimeout))).ConfigureAwait(false);
-                if (result == putAsync)
+                var taskAsync = task;
+                var result = await Task.WhenAny(taskAsync, Task.Delay(TimeSpan.FromSeconds(_configuration.FiskalyClientTimeout))).ConfigureAwait(false);
+                if (result == taskAsync)
                 {
-                    return putAsync.Result;
+                    return taskAsync.Result;
                 }
                 else
                 {
                     _logger.LogError(Timoutlog);
                     throw new TimeoutException();
                 }
+            } else {
+                return await task.ConfigureAwait(false);
             }
-            return await _httpClient.PutAsync(requestUri, content).ConfigureAwait(false);
-        }
-        public async Task<HttpResponseMessage> GetAsync(string requestUri)
-        {
-            if (RuntimeHelper.IsMono)
-            {
-                var getAsync = _httpClient.GetAsync(requestUri);
-                var result = await Task.WhenAny(getAsync, Task.Delay(TimeSpan.FromSeconds(_configuration.FiskalyClientTimeout))).ConfigureAwait(false);
-                if (result == getAsync)
-                {
-                    return getAsync.Result;
-                }
-                else
-                {
-                    _logger.LogError(Timoutlog);
-                    throw new TimeoutException();
-                }
-            }
-            return await _httpClient.GetAsync(requestUri).ConfigureAwait(false);
-        }
-        public async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request)
-        {
-            if (RuntimeHelper.IsMono)
-            {
-                var sendAsync = _httpClient.SendAsync(request);
-                var result = await Task.WhenAny(sendAsync, Task.Delay(TimeSpan.FromSeconds(_configuration.FiskalyClientTimeout))).ConfigureAwait(false);
-                if (result == sendAsync)
-                {
-                    return sendAsync.Result;
-                }
-                else
-                {
-                    _logger.LogError(Timoutlog);
-                    throw new TimeoutException();
-                }
-            }
-            return await _httpClient.SendAsync(request).ConfigureAwait(false);
         }
 
-        public async Task<HttpResponseMessage> PostAsync(string requestUri, HttpContent content)
-        {
-            if (RuntimeHelper.IsMono)
-            {
-                var postAsync = _httpClient.PostAsync(requestUri, content);
-                var result = await Task.WhenAny(postAsync, Task.Delay(TimeSpan.FromSeconds(_configuration.FiskalyClientTimeout))).ConfigureAwait(false);
-                if (result == postAsync)
-                {
-                    return postAsync.Result;
-                }
-                else
-                {
-                    _logger.LogError(Timoutlog);
-                    throw new TimeoutException();
-                }
-            }
-            return await _httpClient.PostAsync(requestUri, content).ConfigureAwait(false);
-        }
+        public async Task<HttpResponseMessage> PutAsync(string requestUri, HttpContent content) => await WrapCall(_httpClient.PutAsync(requestUri, content)).ConfigureAwait(false);
+
+        public async Task<HttpResponseMessage> GetAsync(string requestUri) => await WrapCall(_httpClient.GetAsync(requestUri)).ConfigureAwait(false);
+
+        public async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request) => await WrapCall(_httpClient.SendAsync(request)).ConfigureAwait(false);
+
+        public async Task<HttpResponseMessage> PostAsync(string requestUri, HttpContent content) => await WrapCall(_httpClient.PostAsync(requestUri, content)).ConfigureAwait(false);
 
         public void Dispose() => _httpClient?.Dispose();
     }

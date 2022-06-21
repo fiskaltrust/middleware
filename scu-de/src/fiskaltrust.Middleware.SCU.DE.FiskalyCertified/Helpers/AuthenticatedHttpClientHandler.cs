@@ -19,11 +19,13 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
         private string _accessToken;
         private DateTime? _expiresOn;
         private readonly ILogger _logger;
+        private readonly HttpClientWrapper _client;
 
         public AuthenticatedHttpClientHandler(FiskalySCUConfiguration config, ILogger logger)
         {
             _config = config;
             _logger = logger;
+            _client = new HttpClientWrapper(_config, _logger);
         }
 
         internal async Task<string> GetToken()
@@ -67,21 +69,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await GetToken().ConfigureAwait(false));
-            if (RuntimeHelper.IsMono)
-            {
-                var sendAsync = base.SendAsync(request, cancellationToken);
-                var result = await Task.WhenAny(sendAsync, Task.Delay(TimeSpan.FromSeconds(_config.FiskalyClientTimeout))).ConfigureAwait(false);
-                if (result == sendAsync)
-                {
-                    return sendAsync.Result;
-                }
-                else
-                {
-                    _logger.LogError(HttpClientWrapper.Timoutlog);
-                    throw new TimeoutException();
-                }
-            }
-            return await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
+            return await _client.WrapCall(base.SendAsync(request, cancellationToken)).ConfigureAwait(false);
         }
 
         private bool IsTokenExpired() => _expiresOn == null || _expiresOn < DateTime.UtcNow;
