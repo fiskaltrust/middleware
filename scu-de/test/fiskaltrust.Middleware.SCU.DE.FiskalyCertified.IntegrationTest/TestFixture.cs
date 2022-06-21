@@ -34,7 +34,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.IntegrationTest
 
         private async Task RegisterClientAsync()
         {
-            var apiProvider = new FiskalyV2ApiProvider(Configuration, Mock.Of<ILogger<FiskalySCU>>());
+            var apiProvider = new FiskalyV2ApiProvider(Configuration, Mock.Of<ILogger<FiskalyV2ApiProvider>>());
             var scu = new FiskalySCU(Mock.Of<ILogger<FiskalySCU>>(), apiProvider, new ClientCache(apiProvider), Configuration);
 
             await scu.RegisterClientIdAsync(new RegisterClientIdRequest { ClientId = ClientId.ToString() });
