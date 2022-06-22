@@ -28,18 +28,32 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
         {
             if (RuntimeHelper.IsMono)
             {
-                var taskAsync = task;
-                var result = await Task.WhenAny(taskAsync, Task.Delay(TimeSpan.FromSeconds(_configuration.FiskalyClientTimeout))).ConfigureAwait(false);
-                if (result == taskAsync)
+                try
                 {
-                    return taskAsync.Result;
+                    var taskAsync = task;
+                    var result = await Task.WhenAny(taskAsync, Task.Delay(TimeSpan.FromSeconds(_configuration.FiskalyClientTimeout))).ConfigureAwait(false);
+                    if (result == taskAsync)
+                    {
+                        return taskAsync.Result;
+                    }
+                    else
+                    {
+                        _logger.LogError(Timoutlog);
+                        throw new TimeoutException();
+                    }
                 }
-                else
+                catch (Exception e)
                 {
-                    _logger.LogError(Timoutlog);
-                    throw new TimeoutException();
+                    if ((bool) (e.InnerException?.Message.Equals("A task was canceled.")))
+                    {
+                        _logger?.LogError(Timoutlog);
+                        throw new TimeoutException();
+                    }
+                    _logger?.LogError(e, e.Message);
+                   throw new Exception(e.Message);
                 }
-            } else {
+            } 
+            else {
                 return await task.ConfigureAwait(false);
             }
         }
