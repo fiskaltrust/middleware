@@ -50,7 +50,6 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
 
             var responseMessage = await client.PostAsync(ENDPOINT, new StringContent(requestContent, Encoding.UTF8, "application/json"));
 
-
             if (!responseMessage.IsSuccessStatusCode)
             {
                 var content = await responseMessage.Content.ReadAsStringAsync();
