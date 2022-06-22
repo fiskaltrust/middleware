@@ -38,18 +38,18 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
                     }
                     else
                     {
-                        _logger.LogError(Timoutlog);
+                        _logger.LogError("Task finish: " + Timoutlog);
                         throw new TimeoutException();
                     }
                 }
                 catch (Exception e)
                 {
+                    _logger?.LogError(e, e.Message);
                     if ((bool) (e.InnerException?.Message.Equals("A task was canceled.")))
                     {
                         _logger?.LogError(Timoutlog);
                         throw new TimeoutException();
                     }
-                    _logger?.LogError(e, e.Message);
                    throw new Exception(e.Message);
                 }
             } 
