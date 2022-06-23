@@ -47,8 +47,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
             };
 
             var requestContent = JsonConvert.SerializeObject(requestObject);
-
-            var responseMessage = await client.PostAsync(ENDPOINT, new StringContent(requestContent, Encoding.UTF8, "application/json"));
+            var responseMessage = await HttpClientWrapper.WrapCall(client.PostAsync(ENDPOINT, new StringContent(requestContent, Encoding.UTF8, "application/json")), _config.FiskalyClientTimeout, _logger).ConfigureAwait(false);
 
             if (!responseMessage.IsSuccessStatusCode)
             {
@@ -67,34 +66,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await GetToken().ConfigureAwait(false));
-            if (RuntimeHelper.IsMono)
-            {
-                try
-                {
-                    var sendAsync = base.SendAsync(request, cancellationToken);
-                    var result = await Task.WhenAny(sendAsync, Task.Delay(TimeSpan.FromSeconds(_config.FiskalyClientTimeout))).ConfigureAwait(false);
-                    if (result == sendAsync)
-                    {
-                        return sendAsync.Result;
-                    }
-                    else
-                    {
-                        _logger.LogError("Task finish: " + HttpClientWrapper.Timoutlog);
-                        throw new TimeoutException();
-                    }
-                }
-                catch (Exception e)
-                {
-                    _logger?.LogError(e, e.Message);
-                    if (e.InnerException?.Message != null && e.InnerException.Message.Equals("A task was canceled."))
-                    {
-                        _logger?.LogError(HttpClientWrapper.Timoutlog);
-                        throw new TimeoutException("The client did not response in the configured time!");
-                    }
-                    throw new Exception(e.Message);
-                }
-            }
-            return await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
+            return await HttpClientWrapper.WrapCall(base.SendAsync(request, cancellationToken), _config.FiskalyClientTimeout, _logger).ConfigureAwait(false);
         }
 
         private bool IsTokenExpired() => _expiresOn == null || _expiresOn < DateTime.UtcNow;

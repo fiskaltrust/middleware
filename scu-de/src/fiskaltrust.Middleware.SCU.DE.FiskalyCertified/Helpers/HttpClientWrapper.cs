@@ -24,30 +24,29 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
             };
         }
 
-        public async Task<T> WrapCall<T>(Task<T> task)
-        {
+        public static async Task<T> WrapCall<T>(Task<T> task, int timeout, ILogger logger)       {
             if (RuntimeHelper.IsMono)
             {
                 try
                 {
                     var taskAsync = task;
-                    var result = await Task.WhenAny(taskAsync, Task.Delay(TimeSpan.FromSeconds(_configuration.FiskalyClientTimeout))).ConfigureAwait(false);
+                    var result = await Task.WhenAny(taskAsync, Task.Delay(TimeSpan.FromSeconds(timeout))).ConfigureAwait(false);
                     if (result == taskAsync)
                     {
                         return taskAsync.Result;
                     }
                     else
                     {
-                        _logger.LogError("Task finish: " + Timoutlog);
+                        logger.LogError("Task finish: " + Timoutlog);
                         throw new TimeoutException();
                     }
                 }
                 catch (Exception e)
                 {
-                    _logger?.LogError(e, e.Message);
+                    logger?.LogError(e, e.Message);
                     if (e.InnerException?.Message != null && e.InnerException.Message.Equals("A task was canceled."))
                     {
-                        _logger?.LogError(Timoutlog);
+                        logger?.LogError(Timoutlog);
                         throw new TimeoutException("The client did not response in the configured time!");
                     }
                    throw new Exception(e.Message);
@@ -58,13 +57,13 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
             }
         }
 
-        public async Task<HttpResponseMessage> PutAsync(string requestUri, HttpContent content) => await WrapCall(_httpClient.PutAsync(requestUri, content)).ConfigureAwait(false);
+        public async Task<HttpResponseMessage> PutAsync(string requestUri, HttpContent content) => await WrapCall(_httpClient.PutAsync(requestUri, content), _configuration.FiskalyClientTimeout, _logger).ConfigureAwait(false);
 
-        public async Task<HttpResponseMessage> GetAsync(string requestUri) => await WrapCall(_httpClient.GetAsync(requestUri)).ConfigureAwait(false);
+        public async Task<HttpResponseMessage> GetAsync(string requestUri) => await WrapCall(_httpClient.GetAsync(requestUri), _configuration.FiskalyClientTimeout, _logger).ConfigureAwait(false);
 
-        public async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request) => await WrapCall(_httpClient.SendAsync(request)).ConfigureAwait(false);
+        public async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request) => await WrapCall(_httpClient.SendAsync(request), _configuration.FiskalyClientTimeout, _logger).ConfigureAwait(false);
 
-        public async Task<HttpResponseMessage> PostAsync(string requestUri, HttpContent content) => await WrapCall(_httpClient.PostAsync(requestUri, content)).ConfigureAwait(false);
+        public async Task<HttpResponseMessage> PostAsync(string requestUri, HttpContent content) => await WrapCall(_httpClient.PostAsync(requestUri, content), _configuration.FiskalyClientTimeout, _logger).ConfigureAwait(false);
 
         public void Dispose() => _httpClient?.Dispose();
     }
