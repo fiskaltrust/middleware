@@ -86,7 +86,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
                 catch (Exception e)
                 {
                     _logger?.LogError(e, e.Message);
-                    if ((bool) (e.InnerException?.Message.Equals("A task was canceled.")))
+                    if (e.InnerException?.Message != null && e.InnerException.Message.Equals("A task was canceled."))
                     {
                         _logger?.LogError(HttpClientWrapper.Timoutlog);
                         throw new TimeoutException("The client did not response in the configured time!");
