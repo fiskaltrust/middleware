@@ -21,10 +21,10 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
         private readonly HttpClientWrapper _httpClient;
         private readonly JsonSerializerSettings _serializerSettings;
 
-        public FiskalyV2ApiProvider(FiskalySCUConfiguration configuration, ILogger<FiskalyV2ApiProvider> logger)
+        public FiskalyV2ApiProvider(FiskalySCUConfiguration configuration)
         {
             _configuration = configuration;
-            _httpClient = new HttpClientWrapper(configuration, logger);
+            _httpClient = new HttpClientWrapper(configuration);
             _serializerSettings = new JsonSerializerSettings
             {
                 DefaultValueHandling = DefaultValueHandling.Ignore
