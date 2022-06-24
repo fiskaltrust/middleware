@@ -21,14 +21,16 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
                 Timeout = TimeSpan.FromMilliseconds(configuration.FiskalyClientTimeout)
             };
         }
-
-        public static async Task<T> WrapCall<T>(Task<T> task, int timeout)
+        /// <summary>
+        /// This is needed for Mono to react on the client timeout. 
+        /// </summary>
+        public static async Task<T> WrapCall<T>(Task<T> task, int timespan)
         {
             if (RuntimeHelper.IsMono)
             {
                 try
                 {
-                    var result = await Task.WhenAny(task, Task.Delay(TimeSpan.FromSeconds(timeout))).ConfigureAwait(false);
+                    var result = await Task.WhenAny(task, Task.Delay(TimeSpan.FromSeconds(timespan))).ConfigureAwait(false);
                     if (result == task)
                     {
                         return task.Result;
@@ -40,7 +42,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
                 }
                 catch (Exception e)
                 {
-                    if (e.InnerException?.Message != null && e.InnerException.Message.Equals("A task was canceled."))
+                    if (e.InnerException != null && e.InnerException is TaskCanceledException)
                     {
                         throw new TimeoutException(TIMEOUT_LOG);
                     }
