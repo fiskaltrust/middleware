@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.me;
@@ -35,10 +36,10 @@ namespace fiskaltrust.Middleware.Localization.QueueME
             if (queueME.SSCDFailCount > 0 && requestCommand is not ZeroReceiptCommand )
             {
                 var requestCommandResponse = await requestCommand.ProcessFailedReceiptRequest(queueItem, request, queueME).ConfigureAwait(false);
-                return (requestCommandResponse.ReceiptResponse, requestCommandResponse.ActionJournals);
+                return (requestCommandResponse.ReceiptResponse, requestCommandResponse.ActionJournals.ToList());
             }
             var response = await requestCommand.ExecuteAsync(_client, queue, request, queueItem, queueME).ConfigureAwait(false);
-            return (response.ReceiptResponse, response.ActionJournals);
+            return (response.ReceiptResponse, response.ActionJournals.ToList());
         }
     }
 }

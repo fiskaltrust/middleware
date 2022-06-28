@@ -33,7 +33,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             };
             var journalMERepository = new InMemoryJournalMERepository();
             var cashDepositReceiptCommand = await TestHelper.InitializeRequestCommand<CashDepositReceiptCommand>(queueME, "TestTCRCodePos", journalMERepository).ConfigureAwait(false);
-            var requestResponse = await cashDepositReceiptCommand.ExecuteAsync(new InMemoryMESSCD("TestTCRCodePos"), queue, TestHelper.CreateReceiptRequest(0x44D5_0000_0000_0007), queueItem, queueME);
+            var requestResponse = await cashDepositReceiptCommand.ExecuteAsync(new InMemoryMESSCD("TestTCRCodePos", "iic", "iicSignature"), queue, TestHelper.CreateReceiptRequest(0x44D5_0000_0000_0007), queueItem, queueME);
             var journalME = await journalMERepository.GetByQueueItemId(queueItem.ftQueueItemId).FirstOrDefaultAsync().ConfigureAwait(false);
             journalME.Should().NotBeNull();
             journalME.JournalType.Should().Be(0x44D5_0000_0000_0007);

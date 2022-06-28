@@ -24,6 +24,8 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             var tcr = CreateTCR();
             var inMemoryConfigurationRepository = new InMemoryConfigurationRepository();
             var testTcr = "TestTCRCodeOoO";
+            var iic = "iic";
+            var iicSignature = "iicSignature";
             var queue = new ftQueue()
             {
                 ftQueueId = Guid.NewGuid()
@@ -40,7 +42,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             var inMemoryQueueItemRepository = new InMemoryQueueItemRepository();
             var outOfOperationReceiptCommand = new OutOfOperationReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), inMemoryConfigurationRepository, 
                 inMemoryJournalMERepository, inMemoryQueueItemRepository, new InMemoryActionJournalRepository());
-            var inMemoryMESSCD = new InMemoryMESSCD(testTcr);
+            var inMemoryMESSCD = new InMemoryMESSCD(testTcr, iic, iicSignature);
             await outOfOperationReceiptCommand.ExecuteAsync(inMemoryMESSCD, queue, receiptRequest, new ftQueueItem(), queueME).ConfigureAwait(false);
 
             var queuMe = await inMemoryConfigurationRepository.GetQueueMEAsync(queue.ftQueueId).ConfigureAwait(false);

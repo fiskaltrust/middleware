@@ -10,7 +10,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <PackageReference Update="fiskaltrust.interface" Version="1.3.1-ci-22144-53796" />
+	  <PackageReference Update="fiskaltrust.interface" Version="1.3.1-ci-22178-54547" />
 	</ItemGroup>
 
 </Project>

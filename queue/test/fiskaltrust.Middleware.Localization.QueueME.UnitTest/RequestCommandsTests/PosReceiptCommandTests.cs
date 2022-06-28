@@ -36,13 +36,17 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             var inMemoryActionJournalRepository = await IniActionJournalRepo(queue, Guid.NewGuid(), DateTime.UtcNow).ConfigureAwait(false);
             var posReceiptCommand = await InitializePosReceipt(new ftQueueItem(), new InMemoryJournalMERepository(), inMemoryActionJournalRepository, queueME).ConfigureAwait(false);
             var receiptRequest = CreateReceiptRequest();
-            var inMemoryMESSCD = new InMemoryMESSCD("TestTCRCodePos");
+            var iic = "iic";
+            var inMemoryMESSCD = new InMemoryMESSCD("TestTCRCodePos", iic, "iicSignature");
             var queueItem = new ftQueueItem()
             {
                 ftWorkMoment = DateTime.Now
             };
-            await posReceiptCommand.ExecuteAsync(inMemoryMESSCD, queue, receiptRequest, queueItem, queueME).ConfigureAwait(false);
-
+            var requestCommandResponse = await posReceiptCommand.ExecuteAsync(inMemoryMESSCD, queue, receiptRequest, queueItem, queueME).ConfigureAwait(false);
+            requestCommandResponse.ReceiptResponse.Should().NotBeNull();
+            requestCommandResponse.ReceiptResponse.ftSignatures.Should().NotBeNull();
+            requestCommandResponse.ReceiptResponse.ftSignatures.Should().HaveCount(1);
+            requestCommandResponse.ReceiptResponse.ftSignatures[0].Data.Should().Be(iic);
         }
 
         [Fact]
@@ -76,7 +80,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             };
             var posReceiptCommand = await InitializePosReceipt(existingQueueItem, inMemoryJournalMERepository, inMemoryActionJournalRepository, queueME).ConfigureAwait(false);
             var receiptRequest = CreateReceiptRequest();
-            var inMemoryMESSCD = new InMemoryMESSCD("TestTCRCodePos");
+            var inMemoryMESSCD = new InMemoryMESSCD("TestTCRCodePos", "iic", "iicSignature");
             var queueItem = new ftQueueItem()
             {
                 ftQueueItemId = Guid.NewGuid(),
@@ -135,7 +139,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
 
         private Func<Task> CallInitialOperationReceiptCommand(PosReceiptCommand posReceiptCommand, ftQueue queue, ftQueueME queueME, ReceiptRequest receiptRequest)
         {
-            return async () => { var receiptResponse = await posReceiptCommand.ExecuteAsync(new InMemoryMESSCD("testTcr"), queue, receiptRequest, new ftQueueItem(), queueME); };
+            return async () => { var receiptResponse = await posReceiptCommand.ExecuteAsync(new InMemoryMESSCD("testTcr", "iic", "iicSignature"), queue, receiptRequest, new ftQueueItem(), queueME); };
         }
 
 
@@ -168,7 +172,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             };
             var posReceiptCommand = await InitializePosReceipt(existingQueueItem, inMemoryJournalMERepository, inMemoryActionJournalRepository, queueME).ConfigureAwait(false);
             var receiptRequest = CreateReceiptRequest();
-            var inMemoryMESSCD = new InMemoryMESSCD("TestTCRCodePos");
+            var inMemoryMESSCD = new InMemoryMESSCD("TestTCRCodePos", "iic", "iicSignature");
             var queueItem = new ftQueueItem()
             {
                 ftQueueItemId = Guid.NewGuid(),

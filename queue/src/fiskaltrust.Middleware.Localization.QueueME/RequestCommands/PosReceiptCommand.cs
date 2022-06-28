@@ -12,6 +12,7 @@ using fiskaltrust.Middleware.Localization.QueueME.Extensions;
 using System.Collections.Generic;
 using fiskaltrust.Middleware.Contracts.Constants;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Localization.QueueME.Factories;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 {
@@ -49,22 +50,33 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                     throw new ArgumentNullException(nameof(invoice.OperatorCode));
                 }
                 var invoiceDetails = await CreateInvoiceDetail(request, invoice, queueItem).ConfigureAwait(false);
-                var registerInvoiceRequest = CreateInvoiceReqest(request, queueItem, invoice, scu, invoiceDetails);
-                var registerInvoiceResponse = await client.RegisterInvoiceAsync(registerInvoiceRequest).ConfigureAwait(false);
-                await InsertJournalME(queue, request, queueItem, scu, registerInvoiceResponse, invoiceDetails).ConfigureAwait(false);
+
+                var computeIICRequest = CreateComputeIICReqest(request, scu, invoiceDetails);
+                var computeIICResponse = await client.ComputeIICAsync(computeIICRequest).ConfigureAwait(false);
+
+                RegisterInvoiceResponse registerInvoiceResponse;
+                try
+                {
+                    var registerInvoiceRequest = CreateInvoiceReqest(request, queueItem, invoice, scu, invoiceDetails, computeIICResponse);
+                    registerInvoiceResponse = await client.RegisterInvoiceAsync(registerInvoiceRequest).ConfigureAwait(false);
+                }
+                catch(EntryPointNotFoundException ex)
+                {
+                    _logger.LogDebug(ex, "TSE is not reachable.");
+                    return await ProcessFailedReceiptRequest(queueItem, request, queueME).ConfigureAwait(false);
+                }
+
+                await InsertJournalME(queue, request, queueItem, scu, registerInvoiceResponse, invoiceDetails, computeIICResponse).ConfigureAwait(false);
                 var receiptResponse = CreateReceiptResponse(request, queueItem);
+                receiptResponse.ftSignatures = receiptResponse.ftSignatures.Concat(new SignatureItemFactory(queueItem, request, computeIICResponse, queueME).CreateSignatures()).ToArray();
+
                 return new RequestCommandResponse()
                 {
-                    ReceiptResponse = receiptResponse
+                    ReceiptResponse = receiptResponse,
                 };
             }
             catch (Exception ex)
             {
-                if (ex.GetType().Name == ENDPOINTNOTFOUND)
-                {
-                    _logger.LogDebug(ex, "TSE not reachable.");
-                    return await ProcessFailedReceiptRequest(queueItem, request, queueME).ConfigureAwait(false);
-                }
                 _logger.LogCritical(ex, "An exception occured while processing this request.");
                 throw;
             }
@@ -74,17 +86,17 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
         {
             var _journalME = await _journalMERepository.GetAsync().ConfigureAwait(false);
             var journalME = _journalME.Where(x => x.JournalType == 0x44D5_0000_0000_0007).OrderByDescending(x => x.TimeStamp).FirstOrDefault();
-            
+
             if (journalME == null || new DateTime(journalME.TimeStamp).Date != DateTime.UtcNow.Date)
             {
-                return true;           
+                return true;
             }
             return false;
         }
 
         private async Task<InvoiceDetails> CreateInvoiceDetail(ReceiptRequest request, Invoice invoice, ftQueueItem queueItem)
         {
-            return  new InvoiceDetails()
+            return new InvoiceDetails()
             {
                 InvoiceType = request.GetInvoiceType(),
                 SelfIssuedInvoiceType = invoice.TypeOfSelfiss == null ? null : (SelfIssuedInvoiceType) Enum.Parse(typeof(SelfIssuedInvoiceType), invoice.TypeOfSelfiss),
@@ -100,7 +112,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                     CorrectionType = (InvoiceCorrectionType) Enum.Parse(typeof(InvoiceCorrectionType), invoice.CorrectiveInv.Type),
                 } : null,
                 PaymentDetails = request.GetPaymentMethodTypes(),
-                Currency = new CurrencyDetails() { CurrencyCode = "EUR" , ExchangeRateToEuro = 1},
+                Currency = new CurrencyDetails() { CurrencyCode = "EUR", ExchangeRateToEuro = 1 },
                 Buyer = GetBuyer(request),
                 ItemDetails = GetInvoiceItems(request),
                 Fees = GetFees(invoice),
@@ -113,7 +125,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 YearlyOrdinalNumber = await GetNextOrdinalNumber(queueItem).ConfigureAwait(false)
             };
         }
-        private async Task InsertJournalME(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftSignaturCreationUnitME scu, RegisterInvoiceResponse registerInvoiceResponse, InvoiceDetails invoice)
+        private async Task InsertJournalME(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftSignaturCreationUnitME scu, RegisterInvoiceResponse registerInvoiceResponse, InvoiceDetails invoice, ComputeIICResponse computeIICResponse)
         {
             var journal = new ftJournalME
             {
@@ -123,7 +135,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 cbReference = request.cbReceiptReference,
                 Number = queue.ftReceiptNumerator + 1,
                 FIC = registerInvoiceResponse.FIC,
-                IIC = registerInvoiceResponse.IIC,
+                IIC = computeIICResponse.IIC,
                 JournalType = (long) JournalTypes.JournalME,
                 ftOrdinalNumber = (int) invoice.YearlyOrdinalNumber
             };
@@ -146,7 +158,20 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             return 1;
         }
 
-        private static RegisterInvoiceRequest CreateInvoiceReqest(ReceiptRequest request, ftQueueItem queueItem, Invoice invoice, ftSignaturCreationUnitME scu, InvoiceDetails invoiceDetails)
+        private static ComputeIICRequest CreateComputeIICReqest(ReceiptRequest request, ftSignaturCreationUnitME scu, InvoiceDetails invoiceDetails)
+        {
+            return new ComputeIICRequest()
+            {
+                SoftwareCode = scu.SoftwareCode,
+                TcrCode = scu.TcrCode,
+                BusinessUnitCode = scu.BusinessUnitCode,
+                Moment = request.cbReceiptMoment,
+                YearlyOrdinalNumber = invoiceDetails.YearlyOrdinalNumber,
+                GrossAmount = invoiceDetails.GrossAmount,
+            };
+        }
+
+        private static RegisterInvoiceRequest CreateInvoiceReqest(ReceiptRequest request, ftQueueItem queueItem, Invoice invoice, ftSignaturCreationUnitME scu, InvoiceDetails invoiceDetails, ComputeIICResponse computeIICResponse)
         {
             return new RegisterInvoiceRequest()
             {
@@ -158,17 +183,20 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 Moment = request.cbReceiptMoment,
                 OperatorCode = invoice.OperatorCode,
                 RequestId = queueItem.ftQueueItemId,
-                SubsequentDeliveryType = invoice.SubsequentDeliveryType == null ? null : (SubsequentDeliveryType) Enum.Parse(typeof(SubsequentDeliveryType), invoice.SubsequentDeliveryType)
+                SubsequentDeliveryType = invoice.SubsequentDeliveryType == null ? null : (SubsequentDeliveryType) Enum.Parse(typeof(SubsequentDeliveryType), invoice.SubsequentDeliveryType),
+                IIC = computeIICResponse.IIC,
+                IICSignature = computeIICResponse.IICSignature
             };
         }
+
         private List<InvoiceFee> GetFees(Invoice invoice)
         {
-            if(invoice.Fees is null)
+            if (invoice.Fees is null)
             {
                 return null;
             }
             var result = new List<InvoiceFee>();
-            foreach(var fee in invoice.Fees)
+            foreach (var fee in invoice.Fees)
             {
                 result.Add(new InvoiceFee()
                 {
@@ -185,7 +213,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 throw new MaxInvoiceItemsExceededException();
             }
             var items = new List<InvoiceItem>();
-            foreach(var chargeItem in request.cbChargeItems)
+            foreach (var chargeItem in request.cbChargeItems)
             {
                 items.Add(chargeItem.GetInvoiceItem());
             }
@@ -227,6 +255,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 return true;
             }
             return false;
-       }
+        }
     }
 }

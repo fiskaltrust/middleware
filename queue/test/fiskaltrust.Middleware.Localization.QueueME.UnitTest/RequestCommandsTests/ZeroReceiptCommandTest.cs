@@ -44,7 +44,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             var inMemoryConfigurationRepository = new InMemoryConfigurationRepository();
             await inMemoryConfigurationRepository.InsertOrUpdateSignaturCreationUnitMEAsync(scu).ConfigureAwait(false);
             await inMemoryConfigurationRepository.InsertOrUpdateQueueMEAsync(queueME);
-            var client = new InMemoryMESSCD("TestZeroTCRCode", true);
+            var client = new InMemoryMESSCD("TestZeroTCRCode", "iic", "iicSignature", true);
             var actionJournalRepository = new InMemoryActionJournalRepository();
             var journalMERepository = new InMemoryJournalMERepository();
             var queueItemRepository = new InMemoryQueueItemRepository();
@@ -53,7 +53,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             queueItem.request = JsonConvert.SerializeObject(cdReceipRequest);
             await queueItemRepository.InsertAsync(queueItem).ConfigureAwait(false);
             var cashDepositReceiptCommand = new CashDepositReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), inMemoryConfigurationRepository, journalMERepository, queueItemRepository, actionJournalRepository);
-            await cashDepositReceiptCommand.ExecuteAsync(new InMemoryMESSCD("TestZeroTCRCode"), queue, cdReceipRequest, queueItem, queueME).ConfigureAwait(false);
+            await cashDepositReceiptCommand.ExecuteAsync(new InMemoryMESSCD("TestZeroTCRCode", "iic", "iicSignature"), queue, cdReceipRequest, queueItem, queueME).ConfigureAwait(false);
 
 
 

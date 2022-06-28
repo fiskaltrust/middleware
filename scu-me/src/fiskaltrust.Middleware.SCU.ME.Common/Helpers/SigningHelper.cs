@@ -12,16 +12,16 @@ namespace fiskaltrust.Middleware.SCU.ME.Common.Helpers
 {
     public static class SigningHelper
     {
-        public static string CreateIIC(ScuMEConfiguration configuration, RegisterInvoiceRequest registerInvoiceRequest)
+        public static (string iic, string iicSignature) CreateIIC(ScuMEConfiguration configuration, ComputeIICRequest computeIICRequest)
         {
-
-            var iicSignature = CreateIicSignature(configuration, registerInvoiceRequest);
+            var iicSignature = CreateIicSignature(configuration, computeIICRequest);
+            
             var iic = ((HashAlgorithm) CryptoConfig.CreateFromName("MD5")!).ComputeHash(iicSignature);
 
-            return BitConverter.ToString(iic).Replace("-", string.Empty);
+            return (BitConverter.ToString(iic).Replace("-", string.Empty), BitConverter.ToString(iicSignature).Replace("-", string.Empty));
         }
 
-        public static byte[] CreateIicSignature(ScuMEConfiguration configuration, RegisterInvoiceRequest registerInvoiceRequest)
+        private static byte[] CreateIicSignature(ScuMEConfiguration configuration, ComputeIICRequest computeIICRequest)
         {
             var nfi = new NumberFormatInfo
             {
@@ -30,12 +30,12 @@ namespace fiskaltrust.Middleware.SCU.ME.Common.Helpers
             var iicInput = string.Join("|", new List<object>
             {
                 configuration.TIN,
-                registerInvoiceRequest.Moment.ToString("yyyy-MM-ddTHH:mm:sszzz"),
-                registerInvoiceRequest.InvoiceDetails.YearlyOrdinalNumber,
-                registerInvoiceRequest.BusinessUnitCode,
-                registerInvoiceRequest.TcrCode,
-                registerInvoiceRequest.SoftwareCode,
-                registerInvoiceRequest.InvoiceDetails.GrossAmount.ToString(nfi)
+                computeIICRequest.Moment.ToString("yyyy-MM-ddTHH:mm:sszzz"),
+                computeIICRequest.YearlyOrdinalNumber,
+                computeIICRequest.BusinessUnitCode,
+                computeIICRequest.TcrCode,
+                computeIICRequest.SoftwareCode,
+                computeIICRequest.GrossAmount.ToString(nfi)
             }.Select(o => o.ToString()));
             return configuration.Certificate.GetRSAPrivateKey()!.SignData(Encoding.ASCII.GetBytes(iicInput), HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
         }

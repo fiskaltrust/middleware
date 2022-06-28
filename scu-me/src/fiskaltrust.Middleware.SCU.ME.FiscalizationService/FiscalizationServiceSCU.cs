@@ -108,8 +108,6 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
         {
             var sendDateTime = registerInvoiceRequest.SubsequentDeliveryType.HasValue ? DateTime.Now : ConvertToCETFromUtc(registerInvoiceRequest.Moment);
 
-            var iic = SigningHelper.CreateIIC(_configuration, registerInvoiceRequest);
-            var iicSig = BitConverter.ToString(SigningHelper.CreateIicSignature(_configuration, registerInvoiceRequest)).Replace("-", string.Empty);
             var invoice = new SoapFiscalizationService.InvoiceType
             {
                 BankAccNum = null,
@@ -123,8 +121,8 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
                         IIC = iic
                     }
                 },*/
-                IICSignature = iicSig,
-                IIC = iic,
+                IICSignature = registerInvoiceRequest.IICSignature,
+                IIC = registerInvoiceRequest.IIC,
                 InvNum = string.Join("/", registerInvoiceRequest.BusinessUnitCode, registerInvoiceRequest.InvoiceDetails.YearlyOrdinalNumber, sendDateTime.Year, registerInvoiceRequest.TcrCode),
                 InvOrdNum = (int) registerInvoiceRequest.InvoiceDetails.YearlyOrdinalNumber,
                 InvType = SoapFiscalizationService.InvoiceTSType.INVOICE,
@@ -307,7 +305,6 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
             return new RegisterInvoiceResponse
             {
                 FIC = response.RegisterInvoiceResponse.FIC,
-                IIC = iic
             };
         }
         catch (Exception e)
@@ -410,5 +407,16 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
         DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
         var cstZone = TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
         return TimeZoneInfo.ConvertTimeFromUtc(dateTime, cstZone);
+    }
+
+    public Task<ComputeIICResponse> ComputeIICAsync(ComputeIICRequest computeIICRequest)
+    {
+        var (iic, iicSignature) = SigningHelper.CreateIIC(_configuration, computeIICRequest);
+        return Task.FromResult(
+        new ComputeIICResponse
+        {
+            IIC = iic,
+            IICSignature = iicSignature
+        });
     }
 }

@@ -8,12 +8,12 @@ using fiskaltrust.ifPOS.v1.me;
 using System.Collections.Generic;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using System.Linq;
+using fiskaltrust.Middleware.Localization.QueueME.Factories;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 {
     public abstract class RequestCommand
     {
-        protected const string ENDPOINTNOTFOUND = "EntryPointNotFoundException";
         private const string QUEUEINFAILEDMODE = "Queue in failed mode, use Zeroreceipt to process failed requests. SSCDFailCount: {0}";
         protected readonly ILogger<RequestCommand> _logger;
         protected readonly IConfigurationRepository _configurationRepository;
@@ -30,6 +30,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             _queueItemRepository = queueItemRepository;
             _actionJournalRepository = actionJournalRepository;
         }
+
         public abstract Task<bool> ReceiptNeedsReprocessing(ftQueueME queueME, ftQueueItem queueItem, ReceiptRequest request);
         public abstract Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftQueueME queueME);
         public static ReceiptResponse CreateReceiptResponse(ReceiptRequest request, ftQueueItem queueItem,string[] receiptHeader = null, long state = 0x4D45000000000000)
@@ -44,9 +45,10 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 cbReceiptReference = request.cbReceiptReference,
                 ftReceiptMoment = DateTime.UtcNow,
                 ftReceiptHeader = receiptHeader,
-                ftState = state
+                ftState = state,
             };
         }
+
         protected ftActionJournal CreateActionJournal(ftQueue queue, long journalType, ftQueueItem queueItem)
         {
             var actionjounal = new ftActionJournal()
@@ -59,6 +61,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             };
             return actionjounal;
         }
+
         protected static List<ftActionJournal> CreateClosingActionJournals(ftQueueItem queueItem, ftQueue queue, string message, long type)
         {
             return new List<ftActionJournal>
@@ -76,6 +79,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 }
             };
         }
+
         protected async Task<RequestCommandResponse> CreateClosing(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
         {
             var receiptResponse = CreateReceiptResponse(request, queueItem);
@@ -90,6 +94,14 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             };
             return await Task.FromResult(requestCommandResponse).ConfigureAwait(false);
         }
+
+        public async Task<RequestCommandResponse> ProcessFailedInvoiceRequest(ftQueueItem queueItem, ReceiptRequest request, ComputeIICResponse computeIICResponse, ftQueueME queueME)
+        {
+            var requestCommandResponse = await ProcessFailedReceiptRequest(queueItem, request, queueME);
+            requestCommandResponse.ReceiptResponse.ftSignatures = requestCommandResponse.ReceiptResponse.ftSignatures.Concat(new SignatureItemFactory(queueItem, request, computeIICResponse, queueME).CreateSignatures()).ToArray();
+            return requestCommandResponse;
+        }
+
         public async Task<RequestCommandResponse> ProcessFailedReceiptRequest(ftQueueItem queueItem, ReceiptRequest request, ftQueueME queueME)
         {
             if (queueME.SSCDFailCount == 0)
@@ -107,6 +119,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 ReceiptResponse = receiptResponse
             };
         }
+
         protected async Task<bool> ActionJournalExists(ftQueueItem queueItem, long type)
         {
             var actionJournal = await _actionJournalRepository.GetByQueueItemId(queueItem.ftQueueItemId).FirstOrDefaultAsync().ConfigureAwait(false);

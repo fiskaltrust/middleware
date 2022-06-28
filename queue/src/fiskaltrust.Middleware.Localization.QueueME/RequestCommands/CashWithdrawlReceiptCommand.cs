@@ -49,13 +49,13 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                     }
                 };
             }
+            catch(EntryPointNotFoundException ex)
+            {
+                _logger.LogDebug(ex, "TSE is not reachable.");
+                return await ProcessFailedReceiptRequest(queueItem, request, queueME).ConfigureAwait(false);
+            }
             catch (Exception ex)
             {
-                if (ex.GetType().Name == ENDPOINTNOTFOUND)
-                {
-                    _logger.LogDebug(ex, "TSE not reachable.");
-                    return await ProcessFailedReceiptRequest(queueItem, request, queueME).ConfigureAwait(false);
-                }
                 _logger.LogCritical(ex, "An exception occured while processing this request.");
                 throw;
             }

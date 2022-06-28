@@ -23,6 +23,16 @@ public class InMemorySCU : IMESSCD
         _faker = new Faker();
     }
 
+    public Task<ComputeIICResponse> ComputeIICAsync(ComputeIICRequest computeIICRequest)
+    {
+        var (iic, iicSignature) = SigningHelper.CreateIIC(_configuration, computeIICRequest);
+        return Task.FromResult(
+        new ComputeIICResponse
+        {
+            IIC = iic,
+            IICSignature = iicSignature
+        });
+    }
     public Task<ScuMeEchoResponse> EchoAsync(ScuMeEchoRequest request) => Task.FromResult(new ScuMeEchoResponse { Message = request.Message });
 
     public Task<RegisterCashDepositResponse> RegisterCashDepositAsync(RegisterCashDepositRequest registerCashDepositRequest) =>
@@ -37,8 +47,7 @@ public class InMemorySCU : IMESSCD
     {
         return Task.FromResult(new RegisterInvoiceResponse
         {
-            FIC = Guid.NewGuid().ToString(),
-            IIC = SigningHelper.CreateIIC(_configuration, registerInvoiceRequest)
+            FIC = Guid.NewGuid().ToString()
         });
     }
 

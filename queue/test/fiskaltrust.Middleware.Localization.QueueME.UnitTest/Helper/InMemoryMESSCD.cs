@@ -10,12 +10,16 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.Helper
     public class InMemoryMESSCD : IMESSCD
     {
         private readonly string _tcrCodeOrFIC;
+        private readonly string _iic;
+        private readonly string _iicSignature;
         private readonly bool _throwException;
 
-        public InMemoryMESSCD (string tcrCodeOrFIC, bool throwException = false)
+        public InMemoryMESSCD (string tcrCodeOrFIC, string iic, string iicSignature, bool throwException = false)
         {
             _tcrCodeOrFIC = tcrCodeOrFIC;
             _throwException = throwException;
+            _iic = iic;
+            _iicSignature = iicSignature;
         }
 
         public Task<ScuMeEchoResponse> EchoAsync(ScuMeEchoRequest request) => throw new NotImplementedException();
@@ -65,6 +69,8 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.Helper
                 throw new EndpointNotFoundException("Tse not reachable!");
             }
         }
+
+        public Task<ComputeIICResponse> ComputeIICAsync(ComputeIICRequest computeIICRequest) => Task.FromResult(new ComputeIICResponse { IIC = _iic, IICSignature = _iicSignature });
     }
 }
 

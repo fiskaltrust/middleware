@@ -17,8 +17,8 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
         private const string QUEUECONNECTED = "All Receipts have been sent! Queue is in connected mode!";
         protected readonly IRequestCommandFactory _requestCommandFactory;
 
-        public ZeroReceiptCommand(ILogger<RequestCommand> logger, IConfigurationRepository configurationRepository, IMiddlewareJournalMERepository journalMERepository, 
-            IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareActionJournalRepository actionJournalRepository,IRequestCommandFactory requestCommandFactory) :
+        public ZeroReceiptCommand(ILogger<RequestCommand> logger, IConfigurationRepository configurationRepository, IMiddlewareJournalMERepository journalMERepository,
+            IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareActionJournalRepository actionJournalRepository, IRequestCommandFactory requestCommandFactory) :
             base(logger, configurationRepository, journalMERepository, queueItemRepository, actionJournalRepository)
         {
             _requestCommandFactory = requestCommandFactory;
@@ -28,7 +28,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
         {
             try
             {
-                if(queueME.SSCDFailCount == 0)
+                if (queueME.SSCDFailCount == 0)
                 {
                     _logger.LogInformation("Queue has no failed receipts!");
                     return new RequestCommandResponse()
@@ -54,7 +54,8 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                                     await _actionJournalRepository.InsertAsync(journal).ConfigureAwait(false);
                                 }
                             }
-                        }catch (Exception ex)
+                        }
+                        catch (Exception ex)
                         {
                             _logger.LogError(ex, "Request could not be resolved : " + fqueueItem.request);
                         }
@@ -71,7 +72,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                     ReceiptResponse = receiptResponse
                 });
             }
-            catch (Exception ex) when (ex.GetType().Name == ENDPOINTNOTFOUND)
+            catch (EntryPointNotFoundException ex)
             {
                 _logger.LogDebug(ex, "TSE not reachable.");
                 throw;
