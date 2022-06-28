@@ -23,6 +23,7 @@
         <PackageReference Include="fiskaltrust.Exports.TAR" Version="1.1.0" />
         <PackageReference Include="EntityFramework" Version="6.4.4" />
         <PackageReference Include="SharpCompress" Version="0.28.2" />
+        <PackageReference Include="System.Text.Encoding.CodePages" Version="5.0.0" />
     </ItemGroup>
 
     <ItemGroup Condition="'$(TargetFramework)' != 'netstandard2.0'">
