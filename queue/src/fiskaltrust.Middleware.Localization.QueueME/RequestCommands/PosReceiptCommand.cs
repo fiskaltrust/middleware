@@ -19,8 +19,8 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
     public class PosReceiptCommand : RequestCommand
     {
         public PosReceiptCommand(ILogger<RequestCommand> logger, IConfigurationRepository configurationRepository,
-            IMiddlewareJournalMERepository journalMERepository, IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareActionJournalRepository actionJournalRepository) :
-            base(logger, configurationRepository, journalMERepository, queueItemRepository, actionJournalRepository)
+            IMiddlewareJournalMERepository journalMERepository, IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareActionJournalRepository actionJournalRepository, QueueMEConfiguration queueMeConfiguration) :
+            base(logger, configurationRepository, journalMERepository, queueItemRepository, actionJournalRepository, queueMeConfiguration)
         { }
 
         public override async Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftQueueME queueME)
@@ -68,7 +68,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 
                 await InsertJournalME(queue, request, queueItem, scu, registerInvoiceResponse, invoiceDetails, computeIICResponse).ConfigureAwait(false);
                 var receiptResponse = CreateReceiptResponse(request, queueItem);
-                receiptResponse.ftSignatures = receiptResponse.ftSignatures.Concat(new SignatureItemFactory(queueItem, request, computeIICResponse, queueME).CreateSignatures()).ToArray();
+                receiptResponse.ftSignatures = receiptResponse.ftSignatures.Concat(new SignatureItemFactory(request, computeIICResponse, invoiceDetails.YearlyOrdinalNumber, scu, _queueMeConfiguration).CreateSignatures()).ToArray();
 
                 return new RequestCommandResponse()
                 {
@@ -141,21 +141,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             };
             journal.ftInvoiceNumber = string.Concat(scu.BusinessUnitCode, '/', journal.ftOrdinalNumber, '/', queueItem.ftWorkMoment.Value.Year, '/', scu.TcrCode);
             await _journalMERepository.InsertAsync(journal).ConfigureAwait(false);
-        }
-
-        private async Task<ulong> GetNextOrdinalNumber(ftQueueItem queueItem)
-        {
-            var lastJournals = await _journalMERepository.GetAsync().ConfigureAwait(false);
-            var lastJournal = lastJournals.OrderByDescending(x => x.TimeStamp).Where(x => x.JournalType == (long) JournalTypes.JournalME).FirstOrDefault();
-            if (lastJournal != null)
-            {
-                var lastqueuItem = await _queueItemRepository.GetAsync(lastJournal.ftQueueItemId);
-                if (queueItem.ftWorkMoment.Value.Year == lastqueuItem.ftWorkMoment.Value.Year)
-                {
-                    return (ulong) (lastJournal.ftOrdinalNumber + 1);
-                }
-            }
-            return 1;
         }
 
         private static ComputeIICRequest CreateComputeIICReqest(ReceiptRequest request, ftSignaturCreationUnitME scu, InvoiceDetails invoiceDetails)

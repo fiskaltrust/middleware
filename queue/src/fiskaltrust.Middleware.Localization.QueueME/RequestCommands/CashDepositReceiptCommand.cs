@@ -16,8 +16,8 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
     public class CashDepositReceiptCommand : RequestCommand
     {
         public CashDepositReceiptCommand(ILogger<RequestCommand> logger, IConfigurationRepository configurationRepository,IMiddlewareJournalMERepository journalMERepository, 
-            IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareActionJournalRepository actionJournalRepository) :
-            base(logger, configurationRepository, journalMERepository, queueItemRepository, actionJournalRepository)
+            IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareActionJournalRepository actionJournalRepository, QueueMEConfiguration queueMeConfiguration) :
+            base(logger, configurationRepository, journalMERepository, queueItemRepository, actionJournalRepository, queueMeConfiguration)
         { }
 
         public override async Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftQueueME queueME)

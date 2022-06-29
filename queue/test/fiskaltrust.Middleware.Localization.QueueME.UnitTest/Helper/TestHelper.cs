@@ -31,7 +31,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.Helper
             await inMemoryConfigurationRepository.InsertOrUpdateQueueMEAsync(queueME);
             var requ = typeof(T);
             return (T) Activator.CreateInstance(requ, new object[] {
-                    Mock.Of<ILogger<RequestCommand>>(), inMemoryConfigurationRepository, journalMERepository, new InMemoryQueueItemRepository(), new InMemoryActionJournalRepository()});
+                    Mock.Of<ILogger<RequestCommand>>(), inMemoryConfigurationRepository, journalMERepository, new InMemoryQueueItemRepository(), new InMemoryActionJournalRepository(), new QueueMEConfiguration { Sandbox = true }});
         }
         public static ReceiptRequest CreateReceiptRequest(long receiptCase)
         {

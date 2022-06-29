@@ -29,7 +29,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             var inMemoryJournalMERepository = new InMemoryJournalMERepository();
             var inMemoryQueueItemRepository = new InMemoryQueueItemRepository();
             var initialOperationReceiptCommand = new InitialOperationReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), inMemoryConfigurationRepository, 
-                inMemoryJournalMERepository, inMemoryQueueItemRepository, new InMemoryActionJournalRepository());
+                inMemoryJournalMERepository, inMemoryQueueItemRepository, new InMemoryActionJournalRepository(), new QueueMEConfiguration { Sandbox = true });
 
             var testTcr = "TestTCRCode";
             var iic = "iic";
@@ -87,7 +87,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             var inMemoryJournalMERepository = new InMemoryJournalMERepository();
             var inMemoryQueueItemRepository = new InMemoryQueueItemRepository();
             var InitialOperationReceiptCommand = new InitialOperationReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), inMemoryConfigurationRepository, 
-                inMemoryJournalMERepository, inMemoryQueueItemRepository, new InMemoryActionJournalRepository());
+                inMemoryJournalMERepository, inMemoryQueueItemRepository, new InMemoryActionJournalRepository(), new QueueMEConfiguration { Sandbox = true });
             var sutMethod = CallInitialOperationReceiptCommand(InitialOperationReceiptCommand, queue, receiptRequest, queueME);
             await sutMethod.Should().ThrowAsync<ENUAlreadyRegisteredException>().ConfigureAwait(false);
         }

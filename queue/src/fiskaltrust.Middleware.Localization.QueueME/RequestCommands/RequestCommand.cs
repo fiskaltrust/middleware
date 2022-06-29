@@ -9,6 +9,8 @@ using System.Collections.Generic;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using System.Linq;
 using fiskaltrust.Middleware.Localization.QueueME.Factories;
+using fiskaltrust.Middleware.Localization.QueueME.Exceptions;
+using fiskaltrust.Middleware.Contracts.Constants;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 {
@@ -20,15 +22,17 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
         protected readonly IMiddlewareJournalMERepository _journalMERepository;
         protected readonly IMiddlewareQueueItemRepository _queueItemRepository;
         protected readonly IMiddlewareActionJournalRepository _actionJournalRepository;
+        protected readonly QueueMEConfiguration _queueMeConfiguration;
 
         public RequestCommand(ILogger<RequestCommand> logger, IConfigurationRepository configurationRepository, IMiddlewareJournalMERepository journalMERepository, IMiddlewareQueueItemRepository queueItemRepository, 
-            IMiddlewareActionJournalRepository actionJournalRepository)
+            IMiddlewareActionJournalRepository actionJournalRepository, QueueMEConfiguration queueMeConfiguration)
         {
             _logger = logger;
             _configurationRepository = configurationRepository;
             _journalMERepository = journalMERepository;
             _queueItemRepository = queueItemRepository;
             _actionJournalRepository = actionJournalRepository;
+            _queueMeConfiguration = queueMeConfiguration;
         }
 
         public abstract Task<bool> ReceiptNeedsReprocessing(ftQueueME queueME, ftQueueItem queueItem, ReceiptRequest request);
@@ -98,7 +102,16 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
         public async Task<RequestCommandResponse> ProcessFailedInvoiceRequest(ftQueueItem queueItem, ReceiptRequest request, ComputeIICResponse computeIICResponse, ftQueueME queueME)
         {
             var requestCommandResponse = await ProcessFailedReceiptRequest(queueItem, request, queueME);
-            requestCommandResponse.ReceiptResponse.ftSignatures = requestCommandResponse.ReceiptResponse.ftSignatures.Concat(new SignatureItemFactory(queueItem, request, computeIICResponse, queueME).CreateSignatures()).ToArray();
+            if (queueME.ftSignaturCreationUnitMEId == null)
+            {
+                throw new ENUNotRegisteredException("No SignaturCreationUnitME!");
+            }
+            var scu = await _configurationRepository.GetSignaturCreationUnitMEAsync(queueME.ftSignaturCreationUnitMEId.Value).ConfigureAwait(false);
+            if (scu == null)
+            {
+                throw new ENUNotRegisteredException("No SignaturCreationUnitME!");
+            }
+            requestCommandResponse.ReceiptResponse.ftSignatures = requestCommandResponse.ReceiptResponse.ftSignatures.Concat(new SignatureItemFactory(request, computeIICResponse, await GetNextOrdinalNumber(queueItem).ConfigureAwait(false), scu, _queueMeConfiguration).CreateSignatures()).ToArray();
             return requestCommandResponse;
         }
 
@@ -128,6 +141,25 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 return true;
             }
             return false;
+        }
+        
+        protected async Task<ulong> GetNextOrdinalNumber(ftQueueItem queueItem)
+        {
+            var lastJournals = await _journalMERepository.GetAsync().ConfigureAwait(false);
+            var lastJournal = lastJournals
+                .OrderByDescending(x => x.TimeStamp)
+                .Where(x => x.JournalType == (long) JournalTypes.JournalME)
+                .Where(x => x.ftQueueItemId != queueItem.ftQueueItemId)
+                .FirstOrDefault();
+            if (lastJournal != null)
+            {
+                var lastqueuItem = await _queueItemRepository.GetAsync(lastJournal.ftQueueItemId);
+                if (queueItem.ftWorkMoment.Value.Year == lastqueuItem.ftWorkMoment.Value.Year)
+                {
+                    return (ulong) (lastJournal.ftOrdinalNumber + 1);
+                }
+            }
+            return 1;
         }
     }
 }

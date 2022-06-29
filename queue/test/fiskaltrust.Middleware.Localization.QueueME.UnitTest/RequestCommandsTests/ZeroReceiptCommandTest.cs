@@ -52,12 +52,12 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             var cdReceipRequest = TestHelper.CreateReceiptRequest(0x44D5_0000_0000_0007);
             queueItem.request = JsonConvert.SerializeObject(cdReceipRequest);
             await queueItemRepository.InsertAsync(queueItem).ConfigureAwait(false);
-            var cashDepositReceiptCommand = new CashDepositReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), inMemoryConfigurationRepository, journalMERepository, queueItemRepository, actionJournalRepository);
+            var cashDepositReceiptCommand = new CashDepositReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), inMemoryConfigurationRepository, journalMERepository, queueItemRepository, actionJournalRepository, new QueueMEConfiguration { Sandbox = true });
             await cashDepositReceiptCommand.ExecuteAsync(new InMemoryMESSCD("TestZeroTCRCode", "iic", "iicSignature"), queue, cdReceipRequest, queueItem, queueME).ConfigureAwait(false);
 
 
 
-            var zeroReceiptCommand = new ZeroReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), inMemoryConfigurationRepository, journalMERepository, queueItemRepository, actionJournalRepository, CreateRequestCommandFactory());
+            var zeroReceiptCommand = new ZeroReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), inMemoryConfigurationRepository, journalMERepository, queueItemRepository, actionJournalRepository, CreateRequestCommandFactory(), new QueueMEConfiguration { Sandbox = true });
             var respond = await zeroReceiptCommand.ExecuteAsync(client, queue, cdReceipRequest, queueItem, queueME);
         }
 

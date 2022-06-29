@@ -18,8 +18,8 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
         protected readonly IRequestCommandFactory _requestCommandFactory;
 
         public ZeroReceiptCommand(ILogger<RequestCommand> logger, IConfigurationRepository configurationRepository, IMiddlewareJournalMERepository journalMERepository,
-            IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareActionJournalRepository actionJournalRepository, IRequestCommandFactory requestCommandFactory) :
-            base(logger, configurationRepository, journalMERepository, queueItemRepository, actionJournalRepository)
+            IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareActionJournalRepository actionJournalRepository, IRequestCommandFactory requestCommandFactory, QueueMEConfiguration queueMeConfiguration) :
+            base(logger, configurationRepository, journalMERepository, queueItemRepository, actionJournalRepository, queueMeConfiguration)
         {
             _requestCommandFactory = requestCommandFactory;
         }
