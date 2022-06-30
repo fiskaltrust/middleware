@@ -26,7 +26,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands.Factories
                 0x0006 => _serviceProvider.GetRequiredService<YearlyClosingReceiptCommand>(),
                 0x0007 => _serviceProvider.GetRequiredService<CashDepositReceiptCommand>(),
                 0x0008 => _serviceProvider.GetRequiredService<CashWithdrawlReceiptCommand>(),
-                _ => null
+                _ => throw new NotImplementedException($"The given receipt case 0x{request.ftReceiptCase:x} is not supported. Please see docs.fiskaltrust.cloud for a list of supported types.")
             };
             return command;
         }
