@@ -7,22 +7,12 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Models
     public class CorrectiveInv
     {
         [DataMember]
-        public string ReferencedIKOF
-        {
-            get;
-            set;
-        }
+        public string ReferencedIKOF { get; set; }
+
         [DataMember]
-        public DateTime ReferencedMoment
-        {
-            get;
-            set;
-        }
+        public DateTime ReferencedMoment { get; set; }
+
         [DataMember]
-        public string Type
-        {
-            get;
-            set;
-        }
+        public string Type { get; set; }
     }
 }

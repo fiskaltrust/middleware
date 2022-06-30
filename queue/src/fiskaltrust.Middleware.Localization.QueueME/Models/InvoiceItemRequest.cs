@@ -7,10 +7,13 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Models
     {       
         [DataMember]
         public decimal? DiscountPercentage { get; set; }
+
         [DataMember]
         public string ExemptFromVatReason { get; set; }
+
         [DataMember]
         public string[] VoucherSerialNumbers { get; set; }
+
         [DataMember]
         public string VoucherExpirationDate { get; set; }
     }

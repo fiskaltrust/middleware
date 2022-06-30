@@ -7,7 +7,9 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Models
     public class RequestCommandResponse
     {
         public ReceiptResponse ReceiptResponse { get; set; }
-        public IEnumerable<ftActionJournal> ActionJournals { get; set; } = new List<ftActionJournal>();
+
+        public List<ftActionJournal> ActionJournals { get; set; } = new List<ftActionJournal>();
+
         public ulong? TransactionNumber { get; set; } = null;
     }
 }

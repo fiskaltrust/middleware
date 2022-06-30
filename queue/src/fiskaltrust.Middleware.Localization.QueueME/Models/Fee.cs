@@ -7,6 +7,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Models
     {
         [DataMember]
         public string FeeType { get; set; }
+
         [DataMember]
         public decimal Amount { get; set; }
     }

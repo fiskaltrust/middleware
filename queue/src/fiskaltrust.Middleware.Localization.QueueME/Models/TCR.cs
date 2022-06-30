@@ -7,52 +7,24 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Models
     public class Tcr
     {
         [DataMember]
-        public string TcrType
-        {
-            get;
-            set;
-        }
+        public string TcrType { get; set; }
 
         [DataMember]
-        public string IssuerTin
-        {
-            get;
-            set;
-        }
+        public string IssuerTin { get; set; }
 
         [DataMember]
-        public string BusinessUnitCode
-        {
-            get;
-            set;
-        }
+        public string BusinessUnitCode { get; set; }
 
         [DataMember]
-        public string SoftwareCode
-        {
-            get;
-            set;
-        }
+        public string SoftwareCode { get; set; }
 
         [DataMember]
-        public string MaintainerCode
-        {
-            get;
-            set;
-        }
+        public string MaintainerCode { get; set; }
 
         [DataMember]
-        public string TcrIntId
-        {
-            get;
-            set;
-        }
+        public string TcrIntId { get; set; }
 
         [DataMember]
-        public DateTime? ValidFrom
-        {
-            get;
-            set;
-        }
+        public DateTime? ValidFrom { get; set; }
     }
 }

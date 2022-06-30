@@ -8,14 +8,19 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Models
     {
         [DataMember]
         public string OperatorCode { get; set; }
+
         [DataMember]
         public string TypeOfSelfiss { get; set; }
+
         [DataMember]
         public DateTime? PayDeadline { get; set; }
+
         [DataMember]
         public CorrectiveInv CorrectiveInv { get; set; }
+
         [DataMember]
         public Fee[] Fees { get; set; }
+
         [DataMember]
         public string SubsequentDeliveryType { get; set; }
     }

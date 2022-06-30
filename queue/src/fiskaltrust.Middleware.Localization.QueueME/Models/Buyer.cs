@@ -6,40 +6,20 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Models
     public class Buyer
     {
         [DataMember]
-        public string BuyerIdentificationType
-        {
-            get;
-            set;
-        }
+        public string BuyerIdentificationType { get; set; }
+
         [DataMember]
-        public string IdentificationNumber
-        {
-            get;
-            set;
-        }
+        public string IdentificationNumber { get; set; }
         [DataMember]
-        public string Name
-        {
-            get;
-            set;
-        }
+        public string Name { get; set; }
+
         [DataMember]
-        public string Address
-        {
-            get;
-            set;
-        }
+        public string Address { get; set; }
+
         [DataMember]
-        public string Town
-        {
-            get;
-            set;
-        }
+        public string Town { get; set; }
+
         [DataMember]
-        public string Country
-        {
-            get;
-            set;
-        }
+        public string Country { get; set; }
     }
 }
