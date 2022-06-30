@@ -23,7 +23,7 @@
         <dependency id="fiskaltrust.storage" version="1.3.21-ci-22115-53166" ><NoWarn>NU1605</NoWarn>
         </dependency>
         <dependency id="Dapper" version="2.0.35" />
-        <dependency id="fiskaltrust.Exports.DSFinVK" Version="1.3.8" />
+        <dependency id="fiskaltrust.Exports.DSFinVK" Version="1.4.0" />
         <dependency id="fiskaltrust.Exports.TAR" version="1.1.0" />
         <dependency id="Microsoft.Data.Sqlite" version="3.1.4" />
         <dependency id="System.Linq.Async" version="4.1.1" />

@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Exceptions;
 using fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Models;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
@@ -44,8 +45,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
             };
 
             var requestContent = JsonConvert.SerializeObject(requestObject);
-
-            var responseMessage = await client.PostAsync(ENDPOINT, new StringContent(requestContent, Encoding.UTF8, "application/json"));
+            var responseMessage = await HttpClientWrapper.WrapCall(client.PostAsync(ENDPOINT, new StringContent(requestContent, Encoding.UTF8, "application/json")), _config.FiskalyClientTimeout).ConfigureAwait(false);
 
             if (!responseMessage.IsSuccessStatusCode)
             {
@@ -64,7 +64,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await GetToken().ConfigureAwait(false));
-            return await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
+            return await HttpClientWrapper.WrapCall(base.SendAsync(request, cancellationToken), _config.FiskalyClientTimeout).ConfigureAwait(false);
         }
 
         private bool IsTokenExpired() => _expiresOn == null || _expiresOn < DateTime.UtcNow;

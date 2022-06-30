@@ -19,9 +19,9 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision.Interop
 
         #region Input Functions
 
-        public abstract Task<(SeResult, SeStartTransactionResult)> SeStartTransactionAsync(string clientId, byte[] processData, string processType, byte[] additionalData = null);
+        public abstract Task<(SeResult, SeStartTransactionResult)> SeStartTransactionAsync(string clientId, byte[] processData, string processType);
         public abstract Task<(SeResult, SeTransactionResult)> SeUpdateTransactionAsync(string clientId, UInt32 transactionNumber, byte[] processData, string processType);
-        public abstract Task<(SeResult, SeTransactionResult)> SeFinishTransactionAsync(string clientId, UInt32 transactionNumber, byte[] processData, string processType, byte[] additionalData = null);
+        public abstract Task<(SeResult, SeTransactionResult)> SeFinishTransactionAsync(string clientId, UInt32 transactionNumber, byte[] processData, string processType);
 
         #endregion
 

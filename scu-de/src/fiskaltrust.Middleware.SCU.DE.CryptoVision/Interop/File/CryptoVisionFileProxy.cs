@@ -171,11 +171,11 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision.Interop
             });
         }
 
-        public async Task<(SeResult, SeTransactionResult)> SeFinishTransactionAsync(string clientId, uint transactionNumber, byte[] processData, string processType, byte[] additionalData = null)
+        public async Task<(SeResult, SeTransactionResult)> SeFinishTransactionAsync(string clientId, uint transactionNumber, byte[] processData, string processType)
         {
             return await CommandRunner.ExecuteAsync(async () =>
             {
-                var command = InputCommands.CreateFinishTransactionTseCommand(clientId, transactionNumber, processData, processType, additionalData);
+                var command = InputCommands.CreateFinishTransactionTseCommand(clientId, transactionNumber, processData, processType);
                 var response = await _transportAdapter.ExecuteAsync(command);
 
                 var transactionResult = new SeTransactionResult
@@ -503,11 +503,11 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision.Interop
             });
         }
 
-        public async Task<(SeResult, SeStartTransactionResult)> SeStartTransactionAsync(string clientId, byte[] processData, string processType, byte[] additionalData = null)
+        public async Task<(SeResult, SeStartTransactionResult)> SeStartTransactionAsync(string clientId, byte[] processData, string processType)
         {
             return await CommandRunner.ExecuteAsync(async () =>
             {
-                var command = InputCommands.CreateStartTransactionTseCommand(clientId, processData, processType, additionalData);
+                var command = InputCommands.CreateStartTransactionTseCommand(clientId, processData, processType);
                 var response = await _transportAdapter.ExecuteAsync(command);
 
                 // documentation doesn't match c-implementation, this implementation doesn't follow implementation by purpose
