@@ -85,7 +85,7 @@ namespace fiskaltrust.Middleware.SCU.ME.FiscalizationService.UnitTest
             {
                 RequestId = Guid.NewGuid(),
                 Amount = Math.Round(_faker.Random.Decimal(max: 1000), 2),
-                Moment = DateTime.Now,
+                Moment = DateTime.UtcNow,
                 TcrCode = $"{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}"
             };
 
@@ -112,7 +112,7 @@ namespace fiskaltrust.Middleware.SCU.ME.FiscalizationService.UnitTest
             {
                 RequestId = Guid.NewGuid(),
                 Amount = Math.Round(_faker.Random.Decimal(max: 1000), 2),
-                Moment = DateTime.Now,
+                Moment = DateTime.UtcNow,
                 TcrCode = $"{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}"
             };
 

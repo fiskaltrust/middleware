@@ -8,17 +8,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Extensions
 {
     public static class ReceiptRequestExtensions
     {
-        public static bool IsFailedReceipt(this ChargeItem chargeItem)
-        {
-            return (chargeItem.ftChargeItemCase & 0x0_0010_0000) == 0x0_0010_0000;
-        }
-
-        public static bool IsVoidedReceipt(this ChargeItem chargeItem)
-        {
-            return (chargeItem.ftChargeItemCase & 0x0_0040_0000) == 0x0_0040_0000;
-        }
-
-
         public static InvoiceType GetInvoiceType(this ReceiptRequest receiptRequest)
         {
             var result = InvoiceType.Cash;

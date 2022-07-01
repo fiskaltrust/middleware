@@ -257,7 +257,7 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
         }
 
         if (registerInvoiceRequest.InvoiceDetails.Currency is not null)
-            {
+        {
             invoice.Currency = new SoapFiscalizationService.CurrencyType
             {
                 Code = (SoapFiscalizationService.CurrencyCodeSType) Enum.Parse(typeof(SoapFiscalizationService.CurrencyCodeSType), registerInvoiceRequest.InvoiceDetails.Currency.CurrencyCode),

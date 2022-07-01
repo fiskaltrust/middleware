@@ -57,7 +57,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 RegisterInvoiceResponse registerInvoiceResponse;
                 try
                 {
-                    var registerInvoiceRequest = CreateInvoiceReqest(request, queueItem, invoice, scu, invoiceDetails, computeIICResponse);
+                    var registerInvoiceRequest = CreateInvoiceRequest(request, queueItem, invoice, scu, invoiceDetails, computeIICResponse);
                     registerInvoiceResponse = await client.RegisterInvoiceAsync(registerInvoiceRequest).ConfigureAwait(false);
                 }
                 catch(EntryPointNotFoundException ex)
@@ -96,14 +96,11 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 
         private async Task<InvoiceDetails> CreateInvoiceDetail(ReceiptRequest request, Invoice invoice, ftQueueItem queueItem)
         {
-            return new InvoiceDetails()
+            var invoiceDetails =  new InvoiceDetails()
             {
                 InvoiceType = request.GetInvoiceType(),
                 SelfIssuedInvoiceType = invoice.TypeOfSelfiss == null ? null : (SelfIssuedInvoiceType) Enum.Parse(typeof(SelfIssuedInvoiceType), invoice.TypeOfSelfiss),
                 TaxFreeAmount = request.cbChargeItems.Where(x => x.GetVatRate().Equals(0)).Sum(x => x.Amount),
-                NetAmount = request.cbChargeItems.Sum(x => x.Amount / (1 + (x.GetVatRate() / 100))),
-                TotalVatAmount = request.cbChargeItems.Sum(x => x.Amount * x.GetVatRate() / (100 + x.GetVatRate())),
-                GrossAmount = request.cbChargeItems.Sum(x => x.Amount),
                 PaymentDeadline = invoice.PayDeadline,
                 InvoiceCorrectionDetails = invoice.CorrectiveInv != null ? new InvoiceCorrectionDetails()
                 {
@@ -124,6 +121,11 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 },
                 YearlyOrdinalNumber = await GetNextOrdinalNumber(queueItem).ConfigureAwait(false)
             };
+
+            invoiceDetails.NetAmount = invoiceDetails.ItemDetails.Sum(x => x.NetAmount);
+            invoiceDetails.TotalVatAmount = invoiceDetails.ItemDetails.Sum(x => x.NetAmount * x.VatRate/100 );
+            invoiceDetails.GrossAmount = invoiceDetails.ItemDetails.Sum(x => x.GrossAmount);
+            return invoiceDetails;
         }
         private async Task InsertJournalME(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftSignaturCreationUnitME scu, RegisterInvoiceResponse registerInvoiceResponse, InvoiceDetails invoice, ComputeIICResponse computeIICResponse)
         {
@@ -156,7 +158,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             };
         }
 
-        private static RegisterInvoiceRequest CreateInvoiceReqest(ReceiptRequest request, ftQueueItem queueItem, Invoice invoice, ftSignaturCreationUnitME scu, InvoiceDetails invoiceDetails, ComputeIICResponse computeIICResponse)
+        private static RegisterInvoiceRequest CreateInvoiceRequest(ReceiptRequest request, ftQueueItem queueItem, Invoice invoice, ftSignaturCreationUnitME scu, InvoiceDetails invoiceDetails, ComputeIICResponse computeIICResponse)
         {
             return new RegisterInvoiceRequest()
             {
@@ -191,7 +193,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             }
             return result;
         }
-        private List<InvoiceItem> GetInvoiceItems(ReceiptRequest request)
+        private static List<InvoiceItem> GetInvoiceItems(ReceiptRequest request)
         {
             if (request.cbChargeItems.Count() > 1000)
             {

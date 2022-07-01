@@ -114,7 +114,6 @@ namespace fiskaltrust.Middleware.SCU.ME.InMemory.UnitTest
             var response = await meSSCD.RegisterInvoiceAsync(request);
 
             _ = Guid.Parse(response.FIC);
-            _ = response.IIC.Should().HaveLength(32);
         }
 
         private InMemorySCU CreateSCU()

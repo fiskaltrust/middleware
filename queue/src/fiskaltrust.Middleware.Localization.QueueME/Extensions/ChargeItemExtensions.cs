@@ -14,34 +14,37 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Extensions
     {
         public static bool IsVoucher(this ChargeItem chargeItem)
         {
-            return (chargeItem.ftChargeItemCase & 0x0_0001_0000) == 0x0_0001_0000;
+            return (chargeItem.ftChargeItemCase & 0x0000_0000_000F_0000) == 0x1_0000;
         }
 
         public static bool IsExportGood(this ChargeItem chargeItem)
         {
-            return (chargeItem.ftChargeItemCase & 0x0_0002_0000) == 0x0_0002_0000;
+            return (chargeItem.ftChargeItemCase & 0x0000_0000_000F_0000) == 0x2_0000;
+        }
+
+        public static bool IsVoidedComplete(this ChargeItem chargeItem)
+        {
+            return (chargeItem.ftChargeItemCase & 0x0000_0000_000F_0000) == 0x4_0000;
+        }
+
+        public static bool IsVoidedPartial(this ChargeItem chargeItem)
+        {
+            return (chargeItem.ftChargeItemCase & 0x0000_0000_000F_0000) == 0x5_0000;
         }
 
         public static bool IsNoInvestment(this ChargeItem chargeItem)
         {
-            return (chargeItem.ftChargeItemCase & 0x0_0004_0000) == 0x0_0004_0000;
+            return (chargeItem.ftChargeItemCase & 0x0000_0000_000F_0000) == 0x6_0000;
         }
 
         public static bool DiscountIsNotReducingBasePrice(this ChargeItem chargeItem)
         {
-            return (chargeItem.ftChargeItemCase & 0x0_0008_0000) == 0x0_0008_0000;
+            return (chargeItem.ftChargeItemCase & 0x0000_0000_000F_0000) == 0x8_0000;
         }
-
-        public static bool IsCashDeposite(this ChargeItem chargeItem)
+        public static bool DiscountIsReducingBasePrice(this ChargeItem chargeItem)
         {
-            return (chargeItem.ftChargeItemCase & 0xFFFF) == 0x0020;
+            return (chargeItem.ftChargeItemCase & 0x0000_0000_000F_0000) == 0x7_0000;
         }
-
-        public static bool IsCashWithdrawal(this ChargeItem chargeItem)
-        {
-            return (chargeItem.ftChargeItemCase & 0xFFFF) == 0x0021;
-        }
-
         public static decimal GetVatRate(this ChargeItem chargeItem)
         {
             switch (chargeItem.ftChargeItemCase & 0xFFFF)
@@ -50,14 +53,17 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Extensions
                 case 0x0005:
                 case 0x0015:
                 case 0x001D:
+                case 0x0026:
                     return chargeItem.VATRate;
                 case 0x0001:
                 case 0x0011:
                 case 0x0019:
+                case 0x0022:
                     return 21;
                 case 0x0002:
                 case 0x0012:
                 case 0x001A:
+                case 0x0023:
                     return 7;
                 case 0x0003:
                 case 0x0004:
@@ -65,15 +71,18 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Extensions
                 case 0x0014:
                 case 0x001B:
                 case 0x001C:
+                case 0x0024:
+                case 0x0025:
                     return 0;
                    default:
-                    throw new UnkownInvoiceTypeException("ChargeItemCase holds unkown Vat Rate!");
+                    throw new UnkownInvoiceTypeException("ChargeItemCase holds unknown Vat Rate!");
             }
         }
 
         public static InvoiceItem GetInvoiceItem(this ChargeItem chargeItem)
         {
             var invoiceItemRequest = string.IsNullOrEmpty(chargeItem.ftChargeItemCaseData) ? new InvoiceItemRequest () : JsonConvert.DeserializeObject<InvoiceItemRequest>(chargeItem.ftChargeItemCaseData);
+            
             var invoiceItem = new InvoiceItem
             {
                 Name = chargeItem.Description,
@@ -82,34 +91,48 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Extensions
                 Unit = chargeItem.Unit,
                 Quantity = chargeItem.Quantity,
                 NetUnitPrice = chargeItem.UnitPrice.HasValue ? (decimal) (chargeItem.UnitPrice / (1 + (chargeItem.GetVatRate() / 100))) : 0,
-                GrossUnitPrice = chargeItem.UnitPrice.HasValue ? (decimal) chargeItem.UnitPrice : 0,
+                GrossUnitPrice = chargeItem.UnitPrice ?? 0,
                 DiscountPercentage = invoiceItemRequest.DiscountPercentage,
-                IsDiscountReducingBasePrice = !chargeItem.DiscountIsNotReducingBasePrice(),
+                IsDiscountReducingBasePrice = chargeItem.DiscountIsReducingBasePrice(),
                 VatRate = chargeItem.GetVatRate(),
                 ExemptFromVatReason = string.IsNullOrEmpty(invoiceItemRequest.ExemptFromVatReason) ? null : (ExemptFromVatReasons) Enum.Parse(typeof(ExemptFromVatReasons), invoiceItemRequest.ExemptFromVatReason),
                 GrossAmount = chargeItem.Amount,
                 NetAmount = chargeItem.Amount / (1 + (chargeItem.GetVatRate() / 100))
             };
-            if (chargeItem.IsVoucher())
+            if (chargeItem.DiscountIsReducingBasePrice() && invoiceItemRequest.DiscountPercentage is > 0)
             {
-                var voucher = new VoucherItem()
+                if (!chargeItem.UnitPrice.HasValue)
                 {
-                    NominalValue = chargeItem.Amount,
-                    SerialNumbers = invoiceItemRequest.VoucherSerialNumbers.ToList()
-                };
-                if (!string.IsNullOrEmpty(invoiceItemRequest.VoucherExpirationDate))
-                {
-                    if (DateTime.TryParseExact(invoiceItemRequest.VoucherExpirationDate, "yyyy-mm-dd", CultureInfo.InvariantCulture,
-                        DateTimeStyles.RoundtripKind, out var dateValue))
-                    {
-                        voucher.ExpirationDate = dateValue;
-                    }
+                    invoiceItem.NetUnitPrice = chargeItem.Amount / chargeItem.Quantity / (1 + (chargeItem.GetVatRate() / 100));
                 }
-                invoiceItem.Vouchers = new List<VoucherItem>()
-                {
-                    voucher
-                };
+                var unitPriceWithDiscount = (decimal) (invoiceItem.NetUnitPrice * (100 - invoiceItemRequest.DiscountPercentage) / 100);
+                invoiceItem.GrossUnitPrice = unitPriceWithDiscount * (1 + (chargeItem.GetVatRate() / 100));
+                invoiceItem.GrossAmount = invoiceItem.GrossUnitPrice* invoiceItem.Quantity;
+                invoiceItem.NetAmount = invoiceItem.GrossAmount / (1 + (chargeItem.GetVatRate() / 100));
             }
+
+            if (!chargeItem.IsVoucher())
+            {
+                return invoiceItem;
+            }
+
+            var voucher = new VoucherItem()
+            {
+                NominalValue = chargeItem.Amount,
+                SerialNumbers = invoiceItemRequest.VoucherSerialNumbers.ToList()
+            };
+            if (!string.IsNullOrEmpty(invoiceItemRequest.VoucherExpirationDate))
+            {
+                if (DateTime.TryParseExact(invoiceItemRequest.VoucherExpirationDate, "yyyy-mm-dd", CultureInfo.InvariantCulture,
+                        DateTimeStyles.RoundtripKind, out var dateValue))
+                {
+                    voucher.ExpirationDate = dateValue;
+                }
+            }
+            invoiceItem.Vouchers = new List<VoucherItem>()
+            {
+                voucher
+            };
             return invoiceItem;
         }
     }

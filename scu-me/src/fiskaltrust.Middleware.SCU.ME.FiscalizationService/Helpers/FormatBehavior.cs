@@ -102,6 +102,7 @@ namespace fiskaltrust.Middleware.SCU.ME.FiscalizationService.Helpers
                         "UPB",
                         "VA",
                         "VR",
+                        "R",
                         "TotPriceWoVAT",
                         "GoodsExAmt",
                         "TaxFreeAmt",
