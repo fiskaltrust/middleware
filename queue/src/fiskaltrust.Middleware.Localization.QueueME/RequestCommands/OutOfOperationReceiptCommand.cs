@@ -26,13 +26,13 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 var enu = JsonConvert.DeserializeObject<Tcr>(request.ftReceiptCaseData);
                 if(queueME == null || !queueME.ftSignaturCreationUnitMEId.HasValue)
                 {
-                    throw new ENUNotRegisteredException();
+                    throw new EnuNotRegisteredException();
                 }
-                var scuME = await _configurationRepository.GetSignaturCreationUnitMEAsync(queueME.ftSignaturCreationUnitMEId.Value).ConfigureAwait(false);
+                var scuME = await ConfigurationRepository.GetSignaturCreationUnitMEAsync(queueME.ftSignaturCreationUnitMEId.Value).ConfigureAwait(false);
                 if (!enu.IssuerTin.Equals(scuME.IssuerTin) || !enu.TcrIntId.Equals(scuME.TcrIntId))
                 {
-                    var errormessage = $"Request TCRIntID {enu.TcrIntId} and IssuerTIN {enu.IssuerTin} don´t match Queue initialisation with {enu.TcrIntId} and IssuerTIN {scuME.IssuerTin}";
-                    throw new ENUIIDDontMatchException(errormessage);
+                    var errormessage = $"Request TCRIntID {enu.TcrIntId} and IssuerTIN {enu.IssuerTin} don´t match Queue initialization with {enu.TcrIntId} and IssuerTIN {scuME.IssuerTin}";
+                    throw new EnuIdsNotMatchingException(errormessage);
                 }
                 var unregisterTCRRequest = new UnregisterTcrRequest()
                 {
@@ -44,7 +44,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 };
                 await client.UnregisterTcrAsync(unregisterTCRRequest).ConfigureAwait(false);
                 scuME.ValidTo = DateTime.UtcNow;
-                await _configurationRepository.InsertOrUpdateQueueMEAsync(queueME).ConfigureAwait(false);
+                await ConfigurationRepository.InsertOrUpdateQueueMEAsync(queueME).ConfigureAwait(false);
                 var receiptResponse = CreateReceiptResponse(request, queueItem);
                 return new RequestCommandResponse()
                 {
@@ -53,12 +53,12 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             }
             catch(EntryPointNotFoundException ex)
             {
-                _logger.LogDebug(ex, "TSE is not reachable.");
+                Logger.LogDebug(ex, "TSE is not reachable.");
                 return await ProcessFailedReceiptRequest(queueItem, request, queueME).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
-                _logger.LogCritical(ex, "An exception occured while processing this request.");
+                Logger.LogCritical(ex, "An exception occured while processing this request.");
                 throw;
             }
         }

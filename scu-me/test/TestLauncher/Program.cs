@@ -12,10 +12,10 @@ namespace TestLauncher
 {
     public class Program
     {
-        private static readonly string cashBoxId = "";
-        private static readonly string accessToken = "";
-        private static readonly string certificatePath = "";
-        private static readonly string certificatePassword = "";
+        private static readonly string cashBoxId = "74851323-a96e-48ab-ad20-29cb4d3def4d";
+        private static readonly string accessToken = "BBJe5Byqji+p1Q7tlNOfJuoMRkT09RRlb29FLej4Nmy9KAF5WveTYg+E+dZhIe1EYsglKA2jrTKRw6lY4d7EgEE=";
+        private static readonly string certificatePath = "C:\\Temp\\mw-me\\certificate.pfx";
+        private static readonly string certificatePassword = "13816009";
         public static async Task Main()
         {
             var cashBoxConfiguration = await HelipadHelper.GetConfigurationAsync(cashBoxId, accessToken).ConfigureAwait(false);

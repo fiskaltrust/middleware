@@ -22,25 +22,11 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Extensions
             return (chargeItem.ftChargeItemCase & 0x0000_0000_000F_0000) == 0x2_0000;
         }
 
-        public static bool IsVoidedComplete(this ChargeItem chargeItem)
-        {
-            return (chargeItem.ftChargeItemCase & 0x0000_0000_000F_0000) == 0x4_0000;
-        }
-
-        public static bool IsVoidedPartial(this ChargeItem chargeItem)
-        {
-            return (chargeItem.ftChargeItemCase & 0x0000_0000_000F_0000) == 0x5_0000;
-        }
-
         public static bool IsNoInvestment(this ChargeItem chargeItem)
         {
             return (chargeItem.ftChargeItemCase & 0x0000_0000_000F_0000) == 0x6_0000;
         }
 
-        public static bool DiscountIsNotReducingBasePrice(this ChargeItem chargeItem)
-        {
-            return (chargeItem.ftChargeItemCase & 0x0000_0000_000F_0000) == 0x8_0000;
-        }
         public static bool DiscountIsReducingBasePrice(this ChargeItem chargeItem)
         {
             return (chargeItem.ftChargeItemCase & 0x0000_0000_000F_0000) == 0x7_0000;
@@ -75,11 +61,11 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Extensions
                 case 0x0025:
                     return 0;
                    default:
-                    throw new UnkownInvoiceTypeException("ChargeItemCase holds unknown Vat Rate!");
+                    throw new UnknownInvoiceTypeException("ChargeItemCase holds unknown Vat Rate!");
             }
         }
 
-        public static InvoiceItem GetInvoiceItem(this ChargeItem chargeItem)
+        public static InvoiceItem GetInvoiceItem(this ChargeItem chargeItem, bool isVoid)
         {
             var invoiceItemRequest = string.IsNullOrEmpty(chargeItem.ftChargeItemCaseData) ? new InvoiceItemRequest () : JsonConvert.DeserializeObject<InvoiceItemRequest>(chargeItem.ftChargeItemCaseData);
             
@@ -110,13 +96,19 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Extensions
                 invoiceItem.GrossAmount = invoiceItem.GrossUnitPrice* invoiceItem.Quantity;
                 invoiceItem.NetAmount = invoiceItem.GrossAmount / (1 + (chargeItem.GetVatRate() / 100));
             }
+            if (isVoid)
+            {
+                invoiceItem.Quantity *= -1;
+                invoiceItem.GrossAmount *= -1;
+                invoiceItem.NetAmount *= -1;
+            }
 
             if (!chargeItem.IsVoucher())
             {
                 return invoiceItem;
             }
 
-            var voucher = new VoucherItem()
+            var voucher = new VoucherItem
             {
                 NominalValue = chargeItem.Amount,
                 SerialNumbers = invoiceItemRequest.VoucherSerialNumbers.ToList()
@@ -129,7 +121,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Extensions
                     voucher.ExpirationDate = dateValue;
                 }
             }
-            invoiceItem.Vouchers = new List<VoucherItem>()
+            invoiceItem.Vouchers = new List<VoucherItem>
             {
                 voucher
             };

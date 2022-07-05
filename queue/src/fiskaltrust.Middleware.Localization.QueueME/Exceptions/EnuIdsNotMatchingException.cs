@@ -2,9 +2,9 @@
 
 namespace fiskaltrust.Middleware.Localization.QueueME.Exceptions
 {
-    public class CashDepositOutstandingException : Exception
+    public class EnuIdsNotMatchingException : Exception
     {
-        public CashDepositOutstandingException(string message)
+        public EnuIdsNotMatchingException(string message)
             : base(message)
         {
         }

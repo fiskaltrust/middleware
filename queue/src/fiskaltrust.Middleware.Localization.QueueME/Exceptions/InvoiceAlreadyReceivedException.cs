@@ -2,9 +2,9 @@
 
 namespace fiskaltrust.Middleware.Localization.QueueME.Exceptions
 {
-    public class CashDepositOutstandingException : Exception
+    public class InvoiceAlreadyReceivedException : Exception
     {
-        public CashDepositOutstandingException(string message)
+        public InvoiceAlreadyReceivedException(string message)
             : base(message)
         {
         }

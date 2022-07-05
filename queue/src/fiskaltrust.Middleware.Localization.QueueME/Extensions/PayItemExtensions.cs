@@ -51,7 +51,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Extensions
                 case 0x0016:
                     return PaymentType.OtherCash;
                 default:
-                    throw new UnknownPaymentMethodeTypeException($"PayItemCase {item.ftPayItemCase} incorrect!");
+                    throw new UnknownPaymentMethodTypeException($"PayItemCase {item.ftPayItemCase} incorrect!");
 
             }
         }

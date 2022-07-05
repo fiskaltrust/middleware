@@ -30,14 +30,14 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             {
                 if (queueME.SSCDFailCount == 0)
                 {
-                    _logger.LogInformation("Queue has no failed receipts!");
+                    Logger.LogInformation("Queue has no failed receipts!");
                     return new RequestCommandResponse()
                     {
                         ReceiptResponse = CreateReceiptResponse(request, queueItem)
                     };
                 }
-                var failedQueueItem = await _queueItemRepository.GetAsync(queueME.SSCDFailQueueItemId.Value).ConfigureAwait(false);
-                var queueItemsAfterFailure = _queueItemRepository.GetQueueItemsAfterQueueItem(failedQueueItem);
+                var failedQueueItem = await QueueItemRepository.GetAsync(queueME.SSCDFailQueueItemId.Value).ConfigureAwait(false);
+                var queueItemsAfterFailure = QueueItemRepository.GetQueueItemsAfterQueueItem(failedQueueItem);
                 await foreach (var fqueueItem in queueItemsAfterFailure.ConfigureAwait(false))
                 {
                     var frequest = JsonConvert.DeserializeObject<ReceiptRequest>(fqueueItem.request);
@@ -51,21 +51,21 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                             {
                                 foreach (var journal in requestCommandResponse.ActionJournals)
                                 {
-                                    await _actionJournalRepository.InsertAsync(journal).ConfigureAwait(false);
+                                    await ActionJournalRepository.InsertAsync(journal).ConfigureAwait(false);
                                 }
                             }
                         }
                         catch (Exception ex)
                         {
-                            _logger.LogError(ex, "Request could not be resolved : " + fqueueItem.request);
+                            Logger.LogError(ex, "Request could not be resolved : " + fqueueItem.request);
                         }
                     }
                 }
                 queueME.SSCDFailCount = 0;
                 queueME.SSCDFailMoment = null;
                 queueME.SSCDFailQueueItemId = null;
-                await _configurationRepository.InsertOrUpdateQueueMEAsync(queueME).ConfigureAwait(false);
-                _logger.LogInformation(QUEUECONNECTED);
+                await ConfigurationRepository.InsertOrUpdateQueueMEAsync(queueME).ConfigureAwait(false);
+                Logger.LogInformation(QUEUECONNECTED);
                 var receiptResponse = new ReceiptResponse() { ftReceiptHeader = new string[] { QUEUECONNECTED } };
                 return await Task.FromResult(new RequestCommandResponse()
                 {
@@ -74,7 +74,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             }
             catch (EntryPointNotFoundException ex)
             {
-                _logger.LogDebug(ex, "TSE not reachable.");
+                Logger.LogDebug(ex, "TSE not reachable.");
                 throw;
             }
         }

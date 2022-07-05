@@ -89,7 +89,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             var InitialOperationReceiptCommand = new InitialOperationReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), inMemoryConfigurationRepository, 
                 inMemoryJournalMERepository, inMemoryQueueItemRepository, new InMemoryActionJournalRepository(), new QueueMEConfiguration { Sandbox = true });
             var sutMethod = CallInitialOperationReceiptCommand(InitialOperationReceiptCommand, queue, receiptRequest, queueME);
-            await sutMethod.Should().ThrowAsync<ENUAlreadyRegisteredException>().ConfigureAwait(false);
+            await sutMethod.Should().ThrowAsync<EnuAlreadyRegisteredException>().ConfigureAwait(false);
         }
 
         private Func<Task> CallInitialOperationReceiptCommand(InitialOperationReceiptCommand initialOperationReceiptCommand, ftQueue queue, ReceiptRequest receiptRequest, ftQueueME queueME)

@@ -2,19 +2,13 @@
 
 namespace fiskaltrust.Middleware.Localization.QueueME.Exceptions
 {
-    public class ENUAlreadyRegisteredException : Exception
+    public class EnuAlreadyRegisteredException : Exception
     {
-        public ENUAlreadyRegisteredException()
+        public EnuAlreadyRegisteredException()
         {
         }
-
-        public ENUAlreadyRegisteredException(string message)
+        public EnuAlreadyRegisteredException(string message)
             : base(message)
-        {
-        }
-
-        public ENUAlreadyRegisteredException(string message, Exception inner)
-            : base(message, inner)
         {
         }
     }

@@ -24,7 +24,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             }
             catch (Exception ex)
             {
-                _logger.LogCritical(ex, "An exception occured while processing this request.");
+                Logger.LogCritical(ex, "An exception occured while processing this request.");
                 throw;
             }
         }

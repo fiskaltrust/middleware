@@ -8,11 +8,13 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Extensions
         public static IServiceCollection ConfigureReceiptCommands(this IServiceCollection services)
         {
             services.AddSingleton<CashDepositReceiptCommand>();
-            services.AddSingleton<CashWithdrawlReceiptCommand>();
+            services.AddSingleton<CashWithdrawalReceiptCommand>();
             services.AddSingleton<InitialOperationReceiptCommand>();
             services.AddSingleton<MonthlyClosingReceiptCommand>();
             services.AddSingleton<OutOfOperationReceiptCommand>();
             services.AddSingleton<PosReceiptCommand>();
+            services.AddSingleton<CompleteVoidedReceipt>();
+            services.AddSingleton<PartialVoidedReceipt>();
             services.AddSingleton<YearlyClosingReceiptCommand>();
             services.AddSingleton<ZeroReceiptCommand>();
             return services;

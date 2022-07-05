@@ -16,9 +16,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Models
         public DateTime? PayDeadline { get; set; }
 
         [DataMember]
-        public CorrectiveInv CorrectiveInv { get; set; }
-
-        [DataMember]
         public Fee[] Fees { get; set; }
 
         [DataMember]

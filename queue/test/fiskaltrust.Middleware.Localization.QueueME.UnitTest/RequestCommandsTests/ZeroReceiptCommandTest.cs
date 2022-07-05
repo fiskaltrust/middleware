@@ -70,7 +70,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
                 builder.SetMinimumLevel(LogLevel.Debug);
             });
 
-            var sut = new QueueMEBootstrapper();
+            var sut = new QueueMeBootstrapper();
             sut.ConfigureServices(serviceCollection);
             return new RequestCommandFactory(serviceCollection.BuildServiceProvider());
         }

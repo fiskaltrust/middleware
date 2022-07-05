@@ -9,7 +9,7 @@ using fiskaltrust.ifPOS.v1.me;
 
 namespace fiskaltrust.Middleware.Localization.QueueME
 {
-    public class QueueMEBootstrapper : ILocalizedQueueBootstrapper
+    public class QueueMeBootstrapper : ILocalizedQueueBootstrapper
     {
         public void ConfigureServices(IServiceCollection services)
         {

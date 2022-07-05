@@ -2,9 +2,9 @@
 
 namespace fiskaltrust.Middleware.Localization.QueueME.Exceptions
 {
-    public class CashDepositOutstandingException : Exception
+    public class ReferenceNotSetException : Exception
     {
-        public CashDepositOutstandingException(string message)
+        public ReferenceNotSetException(string message)
             : base(message)
         {
         }

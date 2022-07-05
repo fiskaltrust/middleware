@@ -19,7 +19,7 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
                 "AT" => throw new NotImplementedException("AT IS NOT IMPLEMENTED"),
                 "DE" => new QueueDEBootstrapper(),
                 "FR" => throw new NotImplementedException("FR IS NOT IMPLEMENTED"),
-                "ME" => new QueueMEBootstrapper(),
+                "ME" => new QueueMeBootstrapper(),
                 _ => throw new ArgumentException($"unkown countryCode: {countyCode}"),
             };
         }

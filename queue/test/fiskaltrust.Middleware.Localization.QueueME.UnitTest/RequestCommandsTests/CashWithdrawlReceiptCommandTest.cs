@@ -32,7 +32,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
                 ftSignaturCreationUnitMEId = Guid.NewGuid(),
             };
             var journalMERepository = new InMemoryJournalMERepository();
-            var cashDepositReceiptCommand = await TestHelper.InitializeRequestCommand<CashWithdrawlReceiptCommand>(queueME, "TestTCRCodePos", journalMERepository).ConfigureAwait(false);
+            var cashDepositReceiptCommand = await TestHelper.InitializeRequestCommand<CashWithdrawalReceiptCommand>(queueME, "TestTCRCodePos", journalMERepository).ConfigureAwait(false);
             var requestResponse = await cashDepositReceiptCommand.ExecuteAsync(new InMemoryMESSCD("TestTCRCodePos", "iic", "iicSignature"), queue, TestHelper.CreateReceiptRequest(0x44D5_0000_0000_0008), queueItem, queueME);
             requestResponse.ActionJournals.Should().HaveCount(1);
             requestResponse.ActionJournals.FirstOrDefault().ftQueueItemId.Should().Be(queueItem.ftQueueItemId);

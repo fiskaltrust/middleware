@@ -7,29 +7,28 @@ using fiskaltrust.Middleware.Localization.QueueME.Models;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.me;
 using fiskaltrust.Middleware.Localization.QueueME.Exceptions;
-using fiskaltrust.Middleware.Contracts.Constants;
 using System.Collections.Generic;
 using fiskaltrust.Middleware.Contracts.Repositories;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 {
-    public class CashWithdrawlReceiptCommand : RequestCommand
+    public class CashWithdrawalReceiptCommand : RequestCommand
     {
-        public CashWithdrawlReceiptCommand(ILogger<RequestCommand> logger, IConfigurationRepository configurationRepository,
-            IMiddlewareJournalMERepository journalMERepository, IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareActionJournalRepository actionJournalRepository, QueueMEConfiguration queueMeConfiguration) :
-            base(logger, configurationRepository, journalMERepository, queueItemRepository, actionJournalRepository, queueMeConfiguration)
+        public CashWithdrawalReceiptCommand(ILogger<RequestCommand> logger, IConfigurationRepository configurationRepository,
+            IMiddlewareJournalMERepository journalMeRepository, IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareActionJournalRepository actionJournalRepository, QueueMEConfiguration queueMeConfiguration) :
+            base(logger, configurationRepository, journalMeRepository, queueItemRepository, actionJournalRepository, queueMeConfiguration)
         { }
 
-        public override async Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftQueueME queueME)
+        public override async Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftQueueME queueMe)
         {
             try
             {
-                if (queueME == null || !queueME.ftSignaturCreationUnitMEId.HasValue)
+                if (queueMe == null || !queueMe.ftSignaturCreationUnitMEId.HasValue)
                 {
-                    throw new ENUNotRegisteredException();
+                    throw new EnuNotRegisteredException();
                 }
-                var scu = await _configurationRepository.GetSignaturCreationUnitMEAsync(queueME.ftSignaturCreationUnitMEId.Value).ConfigureAwait(false);
-                var registerCashWithdrawalRequest = new RegisterCashWithdrawalRequest()
+                var scu = await ConfigurationRepository.GetSignaturCreationUnitMEAsync(queueMe.ftSignaturCreationUnitMEId.Value).ConfigureAwait(false);
+                var registerCashWithdrawalRequest = new RegisterCashWithdrawalRequest
                 {
                     Amount = request.cbReceiptAmount ?? request.cbChargeItems.Sum(x => x.Amount),
                     Moment = request.cbReceiptMoment,
@@ -40,10 +39,10 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 await client.RegisterCashWithdrawalAsync(registerCashWithdrawalRequest).ConfigureAwait(false);
                 var receiptResponse = CreateReceiptResponse(request, queueItem);
                 var actionJournalEntry = CreateActionJournal(queue, request.ftReceiptCase, queueItem);
-                return new RequestCommandResponse()
+                return new RequestCommandResponse
                 {
                     ReceiptResponse = receiptResponse,
-                    ActionJournals = new List<ftActionJournal>()
+                    ActionJournals = new List<ftActionJournal>
                     {
                         actionJournalEntry
                     }
@@ -51,17 +50,17 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             }
             catch(EntryPointNotFoundException ex)
             {
-                _logger.LogDebug(ex, "TSE is not reachable.");
-                return await ProcessFailedReceiptRequest(queueItem, request, queueME).ConfigureAwait(false);
+                Logger.LogDebug(ex, "TSE is not reachable.");
+                return await ProcessFailedReceiptRequest(queueItem, request, queueMe).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
-                _logger.LogCritical(ex, "An exception occured while processing this request.");
+                Logger.LogCritical(ex, "An exception occurred while processing this request.");
                 throw;
             }
         }
 
-        public override async Task<bool> ReceiptNeedsReprocessing(ftQueueME queueME, ftQueueItem queueItem, ReceiptRequest request)
+        public override async Task<bool> ReceiptNeedsReprocessing(ftQueueME queueMe, ftQueueItem queueItem, ReceiptRequest request)
         {
             return await ActionJournalExists(queueItem, request.ftReceiptCase).ConfigureAwait(false) == false;
         }

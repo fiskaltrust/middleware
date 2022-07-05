@@ -202,13 +202,13 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
                 {
                     VATRate = s.First().VatRate ?? 0,
                     VATRateSpecified = true,
-                    NumOfItems = (int) s.Sum(x => x.Quantity),
+                    NumOfItems = (int) s.Sum(x => Math.Abs(x.Quantity)),
                     ExemptFromVATSpecified = false,
                     PriceBefVAT = s.Sum(x => x.NetUnitPrice),
                     VATAmtSpecified = false
                 }).ToArray(),
                 SoftCode = registerInvoiceRequest.SoftwareCode,
-                Seller = new SoapFiscalizationService.SellerType() {
+                Seller = new SoapFiscalizationService.SellerType {
                                 IDType = SoapFiscalizationService.IDTypeSType.TIN,
                                 IDNum = _configuration.TIN,
                                 Name = _configuration.PosOperatorName,
@@ -216,7 +216,7 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
                                 Town = _configuration.PosOperatorTown,
                                 CountrySpecified = false
                 },
-            TaxFreeAmtSpecified = registerInvoiceRequest.InvoiceDetails.TaxFreeAmount.HasValue && registerInvoiceRequest.InvoiceDetails.TaxFreeAmount.Value > 0,
+            TaxFreeAmtSpecified = registerInvoiceRequest.InvoiceDetails.TaxFreeAmount is > 0,
             TaxPeriod = default, //registerInvoiceRequest.InvoiceDetails.TaxPeriod,
             TCRCode = registerInvoiceRequest.TcrCode,
             TotPrice = registerInvoiceRequest.InvoiceDetails.GrossAmount,
