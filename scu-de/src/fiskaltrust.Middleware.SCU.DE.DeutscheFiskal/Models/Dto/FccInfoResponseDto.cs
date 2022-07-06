@@ -10,9 +10,6 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Models
         [JsonProperty("maxNumberTransactions")]
         public long MaxNumberTransactions { get; set; }
 
-        [JsonProperty("supportedUpdateVariant")]
-        public string SupportedUpdateVariant { get; set; }
-
         [JsonProperty("currentNumberOfTransactions")]
         public long CurrentNumberOfTransactions { get; set; }
     }

@@ -4,9 +4,6 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Models
 {
     public class TssDetailsResponseDto
     {
-        [JsonProperty("serial")]
-        public string Serial { get; set; }
-
         [JsonProperty("serialNumberHex")]
         public string SerialNumberHex { get; set; }
 
@@ -15,9 +12,6 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Models
 
         [JsonProperty("timeFormat")]
         public string TimeFormat { get; set; }
-
-        [JsonProperty("encoding")]
-        public string Encoding { get; set; }
 
         [JsonProperty("publicKey")]
         public string PublicKey { get; set; }
