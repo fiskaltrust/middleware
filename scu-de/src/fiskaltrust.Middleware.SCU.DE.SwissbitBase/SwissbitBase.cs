@@ -26,11 +26,10 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
 {
     public class SwissbitBase : IDESSCD, IDisposable
     {
-        private const string _tseOpenTransaction = "Could not delete log files from TSE after successfully exporting them because the following transactions were " +
-	                                    "open: {OpenTransactions}. If these transactions are not used anymore and could not be closed automatically by a daily closing " +
-		                                    "receipt, please consider sending a fail-transaction-receipt to cancel them.";
-        private const string _noExport = "noexport-";
-        private const string _tseInfoDat = "TSE_INFO.DAT";
+        private const string NO_EXPORT = "noexport-";
+        private const string TSE_INFO_DAT = "TSE_INFO.DAT";
+        private const int THRESHOLD_TOO_LARGE_FOR_RANGED_EXPORT = 100 * 1024 * 1024;  // 100 MB
+
         private bool disposed = false;
         private string _devicePath;
         private byte[] _adminPin = Encoding.ASCII.GetBytes("12345");
@@ -118,9 +117,9 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
 
         private void ThrowIfDeviceIsNotConnected()
         {
-            if (!File.Exists(Path.Combine(_devicePath, _tseInfoDat)))
+            if (!File.Exists(Path.Combine(_devicePath, TSE_INFO_DAT)))
             {
-                throw new SwissbitException($"The TSE is not available. The file at {Path.Combine(_devicePath, _tseInfoDat)} is not available.");
+                throw new SwissbitException($"The TSE is not available. The file at {Path.Combine(_devicePath, TSE_INFO_DAT)} is not available.");
             }
         }
 
@@ -331,7 +330,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
                 {
                     enableFirmwareUpdate = bool.Parse(enabled.ToString());
                 }
-                if(await proxy.UpdateFirmwareAsync(enableFirmwareUpdate))
+                if (await proxy.UpdateFirmwareAsync(enableFirmwareUpdate))
                 {
                     await SelftestAsync(proxy);
                 }
@@ -627,7 +626,16 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
                         var startTransactionTimeStamp = tseResponse.LogTime.ToDateTime();
                         if (!StartTransactionTimeStampCache.TryRemove(tseResponse.TransactionNumber, out startTransactionTimeStamp))
                         {
-                            startTransactionTimeStamp = await GetStartTransactionTimeStamp(GetProxy(), request.TransactionNumber);
+                            // If the TSE log memory is too full, this call takes too long, and transactions cannot be canceled anymore - basically creating a deadlock.
+                            // Thus, we skip reading the timestamp of the start-transaction and fall-back to the one of the finish-transaction.
+                            if (!IsCancellationTransaction(request) || LastTseInfo?.CurrentLogMemorySize < THRESHOLD_TOO_LARGE_FOR_RANGED_EXPORT)
+                            {
+                                startTransactionTimeStamp = await GetStartTransactionTimeStamp(GetProxy(), request.TransactionNumber);
+                            }
+                            else
+                            {
+                                _logger.LogWarning("Could not set StartTransactionTimestamp, as the TSE's log storage is too full to extract it. Used finish-transaction log time as fallback value.");
+                            }
                         }
 
                         var response = new FinishTransactionResponse()
@@ -663,6 +671,16 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
                 _logger.LogError(ex, "Failed to execute {Operation}", nameof(FinishTransactionAsync));
                 throw;
             }
+        }
+
+        private bool IsCancellationTransaction(FinishTransactionRequest request)
+        {
+            if (string.IsNullOrEmpty(request.ProcessDataBase64))
+            {
+                return false;
+            }
+            var processData = Encoding.UTF8.GetString(Convert.FromBase64String(request.ProcessDataBase64));
+            return request.ProcessType == "Kassenbeleg-V1" && processData.StartsWith("AVBelegabbruch^");
         }
 
         public async Task<RegisterClientIdResponse> RegisterClientIdAsync(RegisterClientIdRequest request)
@@ -771,7 +789,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
                 {
                     return new StartExportSessionResponse
                     {
-                        TokenId = _noExport + exportId,
+                        TokenId = NO_EXPORT + exportId,
                         TseSerialNumberOctet = LastTseInfo.SerialNumberOctet
                     };
                 }
@@ -860,7 +878,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
         {
             try
             {
-                if (request.TokenId.StartsWith(_noExport))
+                if (request.TokenId.StartsWith(NO_EXPORT))
                 {
                     return new ExportDataResponse
                     {
@@ -928,7 +946,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
             try
             {
                 ThrowIfDeviceIsNotConnected();
-                if (request.TokenId.StartsWith(_noExport))
+                if (request.TokenId.StartsWith(NO_EXPORT))
                 {
                     return new EndExportSessionResponse
                     {
@@ -1013,8 +1031,10 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
             if (status.StartedTransactions > 0)
             {
                 var tseOpenTransaction = await GetProxy().GetStartedTransactionsAsync(string.Empty);
-                var list = string.Join(",", tseOpenTransaction.ToArray());
-                _logger.LogWarning(_tseOpenTransaction, list);
+                var list = string.Join(", ", tseOpenTransaction.ToArray());
+                _logger.LogWarning("Could not delete log files from TSE after successfully exporting them because the following transactions were " +
+                    "open: {OpenTransactions}. If these transactions are not used anymore and could not be closed automatically by a daily closing " +
+                    "receipt, please consider sending a fail-transaction-receipt to cancel them.", list);
             }
             return status;
         }
