@@ -28,7 +28,6 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
     {
         private const string NO_EXPORT = "noexport-";
         private const string TSE_INFO_DAT = "TSE_INFO.DAT";
-        private const int THRESHOLD_TOO_LARGE_FOR_RANGED_EXPORT = 100 * 1024 * 1024;  // 100 MB
 
         private bool disposed = false;
         private string _devicePath;
@@ -38,6 +37,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
         private byte[] CertificatesBytes = null;
         private TimeSpan _SelftestInterval = TimeSpan.FromHours(24);
         private uint _hwSelftestIntervalSeconds = 0;
+        private int _tooLargeToExportThreshold = 100 * 1024 * 1024;  // 100 MB
 
         // don't change this puk-default-value and seed-default-value, all existing installations are initialized with this puk. in the moment they are not influenced by configuration
         private readonly byte[] _adminPuk = Encoding.ASCII.GetBytes("123456");
@@ -182,7 +182,6 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
                 _timeAdminPin = System.Text.Encoding.UTF8.GetBytes(_configurationDictionary["timeAdminPin"].ToString());
             }
 
-
             if (_configurationDictionary.ContainsKey("enableTarFileExport") && bool.TryParse(_configurationDictionary["enableTarFileExport"].ToString(), out var enableTarFileExport))
             {
                 _enableTarFileExport = enableTarFileExport;
@@ -190,6 +189,11 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
             else
             {
                 _enableTarFileExport = true;
+            }
+
+            if (_configurationDictionary.ContainsKey("tooLargeToExportThreshold") && int.TryParse(_configurationDictionary["tooLargeToExportThreshold"].ToString(), out var tooLargeToExportThreshold))
+            {
+                _tooLargeToExportThreshold = tooLargeToExportThreshold;
             }
         }
 
@@ -628,7 +632,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
                         {
                             // If the TSE log memory is too full, this call takes too long, and transactions cannot be canceled anymore - basically creating a deadlock.
                             // Thus, we skip reading the timestamp of the start-transaction and fall-back to the one of the finish-transaction.
-                            if (!IsCancellationTransaction(request) || LastTseInfo?.CurrentLogMemorySize < THRESHOLD_TOO_LARGE_FOR_RANGED_EXPORT)
+                            if (!IsCancellationTransaction(request) || LastTseInfo?.CurrentLogMemorySize < _tooLargeToExportThreshold)
                             {
                                 startTransactionTimeStamp = await GetStartTransactionTimeStamp(GetProxy(), request.TransactionNumber);
                             }
