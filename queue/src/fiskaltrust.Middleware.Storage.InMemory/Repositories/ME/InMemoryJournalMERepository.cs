@@ -39,5 +39,11 @@ namespace fiskaltrust.Middleware.Storage.InMemory.Repositories.ME
             var result = Data.Select(x => x.Value).Where(x => x.ftQueueItemId == queueItemId).OrderByDescending(x => x.TimeStamp);
             return result.ToAsyncEnumerable();
         }
+
+        public IAsyncEnumerable<ftJournalME> GetByReceiptReference(string cbReceiptReference)
+        {
+            var result = Data.Select(x => x.Value).Where(x => x.cbReference == cbReceiptReference).OrderByDescending(x => x.TimeStamp);
+            return result.ToAsyncEnumerable();
+        }
     }
 }

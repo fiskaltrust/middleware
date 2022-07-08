@@ -34,9 +34,9 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands.Factories
         private RequestCommand GetPosReceiptCommand(ReceiptRequest request)
         {
             return request.IsVoidedComplete()
-                ? _serviceProvider.GetRequiredService<CompleteVoidedReceipt>()
+                ? _serviceProvider.GetRequiredService<CompleteVoidedReceiptCommand>()
                 : request.IsVoidedPartial()
-                    ? _serviceProvider.GetRequiredService<PartialVoidedReceipt>()
+                    ? _serviceProvider.GetRequiredService<PartialVoidedReceiptCommand>()
                     : _serviceProvider.GetRequiredService<PosReceiptCommand>();
         }
     }

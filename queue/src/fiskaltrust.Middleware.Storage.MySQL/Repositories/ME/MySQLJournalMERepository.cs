@@ -68,5 +68,17 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories.DE
             }
         }
 
+        public async IAsyncEnumerable<ftJournalME> GetByReceiptReference(string cbReceiptReference)
+        {
+            var query = "SELECT * FROM ftJournalME WHERE cbReference = @cbReceiptReference;";
+            using (var connection = new MySqlConnection(ConnectionString))
+            {
+                await connection.OpenAsync().ConfigureAwait(false);
+                await foreach (var entry in connection.Query<ftJournalME>(query, new { cbReceiptReference }, buffered: false).ToAsyncEnumerable().ConfigureAwait(false))
+                {
+                    yield return entry;
+                }
+            }
+        }
     }
 }

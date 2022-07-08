@@ -27,10 +27,11 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
         {
             var scu = await IsEnuRegistered(queueMe).ConfigureAwait(false);
             await CashDepositOutstanding().ConfigureAwait(false);
-            await InvoiceAlreadyReceived(queueItem);
+            await InvoiceAlreadyReceived(request.cbReceiptReference);
             var invoice = JsonConvert.DeserializeObject<Invoice>(request.ftReceiptCaseData);
             IsOperatorSet(invoice);
             var invoiceDetails = await CreateInvoiceDetail(request, invoice, queueItem).ConfigureAwait(false);
+            invoiceDetails.InvoicingType = InvoicingType.Invoice;
             return await SendInvoiceDetailToCis(client, queue, request, queueItem, queueMe, scu, invoiceDetails, invoice);
         }
 
@@ -73,9 +74,9 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             }
         }
 
-        protected async Task InvoiceAlreadyReceived(ftQueueItem queueItem)
+        protected async Task InvoiceAlreadyReceived(string receiptReference)
         {
-            if (await JournalMeRepository.GetByQueueItemId(queueItem.ftQueueItemId).AnyAsync())
+            if (await JournalMeRepository.GetByReceiptReference(receiptReference).AnyAsync())
             {
                 throw new InvoiceAlreadyReceivedException(
                     "The field cbReceiptReference is unique and already in use. Make sure to use an unique cbReceiptReference for each transaction!");
@@ -124,7 +125,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 ItemDetails = GetInvoiceItems(request, isVoid),
                 Fees = GetFees(invoice),
                 ExportedGoodsAmount = request.cbChargeItems.Where(x => x.IsExportGood()).Sum(x => x.Amount),
-                TaxPeriod = new TaxPeriod()
+                TaxPeriod = new TaxPeriod
                 {
                     Month = (uint) request.cbReceiptMoment.Month,
                     Year = (uint) request.cbReceiptMoment.Year
@@ -195,16 +196,9 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
         }
         private static List<InvoiceItem> GetInvoiceItems(ReceiptRequest request, bool isVoid)
         {
-            if (request.cbChargeItems.Length > 1000)
-            {
-                throw new MaxInvoiceItemsExceededException();
-            }
-            var items = new List<InvoiceItem>();
-            foreach (var chargeItem in request.cbChargeItems)
-            {
-                items.Add(chargeItem.GetInvoiceItem(isVoid));
-            }
-            return items;
+            return request.cbChargeItems.Length > 1000
+                ? throw new MaxInvoiceItemsExceededException()
+                : request.cbChargeItems.Select(chargeItem => chargeItem.GetInvoiceItem(isVoid)).ToList();
         }
         private static BuyerDetails GetBuyer(ReceiptRequest request)
         {

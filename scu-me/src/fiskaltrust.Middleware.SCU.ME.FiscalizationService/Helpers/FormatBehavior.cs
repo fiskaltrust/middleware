@@ -110,6 +110,7 @@ namespace fiskaltrust.Middleware.SCU.ME.FiscalizationService.Helpers
                         "VATRate",
                         "PriceBefVAT",
                         "TotPrice",
+                        "Amount"
                     }
                 },
             };

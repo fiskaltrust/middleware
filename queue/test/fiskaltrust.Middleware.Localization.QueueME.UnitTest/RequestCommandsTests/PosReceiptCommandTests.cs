@@ -24,11 +24,11 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
         [Fact]
         public async Task ExecuteAsync_RegisterInvoice_ValidResultAsync()
         {
-            var queue = new ftQueue()
+            var queue = new ftQueue
             {
                 ftQueueId = Guid.NewGuid()
             };
-            var queueME = new ftQueueME()
+            var queueME = new ftQueueME
             {
                 ftQueueMEId = queue.ftQueueId,
                 ftSignaturCreationUnitMEId = Guid.NewGuid(),
@@ -221,7 +221,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             await inMemoryJournalMeRepository.InsertAsync(journal).ConfigureAwait(false);
         }
 
-        private async Task<(PosReceiptCommand, Tcr, ftSignaturCreationUnitME)> InitializePosReceipt(ftQueueItem existingQueueItem, InMemoryJournalMERepository inMemoryJournalMERepository, InMemoryActionJournalRepository inMemoryActionJournalRepository, ftQueueME queueMe)
+        public async Task<(PosReceiptCommand, Tcr, ftSignaturCreationUnitME)> InitializePosReceipt(ftQueueItem existingQueueItem, InMemoryJournalMERepository inMemoryJournalMERepository, InMemoryActionJournalRepository inMemoryActionJournalRepository, ftQueueME queueMe)
         {
             var inMemoryConfigurationRepository = new InMemoryConfigurationRepository();
             var tcr = CreateTcr();

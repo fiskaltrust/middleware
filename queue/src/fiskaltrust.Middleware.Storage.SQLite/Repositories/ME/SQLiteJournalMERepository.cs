@@ -8,7 +8,7 @@ using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Storage.SQLite.Repositories.ME
 {
-    public class SQLiteJournalMERepository : AbstractSQLiteRepository<Guid, ftJournalME>, IJournalMERepository, IMiddlewareJournalMERepository
+    public class SQLiteJournalMERepository : AbstractSQLiteRepository<Guid, ftJournalME>, IMiddlewareJournalMERepository
     {
         public SQLiteJournalMERepository(ISqliteConnectionFactory connectionFactory, string path) : base(connectionFactory, path) { }
         public override void EntityUpdated(ftJournalME entity) => entity.TimeStamp = DateTime.UtcNow.Ticks;
@@ -33,6 +33,15 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Repositories.ME
         {
             var query = "Select * from ftJournalME where ftQueueItemId = @queueItemId;";
             await foreach (var entry in DbConnection.Query<ftJournalME>(query, new { queueItemId }, buffered: false).ToAsyncEnumerable().ConfigureAwait(false))
+            {
+                yield return entry;
+            }
+        }
+
+        public async IAsyncEnumerable<ftJournalME> GetByReceiptReference(string cbReceiptReference)
+        {
+            var query = "Select * from ftJournalME where cbReference = @cbReceiptReference;";
+            await foreach (var entry in DbConnection.Query<ftJournalME>(query, new { cbReceiptReference }, buffered: false).ToAsyncEnumerable().ConfigureAwait(false))
             {
                 yield return entry;
             }

@@ -96,11 +96,14 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Extensions
                 invoiceItem.GrossAmount = invoiceItem.GrossUnitPrice* invoiceItem.Quantity;
                 invoiceItem.NetAmount = invoiceItem.GrossAmount / (1 + (chargeItem.GetVatRate() / 100));
             }
-            if (isVoid)
+            if (invoiceItem.Quantity < 0 || isVoid)
             {
-                invoiceItem.Quantity *= -1;
                 invoiceItem.GrossAmount *= -1;
                 invoiceItem.NetAmount *= -1;
+                if (isVoid)
+                {
+                    invoiceItem.Quantity *= -1;
+                }
             }
 
             if (!chargeItem.IsVoucher())

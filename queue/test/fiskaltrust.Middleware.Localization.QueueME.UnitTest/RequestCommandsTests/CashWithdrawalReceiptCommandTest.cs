@@ -5,16 +5,15 @@ using fiskaltrust.Middleware.Localization.QueueME.RequestCommands;
 using fiskaltrust.Middleware.Localization.QueueME.UnitTest.Helper;
 using fiskaltrust.storage.V0;
 using Xunit;
-using fiskaltrust.Middleware.Contracts.Constants;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories.ME;
 using FluentAssertions;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTests
 {
-    public class CashDepositReceiptCommandTest
+    public class CashWithdrawalReceiptCommandTest
     {
         [Fact]
-        public async Task ExecuteAsync_CashDeposit_ValidResultAsync()
+        public async Task ExecuteAsync_CashWithdrawal_ValidResultAsync()
         {
             var queue = new ftQueue
             {
@@ -29,15 +28,14 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             var queueMe = new ftQueueME
             {
                 ftQueueMEId = queue.ftQueueId,
-                ftSignaturCreationUnitMEId = Guid.NewGuid(),
+                ftSignaturCreationUnitMEId = Guid.NewGuid()
             };
             var journalMeRepository = new InMemoryJournalMERepository();
-            var cashDepositReceiptCommand = await TestHelper.InitializeRequestCommand<CashDepositReceiptCommand>(queueMe, "TestTCRCodePos", journalMeRepository).ConfigureAwait(false);
-            var requestResponse = await cashDepositReceiptCommand.ExecuteAsync(new InMemoryMESSCD("TestTCRCodePos", "iic", "iicSignature"), queue, TestHelper.CreateReceiptRequest(0x44D5_0000_0000_0007), queueItem, queueMe);
-            var journalME = await journalMeRepository.GetByQueueItemId(queueItem.ftQueueItemId).FirstOrDefaultAsync().ConfigureAwait(false);
-            journalME.Should().NotBeNull();
-            journalME.JournalType.Should().Be(0x44D5_0000_0000_0007);
-            journalME.FCDC.Should().Be("1111");
+            var cashDepositReceiptCommand = await TestHelper.InitializeRequestCommand<CashWithdrawalReceiptCommand>(queueMe, "TestTCRCodePos", journalMeRepository).ConfigureAwait(false);
+            var requestResponse = await cashDepositReceiptCommand.ExecuteAsync(new InMemoryMESSCD("TestTCRCodePos", "iic", "iicSignature"), queue, TestHelper.CreateReceiptRequest(0x44D5_0000_0000_0008), queueItem, queueMe);
+            requestResponse.ActionJournals.Should().HaveCount(1);
+            requestResponse.ActionJournals.FirstOrDefault()?.ftQueueItemId.Should().Be(queueItem.ftQueueItemId);
+            requestResponse.ActionJournals.FirstOrDefault()?.Type.Should().Be(0x44D5_0000_0000_0008.ToString());
         }
     }
 }

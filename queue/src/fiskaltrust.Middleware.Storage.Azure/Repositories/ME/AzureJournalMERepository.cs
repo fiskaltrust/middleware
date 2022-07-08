@@ -50,5 +50,15 @@ namespace fiskaltrust.Middleware.Storage.Azure.Repositories.ME
                 yield return MapToStorageEntity(item);
             }
         }
+
+        public async IAsyncEnumerable<ftJournalME> GetByReceiptReference(string cbReceiptReference)
+        {
+            var filter = TableQuery.GenerateFilterCondition(nameof(ftJournalME.cbReference), QueryComparisons.Equal, cbReceiptReference);
+            var result = await GetAllAsync(filter).ToListAsync();
+            foreach (var item in result)
+            {
+                yield return MapToStorageEntity(item);
+            }
+        }
     }
 }

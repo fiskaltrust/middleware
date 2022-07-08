@@ -20,13 +20,9 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Extensions
 
         public static InvoiceType GetInvoiceType(this ReceiptRequest receiptRequest)
         {
-            var result = InvoiceType.Cash;
-            if (receiptRequest.cbPayItems.Any(pay => pay.IsNonCashLocalCurrency()))
-            {
-                result = InvoiceType.NonCash;
-            }
-            return result;
+            return receiptRequest.cbPayItems.Any(pay => pay.IsCashLocalCurrency()) ? InvoiceType.Cash : InvoiceType.NonCash;
         }
+
         public static List<InvoicePayment> GetPaymentMethodTypes(this ReceiptRequest item, bool isVoid)
         {
             var paymentTypes = item.cbPayItems.GroupBy(x => x.GetPaymentMethodType()).Select(x => x.Key) ;

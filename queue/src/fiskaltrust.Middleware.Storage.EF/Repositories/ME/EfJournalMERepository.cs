@@ -39,5 +39,11 @@ namespace fiskaltrust.Middleware.Storage.EF.Repositories.ME
             var result = DbContext.JournalMEList.Where(x => x.ftQueueItemId == queueItemId).OrderByDescending(x => x.TimeStamp);
             return result.ToAsyncEnumerable();
         }
+
+        public IAsyncEnumerable<ftJournalME> GetByReceiptReference(string cbReceiptReference)
+        {
+            var result = DbContext.JournalMEList.Where(x => x.cbReference == cbReceiptReference).OrderByDescending(x => x.TimeStamp);
+            return result.ToAsyncEnumerable();
+        }
     }
 }
