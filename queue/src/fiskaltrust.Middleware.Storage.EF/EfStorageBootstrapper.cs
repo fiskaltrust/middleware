@@ -21,9 +21,9 @@ using fiskaltrust.Middleware.Contracts.Data;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using Microsoft.Extensions.Logging;
 using fiskaltrust.Middleware.Abstractions;
-using fiskaltrust.Middleware.Storage.EF.Repositories.DE.MasterData;
 using fiskaltrust.storage.V0.MasterData;
 using fiskaltrust.Middleware.Storage.EF.Repositories.ME;
+using fiskaltrust.Middleware.Storage.EF.Repositories.MasterData;
 
 namespace fiskaltrust.Middleware.Storage.Ef
 {

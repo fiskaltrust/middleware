@@ -9,6 +9,7 @@ using fiskaltrust.Middleware.Storage.Azure.Repositories;
 using fiskaltrust.Middleware.Storage.Azure.Repositories.AT;
 using fiskaltrust.Middleware.Storage.Azure.Repositories.DE;
 using fiskaltrust.Middleware.Storage.Azure.Repositories.FR;
+using fiskaltrust.Middleware.Storage.Azure.Repositories.MasterData;
 using fiskaltrust.Middleware.Storage.Azure.Repositories.ME;
 using fiskaltrust.Middleware.Storage.Base;
 using fiskaltrust.storage.V0;

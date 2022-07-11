@@ -1,6 +1,6 @@
 ﻿using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Storage.AcceptanceTest;
-using fiskaltrust.Middleware.Storage.InMemory.Repositories.DE.MasterData;
+using fiskaltrust.Middleware.Storage.InMemory.Repositories.MasterData;
 using fiskaltrust.storage.V0.MasterData;
 using System.Collections.Generic;
 using System.Threading.Tasks;

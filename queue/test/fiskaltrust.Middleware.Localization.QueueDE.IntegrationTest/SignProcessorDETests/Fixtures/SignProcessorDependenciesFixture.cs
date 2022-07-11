@@ -15,7 +15,7 @@ using fiskaltrust.Middleware.Queue;
 using fiskaltrust.Middleware.Queue.Helpers;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories.DE;
-using fiskaltrust.Middleware.Storage.InMemory.Repositories.DE.MasterData;
+using fiskaltrust.Middleware.Storage.InMemory.Repositories.MasterData;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 using Microsoft.Extensions.Logging;

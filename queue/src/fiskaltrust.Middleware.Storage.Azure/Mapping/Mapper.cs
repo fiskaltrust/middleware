@@ -1218,7 +1218,8 @@ namespace fiskaltrust.Middleware.Storage.Azure.Mapping
                 Zip = src.Zip,
                 City = src.City,
                 Country = src.Country,
-                VatId = src.VatId
+                VatId = src.VatId,
+                LocationId = src.LocationId
             };
         }
 
@@ -1237,7 +1238,8 @@ namespace fiskaltrust.Middleware.Storage.Azure.Mapping
                 Zip = src.Zip,
                 City = src.City,
                 Country = src.Country,
-                VatId = src.VatId
+                VatId = src.VatId,
+                LocationId = src.LocationId
             };
         }
 
@@ -1298,7 +1300,8 @@ namespace fiskaltrust.Middleware.Storage.Azure.Mapping
                 Brand = src.Brand,
                 Model = src.Model,
                 PosSystemId = src.PosSystemId,
-                SoftwareVersion = src.SoftwareVersion
+                SoftwareVersion = src.SoftwareVersion,
+                Type = src.Type
             };
         }
 
@@ -1315,7 +1318,8 @@ namespace fiskaltrust.Middleware.Storage.Azure.Mapping
                 Brand = src.Brand,
                 Model = src.Model,
                 PosSystemId = src.PosSystemId,
-                SoftwareVersion = src.SoftwareVersion
+                SoftwareVersion = src.SoftwareVersion,
+                Type = src.Type
             };
         }
 

@@ -6,7 +6,7 @@ using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Storage.AcceptanceTest;
 using fiskaltrust.Middleware.Storage.Ef;
 using fiskaltrust.Middleware.Storage.EF.AcceptanceTest.Fixtures;
-using fiskaltrust.Middleware.Storage.EF.Repositories.DE.MasterData;
+using fiskaltrust.Middleware.Storage.EF.Repositories.MasterData;
 using fiskaltrust.storage.V0.MasterData;
 using Microsoft.Extensions.Logging;
 using Moq;

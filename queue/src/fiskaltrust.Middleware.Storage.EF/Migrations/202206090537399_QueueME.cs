@@ -1,8 +1,7 @@
-﻿namespace fiskaltrust.Middleware.Storage.EF.Migrations
+﻿using System.Data.Entity.Migrations;
+
+namespace fiskaltrust.Middleware.Storage.EF.Migrations
 {
-    using System;
-    using System.Data.Entity.Migrations;
-    
     public partial class QueueME : DbMigration
     {
         public override void Up()

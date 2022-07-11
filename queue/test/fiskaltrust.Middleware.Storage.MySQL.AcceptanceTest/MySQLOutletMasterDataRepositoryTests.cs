@@ -5,7 +5,7 @@ using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Storage.AcceptanceTest;
 using fiskaltrust.Middleware.Storage.MySQL.AcceptanceTest.Fixtures;
 using fiskaltrust.Middleware.Storage.MySQL.DatabaseInitialization;
-using fiskaltrust.Middleware.Storage.MySQL.Repositories.DE.MasterData;
+using fiskaltrust.Middleware.Storage.MySQL.Repositories.MasterData;
 using fiskaltrust.storage.V0.MasterData;
 using Microsoft.Extensions.Logging;
 using Moq;

@@ -16,6 +16,9 @@
     <None Update="Migrations\000_ftSchema.mysql">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="Migrations\006_ExtendedMasterData.mysql">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="Migrations\005_InitME.mysql">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

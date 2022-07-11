@@ -14,6 +14,7 @@ using fiskaltrust.Middleware.Storage.MySQL.Repositories.AT;
 using fiskaltrust.Middleware.Storage.MySQL.Repositories.DE;
 using fiskaltrust.Middleware.Storage.MySQL.Repositories.DE.MasterData;
 using fiskaltrust.Middleware.Storage.MySQL.Repositories.FR;
+using fiskaltrust.Middleware.Storage.MySQL.Repositories.MasterData;
 using fiskaltrust.storage.encryption.V0;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;

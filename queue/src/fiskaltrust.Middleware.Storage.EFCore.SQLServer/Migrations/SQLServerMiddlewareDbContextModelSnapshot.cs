@@ -166,6 +166,9 @@ namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer.Migrations
                     b.Property<string>("Country")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("LocationId")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("OutletName")
                         .HasColumnType("nvarchar(max)");
 
@@ -199,6 +202,9 @@ namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("SoftwareVersion")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Type")
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("PosSystemId");

@@ -161,6 +161,9 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
                     b.Property<string>("Country")
                         .HasColumnType("text");
 
+                    b.Property<string>("LocationId")
+                        .HasColumnType("text");
+
                     b.Property<string>("OutletName")
                         .HasColumnType("text");
 
@@ -194,6 +197,9 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("SoftwareVersion")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Type")
                         .HasColumnType("text");
 
                     b.HasKey("PosSystemId");

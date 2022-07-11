@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Storage.AcceptanceTest;
 using fiskaltrust.Middleware.Storage.Azure.Repositories.DE;
+using fiskaltrust.Middleware.Storage.Azure.Repositories.MasterData;
 using fiskaltrust.storage.V0.MasterData;
 
 namespace fiskaltrust.Middleware.Storage.Azure.AcceptanceTest
