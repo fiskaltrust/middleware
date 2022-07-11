@@ -43,7 +43,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             await SendInvoiceDetailToCis(client, queue, request, queueItem, queueMe, scu, invoiceDetailVoid, invoice).ConfigureAwait(false);
 
             var journalMe = await JournalMeRepository.GetByQueueItemId(queueItem.ftQueueItemId).ToListAsync().ConfigureAwait(false);
-            invoiceSummary.YearlyOrdinalNumber = await GetNextOrdinalNumber(queueItem).ConfigureAwait(false);
+            invoiceSummary.YearlyOrdinalNumber = invoiceDetailVoid.YearlyOrdinalNumber+1;
             invoiceSummary.IicReferences = new[]
             {
                 new IicReference

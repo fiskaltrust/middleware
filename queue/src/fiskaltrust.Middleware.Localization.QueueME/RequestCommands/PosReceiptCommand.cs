@@ -144,15 +144,17 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             invoiceDetails.ExportedGoodsAmount *= -1;
             return invoiceDetails;
         }
-        private async Task InsertJournalMe(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftSignaturCreationUnitME scu, RegisterInvoiceResponse registerInvoiceResponse, InvoiceDetails invoice, ComputeIICResponse computeIicResponse)
+        private async Task InsertJournalMe(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftSignaturCreationUnitME scu, RegisterInvoiceResponse registerInvoiceResponse, 
+                            InvoiceDetails invoice, ComputeIICResponse computeIicResponse)
         {
+            var lastEntry = await JournalMeRepository.GetLastEntryAsync().ConfigureAwait(false);
             var journal = new ftJournalME
             {
                 ftJournalMEId = Guid.NewGuid(),
                 ftQueueId = queue.ftQueueId,
                 ftQueueItemId = queueItem.ftQueueItemId,
                 cbReference = request.cbReceiptReference,
-                Number = queue.ftReceiptNumerator + 1,
+                Number = lastEntry.Number +1,
                 FIC = registerInvoiceResponse.FIC,
                 IIC = computeIicResponse.IIC,
                 JournalType = (long) JournalTypes.JournalME,
@@ -234,11 +236,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 
         protected async Task<ulong> GetNextOrdinalNumber(ftQueueItem queueItem)
         {
-            var lastJournals = await JournalMeRepository.GetAsync().ConfigureAwait(false);
-            var lastJournal = lastJournals
-                .OrderByDescending(x => x.TimeStamp)
-                .Where(x => x.JournalType == (long) JournalTypes.JournalME)
-                .FirstOrDefault(x => x.ftQueueItemId != queueItem.ftQueueItemId);
+            var lastJournal = await JournalMeRepository.GetLastEntryAsync().ConfigureAwait(false);
             if (lastJournal == null)
             {
                 return 1;
