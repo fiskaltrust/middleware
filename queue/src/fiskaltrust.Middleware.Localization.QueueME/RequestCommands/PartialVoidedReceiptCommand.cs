@@ -27,17 +27,41 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             {
                 return await VoidForCashReceipts(client, queue, request, queueItem, queueMe, receiptToCancel.ReceiptRequest, receiptToCancel.Invoice, receiptToCancel.QueueItem, receiptToCancel.JournalMe, scu, invoice);
             }
+            var invoiceSummary = await CreateInvoiceDetail(request, invoice, queueItem).ConfigureAwait(false);
             var invoiceDetailToCancel = await CreateInvoiceDetail(receiptToCancel.ReceiptRequest, receiptToCancel.Invoice, receiptToCancel.QueueItem).ConfigureAwait(false);
             var chargeItems = GetVoidChargeItems(request, receiptToCancel);
             chargeItems.AddRange(from chargeItem in request.cbChargeItems let foundItem = FindChargeItem(receiptToCancel.ReceiptRequest, chargeItem) where foundItem == null select chargeItem);
 
             request.cbChargeItems = chargeItems.ToArray();
-            var invoiceDetails = await CreateInvoiceDetail(request, invoice, queueItem).ConfigureAwait(false);
-            invoiceDetails.YearlyOrdinalNumber = await GetNextOrdinalNumber(queueItem).ConfigureAwait(false);
-            invoiceDetails.InvoiceCorrectionDetails = GetInvoiceCorrectionDetails(receiptToCancel.QueueItem, receiptToCancel.JournalMe);
-            invoiceDetails.InvoicingType = InvoicingType.Corrective;
+            var invoiceDetailVoid = await CreateInvoiceDetail(request, invoice, queueItem).ConfigureAwait(false);
+            invoiceDetailVoid.YearlyOrdinalNumber = await GetNextOrdinalNumber(queueItem).ConfigureAwait(false);
+            invoiceDetailVoid.InvoiceCorrectionDetails = GetInvoiceCorrectionDetails(receiptToCancel.QueueItem, receiptToCancel.JournalMe);
+            invoiceDetailVoid.InvoicingType = InvoicingType.Corrective;
+            var payment = invoiceDetailVoid.PaymentDetails.First();
+            payment.Amount = invoiceDetailVoid.GrossAmount;
+            invoiceDetailVoid.PaymentDetails = new List<InvoicePayment> { payment };
+            await SendInvoiceDetailToCis(client, queue, request, queueItem, queueMe, scu, invoiceDetailVoid, invoice).ConfigureAwait(false);
 
-            return await SendInvoiceDetailToCis(client, queue, request, queueItem, queueMe, scu, invoiceDetails, invoice).ConfigureAwait(false);
+            var journalMe = await JournalMeRepository.GetByQueueItemId(queueItem.ftQueueItemId).ToListAsync().ConfigureAwait(false);
+            invoiceSummary.YearlyOrdinalNumber = await GetNextOrdinalNumber(queueItem).ConfigureAwait(false);
+            invoiceSummary.IicReferences = new[]
+            {
+                new IicReference
+                {
+                    Iic = receiptToCancel.JournalMe.IIC,
+                    IssueDateTime = receiptToCancel.QueueItem.cbReceiptMoment,
+                    Amount = invoiceDetailToCancel.GrossAmount
+                },
+                new IicReference
+                {
+                    Iic = journalMe.FirstOrDefault()?.IIC,
+                    IssueDateTime = queueItem.cbReceiptMoment,
+                    Amount = invoiceDetailVoid.GrossAmount
+                },
+            };
+            invoiceSummary.InvoiceType = InvoiceType.NonCash;
+            invoiceSummary.InvoicingType = InvoicingType.Summary;
+            return await SendInvoiceDetailToCis(client, queue, request, queueItem, queueMe, scu, invoiceSummary, invoice).ConfigureAwait(false);
         }
 
         private static List<ChargeItem> GetVoidChargeItems(ReceiptRequest request, ReceiptToCancel receiptToCancel)
