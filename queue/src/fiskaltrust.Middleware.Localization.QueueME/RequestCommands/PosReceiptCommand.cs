@@ -58,7 +58,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             }
             catch (EntryPointNotFoundException ex)
             {
-                Logger.LogDebug(ex, "TSE is not reachable.");
+                Logger.LogDebug(ex, "Fiscalization service is not reachable.");
                 return await ProcessFailedReceiptRequest(queue, queueItem, request, queueMe).ConfigureAwait(false);
             }
             await InsertJournalMe(queue, request, queueItem, scu, registerInvoiceResponse, invoiceDetails, computeIicResponse).ConfigureAwait(false);
