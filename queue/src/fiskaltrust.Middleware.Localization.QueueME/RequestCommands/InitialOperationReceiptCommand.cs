@@ -20,16 +20,18 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
     {
         private readonly IMasterDataRepository<OutletMasterData> _outletMasterDataRepository;
         private readonly IMasterDataRepository<PosSystemMasterData> _posSystemMasterDataRepository;
+        private readonly IMasterDataRepository<AccountMasterData> _accountMasterDataRepository;
         private readonly SignatureItemFactory _signatureItemFactory;
 
         public InitialOperationReceiptCommand(ILogger<RequestCommand> logger, IConfigurationRepository configurationRepository,
             IMiddlewareJournalMERepository journalMERepository, IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareActionJournalRepository actionJournalRepository,
-            IMasterDataRepository<OutletMasterData> outletMasterDataRepository, IMasterDataRepository<PosSystemMasterData> posSystemMasterDataRepository, 
+            IMasterDataRepository<OutletMasterData> outletMasterDataRepository, IMasterDataRepository<PosSystemMasterData> posSystemMasterDataRepository, IMasterDataRepository<AccountMasterData> accountMasterDataRepository,
             QueueMEConfiguration queueMeConfiguration, SignatureItemFactory signatureItemFactory) :
             base(logger, configurationRepository, journalMERepository, queueItemRepository, actionJournalRepository, queueMeConfiguration)
         {
             _outletMasterDataRepository = outletMasterDataRepository;
             _posSystemMasterDataRepository = posSystemMasterDataRepository;
+            _accountMasterDataRepository = accountMasterDataRepository;
             _signatureItemFactory = signatureItemFactory;
         }
 
@@ -42,12 +44,18 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                     // TODO: Make it possible to select the desired PosSystem and Outlet when we made this configurable via the Portal
                     var outlets = await _outletMasterDataRepository.GetAsync().ConfigureAwait(false);
                     var posSystems = await _posSystemMasterDataRepository.GetAsync().ConfigureAwait(false);
+                    var accounts = await _accountMasterDataRepository.GetAsync().ConfigureAwait(false);
+                    
+                    var businessUnitCode = outlets.FirstOrDefault()?.LocationId ?? throw new ArgumentException("The primary outlet's LocationId needs to be set to the business unit code.");
+                    var tcrSoftwareCode = posSystems.FirstOrDefault()?.Model ?? throw new ArgumentException("The primary PosSystem's Model needs to be set to the TCR software code.");
+                    var tcrMaintainerCode = posSystems.FirstOrDefault()?.Brand ?? throw new ArgumentException("The primary PosSystem's Brand needs to be set to the TCR maintainer code.");
+                    var issuerTin = accounts.FirstOrDefault()?.TaxId ?? throw new ArgumentException("The account's TaxId needs to be set to the issuers TIN code.");
 
                     var registerTCRRequest = new RegisterTcrRequest
                     {
-                        BusinessUnitCode = outlets.FirstOrDefault()?.LocationId ?? throw new ArgumentException("The primary outlet's LocationId needs to be set to the business unit code."),
-                        TcrSoftwareCode = posSystems.FirstOrDefault()?.Model ?? throw new ArgumentException("The primary PosSystem's Model needs to be set to the TCR software code."),
-                        TcrSoftwareMaintainerCode = posSystems.FirstOrDefault()?.Brand ?? throw new ArgumentException("The primary PosSystem's Brand needs to be set to the TCR maintainer code."),
+                        BusinessUnitCode = businessUnitCode,
+                        TcrSoftwareCode = tcrSoftwareCode,
+                        TcrSoftwareMaintainerCode = tcrMaintainerCode,
                         InternalTcrIdentifier = queue.ftQueueId.ToString(),
                         RequestId = queueItem.ftQueueItemId,
                         TcrType = TcrType.Regular
@@ -65,6 +73,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                     scuMe.SoftwareCode = registerTCRRequest.TcrSoftwareCode;
                     scuMe.MaintainerCode = registerTCRRequest.TcrSoftwareMaintainerCode;
                     scuMe.ValidFrom = DateTime.UtcNow;
+                    scuMe.IssuerTin = issuerTin;
                     await ConfigurationRepository.InsertOrUpdateSignaturCreationUnitMEAsync(scuMe).ConfigureAwait(false);
 
                     await ConfigurationRepository.InsertOrUpdateQueueMEAsync(queueME).ConfigureAwait(false);
@@ -111,7 +120,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                         Moment = DateTime.UtcNow,
                         Message = queue.IsDeactivated()
                             ? $"Queue {queue.ftQueueId} is de-activated, initial-operations-receipt can not be executed."
-                            : $"Queue {queue.ftQueueId} is activated, initial-operations-receipt can not be executed."
+                            : $"Queue {queue.ftQueueId} is already activated, initial-operations-receipt can not be executed."
                     };
 
                     return new RequestCommandResponse

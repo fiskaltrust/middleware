@@ -24,6 +24,8 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
         [Fact]
         public async Task ExecuteAsync_CompleteVoidedReceipt_ValidResultAsync()
         {
+            var businessUnitCode = "abc1234";
+            var issuerTin = "12345";
             var queue = new ftQueue
             {
                 ftQueueId = Guid.NewGuid()
@@ -34,10 +36,11 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
                 ftSignaturCreationUnitMEId = Guid.NewGuid(),
             };
             var queueItem = new ftQueueItem { ftQueueItemId = Guid.NewGuid(), ftWorkMoment = DateTime.UtcNow };
-            var (posReceiptCommand, _, scu) = await new PosReceiptCommandTests().InitializePosReceipt(queueItem, new InMemoryJournalMERepository(), new InMemoryActionJournalRepository(), queueMe).ConfigureAwait(false);
+            var (posReceiptCommand,scu) = await new PosReceiptCommandTests().CreateSut(queueItem, new InMemoryJournalMERepository(), new InMemoryActionJournalRepository(), queueMe,
+                queue.ftQueueId.ToString(), businessUnitCode, issuerTin);
             var receiptToCancel = CreatePosReceiptToCancel();
             var inMemoryMesscd = new InMemoryMESSCD(scu.TcrCode, "iic", "iicSignature");
-            var response =  await posReceiptCommand.ExecuteAsync(inMemoryMesscd, queue, receiptToCancel, queueItem, queueMe).ConfigureAwait(false);
+            var response =  await posReceiptCommand.ExecuteAsync(inMemoryMesscd, queue, receiptToCancel, queueItem, queueMe);
 
 
 
