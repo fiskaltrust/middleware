@@ -19,19 +19,28 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
     public class PosReceiptCommand : RequestCommand
     {
         private const string CashDepositOutstandingMsg = "Register initial amount with Cash Deposit Receipt for today!";
-        public PosReceiptCommand(ILogger<RequestCommand> logger, IConfigurationRepository configurationRepository,
-            IMiddlewareJournalMERepository journalMeRepository, IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareActionJournalRepository actionJournalRepository, QueueMEConfiguration queueMeConfiguration) :
+        private readonly SignatureItemFactory _signatureItemFactory;
+
+        public PosReceiptCommand(ILogger<RequestCommand> logger, IConfigurationRepository configurationRepository, 
+            IMiddlewareJournalMERepository journalMeRepository, IMiddlewareQueueItemRepository queueItemRepository, 
+            IMiddlewareActionJournalRepository actionJournalRepository, QueueMEConfiguration queueMeConfiguration, SignatureItemFactory signatureItemFactory) :
             base(logger, configurationRepository, journalMeRepository, queueItemRepository, actionJournalRepository, queueMeConfiguration)
-        { }
+        {
+            _signatureItemFactory = signatureItemFactory;
+        }
+
         public override async Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftQueueME queueMe)
         {
-            var scu = await IsEnuRegistered(queueMe).ConfigureAwait(false);
+            var scu = await ConfigurationRepository.GetSignaturCreationUnitMEAsync(queueMe.ftSignaturCreationUnitMEId.Value).ConfigureAwait(false);
+
             await CashDepositOutstanding().ConfigureAwait(false);
             await InvoiceAlreadyReceived(request.cbReceiptReference);
+            
             var invoice = JsonConvert.DeserializeObject<Invoice>(request.ftReceiptCaseData);
-            IsOperatorSet(invoice);
+            ThrowIfOperatorIsNotSet(invoice);
             var invoiceDetails = await CreateInvoiceDetail(request, invoice, queueItem).ConfigureAwait(false);
             invoiceDetails.InvoicingType = InvoicingType.Invoice;
+            
             return await SendInvoiceDetailToCis(client, queue, request, queueItem, queueMe, scu, invoiceDetails, invoice);
         }
 
@@ -44,21 +53,18 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             RegisterInvoiceResponse registerInvoiceResponse;
             try
             {
-                var registerInvoiceRequest =
-                    CreateInvoiceRequest(request, queueItem, invoice, scu, invoiceDetails, computeIicResponse);
+                var registerInvoiceRequest = CreateInvoiceRequest(request, queueItem, invoice, scu, invoiceDetails, computeIicResponse);
                 registerInvoiceResponse = await client.RegisterInvoiceAsync(registerInvoiceRequest).ConfigureAwait(false);
             }
             catch (EntryPointNotFoundException ex)
             {
                 Logger.LogDebug(ex, "TSE is not reachable.");
-                return await ProcessFailedReceiptRequest(queueItem, request, queueMe).ConfigureAwait(false);
+                return await ProcessFailedReceiptRequest(queue, queueItem, request, queueMe).ConfigureAwait(false);
             }
-            await InsertJournalMe(queue, request, queueItem, scu, registerInvoiceResponse, invoiceDetails, computeIicResponse)
-                .ConfigureAwait(false);
-            var receiptResponse = CreateReceiptResponse(request, queueItem);
-            receiptResponse.ftSignatures = receiptResponse.ftSignatures
-                .Concat(new SignatureItemFactory(request, computeIicResponse, invoiceDetails.YearlyOrdinalNumber, scu,
-                    QueueMeConfiguration).CreateSignatures()).ToArray();
+            await InsertJournalMe(queue, request, queueItem, scu, registerInvoiceResponse, invoiceDetails, computeIicResponse).ConfigureAwait(false);
+            var receiptResponse = CreateReceiptResponse(queue, request, queueItem, invoiceDetails.YearlyOrdinalNumber);
+            var signature = _signatureItemFactory.CreatePosReceiptSignatures(request, computeIicResponse, invoiceDetails.YearlyOrdinalNumber, scu);
+            receiptResponse.ftSignatures = receiptResponse.ftSignatures.Extend(signature);
 
             return new RequestCommandResponse
             {
@@ -66,7 +72,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             };
         }
 
-        protected static void IsOperatorSet(Invoice invoice)
+        protected static void ThrowIfOperatorIsNotSet(Invoice invoice)
         {
             if (string.IsNullOrEmpty(invoice.OperatorCode))
             {
@@ -81,25 +87,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 throw new InvoiceAlreadyReceivedException(
                     "The field cbReceiptReference is unique and already in use. Make sure to use an unique cbReceiptReference for each transaction!");
             }
-        }
-
-        protected async Task<ftSignaturCreationUnitME> IsEnuRegistered(ftQueueME queueMe)
-        {
-            if (queueMe == null)
-            {
-                throw new EnuNotRegisteredException("No QueueME!");
-            }
-            if (queueMe.ftSignaturCreationUnitMEId == null)
-            {
-                throw new EnuNotRegisteredException("No SignatureCreationUnitME!");
-            }
-            var scu = await ConfigurationRepository.GetSignaturCreationUnitMEAsync(queueMe.ftSignaturCreationUnitMEId.Value)
-                .ConfigureAwait(false);
-            if (scu == null)
-            {
-                throw new EnuNotRegisteredException("No SignatureCreationUnitME!");
-            }
-            return scu;
         }
 
         protected async Task CashDepositOutstanding()

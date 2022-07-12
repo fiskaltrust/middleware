@@ -23,15 +23,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
         {
             try
             {
-                if (queueMe == null || !queueMe.ftSignaturCreationUnitMEId.HasValue)
-                {
-                    throw new EnuNotRegisteredException();
-                }
-                var scu = await ConfigurationRepository.GetSignaturCreationUnitMEAsync(queueMe.ftSignaturCreationUnitMEId.Value).ConfigureAwait(false);
-                if (scu == null || string.IsNullOrEmpty(scu.TcrCode))
-                {
-                    throw new EnuNotRegisteredException();
-                }
+                var scu = await ConfigurationRepository.GetSignaturCreationUnitMEAsync(queueMe.ftSignaturCreationUnitMEId.Value).ConfigureAwait(false);               
                 var registerCashDepositRequest = new RegisterCashDepositRequest
                 {
                     Amount = request.cbReceiptAmount ?? request.cbChargeItems.Sum(x => x.Amount),
@@ -43,7 +35,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 
                 var registerCashDepositResponse = await client.RegisterCashDepositAsync(registerCashDepositRequest).ConfigureAwait(false);
                 await InsertJournalMe(queue, request, queueItem, registerCashDepositResponse).ConfigureAwait(false);
-                var receiptResponse = CreateReceiptResponse(request, queueItem);
+                var receiptResponse = CreateReceiptResponse(queue, request, queueItem);
                 var actionJournalEntry =  CreateActionJournal(queue, request.ftReceiptCase, queueItem);
                 return new RequestCommandResponse
                 {
@@ -57,7 +49,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             catch(EntryPointNotFoundException ex)
             {
                 Logger.LogDebug(ex, "TSE is not reachable.");
-                return await ProcessFailedReceiptRequest(queueItem, request, queueMe).ConfigureAwait(false);
+                return await ProcessFailedReceiptRequest(queue, queueItem, request, queueMe).ConfigureAwait(false);
             }
             catch (Exception ex)
             {

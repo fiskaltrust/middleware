@@ -35,7 +35,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME
 
             if (queueME.SSCDFailCount > 0 && requestCommand is not ZeroReceiptCommand )
             {
-                var requestCommandResponse = await requestCommand.ProcessFailedReceiptRequest(queueItem, request, queueME).ConfigureAwait(false);
+                var requestCommandResponse = await requestCommand.ProcessFailedReceiptRequest(queue, queueItem, request, queueME).ConfigureAwait(false);
                 return (requestCommandResponse.ReceiptResponse, requestCommandResponse.ActionJournals.ToList());
             }
             var response = await requestCommand.ExecuteAsync(_client, queue, request, queueItem, queueME).ConfigureAwait(false);

@@ -4,6 +4,7 @@ using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.me;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueME.Exceptions;
+using fiskaltrust.Middleware.Localization.QueueME.Factories;
 using fiskaltrust.Middleware.Localization.QueueME.Models;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
@@ -13,27 +14,24 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 {
     public class CompleteVoidedReceiptCommand : PosReceiptCommand
     {
-        protected const string PreviousReceiptNotSet =
-            "The field cbPreviousReceiptReference must be set to the cbReceiptReference of the receipt to cancel!";
         public CompleteVoidedReceiptCommand(ILogger<RequestCommand> logger, IConfigurationRepository configurationRepository,
-            IMiddlewareJournalMERepository journalMeRepository, IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareActionJournalRepository actionJournalRepository, QueueMEConfiguration queueMeConfiguration) :
-            base(logger, configurationRepository, journalMeRepository, queueItemRepository, actionJournalRepository, queueMeConfiguration)
+            IMiddlewareJournalMERepository journalMeRepository, IMiddlewareQueueItemRepository queueItemRepository, 
+            IMiddlewareActionJournalRepository actionJournalRepository, QueueMEConfiguration queueMeConfiguration, SignatureItemFactory signatureItemFactory) :
+            base(logger, configurationRepository, journalMeRepository, queueItemRepository, actionJournalRepository, queueMeConfiguration, signatureItemFactory)
         { }
 
         public override async Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftQueueME queueMe)
         {
-            var (scu, _) = await ValidateVoidReceipt(request, queueMe);
+            var (scu, _) = await ValidateVoidReceipt(request, queueMe).ConfigureAwait(false);
             var receiptToCancel = await GetReceiptToCancel(request).ConfigureAwait(false);
-            var invoiceDetailsCancel =
-                await CreateInvoiceDetail(receiptToCancel.ReceiptRequest, receiptToCancel.Invoice, receiptToCancel.QueueItem, true)
-                    .ConfigureAwait(false);
+            var invoiceDetailsCancel = await CreateInvoiceDetail(receiptToCancel.ReceiptRequest, receiptToCancel.Invoice, receiptToCancel.QueueItem, true).ConfigureAwait(false);
             invoiceDetailsCancel.YearlyOrdinalNumber = await GetNextOrdinalNumber(queueItem).ConfigureAwait(false);
             invoiceDetailsCancel.InvoiceCorrectionDetails = GetInvoiceCorrectionDetails(receiptToCancel.QueueItem, receiptToCancel.JournalMe);
             invoiceDetailsCancel.InvoicingType = InvoicingType.Corrective;
             return await SendInvoiceDetailToCis(client, queue, receiptToCancel.ReceiptRequest, queueItem, queueMe, scu,
                 invoiceDetailsCancel, receiptToCancel.Invoice);
         }
-        
+
         protected InvoiceCorrectionDetails GetInvoiceCorrectionDetails(ftQueueItem queueItemToCancel, ftJournalME journalMeToCancel)
         {
             return new InvoiceCorrectionDetails
@@ -55,7 +53,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             var queueItemToCancel = await QueueItemRepository.GetAsync(journalMeToCancel.ftQueueItemId).ConfigureAwait(false);
             if (queueItemToCancel == null)
             {
-                throw new ReferenceNotSetException(PreviousReceiptNotSet);
+                throw new ReferenceNotSetException("The field cbPreviousReceiptReference must be set to the cbReceiptReference of the receipt to cancel.");
             }
             var receiptRequestToCancel = JsonConvert.DeserializeObject<ReceiptRequest>(queueItemToCancel.request);
             var invoiceToCancel = JsonConvert.DeserializeObject<Invoice>(receiptRequestToCancel.ftReceiptCaseData);
@@ -70,13 +68,15 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 
         protected async Task<(ftSignaturCreationUnitME, Invoice)> ValidateVoidReceipt(ReceiptRequest request, ftQueueME queueMe)
         {
-            var scu = await IsEnuRegistered(queueMe).ConfigureAwait(false);
+            var scu = await ConfigurationRepository.GetSignaturCreationUnitMEAsync(queueMe.ftSignaturCreationUnitMEId.Value).ConfigureAwait(false);
+
             await CashDepositOutstanding().ConfigureAwait(false);
             await InvoiceAlreadyReceived(request.cbReceiptReference);
             var invoice = JsonConvert.DeserializeObject<Invoice>(request.ftReceiptCaseData);
-            IsOperatorSet(invoice);
+            ThrowIfOperatorIsNotSet(invoice);
+
             return string.IsNullOrWhiteSpace(request.cbPreviousReceiptReference)
-                ? throw new ReferenceNotSetException(PreviousReceiptNotSet)
+                ? throw new ReferenceNotSetException("The field cbPreviousReceiptReference must be set to the cbReceiptReference of the receipt to cancel.")
                 : (scu, invoice);
         }
     }

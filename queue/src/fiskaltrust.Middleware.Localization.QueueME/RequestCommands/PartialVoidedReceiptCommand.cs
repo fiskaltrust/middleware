@@ -5,6 +5,7 @@ using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.me;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueME.Extensions;
+using fiskaltrust.Middleware.Localization.QueueME.Factories;
 using fiskaltrust.Middleware.Localization.QueueME.Models;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
@@ -14,8 +15,9 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
     public class PartialVoidedReceiptCommand : CompleteVoidedReceiptCommand
     {
         public PartialVoidedReceiptCommand(ILogger<RequestCommand> logger, IConfigurationRepository configurationRepository,
-            IMiddlewareJournalMERepository journalMeRepository, IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareActionJournalRepository actionJournalRepository, QueueMEConfiguration queueMeConfiguration) :
-            base(logger, configurationRepository, journalMeRepository, queueItemRepository, actionJournalRepository, queueMeConfiguration)
+            IMiddlewareJournalMERepository journalMeRepository, IMiddlewareQueueItemRepository queueItemRepository, 
+            IMiddlewareActionJournalRepository actionJournalRepository, QueueMEConfiguration queueMeConfiguration, SignatureItemFactory signatureItemFactory) :
+            base(logger, configurationRepository, journalMeRepository, queueItemRepository, actionJournalRepository, queueMeConfiguration, signatureItemFactory)
         { }
 
         public override async Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftQueueME queueMe)

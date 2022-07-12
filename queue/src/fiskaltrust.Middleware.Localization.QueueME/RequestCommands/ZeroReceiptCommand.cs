@@ -9,12 +9,13 @@ using fiskaltrust.ifPOS.v1.me;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using Newtonsoft.Json;
 using fiskaltrust.Middleware.Localization.QueueME.RequestCommands.Factories;
+using System.Linq;
+using System.Collections.Generic;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 {
     public class ZeroReceiptCommand : RequestCommand
     {
-        private const string QUEUECONNECTED = "All Receipts have been sent! Queue is in connected mode!";
         protected readonly IRequestCommandFactory _requestCommandFactory;
 
         public ZeroReceiptCommand(ILogger<RequestCommand> logger, IConfigurationRepository configurationRepository, IMiddlewareJournalMERepository journalMERepository,
@@ -30,10 +31,10 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             {
                 if (queueME.SSCDFailCount == 0)
                 {
-                    Logger.LogInformation("Queue has no failed receipts!");
+                    Logger.LogInformation("Queue has no failed receipts.");
                     return new RequestCommandResponse()
                     {
-                        ReceiptResponse = CreateReceiptResponse(request, queueItem)
+                        ReceiptResponse = CreateReceiptResponse(queue, request, queueItem)
                     };
                 }
                 var failedQueueItem = await QueueItemRepository.GetAsync(queueME.SSCDFailQueueItemId.Value).ConfigureAwait(false);
@@ -57,19 +58,51 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                         }
                         catch (Exception ex)
                         {
-                            Logger.LogError(ex, "Request could not be resolved : " + fqueueItem.request);
+                            Logger.LogError(ex, "Request could not be resolved: " + fqueueItem.request);
                         }
                     }
                 }
+                Logger.LogInformation($"Successfully closed failed-mode, re-sent {queueME.SSCDFailCount} receipts that have been stored between {queueME.SSCDFailMoment:G} and {DateTime.UtcNow:G}.");
+
+
+                var caption = $"Restored connection to fiscalization service at {DateTime.UtcNow:G}.";
+                var data = $"{queueME.SSCDFailCount} receipts from the timeframe between {queueME.SSCDFailMoment:G} and {DateTime.UtcNow:G} have been re-processed at the fiscalization service.";
+
+                var receiptResponse = CreateReceiptResponse(queue, request, queueItem);
+                receiptResponse.ftSignatures = receiptResponse.ftSignatures.Concat(new List<SignaturItem>
+                {
+                    new SignaturItem
+                    {
+                        ftSignatureType = 0x4D45_0000_0000_0002,
+                        ftSignatureFormat = (long) ifPOS.v0.SignaturItem.Formats.Text,
+                        Caption = caption,
+                        Data = data
+                    }
+                }).ToArray();
+
                 queueME.SSCDFailCount = 0;
                 queueME.SSCDFailMoment = null;
                 queueME.SSCDFailQueueItemId = null;
                 await ConfigurationRepository.InsertOrUpdateQueueMEAsync(queueME).ConfigureAwait(false);
-                Logger.LogInformation(QUEUECONNECTED);
-                var receiptResponse = new ReceiptResponse() { ftReceiptHeader = new string[] { QUEUECONNECTED } };
-                return await Task.FromResult(new RequestCommandResponse()
+
+                return await Task.FromResult(new RequestCommandResponse
                 {
-                    ReceiptResponse = receiptResponse
+                    ReceiptResponse = receiptResponse,
+                    ActionJournals = new List<ftActionJournal>
+                    {
+                        new ftActionJournal
+                        {
+                            ftActionJournalId = Guid.NewGuid(),
+                            ftQueueId = queueItem.ftQueueId,
+                            ftQueueItemId = queueItem.ftQueueItemId,
+                            Moment = DateTime.UtcNow,
+                            Priority = -1,
+                            TimeStamp = 0,
+                            Message = caption + data,
+                            Type = $"{0x4D45_0000_0000_0002:X}-{nameof(String)}",
+                            DataJson = JsonConvert.SerializeObject(caption + " " + data)
+                        }
+                    }
                 });
             }
             catch (EntryPointNotFoundException ex)
