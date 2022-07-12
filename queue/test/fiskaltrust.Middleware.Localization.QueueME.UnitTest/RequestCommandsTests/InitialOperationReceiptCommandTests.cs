@@ -32,6 +32,8 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             var iicSignature = "iicSignature";
             var businessUnitCode = "aT007FT888";
             var issuerTin = "02657597";
+            var softwareCode = "ab12345";
+            var maintainerCode = "cd12345";
 
             var inMemoryConfigurationRepository = new InMemoryConfigurationRepository();
             var inMemoryJournalMERepository = new InMemoryJournalMERepository();
@@ -40,7 +42,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             var outletRepository = new InMemoryOutletMasterDataRepository();
             await outletRepository.CreateAsync(new OutletMasterData { LocationId = businessUnitCode });
             var posSystemRepository = new InMemoryPosSystemMasterDataRepository();
-            await posSystemRepository.CreateAsync(new PosSystemMasterData { });
+            await posSystemRepository.CreateAsync(new PosSystemMasterData { Model = softwareCode, Brand = maintainerCode });
             var accountRepository = new InMemoryAccountMasterDataRepository();
             await accountRepository.CreateAsync(new AccountMasterData { TaxId = issuerTin });
 
@@ -53,10 +55,17 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             {
                 ftQueueId = Guid.NewGuid()
             };
+            var scuMe = new ftSignaturCreationUnitME
+            {
+                ftSignaturCreationUnitMEId = Guid.NewGuid()                
+            };
             var queueME = new ftQueueME()
             {
                 ftQueueMEId = queue.ftQueueId,
+                ftSignaturCreationUnitMEId = scuMe.ftSignaturCreationUnitMEId
             };
+            await inMemoryConfigurationRepository.InsertOrUpdateSignaturCreationUnitMEAsync(scuMe);
+
             await initialOperationReceiptCommand.ExecuteAsync(inMemoryMESSCD, queue, receiptRequest, new ftQueueItem(), queueME).ConfigureAwait(false);
 
             var queuMe = await inMemoryConfigurationRepository.GetQueueMEAsync(queue.ftQueueId).ConfigureAwait(false);
@@ -99,12 +108,11 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             
             var sut = new InitialOperationReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), inMemoryConfigurationRepository,
                 inMemoryJournalMERepository, inMemoryQueueItemRepository, actionJournalRepo, null, null, null, new QueueMEConfiguration { Sandbox = true }, null);
-            await sut.ExecuteAsync(null, queue, receiptRequest, new ftQueueItem(), queueME);
+            var response = await sut.ExecuteAsync(null, queue, receiptRequest, new ftQueueItem { ftQueueId = queue.ftQueueId}, queueME);
 
-            var ajs = await actionJournalRepo.GetAsync();
-            ajs.Should().HaveCount(1);
-            ajs.First().ftQueueId.Should().Be(queue.ftQueueId);
-            ajs.First().Message.Should().Be($"Queue {queue.ftQueueId} is already activated, initial-operations-receipt can not be executed.");
+            response.ActionJournals.Should().HaveCount(1);
+            response.ActionJournals.First().ftQueueId.Should().Be(queue.ftQueueId);
+            response.ActionJournals.First().Message.Should().Be($"Queue {queue.ftQueueId} is already activated, initial-operations-receipt can not be executed.");
         }
 
         private ReceiptRequest CreateReceiptRequest()

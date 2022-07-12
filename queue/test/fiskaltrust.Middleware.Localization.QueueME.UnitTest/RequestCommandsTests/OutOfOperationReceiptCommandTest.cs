@@ -50,8 +50,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
                 inMemoryJournalMERepository, inMemoryQueueItemRepository, new InMemoryActionJournalRepository(), queueMeConfig, new Factories.SignatureItemFactory(queueMeConfig));
             await sut.ExecuteAsync(inMemoryMESSCD, queue, receiptRequest, new ftQueueItem(), queueME);
 
-            var queueAfterTest = await inMemoryConfigurationRepository.GetQueueAsync(queue.ftQueueId);
-            queueAfterTest.StopMoment.Should().NotBeNull();
+            queue.StopMoment.Should().NotBeNull();
 
             var scuMeAfterTest = await inMemoryConfigurationRepository.GetSignaturCreationUnitMEAsync(queueME.ftSignaturCreationUnitMEId.Value);
             scuMeAfterTest.ValidTo.Should().NotBeNull();
