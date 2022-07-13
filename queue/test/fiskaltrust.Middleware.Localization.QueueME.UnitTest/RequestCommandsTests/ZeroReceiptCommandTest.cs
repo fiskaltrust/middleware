@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading.Tasks;
-using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Localization.QueueME.RequestCommands;
 using fiskaltrust.Middleware.Localization.QueueME.UnitTest.Helper;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories;
@@ -10,10 +9,10 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Newtonsoft.Json;
 using Xunit;
-using fiskaltrust.Middleware.Localization.QueueME.Extensions;
 using fiskaltrust.Middleware.Localization.QueueME.RequestCommands.Factories;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
+using Org.BouncyCastle.Asn1.Ocsp;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTests
 {
@@ -50,6 +49,14 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             var queueItemRepository = new InMemoryQueueItemRepository();
             var queueItem = CreateQueueItem(queue);
             var cdReceipRequest = TestHelper.CreateReceiptRequest(0x44D5_0000_0000_0007);
+            cdReceipRequest.cbChargeItems = new ifPOS.v1.ChargeItem[]
+            {
+                new ifPOS.v1.ChargeItem
+                {
+                    ftChargeItemCase = 0x4D45000000000020,
+                    Amount = 100.0M
+                }
+            };
             queueItem.request = JsonConvert.SerializeObject(cdReceipRequest);
             await queueItemRepository.InsertAsync(queueItem).ConfigureAwait(false);
             var cashDepositReceiptCommand = new CashDepositReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), inMemoryConfigurationRepository, journalMERepository, queueItemRepository, actionJournalRepository, new QueueMEConfiguration { Sandbox = true });
@@ -57,8 +64,8 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
 
 
 
-            var zeroReceiptCommand = new ZeroReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), inMemoryConfigurationRepository, journalMERepository, queueItemRepository, actionJournalRepository, CreateRequestCommandFactory(), new QueueMEConfiguration { Sandbox = true });
-            var respond = await zeroReceiptCommand.ExecuteAsync(client, queue, cdReceipRequest, queueItem, queueME);
+            var sut = new ZeroReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), inMemoryConfigurationRepository, journalMERepository, queueItemRepository, actionJournalRepository, CreateRequestCommandFactory(), new QueueMEConfiguration { Sandbox = true });
+            var respond = await sut.ExecuteAsync(client, queue, cdReceipRequest, queueItem, queueME);
         }
 
         private IRequestCommandFactory CreateRequestCommandFactory()

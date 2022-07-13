@@ -35,7 +35,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             var requestResponse = await cashDepositReceiptCommand.ExecuteAsync(new InMemoryMESSCD("TestTCRCodePos", "iic", "iicSignature"), queue, TestHelper.CreateReceiptRequest(0x44D5_0000_0000_0006), queueItem, queueME);
             requestResponse.ActionJournals.Should().HaveCount(1);
             requestResponse.ActionJournals.FirstOrDefault().ftQueueItemId.Should().Be(queueItem.ftQueueItemId);
-            requestResponse.ActionJournals.FirstOrDefault().Type.Should().Be(((long) 0x44D5_0000_0000_0006).ToString());
+            requestResponse.ActionJournals.FirstOrDefault().Type.Should().Be(0x44D5_0000_0000_0006.ToString("x").ToUpper());
         }
     }
 }

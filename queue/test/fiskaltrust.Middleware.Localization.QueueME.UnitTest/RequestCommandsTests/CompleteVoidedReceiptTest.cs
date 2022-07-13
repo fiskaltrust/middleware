@@ -32,37 +32,15 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             };
             var queueMe = new ftQueueME
             {
-                ftQueueMEId = queue.ftQueueId,  
+                ftQueueMEId = queue.ftQueueId,
                 ftSignaturCreationUnitMEId = Guid.NewGuid(),
             };
             var queueItem = new ftQueueItem { ftQueueItemId = Guid.NewGuid(), ftWorkMoment = DateTime.UtcNow };
-            var (posReceiptCommand,scu) = await new PosReceiptCommandTests().CreateSut(queueItem, new InMemoryJournalMERepository(), new InMemoryActionJournalRepository(), queueMe,
+            var (posReceiptCommand, scu) = await new PosReceiptCommandTests().CreateSut(queueItem, new InMemoryJournalMERepository(), new InMemoryActionJournalRepository(), queueMe,
                 queue.ftQueueId.ToString(), businessUnitCode, issuerTin);
             var receiptToCancel = CreatePosReceiptToCancel();
             var inMemoryMesscd = new InMemoryMESSCD(scu.TcrCode, "iic", "iicSignature");
-            var response =  await posReceiptCommand.ExecuteAsync(inMemoryMesscd, queue, receiptToCancel, queueItem, queueMe);
-
-
-
-        }
-
-        private static ReceiptRequest CreateCompleteCancelReceipt()
-        {
-            return null;
-            /*
-            {
-                "ftCashBoxID": "{{cashbox_id}}",
-                "ftPosSystemId": "{{possystem_id}}",
-                "cbTerminalID": "T2",
-                "cbReceiptReference":137,
-                "cbCustomer":"",
-                "ftReceiptCaseData": "{'OperatorCode':'ir524mw732'}",
-                "cbReceiptMoment":"{{current_moment}}",
-                "cbChargeItems": [],
-                "cbPayItems": [],
-                "ftReceiptCase": 5567856514313748481,
-                "cbPreviousReceiptReference":136
-            }*/
+            var response = await posReceiptCommand.ExecuteAsync(inMemoryMesscd, queue, receiptToCancel, queueItem, queueMe);
         }
 
         private static ReceiptRequest CreatePosReceiptToCancel()
@@ -70,6 +48,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             return new ReceiptRequest
             {
                 cbReceiptReference = "140",
+                cbUser = "{\"OperatorCode\": \"abc\"}",
                 cbCustomer =
                     "{'BuyerIdentificationType':'TIN','IdentificationNumber':'72001008','Name':'Mr. X','Address':'Mustergasse 8','Town':'City','Country':'MNE'}",
                 ftReceiptCaseData = "{'OperatorCode':'ir524mw732'}",

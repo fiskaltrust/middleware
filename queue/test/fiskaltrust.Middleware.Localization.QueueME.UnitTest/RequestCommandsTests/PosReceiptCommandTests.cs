@@ -288,6 +288,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
                 cbCustomer = JsonConvert.SerializeObject(CreateBuyer()),
                 cbReceiptMoment = now,
                 cbReceiptReference = "107",
+                cbUser = "{\"OperatorCode\": \"abc\"}",
                 cbChargeItems = new [] {
                     new ChargeItem {
                         Amount = 221,
