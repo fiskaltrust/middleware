@@ -8,6 +8,7 @@ using fiskaltrust.ifPOS.v1.me;
 using System.Collections.Generic;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using System.Linq;
+using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 {
@@ -37,7 +38,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 
         public abstract Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftQueueME queueMe);
 
-        public static ReceiptResponse CreateReceiptResponse(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ulong? yearlyOrdinalNumber = null)
+        protected ReceiptResponse CreateReceiptResponse(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ulong? yearlyOrdinalNumber = null)
         {
             var receiptIdentification = $"ft{queue.ftReceiptNumerator:X}#";
             if (yearlyOrdinalNumber.HasValue)
@@ -59,23 +60,28 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             };
         }
 
-        protected ftActionJournal CreateActionJournal(ftQueue queue, long journalType, ftQueueItem queueItem)
+        protected ftActionJournal CreateClosingActionJournal(ftQueue queue, long type, ftQueueItem queueItem, string message)
         {
-            var actionJournal = new ftActionJournal
+            return new ftActionJournal
             {
                 ftActionJournalId = Guid.NewGuid(),
                 ftQueueId = queue.ftQueueId,
                 ftQueueItemId = queueItem.ftQueueItemId,
-                Type = journalType.ToString(),
+                Type = $"{type:X}",
                 Moment = DateTime.UtcNow,
+                Message = message,
+                Priority = -1,
+                DataJson = JsonConvert.SerializeObject(new
+                {
+                    ftReceiptNumerator = queue.ftReceiptNumerator + 1
+                })
             };
-            return actionJournal;
         }
 
-        protected async Task<RequestCommandResponse> CreateClosing(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
+        protected async Task<RequestCommandResponse> CreateClosingAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, string message)
         {
             var receiptResponse = CreateReceiptResponse(queue, request, queueItem);
-            var actionJournalEntry = CreateActionJournal(queue, request.ftReceiptCase, queueItem);
+            var actionJournalEntry = CreateClosingActionJournal(queue, request.ftReceiptCase, queueItem, message);
             var requestCommandResponse = new RequestCommandResponse
             {
                 ReceiptResponse = receiptResponse,

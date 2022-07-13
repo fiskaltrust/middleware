@@ -85,5 +85,18 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             };
             await JournalMeRepository.InsertAsync(journal).ConfigureAwait(false);
         }
+
+        private ftActionJournal CreateActionJournal(ftQueue queue, long type, ftQueueItem queueItem)
+        {
+            return new ftActionJournal
+            {
+                ftActionJournalId = Guid.NewGuid(),
+                ftQueueId = queue.ftQueueId,
+                ftQueueItemId = queueItem.ftQueueItemId,
+                Type = $"{type:X}",
+                Moment = DateTime.UtcNow,
+                Message = "Cash-deposit receipt was processed."
+            };
+        }
     }
 }

@@ -20,7 +20,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
         {
             try
             {
-                return await CreateClosing(queue, request, queueItem).ConfigureAwait(false);
+                return await CreateClosingAsync(queue, request, queueItem, "Yearly-closing receipt was processed.").ConfigureAwait(false);
             }
             catch (Exception ex)
             {

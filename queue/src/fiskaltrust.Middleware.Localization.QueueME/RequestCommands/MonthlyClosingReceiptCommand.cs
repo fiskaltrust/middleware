@@ -20,7 +20,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
         {
             try
             {
-                return await CreateClosing(queue, request, queueItem).ConfigureAwait(false);
+                return await CreateClosingAsync(queue, request, queueItem, "Monthly-closing receipt was processed.").ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -28,6 +28,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 throw;
             }
         }
+
         public override async Task<bool> ReceiptNeedsReprocessing(ftQueueME queueME, ftQueueItem queueItem, ReceiptRequest request)
         {
             return await ActionJournalExists(queueItem, request.ftReceiptCase).ConfigureAwait(false) == false;
