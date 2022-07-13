@@ -14,7 +14,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 {
     public class CashDepositReceiptCommand : RequestCommand
     {
-        public CashDepositReceiptCommand(ILogger<RequestCommand> logger, IConfigurationRepository configurationRepository,IMiddlewareJournalMERepository journalMeRepository, 
+        public CashDepositReceiptCommand(ILogger<RequestCommand> logger, IConfigurationRepository configurationRepository, IMiddlewareJournalMERepository journalMeRepository,
             IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareActionJournalRepository actionJournalRepository, QueueMEConfiguration queueMeConfiguration) :
             base(logger, configurationRepository, journalMeRepository, queueItemRepository, actionJournalRepository, queueMeConfiguration)
         { }
@@ -23,10 +23,16 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
         {
             try
             {
-                var scu = await ConfigurationRepository.GetSignaturCreationUnitMEAsync(queueMe.ftSignaturCreationUnitMEId.Value).ConfigureAwait(false);               
+                var scu = await ConfigurationRepository.GetSignaturCreationUnitMEAsync(queueMe.ftSignaturCreationUnitMEId.Value).ConfigureAwait(false);
+                var depositChargeItems = request.cbChargeItems.Where(x => x.ftChargeItemCase == 0x4D45000000000020);
+                if (!depositChargeItems.Any())
+                {
+                    throw new Exception("An opening-balance receipt was sent that did not include any cash deposit charge items.");
+                }
+
                 var registerCashDepositRequest = new RegisterCashDepositRequest
                 {
-                    Amount = request.cbReceiptAmount ?? request.cbChargeItems.Sum(x => x.Amount),
+                    Amount = depositChargeItems.Sum(x => x.Amount),
                     Moment = request.cbReceiptMoment,
                     RequestId = queueItem.ftQueueItemId,
                     SubsequentDeliveryType = null,
@@ -36,7 +42,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 var registerCashDepositResponse = await client.RegisterCashDepositAsync(registerCashDepositRequest).ConfigureAwait(false);
                 await InsertJournalMe(queue, request, queueItem, registerCashDepositResponse).ConfigureAwait(false);
                 var receiptResponse = CreateReceiptResponse(queue, request, queueItem);
-                var actionJournalEntry =  CreateActionJournal(queue, request.ftReceiptCase, queueItem);
+                var actionJournalEntry = CreateActionJournal(queue, request.ftReceiptCase, queueItem);
                 return new RequestCommandResponse
                 {
                     ReceiptResponse = receiptResponse,
@@ -46,7 +52,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                     }
                 };
             }
-            catch(EntryPointNotFoundException ex)
+            catch (EntryPointNotFoundException ex)
             {
                 Logger.LogDebug(ex, "Fiscalization service is not reachable.");
                 return await ProcessFailedReceiptRequest(queue, queueItem, request, queueMe).ConfigureAwait(false);

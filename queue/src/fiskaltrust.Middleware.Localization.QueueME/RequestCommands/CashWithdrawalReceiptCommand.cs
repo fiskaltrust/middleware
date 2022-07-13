@@ -24,9 +24,15 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             try
             {
                 var scu = await ConfigurationRepository.GetSignaturCreationUnitMEAsync(queueMe.ftSignaturCreationUnitMEId.Value).ConfigureAwait(false);
+                var withdrawalChargeItems = request.cbChargeItems.Where(x => x.ftChargeItemCase == 0x4D45000000000021);
+                if (!withdrawalChargeItems.Any())
+                {
+                    throw new Exception("An cash-withdrawal receipt was sent that did not include any cash withdrawal charge items.");
+                }
+
                 var registerCashWithdrawalRequest = new RegisterCashWithdrawalRequest
                 {
-                    Amount = request.cbReceiptAmount ?? request.cbChargeItems.Sum(x => x.Amount),
+                    Amount = withdrawalChargeItems.Sum(x => x.Amount),
                     Moment = request.cbReceiptMoment,
                     RequestId = queueItem.ftQueueItemId,
                     SubsequentDeliveryType = null,
