@@ -35,7 +35,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             await ThrowIfCashDepositOutstanding().ConfigureAwait(false);
             await ThrowIfInvoiceAlreadyReceived(request.cbReceiptReference);
 
-            var invoice = JsonConvert.DeserializeObject<Invoice>(request.ftReceiptCaseData);
+            var invoice = string.IsNullOrEmpty(request.ftReceiptCaseData) ? null : JsonConvert.DeserializeObject<Invoice>(request.ftReceiptCaseData);
             var invoiceDetails = await CreateInvoiceDetail(request, invoice, queueItem).ConfigureAwait(false);
             invoiceDetails.InvoicingType = InvoicingType.Invoice;
 
@@ -114,13 +114,13 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             var invoiceDetails = new InvoiceDetails
             {
                 InvoiceType = request.GetInvoiceType(),
-                SelfIssuedInvoiceType = invoice.TypeOfSelfiss == null ? null : (SelfIssuedInvoiceType) Enum.Parse(typeof(SelfIssuedInvoiceType), invoice.TypeOfSelfiss),
+                SelfIssuedInvoiceType = invoice?.TypeOfSelfiss == null ? null : (SelfIssuedInvoiceType) Enum.Parse(typeof(SelfIssuedInvoiceType), invoice.TypeOfSelfiss),
                 TaxFreeAmount = request.cbChargeItems.Where(x => x.GetVatRate().Equals(0)).Sum(x => x.Amount),
                 PaymentDetails = request.GetPaymentMethodTypes(isVoid),
                 Currency = new CurrencyDetails { CurrencyCode = "EUR", ExchangeRateToEuro = 1 },
                 Buyer = GetBuyer(request),
                 ItemDetails = GetInvoiceItems(request, isVoid),
-                Fees = GetFees(invoice),
+                Fees = invoice != null ? GetFees(invoice) : new List<InvoiceFee>(),
                 ExportedGoodsAmount = request.cbChargeItems.Where(x => x.IsExportGood()).Sum(x => x.Amount),
                 TaxPeriod = new TaxPeriod
                 {

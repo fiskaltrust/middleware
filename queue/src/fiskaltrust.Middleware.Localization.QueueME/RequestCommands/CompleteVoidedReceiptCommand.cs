@@ -56,7 +56,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 throw new ReferenceNotSetException("The field cbPreviousReceiptReference must be set to the cbReceiptReference of the receipt to cancel.");
             }
             var receiptRequestToCancel = JsonConvert.DeserializeObject<ReceiptRequest>(queueItemToCancel.request);
-            var invoiceToCancel = JsonConvert.DeserializeObject<Invoice>(receiptRequestToCancel.ftReceiptCaseData);
+            var invoiceToCancel = string.IsNullOrEmpty(receiptRequestToCancel.ftReceiptCaseData) ? null : JsonConvert.DeserializeObject<Invoice>(receiptRequestToCancel.ftReceiptCaseData);
             return new ReceiptToCancel
             {
                 QueueItem = queueItemToCancel,
@@ -72,7 +72,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 
             await ThrowIfCashDepositOutstanding().ConfigureAwait(false);
             await ThrowIfInvoiceAlreadyReceived(request.cbReceiptReference);
-            var invoice = JsonConvert.DeserializeObject<Invoice>(request.ftReceiptCaseData);
+            var invoice = string.IsNullOrEmpty(request.ftReceiptCaseData) ? null : JsonConvert.DeserializeObject<Invoice>(request.ftReceiptCaseData);
             GetOperatorCodeOrThrow(request.cbUser);
 
             return string.IsNullOrWhiteSpace(request.cbPreviousReceiptReference)
