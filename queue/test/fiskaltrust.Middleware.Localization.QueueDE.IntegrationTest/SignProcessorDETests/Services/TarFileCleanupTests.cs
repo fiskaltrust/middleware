@@ -36,6 +36,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
         [Fact]
         public async Task SignProcessor_TarFileCleanup_ShouldDeleteTarFiles()
         {
+            var serviceFolder = Path.Combine(Directory.GetCurrentDirectory(), Guid.NewGuid().ToString());
 
             var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(File.ReadAllText(Path.Combine("Data", "DailyClosingReceipt", "Request.json")));
             var expectedResponse = JsonConvert.DeserializeObject<ReceiptResponse>(File.ReadAllText(Path.Combine("Data", "DailyClosingReceipt", "Response.json")));
@@ -65,7 +66,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             };
             journalRepositoryMock.Setup(x => x.InsertAsync(It.IsAny<ftJournalDE>())).CallBase();
             var actionJournalRepositoryMock = new Mock<IActionJournalRepository>(MockBehavior.Strict);
-            var config = new MiddlewareConfiguration { Configuration = new Dictionary<string, object>() { { nameof(QueueDEConfiguration.StoreTemporaryExportFiles), false } }, QueueId = queue.ftQueueId, ServiceFolder = Directory.GetCurrentDirectory() };
+            var config = new MiddlewareConfiguration { Configuration = new Dictionary<string, object>() { { nameof(QueueDEConfiguration.StoreTemporaryExportFiles), false } }, QueueId = queue.ftQueueId, ServiceFolder = serviceFolder };
             var configurationRepository = _fixture.CreateConfigurationRepository();
 
             if (Directory.Exists(Path.Combine(config.ServiceFolder, "Exports", config.QueueId.ToString(), "TAR")))
@@ -96,6 +97,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
         [Fact]
         public async Task SignProcessor_TarFileCleanup_ShouldDeleteOldTarFiles()
         {
+            var serviceFolder = Path.Combine(Directory.GetCurrentDirectory(), Guid.NewGuid().ToString());
 
             var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(File.ReadAllText(Path.Combine("Data", "DailyClosingReceipt", "Request.json")));
             var expectedResponse = JsonConvert.DeserializeObject<ReceiptResponse>(File.ReadAllText(Path.Combine("Data", "DailyClosingReceipt", "Response.json")));
@@ -125,7 +127,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             };
             journalRepositoryMock.Setup(x => x.InsertAsync(It.IsAny<ftJournalDE>())).CallBase();
             var actionJournalRepositoryMock = new Mock<IActionJournalRepository>(MockBehavior.Strict);
-            var config = new MiddlewareConfiguration { Configuration = new Dictionary<string, object>() { { nameof(QueueDEConfiguration.StoreTemporaryExportFiles), true } }, QueueId = queue.ftQueueId, ServiceFolder = Directory.GetCurrentDirectory() };
+            var config = new MiddlewareConfiguration { Configuration = new Dictionary<string, object>() { { nameof(QueueDEConfiguration.StoreTemporaryExportFiles), true } }, QueueId = queue.ftQueueId, ServiceFolder = serviceFolder };
             var configurationRepository = _fixture.CreateConfigurationRepository();
 
             if (Directory.Exists(Path.Combine(config.ServiceFolder, "Exports", config.QueueId.ToString(), "TAR")))
