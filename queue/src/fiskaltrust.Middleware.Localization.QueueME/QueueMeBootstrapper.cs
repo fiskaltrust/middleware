@@ -6,6 +6,7 @@ using fiskaltrust.Middleware.Localization.QueueME.RequestCommands.Factories;
 using fiskaltrust.Middleware.Localization.QueueME.Services;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.ifPOS.v1.me;
+using fiskaltrust.Middleware.Localization.QueueME.Factories;
 
 namespace fiskaltrust.Middleware.Localization.QueueME
 {
@@ -27,6 +28,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME
                     return sscdProvider;
                 })
                 .AddSingleton<IRequestCommandFactory, RequestCommandFactory>()
+                .AddSingleton<SignatureItemFactory>()
                 .ConfigureReceiptCommands();
         }
     }
