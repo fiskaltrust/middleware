@@ -1,17 +1,17 @@
 ﻿using System;
+using System.Runtime.Serialization;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.Exceptions
 {
     [Serializable]
-    public class UserParseException : Exception
+    public class UserNotParsableException : Exception
     {
-        public UserParseException(string message) : base(message)
-        {
-        }
+        public UserNotParsableException() { }
 
-        public UserParseException(string message, Exception inner)
-            : base(message, inner)
-        {
-        }
+        public UserNotParsableException(string message) : base(message) { }
+
+        public UserNotParsableException(string message, Exception inner) : base(message, inner) { }
+
+        protected UserNotParsableException(SerializationInfo info, StreamingContext context) : base(info, context) { }
     }
 }

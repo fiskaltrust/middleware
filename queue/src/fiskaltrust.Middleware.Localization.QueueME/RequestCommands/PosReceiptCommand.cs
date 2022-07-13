@@ -87,7 +87,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             }
             catch (Exception ex)
             {
-                throw new UserParseException($"Could not parse cbUser '{cbUser}' from request, which needs to be set for this type of receipt. Please see docs.fiskaltrust.cloud for more details about the format.", ex);
+                throw new UserNotParsableException($"Could not parse cbUser '{cbUser}' from request, which needs to be set for this type of receipt. Please see docs.fiskaltrust.cloud for more details about the format.", ex);
             }
         }
 
@@ -226,7 +226,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             }
             catch (Exception ex)
             {
-                throw new BuyerParseException("The field cbCustomer could not be parsed. If you need to add customer data, please use the correct format according to docs.fiskaltrust.cloud.", ex);
+                throw new BuyerNotParsableException("The field cbCustomer could not be parsed. If you need to add customer data, please use the correct format according to docs.fiskaltrust.cloud.", ex);
             }
         }
 
