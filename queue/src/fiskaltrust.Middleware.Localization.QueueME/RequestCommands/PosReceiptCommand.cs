@@ -18,11 +18,10 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 {
     public class PosReceiptCommand : RequestCommand
     {
-        private const string CashDepositOutstandingMsg = "Register initial amount with Cash Deposit Receipt for today!";
         private readonly SignatureItemFactory _signatureItemFactory;
 
-        public PosReceiptCommand(ILogger<RequestCommand> logger, IConfigurationRepository configurationRepository, 
-            IMiddlewareJournalMERepository journalMeRepository, IMiddlewareQueueItemRepository queueItemRepository, 
+        public PosReceiptCommand(ILogger<RequestCommand> logger, IConfigurationRepository configurationRepository,
+            IMiddlewareJournalMERepository journalMeRepository, IMiddlewareQueueItemRepository queueItemRepository,
             IMiddlewareActionJournalRepository actionJournalRepository, QueueMEConfiguration queueMeConfiguration, SignatureItemFactory signatureItemFactory) :
             base(logger, configurationRepository, journalMeRepository, queueItemRepository, actionJournalRepository, queueMeConfiguration)
         {
@@ -33,27 +32,28 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
         {
             var scu = await ConfigurationRepository.GetSignaturCreationUnitMEAsync(queueMe.ftSignaturCreationUnitMEId.Value).ConfigureAwait(false);
 
-            await CashDepositOutstanding().ConfigureAwait(false);
-            await InvoiceAlreadyReceived(request.cbReceiptReference);
-            
+            await ThrowIfCashDepositOutstanding().ConfigureAwait(false);
+            await ThrowIfInvoiceAlreadyReceived(request.cbReceiptReference);
+
             var invoice = JsonConvert.DeserializeObject<Invoice>(request.ftReceiptCaseData);
-            ThrowIfOperatorIsNotSet(invoice);
             var invoiceDetails = await CreateInvoiceDetail(request, invoice, queueItem).ConfigureAwait(false);
             invoiceDetails.InvoicingType = InvoicingType.Invoice;
-            
+
             return await SendInvoiceDetailToCis(client, queue, request, queueItem, queueMe, scu, invoiceDetails, invoice);
         }
 
         protected async Task<RequestCommandResponse> SendInvoiceDetailToCis(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem,
             ftQueueME queueMe, ftSignaturCreationUnitME scu, InvoiceDetails invoiceDetails, Invoice invoice)
         {
+            var operatorCode = GetOperatorCodeOrThrow(request.cbUser);
+
             var computeIicRequest = CreateComputeIicRequest(request, scu, invoiceDetails);
             var computeIicResponse = await client.ComputeIICAsync(computeIicRequest).ConfigureAwait(false);
 
             RegisterInvoiceResponse registerInvoiceResponse;
             try
             {
-                var registerInvoiceRequest = CreateInvoiceRequest(request, queueItem, invoice, scu, invoiceDetails, computeIicResponse);
+                var registerInvoiceRequest = CreateInvoiceRequest(request, queueItem, invoice, scu, invoiceDetails, computeIicResponse, operatorCode);
                 registerInvoiceResponse = await client.RegisterInvoiceAsync(registerInvoiceRequest).ConfigureAwait(false);
             }
             catch (EntryPointNotFoundException ex)
@@ -72,36 +72,46 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             };
         }
 
-        protected static void ThrowIfOperatorIsNotSet(Invoice invoice)
+        protected string GetOperatorCodeOrThrow(string cbUser)
         {
-            if (string.IsNullOrEmpty(invoice.OperatorCode))
+            try
             {
-                throw new ArgumentNullException(nameof(invoice.OperatorCode));
+                if (string.IsNullOrEmpty(cbUser))
+                {
+                    throw new ArgumentNullException(nameof(cbUser));
+                }
+                var user = JsonConvert.DeserializeObject<User>(cbUser);
+                return cbUser == null
+                    ? throw new Exception("The parsed object is null.")
+                    : user.OperatorCode;
+            }
+            catch (Exception ex)
+            {
+                throw new UserParseException($"Could not parse cbUser '{cbUser}' from request, which needs to be set for this type of receipt. Please see docs.fiskaltrust.cloud for more details about the format.", ex);
             }
         }
 
-        protected async Task InvoiceAlreadyReceived(string receiptReference)
+        protected async Task ThrowIfInvoiceAlreadyReceived(string receiptReference)
         {
             if (await JournalMeRepository.GetByReceiptReference(receiptReference).AnyAsync())
             {
-                throw new InvoiceAlreadyReceivedException(
-                    "The field cbReceiptReference is unique and already in use. Make sure to use an unique cbReceiptReference for each transaction!");
+                throw new InvoiceAlreadyReceivedException("The field cbReceiptReference must be unique, but has already been used. Please make sure to use an unique cbReceiptReference for each receipt.");
             }
         }
 
-        protected async Task CashDepositOutstanding()
+        protected async Task ThrowIfCashDepositOutstanding()
         {
             var journalMes = await JournalMeRepository.GetAsync().ConfigureAwait(false);
             var journalMe = journalMes.Where(x => x.JournalType == 0x44D5_0000_0000_0007).OrderByDescending(x => x.TimeStamp).FirstOrDefault();
             if (journalMe == null || new DateTime(journalMe.TimeStamp).Date != DateTime.UtcNow.Date)
             {
-                throw new CashDepositOutstandingException(CashDepositOutstandingMsg);
+                throw new CashDepositOutstandingException("This receipt could not be processed, as the first receipt each day must be a cash-deposit according to Montenegrin law.");
             }
         }
 
         protected async Task<InvoiceDetails> CreateInvoiceDetail(ReceiptRequest request, Invoice invoice, ftQueueItem queueItem, bool isVoid = false)
         {
-            var invoiceDetails =  new InvoiceDetails
+            var invoiceDetails = new InvoiceDetails
             {
                 InvoiceType = request.GetInvoiceType(),
                 SelfIssuedInvoiceType = invoice.TypeOfSelfiss == null ? null : (SelfIssuedInvoiceType) Enum.Parse(typeof(SelfIssuedInvoiceType), invoice.TypeOfSelfiss),
@@ -121,7 +131,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             };
 
             invoiceDetails.NetAmount = invoiceDetails.ItemDetails.Sum(x => x.NetAmount);
-            invoiceDetails.TotalVatAmount = invoiceDetails.ItemDetails.Sum(x => x.NetAmount * x.VatRate/100 );
+            invoiceDetails.TotalVatAmount = invoiceDetails.ItemDetails.Sum(x => x.NetAmount * x.VatRate / 100);
             invoiceDetails.GrossAmount = invoiceDetails.ItemDetails.Sum(x => x.GrossAmount);
             if (!isVoid)
             {
@@ -131,7 +141,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             invoiceDetails.ExportedGoodsAmount *= -1;
             return invoiceDetails;
         }
-        private async Task InsertJournalMe(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftSignaturCreationUnitME scu, RegisterInvoiceResponse registerInvoiceResponse, 
+        private async Task InsertJournalMe(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftSignaturCreationUnitME scu, RegisterInvoiceResponse registerInvoiceResponse,
                             InvoiceDetails invoice, ComputeIICResponse computeIicResponse)
         {
             var lastEntry = await JournalMeRepository.GetLastEntryAsync().ConfigureAwait(false);
@@ -141,7 +151,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 ftQueueId = queue.ftQueueId,
                 ftQueueItemId = queueItem.ftQueueItemId,
                 cbReference = request.cbReceiptReference,
-                Number = lastEntry.Number +1,
+                Number = lastEntry.Number + 1,
                 FIC = registerInvoiceResponse.FIC,
                 IIC = computeIicResponse.IIC,
                 JournalType = (long) JournalTypes.JournalME,
@@ -162,7 +172,8 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 GrossAmount = invoiceDetails.GrossAmount,
             };
         }
-        private static RegisterInvoiceRequest CreateInvoiceRequest(ReceiptRequest request, ftQueueItem queueItem, Invoice invoice, ftSignaturCreationUnitME scu, InvoiceDetails invoiceDetails, ComputeIICResponse computeIicResponse)
+
+        private static RegisterInvoiceRequest CreateInvoiceRequest(ReceiptRequest request, ftQueueItem queueItem, Invoice invoice, ftSignaturCreationUnitME scu, InvoiceDetails invoiceDetails, ComputeIICResponse computeIicResponse, string operatorCode)
         {
             return new RegisterInvoiceRequest
             {
@@ -172,23 +183,26 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 IsIssuerInVATSystem = true,
                 BusinessUnitCode = scu.BusinessUnitCode,
                 Moment = request.cbReceiptMoment,
-                OperatorCode = invoice.OperatorCode,
+                OperatorCode = operatorCode,
                 RequestId = queueItem.ftQueueItemId,
                 SubsequentDeliveryType = invoice.SubsequentDeliveryType == null ? null : (SubsequentDeliveryType) Enum.Parse(typeof(SubsequentDeliveryType), invoice.SubsequentDeliveryType),
                 IIC = computeIicResponse.IIC,
                 IICSignature = computeIicResponse.IICSignature
             };
         }
+
         private static List<InvoiceFee> GetFees(Invoice invoice)
         {
             return invoice.Fees?.Select(fee => new InvoiceFee { Amount = fee.Amount, FeeType = (FeeType) Enum.Parse(typeof(FeeType), fee.FeeType.ToString()) }).ToList();
         }
+
         private static List<InvoiceItem> GetInvoiceItems(ReceiptRequest request, bool isVoid)
         {
             return request.cbChargeItems.Length > 1000
                 ? throw new MaxInvoiceItemsExceededException()
                 : request.cbChargeItems.Select(chargeItem => chargeItem.GetInvoiceItem(isVoid)).ToList();
         }
+
         private static BuyerDetails GetBuyer(ReceiptRequest request)
         {
             if (string.IsNullOrEmpty(request.cbCustomer))
@@ -201,20 +215,21 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 return buyer == null
                     ? throw new Exception("Value in Field cbCustomer could not be parsed")
                     : new BuyerDetails
-                {
-                    IdentificationNumber = buyer.IdentificationNumber,
-                    IdentificationType = (BuyerIdentificationType) Enum.Parse(typeof(BuyerIdentificationType), buyer.BuyerIdentificationType),
-                    Name = buyer.Name,
-                    Address = buyer.Address,
-                    Town = buyer.Town,
-                    Country = buyer.Country,
-                };
+                    {
+                        IdentificationNumber = buyer.IdentificationNumber,
+                        IdentificationType = (BuyerIdentificationType) Enum.Parse(typeof(BuyerIdentificationType), buyer.BuyerIdentificationType),
+                        Name = buyer.Name,
+                        Address = buyer.Address,
+                        Town = buyer.Town,
+                        Country = buyer.Country,
+                    };
             }
             catch (Exception ex)
             {
-                throw new BuyerParseException("Error when parsing Buyer in cbCustomer field!", ex);
+                throw new BuyerParseException("The field cbCustomer could not be parsed. If you need to add customer data, please use the correct format according to docs.fiskaltrust.cloud.", ex);
             }
         }
+
         public override async Task<bool> ReceiptNeedsReprocessing(ftQueueME queueMe, ftQueueItem queueItem, ReceiptRequest request)
         {
             var journalMe = await JournalMeRepository.GetByQueueItemId(queueItem.ftQueueItemId).FirstOrDefaultAsync().ConfigureAwait(false);

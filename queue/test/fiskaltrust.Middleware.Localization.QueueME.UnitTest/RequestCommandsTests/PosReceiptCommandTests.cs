@@ -366,7 +366,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
         {
             return new Invoice
             {
-                OperatorCode = "ab123ab123",
                 PayDeadline = DateTime.Now.AddDays(30),
                 Fees = new[] {
                     new Fee

@@ -70,10 +70,10 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
         {
             var scu = await ConfigurationRepository.GetSignaturCreationUnitMEAsync(queueMe.ftSignaturCreationUnitMEId.Value).ConfigureAwait(false);
 
-            await CashDepositOutstanding().ConfigureAwait(false);
-            await InvoiceAlreadyReceived(request.cbReceiptReference);
+            await ThrowIfCashDepositOutstanding().ConfigureAwait(false);
+            await ThrowIfInvoiceAlreadyReceived(request.cbReceiptReference);
             var invoice = JsonConvert.DeserializeObject<Invoice>(request.ftReceiptCaseData);
-            ThrowIfOperatorIsNotSet(invoice);
+            GetOperatorCodeOrThrow(request.cbUser);
 
             return string.IsNullOrWhiteSpace(request.cbPreviousReceiptReference)
                 ? throw new ReferenceNotSetException("The field cbPreviousReceiptReference must be set to the cbReceiptReference of the receipt to cancel.")

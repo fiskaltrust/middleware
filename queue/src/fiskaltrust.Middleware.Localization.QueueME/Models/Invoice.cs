@@ -7,9 +7,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Models
     public class Invoice
     {
         [DataMember]
-        public string OperatorCode { get; set; }
-
-        [DataMember]
         public string TypeOfSelfiss { get; set; }
 
         [DataMember]

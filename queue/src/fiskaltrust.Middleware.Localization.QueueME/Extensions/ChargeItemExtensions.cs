@@ -60,15 +60,15 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Extensions
                 case 0x0024:
                 case 0x0025:
                     return 0;
-                   default:
-                    throw new UnknownInvoiceTypeException("ChargeItemCase holds unknown Vat Rate!");
+                default:
+                    throw new UnknownInvoiceTypeException($"The given ChargeItemCase 0x{chargeItem.ftChargeItemCase:x} is not supported. Please refer to docs.fiskaltrust.cloud for supported cases.");
             }
         }
 
         public static InvoiceItem GetInvoiceItem(this ChargeItem chargeItem, bool isVoid)
         {
-            var invoiceItemRequest = string.IsNullOrEmpty(chargeItem.ftChargeItemCaseData) ? new InvoiceItemRequest () : JsonConvert.DeserializeObject<InvoiceItemRequest>(chargeItem.ftChargeItemCaseData);
-            
+            var invoiceItemRequest = string.IsNullOrEmpty(chargeItem.ftChargeItemCaseData) ? new InvoiceItemRequest() : JsonConvert.DeserializeObject<InvoiceItemRequest>(chargeItem.ftChargeItemCaseData);
+
             var invoiceItem = new InvoiceItem
             {
                 Name = chargeItem.Description,
@@ -93,7 +93,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Extensions
                 }
                 var unitPriceWithDiscount = (decimal) (invoiceItem.NetUnitPrice * (100 - invoiceItemRequest.DiscountPercentage) / 100);
                 invoiceItem.GrossUnitPrice = unitPriceWithDiscount * (1 + (chargeItem.GetVatRate() / 100));
-                invoiceItem.GrossAmount = invoiceItem.GrossUnitPrice* invoiceItem.Quantity;
+                invoiceItem.GrossAmount = invoiceItem.GrossUnitPrice * invoiceItem.Quantity;
                 invoiceItem.NetAmount = invoiceItem.GrossAmount / (1 + (chargeItem.GetVatRate() / 100));
             }
             if (invoiceItem.Quantity < 0 || isVoid)
