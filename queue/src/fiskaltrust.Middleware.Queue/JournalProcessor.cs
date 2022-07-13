@@ -8,8 +8,10 @@ using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts;
 using fiskaltrust.Middleware.Contracts.Constants;
+using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueDE;
+using fiskaltrust.Middleware.Queue.Bootstrapper;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -25,8 +27,9 @@ namespace fiskaltrust.Middleware.Queue
         private readonly IMiddlewareRepository<ftJournalAT> _journalATRepository;
         private readonly IMiddlewareRepository<ftJournalDE> _journalDERepository;
         private readonly IMiddlewareRepository<ftJournalFR> _journalFRRepository;
-        private readonly JournalProcessorDE _journalDEProcessor;
+        private readonly IMarketSpecificJournalProcessor _marketSpecificJournalProcessor;
         private readonly ILogger<JournalProcessor> _logger;
+        private readonly MiddlewareConfiguration _middlewareConfiguration;
 
         public JournalProcessor(
             IReadOnlyConfigurationRepository configurationRepository,
@@ -36,8 +39,9 @@ namespace fiskaltrust.Middleware.Queue
             IMiddlewareRepository<ftJournalAT> journalATRepository,
             IMiddlewareRepository<ftJournalDE> journalDERepository,
             IMiddlewareRepository<ftJournalFR> journalFRRepository,
-            JournalProcessorDE journalDEProcessor,
-            ILogger<JournalProcessor> logger)
+            IMarketSpecificJournalProcessor marketSpecificJournalProcessor,
+            ILogger<JournalProcessor> logger,
+            MiddlewareConfiguration middlewareConfiguration)
         {
             _configurationRepository = configurationRepository;
             _queueItemRepository = queueItemRepository;
@@ -46,8 +50,9 @@ namespace fiskaltrust.Middleware.Queue
             _journalATRepository = journalATRepository;
             _journalDERepository = journalDERepository;
             _journalFRRepository = journalFRRepository;
-            _journalDEProcessor = journalDEProcessor;
+            _marketSpecificJournalProcessor = marketSpecificJournalProcessor;
             _logger = logger;
+            _middlewareConfiguration = middlewareConfiguration;
         }
 
         public IAsyncEnumerable<JournalResponse> ProcessAsync(JournalRequest request)
@@ -56,7 +61,14 @@ namespace fiskaltrust.Middleware.Queue
             {
                 if ((0xFFFF000000000000 & (ulong) request.ftJournalType) == 0x4445000000000000)
                 {
-                    return _journalDEProcessor.ProcessAsync(request);
+                    ThrowIfQueueHasIncorrectCountrySet("DE", request.ftJournalType);
+                    return _marketSpecificJournalProcessor.ProcessAsync(request);
+                }
+
+                if ((0xFFFF000000000000 & (ulong) request.ftJournalType) == 0x4D45000000000000)
+                {
+                    ThrowIfQueueHasIncorrectCountrySet("ME", request.ftJournalType);
+                    return _marketSpecificJournalProcessor.ProcessAsync(request);
                 }
 
                 return request.ftJournalType switch
@@ -90,6 +102,14 @@ namespace fiskaltrust.Middleware.Queue
             {
                 _logger.LogError(ex, "An error occured while processing the Journal request.");
                 throw;
+            }
+        }
+
+        private void ThrowIfQueueHasIncorrectCountrySet(string countryCode, long journalType)
+        {
+            if (countryCode != LocalizedQueueBootStrapperFactory.GetQueueLocalization(_middlewareConfiguration.QueueId, _middlewareConfiguration.Configuration))
+            {
+                throw new Exception($"The given journal type 0x'{journalType:x}' cannot be used with the current Queue, as this export type is not supported in this country.");
             }
         }
 

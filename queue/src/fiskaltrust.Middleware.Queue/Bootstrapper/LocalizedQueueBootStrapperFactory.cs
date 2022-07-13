@@ -24,7 +24,7 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
             };
         }
 
-        private static string GetQueueLocalization(Guid queueId, Dictionary<string, object> configuration)
+        public static string GetQueueLocalization(Guid queueId, Dictionary<string, object> configuration)
         {
             var key = "init_ftQueue";
             if (configuration.ContainsKey(key))

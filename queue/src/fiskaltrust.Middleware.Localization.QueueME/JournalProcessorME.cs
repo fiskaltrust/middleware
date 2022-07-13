@@ -5,7 +5,7 @@ using fiskaltrust.Middleware.Contracts;
 
 namespace fiskaltrust.Middleware.Localization.QueueME
 {
-    public class JournalProcessorME : IJournalProcessor
+    public class JournalProcessorME : IMarketSpecificJournalProcessor
     { 
         public JournalProcessorME()
         {

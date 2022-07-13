@@ -5,10 +5,6 @@ using System.Linq;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts;
 using fiskaltrust.Middleware.Contracts.Models;
-using fiskaltrust.Middleware.Contracts.Repositories;
-using fiskaltrust.Middleware.Localization.QueueDE;
-using fiskaltrust.Middleware.Localization.QueueDE.MasterData;
-using fiskaltrust.Middleware.Localization.QueueDE.Services;
 using fiskaltrust.Middleware.Queue.Helpers;
 using fiskaltrust.Middleware.QueueSynchronizer;
 using fiskaltrust.storage.V0;
@@ -46,23 +42,7 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
             services.AddScoped<SignProcessor>();
             services.AddScoped<ISignProcessor>(x => new LocalQueueSynchronizationDecorator(x.GetRequiredService<SignProcessor>(), x.GetRequiredService<ILogger<LocalQueueSynchronizationDecorator>>()));
             services.AddScoped<IJournalProcessor, JournalProcessor>();
-            services.AddScoped<JournalProcessorDE, JournalProcessorDE>();
             services.AddScoped<IPOS, Queue>();
-            services.AddScoped<IDESSCDProvider, DESSCDProvider>();
-            services.AddSingleton(sp => QueueDEConfiguration.FromMiddlewareConfiguration(sp.GetRequiredService<MiddlewareConfiguration>()));
-            services.AddScoped<IMasterDataService, MasterDataService>();
-            services.AddSingleton<ITarFileCleanupService>(sp =>
-            {
-                var tarFileCleanupService = new TarFileCleanupService(
-                    sp.GetRequiredService<ILogger<TarFileCleanupService>>(),
-                    sp.GetRequiredService<IMiddlewareJournalDERepository>(),
-                    sp.GetRequiredService<MiddlewareConfiguration>(),
-                    sp.GetRequiredService<QueueDEConfiguration>());
-
-                tarFileCleanupService.CleanupAllTarFilesAsync().Wait();
-
-                return tarFileCleanupService;
-            });
 
             var businessLogicFactoryBoostrapper = LocalizedQueueBootStrapperFactory.GetBootstrapperForLocalizedQueue(_activeQueueId, _configuration);
             businessLogicFactoryBoostrapper.ConfigureServices(services);

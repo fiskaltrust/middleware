@@ -20,14 +20,13 @@ using fiskaltrust.Middleware.Localization.QueueDE.Helpers;
 using fiskaltrust.Middleware.Localization.QueueDE.MasterData;
 using fiskaltrust.Middleware.Localization.QueueDE.Repositories;
 using fiskaltrust.Middleware.Localization.QueueDE.Services;
-using fiskaltrust.Middleware.Localization.QueueDE.Constants;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueueDE
 {
-    public class JournalProcessorDE : IJournalProcessor
+    public class JournalProcessorDE : IMarketSpecificJournalProcessor
     {
         private readonly ILogger<JournalProcessorDE> _logger;
         private readonly IReadOnlyConfigurationRepository _configurationRepository;
