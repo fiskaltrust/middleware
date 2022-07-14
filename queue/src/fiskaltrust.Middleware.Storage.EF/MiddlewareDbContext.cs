@@ -107,21 +107,28 @@ namespace fiskaltrust.Middleware.Storage.EF
 
             modelBuilder.Entity<ftJournalAT>().ToTable(nameof(ftJournalAT));
             modelBuilder.Entity<ftJournalAT>().HasKey(x => x.ftJournalATId, x => x.IsClustered(false));
+            modelBuilder.Entity<ftJournalAT>().HasIndex(x => x.TimeStamp);
 
             modelBuilder.Entity<ftJournalDE>().ToTable(nameof(ftJournalDE));
             modelBuilder.Entity<ftJournalDE>().HasKey(x => x.ftJournalDEId, x => x.IsClustered(false));
+            modelBuilder.Entity<ftJournalDE>().HasIndex(x => x.TimeStamp);
 
             modelBuilder.Entity<ftJournalFR>().ToTable(nameof(ftJournalFR));
             modelBuilder.Entity<ftJournalFR>().HasKey(x => x.ftJournalFRId, x => x.IsClustered(false));
+            modelBuilder.Entity<ftJournalFR>().HasIndex(x => x.TimeStamp);
 
             modelBuilder.Entity<ftQueueItem>().ToTable(nameof(ftQueueItem));
             modelBuilder.Entity<ftQueueItem>().HasKey(x => x.ftQueueItemId, x => x.IsClustered(false));
+            modelBuilder.Entity<ftQueueItem>().HasIndex(x => x.cbReceiptReference);
+            modelBuilder.Entity<ftQueueItem>().HasIndex(x => x.TimeStamp);
 
             modelBuilder.Entity<ftReceiptJournal>().ToTable(nameof(ftReceiptJournal));
             modelBuilder.Entity<ftReceiptJournal>().HasKey(x => x.ftReceiptJournalId, x => x.IsClustered(false));
+            modelBuilder.Entity<ftReceiptJournal>().HasIndex(x => x.TimeStamp);
 
             modelBuilder.Entity<ftActionJournal>().ToTable(nameof(ftActionJournal));
             modelBuilder.Entity<ftActionJournal>().HasKey(x => x.ftActionJournalId, x => x.IsClustered(false));
+            modelBuilder.Entity<ftActionJournal>().HasIndex(x => x.TimeStamp);
 
             modelBuilder.Entity<FailedStartTransaction>().ToTable(nameof(FailedStartTransaction));
             modelBuilder.Entity<FailedStartTransaction>().HasKey(x => x.cbReceiptReference, x => x.IsClustered(false));
