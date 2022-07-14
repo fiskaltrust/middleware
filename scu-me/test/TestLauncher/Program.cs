@@ -44,7 +44,7 @@ namespace TestLauncher
             var certificate = new X509Certificate2(certificatePath, certificatePassword, X509KeyStorageFlags.Exportable);
             return new Dictionary<string, object>
             {
-                { "Certificate",  Convert.ToBase64String(certificate.Export(X509ContentType.Pfx)) },
+                { "Certificate", Convert.ToBase64String(certificate.Export(X509ContentType.Pfx)) },
                 { "PosOperatorAddress", "Mustergasse 88" },
                 { "PosOperatorCountry", "ME" },
                 { "PosOperatorName", "Hotel007" },

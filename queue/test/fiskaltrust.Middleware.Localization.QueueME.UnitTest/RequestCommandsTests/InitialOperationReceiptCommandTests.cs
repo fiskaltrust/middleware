@@ -119,7 +119,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
         {
             return new ReceiptRequest
             {
-                ftReceiptCase = 0x44D5_0000_0000_0003,
+                ftReceiptCase = 0x4D45_0000_0000_0003,
                 cbReceiptReference = "INIT",
                 ftCashBoxID = Guid.NewGuid().ToString(),
                 cbReceiptMoment = DateTime.Now,

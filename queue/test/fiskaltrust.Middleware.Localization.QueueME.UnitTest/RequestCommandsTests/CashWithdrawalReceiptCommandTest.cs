@@ -31,7 +31,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
                 ftSignaturCreationUnitMEId = Guid.NewGuid()
             };
             var journalMeRepository = new InMemoryJournalMERepository();
-            var request = TestHelper.CreateReceiptRequest(0x44D5_0000_0000_0008);
+            var request = TestHelper.CreateReceiptRequest(0x4D45_0000_0000_0008);
             request.cbChargeItems = new ifPOS.v1.ChargeItem[]
             {
                 new ifPOS.v1.ChargeItem
@@ -46,7 +46,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             
             requestResponse.ActionJournals.Should().HaveCount(1);
             requestResponse.ActionJournals.FirstOrDefault()?.ftQueueItemId.Should().Be(queueItem.ftQueueItemId);
-            requestResponse.ActionJournals.FirstOrDefault()?.Type.Should().Be(0x44D5_0000_0000_0008.ToString("x").ToUpper());
+            requestResponse.ActionJournals.FirstOrDefault()?.Type.Should().Be(0x4D45_0000_0000_0008.ToString("x").ToUpper());
         }
 
         [Fact]
@@ -68,7 +68,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
                 ftSignaturCreationUnitMEId = Guid.NewGuid()
             };
             var journalMeRepository = new InMemoryJournalMERepository();
-            var request = TestHelper.CreateReceiptRequest(0x44D5_0000_0000_0008);
+            var request = TestHelper.CreateReceiptRequest(0x4D45_0000_0000_0008);
             request.cbChargeItems = new ifPOS.v1.ChargeItem[]
             {
                 new ifPOS.v1.ChargeItem

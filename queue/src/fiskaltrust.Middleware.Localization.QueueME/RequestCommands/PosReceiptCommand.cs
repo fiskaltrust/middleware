@@ -102,7 +102,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
         protected async Task ThrowIfCashDepositOutstanding()
         {
             var journalMes = await JournalMeRepository.GetAsync().ConfigureAwait(false);
-            var journalMe = journalMes.Where(x => x.JournalType == 0x44D5_0000_0000_0007).OrderByDescending(x => x.TimeStamp).FirstOrDefault();
+            var journalMe = journalMes.Where(x => x.JournalType == 0x4D45_0000_0000_0007).OrderByDescending(x => x.TimeStamp).FirstOrDefault();
             if (journalMe == null || new DateTime(journalMe.TimeStamp).Date != DateTime.UtcNow.Date)
             {
                 throw new CashDepositOutstandingException("This receipt could not be processed, as the first receipt each day must be a cash-deposit according to Montenegrin law.");

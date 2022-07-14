@@ -283,7 +283,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
         {
             return new ReceiptRequest
             {
-                ftReceiptCase = 0x44D5_0000_0001_0001,
+                ftReceiptCase = 0x4D45_0000_0001_0001,
                 ftReceiptCaseData = JsonConvert.SerializeObject(CreateInvoice()),
                 cbCustomer = JsonConvert.SerializeObject(CreateBuyer()),
                 cbReceiptMoment = now,
@@ -292,7 +292,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
                 cbChargeItems = new [] {
                     new ChargeItem {
                         Amount = 221,
-                        ftChargeItemCase = 0x44D5_0000_0000_0001,
+                        ftChargeItemCase = 0x4D45_0000_0000_0001,
                         ProductBarcode = "Testbarcode1",
                         Unit = "piece",
                         Quantity = 2,
@@ -301,7 +301,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
                     },
                     new ChargeItem {
                         Amount = 107,
-                        ftChargeItemCase = 0x44D5_0000_0000_0002,
+                        ftChargeItemCase = 0x4D45_0000_0000_0002,
                         ProductBarcode = "Testbarcode2",
                         Unit = "piece",
                         Quantity = 1,
@@ -310,7 +310,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
                     },
                     new ChargeItem {
                         Amount = 100,
-                        ftChargeItemCase = 0x44D5_0000_0001_0001,
+                        ftChargeItemCase = 0x4D45_0000_0001_0001,
                         ftChargeItemCaseData = JsonConvert.SerializeObject(CreateVoucherInvoiceItemRequest()),
                         ProductBarcode = "Voucher",
                         Quantity = 1,
@@ -322,32 +322,32 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
                     new PayItem
                     {
                        Amount = 308,
-                       ftPayItemCase = 0x44D5_0000_0000_0000,
+                       ftPayItemCase = 0x4D45_0000_0000_0000,
                     },
                     //Voucher
                     new PayItem
                     {
                        Amount = 50,
-                       ftPayItemCase = 0x44D5_0000_0000_0003,
+                       ftPayItemCase = 0x4D45_0000_0000_0003,
                        ftPayItemCaseData = @"{'VoucherNumber' : '51234'}",
                     },
                     //Voucher
                     new PayItem
                     {
                        Amount = 50,
-                       ftPayItemCase = 0x44D5_0000_0000_0003,
+                       ftPayItemCase = 0x4D45_0000_0000_0003,
                        ftPayItemCaseData = @"{'VoucherNumber' : '41234'}",
                     },//Customer
                      new PayItem
                     {
                        Amount = 10,  
-                       ftPayItemCase = 0x44D5_0000_0000_0004,
+                       ftPayItemCase = 0x4D45_0000_0000_0004,
                        ftPayItemCaseData = @"{'CompCardNumber' : '61234'}",
                     },
                     new PayItem
                     {
                        Amount = 10,
-                       ftPayItemCase = 0x44D5_0000_0000_0004,
+                       ftPayItemCase = 0x4D45_0000_0000_0004,
                        ftPayItemCaseData =  @"{'CompCardNumber' : '71234'}",
                     }
                 }

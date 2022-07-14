@@ -48,7 +48,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             var journalMERepository = new InMemoryJournalMERepository();
             var queueItemRepository = new InMemoryQueueItemRepository();
             var queueItem = CreateQueueItem(queue);
-            var cdReceipRequest = TestHelper.CreateReceiptRequest(0x44D5_0000_0000_0007);
+            var cdReceipRequest = TestHelper.CreateReceiptRequest(0x4D45_0000_0000_0007);
             cdReceipRequest.cbChargeItems = new ifPOS.v1.ChargeItem[]
             {
                 new ifPOS.v1.ChargeItem
