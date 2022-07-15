@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using fiskaltrust.Middleware.Storage.EFCore.PostgreSQL;
@@ -9,9 +10,10 @@ using fiskaltrust.Middleware.Storage.EFCore.PostgreSQL;
 namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
 {
     [DbContext(typeof(PostgreSQLMiddlewareDbContext))]
-    partial class PostgreSQLMiddlewareDbContextModelSnapshot : ModelSnapshot
+    [Migration("20220714112132_Indices")]
+    partial class Indices
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

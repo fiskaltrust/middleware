@@ -1,0 +1,7 @@
+CREATE INDEX idx_ftQueueItem_Timestamp ON ftQueueItem (TimeStamp);
+CREATE INDEX idx_ftQueueItem_cbReceiptReference ON ftQueueItem (cbReceiptReference);
+CREATE INDEX idx_ftActionJournal_Timestamp ON ftActionJournal (TimeStamp);
+CREATE INDEX idx_ftReceiptJournal_Timestamp ON ftReceiptJournal (TimeStamp);
+CREATE INDEX idx_ftJournalAT_Timestamp ON ftJournalAT (TimeStamp);
+CREATE INDEX idx_ftJournalDE_Timestamp ON ftJournalDE (TimeStamp);
+CREATE INDEX idx_ftJournalFR_Timestamp ON ftJournalFR (TimeStamp);
