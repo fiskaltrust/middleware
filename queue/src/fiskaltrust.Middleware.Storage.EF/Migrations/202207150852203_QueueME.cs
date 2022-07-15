@@ -66,10 +66,14 @@ namespace fiskaltrust.Middleware.Storage.EF.Migrations
                     })
                 .PrimaryKey(t => t.ftSignaturCreationUnitMEId, clustered: false);
             
+            AddColumn("dbo.OutletMasterData", "LocationId", c => c.String());
+            AddColumn("dbo.PosSystemMasterData", "Type", c => c.String());
         }
         
         public override void Down()
         {
+            DropColumn("dbo.PosSystemMasterData", "Type");
+            DropColumn("dbo.OutletMasterData", "LocationId");
             DropTable("dbo.ftSignaturCreationUnitME");
             DropTable("dbo.ftQueueME");
             DropTable("dbo.ftJournalME");

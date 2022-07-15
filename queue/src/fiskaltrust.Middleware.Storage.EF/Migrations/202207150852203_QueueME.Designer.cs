@@ -13,7 +13,7 @@ namespace fiskaltrust.Middleware.Storage.EF.Migrations
         
         string IMigrationMetadata.Id
         {
-            get { return "202206090537399_QueueME"; }
+            get { return "202207150852203_QueueME"; }
         }
         
         string IMigrationMetadata.Source
