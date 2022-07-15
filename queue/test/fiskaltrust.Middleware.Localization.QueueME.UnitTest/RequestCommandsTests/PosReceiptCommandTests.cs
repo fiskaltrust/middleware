@@ -161,7 +161,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
                 ftActionJournalId = Guid.NewGuid(),
                 ftQueueId = queue.ftQueueId,
                 ftQueueItemId = ftQueueItemId,
-                Type = "4959870564618469383",
+                Type = "4D45000000000007",
                 Moment = datetime
             };
             await inMemoryActionJournalRepository.InsertAsync(actionJournal);
@@ -231,7 +231,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
                 ftQueueItemId = Guid.NewGuid(),
                 ftQueueId = queueId,
                 ftOrdinalNumber = 8,
-                JournalType = 4959870564618469383
+                JournalType = 5567856514313486343
             };
             await inMemoryJournalMeRepository.InsertAsync(journal);
         }
