@@ -2,85 +2,92 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
-using fiskaltrust.Middleware.Storage.EFCore.PostgreSQL;
+using fiskaltrust.Middleware.Storage.EFCore.SQLServer;
 
-namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
+namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer.Migrations
 {
-    [DbContext(typeof(PostgreSQLMiddlewareDbContext))]
-    partial class PostgreSQLMiddlewareDbContextModelSnapshot : ModelSnapshot
+    [DbContext(typeof(SQLServerMiddlewareDbContext))]
+    [Migration("20220714112205_Indices")]
+    partial class Indices
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("Relational:MaxIdentifierLength", 63)
+                .HasAnnotation("Relational:MaxIdentifierLength", 128)
                 .HasAnnotation("ProductVersion", "5.0.10")
-                .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
+                .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
             modelBuilder.Entity("fiskaltrust.Middleware.Contracts.Models.Transactions.FailedFinishTransaction", b =>
                 {
-                    b.Property<string>("cbReceiptReference")
-                        .HasColumnType("text");
+                    b.Property<long?>("TransactionNumber")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
                     b.Property<string>("CashBoxIdentification")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("FinishMoment")
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Request")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
-                    b.Property<long?>("TransactionNumber")
-                        .HasColumnType("bigint");
+                    b.Property<string>("cbReceiptReference")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid>("ftQueueItemId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
-                    b.HasKey("cbReceiptReference");
+                    b.HasKey("TransactionNumber");
 
                     b.ToTable("FailedFinishTransaction");
                 });
 
             modelBuilder.Entity("fiskaltrust.Middleware.Contracts.Models.Transactions.FailedStartTransaction", b =>
                 {
-                    b.Property<string>("cbReceiptReference")
-                        .HasColumnType("text");
+                    b.Property<Guid>("ftQueueItemId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("CashBoxIdentification")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Request")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("StartMoment")
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("datetime2");
 
-                    b.Property<Guid>("ftQueueItemId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("cbReceiptReference")
+                        .HasColumnType("nvarchar(max)");
 
-                    b.HasKey("cbReceiptReference");
+                    b.HasKey("ftQueueItemId");
 
                     b.ToTable("FailedStartTransaction");
                 });
 
             modelBuilder.Entity("fiskaltrust.Middleware.Contracts.Models.Transactions.OpenTransaction", b =>
                 {
-                    b.Property<string>("cbReceiptReference")
-                        .HasColumnType("text");
+                    b.Property<long>("TransactionNumber")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
                     b.Property<DateTime>("StartMoment")
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("StartTransactionSignatureBase64")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
-                    b.Property<long>("TransactionNumber")
-                        .HasColumnType("bigint");
+                    b.Property<string>("cbReceiptReference")
+                        .HasColumnType("nvarchar(max)");
 
-                    b.HasKey("cbReceiptReference");
+                    b.HasKey("TransactionNumber");
 
                     b.ToTable("OpenTransaction");
                 });
@@ -89,28 +96,28 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
                 {
                     b.Property<Guid>("AccountId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("AccountName")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("City")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Country")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Street")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("TaxId")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("VatId")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Zip")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("AccountId");
 
@@ -121,28 +128,28 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
                 {
                     b.Property<Guid>("AgencyId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("City")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Country")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Name")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Street")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("TaxId")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("VatId")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Zip")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("AgencyId");
 
@@ -153,28 +160,25 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
                 {
                     b.Property<Guid>("OutletId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("City")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Country")
-                        .HasColumnType("text");
-
-                    b.Property<string>("LocationId")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("OutletName")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Street")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("VatId")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Zip")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("OutletId");
 
@@ -185,22 +189,19 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
                 {
                     b.Property<Guid>("PosSystemId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("BaseCurrency")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Brand")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Model")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("SoftwareVersion")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Type")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("PosSystemId");
 
@@ -211,34 +212,34 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
                 {
                     b.Property<Guid>("ftActionJournalId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("DataBase64")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("DataJson")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Message")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("Moment")
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("Priority")
-                        .HasColumnType("integer");
+                        .HasColumnType("int");
 
                     b.Property<long>("TimeStamp")
                         .HasColumnType("bigint");
 
                     b.Property<string>("Type")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid>("ftQueueId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("ftQueueItemId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("ftActionJournalId");
 
@@ -251,7 +252,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
                 {
                     b.Property<Guid>("ftCashBoxId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<long>("TimeStamp")
                         .HasColumnType("bigint");
@@ -265,16 +266,16 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
                 {
                     b.Property<Guid>("ftJournalATId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("JWSHeaderBase64url")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("JWSPayloadBase64url")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("JWSSignatureBase64url")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<long>("Number")
                         .HasColumnType("bigint");
@@ -283,10 +284,10 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
                         .HasColumnType("bigint");
 
                     b.Property<Guid>("ftQueueId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("ftSignaturCreationUnitId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("ftJournalATId");
 
@@ -299,16 +300,16 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
                 {
                     b.Property<Guid>("ftJournalDEId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("FileContentBase64")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("FileExtension")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("FileName")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<long>("Number")
                         .HasColumnType("bigint");
@@ -317,10 +318,10 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
                         .HasColumnType("bigint");
 
                     b.Property<Guid>("ftQueueId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("ftQueueItemId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("ftJournalDEId");
 
@@ -333,28 +334,28 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
                 {
                     b.Property<Guid>("ftJournalFRId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("JWT")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("JsonData")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<long>("Number")
                         .HasColumnType("bigint");
 
                     b.Property<string>("ReceiptType")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<long>("TimeStamp")
                         .HasColumnType("bigint");
 
                     b.Property<Guid>("ftQueueId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("ftQueueItemId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("ftJournalFRId");
 
@@ -363,73 +364,29 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
                     b.ToTable("ftJournalFR");
                 });
 
-            modelBuilder.Entity("fiskaltrust.storage.V0.ftJournalME", b =>
-                {
-                    b.Property<Guid>("ftJournalMEId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("FCDC")
-                        .HasColumnType("text");
-
-                    b.Property<string>("FIC")
-                        .HasColumnType("text");
-
-                    b.Property<string>("IIC")
-                        .HasColumnType("text");
-
-                    b.Property<long>("JournalType")
-                        .HasColumnType("bigint");
-
-                    b.Property<long>("Number")
-                        .HasColumnType("bigint");
-
-                    b.Property<long>("TimeStamp")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("cbReference")
-                        .HasColumnType("text");
-
-                    b.Property<string>("ftInvoiceNumber")
-                        .HasColumnType("text");
-
-                    b.Property<int>("ftOrdinalNumber")
-                        .HasColumnType("integer");
-
-                    b.Property<Guid>("ftQueueId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("ftQueueItemId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("ftJournalMEId");
-
-                    b.ToTable("ftJournalME");
-                });
-
             modelBuilder.Entity("fiskaltrust.storage.V0.ftQueue", b =>
                 {
                     b.Property<Guid>("ftQueueId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("CountryCode")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("StartMoment")
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("StopMoment")
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("datetime2");
 
                     b.Property<long>("TimeStamp")
                         .HasColumnType("bigint");
 
                     b.Property<int>("Timeout")
-                        .HasColumnType("integer");
+                        .HasColumnType("int");
 
                     b.Property<Guid>("ftCashBoxId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<long>("ftCurrentRow")
                         .HasColumnType("bigint");
@@ -438,13 +395,13 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
                         .HasColumnType("bigint");
 
                     b.Property<string>("ftReceiptHash")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<long>("ftReceiptNumerator")
                         .HasColumnType("bigint");
 
                     b.Property<decimal>("ftReceiptTotalizer")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.HasKey("ftQueueId");
 
@@ -455,91 +412,91 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
                 {
                     b.Property<Guid>("ftQueueATId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("CashBoxIdentification")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ClosedSystemKind")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ClosedSystemNote")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ClosedSystemValue")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("EncryptionKeyBase64")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("LastSettlementMoment")
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("LastSettlementMonth")
-                        .HasColumnType("integer");
+                        .HasColumnType("int");
 
                     b.Property<Guid?>("LastSettlementQueueItemId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("LastSignatureCertificateSerialNumber")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("LastSignatureHash")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("LastSignatureZDA")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("MessageCount")
-                        .HasColumnType("integer");
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("MessageMoment")
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("SSCDFailCount")
-                        .HasColumnType("integer");
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("SSCDFailMessageSent")
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("SSCDFailMoment")
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("datetime2");
 
                     b.Property<Guid?>("SSCDFailQueueItemId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<bool>("SignAll")
-                        .HasColumnType("boolean");
+                        .HasColumnType("bit");
 
                     b.Property<long>("TimeStamp")
                         .HasColumnType("bigint");
 
                     b.Property<int>("UsedFailedCount")
-                        .HasColumnType("integer");
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("UsedFailedMomentMax")
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("UsedFailedMomentMin")
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("datetime2");
 
                     b.Property<Guid?>("UsedFailedQueueItemId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("UsedMobileCount")
-                        .HasColumnType("integer");
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("UsedMobileMoment")
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("datetime2");
 
                     b.Property<Guid?>("UsedMobileQueueItemId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<long>("ftCashNumerator")
                         .HasColumnType("bigint");
 
                     b.Property<decimal>("ftCashTotalizer")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.HasKey("ftQueueATId");
 
@@ -550,43 +507,43 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
                 {
                     b.Property<Guid>("ftQueueDEId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("CashBoxIdentification")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("DailyClosingNumber")
-                        .HasColumnType("integer");
+                        .HasColumnType("int");
 
                     b.Property<string>("LastHash")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("SSCDFailCount")
-                        .HasColumnType("integer");
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("SSCDFailMoment")
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("datetime2");
 
                     b.Property<Guid?>("SSCDFailQueueItemId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<long>("TimeStamp")
                         .HasColumnType("bigint");
 
                     b.Property<int>("UsedFailedCount")
-                        .HasColumnType("integer");
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("UsedFailedMomentMax")
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("UsedFailedMomentMin")
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("datetime2");
 
                     b.Property<Guid?>("UsedFailedQueueItemId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid?>("ftSignaturCreationUnitDEId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("ftQueueDEId");
 
@@ -597,406 +554,406 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
                 {
                     b.Property<Guid>("ftQueueFRId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal>("ACITotalNormal")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("ACITotalReduced1")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("ACITotalReduced2")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("ACITotalReducedS")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("ACITotalUnknown")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("ACITotalZero")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("ALastHash")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("ALastMoment")
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("datetime2");
 
                     b.Property<Guid?>("ALastQueueItemId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<long>("ANumerator")
                         .HasColumnType("bigint");
 
                     b.Property<decimal>("APITotalCash")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("APITotalInternal")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("APITotalNonCash")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("APITotalUnknown")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("ATotalizer")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("BCITotalNormal")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("BCITotalReduced1")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("BCITotalReduced2")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("BCITotalReducedS")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("BCITotalUnknown")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("BCITotalZero")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("BLastHash")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<long>("BNumerator")
                         .HasColumnType("bigint");
 
                     b.Property<decimal>("BPITotalCash")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("BPITotalInternal")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("BPITotalNonCash")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("BPITotalUnknown")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("BTotalizer")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("CLastHash")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<long>("CNumerator")
                         .HasColumnType("bigint");
 
                     b.Property<decimal>("CTotalizer")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("CashBoxIdentification")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("GDayCITotalNormal")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("GDayCITotalReduced1")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("GDayCITotalReduced2")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("GDayCITotalReducedS")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("GDayCITotalUnknown")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("GDayCITotalZero")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("GDayPITotalCash")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("GDayPITotalInternal")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("GDayPITotalNonCash")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("GDayPITotalUnknown")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("GDayTotalizer")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("GLastDayMoment")
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("datetime2");
 
                     b.Property<Guid?>("GLastDayQueueItemId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("GLastHash")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("GLastMonthMoment")
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("datetime2");
 
                     b.Property<Guid?>("GLastMonthQueueItemId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("GLastShiftMoment")
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("datetime2");
 
                     b.Property<Guid?>("GLastShiftQueueItemId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("GLastYearMoment")
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("datetime2");
 
                     b.Property<Guid?>("GLastYearQueueItemId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal>("GMonthCITotalNormal")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("GMonthCITotalReduced1")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("GMonthCITotalReduced2")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("GMonthCITotalReducedS")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("GMonthCITotalUnknown")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("GMonthCITotalZero")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("GMonthPITotalCash")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("GMonthPITotalInternal")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("GMonthPITotalNonCash")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("GMonthPITotalUnknown")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("GMonthTotalizer")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<long>("GNumerator")
                         .HasColumnType("bigint");
 
                     b.Property<decimal>("GShiftCITotalNormal")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("GShiftCITotalReduced1")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("GShiftCITotalReduced2")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("GShiftCITotalReducedS")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("GShiftCITotalUnknown")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("GShiftCITotalZero")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("GShiftPITotalCash")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("GShiftPITotalInternal")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("GShiftPITotalNonCash")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("GShiftPITotalUnknown")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("GShiftTotalizer")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("GYearCITotalNormal")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("GYearCITotalReduced1")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("GYearCITotalReduced2")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("GYearCITotalReducedS")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("GYearCITotalUnknown")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("GYearCITotalZero")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("GYearPITotalCash")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("GYearPITotalInternal")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("GYearPITotalNonCash")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("GYearPITotalUnknown")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("GYearTotalizer")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("ICITotalNormal")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("ICITotalReduced1")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("ICITotalReduced2")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("ICITotalReducedS")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("ICITotalUnknown")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("ICITotalZero")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("ILastHash")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<long>("INumerator")
                         .HasColumnType("bigint");
 
                     b.Property<decimal>("IPITotalCash")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("IPITotalInternal")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("IPITotalNonCash")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("IPITotalUnknown")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("ITotalizer")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("LLastHash")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<long>("LNumerator")
                         .HasColumnType("bigint");
 
                     b.Property<int>("MessageCount")
-                        .HasColumnType("integer");
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("MessageMoment")
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("PLastHash")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<long>("PNumerator")
                         .HasColumnType("bigint");
 
                     b.Property<decimal>("PPITotalCash")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("PPITotalInternal")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("PPITotalNonCash")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("PPITotalUnknown")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("PTotalizer")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("Siret")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("TCITotalNormal")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("TCITotalReduced1")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("TCITotalReduced2")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("TCITotalReducedS")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("TCITotalUnknown")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("TCITotalZero")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("TLastHash")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<long>("TNumerator")
                         .HasColumnType("bigint");
 
                     b.Property<decimal>("TPITotalCash")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("TPITotalInternal")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("TPITotalNonCash")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("TPITotalUnknown")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("TTotalizer")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<long>("TimeStamp")
                         .HasColumnType("bigint");
 
                     b.Property<int>("UsedFailedCount")
-                        .HasColumnType("integer");
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("UsedFailedMomentMax")
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("UsedFailedMomentMin")
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("datetime2");
 
                     b.Property<Guid?>("UsedFailedQueueItemId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("XLastHash")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<long>("XNumerator")
                         .HasColumnType("bigint");
 
                     b.Property<decimal>("XTotalizer")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<Guid>("ftSignaturCreationUnitFRId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("ftQueueFRId");
 
@@ -1007,58 +964,58 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
                 {
                     b.Property<Guid>("ftQueueItemId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<long>("TimeStamp")
                         .HasColumnType("bigint");
 
                     b.Property<DateTime>("cbReceiptMoment")
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("cbReceiptReference")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("cbTerminalID")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("country")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("ftDoneMoment")
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("datetime2");
 
                     b.Property<Guid>("ftQueueId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("ftQueueMoment")
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("datetime2");
 
                     b.Property<long>("ftQueueRow")
                         .HasColumnType("bigint");
 
                     b.Property<int>("ftQueueTimeout")
-                        .HasColumnType("integer");
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("ftWorkMoment")
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("request")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("requestHash")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("response")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("responseHash")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("version")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("ftQueueItemId");
-                                        
+
                     b.HasIndex("TimeStamp");
 
                     b.HasIndex("cbReceiptReference");
@@ -1066,76 +1023,32 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
                     b.ToTable("ftQueueItem");
                 });
 
-            modelBuilder.Entity("fiskaltrust.storage.V0.ftQueueME", b =>
-                {
-                    b.Property<Guid>("ftQueueMEId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("DailyClosingNumber")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("LastHash")
-                        .HasColumnType("text");
-
-                    b.Property<int>("SSCDFailCount")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("SSCDFailMoment")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<Guid?>("SSCDFailQueueItemId")
-                        .HasColumnType("uuid");
-
-                    b.Property<long>("TimeStamp")
-                        .HasColumnType("bigint");
-
-                    b.Property<int>("UsedFailedCount")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("UsedFailedMomentMax")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<DateTime?>("UsedFailedMomentMin")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<Guid?>("UsedFailedQueueItemId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("ftSignaturCreationUnitMEId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("ftQueueMEId");
-
-                    b.ToTable("ftQueueME");
-                });
-
             modelBuilder.Entity("fiskaltrust.storage.V0.ftReceiptJournal", b =>
                 {
                     b.Property<Guid>("ftReceiptJournalId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<long>("TimeStamp")
                         .HasColumnType("bigint");
 
                     b.Property<Guid>("ftQueueId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("ftQueueItemId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("ftReceiptHash")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("ftReceiptMoment")
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("datetime2");
 
                     b.Property<long>("ftReceiptNumber")
                         .HasColumnType("bigint");
 
                     b.Property<decimal>("ftReceiptTotal")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,2)");
 
                     b.HasKey("ftReceiptJournalId");
 
@@ -1148,25 +1061,25 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
                 {
                     b.Property<Guid>("ftSignaturCreationUnitATId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("CertificateBase64")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("Mode")
-                        .HasColumnType("integer");
+                        .HasColumnType("int");
 
                     b.Property<string>("SN")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<long>("TimeStamp")
                         .HasColumnType("bigint");
 
                     b.Property<string>("Url")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ZDA")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("ftSignaturCreationUnitATId");
 
@@ -1177,22 +1090,22 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
                 {
                     b.Property<Guid>("ftSignaturCreationUnitDEId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("Mode")
-                        .HasColumnType("integer");
+                        .HasColumnType("int");
 
                     b.Property<string>("ModeConfigurationJson")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<long>("TimeStamp")
                         .HasColumnType("bigint");
 
                     b.Property<string>("TseInfoJson")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Url")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("ftSignaturCreationUnitDEId");
 
@@ -1203,19 +1116,19 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
                 {
                     b.Property<Guid>("ftSignaturCreationUnitFRId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("CertificateBase64")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("CertificateSerialNumber")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PrivateKey")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Siret")
-                        .HasColumnType("text");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<long>("TimeStamp")
                         .HasColumnType("bigint");
@@ -1223,59 +1136,6 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
                     b.HasKey("ftSignaturCreationUnitFRId");
 
                     b.ToTable("ftSignaturCreationUnitFR");
-                });
-
-            modelBuilder.Entity("fiskaltrust.storage.V0.ftSignaturCreationUnitME", b =>
-                {
-                    b.Property<Guid>("ftSignaturCreationUnitMEId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("BusinessUnitCode")
-                        .HasColumnType("text");
-
-                    b.Property<string>("EnuType")
-                        .HasColumnType("text");
-
-                    b.Property<string>("IssuerTin")
-                        .HasColumnType("text");
-
-                    b.Property<string>("MaintainerCode")
-                        .HasColumnType("text");
-
-                    b.Property<int>("Mode")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("ModeConfigurationJson")
-                        .HasColumnType("text");
-
-                    b.Property<string>("SoftwareCode")
-                        .HasColumnType("text");
-
-                    b.Property<string>("TcrCode")
-                        .HasColumnType("text");
-
-                    b.Property<string>("TcrIntId")
-                        .HasColumnType("text");
-
-                    b.Property<long>("TimeStamp")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("TseInfoJson")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Url")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("ValidFrom")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<DateTime?>("ValidTo")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.HasKey("ftSignaturCreationUnitMEId");
-
-                    b.ToTable("ftSignaturCreationUnitME");
                 });
 #pragma warning restore 612, 618
         }

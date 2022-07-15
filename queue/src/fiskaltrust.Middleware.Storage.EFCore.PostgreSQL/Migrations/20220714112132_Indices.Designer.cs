@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using fiskaltrust.Middleware.Storage.EFCore.PostgreSQL;
@@ -9,9 +10,10 @@ using fiskaltrust.Middleware.Storage.EFCore.PostgreSQL;
 namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
 {
     [DbContext(typeof(PostgreSQLMiddlewareDbContext))]
-    partial class PostgreSQLMiddlewareDbContextModelSnapshot : ModelSnapshot
+    [Migration("20220714112132_Indices")]
+    partial class Indices
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -161,9 +163,6 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
                     b.Property<string>("Country")
                         .HasColumnType("text");
 
-                    b.Property<string>("LocationId")
-                        .HasColumnType("text");
-
                     b.Property<string>("OutletName")
                         .HasColumnType("text");
 
@@ -197,9 +196,6 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("SoftwareVersion")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Type")
                         .HasColumnType("text");
 
                     b.HasKey("PosSystemId");
@@ -361,50 +357,6 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
                     b.HasIndex("TimeStamp");
 
                     b.ToTable("ftJournalFR");
-                });
-
-            modelBuilder.Entity("fiskaltrust.storage.V0.ftJournalME", b =>
-                {
-                    b.Property<Guid>("ftJournalMEId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("FCDC")
-                        .HasColumnType("text");
-
-                    b.Property<string>("FIC")
-                        .HasColumnType("text");
-
-                    b.Property<string>("IIC")
-                        .HasColumnType("text");
-
-                    b.Property<long>("JournalType")
-                        .HasColumnType("bigint");
-
-                    b.Property<long>("Number")
-                        .HasColumnType("bigint");
-
-                    b.Property<long>("TimeStamp")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("cbReference")
-                        .HasColumnType("text");
-
-                    b.Property<string>("ftInvoiceNumber")
-                        .HasColumnType("text");
-
-                    b.Property<int>("ftOrdinalNumber")
-                        .HasColumnType("integer");
-
-                    b.Property<Guid>("ftQueueId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("ftQueueItemId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("ftJournalMEId");
-
-                    b.ToTable("ftJournalME");
                 });
 
             modelBuilder.Entity("fiskaltrust.storage.V0.ftQueue", b =>
@@ -1058,56 +1010,12 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("ftQueueItemId");
-                                        
+
                     b.HasIndex("TimeStamp");
 
                     b.HasIndex("cbReceiptReference");
 
                     b.ToTable("ftQueueItem");
-                });
-
-            modelBuilder.Entity("fiskaltrust.storage.V0.ftQueueME", b =>
-                {
-                    b.Property<Guid>("ftQueueMEId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("DailyClosingNumber")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("LastHash")
-                        .HasColumnType("text");
-
-                    b.Property<int>("SSCDFailCount")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("SSCDFailMoment")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<Guid?>("SSCDFailQueueItemId")
-                        .HasColumnType("uuid");
-
-                    b.Property<long>("TimeStamp")
-                        .HasColumnType("bigint");
-
-                    b.Property<int>("UsedFailedCount")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("UsedFailedMomentMax")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<DateTime?>("UsedFailedMomentMin")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<Guid?>("UsedFailedQueueItemId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("ftSignaturCreationUnitMEId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("ftQueueMEId");
-
-                    b.ToTable("ftQueueME");
                 });
 
             modelBuilder.Entity("fiskaltrust.storage.V0.ftReceiptJournal", b =>
@@ -1223,59 +1131,6 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
                     b.HasKey("ftSignaturCreationUnitFRId");
 
                     b.ToTable("ftSignaturCreationUnitFR");
-                });
-
-            modelBuilder.Entity("fiskaltrust.storage.V0.ftSignaturCreationUnitME", b =>
-                {
-                    b.Property<Guid>("ftSignaturCreationUnitMEId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("BusinessUnitCode")
-                        .HasColumnType("text");
-
-                    b.Property<string>("EnuType")
-                        .HasColumnType("text");
-
-                    b.Property<string>("IssuerTin")
-                        .HasColumnType("text");
-
-                    b.Property<string>("MaintainerCode")
-                        .HasColumnType("text");
-
-                    b.Property<int>("Mode")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("ModeConfigurationJson")
-                        .HasColumnType("text");
-
-                    b.Property<string>("SoftwareCode")
-                        .HasColumnType("text");
-
-                    b.Property<string>("TcrCode")
-                        .HasColumnType("text");
-
-                    b.Property<string>("TcrIntId")
-                        .HasColumnType("text");
-
-                    b.Property<long>("TimeStamp")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("TseInfoJson")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Url")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("ValidFrom")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<DateTime?>("ValidTo")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.HasKey("ftSignaturCreationUnitMEId");
-
-                    b.ToTable("ftSignaturCreationUnitME");
                 });
 #pragma warning restore 612, 618
         }

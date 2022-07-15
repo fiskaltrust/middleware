@@ -247,6 +247,8 @@ namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer.Migrations
 
                     b.HasKey("ftActionJournalId");
 
+                    b.HasIndex("TimeStamp");
+
                     b.ToTable("ftActionJournal");
                 });
 
@@ -293,6 +295,8 @@ namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer.Migrations
 
                     b.HasKey("ftJournalATId");
 
+                    b.HasIndex("TimeStamp");
+
                     b.ToTable("ftJournalAT");
                 });
 
@@ -325,6 +329,8 @@ namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer.Migrations
 
                     b.HasKey("ftJournalDEId");
 
+                    b.HasIndex("TimeStamp");
+
                     b.ToTable("ftJournalDE");
                 });
 
@@ -356,6 +362,8 @@ namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("ftJournalFRId");
+                    
+                    b.HasIndex("TimeStamp");
 
                     b.ToTable("ftJournalFR");
                 });
@@ -1013,7 +1021,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("cbReceiptReference")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("cbTerminalID")
                         .HasColumnType("nvarchar(max)");
@@ -1055,6 +1063,10 @@ namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("ftQueueItemId");
+                    
+                    b.HasIndex("TimeStamp");
+
+                    b.HasIndex("cbReceiptReference");
 
                     b.ToTable("ftQueueItem");
                 });
@@ -1131,6 +1143,8 @@ namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer.Migrations
                         .HasColumnType("decimal(18,2)");
 
                     b.HasKey("ftReceiptJournalId");
+
+                    b.HasIndex("TimeStamp");
 
                     b.ToTable("ftReceiptJournal");
                 });
