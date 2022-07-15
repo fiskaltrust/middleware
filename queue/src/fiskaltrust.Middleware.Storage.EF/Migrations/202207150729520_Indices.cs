@@ -6,6 +6,7 @@ namespace fiskaltrust.Middleware.Storage.EF.Migrations
     {
         public override void Up()
         {
+            AlterColumn("dbo.ftQueueItem", "cbReceiptReference", c => c.String(maxLength: 450));
             CreateIndex("dbo.ftActionJournal", "TimeStamp");
             CreateIndex("dbo.ftJournalAT", "TimeStamp");
             CreateIndex("dbo.ftJournalDE", "TimeStamp");
@@ -24,6 +25,7 @@ namespace fiskaltrust.Middleware.Storage.EF.Migrations
             DropIndex("dbo.ftJournalDE", new[] { "TimeStamp" });
             DropIndex("dbo.ftJournalAT", new[] { "TimeStamp" });
             DropIndex("dbo.ftActionJournal", new[] { "TimeStamp" });
+            AlterColumn("dbo.ftQueueItem", "cbReceiptReference", c => c.String());
         }
     }
 }
