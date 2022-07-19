@@ -185,7 +185,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 Moment = request.cbReceiptMoment,
                 OperatorCode = operatorCode,
                 RequestId = queueItem.ftQueueItemId,
-                SubsequentDeliveryType = invoice.SubsequentDeliveryType == null ? null : (SubsequentDeliveryType) Enum.Parse(typeof(SubsequentDeliveryType), invoice.SubsequentDeliveryType),
+                SubsequentDeliveryType = invoice?.SubsequentDeliveryType == null ? null : (SubsequentDeliveryType) Enum.Parse(typeof(SubsequentDeliveryType), invoice.SubsequentDeliveryType),
                 IIC = computeIicResponse.IIC,
                 IICSignature = computeIicResponse.IICSignature
             };
