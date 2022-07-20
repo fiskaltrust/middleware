@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using fiskaltrust.Middleware.Contracts.Constants;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Storage.Azure.Mapping;
 using fiskaltrust.Middleware.Storage.Azure.TableEntities;
@@ -10,7 +11,7 @@ using Microsoft.Azure.Cosmos.Table;
 
 namespace fiskaltrust.Middleware.Storage.Azure.Repositories.ME
 {
-    public class AzureJournalMERepository : BaseAzureTableRepository<Guid, AzureFtJournalME, ftJournalME>, IJournalMERepository, IMiddlewareRepository<ftJournalME>, IMiddlewareJournalMERepository
+    public class AzureJournalMERepository : BaseAzureTableRepository<Guid, AzureFtJournalME, ftJournalME>, IMiddlewareRepository<ftJournalME>, IMiddlewareJournalMERepository
     {
         public AzureJournalMERepository(Guid queueId, string connectionString)
             : base(queueId, connectionString, nameof(ftJournalME)) { }
@@ -37,7 +38,7 @@ namespace fiskaltrust.Middleware.Storage.Azure.Repositories.ME
         public Task<ftJournalME> GetLastEntryAsync()
         {
             var tableQuery = new TableQuery<AzureFtJournalME>();
-            tableQuery = tableQuery.OrderByDesc("Number");
+            tableQuery = tableQuery.Where(TableQuery.GenerateFilterConditionForLong("JournalType", QueryComparisons.Equal, (long) JournalTypes.JournalME)).OrderByDesc("Number");
             return Task.FromResult(GetAllByTableFilterAsync(tableQuery).Take(1).ToListAsync().Result.FirstOrDefault());
         }
 

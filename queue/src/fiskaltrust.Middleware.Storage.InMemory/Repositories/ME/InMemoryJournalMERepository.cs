@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using fiskaltrust.Middleware.Contracts.Constants;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0;
 
@@ -30,7 +31,7 @@ namespace fiskaltrust.Middleware.Storage.InMemory.Repositories.ME
         }
         public Task<ftJournalME> GetLastEntryAsync()
         {
-            var result = Data.Select(x => x.Value).OrderByDescending(x => x.Number).FirstOrDefault();
+            var result = Data.Select(x => x.Value).Where(x => x.JournalType == (long) JournalTypes.JournalME).OrderByDescending(x => x.Number).FirstOrDefault();
             return Task.FromResult(result);
         }
 

@@ -145,13 +145,14 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                             InvoiceDetails invoice, ComputeIICResponse computeIicResponse)
         {
             var lastEntry = await JournalMeRepository.GetLastEntryAsync().ConfigureAwait(false);
+            var lastNumber = lastEntry?.Number ?? 0;
             var journal = new ftJournalME
             {
                 ftJournalMEId = Guid.NewGuid(),
                 ftQueueId = queue.ftQueueId,
                 ftQueueItemId = queueItem.ftQueueItemId,
                 cbReference = request.cbReceiptReference,
-                Number = lastEntry.Number + 1,
+                Number = lastNumber + 1,
                 FIC = registerInvoiceResponse.FIC,
                 IIC = computeIicResponse.IIC,
                 JournalType = (long) JournalTypes.JournalME,
@@ -244,11 +245,9 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 return 1;
             }
             var lastQueueItem = await QueueItemRepository.GetAsync(lastJournal.ftQueueItemId);
-            if (lastQueueItem.ftWorkMoment != null && queueItem.ftWorkMoment != null && queueItem.ftWorkMoment.Value.Year == lastQueueItem.ftWorkMoment.Value.Year)
-            {
-                return (ulong) (lastJournal.ftOrdinalNumber + 1);
-            }
-            return 1;
+            return queueItem.cbReceiptMoment.Year == lastQueueItem.cbReceiptMoment.Year
+                ? (ulong) (lastJournal.ftOrdinalNumber + 1)
+                : 1;
         }
     }
 }

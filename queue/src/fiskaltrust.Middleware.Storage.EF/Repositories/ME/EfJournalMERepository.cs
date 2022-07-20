@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using fiskaltrust.Middleware.Contracts.Constants;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0;
 
@@ -33,7 +34,7 @@ namespace fiskaltrust.Middleware.Storage.EF.Repositories.ME
             }
             return result.ToAsyncEnumerable();
         }
-        public Task<ftJournalME> GetLastEntryAsync() => Task.FromResult(DbContext.JournalMEList.AsQueryable().OrderByDescending(x => x.Number).Take(1).FirstOrDefault());
+        public Task<ftJournalME> GetLastEntryAsync() => Task.FromResult(DbContext.JournalMEList.AsQueryable().Where(x => x.JournalType == (long) JournalTypes.JournalME).OrderByDescending(x => x.Number).Take(1).FirstOrDefault());
         public IAsyncEnumerable<ftJournalME> GetByQueueItemId(Guid queueItemId)
         {
             var result = DbContext.JournalMEList.Where(x => x.ftQueueItemId == queueItemId).OrderByDescending(x => x.TimeStamp);

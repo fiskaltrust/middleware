@@ -110,25 +110,23 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                         ActionJournals = new List<ftActionJournal> { actionJournal }
                     };
                 }
-                else
-                {
-                    var actionJournalEntry = new ftActionJournal
-                    {
-                        ftActionJournalId = Guid.NewGuid(),
-                        ftQueueId = queueItem.ftQueueId,
-                        ftQueueItemId = queueItem.ftQueueItemId,
-                        Moment = DateTime.UtcNow,
-                        Message = queue.IsDeactivated()
-                            ? $"Queue {queue.ftQueueId} is de-activated, initial-operations-receipt can not be executed."
-                            : $"Queue {queue.ftQueueId} is already activated, initial-operations-receipt can not be executed."
-                    };
 
-                    return new RequestCommandResponse
-                    {
-                        ActionJournals = new List<ftActionJournal> { actionJournalEntry },
-                        ReceiptResponse = CreateReceiptResponse(queue, request, queueItem)
-                    };
-                }
+                var actionJournalEntry = new ftActionJournal
+                {
+                    ftActionJournalId = Guid.NewGuid(),
+                    ftQueueId = queueItem.ftQueueId,
+                    ftQueueItemId = queueItem.ftQueueItemId,
+                    Moment = DateTime.UtcNow,
+                    Message = queue.IsDeactivated()
+                        ? $"Queue {queue.ftQueueId} is de-activated, initial-operations-receipt can not be executed."
+                        : $"Queue {queue.ftQueueId} is already activated, initial-operations-receipt can not be executed."
+                };
+
+                return new RequestCommandResponse
+                {
+                    ActionJournals = new List<ftActionJournal> { actionJournalEntry },
+                    ReceiptResponse = CreateReceiptResponse(queue, request, queueItem)
+                };
             }
             catch (Exception ex)
             {

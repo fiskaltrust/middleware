@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
+using fiskaltrust.Middleware.Contracts.Constants;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0;
 using MySqlConnector;
@@ -34,7 +35,7 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories.DE
             using (var connection = new MySqlConnection(ConnectionString))
             {
                 await connection.OpenAsync().ConfigureAwait(false);
-                return await connection.QueryFirstOrDefaultAsync<ftJournalME>("Select * from ftJournalME order by Number desc limit 1").ConfigureAwait(false);
+                return await connection.QueryFirstOrDefaultAsync<ftJournalME>("Select * from ftJournalME where JournalType = " + (long) JournalTypes.JournalME + " order by Number desc limit 1").ConfigureAwait(false);
             }
         }
         public async Task InsertAsync(ftJournalME journal)
