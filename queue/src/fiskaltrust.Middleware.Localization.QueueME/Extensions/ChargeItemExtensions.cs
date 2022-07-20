@@ -89,11 +89,11 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Extensions
             {
                 if (!chargeItem.UnitPrice.HasValue)
                 {
-                    invoiceItem.NetUnitPrice = chargeItem.Amount / chargeItem.Quantity / (1 + (chargeItem.GetVatRate() / 100));
+                    invoiceItem.NetUnitPrice = chargeItem.Amount / Math.Abs(chargeItem.Quantity) / (1 + (chargeItem.GetVatRate() / 100));
                 }
                 var unitPriceWithDiscount = (decimal) (invoiceItem.NetUnitPrice * (100 - invoiceItemRequest.DiscountPercentage) / 100);
                 invoiceItem.GrossUnitPrice = unitPriceWithDiscount * (1 + (chargeItem.GetVatRate() / 100));
-                invoiceItem.GrossAmount = invoiceItem.GrossUnitPrice * invoiceItem.Quantity;
+                invoiceItem.GrossAmount = invoiceItem.GrossUnitPrice * Math.Abs(invoiceItem.Quantity);
                 invoiceItem.NetAmount = invoiceItem.GrossAmount / (1 + (chargeItem.GetVatRate() / 100));
             }
             if (invoiceItem.Quantity < 0 || isVoid)
