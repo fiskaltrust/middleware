@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.ServiceModel;
 using System.Text;
 using System.Threading.Tasks;
@@ -66,13 +67,9 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
 
             return new RegisterCashDepositResponse { FCDC = response.RegisterCashDepositResponse.FCDC };
         }
-        catch (EndpointNotFoundException ep)
-        {
-            _logger.LogError(ep, "Error sending request");
-            throw new FiscalizationException("No access to Fiscalization Endpoint!", ep);
-        }
         catch (Exception e)
         {
+            IsConnectionException(e);
             _logger.LogError(e, "Error sending request");
             throw;
         }
@@ -102,13 +99,9 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
         {
             _ = await _fiscalizationServiceClient.registerCashDepositAsync(request);
         }
-        catch (EndpointNotFoundException ep)
-        {
-            _logger.LogError(ep, "Error sending request");
-            throw new FiscalizationException("No access to Fiscalization Endpoint!", ep);
-        }
         catch (Exception e)
         {
+            IsConnectionException(e);
             _logger.LogError(e, "Error sending request");
             throw;
         }
@@ -316,17 +309,15 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
                 FIC = response.RegisterInvoiceResponse.FIC,
             };
         }
-        catch (EndpointNotFoundException ep)
-        {
-            _logger.LogError(ep, "Error sending request");
-            throw new FiscalizationException("No access to Fiscalization Endpoint!", ep);
-        }
         catch (Exception e)
         {
+            IsConnectionException(e);
             _logger.LogError(e, "Error sending request");
             throw;
         }
     }
+
+
     public async Task<RegisterTcrResponse> RegisterTcrAsync(RegisterTcrRequest registerTCRRequest)
     {
         var sendDateTime = DateTime.Now;
@@ -432,5 +423,16 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
             IIC = iic,
             IICSignature = iicSignature
         });
+    }
+
+    private void IsConnectionException(Exception e)
+    {
+        if (e is EndpointNotFoundException or WebException or CommunicationException)
+        {
+            _logger.LogError(e, "Error sending request");
+            throw new FiscalizationException("No access to Fiscalization Endpoint!", e);
+        }
+        _logger.LogError(e, "Error sending request");
+        throw e;
     }
 }

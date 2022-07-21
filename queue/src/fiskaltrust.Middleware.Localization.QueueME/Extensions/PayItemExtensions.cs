@@ -8,7 +8,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Extensions
 #pragma warning disable
     public static class PayItemExtensions
     {
-        private static readonly long[] _cashLocalPayItemCases = { 0x0000, 0x0001,  0x0002, 0x000D, 0x000E, 0x000C, 0x0016, 0x0004, 0x0005 };
+        private static readonly long[] _cashLocalPayItemCases = { 0x0000, 0x0001, 0x0002, 0x000D, 0x000E, 0x000C, 0x0016, 0x0004, 0x0005 };
 
         public static PaymentType GetPaymentMethodType(this PayItem item)
         {
