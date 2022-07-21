@@ -8,8 +8,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Extensions
 #pragma warning disable
     public static class PayItemExtensions
     {
-        private static readonly long[] _cashLocalPayItemCases = { 0x0000, 0x0001, 0x0005, 0x0010 };
-        private static readonly long[] _nonCashPayItemCases = { 0x0002, 0x0003, 0x0004, 0x0005, 0x0006, 0x0007, 0x0008, 0x0009 };
+        private static readonly long[] _cashLocalPayItemCases = { 0x0000, 0x0001,  0x0002, 0x000D, 0x000E, 0x000C, 0x0016, 0x0004, 0x0005 };
 
         public static PaymentType GetPaymentMethodType(this PayItem item)
         {
@@ -59,11 +58,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Extensions
         {
             var payItemCase = item.ftPayItemCase & 0xFFFF;
             return _cashLocalPayItemCases.Any(x => x == payItemCase);
-        }
-
-        public static bool IsNonCashLocalCurrency(this PayItem item)
-        {
-            return !item.IsCashLocalCurrency();
         }
     }
 }

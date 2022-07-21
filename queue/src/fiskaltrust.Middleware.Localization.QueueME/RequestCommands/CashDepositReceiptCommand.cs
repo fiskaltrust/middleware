@@ -9,6 +9,7 @@ using fiskaltrust.ifPOS.v1.me;
 using fiskaltrust.Middleware.Localization.QueueME.Exceptions;
 using System.Collections.Generic;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using Grpc.Core;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 {
@@ -19,7 +20,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             base(logger, configurationRepository, journalMeRepository, queueItemRepository, actionJournalRepository, queueMeConfiguration)
         { }
 
-        public override async Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftQueueME queueMe)
+        public override async Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftQueueME queueMe, bool subsequent = false)
         {
             try
             {
@@ -35,9 +36,10 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                     Amount = depositChargeItems.Sum(x => x.Amount),
                     Moment = request.cbReceiptMoment,
                     RequestId = queueItem.ftQueueItemId,
-                    SubsequentDeliveryType = null,
                     TcrCode = scu.TcrCode,
+                    SubsequentDeliveryType = subsequent ? SubsequentDeliveryType.NoInternet : null
                 };
+
 
                 var registerCashDepositResponse = await client.RegisterCashDepositAsync(registerCashDepositRequest).ConfigureAwait(false);
                 await InsertJournalMe(queue, request, queueItem, registerCashDepositResponse).ConfigureAwait(false);
@@ -52,10 +54,9 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                     }
                 };
             }
-            catch (EntryPointNotFoundException ex)
+            catch (RpcException ex)
             {
-                Logger.LogDebug(ex, "Fiscalization service is not reachable.");
-                return await ProcessFailedReceiptRequest(queue, queueItem, request, queueMe).ConfigureAwait(false);
+                return await CheckForFiscalizationException(queue, request, queueItem, queueMe, subsequent, ex);
             }
             catch (Exception ex)
             {

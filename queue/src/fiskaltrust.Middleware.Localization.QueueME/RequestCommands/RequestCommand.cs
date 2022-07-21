@@ -8,6 +8,7 @@ using fiskaltrust.ifPOS.v1.me;
 using System.Collections.Generic;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using System.Linq;
+using Grpc.Core;
 using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
@@ -36,7 +37,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 
         public abstract Task<bool> ReceiptNeedsReprocessing(ftQueueME queueMe, ftQueueItem queueItem, ReceiptRequest request);
 
-        public abstract Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftQueueME queueMe);
+        public abstract Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftQueueME queueMe, bool subsequent = false);
 
         protected ReceiptResponse CreateReceiptResponse(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ulong? yearlyOrdinalNumber = null)
         {
@@ -104,11 +105,24 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             await ConfigurationRepository.InsertOrUpdateQueueMEAsync(queueMe).ConfigureAwait(false);
             var receiptResponse = CreateReceiptResponse(queue, request, queueItem);
             receiptResponse.ftState += SSCD_FAILED_MODE_FLAG;
+            Logger.LogInformation($"Queue is in failed mode. SSCDFailMoment: {queueMe.SSCDFailMoment}, SSCDFailCount: {queueMe.SSCDFailCount}. When connection is established use zeroreceipt for subsequent booking!");
 
             return new RequestCommandResponse
             {
                 ReceiptResponse = receiptResponse
             };
+        }
+
+        protected async Task<RequestCommandResponse> CheckForFiscalizationException(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem,
+            ftQueueME queueMe, bool subsequent, RpcException ex)
+        {
+            if (ex.Trailers.GetValue("exception-type") != "FiscalizationException" || subsequent)
+            {
+                throw ex;
+            }
+
+            Logger.LogDebug(ex, ex.Trailers.GetValue("exception - message"));
+            return await ProcessFailedReceiptRequest(queue, queueItem, request, queueMe).ConfigureAwait(false);
         }
 
         protected async Task<bool> ActionJournalExists(ftQueueItem queueItem, long type)

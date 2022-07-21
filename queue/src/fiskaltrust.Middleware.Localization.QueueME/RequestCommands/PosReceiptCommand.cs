@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using fiskaltrust.Middleware.Contracts.Constants;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueME.Factories;
+using Grpc.Core;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 {
@@ -28,7 +29,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             _signatureItemFactory = signatureItemFactory;
         }
 
-        public override async Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftQueueME queueMe)
+        public override async Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftQueueME queueMe, bool subsequent = false)
         {
             var scu = await ConfigurationRepository.GetSignaturCreationUnitMEAsync(queueMe.ftSignaturCreationUnitMEId.Value).ConfigureAwait(false);
 
@@ -39,11 +40,11 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             var invoiceDetails = await CreateInvoiceDetail(request, invoice, queueItem).ConfigureAwait(false);
             invoiceDetails.InvoicingType = InvoicingType.Invoice;
 
-            return await SendInvoiceDetailToCis(client, queue, request, queueItem, queueMe, scu, invoiceDetails, invoice);
+            return await SendInvoiceDetailToCis(client, queue, request, queueItem, queueMe, scu, invoiceDetails, subsequent);
         }
 
         protected async Task<RequestCommandResponse> SendInvoiceDetailToCis(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem,
-            ftQueueME queueMe, ftSignaturCreationUnitME scu, InvoiceDetails invoiceDetails, Invoice invoice)
+            ftQueueME queueMe, ftSignaturCreationUnitME scu, InvoiceDetails invoiceDetails, bool subsequent)
         {
             var operatorCode = GetOperatorCodeOrThrow(request.cbUser);
 
@@ -53,10 +54,14 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             RegisterInvoiceResponse registerInvoiceResponse;
             try
             {
-                var registerInvoiceRequest = CreateInvoiceRequest(request, queueItem, invoice, scu, invoiceDetails, computeIicResponse, operatorCode);
+                var registerInvoiceRequest = CreateInvoiceRequest(request, queueItem, scu, invoiceDetails, computeIicResponse, operatorCode, subsequent);
                 registerInvoiceResponse = await client.RegisterInvoiceAsync(registerInvoiceRequest).ConfigureAwait(false);
             }
-            catch (EntryPointNotFoundException ex)
+            catch (RpcException ex)
+            {
+                return await CheckForFiscalizationException(queue, request, queueItem, queueMe, subsequent, ex);
+            }
+            catch (Exception ex)
             {
                 Logger.LogDebug(ex, "Fiscalization service is not reachable.");
                 return await ProcessFailedReceiptRequest(queue, queueItem, request, queueMe).ConfigureAwait(false);
@@ -174,7 +179,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             };
         }
 
-        private static RegisterInvoiceRequest CreateInvoiceRequest(ReceiptRequest request, ftQueueItem queueItem, Invoice invoice, ftSignaturCreationUnitME scu, InvoiceDetails invoiceDetails, ComputeIICResponse computeIicResponse, string operatorCode)
+        private static RegisterInvoiceRequest CreateInvoiceRequest(ReceiptRequest request, ftQueueItem queueItem, ftSignaturCreationUnitME scu, InvoiceDetails invoiceDetails, ComputeIICResponse computeIicResponse, string operatorCode, bool subsequent)
         {
             return new RegisterInvoiceRequest
             {
@@ -186,7 +191,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 Moment = request.cbReceiptMoment,
                 OperatorCode = operatorCode,
                 RequestId = queueItem.ftQueueItemId,
-                SubsequentDeliveryType = invoice?.SubsequentDeliveryType == null ? null : (SubsequentDeliveryType) Enum.Parse(typeof(SubsequentDeliveryType), invoice.SubsequentDeliveryType),
+                SubsequentDeliveryType = subsequent ? SubsequentDeliveryType.NoInternet : null,
                 IIC = computeIicResponse.IIC,
                 IICSignature = computeIicResponse.IICSignature
             };

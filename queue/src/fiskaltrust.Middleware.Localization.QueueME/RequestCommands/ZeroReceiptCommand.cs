@@ -25,7 +25,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             _requestCommandFactory = requestCommandFactory;
         }
 
-        public override async Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftQueueME queueME)
+        public override async Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftQueueME queueME, bool subsequent = false)
         {
             try
             {
@@ -47,7 +47,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                     {
                         try
                         {
-                            var requestCommandResponse = await command.ExecuteAsync(client, queue, frequest, fqueueItem, queueME).ConfigureAwait(false);
+                            var requestCommandResponse = await command.ExecuteAsync(client, queue, frequest, fqueueItem, queueME,true).ConfigureAwait(false);
                             if (requestCommandResponse.ActionJournals != null)
                             {
                                 foreach (var journal in requestCommandResponse.ActionJournals)
@@ -71,7 +71,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 var receiptResponse = CreateReceiptResponse(queue, request, queueItem);
                 receiptResponse.ftSignatures = receiptResponse.ftSignatures.Concat(new List<SignaturItem>
                 {
-                    new SignaturItem
+                    new()
                     {
                         ftSignatureType = 0x4D45_0000_0000_0002,
                         ftSignatureFormat = (long) ifPOS.v0.SignaturItem.Formats.Text,

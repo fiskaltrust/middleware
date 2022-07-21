@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.ServiceModel;
 using System.Text;
 using System.Threading.Tasks;
+using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.me;
 using fiskaltrust.Middleware.SCU.ME.Common.Configuration;
 using fiskaltrust.Middleware.SCU.ME.Common.Helpers;
@@ -38,17 +40,20 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
 
     public async Task<RegisterCashDepositResponse> RegisterCashDepositAsync(RegisterCashDepositRequest registerCashDepositRequest)
     {
+        var sendTime = registerCashDepositRequest.SubsequentDeliveryType.HasValue
+            ? DateTime.Now
+            : ConvertToCETFromUtc(registerCashDepositRequest.Moment);
         var request = new SoapFiscalizationService.RegisterCashDepositRequest
         {
             Header = new SoapFiscalizationService.RegisterCashDepositRequestHeaderType
             {
-                SendDateTime = registerCashDepositRequest.SubsequentDeliveryType.HasValue ? DateTime.Now : ConvertToCETFromUtc(registerCashDepositRequest.Moment),
+                SendDateTime = sendTime,
                 UUID = registerCashDepositRequest.RequestId.ToString(),
             },
             CashDeposit = new SoapFiscalizationService.CashDepositType
             {
                 CashAmt = registerCashDepositRequest.Amount + 0.00m,
-                ChangeDateTime = ConvertToCETFromUtc(registerCashDepositRequest.Moment),
+                ChangeDateTime = sendTime,
                 IssuerTIN = _configuration.TIN,
                 Operation = SoapFiscalizationService.CashDepositOperationSType.INITIAL,
                 TCRCode = registerCashDepositRequest.TcrCode
@@ -59,10 +64,12 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
         {
             var response = await _fiscalizationServiceClient.registerCashDepositAsync(request);
 
-            return new RegisterCashDepositResponse
-            {
-                FCDC = response.RegisterCashDepositResponse.FCDC
-            };
+            return new RegisterCashDepositResponse { FCDC = response.RegisterCashDepositResponse.FCDC };
+        }
+        catch (EndpointNotFoundException ep)
+        {
+            _logger.LogError(ep, "Error sending request");
+            throw new FiscalizationException("No access to Fiscalization Endpoint!", ep);
         }
         catch (Exception e)
         {
@@ -84,7 +91,7 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
             CashDeposit = new SoapFiscalizationService.CashDepositType
             {
                 CashAmt = registerCashWithdrawalRequest.Amount + 0.00m,
-                ChangeDateTime = ConvertToCETFromUtc(registerCashWithdrawalRequest.Moment),
+                ChangeDateTime = sendDateTime,
                 IssuerTIN = _configuration.TIN,
                 Operation = SoapFiscalizationService.CashDepositOperationSType.WITHDRAW,
                 TCRCode = registerCashWithdrawalRequest.TcrCode
@@ -94,6 +101,11 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
         try
         {
             _ = await _fiscalizationServiceClient.registerCashDepositAsync(request);
+        }
+        catch (EndpointNotFoundException ep)
+        {
+            _logger.LogError(ep, "Error sending request");
+            throw new FiscalizationException("No access to Fiscalization Endpoint!", ep);
         }
         catch (Exception e)
         {
@@ -193,7 +205,7 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
                     Amt = p.Amount,
                     BankAcc = null,
                     CompCard = p.CompanyCardNumber,
-                    Type = (SoapFiscalizationService.PaymentMethodTypeSType) p.Type,
+                    Type = (SoapFiscalizationService.PaymentMethodTypeSType) Enum.Parse(typeof(SoapFiscalizationService.PaymentMethodTypeSType), p.Type.ToString().ToUpper())
                     //Vouchers = p.VoucherNumbers?.Select(v => new SoapFiscalizationService.VoucherType { Num = v })?.ToArray() ?? new SoapFiscalizationService.VoucherType[0]
                 }).ToArray(),
                 SameTaxes = registerInvoiceRequest.InvoiceDetails.ItemDetails?.Where(x => x.VatRate.HasValue).GroupBy(g => g.VatRate).Select(s => new SoapFiscalizationService.SameTaxType
@@ -299,11 +311,15 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
         };
 
             var response = await _fiscalizationServiceClient.registerInvoiceAsync(request);
-
             return new RegisterInvoiceResponse
             {
                 FIC = response.RegisterInvoiceResponse.FIC,
             };
+        }
+        catch (EndpointNotFoundException ep)
+        {
+            _logger.LogError(ep, "Error sending request");
+            throw new FiscalizationException("No access to Fiscalization Endpoint!", ep);
         }
         catch (Exception e)
         {

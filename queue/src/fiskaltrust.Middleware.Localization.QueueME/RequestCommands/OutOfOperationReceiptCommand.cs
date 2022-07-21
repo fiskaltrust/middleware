@@ -26,7 +26,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             _signatureItemFactory = signatureItemFactory;
         }
 
-        public override async Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftQueueME queueME)
+        public override async Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftQueueME queueME, bool subsequent = false)
         {
             try
             {
@@ -75,11 +75,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                     ReceiptResponse = receiptResponse,
                     ActionJournals = new List<ftActionJournal> { actionJournal }
                 };
-            }
-            catch (EntryPointNotFoundException ex)
-            {
-                Logger.LogDebug(ex, "Fiscalization service is not reachable.");
-                return await ProcessFailedReceiptRequest(queue, queueItem, request, queueME).ConfigureAwait(false);
             }
             catch (Exception ex)
             {

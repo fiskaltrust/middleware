@@ -20,7 +20,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             base(logger, configurationRepository, journalMeRepository, queueItemRepository, actionJournalRepository, queueMeConfiguration, signatureItemFactory)
         { }
 
-        public override async Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftQueueME queueMe)
+        public override async Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftQueueME queueMe, bool subsequent = false)
         {
             var (scu, _) = await ValidateVoidReceipt(request, queueMe).ConfigureAwait(false);
             var receiptToCancel = await GetReceiptToCancel(request).ConfigureAwait(false);
@@ -29,7 +29,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             invoiceDetailsCancel.InvoiceCorrectionDetails = GetInvoiceCorrectionDetails(receiptToCancel.QueueItem, receiptToCancel.JournalMe);
             invoiceDetailsCancel.InvoicingType = InvoicingType.Corrective;
             return await SendInvoiceDetailToCis(client, queue, receiptToCancel.ReceiptRequest, queueItem, queueMe, scu,
-                invoiceDetailsCancel, receiptToCancel.Invoice);
+                invoiceDetailsCancel, subsequent);
         }
 
         protected InvoiceCorrectionDetails GetInvoiceCorrectionDetails(ftQueueItem queueItemToCancel, ftJournalME journalMeToCancel)

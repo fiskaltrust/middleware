@@ -20,14 +20,14 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             base(logger, configurationRepository, journalMeRepository, queueItemRepository, actionJournalRepository, queueMeConfiguration, signatureItemFactory)
         { }
 
-        public override async Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftQueueME queueMe)
+        public override async Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftQueueME queueMe, bool subsequent = false)
         {
             var (scu, invoice) = await ValidateVoidReceipt(request, queueMe);
             var receiptToCancel = await GetReceiptToCancel(request).ConfigureAwait(false);
             if (receiptToCancel.ReceiptRequest.cbPayItems.Any(x => x.IsCashLocalCurrency()) ||
                 request.cbPayItems.Any(x => x.IsCashLocalCurrency()))
             {
-                return await VoidForCashReceipts(client, queue, request, queueItem, queueMe, receiptToCancel.ReceiptRequest, receiptToCancel.Invoice, receiptToCancel.QueueItem, receiptToCancel.JournalMe, scu, invoice);
+                return await VoidForCashReceipts(client, queue, request, queueItem, queueMe, receiptToCancel.ReceiptRequest, receiptToCancel.Invoice, receiptToCancel.QueueItem, receiptToCancel.JournalMe, scu, invoice, subsequent);
             }
             var invoiceSummary = await CreateInvoiceDetail(request, invoice, queueItem).ConfigureAwait(false);
             var invoiceDetailToCancel = await CreateInvoiceDetail(receiptToCancel.ReceiptRequest, receiptToCancel.Invoice, receiptToCancel.QueueItem).ConfigureAwait(false);
@@ -42,7 +42,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             var payment = invoiceDetailVoid.PaymentDetails.First();
             payment.Amount = invoiceDetailVoid.GrossAmount;
             invoiceDetailVoid.PaymentDetails = new List<InvoicePayment> { payment };
-            await SendInvoiceDetailToCis(client, queue, request, queueItem, queueMe, scu, invoiceDetailVoid, invoice).ConfigureAwait(false);
+            await SendInvoiceDetailToCis(client, queue, request, queueItem, queueMe, scu, invoiceDetailVoid, subsequent).ConfigureAwait(false);
 
             var journalMe = await JournalMeRepository.GetByQueueItemId(queueItem.ftQueueItemId).ToListAsync().ConfigureAwait(false);
             invoiceSummary.YearlyOrdinalNumber = invoiceDetailVoid.YearlyOrdinalNumber+1;
@@ -63,7 +63,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             };
             invoiceSummary.InvoiceType = InvoiceType.NonCash;
             invoiceSummary.InvoicingType = InvoicingType.Summary;
-            return await SendInvoiceDetailToCis(client, queue, request, queueItem, queueMe, scu, invoiceSummary, invoice).ConfigureAwait(false);
+            return await SendInvoiceDetailToCis(client, queue, request, queueItem, queueMe, scu, invoiceSummary, subsequent).ConfigureAwait(false);
         }
 
         private static List<ChargeItem> GetVoidChargeItems(ReceiptRequest request, ReceiptToCancel receiptToCancel)
@@ -107,7 +107,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 
         private async Task<RequestCommandResponse> VoidForCashReceipts(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem,
             ftQueueME queueMe, ReceiptRequest receiptRequestToCancel, Invoice invoiceToCancel, ftQueueItem queueItemToCancel,
-            ftJournalME journalMeToCancel, ftSignaturCreationUnitME scu, Invoice invoice)
+            ftJournalME journalMeToCancel, ftSignaturCreationUnitME scu, Invoice invoice, bool subsequent)
         {
             var invoiceDetailsCancel =
                 await CreateInvoiceDetail(receiptRequestToCancel, invoiceToCancel, queueItemToCancel, true)
@@ -116,10 +116,10 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             invoiceDetailsCancel.InvoiceCorrectionDetails = GetInvoiceCorrectionDetails(queueItemToCancel, journalMeToCancel);
             invoiceDetailsCancel.InvoicingType = InvoicingType.Corrective;
             await SendInvoiceDetailToCis(client, queue, receiptRequestToCancel, queueItem, queueMe, scu,
-                invoiceDetailsCancel, invoiceToCancel);
+                invoiceDetailsCancel, subsequent);
             var invoiceDetails = await CreateInvoiceDetail(request, invoice, queueItem).ConfigureAwait(false);
             invoiceDetails.InvoicingType = InvoicingType.Invoice;
-            return await SendInvoiceDetailToCis(client, queue, request, queueItem, queueMe, scu, invoiceDetails, invoice);
+            return await SendInvoiceDetailToCis(client, queue, request, queueItem, queueMe, scu, invoiceDetails, subsequent);
         }
     }
 }
