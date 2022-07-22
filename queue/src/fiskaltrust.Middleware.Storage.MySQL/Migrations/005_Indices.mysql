@@ -1,3 +1,4 @@
+ALTER TABLE ftQueueItem MODIFY cbReceiptReference VARCHAR(450);
 CREATE INDEX idx_ftQueueItem_Timestamp ON ftQueueItem (TimeStamp);
 CREATE INDEX idx_ftQueueItem_cbReceiptReference ON ftQueueItem (cbReceiptReference);
 CREATE INDEX idx_ftActionJournal_Timestamp ON ftActionJournal (TimeStamp);
