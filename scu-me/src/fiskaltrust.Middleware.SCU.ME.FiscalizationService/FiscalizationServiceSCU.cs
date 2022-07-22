@@ -1,11 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.ServiceModel;
-using System.Text;
 using System.Threading.Tasks;
-using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.me;
 using fiskaltrust.Middleware.SCU.ME.Common.Configuration;
 using fiskaltrust.Middleware.SCU.ME.Common.Helpers;

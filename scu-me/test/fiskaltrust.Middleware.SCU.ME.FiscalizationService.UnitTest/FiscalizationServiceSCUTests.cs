@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Bogus;
 using fiskaltrust.ifPOS.v1.me;
 using fiskaltrust.Middleware.SCU.ME.Common.Configuration;
+using fiskaltrust.Middleware.SCU.ME.FiscalizationService.Helpers;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -93,9 +94,9 @@ namespace fiskaltrust.Middleware.SCU.ME.FiscalizationService.UnitTest
             {
                 _ = await meSSCD.RegisterCashDepositAsync(request);
             }
-            catch (System.ServiceModel.FaultException ex)
+            catch (FiscalizationException ex)
             {
-                _ = ex.Message.Should().StartWith("Received certificate doesn't contain TIN number.");
+                _ = ex.InnerException?.Message.Should().StartWith("Received certificate doesn't contain TIN number.");
             }
             finally
             {
@@ -120,9 +121,9 @@ namespace fiskaltrust.Middleware.SCU.ME.FiscalizationService.UnitTest
             {
                 await meSSCD.RegisterCashWithdrawalAsync(request);
             }
-            catch (System.ServiceModel.FaultException ex)
+            catch (FiscalizationException ex)
             {
-                _ = ex.Message.Should().StartWith("Received certificate doesn't contain TIN number.");
+                _ = ex.InnerException?.Message.Should().StartWith("Received certificate doesn't contain TIN number.");
             }
             finally
             {
