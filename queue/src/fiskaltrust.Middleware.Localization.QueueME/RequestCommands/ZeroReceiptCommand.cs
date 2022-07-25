@@ -11,6 +11,7 @@ using Newtonsoft.Json;
 using fiskaltrust.Middleware.Localization.QueueME.RequestCommands.Factories;
 using System.Linq;
 using System.Collections.Generic;
+using Grpc.Core;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 {
@@ -58,7 +59,15 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                         }
                         catch (Exception ex)
                         {
-                            Logger.LogError(ex, "Request could not be resolved: " + fqueueItem.request);
+                            if (IsFiscalizationException(ex))
+                            {
+                                var rpc = ex as RpcException;
+                                Logger.LogError(ex,
+                                    rpc.Trailers.Where(x => x.Key.EndsWith("exception-message")).Select(x => x.Value)
+                                        .FirstOrDefault());
+                                throw;
+                            }
+                            Logger.LogError(ex, $"The receipt {frequest.cbReceiptReference} could not be proccessed!");
                         }
                     }
                 }

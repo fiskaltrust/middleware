@@ -125,19 +125,29 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             ftQueueME queueMe, bool subsequent, Exception ex)
         {
 
-            if (ex is not RpcException rpc)
+            if (!IsFiscalizationException(ex) || subsequent)
             {
                 throw ex;
             }
 
+            var rpc = ex as RpcException;
+            Logger.LogError(ex, rpc.Trailers.Where( x => x.Key.EndsWith("exception-message")).Select(x => x.Value).FirstOrDefault());
+            return await ProcessFailedReceiptRequest(queue, queueItem, request, queueMe).ConfigureAwait(false);
+        }
+
+        protected bool IsFiscalizationException(Exception ex)
+        {
+            if (ex is not RpcException rpc)
+            {
+                return false;
+            }
             var fisExc = rpc.Trailers.Where(x => x.Key.EndsWith("exception-type")).Select(x => x.Value)
                 .FirstOrDefault();
-            if (fisExc == null || !fisExc.Equals("FiscalizationException") || subsequent)
+            if (fisExc == null || !fisExc.Equals("FiscalizationException"))
             {
-                throw rpc;
+                return false;
             }
-            Logger.LogDebug(rpc, rpc.Trailers.Where( x => x.Key.EndsWith("exception-message")).Select(x => x.Value).FirstOrDefault());
-            return await ProcessFailedReceiptRequest(queue, queueItem, request, queueMe).ConfigureAwait(false);
+            return true;
         }
     }
 }
