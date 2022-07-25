@@ -13,7 +13,6 @@ using System.Collections.Generic;
 using fiskaltrust.Middleware.Contracts.Constants;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueME.Factories;
-using Grpc.Core;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 {
@@ -40,11 +39,11 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             var invoiceDetails = await CreateInvoiceDetail(request, invoice, queueItem).ConfigureAwait(false);
             invoiceDetails.InvoicingType = InvoicingType.Invoice;
 
-            return await SendInvoiceDetailToCis(client, queue, request, queueItem, queueMe, scu, invoiceDetails, subsequent);
+            return await SendInvoiceDetailToCis(client, queue, request, queueItem, scu, invoiceDetails, subsequent);
         }
 
         protected async Task<RequestCommandResponse> SendInvoiceDetailToCis(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem,
-            ftQueueME queueMe, ftSignaturCreationUnitME scu, InvoiceDetails invoiceDetails, bool subsequent)
+            ftSignaturCreationUnitME scu, InvoiceDetails invoiceDetails, bool subsequent)
         {
             var operatorCode = GetOperatorCodeOrThrow(request.cbUser);
 
@@ -52,20 +51,10 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             var computeIicResponse = await client.ComputeIICAsync(computeIicRequest).ConfigureAwait(false);
 
             RegisterInvoiceResponse registerInvoiceResponse;
-            try
-            {
-                var registerInvoiceRequest = CreateInvoiceRequest(request, queueItem, scu, invoiceDetails, computeIicResponse, operatorCode, subsequent);
-                registerInvoiceResponse = await client.RegisterInvoiceAsync(registerInvoiceRequest).ConfigureAwait(false);
-            }
-            catch (RpcException ex)
-            {
-                return await CheckForFiscalizationException(queue, request, queueItem, queueMe, subsequent, ex);
-            }
-            catch (Exception ex)
-            {
-                Logger.LogDebug(ex, "Fiscalization service is not reachable.");
-                return await ProcessFailedReceiptRequest(queue, queueItem, request, queueMe).ConfigureAwait(false);
-            }
+
+            var registerInvoiceRequest = CreateInvoiceRequest(request, queueItem, scu, invoiceDetails, computeIicResponse, operatorCode, subsequent);
+            registerInvoiceResponse = await client.RegisterInvoiceAsync(registerInvoiceRequest).ConfigureAwait(false);
+
             await InsertJournalMe(queue, request, queueItem, scu, registerInvoiceResponse, invoiceDetails, computeIicResponse).ConfigureAwait(false);
             var receiptResponse = CreateReceiptResponse(queue, request, queueItem, invoiceDetails.YearlyOrdinalNumber);
             var signature = _signatureItemFactory.CreatePosReceiptSignatures(request, computeIicResponse, invoiceDetails.YearlyOrdinalNumber, scu);

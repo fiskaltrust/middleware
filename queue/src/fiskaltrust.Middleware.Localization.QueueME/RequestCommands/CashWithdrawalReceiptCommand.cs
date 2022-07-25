@@ -9,7 +9,6 @@ using fiskaltrust.ifPOS.v1.me;
 using fiskaltrust.Middleware.Localization.QueueME.Exceptions;
 using System.Collections.Generic;
 using fiskaltrust.Middleware.Contracts.Repositories;
-using Grpc.Core;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 {
@@ -22,8 +21,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 
         public override async Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftQueueME queueMe, bool subsequent = false)
         {
-            try
-            {
+
                 var scu = await ConfigurationRepository.GetSignaturCreationUnitMEAsync(queueMe.ftSignaturCreationUnitMEId.Value).ConfigureAwait(false);
                 var withdrawalChargeItems = request.cbChargeItems.Where(x => x.ftChargeItemCase == 0x4D45000000000021);
                 if (!withdrawalChargeItems.Any())
@@ -50,16 +48,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                         actionJournalEntry
                     }
                 };
-            }
-            catch (RpcException ex)
-            {
-                return await CheckForFiscalizationException(queue, request, queueItem, queueMe, subsequent, ex);
-            }
-            catch (Exception ex)
-            {
-                Logger.LogCritical(ex, "An exception occurred while processing this request.");
-                throw;
-            }
+
         }
 
         public override async Task<bool> ReceiptNeedsReprocessing(ftQueueME queueMe, ftQueueItem queueItem, ReceiptRequest request)

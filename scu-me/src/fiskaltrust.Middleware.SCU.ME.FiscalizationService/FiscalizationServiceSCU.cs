@@ -128,7 +128,7 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
                 InvOrdNum = (int) registerInvoiceRequest.InvoiceDetails.YearlyOrdinalNumber,
                 IsIssuerInVAT = registerInvoiceRequest.IsIssuerInVATSystem,
                 IsReverseChargeSpecified = default,
-                IssueDateTime = ConvertToCETFromUtc(registerInvoiceRequest.Moment),
+                IssueDateTime = sendDateTime,
                 Items = registerInvoiceRequest.InvoiceDetails.ItemDetails?.Select(i =>
                 {
                     var invoiceItem = new SoapFiscalizationService.InvoiceItemType
@@ -427,7 +427,7 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
         if (e is EndpointNotFoundException or WebException or CommunicationException)
         {
             _logger.LogError(e, "Error sending request");
-            throw new FiscalizationException("No access to Fiscalization Endpoint!", e);
+            throw new FiscalizationException("No access to Fiscalization Endpoint!");
         }
         _logger.LogError(e, "Error sending request");
         throw e;

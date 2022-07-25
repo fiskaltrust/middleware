@@ -8,7 +8,6 @@ using fiskaltrust.ifPOS.v1.me;
 using System.Collections.Generic;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using System.Linq;
-using Grpc.Core;
 using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
@@ -111,18 +110,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             {
                 ReceiptResponse = receiptResponse
             };
-        }
-
-        protected async Task<RequestCommandResponse> CheckForFiscalizationException(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem,
-            ftQueueME queueMe, bool subsequent, RpcException ex)
-        {
-            if (ex.Trailers.GetValue("exception-type") != "FiscalizationException" || subsequent)
-            {
-                throw ex;
-            }
-
-            Logger.LogDebug(ex, ex.Trailers.GetValue("exception - message"));
-            return await ProcessFailedReceiptRequest(queue, queueItem, request, queueMe).ConfigureAwait(false);
         }
 
         protected async Task<bool> ActionJournalExists(ftQueueItem queueItem, long type)
