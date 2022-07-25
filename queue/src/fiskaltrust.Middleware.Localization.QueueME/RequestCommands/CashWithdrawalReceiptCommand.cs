@@ -37,18 +37,24 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                     SubsequentDeliveryType = subsequent ? SubsequentDeliveryType.NoInternet : null,
                     TcrCode = scu.TcrCode
                 };
-                await client.RegisterCashWithdrawalAsync(registerCashWithdrawalRequest).ConfigureAwait(false);
-                var receiptResponse = CreateReceiptResponse(queue, request, queueItem);
-                var actionJournalEntry = CreateActionJournal(queue, request.ftReceiptCase, queueItem);
-                return new RequestCommandResponse
+                try
                 {
-                    ReceiptResponse = receiptResponse,
-                    ActionJournals = new List<ftActionJournal>
+                    await client.RegisterCashWithdrawalAsync(registerCashWithdrawalRequest).ConfigureAwait(false);
+                    var receiptResponse = CreateReceiptResponse(queue, request, queueItem);
+                    var actionJournalEntry = CreateActionJournal(queue, request.ftReceiptCase, queueItem);
+                    return new RequestCommandResponse
                     {
-                        actionJournalEntry
-                    }
-                };
-
+                        ReceiptResponse = receiptResponse,
+                        ActionJournals = new List<ftActionJournal>
+                        {
+                            actionJournalEntry
+                        }
+                    };
+                }
+                catch (Exception ex)
+                {
+                    return await CheckForFiscalizationException(queue, request, queueItem, queueMe, subsequent, ex).ConfigureAwait(false);
+                }
         }
 
         public override async Task<bool> ReceiptNeedsReprocessing(ftQueueME queueMe, ftQueueItem queueItem, ReceiptRequest request)

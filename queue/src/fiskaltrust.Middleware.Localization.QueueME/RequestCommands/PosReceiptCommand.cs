@@ -39,10 +39,10 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             var invoiceDetails = await CreateInvoiceDetail(request, invoice, queueItem).ConfigureAwait(false);
             invoiceDetails.InvoicingType = InvoicingType.Invoice;
 
-            return await SendInvoiceDetailToCis(client, queue, request, queueItem, scu, invoiceDetails, subsequent);
+            return await SendInvoiceDetailToCis(client, queue, queueMe, request, queueItem, scu, invoiceDetails, subsequent);
         }
 
-        protected async Task<RequestCommandResponse> SendInvoiceDetailToCis(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem,
+        protected async Task<RequestCommandResponse> SendInvoiceDetailToCis(IMESSCD client, ftQueue queue, ftQueueME queueMe, ReceiptRequest request, ftQueueItem queueItem,
             ftSignaturCreationUnitME scu, InvoiceDetails invoiceDetails, bool subsequent)
         {
             var operatorCode = GetOperatorCodeOrThrow(request.cbUser);
@@ -53,17 +53,23 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             RegisterInvoiceResponse registerInvoiceResponse;
 
             var registerInvoiceRequest = CreateInvoiceRequest(request, queueItem, scu, invoiceDetails, computeIicResponse, operatorCode, subsequent);
-            registerInvoiceResponse = await client.RegisterInvoiceAsync(registerInvoiceRequest).ConfigureAwait(false);
+            try{
+                registerInvoiceResponse = await client.RegisterInvoiceAsync(registerInvoiceRequest).ConfigureAwait(false);
 
-            await InsertJournalMe(queue, request, queueItem, scu, registerInvoiceResponse, invoiceDetails, computeIicResponse).ConfigureAwait(false);
-            var receiptResponse = CreateReceiptResponse(queue, request, queueItem, invoiceDetails.YearlyOrdinalNumber);
-            var signature = _signatureItemFactory.CreatePosReceiptSignatures(request, computeIicResponse, invoiceDetails.YearlyOrdinalNumber, scu);
-            receiptResponse.ftSignatures = receiptResponse.ftSignatures.Extend(signature);
+                await InsertJournalMe(queue, request, queueItem, scu, registerInvoiceResponse, invoiceDetails, computeIicResponse).ConfigureAwait(false);
+                var receiptResponse = CreateReceiptResponse(queue, request, queueItem, invoiceDetails.YearlyOrdinalNumber);
+                var signature = _signatureItemFactory.CreatePosReceiptSignatures(request, computeIicResponse, invoiceDetails.YearlyOrdinalNumber, scu);
+                receiptResponse.ftSignatures = receiptResponse.ftSignatures.Extend(signature);
 
-            return new RequestCommandResponse
+                return new RequestCommandResponse
+                {
+                    ReceiptResponse = receiptResponse,
+                };
+            }
+            catch (Exception ex)
             {
-                ReceiptResponse = receiptResponse,
-            };
+                return await CheckForFiscalizationException(queue, request, queueItem, queueMe, subsequent, ex).ConfigureAwait(false);
+            }
         }
 
         protected string GetOperatorCodeOrThrow(string cbUser)

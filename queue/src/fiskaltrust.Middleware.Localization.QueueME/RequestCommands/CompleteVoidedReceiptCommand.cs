@@ -28,7 +28,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             invoiceDetailsCancel.YearlyOrdinalNumber = await GetNextOrdinalNumber(queueItem).ConfigureAwait(false);
             invoiceDetailsCancel.InvoiceCorrectionDetails = GetInvoiceCorrectionDetails(receiptToCancel.QueueItem, receiptToCancel.JournalMe);
             invoiceDetailsCancel.InvoicingType = InvoicingType.Corrective;
-            return await SendInvoiceDetailToCis(client, queue, receiptToCancel.ReceiptRequest, queueItem, scu,
+            return await SendInvoiceDetailToCis(client, queue, queueMe, receiptToCancel.ReceiptRequest, queueItem, scu,
                 invoiceDetailsCancel, subsequent);
         }
 

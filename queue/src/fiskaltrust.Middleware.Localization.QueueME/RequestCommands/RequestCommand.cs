@@ -8,6 +8,7 @@ using fiskaltrust.ifPOS.v1.me;
 using System.Collections.Generic;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using System.Linq;
+using Grpc.Core;
 using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
@@ -23,7 +24,8 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
         protected readonly IMiddlewareActionJournalRepository ActionJournalRepository;
         protected readonly QueueMEConfiguration QueueMeConfiguration;
 
-        protected RequestCommand(ILogger<RequestCommand> logger, IConfigurationRepository configurationRepository, IMiddlewareJournalMERepository journalMeRepository, IMiddlewareQueueItemRepository queueItemRepository,
+        protected RequestCommand(ILogger<RequestCommand> logger, IConfigurationRepository configurationRepository,
+            IMiddlewareJournalMERepository journalMeRepository, IMiddlewareQueueItemRepository queueItemRepository,
             IMiddlewareActionJournalRepository actionJournalRepository, QueueMEConfiguration queueMeConfiguration)
         {
             Logger = logger;
@@ -34,11 +36,14 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             QueueMeConfiguration = queueMeConfiguration;
         }
 
-        public abstract Task<bool> ReceiptNeedsReprocessing(ftQueueME queueMe, ftQueueItem queueItem, ReceiptRequest request);
+        public abstract Task<bool> ReceiptNeedsReprocessing(ftQueueME queueMe, ftQueueItem queueItem,
+            ReceiptRequest request);
 
-        public abstract Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftQueueME queueMe, bool subsequent = false);
+        public abstract Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request,
+            ftQueueItem queueItem, ftQueueME queueMe, bool subsequent = false);
 
-        protected ReceiptResponse CreateReceiptResponse(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ulong? yearlyOrdinalNumber = null)
+        protected ReceiptResponse CreateReceiptResponse(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem,
+            ulong? yearlyOrdinalNumber = null)
         {
             var receiptIdentification = $"ft{queue.ftReceiptNumerator:X}#";
             if (yearlyOrdinalNumber.HasValue)
@@ -60,7 +65,8 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             };
         }
 
-        protected ftActionJournal CreateClosingActionJournal(ftQueue queue, long type, ftQueueItem queueItem, string message)
+        protected ftActionJournal CreateClosingActionJournal(ftQueue queue, long type, ftQueueItem queueItem,
+            string message)
         {
             return new ftActionJournal
             {
@@ -71,51 +77,67 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 Moment = DateTime.UtcNow,
                 Message = message,
                 Priority = -1,
-                DataJson = JsonConvert.SerializeObject(new
-                {
-                    ftReceiptNumerator = queue.ftReceiptNumerator + 1
-                })
+                DataJson = JsonConvert.SerializeObject(new { ftReceiptNumerator = queue.ftReceiptNumerator + 1 })
             };
         }
 
-        protected async Task<RequestCommandResponse> CreateClosingAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, string message)
+        protected async Task<RequestCommandResponse> CreateClosingAsync(ftQueue queue, ReceiptRequest request,
+            ftQueueItem queueItem, string message)
         {
             var receiptResponse = CreateReceiptResponse(queue, request, queueItem);
             var actionJournalEntry = CreateClosingActionJournal(queue, request.ftReceiptCase, queueItem, message);
             var requestCommandResponse = new RequestCommandResponse
             {
-                ReceiptResponse = receiptResponse,
-                ActionJournals = new List<ftActionJournal>
-                {
-                    actionJournalEntry
-                }
+                ReceiptResponse = receiptResponse, ActionJournals = new List<ftActionJournal> { actionJournalEntry }
             };
             return await Task.FromResult(requestCommandResponse).ConfigureAwait(false);
         }
 
-        public async Task<RequestCommandResponse> ProcessFailedReceiptRequest(ftQueue queue, ftQueueItem queueItem, ReceiptRequest request, ftQueueME queueMe)
+        public async Task<RequestCommandResponse> ProcessFailedReceiptRequest(ftQueue queue, ftQueueItem queueItem,
+            ReceiptRequest request, ftQueueME queueMe)
         {
             if (queueMe.SSCDFailCount == 0)
             {
                 queueMe.SSCDFailMoment = DateTime.UtcNow;
                 queueMe.SSCDFailQueueItemId = queueItem.ftQueueItemId;
             }
+
             queueMe.SSCDFailCount++;
             await ConfigurationRepository.InsertOrUpdateQueueMEAsync(queueMe).ConfigureAwait(false);
             var receiptResponse = CreateReceiptResponse(queue, request, queueItem);
             receiptResponse.ftState += SSCD_FAILED_MODE_FLAG;
-            Logger.LogInformation($"Queue is in failed mode. SSCDFailMoment: {queueMe.SSCDFailMoment}, SSCDFailCount: {queueMe.SSCDFailCount}. When connection is established use zeroreceipt for subsequent booking!");
+            Logger.LogInformation(
+                $"Queue is in failed mode. SSCDFailMoment: {queueMe.SSCDFailMoment}, SSCDFailCount: {queueMe.SSCDFailCount}. When connection is established use zeroreceipt for subsequent booking!");
 
-            return new RequestCommandResponse
-            {
-                ReceiptResponse = receiptResponse
-            };
+            return new RequestCommandResponse { ReceiptResponse = receiptResponse };
         }
 
         protected async Task<bool> ActionJournalExists(ftQueueItem queueItem, long type)
         {
-            var actionJournal = await ActionJournalRepository.GetByQueueItemId(queueItem.ftQueueItemId).FirstOrDefaultAsync().ConfigureAwait(false);
+            var actionJournal = await ActionJournalRepository.GetByQueueItemId(queueItem.ftQueueItemId)
+                .FirstOrDefaultAsync().ConfigureAwait(false);
             return actionJournal != null && actionJournal.Type == type.ToString();
+        }
+
+
+        protected async Task<RequestCommandResponse> CheckForFiscalizationException(ftQueue queue,
+            ReceiptRequest request, ftQueueItem queueItem,
+            ftQueueME queueMe, bool subsequent, Exception ex)
+        {
+
+            if (ex is not RpcException rpc)
+            {
+                throw ex;
+            }
+
+            var fisExc = rpc.Trailers.Where(x => x.Key.EndsWith("exception-type")).Select(x => x.Value)
+                .FirstOrDefault();
+            if (fisExc == null || !fisExc.Equals("FiscalizationException") || subsequent)
+            {
+                throw rpc;
+            }
+            Logger.LogDebug(rpc, rpc.Trailers.Where( x => x.Key.EndsWith("exception-message")).Select(x => x.Value).FirstOrDefault());
+            return await ProcessFailedReceiptRequest(queue, queueItem, request, queueMe).ConfigureAwait(false);
         }
     }
 }

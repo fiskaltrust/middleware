@@ -38,19 +38,23 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                     SubsequentDeliveryType = subsequent ? SubsequentDeliveryType.NoInternet : null
                 };
 
-
-                var registerCashDepositResponse = await client.RegisterCashDepositAsync(registerCashDepositRequest).ConfigureAwait(false);
-                await InsertJournalMe(queue, request, queueItem, registerCashDepositResponse).ConfigureAwait(false);
-                var receiptResponse = CreateReceiptResponse(queue, request, queueItem);
-                var actionJournalEntry = CreateActionJournal(queue, request.ftReceiptCase, queueItem);
-                return new RequestCommandResponse
+                try
                 {
-                    ReceiptResponse = receiptResponse,
-                    ActionJournals = new List<ftActionJournal>
+                    var registerCashDepositResponse = await client.RegisterCashDepositAsync(registerCashDepositRequest)
+                        .ConfigureAwait(false);
+                    await InsertJournalMe(queue, request, queueItem, registerCashDepositResponse).ConfigureAwait(false);
+                    var receiptResponse = CreateReceiptResponse(queue, request, queueItem);
+                    var actionJournalEntry = CreateActionJournal(queue, request.ftReceiptCase, queueItem);
+                    return new RequestCommandResponse
                     {
-                        actionJournalEntry
-                    }
-                };
+                        ReceiptResponse = receiptResponse,
+                        ActionJournals = new List<ftActionJournal> { actionJournalEntry }
+                    };
+                }
+                catch (Exception ex)
+                {
+                   return await CheckForFiscalizationException(queue, request, queueItem, queueMe, subsequent, ex).ConfigureAwait(false);
+                }
 
         }
 
