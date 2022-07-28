@@ -24,10 +24,19 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Repositories
             }
         }
 
-        public AbstractSQLiteRepository(ISqliteConnectionFactory connectionFactory, string path)
+        public AbstractSQLiteRepository(ISqliteConnectionFactory connectionFactory, string path, bool read = false)
         {
-            _connectionString = connectionFactory.BuildConnectionString(path);
-            _dbConnection = connectionFactory.GetConnection(_connectionString);
+            if (read)
+            {
+
+                _connectionString = $"Data Source={path};Version=3;Read Only=True;";
+            }
+            else
+            {
+                _connectionString = connectionFactory.BuildConnectionString(path);
+            }
+
+            _dbConnection = connectionFactory.GetNewConnection(_connectionString);
         }
 
         protected abstract TKey GetIdForEntity(T entity);
