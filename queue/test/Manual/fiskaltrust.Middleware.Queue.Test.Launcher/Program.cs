@@ -10,6 +10,7 @@ using fiskaltrust.Middleware.Localization.QueueDE;
 using fiskaltrust.Middleware.Queue.Test.Launcher.Helpers;
 using fiskaltrust.storage.serialization.V0;
 using fiskaltrust.storage.V0;
+using fiskaltrust.storage.V0.MasterData;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -19,8 +20,8 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
 {
     public static class Program
     {
-        private static readonly string _cashBoxId = "";
-        private static readonly string _accessToken = "";
+        private static readonly string _cashBoxId = "74851323-a96e-48ab-ad20-29cb4d3def4d";
+        private static readonly string _accessToken = "BBJe5Byqji+p1Q7tlNOfJuoMRkT09RRlb29FLej4Nmy9KAF5WveTYg+E+dZhIe1EYsglKA2jrTKRw6lY4d7EgEE=";
         private static readonly string _localization = "ME";
 
         public static void Main(string configurationFilePath = "", string serviceFolder = @"C:\ProgramData\fiskaltrust\service")
@@ -70,6 +71,18 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
                 config.Configuration["init_ftQueueME"] = temp.ToString().Replace("DE", "ME");
                 temp = config.Configuration["init_ftSignaturCreationUnitDE"];
                 config.Configuration["init_ftSignaturCreationUnitME"] = temp.ToString().Replace("DE", "ME");
+                
+                var masterDataConfiguration = new MasterDataConfiguration
+                {
+                    Account = new AccountMasterData { TaxId = "03102955" },
+                    Outlet = new OutletMasterData { LocationId = "pg000qi813" },
+                    PosSystems = new List<PosSystemMasterData>
+                    {
+                        new() { Brand = "xl522hw351", Model = "wv720nq953" }
+                    }
+                };
+                config.Configuration["init_masterData"] = JsonConvert.SerializeObject(masterDataConfiguration);
+
                 serviceCollection.AddScoped<IClientFactory<IDESSCD>, DESSCDClientFactory>();
             }
             else

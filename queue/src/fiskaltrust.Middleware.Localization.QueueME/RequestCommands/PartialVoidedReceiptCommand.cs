@@ -65,7 +65,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             invoiceSummary.InvoicingType = InvoicingType.Summary;
             return await SendInvoiceDetailToCis(client, queue, queueMe, request, queueItem, scu, invoiceSummary, subsequent).ConfigureAwait(false);
         }
-
         private static List<ChargeItem> GetVoidChargeItems(ReceiptRequest request, ReceiptToCancel receiptToCancel)
         {
             var chargeItems = new List<ChargeItem>();
@@ -85,7 +84,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 
             return chargeItems;
         }
-
         private static ChargeItem FindChargeItem(ReceiptRequest request, ChargeItem chargeItem)
         {
             var foundItem = request.cbChargeItems.ToList().Find(
@@ -104,7 +102,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                                    foundChargeItem.ftChargeItemCaseData == chargeItem.ftChargeItemCaseData);
             return foundItem;
         }
-
         private async Task<RequestCommandResponse> VoidForCashReceipts(IMESSCD client, ftQueue queue, ftQueueME queueMe, ReceiptRequest request, ftQueueItem queueItem,
              ReceiptRequest receiptRequestToCancel, Invoice invoiceToCancel, ftQueueItem queueItemToCancel,
             ftJournalME journalMeToCancel, ftSignaturCreationUnitME scu, Invoice invoice, bool subsequent)

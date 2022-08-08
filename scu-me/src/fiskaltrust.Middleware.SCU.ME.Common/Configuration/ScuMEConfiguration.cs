@@ -9,6 +9,11 @@ namespace fiskaltrust.Middleware.SCU.ME.Common.Configuration
     public class ScuMEConfiguration
     {
         /// <summary>
+        /// DatetimeFormat sent with receipt LOCAL, UTC
+        /// </summary>
+        public string DatetimeFormat { get; set; } = "LOCAL";
+
+        /// <summary>
         /// Tax identification number (TIN) of the PosOperator.
         /// </summary>
         public string TIN { get; set; } = null!;

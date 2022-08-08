@@ -10,13 +10,13 @@ using fiskaltrust.Middleware.Contracts.Repositories;
 using System.Linq;
 using Grpc.Core;
 using Newtonsoft.Json;
+using fiskaltrust.Middleware.Localization.QueueME.Extensions;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 {
     public abstract class RequestCommand
     {
         private const long SSCD_FAILED_MODE_FLAG = 0x0000_0000_0000_0002;
-
         protected readonly ILogger<RequestCommand> Logger;
         protected readonly IConfigurationRepository ConfigurationRepository;
         protected readonly IMiddlewareJournalMERepository JournalMeRepository;
@@ -35,13 +35,10 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             ActionJournalRepository = actionJournalRepository;
             QueueMeConfiguration = queueMeConfiguration;
         }
-
         public abstract Task<bool> ReceiptNeedsReprocessing(ftQueueME queueMe, ftQueueItem queueItem,
             ReceiptRequest request);
-
         public abstract Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request,
             ftQueueItem queueItem, ftQueueME queueMe, bool subsequent = false);
-
         protected ReceiptResponse CreateReceiptResponse(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem,
             ulong? yearlyOrdinalNumber = null)
         {
@@ -50,7 +47,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             {
                 receiptIdentification += yearlyOrdinalNumber.Value;
             }
-
             return new ReceiptResponse
             {
                 ftCashBoxID = request.ftCashBoxID,
@@ -64,7 +60,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 ftReceiptIdentification = receiptIdentification
             };
         }
-
         protected ftActionJournal CreateClosingActionJournal(ftQueue queue, long type, ftQueueItem queueItem,
             string message)
         {
@@ -80,7 +75,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 DataJson = JsonConvert.SerializeObject(new { ftReceiptNumerator = queue.ftReceiptNumerator + 1 })
             };
         }
-
         protected async Task<RequestCommandResponse> CreateClosingAsync(ftQueue queue, ReceiptRequest request,
             ftQueueItem queueItem, string message)
         {
@@ -92,7 +86,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             };
             return await Task.FromResult(requestCommandResponse).ConfigureAwait(false);
         }
-
         public async Task<RequestCommandResponse> ProcessFailedReceiptRequest(ftQueue queue, ftQueueItem queueItem,
             ReceiptRequest request, ftQueueME queueMe)
         {
@@ -101,7 +94,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 queueMe.SSCDFailMoment = DateTime.UtcNow;
                 queueMe.SSCDFailQueueItemId = queueItem.ftQueueItemId;
             }
-
             queueMe.SSCDFailCount++;
             await ConfigurationRepository.InsertOrUpdateQueueMEAsync(queueMe).ConfigureAwait(false);
             var receiptResponse = CreateReceiptResponse(queue, request, queueItem);
@@ -111,30 +103,31 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 
             return new RequestCommandResponse { ReceiptResponse = receiptResponse };
         }
-
         protected async Task<bool> ActionJournalExists(ftQueueItem queueItem, long type)
         {
             var actionJournal = await ActionJournalRepository.GetByQueueItemId(queueItem.ftQueueItemId)
                 .FirstOrDefaultAsync().ConfigureAwait(false);
             return actionJournal != null && actionJournal.Type == type.ToString();
         }
-
-
         protected async Task<RequestCommandResponse> CheckForFiscalizationException(ftQueue queue,
             ReceiptRequest request, ftQueueItem queueItem,
             ftQueueME queueMe, bool subsequent, Exception ex)
         {
-
-            if (!IsFiscalizationException(ex) || subsequent)
-            {
-                throw ex;
-            }
-
             var rpc = ex as RpcException;
-            Logger.LogError(ex, rpc.Trailers.Where( x => x.Key.EndsWith("exception-message")).Select(x => x.Value).FirstOrDefault());
+            var message = rpc?.Trailers.Where(x => x.Key.EndsWith("exception-message")).Select(x => x.Value).FirstOrDefault();
+            if (!IsFiscalizationException(ex))
+            {
+                if (subsequent)
+                {
+                    throw ex;
+                }
+                var receiptResponse = CreateReceiptResponse(queue, request, queueItem);
+                receiptResponse.SetStateToError(ErrorCode.Error, message);
+                return new RequestCommandResponse { ReceiptResponse = receiptResponse };
+            }
+            Logger.LogError(ex, message);
             return await ProcessFailedReceiptRequest(queue, queueItem, request, queueMe).ConfigureAwait(false);
         }
-
         protected bool IsFiscalizationException(Exception ex)
         {
             if (ex is not RpcException rpc)

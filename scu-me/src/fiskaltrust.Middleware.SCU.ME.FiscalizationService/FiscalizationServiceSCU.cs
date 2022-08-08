@@ -40,7 +40,7 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
     {
         var sendTime = registerCashDepositRequest.SubsequentDeliveryType.HasValue
             ? DateTime.Now
-            : ConvertToCETFromUtc(registerCashDepositRequest.Moment);
+            : ConvertToCET(registerCashDepositRequest.Moment);
         var request = new SoapFiscalizationService.RegisterCashDepositRequest
         {
             Header = new SoapFiscalizationService.RegisterCashDepositRequestHeaderType
@@ -74,7 +74,7 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
 
     public async Task RegisterCashWithdrawalAsync(RegisterCashWithdrawalRequest registerCashWithdrawalRequest)
     {
-        var sendDateTime = registerCashWithdrawalRequest.SubsequentDeliveryType.HasValue ? DateTime.Now : ConvertToCETFromUtc(registerCashWithdrawalRequest.Moment);
+        var sendDateTime = registerCashWithdrawalRequest.SubsequentDeliveryType.HasValue ? DateTime.Now : ConvertToCET(registerCashWithdrawalRequest.Moment);
         var request = new SoapFiscalizationService.RegisterCashDepositRequest
         {
             Header = new SoapFiscalizationService.RegisterCashDepositRequestHeaderType
@@ -108,7 +108,7 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
     {
         try
         {
-            var sendDateTime = registerInvoiceRequest.SubsequentDeliveryType.HasValue ? DateTime.Now : ConvertToCETFromUtc(registerInvoiceRequest.Moment);
+            var sendDateTime = registerInvoiceRequest.SubsequentDeliveryType.HasValue ? DateTime.Now : ConvertToCET(registerInvoiceRequest.Moment);
 
             var invoice = new SoapFiscalizationService.InvoiceType
             {
@@ -404,11 +404,15 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
         ((IDisposable) _fiscalizationServiceClient).Dispose();
     }
 
-    private DateTime ConvertToCETFromUtc(DateTime dateTime)
+    private DateTime ConvertToCET(DateTime dateTime)
     {
-        DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
-        var cstZone = TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
-        return TimeZoneInfo.ConvertTimeFromUtc(dateTime, cstZone);
+        if (_configuration.DatetimeFormat.Equals("UTC"))
+        {
+            DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
+            var cstZone = TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
+            return TimeZoneInfo.ConvertTimeFromUtc(dateTime, cstZone);
+        }
+        return dateTime;
     }
 
     public Task<ComputeIICResponse> ComputeIICAsync(ComputeIICRequest computeIICRequest)
@@ -424,10 +428,13 @@ public sealed class FiscalizationServiceSCU : IMESSCD, IDisposable
 
     private void IsConnectionException(Exception e)
     {
-        if (e is EndpointNotFoundException or WebException or CommunicationException)
+        if (e.GetType().IsAssignableFrom(typeof(EndpointNotFoundException)) ||
+            e.GetType().IsAssignableFrom(typeof(WebException)) ||
+            e.GetType().IsAssignableFrom(typeof(CommunicationException)))
         {
-            _logger.LogError(e, "Error sending request");
-            throw new FiscalizationException("No access to Fiscalization Endpoint!");
+            var fisExc = new FiscalizationException("No access to Fiscalization Endpoint!");
+            _logger.LogError(fisExc, "FiscalizationException!");
+            throw fisExc;
         }
         _logger.LogError(e, "Error sending request");
         throw e;

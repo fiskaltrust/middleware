@@ -15,7 +15,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             IMiddlewareJournalMERepository journalMERepository, IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareActionJournalRepository actionJournalRepository, QueueMEConfiguration queueMeConfiguration) :
             base(logger, configurationRepository, journalMERepository, queueItemRepository, actionJournalRepository, queueMeConfiguration)
         { }
-
         public override async Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftQueueME queueME, bool subsequent = false)
         {
             try
@@ -28,7 +27,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 throw;
             }
         }
-
         public override async Task<bool> ReceiptNeedsReprocessing(ftQueueME queueME, ftQueueItem queueItem, ReceiptRequest request)
         {
             return await ActionJournalExists(queueItem, request.ftReceiptCase).ConfigureAwait(false) == false;

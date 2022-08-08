@@ -103,14 +103,12 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                         Type = $"{0x4D45000000000003:X}-{nameof(ActivateQueueSCU)}",
                         DataJson = JsonConvert.SerializeObject(notification)
                     };
-
                     return new RequestCommandResponse
                     {
                         ReceiptResponse = receiptResponse,
                         ActionJournals = new List<ftActionJournal> { actionJournal }
                     };
                 }
-
                 var actionJournalEntry = new ftActionJournal
                 {
                     ftActionJournalId = Guid.NewGuid(),
@@ -121,7 +119,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                         ? $"Queue {queue.ftQueueId} is de-activated, initial-operations-receipt can not be executed."
                         : $"Queue {queue.ftQueueId} is already activated, initial-operations-receipt can not be executed."
                 };
-
+                Logger.LogInformation(actionJournalEntry.Message);
                 return new RequestCommandResponse
                 {
                     ActionJournals = new List<ftActionJournal> { actionJournalEntry },
@@ -131,10 +129,11 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             catch (Exception ex)
             {
                 Logger.LogCritical(ex, "An exception occured while processing this request.");
-                throw;
+                var receiptResponse = CreateReceiptResponse(queue, request, queueItem);
+                receiptResponse.SetStateToError(ErrorCode.Error, ex.Message);
+                return new RequestCommandResponse { ReceiptResponse = receiptResponse };
             }
         }
-
         public override Task<bool> ReceiptNeedsReprocessing(ftQueueME queueME, ftQueueItem queueItem, ReceiptRequest request) => Task.FromResult(false);
     }
 }

@@ -25,7 +25,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
         {
             _requestCommandFactory = requestCommandFactory;
         }
-
         public override async Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftQueueME queueME, bool subsequent = false)
         {
             try
@@ -73,10 +72,8 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 }
                 Logger.LogInformation($"Successfully closed failed-mode, re-sent {queueME.SSCDFailCount} receipts that have been stored between {queueME.SSCDFailMoment:G} and {DateTime.UtcNow:G}.");
 
-
                 var caption = $"Restored connection to fiscalization service at {DateTime.UtcNow:G}.";
                 var data = $"{queueME.SSCDFailCount} receipts from the timeframe between {queueME.SSCDFailMoment:G} and {DateTime.UtcNow:G} have been re-processed at the fiscalization service.";
-
                 var receiptResponse = CreateReceiptResponse(queue, request, queueItem);
                 receiptResponse.ftSignatures = receiptResponse.ftSignatures.Concat(new List<SignaturItem>
                 {

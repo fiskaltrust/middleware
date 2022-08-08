@@ -72,7 +72,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Extensions
             var invoiceItem = new InvoiceItem
             {
                 Name = chargeItem.Description,
-                Code = chargeItem.ProductBarcode,
+                Code = string.IsNullOrEmpty(chargeItem.ProductBarcode) ? null : chargeItem.ProductBarcode,
                 IsInvestment = !chargeItem.IsNoInvestment(),
                 Unit = chargeItem.Unit,
                 Quantity = chargeItem.Quantity,

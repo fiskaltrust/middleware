@@ -25,7 +25,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
         {
             _signatureItemFactory = signatureItemFactory;
         }
-
         public override async Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftQueueME queueME, bool subsequent = false)
         {
             try
@@ -79,7 +78,9 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             catch (Exception ex)
             {
                 Logger.LogCritical(ex, "An exception occured while processing this request.");
-                throw;
+                var receiptResponse = CreateReceiptResponse(queue, request, queueItem);
+                receiptResponse.SetStateToError(ErrorCode.Error,ex.Message);
+                return new RequestCommandResponse { ReceiptResponse = receiptResponse };
             }
         }
         public override Task<bool> ReceiptNeedsReprocessing(ftQueueME queueME, ftQueueItem queueItem, ReceiptRequest request) => Task.FromResult(false);

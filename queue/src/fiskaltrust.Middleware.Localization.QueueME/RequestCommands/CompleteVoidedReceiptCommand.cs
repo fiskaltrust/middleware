@@ -19,7 +19,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             IMiddlewareActionJournalRepository actionJournalRepository, QueueMEConfiguration queueMeConfiguration, SignatureItemFactory signatureItemFactory) :
             base(logger, configurationRepository, journalMeRepository, queueItemRepository, actionJournalRepository, queueMeConfiguration, signatureItemFactory)
         { }
-
         public override async Task<RequestCommandResponse> ExecuteAsync(IMESSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftQueueME queueMe, bool subsequent = false)
         {
             var (scu, _) = await ValidateVoidReceipt(request, queueMe).ConfigureAwait(false);
@@ -31,7 +30,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             return await SendInvoiceDetailToCis(client, queue, queueMe, receiptToCancel.ReceiptRequest, queueItem, scu,
                 invoiceDetailsCancel, subsequent);
         }
-
         protected InvoiceCorrectionDetails GetInvoiceCorrectionDetails(ftQueueItem queueItemToCancel, ftJournalME journalMeToCancel)
         {
             return new InvoiceCorrectionDetails
@@ -41,7 +39,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 CorrectionType = InvoiceCorrectionType.Corrective
             };
         }
-
         protected async Task<ReceiptToCancel> GetReceiptToCancel(ReceiptRequest request)
         {
             var journalMeToCancel = JournalMeRepository.GetByReceiptReference(request.cbPreviousReceiptReference).ToListAsync()
@@ -65,13 +62,12 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 JournalMe = journalMeToCancel
             };
         }
-
         protected async Task<(ftSignaturCreationUnitME, Invoice)> ValidateVoidReceipt(ReceiptRequest request, ftQueueME queueMe)
         {
             var scu = await ConfigurationRepository.GetSignaturCreationUnitMEAsync(queueMe.ftSignaturCreationUnitMEId.Value).ConfigureAwait(false);
 
-            await ThrowIfCashDepositOutstanding().ConfigureAwait(false);
-            await ThrowIfInvoiceAlreadyReceived(request.cbReceiptReference);
+            await IsCashDepositOutstanding().ConfigureAwait(false);
+            await IsInvoiceAlreadyReceived(request.cbReceiptReference);
             var invoice = string.IsNullOrEmpty(request.ftReceiptCaseData) ? null : JsonConvert.DeserializeObject<Invoice>(request.ftReceiptCaseData);
             GetOperatorCodeOrThrow(request.cbUser);
 
@@ -80,7 +76,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 : (scu, invoice);
         }
     }
-
     public struct ReceiptToCancel
     {
         public ftQueueItem QueueItem;
