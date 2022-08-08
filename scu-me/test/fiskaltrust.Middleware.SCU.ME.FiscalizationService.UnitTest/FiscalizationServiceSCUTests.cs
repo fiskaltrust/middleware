@@ -94,7 +94,7 @@ namespace fiskaltrust.Middleware.SCU.ME.FiscalizationService.UnitTest
             {
                 _ = await meSSCD.RegisterCashDepositAsync(request);
             }
-            catch (FiscalizationException ex)
+            catch (Exception ex)
             {
                 _ = ex.InnerException?.Message.Should().StartWith("Received certificate doesn't contain TIN number.");
             }
@@ -121,7 +121,7 @@ namespace fiskaltrust.Middleware.SCU.ME.FiscalizationService.UnitTest
             {
                 await meSSCD.RegisterCashWithdrawalAsync(request);
             }
-            catch (FiscalizationException ex)
+            catch (Exception ex)
             {
                 _ = ex.InnerException?.Message.Should().StartWith("Received certificate doesn't contain TIN number.");
             }

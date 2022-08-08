@@ -14,7 +14,7 @@ using Microsoft.Extensions.Logging;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories.ME;
 using FluentAssertions;
 using fiskaltrust.Middleware.Contracts.Constants;
-using fiskaltrust.Middleware.Localization.QueueME.Exceptions;
+using fiskaltrust.Middleware.Localization.QueueME.Extensions;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTests
 {
@@ -149,8 +149,9 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             var queueMEConfiguration = new QueueMEConfiguration { Sandbox = true };
             var posReceiptCommand = new PosReceiptCommand(Mock.Of<ILogger<RequestCommand>>(), inMemoryConfigurationRepository, inMemoryJournalMeRepository, 
                 new InMemoryQueueItemRepository(), inMemoryActionJournalRepository, queueMEConfiguration, new Factories.SignatureItemFactory(queueMEConfiguration));
-            var sutMethod = CallInitialOperationReceiptCommand(posReceiptCommand, queue, queueMe, receiptRequest);
-            await sutMethod.Should().ThrowAsync<CashDepositOutstandingException>();
+            var response = await posReceiptCommand.ExecuteAsync(new InMemoryMESSCD("testTcr", "iic", "iicSignature"), queue, receiptRequest, new ftQueueItem() { ftWorkMoment = DateTime.Now }, queueMe).ConfigureAwait(false); 
+            response.Should().NotBeNull();
+            response.ReceiptResponse.ftState.Equals(ErrorCode.CashDepositeOutstanding);
         }
 
         private static async Task<InMemoryActionJournalRepository> IniActionJournalRepo(ftQueue queue, Guid ftQueueItemId, DateTime datetime)
