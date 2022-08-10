@@ -74,7 +74,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.Extensions
                 Name = chargeItem.Description,
                 Code = string.IsNullOrEmpty(chargeItem.ProductBarcode) ? null : chargeItem.ProductBarcode,
                 IsInvestment = !chargeItem.IsNoInvestment(),
-                Unit = chargeItem.Unit,
+                Unit = !string.IsNullOrEmpty(chargeItem.Unit) ? chargeItem.Unit : "unit",
                 Quantity = chargeItem.Quantity,
                 NetUnitPrice = chargeItem.UnitPrice.HasValue ? (decimal) (chargeItem.UnitPrice / (1 + (chargeItem.GetVatRate() / 100))) : 0,
                 GrossUnitPrice = chargeItem.UnitPrice ?? 0,
