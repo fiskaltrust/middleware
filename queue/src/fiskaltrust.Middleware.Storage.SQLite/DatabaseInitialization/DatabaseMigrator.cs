@@ -69,7 +69,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite.DatabaseInitialization
             }
         }
 
-        public async Task SetWALMod()
+        public async Task SetWALMode()
         {
             var walset = _configuration.TryGetValue("WAL", out var value);
             if (walset)

@@ -49,7 +49,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite
             _connectionFactory = new SqliteConnectionFactory();
             var databaseMigrator = new DatabaseMigrator(_connectionFactory, _sqliteFile, _configuration, logger);
             await databaseMigrator.MigrateAsync().ConfigureAwait(false);
-            await databaseMigrator.SetWALMod().ConfigureAwait(false);
+            await databaseMigrator.SetWALMode().ConfigureAwait(false);
 
             _configurationRepository = new SQLiteConfigurationRepository(_connectionFactory, _sqliteFile);
 
