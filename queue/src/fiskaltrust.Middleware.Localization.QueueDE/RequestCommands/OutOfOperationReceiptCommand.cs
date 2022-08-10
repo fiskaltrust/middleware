@@ -39,7 +39,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
 
             var actionJournals = new List<ftActionJournal>();
-            var typeNumber = 0x4445000000000003;
+            var typeNumber = 0x4445000000000004;
             DeactivateQueueSCU notification;
             List<SignaturItem> signatures;
 
