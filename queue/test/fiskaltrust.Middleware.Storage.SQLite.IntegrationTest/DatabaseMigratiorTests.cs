@@ -103,19 +103,19 @@ namespace fiskaltrust.Middleware.Storage.SQLite.IntegrationTest
         public async Task PerformMigrations_SetWALModeOFF_WALModeFF()
         {
 
-            const string path = "waldb.sqlite";
+            const string path = "walOffdb.sqlite";
 
             if (File.Exists(path))
             {
                 File.Delete(path);
             }
-            if (File.Exists("waldb.sqlite-shm"))
+            if (File.Exists("walOffdb.sqlite-shm"))
             {
-                File.Delete("waldb.sqlite-shm");
+                File.Delete("walOffdb.sqlite-shm");
             }
-            if (File.Exists("waldb.sqlite-wal"))
+            if (File.Exists("walOffdb.sqlite-wal"))
             {
-                File.Delete("waldb.sqlite-wal");
+                File.Delete("walOffdb.sqlite-wal");
             }
             var connectionFactory = new SqliteConnectionFactory();
             var config = new Dictionary<string, object>
@@ -137,7 +137,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite.IntegrationTest
                 cbReceiptMoment = DateTime.Now,
                 TimeStamp = DateTime.Now.Ticks
             });
-            File.Exists("waldb.sqlite-wal").Should().BeFalse();
+            File.Exists("walOffdb.sqlite-wal").Should().BeFalse();
 
         }
     }
