@@ -32,10 +32,4 @@
     </None>
   </ItemGroup>
 
-  <ItemGroup>
-    <None Update="Scripts\*">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-
 </Project>
