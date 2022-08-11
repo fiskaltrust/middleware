@@ -22,5 +22,7 @@
         public int? ProxyPort { get; set; }
         public string ProxyUsername { get; set; }
         public string ProxyPassword { get; set; }
+        public int? FccHeapMemory { get; set; }
+
     }
 }
