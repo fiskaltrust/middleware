@@ -69,6 +69,30 @@ namespace fiskaltrust.Middleware.Storage.SQLite.DatabaseInitialization
             }
         }
 
+        public async Task SetWALMode()
+        {
+            var walset = _configuration.TryGetValue("WAL", out var value);
+            if (walset)
+            {
+                if ((string) value == "ON")
+                {
+                    using (var connection = _connectionFactory.GetNewConnection(_connectionString))
+                    {
+                        await connection.ExecuteAsync("PRAGMA journal_mode=WAL;").ConfigureAwait(false);
+                        _logger.LogDebug($"Applied WAL activation script.");
+                    }
+                }
+                else if ((string) value == "OFF")
+                {
+                    using (var connection = _connectionFactory.GetNewConnection(_connectionString))
+                    {
+                        await connection.ExecuteAsync("PRAGMA journal_mode=DELETE;").ConfigureAwait(false);
+                        _logger.LogDebug($"Applied WAL deactivation script.");
+                    }
+                }
+            }
+        }
+
         private async Task<string> GetCurrentVersionAsync(IDbConnection connection)
         {
             var tableCount = await connection.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM sqlite_master AS TABLES WHERE TYPE = 'table' and name = 'ftDatabaseSchema'").ConfigureAwait(false);
