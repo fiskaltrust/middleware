@@ -79,7 +79,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite.DatabaseInitialization
                     using (var connection = _connectionFactory.GetNewConnection(_connectionString))
                     {
                         await connection.ExecuteAsync("PRAGMA journal_mode=WAL;").ConfigureAwait(false);
-                        _logger.LogDebug($"Applied WAL activation script!");
+                        _logger.LogDebug($"Applied WAL activation script.");
                     }
                 }
                 else if ((string) value == "OFF")
@@ -87,7 +87,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite.DatabaseInitialization
                     using (var connection = _connectionFactory.GetNewConnection(_connectionString))
                     {
                         await connection.ExecuteAsync("PRAGMA journal_mode=DELETE;").ConfigureAwait(false);
-                        _logger.LogDebug($"Applied WAL deactivation script!");
+                        _logger.LogDebug($"Applied WAL deactivation script.");
                     }
                 }
             }
