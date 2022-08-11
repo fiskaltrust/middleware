@@ -138,6 +138,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             await ReceiptTestResults.IsResponseValidAsync(_fixture, receiptResponse, receiptRequest, "TSE Kommunikation wiederhergestellt am");
             await CheckQueueLeftFailedModeAsync().ConfigureAwait(false);
         }
+
+        /*
         [Fact]
         public async Task SignProcessorZeroReceipt_QueueFailedMode_ValidOutput()
         {
@@ -173,7 +175,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             await ReceiptTestResults.IsResponseValidAsync(_fixture, receiptResponse, receiptRequest, "TSE Kommunikation wiederhergestellt am");
             await ReceiptTestResults.IsResponseValidAsync(_fixture, receiptResponse, receiptRequest, "Ausfallsnacherfassung abgeschlossen am");
             await CheckQueueLeftFailedModeAsync().ConfigureAwait(false);
-      }
+      }*/
 
         private (ReceiptRequest receiptRequest, ReceiptResponse expectedResponse, ftQueueItem queueItem) GetReceipt(string jsonDirectory, string receiptReference)
         {
