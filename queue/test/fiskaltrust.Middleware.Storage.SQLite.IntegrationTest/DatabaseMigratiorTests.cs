@@ -61,25 +61,16 @@ namespace fiskaltrust.Middleware.Storage.SQLite.IntegrationTest
         [Fact]
         public async Task PerformMigrations_SetWALModeON_WALModeON()
         {
-
             const string path = "waldb.sqlite";
       
             if (File.Exists(path))
             {
                 File.Delete(path);
             }
-            if (File.Exists("waldb.sqlite-shm"))
-            {
-                File.Delete("waldb.sqlite-shm");
-            }
-            if (File.Exists("waldb.sqlite-wal"))
-            {
-                File.Delete("waldb.sqlite-wal");
-            }
             var connectionFactory = new SqliteConnectionFactory();
             var config = new Dictionary<string, object>
             {
-                { "WAL", "ON" }
+                { "EnableWAL", true }
             };
 
             var databaseMigrator = new DatabaseMigrator(connectionFactory, path, config, Mock.Of<ILogger<IMiddlewareBootstrapper>>());
