@@ -71,23 +71,22 @@ namespace fiskaltrust.Middleware.Storage.SQLite.DatabaseInitialization
 
         public async Task SetWALMode()
         {
-            var walset = _configuration.TryGetValue("WAL", out var value);
-            if (walset)
+            if (_configuration.TryGetValue("EnableWAL", out var value) && value != null && bool.TryParse(value?.ToString(), out var walEnabled))
             {
-                if ((string) value == "ON")
+                if (walEnabled)
                 {
                     using (var connection = _connectionFactory.GetNewConnection(_connectionString))
                     {
                         await connection.ExecuteAsync("PRAGMA journal_mode=WAL;").ConfigureAwait(false);
-                        _logger.LogDebug($"Applied WAL activation script.");
+                        _logger.LogDebug($"SQLite WAL mode enabled.");
                     }
                 }
-                else if ((string) value == "OFF")
+                else
                 {
                     using (var connection = _connectionFactory.GetNewConnection(_connectionString))
                     {
                         await connection.ExecuteAsync("PRAGMA journal_mode=DELETE;").ConfigureAwait(false);
-                        _logger.LogDebug($"Applied WAL deactivation script.");
+                        _logger.LogDebug($"SQLite WAL mode disabled.");
                     }
                 }
             }
