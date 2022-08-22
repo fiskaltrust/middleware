@@ -83,6 +83,10 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
                 {
                     _fccInitializationService.Initialize(_fccDirectory);
                 }
+                if (_configuration.FccHeapMemory.HasValue)
+                {
+                    ConfigHelper.SetFccHeapMemory(_fccDirectory, _configuration.FccHeapMemory.Value);
+                }
 
                 StartFccIfNotRunning().Wait();
             }
