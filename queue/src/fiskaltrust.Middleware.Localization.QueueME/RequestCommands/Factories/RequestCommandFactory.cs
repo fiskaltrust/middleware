@@ -6,9 +6,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands.Factories
 {
     public class RequestCommandFactory : IRequestCommandFactory
     {
-        private readonly IServiceProvider _serviceProvider;
-
-        public RequestCommandFactory(IServiceProvider serviceCollection) => _serviceProvider = serviceCollection;
+        public RequestCommandFactory() { }
 
         public RequestCommand Create(ReceiptRequest request)
         {

@@ -8,13 +8,8 @@ namespace fiskaltrust.Middleware.Localization.QueueME
 {
     public class JournalProcessorME : IJournalProcessor
     {
-        private readonly ILogger<JournalProcessorME> _logger;
 
-        public JournalProcessorME(
-            ILogger<JournalProcessorME> logger)
-        {
-            _logger = logger;
-        }
+        public JournalProcessorME() { }
 
         public IAsyncEnumerable<JournalResponse> ProcessAsync(JournalRequest request)
         {

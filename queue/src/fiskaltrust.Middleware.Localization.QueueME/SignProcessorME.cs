@@ -10,14 +10,11 @@ namespace fiskaltrust.Middleware.Localization.QueueME
 {
     public class SignProcessorME : IMarketSpecificSignProcessor
     {
-        private readonly IConfigurationRepository _configurationRepository;
         private readonly IRequestCommandFactory _requestCommandFactory;
 
         public SignProcessorME(
-            IConfigurationRepository configurationRepository,
             IRequestCommandFactory requestCommandFactory)
         {
-            _configurationRepository = configurationRepository;
             _requestCommandFactory = requestCommandFactory;
         }
 
