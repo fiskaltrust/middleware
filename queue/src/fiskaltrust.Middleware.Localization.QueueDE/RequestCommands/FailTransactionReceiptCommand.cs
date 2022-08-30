@@ -28,11 +28,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
         {
             var closeSingleTransaction = !string.IsNullOrEmpty(request.cbReceiptReference);
 
-            if (closeSingleTransaction ? await _failedStartTransactionRepo.ExistsAsync(request.cbReceiptReference).ConfigureAwait(false) : false)
-            {
-                return await ProcessSSCDFailedReceiptRequest(request, queueItem, queue, queueDE).ConfigureAwait(false);
-            }
-
             if (closeSingleTransaction && request.IsImplictFlow())
             {
                 throw new ArgumentException($"ReceiptCase {request.ftReceiptCase:X} (fail-transaction-receipt) cannot use implicit-flow flag when a single transaction should be failed.");
@@ -41,6 +36,12 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             {
                 throw new ArgumentException($"ReceiptCase {request.ftReceiptCase:X} (fail-transaction-receipt) must use implicit-flow flag when multiple transactions should be failed.");
             }
+
+            if (closeSingleTransaction && await _failedStartTransactionRepo.ExistsAsync(request.cbReceiptReference).ConfigureAwait(false))
+            {
+                return await ProcessSSCDFailedReceiptRequest(request, queueItem, queue, queueDE).ConfigureAwait(false);
+            }
+
             if (closeSingleTransaction && !await _openTransactionRepo.ExistsAsync(request.cbReceiptReference).ConfigureAwait(false))
             {
                 throw new ArgumentException($"No open transaction found for cbReceiptReference '{request.cbReceiptReference}'. If you want to close multiple transactions, pass an array value for 'CurrentStartedTransactionNumbers' via ftReceiptCaseData.");
