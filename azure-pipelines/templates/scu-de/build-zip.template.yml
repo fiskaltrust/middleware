@@ -6,7 +6,7 @@ steps:
     updateBuildNumber: false
     semverVersion: 'v1'
 
-- powershell: |   
+- powershell: |
     $nugetFeed = if ($Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/release/") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/main") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/tags")) { "release" } else { "dev" }
     Write-Host "##vso[task.setvariable variable=NuGetFeed;]$nugetFeed"
   displayName: Set NuGet feed
@@ -51,7 +51,12 @@ steps:
     $packageName = "fiskaltrust.Middleware.SCU.DE.CryptoVision"
     $version = (Select-Xml -Path ./Directory.Build.props -XPath 'Project/PropertyGroup/Version').Node.InnerText
     dotnet publish --configuration $(buildConfiguration) -f net6 --output $(Build.ArtifactStagingDirectory)/raw/$packageName --no-build /p:DebugType=None /p:DebugSymbols=false
-    Compress-Archive -Path $(Build.ArtifactStagingDirectory)/raw/$packageName/* -DestinationPath $(Build.ArtifactStagingDirectory)/packages/$packageName.$version.zip
+    Compress-Archive -Path $(Build.ArtifactStagingDirectory)/raw/$packageName/* -DestinationPath $(Build.ArtifactStagingDirectory)/packages/$packageName-$version.zip
+
+    $hash = Get-FileHash $(Build.ArtifactStagingDirectory)/packages/$packageName-$version.zip -Algorithm SHA256
+    $hashbytes = $hash.Hash -split '([A-F0-9]{2})' | foreach-object { if ($_) {[System.Convert]::ToByte($_,16)}}
+    $hashstring = [System.Convert]::ToBase64String($hashbytes)
+    $hashstring | Set-Content $(Build.ArtifactStagingDirectory)/packages/$packageName-$version.zip.hash
   displayName: 'Publish fiskaltrust.Middleware.SCU.DE.CryptoVision'
   workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.CryptoVision'
 
@@ -59,7 +64,12 @@ steps:
     $packageName = "fiskaltrust.Middleware.SCU.DE.DieboldNixdorf"
     $version = (Select-Xml -Path ./Directory.Build.props -XPath 'Project/PropertyGroup/Version').Node.InnerText
     dotnet publish --configuration $(buildConfiguration) -f net6 --output $(Build.ArtifactStagingDirectory)/raw/$packageName --no-build /p:DebugType=None /p:DebugSymbols=false
-    Compress-Archive -Path $(Build.ArtifactStagingDirectory)/raw/$packageName/* -DestinationPath $(Build.ArtifactStagingDirectory)/packages/$packageName.$version.zip
+    Compress-Archive -Path $(Build.ArtifactStagingDirectory)/raw/$packageName/* -DestinationPath $(Build.ArtifactStagingDirectory)/packages/$packageName-$version.zip
+
+    $hash = Get-FileHash $(Build.ArtifactStagingDirectory)/packages/$packageName-$version.zip -Algorithm SHA256
+    $hashbytes = $hash.Hash -split '([A-F0-9]{2})' | foreach-object { if ($_) {[System.Convert]::ToByte($_,16)}}
+    $hashstring = [System.Convert]::ToBase64String($hashbytes)
+    $hashstring | Set-Content $(Build.ArtifactStagingDirectory)/packages/$packageName-$version.zip.hash
   displayName: 'Publish fiskaltrust.Middleware.SCU.DE.DieboldNixdorf'
   workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.DieboldNixdorf'
 
@@ -67,7 +77,12 @@ steps:
     $packageName = "fiskaltrust.Middleware.SCU.DE.Epson"
     $version = (Select-Xml -Path ./Directory.Build.props -XPath 'Project/PropertyGroup/Version').Node.InnerText
     dotnet publish --configuration $(buildConfiguration) -f net6 --output $(Build.ArtifactStagingDirectory)/raw/$packageName --no-build /p:DebugType=None /p:DebugSymbols=false
-    Compress-Archive -Path $(Build.ArtifactStagingDirectory)/raw/$packageName/* -DestinationPath $(Build.ArtifactStagingDirectory)/packages/$packageName.$version.zip
+    Compress-Archive -Path $(Build.ArtifactStagingDirectory)/raw/$packageName/* -DestinationPath $(Build.ArtifactStagingDirectory)/packages/$packageName-$version.zip
+
+    $hash = Get-FileHash $(Build.ArtifactStagingDirectory)/packages/$packageName-$version.zip -Algorithm SHA256
+    $hashbytes = $hash.Hash -split '([A-F0-9]{2})' | foreach-object { if ($_) {[System.Convert]::ToByte($_,16)}}
+    $hashstring = [System.Convert]::ToBase64String($hashbytes)
+    $hashstring | Set-Content $(Build.ArtifactStagingDirectory)/packages/$packageName-$version.zip.hash
   displayName: 'Publish fiskaltrust.Middleware.SCU.DE.Epson'
   workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.Epson'
 
@@ -75,7 +90,12 @@ steps:
     $packageName = "fiskaltrust.Middleware.SCU.DE.FiskalyCertified"
     $version = (Select-Xml -Path ./Directory.Build.props -XPath 'Project/PropertyGroup/Version').Node.InnerText
     dotnet publish --configuration $(buildConfiguration) -f net6 --output $(Build.ArtifactStagingDirectory)/raw/$packageName --no-build /p:DebugType=None /p:DebugSymbols=false
-    Compress-Archive -Path $(Build.ArtifactStagingDirectory)/raw/$packageName/* -DestinationPath $(Build.ArtifactStagingDirectory)/packages/$packageName.$version.zip
+    Compress-Archive -Path $(Build.ArtifactStagingDirectory)/raw/$packageName/* -DestinationPath $(Build.ArtifactStagingDirectory)/packages/$packageName-$version.zip
+
+    $hash = Get-FileHash $(Build.ArtifactStagingDirectory)/packages/$packageName-$version.zip -Algorithm SHA256
+    $hashbytes = $hash.Hash -split '([A-F0-9]{2})' | foreach-object { if ($_) {[System.Convert]::ToByte($_,16)}}
+    $hashstring = [System.Convert]::ToBase64String($hashbytes)
+    $hashstring | Set-Content $(Build.ArtifactStagingDirectory)/packages/$packageName-$version.zip.hash
   displayName: 'Publish fiskaltrust.Middleware.SCU.DE.FiskalyCertified'
   workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.FiskalyCertified'
 
@@ -83,7 +103,12 @@ steps:
     $packageName = "fiskaltrust.Middleware.SCU.DE.Swissbit"
     $version = (Select-Xml -Path ./Directory.Build.props -XPath 'Project/PropertyGroup/Version').Node.InnerText
     dotnet publish --configuration $(buildConfiguration) -f net6 --output $(Build.ArtifactStagingDirectory)/raw/$packageName --no-build /p:DebugType=None /p:DebugSymbols=false
-    Compress-Archive -Path $(Build.ArtifactStagingDirectory)/raw/$packageName/* -DestinationPath $(Build.ArtifactStagingDirectory)/packages/$packageName.$version.zip
+    Compress-Archive -Path $(Build.ArtifactStagingDirectory)/raw/$packageName/* -DestinationPath $(Build.ArtifactStagingDirectory)/packages/$packageName-$version.zip
+
+    $hash = Get-FileHash $(Build.ArtifactStagingDirectory)/packages/$packageName-$version.zip -Algorithm SHA256
+    $hashbytes = $hash.Hash -split '([A-F0-9]{2})' | foreach-object { if ($_) {[System.Convert]::ToByte($_,16)}}
+    $hashstring = [System.Convert]::ToBase64String($hashbytes)
+    $hashstring | Set-Content $(Build.ArtifactStagingDirectory)/packages/$packageName-$version.zip.hash
   displayName: 'Publish fiskaltrust.Middleware.SCU.DE.Swissbit'
   workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.Swissbit'
 
@@ -91,7 +116,12 @@ steps:
     $packageName = "fiskaltrust.Middleware.SCU.DE.DeutscheFiskal"
     $version = (Select-Xml -Path ./Directory.Build.props -XPath 'Project/PropertyGroup/Version').Node.InnerText
     dotnet publish --configuration $(buildConfiguration) -f net6 --output $(Build.ArtifactStagingDirectory)/raw/$packageName --no-build /p:DebugType=None /p:DebugSymbols=false
-    Compress-Archive -Path $(Build.ArtifactStagingDirectory)/raw/$packageName/* -DestinationPath $(Build.ArtifactStagingDirectory)/packages/$packageName.$version.zip
+    Compress-Archive -Path $(Build.ArtifactStagingDirectory)/raw/$packageName/* -DestinationPath $(Build.ArtifactStagingDirectory)/packages/$packageName-$version.zip
+
+    $hash = Get-FileHash $(Build.ArtifactStagingDirectory)/packages/$packageName-$version.zip -Algorithm SHA256
+    $hashbytes = $hash.Hash -split '([A-F0-9]{2})' | foreach-object { if ($_) {[System.Convert]::ToByte($_,16)}}
+    $hashstring = [System.Convert]::ToBase64String($hashbytes)
+    $hashstring | Set-Content $(Build.ArtifactStagingDirectory)/packages/$packageName-$version.zip.hash
   displayName: 'Publish fiskaltrust.Middleware.SCU.DE.DeutscheFiskal'
   workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.DeutscheFiskal'
 
@@ -99,7 +129,12 @@ steps:
     $packageName = "fiskaltrust.Middleware.SCU.DE.SwissbitCloud"
     $version = (Select-Xml -Path ./Directory.Build.props -XPath 'Project/PropertyGroup/Version').Node.InnerText
     dotnet publish --configuration $(buildConfiguration) -f net6 --output $(Build.ArtifactStagingDirectory)/raw/$packageName --no-build /p:DebugType=None /p:DebugSymbols=false
-    Compress-Archive -Path $(Build.ArtifactStagingDirectory)/raw/$packageName/* -DestinationPath $(Build.ArtifactStagingDirectory)/packages/$packageName.$version.zip
+    Compress-Archive -Path $(Build.ArtifactStagingDirectory)/raw/$packageName/* -DestinationPath $(Build.ArtifactStagingDirectory)/packages/$packageName-$version.zip
+
+    $hash = Get-FileHash $(Build.ArtifactStagingDirectory)/packages/$packageName-$version.zip -Algorithm SHA256
+    $hashbytes = $hash.Hash -split '([A-F0-9]{2})' | foreach-object { if ($_) {[System.Convert]::ToByte($_,16)}}
+    $hashstring = [System.Convert]::ToBase64String($hashbytes)
+    $hashstring | Set-Content $(Build.ArtifactStagingDirectory)/packages/$packageName-$version.zip.hash
   displayName: 'Publish fiskaltrust.Middleware.SCU.DE.SwissbitCloud'
   workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.SwissbitCloud'
 
@@ -107,7 +142,12 @@ steps:
     $packageName = "fiskaltrust.Middleware.SCU.DE.InMemory"
     $version = (Select-Xml -Path ./Directory.Build.props -XPath 'Project/PropertyGroup/Version').Node.InnerText
     dotnet publish --configuration $(buildConfiguration) -f net6 --output $(Build.ArtifactStagingDirectory)/raw/$packageName --no-build /p:DebugType=None /p:DebugSymbols=false
-    Compress-Archive -Path $(Build.ArtifactStagingDirectory)/raw/$packageName/* -DestinationPath $(Build.ArtifactStagingDirectory)/packages/$packageName.$version.zip
+    Compress-Archive -Path $(Build.ArtifactStagingDirectory)/raw/$packageName/* -DestinationPath $(Build.ArtifactStagingDirectory)/packages/$packageName-$version.zip
+
+    $hash = Get-FileHash $(Build.ArtifactStagingDirectory)/packages/$packageName-$version.zip -Algorithm SHA256
+    $hashbytes = $hash.Hash -split '([A-F0-9]{2})' | foreach-object { if ($_) {[System.Convert]::ToByte($_,16)}}
+    $hashstring = [System.Convert]::ToBase64String($hashbytes)
+    $hashstring | Set-Content $(Build.ArtifactStagingDirectory)/packages/$packageName-$version.zip.hash
   displayName: 'Publish fiskaltrust.Middleware.SCU.DE.InMemory'
   workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.InMemory'
 
