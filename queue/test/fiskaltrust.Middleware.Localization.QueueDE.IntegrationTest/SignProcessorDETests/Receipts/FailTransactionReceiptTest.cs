@@ -72,5 +72,19 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             opentrans = await _fixture.openTransactionRepository.GetAsync("FailTransaction-X").ConfigureAwait(false);
             opentrans.Should().BeNull();
         }
+
+        [Fact]
+        public async Task FailTransaction_WithFailedStartTransaction_ExpectValid()
+        {
+            var receiptRequest = _receiptTests.GetReceipt("FailTransactionReceipt", "FailedStartTransaction", 0x444500000000000B);
+            await _fixture.AddFailedStartTransaction("FailedStartTransaction");
+            var signProcessor = _fixture.CreateSignProcessorForSignProcessorDE(false, DateTime.Now.AddHours(-1));
+            var receiptResponse = await signProcessor.ProcessAsync(receiptRequest);
+            receiptResponse.Should().NotBeNull();
+            receiptResponse.ftSignatures.Should().NotBeNull();
+            await ReceiptTestResults.IsResponseValidAsync(_fixture, receiptResponse, receiptRequest, string.Empty, 4919338167972134914L, checkReceiptId: false);
+            var opentrans = await _fixture.failedFinishTransactionRepository.GetAsync("FailedStartTransaction").ConfigureAwait(false);
+            opentrans.Should().BeNull();
+        }
     }
 }
