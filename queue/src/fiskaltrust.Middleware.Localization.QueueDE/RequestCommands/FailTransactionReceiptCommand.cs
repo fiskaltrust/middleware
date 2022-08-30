@@ -27,6 +27,12 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
         public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueDE queueDE, ReceiptRequest request, ftQueueItem queueItem)
         {
             var closeSingleTransaction = !string.IsNullOrEmpty(request.cbReceiptReference);
+
+            if (closeSingleTransaction ? await _failedStartTransactionRepo.ExistsAsync(request.cbReceiptReference).ConfigureAwait(false) : false)
+            {
+                return await ProcessSSCDFailedReceiptRequest(request, queueItem, queue, queueDE).ConfigureAwait(false);
+            }
+
             if (closeSingleTransaction && request.IsImplictFlow())
             {
                 throw new ArgumentException($"ReceiptCase {request.ftReceiptCase:X} (fail-transaction-receipt) cannot use implicit-flow flag when a single transaction should be failed.");
@@ -47,6 +53,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             {
                 ulong transactionNumber;
                 var signatures = new List<SignaturItem>();
+
                 if (closeSingleTransaction)
                 {
                     (transactionNumber, signatures) = await ProcessReceiptStartTransSignAsync(request.cbReceiptReference, processType, payload, queueItem, queueDE, request.IsImplictFlow()).ConfigureAwait(false);
