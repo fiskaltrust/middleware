@@ -82,7 +82,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             var receiptResponse = await signProcessor.ProcessAsync(receiptRequest);
             receiptResponse.Should().NotBeNull();
             receiptResponse.ftSignatures.Should().NotBeNull();
-            await ReceiptTestResults.IsResponseValidAsync(_fixture, receiptResponse, receiptRequest, string.Empty, 4919338167972134914L, checkReceiptId: false);
+            await ReceiptTestResults.IsResponseValidAsync(_fixture, receiptResponse, receiptRequest, string.Empty, checkReceiptId: false);
             var opentrans = await _fixture.failedFinishTransactionRepository.GetAsync("FailedStartTransaction").ConfigureAwait(false);
             opentrans.Should().BeNull();
         }
