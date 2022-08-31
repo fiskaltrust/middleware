@@ -37,14 +37,14 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 throw new ArgumentException($"ReceiptCase {request.ftReceiptCase:X} (fail-transaction-receipt) must use implicit-flow flag when multiple transactions should be failed.");
             }
 
-            var hasFailedStartTransaction = closeSingleTransaction && await _failedStartTransactionRepo.ExistsAsync(request.cbReceiptReference).ConfigureAwait(false);
+            if (closeSingleTransaction && await _failedStartTransactionRepo.ExistsAsync(request.cbReceiptReference).ConfigureAwait(false))
+            {
+                return await ProcessReceiptWithFailedStartTransaction(request, queueItem, queue, queueDE).ConfigureAwait(false);
+            }
 
             if (closeSingleTransaction && !await _openTransactionRepo.ExistsAsync(request.cbReceiptReference).ConfigureAwait(false))
             {
-                if (!hasFailedStartTransaction)
-                {
-                    throw new ArgumentException($"No open transaction found for cbReceiptReference '{request.cbReceiptReference}'. If you want to close multiple transactions, pass an array value for 'CurrentStartedTransactionNumbers' via ftReceiptCaseData.");
-                }
+                throw new ArgumentException($"No open transaction found for cbReceiptReference '{request.cbReceiptReference}'. If you want to close multiple transactions, pass an array value for 'CurrentStartedTransactionNumbers' via ftReceiptCaseData.");
             }
 
             var (processType, payload) = _transactionPayloadFactory.CreateReceiptPayload(request);
@@ -52,11 +52,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
             try
             {
-                if (hasFailedStartTransaction)
-                {
-                    return await ProcessReceiptWithFailedStartTransaction(request, queueItem, queue, queueDE).ConfigureAwait(false);
-                }
-
                 ulong transactionNumber;
                 var signatures = new List<SignaturItem>();
 
