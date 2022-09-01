@@ -37,6 +37,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
         private readonly FccErsApiProvider _fccErsApiProvider;
         private readonly FccAdminApiProvider _fccAdminApiProvider;
         private string _fccDirectory;
+        private Version _version;
 
         private TseInfo _lastTseInfo;
 
@@ -71,13 +72,18 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
 
                 if (!_fccDownloadService.IsInstalled(_fccDirectory))
                 {
-                    _fccDownloadService.DownloadFccAsync(_fccDirectory).Wait();
-                    _fccInitializationService.Initialize(_fccDirectory);
+                    if (_fccDownloadService.DownloadFccAsync(_fccDirectory).Result)
+                    {
+                        _fccInitializationService.Initialize(_fccDirectory);
+                        _version = new Version(_configuration.FccVersion);
+                    }
                 }
                 else if (!_fccDownloadService.IsLatestVersion(_fccDirectory, new Version(_configuration.FccVersion)))
                 {
-                    _fccDownloadService.DownloadFccAsync(_fccDirectory).Wait();
-                    _fccInitializationService.Update(_fccDirectory);
+                    if (_fccDownloadService.DownloadFccAsync(_fccDirectory).Result)
+                    {
+                        _fccInitializationService.Update(_fccDirectory);
+                    }
                 }
                 else if (!_fccInitializationService.IsInitialized(_fccDirectory))
                 {
@@ -87,7 +93,10 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
                 {
                     ConfigHelper.SetFccHeapMemory(_fccDirectory, _configuration.FccHeapMemory.Value);
                 }
-
+                if (_version == null)
+                {
+                    _version = _fccDownloadService.UsedFCCVersion;
+                }
                 StartFccIfNotRunning().Wait();
             }
             catch (Exception ex)
@@ -250,9 +259,13 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
                     MaxLogMemorySize = long.MaxValue,
                     MaxNumberOfSignatures = long.MaxValue,
                     CurrentStartedTransactionNumbers = startedTransactions.Select(x => (ulong) x.TransactionNumber).ToList(),
-                    CurrentState = activeKey.state.ToTseState()
+                    CurrentState = activeKey.state.ToTseState(),
+                    Info = new Dictionary<string, object>()
                 };
-
+                if (_version != null)
+                {
+                    _lastTseInfo.Info.Add("FCCVerion", _version.ToString());
+                }
                 return _lastTseInfo;
             }
             catch (Exception ex)
