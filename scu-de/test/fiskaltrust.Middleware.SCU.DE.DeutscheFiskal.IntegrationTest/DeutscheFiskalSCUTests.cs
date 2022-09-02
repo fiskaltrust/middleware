@@ -9,6 +9,7 @@ using fiskaltrust.ifPOS.v1.de;
 using fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser.Logs;
 using fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser.Logs.Models;
 using FluentAssertions;
+using Newtonsoft.Json;
 using Xunit;
 
 [assembly: CollectionBehavior(DisableTestParallelization = true)]
@@ -227,6 +228,8 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.IntegrationTest
 
             var result = await sut.GetTseInfoAsync().ConfigureAwait(false);
 
+            var fwid = JsonConvert.DeserializeObject<Dictionary<string, string>>(result.FirmwareIdentification);
+            fwid.Should().ContainKeys("fccVersion", "remoteCspVersion", "localClientVersion");
             result.CurrentNumberOfClients.Should().BeGreaterThan(0);
             result.CurrentNumberOfStartedTransactions.Should().BeGreaterThan(0);
             result.MaxNumberOfClients.Should().BeGreaterOrEqualTo(result.CurrentNumberOfClients);
