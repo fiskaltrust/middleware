@@ -246,7 +246,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
                     CurrentNumberOfStartedTransactions = fccInfo.CurrentNumberOfTransactions,
                     SerialNumberOctet = tssDetails.SerialNumberHex,
                     PublicKeyBase64 = tssDetails.PublicKey,
-                    FirmwareIdentification = (_version != null ? $"{_version}_" : "") + selfCheckResult.remoteCspVersion,
+                    FirmwareIdentification = JsonConvert.SerializeObject(new Dictionary<string, string> { { "fccVersion", selfCheckResult.fccVersion }, { "localClientVersion", selfCheckResult.localClientVersion }, { "remoteCspVersion", selfCheckResult.remoteCspVersion } }),
                     CertificationIdentification = GetCertificationIdentification(),
                     MaxNumberOfClients = fccInfo.MaxNumberClients,
                     MaxNumberOfStartedTransactions = fccInfo.MaxNumberTransactions,
