@@ -246,7 +246,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
                     CurrentNumberOfStartedTransactions = fccInfo.CurrentNumberOfTransactions,
                     SerialNumberOctet = tssDetails.SerialNumberHex,
                     PublicKeyBase64 = tssDetails.PublicKey,
-                    FirmwareIdentification = selfCheckResult.remoteCspVersion,
+                    FirmwareIdentification = (_version != null ? $"{_version}_" : "") + selfCheckResult.remoteCspVersion,
                     CertificationIdentification = GetCertificationIdentification(),
                     MaxNumberOfClients = fccInfo.MaxNumberClients,
                     MaxNumberOfStartedTransactions = fccInfo.MaxNumberTransactions,
@@ -260,12 +260,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
                     MaxNumberOfSignatures = long.MaxValue,
                     CurrentStartedTransactionNumbers = startedTransactions.Select(x => (ulong) x.TransactionNumber).ToList(),
                     CurrentState = activeKey.state.ToTseState(),
-                    Info = new Dictionary<string, object>()
                 };
-                if (_version != null)
-                {
-                    _lastTseInfo.Info.Add("FCCVerion", _version.ToString());
-                }
                 return _lastTseInfo;
             }
             catch (Exception ex)
