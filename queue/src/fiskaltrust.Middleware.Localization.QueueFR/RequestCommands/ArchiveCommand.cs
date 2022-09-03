@@ -46,6 +46,11 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
 
         public override async Task<(ReceiptResponse receiptResponse, ftJournalFR journalFR, List<ftActionJournal> actionJournals)> ExecuteAsync(ftQueue queue, ftQueueFR queueFR, ftSignaturCreationUnitFR signaturCreationUnitFR, ReceiptRequest request, ftQueueItem queueItem)
         {
+            if (queue.ftReceiptNumerator == 0)
+            {
+                throw new Exception("Nothing to archive (the first receipt of a Queue cannot be an archive receipt).");
+            }
+
             if (request.HasTrainingReceiptFlag())
             {
                 var (response, journalFR) = CreateTrainingReceiptResponse(queue, queueFR, request, queueItem, request.GetTotals(), signaturCreationUnitFR);
@@ -65,7 +70,8 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
                 var response = CreateDefaultReceiptResponse(queue, queueFR, request, queueItem);
                 response.ftReceiptIdentification += $"A{++queueFR.ANumerator}";
 
-                (var lastActionJournalId, var lastJournalFRId, var lastReceiptJournalId, var firstContainedReceiptMoment, var firstContainedReceiptQueueItemId, var lastContainedReceiptMoment, var lastContainedReceiptQueueItemId) = await GetArchivePayloadDataAsync(queueFR);
+                (var lastActionJournalId, var lastJournalFRId, var lastReceiptJournalId, var firstContainedReceiptMoment, 
+                    var firstContainedReceiptQueueItemId, var lastContainedReceiptMoment, var lastContainedReceiptQueueItemId) = await GetArchivePayloadDataAsync(queueFR);
                 
                 
                 var payload = PayloadFactory.GetArchivePayload(request, response, queueFR, signaturCreationUnitFR, queueFR.ALastHash, lastActionJournalId, lastJournalFRId
@@ -121,7 +127,6 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
 
         private async Task<(Guid? lastActionJournalId, Guid? lastJournalFRId, Guid? lastReceiptJournalId, DateTime? firstContainedReceiptMoment, Guid? firstContainedReceiptQueueItemId, DateTime? lastContainedReceiptMoment, Guid? lastContainedReceiptQueueItemId)> GetArchivePayloadDataAsync(ftQueueFR queueFR)
         {
-            // TODO: Handle case when archive receipt is the first one sent ever
             var lastActionJournal = await _actionJournalRepository.GetWithLastTimestampAsync();
             var lastJournalFR = await _journalFRRepository.GetWithLastTimestampAsync();
             var lastReceiptJournal = await _receiptJournalRepository.GetWithLastTimestampAsync();
