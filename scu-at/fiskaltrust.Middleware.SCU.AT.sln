@@ -8,8 +8,11 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.SCU.AT.InMemory", "src\fiskaltrust.Middleware.SCU.AT.InMemory\fiskaltrust.Middleware.SCU.AT.InMemory.csproj", "{AA41A6D6-8C74-4E3D-8E62-2095B0FC1576}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{EC648F3D-71FD-4478-A51B-CB3C0336E74D}"
+	ProjectSection(SolutionItems) = preProject
+		test\Directory.Build.props = test\Directory.Build.props
+	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fiskaltrust.Middleware.SCU.AT.InMemory.UnitTest", "test\fiskaltrust.Middleware.SCU.AT.InMemory.UnitTest\fiskaltrust.Middleware.SCU.AT.InMemory.UnitTest.csproj", "{93A2FCAF-105F-488A-8910-AE5D0ACE90F7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.SCU.AT.InMemory.UnitTest", "test\fiskaltrust.Middleware.SCU.AT.InMemory.UnitTest\fiskaltrust.Middleware.SCU.AT.InMemory.UnitTest.csproj", "{93A2FCAF-105F-488A-8910-AE5D0ACE90F7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
