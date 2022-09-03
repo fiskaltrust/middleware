@@ -14,6 +14,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{EC648F3D-7
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.SCU.AT.InMemory.UnitTest", "test\fiskaltrust.Middleware.SCU.AT.InMemory.UnitTest\fiskaltrust.Middleware.SCU.AT.InMemory.UnitTest.csproj", "{93A2FCAF-105F-488A-8910-AE5D0ACE90F7}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{C7651BB5-A45D-4497-8E55-4170A121FA31}"
+	ProjectSection(SolutionItems) = preProject
+		Directory.Build.props = Directory.Build.props
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
