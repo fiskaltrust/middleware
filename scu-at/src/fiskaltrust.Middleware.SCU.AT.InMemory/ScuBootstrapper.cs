@@ -1,6 +1,5 @@
 ﻿using fiskaltrust.ifPOS.v0;
 using fiskaltrust.Middleware.Abstractions;
-using fiskaltrust.Middleware.SCU.AT.Pfx;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace fiskaltrust.Middleware.SCU.AT.InMemory
