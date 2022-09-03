@@ -16,7 +16,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 {
     internal class YearlyClosingReceiptCommand : RequestCommand
     {
-        public override string ReceiptName => throw new NotImplementedException();
+        public override string ReceiptName => "Yearly-closing receipt";
 
         public YearlyClosingReceiptCommand(IATSSCDProvider sscdProvider, MiddlewareConfiguration middlewareConfiguration, QueueATConfiguration queueATConfiguration, ILogger<RequestCommand> logger)
             : base(sscdProvider, middlewareConfiguration, queueATConfiguration, logger) { }

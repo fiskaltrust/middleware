@@ -17,7 +17,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
     {
         private readonly ExportService _exportService;
 
-        public override string ReceiptName => throw new NotImplementedException();
+        public override string ReceiptName => "Monthly-closing receipt";
 
         public MonthlyClosingReceiptCommand(IATSSCDProvider sscdProvider, MiddlewareConfiguration middlewareConfiguration, QueueATConfiguration queueATConfiguration,
             ExportService exportService, ILogger<RequestCommand> logger)

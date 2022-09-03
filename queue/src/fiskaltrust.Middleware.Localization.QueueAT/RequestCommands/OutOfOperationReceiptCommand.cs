@@ -15,7 +15,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 {
     internal class OutOfOperationReceiptCommand : RequestCommand
     {
-        public override string ReceiptName => throw new NotImplementedException();
+        public override string ReceiptName => "Out-of-operation receipt";
 
         public OutOfOperationReceiptCommand(IATSSCDProvider sscdProvider, MiddlewareConfiguration middlewareConfiguration, QueueATConfiguration queueATConfiguration, ILogger<RequestCommand> logger)
             : base(sscdProvider, middlewareConfiguration, queueATConfiguration, logger) { }

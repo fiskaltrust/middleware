@@ -38,7 +38,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.Helpers
                 DataBase64 = "jws"
             };
         }
-        public static ftActionJournal CreateQueueDeactivationJournal(ftQueue queue, ftQueueAT queueAT, ftQueueItem queueItem, ftJournalAT journalAT)
+        public static ftActionJournal CreateQueueDeactivationJournal(ftQueue queue, ftQueueAT queueAT, ftQueueItem queueItem, ftJournalAT journalAT, bool isStopReceipt = true)
         {
             var fonDeactivateQueue = new FonDeactivateQueue()
             {
@@ -49,7 +49,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.Helpers
                 DEPValue = $"{journalAT?.JWSHeaderBase64url}.{journalAT?.JWSPayloadBase64url}.{journalAT?.JWSSignatureBase64url}",
                 ClosedSystemKind = queueAT.ClosedSystemKind,
                 ClosedSystemValue = queueAT.ClosedSystemValue,
-                IsStopReceipt = true
+                IsStopReceipt = isStopReceipt
             };
 
             return new ftActionJournal

@@ -19,7 +19,7 @@ using Org.BouncyCastle.X509;
 
 namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 {
-    public abstract partial class RequestCommand
+    public abstract class RequestCommand
     {
         private const string JSWS_PAYLOAD_COUNTER_TRAINING = "VFJB";
         private const string JWS_PAYLOAD_COUNTER_STORNO = "U1RP";
@@ -91,7 +91,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
             }
         }
 
-#pragma warning disable IDE0060 // Remove unused parameter
+#pragma warning disable IDE0060
         protected void IncrementMessageCount(ref ftQueueAT queueAT)
         {
             // Not needed anymore, as the database is now only updated when a request finishes
@@ -508,6 +508,11 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 
                 if (receiptRequest.IsZeroReceipt() || queueAT.SSCDFailCount == 0)
                 {
+                    if(!(await _sscdProvider.GetAllInstances()).Any())
+                    {
+                        throw new Exception("No SCU is connected to this Queue.");
+                    }
+
                     if (receiptRequest.IsZeroReceipt())
                     {
                         _sscdProvider.SwitchToFirstScu();
