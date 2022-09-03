@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts;
 
-namespace fiskaltrust.Middleware.Localization.QueueDE
+namespace fiskaltrust.Middleware.Localization.QueueAT
 {
-    public class JournalProcessorAT : IJournalProcessor
+    public class JournalProcessorAT : IJournalProcessor, IMarketSpecificJournalProcessor
     {
         public IAsyncEnumerable<JournalResponse> ProcessAsync(JournalRequest request)
         {

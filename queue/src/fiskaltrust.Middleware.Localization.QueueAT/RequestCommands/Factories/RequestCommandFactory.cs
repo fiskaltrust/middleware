@@ -27,7 +27,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands.Factories
                 0x0004 => _serviceProvider.GetRequiredService<OutOfOperationReceiptCommand>(),
                 0x0005 => _serviceProvider.GetRequiredService<MonthlyClosingReceiptCommand>(),
                 0x0006 => _serviceProvider.GetRequiredService<YearlyClosingReceiptCommand>(),
-                _ => _serviceProvider.GetRequiredService<ReceiptCommand>()
+                _ => _serviceProvider.GetRequiredService<PosReceiptCommand>()
             };
         }
     }

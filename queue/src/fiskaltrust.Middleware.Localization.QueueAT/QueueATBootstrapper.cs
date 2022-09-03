@@ -1,5 +1,9 @@
 ﻿using System;
 using fiskaltrust.Middleware.Contracts;
+using fiskaltrust.Middleware.Contracts.Models;
+using fiskaltrust.Middleware.Localization.QueueAT.RequestCommands;
+using fiskaltrust.Middleware.Localization.QueueAT.RequestCommands.Factories;
+using fiskaltrust.Middleware.Localization.QueueAT.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace fiskaltrust.Middleware.Localization.QueueAT
@@ -8,7 +12,23 @@ namespace fiskaltrust.Middleware.Localization.QueueAT
     {
         public void ConfigureServices(IServiceCollection services)
         {
-            throw new NotImplementedException();
+            services.AddSingleton(sp => QueueATConfiguration.FromMiddlewareConfiguration(sp.GetRequiredService<MiddlewareConfiguration>()));
+            
+            services.AddScoped<IATSSCDProvider, ATSSCDProvider>();
+            services.AddScoped<ExportService>();
+            services.AddScoped<RequestCommandFactory>();
+
+            services.AddScoped<IMarketSpecificJournalProcessor, JournalProcessorAT>();
+            services.AddScoped<IMarketSpecificSignProcessor, SignProcessorAT>();
+
+            services.AddScoped<DisabledQueueReceiptCommand>();
+            services.AddScoped<InitialOperationReceiptCommand>();
+            services.AddScoped<MonthlyClosingReceiptCommand>();
+            services.AddScoped<OutOfOperationReceiptCommand>();
+            services.AddScoped<PosReceiptCommand>();
+            services.AddScoped<YearlyClosingReceiptCommand>();
+            services.AddScoped<ZeroReceiptCommand>();
+
         }
     }
 }

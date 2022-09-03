@@ -10,11 +10,11 @@ using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 {
-    internal class ReceiptCommand : RequestCommand
+    internal class PosReceiptCommand : RequestCommand
     {
         public override string ReceiptName => "POS receipt";
 
-        public ReceiptCommand(IATSSCDProvider sscdProvider, MiddlewareConfiguration middlewareConfiguration, QueueATConfiguration queueATConfiguration, ILogger<RequestCommand> logger)
+        public PosReceiptCommand(IATSSCDProvider sscdProvider, MiddlewareConfiguration middlewareConfiguration, QueueATConfiguration queueATConfiguration, ILogger<RequestCommand> logger)
             : base(sscdProvider, middlewareConfiguration, queueATConfiguration, logger) { }
 
         public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueAT queueAT, ReceiptRequest request, ftQueueItem queueItem)

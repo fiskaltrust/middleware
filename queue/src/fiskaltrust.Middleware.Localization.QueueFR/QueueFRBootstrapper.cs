@@ -38,7 +38,6 @@ namespace fiskaltrust.Middleware.Localization.QueueFR
             services.AddScoped<ArchiveCommand>();
             services.AddScoped<CopyCommand>();
             services.AddScoped<TicketCommand>();
-
         }
     }
 }
