@@ -12,7 +12,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 {
     internal class ReceiptCommand : RequestCommand
     {
-        public override string ReceiptName => throw new NotImplementedException();
+        public override string ReceiptName => "POS receipt";
 
         public ReceiptCommand(IATSSCDProvider sscdProvider, MiddlewareConfiguration middlewareConfiguration, QueueATConfiguration queueATConfiguration, ILogger<RequestCommand> logger)
             : base(sscdProvider, middlewareConfiguration, queueATConfiguration, logger) { }

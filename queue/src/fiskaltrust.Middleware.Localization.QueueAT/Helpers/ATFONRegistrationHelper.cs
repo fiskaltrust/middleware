@@ -9,7 +9,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.Helpers
     {
         private static readonly string _fonSignatureType = $"0x{ifPOS.v0.SignaturItem.Types.AT_FinanzOnline:x}";
 
-        public static ftActionJournal CreateQueueActivationJournal(ftQueue queue, ftQueueAT queueAT, ftQueueItem queueItem, ftJournalAT journalAT)
+        public static ftActionJournal CreateQueueActivationJournal(ftQueue queue, ftQueueAT queueAT, ftQueueItem queueItem, ftJournalAT journalAT, bool isStartReceipt = true)
         {
             var fonActivateQueue = new FonActivateQueue()
             {
@@ -21,7 +21,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.Helpers
                 DEPValue = $"{journalAT?.JWSHeaderBase64url}.{journalAT?.JWSPayloadBase64url}.{journalAT?.JWSSignatureBase64url}",
                 ClosedSystemKind = queueAT.ClosedSystemKind,
                 ClosedSystemValue = queueAT.ClosedSystemValue,
-                IsStartReceipt = true
+                IsStartReceipt = isStartReceipt
             };
 
             return new ftActionJournal
