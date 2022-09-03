@@ -11,7 +11,7 @@ steps:
 
 - task: Cache@2
   inputs:
-    key: 'nuget | "$(Agent.OS)" | scu-me/**/*.csproj'
+    key: 'nuget | "$(Agent.OS)" | scu-at/**/*.csproj'
     restoreKeys: |
       nuget | "$(Agent.OS)"
       nuget

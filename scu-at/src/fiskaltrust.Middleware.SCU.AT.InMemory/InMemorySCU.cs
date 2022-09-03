@@ -44,6 +44,11 @@ namespace fiskaltrust.Middleware.SCU.AT.Pfx
                     }
                 }
             }
+
+            if(_certificate == null)
+            {
+                throw new Exception("An error occurred while creating the random certificate.");
+            }
         }
 
         public async Task<CertificateResponse> CertificateAsync() => await Task.FromResult(new CertificateResponse { Certificate = _certificate }).ConfigureAwait(false);
