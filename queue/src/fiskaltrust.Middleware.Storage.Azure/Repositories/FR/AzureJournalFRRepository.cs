@@ -5,6 +5,7 @@ using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Storage.Azure.Mapping;
 using fiskaltrust.Middleware.Storage.Azure.TableEntities;
 using fiskaltrust.storage.V0;
+using Microsoft.Azure.Cosmos.Table;
 
 namespace fiskaltrust.Middleware.Storage.Azure.Repositories.FR
 {
@@ -29,6 +30,16 @@ namespace fiskaltrust.Middleware.Storage.Azure.Repositories.FR
                 return result.Take(take.Value).ToAsyncEnumerable();
             }
             return result.ToAsyncEnumerable();
+        }
+
+        public async IAsyncEnumerable<ftJournalFR> GetProcessedCopyReceiptsAsync()
+        {
+            var filter = TableQuery.GenerateFilterCondition(nameof(ftJournalFR.ReceiptType), QueryComparisons.Equal, "C");
+            var result = await GetAllAsync(filter).ToListAsync().ConfigureAwait(false);
+            foreach (var item in result)
+            {
+                yield return MapToStorageEntity(item);
+            }
         }
     }
 }

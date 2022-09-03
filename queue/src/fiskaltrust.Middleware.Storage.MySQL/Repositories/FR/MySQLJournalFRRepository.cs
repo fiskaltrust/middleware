@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
 using fiskaltrust.Middleware.Contracts.Repositories;
@@ -58,6 +59,18 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories.FR
             {
                 await connection.OpenAsync().ConfigureAwait(false);
                 return await connection.QueryFirstOrDefaultAsync<ftJournalFR>("SELECT * FROM ftJournalFR ORDER BY TimeStamp DESC LIMIT 1").ConfigureAwait(false);
+            }
+        }
+
+        public async IAsyncEnumerable<ftJournalFR> GetProcessedCopyReceiptsAsync()
+        {
+            using (var connection = new MySqlConnection(ConnectionString))
+            {
+                await connection.OpenAsync().ConfigureAwait(false);
+                foreach (var item in await connection.QueryAsync<ftJournalFR>("select * from ftJournalFR where ReceiptType = 'C'"))
+                {
+                    yield return item;
+                }
             }
         }
     }

@@ -39,5 +39,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.Repositories.FR
         }
 
         public async Task<ftJournalFR> GetWithLastTimestampAsync() => await DbContext.JournalFRList.AsQueryable().OrderByDescending(x => x.TimeStamp).FirstOrDefaultAsync().ConfigureAwait(false);
+
+        public IAsyncEnumerable<ftJournalFR> GetProcessedCopyReceiptsAsync() => DbContext.JournalFRList.AsQueryable().Where(x => x.ReceiptType == "C").ToAsyncEnumerable();
     }
 }

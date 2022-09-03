@@ -122,7 +122,6 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
         private async Task<(Guid? lastActionJournalId, Guid? lastJournalFRId, Guid? lastReceiptJournalId, DateTime? firstContainedReceiptMoment, Guid? firstContainedReceiptQueueItemId, DateTime? lastContainedReceiptMoment, Guid? lastContainedReceiptQueueItemId)> GetArchivePayloadDataAsync(ftQueueFR queueFR)
         {
             // TODO: Handle case when archive receipt is the first one sent ever
-
             var lastActionJournal = await _actionJournalRepository.GetWithLastTimestampAsync();
             var lastJournalFR = await _journalFRRepository.GetWithLastTimestampAsync();
             var lastReceiptJournal = await _receiptJournalRepository.GetWithLastTimestampAsync();
@@ -147,88 +146,6 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
                 return (lastActionJournal?.ftActionJournalId, lastJournalFR?.ftJournalFRId, lastReceiptJournal?.ftReceiptJournalId, firstResponse?.ftReceiptMoment,
                    firstQueueItem.ftQueueItemId, lastResponse.ftReceiptMoment, lastQueueItem.ftQueueItemId);
             }
-
-            
-
-
-            //Guid? firstArchiveReceiptQueueItemId = null;
-            //DateTime? firstArchiveReceiptMoment = null;
-            //Guid? lastArchiveReceiptQueueItemId = null;
-            //DateTime? lastArchiveReceiptMoment = null;
-            //ftQueueItem lastAllowedQueueItem = null;
-            //ArchivePayload previousArchivePayload = null;
-
-            //do
-            //{
-            //    var previousArchiveQueueItemId = previousArchivePayload == null ? queueFr.ALastQueueItemId : previousArchivePayload.PreviousArchiveQueueItemId;
-            //    if (!previousArchiveQueueItemId.HasValue)
-            //    {
-            //        previousArchivePayload = null;
-            //        break;
-            //    }
-            //    var previousArchive = parentStorage.QueueItem(previousArchiveQueueItemId.Value);
-            //    var previousArchiveResponse = JsonConvert.DeserializeObject<ReceiptResponse>(previousArchive.response);
-            //    var jwt = previousArchiveResponse.ftSignatures.Where(s => s.ftSignatureType == 0x4652000000000001).First().Data;
-            //    previousArchivePayload = JsonConvert.DeserializeObject<ArchivePayload>(Encoding.UTF8.GetString(Utilities.FromBase64urlString(jwt.Split('.')[1])));
-            //} while (!previousArchivePayload.LastContainedReceiptQueueItemId.HasValue);
-
-            //if (previousArchivePayload != null && previousArchivePayload.LastContainedReceiptQueueItemId.HasValue)
-            //{
-            //    var firstArchiveItem = parentStorage.QueueItemTableByTimeStamp(parentStorage.QueueItem(previousArchivePayload.LastContainedReceiptQueueItemId.Value).TimeStamp, null, 1).FirstOrDefault();
-            //    firstArchiveReceiptQueueItemId = firstArchiveItem.ftQueueItemId;
-
-            //    if (firstArchiveReceiptQueueItemId.Value.ToString() == receiptResponse.ftQueueItemID)
-            //    {
-            //        firstArchiveReceiptMoment = receiptResponse.ftReceiptMoment;
-            //        lastAllowedQueueItem = firstArchiveItem;
-            //    }
-            //    else if (firstArchiveItem.response != null)
-            //    {
-            //        var firstArchiveReceiptResponse = JsonConvert.DeserializeObject<ReceiptResponse>(firstArchiveItem.response);
-            //        firstArchiveReceiptMoment = firstArchiveReceiptResponse.ftReceiptMoment;
-            //    }
-
-            //    if (lastAllowedQueueItem == null)
-            //    {
-            //        lastAllowedQueueItem = parentStorage.QueueItemTableByTimeStamp(firstArchiveItem.TimeStamp + 1).Where(qi => qi.ftQueueMoment < firstArchiveReceiptMoment.Value.AddYears(1).Date).OrderByDescending(qi => qi.TimeStamp).FirstOrDefault();
-            //    }
-            //}
-            //else if (queue.StartMoment.HasValue)
-            //{
-            //    var queueItems = parentStorage.QueueItemTableByTimeStamp();
-            //    lastAllowedQueueItem = queueItems.Where(qi => qi.ftQueueMoment < queue.StartMoment.Value.AddYears(1).Date).OrderByDescending(qi => qi.TimeStamp).FirstOrDefault();
-
-            //    if (!firstArchiveReceiptQueueItemId.HasValue)
-            //    {
-            //        var firstQueueItem = queueItems.OrderBy(qi => qi.TimeStamp).FirstOrDefault();
-            //        firstArchiveReceiptQueueItemId = firstQueueItem?.ftQueueItemId;
-            //        firstArchiveReceiptMoment = firstQueueItem?.response != null ? (DateTime?) JsonConvert.DeserializeObject<ReceiptResponse>(firstQueueItem.response).ftReceiptMoment : null;
-            //    }
-            //}
-
-            ////it can be null in the following cases:
-            ////  - the queue is not used for one year or more
-            ////  - the Archive receipt has been requested twice (or more) in row
-            ////  - the queue is not yet started (the execution should not reach this method in this case)
-            ////  - the queue has no receipts
-            //if (lastAllowedQueueItem != null)
-            //{
-            //    lastArchiveReceiptQueueItemId = lastAllowedQueueItem.ftQueueItemId;
-            //    if (lastArchiveReceiptQueueItemId.Value.ToString() == receiptResponse.ftQueueItemID)
-            //    {
-            //        lastArchiveReceiptMoment = receiptResponse.ftReceiptMoment;
-            //    }
-            //    else if (lastAllowedQueueItem.response != null)
-            //    {
-            //        var lastArchiveReceiptResponse = JsonConvert.DeserializeObject<ReceiptResponse>(lastAllowedQueueItem.response);
-            //        lastArchiveReceiptMoment = lastArchiveReceiptResponse.ftReceiptMoment;
-            //    }
-            //}
-            //else
-            //{
-            //    lastArchiveReceiptQueueItemId = firstArchiveReceiptQueueItemId;
-            //    lastArchiveReceiptMoment = firstArchiveReceiptMoment;
-            //}
         }
     }
 }

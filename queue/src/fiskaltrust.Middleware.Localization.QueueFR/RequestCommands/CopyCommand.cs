@@ -1,23 +1,33 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
+using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueFR.Extensions;
 using fiskaltrust.Middleware.Localization.QueueFR.Models;
 using fiskaltrust.storage.V0;
+using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
 {
     public class CopyCommand : RequestCommand
     {
-        public CopyCommand(SignatureFactoryFR signatureFactoryFR) : base(signatureFactoryFR) { }
+        private readonly IMiddlewareJournalFRRepository _journalFRRepository;
+        private readonly IReadOnlyQueueItemRepository _queueItemRepository;
 
-        public override Task<(ReceiptResponse receiptResponse, ftJournalFR journalFR, List<ftActionJournal> actionJournals)> ExecuteAsync(ftQueue queue, ftQueueFR queueFR, ftSignaturCreationUnitFR signaturCreationUnitFR, ReceiptRequest request, ftQueueItem queueItem)
+        public CopyCommand(SignatureFactoryFR signatureFactoryFR, IMiddlewareJournalFRRepository journalFRRepository, IReadOnlyQueueItemRepository queueItemRepository) : base(signatureFactoryFR)
+        {
+            _journalFRRepository = journalFRRepository;
+            _queueItemRepository = queueItemRepository;
+        }
+
+        public override async Task<(ReceiptResponse receiptResponse, ftJournalFR journalFR, List<ftActionJournal> actionJournals)> ExecuteAsync(ftQueue queue, ftQueueFR queueFR, ftSignaturCreationUnitFR signaturCreationUnitFR, ReceiptRequest request, ftQueueItem queueItem)
         {
             if (request.HasTrainingReceiptFlag())
             {
                 var totals = request.GetTotals();
                 var (response, journalFR) = CreateTrainingReceiptResponse(queue, queueFR, request, queueItem, totals, signaturCreationUnitFR);
-                return Task.FromResult<(ReceiptResponse, ftJournalFR, List<ftActionJournal>)>((response, journalFR, new()));
+                return (response, journalFR, new());
             }
             else
             {
@@ -30,7 +40,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
                 queueFR.CLastHash = hash;
                 journalFR.ReceiptType = "C";
 
-                var duplicateCount = GetCountOfExistingCopies(request.cbPreviousReceiptReference) + 1;
+                var duplicateCount = (await GetCountOfExistingCopiesAsync(request.cbPreviousReceiptReference)) + 1;
 
                 var signatures = new[]
                 {
@@ -40,7 +50,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
 
                 response.ftSignatures = response.ftSignatures.Extend(signatures);
 
-                return Task.FromResult<(ReceiptResponse, ftJournalFR, List<ftActionJournal>)>((response, journalFR, new()));
+                return (response, journalFR, new());
             }
         }
 
@@ -60,25 +70,23 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
             }
         }
 
-#pragma warning disable
-        private int GetCountOfExistingCopies(string cbPreviousReceiptReference)
+        private async Task<int> GetCountOfExistingCopiesAsync(string cbPreviousReceiptReference)
         {
-            return 0;
-            // TODO
-            //var count = 0;
-            //var copyJournals = parentStorage.JournalFRTableByType("C");
-            //foreach (var journal in copyJournals)
-            //{
-            //    var queueItem = parentStorage.QueueItem(journal.ftQueueItemId);
-            //    var response = queueItem?.response != null ? JsonConvert.DeserializeObject<ReceiptResponse>(queueItem.response) : null;
-            //    if (response != null)
-            //    {
-            //        if (response.ftSignatures.Any(x => x.Caption == "Duplicata" && x.Data.EndsWith($"Duplicata de {cbPreviousReceiptReference}")))
-            //            count++;
-            //    }
-            //}
+            var count = 0;
+            await foreach (var copyJournal in _journalFRRepository.GetProcessedCopyReceiptsAsync())
+            {
+                var queueItem = await _queueItemRepository.GetAsync(copyJournal.ftQueueItemId);
+                var response = queueItem?.response != null ? JsonConvert.DeserializeObject<ReceiptResponse>(queueItem.response) : null;
+                if (response != null)
+                {
+                    if (response.ftSignatures.Any(x => x.Caption == "Duplicata" && x.Data.EndsWith($"Duplicata de {cbPreviousReceiptReference}")))
+                    {
+                        count++;
+                    }
+                }
+            }
 
-            //return count;
+            return count;
         }
     }
 }

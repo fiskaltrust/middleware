@@ -35,5 +35,13 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Repositories.FR
         protected override Guid GetIdForEntity(ftJournalFR entity) => entity.ftJournalFRId;
 
         public async Task<ftJournalFR> GetWithLastTimestampAsync() => await DbConnection.QueryFirstOrDefaultAsync<ftJournalFR>("Select * from ftJournalFR ORDER BY TimeStamp DESC LIMIT 1").ConfigureAwait(false);
+
+        public async IAsyncEnumerable<ftJournalFR> GetProcessedCopyReceiptsAsync()
+        {
+            foreach (var item in await DbConnection.QueryAsync<ftJournalFR>("select * from ftJournalFR where ReceiptType = 'C'"))
+            {
+                yield return item;
+            }
+        }
     }
 }

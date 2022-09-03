@@ -30,5 +30,7 @@ namespace fiskaltrust.Middleware.Storage.InMemory.Repositories.FR
         }
 
         public Task<ftJournalFR> GetWithLastTimestampAsync() => Task.FromResult(Data.Values.OrderByDescending(x => x.TimeStamp).FirstOrDefault());
+
+        public IAsyncEnumerable<ftJournalFR> GetProcessedCopyReceiptsAsync() => Data.Values.Where(x => x.ReceiptType == "C").ToAsyncEnumerable();
     }
 }

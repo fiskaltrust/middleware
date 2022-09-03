@@ -38,6 +38,7 @@ namespace fiskaltrust.Middleware.Contracts.Repositories
     public interface IMiddlewareJournalFRRepository : IJournalFRRepository, IMiddlewareRepository<ftJournalFR>
     {
         Task<ftJournalFR> GetWithLastTimestampAsync();
+        IAsyncEnumerable<ftJournalFR> GetProcessedCopyReceiptsAsync();
     }
 
     public interface IMiddlewareJournalDERepository : IJournalDERepository
