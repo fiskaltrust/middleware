@@ -4,34 +4,24 @@ using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts;
-using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Localization.QueueAT.Models;
 using fiskaltrust.Middleware.Localization.QueueAT.RequestCommands;
 using fiskaltrust.Middleware.Localization.QueueAT.RequestCommands.Factories;
-using fiskaltrust.Middleware.Queue;
 using fiskaltrust.storage.V0;
-using fiskaltrust.Middleware.Queue.Extensions;
 using fiskaltrust.Middleware.Localization.QueueAT.Extensions;
-using fiskaltrust.storage.serialization.AT.V0;
 using fiskaltrust.Middleware.Localization.QueueAT.Helpers;
-using System.Runtime.InteropServices;
 
 namespace fiskaltrust.Middleware.Localization.QueueAT
 {
     public class SignProcessorAT : IMarketSpecificSignProcessor
     {
-        private readonly MiddlewareConfiguration _middlewareConfiguration;
-        private readonly SignatureFactory _signatureFactory;
         private readonly IConfigurationRepository _configurationRepository;
         private readonly IJournalATRepository _journalATRepository;
         private readonly IRequestCommandFactory _requestCommandFactory;
 
 
-        public SignProcessorAT(MiddlewareConfiguration middlewareConfiguration, SignatureFactory signatureFactory, IConfigurationRepository configurationRepository,
-            IJournalATRepository journalATRepository, IRequestCommandFactory requestCommandFactory)
+        public SignProcessorAT(IConfigurationRepository configurationRepository, IJournalATRepository journalATRepository, IRequestCommandFactory requestCommandFactory)
         {
-            _middlewareConfiguration = middlewareConfiguration;
-            _signatureFactory = signatureFactory;
             _configurationRepository = configurationRepository;
             _journalATRepository = journalATRepository;
             _requestCommandFactory = requestCommandFactory;
@@ -48,10 +38,6 @@ namespace fiskaltrust.Middleware.Localization.QueueAT
             }
 
             var requestCommandResponse = await PerformReceiptRequest(request, queueItem, queue, queueAT).ConfigureAwait(false);
-            if (_middlewareConfiguration.IsSandbox)
-            {
-                requestCommandResponse.ReceiptResponse.ftSignatures = requestCommandResponse.ReceiptResponse.ftSignatures.Concat(_signatureFactory.CreateSandboxSignature(queueAT.ftQueueATId));
-            }
 
             var additionalActionJournals = new List<ftActionJournal>();
             additionalActionJournals.AddRange(ProcessSSCDFailedReceipt(queueItem, requestCommandResponse.ReceiptResponse, requestCommandResponse.JournalAT, queue, queueAT));

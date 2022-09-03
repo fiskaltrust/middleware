@@ -13,7 +13,6 @@
 
     <ItemGroup>
         <ProjectReference Include="..\fiskaltrust.Middleware.Contracts\fiskaltrust.Middleware.Contracts.csproj" />
-        <ProjectReference Include="..\fiskaltrust.Middleware.Queue\fiskaltrust.Middleware.Queue.csproj" />
     </ItemGroup>
 
     <ItemGroup Condition="'$(TargetFramework)' != 'netstandard2.1'">
