@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using fiskaltrust.Exports.DSFinVK;
 using fiskaltrust.Exports.DSFinVK.Models;
 using fiskaltrust.Exports.TAR;
-using fiskaltrust.Exports.TAR.Services;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.de;
 using fiskaltrust.Middleware.Contracts;
@@ -113,29 +112,22 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
         private async IAsyncEnumerable<JournalResponse> ProcessTarExportFromDatabaseAsync(JournalRequest request)
         {
             var journalDERepository = new JournalDERepositoryRangeDecorator(_middlewareJournalDERepository, _journalDERepository, request.From, request.To);
-            var archiveRepository = new ArchiveFactory();
 
             var workingDirectory = Path.Combine(_middlewareConfiguration.ServiceFolder, "Exports", _middlewareConfiguration.QueueId.ToString(), "TAR", DateTime.Now.ToString("yyyyMMddhhmmssfff"));
             Directory.CreateDirectory(workingDirectory);
 
             try
             {
-                var exporter = new TarExporter(_logger, journalDERepository, archiveRepository);
-
                 var tarPath = Path.Combine(workingDirectory, "export.tar");
+                
+                var exporter = new TarExporter(_logger, journalDERepository);
+                await exporter.ExportAsync(tarPath);
 
-                using (var tarFileStream = await exporter.ExportAsync().ConfigureAwait(false))
+                var fi = new FileInfo(tarPath);
+                if (!fi.Exists || fi.Length == 0)
                 {
-                    if (tarFileStream == null || tarFileStream.Length == 0)
-                    {
-                        _logger.LogWarning("No TAR export was generated.");
-                        yield break;
-                    }
-
-                    using (var file = File.Open(tarPath, FileMode.Create))
-                    {
-                        tarFileStream.CopyTo(file);
-                    }
+                    _logger.LogInformation("No TAR export was generated. This may happen if there were no TAR files to export during the specified time range.");
+                    yield break;
                 }
 
                 foreach (var chunk in FileHelpers.ReadFileAsChunks(tarPath, request.MaxChunkSize))

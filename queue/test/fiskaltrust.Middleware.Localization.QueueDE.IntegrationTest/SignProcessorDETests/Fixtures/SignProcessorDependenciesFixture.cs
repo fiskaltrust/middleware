@@ -133,6 +133,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
         }
         public async Task AddOpenOrders(string receiptReference, int transnr) => await openTransactionRepository.InsertAsync(new OpenTransaction { cbReceiptReference = receiptReference, StartMoment = DateTime.UtcNow.AddHours(-12), StartTransactionSignatureBase64 = "somebase64==", TransactionNumber = transnr });
 
+        public async Task AddFailedStartTransaction(string receiptReference) => await failedStartTransactionRepository.InsertOrUpdateTransactionAsync(new FailedStartTransaction { cbReceiptReference = receiptReference, StartMoment = DateTime.UtcNow.AddHours(-12), CashBoxIdentification = CASHBOXIDENTIFICATION.ToString(), ftQueueItemId = Guid.NewGuid() });
+
         public InitiateSCUSwitch GetInitiateSCUSwitch() => new InitiateSCUSwitch() { SourceSCUId = _signaturCreationUnitDEId, TargetSCUId = _signaturCreationUnitDETargetId };
 
         public bool AreTargeAndSourceScusAsGiven(Guid signaturCreationUnitDEId, Guid signaturCreationUnitDETargetId) => _signaturCreationUnitDEId.Equals(signaturCreationUnitDEId) && _signaturCreationUnitDETargetId.Equals(signaturCreationUnitDETargetId);

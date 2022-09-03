@@ -16,7 +16,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasAnnotation("Relational:MaxIdentifierLength", 63)
-                .HasAnnotation("ProductVersion", "6.0.0-preview.7.21378.4")
+                .HasAnnotation("ProductVersion", "5.0.10")
                 .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
             modelBuilder.Entity("fiskaltrust.Middleware.Contracts.Models.Transactions.FailedFinishTransaction", b =>
@@ -41,7 +41,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
 
                     b.HasKey("cbReceiptReference");
 
-                    b.ToTable("FailedFinishTransaction", (string)null);
+                    b.ToTable("FailedFinishTransaction");
                 });
 
             modelBuilder.Entity("fiskaltrust.Middleware.Contracts.Models.Transactions.FailedStartTransaction", b =>
@@ -63,7 +63,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
 
                     b.HasKey("cbReceiptReference");
 
-                    b.ToTable("FailedStartTransaction", (string)null);
+                    b.ToTable("FailedStartTransaction");
                 });
 
             modelBuilder.Entity("fiskaltrust.Middleware.Contracts.Models.Transactions.OpenTransaction", b =>
@@ -82,7 +82,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
 
                     b.HasKey("cbReceiptReference");
 
-                    b.ToTable("OpenTransaction", (string)null);
+                    b.ToTable("OpenTransaction");
                 });
 
             modelBuilder.Entity("fiskaltrust.storage.V0.MasterData.AccountMasterData", b =>
@@ -114,7 +114,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
 
                     b.HasKey("AccountId");
 
-                    b.ToTable("AccountMasterData", (string)null);
+                    b.ToTable("AccountMasterData");
                 });
 
             modelBuilder.Entity("fiskaltrust.storage.V0.MasterData.AgencyMasterData", b =>
@@ -146,7 +146,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
 
                     b.HasKey("AgencyId");
 
-                    b.ToTable("AgencyMasterData", (string)null);
+                    b.ToTable("AgencyMasterData");
                 });
 
             modelBuilder.Entity("fiskaltrust.storage.V0.MasterData.OutletMasterData", b =>
@@ -175,7 +175,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
 
                     b.HasKey("OutletId");
 
-                    b.ToTable("OutletMasterData", (string)null);
+                    b.ToTable("OutletMasterData");
                 });
 
             modelBuilder.Entity("fiskaltrust.storage.V0.MasterData.PosSystemMasterData", b =>
@@ -198,7 +198,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
 
                     b.HasKey("PosSystemId");
 
-                    b.ToTable("PosSystemMasterData", (string)null);
+                    b.ToTable("PosSystemMasterData");
                 });
 
             modelBuilder.Entity("fiskaltrust.storage.V0.ftActionJournal", b =>
@@ -236,7 +236,9 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
 
                     b.HasKey("ftActionJournalId");
 
-                    b.ToTable("ftActionJournal", (string)null);
+                    b.HasIndex("TimeStamp");
+
+                    b.ToTable("ftActionJournal");
                 });
 
             modelBuilder.Entity("fiskaltrust.storage.V0.ftCashBox", b =>
@@ -250,7 +252,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
 
                     b.HasKey("ftCashBoxId");
 
-                    b.ToTable("ftCashBox", (string)null);
+                    b.ToTable("ftCashBox");
                 });
 
             modelBuilder.Entity("fiskaltrust.storage.V0.ftJournalAT", b =>
@@ -282,7 +284,9 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
 
                     b.HasKey("ftJournalATId");
 
-                    b.ToTable("ftJournalAT", (string)null);
+                    b.HasIndex("TimeStamp");
+
+                    b.ToTable("ftJournalAT");
                 });
 
             modelBuilder.Entity("fiskaltrust.storage.V0.ftJournalDE", b =>
@@ -314,7 +318,9 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
 
                     b.HasKey("ftJournalDEId");
 
-                    b.ToTable("ftJournalDE", (string)null);
+                    b.HasIndex("TimeStamp");
+
+                    b.ToTable("ftJournalDE");
                 });
 
             modelBuilder.Entity("fiskaltrust.storage.V0.ftJournalFR", b =>
@@ -346,7 +352,9 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
 
                     b.HasKey("ftJournalFRId");
 
-                    b.ToTable("ftJournalFR", (string)null);
+                    b.HasIndex("TimeStamp");
+
+                    b.ToTable("ftJournalFR");
                 });
 
             modelBuilder.Entity("fiskaltrust.storage.V0.ftQueue", b =>
@@ -390,7 +398,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
 
                     b.HasKey("ftQueueId");
 
-                    b.ToTable("ftQueue", (string)null);
+                    b.ToTable("ftQueue");
                 });
 
             modelBuilder.Entity("fiskaltrust.storage.V0.ftQueueAT", b =>
@@ -485,7 +493,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
 
                     b.HasKey("ftQueueATId");
 
-                    b.ToTable("ftQueueAT", (string)null);
+                    b.ToTable("ftQueueAT");
                 });
 
             modelBuilder.Entity("fiskaltrust.storage.V0.ftQueueDE", b =>
@@ -532,7 +540,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
 
                     b.HasKey("ftQueueDEId");
 
-                    b.ToTable("ftQueueDE", (string)null);
+                    b.ToTable("ftQueueDE");
                 });
 
             modelBuilder.Entity("fiskaltrust.storage.V0.ftQueueFR", b =>
@@ -942,7 +950,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
 
                     b.HasKey("ftQueueFRId");
 
-                    b.ToTable("ftQueueFR", (string)null);
+                    b.ToTable("ftQueueFR");
                 });
 
             modelBuilder.Entity("fiskaltrust.storage.V0.ftQueueItem", b =>
@@ -1001,7 +1009,11 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
 
                     b.HasKey("ftQueueItemId");
 
-                    b.ToTable("ftQueueItem", (string)null);
+                    b.HasIndex("TimeStamp");
+
+                    b.HasIndex("cbReceiptReference");
+
+                    b.ToTable("ftQueueItem");
                 });
 
             modelBuilder.Entity("fiskaltrust.storage.V0.ftReceiptJournal", b =>
@@ -1033,7 +1045,9 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
 
                     b.HasKey("ftReceiptJournalId");
 
-                    b.ToTable("ftReceiptJournal", (string)null);
+                    b.HasIndex("TimeStamp");
+
+                    b.ToTable("ftReceiptJournal");
                 });
 
             modelBuilder.Entity("fiskaltrust.storage.V0.ftSignaturCreationUnitAT", b =>
@@ -1062,7 +1076,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
 
                     b.HasKey("ftSignaturCreationUnitATId");
 
-                    b.ToTable("ftSignaturCreationUnitAT", (string)null);
+                    b.ToTable("ftSignaturCreationUnitAT");
                 });
 
             modelBuilder.Entity("fiskaltrust.storage.V0.ftSignaturCreationUnitDE", b =>
@@ -1088,7 +1102,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
 
                     b.HasKey("ftSignaturCreationUnitDEId");
 
-                    b.ToTable("ftSignaturCreationUnitDE", (string)null);
+                    b.ToTable("ftSignaturCreationUnitDE");
                 });
 
             modelBuilder.Entity("fiskaltrust.storage.V0.ftSignaturCreationUnitFR", b =>
@@ -1114,7 +1128,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
 
                     b.HasKey("ftSignaturCreationUnitFRId");
 
-                    b.ToTable("ftSignaturCreationUnitFR", (string)null);
+                    b.ToTable("ftSignaturCreationUnitFR");
                 });
 #pragma warning restore 612, 618
         }

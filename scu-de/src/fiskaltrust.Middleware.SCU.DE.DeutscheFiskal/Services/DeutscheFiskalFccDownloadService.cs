@@ -5,6 +5,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Net;
 using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Helpers;
 using fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services.Interfaces;
@@ -193,7 +194,15 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
 
         protected virtual string GetDownloadUriByCurrentPlatform()
         {
-            var operatingSystem = Environment.Is64BitOperatingSystem ? "x64" : "i686";
+            var operatingSystem = RuntimeInformation.OSArchitecture switch
+            {
+                Architecture.X64 => "x64",
+                Architecture.X86 => "i686",
+                Architecture.Arm64 => "aarch64",
+                Architecture.Arm => "aarch32hf",
+                _ => throw new NotImplementedException($"The processor architecture {RuntimeInformation.ProcessArchitecture} is not supported.")
+            };
+
             string platform;
             if (EnvironmentHelpers.IsWindows)
             {
