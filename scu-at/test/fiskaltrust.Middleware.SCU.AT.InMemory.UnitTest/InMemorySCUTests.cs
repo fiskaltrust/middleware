@@ -1,6 +1,5 @@
 ﻿using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using fiskaltrust.Middleware.SCU.AT.Pfx;
 using FluentAssertions;
 
 namespace fiskaltrust.Middleware.SCU.AT.InMemory.UnitTest

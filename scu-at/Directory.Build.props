@@ -10,7 +10,6 @@
         <PackageTags>fiskaltrust signing;RKSV</PackageTags>
         <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
         <AssemblyCompany>fiskaltrust</AssemblyCompany>
-        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
         <Deterministic>true</Deterministic>
         <LangVersion>11.0</LangVersion>
     </PropertyGroup>

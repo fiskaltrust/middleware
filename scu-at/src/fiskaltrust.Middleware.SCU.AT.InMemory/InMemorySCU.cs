@@ -6,7 +6,7 @@ using Org.BouncyCastle.Pkcs;
 using Org.BouncyCastle.Security;
 using Org.BouncyCastle.X509;
 
-namespace fiskaltrust.Middleware.SCU.AT.Pfx
+namespace fiskaltrust.Middleware.SCU.AT.InMemory
 {
     public class InMemorySCU : IATSSCD
     {
