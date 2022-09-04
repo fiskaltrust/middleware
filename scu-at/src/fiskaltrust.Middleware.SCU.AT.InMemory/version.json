@@ -1,0 +1,8 @@
+{
+    "version": "1.3.38",
+    "releaseBranches": [
+      "^refs/heads/main$",
+      "^refs/tags/scu-at/inmemory/v\\d+(?:\\.\\d+)*(?:-.*)?$"
+    ]
+  }
+  
