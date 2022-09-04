@@ -6,7 +6,7 @@ using static System.FormattableString;
 
 namespace fiskaltrust.Middleware.Localization.QueueFR.Helpers
 {
-    public static class CsvHelper
+    public static class ArchiveCsvHelper
     {
         private const string SEPERATOR = ",";
 

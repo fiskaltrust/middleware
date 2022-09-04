@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Storage.Azure.Mapping;
@@ -67,6 +68,14 @@ namespace fiskaltrust.Middleware.Storage.Azure.Repositories
             {
                 yield return MapToStorageEntity(item);
             }
+        }
+
+        public async Task<ftQueueItem> GetByQueueRowAsync(long queueRow)
+        {
+            var filter = TableQuery.GenerateFilterCondition(nameof(ftQueueItem.ftQueueRow), QueryComparisons.Equal, queueRow.ToString());
+            var result = await GetAllAsync(filter).FirstOrDefaultAsync().ConfigureAwait(false);
+
+            return MapToStorageEntity(result);
         }
     }
 }

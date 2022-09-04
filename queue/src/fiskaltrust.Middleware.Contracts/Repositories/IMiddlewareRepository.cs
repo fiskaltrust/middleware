@@ -17,6 +17,8 @@ namespace fiskaltrust.Middleware.Contracts.Repositories
         IAsyncEnumerable<ftQueueItem> GetByReceiptReferenceAsync(string cbReceiptReference, string cbTerminalId = null);
 
         IAsyncEnumerable<ftQueueItem> GetPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem);
+
+        Task<ftQueueItem> GetByQueueRowAsync(long queueRow);
     }
 
     public interface IMiddlewareReceiptJournalRepository : IReceiptJournalRepository, IMiddlewareRepository<ftReceiptJournal>

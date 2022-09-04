@@ -36,7 +36,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR
             var toQueueItemId = archivePayload.LastContainedReceiptQueueItemId;
             if (!fromQueueItemId.HasValue || !toQueueItemId.HasValue)
             {
-                _logger.LogDebug("Archive payload incomplete, skipping export.");
+                _logger.LogWarning("Archive payload incomplete, skipping export.");
                 return;
             }
 
@@ -83,7 +83,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR
             }
             
             var tempPath = Path.Combine(workingDirectory, "queueItems.csv");
-            await CsvHelper.CreateQueueItemsCSVAsync(FilterQueueItems(queueItems, receiptJournals), tempPath);
+            await ArchiveCsvHelper.CreateQueueItemsCSVAsync(FilterQueueItems(queueItems, receiptJournals), tempPath);
 
             var hash = HashHelper.ComputeSHA256Base64Url(tempPath);
             File.Move(tempPath, $"queueItems.{hash}.csv");
@@ -92,7 +92,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR
         private async Task CreateReceiptJournalsFileAsync(IAsyncEnumerable<ftReceiptJournal> receiptJournals, string workingDirectory)
         {
             var tempPath = Path.Combine(workingDirectory, "receiptJournals.csv");
-            await CsvHelper.CreateReceiptJournalCSVAsync(receiptJournals, tempPath);
+            await ArchiveCsvHelper.CreateReceiptJournalCSVAsync(receiptJournals, tempPath);
 
             var hash = HashHelper.ComputeSHA256Base64Url(tempPath);
             File.Move(tempPath, $"receiptJournals.{hash}.csv");
