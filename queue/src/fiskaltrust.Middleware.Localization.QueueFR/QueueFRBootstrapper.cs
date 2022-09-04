@@ -1,6 +1,5 @@
 ﻿using fiskaltrust.Middleware.Contracts;
 using fiskaltrust.Middleware.Localization.QueueFR.RequestCommands;
-using fiskaltrust.Middleware.Queue;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace fiskaltrust.Middleware.Localization.QueueFR
