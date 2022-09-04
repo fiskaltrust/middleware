@@ -24,6 +24,7 @@
         LogJournalsFR =          0x4652000000000007,
         CopyJournalsFR =         0x4652000000000008,
         TrainingJournalsFR =     0x4652000000000009,
-        Archive =                0x4652000000000010
+        Archive =                0x4652000000000010,
+        RKSV =                   0x4154000000000001
     }
 }

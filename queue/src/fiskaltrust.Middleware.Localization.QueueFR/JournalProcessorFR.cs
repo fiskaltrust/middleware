@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO.Compression;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts;
 using fiskaltrust.Middleware.Contracts.Constants;
@@ -18,9 +16,8 @@ using CsvHelper;
 using System.Globalization;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Localization.QueueFR.Repositories;
-using fiskaltrust.Middleware.Localization.QueueFR;
 
-namespace fiskaltrust.Middleware.Queue
+namespace fiskaltrust.Middleware.Localization.QueueFR
 {
     public class JournalProcessorFR : IJournalProcessor, IMarketSpecificJournalProcessor
     {
