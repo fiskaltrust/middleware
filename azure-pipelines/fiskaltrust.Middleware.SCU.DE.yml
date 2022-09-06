@@ -89,24 +89,6 @@ stages:
             storage: stdevwesteuropepackages
             environment: rg-dev-westeurope-packages
 
-  - template: templates/release.yml
-    parameters:
-      projects:
-        - fiskaltrust.Middleware.SCU.DE.CryptoVision
-        - fiskaltrust.Middleware.SCU.DE.DieboldNixdorf
-        - fiskaltrust.Middleware.SCU.DE.Epson
-        - fiskaltrust.Middleware.SCU.DE.FiskalyCertified
-        - fiskaltrust.Middleware.SCU.DE.Swissbit
-        - fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
-        - fiskaltrust.Middleware.SCU.DE.SwissbitCloud
-        - fiskaltrust.Middleware.SCU.DE.InMemory
-      stages:
-        - stage: Release_Sandbox
-          dependsOn: Build
-          templateContext:
-            storage: stdevwesteuropepackages
-            environment: rg-dev-westeurope-packages
-
         - stage: Release_Production
           condition: startsWith(variables.branch, 'refs/tags/v')
           templateContext:
