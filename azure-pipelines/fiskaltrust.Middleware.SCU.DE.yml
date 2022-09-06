@@ -111,5 +111,5 @@ stages:
           condition: startsWith(variables.branch, 'refs/tags/v')
           templateContext:
             storage: stwesteuropepackages
-            environment: rg-westeurope-packages
+            environment: rg-dev-westeurope-packages
             dependsOnPrefix: Release_Sandbox
