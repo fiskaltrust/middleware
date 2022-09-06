@@ -16,7 +16,7 @@ stages:
       
       displayName: Release ${{ replace(project, 'fiskaltrust.Middleware.', '') }}
 
-      ${{ if ne(length(stage.templateContext.dependsOnPrefix), 0) }}:
+      ${{ if ne(length(coalesce(stage.templateContext.dependsOnPrefix, '')), 0) }}:
         dependsOn: ${{ stage.templateContext.dependsOnPrefix }}_${{ replace(project, '.', '_') }}
 
       jobs:
