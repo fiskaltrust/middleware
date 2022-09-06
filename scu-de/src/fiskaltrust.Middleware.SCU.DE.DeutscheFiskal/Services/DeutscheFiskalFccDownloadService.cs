@@ -108,7 +108,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
                 {
                     if(_configuration.FccRetry > _fccRetry)
                     {
-                        Thread.Sleep(1000);
+                        await Task.Delay(1000);
                         _fccRetry++;
                         _logger.LogWarning($"An error occured while downloading ({ex.InnerException?.Message ?? ex.Message}), retry {_fccRetry} from {_configuration.FccRetry}");
                         return await DownloadFccAsync(fccDirectory).ConfigureAwait(false);
