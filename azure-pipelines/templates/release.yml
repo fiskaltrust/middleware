@@ -14,7 +14,7 @@ stages:
         ${{ else }}:
           ${{ pair.key }}: ${{ pair.value }}
       
-      displayName: Release Sandbox ${{ replace(project, 'fiskaltrust.Middleware.', '_') }}
+      displayName: Release Sandbox ${{ replace(project, 'fiskaltrust.Middleware.', '') }}
 
       jobs:
         - deployment: Release
