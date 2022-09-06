@@ -17,7 +17,7 @@ stages:
         pool:
           vmImage: windows-latest
 
-        environment: ${{ stage.templateContext.environment }}
+        environment: ${{ stage.templateContext.environment }}.${{ project }}
 
         strategy:
           runOnce:
