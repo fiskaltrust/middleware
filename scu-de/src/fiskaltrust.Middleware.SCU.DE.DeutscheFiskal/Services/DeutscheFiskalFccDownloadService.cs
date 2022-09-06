@@ -6,6 +6,7 @@ using System.IO.Compression;
 using System.Net;
 using System.Net.Http;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Helpers;
 using fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services.Interfaces;
@@ -18,9 +19,11 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
         private const int MAX_PROCESS_DURATION_MS = 30 * 1000;
         private const string DOWNLOAD_DIRECTORY = "https://downloads.fiskaltrust.cloud/downloads/fcc/";
         private const string NAMEPREFIX = "fcc-package";
+        private int _fccRetry = 0;
 
         private readonly DeutscheFiskalSCUConfiguration _configuration;
         private readonly ILogger<IFccDownloadService> _logger;
+        public Version UsedFCCVersion { get; private set; }
 
         public DeutscheFiskalFccDownloadService(DeutscheFiskalSCUConfiguration configuration, ILogger<IFccDownloadService> logger)
         {
@@ -43,14 +46,12 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
                         if (line.Contains("Implementation-Version"))
                         {
                             var version = line.Split(':')[1].Trim();
-                            var currentVersion = new Version(version);
-
-                            return currentVersion >= latestVersion;
+                            UsedFCCVersion = new Version(version);
+                            return UsedFCCVersion >= latestVersion;
                         }
                     }
                 }
             }
-            
             _logger.LogWarning("Installed FCC version could not be detected; skipping update.");
             return false;
         }
@@ -92,7 +93,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
             return string.Equals(path, pathInFile, StringComparison.OrdinalIgnoreCase);
         }
 
-        public async Task DownloadFccAsync(string fccDirectory)
+        public async Task<bool> DownloadFccAsync(string fccDirectory)
         {
             _logger.LogWarning("Downloading and extracting FCC - this will take some time, depending on your internet connection.");
             var tempZipPath = Path.GetTempFileName();
@@ -100,12 +101,20 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
             {
                 try
                 {
-                    await DownloadAndExtractAsync(tempZipPath, fccDirectory);
+                    await DownloadAndExtractAsync(tempZipPath, fccDirectory).ConfigureAwait(false);
+                    return true;
                 }
-                catch (Exception ex) when (ex is HttpRequestException || (ex is AggregateException aex && aex.InnerException is WebException))
+                catch (Exception ex)
                 {
-                    _logger.LogWarning($"An error occured while downloading ({ex.InnerException?.Message ?? ex.Message}), retrying once...");
-                    await DownloadAndExtractAsync(tempZipPath, fccDirectory);
+                    if(_configuration.FccRetry > _fccRetry)
+                    {
+                        await Task.Delay(1000);
+                        _fccRetry++;
+                        _logger.LogWarning($"An error occured while downloading ({ex.InnerException?.Message ?? ex.Message}), retry {_fccRetry} from {_configuration.FccRetry}");
+                        return await DownloadFccAsync(fccDirectory).ConfigureAwait(false);
+                    }
+                    _logger.LogWarning($"An error occured while downloading ({ex.InnerException?.Message ?? ex.Message}), download aborted");
+                    return false; 
                 }
             }
             finally
