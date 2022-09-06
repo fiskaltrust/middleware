@@ -31,44 +31,48 @@ variables:
   - name: WorkingDirectory
     value: "scu-de"
 
-jobs:
-  - job: Test
-    displayName: Unit and integration tests
-    pool:
-      vmImage: $(vmImageName)
-    steps:
-      - template: templates/scu-de/test.template.yml
+stages:
+  - stage: Test
+    jobs:
+      - job: Test
+        displayName: Unit and integration tests
+        pool:
+          vmImage: $(vmImageName)
+        steps:
+          - template: templates/scu-de/test.template.yml
 
-  - job: BuildNugetPackages
-    displayName: Build v1 NuGet packages
-    dependsOn:
-      - Test
-    condition: succeeded()
-    pool:
-      vmImage: $(vmImageName)
-    steps:
-      - template: templates/scu-de/build-nuget.template.yml
+  - stage: Build
+    jobs:
+      - job: BuildNugetPackages
+        displayName: Build v1 NuGet packages
+        dependsOn:
+          - Test
+        condition: succeeded()
+        pool:
+          vmImage: $(vmImageName)
+        steps:
+          - template: templates/scu-de/build-nuget.template.yml
 
-  - job: BuildZipPackages
-    displayName: Build v2 zip packages
-    dependsOn:
-      - Test
-    condition: succeeded()
-    pool:
-      vmImage: $(vmImageName)
-    steps:
-      - template: templates/build-zip.yml
-        parameters:
-          workingDirectory: scu-de
-          projects:
-            - fiskaltrust.Middleware.SCU.DE.CryptoVision
-            - fiskaltrust.Middleware.SCU.DE.DieboldNixdorf
-            - fiskaltrust.Middleware.SCU.DE.Epson
-            - fiskaltrust.Middleware.SCU.DE.FiskalyCertified
-            - fiskaltrust.Middleware.SCU.DE.Swissbit
-            - fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
-            - fiskaltrust.Middleware.SCU.DE.SwissbitCloud
-            - fiskaltrust.Middleware.SCU.DE.InMemory
+      - job: BuildZipPackages
+        displayName: Build v2 zip packages
+        dependsOn:
+          - Test
+        condition: succeeded()
+        pool:
+          vmImage: $(vmImageName)
+        steps:
+          - template: templates/build-zip.yml
+            parameters:
+              workingDirectory: scu-de
+              projects:
+                - fiskaltrust.Middleware.SCU.DE.CryptoVision
+                - fiskaltrust.Middleware.SCU.DE.DieboldNixdorf
+                - fiskaltrust.Middleware.SCU.DE.Epson
+                - fiskaltrust.Middleware.SCU.DE.FiskalyCertified
+                - fiskaltrust.Middleware.SCU.DE.Swissbit
+                - fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
+                - fiskaltrust.Middleware.SCU.DE.SwissbitCloud
+                - fiskaltrust.Middleware.SCU.DE.InMemory
 
   - template: templates/release.yml
     parameters:
@@ -83,7 +87,7 @@ jobs:
         - fiskaltrust.Middleware.SCU.DE.InMemory
       stages:
         - stage: Release_Sandbox
-          dependsOn: BuildZipPackages
+          dependsOn: Build
           templateContext:
             storage: stdevwesteuropepackages
             environment: rg-dev-westeurope-packages
