@@ -11,8 +11,8 @@ stages:
     - ${{ each pair in stage }}:
         ${{ if eq(pair.key, 'stage') }}:
           stage: ${{ pair.value }}_${{ replace(project, '.', '_') }}
-        ${{ elseif eq(pair.key, 'dependsOnSelf') }}:
-          dependsOn: ${{ pair.value }}_${{ replace(project, '.', '_') }}
+        ${{ elseif eq(pair.key, 'dependsOn') }}:
+          dependsOn: ${{ replace(pair.value, '${{ self }}', format('_{0}', replace(project, '.', '_'))) }}
         ${{ else }}:
           ${{ pair.key }}: ${{ pair.value }}
       
