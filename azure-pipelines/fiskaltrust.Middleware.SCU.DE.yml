@@ -89,9 +89,9 @@ stages:
             storage: stdevwesteuropepackages
             environment: rg-dev-westeurope-packages
 
-        - stage: Release_Production
-          condition: startsWith(variables.branch, 'refs/tags/v')
-          templateContext:
-            storage: stwesteuropepackages
-            environment: rg-dev-westeurope-packages
-            dependsOnPrefix: Release_Sandbox
+        # - stage: Release_Production
+        #   condition: startsWith(variables.branch, 'refs/tags/v')
+        #   templateContext:
+        #     storage: stwesteuropepackages
+        #     environment: rg-westeurope-packages
+        #     dependsOnPrefix: Release_Sandbox
