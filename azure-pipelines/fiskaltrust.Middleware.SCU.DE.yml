@@ -108,8 +108,8 @@ stages:
             environment: rg-dev-westeurope-packages
 
         - stage: Release_Production
-          dependsOn: Release_Sandbox_${{ self }}
           condition: startsWith(variables.branch, 'refs/tags/v')
           templateContext:
             storage: stwesteuropepackages
             serviceConnection: rg-westeurope-packages
+            dependsOnPrefix: Release_Sandbox
