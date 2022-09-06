@@ -1,0 +1,40 @@
+parameters:
+- name: stages
+  type: stageList
+
+- name: projects
+  type: object
+
+stages:
+- ${{ each stage in parameters.stages }}:
+  - ${{ each pair in stage }}:
+      ${{ pair.key }}: ${{ pair.value }}
+    
+    jobs:
+    - ${{ each project in parameters.projects }}:
+      - deployment: Release_${{ replace(project, '.', '-') }}
+
+        pool:
+          vmImage: windows-latest
+
+        environment: ${{ stage.templateContext.environment }}
+
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+              - download: current
+                artifact: package-${{ project }}
+                displayName: "Download artifact"
+
+              - pwsh: get-childitem "$(Pipeline.Workspace)/package-${{ project }}/*" | foreach { rename-item $_ $_.Name.Replace("${{ project }}-", "") }
+                displayName: Rename artifacts
+
+              - task: AzureCLI@2
+                displayName: "Publish to blob storage"
+                inputs:
+                  azureSubscription: ${{ stage.templateContext.environment }}
+                  scriptType: ps
+                  scriptLocation: inlineScript
+                  inlineScript: |
+                    az storage blob upload-batch --account-name ${{ stage.templateContext.storage }} -d "packages" --destination-path "undefined/${{ project }}/" -s "$(Pipeline.Workspace)/package-${{ project }}/" --pattern "*.zip*"

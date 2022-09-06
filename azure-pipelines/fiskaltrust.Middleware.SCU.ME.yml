@@ -1,12 +1,12 @@
 resources:
-- repo: self
+  - repo: self
 
 trigger:
   batch: true
   branches:
     include:
-    - main
-    - refs/tags/scu-me/*
+      - main
+      - refs/tags/scu-me/*
   paths:
     include:
       - scu-me
@@ -14,47 +14,70 @@ trigger:
 pr:
   branches:
     include:
-    - main
-    - refs/tags/scu-me/*
+      - main
+      - refs/tags/scu-me/*
   paths:
     include:
       - scu-me
 
 variables:
-- group: 'Code Signing Certificates'
-- name: BuildConfiguration
-  value: release
-- name: Solution
-  value: 'fiskaltrust.Middleware.SCU.ME.sln'
-- name: vmImageName 
-  value: 'windows-2022'
-- name: WorkingDirectory
-  value: 'scu-me'
+  - group: "Code Signing Certificates"
+  - name: BuildConfiguration
+    value: release
+  - name: Solution
+    value: "fiskaltrust.Middleware.SCU.ME.sln"
+  - name: vmImageName
+    value: "windows-2022"
+  - name: WorkingDirectory
+    value: "scu-me"
 
 jobs:
-- job: Test
-  displayName: Unit and integration tests
-  pool:
-    vmImage: $(vmImageName)
-  steps:
-  - template: templates/scu-me/test.template.yml
+  - job: Test
+    displayName: Unit and integration tests
+    pool:
+      vmImage: $(vmImageName)
+    steps:
+      - template: templates/scu-me/test.template.yml
 
-- job: BuildNugetPackages
-  displayName: Build v1 NuGet packages
-  dependsOn: 
-  - Test
-  condition: succeeded()
-  pool:
-    vmImage: $(vmImageName)
-  steps:
-  - template: templates/scu-me/build-nuget.template.yml
+  - job: BuildNugetPackages
+    displayName: Build v1 NuGet packages
+    dependsOn:
+      - Test
+    condition: succeeded()
+    pool:
+      vmImage: $(vmImageName)
+    steps:
+      - template: templates/scu-me/build-nuget.template.yml
 
-- job: BuildZipPackages
-  displayName: Build v2 zip packages
-  dependsOn: 
-  - Test
-  condition: succeeded()
-  pool:
-    vmImage: $(vmImageName)
-  steps:
-  - template: templates/scu-me/build-zip.template.yml
+  - job: BuildZipPackages
+    displayName: Build v2 zip packages
+    dependsOn:
+      - Test
+    condition: succeeded()
+    pool:
+      vmImage: $(vmImageName)
+    steps:
+      - template: templates/build-zip.yml
+        parameters:
+          WorkingDirectory: scu-me
+          projects:
+            - fiskaltrust.Middleware.SCU.ME.InMemory
+
+  - template: templates/release.yml
+    parameters:
+      projects:
+        - fiskaltrust.Middleware.SCU.ME.InMemory
+      stages:
+        - stage: Release_Sandbox
+          dependsOn: BuildZipPackages
+          templateContext:
+            storage: stdevwesteuropepackages
+            environment: rg-dev-westeurope-packages
+
+        # - stage: Release_Production
+        #   dependsOn: Release_Sandbox
+        # condition: startsWith(variables.branch, 'refs/tags/v')
+        #   templateContext:
+        #     env: production
+        #     storage: stwesteuropepackages
+        #     serviceConnection: rg-westeurope-packages
