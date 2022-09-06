@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,6 +13,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
 {
     public class HttpClientWrapper : IDisposable
     {
+        private bool isDisposed;
         public static string TIMEOUT_LOG = "The client did not respond in the configured time!";
         private readonly HttpClient _httpClient;
         private readonly FiskalySCUConfiguration _configuration;
@@ -182,7 +184,26 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
             return false;
         }
 
-        public void Dispose() => _httpClient?.Dispose();
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
 
+        // The bulk of the clean-up code is implemented in Dispose(bool)
+        protected virtual void Dispose(bool disposing)
+        {
+            if (isDisposed)
+            {
+                return;
+            }
+
+            if (disposing)
+            {
+                // free managed resources
+                _httpClient?.Dispose();
+            }
+            isDisposed = true;
+        }
     }
 }
