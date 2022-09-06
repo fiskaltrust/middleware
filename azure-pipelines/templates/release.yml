@@ -12,7 +12,7 @@ stages:
     
     jobs:
     - ${{ each project in parameters.projects }}:
-      - deployment: Release_${{ replace(project, '.', '-') }}
+      - deployment: Release_${{ replace(project, '.', '_') }}
 
         pool:
           vmImage: windows-latest
