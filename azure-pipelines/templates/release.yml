@@ -2,6 +2,9 @@ parameters:
 - name: stages
   type: stageList
 
+- name: type
+  type: string
+
 - name: projects
   type: object
 
@@ -10,14 +13,17 @@ stages:
   - ${{ each stage in parameters.stages }}:
     - ${{ each pair in stage }}:
         ${{ if eq(pair.key, 'stage') }}:
-          stage: ${{ pair.value }}_${{ replace(project, '.', '_') }}
+          stage: ${{ pair.value }}_${{ project }}
         ${{ else }}:
           ${{ pair.key }}: ${{ pair.value }}
       
-      displayName: Release ${{ replace(project, 'fiskaltrust.Middleware.', '') }}
+      displayName: Release ${{ project }} ${{ stage.templateContext.environment }}
 
       ${{ if ne(stage.templateContext.dependsOnPrefix, '') }}:
         dependsOn: ${{ stage.templateContext.dependsOnPrefix }}_${{ replace(project, '.', '_') }}
+
+      ${{ if eq(stage.templateContext.environment, 'production') }}:
+        condition: and(startsWith(variables.branch, 'refs/tags/'), contains(variables.branch, lower('/${{ project }}/v')))
 
       jobs:
         - deployment: Release
@@ -25,24 +31,24 @@ stages:
           pool:
             vmImage: windows-latest
 
-          environment: ${{ stage.templateContext.environment }}
+          environment: ${{ stage.templateContext.serviceConnection }}
 
           strategy:
             runOnce:
               deploy:
                 steps:
                   - download: current
-                    artifact: package-${{ project }}
+                    artifact: package-${{ parameters.type }}.${{ project }}
                     displayName: "Download artifact"
 
-                  - pwsh: get-childitem "$(Pipeline.Workspace)/package-${{ project }}/*" | foreach { rename-item $_ $_.Name.Replace("${{ project }}-", "") }
+                  - pwsh: get-childitem "$(Pipeline.Workspace)/package-${{ parameters.type }}.${{ project }}/*" | foreach { rename-item $_ $_.Name.Replace("${{ parameters.type }}.${{ project }}-", "") }
                     displayName: Rename artifacts
 
                   - task: AzureCLI@2
                     displayName: "Publish to blob storage"
                     inputs:
-                      azureSubscription: ${{ stage.templateContext.environment }}
+                      azureSubscription: ${{ stage.templateContext.serviceConnection }}
                       scriptType: ps
                       scriptLocation: inlineScript
                       inlineScript: |
-                        az storage blob upload-batch --account-name ${{ stage.templateContext.storage }} -d "packages" --destination-path "undefined/${{ project }}/" -s "$(Pipeline.Workspace)/package-${{ project }}/" --pattern "*.zip*"
+                        az storage blob upload-batch --account-name ${{ stage.templateContext.storage }} -d "packages" --destination-path "undefined/${{ parameters.type }}.${{ project }}/" -s "$(Pipeline.Workspace)/package-${{ parameters.type }}.${{ project }}/" --pattern "*.zip*"

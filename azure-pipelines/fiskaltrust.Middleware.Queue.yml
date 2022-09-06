@@ -96,21 +96,24 @@ stages:
 
   - template: templates/release.yml
     parameters:
+      type: fiskaltrust.Middleware.Queue
       projects:
-        - fiskaltrust.Middleware.Queue.InMemory
-        - fiskaltrust.Middleware.Queue.SQLite
-        - fiskaltrust.Middleware.Queue.PostgreSQL
-        - fiskaltrust.Middleware.Queue.MySQL
+        - InMemory
+        - SQLite
+        - PostgreSQL
+        - MySQL
       stages:
         - stage: Release_Sandbox
           dependsOn: Build
           templateContext:
+            environment: sandbox
             storage: stdevwesteuropepackages
-            environment: rg-dev-westeurope-packages
+            serviceConnection: rg-dev-westeurope-packages
 
         # - stage: Release_Production
         #   condition: startsWith(variables.branch, 'refs/tags/v')
         #   templateContext:
+        #     environment: production
         #     storage: stwesteuropepackages
-        #     environment: rg-westeurope-packages
+        #     serviceConnection: rg-westeurope-packages
         #     dependsOnPrefix: Release_Sandbox

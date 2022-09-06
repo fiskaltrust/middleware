@@ -73,25 +73,28 @@ stages:
 
   - template: templates/release.yml
     parameters:
+      type: fiskaltrust.Middleware.SCU.DE
       projects:
-        - fiskaltrust.Middleware.SCU.DE.CryptoVision
-        - fiskaltrust.Middleware.SCU.DE.DieboldNixdorf
-        - fiskaltrust.Middleware.SCU.DE.Epson
-        - fiskaltrust.Middleware.SCU.DE.FiskalyCertified
-        - fiskaltrust.Middleware.SCU.DE.Swissbit
-        - fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
-        - fiskaltrust.Middleware.SCU.DE.SwissbitCloud
-        - fiskaltrust.Middleware.SCU.DE.InMemory
+        - CryptoVision
+        - DieboldNixdorf
+        - Epson
+        - FiskalyCertified
+        - Swissbit
+        - DeutscheFiskal
+        - SwissbitCloud
+        - InMemory
+
       stages:
         - stage: Release_Sandbox
           dependsOn: Build
           templateContext:
+            environment: sandbox
             storage: stdevwesteuropepackages
-            environment: rg-dev-westeurope-packages
+            serviceConnection: rg-dev-westeurope-packages
 
         # - stage: Release_Production
-        #   condition: startsWith(variables.branch, 'refs/tags/v')
         #   templateContext:
+        #     environment: production
         #     storage: stwesteuropepackages
-        #     environment: rg-westeurope-packages
+        #     serviceConnection: rg-westeurope-packages
         #     dependsOnPrefix: Release_Sandbox
