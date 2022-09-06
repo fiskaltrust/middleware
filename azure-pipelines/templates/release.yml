@@ -9,7 +9,7 @@ stages:
 - ${{ each project in parameters.projects }}:
   - ${{ each stage in parameters.stages }}:
     - ${{ each pair in stage }}:
-        ${{ if ne(pair.key, 'stage') }}:
+        ${{ if eq(pair.key, 'stage') }}:
           stage: ${{ pair.value }}_${{ replace(project, '.', '_') }}
         ${{ else }}:
           ${{ pair.key }}: ${{ pair.value }}
