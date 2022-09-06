@@ -69,12 +69,11 @@ stages:
           - template: templates/queue/acceptance-test.template.yml
 
   - stage: Build
+    dependsOn: Test
     jobs:
       - job: BuildNugetPackages
         displayName: Build v1 NuGet packages
-        dependsOn:
-          - Test
-          - AcceptanceTest
+        dependsOn: []
         condition: and(eq(dependencies.Test.result, 'Succeeded'), in(dependencies.AcceptanceTest.result, 'Succeeded', 'Skipped'))
         pool:
           vmImage: $(vmImageName)
@@ -83,8 +82,7 @@ stages:
 
       - job: BuildZipPackages
         displayName: Build v2 zip packages
-        dependsOn:
-          - Test
+        dependsOn: []
         condition: succeeded()
         pool:
           vmImage: $(vmImageName)

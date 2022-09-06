@@ -42,11 +42,11 @@ stages:
           - template: templates/scu-me/test.template.yml
 
   - stage: Build
+    dependsOn: Test
     jobs:
       - job: BuildNugetPackages
         displayName: Build v1 NuGet packages
-        dependsOn:
-          - Test
+        dependsOn: []
         condition: succeeded()
         pool:
           vmImage: $(vmImageName)
@@ -55,8 +55,7 @@ stages:
 
       - job: BuildZipPackages
         displayName: Build v2 zip packages
-        dependsOn:
-          - Test
+        dependsOn: []
         condition: succeeded()
         pool:
           vmImage: $(vmImageName)
