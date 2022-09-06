@@ -19,5 +19,6 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
         public string ProxyUsername { get; set; }
         public string ProxyPassword { get; set; }
         public int? MaxClientCount { get; set; }
+        public int RetriesOn5xxError { get; set; } = 4;
     }
 }

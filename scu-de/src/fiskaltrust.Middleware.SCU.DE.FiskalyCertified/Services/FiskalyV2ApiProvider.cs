@@ -21,10 +21,10 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
         private readonly HttpClientWrapper _httpClient;
         private readonly JsonSerializerSettings _serializerSettings;
 
-        public FiskalyV2ApiProvider(FiskalySCUConfiguration configuration)
+        public FiskalyV2ApiProvider(FiskalySCUConfiguration configuration, HttpClientWrapper httpClientWrapper)
         {
             _configuration = configuration;
-            _httpClient = new HttpClientWrapper(configuration);
+            _httpClient = httpClientWrapper;
             _serializerSettings = new JsonSerializerSettings
             {
                 DefaultValueHandling = DefaultValueHandling.Ignore
@@ -35,7 +35,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
         {
             var jsonPayload = JsonConvert.SerializeObject(transactionRequest, _serializerSettings);
 
-            var response = await _httpClient.PutAsync($"tss/{tssId}/tx/{transactionId}?tx_revision=1", new StringContent(jsonPayload, Encoding.UTF8, "application/json"));
+            var response = await _httpClient.PutAsync($"tss/{tssId}/tx/{transactionId}?tx_revision=1", new StringContent(jsonPayload, Encoding.UTF8, "application/json"), Guid.NewGuid());
             var responseContent = await response.Content.ReadAsStringAsync();
             if (response.IsSuccessStatusCode)
             {
@@ -50,7 +50,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
         {
             var jsonPayload = JsonConvert.SerializeObject(transactionRequest, _serializerSettings);
 
-            var response = await _httpClient.PutAsync($"tss/{tssId}/tx/{transactionNumber}?tx_revision={lastRevision}", new StringContent(jsonPayload, Encoding.UTF8, "application/json"));
+            var response = await _httpClient.PutAsync($"tss/{tssId}/tx/{transactionNumber}?tx_revision={lastRevision}", new StringContent(jsonPayload, Encoding.UTF8, "application/json"), Guid.NewGuid());
             var responseContent = await response.Content.ReadAsStringAsync();
             if (response.IsSuccessStatusCode)
             {
@@ -63,7 +63,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
 
         public async Task<TransactionDto> GetTransactionDtoAsync(Guid tssId, ulong transactionNumber)
         {
-            var response = await _httpClient.GetAsync($"tss/{tssId}/tx/{transactionNumber}");
+            var response = await _httpClient.GetAsync($"tss/{tssId}/tx/{transactionNumber}", Guid.NewGuid());
             var responseContent = await response.Content.ReadAsStringAsync();
             if (response.IsSuccessStatusCode)
             {
@@ -76,7 +76,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
 
         public async Task<IEnumerable<TransactionDto>> GetStartedTransactionsAsync(Guid tssId)
         {
-            var response = await _httpClient.GetAsync($"tss/{tssId}/tx?states[]=ACTIVE");
+            var response = await _httpClient.GetAsync($"tss/{tssId}/tx?states[]=ACTIVE", Guid.NewGuid());
             var responseContent = await response.Content.ReadAsStringAsync();
             if (response.IsSuccessStatusCode)
             {
@@ -89,7 +89,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
 
         public async Task<ExportStateInformationDto> GetExportStateInformationByIdAsync(Guid tssId, Guid exportId)
         {
-            var response = await _httpClient.GetAsync($"tss/{tssId}/export/{exportId}");
+            var response = await _httpClient.GetAsync($"tss/{tssId}/export/{exportId}", Guid.NewGuid());
             var responseContent = await response.Content.ReadAsStringAsync();
             if (response.IsSuccessStatusCode)
             {
@@ -102,7 +102,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
 
         public async Task<Dictionary<string, object>> GetExportMetadataAsync(Guid tssId, Guid exportId)
         {
-            var response = await _httpClient.GetAsync($"tss/{tssId}/export/{exportId}/metadata");
+            var response = await _httpClient.GetAsync($"tss/{tssId}/export/{exportId}/metadata", Guid.NewGuid());
             var responseContent = await response.Content.ReadAsStringAsync();
             if (response.IsSuccessStatusCode)
             {
@@ -125,7 +125,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
                 query += $"&start_transaction_number={fromTransactionNumber}";
             }
 
-            var response = await _httpClient.PutAsync($"tss/{tssId}/export/{exportId}?{query}", new StringContent("{}", Encoding.UTF8, "application/json"));
+            var response = await _httpClient.PutAsync($"tss/{tssId}/export/{exportId}?{query}", new StringContent("{}", Encoding.UTF8, "application/json"), Guid.NewGuid());
             if (!response.IsSuccessStatusCode)
             {
                 var responseContent = await response.Content.ReadAsStringAsync();
@@ -142,12 +142,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
                 {"end_transaction_number", toTransactionNumber.ToString() }
             };
             var jsonPayload = JsonConvert.SerializeObject(metadata, new JsonSerializerSettings { DefaultValueHandling = DefaultValueHandling.Ignore });
-            var request = new HttpRequestMessage(new HttpMethod("PATCH"), $"tss/{tssId}/export/{exportId}/metadata")
-            {
-                Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json")
-            };
-
-            var response = await _httpClient.SendAsync(request);
+            var response = await _httpClient.SendAsync(new HttpMethod("PATCH"), $"tss/{tssId}/export/{exportId}/metadata",jsonPayload, Guid.NewGuid());
             if (!response.IsSuccessStatusCode)
             {
                 var responseContent = await response.Content.ReadAsStringAsync();
@@ -164,7 +159,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
                 query += $"&client_id={exportRequest.ClientId}";
             }
 
-            var response = await _httpClient.PutAsync($"tss/{tssId}/export/{exportId}?{query}", new StringContent("{}", Encoding.UTF8, "application/json"));
+            var response = await _httpClient.PutAsync($"tss/{tssId}/export/{exportId}?{query}", new StringContent("{}", Encoding.UTF8, "application/json"), Guid.NewGuid());
             if (!response.IsSuccessStatusCode)
             {
                 var responseContent = await response.Content.ReadAsStringAsync();
@@ -182,7 +177,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
                 query += $"&client_id={exportRequest.ClientId}";
             }
 
-            var response = await _httpClient.PutAsync($"tss/{tssId}/export/{exportId}?{query}", new StringContent("{}", Encoding.UTF8, "application/json"));
+            var response = await _httpClient.PutAsync($"tss/{tssId}/export/{exportId}?{query}", new StringContent("{}", Encoding.UTF8, "application/json"), Guid.NewGuid());
             if (!response.IsSuccessStatusCode)
             {
                 var responseContent = await response.Content.ReadAsStringAsync();
@@ -224,7 +219,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
 
         public async Task<TssDto> GetTseByIdAsync(Guid tssId)
         {
-            var response = await _httpClient.GetAsync($"tss/{tssId}");
+            var response = await _httpClient.GetAsync($"tss/{tssId}", Guid.NewGuid());
             var responseContent = await response.Content.ReadAsStringAsync();
             if (response.IsSuccessStatusCode)
             {
@@ -237,7 +232,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
 
         public async Task<byte[]> GetExportByExportStateAsync(ExportStateInformationDto exportStateInformation)
         {
-            var response = await _httpClient.GetAsync($"tss/{exportStateInformation.TssId}/export/{exportStateInformation.Id}/file");
+            var response = await _httpClient.GetAsync($"tss/{exportStateInformation.TssId}/export/{exportStateInformation.Id}/file", Guid.NewGuid());
             if (response.IsSuccessStatusCode)
             {
                 return await response.Content.ReadAsByteArrayAsync();
@@ -252,12 +247,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
             return await RunAsAdminAsync(tssId, async () =>
             {
                 var jsonPayload = JsonConvert.SerializeObject(tseState, _serializerSettings);
-
-                var request = new HttpRequestMessage(new HttpMethod("PATCH"), $"tss/{tssId}")
-                {
-                    Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json")
-                };
-                var response = await _httpClient.SendAsync(request);
+                var response = await _httpClient.SendAsync(new HttpMethod("PATCH"), $"tss/{tssId}", jsonPayload, Guid.NewGuid());
                 var responseContent = await response.Content.ReadAsStringAsync();
                 if (response.IsSuccessStatusCode)
                 {
@@ -271,7 +261,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
 
         public async Task<List<ClientDto>> GetClientsAsync(Guid tssId)
         {
-            var response = await _httpClient.GetAsync($"tss/{tssId}/client");
+            var response = await _httpClient.GetAsync($"tss/{tssId}/client", Guid.NewGuid());
             var responseContent = await response.Content.ReadAsStringAsync();
             if (response.IsSuccessStatusCode)
             {
@@ -289,7 +279,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
                 var clientRequest = new ClientRequestDto { SerialNumber = serialNumber };
                 var jsonPayload = JsonConvert.SerializeObject(clientRequest, _serializerSettings);
 
-                var response = await _httpClient.PutAsync($"tss/{tssId}/client/{clientId}", new StringContent(jsonPayload, Encoding.UTF8, "application/json"));
+                var response = await _httpClient.PutAsync($"tss/{tssId}/client/{clientId}", new StringContent(jsonPayload, Encoding.UTF8, "application/json"), Guid.NewGuid());
                 if (!response.IsSuccessStatusCode)
                 {
                     var responseContent = await response.Content.ReadAsStringAsync();
@@ -305,13 +295,8 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
             {
                 var clientRequest = new { state = "DEREGISTERED" };
                 var jsonPayload = JsonConvert.SerializeObject(clientRequest, _serializerSettings);
+                var response = await _httpClient.SendAsync(new HttpMethod("PATCH"), $"tss/{tssId}/client/{clientId}", jsonPayload, Guid.NewGuid());
 
-                var request = new HttpRequestMessage(new HttpMethod("PATCH"), $"tss/{tssId}/client/{clientId}")
-                {
-                    Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json")
-                };
-
-                var response = await _httpClient.SendAsync(request);
                 if (!response.IsSuccessStatusCode)
                 {
                     var responseContent = await response.Content.ReadAsStringAsync();
@@ -323,7 +308,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
 
         public async Task<Dictionary<string, object>> GetTseMetadataAsync(Guid tssId)
         {
-            var response = await _httpClient.GetAsync($"tss/{tssId}/metadata");
+            var response = await _httpClient.GetAsync($"tss/{tssId}/metadata", Guid.NewGuid());
             var responseContent = await response.Content.ReadAsStringAsync();
             if (response.IsSuccessStatusCode)
             {
@@ -337,12 +322,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
         public async Task PatchTseMetadataAsync(Guid tssId, Dictionary<string, object> metadata)
         {
             var jsonPayload = JsonConvert.SerializeObject(metadata, _serializerSettings);
-            var request = new HttpRequestMessage(new HttpMethod("PATCH"), $"tss/{tssId}/metadata")
-            {
-                Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json")
-            };
-
-            var response = await _httpClient.SendAsync(request);
+            var response = await _httpClient.SendAsync(new HttpMethod("PATCH"), $"tss/{tssId}/metadata", jsonPayload, Guid.NewGuid());
             if (!response.IsSuccessStatusCode)
             {
                 var responseContent = await response.Content.ReadAsStringAsync();
@@ -356,7 +336,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
             var loginRequest = new LoginRequestDto { AdminPin = _configuration.AdminPin };
             var jsonPayload = JsonConvert.SerializeObject(loginRequest, _serializerSettings);
 
-            var response = await _httpClient.PostAsync($"tss/{tssId}/admin/auth", new StringContent(jsonPayload, Encoding.UTF8, "application/json"));
+            var response = await _httpClient.PostAsync($"tss/{tssId}/admin/auth", new StringContent(jsonPayload, Encoding.UTF8, "application/json"), Guid.NewGuid());
             if (!response.IsSuccessStatusCode)
             {
                 var responseContent = await response.Content.ReadAsStringAsync();
@@ -367,7 +347,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
 
         private async Task LogoutAdminAsync(Guid tssId)
         {
-            var response = await _httpClient.PostAsync($"tss/{tssId}/admin/logout", new StringContent("{}", Encoding.UTF8, "application/json"));
+            var response = await _httpClient.PostAsync($"tss/{tssId}/admin/logout", new StringContent("{}", Encoding.UTF8, "application/json"), Guid.NewGuid());
             if (!response.IsSuccessStatusCode)
             {
                 var responseContent = await response.Content.ReadAsStringAsync();
