@@ -20,7 +20,7 @@ steps:
 
 - task: Cache@2
   inputs:
-    key: 'nuget | "$(Agent.OS)" | ${{ WorkingDirectory }}/**/*.csproj'
+    key: 'nuget | "$(Agent.OS)" |  ${{ parameters.workingDirectory }}/**/*.csproj'
     restoreKeys: |
       nuget | "$(Agent.OS)"
       nuget
@@ -30,7 +30,7 @@ steps:
 - task: DotNetCoreCLI@2
   inputs:
     command: 'restore'
-    projects: '${{ WorkingDirectory }}/$(Solution)'
+    projects: ' ${{ parameters.workingDirectory }}/$(Solution)'
     feedsToUse: 'select'
     vstsFeed: '$(NuGetFeed)'
   displayName: 'Restore'
@@ -38,7 +38,7 @@ steps:
 - task: DotNetCoreCLI@2
   displayName: Build
   inputs:
-    projects: '${{ WorkingDirectory }}/$(Solution)'
+    projects: ' ${{ parameters.workingDirectory }}/$(Solution)'
     arguments: '--configuration $(BuildConfiguration) --no-restore'
 
 - task: codesigning@2
@@ -47,8 +47,8 @@ steps:
     secureFileId: 'codesigning.pfx'
     signCertPassword: '$(Code_Signing_Password)'
     filePaths: |
-      ${{ WorkingDirectory }}/src/**/*fiskaltrust*.dll
-      ${{ WorkingDirectory }}/src/**/*fiskaltrust*.exe
+       ${{ parameters.workingDirectory }}/src/**/*fiskaltrust*.dll
+       ${{ parameters.workingDirectory }}/src/**/*fiskaltrust*.exe
 
 - ${{ each project in parameters.projects }}:
   - powershell: |
@@ -65,7 +65,7 @@ steps:
       $hashstring = [System.Convert]::ToBase64String($hashbytes)
       $hashstring | Set-Content $(Build.ArtifactStagingDirectory)/package-${{ project }}/${{ project }}-$version.zip.hash
     displayName: 'Publish ${{ project }}'
-    workingDirectory: '${{ WorkingDirectory }}/src/${{ project }}'
+    workingDirectory: ' ${{ parameters.workingDirectory }}/src/${{ project }}'
 
 - ${{ each project in parameters.projects }}:
   - task: PublishBuildArtifacts@1

@@ -59,7 +59,7 @@ jobs:
     steps:
       - template: templates/build-zip.yml
         parameters:
-          WorkingDirectory: scu-me
+          workingDirectory: scu-me
           projects:
             - fiskaltrust.Middleware.SCU.ME.InMemory
 

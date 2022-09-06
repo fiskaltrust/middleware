@@ -87,7 +87,7 @@ jobs:
     steps:
       - template: templates/build-zip.yml
         parameters:
-          WorkingDirectory: queue
+          workingDirectory: queue
           projects:
             - fiskaltrust.Middleware.Queue.InMemory
             - fiskaltrust.Middleware.Queue.SQLite

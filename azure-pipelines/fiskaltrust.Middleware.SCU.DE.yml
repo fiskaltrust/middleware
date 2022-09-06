@@ -59,7 +59,7 @@ jobs:
     steps:
       - template: templates/build-zip.yml
         parameters:
-          WorkingDirectory: scu-de
+          workingDirectory: scu-de
           projects:
             - fiskaltrust.Middleware.SCU.DE.CryptoVision
             - fiskaltrust.Middleware.SCU.DE.DieboldNixdorf
