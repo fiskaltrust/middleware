@@ -5,6 +5,10 @@ parameters:
 - name: type
   type: string
 
+- name: artifact
+  type: string
+  default: current
+
 - name: projects
   type: object
 
@@ -39,11 +43,11 @@ stages:
             runOnce:
               deploy:
                 steps:
-                  - download: current
+                  - download: ${{ parameters.artifact }}
                     artifact: package-${{ parameters.type }}.${{ project }}
                     displayName: "Download artifact"
 
-                  - pwsh: get-childitem "$(Pipeline.Workspace)/package-${{ parameters.type }}.${{ project }}/*" | foreach { rename-item $_ $_.Name.Replace("${{ parameters.type }}.${{ project }}-", "") }
+                  - pwsh: get-childitem "$(Pipeline.Workspace)/${{ parameters.artifact }}/package-${{ parameters.type }}.${{ project }}/*" | foreach { rename-item $_ $_.Name.Replace("${{ parameters.type }}.${{ project }}-", "") }
                     displayName: Rename artifacts
 
                   - task: AzureCLI@2
@@ -53,4 +57,4 @@ stages:
                       scriptType: ps
                       scriptLocation: inlineScript
                       inlineScript: |
-                        az storage blob upload-batch --account-name ${{ stage.templateContext.storage }} -d "packages" --destination-path "undefined/${{ parameters.type }}.${{ project }}/" -s "$(Pipeline.Workspace)/package-${{ parameters.type }}.${{ project }}/" --pattern "*.zip*"
+                        az storage blob upload-batch --account-name ${{ stage.templateContext.storage }} -d "packages" --destination-path "undefined/${{ parameters.type }}.${{ project }}/" -s "$(Pipeline.Workspace)/${{ parameters.artifact }}/package-${{ parameters.type }}.${{ project }}/" --pattern "*.zip*"

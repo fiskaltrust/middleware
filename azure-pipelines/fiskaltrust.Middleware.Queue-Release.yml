@@ -13,6 +13,7 @@ stages:
   - template: templates/release.yml
     parameters:
       type: fiskaltrust.Middleware.Queue
+      artifact: build
       projects:
         - InMemory
         - SQLite
