@@ -6,7 +6,6 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography;
-using System.Threading;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1.de;
 using fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Exceptions;
