@@ -1,13 +1,13 @@
 resources:
   pipelines:
     - pipeline: build
-      source: fiskaltrust.Middleware.Queue
+      source: fiskaltrust.Middleware.SCU.DE
       trigger:
         branches:
           include:
             - main
         tags:
-          - refs/tags/queue/*/v*
+          - refs/tags/scu-de/*/v*
 
 trigger: none
 pr: none
@@ -15,13 +15,17 @@ pr: none
 stages:
   - template: templates/release.yml
     parameters:
-      type: fiskaltrust.Middleware.Queue
+      type: fiskaltrust.Middleware.SCU.DE
       artifact: build
       projects:
+        - CryptoVision
+        - DieboldNixdorf
+        - Epson
+        - FiskalyCertified
+        - Swissbit
+        - DeutscheFiskal
+        - SwissbitCloud
         - InMemory
-        - SQLite
-        - PostgreSQL
-        - MySQL
       stages:
         - stage: Release_Sandbox
           dependsOn: []

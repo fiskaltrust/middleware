@@ -63,24 +63,3 @@ stages:
               workingDirectory: scu-me
               projects:
                 - fiskaltrust.Middleware.SCU.ME.InMemory
-
-  - template: templates/release.yml
-    parameters:
-      type: fiskaltrust.Middleware.SCU.ME
-      projects:
-        - InMemory
-      stages:
-        - stage: Release_Sandbox
-          dependsOn: Build
-          templateContext:
-            environment: sandbox
-            storage: stdevwesteuropepackages
-            serviceConnection: rg-dev-westeurope-packages
-
-        # - stage: Release_Production
-        #   condition: startsWith(variables.branch, 'refs/tags/v')
-        #   templateContext:
-        #     environment: production
-        #     storage: stwesteuropepackages
-        #     serviceConnection: rg-westeurope-packages
-        #     dependsOnPrefix: Release_Sandbox
