@@ -23,6 +23,7 @@ stages:
         - MySQL
       stages:
         - stage: Release_Sandbox
+          dependsOn: []
           templateContext:
             environment: sandbox
             storage: stdevwesteuropepackages
