@@ -9,6 +9,8 @@ resources:
         tags:
           - refs/tags/queue/*/v*
 
+trigger: none
+
 stages:
   - template: templates/release.yml
     parameters:
