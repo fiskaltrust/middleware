@@ -30,7 +30,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
             var httpClient = MockHttpCient("PutAsync_BadGateway_RetryException");
             var httpClientWrapper = new HttpClientWrapper(config, logger, httpClient);
             var tss = Guid.NewGuid();
-            var f = CallPutAsync(httpClientWrapper, requestUri, httpResponseMessage.Content, Guid.NewGuid());
+            var f = CallPutAsync(httpClientWrapper, requestUri, httpResponseMessage.Content);
             await f.Should().ThrowAsync<FiskalyException>().WithMessage($"Communication error ({HttpStatusCode.BadGateway}) while setting TSS metadata ({requestUri}). Response: PutAsync_BadGateway_RetryException").ConfigureAwait(false);
             CheckLogs(logger);
         }
@@ -44,7 +44,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
             var httpClient = MockHttpCient("GetAsync_BadGateway_RetryException");
             var httpClientWrapper = new HttpClientWrapper(config, logger, httpClient);
             var tss = Guid.NewGuid();
-            var f = CallGetAsync(httpClientWrapper, requestUri, Guid.NewGuid());
+            var f = CallGetAsync(httpClientWrapper, requestUri);
             await f.Should().ThrowAsync<FiskalyException>().WithMessage($"Communication error ({HttpStatusCode.BadGateway}) while getting TSS metadata ({requestUri}). Response: GetAsync_BadGateway_RetryException").ConfigureAwait(false);
             CheckLogs(logger);
         }
@@ -63,7 +63,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
                 RequestUri = new Uri(httpClient.BaseAddress.ToString()+ "/SendAsync_BadGateway_RetryException"),
                 Content = new StringContent(requestUri)
             };
-            var f = CallSendtAsync(httpClientWrapper, requestUri, "jsonPaylod_SendAsync_BadGateway_RetryException", Guid.NewGuid());
+            var f = CallSendtAsync(httpClientWrapper, requestUri, "jsonPaylod_SendAsync_BadGateway_RetryException");
             await f.Should().ThrowAsync<FiskalyException>().WithMessage("Communication error (BadGateway) while setting TSS metadata (Method: PATCH, RequestUri: 'http://test.com//SendAsync_BadGateway_RetryException', Version: 1.1, Content: System.Net.Http.StringContent, Headers:\r\n{\r\n  Content-Type: application/json; charset=utf-8\r\n}). Response: SendAsync_BadGateway_RetryException").ConfigureAwait(false);
             CheckLogs(logger);
         }
@@ -77,7 +77,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
             var httpClient = MockHttpCient("PostAsync_BadGateway_RetryException");
             var httpClientWrapper = new HttpClientWrapper(config, logger, httpClient);
             var tss = Guid.NewGuid();
-            var f = CallPostAsync(httpClientWrapper, requestUri, new StringContent(requestUri), Guid.NewGuid());
+            var f = CallPostAsync(httpClientWrapper, requestUri, new StringContent(requestUri));
             await f.Should().ThrowAsync<FiskalyException>().WithMessage($"Communication error ({HttpStatusCode.BadGateway}) while setting TSS metadata ({requestUri}). Response: PostAsync_BadGateway_RetryException").ConfigureAwait(false);
             CheckLogs(logger);
         }
@@ -85,9 +85,9 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
         private static void CheckLogs(BadGatewayLogger logger)
         {
             var logs = logger.GetLog();
-            logs.Should().HaveCount(5);
-            logs[0].Should().Equals("HttpStatusCode.BadGateway from Fiskaly retry 0 from 4");
-            logs[4].Should().Equals("HttpStatusCode.BadGateway from Fiskaly retry 4 from 4");
+            logs.Should().HaveCount(2);
+            logs[0].Should().Equals("HttpStatusCode.BadGateway from Fiskaly retry 1 from 2");
+            logs[1].Should().Equals("HttpStatusCode.BadGateway from Fiskaly retry 2 from 2");
         }
 
         private HttpClient MockHttpCient(string content)
@@ -116,24 +116,24 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
             };
         }
 
-        private Func<Task> CallPutAsync(HttpClientWrapper httpClientWrapper, string requestUri, HttpContent content, Guid requestId)
+        private Func<Task> CallPutAsync(HttpClientWrapper httpClientWrapper, string requestUri, HttpContent content)
         {
-            return async () => await httpClientWrapper.PutAsync(requestUri, content, requestId).ConfigureAwait(false);
+            return async () => await httpClientWrapper.PutAsync(requestUri, content).ConfigureAwait(false);
         }
 
-        private Func<Task> CallGetAsync(HttpClientWrapper httpClientWrapper, string requestUri, Guid requestId)
+        private Func<Task> CallGetAsync(HttpClientWrapper httpClientWrapper, string requestUri)
         {
-            return async () => await httpClientWrapper.GetAsync(requestUri, requestId).ConfigureAwait(false);
+            return async () => await httpClientWrapper.GetAsync(requestUri).ConfigureAwait(false);
         }
 
-        private Func<Task> CallSendtAsync(HttpClientWrapper httpClientWrapper, string requestUri, string jsonPayload, Guid requestId)
+        private Func<Task> CallSendtAsync(HttpClientWrapper httpClientWrapper, string requestUri, string jsonPayload)
         {
-            return async () => await httpClientWrapper.SendAsync(new HttpMethod("PATCH"), requestUri, jsonPayload, requestId).ConfigureAwait(false);
+            return async () => await httpClientWrapper.SendAsync(new HttpMethod("PATCH"), requestUri, jsonPayload).ConfigureAwait(false);
         }
 
-        private Func<Task> CallPostAsync(HttpClientWrapper httpClientWrapper, string requestUri, HttpContent httpContent, Guid requestId)
+        private Func<Task> CallPostAsync(HttpClientWrapper httpClientWrapper, string requestUri, HttpContent httpContent)
         {
-            return async () => await httpClientWrapper.PostAsync(requestUri, httpContent, requestId).ConfigureAwait(false);
+            return async () => await httpClientWrapper.PostAsync(requestUri, httpContent).ConfigureAwait(false);
         }
     }
 }

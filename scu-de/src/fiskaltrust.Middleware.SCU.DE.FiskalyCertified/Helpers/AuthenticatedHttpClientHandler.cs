@@ -16,8 +16,6 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
     public class AuthenticatedHttpClientHandler : HttpClientHandler
     {
         private const string ENDPOINT = "auth";
-
-        private readonly ConcurrentDictionary<Guid, int> _5xxRetries = new ConcurrentDictionary<Guid, int>();
         private readonly FiskalySCUConfiguration _config;
         private readonly ILogger _logger;
         private string _accessToken;
@@ -50,7 +48,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
             };
 
             var requestContent = JsonConvert.SerializeObject(requestObject);
-            var responseMessage = await PostAsync(client, requestContent, Guid.NewGuid()).ConfigureAwait(false);
+            var responseMessage = await PostAsync(client, requestContent).ConfigureAwait(false);
 
             var responseContent = await responseMessage.Content.ReadAsStringAsync();
             var response = JsonConvert.DeserializeObject<TokenResponseDto>(responseContent);
@@ -60,15 +58,18 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
             return _accessToken;
         }
 
-        private async Task<HttpResponseMessage> PostAsync(HttpClient client, string requestContent, Guid requestId)
+        private async Task<HttpResponseMessage> PostAsync(HttpClient client, string requestContent, int i = 0)
         {
             var responseMessage = await HttpClientWrapper.WrapCall(client.PostAsync(ENDPOINT, new StringContent(requestContent, Encoding.UTF8, "application/json")), _config.FiskalyClientTimeout).ConfigureAwait(false);
 
             if (!responseMessage.IsSuccessStatusCode)
             {
-                if (HttpClientWrapper.RetryNeeded((int) responseMessage.StatusCode, _5xxRetries, _config.RetriesOn5xxError, _logger, requestId))
+                if ((int) responseMessage.StatusCode >= 500 && (int) responseMessage.StatusCode <= 599 && _config.RetriesOn5xxError > i)
                 {
-                    await PostAsync(client, requestContent, requestId).ConfigureAwait(false);
+                    i++;
+                    Thread.Sleep(1000 * (i + 1));
+                    _logger.LogInformation($"HttpStatusCode {responseMessage.StatusCode} from Fiskaly retry {i} from {_config.RetriesOn5xxError}");
+                    await PostAsync(client, requestContent, i).ConfigureAwait(false);
                 }
                 var content = await responseMessage.Content.ReadAsStringAsync();
                 throw new FiskalyException($"Could not get OAuth token from Fiskaly API (Status code: {responseMessage.StatusCode}, Response: {content})");

@@ -17,7 +17,6 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
         public static string TIMEOUT_LOG = "The client did not respond in the configured time!";
         private readonly HttpClient _httpClient;
         private readonly FiskalySCUConfiguration _configuration;
-        private readonly ConcurrentDictionary<Guid, int> _5xxRetries = new ConcurrentDictionary<Guid, int>();
         private readonly ILogger<HttpClientWrapper> _logger;
 
         public HttpClientWrapper(FiskalySCUConfiguration configuration, ILogger<HttpClientWrapper> logger, HttpClient httpClient)
@@ -72,47 +71,45 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
             }
         }
 
-        public async Task<HttpResponseMessage> PutAsync(string requestUri, HttpContent content, Guid requestId)
+        public async Task<HttpResponseMessage> PutAsync(string requestUri, HttpContent content, int i = 0)
         {
             var response = await WrapCall(_httpClient.PutAsync(requestUri, content), _configuration.FiskalyClientTimeout).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
             {
-                if(RetryNeeded((int) response.StatusCode, _5xxRetries, _configuration.RetriesOn5xxError, _logger, requestId))
+                if ((int)response.StatusCode >= 500 && (int) response.StatusCode <= 599 && _configuration.RetriesOn5xxError > i)
                 {
-                    await PutAsync(requestUri, content, requestId).ConfigureAwait(false);
+                    i++;
+                    Thread.Sleep(1000 * (i + 1));
+                    _logger.LogInformation($"HttpStatusCode {response.StatusCode} from Fiskaly retry {i} from {_configuration.RetriesOn5xxError}");
+                    await PutAsync(requestUri, content, i).ConfigureAwait(false);
                 }
                 var responseContent = await response.Content.ReadAsStringAsync();
                 throw new FiskalyException($"Communication error ({response.StatusCode}) while setting TSS metadata ({requestUri}). Response: {responseContent}",
                     (int) response.StatusCode, content.ToString());
             }
-            else
-            {
-                _5xxRetries.TryRemove(requestId, out _);
-            }
             return response;
         }
 
-        public async Task<HttpResponseMessage> GetAsync(string requestUri, Guid requestId)
+        public async Task<HttpResponseMessage> GetAsync(string requestUri, int i = 0)
         {
             var response = await WrapCall(_httpClient.GetAsync(requestUri), _configuration.FiskalyClientTimeout).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
             {
-                if (RetryNeeded((int) response.StatusCode, _5xxRetries, _configuration.RetriesOn5xxError, _logger, requestId))
+                if ((int) response.StatusCode >= 500 && (int) response.StatusCode <= 599 && _configuration.RetriesOn5xxError > i)
                 {
-                    await GetAsync(requestUri, requestId).ConfigureAwait(false);
+                    i++;
+                    Thread.Sleep(1000 * (i + 1));
+                    _logger.LogInformation($"HttpStatusCode {response.StatusCode} from Fiskaly retry {i} from {_configuration.RetriesOn5xxError}");
+                    await GetAsync(requestUri, i).ConfigureAwait(false);
                 }
                 var responseContent = await response.Content.ReadAsStringAsync();
                 throw new FiskalyException($"Communication error ({response.StatusCode}) while getting TSS metadata ({requestUri}). Response: {responseContent}",
                     (int) response.StatusCode, requestUri);
             }
-            else
-            {
-                _5xxRetries.TryRemove(requestId, out _);
-            }
             return response;
         }
 
-        public async Task<HttpResponseMessage> SendAsync(HttpMethod httpMethod, string requestUri, string jsonPayload, Guid requestId)
+        public async Task<HttpResponseMessage> SendAsync(HttpMethod httpMethod, string requestUri, string jsonPayload, int i = 0)
         {
             var request = new HttpRequestMessage(httpMethod, requestUri)
             {
@@ -121,67 +118,37 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
             var response = await WrapCall(_httpClient.SendAsync(request), _configuration.FiskalyClientTimeout).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
             {
-                if (RetryNeeded((int) response.StatusCode, _5xxRetries, _configuration.RetriesOn5xxError, _logger, requestId))
+                if ((int) response.StatusCode >= 500 && (int) response.StatusCode <= 599 && _configuration.RetriesOn5xxError > i)
                 {
-                    await SendAsync(httpMethod, requestUri, jsonPayload, requestId).ConfigureAwait(false);
+                    i++;
+                    Thread.Sleep(1000 * (i + 1));
+                    _logger.LogInformation($"HttpStatusCode {response.StatusCode} from Fiskaly retry {i} from {_configuration.RetriesOn5xxError}");
+                    await SendAsync(httpMethod, requestUri, jsonPayload, i).ConfigureAwait(false);
                 }
                 var responseContent = await response.Content.ReadAsStringAsync();
                 throw new FiskalyException($"Communication error ({response.StatusCode}) while setting TSS metadata ({request}). Response: {responseContent}",
                     (int) response.StatusCode, request.Content.ToString());
             }
-            else
-            {
-                _5xxRetries.TryRemove(requestId, out _);
-            }
             return response;
         }
             
-        public async Task<HttpResponseMessage> PostAsync(string requestUri, HttpContent content, Guid requestId)
+        public async Task<HttpResponseMessage> PostAsync(string requestUri, HttpContent content, int i = 0)
         {
             var response = await WrapCall(_httpClient.PostAsync(requestUri, content), _configuration.FiskalyClientTimeout).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
             {
-                if (RetryNeeded((int) response.StatusCode, _5xxRetries, _configuration.RetriesOn5xxError, _logger, requestId))
+                if ((int) response.StatusCode >= 500 && (int) response.StatusCode <= 599 && _configuration.RetriesOn5xxError > i)
                 {
-                    await PostAsync(requestUri, content, requestId).ConfigureAwait(false);
+                    i++;
+                    Thread.Sleep(1000 * (i + 1));
+                    _logger.LogInformation($"HttpStatusCode {response.StatusCode} from Fiskaly retry {i} from {_configuration.RetriesOn5xxError}");
+                    await PostAsync(requestUri, content, i).ConfigureAwait(false);
                 }
                 var responseContent = await response.Content.ReadAsStringAsync();
                 throw new FiskalyException($"Communication error ({response.StatusCode}) while setting TSS metadata ({requestUri}). Response: {responseContent}",
                     (int) response.StatusCode, requestUri);
             }
-            else
-            {
-                _5xxRetries.TryRemove(requestId, out _);
-            }
             return response;
-        }
-
-        public static bool RetryNeeded(int statusCode, ConcurrentDictionary<Guid, int> retries,int configRetries, ILogger logger, Guid requestId)
-        {
-            if (statusCode >= 500 && statusCode <= 599)
-            {
-                if (retries.TryGetValue(requestId, out var doneRetries))
-                {
-                    if (configRetries > doneRetries)
-                    {
-                        doneRetries++;
-                    }
-                    else
-                    {
-                        retries.TryRemove(requestId, out _);
-                        return false;
-                    }
-                }
-                else
-                {
-                    doneRetries = 0;
-                }
-                retries.AddOrUpdate(requestId, doneRetries, (key, oldValue) => doneRetries);
-                logger.LogInformation($"HttpStatusCode {statusCode} from Fiskaly retry {doneRetries} from {configRetries}");
-                Thread.Sleep(1000 * (doneRetries + 1));
-                return true;
-            }
-            return false;
         }
 
         public void Dispose()
