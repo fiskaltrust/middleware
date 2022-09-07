@@ -24,6 +24,8 @@ stages:
 
       ${{ if eq(stage.templateContext.environment, 'production') }}:
         condition: and(startsWith(variables.branch, 'refs/tags/'), contains(variables.branch, lower('/${{ project }}/v')))
+      ${{ else }}:
+        condition: or(startsWith(variables['Build.Reason'], 'Manual'), and(startsWith(variables.branch, 'refs/tags/'), contains(variables.branch, lower('/${{ project }}/v'))))
 
       jobs:
         - deployment: Release
