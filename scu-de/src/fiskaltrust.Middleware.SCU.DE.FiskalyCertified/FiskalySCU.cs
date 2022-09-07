@@ -4,7 +4,9 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Security.Cryptography;
+using System.Threading;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1.de;
 using fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Exceptions;
@@ -345,15 +347,25 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
             await _fiskalyApiProvider.PatchTseMetadataAsync(_configuration.TssId, new Dictionary<string, object> { { _lastExportedTransactionNumberKey, lastExportedTransactionNumber } });
         }
 
-        private async Task CacheExportAsync(Guid exportId)
+        private async Task CacheExportAsync(Guid exportId, int i = 0)
         {
             try
             {
                 await _fiskalyApiProvider.StoreDownloadResultAsync(_configuration.TssId, exportId);
                 SetExportState(exportId, ExportState.Succeeded);
+            }catch(WebException)
+            {
+                if (_configuration.RetriesOnTarExportWebException > i)
+                {
+                    i++;
+                    _logger.LogInformation($"WebException on Export from Fiskaly retry {i} from {_configuration.RetriesOnTarExportWebException}");
+                    await Task.Delay(1000 * (i + 1)).ConfigureAwait(false);
+                    await CacheExportAsync(exportId, i).ConfigureAwait(false);
+                }
             }
             catch (Exception ex)
             {
+
                 _logger.LogError(ex, "Failed to execute {Operation} - ExportId: {ExportId}", nameof(CacheExportAsync), exportId);
                 SetExportState(exportId, ExportState.Failed, ex);
             }
