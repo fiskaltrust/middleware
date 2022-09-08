@@ -3,9 +3,6 @@ resources:
     - pipeline: build
       source: fiskaltrust.Middleware.SCU.DE
       trigger:
-        branches:
-          include:
-            - main
         tags:
           - refs/tags/scu-de/*/v*
 
