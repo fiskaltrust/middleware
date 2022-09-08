@@ -1,12 +1,12 @@
 resources:
-- repo: self
+  - repo: self
 
 trigger:
   batch: true
   branches:
     include:
-    - main
-    - refs/tags/scu-me/*
+      - main
+      - refs/tags/scu-me/*
   paths:
     include:
       - scu-me
@@ -14,47 +14,52 @@ trigger:
 pr:
   branches:
     include:
-    - main
-    - refs/tags/scu-me/*
+      - main
+      - refs/tags/scu-me/*
   paths:
     include:
       - scu-me
 
 variables:
-- group: 'Code Signing Certificates'
-- name: BuildConfiguration
-  value: release
-- name: Solution
-  value: 'fiskaltrust.Middleware.SCU.ME.sln'
-- name: vmImageName 
-  value: 'windows-2022'
-- name: WorkingDirectory
-  value: 'scu-me'
+  - group: "Code Signing Certificates"
+  - name: BuildConfiguration
+    value: release
+  - name: Solution
+    value: "fiskaltrust.Middleware.SCU.ME.sln"
+  - name: vmImageName
+    value: "windows-2022"
+  - name: WorkingDirectory
+    value: "scu-me"
 
-jobs:
-- job: Test
-  displayName: Unit and integration tests
-  pool:
-    vmImage: $(vmImageName)
-  steps:
-  - template: templates/scu-me/test.template.yml
+stages:
+  - stage: Test
+    jobs:
+      - job: Test
+        displayName: Unit and integration tests
+        pool:
+          vmImage: $(vmImageName)
+        steps:
+          - template: templates/scu-me/test.template.yml
 
-- job: BuildNugetPackages
-  displayName: Build v1 NuGet packages
-  dependsOn: 
-  - Test
-  condition: succeeded()
-  pool:
-    vmImage: $(vmImageName)
-  steps:
-  - template: templates/scu-me/build-nuget.template.yml
+  - stage: Build
+    dependsOn: Test
+    jobs:
+      - job: BuildNugetPackages
+        displayName: Build v1 NuGet packages
+        dependsOn: []
+        pool:
+          vmImage: $(vmImageName)
+        steps:
+          - template: templates/scu-me/build-nuget.template.yml
 
-- job: BuildZipPackages
-  displayName: Build v2 zip packages
-  dependsOn: 
-  - Test
-  condition: succeeded()
-  pool:
-    vmImage: $(vmImageName)
-  steps:
-  - template: templates/scu-me/build-zip.template.yml
+      - job: BuildZipPackages
+        displayName: Build v2 zip packages
+        dependsOn: []
+        pool:
+          vmImage: $(vmImageName)
+        steps:
+          - template: templates/build-zip.yml
+            parameters:
+              workingDirectory: scu-me
+              projects:
+                - fiskaltrust.Middleware.SCU.ME.InMemory
