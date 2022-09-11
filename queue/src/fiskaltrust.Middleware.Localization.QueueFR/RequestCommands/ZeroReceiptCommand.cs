@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueFR.Extensions;
+using fiskaltrust.Middleware.Localization.QueueFR.Factories;
 using fiskaltrust.Middleware.Localization.QueueFR.Models;
 using fiskaltrust.storage.V0;
 using Newtonsoft.Json;
@@ -13,14 +14,12 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
 {
     public class ZeroReceiptCommand : RequestCommand
     {
-        private readonly ActionJournalFactory _actionJournalFactory;
         private readonly IReadOnlyQueueItemRepository _queueItemRepository;
         private readonly IMiddlewareActionJournalRepository _actionJournalRepository;
 
-        public ZeroReceiptCommand(SignatureFactoryFR signatureFactoryFR, ActionJournalFactory actionJournalFactory, IReadOnlyQueueItemRepository queueItemRepository,
+        public ZeroReceiptCommand(ISignatureFactoryFR signatureFactoryFR, IReadOnlyQueueItemRepository queueItemRepository,
             IMiddlewareActionJournalRepository actionJournalRepository) : base(signatureFactoryFR)
         {
-            _actionJournalFactory = actionJournalFactory;
             _queueItemRepository = queueItemRepository;
             _actionJournalRepository = actionJournalRepository;
         }
@@ -54,7 +53,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
 
                 response.ftSignatures = response.ftSignatures.Extend(signatureItem);
 
-                actionJournals.Add(_actionJournalFactory.Create(queue, queueItem, "Zero receipt", payload));
+                actionJournals.Add(ActionJournalFactory.Create(queue, queueItem, "Zero receipt", payload));
                 return (response, journalFR, actionJournals);
             }
         }
@@ -90,7 +89,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
                 {
                     if (!request.HasTrainingReceiptFlag())
                     {
-                        actionJournals.Add(_actionJournalFactory.Create(queue, queueItem, $"QueueItem {queueItem.ftQueueItemId} error on resolving ftReceiptIdentification of queue item {queueFR.UsedFailedQueueItemId} where used-failed beginns: {x.Message}.", null));
+                        actionJournals.Add(ActionJournalFactory.Create(queue, queueItem, $"QueueItem {queueItem.ftQueueItemId} error on resolving ftReceiptIdentification of queue item {queueFR.UsedFailedQueueItemId} where used-failed beginns: {x.Message}.", null));
                     }
                 }
                 var toReceipt = response.ftReceiptIdentification;
@@ -101,7 +100,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
                 //if it is not a training receit, the counter will be updated
                 if ((request.ftReceiptCase & 0x0000000000020000) == 0)
                 {
-                    actionJournals.Add(_actionJournalFactory.Create(queue, queueItem, $"QueueItem {queueItem.ftQueueItemId} recovered Queue {queueFR.ftQueueFRId} from used-failed mode. closing chain of failed receipts from {fromReceipt} to {toReceipt}.", null));
+                    actionJournals.Add(ActionJournalFactory.Create(queue, queueItem, $"QueueItem {queueItem.ftQueueItemId} recovered Queue {queueFR.ftQueueFRId} from used-failed mode. closing chain of failed receipts from {fromReceipt} to {toReceipt}.", null));
 
                     //reset used-fail mode
                     queueFR.UsedFailedCount = 0;

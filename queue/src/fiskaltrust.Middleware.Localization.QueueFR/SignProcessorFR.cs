@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts;
 using fiskaltrust.Middleware.Localization.QueueFR.Extensions;
+using fiskaltrust.Middleware.Localization.QueueFR.Factories;
 using fiskaltrust.Middleware.Localization.QueueFR.Helpers;
 using fiskaltrust.storage.V0;
 using Newtonsoft.Json;
@@ -16,16 +17,14 @@ namespace fiskaltrust.Middleware.Localization.QueueFR
         private readonly IConfigurationRepository _configurationRepository;
         private readonly IActionJournalRepository _actionJournalRepository;
         private readonly RequestCommandFactory _requestCommandFactory;
-        private readonly ActionJournalFactory _actionJournalFactory;
         private readonly SignatureFactoryFR _signatureFactoryFR;
 
         public SignProcessorFR(IConfigurationRepository configurationRepository, IActionJournalRepository actionJournalRepository,
-            RequestCommandFactory requestCommandFactory, ActionJournalFactory actionJournalFactory, SignatureFactoryFR signatureFactoryFR)
+            RequestCommandFactory requestCommandFactory, SignatureFactoryFR signatureFactoryFR)
         {
             _configurationRepository = configurationRepository;
             _actionJournalRepository = actionJournalRepository;
             _requestCommandFactory = requestCommandFactory;
-            _actionJournalFactory = actionJournalFactory;
             _signatureFactoryFR = signatureFactoryFR;
         }
 
@@ -51,7 +50,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR
                 var defaultResponse = command.CreateDefaultReceiptResponse(queue, queueFR, request, queueItem);
                 defaultResponse.ftState |= 0x1;
 
-                return (defaultResponse, new List<ftActionJournal> { _actionJournalFactory.Create(queue, queueItem, stateErrors.First().Message, null) });
+                return (defaultResponse, new List<ftActionJournal> { ActionJournalFactory.Create(queue, queueItem, stateErrors.First().Message, null) });
             }
 
             var requestErrors = RequestValidation.ValidateReceiptItems(request)
@@ -59,7 +58,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR
 
             if (requestErrors.Any())
             {
-                await _actionJournalRepository.InsertAsync(_actionJournalFactory.Create(queue, queueItem, "The received request contained errors.", JsonConvert.SerializeObject(requestErrors.Select(x => x.Message))));
+                await _actionJournalRepository.InsertAsync(ActionJournalFactory.Create(queue, queueItem, "The received request contained errors.", JsonConvert.SerializeObject(requestErrors.Select(x => x.Message))));
                 throw new AggregateException("Could not process the receipt because the request contained errors. See inner exceptions for details.", requestErrors.Select(x => new ArgumentException(x.Message)));
             }
 
@@ -89,7 +88,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR
                 queueFR.UsedFailedMomentMax = request.cbReceiptMoment;
 
                 queueFR.UsedFailedQueueItemId = queueItem.ftQueueItemId;
-                ajs.Add(_actionJournalFactory.Create(queue, queueItem, $"QueueItem {queueItem.ftQueueItemId} enabled mode \"UsedFailed\" of Queue {queueFR.ftQueueFRId}", null));
+                ajs.Add(ActionJournalFactory.Create(queue, queueItem, $"QueueItem {queueItem.ftQueueItemId} enabled mode \"UsedFailed\" of Queue {queueFR.ftQueueFRId}", null));
             }
             queueFR.UsedFailedCount++;
 

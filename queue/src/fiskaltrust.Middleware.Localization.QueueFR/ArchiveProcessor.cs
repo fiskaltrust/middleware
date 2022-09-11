@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.QueueFR
 {
-    public class ArchiveProcessor
+    public class ArchiveProcessor : IArchiveProcessor
     {
         private readonly ILogger<ArchiveProcessor> _logger;
         private readonly IMiddlewareRepository<ftQueueItem> _mwQueueItemRepository;

@@ -1,13 +1,12 @@
 ﻿using System;
 using fiskaltrust.storage.V0;
 
-namespace fiskaltrust.Middleware.Localization.QueueFR
+namespace fiskaltrust.Middleware.Localization.QueueFR.Factories
 {
-    public class ActionJournalFactory
+    public static class ActionJournalFactory
     {
-        public ftActionJournal Create(ftQueue queue, ftQueueItem queueItem, string message, string dataJson, int priority = 0)
-        {
-            return new ftActionJournal
+        public static ftActionJournal Create(ftQueue queue, ftQueueItem queueItem, string message, string dataJson, int priority = 0) =>
+            new()
             {
                 ftActionJournalId = Guid.NewGuid(),
                 ftQueueId = queue.ftQueueId,
@@ -17,6 +16,5 @@ namespace fiskaltrust.Middleware.Localization.QueueFR
                 DataJson = dataJson,
                 Priority = priority
             };
-        }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using fiskaltrust.Middleware.Contracts;
+using fiskaltrust.Middleware.Localization.QueueFR.Factories;
 using fiskaltrust.Middleware.Localization.QueueFR.RequestCommands;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -8,10 +9,9 @@ namespace fiskaltrust.Middleware.Localization.QueueFR
     {
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddScoped<SignatureFactoryFR>();
+            services.AddScoped<IArchiveProcessor, ArchiveProcessor>();
+            services.AddScoped<ISignatureFactoryFR, SignatureFactoryFR>();
             services.AddScoped<RequestCommandFactory>();
-            services.AddScoped<ActionJournalFactory>();
-            services.AddScoped<ArchiveProcessor>();
             services.AddScoped<IMarketSpecificJournalProcessor, JournalProcessorFR>();
             services.AddScoped<IMarketSpecificSignProcessor, SignProcessorFR>();
 

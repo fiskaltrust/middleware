@@ -5,7 +5,7 @@ using Newtonsoft.Json;
 using System;
 using System.Linq;
 
-namespace fiskaltrust.Middleware.Localization.QueueFR
+namespace fiskaltrust.Middleware.Localization.QueueFR.Factories
 {
     public static class PayloadFactory
     {
@@ -119,7 +119,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR
             return JsonConvert.SerializeObject(payload);
         }
 
-        public static string GetArchivePayload(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, ftQueueFR queueFr, ftSignaturCreationUnitFR signaturCreationUnitFR, 
+        public static string GetArchivePayload(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, ftQueueFR queueFr, ftSignaturCreationUnitFR signaturCreationUnitFR,
             string lastHash, Guid? lastActionJournalId, Guid? lastJournalFRId, Guid? lastReceiptJournalId, DateTime? firstContainedReceiptMoment,
             Guid? firstContainedReceiptQueueItemId, DateTime? lastContainedReceiptMoment, Guid? lastContainedReceiptQueueItemId)
         {
@@ -179,7 +179,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR
                 LastActionJournalId = lastActionJournalId ?? Guid.Empty,
                 LastJournalFRId = lastJournalFRId ?? Guid.Empty,
                 LastReceiptJournalId = lastReceiptJournalId ?? Guid.Empty,
-                PreviousArchiveQueueItemId = queueFr.ALastQueueItemId, 
+                PreviousArchiveQueueItemId = queueFr.ALastQueueItemId,
                 FirstContainedReceiptMoment = firstContainedReceiptMoment,
                 FirstContainedReceiptQueueItemId = firstContainedReceiptQueueItemId,
                 LastContainedReceiptMoment = lastContainedReceiptMoment,

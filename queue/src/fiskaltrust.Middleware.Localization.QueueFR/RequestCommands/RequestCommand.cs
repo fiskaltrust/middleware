@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Localization.QueueFR.Extensions;
+using fiskaltrust.Middleware.Localization.QueueFR.Factories;
 using fiskaltrust.Middleware.Localization.QueueFR.Models;
 using fiskaltrust.storage.V0;
 
@@ -10,9 +11,9 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
 {
     public abstract class RequestCommand
     {
-        protected readonly SignatureFactoryFR _signatureFactoryFR;
+        protected readonly ISignatureFactoryFR _signatureFactoryFR;
 
-        public RequestCommand(SignatureFactoryFR signatureFactoryFR)
+        public RequestCommand(ISignatureFactoryFR signatureFactoryFR)
         {
             _signatureFactoryFR = signatureFactoryFR;
         }

@@ -6,6 +6,7 @@ using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueFR.Extensions;
+using fiskaltrust.Middleware.Localization.QueueFR.Factories;
 using fiskaltrust.Middleware.Localization.QueueFR.Models;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
@@ -15,9 +16,8 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
 {
     public class ArchiveCommand : RequestCommand
     {
-        private readonly ActionJournalFactory _actionJournalFactory;
         private readonly MiddlewareConfiguration _middlewareConfig;
-        private readonly ArchiveProcessor _archiveProcessor;
+        private readonly IArchiveProcessor _archiveProcessor;
         private readonly IMiddlewareActionJournalRepository _actionJournalRepository;
         private readonly IMiddlewareQueueItemRepository _queueItemRepository;
         private readonly IMiddlewareReceiptJournalRepository _receiptJournalRepository;
@@ -26,11 +26,10 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
 
         private readonly bool _exportEnabled;
 
-        public ArchiveCommand(SignatureFactoryFR signatureFactoryFR, ActionJournalFactory actionJournalFactory, MiddlewareConfiguration middlewareConfig, 
-            ArchiveProcessor archiveProcessor, IMiddlewareActionJournalRepository actionJournalRepository, IMiddlewareQueueItemRepository queueItemRepository,
+        public ArchiveCommand(ISignatureFactoryFR signatureFactoryFR, MiddlewareConfiguration middlewareConfig, 
+            IArchiveProcessor archiveProcessor, IMiddlewareActionJournalRepository actionJournalRepository, IMiddlewareQueueItemRepository queueItemRepository,
             IMiddlewareReceiptJournalRepository receiptJournalRepository, IMiddlewareJournalFRRepository journalFRRepository, ILogger<ArchiveCommand> logger) : base(signatureFactoryFR)
         {
-            _actionJournalFactory = actionJournalFactory;
             _middlewareConfig = middlewareConfig;
             _archiveProcessor = archiveProcessor;
             _actionJournalRepository = actionJournalRepository;
@@ -107,7 +106,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
                 journalFR.ReceiptType = "A";
                 response.ftSignatures = response.ftSignatures.Extend(new[] { dailyTotalsSignature, archiveTotalsSignature, signatureItem });
 
-                var actionJournal = _actionJournalFactory.Create(queue, queueItem, "Archive requested", payload);
+                var actionJournal = ActionJournalFactory.Create(queue, queueItem, "Archive requested", payload);
 
                 return (response, journalFR, new() { actionJournal });
             }
@@ -149,7 +148,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
                 var firstResponse = !string.IsNullOrEmpty(firstQueueItem.response) ? JsonConvert.DeserializeObject<ReceiptResponse>(firstQueueItem.response) : null;
 
                 return (lastActionJournal?.ftActionJournalId, lastJournalFR?.ftJournalFRId, lastReceiptJournal?.ftReceiptJournalId, firstResponse?.ftReceiptMoment,
-                   firstQueueItem.ftQueueItemId, lastResponse.ftReceiptMoment, lastQueueItem.ftQueueItemId);
+                   firstQueueItem.ftQueueItemId, lastResponse?.ftReceiptMoment, lastQueueItem.ftQueueItemId);
             }
         }
     }

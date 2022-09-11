@@ -1,14 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts;
 using fiskaltrust.storage.V0;
 using Newtonsoft.Json;
 
-namespace fiskaltrust.Middleware.Localization.QueueFR
+namespace fiskaltrust.Middleware.Localization.QueueFR.Factories
 {
-    public class SignatureFactoryFR
+    public class SignatureFactoryFR : ISignatureFactoryFR
     {
         private readonly ICryptoHelper _cryptoHelper;
 
@@ -31,14 +29,14 @@ namespace fiskaltrust.Middleware.Localization.QueueFR
         public SignaturItem CreateFailureRegisteredSignature(string fromReceipt, string toReceipt)
         {
             return new SignaturItem
-            { 
-                Caption = "Failure registered", 
-                Data = $"From {fromReceipt} to {toReceipt} ", 
-                ftSignatureFormat = (long) SignaturItem.Formats.Text, 
-                ftSignatureType = (long) SignaturItem.Types.Information 
+            {
+                Caption = "Failure registered",
+                Data = $"From {fromReceipt} to {toReceipt} ",
+                ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                ftSignatureType = (long) SignaturItem.Types.Information
             };
         }
-        
+
 
         public SignaturItem CreateTotalsSignatureWithoutSigning(string payload, string description, SignaturItem.Formats format, SignaturItem.Types type)
         {

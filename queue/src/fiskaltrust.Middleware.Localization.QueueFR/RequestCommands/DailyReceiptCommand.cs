@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Localization.QueueFR.Extensions;
+using fiskaltrust.Middleware.Localization.QueueFR.Factories;
 using fiskaltrust.Middleware.Localization.QueueFR.Models;
 using fiskaltrust.storage.V0;
 
@@ -10,11 +11,8 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
 {
     public class DailyReceiptCommand : RequestCommand
     {
-        private readonly ActionJournalFactory _actionJournalFactory;
-
-        public DailyReceiptCommand(SignatureFactoryFR signatureFactoryFR, ActionJournalFactory actionJournalFactory) : base(signatureFactoryFR)
+        public DailyReceiptCommand(ISignatureFactoryFR signatureFactoryFR) : base(signatureFactoryFR)
         {
-            _actionJournalFactory = actionJournalFactory;
         }
 
         public override Task<(ReceiptResponse receiptResponse, ftJournalFR journalFR, List<ftActionJournal> actionJournals)> ExecuteAsync(ftQueue queue, ftQueueFR queueFR, ftSignaturCreationUnitFR signaturCreationUnitFR, ReceiptRequest request, ftQueueItem queueItem)
@@ -44,7 +42,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
                 journalFR.ReceiptType = "G";
                 response.ftSignatures = response.ftSignatures.Extend(new[] { dailyTotalsSignature, perpetualTicketsSignature, signatureItem });
 
-                var actionJournal = _actionJournalFactory.Create(queue, queueItem, "Daily closure", PayloadFactory.GetGrandTotalPayload(request, response, queueFR, signaturCreationUnitFR, queueFR.GLastHash));
+                var actionJournal = ActionJournalFactory.Create(queue, queueItem, "Daily closure", PayloadFactory.GetGrandTotalPayload(request, response, queueFR, signaturCreationUnitFR, queueFR.GLastHash));
 
                 return Task.FromResult<(ReceiptResponse, ftJournalFR, List<ftActionJournal>)>((response, journalFR, new() { actionJournal }));
             }

@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Localization.QueueFR.Extensions;
+using fiskaltrust.Middleware.Localization.QueueFR.Factories;
 using fiskaltrust.Middleware.Localization.QueueFR.Models;
 using fiskaltrust.storage.V0;
 
@@ -9,12 +10,8 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
 {
     public class StopReceiptCommand : RequestCommand
     {
-        private readonly ActionJournalFactory _actionJournalFactory;
-
-        public StopReceiptCommand(SignatureFactoryFR signatureFactoryFR, ActionJournalFactory actionJournalFactory) : base(signatureFactoryFR)
-        {
-            _actionJournalFactory = actionJournalFactory;
-        }
+        public StopReceiptCommand(ISignatureFactoryFR signatureFactoryFR) : base(signatureFactoryFR)
+        { }
 
         public override Task<(ReceiptResponse receiptResponse, ftJournalFR journalFR, List<ftActionJournal> actionJournals)> ExecuteAsync(ftQueue queue, ftQueueFR queueFR, ftSignaturCreationUnitFR signaturCreationUnitFR, ReceiptRequest request, ftQueueItem queueItem)
         {
@@ -57,7 +54,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
                 journalFR.ReceiptType = "G";
                 response.ftSignatures = response.ftSignatures.Extend(new[] { dailyTotalsSignature, monthlyTotalsSignature, yearlyTotalsSignature, signatureItem });
 
-                var actionJournal = _actionJournalFactory.Create(queue, queueItem, $"QueueItem {queueItem.ftQueueItemId} try to disable Queue {queueFR.ftQueueFRId}", grandTotalPayload);
+                var actionJournal = ActionJournalFactory.Create(queue, queueItem, $"QueueItem {queueItem.ftQueueItemId} try to disable Queue {queueFR.ftQueueFRId}", grandTotalPayload);
 
                 return Task.FromResult<(ReceiptResponse, ftJournalFR, List<ftActionJournal>)>((response, journalFR, new() { actionJournal }));
             }

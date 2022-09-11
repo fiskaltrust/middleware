@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Localization.QueueFR.Extensions;
+using fiskaltrust.Middleware.Localization.QueueFR.Factories;
 using fiskaltrust.Middleware.Localization.QueueFR.Models;
 using fiskaltrust.storage.V0;
 
@@ -10,7 +11,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
 {
     public class BillCommand : RequestCommand
     {
-        public BillCommand(SignatureFactoryFR signatureFactoryFR) : base(signatureFactoryFR) { }
+        public BillCommand(ISignatureFactoryFR signatureFactoryFR) : base(signatureFactoryFR) { }
 
         public override Task<(ReceiptResponse receiptResponse, ftJournalFR journalFR, List<ftActionJournal> actionJournals)> ExecuteAsync(ftQueue queue, ftQueueFR queueFR, ftSignaturCreationUnitFR signaturCreationUnitFR, ReceiptRequest request, ftQueueItem queueItem)
         {
