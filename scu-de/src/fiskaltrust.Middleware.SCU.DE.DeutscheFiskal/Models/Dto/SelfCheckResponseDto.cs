@@ -6,6 +6,8 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Models
     public class SelfCheckResponseDto
     {
         public string remoteCspVersion { get; set; }
+        public string fccVersion { get; set; }
+        public string localClientVersion { get; set; }
         public Keyinfo[] keyInfos { get; set; }
     }
 
