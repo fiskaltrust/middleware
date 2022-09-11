@@ -1,17 +1,14 @@
 ﻿using System;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.Middleware.Localization.QueueME.Models;
 using fiskaltrust.Middleware.Localization.QueueME.RequestCommands;
 using fiskaltrust.Middleware.Localization.QueueME.UnitTest.Helper;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 using Moq;
-using Newtonsoft.Json;
 using Xunit;
 using FluentAssertions;
-using fiskaltrust.Middleware.Localization.QueueME.Exceptions;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories.ME;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories.MasterData;
 using fiskaltrust.storage.V0.MasterData;

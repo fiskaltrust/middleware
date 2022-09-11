@@ -2,7 +2,6 @@
 using System.ServiceModel;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1.me;
-using fiskaltrust.Middleware.Localization.QueueME.Exceptions;
 using FluentAssertions;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.Helper
