@@ -75,7 +75,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest
             TotalTarFileSizeAvailable = true
         });
 
-        public Task<EndExportSessionResponse> EndExportSessionAsync(EndExportSessionRequest request)
+        public virtual Task<EndExportSessionResponse> EndExportSessionAsync(EndExportSessionRequest request)
         {
             if (request.Erase)
             {

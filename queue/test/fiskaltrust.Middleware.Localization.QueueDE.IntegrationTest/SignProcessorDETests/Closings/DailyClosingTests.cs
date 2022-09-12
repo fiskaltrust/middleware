@@ -116,6 +116,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             receiptRequest.ftReceiptCase = receiptCase;
             await _receiptTests.ExpectArgumentExceptionReceiptcase(receiptRequest, errorMessage);
         }
+
         private async Task AddOpenOrdersAsync()
         {
             await _fixture.AddOpenOrders("A1", 1);
