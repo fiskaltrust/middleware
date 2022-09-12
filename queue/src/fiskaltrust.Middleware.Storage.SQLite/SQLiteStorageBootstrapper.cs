@@ -43,7 +43,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite
             AddRepositories(serviceCollection);
         }
 
-        private async Task InitAsync(Guid queueId, Dictionary<string, object> configuration, ILogger<IMiddlewareBootstrapper> logger)
+        private async Task InitAsync(Guid queueId, Dictionary<string,object> configuration, ILogger<IMiddlewareBootstrapper> logger)
         {
             _sqliteFile = Path.Combine(configuration["servicefolder"].ToString(), $"{queueId}.sqlite");
             _connectionFactory = new SqliteConnectionFactory();
@@ -56,8 +56,8 @@ namespace fiskaltrust.Middleware.Storage.SQLite
             var baseStorageConfig = ParseStorageConfiguration(configuration);
 
             await PersistMasterDataAsync(baseStorageConfig, _configurationRepository,
-            new SQLiteAccountMasterDataRepository(_connectionFactory, _sqliteFile), new SQLiteOutletMasterDataRepository(_connectionFactory, _sqliteFile),
-                    new SQLiteAgencyMasterDataRepository(_connectionFactory, _sqliteFile), new SQLitePosSystemMasterDataRepository(_connectionFactory, _sqliteFile)).ConfigureAwait(false);
+                new SQLiteAccountMasterDataRepository(_connectionFactory, _sqliteFile), new SQLiteOutletMasterDataRepository(_connectionFactory, _sqliteFile),
+                new SQLiteAgencyMasterDataRepository(_connectionFactory, _sqliteFile), new SQLitePosSystemMasterDataRepository(_connectionFactory, _sqliteFile)).ConfigureAwait(false);
             await PersistConfigurationAsync(baseStorageConfig, _configurationRepository, logger).ConfigureAwait(false);
         }
 
