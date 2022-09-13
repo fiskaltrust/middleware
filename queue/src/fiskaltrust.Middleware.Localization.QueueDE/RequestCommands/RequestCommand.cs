@@ -128,6 +128,10 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                         await _journalDERepository.InsertAsync(journalDE).ConfigureAwait(false);
                         ftJournalDEId = journalDE.ftJournalDEId;
                     }
+                    else
+                    {
+                        _logger.LogInformation("Export not saved to database because it was not erased from the TSE and {key} is set to {value}", nameof(TarFileExportMode), nameof(TarFileExportMode.Erased));
+                    }
 
                     await _tarFileCleanupService.CleanupTarFileAsync(ftJournalDEId, filePath, checkSum);
                 }
