@@ -52,7 +52,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
                     _logger.LogWarning(e, "Failed to check content equality.");
                 }
             }
-            else
+            else if (_queueDEConfiguration.TarFileExportMode == TarFileExportMode.Erased)
             {
                 deleteFile = true;
             }
