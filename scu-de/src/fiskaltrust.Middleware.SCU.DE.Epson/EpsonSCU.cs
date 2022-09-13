@@ -448,8 +448,15 @@ namespace fiskaltrust.Middleware.SCU.DE.Epson
                                 sessionResponse.IsValid = true;
                                 if (request.Erase)
                                 {
-                                    await _exportCommandProvider.FinalizeExportAsync(true);
-                                    sessionResponse.IsErased = true;
+                                    try
+                                    {
+                                        await _exportCommandProvider.FinalizeExportAsync(true);
+                                        sessionResponse.IsErased = true;
+                                    }
+                                    catch (Exception e)
+                                    {
+                                        _logger.LogError(e, "Failed to delete export data from tse.");
+                                    }
                                 }
                                 else
                                 {
