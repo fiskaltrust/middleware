@@ -598,6 +598,8 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
                                     var endDate = exportDetails.EndDate.AddMinutes(-1);
                                     await _fccAdminApiProvider.AcknowledgeAllTransactionsAsync(_minExportDateTime, endDate, exportDetails.ClientId);
                                 }
+
+                                sessionResponse.IsErased = true;
                             }
                             return sessionResponse;
                         }

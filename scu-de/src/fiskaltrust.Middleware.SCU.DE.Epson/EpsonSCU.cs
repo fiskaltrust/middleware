@@ -449,6 +449,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Epson
                                 if (request.Erase)
                                 {
                                     await _exportCommandProvider.FinalizeExportAsync(true);
+                                    sessionResponse.IsErased = true;
                                 }
                                 else
                                 {

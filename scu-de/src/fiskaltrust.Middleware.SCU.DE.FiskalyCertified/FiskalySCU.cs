@@ -181,7 +181,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
             try
             {
                 var tssResult = await _fiskalyApiProvider.GetTseByIdAsync(_configuration.TssId);
-                if(tssResult.State == FiskalyTseState.CREATED.ToString())
+                if (tssResult.State == FiskalyTseState.CREATED.ToString())
                 {
                     throw new FiskalyException("The state of the TSS is 'CREATED' and therefore not yet personalized, which is currently not supported.");
                 }
@@ -555,12 +555,15 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
                                     var list = string.Join(",", openTransaction.Select(x => x.Number).ToArray());
                                     _logger.LogWarning("Could not delete log files from TSE after successfully exporting them because the following transactions were open: {OpenTransactions}. " +
                                         "If these transactions are not used anymore and could not be closed automatically by a daily closing receipt, please consider sending a fail-transaction-receipt to cancel them.", list);
-                                }else
+                                }
+                                else
                                 {
                                     var metadata = await _fiskalyApiProvider.GetExportMetadataAsync(_configuration.TssId, Guid.Parse(request.TokenId));
                                     if (metadata.ContainsKey("end_transaction_number"))
                                     {
                                         await SetLastExportedTransactionNumber(Convert.ToInt64(metadata["end_transaction_number"], CultureInfo.InvariantCulture));
+
+                                        sessionResponse.IsErased = true;
                                     }
                                 }
                             }
