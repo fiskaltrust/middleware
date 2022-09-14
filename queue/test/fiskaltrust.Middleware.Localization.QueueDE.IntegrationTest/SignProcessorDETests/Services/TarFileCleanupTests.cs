@@ -161,6 +161,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                     return factory;
                 });
                 services.AddSingleton(_ => Mock.Of<ILogger<TarFileCleanupService>>());
+                services.AddSingleton(_ => Mock.Of<ILogger<QueueDEConfiguration>>());
 
                 bootstrapper.ConfigureServices(services);
 
@@ -244,6 +245,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                     return factory;
                 });
                 services.AddSingleton(_ => Mock.Of<ILogger<TarFileCleanupService>>());
+                services.AddSingleton(_ => Mock.Of<ILogger<QueueDEConfiguration>>());
 
                 bootstrapper.ConfigureServices(services);
 
