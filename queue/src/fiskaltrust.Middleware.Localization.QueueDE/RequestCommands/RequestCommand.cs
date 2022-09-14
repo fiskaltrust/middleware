@@ -94,7 +94,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
         public async Task PerformTarFileExportAsync(ftQueueItem queueItem, ftQueue queue, ftQueueDE queueDE, bool erase)
         {
-            if (!_queueDEConfiguration.EnableTarFileExport)
+            if (_queueDEConfiguration.TarFileExportMode == TarFileExportMode.None)
             { return; }
 
             if (_queueDEConfiguration.TarFileExportMode == TarFileExportMode.Erased)

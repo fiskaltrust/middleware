@@ -102,7 +102,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                 Mock.Of<ILogger<TarFileCleanupService>>(),
                 journalRepositoryMock.Object,
                 config,
-                QueueDEConfiguration.FromMiddlewareConfiguration(config)
+                QueueDEConfiguration.FromMiddlewareConfiguration(Mock.Of<ILogger<QueueDEConfiguration>>(), config)
             );
             var sut = RequestCommandFactoryHelper.ConstructSignProcessor(
                 Mock.Of<ILogger<SignProcessorDE>>(),
@@ -117,7 +117,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                 Mock.Of<IMasterDataService>(),
                 config,
                 new InMemoryQueueItemRepository(),
-                new SignatureFactoryDE(QueueDEConfiguration.FromMiddlewareConfiguration(config)), tarFileCleanupService);
+                new SignatureFactoryDE(QueueDEConfiguration.FromMiddlewareConfiguration(Mock.Of<ILogger<QueueDEConfiguration>>(), config)), tarFileCleanupService);
 
 
             var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
@@ -189,7 +189,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                 Mock.Of<ILogger<TarFileCleanupService>>(),
                 journalRepositoryMock.Object,
                 config,
-                QueueDEConfiguration.FromMiddlewareConfiguration(config)
+                QueueDEConfiguration.FromMiddlewareConfiguration(Mock.Of<ILogger<QueueDEConfiguration>>(), config)
                );
 
             var sut = RequestCommandFactoryHelper.ConstructSignProcessor(
@@ -205,7 +205,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                 Mock.Of<IMasterDataService>(),
                 config,
                 _fixture.queueItemRepository,
-                new SignatureFactoryDE(QueueDEConfiguration.FromMiddlewareConfiguration(config)),
+                new SignatureFactoryDE(QueueDEConfiguration.FromMiddlewareConfiguration(Mock.Of<ILogger<QueueDEConfiguration>>(), config)),
                 tarFileCleanupService);
 
             try
