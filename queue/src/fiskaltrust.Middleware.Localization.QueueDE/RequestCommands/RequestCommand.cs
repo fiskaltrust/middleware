@@ -94,26 +94,50 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
         public async Task PerformTarFileExportAsync(ftQueueItem queueItem, ftQueue queue, ftQueueDE queueDE, bool erase)
         {
-            if(!_queueDEConfiguration.EnableTarFileExport) { return; }
+            if (_queueDEConfiguration.TarFileExportMode == TarFileExportMode.None)
+            { 
+                _logger.LogInformation("Skipped export because {key} is set to {value}", nameof(TarFileExportMode), nameof(TarFileExportMode.None));
+                return;
+            }
+
+            if (_queueDEConfiguration.TarFileExportMode == TarFileExportMode.Erased)
+            {
+                var tseInfo = await _deSSCDProvider.Instance.GetTseInfoAsync().ConfigureAwait(false);
+                if (tseInfo.CurrentNumberOfStartedTransactions > 0)
+                {
+                    _logger.LogInformation("Skipped export because there are open transactions and {key} is set to {value}", nameof(TarFileExportMode), nameof(TarFileExportMode.Erased));
+                    return;
+                }
+            }
+
             try
             {
                 var exportService = new TarFileExportService();
-                (var filePath, var success, var checkSum) = await exportService.ProcessTarFileExportAsync(_deSSCDProvider.Instance, queueDE.ftQueueDEId, queueDE.CashBoxIdentification, erase, _middlewareConfiguration.ServiceFolder, _middlewareConfiguration.TarFileChunkSize).ConfigureAwait(false);
+                (var filePath, var success, var checkSum, var isErased) = await exportService.ProcessTarFileExportAsync(_deSSCDProvider.Instance, queueDE.ftQueueDEId, queueDE.CashBoxIdentification, erase, _middlewareConfiguration.ServiceFolder, _middlewareConfiguration.TarFileChunkSize).ConfigureAwait(false);
                 if (success)
                 {
-                    var journalDE = new ftJournalDE
+                    Guid? ftJournalDEId = null;
+                    if (_queueDEConfiguration.TarFileExportMode == TarFileExportMode.Erased && !isErased)
                     {
-                        ftJournalDEId = Guid.NewGuid(),
-                        FileContentBase64 = Convert.ToBase64String(Compress(filePath)),
-                        FileExtension = ".zip",
-                        FileName = Path.GetFileNameWithoutExtension(filePath),
-                        ftQueueId = queueItem.ftQueueId,
-                        ftQueueItemId = queueItem.ftQueueItemId,
-                        Number = queue.ftReceiptNumerator + 1
-                    };
-                    await _journalDERepository.InsertAsync(journalDE).ConfigureAwait(false);
+                        _logger.LogInformation("Export not saved to database because it was not erased from the TSE and {key} is set to {value}", nameof(TarFileExportMode), nameof(TarFileExportMode.Erased));
+                    }
+                    else
+                    {
+                        var journalDE = new ftJournalDE
+                        {
+                            ftJournalDEId = Guid.NewGuid(),
+                            FileContentBase64 = Convert.ToBase64String(Compress(filePath)),
+                            FileExtension = ".zip",
+                            FileName = Path.GetFileNameWithoutExtension(filePath),
+                            ftQueueId = queueItem.ftQueueId,
+                            ftQueueItemId = queueItem.ftQueueItemId,
+                            Number = queue.ftReceiptNumerator + 1
+                        };
+                        await _journalDERepository.InsertAsync(journalDE).ConfigureAwait(false);
+                        ftJournalDEId = journalDE.ftJournalDEId;
+                    }
 
-                    await _tarFileCleanupService.CleanupTarFileAsync(journalDE.ftJournalDEId, filePath, checkSum);
+                    await _tarFileCleanupService.CleanupTarFileAsync(ftJournalDEId, filePath, checkSum);
                 }
                 else
                 {
