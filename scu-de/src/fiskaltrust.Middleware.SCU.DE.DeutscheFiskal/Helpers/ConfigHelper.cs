@@ -8,13 +8,9 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Helpers
     public static class ConfigHelper
     {
 
-        public static void SetFccHeapMemory(string fccDirectory, int fccHeapMemory)
+        public static void SetFccHeapMemoryForRunScript(string fccDirectory, int fccHeapMemory)
         {
-            var validXms = new int[] { 256, 512, 1024 };
-            if (!validXms.Contains(fccHeapMemory))
-            {
-                throw new Exception($"Invalid Value in FccHeapMemory{fccHeapMemory}. Posibble values: 256, 512, 1024.");
-            }
+            ValidateHeapMemory(fccHeapMemory);
             string runScript;
             if (EnvironmentHelpers.IsWindows)
             {
@@ -29,24 +25,37 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Helpers
                 throw new NotSupportedException("The current OS is not supported by this SCU.");
             }
             var runCommand = File.ReadAllText(Path.Combine(fccDirectory, runScript));
+            SetHeapMemory(fccDirectory, fccHeapMemory, runScript, runCommand);
+        }
 
-            var posOfX = runCommand.IndexOf("-Xmx");
+        private static void SetHeapMemory(string fccDirectory, int fccHeapMemory, string script, string command)
+        {
+            var posOfX = command.IndexOf("-Xmx");
             if (posOfX >= 0)
             {
-                var fromXms = runCommand.Substring(posOfX);
+                var fromXms = command.Substring(posOfX);
                 var posM = fromXms.IndexOf("m", 4);
-                var xms = fromXms.Substring(0, posM+1);
+                var xms = fromXms.Substring(0, posM + 1);
                 if (!xms.Equals($"-Xmx{fccHeapMemory}m"))
                 {
-                    runCommand = runCommand.Replace(xms, $"-Xmx{fccHeapMemory}m");
-                    File.WriteAllText(Path.Combine(fccDirectory, runScript), runCommand);
+                    command = command.Replace(xms, $"-Xmx{fccHeapMemory}m");
+                    File.WriteAllText(Path.Combine(fccDirectory, script), command);
                 }
             }
             else
             {
-                var posJar = runCommand.IndexOf(Paths.FccServiceJar);
-                runCommand = runCommand.Insert(posJar + Paths.FccServiceJar.Length + 1, $"-Xmx{fccHeapMemory}m ");
-                File.WriteAllText(Path.Combine(fccDirectory, runScript), runCommand);
+                var posJar = command.IndexOf(Paths.FccServiceJar);
+                command = command.Insert(posJar + Paths.FccServiceJar.Length + 1, $"-Xmx{fccHeapMemory}m ");
+                File.WriteAllText(Path.Combine(fccDirectory, script), command);
+            }
+        }
+
+        public static void ValidateHeapMemory(int fccHeapMemory)
+        {
+            var validXms = new int[] { 256, 512, 1024 };
+            if (!validXms.Contains(fccHeapMemory))
+            {
+                throw new Exception($"Invalid Value in FccHeapMemory{fccHeapMemory}. Posibble values: 256, 512, 1024.");
             }
         }
     }
