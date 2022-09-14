@@ -90,7 +90,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                     { nameof(QueueDEConfiguration.TarFileExportMode), TarFileExportMode.Erased },
                 },
                 QueueId = queue.ftQueueId,
-                ServiceFolder = PathHelpers.GetShortPath(Path.Combine("Test", Guid.NewGuid().ToString()))
+                ServiceFolder = Path.Combine(Directory.GetCurrentDirectory(), "Test", Guid.NewGuid().ToString())
             };
             var configurationRepository = _fixture.CreateConfigurationRepository();
 
@@ -178,7 +178,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                     { nameof(QueueDEConfiguration.TarFileExportMode), TarFileExportMode.Erased },
                 },
                 QueueId = queue.ftQueueId,
-                ServiceFolder = PathHelpers.GetShortPath(Path.Combine("Test", Guid.NewGuid().ToString()))
+                ServiceFolder = Path.Combine(Directory.GetCurrentDirectory(), "Test", Guid.NewGuid().ToString())
             };
             var configurationRepository = _fixture.CreateConfigurationRepository();
 

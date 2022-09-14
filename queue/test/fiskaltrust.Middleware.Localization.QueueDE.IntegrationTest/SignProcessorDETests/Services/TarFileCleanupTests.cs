@@ -70,7 +70,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                     { nameof(QueueDEConfiguration.StoreTemporaryExportFiles), false }
                 },
                 QueueId = queue.ftQueueId,
-                ServiceFolder = PathHelpers.GetShortPath(Path.Combine("Test", Guid.NewGuid().ToString()))
+                ServiceFolder = Path.Combine(Directory.GetCurrentDirectory(), "Test", Guid.NewGuid().ToString())
             };
             var configurationRepository = _fixture.CreateConfigurationRepository();
 
@@ -131,7 +131,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                     { nameof(QueueDEConfiguration.StoreTemporaryExportFiles), true }
                 },
                 QueueId = queue.ftQueueId,
-                ServiceFolder = PathHelpers.GetShortPath(Path.Combine("Test", Guid.NewGuid().ToString()))
+                ServiceFolder = Path.Combine(Directory.GetCurrentDirectory(), "Test", Guid.NewGuid().ToString())
             };
             var configurationRepository = _fixture.CreateConfigurationRepository();
 
@@ -214,7 +214,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                     { nameof(QueueDEConfiguration.StoreTemporaryExportFiles), true },
                     { nameof(QueueDEConfiguration.TarFileExportMode), nameof(TarFileExportMode.Erased).ToLower() } },
                 QueueId = queue.ftQueueId,
-                ServiceFolder = PathHelpers.GetShortPath(Path.Combine("Test", Guid.NewGuid().ToString()))
+                ServiceFolder = Path.Combine(Directory.GetCurrentDirectory(), "Test", Guid.NewGuid().ToString())
             };
             var configurationRepository = _fixture.CreateConfigurationRepository();
 
