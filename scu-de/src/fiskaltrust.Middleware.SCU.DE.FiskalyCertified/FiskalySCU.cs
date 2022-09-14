@@ -346,7 +346,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
             await _fiskalyApiProvider.PatchTseMetadataAsync(_configuration.TssId, new Dictionary<string, object> { { _lastExportedTransactionNumberKey, lastExportedTransactionNumber } });
         }
 
-        private async Task CacheExportAsync(Guid exportId, int i = 0)
+        private async Task CacheExportAsync(Guid exportId, int currentTry = 0)
         {
             try
             {
@@ -354,12 +354,12 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
                 SetExportState(exportId, ExportState.Succeeded);
             }catch(WebException)
             {
-                if (_configuration.RetriesOnTarExportWebException > i)
+                if (_configuration.RetriesOnTarExportWebException > currentTry)
                 {
-                    i++;
-                    _logger.LogInformation($"WebException on Export from Fiskaly retry {i} from {_configuration.RetriesOnTarExportWebException}");
-                    await Task.Delay(1000 * (i + 1)).ConfigureAwait(false);
-                    await CacheExportAsync(exportId, i).ConfigureAwait(false);
+                    currentTry++;
+                    _logger.LogWarning($"WebException on Export from Fiskaly retry {currentTry} from {_configuration.RetriesOnTarExportWebException}, DelayOnRetriesInMs: {_configuration.DelayOnRetriesInMs}.");
+                    await Task.Delay(_configuration.DelayOnRetriesInMs * (currentTry + 1)).ConfigureAwait(false);
+                    await CacheExportAsync(exportId, currentTry).ConfigureAwait(false);
                 }
             }
             catch (Exception ex)
