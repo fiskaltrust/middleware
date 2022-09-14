@@ -8,7 +8,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Helpers
     public static class ConfigHelper
     {
 
-        public static void SetFccHeapMemory4Run(string fccDirectory, int fccHeapMemory)
+        public static void SetFccHeapMemoryForRunScript(string fccDirectory, int fccHeapMemory)
         {
             ValidateHeapMemory(fccHeapMemory);
             string runScript;

@@ -91,7 +91,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
                 }
                 if (_configuration.FccHeapMemory.HasValue)
                 {
-                    ConfigHelper.SetFccHeapMemory4Run(_fccDirectory, _configuration.FccHeapMemory.Value);
+                    ConfigHelper.SetFccHeapMemoryForRunScript(_fccDirectory, _configuration.FccHeapMemory.Value);
                 }
                 if (_version == null)
                 {
