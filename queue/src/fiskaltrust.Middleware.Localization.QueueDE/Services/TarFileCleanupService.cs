@@ -35,7 +35,11 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
 
             var deleteFile = false;
 
-            if (journalDEId.HasValue)
+            if (_queueDEConfiguration.TarFileExportMode == TarFileExportMode.Erased)
+            {
+                deleteFile = true;
+            }
+            else if (journalDEId.HasValue)
             {
                 var dbJournalDE = await _journalDERepository.GetAsync(journalDEId.Value).ConfigureAwait(false);
 
@@ -45,16 +49,17 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
                                         ? GetHashFromCompressedBase64WithSharpCompress(dbJournalDE.FileContentBase64)
                                         : GetHashFromCompressedBase64(dbJournalDE.FileContentBase64);
 
-                    deleteFile = checkSum == dbCheckSum;
+                    if (checkSum == dbCheckSum)
+                    { deleteFile = true; }
+                    else
+                    {
+                        _logger.LogWarning("A content mismatch between the temporary local TAR file and the database was detected. The local TAR file will not be deleted and can be found at '{file}'", filePath);
+                    }
                 }
                 catch (Exception e)
                 {
                     _logger.LogWarning(e, "Failed to check content equality.");
                 }
-            }
-            else if (_queueDEConfiguration.TarFileExportMode == TarFileExportMode.Erased)
-            {
-                deleteFile = true;
             }
 
             if (deleteFile)
@@ -63,10 +68,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
                 {
                     File.Delete(filePath);
                 }
-            }
-            else
-            {
-                _logger.LogWarning("A content mismatch between the temporary local TAR file and the database was detected. The local TAR file will not be deleted and can be found at '{file}'", filePath);
             }
         }
 

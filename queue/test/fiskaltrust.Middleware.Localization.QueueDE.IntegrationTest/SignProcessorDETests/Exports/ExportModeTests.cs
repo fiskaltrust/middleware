@@ -104,10 +104,26 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                 }
             }
 
-            var tarFileCleanupService = new TarFileCleanupService(Mock.Of<ILogger<TarFileCleanupService>>(), journalRepositoryMock.Object, config, QueueDEConfiguration.FromMiddlewareConfiguration(config));
-            var sut = RequestCommandFactoryHelper.ConstructSignProcessor(Mock.Of<ILogger<SignProcessorDE>>(), configurationRepository, journalRepositoryMock.Object, actionJournalRepositoryMock.Object,
-                _fixture.DeSSCDProvider, new DSFinVKTransactionPayloadFactory(), new InMemoryFailedFinishTransactionRepository(), new InMemoryFailedStartTransactionRepository(),
-                _fixture.openTransactionRepository, Mock.Of<IMasterDataService>(), config, new InMemoryQueueItemRepository(), new SignatureFactoryDE(QueueDEConfiguration.FromMiddlewareConfiguration(config)), tarFileCleanupService);
+            var tarFileCleanupService = new TarFileCleanupService(
+                Mock.Of<ILogger<TarFileCleanupService>>(),
+                journalRepositoryMock.Object,
+                config,
+                QueueDEConfiguration.FromMiddlewareConfiguration(config)
+            );
+            var sut = RequestCommandFactoryHelper.ConstructSignProcessor(
+                Mock.Of<ILogger<SignProcessorDE>>(),
+                configurationRepository,
+                journalRepositoryMock.Object,
+                actionJournalRepositoryMock.Object,
+                _fixture.DeSSCDProvider,
+                new DSFinVKTransactionPayloadFactory(),
+                new InMemoryFailedFinishTransactionRepository(),
+                new InMemoryFailedStartTransactionRepository(),
+                _fixture.openTransactionRepository,
+                Mock.Of<IMasterDataService>(),
+                config,
+                new InMemoryQueueItemRepository(),
+                new SignatureFactoryDE(QueueDEConfiguration.FromMiddlewareConfiguration(config)), tarFileCleanupService);
 
 
             var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
@@ -192,8 +208,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                 actionJournalRepositoryMock.Object,
                 deSSCDProviderMock.Object,
                 new DSFinVKTransactionPayloadFactory(),
-                _fixture.failedFinishTransactionRepository,
-                _fixture.failedStartTransactionRepository,
+                new InMemoryFailedFinishTransactionRepository(),
+                new InMemoryFailedStartTransactionRepository(),
                 _fixture.openTransactionRepository,
                 Mock.Of<IMasterDataService>(),
                 config,

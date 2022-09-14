@@ -94,7 +94,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
         public async Task PerformTarFileExportAsync(ftQueueItem queueItem, ftQueue queue, ftQueueDE queueDE, bool erase)
         {
-            if (!_queueDEConfiguration.EnableTarFileExport) { return; }
+            if (!_queueDEConfiguration.EnableTarFileExport)
+            { return; }
 
             if (_queueDEConfiguration.TarFileExportMode == TarFileExportMode.Erased)
             {
@@ -113,7 +114,11 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 if (success)
                 {
                     Guid? ftJournalDEId = null;
-                    if (isErased)
+                    if (_queueDEConfiguration.TarFileExportMode == TarFileExportMode.Erased && !isErased)
+                    {
+                        _logger.LogInformation("Export not saved to database because it was not erased from the TSE and {key} is set to {value}", nameof(TarFileExportMode), nameof(TarFileExportMode.Erased));
+                    }
+                    else
                     {
                         var journalDE = new ftJournalDE
                         {
@@ -127,10 +132,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                         };
                         await _journalDERepository.InsertAsync(journalDE).ConfigureAwait(false);
                         ftJournalDEId = journalDE.ftJournalDEId;
-                    }
-                    else
-                    {
-                        _logger.LogInformation("Export not saved to database because it was not erased from the TSE and {key} is set to {value}", nameof(TarFileExportMode), nameof(TarFileExportMode.Erased));
                     }
 
                     await _tarFileCleanupService.CleanupTarFileAsync(ftJournalDEId, filePath, checkSum);
