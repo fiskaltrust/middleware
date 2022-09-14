@@ -2,12 +2,15 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.de;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Localization.QueueDE.Helpers;
 using fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProcessorDETests.Fixtures;
 using fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProcessorDETests.Helpers;
 using fiskaltrust.Middleware.Localization.QueueDE.MasterData;
@@ -87,22 +90,13 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                     { nameof(QueueDEConfiguration.TarFileExportMode), TarFileExportMode.Erased },
                 },
                 QueueId = queue.ftQueueId,
-                ServiceFolder = Directory.GetCurrentDirectory()
+                ServiceFolder = PathHelpers.GetShortPath(Path.Combine("Test", Guid.NewGuid().ToString()))
             };
             var configurationRepository = _fixture.CreateConfigurationRepository();
 
-            if (Directory.Exists(Path.Combine(config.ServiceFolder, "Exports", config.QueueId.ToString(), "TAR")))
-            {
-                foreach (var f in Directory.GetDirectories(Path.Combine(config.ServiceFolder, "Exports", config.QueueId.ToString(), "TAR")))
-                {
-                    Directory.Delete(f);
-                }
 
-                foreach (var f in Directory.GetFiles(Path.Combine(config.ServiceFolder, "Exports", config.QueueId.ToString(), "TAR")))
-                {
-                    File.Delete(f);
-                }
-            }
+            var deSSCDProviderMock = new Mock<IDESSCDProvider>();
+            deSSCDProviderMock.SetupGet(x => x.Instance).Returns(new InMemorySCUWrapper(true));
 
             var tarFileCleanupService = new TarFileCleanupService(
                 Mock.Of<ILogger<TarFileCleanupService>>(),
@@ -115,7 +109,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                 configurationRepository,
                 journalRepositoryMock.Object,
                 actionJournalRepositoryMock.Object,
-                _fixture.DeSSCDProvider,
+                deSSCDProviderMock.Object,
                 new DSFinVKTransactionPayloadFactory(),
                 new InMemoryFailedFinishTransactionRepository(),
                 new InMemoryFailedStartTransactionRepository(),
@@ -128,12 +122,22 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
 
             var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
 
-            var journals = await journalRepositoryMock.Object.GetAsync();
+            try
+            {
+                var journals = await journalRepositoryMock.Object.GetAsync();
 
-            journals.Should().HaveCount(1);
-            journals
-                .Where(j => j.ftQueueItemId == Guid.Parse(receiptResponse.ftQueueItemID)).Should().HaveCount(1)
-                .And.Subject.First().Should().Match((ftJournalDE j) => j.Number == 1);
+                journals.Should().HaveCount(1);
+                journals
+                    .Where(j => j.ftQueueItemId == Guid.Parse(receiptResponse.ftQueueItemID)).Should().HaveCount(1)
+                    .And.Subject.First().Should().Match((ftJournalDE j) => j.Number == 1);
+            }
+            finally
+            {
+                if (Directory.Exists(config.ServiceFolder))
+                {
+                    Directory.Delete(config.ServiceFolder, true);
+                }
+            }
         }
 
         [Fact]
@@ -174,22 +178,9 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                     { nameof(QueueDEConfiguration.TarFileExportMode), TarFileExportMode.Erased },
                 },
                 QueueId = queue.ftQueueId,
-                ServiceFolder = Directory.GetCurrentDirectory()
+                ServiceFolder = PathHelpers.GetShortPath(Path.Combine("Test", Guid.NewGuid().ToString()))
             };
             var configurationRepository = _fixture.CreateConfigurationRepository();
-
-            if (Directory.Exists(Path.Combine(config.ServiceFolder, "Exports", config.QueueId.ToString(), "TAR")))
-            {
-                foreach (var f in Directory.GetDirectories(Path.Combine(config.ServiceFolder, "Exports", config.QueueId.ToString(), "TAR")))
-                {
-                    Directory.Delete(f);
-                }
-
-                foreach (var f in Directory.GetFiles(Path.Combine(config.ServiceFolder, "Exports", config.QueueId.ToString(), "TAR")))
-                {
-                    File.Delete(f);
-                }
-            }
 
             var deSSCDProviderMock = new Mock<IDESSCDProvider>();
             deSSCDProviderMock.SetupGet(x => x.Instance).Returns(new InMemorySCUWrapper(false));
@@ -217,12 +208,21 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                 new SignatureFactoryDE(QueueDEConfiguration.FromMiddlewareConfiguration(config)),
                 tarFileCleanupService);
 
+            try
+            {
+                var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
 
-            var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
+                var journals = await journalRepositoryMock.Object.GetAsync();
 
-            var journals = await journalRepositoryMock.Object.GetAsync();
-
-            journals.Should().HaveCount(0);
+                journals.Should().HaveCount(0);
+            }
+            finally
+            {
+                if (Directory.Exists(config.ServiceFolder))
+                {
+                    Directory.Delete(config.ServiceFolder, true);
+                }
+            }
         }
 
         private async Task AddOpenOrdersAsync()
