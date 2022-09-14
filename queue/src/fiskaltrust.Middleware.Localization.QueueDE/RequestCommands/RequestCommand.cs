@@ -95,7 +95,10 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
         public async Task PerformTarFileExportAsync(ftQueueItem queueItem, ftQueue queue, ftQueueDE queueDE, bool erase)
         {
             if (_queueDEConfiguration.TarFileExportMode == TarFileExportMode.None)
-            { return; }
+            { 
+                _logger.LogInformation("Skipped export because {key} is set to {value}", nameof(TarFileExportMode), nameof(TarFileExportMode.None));
+                return;
+            }
 
             if (_queueDEConfiguration.TarFileExportMode == TarFileExportMode.Erased)
             {
