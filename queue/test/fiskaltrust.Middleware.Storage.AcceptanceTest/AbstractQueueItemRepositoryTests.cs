@@ -285,5 +285,33 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             var entries = await sut.GetPreviousReceiptReferencesAsync(expectedEntries[9]).ToListAsync();
             entries.Count.Should().Be(0);
         }
+
+
+        [Fact]
+        public async Task GetPreviousReceiptReferencesAsync_ZeroReceiptOnlyPosReceipts_ShouldReturnNoQueueItems()
+        {
+            var expectedEntries = StorageTestFixtureProvider.GetFixture().CreateMany<ftQueueItem>(10).OrderBy(x => x.ftQueueRow).ToList();
+            var expectedReceiptReference = Guid.NewGuid().ToString();
+
+            var receiptRequest = new ReceiptRequest()
+            {
+                cbPreviousReceiptReference = expectedReceiptReference,
+                ftReceiptCase = 4919338172267102210
+            };
+
+            var receiptRequestJson = JsonConvert.SerializeObject(receiptRequest);
+
+            expectedEntries[9].request = receiptRequestJson;
+            expectedEntries[9].cbTerminalID = string.Empty;
+            expectedEntries[0].cbReceiptReference = expectedReceiptReference;
+            expectedEntries[1].cbReceiptReference = expectedReceiptReference;
+            expectedEntries[2].cbReceiptReference = expectedReceiptReference;
+
+            var sut = await CreateRepository(expectedEntries);
+            var allEntries = (await sut.GetAsync()).OrderBy(x => x.ftQueueRow).ToList();
+
+            var entries = await sut.GetPreviousReceiptReferencesAsync(expectedEntries[9]).OrderBy(x => x.ftQueueRow).ToListAsync();
+            entries.Count.Should().Be(0);
+        }
     }
 }
