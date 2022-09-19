@@ -247,16 +247,22 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
 
             var receiptRequest = new ReceiptRequest()
             {
-                cbPreviousReceiptReference = expectedReceiptReference
+                cbPreviousReceiptReference = expectedReceiptReference,
             };
 
             var receiptRequestJson = JsonConvert.SerializeObject(receiptRequest);
 
+            var receiptRequestFixture = StorageTestFixtureProvider.GetFixture();
+            receiptRequestFixture.Customize<ReceiptRequest>(c => c.With(r => r.ftReceiptCase, 4919338172267102210));
+
             expectedEntries[9].request = receiptRequestJson;
             expectedEntries[9].cbTerminalID = string.Empty;
             expectedEntries[0].cbReceiptReference = expectedReceiptReference;
+            expectedEntries[0].request = JsonConvert.SerializeObject(receiptRequestFixture.Create<ReceiptRequest>());
             expectedEntries[1].cbReceiptReference = expectedReceiptReference;
+            expectedEntries[1].request = JsonConvert.SerializeObject(receiptRequestFixture.Create<ReceiptRequest>());
             expectedEntries[2].cbReceiptReference = expectedReceiptReference;
+            expectedEntries[2].request = JsonConvert.SerializeObject(receiptRequestFixture.Create<ReceiptRequest>());
 
             var sut = await CreateRepository(expectedEntries);
             var allEntries = (await sut.GetAsync()).OrderBy(x => x.ftQueueRow).ToList();

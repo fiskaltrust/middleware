@@ -55,12 +55,12 @@ namespace fiskaltrust.Middleware.Storage.Azure.Repositories
             if (!receiptRequest.IsPosReceipt() || (string.IsNullOrWhiteSpace(receiptRequest.cbPreviousReceiptReference) && string.IsNullOrWhiteSpace(ftQueueItem.cbReceiptReference)))
             {
                 yield break;
-            }          
+            }
 
-            var refFilter = TableQuery.CombineFilters(TableQuery.GenerateFilterCondition(nameof(ftQueueItem.cbReceiptReference), QueryComparisons.Equal, receiptRequest.cbPreviousReceiptReference), 
-                TableOperators.Or, 
+            var refFilter = TableQuery.CombineFilters(TableQuery.GenerateFilterCondition(nameof(ftQueueItem.cbReceiptReference), QueryComparisons.Equal, receiptRequest.cbPreviousReceiptReference),
+                TableOperators.Or,
                 TableQuery.GenerateFilterCondition(nameof(ftQueueItem.cbReceiptReference), QueryComparisons.Equal, ftQueueItem.cbReceiptReference));
-            
+
             var filter = TableQuery.GenerateFilterCondition(nameof(ftQueueItem.ftQueueRow), QueryComparisons.LessThan, ftQueueItem.ftQueueRow.ToString());
             filter = TableQuery.CombineFilters(filter, TableOperators.And, refFilter);
             var result = await GetAllAsync(filter).ToListAsync();

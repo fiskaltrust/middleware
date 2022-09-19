@@ -55,8 +55,8 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Repositories
             {
                 yield break;
             }
-            var query = "SELECT * FROM ftQueueItem WHERE ftQueueRow < @ftQueueRow AND (cbReceiptReference = @cbPreviousReceiptReference OR cbReceiptReference = @cbReceiptReference)";
-            
+            var query = "SELECT *, json_extract(request, '$.ftReceiptCase') as ReceiptCase FROM ftQueueItem WHERE ftQueueRow < @ftQueueRow AND (cbReceiptReference = @cbPreviousReceiptReference OR cbReceiptReference = @cbReceiptReference) AND (ReceiptCase & 0xFFFF = 0x0002 OR ReceiptCase & 0xFFFF = 0x0003 OR ReceiptCase & 0xFFFF = 0x0005 OR ReceiptCase & 0xFFFF = 0x0006 OR ReceiptCase & 0xFFFF = 0x0007)";
+
             await foreach (var entry in DbConnection.Query<ftQueueItem>(query, new { ftQueueItem.ftQueueRow, receiptRequest.cbPreviousReceiptReference, ftQueueItem.cbReceiptReference }, buffered: false).ToAsyncEnumerable())
             {
                 yield return entry;
