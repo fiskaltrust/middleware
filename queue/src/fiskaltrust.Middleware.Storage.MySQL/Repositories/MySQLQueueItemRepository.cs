@@ -86,7 +86,7 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
                 yield break;
             }
 
-            var query = "SELECT *, json_extract(request, '$.ftReceiptCase') as ReceiptCase FROM ftQueueItem WHERE ftQueueRow < @ftQueueRow AND (cbReceiptReference = @cbPreviousReceiptReference OR cbReceiptReference = @cbReceiptReference) AND (ReceiptCase & 0xFFFF = 0x0002 OR ReceiptCase & 0xFFFF = 0x0003 OR ReceiptCase & 0xFFFF = 0x0005 OR ReceiptCase & 0xFFFF = 0x0006 OR ReceiptCase & 0xFFFF = 0x0007)";
+            var query = "SELECT *, json_extract(request, '$.ftReceiptCase') AS ReceiptCase FROM ftQueueItem WHERE ftQueueRow < @ftQueueRow AND (cbReceiptReference = @cbPreviousReceiptReference OR cbReceiptReference = @cbReceiptReference) HAVING (ReceiptCase & 0xFFFF = 0x0002 OR ReceiptCase & 0xFFFF = 0x0003 OR ReceiptCase & 0xFFFF = 0x0005 OR ReceiptCase & 0xFFFF = 0x0006 OR ReceiptCase & 0xFFFF = 0x0007)";
 
             using (var connection = new MySqlConnection(ConnectionString))
             {
