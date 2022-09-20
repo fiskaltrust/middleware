@@ -8,7 +8,7 @@ namespace fiskaltrust.Middleware.Storage.Base.Extensions
     {
         private static readonly long[] _excludedForReference = {
             0x0002, //Zero-receipt
-            0x0003, //Initial operation receipt    
+            0x0003, //Initial operation receipt
             0x0005, //Monthly-closing
             0x0006, //Yearly-closing
             0x0007  //Daily-closing

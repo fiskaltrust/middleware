@@ -5,6 +5,7 @@ using System.Data.Entity.ModelConfiguration.Conventions;
 using fiskaltrust.Middleware.Contracts.Models.Transactions;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
+using static fiskaltrust.Middleware.Storage.EF.Helpers.JsonExtensions;
 
 namespace fiskaltrust.Middleware.Storage.EF
 {
@@ -72,6 +73,7 @@ namespace fiskaltrust.Middleware.Storage.EF
         protected override void OnModelCreating(DbModelBuilder modelBuilder)
         {
             modelBuilder.Conventions.Remove<PluralizingTableNameConvention>();
+            modelBuilder.Conventions.Add(new RegisterJsonValueFunctionConvention());
 
             if (!string.IsNullOrWhiteSpace(_schemaString))
             {

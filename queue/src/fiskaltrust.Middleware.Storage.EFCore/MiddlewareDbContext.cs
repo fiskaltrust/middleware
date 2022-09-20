@@ -2,11 +2,18 @@
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 using fiskaltrust.Middleware.Contracts.Models.Transactions;
+using fiskaltrust.Middleware.Storage.EFCore.Helpers;
 
 namespace fiskaltrust.Middleware.Storage.EFCore
 {
     public class MiddlewareDbContext : DbContext
     {
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+            modelBuilder.HasDbFunction(() => JsonExtensions.JsonValue(default, default));
+        }
+
         public override void Dispose() => base.Dispose();
         public DbSet<ftCashBox> CashBoxList { get; set; }
 
@@ -53,7 +60,5 @@ namespace fiskaltrust.Middleware.Storage.EFCore
         public MiddlewareDbContext() { }
 
         public MiddlewareDbContext(DbContextOptions contextOptions) : base(contextOptions) { }
-
-        protected override void OnModelCreating(ModelBuilder modelBuilder) => base.OnModelCreating(modelBuilder);
     }
 }

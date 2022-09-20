@@ -8,6 +8,11 @@ using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0;
 using Newtonsoft.Json;
 using fiskaltrust.Middleware.Storage.Base.Extensions;
+using fiskaltrust.Middleware.Storage.EF.Helpers;
+using System.Data.Entity.SqlServer;
+using System.Data.Entity.Core.Objects;
+using System.Data.Entity.Core.Common.CommandTrees.ExpressionBuilder;
+using System.Data.Entity.Core.Common.CommandTrees.ExpressionBuilder.Spatial;
 
 namespace fiskaltrust.Middleware.Storage.EF.Repositories
 {
@@ -63,11 +68,17 @@ namespace fiskaltrust.Middleware.Storage.EF.Repositories
                 return new List<ftQueueItem>().ToAsyncEnumerable();
             }
 
-            return DbContext.QueueItemList.Where(x =>
-                x.ftQueueRow < ftQueueItem.ftQueueRow &&
-                JsonConvert.DeserializeObject<ReceiptRequest>(x.request).IsPosReceipt() &&
-                (x.cbReceiptReference == receiptRequest.cbPreviousReceiptReference || x.cbReceiptReference == ftQueueItem.cbReceiptReference)
-            ).ToAsyncEnumerable();
+            return DbContext.QueueItemList
+                .Where(x =>
+                    x.ftQueueRow < ftQueueItem.ftQueueRow &&
+                    (x.cbReceiptReference == receiptRequest.cbPreviousReceiptReference || x.cbReceiptReference == ftQueueItem.cbReceiptReference)
+                )
+                .ToAsyncEnumerable()
+                .Where(x =>
+                {
+                    var ftReceiptCase = JsonConvert.DeserializeObject<ReceiptRequest>(x.request).ftReceiptCase;
+                    return ftReceiptCase == 0x2 || ftReceiptCase == 0x3 || ftReceiptCase == 0x5 || ftReceiptCase == 0x6 || ftReceiptCase == 0x7;
+                });
         }
     }
 }
