@@ -336,6 +336,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
                 }
                 if (await proxy.UpdateFirmwareAsync(enableFirmwareUpdate))
                 {
+                    _logger.LogInformation($"Updated to Swissbit TSE firmware version {await proxy.GetVersionAsync()}.");
                     await SelftestAsync(proxy);
                 }
                 await UpdateTimeAsync(GetProxy());

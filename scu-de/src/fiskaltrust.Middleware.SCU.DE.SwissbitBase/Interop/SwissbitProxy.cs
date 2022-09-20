@@ -59,8 +59,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
         public async Task<bool> UpdateFirmwareAsync(bool firmwareUpdateEnabled)
         {
             var performedUpdate = false;
-            await _lockingHelper.PerformWithLock(_hwSemaphore, async () =>
-            {
+            await _lockingHelper.PerformWithLock(_hwSemaphore, () => {
                 var fwPtr = Marshal.AllocHGlobal(sizeof(Int32));
 
                 try
@@ -76,7 +75,6 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
                             _nativeFunctionPointer.func_worm_user_login(context, WormUserId.WORM_USER_ADMIN, _adminPinPtr, _adminPinLength, IntPtr.Zero).ThrowIfError();
                             _nativeFunctionPointer.func_worm_tse_firmwareUpdate_applyBundled(context).ThrowIfError();
                             performedUpdate = true;
-                            _logger.LogInformation($"Updated to Swissbit TSE firmware version {await GetVersionAsync()}.");
                         }
                     }
                 }
