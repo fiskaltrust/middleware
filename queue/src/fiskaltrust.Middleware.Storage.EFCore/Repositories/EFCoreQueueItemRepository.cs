@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Storage.Base.Extensions;
-using fiskaltrust.Middleware.Storage.EFCore.Helpers;
 using fiskaltrust.storage.V0;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
@@ -64,14 +63,16 @@ namespace fiskaltrust.Middleware.Storage.EFCore.Repositories
                 return new List<ftQueueItem>().ToAsyncEnumerable();
             }
             
-            return Queryable.Select(DbContext.QueueItemList,
-                x => new { ftReceiptCase = Convert.ToInt64(JsonExtensions.JsonValue(x.request, "$.ftReceiptCase")) & 0xFFF, ftQueueItem = x })
-                .Where(x =>
-                    x.ftQueueItem.ftQueueRow < ftQueueItem.ftQueueRow &&
-                    (x.ftReceiptCase == 0x2 || x.ftReceiptCase == 0x3 || x.ftReceiptCase == 0x5 || x.ftReceiptCase == 0x6 || x.ftReceiptCase == 0x7) &&
-                    (x.ftQueueItem.cbReceiptReference == receiptRequest.cbPreviousReceiptReference || x.ftQueueItem.cbReceiptReference == ftQueueItem.cbReceiptReference)
+            return Queryable.Where(DbContext.QueueItemList, x =>
+                    x.ftQueueRow < ftQueueItem.ftQueueRow &&
+                    (x.cbReceiptReference == receiptRequest.cbPreviousReceiptReference || x.cbReceiptReference == ftQueueItem.cbReceiptReference)
                 )
-                .Select(x => x.ftQueueItem).ToAsyncEnumerable();
+                .ToAsyncEnumerable()
+                .Where(x =>
+                {
+                    var ftReceiptCase = JsonConvert.DeserializeObject<ReceiptRequest>(x.request).ftReceiptCase;
+                    return ftReceiptCase == 0x2 || ftReceiptCase == 0x3 || ftReceiptCase == 0x5 || ftReceiptCase == 0x6 || ftReceiptCase == 0x7;
+                });
         }
     }
 }

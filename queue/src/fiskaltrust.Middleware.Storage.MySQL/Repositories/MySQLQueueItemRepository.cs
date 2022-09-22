@@ -86,14 +86,19 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
                 yield break;
             }
 
-            var query = "SELECT *, json_extract(request, '$.ftReceiptCase') AS ReceiptCase FROM ftQueueItem WHERE ftQueueRow < @ftQueueRow AND (cbReceiptReference = @cbPreviousReceiptReference OR cbReceiptReference = @cbReceiptReference) HAVING (ReceiptCase & 0xFFFF = 0x0002 OR ReceiptCase & 0xFFFF = 0x0003 OR ReceiptCase & 0xFFFF = 0x0005 OR ReceiptCase & 0xFFFF = 0x0006 OR ReceiptCase & 0xFFFF = 0x0007)";
+            var query = "SELECT * AS ReceiptCase FROM ftQueueItem WHERE ftQueueRow < @ftQueueRow AND (cbReceiptReference = @cbPreviousReceiptReference OR cbReceiptReference = @cbReceiptReference)";
 
             using (var connection = new MySqlConnection(ConnectionString))
             {
                 await connection.OpenAsync();
                 await foreach (var entry in connection.Query<ftQueueItem>(query, new { ftQueueItem.ftQueueRow, receiptRequest.cbPreviousReceiptReference, ftQueueItem.cbReceiptReference }, buffered: false).ToAsyncEnumerable())
                 {
-                    yield return entry;
+                    
+                    var ftReceiptCase = JsonConvert.DeserializeObject<ReceiptRequest>(entry.request).ftReceiptCase;
+                    if (ftReceiptCase == 0x2 || ftReceiptCase == 0x3 || ftReceiptCase == 0x5 || ftReceiptCase == 0x6 || ftReceiptCase == 0x7)
+                    {
+                        yield return entry;
+                    }
                 }
             }
         }
