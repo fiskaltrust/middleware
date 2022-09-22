@@ -294,24 +294,131 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
 
 
         [Fact]
-        public async Task GetPreviousReceiptReferencesAsync_ZeroReceiptOnlyPosReceipts_ShouldReturnNoQueueItems()
+        public async Task GetPreviousReceiptReferencesAsync_ZeroReceiptReceiptRefOnlyPosReceipts_ShouldReturnNoQueueItems()
+        {
+            var expectedEntries = StorageTestFixtureProvider.GetFixture().CreateMany<ftQueueItem>(10).OrderBy(x => x.ftQueueRow).ToList();
+            var expectedReceiptReference = Guid.NewGuid().ToString();
+
+
+            expectedEntries[0].request = JsonConvert.SerializeObject(new ReceiptRequest()
+            {
+                cbReceiptReference = Guid.NewGuid().ToString(),
+                ftReceiptCase = 4919338172267102210
+            });
+            expectedEntries[1].request = JsonConvert.SerializeObject(new ReceiptRequest()
+            {
+                cbReceiptReference = Guid.NewGuid().ToString(),
+                ftReceiptCase = 4919338172267102211
+            });
+            expectedEntries[2].request = JsonConvert.SerializeObject(new ReceiptRequest()
+            {
+                cbReceiptReference = Guid.NewGuid().ToString(),
+                ftReceiptCase = 4919338172267102213
+            });
+            expectedEntries[3].request = JsonConvert.SerializeObject(new ReceiptRequest()
+            {
+                cbReceiptReference = Guid.NewGuid().ToString(),
+                ftReceiptCase = 4919338172267102214
+            });
+            expectedEntries[4].request = JsonConvert.SerializeObject(new ReceiptRequest()
+            {
+                cbReceiptReference = Guid.NewGuid().ToString(),
+                ftReceiptCase = 4919338172267102210
+            });
+            expectedEntries[5].request = JsonConvert.SerializeObject(new ReceiptRequest()
+            {
+                cbReceiptReference = Guid.NewGuid().ToString(),
+                ftReceiptCase = 4919338172267102211
+            });
+            expectedEntries[6].request = JsonConvert.SerializeObject(new ReceiptRequest()
+            {
+                cbReceiptReference = Guid.NewGuid().ToString(),
+                ftReceiptCase = 4919338172267102213
+            });
+            expectedEntries[7].request = JsonConvert.SerializeObject(new ReceiptRequest()
+            {
+                cbReceiptReference = Guid.NewGuid().ToString(),
+                ftReceiptCase = 4919338172267102214
+            });
+
+            var sut = await CreateRepository(expectedEntries);
+            var allEntries = (await sut.GetAsync()).OrderBy(x => x.ftQueueRow).ToList();
+
+            var entries = await sut.GetPreviousReceiptReferencesAsync(expectedEntries[0]).OrderBy(x => x.ftQueueRow).ToListAsync();
+            entries.Count.Should().Be(0);
+            entries = await sut.GetPreviousReceiptReferencesAsync(expectedEntries[1]).OrderBy(x => x.ftQueueRow).ToListAsync();
+            entries.Count.Should().Be(0);
+            entries = await sut.GetPreviousReceiptReferencesAsync(expectedEntries[2]).OrderBy(x => x.ftQueueRow).ToListAsync();
+            entries.Count.Should().Be(0);
+            entries = await sut.GetPreviousReceiptReferencesAsync(expectedEntries[3]).OrderBy(x => x.ftQueueRow).ToListAsync();
+            entries.Count.Should().Be(0);
+            entries = await sut.GetPreviousReceiptReferencesAsync(expectedEntries[4]).OrderBy(x => x.ftQueueRow).ToListAsync();
+            entries.Count.Should().Be(0);
+            entries = await sut.GetPreviousReceiptReferencesAsync(expectedEntries[5]).OrderBy(x => x.ftQueueRow).ToListAsync();
+            entries.Count.Should().Be(0);
+            entries = await sut.GetPreviousReceiptReferencesAsync(expectedEntries[6]).OrderBy(x => x.ftQueueRow).ToListAsync();
+            entries.Count.Should().Be(0);
+            entries = await sut.GetPreviousReceiptReferencesAsync(expectedEntries[7]).OrderBy(x => x.ftQueueRow).ToListAsync();
+            entries.Count.Should().Be(0);
+        }
+
+        [Fact]
+        public async Task GetPreviousReceiptReferencesAsync_PrevReceiptRefZeroReceiptOnlyPosReceipts_ShouldReturnNoQueueItems()
         {
             var expectedEntries = StorageTestFixtureProvider.GetFixture().CreateMany<ftQueueItem>(10).OrderBy(x => x.ftQueueRow).ToList();
             var expectedReceiptReference = Guid.NewGuid().ToString();
 
             var receiptRequest = new ReceiptRequest()
             {
-                cbPreviousReceiptReference = expectedReceiptReference,
-                ftReceiptCase = 4919338172267102210
+                cbReceiptReference = Guid.NewGuid().ToString(),
+                cbPreviousReceiptReference = Guid.NewGuid().ToString(),
+                ftReceiptCase = 4919338172267102209
             };
 
             var receiptRequestJson = JsonConvert.SerializeObject(receiptRequest);
 
             expectedEntries[9].request = receiptRequestJson;
             expectedEntries[9].cbTerminalID = string.Empty;
-            expectedEntries[0].cbReceiptReference = expectedReceiptReference;
-            expectedEntries[1].cbReceiptReference = expectedReceiptReference;
-            expectedEntries[2].cbReceiptReference = expectedReceiptReference;
+            expectedEntries[0].request = JsonConvert.SerializeObject(new ReceiptRequest()
+            {
+                cbReceiptReference = receiptRequest.cbReceiptReference,
+                ftReceiptCase = 4919338172267102210
+            });
+            expectedEntries[1].request = JsonConvert.SerializeObject(new ReceiptRequest()
+            {
+                cbReceiptReference = receiptRequest.cbReceiptReference,
+                ftReceiptCase = 4919338172267102211
+            });
+            expectedEntries[2].request = JsonConvert.SerializeObject(new ReceiptRequest()
+            {
+                cbReceiptReference = receiptRequest.cbReceiptReference,
+                ftReceiptCase = 4919338172267102213
+            });
+            expectedEntries[3].request = JsonConvert.SerializeObject(new ReceiptRequest()
+            {
+                cbReceiptReference = receiptRequest.cbReceiptReference,
+                ftReceiptCase = 4919338172267102214
+            });
+            expectedEntries[4].request = JsonConvert.SerializeObject(new ReceiptRequest()
+            {
+                cbReceiptReference = receiptRequest.cbPreviousReceiptReference,
+                ftReceiptCase = 4919338172267102210
+            });
+            expectedEntries[5].request = JsonConvert.SerializeObject(new ReceiptRequest()
+            {
+                cbReceiptReference = receiptRequest.cbPreviousReceiptReference,
+                ftReceiptCase = 4919338172267102211
+            });
+            expectedEntries[6].request = JsonConvert.SerializeObject(new ReceiptRequest()
+            {
+                cbReceiptReference = receiptRequest.cbPreviousReceiptReference,
+                ftReceiptCase = 4919338172267102213
+            });
+            expectedEntries[7].request = JsonConvert.SerializeObject(new ReceiptRequest()
+            {
+                cbReceiptReference = receiptRequest.cbPreviousReceiptReference,
+                ftReceiptCase = 4919338172267102214
+            });
 
             var sut = await CreateRepository(expectedEntries);
             var allEntries = (await sut.GetAsync()).OrderBy(x => x.ftQueueRow).ToList();
