@@ -86,7 +86,7 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
                 yield break;
             }
 
-            var query = "SELECT * AS ReceiptCase FROM ftQueueItem WHERE ftQueueRow < @ftQueueRow AND (cbReceiptReference = @cbPreviousReceiptReference OR cbReceiptReference = @cbReceiptReference)";
+            var query = "SELECT * FROM ftQueueItem WHERE ftQueueRow < @ftQueueRow AND (cbReceiptReference = @cbPreviousReceiptReference OR cbReceiptReference = @cbReceiptReference)";
 
             using (var connection = new MySqlConnection(ConnectionString))
             {
@@ -94,8 +94,7 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
                 await foreach (var entry in connection.Query<ftQueueItem>(query, new { ftQueueItem.ftQueueRow, receiptRequest.cbPreviousReceiptReference, ftQueueItem.cbReceiptReference }, buffered: false).ToAsyncEnumerable())
                 {
                     
-                    var ftReceiptCase = JsonConvert.DeserializeObject<ReceiptRequest>(entry.request).ftReceiptCase;
-                    if (ftReceiptCase == 0x2 || ftReceiptCase == 0x3 || ftReceiptCase == 0x5 || ftReceiptCase == 0x6 || ftReceiptCase == 0x7)
+                    if (JsonConvert.DeserializeObject<ReceiptRequest>(entry.request).IsPosReceipt())
                     {
                         yield return entry;
                     }

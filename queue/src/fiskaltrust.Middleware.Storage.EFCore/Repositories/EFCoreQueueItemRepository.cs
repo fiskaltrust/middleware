@@ -68,11 +68,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.Repositories
                     (x.cbReceiptReference == receiptRequest.cbPreviousReceiptReference || x.cbReceiptReference == ftQueueItem.cbReceiptReference)
                 )
                 .ToAsyncEnumerable()
-                .Where(x =>
-                {
-                    var ftReceiptCase = JsonConvert.DeserializeObject<ReceiptRequest>(x.request).ftReceiptCase;
-                    return ftReceiptCase == 0x2 || ftReceiptCase == 0x3 || ftReceiptCase == 0x5 || ftReceiptCase == 0x6 || ftReceiptCase == 0x7;
-                });
+                .Where(x => JsonConvert.DeserializeObject<ReceiptRequest>(x.request).IsPosReceipt());
         }
     }
 }
