@@ -36,7 +36,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop.DynamicLib
                             Architecture.X86 => linux32LibraryFile,
                             Architecture.X64 => linux64LibraryFile,
                             Architecture.Arm => linuxArm32LibraryFile,
-                            Architecture.Arm64 => throw new NotImplementedException("Arm64 is currently not supported by the Swissbit hardware TSE SDK."),
+                            Architecture.Arm64 => linuxArm32LibraryFile,  // throw new NotImplementedException("Arm64 is currently not supported by the Swissbit hardware TSE SDK."),
                             _ => throw new NotImplementedException($"The CPU architecture {arch} is not supported on Linux by the Swissbit hardware TSE SDK.")
                         };
                     }
