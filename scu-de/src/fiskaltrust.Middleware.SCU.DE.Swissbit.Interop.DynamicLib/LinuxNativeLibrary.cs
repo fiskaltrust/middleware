@@ -73,13 +73,13 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop.DynamicLib
     {
 #pragma warning disable
 
-        [DllImport("c")]
+        [DllImport("libc")]
         public static extern IntPtr dlopen(string path, int mode);
 
-        [DllImport("c")]
+        [DllImport("libc")]
         public static extern IntPtr dlsym(IntPtr handle, string symbol);
 
-        [DllImport("c")]
+        [DllImport("libc")]
         public static extern int dlclose(IntPtr handle);
 
 #pragma warning enable
@@ -89,13 +89,13 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop.DynamicLib
     {
 #pragma warning disable
 
-        [DllImport("dl")]
+        [DllImport("libdl")]
         public static extern IntPtr dlopen(string filename, int flags);
 
-        [DllImport("dl")]
+        [DllImport("libdl")]
         public static extern IntPtr dlsym(IntPtr handle, string symbol);
 
-        [DllImport("dl")]
+        [DllImport("libdl")]
         public static extern int dlclose(IntPtr hModule);
 
 #pragma warning enable
