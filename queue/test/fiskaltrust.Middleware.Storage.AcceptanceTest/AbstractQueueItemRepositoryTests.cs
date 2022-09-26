@@ -1,6 +1,7 @@
 ﻿using AutoFixture;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Storage.Base.Extensions;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
 using Newtonsoft.Json;
@@ -9,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
+
 
 namespace fiskaltrust.Middleware.Storage.AcceptanceTest
 {
@@ -253,7 +255,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             var receiptRequestJson = JsonConvert.SerializeObject(receiptRequest);
 
             var receiptRequestFixture = StorageTestFixtureProvider.GetFixture();
-            receiptRequestFixture.Customize<ReceiptRequest>(c => c.With(r => r.ftReceiptCase, 4919338172267102210));
+            receiptRequestFixture.Customize<ReceiptRequest>(c => c.With(r => r.ftReceiptCase, 4919338172267102209));
 
             expectedEntries[9].request = receiptRequestJson;
             expectedEntries[9].cbTerminalID = string.Empty;
@@ -270,6 +272,37 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             var entries = await sut.GetPreviousReceiptReferencesAsync(expectedEntries[9]).OrderBy(x => x.ftQueueRow).ToListAsync();
 
             entries.Should().BeEquivalentTo(allEntries.Take(3));
+        }
+
+        [Fact]
+        public async Task GetPreviousReceiptReferencesAsync_AllPosReceiptCases_ShouldReturnSomeQueueItems()
+        {
+            var expectedEntries = StorageTestFixtureProvider.GetFixture().CreateMany<ftQueueItem>(25).OrderBy(x => x.ftQueueRow).ToList();
+            var expectedReceiptReference = Guid.NewGuid().ToString();
+
+            var receiptRequest = new ReceiptRequest()
+            {
+                cbPreviousReceiptReference = expectedReceiptReference,
+            };
+
+            var receiptRequestJson = JsonConvert.SerializeObject(receiptRequest);
+
+            foreach(var (entry, index) in expectedEntries.Select((e, i) => (e, i)))
+            {
+                entry.cbReceiptReference = expectedReceiptReference;
+                var request = StorageTestFixtureProvider.GetFixture().Create<ReceiptRequest>();
+                request.ftReceiptCase = 4919338172267102208 + index;
+                entry.request = JsonConvert.SerializeObject(request);
+            }
+
+            expectedEntries[24].request = receiptRequestJson;
+
+            var sut = await CreateRepository(expectedEntries);
+            var allEntries = (await sut.GetAsync()).OrderBy(x => x.ftQueueRow).ToList();
+
+            var entries = await sut.GetPreviousReceiptReferencesAsync(expectedEntries[24]).OrderBy(x => x.ftQueueRow).ToListAsync();
+
+            entries.Should().BeEquivalentTo(allEntries.Take(24).Where(e => JsonConvert.DeserializeObject<ReceiptRequest>(e.request).IsPosReceipt()));
         }
 
         [Fact]
