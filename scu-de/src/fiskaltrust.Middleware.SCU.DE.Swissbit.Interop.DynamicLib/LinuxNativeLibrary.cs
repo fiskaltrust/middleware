@@ -27,7 +27,6 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop.DynamicLib
             //libdl.so, libdl.so.2, libdl.so.6, libdl.dylib
             try
             {
-                _ = LinuxNativeLibdl.dlerror();
                 dlopen = LinuxNativeLibdl.dlopen;
                 dlclose = LinuxNativeLibdl.dlclose;
                 dlsym = LinuxNativeLibdl.dlsym;
@@ -41,7 +40,6 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop.DynamicLib
             //libc.so, libc.so.6
             try
             {
-                _ = LinuxNativeLibc.dlerror();
                 dlopen = LinuxNativeLibc.dlopen;
                 dlclose = LinuxNativeLibc.dlclose;
                 dlsym = LinuxNativeLibc.dlsym;
@@ -75,17 +73,14 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop.DynamicLib
     {
 #pragma warning disable
 
-        [DllImport("c")]
+        [DllImport("libc")]
         public static extern IntPtr dlopen(string path, int mode);
 
-        [DllImport("c")]
+        [DllImport("libc")]
         public static extern IntPtr dlsym(IntPtr handle, string symbol);
 
-        [DllImport("c")]
+        [DllImport("libc")]
         public static extern int dlclose(IntPtr handle);
-
-        [DllImport("c")]
-        public static extern IntPtr dlerror();
 
 #pragma warning enable
     }
@@ -94,17 +89,14 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop.DynamicLib
     {
 #pragma warning disable
 
-        [DllImport("dl")]
+        [DllImport("libdl")]
         public static extern IntPtr dlopen(string filename, int flags);
 
-        [DllImport("dl")]
+        [DllImport("libdl")]
         public static extern IntPtr dlsym(IntPtr handle, string symbol);
 
-        [DllImport("dl")]
+        [DllImport("libdl")]
         public static extern int dlclose(IntPtr hModule);
-
-        [DllImport("dl")]
-        public static extern IntPtr dlerror();
 
 #pragma warning enable
     }

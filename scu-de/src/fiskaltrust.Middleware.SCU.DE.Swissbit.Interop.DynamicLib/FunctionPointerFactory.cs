@@ -17,11 +17,11 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop.DynamicLib
         private const string win64LibraryFile = "runtimes\\win-x64\\native\\WormAPI.dll";
         private const string linux32LibraryFile = "runtimes/linux/native/libWormAPI.so";
         private const string linux64LibraryFile = "runtimes/linux-x64/native/libWormAPI.so";
+        private const string linuxArm32LibraryFile = "runtimes/linux-arm/native/libWormAPI.so";
 
-        private readonly bool is64Bit = IntPtr.Size == 8;
-
-        public FunctionPointerFactory(string libraryFile=null)
+        public FunctionPointerFactory(string libraryFile = null)
         {
+            var arch = RuntimeInformation.ProcessArchitecture;
 
             switch (Environment.OSVersion.Platform)
             {
@@ -29,11 +29,19 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop.DynamicLib
                 case PlatformID.Unix:
                 {
                     nativeLibraryHandler = new LinuxNativeLibrary();
-                    if(string.IsNullOrEmpty(libraryFile))
+                    if (string.IsNullOrEmpty(libraryFile))
                     {
-                        libraryFile = is64Bit ? linux64LibraryFile : linux32LibraryFile;
+                        libraryFile = arch switch
+                        {
+                            Architecture.X86 => linux32LibraryFile,
+                            Architecture.X64 => linux64LibraryFile,
+                            Architecture.Arm => linuxArm32LibraryFile,
+                            Architecture.Arm64 => throw new NotImplementedException("Arm64 is currently not supported by the Swissbit hardware TSE SDK."),
+                            _ => throw new NotImplementedException($"The CPU architecture {arch} is not supported on Linux by the Swissbit hardware TSE SDK.")
+                        };
                     }
-                };break;
+                };
+                break;
                 case PlatformID.Win32NT:
                 case PlatformID.Win32S:
                 case PlatformID.Win32Windows:
@@ -44,7 +52,12 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop.DynamicLib
                     nativeLibraryHandler = new WindowsNativeLibrary();
                     if (string.IsNullOrEmpty(libraryFile))
                     {
-                        libraryFile = is64Bit ? win64LibraryFile : win32LibraryFile;
+                        libraryFile = arch switch
+                        {
+                            Architecture.X86 => win32LibraryFile,
+                            Architecture.X64 => win64LibraryFile,
+                            _ => throw new NotImplementedException($"The CPU architecture {arch} is currently not supported on Windows by the Swissbit hardware TSE SDK.")
+                        };
                     }
                 };
                 break;
@@ -166,6 +179,6 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop.DynamicLib
             func_worm_export_tar_filtered_time = (worm_export_tar_filtered_time) Marshal.GetDelegateForFunctionPointer(nativeLibraryHandler.GetSymbolAddress(libraryPtr, nameof(worm_export_tar_filtered_time)), typeof(worm_export_tar_filtered_time)),
             func_worm_export_tar_filtered_transaction = (worm_export_tar_filtered_transaction) Marshal.GetDelegateForFunctionPointer(nativeLibraryHandler.GetSymbolAddress(libraryPtr, nameof(worm_export_tar_filtered_transaction)), typeof(worm_export_tar_filtered_transaction)),
             func_worm_export_deleteStoredData = (worm_export_deleteStoredData) Marshal.GetDelegateForFunctionPointer(nativeLibraryHandler.GetSymbolAddress(libraryPtr, nameof(worm_export_deleteStoredData)), typeof(worm_export_deleteStoredData)),
-       };
+        };
     }
 }
