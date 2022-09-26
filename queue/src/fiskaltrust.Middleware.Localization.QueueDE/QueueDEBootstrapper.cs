@@ -25,7 +25,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
                 .AddScoped<IMarketSpecificSignProcessor, SignProcessorDE>()
                 .AddScoped<IMarketSpecificJournalProcessor, JournalProcessorDE>()
                 .AddScoped<IMasterDataService, MasterDataService>()
-                .AddSingleton(sp => QueueDEConfiguration.FromMiddlewareConfiguration(sp.GetRequiredService<MiddlewareConfiguration>()))
+                .AddSingleton(sp => QueueDEConfiguration.FromMiddlewareConfiguration(sp.GetRequiredService<ILogger<QueueDEConfiguration>>(), sp.GetRequiredService<MiddlewareConfiguration>()))
                 .AddSingleton<IDESSCDProvider>(sp =>
                 {
                     var sscdProvider = new DESSCDProvider(

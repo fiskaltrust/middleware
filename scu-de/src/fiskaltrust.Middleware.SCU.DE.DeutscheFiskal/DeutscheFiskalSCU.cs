@@ -91,7 +91,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
                 }
                 if (_configuration.FccHeapMemory.HasValue)
                 {
-                    ConfigHelper.SetFccHeapMemory(_fccDirectory, _configuration.FccHeapMemory.Value);
+                    ConfigHelper.SetFccHeapMemoryForRunScript(_fccDirectory, _configuration.FccHeapMemory.Value);
                 }
                 if (_version == null)
                 {
@@ -586,17 +586,26 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
 
                             if (request.Erase)
                             {
-                                var exportDetails = GetExportDetails(request.TokenId);
-                                if (_fccAdminApiProvider.IsSplitExport(Guid.Parse(request.TokenId)))
+                                try
                                 {
-                                    await _fccAdminApiProvider.AcknowledgeSplitTransactionsAsync(Guid.Parse(request.TokenId), exportDetails.ClientId).ConfigureAwait(false);
+                                    var exportDetails = GetExportDetails(request.TokenId);
+                                    if (_fccAdminApiProvider.IsSplitExport(Guid.Parse(request.TokenId)))
+                                    {
+                                        await _fccAdminApiProvider.AcknowledgeSplitTransactionsAsync(Guid.Parse(request.TokenId), exportDetails.ClientId).ConfigureAwait(false);
+                                    }
+                                    else
+                                    {
+                                        // Necessary because of how the DF handles acknowledging transactions.
+                                        // It seems like it's required to go at least one minute back to not return a HTTP 500
+                                        var endDate = exportDetails.EndDate.AddMinutes(-1);
+                                        await _fccAdminApiProvider.AcknowledgeAllTransactionsAsync(_minExportDateTime, endDate, exportDetails.ClientId);
+                                    }
+
+                                    sessionResponse.IsErased = true;
                                 }
-                                else
+                                catch (Exception e)
                                 {
-                                    // Necessary because of how the DF handles acknowledging transactions.
-                                    // It seems like it's required to go at least one minute back to not return a HTTP 500
-                                    var endDate = exportDetails.EndDate.AddMinutes(-1);
-                                    await _fccAdminApiProvider.AcknowledgeAllTransactionsAsync(_minExportDateTime, endDate, exportDetails.ClientId);
+                                    _logger.LogError(e, "Failed to delete export data from tse.");
                                 }
                             }
                             return sessionResponse;

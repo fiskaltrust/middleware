@@ -1,21 +1,33 @@
 ﻿using System;
 using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
+using fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Exceptions;
 using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
 {
-    public sealed class HttpClientWrapper : IDisposable
+    public class HttpClientWrapper : IDisposable
     {
+        private bool isDisposed;
         public static string TIMEOUT_LOG = "The client did not respond in the configured time!";
         private readonly HttpClient _httpClient;
         private readonly FiskalySCUConfiguration _configuration;
+        private readonly ILogger<HttpClientWrapper> _logger;
 
-        public HttpClientWrapper(FiskalySCUConfiguration configuration)
+        public HttpClientWrapper(FiskalySCUConfiguration configuration, ILogger<HttpClientWrapper> logger, HttpClient httpClient)
         {
+            _logger = logger;
+            _configuration = configuration;
+            _httpClient = httpClient;
+        }
+
+        public HttpClientWrapper(FiskalySCUConfiguration configuration, ILogger<HttpClientWrapper> logger)
+        {
+            _logger = logger;
             _configuration = configuration;
             var url = configuration.ApiEndpoint.EndsWith("/") ? configuration.ApiEndpoint : $"{configuration.ApiEndpoint}/";
-            _httpClient = new HttpClient(new AuthenticatedHttpClientHandler(configuration) { Proxy = ConfigurationHelper.CreateProxy(configuration) })
+            _httpClient = new HttpClient(new AuthenticatedHttpClientHandler(configuration, _logger) { Proxy = ConfigurationHelper.CreateProxy(configuration) })
             {
                 BaseAddress = new Uri(url),
                 Timeout = TimeSpan.FromMilliseconds(configuration.FiskalyClientTimeout)
@@ -55,14 +67,106 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers
             }
         }
 
-        public async Task<HttpResponseMessage> PutAsync(string requestUri, HttpContent content) => await WrapCall(_httpClient.PutAsync(requestUri, content), _configuration.FiskalyClientTimeout).ConfigureAwait(false);
+        public async Task<HttpResponseMessage> PutAsync(string requestUri, HttpContent content, int currentTry = 0)
+        {
+            var response = await WrapCall(_httpClient.PutAsync(requestUri, content), _configuration.FiskalyClientTimeout).ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+            {
+                if ((int)response.StatusCode >= 500 && (int) response.StatusCode <= 599 && _configuration.RetriesOn5xxError > currentTry)
+                {
+                    currentTry++;
+                    await Task.Delay(_configuration.DelayOnRetriesInMs * (currentTry + 1)).ConfigureAwait(false);
+                    _logger.LogWarning($"HttpStatusCode {response.StatusCode} from Fiskaly retry {currentTry} from {_configuration.RetriesOn5xxError}, DelayOnRetriesInMs: { _configuration.DelayOnRetriesInMs}.");
+                    await PutAsync(requestUri, content, currentTry).ConfigureAwait(false);
+                }
+                var responseContent = await response.Content.ReadAsStringAsync();
+                throw new FiskalyException($"Communication error ({response.StatusCode}) while setting TSS metadata ({requestUri}). Response: {responseContent}",
+                    (int) response.StatusCode, content.ToString());
+            }
+            return response;
+        }
 
-        public async Task<HttpResponseMessage> GetAsync(string requestUri) => await WrapCall(_httpClient.GetAsync(requestUri), _configuration.FiskalyClientTimeout).ConfigureAwait(false);
+        public async Task<HttpResponseMessage> GetAsync(string requestUri, int currentTry = 0)
+        {
+            var response = await WrapCall(_httpClient.GetAsync(requestUri), _configuration.FiskalyClientTimeout).ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+            {
+                if ((int) response.StatusCode >= 500 && (int) response.StatusCode <= 599 && _configuration.RetriesOn5xxError > currentTry)
+                {
+                    currentTry++;
+                    await Task.Delay(_configuration.DelayOnRetriesInMs * (currentTry + 1)).ConfigureAwait(false);
+                    _logger.LogWarning($"HttpStatusCode {response.StatusCode} from Fiskaly retry {currentTry} from {_configuration.RetriesOn5xxError}, DelayOnRetriesInMs: { _configuration.DelayOnRetriesInMs}.");
+                    await GetAsync(requestUri, currentTry).ConfigureAwait(false);
+                }
+                var responseContent = await response.Content.ReadAsStringAsync();
+                throw new FiskalyException($"Communication error ({response.StatusCode}) while getting TSS metadata ({requestUri}). Response: {responseContent}",
+                    (int) response.StatusCode, requestUri);
+            }
+            return response;
+        }
 
-        public async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request) => await WrapCall(_httpClient.SendAsync(request), _configuration.FiskalyClientTimeout).ConfigureAwait(false);
+        public async Task<HttpResponseMessage> SendAsync(HttpMethod httpMethod, string requestUri, string jsonPayload, int currentTry = 0)
+        {
+            var request = new HttpRequestMessage(httpMethod, requestUri)
+            {
+                Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json")
+            };
+            var response = await WrapCall(_httpClient.SendAsync(request), _configuration.FiskalyClientTimeout).ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+            {
+                if ((int) response.StatusCode >= 500 && (int) response.StatusCode <= 599 && _configuration.RetriesOn5xxError > currentTry)
+                {
+                    currentTry++;
+                    await Task.Delay(_configuration.DelayOnRetriesInMs * (currentTry + 1)).ConfigureAwait(false);
+                    _logger.LogWarning($"HttpStatusCode {response.StatusCode} from Fiskaly retry {currentTry} from {_configuration.RetriesOn5xxError}, DelayOnRetriesInMs: { _configuration.DelayOnRetriesInMs}.");
+                    await SendAsync(httpMethod, requestUri, jsonPayload, currentTry).ConfigureAwait(false);
+                }
+                var responseContent = await response.Content.ReadAsStringAsync();
+                throw new FiskalyException($"Communication error ({response.StatusCode}) while setting TSS metadata ({request}). Response: {responseContent}",
+                    (int) response.StatusCode, request.Content.ToString());
+            }
+            return response;
+        }
+            
+        public async Task<HttpResponseMessage> PostAsync(string requestUri, HttpContent content, int currentTry = 0)
+        {
+            var response = await WrapCall(_httpClient.PostAsync(requestUri, content), _configuration.FiskalyClientTimeout).ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+            {
+                if ((int) response.StatusCode >= 500 && (int) response.StatusCode <= 599 && _configuration.RetriesOn5xxError > currentTry)
+                {
+                    currentTry++;
+                    await Task.Delay(_configuration.DelayOnRetriesInMs * (currentTry + 1)).ConfigureAwait(false);
+                    _logger.LogWarning($"HttpStatusCode {response.StatusCode} from Fiskaly retry {currentTry} from {_configuration.RetriesOn5xxError}, DelayOnRetriesInMs: { _configuration.DelayOnRetriesInMs}.");
+                    await PostAsync(requestUri, content, currentTry).ConfigureAwait(false);
+                }
+                var responseContent = await response.Content.ReadAsStringAsync();
+                throw new FiskalyException($"Communication error ({response.StatusCode}) while setting TSS metadata ({requestUri}). Response: {responseContent}",
+                    (int) response.StatusCode, requestUri);
+            }
+            return response;
+        }
 
-        public async Task<HttpResponseMessage> PostAsync(string requestUri, HttpContent content) => await WrapCall(_httpClient.PostAsync(requestUri, content), _configuration.FiskalyClientTimeout).ConfigureAwait(false);
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
 
-        public void Dispose() => _httpClient?.Dispose();
+        // The bulk of the clean-up code is implemented in Dispose(bool)
+        protected virtual void Dispose(bool disposing)
+        {
+            if (isDisposed)
+            {
+                return;
+            }
+
+            if (disposing)
+            {
+                // free managed resources
+                _httpClient?.Dispose();
+            }
+            isDisposed = true;
+        }
     }
 }

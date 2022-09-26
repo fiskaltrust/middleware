@@ -738,6 +738,10 @@ namespace fiskaltrust.Middleware.SCU.DE.DieboldNixdorf
                                     {
                                         _logger.LogWarning("Failed to delete data from tse. Data not completely exported.");
                                     }
+                                    else
+                                    {
+                                        sessionResponse.IsErased = true;
+                                    }
                                 }
                                 return sessionResponse;
                             }

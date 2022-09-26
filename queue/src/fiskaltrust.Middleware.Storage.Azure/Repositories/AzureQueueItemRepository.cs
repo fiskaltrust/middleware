@@ -5,6 +5,7 @@ using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Storage.Azure.Mapping;
 using fiskaltrust.Middleware.Storage.Azure.TableEntities;
+using fiskaltrust.Middleware.Storage.Base.Extensions;
 using fiskaltrust.storage.V0;
 using Microsoft.Azure.Cosmos.Table;
 using Newtonsoft.Json;
@@ -51,15 +52,15 @@ namespace fiskaltrust.Middleware.Storage.Azure.Repositories
         public async IAsyncEnumerable<ftQueueItem> GetPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem)
         {
             var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(ftQueueItem.request);
-            if (string.IsNullOrWhiteSpace(receiptRequest.cbPreviousReceiptReference) && string.IsNullOrWhiteSpace(ftQueueItem.cbReceiptReference))
+            if (!receiptRequest.IsPosReceipt() || (string.IsNullOrWhiteSpace(receiptRequest.cbPreviousReceiptReference) && string.IsNullOrWhiteSpace(ftQueueItem.cbReceiptReference)))
             {
                 yield break;
-            }          
+            }
 
-            var refFilter = TableQuery.CombineFilters(TableQuery.GenerateFilterCondition(nameof(ftQueueItem.cbReceiptReference), QueryComparisons.Equal, receiptRequest.cbPreviousReceiptReference), 
-                TableOperators.Or, 
+            var refFilter = TableQuery.CombineFilters(TableQuery.GenerateFilterCondition(nameof(ftQueueItem.cbReceiptReference), QueryComparisons.Equal, receiptRequest.cbPreviousReceiptReference),
+                TableOperators.Or,
                 TableQuery.GenerateFilterCondition(nameof(ftQueueItem.cbReceiptReference), QueryComparisons.Equal, ftQueueItem.cbReceiptReference));
-            
+
             var filter = TableQuery.GenerateFilterCondition(nameof(ftQueueItem.ftQueueRow), QueryComparisons.LessThan, ftQueueItem.ftQueueRow.ToString());
             filter = TableQuery.CombineFilters(filter, TableOperators.And, refFilter);
             var result = await GetAllAsync(filter).ToListAsync();

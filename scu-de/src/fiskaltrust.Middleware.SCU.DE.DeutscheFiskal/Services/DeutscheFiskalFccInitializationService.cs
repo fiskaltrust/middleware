@@ -38,8 +38,9 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
             var jarPath = Path.Combine(fccDirectory, DeutscheFiskalConstants.Paths.FccDeployJar);
 
             AddFirewallExceptionIfApplicable(javaPath);
+            var heapMem = GetHeapMemory();
 
-            var arguments = $"-cp \"{jarPath}\" de.fiskal.connector.init.InitializationCLIApplication --fcc_target_environment STABLE --fcc_id {_configuration.FccId} --fcc_secret {_configuration.FccSecret}";
+            var arguments = $"-cp \"{jarPath}\" {heapMem} de.fiskal.connector.init.InitializationCLIApplication --fcc_target_environment STABLE --fcc_id {_configuration.FccId} --fcc_secret {_configuration.FccSecret}";
             if (_configuration.FccPort.HasValue)
             {
                 arguments += $" --fcc_server_port {_configuration.FccPort.Value}";
@@ -48,10 +49,18 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
             {
                 arguments += GetProxyArguments(_configuration);
             }
-
             RunJavaProcess(fccDirectory, javaPath, arguments);
-
             _logger.LogInformation("Succesfully initialized FCC from {FccPath}.", fccDirectory);
+        }
+
+        private string GetHeapMemory()
+        {
+            if (!_configuration.FccHeapMemory.HasValue)
+            {
+                return string.Empty;
+            }
+            ConfigHelper.ValidateHeapMemory(_configuration.FccHeapMemory.Value);
+            return $"-Xmx{_configuration.FccHeapMemory.Value}m";
         }
 
         public void Update(string fccDirectory)
@@ -67,7 +76,9 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
 
             AddFirewallExceptionIfApplicable(javaPath);
 
-            var arguments = $"-cp \"{jarPath}\" de.fiskal.connector.init.UpdateCLIApplication";
+            var heapMem = GetHeapMemory();
+
+            var arguments = $"-cp \"{jarPath}\" {heapMem} de.fiskal.connector.init.UpdateCLIApplication";
 
             RunJavaProcess(fccDirectory, javaPath, arguments);
 

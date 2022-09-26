@@ -28,37 +28,46 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
             _queueDEConfiguration = queueDEConfiguration;
         }
 
-        public async Task CleanupTarFileAsync(Guid journalDEId, string filePath, string checkSum, bool useSharpCompress = false)
+        public async Task CleanupTarFileAsync(Guid? journalDEId, string filePath, string checkSum, bool useSharpCompress = false)
         {
-            if(_queueDEConfiguration.StoreTemporaryExportFiles) { return; }
+            if (_queueDEConfiguration.StoreTemporaryExportFiles)
+            { return; }
 
-            var dbJournalDE = await _journalDERepository.GetAsync(journalDEId).ConfigureAwait(false);
+            var deleteFile = false;
 
-            var uploadSuccess = false;
-
-            try
+            if (_queueDEConfiguration.TarFileExportMode == TarFileExportMode.Erased)
             {
-                var dbCheckSum = useSharpCompress
-                                    ? GetHashFromCompressedBase64WithSharpCompress(dbJournalDE.FileContentBase64)
-                                    : GetHashFromCompressedBase64(dbJournalDE.FileContentBase64);
-
-                uploadSuccess = checkSum == dbCheckSum;
+                deleteFile = true;
             }
-            catch (Exception e)
+            else if (journalDEId.HasValue)
             {
-                _logger.LogWarning(e, "Failed to check content equality.");
+                var dbJournalDE = await _journalDERepository.GetAsync(journalDEId.Value).ConfigureAwait(false);
+
+                try
+                {
+                    var dbCheckSum = useSharpCompress
+                                        ? GetHashFromCompressedBase64WithSharpCompress(dbJournalDE.FileContentBase64)
+                                        : GetHashFromCompressedBase64(dbJournalDE.FileContentBase64);
+
+                    if (checkSum == dbCheckSum)
+                    { deleteFile = true; }
+                    else
+                    {
+                        _logger.LogWarning("A content mismatch between the temporary local TAR file and the database was detected. The local TAR file will not be deleted and can be found at '{file}'", filePath);
+                    }
+                }
+                catch (Exception e)
+                {
+                    _logger.LogWarning(e, "Failed to check content equality.");
+                }
             }
 
-            if (uploadSuccess)
+            if (deleteFile)
             {
                 if (File.Exists(filePath))
                 {
                     File.Delete(filePath);
                 }
-            }
-            else
-            {
-                _logger.LogWarning("A content mismatch between the temporary local TAR file and the database was detected. The local TAR file will not be deleted and can be found at '{file}'", filePath);
             }
         }
 
@@ -72,10 +81,12 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
 
         public async Task CleanupAllTarFilesAsync()
         {
-            if (_queueDEConfiguration.StoreTemporaryExportFiles) { return; }
+            if (_queueDEConfiguration.StoreTemporaryExportFiles)
+            { return; }
 
             var basePath = Path.Combine(_middlewareConfiguration.ServiceFolder, "Exports", _middlewareConfiguration.QueueId.ToString(), "TAR");
-            if(!Directory.Exists(basePath)) { return; }
+            if (!Directory.Exists(basePath))
+            { return; }
 
             foreach (var directory in Directory.GetDirectories(basePath))
             {
@@ -85,7 +96,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
             foreach (var export in Directory.GetFiles(basePath))
             {
                 var journalDE = await _journalDERepository.GetByFileName(Path.GetFileNameWithoutExtension(export)).FirstOrDefaultAsync();
-                if(journalDE == null)
+                if (journalDE == null)
                 {
                     continue;
                 }
@@ -97,7 +108,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
                     checkSum = Convert.ToBase64String(sha256.ComputeHash(stream));
                 }
 
-               // Use SharpCompress to be compatible with old archives without proper footer data
+                // Use SharpCompress to be compatible with old archives without proper footer data
                 await CleanupTarFileAsync(journalDE.ftJournalDEId, Path.Combine(basePath, $"{journalDE.FileName}.tar"), checkSum, useSharpCompress: true);
             }
         }

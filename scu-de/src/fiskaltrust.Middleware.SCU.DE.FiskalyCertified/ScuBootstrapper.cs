@@ -21,6 +21,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
             services.AddScoped<IFiskalyApiProvider, FiskalyV2ApiProvider>();
             services.AddScoped<ClientCache>();
             services.AddScoped<IDESSCD, FiskalySCU>();
+            services.AddScoped<HttpClientWrapper, HttpClientWrapper>();
         }
     }
 }

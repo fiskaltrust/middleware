@@ -35,7 +35,7 @@
     <ItemGroup>
         <ProjectReference Include="..\fiskaltrust.Middleware.Contracts\fiskaltrust.Middleware.Contracts.csproj" PrivateAssets="all" />
         <ProjectReference Include="..\fiskaltrust.Middleware.Queue\fiskaltrust.Middleware.Queue.csproj" PrivateAssets="all" />
-        <ProjectReference Include="..\fiskaltrust.Middleware.Storage.EF\fiskaltrust.Middleware.Storage.Ef.csproj" PrivateAssets="all" />
+        <ProjectReference Include="..\fiskaltrust.Middleware.Storage.EF\fiskaltrust.Middleware.Storage.EF.csproj" PrivateAssets="all" />
     </ItemGroup>
 
     <Target DependsOnTargets="ResolveReferences" Name="CopyProjectReferencesToPackage">

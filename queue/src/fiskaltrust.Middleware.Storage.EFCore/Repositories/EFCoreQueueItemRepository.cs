@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Storage.Base.Extensions;
 using fiskaltrust.storage.V0;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
@@ -57,13 +58,17 @@ namespace fiskaltrust.Middleware.Storage.EFCore.Repositories
         public IAsyncEnumerable<ftQueueItem> GetPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem)
         {
             var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(ftQueueItem.request);
-            if (string.IsNullOrWhiteSpace(receiptRequest.cbPreviousReceiptReference) && string.IsNullOrWhiteSpace(ftQueueItem.cbReceiptReference))
+            if (!receiptRequest.IsPosReceipt() || (string.IsNullOrWhiteSpace(receiptRequest.cbPreviousReceiptReference) && string.IsNullOrWhiteSpace(ftQueueItem.cbReceiptReference)))
             {
                 return new List<ftQueueItem>().ToAsyncEnumerable();
             }
-
-            return DbContext.QueueItemList.AsAsyncEnumerable().Where(x => x.ftQueueRow < ftQueueItem.ftQueueRow &&
-                (x.cbReceiptReference == receiptRequest.cbPreviousReceiptReference || x.cbReceiptReference == ftQueueItem.cbReceiptReference));
+            
+            return Queryable.Where(DbContext.QueueItemList, x =>
+                    x.ftQueueRow < ftQueueItem.ftQueueRow &&
+                    (x.cbReceiptReference == receiptRequest.cbPreviousReceiptReference || x.cbReceiptReference == ftQueueItem.cbReceiptReference)
+                )
+                .ToAsyncEnumerable()
+                .Where(x => JsonConvert.DeserializeObject<ReceiptRequest>(x.request).IsPosReceipt());
         }
 
         public IAsyncEnumerable<ftQueueItem> GetQueueItemsAfterQueueItem(ftQueueItem ftQueueItem)

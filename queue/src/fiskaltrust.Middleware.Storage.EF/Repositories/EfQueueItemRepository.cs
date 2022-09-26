@@ -7,6 +7,12 @@ using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0;
 using Newtonsoft.Json;
+using fiskaltrust.Middleware.Storage.Base.Extensions;
+using fiskaltrust.Middleware.Storage.EF.Helpers;
+using System.Data.Entity.SqlServer;
+using System.Data.Entity.Core.Objects;
+using System.Data.Entity.Core.Common.CommandTrees.ExpressionBuilder;
+using System.Data.Entity.Core.Common.CommandTrees.ExpressionBuilder.Spatial;
 
 namespace fiskaltrust.Middleware.Storage.EF.Repositories
 {
@@ -57,13 +63,18 @@ namespace fiskaltrust.Middleware.Storage.EF.Repositories
         public IAsyncEnumerable<ftQueueItem> GetPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem)
         {
             var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(ftQueueItem.request);
-            if (string.IsNullOrWhiteSpace(receiptRequest.cbPreviousReceiptReference) && string.IsNullOrWhiteSpace(ftQueueItem.cbReceiptReference))
+            if (!receiptRequest.IsPosReceipt() || (string.IsNullOrWhiteSpace(receiptRequest.cbPreviousReceiptReference) && string.IsNullOrWhiteSpace(ftQueueItem.cbReceiptReference)))
             {
                 return new List<ftQueueItem>().ToAsyncEnumerable();
             }
 
-            return DbContext.QueueItemList.Where(x => x.ftQueueRow < ftQueueItem.ftQueueRow && 
-                (x.cbReceiptReference == receiptRequest.cbPreviousReceiptReference || x.cbReceiptReference == ftQueueItem.cbReceiptReference)).ToAsyncEnumerable();
+            return DbContext.QueueItemList
+                .Where(x =>
+                    x.ftQueueRow < ftQueueItem.ftQueueRow &&
+                    (x.cbReceiptReference == receiptRequest.cbPreviousReceiptReference || x.cbReceiptReference == ftQueueItem.cbReceiptReference)
+                )
+                .ToAsyncEnumerable()
+                .Where(x => JsonConvert.DeserializeObject<ReceiptRequest>(x.request).IsPosReceipt());
         }
 
         public IAsyncEnumerable<ftQueueItem> GetQueueItemsAfterQueueItem(ftQueueItem ftQueueItem)

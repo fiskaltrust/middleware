@@ -10,22 +10,22 @@
     <dependencies>
       <group targetFramework=".NETFramework4.6.1">
         <dependency id="BouncyCastle" version="1.7.0" exclude="Build,Analyzers" />
-        <dependency Id="fiskaltrust.Middleware.Abstractions" Version="1.3.1" />
-        <dependency id="fiskaltrust.interface" version="1.3.1" exclude="Build,Analyzers" />
-        <dependency Id="Microsoft.Bcl.AsyncInterfaces" Version="1.1.1" />
-        <dependency Id="System.Linq.Async" Version="4.1.1" />
-        <dependency Id="Microsoft.Extensions.Logging" Version="3.1.4" />
-        <dependency Id="Newtonsoft.Json" Version="12.0.3" />
+        <dependency Id="fiskaltrust.Middleware.Abstractions" version="1.3.1" />
+        <dependency id="fiskaltrust.interface" version="1.3.40" exclude="Build,Analyzers" />
+        <dependency Id="Microsoft.Bcl.AsyncInterfaces" version="1.1.1" />
+        <dependency Id="System.Linq.Async" version="4.1.1" />
+        <dependency Id="Microsoft.Extensions.Logging" version="3.1.4" />
+        <dependency Id="Newtonsoft.Json" version="12.0.3" />
         <dependency id="sharpcompress" version="0.24.0" exclude="Build,Analyzers" />
       </group>
       <group targetFramework=".NETStandard2.0">
         <dependency id="Portable.BouncyCastle" version="1.8.1.2" exclude="Build,Analyzers" />
-        <dependency Id="fiskaltrust.Middleware.Abstractions" Version="1.3.1" />
-        <dependency id="fiskaltrust.interface" version="1.3.1" exclude="Build,Analyzers" />
-        <dependency Id="Microsoft.Bcl.AsyncInterfaces" Version="1.1.1" />
-        <dependency Id="System.Linq.Async" Version="4.1.1" />
-        <dependency Id="Microsoft.Extensions.Logging" Version="3.1.4" />
-        <dependency Id="Newtonsoft.Json" Version="12.0.3" />
+        <dependency Id="fiskaltrust.Middleware.Abstractions" version="1.3.1" />
+        <dependency id="fiskaltrust.interface" version="1.3.40" exclude="Build,Analyzers" />
+        <dependency Id="Microsoft.Bcl.AsyncInterfaces" version="1.1.1" />
+        <dependency Id="System.Linq.Async" version="4.1.1" />
+        <dependency Id="Microsoft.Extensions.Logging" version="3.1.4" />
+        <dependency Id="Newtonsoft.Json" version="12.0.3" />
         <dependency id="sharpcompress" version="0.24.0" exclude="Build,Analyzers" />
       </group>
     </dependencies>

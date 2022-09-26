@@ -29,7 +29,8 @@ namespace fiskaltrust.Middleware.Storage.MySQL.DatabaseInitialization
             var builder = new MySqlConnectionStringBuilder
             {
                 ConnectionString = _serverConnectionString,
-                Database = _dbName
+                Database = _dbName,
+                DefaultCommandTimeout = 30 * 60
             };
             _databaseConnectionString = builder.ConnectionString;
             _logger = logger;
