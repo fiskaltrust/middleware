@@ -6,7 +6,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 using Bogus;
-using fiskaltrust.ifPOS.v2.me;
+using fiskaltrust.ifPOS.v1.me;
 using fiskaltrust.Middleware.SCU.ME.Common.Configuration;
 
 namespace fiskaltrust.Middleware.SCU.ME.InMemory;
@@ -22,6 +22,7 @@ public class InMemorySCU : IMESSCD
         _faker = new Faker();
     }
 
+    public Task<ComputeIICResponse> ComputeIICAsync(ComputeIICRequest computeIICRequest) => throw new NotImplementedException();
     public Task<ScuMeEchoResponse> EchoAsync(ScuMeEchoRequest request) => Task.FromResult(new ScuMeEchoResponse { Message = request.Message });
 
     public Task<RegisterCashDepositResponse> RegisterCashDepositAsync(RegisterCashDepositRequest registerCashDepositRequest) =>
@@ -29,8 +30,8 @@ public class InMemorySCU : IMESSCD
         {
             FCDC = _faker.Random.Guid().ToString()
         });
-    public Task<RegisterCashWithdrawalResponse> RegisterCashWithdrawalAsync(RegisterCashWithdrawalRequest registerCashDepositRequest) =>
-        Task.FromResult(new RegisterCashWithdrawalResponse());
+    public Task RegisterCashWithdrawalAsync(RegisterCashWithdrawalRequest registerCashDepositRequest) =>
+        Task.CompletedTask;
 
     public Task<RegisterInvoiceResponse> RegisterInvoiceAsync(RegisterInvoiceRequest registerInvoiceRequest)
     {
@@ -52,7 +53,6 @@ public class InMemorySCU : IMESSCD
         return Task.FromResult(new RegisterInvoiceResponse
         {
             FIC = _faker.Random.Guid().ToString(),
-            IIC = BitConverter.ToString(iic).Replace("-", string.Empty)
         });
     }
 
@@ -62,5 +62,5 @@ public class InMemorySCU : IMESSCD
             TcrCode = $"{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}",
         });
 
-    public Task UnregisterTcrAsync(RegisterTcrRequest registerTCRRequest) => Task.CompletedTask;
+    public Task UnregisterTcrAsync(UnregisterTcrRequest registerTCRRequest) => throw new NotImplementedException();
 }
