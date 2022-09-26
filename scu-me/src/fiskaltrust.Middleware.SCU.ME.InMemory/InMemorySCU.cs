@@ -62,5 +62,5 @@ public class InMemorySCU : IMESSCD
             TcrCode = $"{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}",
         });
 
-    public Task UnregisterTcrAsync(UnregisterTcrRequest registerTCRRequest) => throw new NotImplementedException();
+    public Task UnregisterTcrAsync(UnregisterTcrRequest registerTCRRequest) => Task.CompletedTask;
 }
