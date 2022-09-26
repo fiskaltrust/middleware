@@ -45,7 +45,7 @@ stages:
       - job: AcceptanceTest
         dependsOn: Test
         displayName: Acceptance tests
-        condition: and(succeeded(), or(eq(variables['Build.SourceBranch'], 'refs/heads/main'), startsWith(variables['Build.SourceBranch'], 'refs/tags/queue/')))
+        condition: and(succeeded(), or(eq(variables.runAcceptanceTests, 'true'), eq(variables['Build.SourceBranch'], 'refs/heads/main'), startsWith(variables['Build.SourceBranch'], 'refs/tags/queue/')))
         pool:
           vmImage: $(vmImageName)
         strategy:

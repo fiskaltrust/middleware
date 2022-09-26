@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Dapper;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Storage.Base.Extensions;
 using fiskaltrust.storage.V0;
 using MySqlConnector;
 using Newtonsoft.Json;
@@ -79,18 +80,24 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
         public async IAsyncEnumerable<ftQueueItem> GetPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem)
         {
             var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(ftQueueItem.request);
-            if (string.IsNullOrWhiteSpace(receiptRequest.cbPreviousReceiptReference))
+
+            if (!receiptRequest.IsPosReceipt() || (string.IsNullOrWhiteSpace(receiptRequest.cbPreviousReceiptReference) && string.IsNullOrWhiteSpace(ftQueueItem.cbReceiptReference)))
             {
                 yield break;
             }
+
             var query = "SELECT * FROM ftQueueItem WHERE ftQueueRow < @ftQueueRow AND (cbReceiptReference = @cbPreviousReceiptReference OR cbReceiptReference = @cbReceiptReference)";
-            
+
             using (var connection = new MySqlConnection(ConnectionString))
             {
                 await connection.OpenAsync();
                 await foreach (var entry in connection.Query<ftQueueItem>(query, new { ftQueueItem.ftQueueRow, receiptRequest.cbPreviousReceiptReference, ftQueueItem.cbReceiptReference }, buffered: false).ToAsyncEnumerable())
                 {
-                    yield return entry;
+                    
+                    if (JsonConvert.DeserializeObject<ReceiptRequest>(entry.request).IsPosReceipt())
+                    {
+                        yield return entry;
+                    }
                 }
             }
         }
