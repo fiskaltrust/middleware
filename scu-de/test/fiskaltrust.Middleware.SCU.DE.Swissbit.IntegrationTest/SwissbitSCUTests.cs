@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -7,7 +6,11 @@ using System.Threading.Tasks;
 using AutoFixture;
 using fiskaltrust.ifPOS.v1.de;
 using fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser.Logs;
+using fiskaltrust.Middleware.SCU.DE.Swissbit.Helpers;
+using fiskaltrust.Middleware.SCU.DE.Swissbit.Interop;
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
+using Moq;
 using Xunit;
 
 [assembly: CollectionBehavior(DisableTestParallelization = true)]
@@ -16,10 +19,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.IntegrationTest
     [Collection("SwissbitSCUTests")]
     public class SwissbitSCUTests
     {
-        private IDESSCD GetSutSwissbitSCU() => new SwissbitSCU(new Dictionary<string, object>
-        {
-            {"devicePath", "e:" }
-        });
+        private IDESSCD GetSutSwissbitSCU() => new SwissbitSCU(new SwissbitSCUConfiguration { DevicePath = "e:" }, new FunctionPointerFactory(), Mock.Of<ILogger<SwissbitSCU>>(), new LockingHelper(Mock.Of<ILogger<LockingHelper>>()));
 
 
 #if DEBUG

@@ -1,5 +1,4 @@
 ﻿using fiskaltrust.Middleware.SCU.DE.Swissbit.Interop;
-using fiskaltrust.Middleware.SCU.DE.Swissbit.Interop.Exceptions;
 
 namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Exceptions
 {

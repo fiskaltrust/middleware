@@ -7,30 +7,28 @@ using SharpCompress.Readers;
 using Xunit;
 using Xunit.Abstractions;
 using fiskaltrust.Middleware.SCU.DE.Swissbit.Interop;
-using fiskaltrust.Middleware.SCU.DE.Swissbit.Interop.Helpers;
 using static fiskaltrust.Middleware.SCU.DE.Swissbit.Interop.NativeFunctionPointer;
 using System.IO;
 using fiskaltrust.ifPOS.v1.de;
 using System.Security.Cryptography;
-using fiskaltrust.Middleware.SCU.DE.SwissbitBase.Helpers;
 using Microsoft.Extensions.Logging.Abstractions;
+using fiskaltrust.Middleware.SCU.DE.Swissbit.Helpers;
+using fiskaltrust.Middleware.SCU.DE.Swissbit.Exceptions;
 
 namespace fiskaltrust.Middleware.SCU.DE.Swissbit.IntegrationTest
 {
     public class SwissbitProxyTests : IClassFixture<SwissbitHardwareFixture>, IDisposable
     {
-
-        private readonly INativeFunctionPointerFactory NativeFunctionPointerFactory = new Interop.DynamicLib.FunctionPointerFactory();
-
-        private readonly SwissbitHardwareFixture HardwareFixtures;
-        private readonly ITestOutputHelper OutputHelper;
+        private readonly INativeFunctionPointerFactory _nativeFunctionPointerFactory = new FunctionPointerFactory();
+        private readonly SwissbitHardwareFixture _hardwareFixtures;
+        private readonly ITestOutputHelper _outputHelper;
 
         public SwissbitProxyTests(ITestOutputHelper outputHelper, SwissbitHardwareFixture hardwareFixtures)
         {
-            OutputHelper = outputHelper;
-            HardwareFixtures = hardwareFixtures;
+            _outputHelper = outputHelper;
+            _hardwareFixtures = hardwareFixtures;
 
-            sut = new SwissbitProxy(HardwareFixtures.MountPoint, HardwareFixtures.AdminPin, HardwareFixtures.TimeAdminPin, NativeFunctionPointerFactory, new LockingHelper(NullLogger<LockingHelper>.Instance), NullLogger.Instance);
+            sut = new SwissbitProxy(_hardwareFixtures.MountPoint, _hardwareFixtures.AdminPin, _hardwareFixtures.TimeAdminPin, _nativeFunctionPointerFactory, new LockingHelper(NullLogger<LockingHelper>.Instance), NullLogger.Instance);
             sut.InitAsync().Wait();
         }
 
@@ -48,10 +46,10 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.IntegrationTest
         [Trait("Category", "SkipWhenLiveUnitTesting")]
         public async Task Instantiate()
         {
-            OutputHelper.WriteLine(await sut.GetVersionAsync());
-            OutputHelper.WriteLine(await sut.GetLogTimeFormatAsync());
-            OutputHelper.WriteLine(await sut.GetSignatureAlgorithmAsync());
-            OutputHelper.WriteLine(JsonConvert.SerializeObject(await sut.GetTseStatusAsync()));
+            _outputHelper.WriteLine(await sut.GetVersionAsync());
+            _outputHelper.WriteLine(await sut.GetLogTimeFormatAsync());
+            _outputHelper.WriteLine(await sut.GetSignatureAlgorithmAsync());
+            _outputHelper.WriteLine(JsonConvert.SerializeObject(await sut.GetTseStatusAsync()));
         }
 
 #if DEBUG
@@ -70,9 +68,9 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.IntegrationTest
                 await sut.TseUpdateTimeAsync();
             }
 
-            OutputHelper.WriteLine(await sut.GetVersionAsync());
-            OutputHelper.WriteLine(await sut.GetSignatureAlgorithmAsync());
-            OutputHelper.WriteLine(await sut.GetLogTimeFormatAsync());
+            _outputHelper.WriteLine(await sut.GetVersionAsync());
+            _outputHelper.WriteLine(await sut.GetSignatureAlgorithmAsync());
+            _outputHelper.WriteLine(await sut.GetLogTimeFormatAsync());
         }
 
 #if DEBUG
@@ -88,33 +86,12 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.IntegrationTest
                 Interop.NativeFunctionPointer.WormInitializationState.WORM_INIT_UNINITIALIZED,
                 "Swissbit TSE need to be in factory reset state");
 
-            await sut.TseSetupAsync(HardwareFixtures.Seed, HardwareFixtures.AdminPuk, HardwareFixtures.AdminPin, HardwareFixtures.TimeAdminPin);
+            await sut.TseSetupAsync(_hardwareFixtures.Seed, _hardwareFixtures.AdminPuk, _hardwareFixtures.AdminPin, _hardwareFixtures.TimeAdminPin);
 
 
             status = await sut.GetTseStatusAsync();
             status.initializationState
                 .Should().Be(WormInitializationState.WORM_INIT_INITIALIZED);
-        }
-
-#if DEBUG
-        [Fact]
-#endif
-        [Trait("Category", "SkipWhenLiveUnitTesting")]
-        public async Task FlashHealthSummary_Should_Return_Value()
-        {
-            var status = await sut.GetTseStatusAsync();
-            if (status.HasPassedSelfTest == false)
-            {
-                await sut.TseRunSelfTestAsnyc();
-            }
-            if (status.HasValidTime == false)
-            {
-                await sut.TseUpdateTimeAsync();
-            }
-
-            var summary = await sut.GetFlashHealthSummaryAsync();
-
-            summary.NeedsReplacement.Should().BeFalse();
         }
 
 #if DEBUG
@@ -224,7 +201,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.IntegrationTest
             {
                 await sut.TseUpdateTimeAsync();
             }
-            await sut.TseRegisterClientAsync(HardwareFixtures.ClientId);
+            await sut.TseRegisterClientAsync(_hardwareFixtures.ClientId);
 
             status.initializationState
                 .Should().Be(WormInitializationState.WORM_INIT_INITIALIZED,
@@ -232,20 +209,20 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.IntegrationTest
 
             var startProcessType = string.Empty;
             var startProcessData = Array.Empty<byte>();
-            var startResponse = await sut.TransactionStartAsync(HardwareFixtures.ClientId, startProcessData, startProcessType);
-            OutputHelper.WriteLine($"transactionStart, TransactionNumber: {startResponse.TransactionNumber}, LogTime: {startResponse.LogTime}, SignatureCounter: {startResponse.SignatureCounter}, Signature: {startResponse.SignatureBase64}, SerialNumber: {startResponse.SerialNumber.ToOctetString()}");
+            var startResponse = await sut.TransactionStartAsync(_hardwareFixtures.ClientId, startProcessData, startProcessType);
+            _outputHelper.WriteLine($"transactionStart, TransactionNumber: {startResponse.TransactionNumber}, LogTime: {startResponse.LogTime}, SignatureCounter: {startResponse.SignatureCounter}, Signature: {startResponse.SignatureBase64}, SerialNumber: {startResponse.SerialNumber.ToOctetString()}");
 
             var updateProcessType = string.Empty;
             var updateProcessData = Array.Empty<byte>();
-            var updateResponse = await sut.TransactionUpdateAsync(HardwareFixtures.ClientId, startResponse.TransactionNumber, updateProcessData, updateProcessType);
-            OutputHelper.WriteLine($"transactionUpdate, TransactionNumber: {updateResponse.TransactionNumber}, LogTime: {updateResponse.LogTime}, SignatureCounter: {updateResponse.SignatureCounter}, Signature: {updateResponse.SignatureBase64}, SerialNumber: {updateResponse.SerialNumber.ToOctetString()}");
+            var updateResponse = await sut.TransactionUpdateAsync(_hardwareFixtures.ClientId, startResponse.TransactionNumber, updateProcessData, updateProcessType);
+            _outputHelper.WriteLine($"transactionUpdate, TransactionNumber: {updateResponse.TransactionNumber}, LogTime: {updateResponse.LogTime}, SignatureCounter: {updateResponse.SignatureCounter}, Signature: {updateResponse.SignatureBase64}, SerialNumber: {updateResponse.SerialNumber.ToOctetString()}");
             updateResponse.TransactionNumber.Should().Be(startResponse.TransactionNumber);
             updateResponse.SignatureCounter.Should().Be(startResponse.SignatureCounter + 1);
 
             var finishProcessType = "Kassenbeleg-V1";
             var finishPrcessData = System.Text.Encoding.ASCII.GetBytes("AVRechnung^0,00_84,20_0,00_0,00_0,00^84,20:Bar");
-            var finishResponse = await sut.TransactionFinishAsync(HardwareFixtures.ClientId, startResponse.TransactionNumber, finishPrcessData, finishProcessType);
-            OutputHelper.WriteLine($"transactionFinish, TransactionNumber: {finishResponse.TransactionNumber}, LogTime: {finishResponse.LogTime}, SignatureCounter: {finishResponse.SignatureCounter}, Signature: {finishResponse.SignatureBase64}, SerialNumber: {finishResponse.SerialNumber.ToOctetString()}");
+            var finishResponse = await sut.TransactionFinishAsync(_hardwareFixtures.ClientId, startResponse.TransactionNumber, finishPrcessData, finishProcessType);
+            _outputHelper.WriteLine($"transactionFinish, TransactionNumber: {finishResponse.TransactionNumber}, LogTime: {finishResponse.LogTime}, SignatureCounter: {finishResponse.SignatureCounter}, Signature: {finishResponse.SignatureBase64}, SerialNumber: {finishResponse.SerialNumber.ToOctetString()}");
             finishResponse.TransactionNumber.Should().Be(startResponse.TransactionNumber);
             finishResponse.SignatureCounter.Should().Be(updateResponse.SignatureCounter + 1);
         }
@@ -268,7 +245,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.IntegrationTest
             {
                 await sut.TseUpdateTimeAsync();
             }
-            await sut.TseRegisterClientAsync(HardwareFixtures.ClientId);
+            await sut.TseRegisterClientAsync(_hardwareFixtures.ClientId);
 
             status.initializationState
                 .Should().Be(WormInitializationState.WORM_INIT_INITIALIZED,
@@ -277,20 +254,20 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.IntegrationTest
             {
                 var startProcessType = string.Empty;
                 var startProcessData = Array.Empty<byte>();
-                var startResponse = await sut.TransactionStartAsync(HardwareFixtures.ClientId, startProcessData, startProcessType);
-                OutputHelper.WriteLine($"transactionStart, TransactionNumber: {startResponse.TransactionNumber}, LogTime: {startResponse.LogTime}, SignatureCounter: {startResponse.SignatureCounter}, Signature: {startResponse.SignatureBase64}, SerialNumber: {startResponse.SerialNumber.ToOctetString()}");
+                var startResponse = await sut.TransactionStartAsync(_hardwareFixtures.ClientId, startProcessData, startProcessType);
+                _outputHelper.WriteLine($"transactionStart, TransactionNumber: {startResponse.TransactionNumber}, LogTime: {startResponse.LogTime}, SignatureCounter: {startResponse.SignatureCounter}, Signature: {startResponse.SignatureBase64}, SerialNumber: {startResponse.SerialNumber.ToOctetString()}");
 
                 var updateProcessType = string.Empty;
                 var updateProcessData = Array.Empty<byte>();
-                var updateResponse = await sut.TransactionUpdateAsync(HardwareFixtures.ClientId, startResponse.TransactionNumber, updateProcessData, updateProcessType);
-                OutputHelper.WriteLine($"transactionUpdate, TransactionNumber: {updateResponse.TransactionNumber}, LogTime: {updateResponse.LogTime}, SignatureCounter: {updateResponse.SignatureCounter}, Signature: {updateResponse.SignatureBase64}, SerialNumber: {updateResponse.SerialNumber.ToOctetString()}");
+                var updateResponse = await sut.TransactionUpdateAsync(_hardwareFixtures.ClientId, startResponse.TransactionNumber, updateProcessData, updateProcessType);
+                _outputHelper.WriteLine($"transactionUpdate, TransactionNumber: {updateResponse.TransactionNumber}, LogTime: {updateResponse.LogTime}, SignatureCounter: {updateResponse.SignatureCounter}, Signature: {updateResponse.SignatureBase64}, SerialNumber: {updateResponse.SerialNumber.ToOctetString()}");
                 updateResponse.TransactionNumber.Should().Be(startResponse.TransactionNumber);
                 updateResponse.SignatureCounter.Should().Be(startResponse.SignatureCounter + 1);
 
                 var finishProcessType = "Kassenbeleg-V1";
                 var finishPrcessData = System.Text.Encoding.ASCII.GetBytes("AVRechnung^0,00_84,20_0,00_0,00_0,00^84,20:Bar");
-                var finishResponse = await sut.TransactionFinishAsync(HardwareFixtures.ClientId, startResponse.TransactionNumber, finishPrcessData, finishProcessType);
-                OutputHelper.WriteLine($"transactionFinish, TransactionNumber: {finishResponse.TransactionNumber}, LogTime: {finishResponse.LogTime}, SignatureCounter: {finishResponse.SignatureCounter}, Signature: {finishResponse.SignatureBase64}, SerialNumber: {finishResponse.SerialNumber.ToOctetString()}");
+                var finishResponse = await sut.TransactionFinishAsync(_hardwareFixtures.ClientId, startResponse.TransactionNumber, finishPrcessData, finishProcessType);
+                _outputHelper.WriteLine($"transactionFinish, TransactionNumber: {finishResponse.TransactionNumber}, LogTime: {finishResponse.LogTime}, SignatureCounter: {finishResponse.SignatureCounter}, Signature: {finishResponse.SignatureBase64}, SerialNumber: {finishResponse.SerialNumber.ToOctetString()}");
                 finishResponse.TransactionNumber.Should().Be(startResponse.TransactionNumber);
                 finishResponse.SignatureCounter.Should().Be(updateResponse.SignatureCounter + 1);
             }
@@ -328,65 +305,13 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.IntegrationTest
                 {
                     while (reader.MoveToNextEntry())
                     {
-                        OutputHelper.WriteLine($"{reader.Entry.Key}");
+                        _outputHelper.WriteLine($"{reader.Entry.Key}");
                     }
                 }
 
-                OutputHelper.WriteLine($"{Convert.ToBase64String(ms.ToArray())}");
+                _outputHelper.WriteLine($"{Convert.ToBase64String(ms.ToArray())}");
             }
         }
-
-#if DEBUG
-        [Fact]
-#endif
-        [Trait("Category", "SkipWhenLiveUnitTesting")]
-        public async Task ExportFromScu()
-        {
-            var scu = new SwissbitSCU(new Dictionary<string, object>
-            {
-                { "devicePath", "H:" }
-            });
-
-            var exportSession = await scu.StartExportSessionAsync(new StartExportSessionRequest
-            {
-                
-            });
-
-            exportSession.Should().NotBeNull();
-            using (var fileStream = File.OpenWrite($"export_{exportSession.TokenId}.tar"))
-            {
-                ExportDataResponse export;
-                do
-                {
-                    export = await scu.ExportDataAsync(new ExportDataRequest
-                    {
-                        TokenId = exportSession.TokenId,
-                        MaxChunkSize = 1024 * 1024
-                    });
-                    if (!export.TotalTarFileSizeAvailable)
-                    {
-                        await Task.Delay(TimeSpan.FromSeconds(1));
-                    }
-                    else
-                    {
-                        var allBytes = Convert.FromBase64String(export.TarFileByteChunkBase64);
-                        await fileStream.WriteAsync(allBytes, 0, allBytes.Length);
-                    }
-                } while (!export.TarFileEndOfFile);
-            }
-
-            var endSessionRequest = new EndExportSessionRequest
-            {
-                TokenId = exportSession.TokenId
-            };
-            using (var fileStream = File.OpenRead($"export_{exportSession.TokenId}.tar"))
-            {
-                endSessionRequest.Sha256ChecksumBase64 = Convert.ToBase64String(SHA256.Create().ComputeHash(fileStream));
-            }
-
-            var endExportSessionResult = await scu.EndExportSessionAsync(endSessionRequest);
-        }
-
 
 #if DEBUG
         [Fact]
@@ -409,26 +334,26 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.IntegrationTest
                "Swissbit TSE need to be in WORM_INIT_INITIALIZED state");
 
 
-            OutputHelper.WriteLine($"LogTimeFormat: {await sut.GetLogTimeFormatAsync()}");
-            OutputHelper.WriteLine($"SignatureAlgorithm: {await sut.GetSignatureAlgorithmAsync()}");
-            OutputHelper.WriteLine($"Version: {await sut.GetVersionAsync()}");
+            _outputHelper.WriteLine($"LogTimeFormat: {await sut.GetLogTimeFormatAsync()}");
+            _outputHelper.WriteLine($"SignatureAlgorithm: {await sut.GetSignatureAlgorithmAsync()}");
+            _outputHelper.WriteLine($"Version: {await sut.GetVersionAsync()}");
 
 
 
             status = await sut.GetTseStatusAsync();
-            OutputHelper.WriteLine(JsonConvert.SerializeObject(status));
+            _outputHelper.WriteLine(JsonConvert.SerializeObject(status));
 
             var serialNumberBytes = status.TseSerialNumber;
-            OutputHelper.WriteLine($"SerialNumber: {BitConverter.ToString(serialNumberBytes)}");
+            _outputHelper.WriteLine($"SerialNumber: {BitConverter.ToString(serialNumberBytes)}");
 
             var publicKeyBytes = status.TsePublicKey;
-            OutputHelper.WriteLine($"PublicKey: {BitConverter.ToString(publicKeyBytes)}");
+            _outputHelper.WriteLine($"PublicKey: {BitConverter.ToString(publicKeyBytes)}");
 
             var sha384 = new SHA384Managed();
-            OutputHelper.WriteLine($"SHA384(PublicKey): {BitConverter.ToString(sha384.ComputeHash(publicKeyBytes))}");
+            _outputHelper.WriteLine($"SHA384(PublicKey): {BitConverter.ToString(sha384.ComputeHash(publicKeyBytes))}");
 
             var sha256 = new SHA256Managed();
-            OutputHelper.WriteLine($"SHA256(PublicKey): {BitConverter.ToString(sha256.ComputeHash(publicKeyBytes))}");
+            _outputHelper.WriteLine($"SHA256(PublicKey): {BitConverter.ToString(sha256.ComputeHash(publicKeyBytes))}");
 
         }
 
@@ -458,13 +383,13 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.IntegrationTest
 
                 var cert = new System.Security.Cryptography.X509Certificates.X509Certificate2(certificateBytes);
 
-                OutputHelper.WriteLine($"Subject: {cert.Subject}");
-                OutputHelper.WriteLine($"Issuer: {cert.Issuer}");
+                _outputHelper.WriteLine($"Subject: {cert.Subject}");
+                _outputHelper.WriteLine($"Issuer: {cert.Issuer}");
 
-                OutputHelper.WriteLine($"SerialNumber: {BitConverter.ToString(cert.GetSerialNumber())}");
-                OutputHelper.WriteLine($"SerialNumberBase64: {Convert.ToBase64String(cert.GetSerialNumber())}");
-                OutputHelper.WriteLine($"PublicKey: {BitConverter.ToString(cert.GetPublicKey())}");
-                OutputHelper.WriteLine($"PublicKeyBase64: {Convert.ToBase64String(cert.GetPublicKey())}");
+                _outputHelper.WriteLine($"SerialNumber: {BitConverter.ToString(cert.GetSerialNumber())}");
+                _outputHelper.WriteLine($"SerialNumberBase64: {Convert.ToBase64String(cert.GetSerialNumber())}");
+                _outputHelper.WriteLine($"PublicKey: {BitConverter.ToString(cert.GetPublicKey())}");
+                _outputHelper.WriteLine($"PublicKeyBase64: {Convert.ToBase64String(cert.GetPublicKey())}");
             }
 
             {
@@ -472,43 +397,13 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.IntegrationTest
                 var parser = new Org.BouncyCastle.X509.X509CertificateParser();
                 foreach (Org.BouncyCastle.X509.X509Certificate item in parser.ReadCertificates(certificateBytes))
                 {
-                    OutputHelper.WriteLine($"Subject: {item.SubjectDN.ToString()}");
-                    OutputHelper.WriteLine($"Issuer: {item.IssuerDN.ToString()}");
+                    _outputHelper.WriteLine($"Subject: {item.SubjectDN.ToString()}");
+                    _outputHelper.WriteLine($"Issuer: {item.IssuerDN.ToString()}");
 
-                    OutputHelper.WriteLine($"SerialNumber: {BitConverter.ToString(item.SerialNumber.ToByteArray())}");
-                    OutputHelper.WriteLine($"SerialNumberBase64: {Convert.ToBase64String(item.SerialNumber.ToByteArray())}");
+                    _outputHelper.WriteLine($"SerialNumber: {BitConverter.ToString(item.SerialNumber.ToByteArray())}");
+                    _outputHelper.WriteLine($"SerialNumberBase64: {Convert.ToBase64String(item.SerialNumber.ToByteArray())}");
 
                 }
-            }
-        }
-
-#if DEBUG
-        [Fact]
-#endif
-        [Trait("Category", "SkipWhenLiveUnitTesting")]
-        public async Task ExportTarIncrementalStream()
-        {
-            var status = await sut.GetTseStatusAsync();
-            if (status.HasPassedSelfTest == false)
-            {
-                await sut.TseRunSelfTestAsnyc();
-            }
-            if (status.HasValidTime == false)
-            {
-                await sut.TseUpdateTimeAsync();
-            }
-
-            status.initializationState
-               .Should().Be(
-               WormInitializationState.WORM_INIT_INITIALIZED,
-               "Swissbit TSE need to be in WORM_INIT_INITIALIZED state");
-
-            using (var ms = new MemoryStream())
-            {
-                var lastState = await sut.ExportTarIncrementalAsync(ms, Array.Empty<byte>());
-                OutputHelper.WriteLine($"{Convert.ToBase64String(ms.ToArray())}");
-
-                ms.Length.Should().BeGreaterThan(0);
             }
         }
 
@@ -537,7 +432,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.IntegrationTest
             {
                 Int64 timeInfinite = -1;
                 await sut.ExportTarFilteredTimeAsync(ms, 0, (UInt64) timeInfinite, string.Empty);
-                OutputHelper.WriteLine($"{Convert.ToBase64String(ms.ToArray())}");
+                _outputHelper.WriteLine($"{Convert.ToBase64String(ms.ToArray())}");
 
                 ms.Length.Should().BeGreaterThan(0);
             }
@@ -568,7 +463,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.IntegrationTest
             {
                 Int64 transactionInfinite = -1;
                 await sut.ExportTarFilteredTimeAsync(ms, 0, (UInt64) transactionInfinite, string.Empty);
-                OutputHelper.WriteLine($"{Convert.ToBase64String(ms.ToArray())}");
+                _outputHelper.WriteLine($"{Convert.ToBase64String(ms.ToArray())}");
 
                 ms.Length.Should().BeGreaterThan(0);
             }
@@ -595,12 +490,12 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.IntegrationTest
                WormInitializationState.WORM_INIT_INITIALIZED,
                "Swissbit TSE need to be in WORM_INIT_INITIALIZED state");
 
-            await sut.UserLoginAsync(WormUserId.WORM_USER_ADMIN, HardwareFixtures.AdminPin);
+            await sut.UserLoginAsync(WormUserId.WORM_USER_ADMIN, _hardwareFixtures.AdminPin);
 
             await sut.UserLogoutAsync(WormUserId.WORM_USER_ADMIN);
 
             //logout of not logged in user should fail.
-            var ex = await Assert.ThrowsAsync<Interop.Exceptions.SwissbitException>(() => sut.UserLogoutAsync(WormUserId.WORM_USER_ADMIN));
+            var ex = await Assert.ThrowsAsync<SwissbitException>(() => sut.UserLogoutAsync(WormUserId.WORM_USER_ADMIN));
             ex.Message.Should().Be("Given user is not authenticated. ");
 
         }
@@ -630,13 +525,13 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.IntegrationTest
             await Transaction();
 
             //delete data should fail when not authenticated as admin
-            var exAuthentication = await Assert.ThrowsAsync<Interop.Exceptions.SwissbitException>(() => sut.DeleteStoredDataAsync());
+            var exAuthentication = await Assert.ThrowsAsync<SwissbitException>(() => sut.DeleteStoredDataAsync());
             exAuthentication.Message.Should().Be("Not authorized. ");
 
-            await sut.UserLoginAsync(WormUserId.WORM_USER_ADMIN, HardwareFixtures.AdminPin);
+            await sut.UserLoginAsync(WormUserId.WORM_USER_ADMIN, _hardwareFixtures.AdminPin);
 
             //delete data should fail when no export is done before
-            var exNoExport = await Assert.ThrowsAsync<Interop.Exceptions.SwissbitException>(() => sut.DeleteStoredDataAsync());
+            var exNoExport = await Assert.ThrowsAsync<SwissbitException>(() => sut.DeleteStoredDataAsync());
             exNoExport.Message.Should().Be("Failed to delete, data not completely exported. ");
 
             await sut.UserLogoutAsync(WormUserId.WORM_USER_ADMIN);
@@ -668,7 +563,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.IntegrationTest
             await Transaction();
 
             //login
-            await sut.UserLoginAsync(WormUserId.WORM_USER_ADMIN, HardwareFixtures.AdminPin);
+            await sut.UserLoginAsync(WormUserId.WORM_USER_ADMIN, _hardwareFixtures.AdminPin);
 
             //do export1
             long len1 = 0;
