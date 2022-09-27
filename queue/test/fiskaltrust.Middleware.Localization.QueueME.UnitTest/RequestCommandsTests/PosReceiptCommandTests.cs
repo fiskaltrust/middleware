@@ -72,7 +72,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
                 ftJournalMEId = Guid.NewGuid(),
                 ftQueueItemId = existingQueueItem.ftQueueItemId,
                 ftQueueId = existingQueueItem.ftQueueId,
-                ftOrdinalNumber = 8,
+                YearlyOrdinalNumber = 8,
                 JournalType = (long) JournalTypes.JournalME,
                 Number = 8
             };
@@ -98,7 +98,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             var journalMEs = await inMemoryJournalMeRepository.GetAsync();
             var journalME = journalMEs.Where(x => x.ftQueueItemId.Equals(queueItem.ftQueueItemId)).FirstOrDefault();
             journalME.Should().NotBeNull();
-            journalME.ftOrdinalNumber.Should().Be(9);
+            journalME.YearlyOrdinalNumber.Should().Be(9);
         }
 
         [Fact]
@@ -123,8 +123,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
                 TcrIntId = queue.ftQueueId.ToString(),
                 BusinessUnitCode = businessUnitCode,
                 IssuerTin = issuerTin,
-                TcrCode = "TestTCRCode008",
-                EnuType = "Regular"
+                TcrCode = "TestTCRCode008"
             };
             await inMemoryConfigurationRepository.InsertOrUpdateSignaturCreationUnitMEAsync(scu);
             await inMemoryConfigurationRepository.InsertOrUpdateQueueMEAsync(queueMe);
@@ -140,7 +139,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             {
                 ftQueueItemId = existingQueueItem.ftQueueItemId,
                 ftQueueId = existingQueueItem.ftQueueId,
-                ftOrdinalNumber = 8,
+                YearlyOrdinalNumber = 8,
                 JournalType = (long) JournalTypes.JournalME
             };
             var inMemoryActionJournalRepository = await IniActionJournalRepo(queue, existingQueueItem.ftQueueItemId, DateTime.UtcNow.AddDays(-1));
@@ -196,7 +195,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             {
                 ftQueueItemId = existingQueueItem.ftQueueItemId,
                 ftQueueId = existingQueueItem.ftQueueId,
-                ftOrdinalNumber = 8,
+                YearlyOrdinalNumber = 8,
                 JournalType = (long) JournalTypes.JournalME
             };
             await inMemoryJournalMERepository.InsertAsync(journal);
@@ -221,7 +220,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
             var journalMEs = await inMemoryJournalMERepository.GetAsync();
             var journalME = journalMEs.Where(x => x.ftQueueItemId.Equals(queueItem.ftQueueItemId));
             Assert.Single(journalME);
-            journalME.FirstOrDefault().ftOrdinalNumber.Should().Be(1);
+            journalME.FirstOrDefault().YearlyOrdinalNumber.Should().Be(1);
         }
 
         private static async Task AddCashDeposit(Guid queueId, InMemoryJournalMERepository inMemoryJournalMeRepository)
@@ -231,7 +230,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
                 ftJournalMEId = Guid.NewGuid(),
                 ftQueueItemId = Guid.NewGuid(),
                 ftQueueId = queueId,
-                ftOrdinalNumber = 8,
+                YearlyOrdinalNumber = 8,
                 JournalType = 5567856514313486343
             };
             await inMemoryJournalMeRepository.InsertAsync(journal);
@@ -247,8 +246,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
                 TcrIntId = tcrIntId,
                 BusinessUnitCode = businessUnitCode,
                 IssuerTin = issuerTin,
-                TcrCode = "TestTCRCode008",
-                EnuType = "Regular"
+                TcrCode = "TestTCRCode008"
             };
             await inMemoryConfigurationRepository.InsertOrUpdateSignaturCreationUnitMEAsync(scu);
             await inMemoryConfigurationRepository.InsertOrUpdateQueueMEAsync(queueMe);
@@ -268,10 +266,10 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
                     FIC = "TestFic",
                     JournalType = (long) JournalTypes.JournalME,
                     TimeStamp = DateTime.UtcNow.Ticks,
-                    ftOrdinalNumber = 0,
+                    YearlyOrdinalNumber = 0,
                     ftQueueId = queueMe.ftQueueMEId,
                     ftJournalMEId = Guid.NewGuid(),
-                    ftInvoiceNumber = "TestInvoiceNr"
+                    InvoiceNumber = "TestInvoiceNr"
                 });
             }
             var queueMeConfiguration = new QueueMEConfiguration { Sandbox = true };

@@ -175,9 +175,9 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 FIC = registerInvoiceResponse.FIC,
                 IIC = computeIicResponse.IIC,
                 JournalType = (long) JournalTypes.JournalME,
-                ftOrdinalNumber = (int) invoice.YearlyOrdinalNumber
+                YearlyOrdinalNumber = (int) invoice.YearlyOrdinalNumber
             };
-            journal.ftInvoiceNumber = string.Concat(scu.BusinessUnitCode, '/', journal.ftOrdinalNumber, '/', request.cbReceiptMoment.Year, '/', scu.TcrCode);
+            journal.InvoiceNumber = string.Concat(scu.BusinessUnitCode, '/', journal.YearlyOrdinalNumber, '/', request.cbReceiptMoment.Year, '/', scu.TcrCode);
             await JournalMeRepository.InsertAsync(journal).ConfigureAwait(false);
         }
         private static ComputeIICRequest CreateComputeIicRequest(ReceiptRequest request, ftSignaturCreationUnitME scu, InvoiceDetails invoiceDetails)
@@ -259,7 +259,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             }
             var lastQueueItem = await QueueItemRepository.GetAsync(lastJournal.ftQueueItemId);
             return queueItem.cbReceiptMoment.Year == lastQueueItem.cbReceiptMoment.Year
-                ? (ulong) (lastJournal.ftOrdinalNumber + 1)
+                ? (ulong) (lastJournal.YearlyOrdinalNumber + 1)
                 : 1;
         }
     }

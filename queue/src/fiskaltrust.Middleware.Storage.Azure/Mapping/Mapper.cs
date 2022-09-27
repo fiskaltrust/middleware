@@ -216,8 +216,8 @@ namespace fiskaltrust.Middleware.Storage.Azure.Mapping
                 ftJournalMEId = src.ftJournalMEId,
                 ftQueueItemId = src.ftQueueItemId,
                 cbReference = src.cbReference,
-                ftInvoiceNumber = src.ftInvoiceNumber,
-                ftOrdinalNumber = src.ftOrdinalNumber,
+                InvoiceNumber = src.InvoiceNumber,
+                YearlyOrdinalNumber = src.YearlyOrdinalNumber,
                 ftQueueId = src.ftQueueId,
                 TimeStamp = src.TimeStamp
             };
@@ -236,8 +236,8 @@ namespace fiskaltrust.Middleware.Storage.Azure.Mapping
                 ftJournalMEId = src.ftJournalMEId,
                 ftQueueItemId = src.ftQueueItemId,
                 cbReference = src.cbReference,
-                ftInvoiceNumber = src.ftInvoiceNumber,
-                ftOrdinalNumber = src.ftOrdinalNumber,
+                InvoiceNumber = src.InvoiceNumber,
+                YearlyOrdinalNumber = src.YearlyOrdinalNumber,
                 ftQueueId = src.ftQueueId,
                 TimeStamp = src.TimeStamp
             };
@@ -911,10 +911,7 @@ namespace fiskaltrust.Middleware.Storage.Azure.Mapping
                 PartitionKey = src.ftSignaturCreationUnitMEId.ToString(),
                 RowKey = src.ftSignaturCreationUnitMEId.ToString(),
                 ftSignaturCreationUnitMEId = src.ftSignaturCreationUnitMEId,
-                TseInfoJson = src.TseInfoJson,
                 TimeStamp = src.TimeStamp,
-                Mode = src.Mode,
-                ModeConfigurationJson = src.ModeConfigurationJson,
                 IssuerTin = src.IssuerTin,
                 BusinessUnitCode = src.BusinessUnitCode,
                 TcrIntId = src.TcrIntId,
@@ -922,7 +919,6 @@ namespace fiskaltrust.Middleware.Storage.Azure.Mapping
                 MaintainerCode = src.MaintainerCode,
                 ValidFrom = src.ValidFrom,
                 ValidTo = src.ValidTo,
-                EnuType = src.EnuType,
                 TcrCode = src.TcrCode
             };
         }
@@ -937,10 +933,7 @@ namespace fiskaltrust.Middleware.Storage.Azure.Mapping
             return new ftSignaturCreationUnitME
             {
                 ftSignaturCreationUnitMEId = src.ftSignaturCreationUnitMEId,
-                TseInfoJson = src.TseInfoJson,
                 TimeStamp = src.TimeStamp,
-                Mode = src.Mode,
-                ModeConfigurationJson = src.ModeConfigurationJson,
                 IssuerTin = src.IssuerTin,
                 BusinessUnitCode = src.BusinessUnitCode,
                 TcrIntId = src.TcrIntId,
@@ -948,7 +941,6 @@ namespace fiskaltrust.Middleware.Storage.Azure.Mapping
                 MaintainerCode = src.MaintainerCode,
                 ValidFrom = src.ValidFrom,
                 ValidTo = src.ValidTo,
-                EnuType = src.EnuType,
                 TcrCode = src.TcrCode
             };
         }

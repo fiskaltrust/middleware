@@ -32,7 +32,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.RequestCommandsTe
                 SoftwareCode = "ft54ft871",
                 MaintainerCode = "ft88fz999",
                 ValidFrom = DateTime.UtcNow.AddDays(-50),
-                EnuType = "REGULAR",     
                 TcrCode = "Testtcr"
             };
             var queueME = new ftQueueME()

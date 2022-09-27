@@ -7,10 +7,7 @@ namespace fiskaltrust.Middleware.Storage.Azure.TableEntities.Configuration
     {
         public Guid ftSignaturCreationUnitMEId { get; set; }
         public string Url { get; set; }
-        public string TseInfoJson { get; set; }
         public long TimeStamp { get; set; }
-        public int Mode { get; set; }
-        public string ModeConfigurationJson { get; set; }
         public string IssuerTin { get; set; }
         public string BusinessUnitCode { get; set; }
         public string TcrIntId { get; set; }
@@ -18,7 +15,6 @@ namespace fiskaltrust.Middleware.Storage.Azure.TableEntities.Configuration
         public string MaintainerCode { get; set; }
         public DateTime? ValidFrom { get; set; }
         public DateTime? ValidTo { get; set; }
-        public string EnuType { get; set; }
         public string TcrCode { get; set; }
     }
 }

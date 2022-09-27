@@ -24,8 +24,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.UnitTest.Helper
                 ftSignaturCreationUnitMEId = queueME.ftSignaturCreationUnitMEId.Value,
                 TcrIntId = "TcrIntId",
                 IssuerTin = "4524689",
-                TcrCode = tcrCode,
-                EnuType = "Regular"
+                TcrCode = tcrCode
             };
             await inMemoryConfigurationRepository.InsertOrUpdateSignaturCreationUnitMEAsync(scu).ConfigureAwait(false);
             await inMemoryConfigurationRepository.InsertOrUpdateQueueMEAsync(queueME);
