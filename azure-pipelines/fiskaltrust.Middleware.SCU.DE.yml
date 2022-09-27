@@ -27,7 +27,7 @@ variables:
   - name: Solution
     value: "fiskaltrust.Middleware.SCU.DE.sln"
   - name: vmImageName
-    value: "windows-2022"
+    value: "windows-latest"
   - name: WorkingDirectory
     value: "scu-de"
 
