@@ -29,7 +29,6 @@ steps:
   inputs:
     solution: '$(WorkingDirectory)/$(Solution)'
     configuration: '$(BuildConfiguration)'
-  workingDirectory: '$(WorkingDirectory)'
 
 - task: DotNetCoreCLI@2
   inputs:
