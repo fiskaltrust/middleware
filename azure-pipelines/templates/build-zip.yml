@@ -27,19 +27,18 @@ steps:
     path: $(UserProfile)/.nuget/packages
   displayName: Cache NuGet packages
 
-- task: DotNetCoreCLI@2
+
+- task: NuGetCommand@2
   inputs:
     command: 'restore'
-    projects: ' ${{ parameters.workingDirectory }}/$(Solution)'
+    restoreSolution: '$(WorkingDirectory)/$(Solution)'
     feedsToUse: 'select'
     vstsFeed: '$(NuGetFeed)'
-  displayName: 'Restore'
-  
-- task: DotNetCoreCLI@2
-  displayName: Build
+
+- task: VSBuild@1
   inputs:
-    projects: ' ${{ parameters.workingDirectory }}/$(Solution)'
-    arguments: '--configuration $(BuildConfiguration) --no-restore'
+    solution: '$(WorkingDirectory)/$(Solution)'
+    configuration: '$(BuildConfiguration)'
 
 - task: codesigning@2
   displayName: 'Code Signing'
