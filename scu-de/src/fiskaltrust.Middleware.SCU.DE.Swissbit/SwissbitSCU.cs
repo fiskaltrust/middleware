@@ -1,5 +1,4 @@
-﻿
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -23,19 +22,11 @@ using static fiskaltrust.Middleware.SCU.DE.Swissbit.Interop.NativeFunctionPointe
 
 namespace fiskaltrust.Middleware.SCU.DE.Swissbit
 {
-    public class SwissbitSCU : IDESSCD, IDisposable
+    public sealed class SwissbitSCU : IDESSCD, IDisposable
     {
         private const string NO_EXPORT = "noexport-";
         private const string TSE_INFO_DAT = "TSE_INFO.DAT";
 
-        private bool disposed = false;
-        private byte[] CertificatesBytes = null;
-        private TimeSpan _SelftestInterval = TimeSpan.FromHours(24);
-        private uint _hwSelftestIntervalSeconds = 0;
-
-        // don't change this puk-default-value and seed-default-value, all existing installations are initialized with this puk. in the moment they are not influenced by configuration
-        private readonly byte[] _adminPuk = Encoding.ASCII.GetBytes("123456");
-        private readonly byte[] _seed = Encoding.ASCII.GetBytes("SwissbitSwissbit");
         private readonly SemaphoreSlim _hwLock = new SemaphoreSlim(1, 1);
         private readonly object _proxyLock = new object();
         private readonly Timer _selftestTimer;
@@ -44,10 +35,17 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
         private readonly ILogger<SwissbitSCU> _logger;
         private readonly LockingHelper _lockingHelper;
         private readonly ConcurrentDictionary<string, ExportStateData> _readStreamPointer = new ConcurrentDictionary<string, ExportStateData>();
-        private readonly ConcurrentDictionary<UInt64, DateTime> StartTransactionTimeStampCache = new ConcurrentDictionary<ulong, DateTime>();
+        private readonly ConcurrentDictionary<ulong, DateTime> _startTransactionTimeStampCache = new ConcurrentDictionary<ulong, DateTime>();
 
+        private byte[] _certificatesBytes = null;
+        private TimeSpan _selftestInterval = TimeSpan.FromHours(24);
+        private uint _hwSelftestIntervalSeconds = 0;
         private ISwissbitProxy _proxy = null;
         private DateTime _nextSyncTime;
+
+        // Never change these values, as all existing installations are depending on them
+        private readonly byte[] _adminPuk = Encoding.ASCII.GetBytes("123456");
+        private readonly byte[] _seed = Encoding.ASCII.GetBytes("SwissbitSwissbit");
 
         public TseInfo LastTseInfo { get; private set; }
 
@@ -226,8 +224,8 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
                 tseStatus = await proxy.GetTseStatusAsync();
                 _logger.LogDebug("Received new TSE status information: {TseStatus}", JsonConvert.SerializeObject(tseStatus));
                 _hwSelftestIntervalSeconds = tseStatus.TimeUntilNextSelfTest;
-                _SelftestInterval = TimeSpan.FromSeconds(_hwSelftestIntervalSeconds * 0.80);
-                _selftestTimer.Change(_SelftestInterval, _SelftestInterval);
+                _selftestInterval = TimeSpan.FromSeconds(_hwSelftestIntervalSeconds * 0.80);
+                _selftestTimer.Change(_selftestInterval, _selftestInterval);
             }
         }
 
@@ -261,11 +259,11 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
         {
             // returns a complete certificate chain as a PEM-file. the first certificate in the chain can be used to verify the signatures of the log-messages.
 
-            if (CertificatesBytes == null)
+            if (_certificatesBytes == null)
             {
-                CertificatesBytes = await proxy.GetLogMessageCertificateAsync();
+                _certificatesBytes = await proxy.GetLogMessageCertificateAsync();
             }
-            return CertificatesBytes;
+            return _certificatesBytes;
         }
 
         private async Task<List<string>> GetCertificateBase64ListAsync(ISwissbitProxy proxy)
@@ -347,25 +345,6 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
                 tseInfo.CurrentStartedTransactionNumbers = Array.Empty<ulong>();
                 tseInfo.CertificatesBase64 = Array.Empty<string>();
             }
-
-            //tseInfo.Info.Add("FlashHealth", await proxy.GetFlashHealthSummaryAsync());
-            //tseInfo.Info.Add("Version", await proxy.GetVersionAsync());
-            //tseInfo.Info.Add("CapacityInBlocks", status.CapacityInBlocks);
-            //tseInfo.Info.Add("SizeInBlocks", status.SizeInBlocks);
-            //tseInfo.Info.Add("CertificateExpirationDate", status.CertificateExpirationDate.ToDateTime());
-            //tseInfo.Info.Add("CustomizationIdentifier", status.CustomizationIdentifier);
-            //tseInfo.Info.Add("FormFactor", status.FormFactor);
-            //tseInfo.Info.Add("HardwareVersion", status.HardwareVersion);
-            //tseInfo.Info.Add("HasPassedSelfTest", status.HasPassedSelfTest);
-            //tseInfo.Info.Add("HasValidTime", status.HasValidTime);
-            //tseInfo.Info.Add("MaxTimeSynchronizationDelay", status.MaxTimeSynchronizationDelay);
-            //tseInfo.Info.Add("MaxUpdateDelay", status.MaxUpdateDelay);
-            //tseInfo.Info.Add("RemainingSignatures", status.RemainingSignatures);
-            //tseInfo.Info.Add("SoftwareVersion", status.SoftwareVersion);
-            //tseInfo.Info.Add("TarExportSizeInBytes", status.TarExportSizeInBytes);
-            //tseInfo.Info.Add("TarExportSizeInSectors", status.TarExportSizeInSectors);
-            //tseInfo.Info.Add("TimeUntilNextSelfTest", status.TimeUntilNextSelfTest);
-            //tseInfo.Info.Add("TseDescription", status.TseDescription);
             LastTseInfo = tseInfo;
         }
 
@@ -497,7 +476,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
                             }
                         };
 
-                        StartTransactionTimeStampCache.AddOrUpdate(tseResponse.TransactionNumber, logTimeStamp, (key, oldValue) => logTimeStamp);
+                        _startTransactionTimeStampCache.AddOrUpdate(tseResponse.TransactionNumber, logTimeStamp, (key, oldValue) => logTimeStamp);
 
                         return response;
                     }
@@ -587,7 +566,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
                         }
 
                         var startTransactionTimeStamp = tseResponse.LogTime.ToDateTime();
-                        if (!StartTransactionTimeStampCache.TryRemove(tseResponse.TransactionNumber, out startTransactionTimeStamp))
+                        if (!_startTransactionTimeStampCache.TryRemove(tseResponse.TransactionNumber, out startTransactionTimeStamp))
                         {
                             // If the TSE log memory is too full, this call takes too long, and transactions cannot be canceled anymore - basically creating a deadlock.
                             // Thus, we skip reading the timestamp of the start-transaction and fall-back to the one of the finish-transaction.
@@ -1004,25 +983,6 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
 
         public async Task<ScuDeEchoResponse> EchoAsync(ScuDeEchoRequest request) => await Task.FromResult(new ScuDeEchoResponse { Message = request.Message });
 
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!disposed)
-            {
-                if (disposing)
-                {
-                    if (_proxy != null)
-                    {
-                        _proxy.Dispose();
-                    }
-                }
-                disposed = true;
-            }
-        }
+        public void Dispose() => _proxy?.Dispose();
     }
 }

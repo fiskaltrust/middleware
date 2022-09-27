@@ -12,12 +12,9 @@ using fiskaltrust.Middleware.SCU.DE.Swissbit.Models;
 using Microsoft.Extensions.Logging;
 using static fiskaltrust.Middleware.SCU.DE.Swissbit.Interop.NativeFunctionPointer;
 
-// IntPtr might be null in < NET6
-#pragma warning disable CS8073 // The result of the expression is always the same since a value of this type is never equal to 'null'
-
 namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
 {
-    public class SwissbitProxy : ISwissbitProxy, IDisposable
+    public sealed class SwissbitProxy : ISwissbitProxy, IDisposable
     {
         public const string ManagementClientId = "fiskaltrust.Middleware";
 
@@ -25,10 +22,8 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
         private IntPtr context = new IntPtr();
 
         private readonly SemaphoreSlim _hwSemaphore = new SemaphoreSlim(1, 1);
-        private readonly IntPtr _adminPinPtr = IntPtr.Zero;
-        private readonly int _adminPinLength = 0;
-        private readonly IntPtr _timeAdminPinPtr = IntPtr.Zero;
-        private readonly int _timeAdminPinLength = 0;
+        private readonly (int Length, IntPtr Ptr) _adminPin;
+        private readonly (int Length, IntPtr Ptr) _timeAdminPin;
         private readonly NativeFunctionPointer _nativeFunctionPointer;
         private readonly LockingHelper _lockingHelper;
         private readonly ILogger _logger;
@@ -37,22 +32,15 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
         public SwissbitProxy(string mountPoint, byte[] adminPin, byte[] timeAdminPin, INativeFunctionPointerFactory nativeFunctionPointerFactory, LockingHelper lockingHelper, ILogger logger)
         {
             _mountPoint = mountPoint;
-            _adminPinLength = adminPin.Length;
-            _adminPinPtr = Marshal.AllocHGlobal(_adminPinLength);
-            Marshal.Copy(adminPin, 0, _adminPinPtr, _adminPinLength);
+            _adminPin = (adminPin.Length, Marshal.AllocHGlobal(adminPin.Length));
+            Marshal.Copy(adminPin, 0, _adminPin.Ptr, _adminPin.Length);
 
-            _timeAdminPinLength = timeAdminPin.Length;
-            _timeAdminPinPtr = Marshal.AllocHGlobal(_timeAdminPinLength);
-            Marshal.Copy(timeAdminPin, 0, _timeAdminPinPtr, _timeAdminPinLength);
+            _timeAdminPin = (timeAdminPin.Length, Marshal.AllocHGlobal(timeAdminPin.Length));
+            Marshal.Copy(timeAdminPin, 0, _timeAdminPin.Ptr, timeAdminPin.Length);
 
             _nativeFunctionPointer = nativeFunctionPointerFactory.LoadLibrary();
             _lockingHelper = lockingHelper;
             _logger = logger;
-        }
-
-        ~SwissbitProxy()
-        {
-            Dispose(false);
         }
 
         public async Task<bool> UpdateFirmwareAsync(bool firmwareUpdateEnabled)
@@ -72,7 +60,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
                         if (firmwareUpdateEnabled)
                         {
                             _logger.LogWarning("Updating Swissbit TSE firmware, this may take several minutes. DON'T TURN OFF THE MIDDLEWARE WHILE THIS PROCESS IS RUNNING!");
-                            _nativeFunctionPointer.func_worm_user_login(context, WormUserId.WORM_USER_ADMIN, _adminPinPtr, _adminPinLength, IntPtr.Zero).ThrowIfError();
+                            _nativeFunctionPointer.func_worm_user_login(context, WormUserId.WORM_USER_ADMIN, _adminPin.Ptr, _adminPin.Length, IntPtr.Zero).ThrowIfError();
                             _nativeFunctionPointer.func_worm_tse_firmwareUpdate_applyBundled(context).ThrowIfError();
                             performedUpdate = true;
                             _logger.LogInformation($"Updated to Swissbit TSE firmware version {await GetVersionAsync()}.");
@@ -220,6 +208,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
                 }
                 finally
                 {
+#pragma warning disable CS8073
                     _logger.LogTrace("GetTseStatusAsync: Freeing memory..");
                     if (infoPtr != null && infoPtr != IntPtr.Zero)
                     {
@@ -229,6 +218,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
                     Marshal.FreeHGlobal(publicKeyLengthPtr);
                     Marshal.FreeHGlobal(serialNumberLengthPtr);
                     _logger.LogTrace("GetTseStatusAsync: Memory freed successfully.");
+#pragma warning restore CS8073 
                 }
             });
         }
@@ -279,7 +269,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
             {
                 try
                 {
-                    _nativeFunctionPointer.func_worm_user_login(context, WormUserId.WORM_USER_ADMIN, _adminPinPtr, _adminPinLength, IntPtr.Zero).ThrowIfError();
+                    _nativeFunctionPointer.func_worm_user_login(context, WormUserId.WORM_USER_ADMIN, _adminPin.Ptr, _adminPin.Length, IntPtr.Zero).ThrowIfError();
                     _nativeFunctionPointer.func_worm_tse_decommission(context).ThrowIfError();
                 }
                 finally
@@ -295,7 +285,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
             {
                 try
                 {
-                    _nativeFunctionPointer.func_worm_user_login(context, WormUserId.WORM_USER_TIME_ADMIN, _timeAdminPinPtr, _timeAdminPinLength, IntPtr.Zero);
+                    _nativeFunctionPointer.func_worm_user_login(context, WormUserId.WORM_USER_TIME_ADMIN, _timeAdminPin.Ptr, _timeAdminPin.Length, IntPtr.Zero);
                     _nativeFunctionPointer.func_worm_tse_updateTime(context, DateTime.UtcNow.ToTimestamp()).ThrowIfError();
                 }
                 finally
@@ -332,7 +322,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
                 var clientIdPtr = Marshal.StringToHGlobalAnsi(clientId);
                 try
                 {
-                    _nativeFunctionPointer.func_worm_user_login(context, WormUserId.WORM_USER_ADMIN, _adminPinPtr, _adminPinLength, IntPtr.Zero).ThrowIfError();
+                    _nativeFunctionPointer.func_worm_user_login(context, WormUserId.WORM_USER_ADMIN, _adminPin.Ptr, _adminPin.Length, IntPtr.Zero).ThrowIfError();
                     _nativeFunctionPointer.func_worm_tse_registerClient(context, clientIdPtr).ThrowIfError();
                 }
                 finally
@@ -350,7 +340,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
                 var clientIdPtr = Marshal.StringToHGlobalAnsi(clientId);
                 try
                 {
-                    _nativeFunctionPointer.func_worm_user_login(context, WormUserId.WORM_USER_ADMIN, _adminPinPtr, _adminPinLength, IntPtr.Zero).ThrowIfError();
+                    _nativeFunctionPointer.func_worm_user_login(context, WormUserId.WORM_USER_ADMIN, _adminPin.Ptr, _adminPin.Length, IntPtr.Zero).ThrowIfError();
                     _nativeFunctionPointer.func_worm_tse_deregisterClient(context, clientIdPtr).ThrowIfError();
                 }
                 finally
@@ -369,7 +359,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
                 try
                 {
                     var clientList = new List<string>();
-                    _nativeFunctionPointer.func_worm_user_login(context, WormUserId.WORM_USER_ADMIN, _adminPinPtr, _adminPinLength, IntPtr.Zero).ThrowIfError();
+                    _nativeFunctionPointer.func_worm_user_login(context, WormUserId.WORM_USER_ADMIN, _adminPin.Ptr, _adminPin.Length, IntPtr.Zero).ThrowIfError();
                     var clientAmount = 0;
                     do
                     {
@@ -806,50 +796,6 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
 
         public async Task DeleteStoredDataAsync() => await _lockingHelper.PerformWithLock(_hwSemaphore, () => _nativeFunctionPointer.func_worm_export_deleteStoredData(context).ThrowIfError());
 
-        private bool disposed = false;
-
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!disposed)
-            {
-                if (disposing)
-                {
-
-
-
-                }
-
-                try
-                {
-                    if (context != IntPtr.Zero)
-                    {
-                        _nativeFunctionPointer.func_worm_cleanup(context);
-                    }
-                }
-                finally
-                {
-                    context = IntPtr.Zero;
-                }
-
-                if (_adminPinPtr != IntPtr.Zero)
-                {
-                    Marshal.FreeHGlobal(_adminPinPtr);
-                }
-                if (_timeAdminPinPtr != IntPtr.Zero)
-                {
-                    Marshal.FreeHGlobal(_timeAdminPinPtr);
-                }
-
-                disposed = true;
-            }
-        }
-
         public async Task<bool> HasValidTimeAsync()
         {
             var infoPtr = _nativeFunctionPointer.func_worm_info_new(context);
@@ -869,6 +815,30 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
             var infoPtr = _nativeFunctionPointer.func_worm_info_new(context);
             _nativeFunctionPointer.func_worm_info_read(infoPtr).ThrowIfError();
             return await Task.FromResult(_nativeFunctionPointer.func_worm_info_initializationState(infoPtr).ToTseStates());
+        }
+
+        public void Dispose()
+        {
+            try
+            {
+                if (context != IntPtr.Zero)
+                {
+                    _nativeFunctionPointer.func_worm_cleanup(context);
+                }
+            }
+            finally
+            {
+                context = IntPtr.Zero;
+            }
+
+            if (_adminPin.Ptr != IntPtr.Zero)
+            {
+                Marshal.FreeHGlobal(_adminPin.Ptr);
+            }
+            if (_timeAdminPin.Ptr != IntPtr.Zero)
+            {
+                Marshal.FreeHGlobal(_timeAdminPin.Ptr);
+            }
         }
     }
 }
