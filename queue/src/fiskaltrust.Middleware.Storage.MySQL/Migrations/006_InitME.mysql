@@ -3,8 +3,8 @@ CREATE TABLE IF NOT EXISTS ftJournalME
     ftJournalMEId         NVARCHAR(36) PRIMARY KEY NOT NULL,
     Number                BIGINT NOT NULL,
     cbReference           LONGTEXT NULL,
-    ftInvoiceNumber       LONGTEXT NULL,
-    ftOrdinalNumber       BIGINT NOT NULL,
+    InvoiceNumber         LONGTEXT NULL,
+    YearlyOrdinalNumber   BIGINT NOT NULL,
     ftQueueItemId         NVARCHAR(36) NOT NULL,
     ftQueueId             NVARCHAR(36) NOT NULL,
     FCDC                  NVARCHAR(36) NULL,
@@ -31,7 +31,6 @@ CREATE TABLE IF NOT EXISTS ftSignaturCreationUnitME
 (
     ftSignaturCreationUnitDEId   NVARCHAR(36) PRIMARY KEY  NOT NULL,
     Url                          LONGTEXT				   NULL,  
-    TseInfoJson				     LONGTEXT				   NULL,                     
     TimeStamp                    BIGINT                    NOT NULL,
     IssuerTin                    LONGTEXT                  NULL,  
     BusinessUnitCode             LONGTEXT                  NULL,
@@ -40,6 +39,5 @@ CREATE TABLE IF NOT EXISTS ftSignaturCreationUnitME
     MaintainerCode               LONGTEXT                  NULL,
     ValidFrom                    BIGINT                    NULL,
     ValidTo                      BIGINT                    NULL,
-    EnuType                      LONGTEXT                  NULL,
     TcrCode                      LONGTEXT                  NULL
 );

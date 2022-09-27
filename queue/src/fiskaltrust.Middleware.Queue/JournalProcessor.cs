@@ -27,6 +27,7 @@ namespace fiskaltrust.Middleware.Queue
         private readonly IMiddlewareRepository<ftJournalAT> _journalATRepository;
         private readonly IMiddlewareRepository<ftJournalDE> _journalDERepository;
         private readonly IMiddlewareRepository<ftJournalFR> _journalFRRepository;
+        private readonly IMiddlewareRepository<ftJournalME> _journalMERepository;
         private readonly IMarketSpecificJournalProcessor _marketSpecificJournalProcessor;
         private readonly ILogger<JournalProcessor> _logger;
         private readonly MiddlewareConfiguration _middlewareConfiguration;
@@ -39,6 +40,7 @@ namespace fiskaltrust.Middleware.Queue
             IMiddlewareRepository<ftJournalAT> journalATRepository,
             IMiddlewareRepository<ftJournalDE> journalDERepository,
             IMiddlewareRepository<ftJournalFR> journalFRRepository,
+            IMiddlewareRepository<ftJournalME> journalMERepository,
             IMarketSpecificJournalProcessor marketSpecificJournalProcessor,
             ILogger<JournalProcessor> logger,
             MiddlewareConfiguration middlewareConfiguration)
@@ -50,6 +52,7 @@ namespace fiskaltrust.Middleware.Queue
             _journalATRepository = journalATRepository;
             _journalDERepository = journalDERepository;
             _journalFRRepository = journalFRRepository;
+            _journalMERepository = journalMERepository;
             _marketSpecificJournalProcessor = marketSpecificJournalProcessor;
             _logger = logger;
             _middlewareConfiguration = middlewareConfiguration;
@@ -79,6 +82,7 @@ namespace fiskaltrust.Middleware.Queue
                     (long) JournalTypes.JournalAT => ToJournalResponseAsync(GetEntitiesAsync(_journalATRepository, request), request.MaxChunkSize),
                     (long) JournalTypes.JournalDE => ToJournalResponseAsync(GetEntitiesAsync(_journalDERepository, request), request.MaxChunkSize),
                     (long) JournalTypes.JournalFR => ToJournalResponseAsync(GetEntitiesAsync(_journalFRRepository, request), request.MaxChunkSize),
+                    (long) JournalTypes.JournalME => ToJournalResponseAsync(GetEntitiesAsync(_journalMERepository, request), request.MaxChunkSize),
                     (long) JournalTypes.Configuration => new List<JournalResponse> {
                     new JournalResponse
                     {
@@ -124,9 +128,11 @@ namespace fiskaltrust.Middleware.Queue
                 QueueATList = await _configurationRepository.GetQueueATListAsync().ConfigureAwait(false),
                 QueueDEList = await _configurationRepository.GetQueueDEListAsync().ConfigureAwait(false),
                 QueueFRList = await _configurationRepository.GetQueueFRListAsync().ConfigureAwait(false),
+                QueueMEList = await _configurationRepository.GetQueueMEListAsync().ConfigureAwait(false),
                 SignaturCreationUnitATList = await _configurationRepository.GetSignaturCreationUnitATListAsync().ConfigureAwait(false),
                 SignaturCreationUnitDEList = await _configurationRepository.GetSignaturCreationUnitDEListAsync().ConfigureAwait(false),
-                SignaturCreationUnitFRList = await _configurationRepository.GetSignaturCreationUnitFRListAsync().ConfigureAwait(false)
+                SignaturCreationUnitFRList = await _configurationRepository.GetSignaturCreationUnitFRListAsync().ConfigureAwait(false),
+                SignaturCreationUnitMEList = await _configurationRepository.GetSignaturCreationUnitMEListAsync().ConfigureAwait(false)
             };
         }
 
