@@ -3,15 +3,17 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using fiskaltrust.Middleware.Storage.EFCore.SQLServer;
 
 namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer.Migrations
 {
     [DbContext(typeof(SQLServerMiddlewareDbContext))]
-    partial class SQLServerMiddlewareDbContextModelSnapshot : ModelSnapshot
+    [Migration("20220927085435_MECleanup")]
+    partial class MECleanup
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

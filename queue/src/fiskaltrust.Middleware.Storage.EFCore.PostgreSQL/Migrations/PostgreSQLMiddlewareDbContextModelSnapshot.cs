@@ -378,6 +378,9 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
                     b.Property<string>("IIC")
                         .HasColumnType("text");
 
+                    b.Property<string>("InvoiceNumber")
+                        .HasColumnType("text");
+
                     b.Property<long>("JournalType")
                         .HasColumnType("bigint");
 
@@ -387,14 +390,11 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
                     b.Property<long>("TimeStamp")
                         .HasColumnType("bigint");
 
+                    b.Property<int>("YearlyOrdinalNumber")
+                        .HasColumnType("integer");
+
                     b.Property<string>("cbReference")
                         .HasColumnType("text");
-
-                    b.Property<string>("ftInvoiceNumber")
-                        .HasColumnType("text");
-
-                    b.Property<int>("ftOrdinalNumber")
-                        .HasColumnType("integer");
 
                     b.Property<Guid>("ftQueueId")
                         .HasColumnType("uuid");
@@ -1058,7 +1058,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("ftQueueItemId");
-                                        
+
                     b.HasIndex("TimeStamp");
 
                     b.HasIndex("cbReceiptReference");
@@ -1234,19 +1234,10 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
                     b.Property<string>("BusinessUnitCode")
                         .HasColumnType("text");
 
-                    b.Property<string>("EnuType")
-                        .HasColumnType("text");
-
                     b.Property<string>("IssuerTin")
                         .HasColumnType("text");
 
                     b.Property<string>("MaintainerCode")
-                        .HasColumnType("text");
-
-                    b.Property<int>("Mode")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("ModeConfigurationJson")
                         .HasColumnType("text");
 
                     b.Property<string>("SoftwareCode")
@@ -1260,9 +1251,6 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
 
                     b.Property<long>("TimeStamp")
                         .HasColumnType("bigint");
-
-                    b.Property<string>("TseInfoJson")
-                        .HasColumnType("text");
 
                     b.Property<string>("Url")
                         .HasColumnType("text");
