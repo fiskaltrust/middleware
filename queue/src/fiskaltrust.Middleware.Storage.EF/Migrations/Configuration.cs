@@ -10,6 +10,7 @@ namespace fiskaltrust.Middleware.Storage.EF.Migrations
         public Configuration()
         {
             AutomaticMigrationsEnabled = false;
+            CommandTimeout = 30 * 60;
         }
 
         protected override void Seed(MiddlewareDbContext context)
