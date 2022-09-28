@@ -81,7 +81,7 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
         {
             var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(ftQueueItem.request);
 
-            if (!receiptRequest.IsPosReceipt() || (string.IsNullOrWhiteSpace(receiptRequest.cbPreviousReceiptReference) && string.IsNullOrWhiteSpace(ftQueueItem.cbReceiptReference)))
+            if (!receiptRequest.IncludeInReferences() || (string.IsNullOrWhiteSpace(receiptRequest.cbPreviousReceiptReference) && string.IsNullOrWhiteSpace(ftQueueItem.cbReceiptReference)))
             {
                 yield break;
             }
@@ -93,8 +93,8 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
                 await connection.OpenAsync();
                 await foreach (var entry in connection.Query<ftQueueItem>(query, new { ftQueueItem.ftQueueRow, receiptRequest.cbPreviousReceiptReference, ftQueueItem.cbReceiptReference }, buffered: false).ToAsyncEnumerable())
                 {
-                    
-                    if (JsonConvert.DeserializeObject<ReceiptRequest>(entry.request).IsPosReceipt())
+
+                    if (JsonConvert.DeserializeObject<ReceiptRequest>(entry.request).IncludeInReferences())
                     {
                         yield return entry;
                     }

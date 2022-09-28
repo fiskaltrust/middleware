@@ -63,7 +63,7 @@ namespace fiskaltrust.Middleware.Storage.EF.Repositories
         public IAsyncEnumerable<ftQueueItem> GetPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem)
         {
             var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(ftQueueItem.request);
-            if (!receiptRequest.IsPosReceipt() || (string.IsNullOrWhiteSpace(receiptRequest.cbPreviousReceiptReference) && string.IsNullOrWhiteSpace(ftQueueItem.cbReceiptReference)))
+            if (!receiptRequest.IncludeInReferences() || (string.IsNullOrWhiteSpace(receiptRequest.cbPreviousReceiptReference) && string.IsNullOrWhiteSpace(ftQueueItem.cbReceiptReference)))
             {
                 return new List<ftQueueItem>().ToAsyncEnumerable();
             }
@@ -74,7 +74,7 @@ namespace fiskaltrust.Middleware.Storage.EF.Repositories
                     (x.cbReceiptReference == receiptRequest.cbPreviousReceiptReference || x.cbReceiptReference == ftQueueItem.cbReceiptReference)
                 )
                 .ToAsyncEnumerable()
-                .Where(x => JsonConvert.DeserializeObject<ReceiptRequest>(x.request).IsPosReceipt());
+                .Where(x => JsonConvert.DeserializeObject<ReceiptRequest>(x.request).IncludeInReferences());
         }
     }
 }

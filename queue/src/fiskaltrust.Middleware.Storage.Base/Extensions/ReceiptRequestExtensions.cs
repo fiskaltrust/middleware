@@ -14,6 +14,6 @@ namespace fiskaltrust.Middleware.Storage.Base.Extensions
             0x0007  //Daily-closing
         };
 
-        public static bool IsPosReceipt(this ReceiptRequest request) => !_excludedForReference.Contains(request.ftReceiptCase & 0xFFFF);
+        public static bool IncludeInReferences(this ReceiptRequest request) => !_excludedForReference.Contains(request.ftReceiptCase & 0xFFFF);
     }
 }
