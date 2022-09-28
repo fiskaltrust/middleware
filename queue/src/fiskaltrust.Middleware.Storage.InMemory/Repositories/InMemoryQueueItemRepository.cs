@@ -51,12 +51,12 @@ namespace fiskaltrust.Middleware.Storage.InMemory.Repositories
         public IAsyncEnumerable<ftQueueItem> GetPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem)
         {
             var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(ftQueueItem.request);
-            if (!receiptRequest.IsPosReceipt() || (string.IsNullOrWhiteSpace(receiptRequest.cbPreviousReceiptReference) && string.IsNullOrWhiteSpace(ftQueueItem.cbReceiptReference)))
+            if (!receiptRequest.IncludeInReferences() || (string.IsNullOrWhiteSpace(receiptRequest.cbPreviousReceiptReference) && string.IsNullOrWhiteSpace(ftQueueItem.cbReceiptReference)))
             {
                 return new List<ftQueueItem>().ToAsyncEnumerable();
             }
 
-            return Data.Values.Where(x => x.ftQueueRow < ftQueueItem.ftQueueRow && 
+            return Data.Values.Where(x => x.ftQueueRow < ftQueueItem.ftQueueRow &&
                 (x.cbReceiptReference == receiptRequest.cbPreviousReceiptReference || x.cbReceiptReference == receiptRequest.cbReceiptReference)).ToAsyncEnumerable();
         }
     }

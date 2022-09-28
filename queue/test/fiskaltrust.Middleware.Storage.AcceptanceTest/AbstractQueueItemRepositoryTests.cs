@@ -287,7 +287,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
 
             var receiptRequestJson = JsonConvert.SerializeObject(receiptRequest);
 
-            foreach(var (entry, index) in expectedEntries.Select((e, i) => (e, i)))
+            foreach (var (entry, index) in expectedEntries.Select((e, i) => (e, i)))
             {
                 entry.cbReceiptReference = expectedReceiptReference;
                 var request = StorageTestFixtureProvider.GetFixture().Create<ReceiptRequest>();
@@ -302,7 +302,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
 
             var entries = await sut.GetPreviousReceiptReferencesAsync(expectedEntries[24]).OrderBy(x => x.ftQueueRow).ToListAsync();
 
-            entries.Should().BeEquivalentTo(allEntries.Take(24).Where(e => JsonConvert.DeserializeObject<ReceiptRequest>(e.request).IsPosReceipt()));
+            entries.Should().BeEquivalentTo(allEntries.Take(24).Where(e => JsonConvert.DeserializeObject<ReceiptRequest>(e.request).IncludeInReferences()));
         }
 
         [Fact]
