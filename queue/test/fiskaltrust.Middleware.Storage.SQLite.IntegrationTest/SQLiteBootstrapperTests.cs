@@ -26,7 +26,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite.IntegrationTest
             var queueConfiguration = JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(azureQueue["Configuration"]));
 
             queueConfiguration.Add("servicefolder", Directory.GetCurrentDirectory());
-            var sqliteBootstrapper = new SQLiteStorageBootstrapper(Guid.Parse(azureQueue["Id"].ToString()), queueConfiguration, Mock.Of<ILogger<IMiddlewareBootstrapper>>());
+            var sqliteBootstrapper = new SQLiteStorageBootstrapper(Guid.Parse(azureQueue["Id"].ToString()), queueConfiguration, new SQLiteStorageConfiguration(), Mock.Of<ILogger<IMiddlewareBootstrapper>>());
 
             var serviceCollection = new ServiceCollection();
             serviceCollection.AddLogging();

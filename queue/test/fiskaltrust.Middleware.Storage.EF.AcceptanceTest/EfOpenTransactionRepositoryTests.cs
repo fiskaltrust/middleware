@@ -24,7 +24,7 @@ namespace fiskaltrust.Middleware.Storage.EF.AcceptanceTest
         {
             var queueId = Guid.NewGuid();
             var repository = new EfOpenTransactionRepository(new MiddlewareDbContext(EfConnectionStringFixture.DatabaseConnectionString, queueId));
-            EfStorageBootstrapper.Update(EfConnectionStringFixture.DatabaseConnectionString, queueId, Mock.Of<ILogger<IMiddlewareBootstrapper>>());
+            EfStorageBootstrapper.Update(EfConnectionStringFixture.DatabaseConnectionString, 30 * 60, queueId, Mock.Of<ILogger<IMiddlewareBootstrapper>>());
 
             foreach (var item in entries)
             {

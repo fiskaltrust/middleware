@@ -22,7 +22,7 @@ namespace fiskaltrust.Middleware.Storage.MySQL.AcceptanceTest
 
         public override async Task<IJournalDERepository> CreateRepository(IEnumerable<ftJournalDE> entries)
         {
-            var databasMigrator = new DatabaseMigrator(MySQLConnectionStringFixture.ServerConnectionString, MySQLConnectionStringFixture.QueueId, Mock.Of<ILogger<IMiddlewareBootstrapper>>());
+            var databasMigrator = new DatabaseMigrator(MySQLConnectionStringFixture.ServerConnectionString, 30 * 60, MySQLConnectionStringFixture.QueueId, Mock.Of<ILogger<IMiddlewareBootstrapper>>());
             await databasMigrator.MigrateAsync();
 
             _repo = new MySQLJournalDERepository(MySQLConnectionStringFixture.DatabaseConnectionString);

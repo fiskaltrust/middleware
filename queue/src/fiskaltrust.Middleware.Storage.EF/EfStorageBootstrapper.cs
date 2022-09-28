@@ -55,7 +55,7 @@ namespace fiskaltrust.Middleware.Storage.Ef
                 throw new Exception("Database connectionstring not defined");
             }
             _connectionString = Encoding.UTF8.GetString(Encryption.Decrypt(Convert.FromBase64String(_efStorageConfiguration.ConnectionString), queueId.ToByteArray()));
-            Update(_connectionString, queueId, logger);
+            Update(_connectionString, _efStorageConfiguration.MigrationsTimeoutSec, queueId, logger);
 
             var configurationRepository = new EfConfigurationRepository(new MiddlewareDbContext(_connectionString, _queueId));
 
@@ -111,12 +111,13 @@ namespace fiskaltrust.Middleware.Storage.Ef
             services.AddTransient<IMasterDataRepository<PosSystemMasterData>, EfPosSystemMasterDataRepository>();
         }
 
-        public static void Update(string connectionString, Guid queueId, ILogger<IMiddlewareBootstrapper> logger)
+        public static void Update(string connectionString, int timeoutSec, Guid queueId, ILogger<IMiddlewareBootstrapper> logger)
         {
             var schemaString = queueId.ToString("D");
             var contextMigrationsConfiguration = new DbMigrationsConfiguration<MiddlewareDbContext>
             {
                 AutomaticMigrationsEnabled = false,
+                CommandTimeout = timeoutSec,
                 TargetDatabase = new DbConnectionInfo(connectionString, "System.Data.SqlClient"),
                 MigrationsAssembly = typeof(MiddlewareDbContext).Assembly,
                 MigrationsNamespace = "fiskaltrust.Middleware.Storage.EF.Migrations"
