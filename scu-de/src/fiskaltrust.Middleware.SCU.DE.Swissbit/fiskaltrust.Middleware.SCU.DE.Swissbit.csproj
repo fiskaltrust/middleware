@@ -27,11 +27,13 @@
     </ItemGroup>
 
     <ItemGroup>
-        <NativeLibs Include="runtimes\**" />
-        <None Include="@(NativeLibs)" Pack="true" PackagePath="runtimes" Visible="true" CopyToOutputDirectory="Preserve" />
+        <None Update="runtimes\**">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
     </ItemGroup>
-
+    
     <ItemGroup>
         <ProjectReference Include="..\fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser\fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser.csproj" />
     </ItemGroup>
+
 </Project>
