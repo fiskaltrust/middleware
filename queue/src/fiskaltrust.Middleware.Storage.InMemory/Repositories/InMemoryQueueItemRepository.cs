@@ -56,8 +56,11 @@ namespace fiskaltrust.Middleware.Storage.InMemory.Repositories
                 return new List<ftQueueItem>().ToAsyncEnumerable();
             }
 
-            return Data.Values.Where(x => x.ftQueueRow < ftQueueItem.ftQueueRow &&
-                (x.cbReceiptReference == receiptRequest.cbPreviousReceiptReference || x.cbReceiptReference == receiptRequest.cbReceiptReference)).ToAsyncEnumerable();
+            return Data.Values.Where(x =>
+                x.ftQueueRow < ftQueueItem.ftQueueRow &&
+                JsonConvert.DeserializeObject<ReceiptRequest>(ftQueueItem.request).IncludeInReferences() &&
+                (x.cbReceiptReference == receiptRequest.cbPreviousReceiptReference || x.cbReceiptReference == receiptRequest.cbReceiptReference)
+            ).ToAsyncEnumerable();
         }
     }
 }
