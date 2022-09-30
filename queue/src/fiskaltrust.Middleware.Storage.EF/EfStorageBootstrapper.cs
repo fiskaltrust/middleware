@@ -21,8 +21,9 @@ using fiskaltrust.Middleware.Contracts.Data;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using Microsoft.Extensions.Logging;
 using fiskaltrust.Middleware.Abstractions;
-using fiskaltrust.Middleware.Storage.EF.Repositories.DE.MasterData;
 using fiskaltrust.storage.V0.MasterData;
+using fiskaltrust.Middleware.Storage.EF.Repositories.ME;
+using fiskaltrust.Middleware.Storage.EF.Repositories.MasterData;
 
 namespace fiskaltrust.Middleware.Storage.Ef
 {
@@ -93,10 +94,16 @@ namespace fiskaltrust.Middleware.Storage.Ef
             services.AddTransient<IReadOnlyJournalFRRepository, EfJournalFRRepository>();
             services.AddTransient<IMiddlewareRepository<ftJournalFR>, EfJournalFRRepository>();
 
+            services.AddTransient<IMiddlewareJournalMERepository, EfJournalMERepository>();
+            services.AddTransient<IJournalMERepository, EfJournalMERepository>();
+            services.AddTransient<IReadOnlyJournalMERepository, EfJournalMERepository>();
+            services.AddTransient<IMiddlewareRepository<ftJournalME>, EfJournalMERepository>();
+
             services.AddTransient<IReceiptJournalRepository, EfReceiptJournalRepository>();
             services.AddTransient<IReadOnlyReceiptJournalRepository, EfReceiptJournalRepository>();
             services.AddTransient<IMiddlewareRepository<ftReceiptJournal>, EfReceiptJournalRepository>();
 
+            services.AddSingleton<IMiddlewareActionJournalRepository, EfActionJournalRepository>();
             services.AddTransient<IActionJournalRepository, EfActionJournalRepository>();
             services.AddTransient<IReadOnlyActionJournalRepository, EfActionJournalRepository>();
             services.AddTransient<IMiddlewareRepository<ftActionJournal>, EfActionJournalRepository>();

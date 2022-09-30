@@ -33,7 +33,7 @@ namespace fiskaltrust.Middleware.Storage.MySQL.AcceptanceTest
         //Clear Database before each test
         public override void DisposeDatabase()
         {
-            using (var mySqlConnetion = new MySqlConnection(MySQLConnectionStringFixture.ServerConnectionString))
+            using (var mySqlConnetion = new MySqlConnection(MySQLConnectionStringFixture.DatabaseConnectionString))
             {
                 mySqlConnetion.Open();
                 using (var command = new MySqlCommand($@"DELETE FROM {TableNames.FtJournalAT}", mySqlConnetion))

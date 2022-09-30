@@ -24,7 +24,9 @@ namespace fiskaltrust.Middleware.Storage.Azure.Repositories.DE
 
         public IAsyncEnumerable<ftJournalDE> GetEntriesOnOrAfterTimeStampAsync(long fromInclusive, int? take = null)
         {
-            var result = GetEntriesOnOrAfterTimeStampAsync(fromInclusive).ToListAsync().Result.OrderBy(x => x.TimeStamp);
+            var tableQuery = new TableQuery<AzureFtJournalDE>();
+            tableQuery = tableQuery.Where(TableQuery.GenerateFilterConditionForLong("TimeStamp", QueryComparisons.GreaterThanOrEqual, fromInclusive));
+            var result = GetAllByTableFilterAsync(tableQuery).ToListAsync().Result;
             if (take.HasValue)
             {
                 return result.Take(take.Value).ToAsyncEnumerable();

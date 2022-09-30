@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
+using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Storage.SQLite.Repositories
 {
-    public class SQLiteActionJournalRepository : AbstractSQLiteRepository<Guid, ftActionJournal>, IActionJournalRepository
+    public class SQLiteActionJournalRepository : AbstractSQLiteRepository<Guid, ftActionJournal>, IActionJournalRepository, IMiddlewareActionJournalRepository
     {
         public SQLiteActionJournalRepository(ISqliteConnectionFactory connectionFactory, string path) : base(connectionFactory, path) { }
 
@@ -29,6 +31,16 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Repositories
                       "(ftActionJournalId, ftQueueId, ftQueueItemId, Moment, Priority, Type, Message, DataBase64, DataJson, TimeStamp) " +
                       "Values (@ftActionJournalId, @ftQueueId, @ftQueueItemId, @Moment, @Priority, @Type, @Message, @DataBase64, @DataJson, @TimeStamp);";
             await DbConnection.ExecuteAsync(sql, entity).ConfigureAwait(false);
+        }
+
+        public async IAsyncEnumerable<ftActionJournal> GetByQueueItemId(Guid queueItemId)
+        {
+            var query = "Select * from ftActionJournal where ftQueueItemId = @queueItemId;";
+
+            await foreach (var entry in DbConnection.Query<ftActionJournal>(query, new { queueItemId }, buffered: false).ToAsyncEnumerable().ConfigureAwait(false))
+            {
+                yield return entry;
+            }
         }
     }
 }

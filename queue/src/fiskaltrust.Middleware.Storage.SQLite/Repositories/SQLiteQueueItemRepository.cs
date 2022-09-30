@@ -62,5 +62,14 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Repositories
                 yield return entry;
             }
         }
+
+        public async IAsyncEnumerable<ftQueueItem> GetQueueItemsAfterQueueItem(ftQueueItem ftQueueItem)
+        {
+            var query = "SELECT * FROM ftQueueItem WHERE ftQueueRow >= @ftQueueRow;";
+            await foreach (var entry in DbConnection.Query<ftQueueItem>(query, new { ftQueueItem.ftQueueRow}, buffered: false).ToAsyncEnumerable())
+            {
+                yield return entry;
+            }
+        }
     }
 }

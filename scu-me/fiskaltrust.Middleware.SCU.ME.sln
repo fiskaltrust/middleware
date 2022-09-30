@@ -16,7 +16,15 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.SCU.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.SCU.ME.Common", "src\fiskaltrust.Middleware.SCU.ME.Common\fiskaltrust.Middleware.SCU.ME.Common.csproj", "{0033C552-017F-468F-8CFD-34B6356109AE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fiskaltrust.Middleware.SCU.ME.InMemory.UnitTest", "test\fiskaltrust.Middleware.SCU.ME.InMemory.UnitTest\fiskaltrust.Middleware.SCU.ME.InMemory.UnitTest.csproj", "{93433258-E808-40A7-BB34-EB08F0D66821}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.SCU.ME.InMemory.UnitTest", "test\fiskaltrust.Middleware.SCU.ME.InMemory.UnitTest\fiskaltrust.Middleware.SCU.ME.InMemory.UnitTest.csproj", "{93433258-E808-40A7-BB34-EB08F0D66821}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.SCU.ME.FiscalizationService", "src\fiskaltrust.Middleware.SCU.ME.FiscalizationService\fiskaltrust.Middleware.SCU.ME.FiscalizationService.csproj", "{125833E3-A1C2-4995-80E4-D1CEEB5878B8}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.SCU.ME.FiscalizationService.UnitTest", "test\fiskaltrust.Middleware.SCU.ME.FiscalizationService.UnitTest\fiskaltrust.Middleware.SCU.ME.FiscalizationService.UnitTest.csproj", "{C675C651-5FC7-440F-8CE9-D71B09825618}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Manual", "Manual", "{2F539BD1-F168-476E-B675-C8E102854AE7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fiskaltrust.Middleware.SCU.ME.TestLauncher", "test\TestLauncher\fiskaltrust.Middleware.SCU.ME.TestLauncher.csproj", "{A60CC543-DC1C-4432-B360-A91DB2B87AD6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -36,6 +44,18 @@ Global
 		{93433258-E808-40A7-BB34-EB08F0D66821}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{93433258-E808-40A7-BB34-EB08F0D66821}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{93433258-E808-40A7-BB34-EB08F0D66821}.Release|Any CPU.Build.0 = Release|Any CPU
+		{125833E3-A1C2-4995-80E4-D1CEEB5878B8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{125833E3-A1C2-4995-80E4-D1CEEB5878B8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{125833E3-A1C2-4995-80E4-D1CEEB5878B8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{125833E3-A1C2-4995-80E4-D1CEEB5878B8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C675C651-5FC7-440F-8CE9-D71B09825618}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C675C651-5FC7-440F-8CE9-D71B09825618}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C675C651-5FC7-440F-8CE9-D71B09825618}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C675C651-5FC7-440F-8CE9-D71B09825618}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A60CC543-DC1C-4432-B360-A91DB2B87AD6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A60CC543-DC1C-4432-B360-A91DB2B87AD6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A60CC543-DC1C-4432-B360-A91DB2B87AD6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A60CC543-DC1C-4432-B360-A91DB2B87AD6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -44,6 +64,10 @@ Global
 		{A6253BF2-F36D-4646-8A40-28693EC237D7} = {2F690A2B-96D1-45AC-BD36-E27D68422352}
 		{0033C552-017F-468F-8CFD-34B6356109AE} = {2F690A2B-96D1-45AC-BD36-E27D68422352}
 		{93433258-E808-40A7-BB34-EB08F0D66821} = {7201C6FB-C25C-45DB-9C0B-1355FEF13939}
+		{125833E3-A1C2-4995-80E4-D1CEEB5878B8} = {2F690A2B-96D1-45AC-BD36-E27D68422352}
+		{C675C651-5FC7-440F-8CE9-D71B09825618} = {7201C6FB-C25C-45DB-9C0B-1355FEF13939}
+		{2F539BD1-F168-476E-B675-C8E102854AE7} = {7201C6FB-C25C-45DB-9C0B-1355FEF13939}
+		{A60CC543-DC1C-4432-B360-A91DB2B87AD6} = {2F539BD1-F168-476E-B675-C8E102854AE7}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {C5E269B8-4A21-4B1B-8805-C8193C08FE3E}

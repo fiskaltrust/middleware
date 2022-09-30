@@ -63,3 +63,4 @@ stages:
               workingDirectory: scu-me
               projects:
                 - fiskaltrust.Middleware.SCU.ME.InMemory
+                - fiskaltrust.Middleware.SCU.ME.FiscalizationService

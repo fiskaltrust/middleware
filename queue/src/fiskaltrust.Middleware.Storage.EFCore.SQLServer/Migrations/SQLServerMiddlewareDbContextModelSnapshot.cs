@@ -166,6 +166,9 @@ namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer.Migrations
                     b.Property<string>("Country")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("LocationId")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("OutletName")
                         .HasColumnType("nvarchar(max)");
 
@@ -199,6 +202,9 @@ namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("SoftwareVersion")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Type")
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("PosSystemId");
@@ -360,6 +366,50 @@ namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer.Migrations
                     b.HasIndex("TimeStamp");
 
                     b.ToTable("ftJournalFR");
+                });
+
+            modelBuilder.Entity("fiskaltrust.storage.V0.ftJournalME", b =>
+                {
+                    b.Property<Guid>("ftJournalMEId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("FCDC")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FIC")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("IIC")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("InvoiceNumber")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long>("JournalType")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("Number")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("TimeStamp")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("YearlyOrdinalNumber")
+                        .HasColumnType("int");
+
+                    b.Property<string>("cbReference")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("ftQueueId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ftQueueItemId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("ftJournalMEId");
+
+                    b.ToTable("ftJournalME");
                 });
 
             modelBuilder.Entity("fiskaltrust.storage.V0.ftQueue", b =>
@@ -1021,6 +1071,50 @@ namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer.Migrations
                     b.ToTable("ftQueueItem");
                 });
 
+            modelBuilder.Entity("fiskaltrust.storage.V0.ftQueueME", b =>
+                {
+                    b.Property<Guid>("ftQueueMEId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("DailyClosingNumber")
+                        .HasColumnType("int");
+
+                    b.Property<string>("LastHash")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("SSCDFailCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("SSCDFailMoment")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("SSCDFailQueueItemId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("TimeStamp")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("UsedFailedCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UsedFailedMomentMax")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("UsedFailedMomentMin")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UsedFailedQueueItemId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("ftSignaturCreationUnitMEId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("ftQueueMEId");
+
+                    b.ToTable("ftQueueME");
+                });
+
             modelBuilder.Entity("fiskaltrust.storage.V0.ftReceiptJournal", b =>
                 {
                     b.Property<Guid>("ftReceiptJournalId")
@@ -1134,6 +1228,47 @@ namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer.Migrations
                     b.HasKey("ftSignaturCreationUnitFRId");
 
                     b.ToTable("ftSignaturCreationUnitFR");
+                });
+
+            modelBuilder.Entity("fiskaltrust.storage.V0.ftSignaturCreationUnitME", b =>
+                {
+                    b.Property<Guid>("ftSignaturCreationUnitMEId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("BusinessUnitCode")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("IssuerTin")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("MaintainerCode")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SoftwareCode")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TcrCode")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TcrIntId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long>("TimeStamp")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Url")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ValidFrom")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ValidTo")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("ftSignaturCreationUnitMEId");
+
+                    b.ToTable("ftSignaturCreationUnitME");
                 });
 #pragma warning restore 612, 618
         }

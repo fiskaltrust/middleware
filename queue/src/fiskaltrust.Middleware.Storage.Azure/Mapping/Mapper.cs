@@ -203,6 +203,46 @@ namespace fiskaltrust.Middleware.Storage.Azure.Mapping
             };
         }
 
+        public static AzureFtJournalME Map(ftJournalME src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+
+            return new AzureFtJournalME
+            {
+                PartitionKey = GetHashString(src.TimeStamp),
+                ftJournalMEId = src.ftJournalMEId,
+                ftQueueItemId = src.ftQueueItemId,
+                cbReference = src.cbReference,
+                InvoiceNumber = src.InvoiceNumber,
+                YearlyOrdinalNumber = src.YearlyOrdinalNumber,
+                ftQueueId = src.ftQueueId,
+                TimeStamp = src.TimeStamp
+            };
+        }
+
+        public static ftJournalME Map(AzureFtJournalME src)
+        {
+            if (src == null)
+
+            {
+                return null;
+            }
+
+            return new ftJournalME
+            {
+                ftJournalMEId = src.ftJournalMEId,
+                ftQueueItemId = src.ftQueueItemId,
+                cbReference = src.cbReference,
+                InvoiceNumber = src.InvoiceNumber,
+                YearlyOrdinalNumber = src.YearlyOrdinalNumber,
+                ftQueueId = src.ftQueueId,
+                TimeStamp = src.TimeStamp
+            };
+        }
+
         public static ftJournalFR Map(AzureFtJournalFR src)
         {
             if (src == null)
@@ -377,6 +417,56 @@ namespace fiskaltrust.Middleware.Storage.Azure.Mapping
                 ftSignaturCreationUnitDEId = src.ftSignaturCreationUnitDEId,
                 LastHash = src.LastHash,
                 CashBoxIdentification = src.CashBoxIdentification,
+                SSCDFailCount = src.SSCDFailCount,
+                SSCDFailMoment = src.SSCDFailMoment,
+                SSCDFailQueueItemId = src.SSCDFailQueueItemId,
+                UsedFailedCount = src.UsedFailedCount,
+                UsedFailedMomentMin = src.UsedFailedMomentMin,
+                UsedFailedMomentMax = src.UsedFailedMomentMax,
+                UsedFailedQueueItemId = src.UsedFailedQueueItemId,
+                TimeStamp = src.TimeStamp,
+                DailyClosingNumber = src.DailyClosingNumber
+            };
+        }
+
+        public static AzureFtQueueME Map(ftQueueME src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+
+            return new AzureFtQueueME
+            {
+                PartitionKey = src.ftQueueMEId.ToString(),
+                RowKey = src.ftQueueMEId.ToString(),
+                ftQueueMEId = src.ftQueueMEId,
+                ftSignaturCreationUnitMEId = src.ftSignaturCreationUnitMEId,
+                LastHash = src.LastHash,
+                SSCDFailCount = src.SSCDFailCount,
+                SSCDFailMoment = src.SSCDFailMoment,
+                SSCDFailQueueItemId = src.SSCDFailQueueItemId,
+                UsedFailedCount = src.UsedFailedCount,
+                UsedFailedMomentMin = src.UsedFailedMomentMin,
+                UsedFailedMomentMax = src.UsedFailedMomentMax,
+                UsedFailedQueueItemId = src.UsedFailedQueueItemId,
+                TimeStamp = src.TimeStamp,
+                DailyClosingNumber = src.DailyClosingNumber,
+            };
+        }
+
+        public static ftQueueME Map(AzureFtQueueME src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+
+            return new ftQueueME
+            {
+                ftQueueMEId = src.ftQueueMEId,
+                ftSignaturCreationUnitMEId = src.ftSignaturCreationUnitMEId,
+                LastHash = src.LastHash,
                 SSCDFailCount = src.SSCDFailCount,
                 SSCDFailMoment = src.SSCDFailMoment,
                 SSCDFailQueueItemId = src.SSCDFailQueueItemId,
@@ -803,11 +893,55 @@ namespace fiskaltrust.Middleware.Storage.Azure.Mapping
             return new ftSignaturCreationUnitDE
             {
                 ftSignaturCreationUnitDEId = src.ftSignaturCreationUnitDEId,
-                Url = src.Url,
                 TseInfoJson = src.TseInfoJson,
                 TimeStamp = src.TimeStamp,
                 Mode = src.Mode,
                 ModeConfigurationJson = src.ModeConfigurationJson
+            };
+        }
+
+        public static AzureFtSignaturCreationUnitME Map(ftSignaturCreationUnitME src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+            return new AzureFtSignaturCreationUnitME
+            {
+                PartitionKey = src.ftSignaturCreationUnitMEId.ToString(),
+                RowKey = src.ftSignaturCreationUnitMEId.ToString(),
+                ftSignaturCreationUnitMEId = src.ftSignaturCreationUnitMEId,
+                TimeStamp = src.TimeStamp,
+                IssuerTin = src.IssuerTin,
+                BusinessUnitCode = src.BusinessUnitCode,
+                TcrIntId = src.TcrIntId,
+                SoftwareCode = src.SoftwareCode,
+                MaintainerCode = src.MaintainerCode,
+                ValidFrom = src.ValidFrom,
+                ValidTo = src.ValidTo,
+                TcrCode = src.TcrCode
+            };
+        }
+
+        public static ftSignaturCreationUnitME Map(AzureFtSignaturCreationUnitME src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+
+            return new ftSignaturCreationUnitME
+            {
+                ftSignaturCreationUnitMEId = src.ftSignaturCreationUnitMEId,
+                TimeStamp = src.TimeStamp,
+                IssuerTin = src.IssuerTin,
+                BusinessUnitCode = src.BusinessUnitCode,
+                TcrIntId = src.TcrIntId,
+                SoftwareCode = src.SoftwareCode,
+                MaintainerCode = src.MaintainerCode,
+                ValidFrom = src.ValidFrom,
+                ValidTo = src.ValidTo,
+                TcrCode = src.TcrCode
             };
         }
 
@@ -1076,7 +1210,8 @@ namespace fiskaltrust.Middleware.Storage.Azure.Mapping
                 Zip = src.Zip,
                 City = src.City,
                 Country = src.Country,
-                VatId = src.VatId
+                VatId = src.VatId,
+                LocationId = src.LocationId
             };
         }
 
@@ -1095,7 +1230,8 @@ namespace fiskaltrust.Middleware.Storage.Azure.Mapping
                 Zip = src.Zip,
                 City = src.City,
                 Country = src.Country,
-                VatId = src.VatId
+                VatId = src.VatId,
+                LocationId = src.LocationId
             };
         }
 
@@ -1156,7 +1292,8 @@ namespace fiskaltrust.Middleware.Storage.Azure.Mapping
                 Brand = src.Brand,
                 Model = src.Model,
                 PosSystemId = src.PosSystemId,
-                SoftwareVersion = src.SoftwareVersion
+                SoftwareVersion = src.SoftwareVersion,
+                Type = src.Type
             };
         }
 
@@ -1173,7 +1310,8 @@ namespace fiskaltrust.Middleware.Storage.Azure.Mapping
                 Brand = src.Brand,
                 Model = src.Model,
                 PosSystemId = src.PosSystemId,
-                SoftwareVersion = src.SoftwareVersion
+                SoftwareVersion = src.SoftwareVersion,
+                Type = src.Type
             };
         }
 

@@ -14,6 +14,8 @@ using fiskaltrust.Middleware.Storage.SQLite.Repositories.AT;
 using fiskaltrust.Middleware.Storage.SQLite.Repositories.DE;
 using fiskaltrust.Middleware.Storage.SQLite.Repositories.DE.MasterData;
 using fiskaltrust.Middleware.Storage.SQLite.Repositories.FR;
+using fiskaltrust.Middleware.Storage.SQLite.Repositories.MasterData;
+using fiskaltrust.Middleware.Storage.SQLite.Repositories.ME;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 using Microsoft.Extensions.DependencyInjection;
@@ -84,10 +86,16 @@ namespace fiskaltrust.Middleware.Storage.SQLite
             services.AddSingleton<IReadOnlyJournalFRRepository>(x => new SQLiteJournalFRRepository(_connectionFactory, _sqliteFile));
             services.AddSingleton<IMiddlewareRepository<ftJournalFR>>(x => new SQLiteJournalFRRepository(_connectionFactory, _sqliteFile));
 
+            services.AddSingleton<IMiddlewareJournalMERepository>(x => new SQLiteJournalMERepository(_connectionFactory, _sqliteFile));
+            services.AddSingleton<IJournalMERepository>(x => new SQLiteJournalMERepository(_connectionFactory, _sqliteFile));
+            services.AddSingleton<IReadOnlyJournalMERepository>(x => new SQLiteJournalMERepository(_connectionFactory, _sqliteFile));
+            services.AddSingleton<IMiddlewareRepository<ftJournalME>>(x => new SQLiteJournalMERepository(_connectionFactory, _sqliteFile));
+
             services.AddSingleton<IReceiptJournalRepository>(x => new SQLiteReceiptJournalRepository(_connectionFactory, _sqliteFile));
             services.AddSingleton<IReadOnlyReceiptJournalRepository>(x => new SQLiteReceiptJournalRepository(_connectionFactory, _sqliteFile));
             services.AddSingleton<IMiddlewareRepository<ftReceiptJournal>>(x => new SQLiteReceiptJournalRepository(_connectionFactory, _sqliteFile));
 
+            services.AddSingleton<IMiddlewareActionJournalRepository>(x => new SQLiteActionJournalRepository(_connectionFactory, _sqliteFile));
             services.AddSingleton<IActionJournalRepository>(x => new SQLiteActionJournalRepository(_connectionFactory, _sqliteFile));
             services.AddSingleton<IReadOnlyActionJournalRepository>(x => new SQLiteActionJournalRepository(_connectionFactory, _sqliteFile));
             services.AddSingleton<IMiddlewareRepository<ftActionJournal>>(x => new SQLiteActionJournalRepository(_connectionFactory, _sqliteFile));

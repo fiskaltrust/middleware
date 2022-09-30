@@ -5,7 +5,7 @@ using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Storage.AcceptanceTest;
 using fiskaltrust.Middleware.Storage.MySQL.AcceptanceTest.Fixtures;
 using fiskaltrust.Middleware.Storage.MySQL.DatabaseInitialization;
-using fiskaltrust.Middleware.Storage.MySQL.Repositories.DE.MasterData;
+using fiskaltrust.Middleware.Storage.MySQL.Repositories.MasterData;
 using fiskaltrust.storage.V0.MasterData;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -37,7 +37,7 @@ namespace fiskaltrust.Middleware.Storage.MySQL.AcceptanceTest
         //Clear Database before each test
         public override void DisposeDatabase()
         {
-            using (var mySqlConnetion = new MySqlConnection(MySQLConnectionStringFixture.ServerConnectionString))
+            using (var mySqlConnetion = new MySqlConnection(MySQLConnectionStringFixture.DatabaseConnectionString))
             {
                 mySqlConnetion.Open();
                 using (var command = new MySqlCommand($@"DELETE FROM {TableNames.AgencyMasterData}", mySqlConnetion))

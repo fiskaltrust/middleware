@@ -9,6 +9,7 @@ using fiskaltrust.Middleware.SCU.ME.Common.Configuration;
 using FluentAssertions;
 using Xunit;
 
+#pragma warning disable CA2007
 namespace fiskaltrust.Middleware.SCU.ME.InMemory.UnitTest
 {
     public class InMemorySCUTests
@@ -32,7 +33,7 @@ namespace fiskaltrust.Middleware.SCU.ME.InMemory.UnitTest
 
             var response = await meSSCD.RegisterTcrAsync(request);
 
-            response.TcrCode.Should().MatchRegex("[a-z]{2}[0-9]{3}[a-z]{2}[0-9]{3}");
+            _ = response.TcrCode.Should().MatchRegex("[a-z]{2}[0-9]{3}[a-z]{2}[0-9]{3}");
         }
 
         [Fact]
@@ -68,7 +69,7 @@ namespace fiskaltrust.Middleware.SCU.ME.InMemory.UnitTest
 
             var response = await meSSCD.RegisterCashDepositAsync(request);
 
-            Guid.Parse(response.FCDC);
+            _ = Guid.Parse(response.FCDC);
         }
 
         [Fact]
@@ -129,7 +130,7 @@ namespace fiskaltrust.Middleware.SCU.ME.InMemory.UnitTest
             });
         }
 
-        private X509Certificate2 BuildSelfSignedServerCertificate()
+        private static X509Certificate2 BuildSelfSignedServerCertificate()
         {
             var certificateName = "UnitTests";
             var sanBuilder = new SubjectAlternativeNameBuilder();

@@ -10,5 +10,6 @@ namespace fiskaltrust.Middleware.Storage.Azure.TableEntities
         public string Model { get; set; }
         public string SoftwareVersion { get; set; }
         public string BaseCurrency { get; set; }
+        public string Type { get; set; }
     }
 }

@@ -18,9 +18,9 @@ namespace fiskaltrust.Middleware.Storage.MySQL.AcceptanceTest
     {
         private MySQLConfigurationRepository _repo;
 
-        public override async Task<IReadOnlyConfigurationRepository> CreateReadOnlyRepository(IEnumerable<ftCashBox> cashBoxes = null, IEnumerable<ftQueue> queues = null, IEnumerable<ftQueueAT> queuesAT = null, IEnumerable<ftQueueDE> queuesDE = null, IEnumerable<ftQueueFR> queuesFR = null, IEnumerable<ftSignaturCreationUnitAT> signatureCreateUnitsAT = null, IEnumerable<ftSignaturCreationUnitDE> signatureCreateUnitsDE = null, IEnumerable<ftSignaturCreationUnitFR> signatureCreateUnitsFR = null) => await CreateRepository(cashBoxes, queues, queuesAT, queuesDE, queuesFR, signatureCreateUnitsAT, signatureCreateUnitsDE, signatureCreateUnitsFR);
+        public override async Task<IReadOnlyConfigurationRepository> CreateReadOnlyRepository(IEnumerable<ftCashBox> cashBoxes = null, IEnumerable<ftQueue> queues = null, IEnumerable<ftQueueAT> queuesAT = null, IEnumerable<ftQueueDE> queuesDE = null, IEnumerable<ftQueueFR> queuesFR = null, IEnumerable<ftQueueME> queuesME = null, IEnumerable<ftSignaturCreationUnitAT> signatureCreateUnitsAT = null, IEnumerable<ftSignaturCreationUnitDE> signatureCreateUnitsDE = null, IEnumerable<ftSignaturCreationUnitFR> signatureCreateUnitsFR = null, IEnumerable<ftSignaturCreationUnitME> signatureCreateUnitsME = null) => await CreateRepository(cashBoxes, queues, queuesAT, queuesDE, queuesFR, queuesME, signatureCreateUnitsAT, signatureCreateUnitsDE, signatureCreateUnitsFR, signatureCreateUnitsME);
 
-        public override async Task<IConfigurationRepository> CreateRepository(IEnumerable<ftCashBox> cashBoxes = null, IEnumerable<ftQueue> queues = null, IEnumerable<ftQueueAT> queuesAT = null, IEnumerable<ftQueueDE> queuesDE = null, IEnumerable<ftQueueFR> queuesFR = null, IEnumerable<ftSignaturCreationUnitAT> signatureCreateUnitsAT = null, IEnumerable<ftSignaturCreationUnitDE> signatureCreateUnitsDE = null, IEnumerable<ftSignaturCreationUnitFR> signatureCreateUnitsFR = null)
+        public override async Task<IConfigurationRepository> CreateRepository(IEnumerable<ftCashBox> cashBoxes = null, IEnumerable<ftQueue> queues = null, IEnumerable<ftQueueAT> queuesAT = null, IEnumerable<ftQueueDE> queuesDE = null, IEnumerable<ftQueueFR> queuesFR = null, IEnumerable<ftQueueME> queuesME = null, IEnumerable<ftSignaturCreationUnitAT> signatureCreateUnitsAT = null, IEnumerable<ftSignaturCreationUnitDE> signatureCreateUnitsDE = null, IEnumerable<ftSignaturCreationUnitFR> signatureCreateUnitsFR = null, IEnumerable<ftSignaturCreationUnitME> signatureCreateUnitsME = null)
         {
             var databasMigrator = new DatabaseMigrator(MySQLConnectionStringFixture.ServerConnectionString, MySQLConnectionStringFixture.QueueId, Mock.Of<ILogger<IMiddlewareBootstrapper>>());
             await databasMigrator.MigrateAsync();
@@ -56,6 +56,12 @@ namespace fiskaltrust.Middleware.Storage.MySQL.AcceptanceTest
                 { await _repo.InsertOrUpdateQueueFRAsync(queueFR); }
             }
 
+            if (queuesME != null)
+            {
+                foreach (var queueME in queuesME)
+                { await _repo.InsertOrUpdateQueueMEAsync(queueME); }
+            }
+
             if (signatureCreateUnitsAT != null)
             {
                 foreach (var scuAT in signatureCreateUnitsAT)
@@ -74,13 +80,19 @@ namespace fiskaltrust.Middleware.Storage.MySQL.AcceptanceTest
                 { await _repo.InsertOrUpdateSignaturCreationUnitFRAsync(scuFR); }
             }
 
+            if (signatureCreateUnitsME != null)
+            {
+                foreach (var scuME in signatureCreateUnitsME)
+                { await _repo.InsertOrUpdateSignaturCreationUnitMEAsync(scuME); }
+            }
+
             return _repo;
         }
 
         //Clear Database before each test
         public override void DisposeDatabase()
         {
-            using (var mySqlConnetion = new MySqlConnection(MySQLConnectionStringFixture.ServerConnectionString))
+            using (var mySqlConnetion = new MySqlConnection(MySQLConnectionStringFixture.DatabaseConnectionString))
             {
                 mySqlConnetion.Open();
                 using (var command = new MySqlCommand("", mySqlConnetion))
@@ -95,11 +107,15 @@ namespace fiskaltrust.Middleware.Storage.MySQL.AcceptanceTest
                     command.ExecuteNonQuery();
                     command.CommandText = $@"DELETE FROM {TableNames.FtQueueFR}";
                     command.ExecuteNonQuery();
+                    command.CommandText = $@"DELETE FROM {TableNames.FtQueueME}";
+                    command.ExecuteNonQuery();
                     command.CommandText = $@"DELETE FROM {TableNames.FtSignaturCreationUnitAT}";
                     command.ExecuteNonQuery();
                     command.CommandText = $@"DELETE FROM {TableNames.FtSignaturCreationUnitDE}";
                     command.ExecuteNonQuery();
                     command.CommandText = $@"DELETE FROM {TableNames.FtSignaturCreationUnitFR}";
+                    command.ExecuteNonQuery();
+                    command.CommandText = $@"DELETE FROM {TableNames.FtSignaturCreationUnitME}";
                     command.ExecuteNonQuery();
                 }
             }

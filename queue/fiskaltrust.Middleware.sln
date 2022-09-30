@@ -121,6 +121,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.Stor
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.Localization.QueueME", "src\fiskaltrust.Middleware.Localization.QueueME\fiskaltrust.Middleware.Localization.QueueME.csproj", "{FE5F9883-D0AE-48BC-A8B5-B028B1F60C10}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fiskaltrust.Middleware.Localization.QueueME.UnitTest", "test\fiskaltrust.Middleware.Localization.QueueME.UnitTest\fiskaltrust.Middleware.Localization.QueueME.UnitTest.csproj", "{BD6E6701-2F8E-43D1-B583-F3DC1CA52D67}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -295,6 +297,10 @@ Global
 		{FE5F9883-D0AE-48BC-A8B5-B028B1F60C10}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FE5F9883-D0AE-48BC-A8B5-B028B1F60C10}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FE5F9883-D0AE-48BC-A8B5-B028B1F60C10}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BD6E6701-2F8E-43D1-B583-F3DC1CA52D67}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BD6E6701-2F8E-43D1-B583-F3DC1CA52D67}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BD6E6701-2F8E-43D1-B583-F3DC1CA52D67}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BD6E6701-2F8E-43D1-B583-F3DC1CA52D67}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -349,6 +355,7 @@ Global
 		{985E45EE-6998-4493-AD78-55188B9279FA} = {5195B05E-EB55-4544-8FE6-B683747B1F9E}
 		{9CCF6F87-4940-496E-B34C-33256709CC30} = {5195B05E-EB55-4544-8FE6-B683747B1F9E}
 		{FE5F9883-D0AE-48BC-A8B5-B028B1F60C10} = {C345F1F7-C2A5-472A-A55F-987A53DF3CCE}
+		{BD6E6701-2F8E-43D1-B583-F3DC1CA52D67} = {16BF88B4-3302-49F5-A5FA-5DA96DD03F0E}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {E8BEA609-BD83-4165-A14A-D010D2CC87AD}

@@ -15,8 +15,4 @@
     <LangVersion>10.0</LangVersion>
   </PropertyGroup>
 
-  <ItemGroup Condition="'$(Configuration)' != 'Debug'">
-    <PackageReference Include="Microsoft.CodeAnalysis.FxCopAnalyzers" Version="2.9.8" PrivateAssets="All" />
-  </ItemGroup>
-  
 </Project>
