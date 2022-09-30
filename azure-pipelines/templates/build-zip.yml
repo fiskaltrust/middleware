@@ -31,13 +31,13 @@ steps:
 - task: NuGetCommand@2
   inputs:
     command: 'restore'
-    restoreSolution: '$(WorkingDirectory)/$(Solution)'
+    restoreSolution: '${{ parameters.workingDirectory }}/$(Solution)'
     feedsToUse: 'select'
     vstsFeed: '$(NuGetFeed)'
 
 - task: VSBuild@1
   inputs:
-    solution: '$(WorkingDirectory)/$(Solution)'
+    solution: '${{ parameters.workingDirectory }}/$(Solution)'
     configuration: '$(BuildConfiguration)'
 
 - task: codesigning@2
