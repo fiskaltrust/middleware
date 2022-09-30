@@ -55,7 +55,7 @@ namespace fiskaltrust.Middleware.Storage.MySQL
 
             _connectionString = Encoding.UTF8.GetString(Encryption.Decrypt(Convert.FromBase64String(_mySQLStorageConfiguration.ConnectionString), queueId.ToByteArray()));
 
-            var databaseMigrator = new DatabaseMigrator(_connectionString, queueId, logger);
+            var databaseMigrator = new DatabaseMigrator(_connectionString, _mySQLStorageConfiguration.MigrationsTimeoutSec, queueId, logger);
             var dbName = await databaseMigrator.MigrateAsync().ConfigureAwait(false);
 
             _connectionString += $"database={ dbName };";

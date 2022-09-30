@@ -22,7 +22,7 @@ namespace fiskaltrust.Middleware.Storage.MySQL.DatabaseInitialization
         private readonly string _dbName;
         private readonly ILogger<IMiddlewareBootstrapper> _logger;
 
-        public DatabaseMigrator(string serverConnectionString, Guid queueId, ILogger<IMiddlewareBootstrapper> logger)
+        public DatabaseMigrator(string serverConnectionString, uint timeoutSec, Guid queueId, ILogger<IMiddlewareBootstrapper> logger)
         {
             _dbName = queueId.ToString().Replace("-", string.Empty);
             _serverConnectionString = serverConnectionString;
@@ -30,7 +30,7 @@ namespace fiskaltrust.Middleware.Storage.MySQL.DatabaseInitialization
             {
                 ConnectionString = _serverConnectionString,
                 Database = _dbName,
-                DefaultCommandTimeout = 30 * 60
+                DefaultCommandTimeout = timeoutSec
             };
             _databaseConnectionString = builder.ConnectionString;
             _logger = logger;

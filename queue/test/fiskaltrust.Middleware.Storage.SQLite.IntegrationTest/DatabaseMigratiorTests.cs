@@ -28,7 +28,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite.IntegrationTest
                 File.Delete(path);
             }
 
-            var databaseMigrator = new DatabaseMigrator(new SqliteConnectionFactory(), path, new Dictionary<string, object>(), Mock.Of<ILogger<IMiddlewareBootstrapper>>());
+            var databaseMigrator = new DatabaseMigrator(new SqliteConnectionFactory(), 30 * 60, path, new Dictionary<string, object>(), Mock.Of<ILogger<IMiddlewareBootstrapper>>());
             await databaseMigrator.MigrateAsync();
 
             File.Delete(path);
@@ -40,7 +40,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite.IntegrationTest
             const string path = "Data/001_Init.sqlite";
 
             var connectionFactory = new SqliteConnectionFactory();
-            var databaseMigrator = new DatabaseMigrator(connectionFactory, path, new Dictionary<string, object>(), Mock.Of<ILogger<IMiddlewareBootstrapper>>());
+            var databaseMigrator = new DatabaseMigrator(connectionFactory, 30 * 60, path, new Dictionary<string, object>(), Mock.Of<ILogger<IMiddlewareBootstrapper>>());
             await databaseMigrator.MigrateAsync();
 
             using (var connection = connectionFactory.GetConnection(connectionFactory.BuildConnectionString(path)))
@@ -73,7 +73,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite.IntegrationTest
                 { "EnableWAL", true }
             };
 
-            var databaseMigrator = new DatabaseMigrator(connectionFactory, path, config, Mock.Of<ILogger<IMiddlewareBootstrapper>>());
+            var databaseMigrator = new DatabaseMigrator(connectionFactory, 30 * 60, path, config, Mock.Of<ILogger<IMiddlewareBootstrapper>>());
             await databaseMigrator.MigrateAsync();
             await databaseMigrator.SetWALMode();
             var queueItemRepo = new SQLiteQueueItemRepository(connectionFactory, path);
@@ -114,7 +114,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite.IntegrationTest
                 { "WAL", "OFF" }
             };
 
-            var databaseMigrator = new DatabaseMigrator(connectionFactory, path, config, Mock.Of<ILogger<IMiddlewareBootstrapper>>());
+            var databaseMigrator = new DatabaseMigrator(connectionFactory, 30 * 60, path, config, Mock.Of<ILogger<IMiddlewareBootstrapper>>());
             await databaseMigrator.MigrateAsync();
             await databaseMigrator.SetWALMode();
             var queueItemRepo = new SQLiteQueueItemRepository(connectionFactory, path);
