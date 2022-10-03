@@ -21,7 +21,7 @@ stages:
         ${{ else }}:
           ${{ pair.key }}: ${{ pair.value }}
       
-      displayName: Release ${{ project }} ${{ stage.templateContext.environment }}
+      displayName:  ${{ stage.templateContext.environment }} ${{ project }}
 
       ${{ if ne(stage.templateContext.dependsOnPrefix, '') }}:
         dependsOn: ${{ stage.templateContext.dependsOnPrefix }}_${{ replace(project, '.', '_') }}
