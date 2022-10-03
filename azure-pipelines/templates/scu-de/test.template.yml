@@ -18,6 +18,8 @@ steps:
     path: $(UserProfile)/.nuget/packages
   displayName: Cache NuGet packages
 
+- task: NuGetToolInstaller@1
+
 - task: NuGetCommand@2
   inputs:
     command: 'restore'
