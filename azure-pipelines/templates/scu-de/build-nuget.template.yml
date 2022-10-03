@@ -77,10 +77,9 @@ steps:
   displayName: 'nuget pack fiskaltrust.Middleware.SCU.DE.InMemory'
   inputs:
     command: 'pack'
-    packagesToPack: 'src/fiskaltrust.Middleware.SCU.DE.SwissbitAndroid/.nuspec'
+    packagesToPack: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.SwissbitAndroid/.nuspec'
     versioningScheme: 'off'
-    basePath: 'src/fiskaltrust.Middleware.SCU.DE.SwissbitAndroid/'
-  workingDirectory: '$(WorkingDirectory)'
+    basePath: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.SwissbitAndroid/'
 
 - task: PublishBuildArtifacts@1
   displayName: 'Publish Artifact: drop'
