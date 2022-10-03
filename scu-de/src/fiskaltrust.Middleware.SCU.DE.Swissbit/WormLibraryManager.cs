@@ -11,7 +11,8 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
         private const string win64LibraryFile = "runtimes\\win-x64\\native\\WormAPI.dll";
         private const string linux32LibraryFile = "runtimes/linux/native/libWormAPI.so";
         private const string linux64LibraryFile = "runtimes/linux-x64/native/libWormAPI.so";
-        private const string linuxArm32LibraryFile = "runtimes/linux-arm/native/libWormAPI.so";
+        private const string linuxArmV7LibraryFile = "runtimes/linux-arm-v7/native/libWormAPI.so";
+        private const string linuxArmV8LibraryFile = "runtimes/linux-arm-v8/native/libWormAPI.so";
 
         public static void CopyLibraryToWorkingDirectory()
         {
@@ -27,8 +28,8 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
                     {
                         Architecture.X86 => linux32LibraryFile,
                         Architecture.X64 => linux64LibraryFile,
-                        Architecture.Arm => linuxArm32LibraryFile,
-                        Architecture.Arm64 => throw new NotImplementedException("Arm64 is currently not supported by the Swissbit hardware TSE SDK."),
+                        Architecture.Arm => linuxArmV7LibraryFile,
+                        Architecture.Arm64 => linuxArmV8LibraryFile,
                         _ => throw new NotImplementedException($"The CPU architecture {arch} is not supported on Unix by the Swissbit hardware TSE SDK.")
                     };
                 };
