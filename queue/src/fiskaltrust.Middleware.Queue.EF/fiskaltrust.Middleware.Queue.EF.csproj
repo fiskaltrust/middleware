@@ -24,7 +24,7 @@
         <PackageReference Include="System.Text.Encoding.CodePages" Version="5.0.0" />
     </ItemGroup>
 
-    <ItemGroup Condition="'$(TargetFramework)' != 'netstandard2.0'">
+    <ItemGroup Condition="'$(TargetFramework)' != 'netstandard2.0' AND '$(TargetFramework)' != 'net6.0'">
         <PackageReference Include="BouncyCastle" version="1.7.0" />
     </ItemGroup>
 
