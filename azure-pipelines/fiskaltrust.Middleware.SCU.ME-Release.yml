@@ -4,7 +4,7 @@ resources:
       source: fiskaltrust.Middleware.SCU.ME
       trigger:
         tags:
-          - refs/tags/scu-me/*/v*
+          - refs/tags/scu-me/*
 
 trigger: none
 pr: none

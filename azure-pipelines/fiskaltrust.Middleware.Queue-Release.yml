@@ -4,7 +4,7 @@ resources:
       source: fiskaltrust.Middleware.Queue
       trigger:
         tags:
-          - refs/tags/queue/*/v*
+          - refs/tags/queue/*
 
 trigger: none
 pr: none
