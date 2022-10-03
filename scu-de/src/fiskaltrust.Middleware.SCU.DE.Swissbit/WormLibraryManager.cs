@@ -7,12 +7,12 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
 {
     public static class WormLibraryManager
     {
-        private const string win32LibraryFile = "runtimes\\win-x86\\native\\WormAPI.dll";
-        private const string win64LibraryFile = "runtimes\\win-x64\\native\\WormAPI.dll";
-        private const string linux32LibraryFile = "runtimes/linux/native/libWormAPI.so";
-        private const string linux64LibraryFile = "runtimes/linux-x64/native/libWormAPI.so";
-        private const string linuxArmV7LibraryFile = "runtimes/linux-arm-v7/native/libWormAPI.so";
-        private const string linuxArmV8LibraryFile = "runtimes/linux-arm-v8/native/libWormAPI.so";
+        private static readonly string _win32LibraryFile = Path.Combine("runtimes", "win-x86", "native", "WormAPI.dll");
+        private static readonly string _win64LibraryFile = Path.Combine("runtimes", "win-x64", "native", "WormAPI.dll");
+        private static readonly string _linux32LibraryFile = Path.Combine("runtimes", "linux", "native", "libWormAPI.so");
+        private static readonly string _linux64LibraryFile = Path.Combine("runtimes", "linux-x64", "native", "libWormAPI.so");
+        private static readonly string _linuxArmV7LibraryFile = Path.Combine("runtimes", "linux-arm-v7", "native", "libWormAPI.so");
+        private static readonly string _linuxArmV8LibraryFile = Path.Combine("runtimes", "linux-arm-v8", "native", "libWormAPI.so");
 
         public static void CopyLibraryToWorkingDirectory()
         {
@@ -26,10 +26,10 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
                 {
                     libraryFile = arch switch
                     {
-                        Architecture.X86 => linux32LibraryFile,
-                        Architecture.X64 => linux64LibraryFile,
-                        Architecture.Arm => linuxArmV7LibraryFile,
-                        Architecture.Arm64 => linuxArmV8LibraryFile,
+                        Architecture.X86 => _linux32LibraryFile,
+                        Architecture.X64 => _linux64LibraryFile,
+                        Architecture.Arm => _linuxArmV7LibraryFile,
+                        Architecture.Arm64 => _linuxArmV8LibraryFile,
                         _ => throw new NotImplementedException($"The CPU architecture {arch} is not supported on Unix by the Swissbit hardware TSE SDK.")
                     };
                 };
@@ -43,8 +43,8 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
                 {
                     libraryFile = arch switch
                     {
-                        Architecture.X86 => win32LibraryFile,
-                        Architecture.X64 => win64LibraryFile,
+                        Architecture.X86 => _win32LibraryFile,
+                        Architecture.X64 => _win64LibraryFile,
                         _ => throw new NotImplementedException($"The CPU architecture {arch} is currently not supported on Windows by the Swissbit hardware TSE SDK.")
                     };
                 };
