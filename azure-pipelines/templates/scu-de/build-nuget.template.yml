@@ -73,6 +73,15 @@ steps:
   displayName: 'dotnet pack fiskaltrust.Middleware.SCU.DE.InMemory'
   workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.InMemory'
 
+- task: NuGetCommand@2
+  displayName: 'nuget pack fiskaltrust.Middleware.SCU.DE.InMemory'
+  inputs:
+    command: 'pack'
+    packagesToPack: 'src/fiskaltrust.Middleware.SCU.DE.SwissbitAndroid/.nuspec'
+    versioningScheme: 'off'
+    basePath: 'src/fiskaltrust.Middleware.SCU.DE.SwissbitAndroid/'
+  workingDirectory: '$(WorkingDirectory)'
+
 - task: PublishBuildArtifacts@1
   displayName: 'Publish Artifact: drop'
   inputs:
