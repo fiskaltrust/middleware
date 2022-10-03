@@ -4,7 +4,7 @@ resources:
       source: fiskaltrust.Middleware.SCU.ME
       trigger:
         tags:
-          - refs/tags/scu-me/*/v*
+          - refs/tags/scu-me/*
 
 trigger: none
 pr: none
@@ -27,6 +27,6 @@ stages:
         # - stage: Release_Production
         #   templateContext:
         #     environment: production
-        #     storage: stwesteuropepackages
-        #     serviceConnection: rg-westeurope-packages
+        #     storage: stprodwesteuropepackages
+        #     serviceConnection: rg-prod-westeurope-packages
         #     dependsOnPrefix: Release_Sandbox

@@ -4,7 +4,7 @@ resources:
       source: fiskaltrust.Middleware.Queue
       trigger:
         tags:
-          - refs/tags/queue/*/v*
+          - refs/tags/queue/*
 
 trigger: none
 pr: none
@@ -27,9 +27,9 @@ stages:
             storage: stdevwesteuropepackages
             serviceConnection: rg-dev-westeurope-packages
 
-        # - stage: Release_Production
-        #   templateContext:
-        #     environment: production
-        #     storage: stwesteuropepackages
-        #     serviceConnection: rg-westeurope-packages
-        #     dependsOnPrefix: Release_Sandbox
+        - stage: Release_Production
+          templateContext:
+            dependsOnPrefix: Release_Sandbox
+            environment: production
+            storage: stprodwesteuropepackages
+            serviceConnection: rg-prod-westeurope-packages

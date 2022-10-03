@@ -21,7 +21,7 @@ stages:
         ${{ else }}:
           ${{ pair.key }}: ${{ pair.value }}
       
-      displayName: Release ${{ project }} ${{ stage.templateContext.environment }}
+      displayName: ${{ stage.templateContext.environment }} ${{ project }}
 
       ${{ if ne(stage.templateContext.dependsOnPrefix, '') }}:
         dependsOn: ${{ stage.templateContext.dependsOnPrefix }}_${{ replace(project, '.', '_') }}
@@ -29,7 +29,7 @@ stages:
       ${{ if eq(stage.templateContext.environment, 'production') }}:
         condition: and(startsWith(variables.branch, 'refs/tags/'), contains(variables.branch, lower('/${{ project }}/v')))
       ${{ else }}:
-        condition: or(startsWith(variables['Build.Reason'], 'Manual'), and(startsWith(variables.branch, 'refs/tags/'), contains(variables.branch, lower('/${{ project }}/v'))))
+        condition: or(not(startsWith(variables.branch, 'refs/tags/')), and(startsWith(variables.branch, 'refs/tags/'), contains(variables.branch, lower('/${{ project }}/v'))))
 
       jobs:
         - deployment: Release
