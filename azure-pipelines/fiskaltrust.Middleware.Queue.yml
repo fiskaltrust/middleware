@@ -93,3 +93,4 @@ stages:
                 - fiskaltrust.Middleware.Queue.SQLite
                 - fiskaltrust.Middleware.Queue.PostgreSQL
                 - fiskaltrust.Middleware.Queue.MySQL
+                - fiskaltrust.Middleware.Queue.EF

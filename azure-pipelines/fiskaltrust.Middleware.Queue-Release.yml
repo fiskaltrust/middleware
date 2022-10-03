@@ -17,7 +17,7 @@ stages:
       projects:
         - InMemory
         - SQLite
-        - PostgreSQL
+        - EF
         - MySQL
       stages:
         - stage: Release_Sandbox
