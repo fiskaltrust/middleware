@@ -51,11 +51,11 @@ steps:
        ${{ parameters.workingDirectory }}/src/**/*fiskaltrust*.exe
 
 - ${{ each project in parameters.projects }}:
-  - powershell: |
+  - pwsh: |
       mkdir $(Build.ArtifactStagingDirectory)/package-${{ project }}
     displayName: Create target directory package-${{ project }}
 
-  - powershell: |
+  - pwsh: |
       $version = (Select-Xml -Path ./Directory.Build.props -XPath 'Project/PropertyGroup/Version').Node.InnerText
       dotnet publish --configuration $(buildConfiguration) -f net6 --output $(Build.ArtifactStagingDirectory)/raw/${{ project }} --no-build /p:DebugType=None /p:DebugSymbols=false
       Compress-Archive -Path $(Build.ArtifactStagingDirectory)/raw/${{ project }}/* -DestinationPath $(Build.ArtifactStagingDirectory)/package-${{ project }}/${{ project }}-$version.zip
