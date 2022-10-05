@@ -85,6 +85,10 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
                         _fccInitializationService.Update(_fccDirectory);
                     }
                 }
+                else if (!_fccDownloadService.IsLatestVersionDat(_fccDirectory, new Version(_configuration.FccVersion)))
+                {
+                     _fccInitializationService.Update(_fccDirectory);
+                }
                 else if (!_fccInitializationService.IsInitialized(_fccDirectory))
                 {
                     _fccInitializationService.Initialize(_fccDirectory);
