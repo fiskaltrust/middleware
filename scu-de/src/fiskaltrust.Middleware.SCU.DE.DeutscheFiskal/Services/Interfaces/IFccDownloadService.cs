@@ -9,6 +9,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services.Interfaces
         Task<bool> DownloadFccAsync(string fccDirectory);
         bool IsInstalled(string fccDirectory);
         bool IsLatestVersion(string fccDirectory, Version latestVersion);
+        bool IsLatestVersionDat(string fccDirectory, Version latestVersion);
         Task LogWarningIfFccPathsDontMatchAsync(string fccDirectory);
         bool IsPathInRunFccIdent(string path, string content, out string pathInFile);
     }
