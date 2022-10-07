@@ -8,5 +8,6 @@
         public bool EnableTarFileExport { get; set; } = true;
         public int TooLargeToExportThreshold { get; set; } = 100 * 1024 * 1024;  // 100 MB
         public bool EnableFirmwareUpdate { get; set; } = false;
+        public string NativeLibArch { get; set; }
     }
 }
