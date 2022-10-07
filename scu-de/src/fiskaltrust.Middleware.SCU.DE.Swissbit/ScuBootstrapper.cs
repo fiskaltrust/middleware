@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.SCU.DE.Swissbit.Extensions;
 using Microsoft.Extensions.DependencyInjection;
+using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.SCU.DE.Swissbit
 {
@@ -13,7 +14,9 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
 
         public void ConfigureServices(IServiceCollection serviceCollection)
         {
-            WormLibraryManager.CopyLibraryToWorkingDirectory();
+            var config = JsonConvert.DeserializeObject<SwissbitSCUConfiguration>(JsonConvert.SerializeObject(Configuration));
+            WormLibraryManager.CopyLibraryToWorkingDirectory(config);
+
             serviceCollection.AddSwissbitScuServices(Configuration);
         }
     }
