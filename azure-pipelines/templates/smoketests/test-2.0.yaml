@@ -69,21 +69,17 @@ steps:
     displayName: Add Packages
 
   - pwsh: |
-      $process = $Null
-      if("${{ parameters.mono }}" -eq "True") {
-      } else {
-        $process = Start-Process -PassThru -WorkingDirectory "$(Build.SourcesDirectory)/launcher" -FilePath "$(Build.SourcesDirectory)/launcher/fiskaltrust.Launcher.exe" -ArgumentList @(
-          "run";
-          "--cashbox-id"; "${{ parameters.cashbox.cashboxid }}";
-          "--access-token"; "${{ parameters.cashbox.accesstoken }}";
-          "-launcher-configuration-file"; "$(Build.SourcesDirectory)/launcher/configuration.json";
-          "--sandbox";
-          "--use-offline";
-          "--service-folder"; "$(Build.SourcesDirectory)/service";
-          "--log-folder"; "$(Build.SourcesDirectory)/logs";
-          "--log-level"; "Debug";
-        )
-      }
+      $process = Start-Process -PassThru -WorkingDirectory "$(Build.SourcesDirectory)/launcher" -FilePath "$(Build.SourcesDirectory)/launcher/fiskaltrust.Launcher.exe" -ArgumentList @(
+        "run";
+        "--cashbox-id"; "${{ parameters.cashbox.cashboxid }}";
+        "--access-token"; "${{ parameters.cashbox.accesstoken }}";
+        "-launcher-configuration-file"; "$(Build.SourcesDirectory)/launcher/configuration.json";
+        "--sandbox";
+        "--use-offline";
+        "--service-folder"; "$(Build.SourcesDirectory)/service";
+        "--log-folder"; "$(Build.SourcesDirectory)/logs";
+        "--log-level"; "Debug";
+      )
 
       $count = 0
       $step = 5
