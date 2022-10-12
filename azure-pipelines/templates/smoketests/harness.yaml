@@ -33,7 +33,7 @@ stages:
                               Set-Content -Path "$(Build.SourcesDirectory)/environment.json" -Value '{"id": "","name":"local","values":[{"key":"base_url","value":"${{ config.cashbox.baseurl }}","enabled":true},{"key":"cashbox_id","value":"${{ config.cashbox.cashboxid }}","enabled":true},{"key":"access_token","value":"${{ config.cashbox.accesstoken }}","enabled":true}]}'
                             displayName: Create newman Environment
 
-                          - template: helpers/run.yaml
+                          - template: run.yaml
                             parameters:
                               run: ${{ config.pre }}
 
@@ -51,7 +51,7 @@ stages:
                               cashbox: ${{ config.cashbox }}
                               target: ${{ agent.os }}
 
-                          - template: helpers/run.yaml
+                          - template: run.yaml
                             parameters:
                               run: ${{ config.post }}
 
