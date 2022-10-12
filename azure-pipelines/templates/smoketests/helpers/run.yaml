@@ -4,5 +4,5 @@ parameters:
 
 steps:
 - ${{ if ne(length(parameters.run), 0) }}:
-  - ${{ each pre in parameters.run }}:
+  - ${{ each run in parameters.run }}:
     - ${{ run }}
