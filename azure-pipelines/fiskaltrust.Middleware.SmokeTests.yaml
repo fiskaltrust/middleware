@@ -11,7 +11,7 @@ resources:
     - pipeline: launcher-1-3
       source: fiskaltrust.Launcher
       project: department-develop-research
-      branch: main
+      branch: master
 
     - pipeline: launcher-2-0
       source: fiskaltrust.Launcher
