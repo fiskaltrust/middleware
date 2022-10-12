@@ -29,7 +29,7 @@ steps:
   - pwsh: |
       Expand-Archive $(Pipeline.Workspace)/launcher-1-3/drop/fiskaltrust.service.launcher.*.nupkg -DestinationPath $(Agent.TempDirectory)/launcher-1-3/
       
-      Move-Item $(Agent.TempDirectory)/launcher-1-3/lib/net461/* $(Build.SourcesDirectory)/launcher-1-3 -Recurse
+      Move-Item $(Agent.TempDirectory)/launcher-1-3/lib/net461/* $(Build.SourcesDirectory)/launcher-1-3
     displayName: Extraxt Launcher 1.3 Artifact
 
   - pwsh: |
