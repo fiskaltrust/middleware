@@ -33,9 +33,9 @@ stages:
                               Set-Content -Path "$(Build.SourcesDirectory)/environment.json" -Value '{"id": "","name":"local","values":[{"key":"base_url","value":"${{ config.cashbox.baseurl }}","enabled":true},{"key":"cashbox_id","value":"${{ config.cashbox.cashboxid }}","enabled":true},{"key":"access_token","value":"${{ config.cashbox.accesstoken }}","enabled":true}]}'
                             displayName: Create newman Environment
 
-                          - ${{ if ne(length(config.pre), 0) }}:
-                              - ${{ each pre in config.pre }}:
-                                  - ${{ pre }}
+                          - template: helpers/run.yaml
+                            parameters:
+                              run: ${{ config.pre }}
 
                           - template: test-1.3.yaml
                             parameters:
@@ -51,9 +51,9 @@ stages:
                               cashbox: ${{ config.cashbox }}
                               target: ${{ agent.os }}
 
-                          - ${{ if ne(length(config.post), 0) }}:
-                              - ${{ each post in config.post }}:
-                                  - ${{ post }}
+                          - template: helpers/run.yaml
+                            parameters:
+                              run: ${{ config.post }}
 
                           - publish: logs
                             artifact: logs-${{ agent.os }}-${{ config.queue }}-${{ replace(config.scu, '.', '-') }}
