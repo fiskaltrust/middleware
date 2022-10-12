@@ -1,0 +1,115 @@
+parameters:
+  - name: queue
+    type: string
+
+  - name: scu
+    type: string
+
+  - name: cashbox
+    type: object
+
+  - name: target
+    type: string
+
+steps:
+  - download: queues
+    artifact: packages-fiskaltrust.Middleware.Queue.${{ parameters.queue }}
+    displayName: Download Queue 2.0 Artifact
+
+  - download: scus
+    artifact: packages-fiskaltrust.Middleware.Queue.${{ parameters.scu }}
+    displayName: Download Scu 2.0 Artifact
+
+  - download: launcher-2-0
+    artifact: drop-${{ parameters.target }}
+    displayName: Download Launcher 2.0 Artifact
+
+  - pwsh: |
+      $basicAuthBytes = [System.Text.Encoding]::ASCII.GetBytes("${{ parameters.cashbox.cashboxid}}:${{ parameters.cashbox.accesstoken }}")
+      $basicAuthBase64 = [System.Convert]::ToBase64String($basicAuthBytes)
+      $basicAuthValue = "Basic ${basicAuthBase64}"
+      $headers = @{ Authorization = $basicAuthValue ; cashboxid = "${{ parameters.cashbox.cashboxid}}" }
+      $uri = "https://packages-sandbox.fiskaltrust.cloud/${{ parameters.cashbox.cashboxid }}.download?offline=true"
+
+      Invoke-WebRequest -uri $uri -Headers $headers -OutFile "$(Agent.TempDirectory)/launcher.zip"
+
+      Expand-Archive $(Agent.TempDirectory)/launcher.zip -DestinationPath $(Agent.TempDirectory)/launcher -Force
+
+      mkdir $(Build.SourcesDirectory)/launcher
+      Move-Item $(Agent.TempDirectory)/launcher/configuration.json $(Build.SourcesDirectory)/launcher/configuration.json
+
+      Write-Host "Downloaded Launcher & Config"
+    displayName: Download Config
+
+  - pwsh: |
+      Move-Item $(Pipeline.Workspace)/launcher-2-0/drop-${{ parameters.target }}/fiskaltrust.Launcher* $(Build.SourcesDirectory)/launcher
+    displayName: Extraxt Launcher 2.0 Artifact
+
+  - pwsh: |
+      mkdir $(Build.SourcesDirectory)/service/cache
+      $queueFile = "$(Pipeline.Workspace)/queues/packages-${{ parameters.queue }}/fiskaltrust.Middleware.Queue.${{ parameters.queue }}-*.zip"
+      $queueName = $(Get-Item $queueFile).Name
+      $queueVersion = $queueName -replace 'fiskaltrust\.Middleware\.Queue\.${{ parameters.queue }}-(.*)\.zip', '$1'
+      Move-Item $(Pipeline.Workspace)/queues/packages-${{ parameters.queue }}/* $(Build.SourcesDirectory)/service/cache
+      Write-Host "Moved Queue packages"
+
+      $scuFile = "$(Pipeline.Workspace)/scus/packages-${{ parameters.scu }}/fiskaltrust.Middleware.SCU.${{ parameters.scu }}-*.zip"
+      $scuName = $(Get-Item $scuFile).Name
+      $scuVersion = $scuName -replace 'fiskaltrust\.Middleware\.SCU\.${{ parameters.scu }}-(.*)\.zip', '$1'
+      Move-Item $(Pipeline.Workspace)/queues/packages-${{ parameters.scu }}/* $(Build.SourcesDirectory)/service/cache
+      Write-Host "Moved SCU packages"
+
+      $configuration = ConvertFrom-Json $(Get-Content $(Build.SourcesDirectory)/launcher/configuration.json)
+      $configuration.ftQueues[0].Version = $queueVersion
+      $configuration.ftSignaturCreationDevices[0].Version = $scuVersion
+
+      ConvertTo-Json $configuration -Depth 100 | Set-Content -Path $(Build.SourcesDirectory)/launcher/configuration.json -Encoding utf8
+      Write-Host "Replaced Versions in Config"
+
+    displayName: Add Packages
+
+  - pwsh: |
+      $process = $Null
+      if("${{ parameters.mono }}" -eq "True") {
+      } else {
+        $process = Start-Process -PassThru -WorkingDirectory "$(Build.SourcesDirectory)/launcher" -FilePath "$(Build.SourcesDirectory)/launcher/fiskaltrust.Launcher.exe" -ArgumentList @(
+          "run";
+          "--cashbox-id"; "${{ parameters.cashbox.cashboxid }}";
+          "--access-token"; "${{ parameters.cashbox.accesstoken }}";
+          "-launcher-configuration-file"; "$(Build.SourcesDirectory)/launcher/configuration.json";
+          "--sandbox";
+          "--use-offline";
+          "--service-folder"; "$(Build.SourcesDirectory)/service";
+          "--log-folder"; "$(Build.SourcesDirectory)/logs";
+          "--log-level"; "Debug";
+        )
+      }
+
+      $count = 0
+      $step = 5
+      $max = 10 * 60
+
+      while($True) {
+        Start-Sleep -Seconds $step
+        $count += $step
+        if($count -gt $max) {
+          Write-Error "Launcher did not complete startup."
+          exit 1
+        }
+        if($process.HasExited) {
+          Write-Error "Launcher has exited."
+          exit 1
+        }
+        if(!(Test-Path $(Build.SourcesDirectory)/logs/log_fiskaltrust.Launcher_*)) {
+          continue
+        }
+        $log = Get-Content $(Build.SourcesDirectory)/logs/log_fiskaltrust.Launcher_*
+        if($log -like "*Press CTRL+C to exit.*") {
+          break
+        }
+      }
+
+      newman run https://www.getpostman.com/collections/cb26765356b4bf4d133d -e "$(Build.SourcesDirectory)/environment.json" --reporters 'cli,junit' --reporter-junit-export "$(Build.SourcesDirectory)/newman-2.0.xml"
+
+      Stop-Process $process
+    displayName: Run Tests

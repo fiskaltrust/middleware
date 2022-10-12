@@ -1,0 +1,69 @@
+parameters:
+  - name: agents
+    type: object
+  - name: configs
+    type: object
+
+stages:
+  - ${{ each agent in parameters.agents }}:
+      - ${{ if not(agent.skip) }}:
+          - ${{ each config in parameters.configs }}:
+              - ${{ if not(config.skip) }}:
+                  - stage: ${{ replace(agent.os, '-', '_') }}_${{ config.queue }}_${{ replace(config.scu, '.', '_') }}
+                    dependsOn: []
+                    pool:
+                      name: smoketests-middleware
+                      demands:
+                        - SmokeTests
+                        - SmokeTests.Queue.${{ config.queue }}
+                        - SmokeTests.SCU.${{ config.scu }}
+                        - SmokeTests.OS -equals ${{ agent.os }}
+                    jobs:
+                      - job:
+                        displayName: Smoke Tests
+                        workspace:
+                          clean: all
+                        steps:
+                          - checkout: none
+
+                          - pwsh: New-Item -ItemType directory -Path "$(Build.SourcesDirectory)/logs"
+                            displayName: Setup Directories
+
+                          - pwsh: |
+                              Set-Content -Path "$(Build.SourcesDirectory)/environment.json" -Value '{"id": "","name":"local","values":[{"key":"base_url","value":"${{ config.cashbox.baseurl }}","enabled":true},{"key":"cashbox_id","value":"${{ config.cashbox.cashboxid }}","enabled":true},{"key":"access_token","value":"${{ config.cashbox.accesstoken }}","enabled":true}]}'
+                            displayName: Create newman Environment
+
+                          - ${{ if ne(length(config.pre), 0) }}:
+                              - ${{ each pre in config.pre }}:
+                                  - ${{ pre }}
+
+                          - template: test-1.3.yaml
+                            parameters:
+                              queue: ${{ config.queue }}
+                              scu: ${{ config.scu }}
+                              cashbox: ${{ config.cashbox }}
+                              mono: ${{ eq(agent.mono, True) }}
+
+                          - template: test-2.0.yaml
+                            parameters:
+                              queue: ${{ config.queue }}
+                              scu: ${{ config.scu }}
+                              cashbox: ${{ config.cashbox }}
+                              target: ${{ agent.os }}
+
+                          - ${{ if ne(length(config.post), 0) }}:
+                              - ${{ each post in config.post }}:
+                                  - ${{ post }}
+
+                          - publish: logs
+                            artifact: logs-${{ agent.os }}-${{ config.queue }}-${{ replace(config.scu, '.', '-') }}
+                            condition: succeededOrFailed()
+
+                          - task: PublishTestResults@2
+                            condition: and(succeededOrFailed(), eq(variables['System.JobAttempt'], 1))
+                            inputs:
+                              testResultsFormat: JUnit
+                              testResultsFiles: $(Build.SourcesDirectory)/newman-*.xml
+                              testRunTitle: ${{ agent.os }}-${{ config.queue }}-${{ replace(config.scu, '.', '-') }}
+                              buildPlatform: ${{ agent.os }}
+                              buildConfiguration: ${{ config.queue }}-${{ replace(config.scu, '.', '-') }}
