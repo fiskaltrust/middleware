@@ -203,6 +203,7 @@ stages:
             cashboxid: b6770cdd-ccac-4b0d-946a-85dc0265cc5e
             accesstoken: BJO0GTRdjnH+I5UfbhtuflFBepWKXnoTedwdrpMqoeq7bvxzy9ejlaY+AH7Vd3uwDabgI0etRX0Q3cUv4BRHXjc=
             baseurl: http://localhost:1511/108d8a30-60e0-4589-9af2-d0bcad3cbb29
+          skip: true
 
         - queue: SQLite
           scu: DE.SwissbitCloud
@@ -224,4 +225,3 @@ stages:
                 apipassword: $(DE.Swissbit.ApiPassword)
                 apiusername: $(DE.Swissbit.ApiUsername)
                 tenantid: $(DE.Swissbit.TenantId)
-          skip: true
