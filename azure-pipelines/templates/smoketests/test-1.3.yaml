@@ -27,47 +27,29 @@ steps:
     displayName: Download Launcher 1.3 Artifact
 
   - pwsh: |
-      $basicAuthBytes = [System.Text.Encoding]::ASCII.GetBytes("${{ parameters.cashbox.cashboxid}}:${{ parameters.cashbox.accesstoken }}")
-      $basicAuthBase64 = [System.Convert]::ToBase64String($basicAuthBytes)
-      $basicAuthValue = "Basic ${basicAuthBase64}"
-      $headers = @{ Authorization = $basicAuthValue ; cashboxid = "${{ parameters.cashbox.cashboxid}}" }
-      $uri = "https://packages-sandbox.fiskaltrust.cloud/${{ parameters.cashbox.cashboxid }}.download?offline=true"
-
-      Invoke-WebRequest -uri $uri -Headers $headers -OutFile "$(Agent.TempDirectory)/launcher.zip"
-
-      Expand-Archive $(Agent.TempDirectory)/launcher.zip -DestinationPath $(Agent.TempDirectory)/launcher -Force
-
-      mkdir $(Build.SourcesDirectory)/launcher
-      Move-Item $(Agent.TempDirectory)/launcher/configuration.json $(Build.SourcesDirectory)/launcher/configuration.json
-      Move-Item $(Agent.TempDirectory)/launcher/packages $(Build.SourcesDirectory)/launcher/packages -Recurse
-
-      Write-Host "Downloaded Launcher & Config"
-    displayName: Download Config
-
-  - pwsh: |
       Expand-Archive $(Pipeline.Workspace)/launcher-1-3/drop/fiskaltrust.service.launcher.*.nupkg -DestinationPath $(Agent.TempDirectory)/launcher-1-3/
       
-      Move-Item $(Agent.TempDirectory)/launcher-1-3/lib/net461/* $(Build.SourcesDirectory)/launcher -Recurse
+      Move-Item $(Agent.TempDirectory)/launcher-1-3/lib/net461/* $(Build.SourcesDirectory)/launcher-1-3 -Recurse
     displayName: Extraxt Launcher 1.3 Artifact
 
   - pwsh: |
       $queueFile = "$(Pipeline.Workspace)/queues/packages-v1/fiskaltrust.Middleware.Queue.${{ parameters.queue }}.*.nupkg"
       $queueName = $(Get-Item $queueFile).Name
       $queueVersion = $queueName -replace 'fiskaltrust\.Middleware\.Queue\.${{ parameters.queue }}\.(.*)\.nupkg', '$1'
-      Move-Item $queueFile $(Build.SourcesDirectory)/launcher/packages -Force
+      Move-Item $queueFile $(Build.SourcesDirectory)/launcher-1-3/packages -Force
       Write-Host "Moved $queueFile"
 
       $scuFile = "$(Pipeline.Workspace)/scus/packages-v1/fiskaltrust.Middleware.SCU.${{ parameters.scu }}.*.nupkg"
       $scuName = $(Get-Item $scuFile).Name
       $scuVersion = $scuName -replace 'fiskaltrust\.Middleware\.SCU\.${{ parameters.scu }}\.(.*)\.nupkg', '$1'
-      Move-Item $scuFile $(Build.SourcesDirectory)/launcher/packages -Force
+      Move-Item $scuFile $(Build.SourcesDirectory)/launcher-1-3/packages -Force
       Write-Host "Moved $scuFile"
 
-      $configuration = ConvertFrom-Json $(Get-Content $(Build.SourcesDirectory)/launcher/configuration.json)
+      $configuration = ConvertFrom-Json $(Get-Content $(Build.SourcesDirectory)/launcher-1-3/configuration.json)
       $configuration.ftQueues[0].Version = $queueVersion
       $configuration.ftSignaturCreationDevices[0].Version = $scuVersion
 
-      ConvertTo-Json $configuration -Depth 100 | Set-Content -Path $(Build.SourcesDirectory)/launcher/configuration.json -Encoding utf8
+      ConvertTo-Json $configuration -Depth 100 | Set-Content -Path $(Build.SourcesDirectory)/launcher-1-3/configuration.json -Encoding utf8
       Write-Host "Replaced Versions in Config"
 
     displayName: Replace Launcher Packages
@@ -76,7 +58,7 @@ steps:
       $process = $Null
       if("${{ parameters.mono }}" -eq "True") {
       } else {
-        $process = Start-Process -PassThru -WorkingDirectory "$(Build.SourcesDirectory)/launcher" -FilePath "$(Build.SourcesDirectory)/launcher/fiskaltrust.exe" -ArgumentList @("-cashboxid=${{ parameters.cashbox.cashboxid }}"; "-accesstoken=${{ parameters.cashbox.accesstoken }}"; "-sandbox"; "-useoffline"; "-servicefolder=$(Build.SourcesDirectory)/service"; "-logfile=$(Build.SourcesDirectory)/logs/log.txt"; "-verbosity=Debug"; "-test")
+        $process = Start-Process -PassThru -WorkingDirectory "$(Build.SourcesDirectory)/launcher-1-3" -FilePath "$(Build.SourcesDirectory)/launcher-1-3/fiskaltrust.exe" -ArgumentList @("-cashboxid=${{ parameters.cashbox.cashboxid }}"; "-accesstoken=${{ parameters.cashbox.accesstoken }}"; "-sandbox"; "-useoffline"; "-servicefolder=$(Build.SourcesDirectory)/service-1-3"; "-logfile=$(Build.SourcesDirectory)/logs/log-1-3.txt"; "-verbosity=Debug"; "-test")
       }
 
       $count = 0
@@ -94,16 +76,16 @@ steps:
           Write-Error "Launcher has exited."
           exit 1
         }
-        if(!(Test-Path $(Build.SourcesDirectory)/logs/log.txt)) {
+        if(!(Test-Path $(Build.SourcesDirectory)/logs/log-1-3.txt)) {
           continue
         }
-        $log = Get-Content $(Build.SourcesDirectory)/logs/log.txt
+        $log = Get-Content $(Build.SourcesDirectory)/logs/log-1-3.txt
         if($log -like "*fiskaltrust.Middleware started. Press a button to stop...*") {
           break
         }
       }
 
-      newman run https://www.getpostman.com/collections/cb26765356b4bf4d133d -e "$(Build.SourcesDirectory)/environment.json" --reporters 'cli,junit' --reporter-junit-export "$(Build.SourcesDirectory)/newman-1.3.xml"
+      newman run https://www.getpostman.com/collections/cb26765356b4bf4d133d -e "$(Build.SourcesDirectory)/environment.json" --reporters 'cli,junit' --reporter-junit-export "$(Build.SourcesDirectory)/newman-1-3.xml"
 
       Stop-Process $process
     displayName: Run Tests

@@ -1,0 +1,25 @@
+parameters:
+  - name: cashbox
+    type: object
+
+steps:
+  - pwsh: |
+      $basicAuthBytes = [System.Text.Encoding]::ASCII.GetBytes("${{ parameters.cashbox.cashboxid}}:${{ parameters.cashbox.accesstoken }}")
+      $basicAuthBase64 = [System.Convert]::ToBase64String($basicAuthBytes)
+      $basicAuthValue = "Basic ${basicAuthBase64}"
+      $headers = @{ Authorization = $basicAuthValue ; cashboxid = "${{ parameters.cashbox.cashboxid}}" }
+      $uri = "https://packages-sandbox.fiskaltrust.cloud/${{ parameters.cashbox.cashboxid }}.download?offline=true"
+
+      Invoke-WebRequest -uri $uri -Headers $headers -OutFile "$(Agent.TempDirectory)/launcher.zip"
+
+      Expand-Archive $(Agent.TempDirectory)/launcher.zip -DestinationPath $(Agent.TempDirectory)/launcher -Force
+
+      mkdir $(Build.SourcesDirectory)/launcher-1-3
+      Copy-Item $(Agent.TempDirectory)/launcher-1-3/configuration.json $(Build.SourcesDirectory)/launcher/configuration.json
+      Move-Item $(Agent.TempDirectory)/launcher-1-3/packages $(Build.SourcesDirectory)/launcher/packages -Recurse
+
+      mkdir $(Build.SourcesDirectory)/launcher-2-0
+      Copy-Item $(Agent.TempDirectory)/launcher-2-0/configuration.json $(Build.SourcesDirectory)/launcher/configuration.json
+
+      Write-Host "Downloaded Launcher & Config"
+    displayName: Download Config
