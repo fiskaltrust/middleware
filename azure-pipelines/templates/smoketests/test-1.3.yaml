@@ -45,7 +45,7 @@ steps:
       Move-Item $scuFile $(Build.SourcesDirectory)/launcher-1-3/packages -Force
       Write-Host "Moved $scuFile"
 
-      $configuration = ConvertFrom-Json $(Get-Content $(Build.SourcesDirectory)/launcher-1-3/configuration.json)
+      $configuration = ConvertFrom-Json $(Get-Content $(Build.SourcesDirectory)/launcher/configuration.json)
       $configuration.ftQueues[0].Version = $queueVersion
       $configuration.ftSignaturCreationDevices[0].Version = $scuVersion
 

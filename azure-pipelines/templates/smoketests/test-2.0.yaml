@@ -42,7 +42,7 @@ steps:
       Move-Item $(Pipeline.Workspace)/queues/packages-${{ parameters.scu }}/* $(Build.SourcesDirectory)/service-2-0/cache
       Write-Host "Moved SCU packages"
 
-      $configuration = ConvertFrom-Json $(Get-Content $(Build.SourcesDirectory)/launcher-2-0/configuration.json)
+      $configuration = ConvertFrom-Json $(Get-Content $(Build.SourcesDirectory)/launcher/configuration.json)
       $configuration.ftQueues[0].Version = $queueVersion
       $configuration.ftSignaturCreationDevices[0].Version = $scuVersion
 
