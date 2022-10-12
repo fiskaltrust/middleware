@@ -70,6 +70,7 @@ steps:
         $count += $step
         if($count -gt $max) {
           Write-Error "Launcher did not complete startup."
+          Stop-Process $process
           exit 1
         }
         if($process.HasExited) {
