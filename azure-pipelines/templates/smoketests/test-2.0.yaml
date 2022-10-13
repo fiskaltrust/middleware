@@ -55,6 +55,7 @@ steps:
       $configuration = ConvertFrom-Json $([String]$(Get-Content $(Build.SourcesDirectory)/launcher/configuration.json -Encoding utf8))
       $configuration.ftQueues[0].Version = $queueVersion
       $configuration.ftSignaturCreationDevices[0].Version = $scuVersion
+      $configuration.helpers[0].Version = $helipadVersion
 
       ConvertTo-Json $configuration -Depth 100 | Set-Content -Path $(Build.SourcesDirectory)/launcher-2-0/configuration.json -Encoding utf8
       Write-Host "Replaced Versions in Config"
