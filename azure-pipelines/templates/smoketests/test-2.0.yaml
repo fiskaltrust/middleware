@@ -39,7 +39,7 @@ steps:
       $scuFile = "$(Pipeline.Workspace)/scus/package-fiskaltrust.Middleware.SCU.${{ parameters.scu }}/fiskaltrust.Middleware.SCU.${{ parameters.scu }}-*.zip"
       $scuName = $(Get-Item $scuFile).Name
       $scuVersion = $scuName -replace 'fiskaltrust\.Middleware\.SCU\.${{ parameters.scu }}-(.*)\.zip', '$1'
-      Move-Item $(Pipeline.Workspace)/queues/package-fiskaltrust.Middleware.SCU.${{ parameters.scu }}/* $(Build.SourcesDirectory)/service-2-0/cache
+      Move-Item $(Pipeline.Workspace)/scus/package-fiskaltrust.Middleware.SCU.${{ parameters.scu }}/* $(Build.SourcesDirectory)/service-2-0/cache
       Write-Host "Moved SCU package"
 
       $configuration = ConvertFrom-Json $([String]$(Get-Content $(Build.SourcesDirectory)/launcher/configuration.json -Encoding utf8))
