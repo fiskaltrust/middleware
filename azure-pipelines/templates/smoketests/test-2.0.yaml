@@ -20,6 +20,10 @@ steps:
     artifact: package-fiskaltrust.Middleware.SCU.${{ parameters.scu }}
     displayName: Download Scu 2.0 Artifact
 
+  - download: helpers
+    artifact: package-fiskaltrust.Middleware.Helper.Helipad
+    displayName: Download Helipad 2.0 Artifact
+
   - download: launcher-2-0
     artifact: drop-${{ parameters.target }}
     displayName: Download Launcher 2.0 Artifact
@@ -29,19 +33,24 @@ steps:
     displayName: Extraxt Launcher 2.0 Artifact
 
   - pwsh: |
-      mkdir $(Build.SourcesDirectory)/service-2-0/cache
+      mkdir $(Build.SourcesDirectory)/service-2-0/cache/packages
       $queueFile = "$(Pipeline.Workspace)/queues/package-fiskaltrust.Middleware.Queue.${{ parameters.queue }}/fiskaltrust.Middleware.Queue.${{ parameters.queue }}-*.zip"
       $queueName = $(Get-Item $queueFile).Name
       $queueVersion = $queueName -replace 'fiskaltrust\.Middleware\.Queue\.${{ parameters.queue }}-(.*)\.zip', '$1'
-      Move-Item $(Pipeline.Workspace)/queues/package-fiskaltrust.Middleware.Queue.${{ parameters.queue }}/* $(Build.SourcesDirectory)/service-2-0/cache
+      Move-Item $(Pipeline.Workspace)/queues/package-fiskaltrust.Middleware.Queue.${{ parameters.queue }}/* $(Build.SourcesDirectory)/service-2-0/cache/packages
       Write-Host "Moved Queue package"
 
       $scuFile = "$(Pipeline.Workspace)/scus/package-fiskaltrust.Middleware.SCU.${{ parameters.scu }}/fiskaltrust.Middleware.SCU.${{ parameters.scu }}-*.zip"
       $scuName = $(Get-Item $scuFile).Name
       $scuVersion = $scuName -replace 'fiskaltrust\.Middleware\.SCU\.${{ parameters.scu }}-(.*)\.zip', '$1'
-      Move-Item $(Pipeline.Workspace)/scus/package-fiskaltrust.Middleware.SCU.${{ parameters.scu }}/* $(Build.SourcesDirectory)/service-2-0/cache
+      Move-Item $(Pipeline.Workspace)/scus/package-fiskaltrust.Middleware.SCU.${{ parameters.scu }}/* $(Build.SourcesDirectory)/service-2-0/cache/packages
       Write-Host "Moved SCU package"
-      Write-Host $(ls $(Build.SourcesDirectory)/service-2-0/cache)
+
+      $helipadFile = "$(Pipeline.Workspace)/helpers/package-fiskaltrust.Middleware.Helper.Helipad/fiskaltrust.Middleware.Helper.Helipad-*.zip"
+      $helipadName = $(Get-Item $helipadFile).Name
+      $helipadVersion = $helipadName -replace 'fiskaltrust\.Middleware\.Helper\.Helipad-(.*)\.zip', '$1'
+      Move-Item $(Pipeline.Workspace)/helpers/package-fiskaltrust.Middleware.Helper.Helipad/* $(Build.SourcesDirectory)/service-2-0/cache/packages
+      Write-Host "Moved Helipad package"
 
       $configuration = ConvertFrom-Json $([String]$(Get-Content $(Build.SourcesDirectory)/launcher/configuration.json -Encoding utf8))
       $configuration.ftQueues[0].Version = $queueVersion

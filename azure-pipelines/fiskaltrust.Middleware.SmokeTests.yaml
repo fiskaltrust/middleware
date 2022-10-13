@@ -8,6 +8,11 @@ resources:
       source: fiskaltrust.Middleware.SCU.DE
       branch: main
 
+    - pipeline: helpers
+      source: fiskaltrust.Middleware.Helpers
+      project: department-develop-research
+      branch: master
+
     - pipeline: launcher-1-3
       source: fiskaltrust.Launcher
       project: department-develop-research
