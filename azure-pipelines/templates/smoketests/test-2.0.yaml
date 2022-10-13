@@ -56,7 +56,7 @@ steps:
         "run";
         "--cashbox-id"; "${{ parameters.cashbox.cashboxid }}";
         "--access-token"; "${{ parameters.cashbox.accesstoken }}";
-        "-launcher-configuration-file"; "$(Build.SourcesDirectory)/launcher-2-0/configuration.json";
+        "-cashbox-configuration-file"; "$(Build.SourcesDirectory)/launcher-2-0/configuration.json";
         "--sandbox";
         "--use-offline";
         "--service-folder"; "$(Build.SourcesDirectory)/service-2-0";
