@@ -53,7 +53,7 @@ stages:
                               queue: ${{ config.queue }}
                               scu: ${{ config.scu }}
                               cashbox: ${{ config.cashbox }}
-                              target: ${{ agent.os }}
+                              target: ${{ agent.target }}
 
                           - template: run.yaml
                             parameters:

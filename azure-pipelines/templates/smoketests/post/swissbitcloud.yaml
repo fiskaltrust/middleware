@@ -66,4 +66,5 @@ steps:
 
 - pwsh: Copy-Item $(Build.SourcesDirectory)/service/fiskaltrust/FCC/*/.fccdata/log/* $(Build.SourcesDirectory)/logs
   condition: succeededOrFailed()
+  continueOnError: true
   displayName: Copy FCC logs
