@@ -44,10 +44,10 @@ steps:
       $scuVersion = $scuName -replace 'fiskaltrust\.Middleware\.SCU\.${{ parameters.scu }}\.(.*)\.nupkg', '$1'
       Move-Item $scuFile $(Build.SourcesDirectory)/launcher-1-3/packages -Force
       Write-Host "Moved $scuFile"
-      
-      Write-Host $(Get-Content $(Build.SourcesDirectory)/launcher/configuration.json -Encoding utf8)
 
-      $configuration = ConvertFrom-Json [String]$(Get-Content $(Build.SourcesDirectory)/launcher/configuration.json -Encoding utf8)
+      Write-Host [String]$(Get-Content $(Build.SourcesDirectory)/launcher/configuration.json -Encoding utf8)
+
+      $configuration = ConvertFrom-Json $([String]$(Get-Content $(Build.SourcesDirectory)/launcher/configuration.json -Encoding utf8))
       $configuration.ftQueues[0].Version = $queueVersion
       $configuration.ftSignaturCreationDevices[0].Version = $scuVersion
 
