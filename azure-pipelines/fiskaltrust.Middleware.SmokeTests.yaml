@@ -9,7 +9,7 @@ resources:
       branch: main
 
     - pipeline: helpers
-      source: fiskaltrust.Middleware.Helpers
+      source: fiskaltrust.Middleware.Helper
       project: department-develop-research
       branch: master
 
