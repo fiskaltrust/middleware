@@ -54,7 +54,7 @@ steps:
 
     Write-Host $(Get-Content $(Build.SourcesDirectory)/launcher/configuration.json)
 
-    $configuration = Get-Content $(Build.SourcesDirectory)/launcher/configuration.json -Encoding utf8 | ConvertFrom-Json
+    $configuration = [String]$(Get-Content $(Build.SourcesDirectory)/launcher/configuration.json -Encoding utf8) | ConvertFrom-Json
 
     $configuration.ftSignaturCreationDevices[0].Configuration = @{
       "TssId" = $tss._id;
