@@ -17,7 +17,7 @@ steps:
     displayName: Download Queue 2.0 Artifact
 
   - download: scus
-    artifact: package-fiskaltrust.Middleware.Queue.${{ parameters.scu }}
+    artifact: package-fiskaltrust.Middleware.SCU.${{ parameters.scu }}
     displayName: Download Scu 2.0 Artifact
 
   - download: launcher-2-0
