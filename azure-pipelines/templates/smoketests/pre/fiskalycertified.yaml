@@ -52,6 +52,8 @@ steps:
       throw "Could not set admin_pin"
     }
 
+    Write-Host $(Get-Content $(Build.SourcesDirectory)/launcher/configuration.json)
+
     $configuration = Get-Content $(Build.SourcesDirectory)/launcher/configuration.json -Encoding utf8 | ConvertFrom-Json
 
     $configuration.ftSignaturCreationDevices[0].Configuration = @{
@@ -62,4 +64,5 @@ steps:
     }
 
     ConvertTo-Json $configuration -Depth 100 | Set-Content -Path $(Build.SourcesDirectory)/launcher/configuration.json -Encoding utf8
+    Write-Host $(Get-Content $(Build.SourcesDirectory)/launcher/configuration.json)
   displayName: Create FiskalyCertified
