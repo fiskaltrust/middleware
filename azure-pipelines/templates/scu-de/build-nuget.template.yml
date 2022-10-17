@@ -74,7 +74,7 @@ steps:
   workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.InMemory'
 
 - task: NuGetCommand@2
-  displayName: 'nuget pack fiskaltrust.Middleware.SCU.DE.InMemory'
+  displayName: 'nuget pack fiskaltrust.Middleware.SCU.DE.SwissbitAndroid'
   inputs:
     command: 'pack'
     packagesToPack: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.SwissbitAndroid/.nuspec'
