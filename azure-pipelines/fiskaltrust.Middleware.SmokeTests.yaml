@@ -20,7 +20,7 @@ resources:
 
     - pipeline: launcher-2-0
       source: fiskaltrust.Launcher
-      branch: refactor-serialization
+      branch: main
 
 variables:
   - group: SmokeTests-Middleware
