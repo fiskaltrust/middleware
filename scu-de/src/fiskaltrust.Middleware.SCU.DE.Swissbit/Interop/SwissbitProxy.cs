@@ -286,7 +286,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
                 try
                 {
                     _nativeFunctionPointer.func_worm_user_login(context, WormUserId.WORM_USER_TIME_ADMIN, _timeAdminPin.Ptr, _timeAdminPin.Length, IntPtr.Zero);
-                    _nativeFunctionPointer.func_worm_tse_updateTime(context, DateTime.UtcNow.ToTimestamp()).ThrowIfError();
+                    _nativeFunctionPointer.func_worm_tse_updateTime(context, DateTime.UtcNow.ToLinuxTimestamp()).ThrowIfError();
                 }
                 finally
                 {

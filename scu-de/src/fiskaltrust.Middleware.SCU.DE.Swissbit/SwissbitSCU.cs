@@ -460,7 +460,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
 
                         var tseResponse = await GetProxy().TransactionStartAsync(request.ClientId, Convert.FromBase64String(request.ProcessDataBase64 ?? string.Empty), request.ProcessType ?? string.Empty);
 
-                        var logTimeStamp = tseResponse.LogTime.ToDateTime();
+                        var logTimeStamp = tseResponse.LogTime.LinuxTimestampToDateTime();
                         var response = new StartTransactionResponse()
                         {
                             ClientId = request.ClientId,
@@ -519,7 +519,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
                             TransactionNumber = tseResponse.TransactionNumber,
                             ProcessType = request.ProcessType,
                             ProcessDataBase64 = request.ProcessDataBase64,
-                            TimeStamp = tseResponse.LogTime.ToDateTime(),
+                            TimeStamp = tseResponse.LogTime.LinuxTimestampToDateTime(),
                             TseSerialNumberOctet = tseResponse.SerialNumber.ToOctetString(),
                             SignatureData = new TseSignatureData()
                             {
@@ -565,7 +565,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
                             throw new SwissbitException();
                         }
 
-                        var startTransactionTimeStamp = tseResponse.LogTime.ToDateTime();
+                        var startTransactionTimeStamp = tseResponse.LogTime.LinuxTimestampToDateTime();
                         if (!_startTransactionTimeStampCache.TryRemove(tseResponse.TransactionNumber, out startTransactionTimeStamp))
                         {
                             // If the TSE log memory is too full, this call takes too long, and transactions cannot be canceled anymore - basically creating a deadlock.
@@ -587,7 +587,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
                             ProcessType = request.ProcessType,
                             ProcessDataBase64 = request.ProcessDataBase64,
                             StartTransactionTimeStamp = startTransactionTimeStamp,
-                            TimeStamp = tseResponse.LogTime.ToDateTime(),
+                            TimeStamp = tseResponse.LogTime.LinuxTimestampToDateTime(),
                             TseTimeStampFormat = LastTseInfo?.LogTimeFormat,
                             TseSerialNumberOctet = tseResponse.SerialNumber.ToOctetString(),
                             SignatureData = new TseSignatureData()
