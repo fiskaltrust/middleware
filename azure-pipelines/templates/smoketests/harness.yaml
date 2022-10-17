@@ -60,14 +60,14 @@ stages:
                               run: ${{ config.post }}
 
                           - publish: logs
-                            artifact: logs-${{ agent.os }}-${{ config.queue }}-${{ replace(config.scu, '.', '-') }}
+                            artifact: logs-${{ agent.os }}-${{ config.queue }}-${{ replace(config.scu, '.', '-') }}-$(System.JobAttempt)
                             condition: succeededOrFailed()
 
                           - task: PublishTestResults@2
-                            condition: and(succeededOrFailed(), eq(variables['System.JobAttempt'], 1))
+                            condition: succeededOrFailed()
                             inputs:
                               testResultsFormat: JUnit
                               testResultsFiles: $(Build.SourcesDirectory)/newman-*.xml
-                              testRunTitle: ${{ agent.os }}-${{ config.queue }}-${{ replace(config.scu, '.', '-') }}
+                              testRunTitle: ${{ agent.os }}-${{ config.queue }}-${{ replace(config.scu, '.', '-') }}-$(System.JobAttempt)
                               buildPlatform: ${{ agent.os }}
                               buildConfiguration: ${{ config.queue }}-${{ replace(config.scu, '.', '-') }}
