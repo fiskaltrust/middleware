@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -121,6 +122,54 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.IntegrationTest
                 var logs = LogParser.GetLogsFromTarStream(fileStream).ToList();
                 logs.Should().HaveCountGreaterThan(0);
             }
+        }
+
+#if DEBUG
+        [Fact]
+#endif
+        [Trait("Category", "SkipWhenLiveUnitTesting")]
+        public async Task ExportFromScu()
+        {
+            var sut = GetSutSwissbitSCU();
+
+            var exportSession = await sut.StartExportSessionAsync(new StartExportSessionRequest
+            {
+
+            });
+
+            exportSession.Should().NotBeNull();
+            using (var fileStream = File.OpenWrite($"export_{exportSession.TokenId}.tar"))
+            {
+                ExportDataResponse export;
+                do
+                {
+                    export = await sut.ExportDataAsync(new ExportDataRequest
+                    {
+                        TokenId = exportSession.TokenId,
+                        MaxChunkSize = 1024 * 1024
+                    });
+                    if (!export.TotalTarFileSizeAvailable)
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(1));
+                    }
+                    else
+                    {
+                        var allBytes = Convert.FromBase64String(export.TarFileByteChunkBase64);
+                        await fileStream.WriteAsync(allBytes, 0, allBytes.Length);
+                    }
+                } while (!export.TarFileEndOfFile);
+            }
+
+            var endSessionRequest = new EndExportSessionRequest
+            {
+                TokenId = exportSession.TokenId
+            };
+            using (var fileStream = File.OpenRead($"export_{exportSession.TokenId}.tar"))
+            {
+                endSessionRequest.Sha256ChecksumBase64 = Convert.ToBase64String(SHA256.Create().ComputeHash(fileStream));
+            }
+
+            var endExportSessionResult = await sut.EndExportSessionAsync(endSessionRequest);
         }
     }
 }
