@@ -14,7 +14,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitAndroid
 {
 	
 	
-	[global::System.CodeDom.Compiler.GeneratedCodeAttribute("Xamarin.Android.Build.Tasks", "1.0.0.0")]
+	[global::System.CodeDom.Compiler.GeneratedCodeAttribute("Xamarin.Android.Build.Tasks", "13.0.99.154")]
 	public partial class Resource
 	{
 		
