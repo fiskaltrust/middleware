@@ -22,12 +22,12 @@ steps:
     patterns: "**/fiskaltrust.Middleware.SCU.${{ parameters.scu }}.*.nupkg"
     displayName: Download Scu Artifact
 
-  - download: launcher
+  - download: launcher-1-3
     artifact: drop
     displayName: Download Launcher 1.3 Artifact
 
   - pwsh: |
-      Expand-Archive $(Pipeline.Workspace)/launcher/drop/fiskaltrust.service.launcher.*.nupkg -DestinationPath $(Agent.TempDirectory)/launcher/
+      Expand-Archive $(Pipeline.Workspace)/launcher-1-3/drop/fiskaltrust.service.launcher.*.nupkg -DestinationPath $(Agent.TempDirectory)/launcher/
       
       Move-Item $(Agent.TempDirectory)/launcher/lib/net461/* $(Build.SourcesDirectory)/launcher
     displayName: Extraxt Launcher 1.3 Artifact

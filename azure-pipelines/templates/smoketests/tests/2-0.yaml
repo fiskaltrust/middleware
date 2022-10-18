@@ -24,12 +24,12 @@ steps:
     artifact: package-fiskaltrust.Middleware.Helper.Helipad
     displayName: Download Helipad 2.0 Artifact
 
-  - download: launcher
+  - download: launcher-2-0
     artifact: drop-${{ parameters.target }}
     displayName: Download Launcher 2.0 Artifact
 
   - pwsh: |
-      Move-Item $(Pipeline.Workspace)/launcher/drop-${{ parameters.target }}/fiskaltrust.Launcher* $(Build.SourcesDirectory)/launcher
+      Move-Item $(Pipeline.Workspace)/launcher-2-0/drop-${{ parameters.target }}/fiskaltrust.Launcher* $(Build.SourcesDirectory)/launcher
     displayName: Extraxt Launcher 2.0 Artifact
 
   - pwsh: |
