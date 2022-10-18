@@ -17,9 +17,6 @@ parameters:
   - name: cashbox
     type: object
 
-  - name: mono
-    type: boolean
-
   - name: target
     type: string
 
