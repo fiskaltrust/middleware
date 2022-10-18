@@ -56,12 +56,10 @@ stages:
 
         - os: debian9-x64
           target: linux-x64
-          mono: true
           skip: true
 
         - os: debian9-x86
           target: linux-x86
-          mono: true
           skip: true
 
       configs:

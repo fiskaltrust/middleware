@@ -24,32 +24,32 @@ steps:
     artifact: package-fiskaltrust.Middleware.Helper.Helipad
     displayName: Download Helipad 2.0 Artifact
 
-  - download: launcher-2-0
+  - download: launcher
     artifact: drop-${{ parameters.target }}
     displayName: Download Launcher 2.0 Artifact
 
   - pwsh: |
-      Move-Item $(Pipeline.Workspace)/launcher-2-0/drop-${{ parameters.target }}/fiskaltrust.Launcher* $(Build.SourcesDirectory)/launcher-2-0
+      Move-Item $(Pipeline.Workspace)/launcher/drop-${{ parameters.target }}/fiskaltrust.Launcher* $(Build.SourcesDirectory)/launcher
     displayName: Extraxt Launcher 2.0 Artifact
 
   - pwsh: |
-      mkdir $(Build.SourcesDirectory)/service-2-0/cache/packages
+      mkdir $(Build.SourcesDirectory)/service/cache/packages
       $queueFile = "$(Pipeline.Workspace)/queues/package-fiskaltrust.Middleware.Queue.${{ parameters.queue }}/fiskaltrust.Middleware.Queue.${{ parameters.queue }}-*.zip"
       $queueName = $(Get-Item $queueFile).Name
       $queueVersion = $queueName -replace 'fiskaltrust\.Middleware\.Queue\.${{ parameters.queue }}-(.*)\.zip', '$1'
-      Move-Item $(Pipeline.Workspace)/queues/package-fiskaltrust.Middleware.Queue.${{ parameters.queue }}/* $(Build.SourcesDirectory)/service-2-0/cache/packages
+      Move-Item $(Pipeline.Workspace)/queues/package-fiskaltrust.Middleware.Queue.${{ parameters.queue }}/* $(Build.SourcesDirectory)/service/cache/packages
       Write-Host "Moved Queue package"
 
       $scuFile = "$(Pipeline.Workspace)/scus/package-fiskaltrust.Middleware.SCU.${{ parameters.scu }}/fiskaltrust.Middleware.SCU.${{ parameters.scu }}-*.zip"
       $scuName = $(Get-Item $scuFile).Name
       $scuVersion = $scuName -replace 'fiskaltrust\.Middleware\.SCU\.${{ parameters.scu }}-(.*)\.zip', '$1'
-      Move-Item $(Pipeline.Workspace)/scus/package-fiskaltrust.Middleware.SCU.${{ parameters.scu }}/* $(Build.SourcesDirectory)/service-2-0/cache/packages
+      Move-Item $(Pipeline.Workspace)/scus/package-fiskaltrust.Middleware.SCU.${{ parameters.scu }}/* $(Build.SourcesDirectory)/service/cache/packages
       Write-Host "Moved SCU package"
 
       $helipadFile = "$(Pipeline.Workspace)/helpers/package-fiskaltrust.Middleware.Helper.Helipad/fiskaltrust.Middleware.Helper.Helipad-*.zip"
       $helipadName = $(Get-Item $helipadFile).Name
       $helipadVersion = $helipadName -replace 'fiskaltrust\.Middleware\.Helper\.Helipad-(.*)\.zip', '$1'
-      Move-Item $(Pipeline.Workspace)/helpers/package-fiskaltrust.Middleware.Helper.Helipad/* $(Build.SourcesDirectory)/service-2-0/cache/packages
+      Move-Item $(Pipeline.Workspace)/helpers/package-fiskaltrust.Middleware.Helper.Helipad/* $(Build.SourcesDirectory)/service/cache/packages
       Write-Host "Moved Helipad package"
 
       $configuration = ConvertFrom-Json $([String]$(Get-Content $(Build.SourcesDirectory)/launcher/configuration.json -Encoding utf8))
@@ -57,20 +57,20 @@ steps:
       $configuration.ftSignaturCreationDevices[0].Version = $scuVersion
       $configuration.helpers[0].Version = $helipadVersion
 
-      ConvertTo-Json $configuration -Depth 100 | Set-Content -Path $(Build.SourcesDirectory)/launcher-2-0/configuration.json -Encoding utf8
+      ConvertTo-Json $configuration -Depth 100 | Set-Content -Path $(Build.SourcesDirectory)/launcher/configuration.json -Encoding utf8
       Write-Host "Replaced Versions in Config"
 
     displayName: Add Packages
 
   - pwsh: |
-      $process = Start-Process -PassThru -WorkingDirectory "$(Build.SourcesDirectory)/launcher-2-0" -FilePath "$(Build.SourcesDirectory)/launcher-2-0/fiskaltrust.Launcher.exe" -ArgumentList @(
+      $process = Start-Process -PassThru -WorkingDirectory "$(Build.SourcesDirectory)/launcher" -FilePath "$(Build.SourcesDirectory)/launcher/fiskaltrust.Launcher.exe" -ArgumentList @(
         "run";
         "--cashbox-id"; "${{ parameters.cashbox.cashboxid }}";
         "--access-token"; "${{ parameters.cashbox.accesstoken }}";
-        "--cashbox-configuration-file"; "$(Build.SourcesDirectory)/launcher-2-0/configuration.json";
+        "--cashbox-configuration-file"; "$(Build.SourcesDirectory)/launcher/configuration.json";
         "--sandbox";
         "--use-offline";
-        "--service-folder"; "$(Build.SourcesDirectory)/service-2-0";
+        "--service-folder"; "$(Build.SourcesDirectory)/service";
         "--log-folder"; "$(Build.SourcesDirectory)/logs";
         "--log-level"; "Debug";
       )
@@ -99,7 +99,7 @@ steps:
         }
       }
 
-      newman run https://www.getpostman.com/collections/cb26765356b4bf4d133d -e "$(Build.SourcesDirectory)/environment.json" --reporters 'cli,junit' --reporter-junit-export "$(Build.SourcesDirectory)/newman-2-0.xml"
+      newman run https://www.getpostman.com/collections/cb26765356b4bf4d133d -e "$(Build.SourcesDirectory)/environment.json" --reporters 'cli,junit' --reporter-junit-export "$(Build.SourcesDirectory)/newman.xml"
 
       Stop-Process $process
     displayName: Run Tests
