@@ -70,7 +70,7 @@ steps:
         "--cashbox-configuration-file"; "$(Build.SourcesDirectory)/launcher/configuration.json";
         "--sandbox";
         "--use-offline";
-        "--service-folder"; "$(Build.SourcesDirectory)/service";
+        "--service-folder"; "$(Build.SourcesDirectory)";
         "--log-folder"; "$(Build.SourcesDirectory)/logs";
         "--log-level"; "Debug";
       )
