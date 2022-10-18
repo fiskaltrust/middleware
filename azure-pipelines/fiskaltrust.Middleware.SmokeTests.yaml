@@ -78,12 +78,12 @@ stages:
             accesstoken: BBhUqbNRIY/iI6bblVO1K/rS9MFW7Sj2fXxsD5d3IM4HvpGZkVI619Oku32U9P6f+k7TEagFMYCp4brdIcBrWAw=
             baseurl: http://localhost:1502/d9c927da-fa5e-4ab5-a107-24f32884916f
           pre:
-            - template: pre/fiskalycertified.yaml
+            - template: ../pre/fiskalycertified.yaml
               parameters:
                 apikey: $(DE.FiskalyCertified.ApiKey)
                 apisecret: $(DE.FiskalyCertified.ApiSecret)
           post:
-            - template: post/fiskalycertified.yaml
+            - template: ../post/fiskalycertified.yaml
               parameters:
                 apikey: $(DE.FiskalyCertified.ApiKey)
                 apisecret: $(DE.FiskalyCertified.ApiSecret)
@@ -104,7 +104,7 @@ stages:
             accesstoken: BL1mw4tnMBiryfOBelrW97lRcTc36JCID6SbhuoECPlOn820mcLcrI9od3zK/NYr2q+bx/8D2R3FULI6sHGvTBA=
             baseurl: http://localhost:1504/49d946c5-8685-4274-9108-5e6b78e22b67
           pre:
-            - template: pre/swissbitcloud.yaml
+            - template: ../pre/swissbitcloud.yaml
               parameters:
                 apipassword: $(DE.Swissbit.ApiPassword)
                 apiusername: $(DE.Swissbit.ApiUsername)
@@ -112,7 +112,7 @@ stages:
                 accountid: $(AccountId)
                 outletid: $(OutletId)
           post:
-            - template: post/swissbitcloud.yaml
+            - template: ../post/swissbitcloud.yaml
               parameters:
                 apipassword: $(DE.Swissbit.ApiPassword)
                 apiusername: $(DE.Swissbit.ApiUsername)
@@ -134,12 +134,12 @@ stages:
             accesstoken: BApHjeoVTUTbrZsWmRulRKmoZPIIizTjUP2xkThGOv6uBzdUcS7jEw4BPkFzsiHerYag8yaxsQ4oSnjBiKgrn74=
             baseurl: http://localhost:1506/32fee0b1-260d-4f11-8e8c-83b5561b8666
           pre:
-            - template: pre/fiskalycertified.yaml
+            - template: ../pre/fiskalycertified.yaml
               parameters:
                 apikey: $(DE.FiskalyCertified.ApiKey)
                 apisecret: $(DE.FiskalyCertified.ApiSecret)
           post:
-            - template: post/fiskalycertified.yaml
+            - template: ../post/fiskalycertified.yaml
               parameters:
                 apikey: $(DE.FiskalyCertified.ApiKey)
                 apisecret: $(DE.FiskalyCertified.ApiSecret)
@@ -160,7 +160,7 @@ stages:
             accesstoken: BLyToue7i2DzBEmPFxsG3ePA2oQAyIGJKQFnF3IuAcFHEusjcqJoASjXLVLPU5QVsf/6wPs+SADJltnH19oLJbo=
             baseurl: http://localhost:1508/837ab93b-8849-4b68-a876-136be60040fb
           pre:
-            - template: pre/swissbitcloud.yaml
+            - template: ../pre/swissbitcloud.yaml
               parameters:
                 apipassword: $(DE.Swissbit.ApiPassword)
                 apiusername: $(DE.Swissbit.ApiUsername)
@@ -168,7 +168,7 @@ stages:
                 accountid: $(AccountId)
                 outletid: $(OutletId)
           post:
-            - template: post/swissbitcloud.yaml
+            - template: ../post/swissbitcloud.yaml
               parameters:
                 apipassword: $(DE.Swissbit.ApiPassword)
                 apiusername: $(DE.Swissbit.ApiUsername)
@@ -190,12 +190,12 @@ stages:
             accesstoken: BNbZE94Azu3LEL6ShNCaZteCJo4nEipq2cIEIIp3bqCg4gCgGjuCrXRDTg3+MXKucE3YovczbnqpTuHRb+Wk20Y=
             baseurl: http://localhost:1510/081f5d60-3495-483c-8bd0-db20b83d6be9
           pre:
-            - template: pre/fiskalycertified.yaml
+            - template: ../pre/fiskalycertified.yaml
               parameters:
                 apikey: $(DE.FiskalyCertified.ApiKey)
                 apisecret: $(DE.FiskalyCertified.ApiSecret)
           post:
-            - template: post/fiskalycertified.yaml
+            - template: ../post/fiskalycertified.yaml
               parameters:
                 apikey: $(DE.FiskalyCertified.ApiKey)
                 apisecret: $(DE.FiskalyCertified.ApiSecret)
@@ -215,7 +215,7 @@ stages:
             accesstoken: BPth5lBHQbhExB7PJzAPvyJKxBAnmMwuxvMSEioUyZ7EueZNiLLi4OTvFXapB/45wDk1QENWhEUYk6rMrXTArSI=
             baseurl: http://localhost:1512/32289ea1-28b2-463e-a410-07548b137283
           pre:
-            - template: pre/swissbitcloud.yaml
+            - template: ../pre/swissbitcloud.yaml
               parameters:
                 apipassword: $(DE.Swissbit.ApiPassword)
                 apiusername: $(DE.Swissbit.ApiUsername)
@@ -223,7 +223,7 @@ stages:
                 accountid: $(AccountId)
                 outletid: $(OutletId)
           post:
-            - template: post/swissbitcloud.yaml
+            - template: ../post/swissbitcloud.yaml
               parameters:
                 apipassword: $(DE.Swissbit.ApiPassword)
                 apiusername: $(DE.Swissbit.ApiUsername)
