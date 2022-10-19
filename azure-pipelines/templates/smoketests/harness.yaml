@@ -21,7 +21,7 @@ stages:
                     jobs:
                       - template: helpers/test.yaml
                         parameters:
-                          test: 1-3
+                          test: launcher-1-3
                           pre: ${{ config.pre }}
                           post: ${{ config.post }}
                           queue: ${{ config.queue }}
@@ -32,7 +32,7 @@ stages:
 
                       - template: helpers/test.yaml
                         parameters:
-                          test: 2-0
+                          test: launcher-2-0
                           pre: ${{ config.pre }}
                           post: ${{ config.post }}
                           queue: ${{ config.queue }}
