@@ -64,6 +64,8 @@ steps:
   env:
     apipassword: ${{ parameters.apipassword }}
 
-- pwsh: Copy-Item $(Build.SourcesDirectory)/service/fiskaltrust/FCC/*/.fccdata/log/* $(Build.SourcesDirectory)/logs
+- pwsh: |
+    Copy-Item $(Build.SourcesDirectory)/service/fiskaltrust/FCC/*/.fccdata/log/* $(Build.SourcesDirectory)/logs/FCC
   condition: succeededOrFailed()
+  continueOnError: true
   displayName: Copy FCC logs
