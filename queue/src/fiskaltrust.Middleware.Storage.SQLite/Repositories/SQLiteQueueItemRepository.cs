@@ -47,26 +47,50 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Repositories
             }
         }
 
-        public async IAsyncEnumerable<ftQueueItem> GetPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem)
+        public async Task<ftQueueItem> GetFirstPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem)
         {
             var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(ftQueueItem.request);
 
-            if (!receiptRequest.IncludeInReferences() || (string.IsNullOrWhiteSpace(receiptRequest.cbPreviousReceiptReference) && string.IsNullOrWhiteSpace(ftQueueItem.cbReceiptReference)))
+            if (string.IsNullOrWhiteSpace(receiptRequest.cbPreviousReceiptReference) || string.IsNullOrWhiteSpace(ftQueueItem.cbReceiptReference) || receiptRequest.cbPreviousReceiptReference == ftQueueItem.cbReceiptReference)
             {
-                yield break;
+                return null;
             }
-            var query = "SELECT *, json_extract(request, '$.ftReceiptCase') AS ReceiptCase FROM ftQueueItem WHERE ftQueueRow < @ftQueueRow AND (cbReceiptReference = @cbPreviousReceiptReference OR cbReceiptReference = @cbReceiptReference) AND NOT (ReceiptCase & 0xFFFF = 0x0002 OR ReceiptCase & 0xFFFF = 0x0003 OR ReceiptCase & 0xFFFF = 0x0005 OR ReceiptCase & 0xFFFF = 0x0006 OR ReceiptCase & 0xFFFF = 0x0007)";
 
-            await foreach (var entry in DbConnection.Query<ftQueueItem>(query, new { ftQueueItem.ftQueueRow, receiptRequest.cbPreviousReceiptReference, ftQueueItem.cbReceiptReference }, buffered: false).ToAsyncEnumerable())
-            {
-                yield return entry;
-            }
+            var query = "SELECT *, json_extract(request, '$.ftReceiptCase') AS ReceiptCase FROM ftQueueItem WHERE ftQueueRow < @ftQueueRow AND cbReceiptReference = @cbPreviousReceiptReference "+
+                "AND NOT (ReceiptCase & 0xFFFF = 0x0002 OR ReceiptCase & 0xFFFF = 0x0003 OR ReceiptCase & 0xFFFF = 0x0005 OR ReceiptCase & 0xFFFF = 0x0006 OR ReceiptCase & 0xFFFF = 0x0007) " +
+                "order by timestamp limit 1;";
+            return await DbConnection.QueryFirstOrDefaultAsync<ftQueueItem>(query, new { ftQueueItem.ftQueueRow, receiptRequest.cbPreviousReceiptReference }).ConfigureAwait(false);
         }
 
         public async IAsyncEnumerable<ftQueueItem> GetQueueItemsAfterQueueItem(ftQueueItem ftQueueItem)
         {
             var query = "SELECT * FROM ftQueueItem WHERE ftQueueRow >= @ftQueueRow;";
             await foreach (var entry in DbConnection.Query<ftQueueItem>(query, new { ftQueueItem.ftQueueRow}, buffered: false).ToAsyncEnumerable())
+            {
+                yield return entry;
+            }
+        }
+
+        public async IAsyncEnumerable<string> GetGroupedReceiptReference(long from, long to) {
+            var query = $"SELECT cbReceiptReference FROM ( " +
+                         "SELECT cbReceiptReference, count(*) cnt FROM " +
+                         "(SELECT cbReceiptReference, json_extract(request, '$.ftReceiptCase') AS ReceiptCase FROM ftQueueItem " +
+                         "JOIN ftReceiptJournal on ftReceiptJournal.ftQueueItemId = ftQueueItem.ftQueueItemId " +
+                         "WHERE ftQueueItem.TimeStamp >=  @from  AND ftQueueItem.TimeStamp <= @to  " +
+                         " AND NOT(ReceiptCase & 0xFFFF = 0x0002 OR ReceiptCase & 0xFFFF = 0x0003 OR ReceiptCase & 0xFFFF = 0x0005 OR ReceiptCase & 0xFFFF = 0x0006 OR ReceiptCase & 0xFFFF = 0x0007) " +
+                         ") GROUP BY cbReceiptReference); ";
+            await foreach (var entry in DbConnection.Query<string>(query, new { from, to },  buffered: false).ToAsyncEnumerable())
+            {
+                yield return entry;
+            }
+        }
+
+        public async IAsyncEnumerable<ftQueueItem> GetQueueItemsForReceiptReference(string receiptReference)
+        {
+            var query = "SELECT *, json_extract(request, '$.ftReceiptCase') AS ReceiptCase FROM ftQueueItem WHERE cbReceiptReference = @receiptReference " +
+                "AND NOT (ReceiptCase & 0xFFFF = 0x0002 OR ReceiptCase & 0xFFFF = 0x0003 OR ReceiptCase & 0xFFFF = 0x0005 OR ReceiptCase & 0xFFFF = 0x0006 OR ReceiptCase & 0xFFFF = 0x0007) " +
+                "ORDER BY timestamp;";
+            await foreach (var entry in DbConnection.Query<ftQueueItem>(query, new { receiptReference }, buffered: false).ToAsyncEnumerable())
             {
                 yield return entry;
             }

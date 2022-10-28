@@ -114,5 +114,8 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
                 }
             }
         }
+        public IAsyncEnumerable<ftQueueItem> GetQueueItemsForReceiptReference(string receiptReference) => throw new NotImplementedException();
+        public IAsyncEnumerable<string> GetGroupedReceiptReference(long from, long to) => throw new NotImplementedException();
+        public Task<ftQueueItem> GetFirstPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem) => throw new NotImplementedException();
     }
 }

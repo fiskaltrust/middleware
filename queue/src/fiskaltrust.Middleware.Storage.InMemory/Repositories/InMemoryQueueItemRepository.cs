@@ -68,5 +68,8 @@ namespace fiskaltrust.Middleware.Storage.InMemory.Repositories
         {
             return Data.Values.Where(x => x.ftQueueRow >= ftQueueItem.ftQueueRow).ToAsyncEnumerable();
         }
+        public IAsyncEnumerable<ftQueueItem> GetQueueItemsForReceiptReference(string receiptReference) => throw new NotImplementedException();
+        public IAsyncEnumerable<string> GetGroupedReceiptReference(long from, long to) => throw new NotImplementedException();
+        public Task<ftQueueItem> GetFirstPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem) => throw new NotImplementedException();
     }
 }
