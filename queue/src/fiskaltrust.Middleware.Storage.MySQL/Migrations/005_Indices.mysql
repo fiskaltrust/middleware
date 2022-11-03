@@ -17,7 +17,7 @@ SET
             table_name = indexes.table_name
             and index_name = indexes.index_name
         ),
-        'SELECT NULL',
+        'SET @noop = NULL',
         CONCAT(
           'CREATE INDEX ',
           indexes.index_name,
@@ -57,7 +57,7 @@ SET
             table_name = indexes.table_name
             and index_name = indexes.index_name
         ),
-        'SELECT NULL',
+        'SET @noop = NULL',
         CONCAT(
           'CREATE INDEX ',
           indexes.index_name,
@@ -97,7 +97,7 @@ SET
             table_name = indexes.table_name
             and index_name = indexes.index_name
         ),
-        'SELECT NULL',
+        'SET @noop = NULL',
         CONCAT(
           'CREATE INDEX ',
           indexes.index_name,
@@ -137,7 +137,7 @@ SET
             table_name = indexes.table_name
             and index_name = indexes.index_name
         ),
-        'SELECT NULL',
+        'SET @noop = NULL',
         CONCAT(
           'CREATE INDEX ',
           indexes.index_name,
@@ -177,7 +177,7 @@ SET
             table_name = indexes.table_name
             and index_name = indexes.index_name
         ),
-        'SELECT NULL',
+        'SET @noop = NULL',
         CONCAT(
           'CREATE INDEX ',
           indexes.index_name,
@@ -217,7 +217,7 @@ SET
             table_name = indexes.table_name
             and index_name = indexes.index_name
         ),
-        'SELECT NULL',
+        'SET @noop = NULL',
         CONCAT(
           'CREATE INDEX ',
           indexes.index_name,
@@ -257,7 +257,7 @@ SET
             table_name = indexes.table_name
             and index_name = indexes.index_name
         ),
-        'SELECT NULL',
+        'SET @noop = NULL',
         CONCAT(
           'CREATE INDEX ',
           indexes.index_name,
