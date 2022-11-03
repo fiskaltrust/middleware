@@ -49,7 +49,8 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             }
             catch (Exception ex)
             {
-                return await CheckForFiscalizationException(queue, request, queueItem, queueMe, subsequent, ex).ConfigureAwait(false);
+                Logger.LogError(ex, $"The receipt {request.cbReceiptReference} could not be proccessed!");
+                return await ProcessFailedReceiptRequest(queue, queueItem, request, queueMe).ConfigureAwait(false);
             }
         }
         public override async Task<bool> ReceiptNeedsReprocessing(ftQueueME queueMe, ftQueueItem queueItem, ReceiptRequest request)

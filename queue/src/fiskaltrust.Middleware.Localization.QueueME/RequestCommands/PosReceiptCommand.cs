@@ -41,7 +41,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                     ReceiptResponse = receiptResponse,
                 };
             }
-            if(await IsInvoiceAlreadyReceived(request.cbReceiptReference).ConfigureAwait(false))
+            if (await IsInvoiceAlreadyReceived(request.cbReceiptReference).ConfigureAwait(false))
             {
                 var receiptResponse = CreateReceiptResponse(queue, request, queueItem);
                 receiptResponse.SetStateToError(ErrorCode.InvoiceAlreadyReceived, "Invoice already received! The field cbReceiptReference must be unique, but has already been used. Please make sure to use an unique cbReceiptReference for each receipt.");
@@ -84,7 +84,8 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             }
             catch (Exception ex)
             {
-                return await CheckForFiscalizationException(queue, request, queueItem, queueMe, subsequent, ex).ConfigureAwait(false);
+                Logger.LogError(ex, $"The receipt {request.cbReceiptReference} could not be proccessed!");
+                return await ProcessFailedReceiptRequest(queue, queueItem, request, queueMe).ConfigureAwait(false);
             }
         }
         protected string GetOperatorCodeOrThrow(string cbUser)
@@ -145,7 +146,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 YearlyOrdinalNumber = await GetNextOrdinalNumber(queueItem).ConfigureAwait(false)
             };
 
-            if(request.cbChargeItems.Where(x => x.IsExportGood()).Any())
+            if (request.cbChargeItems.Where(x => x.IsExportGood()).Any())
             {
                 invoiceDetails.ExportedGoodsAmount = request.cbChargeItems.Where(x => x.IsExportGood()).Sum(x => x.Amount);
             }

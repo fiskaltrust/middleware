@@ -8,9 +8,7 @@ using fiskaltrust.ifPOS.v1.me;
 using System.Collections.Generic;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using System.Linq;
-using Grpc.Core;
 using Newtonsoft.Json;
-using fiskaltrust.Middleware.Localization.QueueME.Extensions;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 {
@@ -82,7 +80,8 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
             var actionJournalEntry = CreateClosingActionJournal(queue, request.ftReceiptCase, queueItem, message);
             var requestCommandResponse = new RequestCommandResponse
             {
-                ReceiptResponse = receiptResponse, ActionJournals = new List<ftActionJournal> { actionJournalEntry }
+                ReceiptResponse = receiptResponse,
+                ActionJournals = new List<ftActionJournal> { actionJournalEntry }
             };
             return await Task.FromResult(requestCommandResponse).ConfigureAwait(false);
         }
@@ -109,38 +108,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                 .FirstOrDefaultAsync().ConfigureAwait(false);
             return actionJournal != null && actionJournal.Type == type.ToString();
         }
-        protected async Task<RequestCommandResponse> CheckForFiscalizationException(ftQueue queue,
-            ReceiptRequest request, ftQueueItem queueItem,
-            ftQueueME queueMe, bool subsequent, Exception ex)
-        {
-            var rpc = ex as RpcException;
-            var message = rpc?.Trailers.Where(x => x.Key.EndsWith("exception-message")).Select(x => x.Value).FirstOrDefault();
-            if (!IsFiscalizationException(ex))
-            {
-                if (subsequent)
-                {
-                    throw ex;
-                }
-                var receiptResponse = CreateReceiptResponse(queue, request, queueItem);
-                receiptResponse.SetStateToError(ErrorCode.Error, message);
-                return new RequestCommandResponse { ReceiptResponse = receiptResponse };
-            }
-            Logger.LogError(ex, message);
-            return await ProcessFailedReceiptRequest(queue, queueItem, request, queueMe).ConfigureAwait(false);
-        }
-        protected bool IsFiscalizationException(Exception ex)
-        {
-            if (ex is not RpcException rpc)
-            {
-                return false;
-            }
-            var fisExc = rpc.Trailers.Where(x => x.Key.EndsWith("exception-type")).Select(x => x.Value)
-                .FirstOrDefault();
-            if (fisExc == null || !fisExc.Equals("FiscalizationException"))
-            {
-                return false;
-            }
-            return true;
-        }
+
     }
 }

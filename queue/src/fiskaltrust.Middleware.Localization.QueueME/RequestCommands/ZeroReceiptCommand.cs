@@ -11,7 +11,6 @@ using Newtonsoft.Json;
 using fiskaltrust.Middleware.Localization.QueueME.RequestCommands.Factories;
 using System.Linq;
 using System.Collections.Generic;
-using Grpc.Core;
 
 namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
 {
@@ -47,7 +46,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                     {
                         try
                         {
-                            var requestCommandResponse = await command.ExecuteAsync(client, queue, frequest, fqueueItem, queueME,true).ConfigureAwait(false);
+                            var requestCommandResponse = await command.ExecuteAsync(client, queue, frequest, fqueueItem, queueME, true).ConfigureAwait(false);
                             if (requestCommandResponse.ActionJournals != null)
                             {
                                 foreach (var journal in requestCommandResponse.ActionJournals)
@@ -58,14 +57,6 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                         }
                         catch (Exception ex)
                         {
-                            if (IsFiscalizationException(ex))
-                            {
-                                var rpc = ex as RpcException;
-                                Logger.LogError(ex,
-                                    rpc.Trailers.Where(x => x.Key.EndsWith("exception-message")).Select(x => x.Value)
-                                        .FirstOrDefault());
-                                throw;
-                            }
                             Logger.LogError(ex, $"The receipt {frequest.cbReceiptReference} could not be proccessed!");
                         }
                     }
