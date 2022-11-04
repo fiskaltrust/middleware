@@ -84,12 +84,15 @@ namespace fiskaltrust.Middleware.Storage.EF.Repositories
         {
             var queueItemsForReceiptReference =
                 from queueItem in DbContext.QueueItemList.AsQueryable()
-                where JsonConvert.DeserializeObject<ReceiptRequest>(queueItem.request).IncludeInReferences() && queueItem.cbReceiptReference == receiptReference
+                where queueItem.cbReceiptReference == receiptReference
                 orderby queueItem.TimeStamp
                 select queueItem;
             await foreach (var entry in queueItemsForReceiptReference.ToAsyncEnumerable())
             {
-                yield return entry;
+                if (JsonConvert.DeserializeObject<ReceiptRequest>(entry.request).IncludeInReferences())
+                {
+                    yield return entry;
+                }
             }
         }
         public Task<ftQueueItem> GetFirstPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem)

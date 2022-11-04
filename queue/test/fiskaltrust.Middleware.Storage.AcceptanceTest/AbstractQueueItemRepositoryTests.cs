@@ -349,19 +349,42 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
 
 
         [Fact]
-        public async Task GetByReceiptReferenceAsync_PosAndNonePosReceipts_ValidQueueItems()
+        public async Task GetQueueItemsForReceiptReferenceAsync_PosAndNonePosReceipts_ValidQueueItems()
         {
-
             var receiptReference = "receiptReference9";
-            var receiptFixturePos = StorageTestFixtureProvider.GetFixture();
-            receiptFixturePos.Customize<ReceiptRequest>(c => c.With(r => r.ftReceiptCase, 4919338172267102209));
+
+
+            var receiptFixture = StorageTestFixtureProvider.GetFixture();
+            receiptFixture.Customize<ReceiptRequest>(c => c.With(r => r.ftReceiptCase, 4919338172267102209));
 
             var queueItemFixture = StorageTestFixtureProvider.GetFixture();
-            var expectedEntries = queueItemFixture.CreateMany<ftQueueItem>(2).ToList();
-            var sut = await CreateRepository(expectedEntries);
+            queueItemFixture.Customize<ftQueueItem>(c => c.With(r => r.TimeStamp, DateTime.UtcNow.Ticks).
+            With(r => r.request, JsonConvert.SerializeObject(receiptFixture.Create<ReceiptRequest>())).
+            With(r => r.cbReceiptReference, receiptReference));
 
-            var groupedReferences = await sut.GetByReceiptReferenceAsync(receiptReference).ToListAsync();
+            var receiptFixtureClosing = StorageTestFixtureProvider.GetFixture();
+            receiptFixtureClosing.Customize<ReceiptRequest>(c => c.With(r => r.ftReceiptCase, 4919338172401319943));
 
+            var queueItemFixtureClosing = StorageTestFixtureProvider.GetFixture();
+            queueItemFixtureClosing.Customize<ftQueueItem>(c => c.With(r => r.TimeStamp, DateTime.UtcNow.Ticks).
+            With(r => r.request, JsonConvert.SerializeObject(receiptFixtureClosing.Create<ReceiptRequest>())).
+            With(r => r.cbReceiptReference, receiptReference));
+
+            var expectedEntriesPos = queueItemFixture.CreateMany<ftQueueItem>(2).ToList();
+            expectedEntriesPos.Add(queueItemFixtureClosing.Create<ftQueueItem>());
+            var difReceiptRef = queueItemFixture.Create<ftQueueItem>();
+            difReceiptRef.cbReceiptReference = "NotIncluded";
+            expectedEntriesPos.Add(difReceiptRef);
+
+            var sut = await CreateRepository(expectedEntriesPos);
+
+            var receiptReferences = await sut.GetQueueItemsForReceiptReferenceAsync(receiptReference).ToListAsync();
+            receiptReferences.Count().Should().Be(2);
+            foreach(var receipt in receiptReferences)
+            {
+                receipt.cbReceiptReference.Should().Be(receiptReference);
+                JsonConvert.DeserializeObject<ReceiptRequest>(receipt.request).ftReceiptCase.Should().Be(4919338172267102209);
+            }
         }
 
 

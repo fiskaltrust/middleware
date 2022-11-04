@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Dapper;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Storage.Base.Extensions;
 using fiskaltrust.storage.V0;
 using MySqlConnector;
 using Newtonsoft.Json;
@@ -124,15 +125,18 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
 
         public async IAsyncEnumerable<ftQueueItem> GetQueueItemsForReceiptReferenceAsync(string receiptReference)
         {
-            var query = "SELECT *, json_extract(request, '$.ftReceiptCase') AS ReceiptCase FROM ftQueueItem WHERE cbReceiptReference = @receiptReference " +
-                "AND NOT (ReceiptCase & 0xFFFF = 0x0002 OR ReceiptCase & 0xFFFF = 0x0003 OR ReceiptCase & 0xFFFF = 0x0005 OR ReceiptCase & 0xFFFF = 0x0006 OR ReceiptCase & 0xFFFF = 0x0007) " +
+            var query = "SELECT * FROM ftQueueItem WHERE cbReceiptReference = @receiptReference " +
                 "ORDER BY timestamp;";
             using (var connection = new MySqlConnection(ConnectionString))
             {
                 await connection.OpenAsync().ConfigureAwait(false);
                 await foreach (var entry in connection.Query<ftQueueItem>(query, new { receiptReference }, buffered: false).ToAsyncEnumerable().ConfigureAwait(false))
                 {
-                    yield return entry;
+                    var request = JsonConvert.DeserializeObject<ReceiptRequest>(entry.request);
+                    if (request.IncludeInReferences())
+                    {
+                        yield return entry;
+                    }
                 }
             }
         }
