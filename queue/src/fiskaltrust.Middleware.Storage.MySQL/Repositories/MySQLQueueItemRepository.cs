@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Dapper;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Repositories;
-using fiskaltrust.Middleware.Storage.Base.Extensions;
 using fiskaltrust.storage.V0;
 using MySqlConnector;
 using Newtonsoft.Json;
@@ -77,31 +76,6 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
             }
         }
 
-        public async IAsyncEnumerable<ftQueueItem> GetPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem)
-        {
-            var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(ftQueueItem.request);
-
-            if (!receiptRequest.IncludeInReferences() || (string.IsNullOrWhiteSpace(receiptRequest.cbPreviousReceiptReference) && string.IsNullOrWhiteSpace(ftQueueItem.cbReceiptReference)))
-            {
-                yield break;
-            }
-
-            var query = "SELECT * FROM ftQueueItem WHERE ftQueueRow < @ftQueueRow AND (cbReceiptReference = @cbPreviousReceiptReference OR cbReceiptReference = @cbReceiptReference)";
-
-            using (var connection = new MySqlConnection(ConnectionString))
-            {
-                await connection.OpenAsync();
-                await foreach (var entry in connection.Query<ftQueueItem>(query, new { ftQueueItem.ftQueueRow, receiptRequest.cbPreviousReceiptReference, ftQueueItem.cbReceiptReference }, buffered: false).ToAsyncEnumerable())
-                {
-
-                    if (JsonConvert.DeserializeObject<ReceiptRequest>(entry.request).IncludeInReferences())
-                    {
-                        yield return entry;
-                    }
-                }
-            }
-        }
-
         public async IAsyncEnumerable<ftQueueItem> GetQueueItemsAfterQueueItem(ftQueueItem ftQueueItem)
         {
             var query = "SELECT * FROM ftQueueItem WHERE ftQueueRow >= @ftQueueRow";
@@ -114,8 +88,74 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
                 }
             }
         }
-        public IAsyncEnumerable<ftQueueItem> GetQueueItemsForReceiptReference(string receiptReference) => throw new NotImplementedException();
-        public IAsyncEnumerable<string> GetGroupedReceiptReference(long from, long to) => throw new NotImplementedException();
-        public Task<ftQueueItem> GetFirstPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem) => throw new NotImplementedException();
+
+        public async IAsyncEnumerable<string> GetGroupedReceiptReference(long? fromIncl, long? toIncl)
+        {
+            var query = $"SELECT cbReceiptReference  FROM " +
+                         "(SELECT cbReceiptReference FROM ftQueueItem " +
+                         (fromIncl.HasValue || toIncl.HasValue ? "WHERE " : " ") +
+                         (fromIncl.HasValue ? "ftQueueItem.TimeStamp >= @fromIncl " : "") +
+                         (fromIncl.HasValue && toIncl.HasValue ? "AND " : " ") +
+                         (toIncl.HasValue ? " ftQueueItem.TimeStamp <= @toIncl  " : " ") +
+                        ") AS groupedReferences GROUP BY cbReceiptReference; ";
+
+            object obj = null;
+            if (fromIncl.HasValue && toIncl.HasValue)
+            {
+                obj = new { fromIncl, toIncl };
+            }
+            else if (fromIncl.HasValue)
+            {
+                obj = new { fromIncl };
+            }
+            else if (toIncl.HasValue)
+            {
+                obj = new { toIncl };
+            };
+            using (var connection = new MySqlConnection(ConnectionString))
+            {
+                await connection.OpenAsync().ConfigureAwait(false);
+                await foreach (var entry in connection.Query<string>(query, obj, buffered: false).ToAsyncEnumerable().ConfigureAwait(false))
+                {
+                    yield return entry;
+                }
+            }
+        }
+
+        public async IAsyncEnumerable<ftQueueItem> GetQueueItemsForReceiptReference(string receiptReference)
+        {
+            var query = "SELECT *, json_extract(request, '$.ftReceiptCase') AS ReceiptCase FROM ftQueueItem WHERE cbReceiptReference = @receiptReference " +
+                "AND NOT (ReceiptCase & 0xFFFF = 0x0002 OR ReceiptCase & 0xFFFF = 0x0003 OR ReceiptCase & 0xFFFF = 0x0005 OR ReceiptCase & 0xFFFF = 0x0006 OR ReceiptCase & 0xFFFF = 0x0007) " +
+                "ORDER BY timestamp;";
+            using (var connection = new MySqlConnection(ConnectionString))
+            {
+                await connection.OpenAsync().ConfigureAwait(false);
+                await foreach (var entry in connection.Query<ftQueueItem>(query, new { receiptReference }, buffered: false).ToAsyncEnumerable().ConfigureAwait(false))
+                {
+                    yield return entry;
+                }
+            }
+        }
+
+        public async Task<ftQueueItem> GetFirstPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem)
+        {
+            var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(ftQueueItem.request);
+
+            if (string.IsNullOrWhiteSpace(receiptRequest.cbPreviousReceiptReference) || string.IsNullOrWhiteSpace(ftQueueItem.cbReceiptReference) || receiptRequest.cbPreviousReceiptReference == ftQueueItem.cbReceiptReference)
+            {
+                return null;
+            }
+
+            var query = "SELECT *, json_extract(request, '$.ftReceiptCase') AS ReceiptCase FROM ftQueueItem WHERE ftQueueRow < @ftQueueRow AND cbReceiptReference = @cbPreviousReceiptReference " +
+                "AND NOT (ReceiptCase & 0xFFFF = 0x0002 OR ReceiptCase & 0xFFFF = 0x0003 OR ReceiptCase & 0xFFFF = 0x0005 OR ReceiptCase & 0xFFFF = 0x0006 OR ReceiptCase & 0xFFFF = 0x0007) " +
+            "order by timestamp limit 1;";
+
+            using (var connection = new MySqlConnection(ConnectionString))
+            {
+                await connection.OpenAsync().ConfigureAwait(false);
+                return await connection.QueryFirstOrDefaultAsync<ftQueueItem>(query, new { ftQueueItem.ftQueueRow, receiptRequest.cbPreviousReceiptReference }).ConfigureAwait(false);
+
+            }
+        }
     }
 }

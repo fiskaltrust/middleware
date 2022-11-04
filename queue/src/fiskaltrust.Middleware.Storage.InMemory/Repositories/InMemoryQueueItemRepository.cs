@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
@@ -48,28 +49,51 @@ namespace fiskaltrust.Middleware.Storage.InMemory.Repositories
             }
         }
 
-        public IAsyncEnumerable<ftQueueItem> GetPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem)
-        {
-            var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(ftQueueItem.request);
-            if (!receiptRequest.IncludeInReferences() || (string.IsNullOrWhiteSpace(receiptRequest.cbPreviousReceiptReference) && string.IsNullOrWhiteSpace(ftQueueItem.cbReceiptReference)))
-            {
-                return new List<ftQueueItem>().ToAsyncEnumerable();
-            }
-
-            return Data.Values.Where(x =>
-                x.ftQueueRow < ftQueueItem.ftQueueRow &&
-                (x.cbReceiptReference == receiptRequest.cbPreviousReceiptReference || x.cbReceiptReference == receiptRequest.cbReceiptReference)
-            )
-            .ToAsyncEnumerable()
-            .Where(x => JsonConvert.DeserializeObject<ReceiptRequest>(x.request).IncludeInReferences());
-        }
-
         public IAsyncEnumerable<ftQueueItem> GetQueueItemsAfterQueueItem(ftQueueItem ftQueueItem)
         {
             return Data.Values.Where(x => x.ftQueueRow >= ftQueueItem.ftQueueRow).ToAsyncEnumerable();
         }
-        public IAsyncEnumerable<ftQueueItem> GetQueueItemsForReceiptReference(string receiptReference) => throw new NotImplementedException();
-        public IAsyncEnumerable<string> GetGroupedReceiptReference(long from, long to) => throw new NotImplementedException();
-        public Task<ftQueueItem> GetFirstPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem) => throw new NotImplementedException();
+
+        public async IAsyncEnumerable<string> GetGroupedReceiptReference(long? fromIncl, long? toIncl)
+        {
+            var groupByLastNamesQuery =
+                    from queueItem in Data.Values
+                    where
+                    (fromIncl.HasValue ? queueItem.TimeStamp >= fromIncl.Value : true) &&
+                    (toIncl.HasValue ? queueItem.TimeStamp <= toIncl.Value : true) &&
+                    JsonConvert.DeserializeObject<ReceiptRequest>(queueItem.request).IncludeInReferences()
+                    group queueItem by queueItem.cbReceiptReference into newGroup
+                    orderby newGroup.Key
+                    select newGroup;
+            await foreach (var entry in groupByLastNamesQuery.ToAsyncEnumerable())
+            {
+                yield return entry.Key;
+            }
+        }
+
+
+        public async IAsyncEnumerable<ftQueueItem> GetQueueItemsForReceiptReference(string receiptReference)
+        {
+            var queueItemsForReceiptReference =
+                from queueItem in Data.Values
+                where JsonConvert.DeserializeObject<ReceiptRequest>(queueItem.request).IncludeInReferences() && queueItem.cbReceiptReference == receiptReference
+                orderby queueItem.TimeStamp
+                select queueItem;
+            await foreach (var entry in queueItemsForReceiptReference.ToAsyncEnumerable())
+            {
+                yield return entry;
+            }
+        }
+        public Task<ftQueueItem> GetFirstPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem)
+        {
+            var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(ftQueueItem.request);
+
+            var queueItemsForReceiptReference =
+                            (from queueItem in Data.Values
+                            where receiptRequest.IncludeInReferences() && queueItem.cbReceiptReference == receiptRequest.cbPreviousReceiptReference
+                            orderby queueItem.TimeStamp
+                            select queueItem).ToAsyncEnumerable().Take(1);
+            return (Task<ftQueueItem>) queueItemsForReceiptReference;
+        }
     }
 }

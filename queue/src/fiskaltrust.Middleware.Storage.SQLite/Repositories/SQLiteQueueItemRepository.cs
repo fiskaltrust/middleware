@@ -7,7 +7,6 @@ using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0;
 using Newtonsoft.Json;
-using fiskaltrust.Middleware.Storage.Base.Extensions;
 
 namespace fiskaltrust.Middleware.Storage.SQLite.Repositories
 {
@@ -71,15 +70,27 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Repositories
             }
         }
 
-        public async IAsyncEnumerable<string> GetGroupedReceiptReference(long from, long to) {
-            var query = $"SELECT cbReceiptReference FROM ( " +
-                         "SELECT cbReceiptReference, count(*) cnt FROM " +
+        public async IAsyncEnumerable<string> GetGroupedReceiptReference(long? fromIncl, long? toIncl) 
+        {
+            var query = $"SELECT cbReceiptReference  FROM " +
                          "(SELECT cbReceiptReference, json_extract(request, '$.ftReceiptCase') AS ReceiptCase FROM ftQueueItem " +
-                         "JOIN ftReceiptJournal on ftReceiptJournal.ftQueueItemId = ftQueueItem.ftQueueItemId " +
-                         "WHERE ftQueueItem.TimeStamp >=  @from  AND ftQueueItem.TimeStamp <= @to  " +
-                         " AND NOT(ReceiptCase & 0xFFFF = 0x0002 OR ReceiptCase & 0xFFFF = 0x0003 OR ReceiptCase & 0xFFFF = 0x0005 OR ReceiptCase & 0xFFFF = 0x0006 OR ReceiptCase & 0xFFFF = 0x0007) " +
-                         ") GROUP BY cbReceiptReference); ";
-            await foreach (var entry in DbConnection.Query<string>(query, new { from, to },  buffered: false).ToAsyncEnumerable())
+                         "WHERE " +
+                         (fromIncl.HasValue ? " ftQueueItem.TimeStamp >= @fromIncl " : "") +
+                         (fromIncl.HasValue && toIncl.HasValue ? " AND " : " ") +
+                         (toIncl.HasValue ? " ftQueueItem.TimeStamp <= @toIncl  " : " ") +
+                         (fromIncl.HasValue || toIncl.HasValue ? "AND " : " ") +
+                         "NOT (ReceiptCase & 0xFFFF = 0x0002 OR ReceiptCase & 0xFFFF = 0x0003 OR ReceiptCase & 0xFFFF = 0x0005 OR ReceiptCase & 0xFFFF = 0x0006 OR ReceiptCase & 0xFFFF = 0x0007) " +
+                         ") GROUP BY cbReceiptReference; ";
+
+            object obj = null;
+            if (fromIncl.HasValue && toIncl.HasValue) {
+                obj = new { fromIncl, toIncl };
+            } else if (fromIncl.HasValue) {
+                obj = new { fromIncl };
+            } else if (toIncl.HasValue) {
+                obj = new { toIncl };
+            };
+            await foreach (var entry in DbConnection.Query<string>(query, obj,  buffered: false).ToAsyncEnumerable())
             {
                 yield return entry;
             }
