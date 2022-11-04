@@ -71,7 +71,6 @@ namespace fiskaltrust.Middleware.Storage.InMemory.Repositories
             }
         }
 
-
         public async IAsyncEnumerable<ftQueueItem> GetQueueItemsForReceiptReferenceAsync(string receiptReference)
         {
             var queueItemsForReceiptReference =
@@ -84,16 +83,21 @@ namespace fiskaltrust.Middleware.Storage.InMemory.Repositories
                 yield return entry;
             }
         }
-        public Task<ftQueueItem> GetFirstPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem)
+        public async Task<ftQueueItem> GetFirstPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem)
         {
             var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(ftQueueItem.request);
 
+            if (string.IsNullOrWhiteSpace(receiptRequest.cbPreviousReceiptReference) || string.IsNullOrWhiteSpace(ftQueueItem.cbReceiptReference) || receiptRequest.cbPreviousReceiptReference == ftQueueItem.cbReceiptReference)
+            {
+                return null;
+            }
             var queueItemsForReceiptReference =
                             (from queueItem in Data.Values
-                            where receiptRequest.IncludeInReferences() && queueItem.cbReceiptReference == receiptRequest.cbPreviousReceiptReference
+                            where queueItem.ftQueueRow < ftQueueItem.ftQueueRow &&
+                            receiptRequest.IncludeInReferences() && queueItem.cbReceiptReference == receiptRequest.cbPreviousReceiptReference
                             orderby queueItem.TimeStamp
                             select queueItem).ToAsyncEnumerable().Take(1);
-            return (Task<ftQueueItem>) queueItemsForReceiptReference;
+            return await queueItemsForReceiptReference.FirstOrDefaultAsync();
         }
     }
 }

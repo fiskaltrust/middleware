@@ -79,7 +79,8 @@ namespace fiskaltrust.Middleware.Storage.EFCore.Repositories
         {
             var queueItemsForReceiptReference =
                 from queueItem in DbContext.QueueItemList.AsQueryable()
-                where JsonConvert.DeserializeObject<ReceiptRequest>(queueItem.request).IncludeInReferences() && queueItem.cbReceiptReference == receiptReference
+                where 
+                JsonConvert.DeserializeObject<ReceiptRequest>(queueItem.request).IncludeInReferences() && queueItem.cbReceiptReference == receiptReference
                 orderby queueItem.TimeStamp
                 select queueItem;
             await foreach (var entry in queueItemsForReceiptReference.ToAsyncEnumerable())
@@ -87,16 +88,21 @@ namespace fiskaltrust.Middleware.Storage.EFCore.Repositories
                 yield return entry;
             }
         }
-        public Task<ftQueueItem> GetFirstPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem)
+        public async Task<ftQueueItem> GetFirstPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem)
         {
             var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(ftQueueItem.request);
-
+            if (string.IsNullOrWhiteSpace(receiptRequest.cbPreviousReceiptReference) || string.IsNullOrWhiteSpace(ftQueueItem.cbReceiptReference) || receiptRequest.cbPreviousReceiptReference == ftQueueItem.cbReceiptReference)
+            {
+                return null;
+            }
             var queueItemsForReceiptReference =
                             (from queueItem in DbContext.QueueItemList.AsQueryable()
-                             where receiptRequest.IncludeInReferences() && queueItem.cbReceiptReference == receiptRequest.cbPreviousReceiptReference
+                             where
+                             queueItem.ftQueueRow < ftQueueItem.ftQueueRow &&
+                             receiptRequest.IncludeInReferences() && queueItem.cbReceiptReference == receiptRequest.cbPreviousReceiptReference
                              orderby queueItem.TimeStamp
                              select queueItem).ToAsyncEnumerable().Take(1);
-            return (Task<ftQueueItem>) queueItemsForReceiptReference;
+            return await queueItemsForReceiptReference.FirstOrDefaultAsync();
         }
     }
 }

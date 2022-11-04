@@ -149,16 +149,21 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
             {
                 return null;
             }
-
             var query = "SELECT *, json_extract(request, '$.ftReceiptCase') AS ReceiptCase FROM ftQueueItem WHERE ftQueueRow < @ftQueueRow AND cbReceiptReference = @cbPreviousReceiptReference " +
-                "AND NOT (ReceiptCase & 0xFFFF = 0x0002 OR ReceiptCase & 0xFFFF = 0x0003 OR ReceiptCase & 0xFFFF = 0x0005 OR ReceiptCase & 0xFFFF = 0x0006 OR ReceiptCase & 0xFFFF = 0x0007) " +
-            "order by timestamp limit 1;";
-
+                            "order by timestamp limit 1;";
             using (var connection = new MySqlConnection(ConnectionString))
             {
                 await connection.OpenAsync().ConfigureAwait(false);
-                return await connection.QueryFirstOrDefaultAsync<ftQueueItem>(query, new { ftQueueItem.ftQueueRow, receiptRequest.cbPreviousReceiptReference }).ConfigureAwait(false);
-
+                var entry =  await connection.QueryFirstOrDefaultAsync<ftQueueItem>(query, new { ftQueueItem.ftQueueRow, receiptRequest.cbPreviousReceiptReference }).ConfigureAwait(false);
+                var request = JsonConvert.DeserializeObject<ReceiptRequest>(entry.request);
+                if (request.IncludeInReferences())
+                {
+                    return await Task.FromResult(entry);
+                }
+                else
+                {
+                    return null;
+                }
             }
         }
     }

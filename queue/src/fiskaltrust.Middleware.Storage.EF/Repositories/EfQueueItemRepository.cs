@@ -8,11 +8,7 @@ using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0;
 using Newtonsoft.Json;
 using fiskaltrust.Middleware.Storage.Base.Extensions;
-using fiskaltrust.Middleware.Storage.EF.Helpers;
-using System.Data.Entity.SqlServer;
-using System.Data.Entity.Core.Objects;
 using System.Data.Entity.Core.Common.CommandTrees.ExpressionBuilder;
-using System.Data.Entity.Core.Common.CommandTrees.ExpressionBuilder.Spatial;
 
 namespace fiskaltrust.Middleware.Storage.EF.Repositories
 {
@@ -95,15 +91,29 @@ namespace fiskaltrust.Middleware.Storage.EF.Repositories
                 }
             }
         }
-        public Task<ftQueueItem> GetFirstPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem)
+        public async Task<ftQueueItem> GetFirstPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem)
         {
             var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(ftQueueItem.request);
+
+            if (string.IsNullOrWhiteSpace(receiptRequest.cbPreviousReceiptReference) || string.IsNullOrWhiteSpace(ftQueueItem.cbReceiptReference) || receiptRequest.cbPreviousReceiptReference == ftQueueItem.cbReceiptReference)
+            {
+                return null;
+            }
             var queueItemsForReceiptReference =
                             (from queueItem in DbContext.QueueItemList.AsQueryable()
-                             where receiptRequest.IncludeInReferences() && queueItem.cbReceiptReference == receiptRequest.cbPreviousReceiptReference
+                             where queueItem.ftQueueRow < ftQueueItem.ftQueueRow &&
+                             queueItem.cbReceiptReference == receiptRequest.cbPreviousReceiptReference
                              orderby queueItem.TimeStamp
-                             select queueItem).ToAsyncEnumerable().Take(1);
-            return (Task<ftQueueItem>) queueItemsForReceiptReference;
+                             select queueItem).ToAsyncEnumerable();
+
+            await foreach (var entry in queueItemsForReceiptReference)
+            {
+                if (JsonConvert.DeserializeObject<ReceiptRequest>(entry.request).IncludeInReferences())
+                {
+                    return entry;
+                }
+            }
+            return null;
         }
     }
 }
