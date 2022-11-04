@@ -7,9 +7,6 @@ trigger:
     include:
       - main
       - refs/tags/scu-de/*
-  paths:
-    include:
-      - scu-de
 
 pr:
   branches:
