@@ -272,7 +272,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             }
             var sut = await CreateRepository(expectedEntries);
 
-            var groupedReferences = await sut.GetGroupedReceiptReference(null, null).ToListAsync();
+            var groupedReferences = await sut.GetGroupedReceiptReferenceAsync(null, null).ToListAsync();
             groupedReferences.Count().Should().Be(2);
             groupedReferences.Contains(noReference[0].cbReceiptReference).Should().BeTrue();
             groupedReferences.Contains(receiptReference).Should().BeTrue();
@@ -296,7 +296,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             var fromIncl = DateTime.UtcNow.Ticks;
             var queueItem = queueItemFixture.Create<ftQueueItem>();
             await sut.InsertOrUpdateAsync(queueItem);
-            var groupedReferences = await sut.GetGroupedReceiptReference(fromIncl, null).ToListAsync();
+            var groupedReferences = await sut.GetGroupedReceiptReferenceAsync(fromIncl, null).ToListAsync();
             groupedReferences.Count().Should().Be(1);
         }
 
@@ -315,7 +315,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             await Task.Delay(1);
             var queueItem = queueItemFixture.Create<ftQueueItem>();
             await sut.InsertOrUpdateAsync(queueItem);
-            var groupedReferences = await sut.GetGroupedReceiptReference(null, toIncl).ToListAsync();
+            var groupedReferences = await sut.GetGroupedReceiptReferenceAsync(null, toIncl).ToListAsync();
             groupedReferences.Count().Should().Be(2);
         }
 
@@ -343,10 +343,26 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             queueItem = queueItemFixture.Create<ftQueueItem>();
             await sut.InsertOrUpdateAsync(queueItem);
 
-            var groupedReferences = await sut.GetGroupedReceiptReference(fromIncl, toIncl).ToListAsync();
+            var groupedReferences = await sut.GetGroupedReceiptReferenceAsync(fromIncl, toIncl).ToListAsync();
             groupedReferences.Count().Should().Be(1);
         }
 
+
+        [Fact]
+        public async Task GetByReceiptReferenceAsync_PosAndNonePosReceipts_ValidQueueItems()
+        {
+
+            var receiptReference = "receiptReference9";
+            var receiptFixturePos = StorageTestFixtureProvider.GetFixture();
+            receiptFixturePos.Customize<ReceiptRequest>(c => c.With(r => r.ftReceiptCase, 4919338172267102209));
+
+            var queueItemFixture = StorageTestFixtureProvider.GetFixture();
+            var expectedEntries = queueItemFixture.CreateMany<ftQueueItem>(2).ToList();
+            var sut = await CreateRepository(expectedEntries);
+
+            var groupedReferences = await sut.GetByReceiptReferenceAsync(receiptReference).ToListAsync();
+
+        }
 
 
         [Fact]

@@ -89,7 +89,7 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
             }
         }
 
-        public async IAsyncEnumerable<string> GetGroupedReceiptReference(long? fromIncl, long? toIncl)
+        public async IAsyncEnumerable<string> GetGroupedReceiptReferenceAsync(long? fromIncl, long? toIncl)
         {
             var query = $"SELECT cbReceiptReference  FROM " +
                          "(SELECT cbReceiptReference FROM ftQueueItem " +
@@ -122,7 +122,7 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
             }
         }
 
-        public async IAsyncEnumerable<ftQueueItem> GetQueueItemsForReceiptReference(string receiptReference)
+        public async IAsyncEnumerable<ftQueueItem> GetQueueItemsForReceiptReferenceAsync(string receiptReference)
         {
             var query = "SELECT *, json_extract(request, '$.ftReceiptCase') AS ReceiptCase FROM ftQueueItem WHERE cbReceiptReference = @receiptReference " +
                 "AND NOT (ReceiptCase & 0xFFFF = 0x0002 OR ReceiptCase & 0xFFFF = 0x0003 OR ReceiptCase & 0xFFFF = 0x0005 OR ReceiptCase & 0xFFFF = 0x0006 OR ReceiptCase & 0xFFFF = 0x0007) " +
