@@ -81,7 +81,7 @@ namespace fiskaltrust.Middleware.Storage.Azure.Repositories
             }
         }
 
-        public async IAsyncEnumerable<string> GetGroupedReceiptReference(long? fromIncl, long? toIncl)
+        public async IAsyncEnumerable<string> GetGroupedReceiptReferenceAsync(long? fromIncl, long? toIncl)
         {
             var groupByLastNamesQuery =
                     from queueItem in await GetAllAsync().ToListAsync()
@@ -97,7 +97,7 @@ namespace fiskaltrust.Middleware.Storage.Azure.Repositories
                 yield return entry.Key;
             }
         }
-        public async IAsyncEnumerable<ftQueueItem> GetQueueItemsForReceiptReference(string receiptReference)
+        public async IAsyncEnumerable<ftQueueItem> GetQueueItemsForReceiptReferenceAsync(string receiptReference)
         {
             var queueItemsForReceiptReference =
                 from queueItem in await GetAllAsync().ToListAsync()

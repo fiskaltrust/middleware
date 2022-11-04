@@ -24,13 +24,13 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Repositories
 
         public async Task<HashSet<ReceiptReferenceData>> GetReceiptReferenceAsync(long from, long to)
         {
-            var receiptReferencesGrouped = _middlewareQueueItemRepository.GetGroupedReceiptReference(from, to);
+            var receiptReferencesGrouped = _middlewareQueueItemRepository.GetGroupedReceiptReferenceAsync(from, to);
             var receiptReferences = new HashSet<ReceiptReferenceData>();
             await foreach (var receiptReference in receiptReferencesGrouped)
             {
                 var row = 0;
                 var source = new ftQueueItem();
-                await foreach (var queueItem in _middlewareQueueItemRepository.GetQueueItemsForReceiptReference(receiptReference))
+                await foreach (var queueItem in _middlewareQueueItemRepository.GetQueueItemsForReceiptReferenceAsync(receiptReference))
                 {
                     if (row == 0)
                     {

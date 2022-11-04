@@ -65,7 +65,7 @@ namespace fiskaltrust.Middleware.Storage.EF.Repositories
             return DbContext.QueueItemList.Where(x => x.ftQueueRow >= ftQueueItem.ftQueueRow).ToAsyncEnumerable();
         }
 
-        public async IAsyncEnumerable<string> GetGroupedReceiptReference(long? fromIncl, long? toIncl)
+        public async IAsyncEnumerable<string> GetGroupedReceiptReferenceAsync(long? fromIncl, long? toIncl)
         {
             var groupByLastNamesQuery =
                     from queueItem in DbContext.QueueItemList
@@ -80,7 +80,7 @@ namespace fiskaltrust.Middleware.Storage.EF.Repositories
                 yield return entry.Key;
             }
         }
-        public async IAsyncEnumerable<ftQueueItem> GetQueueItemsForReceiptReference(string receiptReference)
+        public async IAsyncEnumerable<ftQueueItem> GetQueueItemsForReceiptReferenceAsync(string receiptReference)
         {
             var queueItemsForReceiptReference =
                 from queueItem in DbContext.QueueItemList.AsQueryable()

@@ -21,9 +21,9 @@ namespace fiskaltrust.Middleware.Contracts.Repositories
 
         IAsyncEnumerable<ftQueueItem> GetQueueItemsAfterQueueItem(ftQueueItem ftQueueItem);
 
-        IAsyncEnumerable<string> GetGroupedReceiptReference(long? fromIncl, long? toIncl);
+        IAsyncEnumerable<string> GetGroupedReceiptReferenceAsync(long? fromIncl, long? toIncl);
 
-        IAsyncEnumerable<ftQueueItem> GetQueueItemsForReceiptReference(string receiptReference);
+        IAsyncEnumerable<ftQueueItem> GetQueueItemsForReceiptReferenceAsync(string receiptReference);
 
     }
 

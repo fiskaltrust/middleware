@@ -54,7 +54,7 @@ namespace fiskaltrust.Middleware.Storage.InMemory.Repositories
             return Data.Values.Where(x => x.ftQueueRow >= ftQueueItem.ftQueueRow).ToAsyncEnumerable();
         }
 
-        public async IAsyncEnumerable<string> GetGroupedReceiptReference(long? fromIncl, long? toIncl)
+        public async IAsyncEnumerable<string> GetGroupedReceiptReferenceAsync(long? fromIncl, long? toIncl)
         {
             var groupByLastNamesQuery =
                     from queueItem in Data.Values
@@ -72,7 +72,7 @@ namespace fiskaltrust.Middleware.Storage.InMemory.Repositories
         }
 
 
-        public async IAsyncEnumerable<ftQueueItem> GetQueueItemsForReceiptReference(string receiptReference)
+        public async IAsyncEnumerable<ftQueueItem> GetQueueItemsForReceiptReferenceAsync(string receiptReference)
         {
             var queueItemsForReceiptReference =
                 from queueItem in Data.Values
