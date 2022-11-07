@@ -29,25 +29,25 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Repositories
             await foreach (var receiptReference in receiptReferencesGrouped)
             {
                 var row = 0;
-                var source = new ftQueueItem();
+                var target = new ftQueueItem();
                 await foreach (var queueItem in _middlewareQueueItemRepository.GetQueueItemsForReceiptReferenceAsync(receiptReference))
                 {
                     if (row == 0)
                     {
-                        source = queueItem;
+                        target = queueItem;
                         row++;
                         continue;
                     }
+                    await AddReference(receiptReferences, target, queueItem);
+                    var source = await _middlewareQueueItemRepository.GetFirstPreviousReceiptReferencesAsync(queueItem);
                     await AddReference(receiptReferences, source, queueItem);
-                    var target = await _middlewareQueueItemRepository.GetFirstPreviousReceiptReferencesAsync(queueItem);
-                    await AddReference(receiptReferences, source, target);
 
-                    source = queueItem;
+                    target = queueItem;
                     row++;
                 }
-                if (row == 1 && !string.IsNullOrEmpty(source.ftQueueItemId.ToString()))
+                if (row == 1 && !string.IsNullOrEmpty(target.ftQueueItemId.ToString()))
                 {
-                    var target = await _middlewareQueueItemRepository.GetFirstPreviousReceiptReferencesAsync(source);
+                    var source = await _middlewareQueueItemRepository.GetFirstPreviousReceiptReferencesAsync(target);
                     await AddReference(receiptReferences, source, target);
                 }
             }
@@ -66,7 +66,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Repositories
             var responseSource = JsonConvert.DeserializeObject<ReceiptResponse>(source.response);
             var receiptCaseDataSource = SerializationHelper.GetReceiptCaseData(requestSource);
 
-            var znumber = await GetLastZNumberForQueueItem(_actionJournalRepository, target).ConfigureAwait(false);
+            var znumber = await GetLastZNumberForQueueItem(target).ConfigureAwait(false);
 
             return receiptReferences.Add(new ReceiptReferenceData()
             {
@@ -80,9 +80,9 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Repositories
             });
         }
 
-        private static async Task<long> GetLastZNumberForQueueItem(IReadOnlyActionJournalRepository actionJournalRepository, ftQueueItem queueItem)
+        private async Task<long> GetLastZNumberForQueueItem(ftQueueItem queueItem)
         {
-            var actionJournals = (await actionJournalRepository.GetAsync()).Where(x => x.Type == "4445000000000007").OrderBy(x => x.TimeStamp);
+            var actionJournals = (await _actionJournalRepository.GetAsync()).Where(x => x.Type == "4445000000000007").OrderBy(x => x.TimeStamp);
             var actionJournal = actionJournals.Where(x => x.TimeStamp > queueItem.TimeStamp).FirstOrDefault();
             if (actionJournal == null)
             {
