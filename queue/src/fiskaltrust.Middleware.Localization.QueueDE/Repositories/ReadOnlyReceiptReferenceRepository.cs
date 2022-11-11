@@ -22,10 +22,10 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Repositories
             _actionJournalRepository = actionJournalRepository;
         }
 
-        public async Task<HashSet<ReceiptReferenceData>> GetReceiptReferenceAsync(long from, long to)
+        public async Task<HashSet<ReceiptReferencesGroupedData>> GetReceiptReferenceAsync(long from, long to)
         {
             var receiptReferencesGrouped = _middlewareQueueItemRepository.GetGroupedReceiptReferenceAsync(from, to);
-            var receiptReferences = new HashSet<ReceiptReferenceData>();
+            var receiptReferences = new HashSet<ReceiptReferencesGroupedData>();
             await foreach (var receiptReference in receiptReferencesGrouped)
             {
                 var row = 0;
@@ -54,9 +54,11 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Repositories
             return receiptReferences;
         }
 
-        private async Task<bool> AddReference(HashSet<ReceiptReferenceData> receiptReferences, ftQueueItem source, ftQueueItem target)
+        public Task<HashSet<ReceiptReferenceData>> GetReceiptReferenceAsync(ftQueueItem queueItem) => throw new System.NotImplementedException();
+
+        private async Task<bool> AddReference(HashSet<ReceiptReferencesGroupedData> receiptReferences, ftQueueItem source, ftQueueItem target)
         {
-            if (source == null || target == null || string.IsNullOrEmpty(source.response))
+            if (source == null || target == null || string.IsNullOrEmpty(target.response) || string.IsNullOrEmpty(source.response))
             {
                 return false;
             }
@@ -68,12 +70,12 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Repositories
 
             var znumber = await GetLastZNumberForQueueItem(target).ConfigureAwait(false);
 
-            return receiptReferences.Add(new ReceiptReferenceData()
+            return receiptReferences.Add(new ReceiptReferencesGroupedData()
             {
-                TargetRefMoment = target.cbReceiptMoment,
-                TargetRefReceiptId = responseTarget.ftReceiptIdentification,
+                RefMoment = target.cbReceiptMoment,
+                RefReceiptId = responseTarget.ftReceiptIdentification,
                 TargetQueueItemId = target.ftQueueItemId,
-                TargetZNumber = znumber,
+                ZNumber = znumber,
                 SourceQueueItemId = source.ftQueueItemId,
                 SourceReceiptCaseData = receiptCaseDataSource,
                 SouceReceiptIdentification = responseSource.ftReceiptIdentification,

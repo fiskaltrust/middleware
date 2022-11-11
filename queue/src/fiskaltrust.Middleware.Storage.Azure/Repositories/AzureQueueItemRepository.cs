@@ -88,7 +88,8 @@ namespace fiskaltrust.Middleware.Storage.Azure.Repositories
                     where
                     fromIncl.HasValue ? queueItem.TimeStamp >= fromIncl.Value : true &&
                     toIncl.HasValue ? queueItem.TimeStamp <= toIncl.Value : true &&
-                    JsonConvert.DeserializeObject<ReceiptRequest>(queueItem.request).IncludeInReferences()
+                    JsonConvert.DeserializeObject<ReceiptRequest>(queueItem.request).IncludeInReferences() &&
+                    !string.IsNullOrEmpty(queueItem.response)
                     group queueItem by queueItem.cbReceiptReference into newGroup
                     orderby newGroup.Key
                     select newGroup;
@@ -101,7 +102,8 @@ namespace fiskaltrust.Middleware.Storage.Azure.Repositories
         {
             var queueItemsForReceiptReference =
                 from queueItem in await GetAllAsync().ToListAsync()
-                where JsonConvert.DeserializeObject<ReceiptRequest>(queueItem.request).IncludeInReferences() && queueItem.cbReceiptReference == receiptReference
+                where JsonConvert.DeserializeObject<ReceiptRequest>(queueItem.request).IncludeInReferences() && queueItem.cbReceiptReference == receiptReference &&
+                !string.IsNullOrEmpty(queueItem.response)
                 orderby queueItem.TimeStamp
                 select queueItem;
             await foreach (var entry in queueItemsForReceiptReference.ToAsyncEnumerable())
@@ -114,7 +116,8 @@ namespace fiskaltrust.Middleware.Storage.Azure.Repositories
             var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(ftQueueItem.request);
             var queueItemsForReceiptReference =
                             (from queueItem in await GetAllAsync().ToListAsync()
-                             where receiptRequest.IncludeInReferences() && queueItem.cbReceiptReference == receiptRequest.cbPreviousReceiptReference
+                             where receiptRequest.IncludeInReferences() && queueItem.cbReceiptReference == receiptRequest.cbPreviousReceiptReference &&
+                             !string.IsNullOrEmpty(queueItem.response)
                              orderby queueItem.TimeStamp
                              select queueItem).ToAsyncEnumerable().Take(1);
             return (ftQueueItem) queueItemsForReceiptReference;

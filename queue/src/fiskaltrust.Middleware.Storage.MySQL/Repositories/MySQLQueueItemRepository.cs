@@ -94,10 +94,12 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
         {
             var query = $"SELECT cbReceiptReference  FROM " +
                          "(SELECT cbReceiptReference FROM ftQueueItem " +
-                         (fromIncl.HasValue || toIncl.HasValue ? "WHERE " : " ") +
-                         (fromIncl.HasValue ? "ftQueueItem.TimeStamp >= @fromIncl " : "") +
-                         (fromIncl.HasValue && toIncl.HasValue ? "AND " : " ") +
+                         "WHERE " +
+                         (fromIncl.HasValue ? " ftQueueItem.TimeStamp >= @fromIncl " : " ") +
+                         (fromIncl.HasValue && toIncl.HasValue ? " AND " : " ") +
                          (toIncl.HasValue ? " ftQueueItem.TimeStamp <= @toIncl  " : " ") +
+                         (fromIncl.HasValue || toIncl.HasValue ? "AND " : " ") +
+                         "response IS NOT NULL" +
                         ") AS groupedReferences GROUP BY cbReceiptReference; ";
 
             object obj = null;
@@ -126,6 +128,7 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
         public async IAsyncEnumerable<ftQueueItem> GetQueueItemsForReceiptReferenceAsync(string receiptReference)
         {
             var query = "SELECT * FROM ftQueueItem WHERE cbReceiptReference = @receiptReference " +
+                "AND response IS NOT NULL " +
                 "ORDER BY timestamp;";
             using (var connection = new MySqlConnection(ConnectionString))
             {
@@ -149,8 +152,9 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
             {
                 return null;
             }
-            var query = "SELECT *, json_extract(request, '$.ftReceiptCase') AS ReceiptCase FROM ftQueueItem WHERE ftQueueRow < @ftQueueRow AND cbReceiptReference = @cbPreviousReceiptReference " +
-                            "order by timestamp limit 1;";
+            var query = "SELECT * FROM ftQueueItem WHERE ftQueueRow < @ftQueueRow AND cbReceiptReference = @cbPreviousReceiptReference " +
+                            "AND response IS NOT NULL " +
+                            "ORDER BY timestamp LIMIT 1;";
             using (var connection = new MySqlConnection(ConnectionString))
             {
                 await connection.OpenAsync().ConfigureAwait(false);

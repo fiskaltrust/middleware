@@ -67,7 +67,8 @@ namespace fiskaltrust.Middleware.Storage.EF.Repositories
                     from queueItem in DbContext.QueueItemList
                     where
                     (fromIncl.HasValue ? queueItem.TimeStamp >= fromIncl.Value : true) &&
-                    (toIncl.HasValue ? queueItem.TimeStamp <= toIncl.Value : true)
+                    (toIncl.HasValue ? queueItem.TimeStamp <= toIncl.Value : true) &&
+                    !string.IsNullOrEmpty(queueItem.response)
                     group queueItem by queueItem.cbReceiptReference into newGroup
                     orderby newGroup.Key
                     select newGroup;
@@ -80,7 +81,8 @@ namespace fiskaltrust.Middleware.Storage.EF.Repositories
         {
             var queueItemsForReceiptReference =
                 from queueItem in DbContext.QueueItemList.AsQueryable()
-                where queueItem.cbReceiptReference == receiptReference
+                where queueItem.cbReceiptReference == receiptReference &&
+                !string.IsNullOrEmpty(queueItem.response)
                 orderby queueItem.TimeStamp
                 select queueItem;
             await foreach (var entry in queueItemsForReceiptReference.ToAsyncEnumerable())
@@ -102,7 +104,8 @@ namespace fiskaltrust.Middleware.Storage.EF.Repositories
             var queueItemsForReceiptReference =
                             (from queueItem in DbContext.QueueItemList.AsQueryable()
                              where queueItem.ftQueueRow < ftQueueItem.ftQueueRow &&
-                             queueItem.cbReceiptReference == receiptRequest.cbPreviousReceiptReference
+                             queueItem.cbReceiptReference == receiptRequest.cbPreviousReceiptReference &&
+                             !string.IsNullOrEmpty(queueItem.response)
                              orderby queueItem.TimeStamp
                              select queueItem).ToAsyncEnumerable();
 

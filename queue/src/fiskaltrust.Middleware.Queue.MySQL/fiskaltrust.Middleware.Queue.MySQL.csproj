@@ -15,7 +15,7 @@
         <PackageReference Include="System.ValueTuple" Version="4.5.0" />
         <PackageReference Include="Dapper" Version="2.0.35" />
         <PackageReference Include="MySqlConnector" Version="2.1.10" />
-        <PackageReference Include="fiskaltrust.Exports.DSFinVK" Version="1.4.0-ci-22312-57560">
+        <PackageReference Include="fiskaltrust.Exports.DSFinVK" Version="1.4.0-ci-22314-57645">
             <NoWarn>NU1605</NoWarn>
         </PackageReference>            
         <PackageReference Include="fiskaltrust.Exports.TAR" Version="1.1.1" />
