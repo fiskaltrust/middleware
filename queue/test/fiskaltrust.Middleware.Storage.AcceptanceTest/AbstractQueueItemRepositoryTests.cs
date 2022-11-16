@@ -317,7 +317,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
         }
 
         [Fact]
-        public async Task GetGroupedReceiptReference_ToAndToTimespan_QueryValidGroupAndItems()
+        public async Task GetGroupedReceiptReference_ToAndFromTimespan_QueryValidGroupAndItems()
         {
             var receiptFixture = StorageTestFixtureProvider.GetFixture();
             receiptFixture.Customize<ReceiptRequest>(c => c.With(r => r.ftReceiptCase, 4919338172267102209));
@@ -393,7 +393,6 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             queueItemFixtureClosing.Customize<ftQueueItem>(c => c.With(r => r.TimeStamp, DateTime.UtcNow.Ticks).
             With(r => r.request, JsonConvert.SerializeObject(receiptFixtureClosing.Create<ReceiptRequest>())).
             With(r => r.cbReceiptReference, receiptReference));
-
 
             var expectedEntries = queueItemFixtureClosing.CreateMany<ftQueueItem>(2).ToList();
             var sut = await CreateRepository(expectedEntries);
