@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <ItemGroup>
-        <PackageReference Include="fiskaltrust.Exports.DSFinVK" Version="1.4.0-ci-22314-57645">
+        <PackageReference Include="fiskaltrust.Exports.DSFinVK" Version="1.4.0-ci-22321-57739">
             <NoWarn>NU1605</NoWarn>
         </PackageReference>
         <PackageReference Include="fiskaltrust.Exports.TAR" Version="1.1.1" />

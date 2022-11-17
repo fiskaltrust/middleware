@@ -40,7 +40,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Repositories
                     }
                     await AddReference(receiptReferences, target, queueItem);
                     var source = await _middlewareQueueItemRepository.GetFirstPreviousReceiptReferencesAsync(queueItem);
-                    await AddReference(receiptReferences, source, queueItem);
+                    await AddReference(receiptReferences, queueItem, source);
 
                     target = queueItem;
                     row++;
@@ -48,7 +48,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Repositories
                 if (row == 1 && !string.IsNullOrEmpty(target.ftQueueItemId.ToString()))
                 {
                     var source = await _middlewareQueueItemRepository.GetFirstPreviousReceiptReferencesAsync(target);
-                    await AddReference(receiptReferences, source, target);
+                    await AddReference(receiptReferences, target, source);
                 }
             }
             return receiptReferences;
@@ -56,29 +56,53 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Repositories
 
         public Task<HashSet<ReceiptReferenceData>> GetReceiptReferenceAsync(ftQueueItem queueItem) => throw new System.NotImplementedException();
 
-        private async Task<bool> AddReference(HashSet<ReceiptReferencesGroupedData> receiptReferences, ftQueueItem source, ftQueueItem target)
+        private async Task<bool> AddReference(HashSet<ReceiptReferencesGroupedData> receiptReferences, ftQueueItem target, ftQueueItem source)
         {
-            if (source == null || target == null || string.IsNullOrEmpty(target.response) || string.IsNullOrEmpty(source.response))
+            if (target == null || string.IsNullOrEmpty(target.response))
             {
                 return false;
             }
+
+            //external references
+            if (source == null)
+            {
+                var requestTarget = JsonConvert.DeserializeObject<ReceiptRequest>(target.request);
+                if (string.IsNullOrEmpty(requestTarget.ftReceiptCaseData))
+                {
+                    return false;
+                }
+                var receiptCaseData = SerializationHelper.GetReceiptCaseData(requestTarget);
+                if (receiptCaseData == null)
+                {
+                    return false;
+                }
+                var znr = await GetLastZNumberForQueueItem(target).ConfigureAwait(false);
+                var respTarget = JsonConvert.DeserializeObject<ReceiptResponse>(target.response);
+                return receiptReferences.Add(new ReceiptReferencesGroupedData()
+                {
+                    TargetQueueItemId = target.ftQueueItemId,
+                    ZNumber = znr,
+                    TargetReceiptCaseData = receiptCaseData,
+                    TargetReceiptIdentification = respTarget.ftReceiptIdentification,
+                });
+            }
+            if (string.IsNullOrEmpty(source.response))
+            {
+                return false;
+            }
+
             var responseTarget = JsonConvert.DeserializeObject<ReceiptResponse>(target.response);
-
-            var requestSource = JsonConvert.DeserializeObject<ReceiptRequest>(source.request);
             var responseSource = JsonConvert.DeserializeObject<ReceiptResponse>(source.response);
-            var receiptCaseDataSource = SerializationHelper.GetReceiptCaseData(requestSource);
-
             var znumber = await GetLastZNumberForQueueItem(target).ConfigureAwait(false);
 
             return receiptReferences.Add(new ReceiptReferencesGroupedData()
             {
-                RefMoment = target.cbReceiptMoment,
-                RefReceiptId = responseTarget.ftReceiptIdentification,
+                RefMoment = source.cbReceiptMoment,
+                RefReceiptId = responseSource.ftReceiptIdentification,
                 TargetQueueItemId = target.ftQueueItemId,
                 ZNumber = znumber,
                 SourceQueueItemId = source.ftQueueItemId,
-                SourceReceiptCaseData = receiptCaseDataSource,
-                SouceReceiptIdentification = responseSource.ftReceiptIdentification,
+                TargetReceiptIdentification = responseTarget.ftReceiptIdentification,
             });
         }
 
