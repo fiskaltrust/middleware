@@ -13,7 +13,7 @@
         <ProjectReference Include="..\fiskaltrust.Middleware.Storage.EFCore.PostgreSQL\fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.csproj" PrivateAssets="all" />
         <PackageReference Include="Microsoft.EntityFrameworkCore" Version="5.0.10" />
         <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="5.0.10" />
-        <PackageReference Include="fiskaltrust.Exports.DSFinVK" Version="1.4.0-ci-22321-57739">
+        <PackageReference Include="fiskaltrust.Exports.DSFinVK" Version="1.4.0-ci-22325-57830">
             <NoWarn>NU1605</NoWarn>
         </PackageReference>
         <PackageReference Include="fiskaltrust.Exports.TAR" Version="1.1.1" />

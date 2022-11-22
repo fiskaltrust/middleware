@@ -17,7 +17,7 @@
         <PackageReference Include="fiskaltrust.storage.serialization" Version="1.3.1" />
         <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="1.1.1" />
         <PackageReference Include="System.ValueTuple" Version="4.5.0" />
-        <PackageReference Include="fiskaltrust.Exports.DSFinVK" Version="1.4.0-ci-22321-57739">
+        <PackageReference Include="fiskaltrust.Exports.DSFinVK" Version="1.4.0-ci-22325-57830">
             <NoWarn>NU1605</NoWarn>
         </PackageReference>
         <PackageReference Include="fiskaltrust.Exports.TAR" Version="1.1.1" />
