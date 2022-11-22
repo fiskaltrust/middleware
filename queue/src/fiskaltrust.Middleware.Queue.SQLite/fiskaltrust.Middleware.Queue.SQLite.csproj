@@ -15,7 +15,7 @@
         <PackageReference Include="fiskaltrust.storage.encryption" Version="1.3.1" />
         <PackageReference Include="fiskaltrust.storage.serialization" Version="1.3.1" />
         <PackageReference Include="Dapper" Version="2.0.123" />
-        <PackageReference Include="fiskaltrust.Exports.DSFinVK" Version="1.4.0-ci-22325-57830">
+        <PackageReference Include="fiskaltrust.Exports.DSFinVK" Version="1.4.0-ci-22326-57883">
             <NoWarn>NU1605</NoWarn>
         </PackageReference>
         <PackageReference Include="fiskaltrust.Exports.TAR" Version="1.1.1" />
