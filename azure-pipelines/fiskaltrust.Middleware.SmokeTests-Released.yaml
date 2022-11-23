@@ -1,0 +1,230 @@
+resources:
+  pipelines:
+    - pipeline: queues
+      source: fiskaltrust.Middleware.Queue
+      branch: refs/tags/queue/*
+
+    - pipeline: scus
+      source: fiskaltrust.Middleware.SCU.DE
+      branch: refs/tags/scu-de/*
+
+    - pipeline: helpers
+      source: fiskaltrust.Middleware.Helper
+      project: department-develop-research
+      branch: refs/tags/helipad/v*
+
+    - pipeline: launcher-1-3
+      source: fiskaltrust.Launcher
+      project: department-develop-research
+      branch: refs/tags/v*
+
+    - pipeline: launcher-2-0
+      source: fiskaltrust.Launcher
+      branch: refs/tags/v*
+
+variables:
+  - group: SmokeTests-Middleware
+
+trigger: none
+pr: none
+
+schedules:
+  - cron: 0 0 * * *
+    displayName: Nightly Run
+    branches:
+      include:
+        - main
+    always: true
+
+stages:
+  - template: templates/smoketests/harness.yaml
+    parameters:
+      agents:
+        - os: windows10-x64
+          target: win-x64
+
+        - os: windows10-x86
+          target: win-x86
+
+        - os: windows7-x64
+          target: win-x64
+          skip: true
+
+        - os: windows7-x86
+          target: win-x86
+          skip: true
+
+        - os: debian9-x64
+          target: linux-x64
+          skip: true
+
+        - os: debian9-x86
+          target: linux-x86
+          skip: true
+
+      configs:
+        - queue: EF
+          scu: DE.CryptoVision
+          cashbox:
+            cashboxid: 29d41fe0-a41c-4532-a4a2-47c246a402d9
+            accesstoken: BMCd0k6wbb0OEXe3M1hALIO8qbkLvD/j1P1jUxlFlOmVkEMGdPkc/aEzHoE3GN0pn264E1CPOhwYIeIlBefZWkk=
+            baseurl: http://localhost:1501/b28f1c18-b8e3-422e-9dfc-bc25caf231a0
+          skip: true
+
+        - queue: EF
+          scu: DE.FiskalyCertified
+          cashbox:
+            cashboxid: 87b11ff3-6fe0-474e-8d69-48c376b5d946
+            accesstoken: BBhUqbNRIY/iI6bblVO1K/rS9MFW7Sj2fXxsD5d3IM4HvpGZkVI619Oku32U9P6f+k7TEagFMYCp4brdIcBrWAw=
+            baseurl: http://localhost:1502/d9c927da-fa5e-4ab5-a107-24f32884916f
+          pre:
+            - template: ../pre/fiskalycertified.yaml
+              parameters:
+                apikey: $(DE.FiskalyCertified.ApiKey)
+                apisecret: $(DE.FiskalyCertified.ApiSecret)
+          post:
+            - template: ../post/fiskalycertified.yaml
+              parameters:
+                apikey: $(DE.FiskalyCertified.ApiKey)
+                apisecret: $(DE.FiskalyCertified.ApiSecret)
+          skip: true
+
+        - queue: EF
+          scu: DE.Swissbit
+          cashbox:
+            cashboxid: 26172339-4c70-4716-af33-59bde803e128
+            accesstoken: BDNT3dJF9QaXLc64AQEN2E5d/PCq6W3AYlXGPPbCP5Y1DPZ6YUe33oHuEhnnkGS8tsob0zocWV4I621WNITXUSQ=
+            baseurl: http://localhost:1503/64595b8d-6593-4a6c-976e-4a8b358050cd
+          skip: true
+
+        - queue: EF
+          scu: DE.SwissbitCloud
+          cashbox:
+            cashboxid: 2eece343-04e0-40ba-8061-a83ec6c990b9
+            accesstoken: BL1mw4tnMBiryfOBelrW97lRcTc36JCID6SbhuoECPlOn820mcLcrI9od3zK/NYr2q+bx/8D2R3FULI6sHGvTBA=
+            baseurl: http://localhost:1504/49d946c5-8685-4274-9108-5e6b78e22b67
+          pre:
+            - template: ../pre/swissbitcloud.yaml
+              parameters:
+                apipassword: $(DE.Swissbit.ApiPassword)
+                apiusername: $(DE.Swissbit.ApiUsername)
+                tenantid: $(DE.Swissbit.TenantId)
+                accountid: $(AccountId)
+                outletid: $(OutletId)
+          post:
+            - template: ../post/swissbitcloud.yaml
+              parameters:
+                apipassword: $(DE.Swissbit.ApiPassword)
+                apiusername: $(DE.Swissbit.ApiUsername)
+                tenantid: $(DE.Swissbit.TenantId)
+          skip: true
+
+        - queue: MySQL
+          scu: DE.CryptoVision
+          cashbox:
+            cashboxid: 5cbcf651-a132-467e-a8e4-32fbe3d16dc1
+            accesstoken: BGGaOKRNaJIcIwaAkoFc83bZSW3SRwgS3y69xs2Nc9G/FO7z8AuTff1sjdPg2HMmO2rDvz5GVjrSxGczIczAv6s=
+            baseurl: http://localhost:1505/add55f9a-6074-4143-ab49-772f680b4337
+          skip: true
+
+        - queue: MySQL
+          scu: DE.FiskalyCertified
+          cashbox:
+            cashboxid: 73dce91a-ba3c-4395-befd-de877eb2c684
+            accesstoken: BApHjeoVTUTbrZsWmRulRKmoZPIIizTjUP2xkThGOv6uBzdUcS7jEw4BPkFzsiHerYag8yaxsQ4oSnjBiKgrn74=
+            baseurl: http://localhost:1506/32fee0b1-260d-4f11-8e8c-83b5561b8666
+          pre:
+            - template: ../pre/fiskalycertified.yaml
+              parameters:
+                apikey: $(DE.FiskalyCertified.ApiKey)
+                apisecret: $(DE.FiskalyCertified.ApiSecret)
+          post:
+            - template: ../post/fiskalycertified.yaml
+              parameters:
+                apikey: $(DE.FiskalyCertified.ApiKey)
+                apisecret: $(DE.FiskalyCertified.ApiSecret)
+          skip: true
+
+        - queue: MySQL
+          scu: DE.Swissbit
+          cashbox:
+            cashboxid: 3bae10e1-48a8-45a0-a544-e47284846ad4
+            accesstoken: BH/mAI2WEkSY7rt17RLUDNi7t9OZue5LQcMt0YOCOUQP9fBhVgTO6rFgZm0nT0m15b00HUvY0iFl4OIuhGdKG88=
+            baseurl: http://localhost:1507/4f3c55e1-8e98-4e50-a235-6cbb0f6e5d2e
+          skip: true
+
+        - queue: MySQL
+          scu: DE.SwissbitCloud
+          cashbox:
+            cashboxid: ece8f8f6-ffce-4681-8df9-ca5aa7af278b
+            accesstoken: BLyToue7i2DzBEmPFxsG3ePA2oQAyIGJKQFnF3IuAcFHEusjcqJoASjXLVLPU5QVsf/6wPs+SADJltnH19oLJbo=
+            baseurl: http://localhost:1508/837ab93b-8849-4b68-a876-136be60040fb
+          pre:
+            - template: ../pre/swissbitcloud.yaml
+              parameters:
+                apipassword: $(DE.Swissbit.ApiPassword)
+                apiusername: $(DE.Swissbit.ApiUsername)
+                tenantid: $(DE.Swissbit.TenantId)
+                accountid: $(AccountId)
+                outletid: $(OutletId)
+          post:
+            - template: ../post/swissbitcloud.yaml
+              parameters:
+                apipassword: $(DE.Swissbit.ApiPassword)
+                apiusername: $(DE.Swissbit.ApiUsername)
+                tenantid: $(DE.Swissbit.TenantId)
+          skip: true
+
+        - queue: SQLite
+          scu: DE.CryptoVision
+          cashbox:
+            cashboxid: b655b118-100e-413a-a218-1b9efab07259
+            accesstoken: BDDYMvIKjLgCVD1Rd2xR9so/YyFDU5WmIxWXclGTzdWZ4JZN+BKFLvenxgHQUa00hP9oYtOu0Y3a9XmzCVwdrGw=
+            baseurl: http://localhost:1509/1f1e6897-7350-4d61-a19b-3aeaa0e63308
+          skip: true
+
+        - queue: SQLite
+          scu: DE.FiskalyCertified
+          cashbox:
+            cashboxid: b8073b8e-b510-4663-b57c-cc0e8af8d367
+            accesstoken: BNbZE94Azu3LEL6ShNCaZteCJo4nEipq2cIEIIp3bqCg4gCgGjuCrXRDTg3+MXKucE3YovczbnqpTuHRb+Wk20Y=
+            baseurl: http://localhost:1510/081f5d60-3495-483c-8bd0-db20b83d6be9
+          pre:
+            - template: ../pre/fiskalycertified.yaml
+              parameters:
+                apikey: $(DE.FiskalyCertified.ApiKey)
+                apisecret: $(DE.FiskalyCertified.ApiSecret)
+          post:
+            - template: ../post/fiskalycertified.yaml
+              parameters:
+                apikey: $(DE.FiskalyCertified.ApiKey)
+                apisecret: $(DE.FiskalyCertified.ApiSecret)
+
+        - queue: SQLite
+          scu: DE.Swissbit
+          cashbox:
+            cashboxid: b6770cdd-ccac-4b0d-946a-85dc0265cc5e
+            accesstoken: BJO0GTRdjnH+I5UfbhtuflFBepWKXnoTedwdrpMqoeq7bvxzy9ejlaY+AH7Vd3uwDabgI0etRX0Q3cUv4BRHXjc=
+            baseurl: http://localhost:1511/108d8a30-60e0-4589-9af2-d0bcad3cbb29
+          skip: true
+
+        - queue: SQLite
+          scu: DE.SwissbitCloud
+          cashbox:
+            cashboxid: dab927c1-ca31-4505-ae57-9c63abaf11b8
+            accesstoken: BPth5lBHQbhExB7PJzAPvyJKxBAnmMwuxvMSEioUyZ7EueZNiLLi4OTvFXapB/45wDk1QENWhEUYk6rMrXTArSI=
+            baseurl: http://localhost:1512/32289ea1-28b2-463e-a410-07548b137283
+          pre:
+            - template: ../pre/swissbitcloud.yaml
+              parameters:
+                apipassword: $(DE.Swissbit.ApiPassword)
+                apiusername: $(DE.Swissbit.ApiUsername)
+                tenantid: $(DE.Swissbit.TenantId)
+                accountid: $(AccountId)
+                outletid: $(OutletId)
+          post:
+            - template: ../post/swissbitcloud.yaml
+              parameters:
+                apipassword: $(DE.Swissbit.ApiPassword)
+                apiusername: $(DE.Swissbit.ApiUsername)
+                tenantid: $(DE.Swissbit.TenantId)
