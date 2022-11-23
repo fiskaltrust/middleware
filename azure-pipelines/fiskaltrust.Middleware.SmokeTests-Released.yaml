@@ -2,25 +2,25 @@ resources:
   pipelines:
     - pipeline: queues
       source: fiskaltrust.Middleware.Queue
-      tags: queue/*
+      tags: [queue/*]
 
     - pipeline: scus
       source: fiskaltrust.Middleware.SCU.DE
-      tags: scu-de/*
+      tags: [scu-de/*]
 
     - pipeline: helpers
       source: fiskaltrust.Middleware.Helper
       project: department-develop-research
-      tags: helipad/v*
+      tags: [helipad/v*]
 
     - pipeline: launcher-1-3
       source: fiskaltrust.Launcher
       project: department-develop-research
-      tags: v*
+      tags: [v*]
 
     - pipeline: launcher-2-0
       source: fiskaltrust.Launcher
-      tags: v*
+      tags: [v*]
 
 variables:
   - group: SmokeTests-Middleware
