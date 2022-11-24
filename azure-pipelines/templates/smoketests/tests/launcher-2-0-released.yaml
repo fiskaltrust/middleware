@@ -17,8 +17,7 @@ steps:
 
       $lastLauncherVersion = $(Invoke-WebRequest https://packages-2-0-sandbox.fiskaltrust.cloud/api/packages/fiskaltrust.Launcher?platform=${{ parameters.target }}).Content | ConvertFrom-Json | % { if($_ -match "(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$") { $_ } } | Select -Last 1
 
-      Invoke-WebRequest "https://packages-2-0-sandbox.fiskaltrust.cloud/api/download/fiskaltrust.Launcher?platform=${{ parameters.target}}&version=$lastLauncherVersion" -OutFile "$(Agent.TempDirectory)/packages/launcher-2-0-released/fiskaltrust.Launcher-$lastLauncherVersion.zip"
-      Invoke-WebRequest "https://packages-2-0-sandbox.fiskaltrust.cloud/api/download/fiskaltrust.Launcher/hash?platform=${{ parameters.target}}&version=$lastLauncherVersion" -OutFile "$(Agent.TempDirectory)/packages/launcher-2-0-released/fiskaltrust.Launcher-$lastLauncherVersion.zip.hash"
+      Invoke-WebRequest "https://packages-2-0-sandbox.fiskaltrust.cloud/api/download/fiskaltrust.Launcher?platform=${{ parameters.target}}&version=$lastLauncherVersion" -OutFile "$(Agent.TempDirectory)/packages/launcher-2-0-released/fiskaltrust.Launcher.zip"
     displayName: Download Launcher Package
 
   - pwsh: |
@@ -43,7 +42,7 @@ steps:
     displayName: Download Helipad Package
 
   - pwsh: |
-      Move-Item $(Agent.TempDirectory)/packages/launcher-2-0-released/fiskaltrust.Launcher* $(Build.SourcesDirectory)/launcher
+      Expand-Archive $(Agent.TempDirectory)/packages/launcher-2-0-released/fiskaltrust.Launcher.zip -DestinationPath $(Build.SourcesDirectory)/launcher -Force
     displayName: Extraxt Launcher 2.0 Artifact
 
   - pwsh: |
