@@ -20,24 +20,23 @@ steps:
       $(Invoke-WebRequest "https://packages-2-0-sandbox.fiskaltrust.cloud/api/download/fiskaltrust.Launcher?platform=${{ parameters.target}}&version=$lastLauncherVersion").Content | Set-Content -Path "$(Agent.TempDirectory)/packages/launcher-2-0-released/fiskaltrust.Launcher-$lastLauncherVersion.zip" -AsByteStream
     displayName: Download Launcher Package
 
-    - pwsh: |
+  - pwsh: |
       $lastQueueVersion = $(Invoke-WebRequest https://packages-2-0-sandbox.fiskaltrust.cloud/api/packages/fiskaltrust.Middleware.Queue.${{ parameters.queue }}).Content | ConvertFrom-Json | % { if($_ -match "(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$") { $_ } } | Select -Last 1
 
       $(Invoke-WebRequest "https://packages-2-0-sandbox.fiskaltrust.cloud/api/download/fiskaltrust.Middleware.Queue.${{ parameters.queue }}?version=$lastQueueVersion").Content | Set-Content -Path "$(Agent.TempDirectory)/packages/launcher-2-0-released/fiskaltrust.Middleware.Queue.${{ parameters.queue }}-$lastQueueVersion.zip" -AsByteStream
     displayName: Download Queue Package
 
-    - pwsh: |
+  - pwsh: |
       $lastScuVersion = $(Invoke-WebRequest https://packages-2-0-sandbox.fiskaltrust.cloud/api/packages/fiskaltrust.Middleware.SCU.${{ parameters.scu }}).Content | ConvertFrom-Json | % { if($_ -match "(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$") { $_ } } | Select -Last 1
 
       $(Invoke-WebRequest "https://packages-2-0-sandbox.fiskaltrust.cloud/api/download/fiskaltrust.Middleware.SCU.${{ parameters.scu }}?version=$lastScuVersion").Content | Set-Content -Path "$(Agent.TempDirectory)/packages/launcher-2-0-released/fiskaltrust.Middleware.SCU.${{ parameters.scu }}-$lastScuVersion.zip" -AsByteStream
     displayName: Download Scu Package
 
-    - pwsh: |
+  - pwsh: |
       $lastHelipadVersion = $(Invoke-WebRequest https://packages-2-0-sandbox.fiskaltrust.cloud/api/packages/fiskaltrust.Middleware.Helper.Helipad).Content | ConvertFrom-Json | % { if($_ -match "(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$") { $_ } } | Select -Last 1
 
       $(Invoke-WebRequest "https://packages-2-0-sandbox.fiskaltrust.cloud/api/download/fiskaltrust.Middleware.Helper.Helipad?version=$lastHelipadVersion").Content | Set-Content -Path "$(Agent.TempDirectory)/packages/launcher-2-0-released/fiskaltrust.Middleware.Helper.Helipad-$lastHelipadVersion.zip" -AsByteStream
     displayName: Download Helipad Package
-
 
   - pwsh: |
       Move-Item $(Agent.TempDirectory)/packages/launcher-2-0-released/fiskaltrust.Launcher* $(Build.SourcesDirectory)/launcher
