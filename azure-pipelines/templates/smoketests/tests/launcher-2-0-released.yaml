@@ -18,24 +18,28 @@ steps:
       $lastLauncherVersion = $(Invoke-WebRequest https://packages-2-0-sandbox.fiskaltrust.cloud/api/packages/fiskaltrust.Launcher?platform=${{ parameters.target }}).Content | ConvertFrom-Json | % { if($_ -match "(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$") { $_ } } | Select -Last 1
 
       Invoke-WebRequest "https://packages-2-0-sandbox.fiskaltrust.cloud/api/download/fiskaltrust.Launcher?platform=${{ parameters.target}}&version=$lastLauncherVersion" -OutFile "$(Agent.TempDirectory)/packages/launcher-2-0-released/fiskaltrust.Launcher-$lastLauncherVersion.zip"
+      Invoke-WebRequest "https://packages-2-0-sandbox.fiskaltrust.cloud/api/download/fiskaltrust.Launcher/hash?platform=${{ parameters.target}}&version=$lastLauncherVersion" -OutFile "$(Agent.TempDirectory)/packages/launcher-2-0-released/fiskaltrust.Launcher-$lastLauncherVersion.zip.hash"
     displayName: Download Launcher Package
 
   - pwsh: |
       $lastQueueVersion = $(Invoke-WebRequest https://packages-2-0-sandbox.fiskaltrust.cloud/api/packages/fiskaltrust.Middleware.Queue.${{ parameters.queue }}).Content | ConvertFrom-Json | % { if($_ -match "(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$") { $_ } } | Select -Last 1
 
       Invoke-WebRequest "https://packages-2-0-sandbox.fiskaltrust.cloud/api/download/fiskaltrust.Middleware.Queue.${{ parameters.queue }}?version=$lastQueueVersion" -OutFile "$(Agent.TempDirectory)/packages/launcher-2-0-released/fiskaltrust.Middleware.Queue.${{ parameters.queue }}-$lastQueueVersion.zip"
+      Invoke-WebRequest "https://packages-2-0-sandbox.fiskaltrust.cloud/api/download/fiskaltrust.Middleware.Queue.${{ parameters.queue }}/hash?version=$lastQueueVersion" -OutFile "$(Agent.TempDirectory)/packages/launcher-2-0-released/fiskaltrust.Middleware.Queue.${{ parameters.queue }}-$lastQueueVersion.zip.hash"
     displayName: Download Queue Package
 
   - pwsh: |
       $lastScuVersion = $(Invoke-WebRequest https://packages-2-0-sandbox.fiskaltrust.cloud/api/packages/fiskaltrust.Middleware.SCU.${{ parameters.scu }}).Content | ConvertFrom-Json | % { if($_ -match "(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$") { $_ } } | Select -Last 1
 
       Invoke-WebRequest "https://packages-2-0-sandbox.fiskaltrust.cloud/api/download/fiskaltrust.Middleware.SCU.${{ parameters.scu }}?version=$lastScuVersion" -OutFile "$(Agent.TempDirectory)/packages/launcher-2-0-released/fiskaltrust.Middleware.SCU.${{ parameters.scu }}-$lastScuVersion.zip"
+      Invoke-WebRequest "https://packages-2-0-sandbox.fiskaltrust.cloud/api/download/fiskaltrust.Middleware.SCU.${{ parameters.scu }}/hash?version=$lastScuVersion" -OutFile "$(Agent.TempDirectory)/packages/launcher-2-0-released/fiskaltrust.Middleware.SCU.${{ parameters.scu }}-$lastScuVersion.zip.hash"
     displayName: Download Scu Package
 
   - pwsh: |
       $lastHelipadVersion = $(Invoke-WebRequest https://packages-2-0-sandbox.fiskaltrust.cloud/api/packages/fiskaltrust.Middleware.Helper.Helipad).Content | ConvertFrom-Json | % { if($_ -match "(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$") { $_ } } | Select -Last 1
 
       Invoke-WebRequest "https://packages-2-0-sandbox.fiskaltrust.cloud/api/download/fiskaltrust.Middleware.Helper.Helipad?version=$lastHelipadVersion" -OutFile "$(Agent.TempDirectory)/packages/launcher-2-0-released/fiskaltrust.Middleware.Helper.Helipad-$lastHelipadVersion.zip"
+      Invoke-WebRequest "https://packages-2-0-sandbox.fiskaltrust.cloud/api/download/fiskaltrust.Middleware.Helper.Helipad/hash?version=$lastHelipadVersion" -OutFile "$(Agent.TempDirectory)/packages/launcher-2-0-released/fiskaltrust.Middleware.Helper.Helipad-$lastHelipadVersion.zip.hash"
     displayName: Download Helipad Package
 
   - pwsh: |
@@ -47,19 +51,19 @@ steps:
       $queueFile = "$(Agent.TempDirectory)/packages/launcher-2-0-released/fiskaltrust.Middleware.Queue.${{ parameters.queue }}-*.zip"
       $queueName = $(Get-Item $queueFile).Name
       $queueVersion = $queueName -replace 'fiskaltrust\.Middleware\.Queue\.${{ parameters.queue }}-(.*)\.zip', '$1'
-      Move-Item $(Pipeline.Workspace)/queues/package-fiskaltrust.Middleware.Queue.${{ parameters.queue }}/* $(Build.SourcesDirectory)/cache/packages
+      Move-Item $(Agent.TempDirectory)/packages/launcher-2-0-released/fiskaltrust.Middleware.Queue.${{ parameters.queue }}-* $(Build.SourcesDirectory)/cache/packages
       Write-Host "Moved Queue package"
 
       $scuFile = "$(Agent.TempDirectory)/packages/launcher-2-0-released/fiskaltrust.Middleware.SCU.${{ parameters.scu }}-*.zip"
       $scuName = $(Get-Item $scuFile).Name
       $scuVersion = $scuName -replace 'fiskaltrust\.Middleware\.SCU\.${{ parameters.scu }}-(.*)\.zip', '$1'
-      Move-Item $(Pipeline.Workspace)/scus/package-fiskaltrust.Middleware.SCU.${{ parameters.scu }}/* $(Build.SourcesDirectory)/cache/packages
+      Move-Item $(Agent.TempDirectory)/packages/launcher-2-0-released/fiskaltrust.Middleware.SCU.${{ parameters.scu }}-* $(Build.SourcesDirectory)/cache/packages
       Write-Host "Moved SCU package"
 
       $helipadFile = "$(Agent.TempDirectory)/packages/launcher-2-0-released/fiskaltrust.Middleware.Helper.Helipad-*.zip"
       $helipadName = $(Get-Item $helipadFile).Name
       $helipadVersion = $helipadName -replace 'fiskaltrust\.Middleware\.Helper\.Helipad-(.*)\.zip', '$1'
-      Move-Item $(Pipeline.Workspace)/helpers/package-fiskaltrust.Middleware.Helper.Helipad/* $(Build.SourcesDirectory)/cache/packages
+      Move-Item $(Agent.TempDirectory)/packages/launcher-2-0-released/fiskaltrust.Middleware.Helper.Helipad-* $(Build.SourcesDirectory)/cache/packages
       Write-Host "Moved Helipad package"
 
       $configuration = ConvertFrom-Json $([String]$(Get-Content $(Build.SourcesDirectory)/launcher/configuration.json -Encoding utf8))
@@ -69,7 +73,6 @@ steps:
 
       ConvertTo-Json $configuration -Depth 100 | Set-Content -Path $(Build.SourcesDirectory)/launcher/configuration.json -Encoding utf8
       Write-Host "Replaced Versions in Config"
-
     displayName: Add Packages
 
   - pwsh: |
