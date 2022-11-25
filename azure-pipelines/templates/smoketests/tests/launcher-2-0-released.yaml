@@ -75,7 +75,7 @@ steps:
     displayName: Add Packages
 
   - pwsh: |
-      $process = Start-Process -PassThru -WorkingDirectory "$(Build.SourcesDirectory)/launcher" -FilePath "$(Build.SourcesDirectory)/launcher/fiskaltrust.Launcher.exe" -ArgumentList @(
+      $process = Start-Process -PassThru -RedirectStandardOutput $(Build.SourcesDirectory)/logs/stdout.txt -RedirectStandardError $(Build.SourcesDirectory)/logs/stderr.txt -WorkingDirectory "$(Build.SourcesDirectory)/launcher" -FilePath "$(Build.SourcesDirectory)/launcher/fiskaltrust.Launcher.exe" -ArgumentList @(
         "run";
         "--cashbox-id"; "${{ parameters.cashbox.cashboxid }}";
         "--access-token"; "${{ parameters.cashbox.accesstoken }}";
