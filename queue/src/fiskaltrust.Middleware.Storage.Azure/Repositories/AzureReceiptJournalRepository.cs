@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Azure.Data.Tables;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Storage.Azure.Mapping;
 using fiskaltrust.Middleware.Storage.Azure.TableEntities;
@@ -10,8 +11,8 @@ namespace fiskaltrust.Middleware.Storage.Azure.Repositories
 {
     public class AzureReceiptJournalRepository : BaseAzureTableRepository<Guid, AzureFtReceiptJournal, ftReceiptJournal>, IReceiptJournalRepository, IMiddlewareRepository<ftReceiptJournal>
     {
-        public AzureReceiptJournalRepository(Guid queueId, string connectionString)
-            : base(queueId, connectionString, nameof(ftReceiptJournal)) { }
+        public AzureReceiptJournalRepository(QueueConfiguration queueConfig, TableServiceClient tableServiceClient)
+            : base(queueConfig, tableServiceClient, nameof(ftReceiptJournal)) { }
 
         protected override void EntityUpdated(ftReceiptJournal entity) => entity.TimeStamp = DateTime.UtcNow.Ticks;
 
@@ -23,12 +24,8 @@ namespace fiskaltrust.Middleware.Storage.Azure.Repositories
 
         public IAsyncEnumerable<ftReceiptJournal> GetEntriesOnOrAfterTimeStampAsync(long fromInclusive, int? take = null)
         {
-            var result = GetEntriesOnOrAfterTimeStampAsync(fromInclusive).ToListAsync().Result.OrderBy(x => x.TimeStamp);
-            if (take.HasValue)
-            {
-                return result.Take(take.Value).ToAsyncEnumerable();
-            }
-            return result.ToAsyncEnumerable();
+            var result = base.GetEntriesOnOrAfterTimeStampAsync(fromInclusive).OrderBy(x => x.TimeStamp);
+            return take.HasValue ? result.Take(take.Value).AsAsyncEnumerable() : result.AsAsyncEnumerable();
         }
     }
 }

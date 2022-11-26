@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Azure.Data.Tables;
 using fiskaltrust.Middleware.Contracts.Data;
 using fiskaltrust.Middleware.Contracts.Models.Transactions;
 using fiskaltrust.Middleware.Storage.Azure.Mapping;
@@ -10,8 +11,8 @@ namespace fiskaltrust.Middleware.Storage.Azure.Repositories.DE
 {
     public class AzureFailedFinishTransactionRepository : BaseAzureTableRepository<string, AzureFailedFinishTransaction, FailedFinishTransaction>, IPersistentTransactionRepository<FailedFinishTransaction>
     {
-        public AzureFailedFinishTransactionRepository(Guid queueId, string connectionString)
-            : base(queueId, connectionString, nameof(ftJournalDE)) { }
+        public AzureFailedFinishTransactionRepository(QueueConfiguration queueConfig, TableServiceClient tableServiceClient)
+            : base(queueConfig, tableServiceClient, nameof(ftJournalDE)) { }
 
         public async Task InsertOrUpdateTransactionAsync(FailedFinishTransaction transaction) => await InsertOrUpdateAsync(transaction).ConfigureAwait(false);
 

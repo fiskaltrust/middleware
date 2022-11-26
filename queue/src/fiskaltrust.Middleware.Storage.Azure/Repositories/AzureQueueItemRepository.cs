@@ -1,21 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Azure.Data.Tables;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Storage.Azure.Mapping;
 using fiskaltrust.Middleware.Storage.Azure.TableEntities;
 using fiskaltrust.Middleware.Storage.Base.Extensions;
 using fiskaltrust.storage.V0;
-using Microsoft.Azure.Cosmos.Table;
 using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Storage.Azure.Repositories
 {
     public class AzureQueueItemRepository : BaseAzureTableRepository<Guid, AzureFtQueueItem, ftQueueItem>, IMiddlewareQueueItemRepository, IMiddlewareRepository<ftQueueItem>
     {
-        public AzureQueueItemRepository(Guid queueId, string connectionString)
-            : base(queueId, connectionString, nameof(ftQueueItem)) { }
+        public AzureQueueItemRepository(QueueConfiguration queueConfig, TableServiceClient tableServiceClient)
+            : base(queueConfig, tableServiceClient, nameof(ftQueueItem)) { }
 
         protected override void EntityUpdated(ftQueueItem entity) => entity.TimeStamp = DateTime.UtcNow.Ticks;
 
@@ -27,57 +27,38 @@ namespace fiskaltrust.Middleware.Storage.Azure.Repositories
 
         public IAsyncEnumerable<ftQueueItem> GetEntriesOnOrAfterTimeStampAsync(long fromInclusive, int? take = null)
         {
-            var result = GetEntriesOnOrAfterTimeStampAsync(fromInclusive).ToListAsync().Result.OrderBy(x => x.TimeStamp);
-            if (take.HasValue)
-            {
-                return result.Take(take.Value).ToAsyncEnumerable();
-            }
-            return result.ToAsyncEnumerable();
+            var result = base.GetEntriesOnOrAfterTimeStampAsync(fromInclusive).OrderBy(x => x.TimeStamp);
+            return take.HasValue ? result.Take(take.Value).AsAsyncEnumerable() : result.AsAsyncEnumerable();
         }
 
-        public async IAsyncEnumerable<ftQueueItem> GetByReceiptReferenceAsync(string cbReceiptReference, string cbTerminalId)
+        public IAsyncEnumerable<ftQueueItem> GetByReceiptReferenceAsync(string cbReceiptReference, string cbTerminalId)
         {
-            var filter = TableQuery.GenerateFilterCondition(nameof(ftQueueItem.cbReceiptReference), QueryComparisons.Equal, cbReceiptReference);
-            if (!string.IsNullOrWhiteSpace(cbTerminalId))
-            {
-                filter = TableQuery.CombineFilters(filter, TableOperators.And, TableQuery.GenerateFilterCondition(nameof(ftQueueItem.cbTerminalID), QueryComparisons.Equal, cbTerminalId));
-            }
-            var result = await GetAllAsync(filter).ToListAsync().ConfigureAwait(false);
-            foreach (var item in result)
-            {
-                yield return MapToStorageEntity(item);
-            }
+            var filter = string.IsNullOrWhiteSpace(cbTerminalId)
+                ? TableClient.CreateQueryFilter($"cbReceiptReference eq {cbReceiptReference}")
+                : TableClient.CreateQueryFilter($"cbReceiptReference eq {cbReceiptReference} and cbTerminalId eq {cbTerminalId}");
+
+            var result = _tableClient.QueryAsync<AzureFtQueueItem>(filter: filter);
+            return result.Select(MapToStorageEntity).AsAsyncEnumerable();
         }
 
-        public async IAsyncEnumerable<ftQueueItem> GetPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem)
+        public IAsyncEnumerable<ftQueueItem> GetPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem)
         {
+            // TODO: Add separate tables for this call
             var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(ftQueueItem.request);
             if (!receiptRequest.IncludeInReferences() || (string.IsNullOrWhiteSpace(receiptRequest.cbPreviousReceiptReference) && string.IsNullOrWhiteSpace(ftQueueItem.cbReceiptReference)))
             {
-                yield break;
+                return AsyncEnumerable.Empty<ftQueueItem>();
             }
 
-            var refFilter = TableQuery.CombineFilters(TableQuery.GenerateFilterCondition(nameof(ftQueueItem.cbReceiptReference), QueryComparisons.Equal, receiptRequest.cbPreviousReceiptReference),
-                TableOperators.Or,
-                TableQuery.GenerateFilterCondition(nameof(ftQueueItem.cbReceiptReference), QueryComparisons.Equal, ftQueueItem.cbReceiptReference));
-
-            var filter = TableQuery.GenerateFilterCondition(nameof(ftQueueItem.ftQueueRow), QueryComparisons.LessThan, ftQueueItem.ftQueueRow.ToString());
-            filter = TableQuery.CombineFilters(filter, TableOperators.And, refFilter);
-            var result = await GetAllAsync(filter).ToListAsync();
-            foreach (var item in result)
-            {
-                yield return MapToStorageEntity(item);
-            }
+            var result = _tableClient.QueryAsync<AzureFtQueueItem>(filter: TableClient.CreateQueryFilter($"cbReceiptReference eq {receiptRequest.cbPreviousReceiptReference} or cbReceiptReference eq {ftQueueItem.cbReceiptReference}"));
+            return result.Select(MapToStorageEntity).AsAsyncEnumerable();
         }
 
-        public async IAsyncEnumerable<ftQueueItem> GetQueueItemsAfterQueueItem(ftQueueItem ftQueueItem)
+        public IAsyncEnumerable<ftQueueItem> GetQueueItemsAfterQueueItem(ftQueueItem ftQueueItem)
         {
-            var filter = TableQuery.GenerateFilterCondition(nameof(ftQueueItem.ftQueueRow), QueryComparisons.GreaterThanOrEqual, ftQueueItem.ftQueueRow.ToString());
-            var result = await GetAllAsync(filter).ToListAsync();
-            foreach (var item in result)
-            {
-                yield return MapToStorageEntity(item);
-            }
+            // TODO: Add a separate table for this call
+            var result = _tableClient.QueryAsync<AzureFtQueueItem>(filter: TableClient.CreateQueryFilter($"ftQueueRow ge {ftQueueItem.ftQueueRow}"));
+            return result.Select(MapToStorageEntity).AsAsyncEnumerable();
         }
     }
 }

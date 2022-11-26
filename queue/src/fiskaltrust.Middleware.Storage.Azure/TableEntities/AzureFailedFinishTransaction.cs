@@ -1,5 +1,5 @@
 ﻿using System;
-using Microsoft.Azure.Cosmos.Table;
+using Azure.Data.Tables;
 
 namespace fiskaltrust.Middleware.Storage.Azure.TableEntities
 {

@@ -1,18 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Azure.Data.Tables;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Storage.Azure.Mapping;
 using fiskaltrust.Middleware.Storage.Azure.TableEntities;
 using fiskaltrust.storage.V0;
-using Microsoft.Azure.Cosmos.Table;
 
 namespace fiskaltrust.Middleware.Storage.Azure.Repositories.DE
 {
     public class AzureJournalDERepository : BaseAzureTableRepository<Guid, AzureFtJournalDE, ftJournalDE>, IJournalDERepository, IMiddlewareRepository<ftJournalDE>, IMiddlewareJournalDERepository
     {
-        public AzureJournalDERepository(Guid queueId, string connectionString)
-            : base(queueId, connectionString, nameof(ftJournalDE)) { }
+        public AzureJournalDERepository(QueueConfiguration queueConfig, TableServiceClient tableServiceClient)
+            : base(queueConfig, tableServiceClient, nameof(ftJournalDE)) { }
 
         protected override void EntityUpdated(ftJournalDE entity) => entity.TimeStamp = DateTime.UtcNow.Ticks;
 
@@ -24,22 +24,14 @@ namespace fiskaltrust.Middleware.Storage.Azure.Repositories.DE
 
         public IAsyncEnumerable<ftJournalDE> GetEntriesOnOrAfterTimeStampAsync(long fromInclusive, int? take = null)
         {
-            var tableQuery = new TableQuery<AzureFtJournalDE>();
-            tableQuery = tableQuery.Where(TableQuery.GenerateFilterConditionForLong("TimeStamp", QueryComparisons.GreaterThanOrEqual, fromInclusive));
-            var result = GetAllByTableFilterAsync(tableQuery).ToListAsync().Result;
-            if (take.HasValue)
-            {
-                return result.Take(take.Value).ToAsyncEnumerable();
-            }
-            return result.ToAsyncEnumerable();
+            var result = base.GetEntriesOnOrAfterTimeStampAsync(fromInclusive).OrderBy(x => x.TimeStamp);
+            return take.HasValue ? result.Take(take.Value).AsAsyncEnumerable() : result.AsAsyncEnumerable();
         }
 
         public IAsyncEnumerable<ftJournalDE> GetByFileName(string fileName)
         {
-            var tableQuery = new TableQuery<AzureFtJournalDE>();
-            tableQuery = tableQuery.Where(TableQuery.GenerateFilterCondition("FileName", QueryComparisons.Equal, fileName));
-            var result = GetAllByTableFilterAsync(tableQuery).ToListAsync().Result;
-            return result.ToAsyncEnumerable();
+            var result = _tableClient.QueryAsync<AzureFtJournalDE>(filter: TableClient.CreateQueryFilter($"FileName eq {fileName}"));
+            return result.Select(MapToStorageEntity).AsAsyncEnumerable();
         }
     }
 }

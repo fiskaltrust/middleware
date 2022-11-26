@@ -1,19 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography.X509Certificates;
+using Azure.Data.Tables;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Storage.Azure.Mapping;
 using fiskaltrust.Middleware.Storage.Azure.TableEntities;
 using fiskaltrust.storage.V0;
-using Microsoft.Azure.Cosmos.Table;
 
 namespace fiskaltrust.Middleware.Storage.Azure.Repositories
 {
     public class AzureActionJournalRepository : BaseAzureTableRepository<Guid, AzureFtActionJournal, ftActionJournal>, IActionJournalRepository, IMiddlewareRepository<ftActionJournal>, IMiddlewareActionJournalRepository
     {
-        public AzureActionJournalRepository(Guid queueId, string connectionString)
-            : base(queueId, connectionString, nameof(ftActionJournal)) { }
+        public AzureActionJournalRepository(QueueConfiguration queueConfig, TableServiceClient tableServiceClient)
+            : base(queueConfig, tableServiceClient, nameof(ftActionJournal)) { }
 
         protected override void EntityUpdated(ftActionJournal entity) => entity.TimeStamp = DateTime.UtcNow.Ticks;
 
@@ -25,22 +24,14 @@ namespace fiskaltrust.Middleware.Storage.Azure.Repositories
 
         public IAsyncEnumerable<ftActionJournal> GetEntriesOnOrAfterTimeStampAsync(long fromInclusive, int? take = null)
         {
-            var result = GetEntriesOnOrAfterTimeStampAsync(fromInclusive).ToListAsync().Result.OrderBy(x => x.TimeStamp);
-            if (take.HasValue)
-            {
-                return result.Take(take.Value).ToAsyncEnumerable();
-            }
-            return result.ToAsyncEnumerable();
+            var result = base.GetEntriesOnOrAfterTimeStampAsync(fromInclusive).OrderBy(x => x.TimeStamp);
+            return take.HasValue ? result.Take(take.Value).AsAsyncEnumerable() : result.AsAsyncEnumerable();
         }
 
-        public async IAsyncEnumerable<ftActionJournal> GetByQueueItemId(Guid queueItemId)
+        public IAsyncEnumerable<ftActionJournal> GetByQueueItemId(Guid queueItemId)
         {
-            var filter = TableQuery.GenerateFilterCondition(nameof(ftActionJournal.ftQueueItemId), QueryComparisons.Equal, queueItemId.ToString());
-            var result = await GetAllAsync(filter).ToListAsync();
-            foreach (var item in result)
-            {
-                yield return MapToStorageEntity(item);
-            }
+            var result = _tableClient.QueryAsync<AzureFtActionJournal>(filter: TableClient.CreateQueryFilter($"ftQueueItemId eq {queueItemId}"));
+            return result.Select(MapToStorageEntity).AsAsyncEnumerable();
         }
     }
 }

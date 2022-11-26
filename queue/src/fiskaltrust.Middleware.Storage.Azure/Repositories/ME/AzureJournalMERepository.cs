@@ -2,19 +2,19 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Azure.Data.Tables;
 using fiskaltrust.Middleware.Contracts.Constants;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Storage.Azure.Mapping;
 using fiskaltrust.Middleware.Storage.Azure.TableEntities;
 using fiskaltrust.storage.V0;
-using Microsoft.Azure.Cosmos.Table;
 
 namespace fiskaltrust.Middleware.Storage.Azure.Repositories.ME
 {
     public class AzureJournalMERepository : BaseAzureTableRepository<Guid, AzureFtJournalME, ftJournalME>, IMiddlewareRepository<ftJournalME>, IMiddlewareJournalMERepository
     {
-        public AzureJournalMERepository(Guid queueId, string connectionString)
-            : base(queueId, connectionString, nameof(ftJournalME)) { }
+        public AzureJournalMERepository(QueueConfiguration queueConfig, TableServiceClient tableServiceClient)
+            : base(queueConfig, tableServiceClient, nameof(ftJournalME)) { }
 
         protected override void EntityUpdated(ftJournalME entity) => entity.TimeStamp = DateTime.UtcNow.Ticks;
 
@@ -26,40 +26,25 @@ namespace fiskaltrust.Middleware.Storage.Azure.Repositories.ME
 
         public IAsyncEnumerable<ftJournalME> GetEntriesOnOrAfterTimeStampAsync(long fromInclusive, int? take = null)
         {
-            var tableQuery = new TableQuery<AzureFtJournalME>();
-            tableQuery = tableQuery.Where(TableQuery.GenerateFilterConditionForLong("TimeStamp", QueryComparisons.GreaterThanOrEqual, fromInclusive));
-            var result = GetAllByTableFilterAsync(tableQuery).ToListAsync().Result;
-            if (take.HasValue)
-            {
-                return result.Take(take.Value).ToAsyncEnumerable();
-            }
-            return result.ToAsyncEnumerable();
+            var result = base.GetEntriesOnOrAfterTimeStampAsync(fromInclusive).OrderBy(x => x.TimeStamp);
+            return take.HasValue ? result.Take(take.Value).AsAsyncEnumerable() : result.AsAsyncEnumerable();
         }
-        public Task<ftJournalME> GetLastEntryAsync()
+        public async Task<ftJournalME> GetLastEntryAsync()
         {
-            var tableQuery = new TableQuery<AzureFtJournalME>();
-            tableQuery = tableQuery.Where(TableQuery.GenerateFilterConditionForLong("JournalType", QueryComparisons.Equal, (long) JournalTypes.JournalME)).OrderByDesc("Number");
-            return Task.FromResult(GetAllByTableFilterAsync(tableQuery).Take(1).ToListAsync().Result.FirstOrDefault());
+            var result = _tableClient.QueryAsync<AzureFtJournalME>(filter: TableClient.CreateQueryFilter($"JournalType eq {(long) JournalTypes.JournalME}"));
+            return await result.OrderByDescending(x => x.Number).Take(1).Select(MapToStorageEntity).FirstOrDefaultAsync();
         }
 
-        public async IAsyncEnumerable<ftJournalME> GetByQueueItemId(Guid queueItemId)
+        public IAsyncEnumerable<ftJournalME> GetByQueueItemId(Guid queueItemId)
         {
-            var filter = TableQuery.GenerateFilterCondition(nameof(ftJournalME.ftQueueItemId), QueryComparisons.Equal, queueItemId.ToString());
-            var result = await GetAllAsync(filter).ToListAsync();
-            foreach (var item in result)
-            {
-                yield return MapToStorageEntity(item);
-            }
+            var result = _tableClient.QueryAsync<AzureFtJournalME>(filter: TableClient.CreateQueryFilter($"ftQueueItemId eq {queueItemId}"));
+            return result.Select(MapToStorageEntity).AsAsyncEnumerable();
         }
 
-        public async IAsyncEnumerable<ftJournalME> GetByReceiptReference(string cbReceiptReference)
+        public IAsyncEnumerable<ftJournalME> GetByReceiptReference(string cbReceiptReference)
         {
-            var filter = TableQuery.GenerateFilterCondition(nameof(ftJournalME.cbReference), QueryComparisons.Equal, cbReceiptReference);
-            var result = await GetAllAsync(filter).ToListAsync();
-            foreach (var item in result)
-            {
-                yield return MapToStorageEntity(item);
-            }
+            var result = _tableClient.QueryAsync<AzureFtJournalME>(filter: TableClient.CreateQueryFilter($"cbReference eq {cbReceiptReference}"));
+            return result.Select(MapToStorageEntity).AsAsyncEnumerable();
         }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using Azure.Data.Tables;
 using fiskaltrust.Middleware.Storage.Azure.Mapping;
 using fiskaltrust.Middleware.Storage.Azure.TableEntities.Configuration;
 using fiskaltrust.storage.V0;
@@ -7,8 +8,8 @@ namespace fiskaltrust.Middleware.Storage.Azure.Repositories.Configuration
 {
     public class AzureQueueMERepository : BaseAzureTableRepository<Guid, AzureFtQueueME, ftQueueME>
     {
-        public AzureQueueMERepository(Guid queueId, string connectionString)
-            : base(queueId, connectionString, nameof(ftQueueME)) { }
+        public AzureQueueMERepository(QueueConfiguration queueConfig, TableServiceClient tableServiceClient)
+            : base(queueConfig, tableServiceClient, nameof(ftQueueME)) { }
 
         protected override void EntityUpdated(ftQueueME entity) => entity.TimeStamp = DateTime.UtcNow.Ticks;
 

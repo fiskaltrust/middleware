@@ -1,4 +1,5 @@
 ﻿using System;
+using Azure.Data.Tables;
 using fiskaltrust.Middleware.Storage.Azure.Mapping;
 using fiskaltrust.Middleware.Storage.Azure.TableEntities.Configuration;
 using fiskaltrust.storage.V0;
@@ -7,8 +8,8 @@ namespace fiskaltrust.Middleware.Storage.Azure.Repositories.Configuration
 {
     public class AzureSignaturCreationUnitATRepository : BaseAzureTableRepository<Guid, AzureFtSignaturCreationUnitAT, ftSignaturCreationUnitAT>
     {
-        public AzureSignaturCreationUnitATRepository(Guid queueId, string connectionString)
-            : base(queueId, connectionString, nameof(ftSignaturCreationUnitAT)) { }
+        public AzureSignaturCreationUnitATRepository(QueueConfiguration queueConfig, TableServiceClient tableServiceClient)
+            : base(queueConfig, tableServiceClient, nameof(ftSignaturCreationUnitAT)) { }
 
         protected override void EntityUpdated(ftSignaturCreationUnitAT entity) => entity.TimeStamp = DateTime.UtcNow.Ticks;
 

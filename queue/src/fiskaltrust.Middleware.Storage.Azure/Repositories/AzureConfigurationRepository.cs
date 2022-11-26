@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq.Expressions;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.Storage.Azure.TableEntities.Configuration;
 using fiskaltrust.Middleware.Storage.Azure.Repositories.Configuration;
 using fiskaltrust.storage.V0;
+using Azure.Data.Tables;
 
 namespace fiskaltrust.Middleware.Storage.Azure.Repositories
 {
@@ -21,16 +21,16 @@ namespace fiskaltrust.Middleware.Storage.Azure.Repositories
 
         public AzureConfigurationRepository() { }
 
-        public AzureConfigurationRepository(Guid queueId, string connectionString)
+        public AzureConfigurationRepository(QueueConfiguration queueConfig, TableServiceClient tableServiceClient)
         {
-            _cashBoxRepository = new AzureCashBoxRepository(queueId, connectionString);
-            _queueRepository = new AzureQueueRepository(queueId, connectionString);
-            _queueATRepository = new AzureQueueATRepository(queueId, connectionString);
-            _queueDERepository = new AzureQueueDERepository(queueId, connectionString);
-            _queueFRRepository = new AzureQueueFRRepository(queueId, connectionString);
-            _signaturCreationUnitATRepository = new AzureSignaturCreationUnitATRepository(queueId, connectionString);
-            _signaturCreationUnitDERepository = new AzureSignaturCreationUnitDERepository(queueId, connectionString);
-            _signaturCreationUnitFRRepository = new AzureSignaturCreationUnitFRRepository(queueId, connectionString);
+            _cashBoxRepository = new AzureCashBoxRepository(queueConfig, tableServiceClient);
+            _queueRepository = new AzureQueueRepository(queueConfig, tableServiceClient);
+            _queueATRepository = new AzureQueueATRepository(queueConfig, tableServiceClient);
+            _queueDERepository = new AzureQueueDERepository(queueConfig, tableServiceClient);
+            _queueFRRepository = new AzureQueueFRRepository(queueConfig, tableServiceClient);
+            _signaturCreationUnitATRepository = new AzureSignaturCreationUnitATRepository(queueConfig, tableServiceClient);
+            _signaturCreationUnitDERepository = new AzureSignaturCreationUnitDERepository(queueConfig, tableServiceClient);
+            _signaturCreationUnitFRRepository = new AzureSignaturCreationUnitFRRepository(queueConfig, tableServiceClient);
         }
 
         public async Task<ftCashBox> GetCashBoxAsync(Guid cashBoxId) => await _cashBoxRepository.GetAsync(cashBoxId).ConfigureAwait(false);

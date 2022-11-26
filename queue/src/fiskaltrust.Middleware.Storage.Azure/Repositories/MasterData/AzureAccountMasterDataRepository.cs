@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Azure.Data.Tables;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Storage.Azure.Mapping;
 using fiskaltrust.Middleware.Storage.Azure.TableEntities;
@@ -9,8 +10,8 @@ namespace fiskaltrust.Middleware.Storage.Azure.Repositories.MasterData
 {
     public class AzureAccountMasterDataRepository : BaseAzureTableRepository<Guid, AzureAccountMasterData, AccountMasterData>, IMasterDataRepository<AccountMasterData>
     {
-        public AzureAccountMasterDataRepository(Guid queueId, string connectionString)
-            : base(queueId, connectionString, nameof(AccountMasterData)) { }
+        public AzureAccountMasterDataRepository(QueueConfiguration queueConfig, TableServiceClient tableServiceClient)
+            : base(queueConfig, tableServiceClient, nameof(AccountMasterData)) { }
 
         public async Task ClearAsync() => await ClearTableAsync().ConfigureAwait(false);
 
