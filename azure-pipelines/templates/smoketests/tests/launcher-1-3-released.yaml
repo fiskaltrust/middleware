@@ -12,6 +12,9 @@ parameters:
     type: string
 
 steps:
+  - task: NuGetToolInstaller@1
+    displayName: Install Nuget CLI
+    
   - pwsh: |
       mkdir $(Agent.TempDirectory)/packages/launcher-1-3-released
 
@@ -25,17 +28,20 @@ steps:
     displayName: Extraxt Launcher 1.3 Artifact
 
   - pwsh: |
-      $queueFile = "$(Agent.TempDirectory)/packages/launcher-1-3-released/fiskaltrust.Middleware.Queue.${{ parameters.queue }}.*.nupkg"
+     nuget sources add -Name "Package Service v1" -Source ${{ parameters.feed }} -username "${{ parameters.cashbox.cashboxid }}" -password "${{ parameters.cashbox.accesstoken }}"
+
+      nuget install fiskaltrust.Middleware.Queue.${{ parameters.queue }} -OutputDirectory ./nuget-packages
+      nuget install fiskaltrust.Middleware.SCU.${{ parameters.scu }} -OutputDirectory ./nuget-packages
+      Get-ChildItem ./nuget-packages/**/*.nupkg | ForEach-Object {Copy $(Build.SourcesDirectory)/launcher/packages $_.FullName -Force}
+      Write-Host "Copied .nupkg files to packages directory"
+
+      $queueFile = "./nuget-packages/fiskaltrust.Middleware.Queue.${{ parameters.queue }}.*/fiskaltrust.Middleware.Queue.${{ parameters.queue }}.*.nupkg"
       $queueName = $(Get-Item $queueFile).Name
       $queueVersion = $queueName -replace 'fiskaltrust\.Middleware\.Queue\.${{ parameters.queue }}\.(.*)\.nupkg', '$1'
-      Move-Item $queueFile $(Build.SourcesDirectory)/launcher/packages -Force
-      Write-Host "Moved $queueFile"
 
-      $scuFile = "$(Agent.TempDirectory)/packages/launcher-1-3-released/fiskaltrust.Middleware.SCU.${{ parameters.scu }}.*.nupkg"
+      $scuFile = "./nuget-packages/fiskaltrust.Middleware.SCU.${{ parameters.scu }}.*.nupkg"
       $scuName = $(Get-Item $scuFile).Name
       $scuVersion = $scuName -replace 'fiskaltrust\.Middleware\.SCU\.${{ parameters.scu }}\.(.*)\.nupkg', '$1'
-      Move-Item $scuFile $(Build.SourcesDirectory)/launcher/packages -Force
-      Write-Host "Moved $scuFile"
 
       $configuration = ConvertFrom-Json $([String]$(Get-Content $(Build.SourcesDirectory)/launcher/configuration.json -Encoding utf8))
       $configuration.ftQueues[0].Version = $queueVersion
