@@ -35,8 +35,8 @@ steps:
       nuget sources add -Name "Package Service v1" -Source https://packages-sandbox.fiskaltrust.cloud/nuget -username "${{ parameters.cashbox.cashboxid }}" -password "${{ parameters.cashbox.accesstoken }}"
       nuget sources update -Name "Package Service v1" -Source https://packages-sandbox.fiskaltrust.cloud/nuget -username "${{ parameters.cashbox.cashboxid }}" -password "${{ parameters.cashbox.accesstoken }}"
 
-      $queuePackage = fiskaltrust.Middleware.Queue.${{ parameters.queue }}
-      $scuPackage = fiskaltrust.Middleware.SCU.${{ parameters.scu }}
+      $queuePackage = "fiskaltrust.Middleware.Queue.${{ parameters.queue }}"
+      $scuPackage = "fiskaltrust.Middleware.SCU.${{ parameters.scu }}"
 
       nuget install $queuePackage -OutputDirectory ./nuget-packages -Source https://packages-sandbox.fiskaltrust.cloud/nuget
       nuget install $scuPackage -OutputDirectory ./nuget-packages -Source https://packages-sandbox.fiskaltrust.cloud/nuget
