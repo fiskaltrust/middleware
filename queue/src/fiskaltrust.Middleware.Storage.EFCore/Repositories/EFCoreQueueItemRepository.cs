@@ -90,7 +90,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.Repositories
                 yield return entry;
             }
         }
-        public async Task<ftQueueItem> GetFirstPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem)
+        public async Task<ftQueueItem> GetClosestPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem)
         {
             var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(ftQueueItem.request);
             if (string.IsNullOrWhiteSpace(receiptRequest.cbPreviousReceiptReference) || string.IsNullOrWhiteSpace(ftQueueItem.cbReceiptReference) || receiptRequest.cbPreviousReceiptReference == ftQueueItem.cbReceiptReference)
@@ -103,7 +103,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.Repositories
                              queueItem.ftQueueRow < ftQueueItem.ftQueueRow &&
                              receiptRequest.IncludeInReferences() && queueItem.cbReceiptReference == receiptRequest.cbPreviousReceiptReference &&
                              !string.IsNullOrEmpty(queueItem.response)
-                             orderby queueItem.TimeStamp
+                             orderby queueItem.TimeStamp descending
                              select queueItem).ToAsyncEnumerable().Take(1);
             return await queueItemsForReceiptReference.FirstOrDefaultAsync();
         }

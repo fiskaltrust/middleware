@@ -1,7 +1,6 @@
 ﻿using AutoFixture;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Repositories;
-using fiskaltrust.Middleware.Storage.Base.Extensions;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
 using Newtonsoft.Json;
@@ -411,24 +410,27 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             firstPos.ftQueueRow = queueRow;
             await sut.InsertOrUpdateAsync(firstPos);
 
-            await Task.Delay(1);
-            var morePos = queueItemFixture.CreateMany<ftQueueItem>(2).ToList();
-
             var prevReceiptFixture = StorageTestFixtureProvider.GetFixture();
             prevReceiptFixture.Customize<ReceiptRequest>(c => c.With(r => r.ftReceiptCase, 4919338172267102209).
             With(r => r.cbPreviousReceiptReference, receiptReference));
 
-            foreach (var pos in morePos)
-            {
-                pos.ftQueueRow = queueRow++;
-                pos.cbReceiptReference = "ReceiptReference" + Guid.NewGuid().ToString();
-                pos.request = JsonConvert.SerializeObject(prevReceiptFixture.Create<ReceiptRequest>());
-                await sut.InsertOrUpdateAsync(pos);
-            }
+            await Task.Delay(1);
+            var secondPos = queueItemFixture.Create<ftQueueItem>();
+            secondPos.ftQueueRow = queueRow++;
+            secondPos.cbReceiptReference = firstPos.cbReceiptReference;
+            secondPos.request = JsonConvert.SerializeObject(receiptFixture.Create<ReceiptRequest>());
+            await sut.InsertOrUpdateAsync(secondPos);
 
-            var firstQueriedPos = await sut.GetFirstPreviousReceiptReferencesAsync(morePos[1]);
+            await Task.Delay(1);
+            var prevRefPos = queueItemFixture.Create<ftQueueItem>();
+            prevRefPos.ftQueueRow = queueRow++;
+            prevRefPos.cbReceiptReference = "ReceiptReference" + Guid.NewGuid().ToString();
+            prevRefPos.request = JsonConvert.SerializeObject(prevReceiptFixture.Create<ReceiptRequest>());
+            await sut.InsertOrUpdateAsync(prevRefPos);
 
-            firstQueriedPos.ftQueueItemId.Should().Be(firstPos.ftQueueItemId);
+            var closestQueriedPos = await sut.GetClosestPreviousReceiptReferencesAsync(prevRefPos);
+
+            closestQueriedPos.ftQueueItemId.Should().Be(secondPos.ftQueueItemId);
 
         }
     }

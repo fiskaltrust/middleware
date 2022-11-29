@@ -191,6 +191,92 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.Repositori
             resultlist[1].TargetReceiptIdentification = responseref2.ftReceiptIdentification;
         }
 
+        [Fact]
+        public async Task GetReceiptReferenceAsync_ThreeWithPreviouseReceipt_ValidResult()
+        {
+            var receiptFixture = GetFixture();
+            receiptFixture.Customize<ReceiptRequest>(c => c.With(r => r.ftReceiptCase, 4919338172267102209));
+
+            var queueItemFixture = GetFixture();
+            queueItemFixture.Customize<ftQueueItem>(c => c.With(r => r.TimeStamp, DateTime.UtcNow.Ticks).
+            With(r => r.request, JsonConvert.SerializeObject(receiptFixture.Create<ReceiptRequest>())).
+            With(r => r.response, JsonConvert.SerializeObject(receiptFixture.Create<ReceiptResponse>())));
+
+            var expectedEntries = new List<ftQueueItem>();
+            var rowcount = 0;
+
+            var requ1 = receiptFixture.Create<ReceiptRequest>();
+            requ1.cbPreviousReceiptReference = "";
+            var ref1 = queueItemFixture.Create<ftQueueItem>();
+            ref1.cbReceiptReference = "TestReference1";
+            ref1.ftQueueRow = rowcount++;
+            ref1.request = JsonConvert.SerializeObject(requ1);
+            expectedEntries.Add(ref1);
+
+            await Task.Delay(1);
+            var requ2 = receiptFixture.Create<ReceiptRequest>();
+            requ2.cbPreviousReceiptReference = "";
+            var ref2 = queueItemFixture.Create<ftQueueItem>();
+            ref2.cbReceiptReference = "TestReference1";
+            ref2.ftQueueRow = rowcount++;
+            ref2.request = JsonConvert.SerializeObject(requ2);
+            expectedEntries.Add(ref2);
+
+            await Task.Delay(1);
+            var requ3 = receiptFixture.Create<ReceiptRequest>();
+            requ3.cbPreviousReceiptReference = "TestReference1";
+            var ref3 = queueItemFixture.Create<ftQueueItem>();
+            ref3.cbReceiptReference = "TestReference2";
+            ref3.ftQueueRow = rowcount++;
+            ref3.TimeStamp = DateTime.UtcNow.Ticks;
+            ref3.request = JsonConvert.SerializeObject(requ3);
+            expectedEntries.Add(ref3);
+
+            await Task.Delay(1);
+            var requ4 = receiptFixture.Create<ReceiptRequest>();
+            requ4.cbPreviousReceiptReference = "";
+            var ref4 = queueItemFixture.Create<ftQueueItem>();
+            ref4.cbReceiptReference = "TestReference1";
+            ref4.ftQueueRow = rowcount++;
+            ref4.request = JsonConvert.SerializeObject(requ4);
+            expectedEntries.Add(ref4);
+
+            var queueItemRepo = new InMemoryQueueItemRepository();
+            foreach (var item in expectedEntries)
+            {
+                await queueItemRepo.InsertOrUpdateAsync(item);
+            }
+
+            var readonlyRepo = new ReadOnlyReceiptReferenceRepository(queueItemRepo, new Mock<IReadOnlyActionJournalRepository>().Object);
+            var receiptRef = await readonlyRepo.GetReceiptReferenceAsync(DateTime.UtcNow.AddDays(-1).Ticks, DateTime.UtcNow.AddDays(1).Ticks);
+            receiptRef.Should().HaveCount(3);
+
+            var responseref1 = JsonConvert.DeserializeObject<ReceiptResponse>(ref1.response);
+            var responseref2 = JsonConvert.DeserializeObject<ReceiptResponse>(ref2.response);
+            var responseref3 = JsonConvert.DeserializeObject<ReceiptResponse>(ref3.response);
+            var responseref4 = JsonConvert.DeserializeObject<ReceiptResponse>(ref4.response);
+
+            var resultlist = await receiptRef.ToAsyncEnumerable().ToListAsync();
+
+            resultlist[0].RefMoment = ref1.cbReceiptMoment;
+            resultlist[0].RefReceiptId = responseref1.ftReceiptIdentification;
+            resultlist[0].TargetQueueItemId = ref2.ftQueueItemId;
+            resultlist[0].SourceQueueItemId = ref1.ftQueueItemId;
+            resultlist[0].TargetReceiptIdentification = responseref2.ftReceiptIdentification;
+
+            resultlist[1].RefMoment = ref3.cbReceiptMoment;
+            resultlist[1].RefReceiptId = responseref3.ftReceiptIdentification;
+            resultlist[1].TargetQueueItemId = ref4.ftQueueItemId;
+            resultlist[1].SourceQueueItemId = ref3.ftQueueItemId;
+            resultlist[1].TargetReceiptIdentification = responseref4.ftReceiptIdentification;
+
+            resultlist[2].RefMoment = ref2.cbReceiptMoment;
+            resultlist[2].RefReceiptId = responseref2.ftReceiptIdentification;
+            resultlist[2].TargetQueueItemId = ref3.ftQueueItemId;
+            resultlist[2].SourceQueueItemId = ref2.ftQueueItemId;
+            resultlist[2].TargetReceiptIdentification = responseref3.ftReceiptIdentification;
+        }
+
 
         [Fact]
         public async Task GetReceiptReferenceAsync_ExternalReference_ValidResult()

@@ -111,14 +111,14 @@ namespace fiskaltrust.Middleware.Storage.Azure.Repositories
                 yield return MapToStorageEntity(entry);
             }
         }
-        public async Task<ftQueueItem> GetFirstPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem)
+        public async Task<ftQueueItem> GetClosestPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem)
         {
             var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(ftQueueItem.request);
             var queueItemsForReceiptReference =
                             (from queueItem in await GetAllAsync().ToListAsync()
                              where receiptRequest.IncludeInReferences() && queueItem.cbReceiptReference == receiptRequest.cbPreviousReceiptReference &&
                              !string.IsNullOrEmpty(queueItem.response)
-                             orderby queueItem.TimeStamp
+                             orderby queueItem.TimeStamp descending
                              select queueItem).ToAsyncEnumerable().Take(1);
             return (ftQueueItem) queueItemsForReceiptReference;
         }

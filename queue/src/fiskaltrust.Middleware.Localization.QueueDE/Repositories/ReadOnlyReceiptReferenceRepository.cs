@@ -40,7 +40,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Repositories
                         continue;
                     }
                     await AddReference(receiptReferences, queueItem, selected);
-                    var source = await _middlewareQueueItemRepository.GetFirstPreviousReceiptReferencesAsync(queueItem);
+                    var source = await _middlewareQueueItemRepository.GetClosestPreviousReceiptReferencesAsync(queueItem);
                     await AddReference(receiptReferences, queueItem, source);
 
                     selected = queueItem;
@@ -48,7 +48,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Repositories
                 }
                 if (row == 1 && !string.IsNullOrEmpty(selected.ftQueueItemId.ToString()))
                 {
-                    var source = await _middlewareQueueItemRepository.GetFirstPreviousReceiptReferencesAsync(selected);
+                    var source = await _middlewareQueueItemRepository.GetClosestPreviousReceiptReferencesAsync(selected);
                     await AddReference(receiptReferences, selected, source);
                 }
             }

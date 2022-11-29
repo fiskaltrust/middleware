@@ -93,7 +93,7 @@ namespace fiskaltrust.Middleware.Storage.EF.Repositories
                 }
             }
         }
-        public async Task<ftQueueItem> GetFirstPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem)
+        public async Task<ftQueueItem> GetClosestPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem)
         {
             var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(ftQueueItem.request);
 
@@ -106,7 +106,7 @@ namespace fiskaltrust.Middleware.Storage.EF.Repositories
                              where queueItem.ftQueueRow < ftQueueItem.ftQueueRow &&
                              queueItem.cbReceiptReference == receiptRequest.cbPreviousReceiptReference &&
                              !string.IsNullOrEmpty(queueItem.response)
-                             orderby queueItem.TimeStamp
+                             orderby queueItem.TimeStamp descending
                              select queueItem).ToAsyncEnumerable();
 
             await foreach (var entry in queueItemsForReceiptReference)

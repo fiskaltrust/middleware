@@ -144,7 +144,7 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
             }
         }
 
-        public async Task<ftQueueItem> GetFirstPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem)
+        public async Task<ftQueueItem> GetClosestPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem)
         {
             var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(ftQueueItem.request);
 
@@ -154,7 +154,7 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
             }
             var query = "SELECT * FROM ftQueueItem WHERE ftQueueRow < @ftQueueRow AND cbReceiptReference = @cbPreviousReceiptReference " +
                             "AND response IS NOT NULL " +
-                            "ORDER BY timestamp LIMIT 1;";
+                            "ORDER BY timestamp DESC LIMIT 1;";
             using (var connection = new MySqlConnection(ConnectionString))
             {
                 await connection.OpenAsync().ConfigureAwait(false);
