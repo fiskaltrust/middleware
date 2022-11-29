@@ -36,8 +36,9 @@ steps:
   inputs:
     command: 'test'
     projects: '$(WorkingDirectory)/**/*.UnitTest.csproj'
-    arguments: '--configuration $(BuildConfiguration) --no-restore /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:Include=[fiskaltrust.*]*'
+    arguments: '--configuration $(BuildConfiguration) --no-restore --collect "Code coverage"'
     nobuild: true
+    publishTestResults: true
   displayName: 'Run unit tests'
   env:
     CONNECTIONSTRING_AZURE_STORAGE_TESTS: $(CONNECTIONSTRING_AZURE_STORAGE_TESTS)
@@ -48,22 +49,12 @@ steps:
   inputs:
     command: 'test'
     projects: '$(WorkingDirectory)/**/*.IntegrationTest.csproj'
-    arguments: '--configuration $(BuildConfiguration) --no-restore --collect:"XPlat Code Coverage"'
+    arguments: '--configuration $(BuildConfiguration) --no-restore --collect "Code coverage"'
     nobuild: true
+    publishTestResults: true
   displayName: 'Run integration tests'
   env:
     CONNECTIONSTRING_AZURE_STORAGE_TESTS: $(CONNECTIONSTRING_AZURE_STORAGE_TESTS)
     CONNECTIONSTRING_POSTGRESQL_TESTS: $(CONNECTIONSTRING_POSTGRESQL_TESTS)
     CONNECTIONSTRING_MYSQL_TESTS: $(CONNECTIONSTRING_MYSQL_TESTS)
 
-- script: |
-    /tools/reportgenerator -reports:$(Build.SourcesDirectory)/$(WorkingDirectory)/test/**/*.cobertura.xml -targetdir:$(Build.SourcesDirectory)/$(WorkingDirectory)/CodeCoverage -reporttypes:"Cobertura;HTMLInline;HTMLChart"
-  displayName: Create Code coverage report
-  workingDirectory: '/'
-
-- task: PublishCodeCoverageResults@1
-  displayName: 'Publish code coverage'
-  inputs:
-    codeCoverageTool: Cobertura
-    summaryFileLocation: '$(Build.SourcesDirectory)/$(WorkingDirectory)/CodeCoverage/Cobertura.xml'
-    reportDirectory: '$(Build.SourcesDirectory)/$(WorkingDirectory)/CodeCoverage'
