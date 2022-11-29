@@ -47,7 +47,7 @@ steps:
       $queueName = $(Get-Item $queueFile).Name
       $queueVersion = $queueName.Replace("$queuePackage.", "").Replace(".nupkg", "")
 
-      $scuFile = "./nuget-packages/$scuPackage.*.nupkg"
+      $scuFile = "./nuget-packages/$scuPackage.*/$scuPackage.*.nupkg"
       $scuName = $(Get-Item $scuFile).Name
       $scuVersion = $scuName.Replace("$scuPackage.", "").Replace(".nupkg", "")
 
