@@ -1,0 +1,92 @@
+parameters:
+  - name: queue
+    type: string
+
+  - name: scu
+    type: string
+
+  - name: cashbox
+    type: object
+
+  - name: target
+    type: string
+
+steps:
+  - download: queues
+    artifact: packages-v1
+    patterns: "**/fiskaltrust.Middleware.Queue.${{ parameters.queue }}.*.nupkg"
+    displayName: Download Queue Artifact
+
+  - download: scus
+    artifact: packages-v1
+    patterns: "**/fiskaltrust.Middleware.SCU.${{ parameters.scu }}.*.nupkg"
+    displayName: Download Scu Artifact
+
+  - download: launcher-1-3
+    artifact: drop
+    displayName: Download Launcher 1.3 Artifact
+
+  - pwsh: |
+      Expand-Archive $(Pipeline.Workspace)/launcher-1-3/drop/fiskaltrust.service.launcher.*.nupkg -DestinationPath $(Agent.TempDirectory)/launcher/
+      
+      Move-Item $(Agent.TempDirectory)/launcher/lib/net461/* $(Build.SourcesDirectory)/launcher
+    displayName: Extraxt Launcher 1.3 Artifact
+
+  - pwsh: |
+      $queueFile = "$(Pipeline.Workspace)/queues/packages-v1/fiskaltrust.Middleware.Queue.${{ parameters.queue }}.*.nupkg"
+      $queueName = $(Get-Item $queueFile).Name
+      $queueVersion = $queueName -replace 'fiskaltrust\.Middleware\.Queue\.${{ parameters.queue }}\.(.*)\.nupkg', '$1'
+      Move-Item $queueFile $(Build.SourcesDirectory)/launcher/packages -Force
+      Write-Host "Moved $queueFile"
+
+      $scuFile = "$(Pipeline.Workspace)/scus/packages-v1/fiskaltrust.Middleware.SCU.${{ parameters.scu }}.*.nupkg"
+      $scuName = $(Get-Item $scuFile).Name
+      $scuVersion = $scuName -replace 'fiskaltrust\.Middleware\.SCU\.${{ parameters.scu }}\.(.*)\.nupkg', '$1'
+      Move-Item $scuFile $(Build.SourcesDirectory)/launcher/packages -Force
+      Write-Host "Moved $scuFile"
+
+      $configuration = ConvertFrom-Json $([String]$(Get-Content $(Build.SourcesDirectory)/launcher/configuration.json -Encoding utf8))
+      $configuration.ftQueues[0].Version = $queueVersion
+      $configuration.ftSignaturCreationDevices[0].Version = $scuVersion
+
+      ConvertTo-Json $configuration -Depth 100 | Set-Content -Path $(Build.SourcesDirectory)/launcher/configuration.json -Encoding utf8
+      Write-Host "Replaced Versions in Config"
+
+    displayName: Replace Launcher Packages
+
+  - pwsh: |
+      $process = $Null
+      if(!"${{ parameters.target }}".startsWith("win")) {
+      } else {
+        $process = Start-Process -PassThru -WorkingDirectory "$(Build.SourcesDirectory)/launcher" -FilePath "$(Build.SourcesDirectory)/launcher/fiskaltrust.exe" -ArgumentList @("-cashboxid=${{ parameters.cashbox.cashboxid }}"; "-accesstoken=${{ parameters.cashbox.accesstoken }}"; "-sandbox"; "-useoffline"; "-servicefolder=$(Build.SourcesDirectory)/service"; "-logfile=$(Build.SourcesDirectory)/logs/log.txt"; "-verbosity=Debug"; "-test")
+      }
+
+      $count = 0
+      $step = 5
+      $max = 10 * 60
+
+      while($True) {
+        Start-Sleep -Seconds $step
+        $count += $step
+        if($count -gt $max) {
+          Write-Error "Launcher did not complete startup."
+          Stop-Process $process
+          exit 1
+        }
+        if($process.HasExited) {
+          Write-Error "Launcher has exited."
+          exit 1
+        }
+        if(!(Test-Path $(Build.SourcesDirectory)/logs/log.txt)) {
+          continue
+        }
+        $log = Get-Content $(Build.SourcesDirectory)/logs/log.txt
+        if($log -like "*fiskaltrust.Middleware started. Press a button to stop...*") {
+          break
+        }
+      }
+
+      newman run https://www.getpostman.com/collections/cb26765356b4bf4d133d -e "$(Build.SourcesDirectory)/environment.json" --reporters 'cli,junit' --reporter-junit-export "$(Build.SourcesDirectory)/newman.xml"
+
+      Stop-Process $process
+    displayName: Run Tests

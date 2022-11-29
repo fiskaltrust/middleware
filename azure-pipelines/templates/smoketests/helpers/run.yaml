@@ -1,0 +1,8 @@
+parameters:
+  - name: run
+    type: object
+
+steps:
+- ${{ if ne(length(parameters.run), 0) }}:
+  - ${{ each run in parameters.run }}:
+    - ${{ run }}

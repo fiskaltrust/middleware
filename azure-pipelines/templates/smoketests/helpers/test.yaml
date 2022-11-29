@@ -1,0 +1,73 @@
+parameters:
+  - name: test
+    type: string
+
+  - name: pre
+    type: object
+
+  - name: post
+    type: object
+
+  - name: queue
+    type: string
+
+  - name: scu
+    type: string
+
+  - name: cashbox
+    type: object
+
+  - name: target
+    type: string
+
+  - name: os
+    type: string
+
+
+jobs:
+  - job:
+    condition: always()
+    displayName: Smoke Tests ${{ parameters.test }}
+    workspace:
+      clean: all
+    steps:
+      - checkout: none
+
+      - pwsh: New-Item -ItemType directory -Path "$(Build.SourcesDirectory)/logs"
+        displayName: Setup Directories
+
+      - pwsh: |
+          Set-Content -Path "$(Build.SourcesDirectory)/environment.json" -Value '{"id": "","name":"local","values":[{"key":"base_url","value":"${{ parameters.cashbox.baseurl }}","enabled":true},{"key":"cashbox_id","value":"${{ parameters.cashbox.cashboxid }}","enabled":true},{"key":"access_token","value":"${{ parameters.cashbox.accesstoken }}","enabled":true}]}'
+        displayName: Create newman Environment
+
+      - template: download.yaml
+        parameters:
+          cashbox: ${{ parameters.cashbox }}
+
+      - template: run.yaml
+        parameters:
+          run: ${{ parameters.pre }}
+
+      - template: ../tests/${{ parameters.test }}.yaml
+        parameters:
+          queue: ${{ parameters.queue }}
+          scu: ${{ parameters.scu }}
+          cashbox: ${{ parameters.cashbox }}
+          target: ${{ parameters.target }}
+
+      - template: run.yaml
+        parameters:
+          run: ${{ parameters.post }}
+
+      - publish: logs
+        artifact: logs-${{ parameters.os }}-${{ parameters.queue }}-${{ replace(parameters.scu, '.', '-') }}-${{ parameters.test }}-$(System.JobAttempt)
+        condition: succeededOrFailed()
+
+      - task: PublishTestResults@2
+        condition: succeededOrFailed()
+        inputs:
+          testResultsFormat: JUnit
+          testResultsFiles: $(Build.SourcesDirectory)/newman.xml
+          testRunTitle: ${{ parameters.os }}-${{ parameters.queue }}-${{ replace(parameters.scu, '.', '-') }}-${{ parameters.test }}-$(System.JobAttempt)
+          buildPlatform: ${{ parameters.os }}
+          buildConfiguration: ${{ parameters.queue }}-${{ replace(parameters.scu, '.', '-') }}-${{ parameters.test }}

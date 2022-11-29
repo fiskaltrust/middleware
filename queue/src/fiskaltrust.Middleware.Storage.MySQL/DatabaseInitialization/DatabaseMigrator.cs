@@ -30,7 +30,8 @@ namespace fiskaltrust.Middleware.Storage.MySQL.DatabaseInitialization
             {
                 ConnectionString = _serverConnectionString,
                 Database = _dbName,
-                DefaultCommandTimeout = timeoutSec
+                DefaultCommandTimeout = timeoutSec,
+                AllowUserVariables = true
             };
             _databaseConnectionString = builder.ConnectionString;
             _logger = logger;

@@ -7,9 +7,6 @@ trigger:
     include:
       - main
       - refs/tags/queue/*
-  paths:
-    include:
-      - queue
 
 pr:
   branches:

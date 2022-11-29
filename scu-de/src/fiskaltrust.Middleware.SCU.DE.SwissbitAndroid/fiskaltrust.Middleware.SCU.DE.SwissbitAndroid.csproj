@@ -50,7 +50,6 @@
     <Compile Include="Resources\Resource.designer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ScuBootstrapper.cs" />
-    <Compile Include="SwissbitSCU.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".nuspec" />
@@ -80,6 +79,9 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions">
       <Version>3.1.4</Version>
     </PackageReference>
+    <PackageReference Include="Newtonsoft.Json">
+      <Version>12.0.3</Version>
+    </PackageReference>
     <PackageReference Include="Xamarin.Android.Support.v7.AppCompat" Version="28.0.0.3" />
   </ItemGroup>
   <ItemGroup>
@@ -93,17 +95,9 @@
       <Project>{b8b0f806-bb44-4c0e-8327-26119dea0dae}</Project>
       <Name>fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser</Name>
     </ProjectReference>
-    <ProjectReference Include="..\fiskaltrust.Middleware.SCU.DE.Swissbit.Interop.StaticLib\fiskaltrust.Middleware.SCU.DE.Swissbit.Interop.StaticLib.csproj">
-      <Project>{C3D38400-3F35-4138-8F8C-B85CFA96EAAC}</Project>
-      <Name>fiskaltrust.Middleware.SCU.DE.Swissbit.Interop.StaticLib</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\fiskaltrust.Middleware.SCU.DE.Swissbit.Interop\fiskaltrust.Middleware.SCU.DE.Swissbit.Interop.csproj">
-      <Project>{44ce148a-988a-4e11-b9eb-ee3c64543447}</Project>
-      <Name>fiskaltrust.Middleware.SCU.DE.Swissbit.Interop</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\fiskaltrust.Middleware.SCU.DE.SwissbitBase\fiskaltrust.Middleware.SCU.DE.SwissbitBase.csproj">
-      <Project>{188a6fad-777c-4f20-8448-a97e3e5c9356}</Project>
-      <Name>fiskaltrust.Middleware.SCU.DE.SwissbitBase</Name>
+    <ProjectReference Include="..\fiskaltrust.Middleware.SCU.DE.Swissbit\fiskaltrust.Middleware.SCU.DE.Swissbit.csproj">
+      <Project>{13bbfba8-0991-484c-8626-a62062119e38}</Project>
+      <Name>fiskaltrust.Middleware.SCU.DE.Swissbit</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\Xamarin\Android\Xamarin.Android.CSharp.targets" />
