@@ -48,7 +48,7 @@ steps:
   inputs:
     command: 'test'
     projects: '$(WorkingDirectory)/**/*.IntegrationTest.csproj'
-    arguments: '--configuration $(BuildConfiguration) --no-restore --collect:"XPlat Code Coverage"
+    arguments: '--configuration $(BuildConfiguration) --no-restore --collect:"XPlat Code Coverage"'
     nobuild: true
   displayName: 'Run integration tests'
   env:
