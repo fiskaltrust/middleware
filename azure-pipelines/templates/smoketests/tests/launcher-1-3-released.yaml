@@ -34,8 +34,8 @@ steps:
   - pwsh: |
       nuget sources add -Name "Package Service v1" -Source https://packages-sandbox.fiskaltrust.cloud/nuget -username "${{ parameters.cashbox.cashboxid }}" -password "${{ parameters.cashbox.accesstoken }}"
 
-      nuget install fiskaltrust.Middleware.Queue.${{ parameters.queue }} -OutputDirectory ./nuget-packages -Source https://packages.fiskaltrust.cloud/nuget
-      nuget install fiskaltrust.Middleware.SCU.${{ parameters.scu }} -OutputDirectory ./nuget-packages -Source https://packages.fiskaltrust.cloud/nuget
+      nuget install fiskaltrust.Middleware.Queue.${{ parameters.queue }} -OutputDirectory ./nuget-packages -Source https://packages-sandbox.fiskaltrust.cloud/nuget
+      nuget install fiskaltrust.Middleware.SCU.${{ parameters.scu }} -OutputDirectory ./nuget-packages -Source https://packages-sandbox.fiskaltrust.cloud/nuget
       Get-ChildItem ./nuget-packages/**/*.nupkg | ForEach-Object {Copy $(Build.SourcesDirectory)/launcher/packages $_.FullName -Force}
       Write-Host "Copied .nupkg files to packages directory"
 
