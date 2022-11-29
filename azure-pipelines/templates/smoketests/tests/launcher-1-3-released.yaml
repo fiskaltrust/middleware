@@ -37,8 +37,8 @@ steps:
 
       nuget install fiskaltrust.Middleware.Queue.${{ parameters.queue }} -OutputDirectory ./nuget-packages -Source https://packages-sandbox.fiskaltrust.cloud/nuget
       nuget install fiskaltrust.Middleware.SCU.${{ parameters.scu }} -OutputDirectory ./nuget-packages -Source https://packages-sandbox.fiskaltrust.cloud/nuget
-      Get-ChildItem ./nuget-packages/**/*.nupkg | ForEach-Object {Move-Item $_.FullName $(Build.SourcesDirectory)/launcher/packages -Force}
-      Write-Host "Copied .nupkg files to packages directory"
+      Get-ChildItem ./nuget-packages/**/*.nupkg | ForEach-Object {Copy-Item $_.FullName $(Build.SourcesDirectory)/launcher/packages -Force}
+      Write-Host "Moved .nupkg files to packages directory"
 
       $queueFile = "./nuget-packages/fiskaltrust.Middleware.Queue.${{ parameters.queue }}.*/fiskaltrust.Middleware.Queue.${{ parameters.queue }}.*.nupkg"
       $queueName = $(Get-Item $queueFile).Name
@@ -50,10 +50,14 @@ steps:
 
       $configuration = ConvertFrom-Json $([String]$(Get-Content $(Build.SourcesDirectory)/launcher/configuration.json -Encoding utf8))
       $configuration.ftQueues[0].Version = $queueVersion
+      Write-Host "Set Queue version to $queueVersion"
       $configuration.ftSignaturCreationDevices[0].Version = $scuVersion
+      Write-Host "Set SCU version to $scuVersion"
 
       ConvertTo-Json $configuration -Depth 100 | Set-Content -Path $(Build.SourcesDirectory)/launcher/configuration.json -Encoding utf8
       Write-Host "Replaced Versions in Config"
+
+      Remove-Item ./nuget-packages -Force -Recurse
 
     displayName: Replace Launcher Packages
 
