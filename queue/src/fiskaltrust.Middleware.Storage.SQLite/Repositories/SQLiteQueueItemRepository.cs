@@ -102,19 +102,21 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Repositories
                     ftQueueRow.Value = item.ftQueueRow;
                     ftQueueMoment.Value = item.ftQueueMoment;
                     ftQueueTimeout.Value = item.ftQueueTimeout;
-                    ftWorkMoment.Value = item.ftWorkMoment;
-                    ftDoneMoment.Value = item.ftDoneMoment;
+                    ftWorkMoment.Value = item.ftWorkMoment ?? item.ftQueueMoment;
+                    ftDoneMoment.Value = item.ftDoneMoment ?? item.ftQueueMoment;
                     cbReceiptMoment.Value = item.cbReceiptMoment;
                     cbTerminalID.Value = item.cbTerminalID;
                     cbReceiptReference.Value = item.cbReceiptReference;
                     country.Value = item.country;
                     version.Value = item.version;
-                    request.Value = item.request;
-                    requestHash.Value = item.requestHash;
-                    response.Value = item.response;
-                    responseHash.Value = item.responseHash;
+                    request.Value = item.request ?? "";
+                    requestHash.Value = item.requestHash ?? "";
+                    response.Value = item.response ?? "";
+                    responseHash.Value = item.responseHash ?? "";
                     TimeStamp.Value = item.TimeStamp;
                     command.ExecuteNonQuery();
+
+
                 }
 
                 transaction.Commit();
