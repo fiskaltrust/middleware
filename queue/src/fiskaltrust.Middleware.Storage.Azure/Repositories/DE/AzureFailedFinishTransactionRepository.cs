@@ -12,7 +12,7 @@ namespace fiskaltrust.Middleware.Storage.Azure.Repositories.DE
     public class AzureFailedFinishTransactionRepository : BaseAzureTableRepository<string, AzureFailedFinishTransaction, FailedFinishTransaction>, IPersistentTransactionRepository<FailedFinishTransaction>
     {
         public AzureFailedFinishTransactionRepository(QueueConfiguration queueConfig, TableServiceClient tableServiceClient)
-            : base(queueConfig, tableServiceClient, nameof(ftJournalDE)) { }
+            : base(queueConfig, tableServiceClient, nameof(FailedFinishTransaction)) { }
 
         public async Task InsertOrUpdateTransactionAsync(FailedFinishTransaction transaction) => await InsertOrUpdateAsync(transaction).ConfigureAwait(false);
 

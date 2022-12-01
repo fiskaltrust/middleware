@@ -12,7 +12,7 @@ namespace fiskaltrust.Middleware.Storage.Azure.Repositories.DE
     public class AzureOpenTransactionRepository : BaseAzureTableRepository<string, AzureOpenTransaction, OpenTransaction>, IPersistentTransactionRepository<OpenTransaction>
     {
         public AzureOpenTransactionRepository(QueueConfiguration queueConfig, TableServiceClient tableServiceClient)
-            : base(queueConfig, tableServiceClient, nameof(ftJournalDE)) { }
+            : base(queueConfig, tableServiceClient, nameof(OpenTransaction)) { }
 
         public async Task InsertOrUpdateTransactionAsync(OpenTransaction transaction) => await InsertOrUpdateAsync(transaction).ConfigureAwait(false);
 

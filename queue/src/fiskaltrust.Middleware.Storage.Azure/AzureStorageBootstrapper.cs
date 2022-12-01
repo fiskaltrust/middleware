@@ -48,6 +48,9 @@ namespace fiskaltrust.Middleware.Storage.Azure
 
         private async Task InitAsync(Dictionary<string,object> configuration, ILogger<IMiddlewareBootstrapper> logger)
         {
+            var databaseMigrator = new DatabaseMigrator(logger, _tableServiceClient, _queueConfiguration);
+            await databaseMigrator.MigrateAsync().ConfigureAwait(false);
+
             _configurationRepository = new AzureConfigurationRepository(_queueConfiguration, _tableServiceClient);
             var baseStorageConfig = ParseStorageConfiguration(configuration);
 
