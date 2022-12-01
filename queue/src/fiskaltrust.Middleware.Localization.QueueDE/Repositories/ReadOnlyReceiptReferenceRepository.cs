@@ -73,7 +73,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Repositories
                     return false;
                 }
                 var receiptCaseData = SerializationHelper.GetReceiptCaseData(requestTarget);
-                if (receiptCaseData == null)
+                if (receiptCaseData == null || string.IsNullOrEmpty(receiptCaseData.RefReceiptId))
                 {
                     return false;
                 }
