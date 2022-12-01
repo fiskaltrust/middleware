@@ -992,7 +992,7 @@ namespace fiskaltrust.Middleware.Storage.Azure.Mapping
 
             return new AzureFtQueueItem
             {
-                PartitionKey = GetHashString(src.ftQueueRow),
+                PartitionKey = GetHashString(src.TimeStamp),
                 RowKey = src.ftQueueItemId.ToString(),
                 ftQueueItemId = src.ftQueueItemId,
                 request = src.request,
