@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Azure;
 using Azure.Data.Tables;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Storage.Azure.Migrations;
@@ -19,16 +16,18 @@ namespace fiskaltrust.Middleware.Storage.Azure
         private readonly TableServiceClient _tableServiceClient;
         private readonly QueueConfiguration _queueConfiguration;
 
-        private readonly IAzureStorageMigration[] _migrations =
-        {
-            new Migration_000_Initial()
-        };
+        private readonly IAzureStorageMigration[] _migrations;
 
         public DatabaseMigrator(ILogger<IMiddlewareBootstrapper> logger, TableServiceClient tableServiceClient, QueueConfiguration queueConfiguration)
         {
             _logger = logger;
             _tableServiceClient = tableServiceClient;
             _queueConfiguration = queueConfiguration;
+
+            _migrations = new []
+            {
+                new Migration_000_Initial(_tableServiceClient)
+            };
         }
 
         public async Task MigrateAsync()
@@ -61,11 +60,11 @@ namespace fiskaltrust.Middleware.Storage.Azure
             var migration = await tableClient.QueryAsync<TableEntity>().FirstOrDefaultAsync();
             return migration?.GetInt32("CurrentVersion") ?? -1;
         }
-        
+
         private async Task SetCurrentMigrationAsync(int version)
         {
             var tableClient = _tableServiceClient.GetTableClient(MIGRATION_TABLE_NAME);
-            await tableClient.UpsertEntityAsync(new TableEntity(_queueConfiguration.QueueId.ToString(), "Current") { { "CurentVersion", version } });            
+            await tableClient.UpsertEntityAsync(new TableEntity(_queueConfiguration.QueueId.ToString(), "Current") { { "CurentVersion", version } });
         }
 
         private async Task<bool> MigrationTableExists() => await _tableServiceClient.QueryAsync(t => t.Name == MIGRATION_TABLE_NAME).AnyAsync();

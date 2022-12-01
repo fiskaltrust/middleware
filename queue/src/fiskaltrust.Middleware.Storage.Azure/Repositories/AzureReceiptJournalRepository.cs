@@ -25,7 +25,7 @@ namespace fiskaltrust.Middleware.Storage.Azure.Repositories
         public IAsyncEnumerable<ftReceiptJournal> GetEntriesOnOrAfterTimeStampAsync(long fromInclusive, int? take = null)
         {
             var result = base.GetEntriesOnOrAfterTimeStampAsync(fromInclusive).OrderBy(x => x.TimeStamp);
-            return take.HasValue ? result.Take(take.Value).AsAsyncEnumerable() : result.AsAsyncEnumerable();
+            return take.HasValue ? result.Take(take.Value) : result;
         }
     }
 }

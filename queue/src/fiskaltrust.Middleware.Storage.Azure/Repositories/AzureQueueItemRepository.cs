@@ -28,7 +28,7 @@ namespace fiskaltrust.Middleware.Storage.Azure.Repositories
         public IAsyncEnumerable<ftQueueItem> GetEntriesOnOrAfterTimeStampAsync(long fromInclusive, int? take = null)
         {
             var result = base.GetEntriesOnOrAfterTimeStampAsync(fromInclusive).OrderBy(x => x.TimeStamp);
-            return take.HasValue ? result.Take(take.Value).AsAsyncEnumerable() : result.AsAsyncEnumerable();
+            return take.HasValue ? result.Take(take.Value) : result;
         }
 
         public IAsyncEnumerable<ftQueueItem> GetByReceiptReferenceAsync(string cbReceiptReference, string cbTerminalId)
@@ -38,7 +38,7 @@ namespace fiskaltrust.Middleware.Storage.Azure.Repositories
                 : TableClient.CreateQueryFilter($"cbReceiptReference eq {cbReceiptReference} and cbTerminalId eq {cbTerminalId}");
 
             var result = _tableClient.QueryAsync<AzureFtQueueItem>(filter: filter);
-            return result.Select(MapToStorageEntity).AsAsyncEnumerable();
+            return result.Select(MapToStorageEntity);
         }
 
         public IAsyncEnumerable<ftQueueItem> GetPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem)
@@ -51,14 +51,14 @@ namespace fiskaltrust.Middleware.Storage.Azure.Repositories
             }
 
             var result = _tableClient.QueryAsync<AzureFtQueueItem>(filter: TableClient.CreateQueryFilter($"cbReceiptReference eq {receiptRequest.cbPreviousReceiptReference} or cbReceiptReference eq {ftQueueItem.cbReceiptReference}"));
-            return result.Select(MapToStorageEntity).AsAsyncEnumerable();
+            return result.Select(MapToStorageEntity);
         }
 
         public IAsyncEnumerable<ftQueueItem> GetQueueItemsAfterQueueItem(ftQueueItem ftQueueItem)
         {
             // TODO: Add a separate table for this call
             var result = _tableClient.QueryAsync<AzureFtQueueItem>(filter: TableClient.CreateQueryFilter($"ftQueueRow ge {ftQueueItem.ftQueueRow}"));
-            return result.Select(MapToStorageEntity).AsAsyncEnumerable();
+            return result.Select(MapToStorageEntity);
         }
     }
 }

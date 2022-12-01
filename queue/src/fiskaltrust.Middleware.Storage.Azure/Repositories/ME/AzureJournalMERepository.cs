@@ -27,7 +27,7 @@ namespace fiskaltrust.Middleware.Storage.Azure.Repositories.ME
         public IAsyncEnumerable<ftJournalME> GetEntriesOnOrAfterTimeStampAsync(long fromInclusive, int? take = null)
         {
             var result = base.GetEntriesOnOrAfterTimeStampAsync(fromInclusive).OrderBy(x => x.TimeStamp);
-            return take.HasValue ? result.Take(take.Value).AsAsyncEnumerable() : result.AsAsyncEnumerable();
+            return take.HasValue ? result.Take(take.Value) : result;
         }
         public async Task<ftJournalME> GetLastEntryAsync()
         {
@@ -38,13 +38,13 @@ namespace fiskaltrust.Middleware.Storage.Azure.Repositories.ME
         public IAsyncEnumerable<ftJournalME> GetByQueueItemId(Guid queueItemId)
         {
             var result = _tableClient.QueryAsync<AzureFtJournalME>(filter: TableClient.CreateQueryFilter($"ftQueueItemId eq {queueItemId}"));
-            return result.Select(MapToStorageEntity).AsAsyncEnumerable();
+            return result.Select(MapToStorageEntity);
         }
 
         public IAsyncEnumerable<ftJournalME> GetByReceiptReference(string cbReceiptReference)
         {
             var result = _tableClient.QueryAsync<AzureFtJournalME>(filter: TableClient.CreateQueryFilter($"cbReference eq {cbReceiptReference}"));
-            return result.Select(MapToStorageEntity).AsAsyncEnumerable();
+            return result.Select(MapToStorageEntity);
         }
     }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Azure.Data.Tables;
 using Azure.Identity;
+using Azure.Storage.Blobs;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts.Data;
 using fiskaltrust.Middleware.Contracts.Models.Transactions;
@@ -27,7 +28,7 @@ namespace fiskaltrust.Middleware.Storage.Azure
         private readonly ILogger<IMiddlewareBootstrapper> _logger;
         private readonly QueueConfiguration _queueConfiguration;
         private readonly TableServiceClient _tableServiceClient;
-
+        private readonly BlobServiceClient _blobServiceClient;
         private AzureConfigurationRepository _configurationRepository;
 
         public AzureStorageBootstrapper(Guid queueId, Dictionary<string, object> configuration, ILogger<IMiddlewareBootstrapper> logger)
@@ -38,6 +39,7 @@ namespace fiskaltrust.Middleware.Storage.Azure
             var storageUrl = configuration["storageUrl"].ToString();
             _queueConfiguration = new QueueConfiguration { QueueId = queueId };
             _tableServiceClient = new TableServiceClient(new Uri(storageUrl), new DefaultAzureCredential());
+            _blobServiceClient = new BlobServiceClient(new Uri(storageUrl), new DefaultAzureCredential());
         }
 
         public void ConfigureStorageServices(IServiceCollection serviceCollection)
@@ -64,6 +66,7 @@ namespace fiskaltrust.Middleware.Storage.Azure
         {
             services.AddSingleton(_queueConfiguration);
             services.AddSingleton(_tableServiceClient);
+            services.AddSingleton(_blobServiceClient);
 
             services.AddSingleton<IConfigurationRepository>(_configurationRepository);
             services.AddSingleton<IReadOnlyConfigurationRepository>(_configurationRepository);
