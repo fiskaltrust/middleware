@@ -65,14 +65,14 @@ namespace fiskaltrust.Middleware.Storage.Azure.Repositories
 
         public virtual IAsyncEnumerable<TStorageEntity> GetByTimeStampRangeAsync(long fromInclusive, long toInclusive)
         {
-            var result = _tableClient.QueryAsync<TAzureEntity>(filter: TableClient.CreateQueryFilter($"PartitionKey ge {Mapper.GetHashString(fromInclusive)} and PartitionKey le {Mapper.GetHashString(toInclusive)}"));
-            return result.Select(MapToStorageEntity).AsAsyncEnumerable();
+            var result = _tableClient.QueryAsync<TAzureEntity>(filter: TableClient.CreateQueryFilter($"PartitionKey le {Mapper.GetHashString(fromInclusive)} and PartitionKey ge {Mapper.GetHashString(toInclusive)}"));
+            return result.Select(MapToStorageEntity);
         }
 
         public IAsyncEnumerable<TStorageEntity> GetEntriesOnOrAfterTimeStampAsync(long fromInclusive)
         {
-            var result = _tableClient.QueryAsync<TAzureEntity>(filter: TableClient.CreateQueryFilter($"PartitionKey ge {Mapper.GetHashString(fromInclusive)}"));
-            return result.Select(MapToStorageEntity).AsAsyncEnumerable();
+            var result = _tableClient.QueryAsync<TAzureEntity>(filter: TableClient.CreateQueryFilter($"PartitionKey le {Mapper.GetHashString(fromInclusive)}"));
+            return result.Select(MapToStorageEntity);
         }
 
         protected abstract TKey GetIdForEntity(TStorageEntity entity);

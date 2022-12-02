@@ -21,6 +21,8 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
                 .With(r => r.FileContentBase64, Convert.ToBase64String(Encoding.UTF8.GetBytes(fixture.Create<string>())))
                 .With(r => r.FileExtension, ".zip")
                 );
+
+            fixture.Customize<ftActionJournal>(c => c.With(r => r.TimeStamp, DateTime.UtcNow.Ticks));
             
             return fixture;
         }

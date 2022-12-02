@@ -36,14 +36,29 @@ namespace fiskaltrust.Middleware.Storage.Azure.Repositories.DE
 
         public IAsyncEnumerable<ftJournalDE> GetEntriesOnOrAfterTimeStampAsync(long fromInclusive, int? take = null)
         {
-            var result = base.GetEntriesOnOrAfterTimeStampAsync(fromInclusive).OrderBy(x => x.TimeStamp);
-            return take.HasValue ? result.Take(take.Value) : result;
+            var result = _tableClient
+                .QueryAsync<AzureFtJournalDE>(filter: TableClient.CreateQueryFilter($"PartitionKey le {Mapper.GetHashString(fromInclusive)}"))
+                .SelectAwait(async x =>
+                {
+                    var entity = MapToStorageEntity(x);
+                    entity.FileContentBase64 = await DownloadJournalDEFromBlobAsync(entity);
+                    return entity;
+                });
+            
+            
+            return take.HasValue ? result.TakeLast(take.Value).OrderBy(x => x.TimeStamp) : result.OrderBy(x => x.TimeStamp);
         }
 
         public IAsyncEnumerable<ftJournalDE> GetByFileName(string fileName)
         {
-            var result = _tableClient.QueryAsync<AzureFtJournalDE>(filter: TableClient.CreateQueryFilter($"FileName eq {fileName}"));
-            return result.Select(MapToStorageEntity);
+            return _tableClient
+                .QueryAsync<AzureFtJournalDE>(filter: TableClient.CreateQueryFilter($"FileName eq {fileName}"))
+                .SelectAwait(async x =>
+                {
+                    var entity = MapToStorageEntity(x);
+                    entity.FileContentBase64 = await DownloadJournalDEFromBlobAsync(entity);
+                    return entity;
+                });
         }
 
         public override async Task InsertAsync(ftJournalDE entity)
