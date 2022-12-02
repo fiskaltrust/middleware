@@ -48,48 +48,46 @@ namespace fiskaltrust.Middleware.Storage.Azure.Repositories.DE
 
         public override async Task InsertAsync(ftJournalDE entity)
         {
-            if (!string.IsNullOrEmpty(entity.FileContentBase64))
+            var fileContent = entity.FileContentBase64;
+            try
+            {
+                entity.FileContentBase64 = null;
+                await base.InsertAsync(entity);
+            }
+            finally
+            {
+                entity.FileContentBase64 = fileContent;
+            }
+
+            if (!string.IsNullOrEmpty(fileContent))
             {
                 var blob = _blobContainerClient.GetBlobClient($"{_queueConfig.QueueId}/{entity.ftJournalDEId}/{entity.FileName}.{entity.FileExtension}");
-
                 var file = Convert.FromBase64String(entity.FileContentBase64);
                 using var ms = new MemoryStream(file);
                 await blob.UploadAsync(ms);
             }
-
-            await base.InsertAsync(new ftJournalDE
-            {
-                FileExtension = entity.FileExtension,
-                FileName = entity.FileName,
-                ftJournalDEId = entity.ftJournalDEId,
-                ftQueueId = entity.ftQueueId,
-                ftQueueItemId = entity.ftQueueItemId,
-                Number = entity.Number,
-                TimeStamp = entity.TimeStamp,
-                FileContentBase64 = null
-            });
         }
 
         public override async Task<ftJournalDE> GetAsync(Guid id)
         {
             var entity = await base.GetAsync(id);
-            entity.FileContentBase64 = await DownloadJournalDEFromBlobAsync(entity);
+            if (entity != null)
+            {
+                entity.FileContentBase64 = await DownloadJournalDEFromBlobAsync(entity);
+            }
 
             return entity;
         }
 
-        public override async Task<IEnumerable<ftJournalDE>> GetAsync()
+        public override Task<IEnumerable<ftJournalDE>> GetAsync()
         {
-            var journals = await base.GetAsync();
-#if NET461 || NETSTANDARD2_0 || NETSTANDARD2_1
-            foreach (var journal in journals)
+            var result = _tableClient.QueryAsync<AzureFtJournalDE>();
+            return Task.FromResult(result.SelectAwait(async x =>
             {
-                journal.FileContentBase64 = await DownloadJournalDEFromBlobAsync(journal);
-            }
-#else
-            await Parallel.ForEachAsync(journals, async (journal, _) => journal.FileContentBase64 = await DownloadJournalDEFromBlobAsync(journal));
-#endif
-            return journals;
+                var entity = MapToStorageEntity(x);
+                entity.FileContentBase64 = await DownloadJournalDEFromBlobAsync(entity);
+                return entity;
+            }).ToEnumerable());
         }
 
         public override async IAsyncEnumerable<ftJournalDE> GetByTimeStampRangeAsync(long fromInclusive, long toInclusive)
@@ -107,10 +105,10 @@ namespace fiskaltrust.Middleware.Storage.Azure.Repositories.DE
             var blob = _blobContainerClient.GetBlobClient($"{_queueConfig.QueueId}/{entity.ftJournalDEId}/{entity.FileName}.{entity.FileExtension}");
             if (await blob.ExistsAsync())
             {
-                using var blobStream = await blob.OpenReadAsync();
-                using var base64Stream = new CryptoStream(blobStream, new ToBase64Transform(), CryptoStreamMode.Read);
-                using var streamReader = new StreamReader(base64Stream);
-                return streamReader.ReadToEnd();
+                using var ms = new MemoryStream();
+                var content = await blob.DownloadToAsync(ms);
+                var n = Convert.ToBase64String(ms.ToArray());
+                return n;
             }
 
             return null;

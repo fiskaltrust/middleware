@@ -905,7 +905,8 @@ namespace fiskaltrust.Middleware.Storage.Azure.Mapping
                 TseInfoJson = src.TseInfoJson,
                 TimeStamp = src.TimeStamp,
                 Mode = src.Mode,
-                ModeConfigurationJson = src.ModeConfigurationJson
+                ModeConfigurationJson = src.ModeConfigurationJson,
+                Url = src.Url
             };
         }
 
