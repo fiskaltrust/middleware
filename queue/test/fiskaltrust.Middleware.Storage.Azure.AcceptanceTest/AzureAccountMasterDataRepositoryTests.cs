@@ -11,7 +11,6 @@ using Xunit;
 
 namespace fiskaltrust.Middleware.Storage.Azure.AcceptanceTest
 {
-    //[Collection(nameof(AzureStorageFixture))]
     public class AzureAccountMasterDataRepositoryTests : AbstractAccountMasterDataRepositoryTests, IClassFixture<AzureStorageFixture>
     {
         private readonly AzureStorageFixture _fixture;

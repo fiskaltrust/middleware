@@ -6,11 +6,11 @@ using fiskaltrust.Middleware.Storage.AcceptanceTest;
 using fiskaltrust.Middleware.Storage.Azure.AcceptanceTest.Fixtures;
 using fiskaltrust.Middleware.Storage.Azure.Repositories.AT;
 using fiskaltrust.storage.V0;
+using fiskaltrust.storage.V0.MasterData;
 using Xunit;
 
 namespace fiskaltrust.Middleware.Storage.Azure.AcceptanceTest
 {
-    //[Collection(nameof(AzureStorageFixture))]
     public class AzureJournalATRepositoryTests : AbstractJournalATRepositoryTests, IClassFixture<AzureStorageFixture>
     {
         private readonly AzureStorageFixture _fixture;
@@ -29,5 +29,7 @@ namespace fiskaltrust.Middleware.Storage.Azure.AcceptanceTest
 
             return azureJournalATRepository;
         }
+
+        public override void DisposeDatabase() => _fixture.CleanTable(nameof(ftJournalAT));
     }
 }

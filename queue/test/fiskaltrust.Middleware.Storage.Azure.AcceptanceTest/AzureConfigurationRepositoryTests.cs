@@ -6,11 +6,11 @@ using fiskaltrust.Middleware.Storage.AcceptanceTest;
 using fiskaltrust.Middleware.Storage.Azure.AcceptanceTest.Fixtures;
 using fiskaltrust.Middleware.Storage.Azure.Repositories;
 using fiskaltrust.storage.V0;
+using fiskaltrust.storage.V0.MasterData;
 using Xunit;
 
 namespace fiskaltrust.Middleware.Storage.Azure.AcceptanceTest
 {
-    //[Collection(nameof(AzureStorageFixture))]
     public class AzureConfigurationRepositoryTests : AbstractConfigurationRepositoryTests, IClassFixture<AzureStorageFixture>
     {
         private readonly AzureStorageFixture _fixture;
@@ -75,6 +75,20 @@ namespace fiskaltrust.Middleware.Storage.Azure.AcceptanceTest
             }
 
             return azureConfigurationRepository;
+        }
+
+        public override void DisposeDatabase()
+        {
+            _fixture.CleanTable(nameof(ftCashBox));
+            _fixture.CleanTable(nameof(ftQueue));
+            _fixture.CleanTable(nameof(ftQueueAT));
+            _fixture.CleanTable(nameof(ftQueueDE));
+            _fixture.CleanTable(nameof(ftQueueFR));
+            _fixture.CleanTable(nameof(ftQueueME));
+            _fixture.CleanTable(nameof(ftSignaturCreationUnitAT));
+            _fixture.CleanTable(nameof(ftSignaturCreationUnitDE));
+            _fixture.CleanTable(nameof(ftSignaturCreationUnitFR));
+            _fixture.CleanTable(nameof(ftSignaturCreationUnitME));
         }
     }
 }

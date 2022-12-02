@@ -11,7 +11,6 @@ using Xunit;
 
 namespace fiskaltrust.Middleware.Storage.Azure.AcceptanceTest
 {
-    //[Collection(nameof(AzureStorageFixture))]
     public class AzureOutletMasterDataRepositoryTests : AbstractOutletMasterDataRepositoryTests, IClassFixture<AzureStorageFixture>
     {
         private readonly AzureStorageFixture _fixture;
@@ -30,5 +29,7 @@ namespace fiskaltrust.Middleware.Storage.Azure.AcceptanceTest
 
             return repository;
         }
+
+        public override void DisposeDatabase() => _fixture.CleanTable(nameof(OutletMasterData));
     }
 }
