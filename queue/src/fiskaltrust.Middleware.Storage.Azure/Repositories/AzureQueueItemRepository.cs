@@ -35,7 +35,7 @@ namespace fiskaltrust.Middleware.Storage.Azure.Repositories
         {
             var filter = string.IsNullOrWhiteSpace(cbTerminalId)
                 ? TableClient.CreateQueryFilter($"cbReceiptReference eq {cbReceiptReference}")
-                : TableClient.CreateQueryFilter($"cbReceiptReference eq {cbReceiptReference} and cbTerminalId eq {cbTerminalId}");
+                : TableClient.CreateQueryFilter($"cbReceiptReference eq {cbReceiptReference} and cbTerminalID eq {cbTerminalId}");
 
             var result = _tableClient.QueryAsync<TableEntity>(filter: filter);
             return result.Select(MapToStorageEntity);
@@ -50,8 +50,8 @@ namespace fiskaltrust.Middleware.Storage.Azure.Repositories
                 return AsyncEnumerable.Empty<ftQueueItem>();
             }
 
-            var result = _tableClient.QueryAsync<TableEntity>(filter: TableClient.CreateQueryFilter($"cbReceiptReference eq {receiptRequest.cbPreviousReceiptReference} or cbReceiptReference eq {ftQueueItem.cbReceiptReference}"));
-            return result.Select(MapToStorageEntity);
+            var result = _tableClient.QueryAsync<TableEntity>(filter: TableClient.CreateQueryFilter($"ftQueueRow lt {ftQueueItem.ftQueueRow} and (cbReceiptReference eq {receiptRequest.cbPreviousReceiptReference} or cbReceiptReference eq {ftQueueItem.cbReceiptReference})"));
+            return result.Select(MapToStorageEntity).Where(x => JsonConvert.DeserializeObject<ReceiptRequest>(x.request).IncludeInReferences());
         }
 
         public IAsyncEnumerable<ftQueueItem> GetQueueItemsAfterQueueItem(ftQueueItem ftQueueItem)

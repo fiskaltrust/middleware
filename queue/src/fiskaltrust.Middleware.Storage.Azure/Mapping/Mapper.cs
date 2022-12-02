@@ -1057,24 +1057,24 @@ namespace fiskaltrust.Middleware.Storage.Azure.Mapping
                 ftWorkMoment = src.GetDateTime(nameof(ftQueueItem.ftWorkMoment)).GetValueOrDefault(),
                 ftQueueTimeout = src.GetInt32(nameof(ftQueueItem.ftQueueTimeout)).GetValueOrDefault(),
                 ftQueueMoment = src.GetDateTime(nameof(ftQueueItem.ftQueueMoment)).GetValueOrDefault(),
-                ftQueueRow = src.GetInt32(nameof(ftQueueItem.ftQueueRow)).GetValueOrDefault(),
+                ftQueueRow = src.GetInt64(nameof(ftQueueItem.ftQueueRow)).GetValueOrDefault(),
                 ftQueueId = src.GetGuid(nameof(ftQueueItem.ftQueueId)).GetValueOrDefault(),
                 TimeStamp = src.GetInt64(nameof(ftQueueItem.TimeStamp)).GetValueOrDefault()
             };
 
             var reqSb = new StringBuilder();
-            foreach (var key in src.Keys.Where(x => x.StartsWith(nameof(ftQueueItem.request))))
+            foreach (var key in src.Keys.Where(x => x.StartsWith($"{nameof(ftQueueItem.request)}_")))
             {
                 reqSb.Append(src[key]);
             }
             queueItem.request = reqSb.ToString();
 
             var resSb = new StringBuilder();
-            foreach (var key in src.Keys.Where(x => x.StartsWith(nameof(ftQueueItem.response))))
+            foreach (var key in src.Keys.Where(x => x.StartsWith($"{nameof(ftQueueItem.response)}_")))
             {
                 resSb.Append(src[key]);
             }
-            queueItem.response = reqSb.ToString();
+            queueItem.response = resSb.ToString();
 
             return queueItem;
         }
