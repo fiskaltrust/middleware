@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Azure.Data.Tables;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Storage.AcceptanceTest;
 using fiskaltrust.Middleware.Storage.Azure.Repositories;
@@ -14,7 +15,7 @@ namespace fiskaltrust.Middleware.Storage.Azure.AcceptanceTest
 
         public override async Task<IMiddlewareQueueItemRepository> CreateRepository(IEnumerable<ftQueueItem> entries)
         {
-            var azureQueueItemRepository = new AzureQueueItemRepository(Guid.NewGuid(), Constants.AzureStorageConnectionString);
+            var azureQueueItemRepository = new AzureQueueItemRepository(new QueueConfiguration { QueueId = Guid.NewGuid() }, new TableServiceClient(Constants.AzureStorageConnectionString));
             foreach (var entry in entries)
             {
                 await azureQueueItemRepository.InsertAsync(entry);

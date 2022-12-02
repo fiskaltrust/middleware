@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Azure.Data.Tables;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Storage.AcceptanceTest;
 using fiskaltrust.Middleware.Storage.Azure.Repositories.MasterData;
@@ -14,7 +15,7 @@ namespace fiskaltrust.Middleware.Storage.Azure.AcceptanceTest
 
         public override async Task<IMasterDataRepository<AccountMasterData>> CreateRepository(IEnumerable<AccountMasterData> entries)
         {
-            var repository = new AzureAccountMasterDataRepository(Guid.NewGuid(), Constants.AzureStorageConnectionString);
+            var repository = new AzureAccountMasterDataRepository(new QueueConfiguration { QueueId = Guid.NewGuid() }, new TableServiceClient(Constants.AzureStorageConnectionString));
             foreach (var entry in entries)
             {
                 await repository.InsertAsync(entry).ConfigureAwait(false);

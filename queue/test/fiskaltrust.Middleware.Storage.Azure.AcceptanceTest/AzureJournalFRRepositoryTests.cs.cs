@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Azure.Data.Tables;
 using fiskaltrust.Middleware.Storage.AcceptanceTest;
 using fiskaltrust.Middleware.Storage.Azure.Repositories.FR;
 using fiskaltrust.storage.V0;
@@ -13,7 +14,7 @@ namespace fiskaltrust.Middleware.Storage.Azure.AcceptanceTest
 
         public override async Task<IJournalFRRepository> CreateRepository(IEnumerable<ftJournalFR> entries)
         {
-            var azureJournalFRRepository = new AzureJournalFRRepository(Guid.NewGuid(), Constants.AzureStorageConnectionString);
+            var azureJournalFRRepository = new AzureJournalFRRepository(new QueueConfiguration { QueueId = Guid.NewGuid() }, new TableServiceClient(Constants.AzureStorageConnectionString));
             foreach (var entry in entries)
             {
                 await azureJournalFRRepository.InsertAsync(entry);
