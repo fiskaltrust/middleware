@@ -4,18 +4,25 @@ using System.Threading.Tasks;
 using Azure.Data.Tables;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Storage.AcceptanceTest;
+using fiskaltrust.Middleware.Storage.Azure.AcceptanceTest.Fixtures;
 using fiskaltrust.Middleware.Storage.Azure.Repositories.MasterData;
 using fiskaltrust.storage.V0.MasterData;
+using Xunit;
 
 namespace fiskaltrust.Middleware.Storage.Azure.AcceptanceTest
 {
-    public class AzureAccountMasterDataRepositoryTests : AbstractAccountMasterDataRepositoryTests
+    //[Collection(nameof(AzureStorageFixture))]
+    public class AzureAccountMasterDataRepositoryTests : AbstractAccountMasterDataRepositoryTests, IClassFixture<AzureStorageFixture>
     {
+        private readonly AzureStorageFixture _fixture;
+
+        public AzureAccountMasterDataRepositoryTests(AzureStorageFixture fixture) => _fixture = fixture;
+
         public override Task<IMasterDataRepository<AccountMasterData>> CreateReadOnlyRepository(IEnumerable<AccountMasterData> entries) => CreateRepository(entries);
 
         public override async Task<IMasterDataRepository<AccountMasterData>> CreateRepository(IEnumerable<AccountMasterData> entries)
         {
-            var repository = new AzureAccountMasterDataRepository(new QueueConfiguration { QueueId = Guid.NewGuid() }, new TableServiceClient(Constants.AzureStorageConnectionString));
+            var repository = new AzureAccountMasterDataRepository(new QueueConfiguration { QueueId = _fixture.QueueId }, new TableServiceClient(Constants.AzureStorageConnectionString));
             foreach (var entry in entries)
             {
                 await repository.InsertAsync(entry).ConfigureAwait(false);
@@ -23,5 +30,7 @@ namespace fiskaltrust.Middleware.Storage.Azure.AcceptanceTest
 
             return repository;
         }
+
+        public override void DisposeDatabase() => _fixture.CleanTable(nameof(AccountMasterData));
     }
 }

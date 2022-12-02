@@ -26,7 +26,7 @@ namespace fiskaltrust.Middleware.Storage.Azure
 
             _migrations = new []
             {
-                new Migration_000_Initial(_tableServiceClient)
+                new Migration_000_Initial(_tableServiceClient, queueConfiguration)
             };
         }
 
@@ -40,7 +40,7 @@ namespace fiskaltrust.Middleware.Storage.Azure
             else
             {
                 _logger.LogInformation("Database tables were not yet created, executing all {MigrationCount} migrations.", _migrations.Length);
-                await _tableServiceClient.CreateTableIfNotExistsAsync(MIGRATION_TABLE_NAME);
+                await _tableServiceClient.CreateTableIfNotExistsAsync(GetMigrationTableName());
                 await ExecuteMigrationsAsync(_migrations);
             }
         }
@@ -51,22 +51,25 @@ namespace fiskaltrust.Middleware.Storage.Azure
             {
                 await migration.ExecuteAsync();
                 await SetCurrentMigrationAsync(migration.Version);
+                _logger.LogDebug("Applied migration {MigrationName} (version: {MigrationVersion}).", migration.GetType().Name, migration.Version);
             }
         }
 
         private async Task<int> GetCurrentMigrationAsync()
         {
-            var tableClient = _tableServiceClient.GetTableClient(MIGRATION_TABLE_NAME);
+            var tableClient = _tableServiceClient.GetTableClient(GetMigrationTableName());
             var migration = await tableClient.QueryAsync<TableEntity>().FirstOrDefaultAsync();
             return migration?.GetInt32("CurrentVersion") ?? -1;
         }
 
         private async Task SetCurrentMigrationAsync(int version)
         {
-            var tableClient = _tableServiceClient.GetTableClient(MIGRATION_TABLE_NAME);
+            var tableClient = _tableServiceClient.GetTableClient(GetMigrationTableName());
             await tableClient.UpsertEntityAsync(new TableEntity(_queueConfiguration.QueueId.ToString(), "Current") { { "CurentVersion", version } });
         }
 
-        private async Task<bool> MigrationTableExists() => await _tableServiceClient.QueryAsync(t => t.Name == MIGRATION_TABLE_NAME).AnyAsync();
+        private async Task<bool> MigrationTableExists() => await _tableServiceClient.QueryAsync(t => t.Name == GetMigrationTableName()).AnyAsync();
+
+        private string GetMigrationTableName() => $"x{_queueConfiguration.QueueId.ToString().Replace("-", "")}{MIGRATION_TABLE_NAME}";
     }
 }

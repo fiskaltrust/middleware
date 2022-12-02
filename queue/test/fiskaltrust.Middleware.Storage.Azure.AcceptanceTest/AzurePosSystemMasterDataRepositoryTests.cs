@@ -4,19 +4,26 @@ using System.Threading.Tasks;
 using Azure.Data.Tables;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Storage.AcceptanceTest;
+using fiskaltrust.Middleware.Storage.Azure.AcceptanceTest.Fixtures;
 using fiskaltrust.Middleware.Storage.Azure.Repositories.DE;
 using fiskaltrust.Middleware.Storage.Azure.Repositories.MasterData;
 using fiskaltrust.storage.V0.MasterData;
+using Xunit;
 
 namespace fiskaltrust.Middleware.Storage.Azure.AcceptanceTest
 {
-    public class AzurePosSystemMasterDataRepositoryTests : AbstractPosSystemMasterDataRepositoryTests
+    //[Collection(nameof(AzureStorageFixture))]
+    public class AzurePosSystemMasterDataRepositoryTests : AbstractPosSystemMasterDataRepositoryTests, IClassFixture<AzureStorageFixture>
     {
+        private readonly AzureStorageFixture _fixture;
+
+        public AzurePosSystemMasterDataRepositoryTests(AzureStorageFixture fixture) => _fixture = fixture;
+
         public override Task<IMasterDataRepository<PosSystemMasterData>> CreateReadOnlyRepository(IEnumerable<PosSystemMasterData> entries) => CreateRepository(entries);
 
         public override async Task<IMasterDataRepository<PosSystemMasterData>> CreateRepository(IEnumerable<PosSystemMasterData> entries)
         {
-            var repository = new AzurePosSystemMasterDataRepository(new QueueConfiguration { QueueId = Guid.NewGuid() }, new TableServiceClient(Constants.AzureStorageConnectionString));
+            var repository = new AzurePosSystemMasterDataRepository(new QueueConfiguration { QueueId = _fixture.QueueId }, new TableServiceClient(Constants.AzureStorageConnectionString));
             foreach (var entry in entries)
             {
                 await repository.InsertAsync(entry);

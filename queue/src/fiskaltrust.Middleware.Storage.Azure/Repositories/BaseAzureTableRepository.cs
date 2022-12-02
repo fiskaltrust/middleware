@@ -85,13 +85,16 @@ namespace fiskaltrust.Middleware.Storage.Azure.Repositories
 
         protected async Task ClearTableAsync()
         {
-            await _tableClient.DeleteAsync();
-            await _tableClient.CreateAsync();
+            var result = _tableClient.QueryAsync<TableEntity>(select: new List<string>() { "PartitionKey", "RowKey" });
+            await foreach (var item in result)
+            {
+                await _tableClient.DeleteEntityAsync(item.PartitionKey, item.RowKey);
+            }
         }
 
         private async Task<TAzureEntity> RetrieveAsync(TKey id)
         {
-            var result = _tableClient.QueryAsync<TAzureEntity>(filter: TableClient.CreateQueryFilter($"RowKey eq {id}"));
+            var result = _tableClient.QueryAsync<TAzureEntity>(filter: TableClient.CreateQueryFilter($"RowKey eq {id.ToString()}"));
             return await result.FirstOrDefaultAsync();
         }
     }
