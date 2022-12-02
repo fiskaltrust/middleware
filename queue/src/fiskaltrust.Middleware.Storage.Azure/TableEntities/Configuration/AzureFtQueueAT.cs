@@ -2,7 +2,7 @@
 
 namespace fiskaltrust.Middleware.Storage.Azure.TableEntities.Configuration
 {
-    public class AzureFtQueueAT : TableEntity
+    public class AzureFtQueueAT : BaseTableEntity
     {
         public string LastSignatureCertificateSerialNumber { get; set; }
         public string LastSignatureZDA { get; set; }

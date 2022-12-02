@@ -2,7 +2,7 @@
 
 namespace fiskaltrust.Middleware.Storage.Azure.TableEntities
 {
-    public class AzureFtQueueItem : TableEntity
+    public class AzureFtQueueItem : BaseTableEntity
     {
         public string response { get; set; }
         public string requestHash { get; set; }

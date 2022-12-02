@@ -2,7 +2,7 @@
 
 namespace fiskaltrust.Middleware.Storage.Azure.TableEntities
 {
-    public class AzureOutletMasterData : TableEntity
+    public class AzureOutletMasterData : BaseTableEntity
     {
         public Guid OutletId { get; set; }
         public string OutletName { get; set; }

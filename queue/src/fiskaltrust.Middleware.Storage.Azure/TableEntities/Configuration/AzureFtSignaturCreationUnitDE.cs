@@ -2,7 +2,7 @@
 
 namespace fiskaltrust.Middleware.Storage.Azure.TableEntities.Configuration
 {
-    public class AzureFtSignaturCreationUnitDE : TableEntity
+    public class AzureFtSignaturCreationUnitDE : BaseTableEntity
     {
         public Guid ftSignaturCreationUnitDEId { get; set; }
         public string Url { get; set; }

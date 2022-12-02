@@ -4,7 +4,7 @@ using Azure.Data.Tables;
 
 namespace fiskaltrust.Middleware.Storage.Azure.TableEntities
 {
-    public class TableEntity : ITableEntity
+    public class BaseTableEntity : ITableEntity
     {
         public string PartitionKey { get; set; }
         public string RowKey { get; set; }

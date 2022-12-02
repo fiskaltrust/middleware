@@ -4,11 +4,20 @@ using fiskaltrust.Middleware.Storage.Azure.TableEntities;
 using fiskaltrust.Middleware.Storage.Azure.TableEntities.Configuration;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
+using Azure.Data.Tables;
+using fiskaltrust.Middleware.Storage.Azure.Extensions;
+using Azure.Core;
+using Azure;
+using System.Linq;
+using System.Text;
 
 namespace fiskaltrust.Middleware.Storage.Azure.Mapping
 {
     public static class Mapper
     {
+        // 64KiB, roughly 32K characters
+        private const int MAX_STRING_CHARS = 32_000;
+
         public static AzureFtActionJournal Map(ftActionJournal src)
         {
             if (src == null)
@@ -983,64 +992,90 @@ namespace fiskaltrust.Middleware.Storage.Azure.Mapping
             };
         }
 
-        public static AzureFtQueueItem Map(ftQueueItem src)
+        public static TableEntity Map(ftQueueItem src)
         {
             if (src == null)
             {
                 return null;
             }
 
-            return new AzureFtQueueItem
+            var entity = new TableEntity(GetHashString(src.TimeStamp), src.ftQueueItemId.ToString())
             {
-                PartitionKey = GetHashString(src.TimeStamp),
-                RowKey = src.ftQueueItemId.ToString(),
-                ftQueueItemId = src.ftQueueItemId,
-                request = src.request,
-                response = src.response,
-                requestHash = src.requestHash,
-                responseHash = src.responseHash,
-                version = src.version,
-                country = src.country,
-                cbReceiptReference = src.cbReceiptReference,
-                cbTerminalID = src.cbTerminalID,
-                cbReceiptMoment = src.cbReceiptMoment,
-                ftDoneMoment = src.ftDoneMoment,
-                ftWorkMoment = src.ftWorkMoment,
-                ftQueueTimeout = src.ftQueueTimeout,
-                ftQueueMoment = src.ftQueueMoment,
-                ftQueueRow = src.ftQueueRow,
-                ftQueueId = src.ftQueueId,
-                TimeStamp = src.TimeStamp
+                { "ftQueueItemId", src.ftQueueItemId },             
+                { "requestHash", src.requestHash },
+                { "responseHash", src.responseHash },
+                { "version", src.version },
+                { "country", src.country },
+                { "cbReceiptReference", src.cbReceiptReference },
+                { "cbTerminalID", src.cbTerminalID },
+                { "cbReceiptMoment", src.cbReceiptMoment },
+                { "ftDoneMoment", src.ftDoneMoment },
+                { "ftWorkMoment", src.ftWorkMoment },
+                { "ftQueueTimeout", src.ftQueueTimeout },
+                { "ftQueueMoment", src.ftQueueMoment },
+                { "ftQueueRow", src.ftQueueRow },
+                { "ftQueueId", src.ftQueueId },
+                { "TimeStamp", src.TimeStamp }
             };
+
+            var currentRequestChunk = 0;
+            foreach (var chunk in src.request.Chunk(MAX_STRING_CHARS))
+            {
+                entity.Add($"{nameof(ftQueueItem.request)}_{currentRequestChunk}", chunk);
+                currentRequestChunk++;
+            }
+
+            var currentResponseChunk = 0;
+            foreach (var chunk in src.response.Chunk(MAX_STRING_CHARS))
+            {
+                entity.Add($"{nameof(ftQueueItem.response)}_{currentResponseChunk}", chunk);
+                currentResponseChunk++;
+            }
+
+            return entity;
         }
 
-        public static ftQueueItem Map(AzureFtQueueItem src)
+        public static ftQueueItem Map(TableEntity src)
         {
             if (src == null)
             {
                 return null;
             }
 
-            return new ftQueueItem
+            var queueItem = new ftQueueItem
             {
-                ftQueueItemId = src.ftQueueItemId,
-                request = src.request,
-                response = src.response,
-                requestHash = src.requestHash,
-                responseHash = src.responseHash,
-                version = src.version,
-                country = src.country,
-                cbReceiptReference = src.cbReceiptReference,
-                cbTerminalID = src.cbTerminalID,
-                cbReceiptMoment = src.cbReceiptMoment,
-                ftDoneMoment = src.ftDoneMoment,
-                ftWorkMoment = src.ftWorkMoment,
-                ftQueueTimeout = src.ftQueueTimeout,
-                ftQueueMoment = src.ftQueueMoment,
-                ftQueueRow = src.ftQueueRow,
-                ftQueueId = src.ftQueueId,
-                TimeStamp = src.TimeStamp
+                ftQueueItemId = src.GetGuid(nameof(ftQueueItem.ftQueueItemId)).GetValueOrDefault(),
+                requestHash = src.GetString(nameof(ftQueueItem.requestHash)),
+                responseHash = src.GetString(nameof(ftQueueItem.responseHash)),
+                version = src.GetString(nameof(ftQueueItem.version)),
+                country = src.GetString(nameof(ftQueueItem.country)),
+                cbReceiptReference = src.GetString(nameof(ftQueueItem.cbReceiptReference)),
+                cbTerminalID = src.GetString(nameof(ftQueueItem.cbTerminalID)),
+                cbReceiptMoment = src.GetDateTime(nameof(ftQueueItem.cbReceiptMoment)).GetValueOrDefault(),
+                ftDoneMoment = src.GetDateTime(nameof(ftQueueItem.ftDoneMoment)).GetValueOrDefault(),
+                ftWorkMoment = src.GetDateTime(nameof(ftQueueItem.ftWorkMoment)).GetValueOrDefault(),
+                ftQueueTimeout = src.GetInt32(nameof(ftQueueItem.ftQueueTimeout)).GetValueOrDefault(),
+                ftQueueMoment = src.GetDateTime(nameof(ftQueueItem.ftQueueMoment)).GetValueOrDefault(),
+                ftQueueRow = src.GetInt32(nameof(ftQueueItem.ftQueueRow)).GetValueOrDefault(),
+                ftQueueId = src.GetGuid(nameof(ftQueueItem.ftQueueId)).GetValueOrDefault(),
+                TimeStamp = src.GetInt64(nameof(ftQueueItem.TimeStamp)).GetValueOrDefault()
             };
+
+            var reqSb = new StringBuilder();
+            foreach (var key in src.Keys.Where(x => x.StartsWith(nameof(ftQueueItem.request))))
+            {
+                reqSb.Append(src[key]);
+            }
+            queueItem.request = reqSb.ToString();
+
+            var resSb = new StringBuilder();
+            foreach (var key in src.Keys.Where(x => x.StartsWith(nameof(ftQueueItem.response))))
+            {
+                resSb.Append(src[key]);
+            }
+            queueItem.response = reqSb.ToString();
+
+            return queueItem;
         }
 
         public static FailedFinishTransaction Map(AzureFailedFinishTransaction src)

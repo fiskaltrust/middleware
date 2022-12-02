@@ -2,7 +2,7 @@
 
 namespace fiskaltrust.Middleware.Storage.Azure.TableEntities.Configuration
 {
-    public class AzureFtQueueFR : TableEntity
+    public class AzureFtQueueFR : BaseTableEntity
     {
         public double BCITotalReducedS { get; set; }
         public double BCITotalReduced2 { get; set; }

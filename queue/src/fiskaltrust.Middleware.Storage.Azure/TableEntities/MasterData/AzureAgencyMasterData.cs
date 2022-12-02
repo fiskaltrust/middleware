@@ -2,7 +2,7 @@
 
 namespace fiskaltrust.Middleware.Storage.Azure.TableEntities
 {
-    public class AzureAgencyMasterData : TableEntity
+    public class AzureAgencyMasterData : BaseTableEntity
     {
         public Guid AgencyId { get; set; }
         public string Name { get; set; }

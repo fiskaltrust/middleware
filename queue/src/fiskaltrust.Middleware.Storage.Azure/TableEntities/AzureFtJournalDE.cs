@@ -2,7 +2,7 @@
 
 namespace fiskaltrust.Middleware.Storage.Azure.TableEntities
 {
-    public class AzureFtJournalDE : TableEntity
+    public class AzureFtJournalDE : BaseTableEntity
     {
         public Guid ftJournalDEId { get; set; }
         public long Number { get; set; }

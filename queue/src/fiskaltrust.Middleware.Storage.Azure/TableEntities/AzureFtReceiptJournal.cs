@@ -2,7 +2,7 @@
 
 namespace fiskaltrust.Middleware.Storage.Azure.TableEntities
 {
-    public class AzureFtReceiptJournal : TableEntity
+    public class AzureFtReceiptJournal : BaseTableEntity
     {
         public Guid ftReceiptJournalId { get; set; }
         public DateTime ftReceiptMoment { get; set; }

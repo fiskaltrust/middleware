@@ -2,7 +2,7 @@
 
 namespace fiskaltrust.Middleware.Storage.Azure.TableEntities
 {
-    public class AzureFailedStartTransaction : TableEntity
+    public class AzureFailedStartTransaction : BaseTableEntity
     {
         public string cbReceiptReference { get; set; }
         public Guid ftQueueItemId { get; set; }

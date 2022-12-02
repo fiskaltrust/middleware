@@ -2,7 +2,7 @@
 
 namespace fiskaltrust.Middleware.Storage.Azure.TableEntities
 {
-    public class AzureOpenTransaction : TableEntity
+    public class AzureOpenTransaction : BaseTableEntity
     {
         public string cbReceiptReference { get; set; }
         public string TransactionNumber { get; set; }

@@ -3,7 +3,7 @@ using Azure.Data.Tables;
 
 namespace fiskaltrust.Middleware.Storage.Azure.TableEntities
 {
-    public class AzureFailedFinishTransaction : TableEntity
+    public class AzureFailedFinishTransaction : BaseTableEntity
     {
         public string cbReceiptReference { get; set; }
         public string TransactionNumber { get; set; }

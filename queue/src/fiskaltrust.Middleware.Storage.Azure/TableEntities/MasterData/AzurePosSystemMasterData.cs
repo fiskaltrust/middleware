@@ -2,7 +2,7 @@
 
 namespace fiskaltrust.Middleware.Storage.Azure.TableEntities
 {
-    public class AzurePosSystemMasterData : TableEntity
+    public class AzurePosSystemMasterData : BaseTableEntity
     {
         public Guid PosSystemId { get; set; }
         public string Brand { get; set; }

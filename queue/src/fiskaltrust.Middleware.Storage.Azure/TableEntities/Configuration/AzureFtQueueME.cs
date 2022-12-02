@@ -2,7 +2,7 @@
 
 namespace fiskaltrust.Middleware.Storage.Azure.TableEntities.Configuration
 {
-    public class AzureFtQueueME : TableEntity
+    public class AzureFtQueueME : BaseTableEntity
     {
         public Guid ftQueueMEId { get; set; }
         public Guid? ftSignaturCreationUnitMEId { get; set; }
