@@ -3,8 +3,9 @@ resources:
     - pipeline: build
       source: fiskaltrust.Middleware.Queue
       trigger:
-        tags:
-          - queue/*
+        branches:
+          include:
+            - refs/tags/queue/*
 
 trigger: none
 pr: none

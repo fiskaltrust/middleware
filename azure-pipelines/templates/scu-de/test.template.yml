@@ -18,19 +18,19 @@ steps:
     path: $(UserProfile)/.nuget/packages
   displayName: Cache NuGet packages
 
-- task: DotNetCoreCLI@2
+- task: NuGetToolInstaller@1
+
+- task: NuGetCommand@2
   inputs:
     command: 'restore'
-    projects: '$(WorkingDirectory)/$(Solution)'
-    vstsFeed: $(NuGetFeed)
-    arguments: '--configuration $(BuildConfiguration)'
-  displayName: 'Restore'
+    restoreSolution: '$(WorkingDirectory)/$(Solution)'
+    feedsToUse: 'select'
+    vstsFeed: '$(NuGetFeed)'
 
-- task: DotNetCoreCLI@2
-  displayName: Build
+- task: VSBuild@1
   inputs:
-    projects: '$(WorkingDirectory)/$(Solution)'
-    arguments: '--configuration $(BuildConfiguration)'
+    solution: '$(WorkingDirectory)/$(Solution)'
+    configuration: '$(BuildConfiguration)'
 
 - task: DotNetCoreCLI@2
   inputs:

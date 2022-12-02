@@ -1,0 +1,96 @@
+parameters:
+  - name: queue
+    type: string
+
+  - name: scu
+    type: string
+
+  - name: cashbox
+    type: object
+
+  - name: target
+    type: string
+
+steps:
+  - download: launcher-1-3
+    artifact: drop
+    displayName: Download Launcher 1.3 Artifact
+
+  - task: NuGetToolInstaller@1
+    displayName: Install Nuget CLI
+
+  - pwsh: |
+      Expand-Archive $(Pipeline.Workspace)/launcher-1-3/drop/fiskaltrust.service.launcher.*.nupkg -DestinationPath $(Agent.TempDirectory)/launcher/
+      
+      Move-Item $(Agent.TempDirectory)/launcher/lib/net461/* $(Build.SourcesDirectory)/launcher
+    displayName: Extraxt Launcher 1.3 Artifact
+
+  - pwsh: |
+      nuget sources add -Name "Package Service v1" -Source https://packages-sandbox.fiskaltrust.cloud/nuget -username "${{ parameters.cashbox.cashboxid }}" -password "${{ parameters.cashbox.accesstoken }}"
+      nuget sources update -Name "Package Service v1" -Source https://packages-sandbox.fiskaltrust.cloud/nuget -username "${{ parameters.cashbox.cashboxid }}" -password "${{ parameters.cashbox.accesstoken }}"
+
+      $queuePackage = "fiskaltrust.Middleware.Queue.${{ parameters.queue }}"
+      $scuPackage = "fiskaltrust.Middleware.SCU.${{ parameters.scu }}"
+
+      nuget install $queuePackage -OutputDirectory ./nuget-packages -Source https://packages-sandbox.fiskaltrust.cloud/nuget
+      nuget install $scuPackage -OutputDirectory ./nuget-packages -Source https://packages-sandbox.fiskaltrust.cloud/nuget
+      Get-ChildItem ./nuget-packages/**/*.nupkg | ForEach-Object {Copy-Item $_.FullName $(Build.SourcesDirectory)/launcher/packages -Force}
+      Write-Host "Moved .nupkg files to packages directory"
+
+      $queueFile = "./nuget-packages/$queuePackage.*/$queuePackage.*.nupkg"
+      $queueName = $(Get-Item $queueFile).Name
+      $queueVersion = $queueName.Replace("$queuePackage.", "").Replace(".nupkg", "")
+
+      $scuFile = "./nuget-packages/$scuPackage.*/$scuPackage.*.nupkg"
+      $scuName = $(Get-Item $scuFile).Name
+      $scuVersion = $scuName.Replace("$scuPackage.", "").Replace(".nupkg", "")
+
+      $configuration = ConvertFrom-Json $([String]$(Get-Content $(Build.SourcesDirectory)/launcher/configuration.json -Encoding utf8))
+      $configuration.ftQueues[0].Version = $queueVersion
+      Write-Host "Set Queue version to $queueVersion"
+      $configuration.ftSignaturCreationDevices[0].Version = $scuVersion
+      Write-Host "Set SCU version to $scuVersion"
+
+      ConvertTo-Json $configuration -Depth 100 | Set-Content -Path $(Build.SourcesDirectory)/launcher/configuration.json -Encoding utf8
+      Write-Host "Replaced Versions in Config"
+
+      Remove-Item ./nuget-packages -Force -Recurse
+
+    displayName: Replace Launcher Packages
+
+  - pwsh: |
+      $process = $Null
+      if(!"${{ parameters.target }}".startsWith("win")) {
+      } else {
+        $process = Start-Process -PassThru -WorkingDirectory "$(Build.SourcesDirectory)/launcher" -FilePath "$(Build.SourcesDirectory)/launcher/fiskaltrust.exe" -ArgumentList @("-cashboxid=${{ parameters.cashbox.cashboxid }}"; "-accesstoken=${{ parameters.cashbox.accesstoken }}"; "-sandbox"; "-useoffline"; "-servicefolder=$(Build.SourcesDirectory)/service"; "-logfile=$(Build.SourcesDirectory)/logs/log.txt"; "-verbosity=Debug"; "-test")
+      }
+
+      $count = 0
+      $step = 5
+      $max = 10 * 60
+
+      while($True) {
+        Start-Sleep -Seconds $step
+        $count += $step
+        if($count -gt $max) {
+          Write-Error "Launcher did not complete startup."
+          Stop-Process $process
+          exit 1
+        }
+        if($process.HasExited) {
+          Write-Error "Launcher has exited."
+          exit 1
+        }
+        if(!(Test-Path $(Build.SourcesDirectory)/logs/log.txt)) {
+          continue
+        }
+        $log = Get-Content $(Build.SourcesDirectory)/logs/log.txt
+        if($log -like "*fiskaltrust.Middleware started. Press a button to stop...*") {
+          break
+        }
+      }
+
+      newman run https://www.getpostman.com/collections/cb26765356b4bf4d133d -e "$(Build.SourcesDirectory)/environment.json" --reporters 'cli,junit' --reporter-junit-export "$(Build.SourcesDirectory)/newman.xml"
+
+      Stop-Process $process
+    displayName: Run Tests

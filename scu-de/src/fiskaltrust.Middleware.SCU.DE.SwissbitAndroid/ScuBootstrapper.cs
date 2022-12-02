@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using fiskaltrust.ifPOS.v1.de;
 using fiskaltrust.Middleware.Abstractions;
-using fiskaltrust.Middleware.SCU.DE.Swissbit.Interop;
-using fiskaltrust.Middleware.SCU.DE.Swissbit.Interop.StaticLib;
-using fiskaltrust.Middleware.SCU.DE.SwissbitBase.Helpers;
+using fiskaltrust.Middleware.SCU.DE.Swissbit.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace fiskaltrust.Middleware.SCU.DE.SwissbitAndroid
@@ -16,10 +13,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitAndroid
 
         public void ConfigureServices(IServiceCollection serviceCollection)
         {
-            serviceCollection.AddSingleton<LockingHelper>();
-            serviceCollection.AddSingleton(new ConfigurationDictionary(Configuration));
-            serviceCollection.AddSingleton<INativeFunctionPointerFactory>(new FunctionPointerFactory());
-            serviceCollection.AddScoped<IDESSCD, SwissbitSCU>();
+            serviceCollection.AddSwissbitScuServices(Configuration);
         }
     }
 }
