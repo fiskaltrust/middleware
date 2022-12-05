@@ -77,31 +77,6 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
             }
         }
 
-        public async IAsyncEnumerable<ftQueueItem> GetPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem)
-        {
-            var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(ftQueueItem.request);
-
-            if (!receiptRequest.IncludeInReferences() || (string.IsNullOrWhiteSpace(receiptRequest.cbPreviousReceiptReference) && string.IsNullOrWhiteSpace(ftQueueItem.cbReceiptReference)))
-            {
-                yield break;
-            }
-
-            var query = "SELECT * FROM ftQueueItem WHERE ftQueueRow < @ftQueueRow AND (cbReceiptReference = @cbPreviousReceiptReference OR cbReceiptReference = @cbReceiptReference)";
-
-            using (var connection = new MySqlConnection(ConnectionString))
-            {
-                await connection.OpenAsync();
-                await foreach (var entry in connection.Query<ftQueueItem>(query, new { ftQueueItem.ftQueueRow, receiptRequest.cbPreviousReceiptReference, ftQueueItem.cbReceiptReference }, buffered: false).ToAsyncEnumerable())
-                {
-
-                    if (JsonConvert.DeserializeObject<ReceiptRequest>(entry.request).IncludeInReferences())
-                    {
-                        yield return entry;
-                    }
-                }
-            }
-        }
-
         public async IAsyncEnumerable<ftQueueItem> GetQueueItemsAfterQueueItem(ftQueueItem ftQueueItem)
         {
             var query = "SELECT * FROM ftQueueItem WHERE ftQueueRow >= @ftQueueRow";
@@ -111,6 +86,87 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
                 await foreach (var entry in connection.Query<ftQueueItem>(query, new { ftQueueItem.ftQueueRow}, buffered: false).ToAsyncEnumerable().ConfigureAwait(false))
                 {
                     yield return entry;
+                }
+            }
+        }
+
+        public async IAsyncEnumerable<string> GetGroupedReceiptReferenceAsync(long? fromIncl, long? toIncl)
+        {
+            var query = $"SELECT cbReceiptReference  FROM " +
+                         "(SELECT cbReceiptReference FROM ftQueueItem " +
+                         "WHERE " +
+                         (fromIncl.HasValue ? " ftQueueItem.TimeStamp >= @fromIncl " : " ") +
+                         (fromIncl.HasValue && toIncl.HasValue ? " AND " : " ") +
+                         (toIncl.HasValue ? " ftQueueItem.TimeStamp <= @toIncl  " : " ") +
+                         (fromIncl.HasValue || toIncl.HasValue ? "AND " : " ") +
+                         "response IS NOT NULL" +
+                        ") AS groupedReferences GROUP BY cbReceiptReference; ";
+
+            object obj = null;
+            if (fromIncl.HasValue && toIncl.HasValue)
+            {
+                obj = new { fromIncl, toIncl };
+            }
+            else if (fromIncl.HasValue)
+            {
+                obj = new { fromIncl };
+            }
+            else if (toIncl.HasValue)
+            {
+                obj = new { toIncl };
+            };
+            using (var connection = new MySqlConnection(ConnectionString))
+            {
+                await connection.OpenAsync().ConfigureAwait(false);
+                await foreach (var entry in connection.Query<string>(query, obj, buffered: false).ToAsyncEnumerable().ConfigureAwait(false))
+                {
+                    yield return entry;
+                }
+            }
+        }
+
+        public async IAsyncEnumerable<ftQueueItem> GetQueueItemsForReceiptReferenceAsync(string receiptReference)
+        {
+            var query = "SELECT * FROM ftQueueItem WHERE cbReceiptReference = @receiptReference " +
+                "AND response IS NOT NULL " +
+                "ORDER BY timestamp;";
+            using (var connection = new MySqlConnection(ConnectionString))
+            {
+                await connection.OpenAsync().ConfigureAwait(false);
+                await foreach (var entry in connection.Query<ftQueueItem>(query, new { receiptReference }, buffered: false).ToAsyncEnumerable().ConfigureAwait(false))
+                {
+                    var request = JsonConvert.DeserializeObject<ReceiptRequest>(entry.request);
+                    if (request.IncludeInReferences())
+                    {
+                        yield return entry;
+                    }
+                }
+            }
+        }
+
+        public async Task<ftQueueItem> GetClosestPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem)
+        {
+            var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(ftQueueItem.request);
+
+            if (string.IsNullOrWhiteSpace(receiptRequest.cbPreviousReceiptReference) || string.IsNullOrWhiteSpace(ftQueueItem.cbReceiptReference) || receiptRequest.cbPreviousReceiptReference == ftQueueItem.cbReceiptReference)
+            {
+                return null;
+            }
+            var query = "SELECT * FROM ftQueueItem WHERE ftQueueRow < @ftQueueRow AND cbReceiptReference = @cbPreviousReceiptReference " +
+                            "AND response IS NOT NULL " +
+                            "ORDER BY timestamp DESC LIMIT 1;";
+            using (var connection = new MySqlConnection(ConnectionString))
+            {
+                await connection.OpenAsync().ConfigureAwait(false);
+                var entry =  await connection.QueryFirstOrDefaultAsync<ftQueueItem>(query, new { ftQueueItem.ftQueueRow, receiptRequest.cbPreviousReceiptReference }).ConfigureAwait(false);
+                var request = JsonConvert.DeserializeObject<ReceiptRequest>(entry.request);
+                if (request.IncludeInReferences())
+                {
+                    return await Task.FromResult(entry);
+                }
+                else
+                {
+                    return null;
                 }
             }
         }
