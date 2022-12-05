@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Queue.Bootstrapper;
-using fiskaltrust.Middleware.Storage.Azure;
+using fiskaltrust.Middleware.Storage.AzureTableStorage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 

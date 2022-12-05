@@ -31,6 +31,7 @@
     <ItemGroup>
         <ProjectReference Include="..\fiskaltrust.Middleware.Contracts\fiskaltrust.Middleware.Contracts.csproj" PrivateAssets="all" />
         <ProjectReference Include="..\fiskaltrust.Middleware.Queue\fiskaltrust.Middleware.Queue.csproj" PrivateAssets="all" />
+        <ProjectReference Include="..\fiskaltrust.Middleware.Storage.AzureTableStorage\fiskaltrust.Middleware.Storage.AzureTableStorage.csproj" />
     </ItemGroup>
 
     <Target DependsOnTargets="ResolveReferences" Name="CopyProjectReferencesToPackage">
