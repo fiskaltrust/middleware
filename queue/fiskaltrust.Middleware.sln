@@ -70,8 +70,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Storage", "Storage", "{3148
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.Storage.EF.AcceptanceTest", "test\fiskaltrust.Middleware.Storage.EF.AcceptanceTest\fiskaltrust.Middleware.Storage.EF.AcceptanceTest.csproj", "{C11F8D87-4B69-41AA-AFCE-17342D00F535}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.Storage.Azure.AcceptanceTest", "test\fiskaltrust.Middleware.Storage.Azure.AcceptanceTest\fiskaltrust.Middleware.Storage.Azure.AcceptanceTest.csproj", "{F1CF8D0F-76E6-472A-9450-D6F37E13BD8C}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.Storage.SQLite.AcceptanceTest", "test\fiskaltrust.Middleware.Storage.SQLite.AcceptanceTest\fiskaltrust.Middleware.Storage.SQLite.AcceptanceTest.csproj", "{B4A649C1-D137-4AF8-82B9-ED3A76407B4E}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.Storage.InMemory.AcceptanceTest", "test\fiskaltrust.Middleware.Storage.InMemory.AcceptanceTest\fiskaltrust.Middleware.Storage.InMemory.AcceptanceTest.csproj", "{A984EC5A-0C33-4375-B2F9-45E0E13C7716}"
@@ -122,6 +120,8 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.Localization.QueueME.UnitTest", "test\fiskaltrust.Middleware.Localization.QueueME.UnitTest\fiskaltrust.Middleware.Localization.QueueME.UnitTest.csproj", "{BD6E6701-2F8E-43D1-B583-F3DC1CA52D67}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.Storage.AzureTableStorage", "src\fiskaltrust.Middleware.Storage.AzureTableStorage\fiskaltrust.Middleware.Storage.AzureTableStorage.csproj", "{87E0049F-9DF1-4F6F-8137-7765A2B16ABA}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.Storage.AzureTableStorage.AcceptanceTest", "test\fiskaltrust.Middleware.Storage.AzureTableStorage.AcceptanceTest\fiskaltrust.Middleware.Storage.AzureTableStorage.AcceptanceTest.csproj", "{F39B38CB-B8B7-4537-9130-43131AD51FF2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -213,10 +213,6 @@ Global
 		{C11F8D87-4B69-41AA-AFCE-17342D00F535}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C11F8D87-4B69-41AA-AFCE-17342D00F535}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C11F8D87-4B69-41AA-AFCE-17342D00F535}.Release|Any CPU.Build.0 = Release|Any CPU
-		{F1CF8D0F-76E6-472A-9450-D6F37E13BD8C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{F1CF8D0F-76E6-472A-9450-D6F37E13BD8C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{F1CF8D0F-76E6-472A-9450-D6F37E13BD8C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{F1CF8D0F-76E6-472A-9450-D6F37E13BD8C}.Release|Any CPU.Build.0 = Release|Any CPU
 		{B4A649C1-D137-4AF8-82B9-ED3A76407B4E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{B4A649C1-D137-4AF8-82B9-ED3A76407B4E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B4A649C1-D137-4AF8-82B9-ED3A76407B4E}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -301,6 +297,10 @@ Global
 		{87E0049F-9DF1-4F6F-8137-7765A2B16ABA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{87E0049F-9DF1-4F6F-8137-7765A2B16ABA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{87E0049F-9DF1-4F6F-8137-7765A2B16ABA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F39B38CB-B8B7-4537-9130-43131AD51FF2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F39B38CB-B8B7-4537-9130-43131AD51FF2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F39B38CB-B8B7-4537-9130-43131AD51FF2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F39B38CB-B8B7-4537-9130-43131AD51FF2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -331,7 +331,6 @@ Global
 		{E1D772DC-2114-4DDA-B2C7-6421A6D9DFF5} = {53553169-8085-4885-BFB5-7676C4FC5CDB}
 		{31488E86-D7EB-4964-84F1-B7338BB5A7D1} = {EAEEF28B-F372-48C1-8F9B-45CEB95159A2}
 		{C11F8D87-4B69-41AA-AFCE-17342D00F535} = {31488E86-D7EB-4964-84F1-B7338BB5A7D1}
-		{F1CF8D0F-76E6-472A-9450-D6F37E13BD8C} = {31488E86-D7EB-4964-84F1-B7338BB5A7D1}
 		{B4A649C1-D137-4AF8-82B9-ED3A76407B4E} = {31488E86-D7EB-4964-84F1-B7338BB5A7D1}
 		{A984EC5A-0C33-4375-B2F9-45E0E13C7716} = {31488E86-D7EB-4964-84F1-B7338BB5A7D1}
 		{B22FF43C-8AA2-4B70-B2EE-4171C600F734} = {08381205-3409-4468-92EB-ACA65F8D82FB}
@@ -356,6 +355,7 @@ Global
 		{FE5F9883-D0AE-48BC-A8B5-B028B1F60C10} = {C345F1F7-C2A5-472A-A55F-987A53DF3CCE}
 		{BD6E6701-2F8E-43D1-B583-F3DC1CA52D67} = {16BF88B4-3302-49F5-A5FA-5DA96DD03F0E}
 		{87E0049F-9DF1-4F6F-8137-7765A2B16ABA} = {5195B05E-EB55-4544-8FE6-B683747B1F9E}
+		{F39B38CB-B8B7-4537-9130-43131AD51FF2} = {31488E86-D7EB-4964-84F1-B7338BB5A7D1}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {E8BEA609-BD83-4165-A14A-D010D2CC87AD}

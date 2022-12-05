@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using Azure.Data.Tables;
 using fiskaltrust.Middleware.Abstractions;
+using fiskaltrust.Middleware.Storage.AzureTableStorage;
+using fiskaltrust.Middleware.Storage.AzureTableStorage.AcceptanceTest;
 using Microsoft.Extensions.Logging;
 using Moq;
 
-namespace fiskaltrust.Middleware.Storage.Azure.AcceptanceTest.Fixtures
+namespace fiskaltrust.Middleware.Storage.AzureTableStorage.AcceptanceTest.Fixtures
 {
     public class AzureStorageFixture : IDisposable
     {

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace fiskaltrust.Middleware.Storage.Azure.AcceptanceTest
+namespace fiskaltrust.Middleware.Storage.AzureTableStorage.AcceptanceTest
 {
     public static class Constants
     {

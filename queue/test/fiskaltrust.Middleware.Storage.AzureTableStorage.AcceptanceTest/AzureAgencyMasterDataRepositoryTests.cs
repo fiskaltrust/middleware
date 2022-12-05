@@ -4,12 +4,13 @@ using System.Threading.Tasks;
 using Azure.Data.Tables;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Storage.AcceptanceTest;
-using fiskaltrust.Middleware.Storage.Azure.AcceptanceTest.Fixtures;
-using fiskaltrust.Middleware.Storage.Azure.Repositories.MasterData;
+using fiskaltrust.Middleware.Storage.AzureTableStorage;
+using fiskaltrust.Middleware.Storage.AzureTableStorage.AcceptanceTest.Fixtures;
+using fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.MasterData;
 using fiskaltrust.storage.V0.MasterData;
 using Xunit;
 
-namespace fiskaltrust.Middleware.Storage.Azure.AcceptanceTest
+namespace fiskaltrust.Middleware.Storage.AzureTableStorage.AcceptanceTest
 {
     public class AzureAgencyMasterDataRepositoryTests : AbstractAgencyMasterDataRepositoryTests, IClassFixture<AzureStorageFixture>
     {
