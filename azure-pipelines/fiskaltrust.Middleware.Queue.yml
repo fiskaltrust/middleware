@@ -48,6 +48,8 @@ stages:
         strategy:
           maxParallel: 4
           matrix:
+            AzureTableStorageQueue:
+              Project: "fiskaltrust.Middleware.Storage.AzureTableStorage.AcceptanceTest"
             EFQueue:
               Project: "fiskaltrust.Middleware.Storage.EF.AcceptanceTest"
             EFCoreQueue:
