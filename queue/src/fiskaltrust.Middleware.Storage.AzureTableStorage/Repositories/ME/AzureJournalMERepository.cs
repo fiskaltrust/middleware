@@ -31,19 +31,19 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.ME
         }
         public async Task<ftJournalME> GetLastEntryAsync()
         {
-            var result = _tableClient.QueryAsync<AzureFtJournalME>(filter: TableClient.CreateQueryFilter($"JournalType eq {(long) JournalTypes.JournalME}"));
+            var result = _tableClient.QueryAsync<AzureFtJournalME>(x => x.JournalType == (long) JournalTypes.JournalME);
             return await result.OrderByDescending(x => x.Number).Take(1).Select(MapToStorageEntity).FirstOrDefaultAsync();
         }
 
         public IAsyncEnumerable<ftJournalME> GetByQueueItemId(Guid queueItemId)
         {
-            var result = _tableClient.QueryAsync<AzureFtJournalME>(filter: TableClient.CreateQueryFilter($"ftQueueItemId eq {queueItemId}"));
+            var result = _tableClient.QueryAsync<AzureFtJournalME>(x => x.ftQueueItemId == queueItemId);
             return result.Select(MapToStorageEntity);
         }
 
         public IAsyncEnumerable<ftJournalME> GetByReceiptReference(string cbReceiptReference)
         {
-            var result = _tableClient.QueryAsync<AzureFtJournalME>(filter: TableClient.CreateQueryFilter($"cbReference eq {cbReceiptReference}"));
+            var result = _tableClient.QueryAsync<AzureFtJournalME>(x => x.cbReference == cbReceiptReference);
             return result.Select(MapToStorageEntity);
         }
     }

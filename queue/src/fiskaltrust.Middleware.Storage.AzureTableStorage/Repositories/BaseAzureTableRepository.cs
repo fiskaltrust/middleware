@@ -95,7 +95,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
 
         private async Task<TAzureEntity> RetrieveAsync(TKey id)
         {
-            var result = _tableClient.QueryAsync<TAzureEntity>(filter: TableClient.CreateQueryFilter($"RowKey eq {id.ToString()}"));
+            var result = _tableClient.QueryAsync<TAzureEntity>(x => x.RowKey == id.ToString());
             return await result.FirstOrDefaultAsync();
         }
     }

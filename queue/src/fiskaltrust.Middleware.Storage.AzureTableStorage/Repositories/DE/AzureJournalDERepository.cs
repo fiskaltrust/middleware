@@ -51,7 +51,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
         public IAsyncEnumerable<ftJournalDE> GetByFileName(string fileName)
         {
             return _tableClient
-                .QueryAsync<AzureFtJournalDE>(filter: TableClient.CreateQueryFilter($"FileName eq {fileName}"))
+                .QueryAsync<AzureFtJournalDE>(x => x.FileName == fileName)
                 .SelectAwait(async x =>
                 {
                     var entity = MapToStorageEntity(x);

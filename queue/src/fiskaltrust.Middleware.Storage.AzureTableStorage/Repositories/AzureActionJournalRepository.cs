@@ -31,7 +31,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
 
         public IAsyncEnumerable<ftActionJournal> GetByQueueItemId(Guid queueItemId)
         {
-            var result = _tableClient.QueryAsync<AzureFtActionJournal>(filter: TableClient.CreateQueryFilter($"ftQueueItemId eq {queueItemId}"));
+            var result = _tableClient.QueryAsync<AzureFtActionJournal>(x => x.ftQueueItemId == queueItemId);
             return result.Select(MapToStorageEntity);
         }
     }

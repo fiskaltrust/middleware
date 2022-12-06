@@ -1003,21 +1003,21 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
 
             var entity = new TableEntity(GetHashString(src.TimeStamp), src.ftQueueItemId.ToString())
             {
-                { "ftQueueItemId", src.ftQueueItemId },
-                { "requestHash", src.requestHash },
-                { "responseHash", src.responseHash },
-                { "version", src.version },
-                { "country", src.country },
-                { "cbReceiptReference", src.cbReceiptReference },
-                { "cbTerminalID", src.cbTerminalID },
-                { "cbReceiptMoment", src.cbReceiptMoment },
-                { "ftDoneMoment", src.ftDoneMoment },
-                { "ftWorkMoment", src.ftWorkMoment },
-                { "ftQueueTimeout", src.ftQueueTimeout },
-                { "ftQueueMoment", src.ftQueueMoment },
-                { "ftQueueRow", src.ftQueueRow },
-                { "ftQueueId", src.ftQueueId },
-                { "TimeStamp", src.TimeStamp }
+                { nameof(ftQueueItem.ftQueueItemId), src.ftQueueItemId },
+                { nameof(ftQueueItem.requestHash), src.requestHash },
+                { nameof(ftQueueItem.responseHash), src.responseHash },
+                { nameof(ftQueueItem.version), src.version },
+                { nameof(ftQueueItem.country), src.country },
+                { nameof(ftQueueItem.cbReceiptReference), src.cbReceiptReference },
+                { nameof(ftQueueItem.cbTerminalID), src.cbTerminalID },
+                { nameof(ftQueueItem.cbReceiptMoment), src.cbReceiptMoment },
+                { nameof(ftQueueItem.ftDoneMoment), src.ftDoneMoment },
+                { nameof(ftQueueItem.ftWorkMoment), src.ftWorkMoment },
+                { nameof(ftQueueItem.ftQueueTimeout), src.ftQueueTimeout },
+                { nameof(ftQueueItem.ftQueueMoment), src.ftQueueMoment },
+                { nameof(ftQueueItem.ftQueueRow), src.ftQueueRow },
+                { nameof(ftQueueItem.ftQueueId), src.ftQueueId },
+                { nameof(ftQueueItem.TimeStamp), src.TimeStamp }
             };
 
             var currentRequestChunk = 0;
@@ -1054,8 +1054,8 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
                 cbReceiptReference = src.GetString(nameof(ftQueueItem.cbReceiptReference)),
                 cbTerminalID = src.GetString(nameof(ftQueueItem.cbTerminalID)),
                 cbReceiptMoment = src.GetDateTime(nameof(ftQueueItem.cbReceiptMoment)).GetValueOrDefault(),
-                ftDoneMoment = src.GetDateTime(nameof(ftQueueItem.ftDoneMoment)).GetValueOrDefault(),
-                ftWorkMoment = src.GetDateTime(nameof(ftQueueItem.ftWorkMoment)).GetValueOrDefault(),
+                ftDoneMoment = src.GetDateTime(nameof(ftQueueItem.ftDoneMoment)),
+                ftWorkMoment = src.GetDateTime(nameof(ftQueueItem.ftWorkMoment)),
                 ftQueueTimeout = src.GetInt32(nameof(ftQueueItem.ftQueueTimeout)).GetValueOrDefault(),
                 ftQueueMoment = src.GetDateTime(nameof(ftQueueItem.ftQueueMoment)).GetValueOrDefault(),
                 ftQueueRow = src.GetInt64(nameof(ftQueueItem.ftQueueRow)).GetValueOrDefault(),
