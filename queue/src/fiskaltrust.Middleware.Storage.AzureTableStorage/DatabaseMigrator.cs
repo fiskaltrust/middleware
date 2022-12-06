@@ -16,7 +16,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage
         private readonly TableServiceClient _tableServiceClient;
         private readonly QueueConfiguration _queueConfiguration;
 
-        private readonly IAzureStorageMigration[] _migrations;
+        private readonly IAzureTableStorageMigration[] _migrations;
 
         public DatabaseMigrator(ILogger<IMiddlewareBootstrapper> logger, TableServiceClient tableServiceClient, QueueConfiguration queueConfiguration)
         {
@@ -45,7 +45,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage
             }
         }
 
-        private async Task ExecuteMigrationsAsync(IEnumerable<IAzureStorageMigration> migrations)
+        private async Task ExecuteMigrationsAsync(IEnumerable<IAzureTableStorageMigration> migrations)
         {
             foreach (var migration in migrations.OrderBy(x => x.Version))
             {

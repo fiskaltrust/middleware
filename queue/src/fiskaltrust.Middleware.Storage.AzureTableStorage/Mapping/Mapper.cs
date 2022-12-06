@@ -19,14 +19,14 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
         // 64KiB, roughly 32K characters
         private const int MAX_STRING_CHARS = 32_000;
 
-        public static AzureFtActionJournal Map(ftActionJournal src)
+        public static AzureTableStorageFtActionJournal Map(ftActionJournal src)
         {
             if (src == null)
             {
                 return null;
             }
 
-            return new AzureFtActionJournal
+            return new AzureTableStorageFtActionJournal
             {
                 PartitionKey = GetHashString(src.TimeStamp),
                 RowKey = src.ftActionJournalId.ToString(),
@@ -43,7 +43,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             };
         }
 
-        public static ftActionJournal Map(AzureFtActionJournal src)
+        public static ftActionJournal Map(AzureTableStorageFtActionJournal src)
         {
             if (src == null)
             {
@@ -65,14 +65,14 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             };
         }
 
-        public static AzureFtReceiptJournal Map(ftReceiptJournal src)
+        public static AzureTableStorageFtReceiptJournal Map(ftReceiptJournal src)
         {
             if (src == null)
             {
                 return null;
             }
 
-            return new AzureFtReceiptJournal
+            return new AzureTableStorageFtReceiptJournal
             {
                 PartitionKey = GetHashString(src.TimeStamp),
                 RowKey = src.ftReceiptJournalId.ToString(),
@@ -87,7 +87,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             };
         }
 
-        public static ftReceiptJournal Map(AzureFtReceiptJournal src)
+        public static ftReceiptJournal Map(AzureTableStorageFtReceiptJournal src)
         {
             if (src == null)
             {
@@ -107,14 +107,14 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             };
         }
 
-        public static AzureFtJournalAT Map(ftJournalAT src)
+        public static AzureTableStorageFtJournalAT Map(ftJournalAT src)
         {
             if (src == null)
             {
                 return null;
             }
 
-            return new AzureFtJournalAT
+            return new AzureTableStorageFtJournalAT
             {
                 PartitionKey = GetHashString(src.TimeStamp),
                 RowKey = src.ftJournalATId.ToString(),
@@ -129,7 +129,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             };
         }
 
-        public static ftJournalAT Map(AzureFtJournalAT src)
+        public static ftJournalAT Map(AzureTableStorageFtJournalAT src)
         {
             if (src == null)
             {
@@ -149,14 +149,14 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             };
         }
 
-        public static AzureFtJournalDE Map(ftJournalDE src)
+        public static AzureTableStorageFtJournalDE Map(ftJournalDE src)
         {
             if (src == null)
             {
                 return null;
             }
 
-            return new AzureFtJournalDE
+            return new AzureTableStorageFtJournalDE
             {
                 PartitionKey = GetHashString(src.TimeStamp),
                 RowKey = src.ftJournalDEId.ToString(),
@@ -171,7 +171,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             };
         }
 
-        public static ftJournalDE Map(AzureFtJournalDE src)
+        public static ftJournalDE Map(AzureTableStorageFtJournalDE src)
         {
             if (src == null)
             {
@@ -191,14 +191,14 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             };
         }
 
-        public static AzureFtJournalFR Map(ftJournalFR src)
+        public static AzureTableStorageFtJournalFR Map(ftJournalFR src)
         {
             if (src == null)
             {
                 return null;
             }
 
-            return new AzureFtJournalFR
+            return new AzureTableStorageFtJournalFR
             {
                 PartitionKey = GetHashString(src.TimeStamp),
                 RowKey = src.ftJournalFRId.ToString(),
@@ -213,14 +213,14 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             };
         }
 
-        public static AzureFtJournalME Map(ftJournalME src)
+        public static AzureTableStorageFtJournalME Map(ftJournalME src)
         {
             if (src == null)
             {
                 return null;
             }
 
-            return new AzureFtJournalME
+            return new AzureTableStorageFtJournalME
             {
                 PartitionKey = GetHashString(src.TimeStamp),
                 ftJournalMEId = src.ftJournalMEId,
@@ -233,7 +233,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             };
         }
 
-        public static ftJournalME Map(AzureFtJournalME src)
+        public static ftJournalME Map(AzureTableStorageFtJournalME src)
         {
             if (src == null)
 
@@ -253,7 +253,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             };
         }
 
-        public static ftJournalFR Map(AzureFtJournalFR src)
+        public static ftJournalFR Map(AzureTableStorageFtJournalFR src)
         {
             if (src == null)
             {
@@ -273,14 +273,14 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             };
         }
 
-        public static AzureFtCashBox Map(ftCashBox src)
+        public static AzureTableStorageFtCashBox Map(ftCashBox src)
         {
             if (src == null)
             {
                 return null;
             }
 
-            return new AzureFtCashBox
+            return new AzureTableStorageFtCashBox
             {
                 PartitionKey = src.ftCashBoxId.ToString(),
                 RowKey = src.ftCashBoxId.ToString(),
@@ -289,7 +289,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             };
         }
 
-        public static ftCashBox Map(AzureFtCashBox src)
+        public static ftCashBox Map(AzureTableStorageFtCashBox src)
         {
             if (src == null)
             {
@@ -303,14 +303,14 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             };
         }
 
-        public static AzureFtQueueAT Map(ftQueueAT src)
+        public static AzureTableStorageFtQueueAT Map(ftQueueAT src)
         {
             if (src == null)
             {
                 return null;
             }
 
-            return new AzureFtQueueAT
+            return new AzureTableStorageFtQueueAT
             {
                 PartitionKey = src.ftQueueATId.ToString(),
                 RowKey = src.ftQueueATId.ToString(),
@@ -346,7 +346,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             };
         }
 
-        public static ftQueueAT Map(AzureFtQueueAT src)
+        public static ftQueueAT Map(AzureTableStorageFtQueueAT src)
         {
             if (src == null)
             {
@@ -387,14 +387,14 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             };
         }
 
-        public static AzureFtQueueDE Map(ftQueueDE src)
+        public static AzureTableStorageFtQueueDE Map(ftQueueDE src)
         {
             if (src == null)
             {
                 return null;
             }
 
-            return new AzureFtQueueDE
+            return new AzureTableStorageFtQueueDE
             {
                 PartitionKey = src.ftQueueDEId.ToString(),
                 RowKey = src.ftQueueDEId.ToString(),
@@ -414,7 +414,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             };
         }
 
-        public static ftQueueDE Map(AzureFtQueueDE src)
+        public static ftQueueDE Map(AzureTableStorageFtQueueDE src)
         {
             if (src == null)
             {
@@ -439,14 +439,14 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             };
         }
 
-        public static AzureFtQueueME Map(ftQueueME src)
+        public static AzureTableStorageFtQueueME Map(ftQueueME src)
         {
             if (src == null)
             {
                 return null;
             }
 
-            return new AzureFtQueueME
+            return new AzureTableStorageFtQueueME
             {
                 PartitionKey = src.ftQueueMEId.ToString(),
                 RowKey = src.ftQueueMEId.ToString(),
@@ -465,7 +465,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             };
         }
 
-        public static ftQueueME Map(AzureFtQueueME src)
+        public static ftQueueME Map(AzureTableStorageFtQueueME src)
         {
             if (src == null)
             {
@@ -489,14 +489,14 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             };
         }
 
-        public static AzureFtQueueFR Map(ftQueueFR src)
+        public static AzureTableStorageFtQueueFR Map(ftQueueFR src)
         {
             if (src == null)
             {
                 return null;
             }
 
-            return new AzureFtQueueFR
+            return new AzureTableStorageFtQueueFR
             {
                 PartitionKey = src.ftQueueFRId.ToString(),
                 RowKey = src.ftQueueFRId.ToString(),
@@ -637,7 +637,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             };
         }
 
-        public static ftQueueFR Map(AzureFtQueueFR src)
+        public static ftQueueFR Map(AzureTableStorageFtQueueFR src)
         {
             if (src == null)
             {
@@ -783,14 +783,14 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             };
         }
 
-        public static AzureFtQueue Map(ftQueue src)
+        public static AzureTableStorageFtQueue Map(ftQueue src)
         {
             if (src == null)
             {
                 return null;
             }
 
-            return new AzureFtQueue
+            return new AzureTableStorageFtQueue
             {
                 PartitionKey = src.ftQueueId.ToString(),
                 RowKey = src.ftQueueId.ToString(),
@@ -809,7 +809,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             };
         }
 
-        public static ftQueue Map(AzureFtQueue src)
+        public static ftQueue Map(AzureTableStorageFtQueue src)
         {
             if (src == null)
             {
@@ -833,14 +833,14 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             };
         }
 
-        public static AzureFtSignaturCreationUnitAT Map(ftSignaturCreationUnitAT src)
+        public static AzureTableStorageFtSignaturCreationUnitAT Map(ftSignaturCreationUnitAT src)
         {
             if (src == null)
             {
                 return null;
             }
 
-            return new AzureFtSignaturCreationUnitAT
+            return new AzureTableStorageFtSignaturCreationUnitAT
             {
                 PartitionKey = src.ftSignaturCreationUnitATId.ToString(),
                 RowKey = src.ftSignaturCreationUnitATId.ToString(),
@@ -854,7 +854,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             };
         }
 
-        public static ftSignaturCreationUnitAT Map(AzureFtSignaturCreationUnitAT src)
+        public static ftSignaturCreationUnitAT Map(AzureTableStorageFtSignaturCreationUnitAT src)
         {
             if (src == null)
             {
@@ -873,14 +873,14 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             };
         }
 
-        public static AzureFtSignaturCreationUnitDE Map(ftSignaturCreationUnitDE src)
+        public static AzureTableStorageFtSignaturCreationUnitDE Map(ftSignaturCreationUnitDE src)
         {
             if (src == null)
             {
                 return null;
             }
 
-            return new AzureFtSignaturCreationUnitDE
+            return new AzureTableStorageFtSignaturCreationUnitDE
             {
                 PartitionKey = src.ftSignaturCreationUnitDEId.ToString(),
                 RowKey = src.ftSignaturCreationUnitDEId.ToString(),
@@ -893,7 +893,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             };
         }
 
-        public static ftSignaturCreationUnitDE Map(AzureFtSignaturCreationUnitDE src)
+        public static ftSignaturCreationUnitDE Map(AzureTableStorageFtSignaturCreationUnitDE src)
         {
             if (src == null)
             {
@@ -911,13 +911,13 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             };
         }
 
-        public static AzureFtSignaturCreationUnitME Map(ftSignaturCreationUnitME src)
+        public static AzureTableStorageFtSignaturCreationUnitME Map(ftSignaturCreationUnitME src)
         {
             if (src == null)
             {
                 return null;
             }
-            return new AzureFtSignaturCreationUnitME
+            return new AzureTableStorageFtSignaturCreationUnitME
             {
                 PartitionKey = src.ftSignaturCreationUnitMEId.ToString(),
                 RowKey = src.ftSignaturCreationUnitMEId.ToString(),
@@ -934,7 +934,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             };
         }
 
-        public static ftSignaturCreationUnitME Map(AzureFtSignaturCreationUnitME src)
+        public static ftSignaturCreationUnitME Map(AzureTableStorageFtSignaturCreationUnitME src)
         {
             if (src == null)
             {
@@ -956,14 +956,14 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             };
         }
 
-        public static AzureFtSignaturCreationUnitFR Map(ftSignaturCreationUnitFR src)
+        public static AzureTableStorageFtSignaturCreationUnitFR Map(ftSignaturCreationUnitFR src)
         {
             if (src == null)
             {
                 return null;
             }
 
-            return new AzureFtSignaturCreationUnitFR
+            return new AzureTableStorageFtSignaturCreationUnitFR
             {
                 PartitionKey = src.ftSignaturCreationUnitFRId.ToString(),
                 RowKey = src.ftSignaturCreationUnitFRId.ToString(),
@@ -976,7 +976,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             };
         }
 
-        public static ftSignaturCreationUnitFR Map(AzureFtSignaturCreationUnitFR src)
+        public static ftSignaturCreationUnitFR Map(AzureTableStorageFtSignaturCreationUnitFR src)
         {
             if (src == null)
             {
@@ -1080,7 +1080,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             return queueItem;
         }
 
-        public static FailedFinishTransaction Map(AzureFailedFinishTransaction src)
+        public static FailedFinishTransaction Map(AzureTableStorageFailedFinishTransaction src)
         {
             if (src == null)
             {
@@ -1098,14 +1098,14 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             };
         }
 
-        public static AzureFailedFinishTransaction Map(FailedFinishTransaction src)
+        public static AzureTableStorageFailedFinishTransaction Map(FailedFinishTransaction src)
         {
             if (src == null)
             {
                 return null;
             }
 
-            return new AzureFailedFinishTransaction
+            return new AzureTableStorageFailedFinishTransaction
             {
                 PartitionKey = GetHashString(src.FinishMoment.Ticks),
                 RowKey = src.cbReceiptReference,
@@ -1118,7 +1118,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             };
         }
 
-        public static FailedStartTransaction Map(AzureFailedStartTransaction src)
+        public static FailedStartTransaction Map(AzureTableStorageFailedStartTransaction src)
         {
             if (src == null)
             {
@@ -1135,14 +1135,14 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             };
         }
 
-        public static AzureFailedStartTransaction Map(FailedStartTransaction src)
+        public static AzureTableStorageFailedStartTransaction Map(FailedStartTransaction src)
         {
             if (src == null)
             {
                 return null;
             }
 
-            return new AzureFailedStartTransaction
+            return new AzureTableStorageFailedStartTransaction
             {
                 PartitionKey = GetHashString(src.StartMoment.Ticks),
                 RowKey = src.cbReceiptReference,
@@ -1154,7 +1154,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             };
         }
 
-        public static OpenTransaction Map(AzureOpenTransaction src)
+        public static OpenTransaction Map(AzureTableStorageOpenTransaction src)
         {
             if (src == null)
             {
@@ -1170,14 +1170,14 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             };
         }
 
-        public static AzureOpenTransaction Map(OpenTransaction src)
+        public static AzureTableStorageOpenTransaction Map(OpenTransaction src)
         {
             if (src == null)
             {
                 return null;
             }
 
-            return new AzureOpenTransaction
+            return new AzureTableStorageOpenTransaction
             {
                 PartitionKey = GetHashString(src.StartMoment.Ticks),
                 RowKey = src.cbReceiptReference,
@@ -1188,14 +1188,14 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             };
         }
 
-        public static AzureAccountMasterData Map(AccountMasterData src)
+        public static AzureTableStorageAccountMasterData Map(AccountMasterData src)
         {
             if (src == null)
             {
                 return null;
             }
 
-            return new AzureAccountMasterData
+            return new AzureTableStorageAccountMasterData
             {
                 PartitionKey = src.AccountId.ToString(),
                 RowKey = src.AccountId.ToString(),
@@ -1210,7 +1210,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             };
         }
 
-        public static AccountMasterData Map(AzureAccountMasterData src)
+        public static AccountMasterData Map(AzureTableStorageAccountMasterData src)
         {
             if (src == null)
             {
@@ -1230,14 +1230,14 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             };
         }
 
-        public static AzureOutletMasterData Map(OutletMasterData src)
+        public static AzureTableStorageOutletMasterData Map(OutletMasterData src)
         {
             if (src == null)
             {
                 return null;
             }
 
-            return new AzureOutletMasterData
+            return new AzureTableStorageOutletMasterData
             {
                 PartitionKey = src.OutletId.ToString(),
                 RowKey = src.OutletId.ToString(),
@@ -1252,7 +1252,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             };
         }
 
-        public static OutletMasterData Map(AzureOutletMasterData src)
+        public static OutletMasterData Map(AzureTableStorageOutletMasterData src)
         {
             if (src == null)
             {
@@ -1272,14 +1272,14 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             };
         }
 
-        public static AzureAgencyMasterData Map(AgencyMasterData src)
+        public static AzureTableStorageAgencyMasterData Map(AgencyMasterData src)
         {
             if (src == null)
             {
                 return null;
             }
 
-            return new AzureAgencyMasterData
+            return new AzureTableStorageAgencyMasterData
             {
                 PartitionKey = src.AgencyId.ToString(),
                 RowKey = src.AgencyId.ToString(),
@@ -1294,7 +1294,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             };
         }
 
-        public static AgencyMasterData Map(AzureAgencyMasterData src)
+        public static AgencyMasterData Map(AzureTableStorageAgencyMasterData src)
         {
             if (src == null)
             {
@@ -1314,14 +1314,14 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             };
         }
 
-        public static AzurePosSystemMasterData Map(PosSystemMasterData src)
+        public static AzureTableStoragePosSystemMasterData Map(PosSystemMasterData src)
         {
             if (src == null)
             {
                 return null;
             }
 
-            return new AzurePosSystemMasterData
+            return new AzureTableStoragePosSystemMasterData
             {
                 PartitionKey = src.PosSystemId.ToString(),
                 RowKey = src.PosSystemId.ToString(),
@@ -1334,7 +1334,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             };
         }
 
-        public static PosSystemMasterData Map(AzurePosSystemMasterData src)
+        public static PosSystemMasterData Map(AzureTableStoragePosSystemMasterData src)
         {
             if (src == null)
             {

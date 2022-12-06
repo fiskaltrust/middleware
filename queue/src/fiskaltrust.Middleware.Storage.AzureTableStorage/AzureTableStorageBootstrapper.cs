@@ -30,7 +30,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage
         private readonly QueueConfiguration _queueConfiguration;
         private TableServiceClient _tableServiceClient;
         private BlobServiceClient _blobServiceClient;
-        private AzureConfigurationRepository _configurationRepository;
+        private AzureTableStorageConfigurationRepository _configurationRepository;
 
         public AzureTableStorageBootstrapper(Guid queueId, Dictionary<string, object> configuration, ILogger<IMiddlewareBootstrapper> logger)
         {
@@ -58,12 +58,12 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage
             var databaseMigrator = new DatabaseMigrator(logger, _tableServiceClient, _queueConfiguration);
             await databaseMigrator.MigrateAsync().ConfigureAwait(false);
 
-            _configurationRepository = new AzureConfigurationRepository(_queueConfiguration, _tableServiceClient);
+            _configurationRepository = new AzureTableStorageConfigurationRepository(_queueConfiguration, _tableServiceClient);
             var baseStorageConfig = ParseStorageConfiguration(configuration);
 
             await PersistMasterDataAsync(baseStorageConfig, _configurationRepository,
-                new AzureAccountMasterDataRepository(_queueConfiguration, _tableServiceClient), new AzureOutletMasterDataRepository(_queueConfiguration, _tableServiceClient),
-                new AzureAgencyMasterDataRepository(_queueConfiguration, _tableServiceClient), new AzurePosSystemMasterDataRepository(_queueConfiguration, _tableServiceClient)).ConfigureAwait(false);
+                new AzureTableStorageAccountMasterDataRepository(_queueConfiguration, _tableServiceClient), new AzureTableStorageOutletMasterDataRepository(_queueConfiguration, _tableServiceClient),
+                new AzureTableStorageAgencyMasterDataRepository(_queueConfiguration, _tableServiceClient), new AzureTableStoragePosSystemMasterDataRepository(_queueConfiguration, _tableServiceClient)).ConfigureAwait(false);
             await PersistConfigurationAsync(baseStorageConfig, _configurationRepository, logger).ConfigureAwait(false);
         }
 
@@ -76,46 +76,46 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage
             services.AddSingleton<IConfigurationRepository>(_configurationRepository);
             services.AddSingleton<IReadOnlyConfigurationRepository>(_configurationRepository);
 
-            services.AddSingleton<IQueueItemRepository, AzureQueueItemRepository>();
-            services.AddScoped<IMiddlewareQueueItemRepository, AzureQueueItemRepository>();
-            services.AddSingleton<IReadOnlyQueueItemRepository, AzureQueueItemRepository>();
-            services.AddSingleton<IMiddlewareRepository<ftQueueItem>, AzureQueueItemRepository>();
+            services.AddSingleton<IQueueItemRepository, AzureTableStorageQueueItemRepository>();
+            services.AddScoped<IMiddlewareQueueItemRepository, AzureTableStorageQueueItemRepository>();
+            services.AddSingleton<IReadOnlyQueueItemRepository, AzureTableStorageQueueItemRepository>();
+            services.AddSingleton<IMiddlewareRepository<ftQueueItem>, AzureTableStorageQueueItemRepository>();
 
-            services.AddSingleton<IJournalATRepository, AzureJournalATRepository>();
-            services.AddSingleton<IReadOnlyJournalATRepository, AzureJournalATRepository>();
-            services.AddSingleton<IMiddlewareRepository<ftJournalAT>, AzureJournalATRepository>();
+            services.AddSingleton<IJournalATRepository, AzureTableStorageJournalATRepository>();
+            services.AddSingleton<IReadOnlyJournalATRepository, AzureTableStorageJournalATRepository>();
+            services.AddSingleton<IMiddlewareRepository<ftJournalAT>, AzureTableStorageJournalATRepository>();
 
-            services.AddSingleton<IJournalDERepository, AzureJournalDERepository>();
-            services.AddSingleton<IMiddlewareJournalDERepository, AzureJournalDERepository>();
-            services.AddSingleton<IJournalDERepository, AzureJournalDERepository>();
-            services.AddSingleton<IMiddlewareRepository<ftJournalDE>, AzureJournalDERepository>();
+            services.AddSingleton<IJournalDERepository, AzureTableStorageJournalDERepository>();
+            services.AddSingleton<IMiddlewareJournalDERepository, AzureTableStorageJournalDERepository>();
+            services.AddSingleton<IJournalDERepository, AzureTableStorageJournalDERepository>();
+            services.AddSingleton<IMiddlewareRepository<ftJournalDE>, AzureTableStorageJournalDERepository>();
 
-            services.AddSingleton<IJournalFRRepository, AzureJournalFRRepository>();
-            services.AddSingleton<IReadOnlyJournalFRRepository, AzureJournalFRRepository>();
-            services.AddSingleton<IMiddlewareRepository<ftJournalFR>, AzureJournalFRRepository>();
+            services.AddSingleton<IJournalFRRepository, AzureTableStorageJournalFRRepository>();
+            services.AddSingleton<IReadOnlyJournalFRRepository, AzureTableStorageJournalFRRepository>();
+            services.AddSingleton<IMiddlewareRepository<ftJournalFR>, AzureTableStorageJournalFRRepository>();
 
-            services.AddSingleton<IMiddlewareJournalMERepository, AzureJournalMERepository>();
-            services.AddSingleton<IJournalMERepository, AzureJournalMERepository>();
-            services.AddSingleton<IReadOnlyJournalMERepository, AzureJournalMERepository>();
-            services.AddSingleton<IMiddlewareRepository<ftJournalME>, AzureJournalMERepository>();
+            services.AddSingleton<IMiddlewareJournalMERepository, AzureTableStorageJournalMERepository>();
+            services.AddSingleton<IJournalMERepository, AzureTableStorageJournalMERepository>();
+            services.AddSingleton<IReadOnlyJournalMERepository, AzureTableStorageJournalMERepository>();
+            services.AddSingleton<IMiddlewareRepository<ftJournalME>, AzureTableStorageJournalMERepository>();
 
-            services.AddSingleton<IReceiptJournalRepository, AzureReceiptJournalRepository>();
-            services.AddSingleton<IReadOnlyReceiptJournalRepository, AzureReceiptJournalRepository>();
-            services.AddSingleton<IMiddlewareRepository<ftReceiptJournal>, AzureReceiptJournalRepository>();
+            services.AddSingleton<IReceiptJournalRepository, AzureTableStorageReceiptJournalRepository>();
+            services.AddSingleton<IReadOnlyReceiptJournalRepository, AzureTableStorageReceiptJournalRepository>();
+            services.AddSingleton<IMiddlewareRepository<ftReceiptJournal>, AzureTableStorageReceiptJournalRepository>();
 
-            services.AddSingleton<IMiddlewareActionJournalRepository, AzureActionJournalRepository>();
-            services.AddSingleton<IActionJournalRepository, AzureActionJournalRepository>();
-            services.AddSingleton<IReadOnlyActionJournalRepository, AzureActionJournalRepository>();
-            services.AddSingleton<IMiddlewareRepository<ftActionJournal>, AzureActionJournalRepository>();
+            services.AddSingleton<IMiddlewareActionJournalRepository, AzureTableStorageActionJournalRepository>();
+            services.AddSingleton<IActionJournalRepository, AzureTableStorageActionJournalRepository>();
+            services.AddSingleton<IReadOnlyActionJournalRepository, AzureTableStorageActionJournalRepository>();
+            services.AddSingleton<IMiddlewareRepository<ftActionJournal>, AzureTableStorageActionJournalRepository>();
 
-            services.AddSingleton<IPersistentTransactionRepository<FailedFinishTransaction>, AzureFailedFinishTransactionRepository>();
-            services.AddSingleton<IPersistentTransactionRepository<FailedStartTransaction>, AzureFailedStartTransactionRepository>();
-            services.AddSingleton<IPersistentTransactionRepository<OpenTransaction>, AzureOpenTransactionRepository>();
+            services.AddSingleton<IPersistentTransactionRepository<FailedFinishTransaction>, AzureTableStorageFailedFinishTransactionRepository>();
+            services.AddSingleton<IPersistentTransactionRepository<FailedStartTransaction>, AzureTableStorageFailedStartTransactionRepository>();
+            services.AddSingleton<IPersistentTransactionRepository<OpenTransaction>, AzureTableStorageOpenTransactionRepository>();
 
-            services.AddSingleton<IMasterDataRepository<AccountMasterData>, AzureAccountMasterDataRepository>();
-            services.AddSingleton<IMasterDataRepository<OutletMasterData>, AzureOutletMasterDataRepository>();
-            services.AddSingleton<IMasterDataRepository<AgencyMasterData>, AzureAgencyMasterDataRepository>();
-            services.AddSingleton<IMasterDataRepository<PosSystemMasterData>, AzurePosSystemMasterDataRepository>();
+            services.AddSingleton<IMasterDataRepository<AccountMasterData>, AzureTableStorageAccountMasterDataRepository>();
+            services.AddSingleton<IMasterDataRepository<OutletMasterData>, AzureTableStorageOutletMasterDataRepository>();
+            services.AddSingleton<IMasterDataRepository<AgencyMasterData>, AzureTableStorageAgencyMasterDataRepository>();
+            services.AddSingleton<IMasterDataRepository<PosSystemMasterData>, AzureTableStoragePosSystemMasterDataRepository>();
         }
     }
 }

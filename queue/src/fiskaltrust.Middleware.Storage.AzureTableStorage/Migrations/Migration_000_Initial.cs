@@ -6,7 +6,7 @@ using fiskaltrust.storage.V0.MasterData;
 
 namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Migrations
 {
-    public class Migration_000_Initial : IAzureStorageMigration
+    public class Migration_000_Initial : IAzureTableStorageMigration
     {
         private readonly TableServiceClient _tableServiceClient;
         private readonly QueueConfiguration _queueConfiguration;
