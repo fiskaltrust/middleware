@@ -34,23 +34,16 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
 
         public virtual async Task InsertAsync(TStorageEntity storageEntity)
         {
-            var entityId = GetIdForEntity(storageEntity);
-            var existingEntity = await GetAsync(entityId).ConfigureAwait(false);
-            if (existingEntity != null)
-            {
-                throw new Exception("The key already exists");
-            }
-
             EntityUpdated(storageEntity);
             var entity = MapToAzureEntity(storageEntity);
-            await _tableClient.UpsertEntityAsync(entity, TableUpdateMode.Merge);
+            await _tableClient.UpsertEntityAsync(entity, TableUpdateMode.Replace);
         }
 
         public async Task InsertOrUpdateAsync(TStorageEntity storageEntity)
         {
             EntityUpdated(storageEntity);
             var entity = MapToAzureEntity(storageEntity);
-            await _tableClient.UpsertEntityAsync(entity, TableUpdateMode.Merge);
+            await _tableClient.UpsertEntityAsync(entity, TableUpdateMode.Replace);
         }
 
         public async Task<TStorageEntity> RemoveAsync(TKey key)
