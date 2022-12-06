@@ -17,7 +17,7 @@ namespace fiskaltrust.Middleware.Queue.AzureTableStorage
         {
             var logger = serviceCollection.BuildServiceProvider().GetRequiredService<ILogger<IMiddlewareBootstrapper>>();
 
-            var storageBootStrapper = new AzureStorageBootstrapper(Id, Configuration, logger);
+            var storageBootStrapper = new AzureTableStorageBootstrapper(Id, Configuration, logger);
             storageBootStrapper.ConfigureStorageServices(serviceCollection);
 
             var queueBootstrapper = new QueueBootstrapper(Id, Configuration);

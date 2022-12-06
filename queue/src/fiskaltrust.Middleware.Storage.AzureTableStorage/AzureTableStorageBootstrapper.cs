@@ -8,6 +8,7 @@ using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts.Data;
 using fiskaltrust.Middleware.Contracts.Models.Transactions;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Storage.AzureTableStorage.Extensions;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.AT;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE;
@@ -22,24 +23,20 @@ using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Storage.AzureTableStorage
 {
-    public class AzureStorageBootstrapper : BaseStorageBootStrapper
+    public class AzureTableStorageBootstrapper : BaseStorageBootStrapper
     {
         private readonly Dictionary<string, object> _configuration;
         private readonly ILogger<IMiddlewareBootstrapper> _logger;
         private readonly QueueConfiguration _queueConfiguration;
-        private readonly TableServiceClient _tableServiceClient;
-        private readonly BlobServiceClient _blobServiceClient;
+        private TableServiceClient _tableServiceClient;
+        private BlobServiceClient _blobServiceClient;
         private AzureConfigurationRepository _configurationRepository;
 
-        public AzureStorageBootstrapper(Guid queueId, Dictionary<string, object> configuration, ILogger<IMiddlewareBootstrapper> logger)
+        public AzureTableStorageBootstrapper(Guid queueId, Dictionary<string, object> configuration, ILogger<IMiddlewareBootstrapper> logger)
         {
-            _configuration = configuration;
+            _configuration = configuration.ConvertToCaseInSensitive();
             _logger = logger;
-
-            var storageUrl = configuration["storageUrl"].ToString();
             _queueConfiguration = new QueueConfiguration { QueueId = queueId };
-            _tableServiceClient = new TableServiceClient(new Uri(storageUrl), new DefaultAzureCredential());
-            _blobServiceClient = new BlobServiceClient(new Uri(storageUrl), new DefaultAzureCredential());
         }
 
         public void ConfigureStorageServices(IServiceCollection serviceCollection)
@@ -50,6 +47,14 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage
 
         private async Task InitAsync(Dictionary<string, object> configuration, ILogger<IMiddlewareBootstrapper> logger)
         {
+            if (string.IsNullOrEmpty(configuration["storageaccountname"]?.ToString()))
+            {
+                throw new Exception("The parameter 'storageUrl' needs to be defined.");
+            }
+            var accountName = configuration["storageaccountname"]?.ToString();
+            _tableServiceClient = new TableServiceClient(new Uri($"https://{accountName}.blob.core.windows.net/"), new DefaultAzureCredential());
+            _blobServiceClient = new BlobServiceClient(new Uri($"https://{accountName}.table.core.windows.net/"), new DefaultAzureCredential());
+
             var databaseMigrator = new DatabaseMigrator(logger, _tableServiceClient, _queueConfiguration);
             await databaseMigrator.MigrateAsync().ConfigureAwait(false);
 
