@@ -41,4 +41,8 @@ In general, we welcome all kinds of contributions and feedback, e.g. via [issues
 Please check out the [contribution guidelines](./CONTRIBUTING.md) for more detailed information about how to proceed.
 
 ## License
-The fiskaltrust Middleware is released under the [LICENSE](./LICENSE).
+The fiskaltrust Middleware is released under the [EUPL 1.2](./LICENSE). 
+
+As a Compliance-as-a-Service provider, the security and authenticity of the products installed on our users' endpoints is essential to us. To ensure that only peer-reviewed binaries are distributed by maintainers, fiskaltrust explicitly reserves the sole right to use the brand name "fiskaltrust Middleware" (and the brand names of related products and services) for the software provided here as open source - regardless of the spelling or abbreviation, as long as conclusions can be drawn about the original product name.  
+
+The fiskaltrust Middleware (and related products and services) as contained in these repositories may therefore only be used in the form of binaries signed by fiskaltrust. 
