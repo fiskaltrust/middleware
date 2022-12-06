@@ -62,7 +62,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.Repositories
         public async IAsyncEnumerable<string> GetGroupedReceiptReferenceAsync(long? fromIncl, long? toIncl)
         {
             var groupByLastNamesQuery =
-                    from queueItem in DbContext.QueueItemList.AsQueryable()
+                    from queueItem in DbContext.QueueItemList.AsEnumerable()
                     where
                     (fromIncl.HasValue ? queueItem.TimeStamp >= fromIncl.Value : true) &&
                     (toIncl.HasValue ? queueItem.TimeStamp <= toIncl.Value : true) &&
@@ -78,7 +78,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.Repositories
         public async IAsyncEnumerable<ftQueueItem> GetQueueItemsForReceiptReferenceAsync(string receiptReference)
         {
             var queueItemsForReceiptReference =
-                from queueItem in DbContext.QueueItemList.AsQueryable()
+                from queueItem in DbContext.QueueItemList.AsEnumerable()
                 where 
                 queueItem.cbReceiptReference == receiptReference &&
                 !string.IsNullOrEmpty(queueItem.response)
@@ -97,7 +97,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.Repositories
                 return null;
             }
             var queueItemsForReceiptReference =
-                            (from queueItem in DbContext.QueueItemList.AsQueryable()
+                            (from queueItem in DbContext.QueueItemList.AsEnumerable()
                              where
                              queueItem.ftQueueRow < ftQueueItem.ftQueueRow &&
                              receiptRequest.IncludeInReferences() && queueItem.cbReceiptReference == receiptRequest.cbPreviousReceiptReference &&
