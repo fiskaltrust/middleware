@@ -52,8 +52,8 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage
                 throw new Exception("The parameter 'storageUrl' needs to be defined.");
             }
             var accountName = configuration["storageaccountname"]?.ToString();
-            _tableServiceClient = new TableServiceClient(new Uri($"https://{accountName}.blob.core.windows.net/"), new DefaultAzureCredential());
-            _blobServiceClient = new BlobServiceClient(new Uri($"https://{accountName}.table.core.windows.net/"), new DefaultAzureCredential());
+            _tableServiceClient = new TableServiceClient(new Uri($"https://{accountName}.table.core.windows.net/"), new DefaultAzureCredential());
+            _blobServiceClient = new BlobServiceClient(new Uri($"https://{accountName}.blob.core.windows.net/"), new DefaultAzureCredential());
 
             var databaseMigrator = new DatabaseMigrator(logger, _tableServiceClient, _queueConfiguration);
             await databaseMigrator.MigrateAsync().ConfigureAwait(false);
