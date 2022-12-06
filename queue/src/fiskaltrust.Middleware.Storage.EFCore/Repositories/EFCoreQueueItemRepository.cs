@@ -66,7 +66,6 @@ namespace fiskaltrust.Middleware.Storage.EFCore.Repositories
                     where
                     (fromIncl.HasValue ? queueItem.TimeStamp >= fromIncl.Value : true) &&
                     (toIncl.HasValue ? queueItem.TimeStamp <= toIncl.Value : true) &&
-                    JsonConvert.DeserializeObject<ReceiptRequest>(queueItem.request).IncludeInReferences() &&
                     !string.IsNullOrEmpty(queueItem.response)
                     group queueItem by queueItem.cbReceiptReference into newGroup
                     orderby newGroup.Key
@@ -81,7 +80,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.Repositories
             var queueItemsForReceiptReference =
                 from queueItem in DbContext.QueueItemList.AsQueryable()
                 where 
-                JsonConvert.DeserializeObject<ReceiptRequest>(queueItem.request).IncludeInReferences() && queueItem.cbReceiptReference == receiptReference &&
+                queueItem.cbReceiptReference == receiptReference &&
                 !string.IsNullOrEmpty(queueItem.response)
                 orderby queueItem.TimeStamp
                 select queueItem;
