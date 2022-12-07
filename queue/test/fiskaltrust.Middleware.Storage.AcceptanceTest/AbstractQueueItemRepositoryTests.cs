@@ -89,7 +89,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             var expectedEntries = StorageTestFixtureProvider.GetFixture().CreateMany<ftQueueItem>(10).OrderBy(x => x.TimeStamp).ToList();
 
             var sutIterate = await CreateRepository(expectedEntries);
-            var sutInsert = await CreateRepository(expectedEntries);
+            var sutInsert = await CreateRepository(Array.Empty<ftQueueItem>());
 
             await foreach (var entry in ((IMiddlewareRepository<ftQueueItem>) sutIterate).GetEntriesOnOrAfterTimeStampAsync(0, 2))
             {
