@@ -86,7 +86,11 @@ namespace fiskaltrust.Middleware.Storage.EFCore.Repositories
                 select queueItem;
             await foreach (var entry in queueItemsForReceiptReference.ToAsyncEnumerable())
             {
-                yield return entry;
+                var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(entry.request);
+                if (receiptRequest.IncludeInReferences())
+                {
+                    yield return entry;
+                }
             }
         }
         public async Task<ftQueueItem> GetClosestPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem)
