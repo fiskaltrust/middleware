@@ -381,7 +381,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
         }
 
         [Fact]
-        public async Task GetFirstPreviousReceiptReferencesAsync_PosAndNonePosReceipts_ValidQueueItems()
+        public async Task GetClosestPreviousReceiptReferencesAsync_PosAndNonePosReceipts_ValidQueueItems()
         {
             var receiptReference = "receiptReference9";
 
