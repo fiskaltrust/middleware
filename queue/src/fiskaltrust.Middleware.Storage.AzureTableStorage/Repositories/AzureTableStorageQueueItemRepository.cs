@@ -72,10 +72,10 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
                     !string.IsNullOrEmpty(queueItem.response)
                     group queueItem by queueItem.cbReceiptReference into newGroup
                     orderby newGroup.Key
-                    select newGroup;
+                    select newGroup.Key;
             await foreach (var entry in groupByLastNamesQuery.ToAsyncEnumerable())
             {
-                yield return entry.Key;
+                yield return entry;
             }
         }
 
@@ -102,7 +102,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
                              !string.IsNullOrEmpty(queueItem.response)
                              orderby queueItem.TimeStamp descending
                              select queueItem).ToAsyncEnumerable().Take(1);
-            return (ftQueueItem) queueItemsForReceiptReference;
+            return await queueItemsForReceiptReference.FirstOrDefaultAsync();
         }
     }
 }
