@@ -1,8 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Azure.Data.Tables;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Storage.AcceptanceTest;
+using fiskaltrust.Middleware.Storage.AzureTableStorage;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.AcceptanceTest.Fixtures;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.MasterData;
 using fiskaltrust.storage.V0.MasterData;
@@ -10,8 +12,7 @@ using Xunit;
 
 namespace fiskaltrust.Middleware.Storage.AzureTableStorage.AcceptanceTest
 {
-    [Collection("AzureTableStorageCollection")]
-    public class AzureTableStorageAccountMasterDataRepositoryTests: AbstractAccountMasterDataRepositoryTests
+    public class AzureTableStorageAccountMasterDataRepositoryTests: AbstractAccountMasterDataRepositoryTests, IClassFixture<AzureTableStorageFixture>
     {
         private readonly AzureTableStorageFixture _fixture;
 

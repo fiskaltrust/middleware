@@ -1,21 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using AutoFixture;
 using Azure.Data.Tables;
 using fiskaltrust.Middleware.Storage.AcceptanceTest;
 using fiskaltrust.Middleware.Storage.AzureTableStorage;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.AcceptanceTest.Fixtures;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories;
 using fiskaltrust.storage.V0;
-using FluentAssertions;
 using Xunit;
 
 namespace fiskaltrust.Middleware.Storage.AzureTableStorage.AcceptanceTest
 {
-    [Collection("AzureTableStorageCollection")]
-    public class AzureTableStorageReceiptJournalRepositoryTests : AbstractReceiptJournalRepositoryTests
+    public class AzureTableStorageReceiptJournalRepositoryTests : AbstractReceiptJournalRepositoryTests, IClassFixture<AzureTableStorageFixture>
     {
         private readonly AzureTableStorageFixture _fixture;
 
@@ -35,16 +30,5 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.AcceptanceTest
         }
 
         public override void DisposeDatabase() => _fixture.CleanTable(nameof(ftReceiptJournal));
-
-        public override async Task InsertAsync_ShouldThrowException_IfEntryAlreadyExists()
-        {
-            var entries = StorageTestFixtureProvider.GetFixture().CreateMany<ftReceiptJournal>(10).ToList();
-
-            var sut = await CreateRepository(entries);
-            await sut.InsertAsync(entries[0]);
-
-            var insertedEntry = await sut.GetAsync(entries[0].ftReceiptJournalId);
-            insertedEntry.Should().BeEquivalentTo(entries[0]);
-        }
     }
 }

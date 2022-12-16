@@ -36,10 +36,22 @@ steps:
     command: 'test'
     projects: |
       $(WorkingDirectory)/**/$(Project).csproj
-    arguments: '--configuration $(BuildConfiguration) --no-restore --collect "Code coverage"'
+    arguments: '--configuration $(BuildConfiguration) --no-restore /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:Include=[fiskaltrust.*]*'
     nobuild: true
   displayName: 'Run acceptance tests'
   env:
     CONNECTIONSTRING_AZURE_STORAGE_TESTS: $(CONNECTIONSTRING_AZURE_STORAGE_TESTS)
     CONNECTIONSTRING_POSTGRESQL_TESTS: $(CONNECTIONSTRING_POSTGRESQL_TESTS)
     CONNECTIONSTRING_MYSQL_TESTS: $(CONNECTIONSTRING_MYSQL_TESTS)
+
+- script: |
+    /tools/reportgenerator -reports:$(Build.SourcesDirectory)/$(WorkingDirectory)/test/**/*.opencover.xml -targetdir:$(Build.SourcesDirectory)/$(WorkingDirectory)/CodeCoverage -reporttypes:"Cobertura;HTMLInline;HTMLChart"
+  displayName: Create Code coverage report
+  workingDirectory: '/'
+
+- task: PublishCodeCoverageResults@1
+  displayName: 'Publish code coverage'
+  inputs:
+    codeCoverageTool: Cobertura
+    summaryFileLocation: '$(Build.SourcesDirectory)/$(WorkingDirectory)/CodeCoverage/Cobertura.xml'
+    reportDirectory: '$(Build.SourcesDirectory)/$(WorkingDirectory)/CodeCoverage'        
