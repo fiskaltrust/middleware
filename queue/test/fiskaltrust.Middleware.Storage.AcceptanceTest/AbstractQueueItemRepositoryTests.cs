@@ -1,4 +1,5 @@
 ﻿using AutoFixture;
+using Castle.DynamicProxy.Generators.Emitters.SimpleAST;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0;
@@ -330,6 +331,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             var fromIncl = DateTime.UtcNow.Ticks;
             await Task.Delay(1);
             var queueItem = queueItemFixture.Create<ftQueueItem>();
+            queueItem.cbReceiptReference = "reference9fromTo";
             await sut.InsertOrUpdateAsync(queueItem);
             await Task.Delay(1);
             var toIncl = DateTime.UtcNow.Ticks;

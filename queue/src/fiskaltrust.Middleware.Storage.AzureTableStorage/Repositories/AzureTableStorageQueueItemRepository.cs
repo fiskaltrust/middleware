@@ -66,8 +66,8 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
             var groupByLastNamesQuery =
                     from queueItem in await GetAsync()
                     where
-                    fromIncl.HasValue ? queueItem.TimeStamp >= fromIncl.Value : true &&
-                    toIncl.HasValue ? queueItem.TimeStamp <= toIncl.Value : true &&
+                    (fromIncl.HasValue ? queueItem.TimeStamp >= fromIncl.Value : true) &&
+                    (toIncl.HasValue ? queueItem.TimeStamp <= toIncl.Value : true) &&
                     JsonConvert.DeserializeObject<ReceiptRequest>(queueItem.request).IncludeInReferences() &&
                     !string.IsNullOrEmpty(queueItem.response)
                     group queueItem by queueItem.cbReceiptReference into newGroup
