@@ -11,7 +11,8 @@ using Xunit;
 
 namespace fiskaltrust.Middleware.Storage.AzureTableStorage.AcceptanceTest
 {
-    public class AzureTableStorageFailedStartTransactionRepositoryTests : AbstractFailedStartTransactionRepositoryTests, IClassFixture<AzureTableStorageFixture>
+    [Collection("AzureTableStorageCollection")]
+    public class AzureTableStorageFailedStartTransactionRepositoryTests : AbstractFailedStartTransactionRepositoryTests
     {
         private readonly AzureTableStorageFixture _fixture;
 

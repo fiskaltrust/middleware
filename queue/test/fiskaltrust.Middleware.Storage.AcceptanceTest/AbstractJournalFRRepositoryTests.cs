@@ -113,7 +113,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
         }
 
         [Fact]
-        public async Task InsertAsync_ShouldUpdateEntry_IfEntryAlreadyExists()
+        public virtual async Task InsertAsync_ShouldUpdateEntry_IfEntryAlreadyExists()
         {
             var entries = StorageTestFixtureProvider.GetFixture().CreateMany<ftJournalFR>(10).ToList();
             var entryToInsert = StorageTestFixtureProvider.GetFixture().Create<ftJournalFR>();

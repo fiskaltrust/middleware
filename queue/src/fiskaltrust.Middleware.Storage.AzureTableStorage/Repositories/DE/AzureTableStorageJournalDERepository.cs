@@ -78,7 +78,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
                 var blob = _blobContainerClient.GetBlobClient($"{_queueConfig.QueueId}/{entity.ftJournalDEId}/{entity.FileName}.{entity.FileExtension}");
                 var file = Convert.FromBase64String(entity.FileContentBase64);
                 using var ms = new MemoryStream(file);
-                await blob.UploadAsync(ms);
+                await blob.UploadAsync(ms, overwrite: true);
             }
         }
 
