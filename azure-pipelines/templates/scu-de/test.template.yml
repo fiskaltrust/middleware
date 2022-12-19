@@ -1,9 +1,4 @@
-steps:    
-- script: |
-    dotnet tool install --tool-path tools dotnet-reportgenerator-globaltool
-  displayName: Install report generator
-  workingDirectory: '/'
-
+steps:
 - powershell: |   
     $nugetFeed = if ($Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/release/") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/main") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/tags/")) { "release" } else { "dev" }
     Write-Host "##vso[task.setvariable variable=NuGetFeed;]$nugetFeed"
@@ -37,18 +32,7 @@ steps:
     command: 'test'
     projects: |
       $(WorkingDirectory)/**/*.UnitTest.csproj
-    arguments: '--configuration $(BuildConfiguration) --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:Include=[fiskaltrust.*]*'
+    arguments: '--configuration $(BuildConfiguration) --no-restore --collect "Code coverage"'
     nobuild: true
   displayName: 'Run unit tests'   
 
-- script: |
-    /tools/reportgenerator -reports:$(Build.SourcesDirectory)/$(WorkingDirectory)/test/**/*.opencover.xml -targetdir:$(Build.SourcesDirectory)/$(WorkingDirectory)/CodeCoverage -reporttypes:"Cobertura;HTMLInline;HTMLChart"
-  displayName: Create Code coverage report
-  workingDirectory: '/'
-
-- task: PublishCodeCoverageResults@1
-  displayName: 'Publish code coverage'
-  inputs:
-    codeCoverageTool: Cobertura
-    summaryFileLocation: '$(Build.SourcesDirectory)/$(WorkingDirectory)/CodeCoverage/Cobertura.xml'
-    reportDirectory: '$(Build.SourcesDirectory)/$(WorkingDirectory)/CodeCoverage'
