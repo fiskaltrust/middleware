@@ -163,9 +163,13 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             await _fixture.queueItemRepository.InsertOrUpdateAsync(queueItem);
             await _fixture.actionJournalRepository.InsertAsync(CreateftActionJournal(_fixture.QUEUEID, queueItem.ftQueueItemId, 10));
             await _receiptTests.ExpectException(
-                _receiptTests.GetReceipt("InitiateScuSwitchReceipt", "InitiateScuSwitchNoImplFlow", 0x4445000100000017), "The SCU switch must be initiated properly in the fiskaltrust.Portal before sending this receipt. See https://link.fiskaltrust.cloud/market-de/scu-switch for more details.").ConfigureAwait(false);
+                _receiptTests.GetReceipt(
+                    "InitiateScuSwitchReceipt",
+                    "InitiateScuSwitchNoImplFlow",
+                    0x4445000100000017
+                ),
+            "The source SCU is not set up correctly for an SCU switch in the local configuration. The SCU switch must be initiated properly in the fiskaltrust.Portal before sending this receipt. See https://link.fiskaltrust.cloud/market-de/scu-switch for more details. (Source SCU: *, Mode: 0, ModeConfigurationJson: {\"TargetScuId\": \"*\"})").ConfigureAwait(false);
         }
-
         [Fact]
         public async Task InitScuSwitchReceipt_TargetScuIsNoSwitchSource_ExpectException()
         {
@@ -181,11 +185,15 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                 request = "",
                 requestHash = "test request hash"
             };
-
             await _fixture.queueItemRepository.InsertOrUpdateAsync(queueItem);
             await _fixture.actionJournalRepository.InsertAsync(CreateftActionJournal(_fixture.QUEUEID, queueItem.ftQueueItemId, 10));
             await _receiptTests.ExpectException(
-                _receiptTests.GetReceipt("InitiateScuSwitchReceipt", "InitiateScuSwitchNoImplFlow", 0x4445000100000017), "The SCU switch must be initiated properly in the fiskaltrust.Portal before sending this receipt. See https://link.fiskaltrust.cloud/market-de/scu-switch for more details.", true, false).ConfigureAwait(false);
+                _receiptTests.GetReceipt(
+                    "InitiateScuSwitchReceipt",
+                    "InitiateScuSwitchNoImplFlow",
+                    0x4445000100000017
+                ),
+                "The target SCU is not set up correctly for an SCU switch in the local configuration. The SCU switch must be initiated properly in the fiskaltrust.Portal before sending this receipt. See https://link.fiskaltrust.cloud/market-de/scu-switch for more details. (Source SCU: *, Mode: 65536, ModeConfigurationJson: {\"TargetScuId\": \"*\"}; Target SCU: *, Mode: 0, ModeConfigurationJson: {\"SourceScuId\": \"*\"})", true, false).ConfigureAwait(false);
         }
 
         private ftActionJournal CreateftActionJournal(Guid ftQueueId, Guid ftQueueItemId, int ftReceiptNumerator)
@@ -195,7 +203,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                 Type = "4445000000000007",
                 Moment = DateTime.Now,
                 DataJson = "{\"ftReceiptNumerator\": " + ftReceiptNumerator + "}",
-                DataBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes("{\"ftReceiptNumerator\": "+ ftReceiptNumerator + "}")),
+                DataBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes("{\"ftReceiptNumerator\": " + ftReceiptNumerator + "}")),
                 ftActionJournalId = Guid.NewGuid(),
                 ftQueueId = ftQueueId,
                 ftQueueItemId = ftQueueItemId,
