@@ -56,13 +56,13 @@ namespace fiskaltrust.Middleware.Storage.Ef
                 throw new Exception("Database connectionstring not defined");
             }
 
-            try
+            if (_efStorageConfiguration.ConnectionString.StartsWith("raw:"))
+            {
+                _connectionString = _efStorageConfiguration.ConnectionString.Substring("raw:".Length - 1);
+            }
+            else
             {
                 _connectionString = Encoding.UTF8.GetString(Encryption.Decrypt(Convert.FromBase64String(_efStorageConfiguration.ConnectionString), queueId.ToByteArray()));
-            }
-            catch
-            {
-                _connectionString = _efStorageConfiguration.ConnectionString;
             }
 
             Update(_connectionString, _efStorageConfiguration.MigrationsTimeoutSec, queueId, logger);

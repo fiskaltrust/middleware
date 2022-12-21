@@ -50,14 +50,16 @@ namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer
             {
                 throw new Exception("Database connectionstring not defined");
             }
-            try
+
+            if (((string) configuration["connectionstring"]).StartsWith("raw:"))
+            {
+                _connectionString = ((string) configuration["connectionstring"]).Substring("raw:".Length - 1);
+            }
+            else
             {
                 _connectionString = Encoding.UTF8.GetString(Encryption.Decrypt(Convert.FromBase64String((string) configuration["connectionstring"]), queueId.ToByteArray()));
             }
-            catch
-            {
-                _connectionString = (string) configuration["connectionstring"];
-            }
+
             _optionsBuilder = new DbContextOptionsBuilder<SQLServerMiddlewareDbContext>();
             _optionsBuilder.UseSqlServer(_connectionString);
             Update(_optionsBuilder.Options, queueId, logger);
