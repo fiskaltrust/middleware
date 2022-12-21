@@ -55,7 +55,16 @@ namespace fiskaltrust.Middleware.Storage.Ef
             {
                 throw new Exception("Database connectionstring not defined");
             }
-            _connectionString = Encoding.UTF8.GetString(Encryption.Decrypt(Convert.FromBase64String(_efStorageConfiguration.ConnectionString), queueId.ToByteArray()));
+
+            try
+            {
+                _connectionString = Encoding.UTF8.GetString(Encryption.Decrypt(Convert.FromBase64String(_efStorageConfiguration.ConnectionString), queueId.ToByteArray()));
+            }
+            catch
+            {
+                _connectionString = _efStorageConfiguration.ConnectionString;
+            }
+
             Update(_connectionString, _efStorageConfiguration.MigrationsTimeoutSec, queueId, logger);
 
             var configurationRepository = new EfConfigurationRepository(new MiddlewareDbContext(_connectionString, _queueId));
