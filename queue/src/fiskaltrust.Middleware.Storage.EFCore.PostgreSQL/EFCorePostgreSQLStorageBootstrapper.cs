@@ -52,7 +52,15 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL
             {
                 throw new Exception("Database connectionstring not defined");
             }
-            _connectionString = Encoding.UTF8.GetString(Encryption.Decrypt(Convert.FromBase64String(_posgresQLStorageConfiguration.ConnectionString), queueId.ToByteArray()));
+
+            if (_posgresQLStorageConfiguration.ConnectionString.StartsWith("raw:"))
+            {
+                _connectionString = _posgresQLStorageConfiguration.ConnectionString.Substring("raw:".Length - 1);
+            }
+            else
+            {
+                _connectionString = Encoding.UTF8.GetString(Encryption.Decrypt(Convert.FromBase64String(_posgresQLStorageConfiguration.ConnectionString), queueId.ToByteArray()));
+            }
             _optionsBuilder = new DbContextOptionsBuilder<PostgreSQLMiddlewareDbContext>();
             _optionsBuilder.UseNpgsql(_connectionString);
             Update(_optionsBuilder.Options, queueId, logger);
