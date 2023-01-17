@@ -146,7 +146,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
                 var serial = tssResult.SerialNumber;
 
                 var certificate = tssResult.Certificate;
-                if (!certificate.TrimStart('\n', '\r').StartsWith("-----BEGIN CERTIFICATE-----") && !certificate.TrimEnd('\n', '\r').EndsWith("-----END CERTIFICATE-----"))
+                if (!certificate.TrimStart('\n', '\r', ' ').StartsWith("-----BEGIN CERTIFICATE-----") && !certificate.TrimEnd('\n', '\r', ' ').EndsWith("-----END CERTIFICATE-----"))
                 {
                     certificate = "-----BEGIN CERTIFICATE-----\n" + certificate + "\n-----END CERTIFICATE-----";
                 }
