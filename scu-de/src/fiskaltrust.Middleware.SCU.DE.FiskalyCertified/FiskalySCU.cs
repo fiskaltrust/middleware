@@ -145,12 +145,6 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
                 var startedTransactions = await _fiskalyApiProvider.GetStartedTransactionsAsync(_configuration.TssId);
                 var serial = tssResult.SerialNumber;
 
-                var certificate = tssResult.Certificate;
-                if (!certificate.TrimStart('\n', '\r', ' ').StartsWith("-----BEGIN CERTIFICATE-----") && !certificate.TrimEnd('\n', '\r', ' ').EndsWith("-----END CERTIFICATE-----"))
-                {
-                    certificate = "-----BEGIN CERTIFICATE-----\n" + certificate + "\n-----END CERTIFICATE-----";
-                }
-
                 return new TseInfo
                 {
                     CurrentNumberOfClients = clientDto.Where(x => x.State.Equals("REGISTERED")).ToList().Count,
@@ -163,7 +157,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
                     MaxNumberOfStartedTransactions = tssResult.MaxNumberOfActiveTransactions ?? int.MaxValue,
                     CertificatesBase64 = new List<string>
                     {
-                        certificate.AsBase64()
+                        tssResult.Certificate
                     },
                     CurrentClientIds = clientDto.Where(x => x.State.Equals("REGISTERED")).Select(x => x.SerialNumber),
                     SignatureAlgorithm = tssResult.SignatureAlgorithm,
