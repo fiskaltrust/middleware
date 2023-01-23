@@ -85,6 +85,16 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Transactions
 
             var paymentDict = new ConcurrentDictionary<string, decimal>();
 
+            var payItemsTillNoCash = request.cbPayItems != null && request.cbPayItems.Where(y => y.IsTillPayment()).Any() && !request.cbPayItems.Where(y => y.IsCashPaymentType()).Any() ?
+                                request.cbPayItems
+                                : Enumerable.Empty<PayItem>();
+
+            foreach (var item in payItemsTillNoCash)
+            {
+                var amount = CalculationHelper.ReviseAmountOnNegativeQuantity(item.Quantity, item.Amount);
+                paymentDict.AddOrUpdate(DSFinVKConstants.PROCESS_DATA_PAYMENT_CASH_TEXT, amount, (k, v) => v + amount);
+            }
+
             foreach (var item in request.cbPayItems ?? Array.Empty<PayItem>())
             {
                 switch (item.ftPayItemCase & 0xFFFF)
@@ -159,7 +169,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Transactions
                     }
                 }
             }
-            var paymentList = paymentDict.Where(i => i.Value != 0.0m).OrderBy(i => i.Key).Select(i => string.Format(CultureInfo.InvariantCulture, "{0:0.00}", i.Value)+ ":"+ i.Key);
+            var paymentList = paymentDict.Where(i => i.Value != 0.0m).OrderBy(i => i.Key).Select(i => string.Format(CultureInfo.InvariantCulture, "{0:0.00}", i.Value) + ":" + i.Key);
             return string.Join("_", paymentList);
         }
     }

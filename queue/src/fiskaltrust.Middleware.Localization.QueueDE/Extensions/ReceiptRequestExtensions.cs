@@ -268,6 +268,16 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
             var special_2 = 0.0m;
             var zero = 0.0m;
 
+
+            var payItemsTillNoCash = request.cbPayItems != null && request.cbPayItems.Where(y => y.IsTillPayment()).Any() && !request.cbPayItems.Where(y => y.IsCashPaymentType()).Any() ?
+                    request.cbPayItems
+                    : Enumerable.Empty<PayItem>();
+
+            foreach (var item in payItemsTillNoCash)
+            {
+                zero += item.Amount * GetSignForAmount(item.Quantity, item.Amount);
+            }
+
             foreach (var item in request.cbChargeItems ?? Array.Empty<ChargeItem>())
             {
                 switch (item.ftChargeItemCase & 0xFFFF)
@@ -363,7 +373,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
                         special_2 += item.Amount * GetSignForAmount(item.Quantity, item.Amount);
                         break;
                     default:
-                        zero += item.Amount * GetSignForAmount(item.Quantity, item.Amount); 
+                        zero += item.Amount * GetSignForAmount(item.Quantity, item.Amount);
 
                         break;
                 }
@@ -383,7 +393,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
                     case 0x0015:
                     case 0x0016:
                     case 0x0017:
-                        item.Amount = item.Amount*GetSignForAmount(item.Quantity, item.Amount);
+                        item.Amount = item.Amount * GetSignForAmount(item.Quantity, item.Amount);
                         zero += item.Amount * -1;
                         break;
                     default:
@@ -392,8 +402,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
             }
 
             //TODO check rounding problesm: round sum(results) towards receipt.totalamount if given
-            return FormatAmount(normal) + "_" + FormatAmount(discounted_1) + "_" + FormatAmount( special_1) +
-                                "_" + FormatAmount(special_2) + "_" + FormatAmount( zero);
+            return FormatAmount(normal) + "_" + FormatAmount(discounted_1) + "_" + FormatAmount(special_1) +
+                                "_" + FormatAmount(special_2) + "_" + FormatAmount(zero);
         }
         private static string FormatAmount(decimal value)
         {
@@ -414,10 +424,10 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
                 request.cbReceiptMoment
             }).Min();
         }
-        private static decimal GetSignForAmount(decimal quantity, decimal amount)  => quantity < 0 && amount >= 0 ? -1 : 1;
+        private static decimal GetSignForAmount(decimal quantity, decimal amount) => quantity < 0 && amount >= 0 ? -1 : 1;
         public static void CheckForEqualSumChargePayItems(this ReceiptRequest request, ILogger logger)
         {
-            var chargeAmount = request.cbChargeItems != null ? request.cbChargeItems.Sum( x => x.Amount != null ? x.Amount * GetSignForAmount(x.Quantity, x.Amount) : 0) : 0;
+            var chargeAmount = request.cbChargeItems != null ? request.cbChargeItems.Sum(x => x.Amount != null ? x.Amount * GetSignForAmount(x.Quantity, x.Amount) : 0) : 0;
             var payAmount = request.cbPayItems != null ? request.cbPayItems.Sum(x => x.Amount != null ? x.Amount * GetSignForAmount(x.Quantity, x.Amount) : 0) : 0;
             if (chargeAmount != payAmount)
             {

@@ -40,5 +40,34 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
             // TODO: Extract currency from PayItemCaseData
             return "???";
         }
+
+        public static bool IsTillPayment(this PayItem payItem)
+        {
+            return (payItem.ftPayItemCase & 0xFFFF) switch
+            {
+                0x0012 or
+                0x0013 or
+                0x0014 or
+                0x0015 or
+                0x0016 or
+                0x0017
+                => true,
+                _ => false
+            };
+        }
+
+        public static bool IsCashPaymentType(this PayItem payItem)
+        {
+            return (payItem.ftPayItemCase & 0xFFFF) switch
+            {
+                0x0000 or
+                0x0001 or
+                0x0002 or
+                0x000B or
+                0x000C
+                => true,
+                _ => false
+            };
+        }
     }
 }
