@@ -435,5 +435,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
                 logger.LogWarning(_differentPayChargeAmount);
             }
         }
+        public static bool IsTillReceipt(this ReceiptRequest request) => (request.ftReceiptCase & 0xFFFF) == 0x0011;
     }
 }

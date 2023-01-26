@@ -85,7 +85,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Transactions
 
             var paymentDict = new ConcurrentDictionary<string, decimal>();
 
-            var payItemsTillNoCash = request.cbPayItems != null && request.cbPayItems.Where(y => y.IsTillPayment()).Any() && !request.cbPayItems.Where(y => y.IsCashPaymentType()).Any() ?
+            var payItemsTillNoCash = request.IsTillReceipt() && request.cbPayItems != null && request.cbPayItems.Any(y => y.IsTillPayment()) && !request.cbPayItems.Any(y => y.IsCashPaymentType()) ?
                                 request.cbPayItems
                                 : Enumerable.Empty<PayItem>();
 
