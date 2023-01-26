@@ -269,7 +269,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
             var zero = 0.0m;
 
 
-            var payItemsTillNoCash = request.cbPayItems != null && request.cbPayItems.Where(y => y.IsTillPayment()).Any() && !request.cbPayItems.Where(y => y.IsCashPaymentType()).Any() ?
+            var payItemsTillNoCash = request.cbPayItems != null && request.cbPayItems.Any(y => y.IsTillPayment()) && !request.cbPayItems.Any(y => y.IsCashPaymentType()) ?
                     request.cbPayItems
                     : Enumerable.Empty<PayItem>();
 
