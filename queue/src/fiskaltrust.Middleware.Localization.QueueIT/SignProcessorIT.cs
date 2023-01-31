@@ -7,7 +7,7 @@ using fiskaltrust.Middleware.Contracts;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 
-namespace fiskaltrust.Middleware.Localization.QueueDE
+namespace fiskaltrust.Middleware.Localization.QueueIT
 {
     public class SignProcessorIT : IMarketSpecificSignProcessor
     {
