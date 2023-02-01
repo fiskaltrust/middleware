@@ -7,6 +7,9 @@ namespace fiskaltrust.Middleware.Localization.QueueES
     {
         public void ConfigureServices(IServiceCollection services)
         {
+            var _ = services
+                    .AddScoped<IMarketSpecificSignProcessor, SignProcessorES>()
+                    .AddScoped<IMarketSpecificJournalProcessor, JournalProcessorES>();
         }
     }
 }

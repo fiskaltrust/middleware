@@ -6,7 +6,6 @@ using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.de;
 using fiskaltrust.ifPOS.v1.me;
 using fiskaltrust.Middleware.Abstractions;
-using fiskaltrust.Middleware.Localization.QueueDE;
 using fiskaltrust.Middleware.Queue.Test.Launcher.Helpers;
 using fiskaltrust.storage.serialization.V0;
 using fiskaltrust.storage.V0;
@@ -22,7 +21,7 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
     {
         private static readonly string _cashBoxId = "";
         private static readonly string _accessToken = "";
-        private static readonly string _localization = "ME";
+        private static readonly string _localization = "";
 
         public static void Main(string configurationFilePath = "", string serviceFolder = @"C:\ProgramData\fiskaltrust\service")
         {
@@ -57,39 +56,20 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
             serviceCollection.AddStandardLoggers(LogLevel.Debug);
 
 
-            if (_localization.Equals("ME"))
+            if (!string.IsNullOrEmpty(_localization))
             {
-                serviceCollection.AddScoped<IClientFactory<IMESSCD>, MESSCDClientFactory>();
-                var key = "init_ftQueue";
-                if (config.Configuration.ContainsKey(key))
+                if (_localization == "ME")
                 {
-                    var queues = JsonConvert.DeserializeObject<List<ftQueue>>(config.Configuration[key].ToString());
-                    queues.FirstOrDefault().CountryCode = "ME";
-                    config.Configuration[key] = JsonConvert.SerializeObject(queues);
+                    serviceCollection.AddScoped<IClientFactory<IMESSCD>, MESSCDClientFactory>();
                 }
-                var temp = config.Configuration["init_ftQueueDE"];
-                config.Configuration["init_ftQueueME"] = temp.ToString().Replace("DE", "ME");
-                temp = config.Configuration["init_ftSignaturCreationUnitDE"];
-                config.Configuration["init_ftSignaturCreationUnitME"] = temp.ToString().Replace("DE", "ME");
-                
-                var masterDataConfiguration = new MasterDataConfiguration
-                {
-                    Account = new AccountMasterData { TaxId = "03102955" },
-                    Outlet = new OutletMasterData { LocationId = "pg000qi813" },
-                    PosSystems = new List<PosSystemMasterData>
-                    {
-                        new() { Brand = "xl522hw351", Model = "wv720nq953" }
-                    }
-                };
-                config.Configuration["init_masterData"] = JsonConvert.SerializeObject(masterDataConfiguration);
+                overrideLocalization(_localization, config);
 
-                serviceCollection.AddScoped<IClientFactory<IDESSCD>, DESSCDClientFactory>();
             }
             else
-            { 
+            {
                 serviceCollection.AddScoped<IClientFactory<IDESSCD>, DESSCDClientFactory>();
             }
-
+            
             if (config.Package == "fiskaltrust.Middleware.Queue.SQLite")
             {
                 ConfigureSQLite(config, serviceCollection);
@@ -105,6 +85,33 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
             Console.WriteLine("Press key to end program");
             Console.ReadLine();
         }
+
+        private static void overrideLocalization(string localization, PackageConfiguration config)
+        {
+            var key = "init_ftQueue";
+            if (config.Configuration.ContainsKey(key))
+            {
+                var queues = JsonConvert.DeserializeObject<List<ftQueue>>(config.Configuration[key].ToString());
+                queues.FirstOrDefault().CountryCode = localization;
+                config.Configuration[key] = JsonConvert.SerializeObject(queues);
+            }
+            var temp = config.Configuration["init_ftQueueDE"];
+            config.Configuration["init_ftQueue"+localization] = temp.ToString().Replace("DE", localization);
+            temp = config.Configuration["init_ftSignaturCreationUnitDE"];
+            config.Configuration["init_ftSignaturCreationUnit" + localization] = temp.ToString().Replace("DE", localization);
+
+            var masterDataConfiguration = new MasterDataConfiguration
+            {
+                Account = new AccountMasterData { TaxId = "03102955" },
+                Outlet = new OutletMasterData { LocationId = "pg000qi813" },
+                PosSystems = new List<PosSystemMasterData>
+                    {
+                        new() { Brand = "xl522hw351", Model = "wv720nq953" }
+                    }
+            };
+            config.Configuration["init_masterData"] = JsonConvert.SerializeObject(masterDataConfiguration);
+        }
+
         private static void ConfigureSQLite(PackageConfiguration queue, ServiceCollection serviceCollection)
         {
                 var bootStrapper = new SQLite.PosBootstrapper
