@@ -1,0 +1,32 @@
+resources:
+  pipelines:
+    - pipeline: build
+      source: fiskaltrust.Middleware.SCU.IT
+      trigger:
+        tags:
+          - scu-it/*
+
+trigger: none
+pr: none
+
+stages:
+  - template: templates/release.yml
+    parameters:
+      type: fiskaltrust.Middleware.SCU.IT
+      artifact: build
+      projects:
+        - Epson
+      stages:
+        - stage: Release_Sandbox
+          dependsOn: []
+          templateContext:
+            environment: sandbox
+            storage: stdevwesteuropepackages
+            serviceConnection: rg-dev-westeurope-packages
+
+        # - stage: Release_Production
+        #   templateContext:
+        #     environment: production
+        #     storage: stprodwesteuropepackages
+        #     serviceConnection: rg-prod-westeurope-packages
+        #     dependsOnPrefix: Release_Sandbox

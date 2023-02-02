@@ -439,6 +439,102 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             };
         }
 
+        public static AzureTableStorageFtQueueES Map(ftQueueES src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+
+            return new AzureTableStorageFtQueueES
+            {
+                PartitionKey = src.ftQueueESId.ToString(),
+                RowKey = src.ftQueueESId.ToString(),
+                ftQueueESId = src.ftQueueESId,
+                ftSignaturCreationUnitESId = src.ftSignaturCreationUnitESId,
+                LastHash = src.LastHash,
+                SSCDFailCount = src.SSCDFailCount,
+                SSCDFailMoment = src.SSCDFailMoment,
+                SSCDFailQueueItemId = src.SSCDFailQueueItemId,
+                UsedFailedCount = src.UsedFailedCount,
+                UsedFailedMomentMin = src.UsedFailedMomentMin,
+                UsedFailedMomentMax = src.UsedFailedMomentMax,
+                UsedFailedQueueItemId = src.UsedFailedQueueItemId,
+                TimeStamp = src.TimeStamp
+            };
+        }
+
+        public static ftQueueES Map(AzureTableStorageFtQueueES src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+
+            return new ftQueueES
+            {
+                ftQueueESId = src.ftQueueESId,
+                ftSignaturCreationUnitESId = src.ftSignaturCreationUnitESId,
+                LastHash = src.LastHash,
+                SSCDFailCount = src.SSCDFailCount,
+                SSCDFailMoment = src.SSCDFailMoment,
+                SSCDFailQueueItemId = src.SSCDFailQueueItemId,
+                UsedFailedCount = src.UsedFailedCount,
+                UsedFailedMomentMin = src.UsedFailedMomentMin,
+                UsedFailedMomentMax = src.UsedFailedMomentMax,
+                UsedFailedQueueItemId = src.UsedFailedQueueItemId,
+                TimeStamp = src.TimeStamp
+            };
+        }
+
+        public static AzureTableStorageFtQueueIT Map(ftQueueIT src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+
+            return new AzureTableStorageFtQueueIT
+            {
+                PartitionKey = src.ftQueueITId.ToString(),
+                RowKey = src.ftQueueITId.ToString(),
+                ftQueueITId = src.ftQueueITId,
+                ftSignaturCreationUnitITId = src.ftSignaturCreationUnitITId,
+                LastHash = src.LastHash,
+                SSCDFailCount = src.SSCDFailCount,
+                SSCDFailMoment = src.SSCDFailMoment,
+                SSCDFailQueueItemId = src.SSCDFailQueueItemId,
+                UsedFailedCount = src.UsedFailedCount,
+                UsedFailedMomentMin = src.UsedFailedMomentMin,
+                UsedFailedMomentMax = src.UsedFailedMomentMax,
+                UsedFailedQueueItemId = src.UsedFailedQueueItemId,
+                TimeStamp = src.TimeStamp
+            };
+        }
+
+        public static ftQueueIT Map(AzureTableStorageFtQueueIT src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+
+            return new ftQueueIT
+            {
+                ftQueueITId = src.ftQueueITId,
+                ftSignaturCreationUnitITId = src.ftSignaturCreationUnitITId,
+                LastHash = src.LastHash,
+                SSCDFailCount = src.SSCDFailCount,
+                SSCDFailMoment = src.SSCDFailMoment,
+                SSCDFailQueueItemId = src.SSCDFailQueueItemId,
+                UsedFailedCount = src.UsedFailedCount,
+                UsedFailedMomentMin = src.UsedFailedMomentMin,
+                UsedFailedMomentMax = src.UsedFailedMomentMax,
+                UsedFailedQueueItemId = src.UsedFailedQueueItemId,
+                TimeStamp = src.TimeStamp                
+            };
+        }
+
         public static AzureTableStorageFtQueueME Map(ftQueueME src)
         {
             if (src == null)
@@ -907,6 +1003,70 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
                 TimeStamp = src.TimeStamp,
                 Mode = src.Mode,
                 ModeConfigurationJson = src.ModeConfigurationJson,
+                Url = src.Url
+            };
+        }
+
+        public static AzureTableStorageFtSignaturCreationUnitES Map(ftSignaturCreationUnitES src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+
+            return new AzureTableStorageFtSignaturCreationUnitES
+            {
+                PartitionKey = src.ftSignaturCreationUnitESId.ToString(),
+                RowKey = src.ftSignaturCreationUnitESId.ToString(),
+                ftSignaturCreationUnitESId = src.ftSignaturCreationUnitESId,
+                Url = src.Url,
+                TimeStamp = src.TimeStamp
+            };
+        }
+
+        public static ftSignaturCreationUnitES Map(AzureTableStorageFtSignaturCreationUnitES src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+
+            return new ftSignaturCreationUnitES
+            {
+                ftSignaturCreationUnitESId = src.ftSignaturCreationUnitESId,
+                TimeStamp = src.TimeStamp,
+                Url = src.Url
+            };
+        }
+
+        public static AzureTableStorageFtSignaturCreationUnitIT Map(ftSignaturCreationUnitIT src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+
+            return new AzureTableStorageFtSignaturCreationUnitIT
+            {
+                PartitionKey = src.ftSignaturCreationUnitITId.ToString(),
+                RowKey = src.ftSignaturCreationUnitITId.ToString(),
+                ftSignaturCreationUnitITId = src.ftSignaturCreationUnitITId,
+                Url = src.Url,
+                TimeStamp = src.TimeStamp
+            };
+        }
+
+        public static ftSignaturCreationUnitIT Map(AzureTableStorageFtSignaturCreationUnitIT src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+
+            return new ftSignaturCreationUnitIT
+            {
+                ftSignaturCreationUnitITId = src.ftSignaturCreationUnitITId,
+                TimeStamp = src.TimeStamp,
                 Url = src.Url
             };
         }
