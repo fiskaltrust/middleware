@@ -165,7 +165,7 @@ namespace fiskaltrust.Middleware.Queue.InMemory.IntegrationTest
                 { "init_ftQueue", JsonConvert.SerializeObject(values.ftQueues[0].Configuration.init_ftQueue) }
             };
 
-            var businessLogicFactoryBoostrapper = LocalizedQueueBootStrapperFactory.GetBootstrapperForLocalizedQueue(values.ftQueues[0].Configuration.init_ftQueue[0].ftQueueId, new MiddlewareConfiguration { Configuration = config });
+            var businessLogicFactoryBoostrapper = LocalizedQueueBootStrapperFactory.GetBootstrapperForLocalizedQueue(values.ftQueues[0].Configuration.init_ftQueue[0].ftQueueId, new MiddlewareConfiguration { Configuration = config, PreviewFeatures = new() });
             businessLogicFactoryBoostrapper.Should().BeOfType(typeof(QueueDEBootstrapper));
         }
     }
