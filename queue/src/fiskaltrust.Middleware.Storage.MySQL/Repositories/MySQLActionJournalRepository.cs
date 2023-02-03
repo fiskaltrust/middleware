@@ -52,6 +52,19 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
             }
         }
 
+        public async IAsyncEnumerable<ftActionJournal> GetByQueueItemId(Guid queueItemId)
+        {
+            var query = "SELECT * FROM ftActionJournal WHERE ftQueueItemId = @queueItemId;";
+            using (var connection = new MySqlConnection(ConnectionString))
+            {
+                await connection.OpenAsync().ConfigureAwait(false);
+                await foreach (var entry in connection.Query<ftActionJournal>(query, new { queueItemId }, buffered: false).ToAsyncEnumerable().ConfigureAwait(false))
+                {
+                    yield return entry;
+                }
+            }
+        }
+
         public async Task<ftActionJournal> GetWithLastTimestampAsync()
         {
             using (var connection = new MySqlConnection(ConnectionString))

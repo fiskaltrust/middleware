@@ -1,5 +1,5 @@
 # fiskaltrust.Middleware
-[![Build Status](https://img.shields.io/azure-devops/build/fiskaltrust/29af887e-c4f1-46d9-bcd8-323f3f3ea149/441/main?label=Build%20%28Queue%29&logo=azurepipelines)](https://dev.azure.com/fiskaltrust/fiskaltrust/_build/latest?definitionId=441&branchName=main) [![Build Status](https://img.shields.io/azure-devops/build/fiskaltrust/29af887e-c4f1-46d9-bcd8-323f3f3ea149/442/main?label=Build%20%28SCU%20DE%29&logo=azurepipelines)](https://dev.azure.com/fiskaltrust/fiskaltrust/_build/latest?definitionId=442&branchName=main) [![Docs](https://img.shields.io/badge/Docs-informational)](https://docs.fiskaltrust.cloud) [![Release notes](https://img.shields.io/badge/Release%20notes-informational)](https://docs.fiskaltrust.cloud/docs/release-notes)
+[![Build Status](https://img.shields.io/azure-devops/build/fiskaltrust/29af887e-c4f1-46d9-bcd8-323f3f3ea149/441/main?label=Build%20%28Queue%29&logo=azurepipelines)](https://dev.azure.com/fiskaltrust/fiskaltrust/_build/latest?definitionId=441&branchName=main) [![Build Status](https://img.shields.io/azure-devops/build/fiskaltrust/29af887e-c4f1-46d9-bcd8-323f3f3ea149/442/main?label=Build%20%28SCU%20DE%29&logo=azurepipelines)](https://dev.azure.com/fiskaltrust/fiskaltrust/_build/latest?definitionId=442&branchName=main) [![Nightly Smoke Tests](https://img.shields.io/azure-devops/build/fiskaltrust/fiskaltrust/444?label=Nightly%20Smoke%20Tests)](https://dev.azure.com/fiskaltrust/fiskaltrust/_build/latest?definitionId=444&branchName=main) [![Docs](https://img.shields.io/badge/Docs-informational)](https://docs.fiskaltrust.cloud) [![Release notes](https://img.shields.io/badge/Release%20notes-informational)](https://docs.fiskaltrust.cloud/docs/release-notes)
 
 The fiskaltrust.Middleware is an integrated set of highly configurable software components for POS systems to abstract the complexity of national fiscalization laws.
 
@@ -41,4 +41,8 @@ In general, we welcome all kinds of contributions and feedback, e.g. via [issues
 Please check out the [contribution guidelines](./CONTRIBUTING.md) for more detailed information about how to proceed.
 
 ## License
-The fiskaltrust Middleware is released under the [LICENSE](./LICENSE).
+The fiskaltrust Middleware is released under the [EUPL 1.2](./LICENSE). 
+
+As a Compliance-as-a-Service provider, the security and authenticity of the products installed on our users' endpoints is essential to us. To ensure that only peer-reviewed binaries are distributed by maintainers, fiskaltrust explicitly reserves the sole right to use the brand name "fiskaltrust Middleware" (and the brand names of related products and services) for the software provided here as open source - regardless of the spelling or abbreviation, as long as conclusions can be drawn about the original product name.  
+
+The fiskaltrust Middleware (and related products and services) as contained in these repositories may therefore only be used in the form of binaries signed by fiskaltrust. 

@@ -38,6 +38,12 @@ namespace fiskaltrust.Middleware.Storage.EFCore.Repositories
             return result.AsAsyncEnumerable();
         }
 
+        public IAsyncEnumerable<ftActionJournal> GetByQueueItemId(Guid queueItemId)
+        {
+            var result = DbContext.ActionJournalList.AsQueryable().Where(x => x.ftQueueItemId == queueItemId).OrderBy(x => x.TimeStamp);
+            return result.AsAsyncEnumerable();
+        }
+
         public async Task<ftActionJournal> GetWithLastTimestampAsync() => await DbContext.ActionJournalList.AsQueryable().OrderByDescending(x => x.TimeStamp).FirstOrDefaultAsync().ConfigureAwait(false);
 
         public IAsyncEnumerable<ftActionJournal> GetByPriorityAfterTimestampAsync(int lowerThanPriority, long fromTimestampInclusive) =>

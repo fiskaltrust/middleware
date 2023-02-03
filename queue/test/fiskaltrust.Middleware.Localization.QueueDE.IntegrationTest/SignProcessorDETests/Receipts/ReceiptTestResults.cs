@@ -21,10 +21,9 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                 actionJournalEntry.Should().NotBeNull();
             }
             var queueItems = await signProcessorDependenciesFixture.queueItemRepository.GetAsync().ConfigureAwait(false);
-            var lastQueueItem = queueItems.OrderByDescending(x => x.ftQueueMoment).First();
+            var lastQueueItem = queueItems.Where(x => x.ftQueueItemId.ToString() == receiptResponse.ftQueueItemID).First();
             var queue = await signProcessorDependenciesFixture.configurationRepository.GetQueueAsync(signProcessorDependenciesFixture.QUEUEID).ConfigureAwait(false);
             var queueDE = await signProcessorDependenciesFixture.configurationRepository.GetQueueDEAsync(signProcessorDependenciesFixture.QUEUEID).ConfigureAwait(false);
-            receiptResponse.ftQueueItemID.Should().Be(lastQueueItem.ftQueueItemId.ToString()).Should();
             receiptResponse.ftCashBoxID.Should().Be(signProcessorDependenciesFixture.CASHBOXID.ToString());
             receiptResponse.ftCashBoxID.Should().Be(queue.ftCashBoxId.ToString());
             receiptResponse.ftCashBoxIdentification.Should().Be(signProcessorDependenciesFixture.CASHBOXIDENTIFICATION.ToString());

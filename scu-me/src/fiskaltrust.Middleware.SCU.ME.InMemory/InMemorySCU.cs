@@ -6,8 +6,9 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 using Bogus;
-using fiskaltrust.ifPOS.v2.me;
+using fiskaltrust.ifPOS.v1.me;
 using fiskaltrust.Middleware.SCU.ME.Common.Configuration;
+using fiskaltrust.Middleware.SCU.ME.Common.Helpers;
 
 namespace fiskaltrust.Middleware.SCU.ME.InMemory;
 
@@ -22,37 +23,31 @@ public class InMemorySCU : IMESSCD
         _faker = new Faker();
     }
 
+    public Task<ComputeIICResponse> ComputeIICAsync(ComputeIICRequest computeIICRequest)
+    {
+        var (iic, iicSignature) = SigningHelper.CreateIIC(_configuration, computeIICRequest);
+        return Task.FromResult(
+        new ComputeIICResponse
+        {
+            IIC = iic,
+            IICSignature = iicSignature
+        });
+    }
     public Task<ScuMeEchoResponse> EchoAsync(ScuMeEchoRequest request) => Task.FromResult(new ScuMeEchoResponse { Message = request.Message });
 
     public Task<RegisterCashDepositResponse> RegisterCashDepositAsync(RegisterCashDepositRequest registerCashDepositRequest) =>
         Task.FromResult(new RegisterCashDepositResponse
         {
-            FCDC = _faker.Random.Guid().ToString()
+            FCDC = Guid.NewGuid().ToString()
         });
-    public Task<RegisterCashWithdrawalResponse> RegisterCashWithdrawalAsync(RegisterCashWithdrawalRequest registerCashDepositRequest) =>
-        Task.FromResult(new RegisterCashWithdrawalResponse());
+    public Task RegisterCashWithdrawalAsync(RegisterCashWithdrawalRequest registerCashWithdrawalRequest) =>
+        Task.CompletedTask;
 
     public Task<RegisterInvoiceResponse> RegisterInvoiceAsync(RegisterInvoiceRequest registerInvoiceRequest)
     {
-        var iicInput = string.Join("|", new List<object>
-        {
-            _configuration.TIN,
-            registerInvoiceRequest.Moment,
-            registerInvoiceRequest.InvoiceDetails.YearlyOrdinalNumber,
-            registerInvoiceRequest.BusinessUnitCode,
-            registerInvoiceRequest.TcrCode,
-            registerInvoiceRequest.SoftwareCode,
-            registerInvoiceRequest.InvoiceDetails.GrossAmount
-        }.Select(o => o.ToString()));
-
-        var iicSignature = _configuration.Certificate.GetRSAPrivateKey()!.SignData(Encoding.ASCII.GetBytes(iicInput), HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-
-        var iic = ((HashAlgorithm) CryptoConfig.CreateFromName("MD5")!).ComputeHash(iicSignature);
-
         return Task.FromResult(new RegisterInvoiceResponse
         {
-            FIC = _faker.Random.Guid().ToString(),
-            IIC = BitConverter.ToString(iic).Replace("-", string.Empty)
+            FIC = Guid.NewGuid().ToString()
         });
     }
 
@@ -62,5 +57,5 @@ public class InMemorySCU : IMESSCD
             TcrCode = $"{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}",
         });
 
-    public Task UnregisterTcrAsync(RegisterTcrRequest registerTCRRequest) => Task.CompletedTask;
+    public Task UnregisterTcrAsync(UnregisterTcrRequest unregisterTCRRequest) => Task.CompletedTask;
 }

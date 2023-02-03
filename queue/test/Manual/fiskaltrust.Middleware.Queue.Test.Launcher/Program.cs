@@ -1,12 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.de;
+using fiskaltrust.ifPOS.v1.me;
 using fiskaltrust.Middleware.Abstractions;
-using fiskaltrust.Middleware.Queue.Test.Launcher.Grpc;
 using fiskaltrust.Middleware.Queue.Test.Launcher.Helpers;
 using fiskaltrust.storage.serialization.V0;
+using fiskaltrust.storage.V0;
+using fiskaltrust.storage.V0.MasterData;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -16,12 +19,13 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
 {
     public static class Program
     {
-        private static readonly string _cashBoxId = "054ed8e5-3c57-4309-9287-14756b6431fd";
-        private static readonly string _accessToken = "BE+pB5gShTPyLDfq2dosKOfJrDBnRU++IU6TJPpwoKOPfCF87gXVQ1dPlGpUzXLNvRJ0zn5gm4OIP3h5lCvczM0=";
+        private static readonly string _cashBoxId = "";
+        private static readonly string _accessToken = "";
+        private static readonly string _localization = "";
 
         public static void Main(string configurationFilePath = "", string serviceFolder = @"C:\ProgramData\fiskaltrust\service")
         {
-            ftCashBoxConfiguration cashBoxConfiguration;
+            ftCashBoxConfiguration cashBoxConfiguration = null;
             if (!string.IsNullOrEmpty(configurationFilePath))
             {
                 cashBoxConfiguration = JsonConvert.DeserializeObject<ftCashBoxConfiguration>(configurationFilePath);
@@ -34,21 +38,38 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
             {
                 serviceFolder = Directory.GetCurrentDirectory();
             }
+
             var config = cashBoxConfiguration.ftQueues[0];
+
             config.Configuration.Add("cashboxid", cashBoxConfiguration.ftCashBoxId);
-            config.Configuration.Add("accesstoken", "");
+            config.Configuration.Add("accesstoken", _accessToken);
             config.Configuration.Add("useoffline", false);
             config.Configuration.Add("sandbox", true);
             config.Configuration.Add("servicefolder", serviceFolder);
             config.Configuration.Add("configuration", JsonConvert.SerializeObject(cashBoxConfiguration));
             config.Configuration.Add("ClosingTARExportTimeoutMin", 1);
             config.Configuration.Add("ClosingTARExportPollingDurationMs", 6000);
+
             //config.Configuration.Add("DisableClosingTARExport", true);
 
             var serviceCollection = new ServiceCollection();
             serviceCollection.AddStandardLoggers(LogLevel.Debug);
-            serviceCollection.AddScoped<IClientFactory<IDESSCD>, DESSCDClientFactory>();
 
+
+            if (!string.IsNullOrEmpty(_localization))
+            {
+                if (_localization == "ME")
+                {
+                    serviceCollection.AddScoped<IClientFactory<IMESSCD>, MESSCDClientFactory>();
+                }
+                overrideLocalization(_localization, config);
+
+            }
+            else
+            {
+                serviceCollection.AddScoped<IClientFactory<IDESSCD>, DESSCDClientFactory>();
+            }
+            
             if (config.Package == "fiskaltrust.Middleware.Queue.SQLite")
             {
                 ConfigureSQLite(config, serviceCollection);
@@ -64,14 +85,41 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
             Console.WriteLine("Press key to end program");
             Console.ReadLine();
         }
+
+        private static void overrideLocalization(string localization, PackageConfiguration config)
+        {
+            var key = "init_ftQueue";
+            if (config.Configuration.ContainsKey(key))
+            {
+                var queues = JsonConvert.DeserializeObject<List<ftQueue>>(config.Configuration[key].ToString());
+                queues.FirstOrDefault().CountryCode = localization;
+                config.Configuration[key] = JsonConvert.SerializeObject(queues);
+            }
+            var temp = config.Configuration["init_ftQueueDE"];
+            config.Configuration["init_ftQueue"+localization] = temp.ToString().Replace("DE", localization);
+            temp = config.Configuration["init_ftSignaturCreationUnitDE"];
+            config.Configuration["init_ftSignaturCreationUnit" + localization] = temp.ToString().Replace("DE", localization);
+
+            var masterDataConfiguration = new MasterDataConfiguration
+            {
+                Account = new AccountMasterData { TaxId = "03102955" },
+                Outlet = new OutletMasterData { LocationId = "pg000qi813" },
+                PosSystems = new List<PosSystemMasterData>
+                    {
+                        new() { Brand = "xl522hw351", Model = "wv720nq953" }
+                    }
+            };
+            config.Configuration["init_masterData"] = JsonConvert.SerializeObject(masterDataConfiguration);
+        }
+
         private static void ConfigureSQLite(PackageConfiguration queue, ServiceCollection serviceCollection)
         {
-            var bootStrapper = new SQLite.PosBootstrapper
-            {
-                Id = queue.Id,
-                Configuration = queue.Configuration
-            };
-            bootStrapper.ConfigureServices(serviceCollection);
+                var bootStrapper = new SQLite.PosBootstrapper
+                {
+                    Id = queue.Id,
+                    Configuration = queue.Configuration
+                };
+                bootStrapper.ConfigureServices(serviceCollection);
         }
     }
 }

@@ -77,7 +77,7 @@ namespace fiskaltrust.Middleware.Storage.EF.Migrations
                         TimeStamp = c.Long(nullable: false),
                     })
                 .PrimaryKey(t => t.ftJournalFRId, clustered: false);
-            
+
             CreateTable(
                 "dbo.ftQueueAT",
                 c => new
@@ -273,7 +273,7 @@ namespace fiskaltrust.Middleware.Storage.EF.Migrations
                         TimeStamp = c.Long(nullable: false),
                     })
                 .PrimaryKey(t => t.ftQueueFRId, clustered: false);
-            
+
             CreateTable(
                 "dbo.ftQueueItem",
                 c => new
@@ -368,8 +368,7 @@ namespace fiskaltrust.Middleware.Storage.EF.Migrations
                         TimeStamp = c.Long(nullable: false),
                     })
                 .PrimaryKey(t => t.ftSignaturCreationUnitFRId, clustered: false);
-            
-        }
+    }
         
         public override void Down()
         {

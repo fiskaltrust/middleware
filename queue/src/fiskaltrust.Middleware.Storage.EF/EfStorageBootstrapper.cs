@@ -21,8 +21,9 @@ using fiskaltrust.Middleware.Contracts.Data;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using Microsoft.Extensions.Logging;
 using fiskaltrust.Middleware.Abstractions;
-using fiskaltrust.Middleware.Storage.EF.Repositories.DE.MasterData;
 using fiskaltrust.storage.V0.MasterData;
+using fiskaltrust.Middleware.Storage.EF.Repositories.ME;
+using fiskaltrust.Middleware.Storage.EF.Repositories.MasterData;
 
 namespace fiskaltrust.Middleware.Storage.Ef
 {
@@ -54,8 +55,17 @@ namespace fiskaltrust.Middleware.Storage.Ef
             {
                 throw new Exception("Database connectionstring not defined");
             }
-            _connectionString = Encoding.UTF8.GetString(Encryption.Decrypt(Convert.FromBase64String(_efStorageConfiguration.ConnectionString), queueId.ToByteArray()));
-            Update(_connectionString, queueId, logger);
+
+            if (_efStorageConfiguration.ConnectionString.StartsWith("raw:"))
+            {
+                _connectionString = _efStorageConfiguration.ConnectionString.Substring("raw:".Length - 1);
+            }
+            else
+            {
+                _connectionString = Encoding.UTF8.GetString(Encryption.Decrypt(Convert.FromBase64String(_efStorageConfiguration.ConnectionString), queueId.ToByteArray()));
+            }
+
+            Update(_connectionString, _efStorageConfiguration.MigrationsTimeoutSec, queueId, logger);
 
             var configurationRepository = new EfConfigurationRepository(new MiddlewareDbContext(_connectionString, _queueId));
 
@@ -93,10 +103,16 @@ namespace fiskaltrust.Middleware.Storage.Ef
             services.AddTransient<IReadOnlyJournalFRRepository, EfJournalFRRepository>();
             services.AddTransient<IMiddlewareRepository<ftJournalFR>, EfJournalFRRepository>();
 
+            services.AddTransient<IMiddlewareJournalMERepository, EfJournalMERepository>();
+            services.AddTransient<IJournalMERepository, EfJournalMERepository>();
+            services.AddTransient<IReadOnlyJournalMERepository, EfJournalMERepository>();
+            services.AddTransient<IMiddlewareRepository<ftJournalME>, EfJournalMERepository>();
+
             services.AddTransient<IReceiptJournalRepository, EfReceiptJournalRepository>();
             services.AddTransient<IReadOnlyReceiptJournalRepository, EfReceiptJournalRepository>();
             services.AddTransient<IMiddlewareRepository<ftReceiptJournal>, EfReceiptJournalRepository>();
 
+            services.AddSingleton<IMiddlewareActionJournalRepository, EfActionJournalRepository>();
             services.AddTransient<IActionJournalRepository, EfActionJournalRepository>();
             services.AddTransient<IReadOnlyActionJournalRepository, EfActionJournalRepository>();
             services.AddTransient<IMiddlewareRepository<ftActionJournal>, EfActionJournalRepository>();
@@ -111,12 +127,13 @@ namespace fiskaltrust.Middleware.Storage.Ef
             services.AddTransient<IMasterDataRepository<PosSystemMasterData>, EfPosSystemMasterDataRepository>();
         }
 
-        public static void Update(string connectionString, Guid queueId, ILogger<IMiddlewareBootstrapper> logger)
+        public static void Update(string connectionString, int timeoutSec, Guid queueId, ILogger<IMiddlewareBootstrapper> logger)
         {
             var schemaString = queueId.ToString("D");
             var contextMigrationsConfiguration = new DbMigrationsConfiguration<MiddlewareDbContext>
             {
                 AutomaticMigrationsEnabled = false,
+                CommandTimeout = timeoutSec,
                 TargetDatabase = new DbConnectionInfo(connectionString, "System.Data.SqlClient"),
                 MigrationsAssembly = typeof(MiddlewareDbContext).Assembly,
                 MigrationsNamespace = "fiskaltrust.Middleware.Storage.EF.Migrations"

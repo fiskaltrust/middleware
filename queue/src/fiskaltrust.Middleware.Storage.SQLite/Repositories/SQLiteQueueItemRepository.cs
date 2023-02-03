@@ -46,16 +46,65 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Repositories
             }
         }
 
-        public async IAsyncEnumerable<ftQueueItem> GetPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem)
+        public async Task<ftQueueItem> GetClosestPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem)
         {
             var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(ftQueueItem.request);
-            if (string.IsNullOrWhiteSpace(receiptRequest.cbPreviousReceiptReference) && string.IsNullOrWhiteSpace(ftQueueItem.cbReceiptReference))
+
+            if (string.IsNullOrWhiteSpace(receiptRequest.cbPreviousReceiptReference) || string.IsNullOrWhiteSpace(ftQueueItem.cbReceiptReference) || receiptRequest.cbPreviousReceiptReference == ftQueueItem.cbReceiptReference)
             {
-                yield break;
+                return null;
             }
-            var query = "SELECT * FROM ftQueueItem WHERE ftQueueRow < @ftQueueRow AND (cbReceiptReference = @cbPreviousReceiptReference OR cbReceiptReference = @cbReceiptReference)";
-            
-            await foreach (var entry in DbConnection.Query<ftQueueItem>(query, new { ftQueueItem.ftQueueRow, receiptRequest.cbPreviousReceiptReference, ftQueueItem.cbReceiptReference }, buffered: false).ToAsyncEnumerable())
+
+            var query = "SELECT *, json_extract(request, '$.ftReceiptCase') AS ReceiptCase FROM ftQueueItem WHERE ftQueueRow < @ftQueueRow AND cbReceiptReference = @cbPreviousReceiptReference "+
+                "AND NOT (ReceiptCase & 0xFFFF = 0x0002 OR ReceiptCase & 0xFFFF = 0x0003 OR ReceiptCase & 0xFFFF = 0x0005 OR ReceiptCase & 0xFFFF = 0x0006 OR ReceiptCase & 0xFFFF = 0x0007) " +
+                "AND response IS NOT NULL " +
+                "ORDER BY timestamp DESC LIMIT 1;";
+            return await DbConnection.QueryFirstOrDefaultAsync<ftQueueItem>(query, new { ftQueueItem.ftQueueRow, receiptRequest.cbPreviousReceiptReference }).ConfigureAwait(false);
+        }
+
+        public async IAsyncEnumerable<ftQueueItem> GetQueueItemsAfterQueueItem(ftQueueItem ftQueueItem)
+        {
+            var query = "SELECT * FROM ftQueueItem WHERE ftQueueRow >= @ftQueueRow;";
+            await foreach (var entry in DbConnection.Query<ftQueueItem>(query, new { ftQueueItem.ftQueueRow}, buffered: false).ToAsyncEnumerable())
+            {
+                yield return entry;
+            }
+        }
+
+        public async IAsyncEnumerable<string> GetGroupedReceiptReferenceAsync(long? fromIncl, long? toIncl) 
+        {
+            var query = $"SELECT cbReceiptReference  FROM " +
+                         "(SELECT cbReceiptReference, json_extract(request, '$.ftReceiptCase') AS ReceiptCase FROM ftQueueItem " +
+                         "WHERE " +
+                         (fromIncl.HasValue ? " ftQueueItem.TimeStamp >= @fromIncl " : " ") +
+                         (fromIncl.HasValue && toIncl.HasValue ? " AND " : " ") +
+                         (toIncl.HasValue ? " ftQueueItem.TimeStamp <= @toIncl  " : " ") +
+                         (fromIncl.HasValue || toIncl.HasValue ? "AND " : " ") +
+                         "NOT (ReceiptCase & 0xFFFF = 0x0002 OR ReceiptCase & 0xFFFF = 0x0003 OR ReceiptCase & 0xFFFF = 0x0005 OR ReceiptCase & 0xFFFF = 0x0006 OR ReceiptCase & 0xFFFF = 0x0007) " +
+                         "AND response IS NOT NULL" +
+                         ") GROUP BY cbReceiptReference; ";
+
+            object obj = null;
+            if (fromIncl.HasValue && toIncl.HasValue) {
+                obj = new { fromIncl, toIncl };
+            } else if (fromIncl.HasValue) {
+                obj = new { fromIncl };
+            } else if (toIncl.HasValue) {
+                obj = new { toIncl };
+            };
+            await foreach (var entry in DbConnection.Query<string>(query, obj,  buffered: false).ToAsyncEnumerable())
+            {
+                yield return entry;
+            }
+        }
+
+        public async IAsyncEnumerable<ftQueueItem> GetQueueItemsForReceiptReferenceAsync(string receiptReference)
+        {
+            var query = "SELECT *, json_extract(request, '$.ftReceiptCase') AS ReceiptCase FROM ftQueueItem WHERE cbReceiptReference = @receiptReference " +
+                "AND NOT (ReceiptCase & 0xFFFF = 0x0002 OR ReceiptCase & 0xFFFF = 0x0003 OR ReceiptCase & 0xFFFF = 0x0005 OR ReceiptCase & 0xFFFF = 0x0006 OR ReceiptCase & 0xFFFF = 0x0007) " +
+                "AND response IS NOT NULL " +
+                "ORDER BY timestamp;";
+            await foreach (var entry in DbConnection.Query<ftQueueItem>(query, new { receiptReference }, buffered: false).ToAsyncEnumerable())
             {
                 yield return entry;
             }

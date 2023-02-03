@@ -23,6 +23,7 @@
         public string ProxyUsername { get; set; }
         public string ProxyPassword { get; set; }
         public int? FccHeapMemory { get; set; }
+        public int FccRetry { get; set; } = 8;
 
     }
 }

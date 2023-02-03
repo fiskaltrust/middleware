@@ -10,8 +10,9 @@ using fiskaltrust.Middleware.Storage.Base;
 using fiskaltrust.Middleware.Storage.EFCore.Repositories;
 using fiskaltrust.Middleware.Storage.EFCore.Repositories.AT;
 using fiskaltrust.Middleware.Storage.EFCore.Repositories.DE;
-using fiskaltrust.Middleware.Storage.EFCore.Repositories.DE.MasterData;
 using fiskaltrust.Middleware.Storage.EFCore.Repositories.FR;
+using fiskaltrust.Middleware.Storage.EFCore.Repositories.MasterData;
+using fiskaltrust.Middleware.Storage.EFCore.Repositories.ME;
 using fiskaltrust.storage.encryption.V0;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
@@ -49,7 +50,16 @@ namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer
             {
                 throw new Exception("Database connectionstring not defined");
             }
-            _connectionString = Encoding.UTF8.GetString(Encryption.Decrypt(Convert.FromBase64String((string) configuration["connectionstring"]), queueId.ToByteArray()));
+
+            if (((string) configuration["connectionstring"]).StartsWith("raw:"))
+            {
+                _connectionString = ((string) configuration["connectionstring"]).Substring("raw:".Length - 1);
+            }
+            else
+            {
+                _connectionString = Encoding.UTF8.GetString(Encryption.Decrypt(Convert.FromBase64String((string) configuration["connectionstring"]), queueId.ToByteArray()));
+            }
+
             _optionsBuilder = new DbContextOptionsBuilder<SQLServerMiddlewareDbContext>();
             _optionsBuilder.UseSqlServer(_connectionString);
             Update(_optionsBuilder.Options, queueId, logger);
@@ -89,10 +99,15 @@ namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer
             services.AddTransient<IReadOnlyJournalFRRepository, EFCoreJournalFRRepository>();
             services.AddTransient<IMiddlewareRepository<ftJournalFR>, EFCoreJournalFRRepository>();
 
+            services.AddTransient<IJournalMERepository, EFCoreJournalMERepository>();
+            services.AddTransient<IReadOnlyJournalMERepository, EFCoreJournalMERepository>();
+            services.AddTransient<IMiddlewareRepository<ftJournalME>, EFCoreJournalMERepository>();
+
             services.AddTransient<IReceiptJournalRepository, EFCoreReceiptJournalRepository>();
             services.AddTransient<IReadOnlyReceiptJournalRepository, EFCoreReceiptJournalRepository>();
             services.AddTransient<IMiddlewareRepository<ftReceiptJournal>, EFCoreReceiptJournalRepository>();
 
+            services.AddSingleton<IMiddlewareActionJournalRepository, EFCoreActionJournalRepository>();
             services.AddTransient<IActionJournalRepository, EFCoreActionJournalRepository>();
             services.AddTransient<IReadOnlyActionJournalRepository, EFCoreActionJournalRepository>();
             services.AddTransient<IMiddlewareRepository<ftActionJournal>, EFCoreActionJournalRepository>();

@@ -24,8 +24,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
         public override string ReceiptName => "Initiate-SCU-switch receipt";
 
-        public InitiateScuSwitchReceiptCommand(IActionJournalRepository actionJournalRepository, ILogger<RequestCommand> logger, SignatureFactoryDE signatureFactory, 
-            IDESSCDProvider deSSCDProvider, ITransactionPayloadFactory transactionPayloadFactory, IReadOnlyQueueItemRepository queueItemRepository, 
+        public InitiateScuSwitchReceiptCommand(IActionJournalRepository actionJournalRepository, ILogger<RequestCommand> logger, SignatureFactoryDE signatureFactory,
+            IDESSCDProvider deSSCDProvider, ITransactionPayloadFactory transactionPayloadFactory, IReadOnlyQueueItemRepository queueItemRepository,
             IConfigurationRepository configurationRepository, IJournalDERepository journalDERepository, MiddlewareConfiguration middlewareConfiguration,
             IPersistentTransactionRepository<FailedStartTransaction> failedStartTransactionRepo, IPersistentTransactionRepository<FailedFinishTransaction> failedFinishTransactionRepo,
             IPersistentTransactionRepository<OpenTransaction> openTransactionRepo, ITarFileCleanupService tarFileCleanupService, QueueDEConfiguration queueDEConfiguration)
@@ -69,7 +69,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
             if (!sourceScu.IsSwitchSource() || string.IsNullOrEmpty(sourceScu.ModeConfigurationJson))
             {
-                throw new Exception($"The SCU switch must be initiated properly in the fiskaltrust.Portal before sending this receipt. See https://link.fiskaltrust.cloud/market-de/scu-switch for more details.");
+                throw new Exception($"The source SCU is not set up correctly for an SCU switch in the local configuration. The SCU switch must be initiated properly in the fiskaltrust.Portal before sending this receipt. See https://link.fiskaltrust.cloud/market-de/scu-switch for more details. (Source SCU: {sourceScu?.ftSignaturCreationUnitDEId}, Mode: {sourceScu?.Mode}, ModeConfigurationJson: {sourceScu?.ModeConfigurationJson})");
             }
 
             var specifiedTargetScuId = JsonConvert.DeserializeAnonymousType(sourceScu.ModeConfigurationJson, new { TargetScuId = new Guid?() })?.TargetScuId;
@@ -78,7 +78,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
             if (targetScu == null || !targetScu.IsSwitchTarget() || !specifiedSourceScuId.HasValue || specifiedSourceScuId.Value != sourceScu.ftSignaturCreationUnitDEId)
             {
-                throw new Exception($"The SCU switch must be initiated properly in the fiskaltrust.Portal before sending this receipt. See https://link.fiskaltrust.cloud/market-de/scu-switch for more details.");
+                throw new Exception($"The target SCU is not set up correctly for an SCU switch in the local configuration. The SCU switch must be initiated properly in the fiskaltrust.Portal before sending this receipt. See https://link.fiskaltrust.cloud/market-de/scu-switch for more details. (Source SCU: {sourceScu?.ftSignaturCreationUnitDEId}, Mode: {sourceScu?.Mode}, ModeConfigurationJson: {sourceScu?.ModeConfigurationJson}; Target SCU: {targetScu?.ftSignaturCreationUnitDEId}, Mode: {targetScu?.Mode}, ModeConfigurationJson: {targetScu?.ModeConfigurationJson})");
             }
 
             var actionJournals = new List<ftActionJournal>();

@@ -33,6 +33,16 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Repositories
             await DbConnection.ExecuteAsync(sql, entity).ConfigureAwait(false);
         }
 
+        public async IAsyncEnumerable<ftActionJournal> GetByQueueItemId(Guid queueItemId)
+        {
+            var query = "Select * from ftActionJournal where ftQueueItemId = @queueItemId;";
+
+            await foreach (var entry in DbConnection.Query<ftActionJournal>(query, new { queueItemId }, buffered: false).ToAsyncEnumerable().ConfigureAwait(false))
+            {
+                yield return entry;
+            }
+        }
+
         public async Task<ftActionJournal> GetWithLastTimestampAsync() 
             => await DbConnection.QueryFirstOrDefaultAsync<ftActionJournal>("Select * from ftActionJournal ORDER BY TimeStamp DESC LIMIT 1").ConfigureAwait(false);
 

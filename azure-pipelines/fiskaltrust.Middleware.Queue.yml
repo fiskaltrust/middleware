@@ -1,89 +1,95 @@
 resources:
-- repo: self
+  - repo: self
 
 trigger:
   batch: true
   branches:
     include:
-    - main
-    - refs/tags/queue/*
-  paths:
-    include:
-      - queue
+      - main
+      - refs/tags/queue/*
 
 pr:
   branches:
     include:
-    - main
-    - refs/tags/queue/*
+      - main
+      - refs/tags/queue/*
   paths:
     include:
       - queue
 
 variables:
-- group: 'Code Signing Certificates'
-- group: 'Middleware Tests'
-- name: BuildConfiguration
-  value: release
-- name: Solution
-  value: 'fiskaltrust.Middleware.sln'
-- name: WorkingDirectory
-  value: 'queue'
-- name: vmImageName 
-  value: 'windows-2022'
+  - group: "Code Signing Certificates"
+  - group: "Middleware Tests"
+  - name: BuildConfiguration
+    value: release
+  - name: Solution
+    value: "fiskaltrust.Middleware.sln"
+  - name: WorkingDirectory
+    value: "queue"
+  - name: vmImageName
+    value: "windows-2022"
 
-jobs:  
-- job: Test
-  displayName: Unit and integration tests
-  pool:
-    vmImage: $(vmImageName)
-  steps:
-  - template: templates/queue/test.template.yml
+stages:
+  - stage: Test
+    jobs:
+      - job: Test
+        displayName: Unit and integration tests
+        pool:
+          vmImage: $(vmImageName)
+        steps:
+          - template: templates/queue/test.template.yml
 
-- job: AcceptanceTest
-  dependsOn: Test
-  displayName: Acceptance tests
-  condition: and(succeeded(), or(eq(variables['Build.SourceBranch'], 'refs/heads/main'), startsWith(variables['Build.SourceBranch'], 'refs/tags/queue/')))
-  pool:
-    vmImage: $(vmImageName)
-  strategy:
-    maxParallel: 4
-    matrix: 
-      EFQueue:
-        Project: 'fiskaltrust.Middleware.Storage.EF.AcceptanceTest'
-      EFCoreQueue:
-        Project: 'fiskaltrust.Middleware.Storage.EFCore.AcceptanceTest'
-      SQLiteQueue:
-        Project: 'fiskaltrust.Middleware.Storage.SQLite.AcceptanceTest'
-      MySQLQueue:
-        Project: 'fiskaltrust.Middleware.Storage.MySQL.AcceptanceTest'
-      InMemoryQueue:
-        Project: 'fiskaltrust.Middleware.Storage.InMemory.AcceptanceTest'
-      QueueSynchronizer:
-        Project: 'fiskaltrust.Middleware.QueueSynchronizer.AcceptanceTest'
-      Queue:
-        Project: 'fiskaltrust.Middleware.Queue.AcceptanceTest'
-  steps:
-  - template: templates/queue/acceptance-test.template.yml
+      - job: AcceptanceTest
+        dependsOn: Test
+        displayName: Acceptance tests
+        condition: and(succeeded(), or(eq(variables.runAcceptanceTests, 'true'), eq(variables['Build.SourceBranch'], 'refs/heads/main'), startsWith(variables['Build.SourceBranch'], 'refs/tags/queue/')))
+        pool:
+          vmImage: $(vmImageName)
+        strategy:
+          maxParallel: 4
+          matrix:
+            AzureTableStorageQueue:
+              Project: "fiskaltrust.Middleware.Storage.AzureTableStorage.AcceptanceTest"
+            EFQueue:
+              Project: "fiskaltrust.Middleware.Storage.EF.AcceptanceTest"
+            EFCoreQueue:
+              Project: "fiskaltrust.Middleware.Storage.EFCore.AcceptanceTest"
+            SQLiteQueue:
+              Project: "fiskaltrust.Middleware.Storage.SQLite.AcceptanceTest"
+            MySQLQueue:
+              Project: "fiskaltrust.Middleware.Storage.MySQL.AcceptanceTest"
+            InMemoryQueue:
+              Project: "fiskaltrust.Middleware.Storage.InMemory.AcceptanceTest"
+            QueueSynchronizer:
+              Project: "fiskaltrust.Middleware.QueueSynchronizer.AcceptanceTest"
+            Queue:
+              Project: "fiskaltrust.Middleware.Queue.AcceptanceTest"
+        steps:
+          - template: templates/queue/acceptance-test.template.yml
 
-- job: BuildNugetPackages
-  displayName: Build v1 NuGet packages
-  dependsOn: 
-  - Test
-  - AcceptanceTest
-  condition: and(eq(dependencies.Test.result, 'Succeeded'), in(dependencies.AcceptanceTest.result, 'Succeeded', 'Skipped'))
-  pool:
-    vmImage: $(vmImageName)
-  steps:
-  - template: templates/queue/build-nuget.template.yml
+  - stage: Build
+    dependsOn: Test
+    jobs:
+      - job: BuildNugetPackages
+        displayName: Build v1 NuGet packages
+        dependsOn: []
+        pool:
+          vmImage: $(vmImageName)
+        steps:
+          - template: templates/queue/build-nuget.template.yml
 
-- job: BuildZipPackages
-  displayName: Build v2 zip packages
-  dependsOn: 
-  - Test
-  - AcceptanceTest
-  condition: and(eq(dependencies.Test.result, 'Succeeded'), in(dependencies.AcceptanceTest.result, 'Succeeded', 'Skipped'))
-  pool:
-    vmImage: $(vmImageName)
-  steps:
-  - template: templates/queue/build-zip.template.yml
+      - job: BuildZipPackages
+        displayName: Build v2 zip packages
+        dependsOn: []
+        pool:
+          vmImage: $(vmImageName)
+        steps:
+          - template: templates/build-zip.yml
+            parameters:
+              workingDirectory: queue
+              projects:
+                - fiskaltrust.Middleware.Queue.InMemory
+                - fiskaltrust.Middleware.Queue.SQLite
+                - fiskaltrust.Middleware.Queue.PostgreSQL
+                - fiskaltrust.Middleware.Queue.MySQL
+                - fiskaltrust.Middleware.Queue.EF

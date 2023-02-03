@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Storage.Base.Extensions;
 using fiskaltrust.storage.V0;
 using Newtonsoft.Json;
 
@@ -47,16 +49,58 @@ namespace fiskaltrust.Middleware.Storage.InMemory.Repositories
             }
         }
 
-        public IAsyncEnumerable<ftQueueItem> GetPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem)
+        public IAsyncEnumerable<ftQueueItem> GetQueueItemsAfterQueueItem(ftQueueItem ftQueueItem)
+        {
+            return Data.Values.Where(x => x.ftQueueRow >= ftQueueItem.ftQueueRow).ToAsyncEnumerable();
+        }
+
+        public async IAsyncEnumerable<string> GetGroupedReceiptReferenceAsync(long? fromIncl, long? toIncl)
+        {
+            var groupByLastNamesQuery =
+                    from queueItem in Data.Values
+                    where
+                    (fromIncl.HasValue ? queueItem.TimeStamp >= fromIncl.Value : true) &&
+                    (toIncl.HasValue ? queueItem.TimeStamp <= toIncl.Value : true) &&
+                    JsonConvert.DeserializeObject<ReceiptRequest>(queueItem.request).IncludeInReferences() &&
+                    !string.IsNullOrEmpty(queueItem.response)
+                    group queueItem by queueItem.cbReceiptReference into newGroup
+                    orderby newGroup.Key
+                    select newGroup;
+            await foreach (var entry in groupByLastNamesQuery.ToAsyncEnumerable())
+            {
+                yield return entry.Key;
+            }
+        }
+
+        public async IAsyncEnumerable<ftQueueItem> GetQueueItemsForReceiptReferenceAsync(string receiptReference)
+        {
+            var queueItemsForReceiptReference =
+                from queueItem in Data.Values
+                where JsonConvert.DeserializeObject<ReceiptRequest>(queueItem.request).IncludeInReferences() && queueItem.cbReceiptReference == receiptReference &&
+                !string.IsNullOrEmpty(queueItem.response)
+                orderby queueItem.TimeStamp
+                select queueItem;
+            await foreach (var entry in queueItemsForReceiptReference.ToAsyncEnumerable())
+            {
+                yield return entry;
+            }
+        }
+        public async Task<ftQueueItem> GetClosestPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem)
         {
             var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(ftQueueItem.request);
-            if (string.IsNullOrWhiteSpace(receiptRequest.cbPreviousReceiptReference) && string.IsNullOrWhiteSpace(ftQueueItem.cbReceiptReference))
-            {
-                return new List<ftQueueItem>().ToAsyncEnumerable();
-            }
 
-            return Data.Values.Where(x => x.ftQueueRow < ftQueueItem.ftQueueRow && 
-                (x.cbReceiptReference == receiptRequest.cbPreviousReceiptReference || x.cbReceiptReference == receiptRequest.cbReceiptReference)).ToAsyncEnumerable();
+            if (string.IsNullOrWhiteSpace(receiptRequest.cbPreviousReceiptReference) || string.IsNullOrWhiteSpace(ftQueueItem.cbReceiptReference) || receiptRequest.cbPreviousReceiptReference == ftQueueItem.cbReceiptReference)
+            {
+                return null;
+            }
+            var queueItemsForReceiptReference =
+                            (from queueItem in Data.Values
+                            where queueItem.ftQueueRow < ftQueueItem.ftQueueRow &&
+                            receiptRequest.IncludeInReferences() && queueItem.cbReceiptReference == receiptRequest.cbPreviousReceiptReference &&
+                            !string.IsNullOrEmpty(queueItem.response)
+                             orderby queueItem.TimeStamp descending
+                             select queueItem).ToAsyncEnumerable().Take(1);
+            return await queueItemsForReceiptReference.FirstOrDefaultAsync();
         }
     }
 }

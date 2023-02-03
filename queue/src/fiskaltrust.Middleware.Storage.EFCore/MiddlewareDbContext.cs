@@ -7,6 +7,8 @@ namespace fiskaltrust.Middleware.Storage.EFCore
 {
     public class MiddlewareDbContext : DbContext
     {
+        protected override void OnModelCreating(ModelBuilder modelBuilder) => base.OnModelCreating(modelBuilder);
+
         public override void Dispose() => base.Dispose();
         public DbSet<ftCashBox> CashBoxList { get; set; }
 
@@ -29,6 +31,8 @@ namespace fiskaltrust.Middleware.Storage.EFCore
         public DbSet<ftJournalDE> JournalDEList { get; set; }
 
         public DbSet<ftJournalFR> JournalFRList { get; set; }
+
+        public DbSet<ftJournalME> JournalMEList { get; set; }
 
         public DbSet<ftQueueItem> QueueItemList { get; set; }
 
@@ -53,7 +57,5 @@ namespace fiskaltrust.Middleware.Storage.EFCore
         public MiddlewareDbContext() { }
 
         public MiddlewareDbContext(DbContextOptions contextOptions) : base(contextOptions) { }
-
-        protected override void OnModelCreating(ModelBuilder modelBuilder) => base.OnModelCreating(modelBuilder);
     }
 }

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Queue.Bootstrapper;
-using fiskaltrust.Middleware.Storage.Azure;
+using fiskaltrust.Middleware.Storage.AzureTableStorage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -17,7 +17,7 @@ namespace fiskaltrust.Middleware.Queue.AzureTableStorage
         {
             var logger = serviceCollection.BuildServiceProvider().GetRequiredService<ILogger<IMiddlewareBootstrapper>>();
 
-            var storageBootStrapper = new AzureStorageBootstrapper(Id, Configuration, logger);
+            var storageBootStrapper = new AzureTableStorageBootstrapper(Id, Configuration, logger);
             storageBootStrapper.ConfigureStorageServices(serviceCollection);
 
             var queueBootstrapper = new QueueBootstrapper(Id, Configuration);

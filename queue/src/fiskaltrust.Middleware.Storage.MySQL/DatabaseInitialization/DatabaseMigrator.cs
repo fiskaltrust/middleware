@@ -22,14 +22,16 @@ namespace fiskaltrust.Middleware.Storage.MySQL.DatabaseInitialization
         private readonly string _dbName;
         private readonly ILogger<IMiddlewareBootstrapper> _logger;
 
-        public DatabaseMigrator(string serverConnectionString, Guid queueId, ILogger<IMiddlewareBootstrapper> logger)
+        public DatabaseMigrator(string serverConnectionString, uint timeoutSec, Guid queueId, ILogger<IMiddlewareBootstrapper> logger)
         {
             _dbName = queueId.ToString().Replace("-", string.Empty);
             _serverConnectionString = serverConnectionString;
             var builder = new MySqlConnectionStringBuilder
             {
                 ConnectionString = _serverConnectionString,
-                Database = _dbName
+                Database = _dbName,
+                DefaultCommandTimeout = timeoutSec,
+                AllowUserVariables = true
             };
             _databaseConnectionString = builder.ConnectionString;
             _logger = logger;

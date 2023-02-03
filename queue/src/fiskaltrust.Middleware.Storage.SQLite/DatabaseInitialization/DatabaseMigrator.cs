@@ -19,13 +19,15 @@ namespace fiskaltrust.Middleware.Storage.SQLite.DatabaseInitialization
         private const string MIGRATIONS_CONFIG_KEY = "migrationDirectory";
 
         private readonly string _connectionString;
+        private readonly int _timeoutSec;
         private readonly ISqliteConnectionFactory _connectionFactory;
         private readonly Dictionary<string, object> _configuration;
         private readonly ILogger<IMiddlewareBootstrapper> _logger;
 
-        public DatabaseMigrator(ISqliteConnectionFactory connectionFactory, string path, Dictionary<string, object> configuration, ILogger<IMiddlewareBootstrapper> logger)
+        public DatabaseMigrator(ISqliteConnectionFactory connectionFactory, int timeoutSec, string path, Dictionary<string, object> configuration, ILogger<IMiddlewareBootstrapper> logger)
         {
             _connectionString = connectionFactory.BuildConnectionString(path);
+            _timeoutSec = timeoutSec;
             _connectionFactory = connectionFactory;
             _configuration = configuration;
             _logger = logger;

@@ -4,11 +4,12 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Bogus;
-using fiskaltrust.ifPOS.v2.me;
+using fiskaltrust.ifPOS.v1.me;
 using fiskaltrust.Middleware.SCU.ME.Common.Configuration;
 using FluentAssertions;
 using Xunit;
 
+#pragma warning disable CA2007
 namespace fiskaltrust.Middleware.SCU.ME.InMemory.UnitTest
 {
     public class InMemorySCUTests
@@ -32,7 +33,7 @@ namespace fiskaltrust.Middleware.SCU.ME.InMemory.UnitTest
 
             var response = await meSSCD.RegisterTcrAsync(request);
 
-            response.TcrCode.Should().MatchRegex("[a-z]{2}[0-9]{3}[a-z]{2}[0-9]{3}");
+            _ = response.TcrCode.Should().MatchRegex("[a-z]{2}[0-9]{3}[a-z]{2}[0-9]{3}");
         }
 
         [Fact]
@@ -40,7 +41,7 @@ namespace fiskaltrust.Middleware.SCU.ME.InMemory.UnitTest
         {
             IMESSCD meSSCD = CreateSCU();
 
-            var request = new RegisterTcrRequest
+            var request = new UnregisterTcrRequest
             {
                 BusinessUnitCode = _faker.Random.String2(10),
                 InternalTcrIdentifier = _faker.Random.String2(10),
@@ -68,7 +69,7 @@ namespace fiskaltrust.Middleware.SCU.ME.InMemory.UnitTest
 
             var response = await meSSCD.RegisterCashDepositAsync(request);
 
-            Guid.Parse(response.FCDC);
+            _ = Guid.Parse(response.FCDC);
         }
 
         [Fact]
@@ -85,7 +86,7 @@ namespace fiskaltrust.Middleware.SCU.ME.InMemory.UnitTest
                 TcrCode = $"{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}{_faker.Random.String(2, 'a', 'z')}{_faker.Random.String(3, '0', '9')}"
             };
 
-            _ = await meSSCD.RegisterCashWithdrawalAsync(request);
+            await meSSCD.RegisterCashWithdrawalAsync(request);
         }
 
         [Fact]
@@ -112,8 +113,7 @@ namespace fiskaltrust.Middleware.SCU.ME.InMemory.UnitTest
 
             var response = await meSSCD.RegisterInvoiceAsync(request);
 
-            Guid.Parse(response.FIC);
-            response.IIC.Should().HaveLength(32);
+            _ = Guid.Parse(response.FIC);
         }
 
         private InMemorySCU CreateSCU()
@@ -130,7 +130,7 @@ namespace fiskaltrust.Middleware.SCU.ME.InMemory.UnitTest
             });
         }
 
-        private X509Certificate2 BuildSelfSignedServerCertificate()
+        private static X509Certificate2 BuildSelfSignedServerCertificate()
         {
             var certificateName = "UnitTests";
             var sanBuilder = new SubjectAlternativeNameBuilder();

@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
-using fiskaltrust.ifPOS.v1.de;
 using fiskaltrust.Middleware.Abstractions;
-using fiskaltrust.Middleware.SCU.DE.Swissbit.Interop;
-using fiskaltrust.Middleware.SCU.DE.SwissbitBase.Helpers;
+using fiskaltrust.Middleware.SCU.DE.Swissbit.Extensions;
 using Microsoft.Extensions.DependencyInjection;
+using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.SCU.DE.Swissbit
 {
@@ -16,10 +14,10 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
 
         public void ConfigureServices(IServiceCollection serviceCollection)
         {
-            serviceCollection.AddSingleton<LockingHelper>();
-            serviceCollection.AddSingleton(new ConfigurationDictionary(Configuration));
-            serviceCollection.AddSingleton<INativeFunctionPointerFactory>(new Interop.DynamicLib.FunctionPointerFactory(Configuration.ContainsKey(SwissbitSCU.libraryFileKeyName) ? Configuration[SwissbitSCU.libraryFileKeyName] as string : null));
-            serviceCollection.AddScoped<IDESSCD, SwissbitSCU>();
+            var config = JsonConvert.DeserializeObject<SwissbitSCUConfiguration>(JsonConvert.SerializeObject(Configuration));
+            WormLibraryManager.CopyLibraryToWorkingDirectory(config);
+
+            serviceCollection.AddSwissbitScuServices(Configuration);
         }
     }
 }

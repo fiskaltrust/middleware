@@ -1,0 +1,37 @@
+resources:
+  pipelines:
+    - pipeline: build
+      source: fiskaltrust.Middleware.Queue
+      trigger:
+        branches:
+          include:
+            - refs/tags/queue/*
+
+trigger: none
+pr: none
+
+stages:
+  - template: templates/release.yml
+    parameters:
+      type: fiskaltrust.Middleware.Queue
+      artifact: build
+      projects:
+        - InMemory
+        - SQLite
+        - EF
+        - MySQL
+        - PostgreSQL
+      stages:
+        - stage: Release_Sandbox
+          dependsOn: []
+          templateContext:
+            environment: sandbox
+            storage: stdevwesteuropepackages
+            serviceConnection: rg-dev-westeurope-packages
+
+        - stage: Release_Production
+          templateContext:
+            dependsOnPrefix: Release_Sandbox
+            environment: production
+            storage: stprodwesteuropepackages
+            serviceConnection: rg-prod-westeurope-packages

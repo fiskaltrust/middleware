@@ -14,6 +14,7 @@ using fiskaltrust.Middleware.Storage.MySQL.Repositories.AT;
 using fiskaltrust.Middleware.Storage.MySQL.Repositories.DE;
 using fiskaltrust.Middleware.Storage.MySQL.Repositories.DE.MasterData;
 using fiskaltrust.Middleware.Storage.MySQL.Repositories.FR;
+using fiskaltrust.Middleware.Storage.MySQL.Repositories.MasterData;
 using fiskaltrust.storage.encryption.V0;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
@@ -52,20 +53,27 @@ namespace fiskaltrust.Middleware.Storage.MySQL
                 throw new Exception("Database connectionstring not defined");
             }
 
-            _connectionString = Encoding.UTF8.GetString(Encryption.Decrypt(Convert.FromBase64String(_mySQLStorageConfiguration.ConnectionString), queueId.ToByteArray()));
+            if (_mySQLStorageConfiguration.ConnectionString.StartsWith("raw:"))
+            {
+                _connectionString = _mySQLStorageConfiguration.ConnectionString.Substring("raw:".Length - 1);
+            }
+            else
+            {
+                _connectionString = Encoding.UTF8.GetString(Encryption.Decrypt(Convert.FromBase64String(_mySQLStorageConfiguration.ConnectionString), queueId.ToByteArray()));
+            }
 
-            var databaseMigrator = new DatabaseMigrator(_connectionString, queueId, logger);
+            var databaseMigrator = new DatabaseMigrator(_connectionString, _mySQLStorageConfiguration.MigrationsTimeoutSec, queueId, logger);
             var dbName = await databaseMigrator.MigrateAsync().ConfigureAwait(false);
 
-            _connectionString += $"database={ dbName };";
+            _connectionString += $"database={dbName};";
 
             _configurationRepository = new MySQLConfigurationRepository(_connectionString);
 
             var baseStorageConfig = ParseStorageConfiguration(configuration);
 
             await PersistMasterDataAsync(baseStorageConfig, _configurationRepository,
-                new MySQLAccountMasterDataRepository(_connectionString), new MySQLOutletMasterDataRepository(_connectionString),
-                new MySQLAgencyMasterDataRepository(_connectionString), new MySQLPosSystemMasterDataRepository(_connectionString)).ConfigureAwait(false);
+                    new MySQLAccountMasterDataRepository(_connectionString), new MySQLOutletMasterDataRepository(_connectionString),
+                    new MySQLAgencyMasterDataRepository(_connectionString), new MySQLPosSystemMasterDataRepository(_connectionString)).ConfigureAwait(false);
             await PersistConfigurationAsync(baseStorageConfig, _configurationRepository, logger).ConfigureAwait(false);
         }
 
@@ -93,11 +101,17 @@ namespace fiskaltrust.Middleware.Storage.MySQL
             services.AddSingleton<IMiddlewareJournalFRRepository>(x => new MySQLJournalFRRepository(_connectionString));
             services.AddSingleton<IMiddlewareRepository<ftJournalFR>>(x => new MySQLJournalFRRepository(_connectionString));
 
+            services.AddSingleton<IMiddlewareJournalMERepository>(x => new MySQLJournalMERepository(_connectionString));
+            services.AddSingleton<IJournalMERepository>(x => new MySQLJournalMERepository(_connectionString));
+            services.AddSingleton<IReadOnlyJournalMERepository>(x => new MySQLJournalMERepository(_connectionString));
+            services.AddSingleton<IMiddlewareRepository<ftJournalME>>(x => new MySQLJournalMERepository(_connectionString));
+
             services.AddSingleton<IReceiptJournalRepository>(x => new MySQLReceiptJournalRepository(_connectionString));
             services.AddSingleton<IReadOnlyReceiptJournalRepository>(x => new MySQLReceiptJournalRepository(_connectionString));
             services.AddSingleton<IMiddlewareReceiptJournalRepository>(x => new MySQLReceiptJournalRepository(_connectionString));
             services.AddSingleton<IMiddlewareRepository<ftReceiptJournal>>(x => new MySQLReceiptJournalRepository(_connectionString));
 
+            services.AddSingleton<IMiddlewareActionJournalRepository>(x => new MySQLActionJournalRepository(_connectionString));
             services.AddSingleton<IActionJournalRepository>(x => new MySQLActionJournalRepository(_connectionString));
             services.AddSingleton<IReadOnlyActionJournalRepository>(x => new MySQLActionJournalRepository(_connectionString));
             services.AddSingleton<IMiddlewareActionJournalRepository>(x => new MySQLActionJournalRepository(_connectionString));
@@ -110,7 +124,7 @@ namespace fiskaltrust.Middleware.Storage.MySQL
             services.AddSingleton<IMasterDataRepository<AccountMasterData>, MySQLAccountMasterDataRepository>(x => new MySQLAccountMasterDataRepository(_connectionString));
             services.AddSingleton<IMasterDataRepository<OutletMasterData>, MySQLOutletMasterDataRepository>(x => new MySQLOutletMasterDataRepository(_connectionString));
             services.AddSingleton<IMasterDataRepository<PosSystemMasterData>, MySQLPosSystemMasterDataRepository>(x => new MySQLPosSystemMasterDataRepository(_connectionString));
-            services.AddSingleton<IMasterDataRepository<AgencyMasterData>, MySQLAgencyMasterDataRepository>(x => new MySQLAgencyMasterDataRepository( _connectionString));
+            services.AddSingleton<IMasterDataRepository<AgencyMasterData>, MySQLAgencyMasterDataRepository>(x => new MySQLAgencyMasterDataRepository(_connectionString));
         }
     }
 }

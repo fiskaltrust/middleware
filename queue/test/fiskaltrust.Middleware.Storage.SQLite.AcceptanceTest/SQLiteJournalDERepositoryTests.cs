@@ -25,7 +25,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite.AcceptanceTest
 
         public override async Task<IJournalDERepository> CreateRepository(IEnumerable<ftJournalDE> entries)
         {
-            var databasMigrator = new DatabaseMigrator(_sqliteConnectionFactory, _path, new Dictionary<string, object>(), Mock.Of<ILogger<IMiddlewareBootstrapper>>());
+            var databasMigrator = new DatabaseMigrator(_sqliteConnectionFactory, 30 * 60, _path, new Dictionary<string, object>(), Mock.Of<ILogger<IMiddlewareBootstrapper>>());
             await databasMigrator.MigrateAsync();
 
             _repo = new SQLiteJournalDERepository(_sqliteConnectionFactory, _path);

@@ -57,11 +57,11 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
             serviceCollection.Should().HaveCount(36);
 
             var cryptoHelper = new ServiceDescriptor(typeof(ICryptoHelper), typeof(CryptoHelper), ServiceLifetime.Scoped);
-            var signProcessorDecorator =  new ServiceDescriptor(typeof(ISignProcessor), x => new LocalQueueSynchronizationDecorator(x.GetRequiredService<ISignProcessor>(), x.GetRequiredService<ILogger<LocalQueueSynchronizationDecorator>>()), ServiceLifetime.Scoped);
-            var signProcessor =  new ServiceDescriptor(typeof(SignProcessor), typeof(SignProcessor), ServiceLifetime.Scoped);
+            var signProcessorDecorator = new ServiceDescriptor(typeof(ISignProcessor), x => new LocalQueueSynchronizationDecorator(x.GetRequiredService<ISignProcessor>(), x.GetRequiredService<ILogger<LocalQueueSynchronizationDecorator>>()), ServiceLifetime.Scoped);
+            var signProcessor = new ServiceDescriptor(typeof(SignProcessor), typeof(SignProcessor), ServiceLifetime.Scoped);
             var journalProcessor = new ServiceDescriptor(typeof(IJournalProcessor), typeof(JournalProcessor), ServiceLifetime.Scoped);
             var iPos = new ServiceDescriptor(typeof(IPOS), typeof(Queue), ServiceLifetime.Scoped);
-    
+
             serviceCollection.Should().ContainEquivalentOf(cryptoHelper);
             serviceCollection.Should().ContainEquivalentOf(signProcessor);
             serviceCollection.Should().ContainEquivalentOf(signProcessorDecorator, options => options.Excluding(su => su.ImplementationFactory));

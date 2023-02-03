@@ -326,7 +326,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.IntegrationTest
 
         private FiskalySCU GetSut()
         {
-            var apiProvider = new FiskalyV2ApiProvider(_testFixture.Configuration);
+            var apiProvider = new FiskalyV2ApiProvider(_testFixture.Configuration, new HttpClientWrapper(_testFixture.Configuration, Mock.Of<ILogger<HttpClientWrapper>>()));
             return new FiskalySCU(Mock.Of<ILogger<FiskalySCU>>(), apiProvider, new ClientCache(apiProvider), _testFixture.Configuration);
         }
 
