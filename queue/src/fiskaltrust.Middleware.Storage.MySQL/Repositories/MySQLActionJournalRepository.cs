@@ -78,7 +78,7 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
         {
             using (var connection = new MySqlConnection(ConnectionString))
             {
-                return connection.Query<ftActionJournal>($"SELECT * FROM ftActionJournal WHERE TimeStamp >= @from AND Priority <= @prio ORDER BY TimeStamp", new { from = fromTimestampInclusive, prio = lowerThanPriority }, buffered: false).ToAsyncEnumerable();
+                return connection.Query<ftActionJournal>($"SELECT * FROM ftActionJournal WHERE TimeStamp >= @from AND Priority < @prio ORDER BY TimeStamp", new { from = fromTimestampInclusive, prio = lowerThanPriority }, buffered: false).ToAsyncEnumerable();
             }
         }
     }
