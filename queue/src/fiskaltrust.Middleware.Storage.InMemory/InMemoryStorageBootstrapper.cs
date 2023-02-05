@@ -38,7 +38,7 @@ namespace fiskaltrust.Middleware.Storage.InMemory
             AddRepositories(serviceCollection);
         }
 
-        public async Task InitAsync(Dictionary<string,object> configuration, ILogger<IMiddlewareBootstrapper> logger)
+        public async Task InitAsync(Dictionary<string, object> configuration, ILogger<IMiddlewareBootstrapper> logger)
         {
             _configurationRepository = new InMemoryConfigurationRepository();
             var baseStorageConfig = ParseStorageConfiguration(configuration);
@@ -63,13 +63,15 @@ namespace fiskaltrust.Middleware.Storage.InMemory
             services.AddSingleton<IReadOnlyJournalATRepository, InMemoryJournalATRepository>();
             services.AddSingleton<IMiddlewareRepository<ftJournalAT>, InMemoryJournalATRepository>();
 
-            services.AddSingleton<IMiddlewareJournalDERepository, InMemoryJournalDERepository >();
+            services.AddSingleton<IMiddlewareJournalDERepository, InMemoryJournalDERepository>();
+            services.AddSingleton<IJournalDERepository, InMemoryJournalDERepository>();
             services.AddSingleton<IReadOnlyJournalDERepository, InMemoryJournalDERepository>();
             services.AddSingleton<IJournalDERepository, InMemoryJournalDERepository>();
             services.AddSingleton<IMiddlewareRepository<ftJournalDE>, InMemoryJournalDERepository>();
 
             services.AddSingleton<IJournalFRRepository, InMemoryJournalFRRepository>();
             services.AddSingleton<IReadOnlyJournalFRRepository, InMemoryJournalFRRepository>();
+            services.AddSingleton<IMiddlewareJournalFRRepository, InMemoryJournalFRRepository>();
             services.AddSingleton<IMiddlewareRepository<ftJournalFR>, InMemoryJournalFRRepository>();
 
             services.AddSingleton<IMiddlewareJournalMERepository, InMemoryJournalMERepository>();
@@ -79,17 +81,19 @@ namespace fiskaltrust.Middleware.Storage.InMemory
 
             services.AddSingleton<IReceiptJournalRepository, InMemoryReceiptJournalRepository>();
             services.AddSingleton<IReadOnlyReceiptJournalRepository, InMemoryReceiptJournalRepository>();
+            services.AddSingleton<IMiddlewareReceiptJournalRepository, InMemoryReceiptJournalRepository>();
             services.AddSingleton<IMiddlewareRepository<ftReceiptJournal>, InMemoryReceiptJournalRepository>();
 
             services.AddSingleton<IMiddlewareActionJournalRepository, InMemoryActionJournalRepository>();
             services.AddSingleton<IActionJournalRepository, InMemoryActionJournalRepository>();
             services.AddSingleton<IReadOnlyActionJournalRepository, InMemoryActionJournalRepository>();
+            services.AddSingleton<IMiddlewareActionJournalRepository, InMemoryActionJournalRepository>();
             services.AddSingleton<IMiddlewareRepository<ftActionJournal>, InMemoryActionJournalRepository>();
 
             services.AddSingleton<IPersistentTransactionRepository<FailedFinishTransaction>, InMemoryFailedFinishTransactionRepository>();
             services.AddSingleton<IPersistentTransactionRepository<FailedStartTransaction>, InMemoryFailedStartTransactionRepository>();
             services.AddSingleton<IPersistentTransactionRepository<OpenTransaction>, InMemoryOpenTransactionRepository>();
-            
+
             services.AddSingleton<IMasterDataRepository<AccountMasterData>, InMemoryAccountMasterDataRepository>();
             services.AddSingleton<IMasterDataRepository<OutletMasterData>, InMemoryOutletMasterDataRepository>();
             services.AddSingleton<IMasterDataRepository<AgencyMasterData>, InMemoryAgencyMasterDataRepository>();

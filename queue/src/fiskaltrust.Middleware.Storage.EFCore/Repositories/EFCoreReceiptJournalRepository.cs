@@ -2,12 +2,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0;
 using Microsoft.EntityFrameworkCore;
 
 namespace fiskaltrust.Middleware.Storage.EFCore.Repositories
 {
-    public class EFCoreReceiptJournalRepository : AbstractEFCoreRepostiory<Guid, ftReceiptJournal>, IReceiptJournalRepository
+    public class EFCoreReceiptJournalRepository : AbstractEFCoreRepostiory<Guid, ftReceiptJournal>, IReceiptJournalRepository, IMiddlewareReceiptJournalRepository
     {
         private long _lastInsertedTimeStamp;
 
@@ -36,5 +37,9 @@ namespace fiskaltrust.Middleware.Storage.EFCore.Repositories
             }
             return result.AsAsyncEnumerable();
         }
+
+        public async Task<ftReceiptJournal> GetWithLastTimestampAsync() => await DbContext.ReceiptJournalList.AsQueryable().OrderByDescending(x => x.TimeStamp).FirstOrDefaultAsync().ConfigureAwait(false);
+        public async Task<ftReceiptJournal> GetByQueueItemId(Guid ftQueueItemId) => await DbContext.ReceiptJournalList.AsQueryable().FirstOrDefaultAsync(x => x.ftQueueItemId == ftQueueItemId).ConfigureAwait(false);
+        public async Task<ftReceiptJournal> GetByReceiptNumber(long ftReceiptNumber) => await DbContext.ReceiptJournalList.AsQueryable().FirstOrDefaultAsync(x => x.ftReceiptNumber == ftReceiptNumber).ConfigureAwait(false);
     }
 }

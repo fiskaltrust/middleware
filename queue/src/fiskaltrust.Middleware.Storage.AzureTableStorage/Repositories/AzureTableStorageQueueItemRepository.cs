@@ -104,6 +104,12 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
                              select queueItem).ToAsyncEnumerable().Take(1);
             return await queueItemsForReceiptReference.FirstOrDefaultAsync();
         }
+
+        public async Task<ftQueueItem> GetByQueueRowAsync(long queueRow)
+        {
+            var result = _tableClient.QueryAsync<TableEntity>(filter: TableClient.CreateQueryFilter($"ftQueueRow eq {queueRow}"));
+            return MapToStorageEntity(await result.FirstOrDefaultAsync());
+        }
     }
 }
 

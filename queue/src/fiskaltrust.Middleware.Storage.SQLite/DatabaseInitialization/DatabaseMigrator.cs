@@ -48,26 +48,57 @@ namespace fiskaltrust.Middleware.Storage.SQLite.DatabaseInitialization
                 ? value.ToString()
                 : Path.Combine(typeof(DatabaseMigrator).Assembly.GetDirectoryPath(), MIGRATION_DIR);
 
-            var migrations = Directory.GetFiles(migrationDir, "*.sqlite3").OrderBy(x => x);
+            using var connection = _connectionFactory.GetNewConnection(_connectionString);
 
+            if (await IsLegacyDatabaseAsync(connection))
+            {
+                _logger.LogWarning("Legacy database detected. Migrating...");
+                await MigrateLegacyDatabaseAsync(connection, migrationDir);
+                _logger.LogWarning("Migration from legacy database complete.");
+            }
+
+            var migrations = Directory.GetFiles(migrationDir, "*.sqlite3").Where(x => !x.EndsWith(".legacy.sqlite3")).OrderBy(x => x);
             _logger.LogDebug($"Found {migrations.Count()} migration files.");
 
-            using (var connection = _connectionFactory.GetNewConnection(_connectionString))
-            {
-                var currentVersion = await GetCurrentVersionAsync(connection).ConfigureAwait(false);
-                var notAppliedMigrations = migrations.Where(x => string.Compare(Path.GetFileNameWithoutExtension(x), currentVersion, true) > 0);
+            var currentVersion = await GetCurrentVersionAsync(connection).ConfigureAwait(false);
+            var notAppliedMigrations = migrations.Where(x => string.Compare(Path.GetFileNameWithoutExtension(x), currentVersion, true) > 0);
 
-                if (notAppliedMigrations.Any())
-                {
-                    _logger.LogInformation($"{notAppliedMigrations.Count()} pending database updates were detected. Updating database now.");
-                }
-                foreach (var migrationScript in notAppliedMigrations)
-                {
-                    _logger.LogDebug($"Updating database with migration script {migrationScript}..");
-                    await connection.ExecuteAsync(File.ReadAllText(migrationScript), commandTimeout: _timeoutSec).ConfigureAwait(false);
-                    await SetCurrentVersionAsync(connection, Path.GetFileNameWithoutExtension(migrationScript)).ConfigureAwait(false);
-                    _logger.LogDebug($"Applying the migration script was successful. Set current version to {Path.GetFileNameWithoutExtension(migrationScript)}.");
-                }
+            if (notAppliedMigrations.Any())
+            {
+                _logger.LogInformation($"{notAppliedMigrations.Count()} pending database updates were detected. Updating database now.");
+            }
+            foreach (var migrationScript in notAppliedMigrations)
+            {
+                _logger.LogDebug($"Updating database with migration script {migrationScript}..");
+                await connection.ExecuteAsync(File.ReadAllText(migrationScript), commandTimeout: _timeoutSec).ConfigureAwait(false);
+                await SetCurrentVersionAsync(connection, Path.GetFileNameWithoutExtension(migrationScript)).ConfigureAwait(false);
+                _logger.LogDebug($"Applying the migration script was successful. Set current version to {Path.GetFileNameWithoutExtension(migrationScript)}.");
+            }
+        }
+
+        private async Task<bool> IsLegacyDatabaseAsync(IDbConnection connection)
+        {
+            var legacyVersionHistoryTable = await connection.ExecuteScalarAsync<string>("SELECT name FROM sqlite_master WHERE type='table' AND name='__VersionHistory'").ConfigureAwait(false);
+            var databaseSchemaTable = await connection.ExecuteScalarAsync<string>("SELECT name FROM sqlite_master WHERE type='table' AND name='ftDatabaseSchema'").ConfigureAwait(false);
+
+            return legacyVersionHistoryTable != null && databaseSchemaTable == null;
+        }
+
+        private async Task MigrateLegacyDatabaseAsync(IDbConnection connection, string migrationDir)
+        {
+            var currentDatabaseVersion = await connection.ExecuteScalarAsync<string>("select QueueVersionNumber from __VersionHistory ORDER BY InstallationDate DESC LIMIT 1").ConfigureAwait(false);
+            if (currentDatabaseVersion != null && currentDatabaseVersion.StartsWith("1.2"))
+            {
+                await connection.ExecuteAsync(File.ReadAllText(Path.Combine(migrationDir, "995_1-2.legacy.sqlite3"))).ConfigureAwait(false);
+                await SetCurrentVersionAsync(connection, Path.GetFileNameWithoutExtension("007_ScuMode")).ConfigureAwait(false);
+            }
+            else if (currentDatabaseVersion != null && currentDatabaseVersion.StartsWith("1.1"))
+            {
+                throw new Exception("Migrating from Queue version 1.1 is currently not supported, please update to 1.2 first.");
+            }
+            else
+            {
+                throw new Exception($"Could not detect current database version ({currentDatabaseVersion})");
             }
         }
 

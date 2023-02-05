@@ -98,6 +98,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL
 
             services.AddTransient<IJournalFRRepository>(_ => new EFCoreJournalFRRepository(new PostgreSQLMiddlewareDbContext(_optionsBuilder.Options, _queueId)));
             services.AddTransient<IReadOnlyJournalFRRepository>(_ => new EFCoreJournalFRRepository(new PostgreSQLMiddlewareDbContext(_optionsBuilder.Options, _queueId)));
+            services.AddTransient<IMiddlewareJournalFRRepository>(_ => new EFCoreJournalFRRepository(new PostgreSQLMiddlewareDbContext(_optionsBuilder.Options, _queueId)));
             services.AddTransient<IMiddlewareRepository<ftJournalFR>>(_ => new EFCoreJournalFRRepository(new PostgreSQLMiddlewareDbContext(_optionsBuilder.Options, _queueId)));
 
             services.AddTransient<IJournalMERepository>(_ => new EFCoreJournalMERepository(new PostgreSQLMiddlewareDbContext(_optionsBuilder.Options, _queueId)));
@@ -106,11 +107,13 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL
 
             services.AddTransient<IReceiptJournalRepository>(_ => new EFCoreReceiptJournalRepository(new PostgreSQLMiddlewareDbContext(_optionsBuilder.Options, _queueId)));
             services.AddTransient<IReadOnlyReceiptJournalRepository>(_ => new EFCoreReceiptJournalRepository(new PostgreSQLMiddlewareDbContext(_optionsBuilder.Options, _queueId)));
+            services.AddTransient<IMiddlewareReceiptJournalRepository>(_ => new EFCoreReceiptJournalRepository(new PostgreSQLMiddlewareDbContext(_optionsBuilder.Options, _queueId)));
             services.AddTransient<IMiddlewareRepository<ftReceiptJournal>>(_ => new EFCoreReceiptJournalRepository(new PostgreSQLMiddlewareDbContext(_optionsBuilder.Options, _queueId)));
 
             services.AddSingleton<IMiddlewareActionJournalRepository>(_ => new EFCoreActionJournalRepository(new PostgreSQLMiddlewareDbContext(_optionsBuilder.Options, _queueId)));
             services.AddTransient<IActionJournalRepository>(_ => new EFCoreActionJournalRepository(new PostgreSQLMiddlewareDbContext(_optionsBuilder.Options, _queueId)));
             services.AddTransient<IReadOnlyActionJournalRepository>(_ => new EFCoreActionJournalRepository(new PostgreSQLMiddlewareDbContext(_optionsBuilder.Options, _queueId)));
+            services.AddTransient<IMiddlewareActionJournalRepository>(_ => new EFCoreActionJournalRepository(new PostgreSQLMiddlewareDbContext(_optionsBuilder.Options, _queueId)));
             services.AddTransient<IMiddlewareRepository<ftActionJournal>>(_ => new EFCoreActionJournalRepository(new PostgreSQLMiddlewareDbContext(_optionsBuilder.Options, _queueId)));
 
             services.AddTransient<IPersistentTransactionRepository<FailedStartTransaction>>(_ => new EFCoreFailedStartTransactionRepository(new PostgreSQLMiddlewareDbContext(_optionsBuilder.Options, _queueId)));

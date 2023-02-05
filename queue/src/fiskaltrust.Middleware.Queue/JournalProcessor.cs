@@ -15,6 +15,7 @@ using fiskaltrust.Middleware.Queue.Bootstrapper;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using Org.BouncyCastle.Asn1.Ocsp;
 
 namespace fiskaltrust.Middleware.Queue
 {
@@ -62,15 +63,10 @@ namespace fiskaltrust.Middleware.Queue
         {
             try
             {
-                if ((0xFFFF000000000000 & (ulong) request.ftJournalType) == 0x4445000000000000)
+                if ((0xFFFF000000000000 & (ulong) request.ftJournalType) != 0)
                 {
-                    ThrowIfQueueHasIncorrectCountrySet("DE", request.ftJournalType);
-                    return _marketSpecificJournalProcessor.ProcessAsync(request);
-                }
+                    ThrowIfQueueHasIncorrectCountrySet(request.ftJournalType);
 
-                if ((0xFFFF000000000000 & (ulong) request.ftJournalType) == 0x4D45000000000000)
-                {
-                    ThrowIfQueueHasIncorrectCountrySet("ME", request.ftJournalType);
                     return _marketSpecificJournalProcessor.ProcessAsync(request);
                 }
 
@@ -109,8 +105,10 @@ namespace fiskaltrust.Middleware.Queue
             }
         }
 
-        private void ThrowIfQueueHasIncorrectCountrySet(string countryCode, long journalType)
+        private void ThrowIfQueueHasIncorrectCountrySet(long journalType)
         {
+            var bytes = BitConverter.GetBytes(0xFFFF000000000000 & (ulong) journalType).Reverse().ToArray();
+            var countryCode = Encoding.UTF8.GetString(bytes);
             if (countryCode != LocalizedQueueBootStrapperFactory.GetQueueLocalization(_middlewareConfiguration.QueueId, _middlewareConfiguration.Configuration))
             {
                 throw new Exception($"The given journal type 0x'{journalType:x}' cannot be used with the current Queue, as this export type is not supported in this country.");

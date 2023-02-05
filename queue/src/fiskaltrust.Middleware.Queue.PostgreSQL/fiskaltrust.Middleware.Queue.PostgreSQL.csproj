@@ -16,6 +16,7 @@
         <PackageReference Include="fiskaltrust.Exports.DSFinVK" Version="1.5.1"/>
         <PackageReference Include="fiskaltrust.Exports.TAR" Version="1.1.1" />
         <PackageReference Include="SharpCompress" Version="0.28.2" />
+        <PackageReference Include="CsvHelper" Version="28.0.1" />
     </ItemGroup>
 
     <Target DependsOnTargets="ResolveReferences" Name="CopyProjectReferencesToPackage">

@@ -64,5 +64,22 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
                 }
             }
         }
+
+        public async Task<ftActionJournal> GetWithLastTimestampAsync()
+        {
+            using (var connection = new MySqlConnection(ConnectionString))
+            {
+                await connection.OpenAsync().ConfigureAwait(false);
+                return await connection.QueryFirstOrDefaultAsync<ftActionJournal>("SELECT * FROM ftActionJournal ORDER BY TimeStamp DESC LIMIT 1").ConfigureAwait(false);
+            }
+        }
+
+        public IAsyncEnumerable<ftActionJournal> GetByPriorityAfterTimestampAsync(int lowerThanPriority, long fromTimestampInclusive)
+        {
+            using (var connection = new MySqlConnection(ConnectionString))
+            {
+                return connection.Query<ftActionJournal>($"SELECT * FROM ftActionJournal WHERE TimeStamp >= @from AND Priority < @prio ORDER BY TimeStamp", new { from = fromTimestampInclusive, prio = lowerThanPriority }, buffered: false).ToAsyncEnumerable();
+            }
+        }
     }
 }

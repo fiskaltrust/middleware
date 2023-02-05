@@ -2,12 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using fiskaltrust.Middleware.Storage.EF.Repositories;
+using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Storage.EF.Repositories
 {
-    public class EfReceiptJournalRepository : AbstractEFRepostiory<Guid, ftReceiptJournal>, IReceiptJournalRepository
+    public class EfReceiptJournalRepository : AbstractEFRepostiory<Guid, ftReceiptJournal>, IReceiptJournalRepository, IMiddlewareReceiptJournalRepository
     {
         private long _lastInsertedTimeStamp;
 
@@ -36,5 +36,11 @@ namespace fiskaltrust.Middleware.Storage.EF.Repositories
             }
             return result.ToAsyncEnumerable();
         }
+
+        public Task<ftReceiptJournal> GetWithLastTimestampAsync() => Task.FromResult(DbContext.Set<ftReceiptJournal>().OrderByDescending(x => x.TimeStamp).FirstOrDefault());
+
+        public Task<ftReceiptJournal> GetByQueueItemId(Guid ftQueueItemId) => Task.FromResult(DbContext.Set<ftReceiptJournal>().FirstOrDefault(x => x.ftQueueItemId == ftQueueItemId));
+
+        public Task<ftReceiptJournal> GetByReceiptNumber(long ftReceiptNumber) => Task.FromResult(DbContext.Set<ftReceiptJournal>().FirstOrDefault(x => x.ftReceiptNumber == ftReceiptNumber));
     }
 }

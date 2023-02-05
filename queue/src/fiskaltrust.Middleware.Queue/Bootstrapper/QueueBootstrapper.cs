@@ -34,7 +34,7 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
                 IsSandbox = _configuration.TryGetValue("sandbox", out var sandbox) && bool.TryParse(sandbox.ToString(), out var sandboxBool) && sandboxBool,
                 ServiceFolder = _configuration.TryGetValue("servicefolder", out var val) ? val.ToString() : GetServiceFolder(),
                 Configuration = _configuration,
-                OnMessage = _configuration.TryGetValue("OnMessage", out var onMessage) ? (Action<string>) onMessage : null
+                PreviewFeatures = GetPreviewFeatures(_configuration)
             };
 
             services.AddSingleton(middlewareConfiguration);
@@ -44,7 +44,7 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
             services.AddScoped<IJournalProcessor, JournalProcessor>();
             services.AddScoped<IPOS, Queue>();
 
-            var businessLogicFactoryBoostrapper = LocalizedQueueBootStrapperFactory.GetBootstrapperForLocalizedQueue(_activeQueueId, _configuration);
+            var businessLogicFactoryBoostrapper = LocalizedQueueBootStrapperFactory.GetBootstrapperForLocalizedQueue(_activeQueueId, middlewareConfiguration);
             businessLogicFactoryBoostrapper.ConfigureServices(services);
         }
 
@@ -59,6 +59,21 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
             else
             {
                 throw new ArgumentException("Configuration must contain 'init_ftQueue' parameter.");
+            }
+        }
+
+        private static Dictionary<string, bool> GetPreviewFeatures(Dictionary<string, object> configuration)
+        {
+            var key = "previewFeatures";
+            try
+            {
+                return configuration.ContainsKey(key)
+                ? JsonConvert.DeserializeObject<Dictionary<string, bool>>(configuration[key].ToString())
+                : new Dictionary<string, bool>();
+            }
+            catch
+            {
+                return new();
             }
         }
 

@@ -2,11 +2,12 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Dapper;
+using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Storage.SQLite.Repositories.FR
 {
-    public class SQLiteJournalFRRepository : AbstractSQLiteRepository<Guid, ftJournalFR>, IJournalFRRepository
+    public class SQLiteJournalFRRepository : AbstractSQLiteRepository<Guid, ftJournalFR>, IJournalFRRepository, IMiddlewareJournalFRRepository
     {
         public SQLiteJournalFRRepository(ISqliteConnectionFactory connectionFactory, string path) : base(connectionFactory, path) { }
 
@@ -32,5 +33,15 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Repositories.FR
         }
 
         protected override Guid GetIdForEntity(ftJournalFR entity) => entity.ftJournalFRId;
+
+        public async Task<ftJournalFR> GetWithLastTimestampAsync() => await DbConnection.QueryFirstOrDefaultAsync<ftJournalFR>("Select * from ftJournalFR ORDER BY TimeStamp DESC LIMIT 1").ConfigureAwait(false);
+
+        public async IAsyncEnumerable<ftJournalFR> GetProcessedCopyReceiptsAsync()
+        {
+            foreach (var item in await DbConnection.QueryAsync<ftJournalFR>("select * from ftJournalFR where ReceiptType = 'C'"))
+            {
+                yield return item;
+            }
+        }
     }
 }
