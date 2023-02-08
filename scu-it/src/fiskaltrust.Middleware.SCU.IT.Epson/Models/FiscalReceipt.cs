@@ -1,9 +1,10 @@
-﻿
-using System.Xml.Serialization;
+﻿using System.Xml.Serialization;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
+
 namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
 {
-    [XmlRoot(ElementName = "displayText")]
+    [XmlType("displayText")]
     public class DisplayText
     {
         public DisplayText(string data) => Data = data;
@@ -14,7 +15,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
         public string Data { get; set; }
     }
 
-    [XmlRoot(ElementName = "printRecMessage")]
+    [XmlType("printRecMessage")]
     public class PrintRecMessage
     {
         public PrintRecMessage(string message) => Message = message;
@@ -48,141 +49,133 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
         [XmlAttribute(AttributeName = "description")]
         public string? Description { get; set; }
         [XmlAttribute(AttributeName = "quantity")]
-        public string? Quantity { get; set; }
+        public decimal Quantity { get; set; }
         [XmlAttribute(AttributeName = "unitPrice")]
-        public string? UnitPrice { get; set; }
+        public decimal UnitPrice { get; set; }
         [XmlAttribute(AttributeName = "department")]
-        public string? Department { get; set; }
+        public int Department { get; set; } = 1;
         [XmlAttribute(AttributeName = "justification")]
-        public string? Justification { get; set; }
+        public int Justification { get; set; } = 1; 
     }
 
     [XmlRoot(ElementName = "printRecItemVoid")]
     public class PrintRecItemVoid
     {
         [XmlAttribute(AttributeName = "operator")]
-        public string Operator { get; set; }
+        public string? Operator { get; set; }
         [XmlAttribute(AttributeName = "description")]
-        public string Description { get; set; }
+        public string? Description { get; set; }
         [XmlAttribute(AttributeName = "quantity")]
-        public string Quantity { get; set; }
+        public int Quantity { get; set; }
         [XmlAttribute(AttributeName = "unitPrice")]
-        public string UnitPrice { get; set; }
+        public decimal UnitPrice { get; set; }
         [XmlAttribute(AttributeName = "department")]
-        public string Department { get; set; }
+        public string? Department { get; set; }
         [XmlAttribute(AttributeName = "justification")]
-        public string Justification { get; set; }
-    }
-
-    [XmlRoot(ElementName = "printRecItemAdjustment")]
-    public class PrintRecItemAdjustment
-    {
-        [XmlAttribute(AttributeName = "operator")]
-        public string Operator { get; set; }
-        [XmlAttribute(AttributeName = "description")]
-        public string Description { get; set; }
-        [XmlAttribute(AttributeName = "adjustmentType")]
-        public string AdjustmentType { get; set; }
-        [XmlAttribute(AttributeName = "amount")]
-        public string Amount { get; set; }
-        [XmlAttribute(AttributeName = "justification")]
-        public string Justification { get; set; } = "1";
+        public string? Justification { get; set; }
     }
 
     [XmlRoot(ElementName = "printRecSubtotalAdjustment")]
     public class PrintRecSubtotalAdjustment
     {
         [XmlAttribute(AttributeName = "operator")]
-        public string Operator { get; set; }
+        public string? Operator { get; set; }
         [XmlAttribute(AttributeName = "description")]
-        public string Description { get; set; }
+        public string? Description { get; set; }
+
+        /// <summary>  
+        /// +value is surcharge -value is discount 
+        ///determines discount/surcharge operation to perform:
+        ///1 = Discount on subtotal with subtotal printed out
+        ///2 = Discount on subtotal without subtotal printed out
+        /// 6 = Surcharge on subtotal with subtotal printed out
+        /// 7 = Surcharge on subtotal without subtotal printed out
+        /// </summary>
         [XmlAttribute(AttributeName = "adjustmentType")]
-        public string AdjustmentType { get; set; }
+        public int AdjustmentType { get; set; }
         [XmlAttribute(AttributeName = "amount")]
-        public string Amount { get; set; }
+        public decimal Amount { get; set; }
         [XmlAttribute(AttributeName = "justification")]
-        public string Justification { get; set; }
+        public int Justification { get; set; }
     }
 
     [XmlRoot(ElementName = "printRecSubtotal")]
     public class PrintRecSubtotal
     {
         [XmlAttribute(AttributeName = "operator")]
-        public string Operator { get; set; }
+        public string? Operator { get; set; }
         [XmlAttribute(AttributeName = "option")]
-        public string Option { get; set; }
+        public int Option { get; set; } = 0;
     }
 
     [XmlRoot(ElementName = "printBarCode")]
     public class PrintBarCode
     {
         [XmlAttribute(AttributeName = "operator")]
-        public string Operator { get; set; }
+        public string? Operator { get; set; }
         [XmlAttribute(AttributeName = "position")]
-        public string Position { get; set; }
+        public int Position { get; set; }
         [XmlAttribute(AttributeName = "width")]
-        public string Width { get; set; }
+        public int Width { get; set; }
         [XmlAttribute(AttributeName = "height")]
-        public string Height { get; set; }
+        public int Height { get; set; }
         [XmlAttribute(AttributeName = "hRIPosition")]
-        public string HRIPosition { get; set; }
+        public int HRIPosition { get; set; }
         [XmlAttribute(AttributeName = "hRIFont")]
-        public string HRIFont { get; set; }
+        public char HRIFont { get; set; }
         [XmlAttribute(AttributeName = "codeType")]
-        public string CodeType { get; set; }
+        public string? CodeType { get; set; }
         [XmlAttribute(AttributeName = "code")]
-        public string Code { get; set; }
+        public string? Code { get; set; }
     }
 
     [XmlRoot(ElementName = "printRecTotal")]
     public class PrintRecTotal
     {
         [XmlAttribute(AttributeName = "operator")]
-        public string Operator { get; set; }
+        public string? Operator { get; set; }
         [XmlAttribute(AttributeName = "description")]
-        public string Description { get; set; }
+        public string? Description { get; set; }
         [XmlAttribute(AttributeName = "payment")]
-        public string Payment { get; set; }
+        public decimal Payment { get; set; }
         [XmlAttribute(AttributeName = "paymentType")]
-        public string PaymentType { get; set; }
+        public int PaymentType { get; set; }
         [XmlAttribute(AttributeName = "index")]
-        public string Index { get; set; }
+        public int Index { get; set; }
         [XmlAttribute(AttributeName = "justification")]
-        public string Justification { get; set; }
+        public int Justification { get; set; } = 1;
     }
 
     [XmlRoot(ElementName = "endFiscalReceipt")]
     public class EndFiscalReceipt
     {
         [XmlAttribute(AttributeName = "operator")]
-        public string Operator { get; set; } 
+        public string? Operator { get; set; } 
     }
 
     [XmlRoot(ElementName = "printerFiscalReceipt")]
     public class FiscalReceipt
     {
         [XmlElement(ElementName = "displayText")]
-        public List<DisplayText> DisplayText { get; set; }
+        public List<DisplayText>? DisplayText { get; set; }
         [XmlElement(ElementName = "printRecMessage")]
-        public List<PrintRecMessage> PrintRecMessage { get; set; }
+        public List<PrintRecMessage>? PrintRecMessage { get; set; }
         [XmlElement(ElementName = "beginFiscalReceipt")]
-        public BeginFiscalReceipt BeginFiscalReceipt { get; set; }
+        public BeginFiscalReceipt BeginFiscalReceipt { get; set; } = new BeginFiscalReceipt();
         [XmlElement(ElementName = "printRecItem")]
-        public List<PrintRecItem> PrintRecItem { get; set; }
+        public List<PrintRecItem>? PrintRecItem { get; set; }
         [XmlElement(ElementName = "printRecItemVoid")]
-        public PrintRecItemVoid PrintRecItemVoid { get; set; }
-        [XmlElement(ElementName = "printRecItemAdjustment")]
-        public PrintRecItemAdjustment PrintRecItemAdjustment { get; set; }
+        public PrintRecItemVoid? PrintRecItemVoid { get; set; }
         [XmlElement(ElementName = "printRecSubtotalAdjustment")]
-        public PrintRecSubtotalAdjustment PrintRecSubtotalAdjustment { get; set; }
+        public PrintRecSubtotalAdjustment? PrintRecSubtotalAdjustment { get; set; }
         [XmlElement(ElementName = "printRecSubtotal")]
-        public PrintRecSubtotal PrintRecSubtotal { get; set; }
+        public PrintRecSubtotal? PrintRecSubtotal { get; set; }
         [XmlElement(ElementName = "printBarCode")]
-        public PrintBarCode PrintBarCode { get; set; }
+        public PrintBarCode? PrintBarCode { get; set; }
         [XmlElement(ElementName = "printRecTotal")]
-        public PrintRecTotal PrintRecTotal { get; set; }
+        public List<PrintRecTotal>? PrintRecTotal { get; set; }
         [XmlElement(ElementName = "endFiscalReceipt")]
-        public EndFiscalReceipt EndFiscalReceipt { get; set; }
+        public EndFiscalReceipt EndFiscalReceipt { get; set; }= new EndFiscalReceipt();
     }
 
 }
