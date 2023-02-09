@@ -10,6 +10,7 @@ using Microsoft.VisualStudio.TestPlatform.CommunicationUtilities.ObjectModel;
 using Xunit;
 using fiskaltrust.ifPOS.v1.it;
 using System.Collections.Generic;
+using System.IO;
 
 namespace fiskaltrust.Middleware.SCU.IT.UnitTest
 {
@@ -24,6 +25,7 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
             var fiscalReceiptRequest = new FiscalReceiptInvoice()
             {
                 Barcode = "0123456789",
+                DisplayText = "Message on customer display",
                 RecItems = new List<RecItem>()
                 {
                     new RecItem() { Description = "PANINO", Quantity = 1, UnitPrice = 6.00m },
@@ -36,9 +38,8 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
                 {
                     new RecSubtotalAdjustment()
                     {
-                        AdjustmentType= 1,
                         Description = "Discount applied to the subtotal",
-                        Amount = 300.12m
+                        Amount = -300.12m
                     }
                 },
                 RecTotals = new List<RecTotal>()
@@ -48,11 +49,17 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
 
             };
 
+            var xml = epsonXmlWriter.GetFiscalReceiptfromRequestXml(fiscalReceiptRequest);
+            if (File.Exists("FiscalReceiptInvoice"))
+            {
+                File.Delete("FiscalReceiptInvoice");
+            }
 
-
-
-
-
+            using (var outputFileStream = new FileStream("FiscalReceiptInvoice", FileMode.Create))
+            {
+                xml.CopyTo(outputFileStream);
+            }
         }
+
     }
 }

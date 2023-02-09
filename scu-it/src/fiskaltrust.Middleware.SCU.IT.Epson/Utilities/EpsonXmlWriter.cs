@@ -22,13 +22,18 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
         public Stream GetFiscalReceiptfromRequestXml(FiscalReceiptInvoice request)
         {
             var fiscalReceipt = CreateFiscalReceipt(request);
+            fiscalReceipt.DisplayText = string.IsNullOrEmpty(request.DisplayText) ? null : new DisplayText() { Data = request.DisplayText};
             fiscalReceipt.PrintRecItem = request.RecItems?.Select(p => new PrintRecItem
             {
                 Description = p.Description,
                 Quantity = p.Quantity,
-                UnitPrice = p.UnitPrice,
-                //Department = 
-                //Operator = request.
+                UnitPrice = p.UnitPrice
+            }).ToList();
+            fiscalReceipt.PrintRecSubtotalAdjustment = request.RecSubtotalAdjustments?.Select(p => new PrintRecSubtotalAdjustment
+            {
+                Description = p.Description,
+                AdjustmentType = p.Amount < 0 ? 1 : 6,
+                Amount = p.Amount
             }).ToList();
             return GetFiscalReceiptXml(fiscalReceipt);
         }
@@ -49,7 +54,6 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
                     Height = _epsonScuConfiguration.BarCodeHeight,
                     HRIFont = _epsonScuConfiguration.BarCodeHRIFont,
                     HRIPosition = _epsonScuConfiguration.BarCodeHRIPosition,
-                    //Operator = request.
                     Position = _epsonScuConfiguration.BarCodePosition,
                     Width = _epsonScuConfiguration.BarCodeWidth
                 } : null,
@@ -59,7 +63,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
                     Payment = p.Payment,
                     PaymentType = (int) p.PaymentType,
                     Index= p.Index,
-                    //Operator = request.
+                    Operator = request.Operator
                 }).ToList(),
             };
             return fiscalReceipt;
@@ -67,12 +71,9 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
 
         private Stream GetFiscalReceiptXml(FiscalReceipt fiscalReceipt)
         {
-            var writer = new XmlSerializer(typeof(FiscalReceipt));
+            var serializer = new XmlSerializer(typeof(FiscalReceipt));
             var stream = new MemoryStream();
-            using (var file = new StreamWriter(stream))
-            {
-                writer.Serialize(file, fiscalReceipt);
-            }
+            serializer.Serialize(stream, fiscalReceipt);
             stream.Position= 0;
             return stream;
         }
