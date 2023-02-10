@@ -22,7 +22,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
         public Stream GetFiscalReceiptfromRequestXml(FiscalReceiptInvoice request)
         {
             var fiscalReceipt = CreateFiscalReceipt(request);
-            fiscalReceipt.DisplayText = string.IsNullOrEmpty(request.DisplayText) ? null : new DisplayText() { Data = request.DisplayText};
+            fiscalReceipt.DisplayText = string.IsNullOrEmpty(request.DisplayText) ? null : (DisplayText) request.DisplayText;
             fiscalReceipt.PrintRecItem = request.RecItems?.Select(p => new PrintRecItem
             {
                 Description = p.Description,
@@ -40,7 +40,30 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
         public Stream GetFiscalReceiptfromRequestXml(FiscalReceiptRefund request)
         {
             var fiscalReceipt = CreateFiscalReceipt(request);
+            fiscalReceipt.PrintRecRefund = request.RecRefunds?.Select(GetPrintRecRefund).ToList();
             return GetFiscalReceiptXml(fiscalReceipt);
+        }
+
+        private PrintRecRefund GetPrintRecRefund(RecRefund recRefund)
+        {
+            if (recRefund.UnitPrice != 0 && recRefund.Quantity != 0)
+            {
+                return new PrintRecRefund
+                {
+                    Description = recRefund.Description,
+                    Quantity = recRefund.Quantity,
+                    UnitPrice = recRefund.UnitPrice
+                };
+            }else
+            {
+                return new PrintRecRefund
+                {
+                    Ámount = recRefund.Amount,
+                    OperationType = (int) recRefund.OperationType
+                };
+            }
+
+
         }
 
         private FiscalReceipt CreateFiscalReceipt(FiscalReceiptRequest request)

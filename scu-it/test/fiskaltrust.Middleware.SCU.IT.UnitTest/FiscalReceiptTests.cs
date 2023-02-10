@@ -60,6 +60,34 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
                 xml.CopyTo(outputFileStream);
             }
         }
+        [Fact]
+        public void CommercailDocument_SendRefund_CreateValidXml()
+        {
+            var epsonScuConfiguration = new EpsonScuConfiguration();
+            var epsonXmlWriter = new EpsonXmlWriter(epsonScuConfiguration);
+            var fiscalReceiptRequest = new FiscalReceiptRefund()
+            {
+                Barcode = "0123456789",
+                DisplayText = "REFUND 0279 0010 08012021 99MEY123456",
+                RecRefunds= new List<RecRefund>()
+                {
+                    new RecRefund(){ Amount = 600, Description = "TV" }
+                },
+                RecTotals = new List<RecTotal>()
+                {
+                    new RecTotal(){ Description = "Payment in cash", Payment= 600, PaymentType = PaymentType.Cash, Index = 1}
+                }
 
+            };
+            var xml = epsonXmlWriter.GetFiscalReceiptfromRequestXml(fiscalReceiptRequest);
+            if (File.Exists("FiscalReceiptRefund"))
+            {
+                File.Delete("FiscalReceiptRefund");
+            }
+            using (var outputFileStream = new FileStream("FiscalReceiptRefund", FileMode.Create))
+            {
+                xml.CopyTo(outputFileStream);
+            }
+        }
     }
 }

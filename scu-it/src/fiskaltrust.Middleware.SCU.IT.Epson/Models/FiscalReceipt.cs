@@ -1,9 +1,22 @@
 ﻿using System.Xml.Serialization;
 using System.Collections.Generic;
 using fiskaltrust.Middleware.SCU.IT.Epson.Utilities;
+using System;
+using static System.Net.Mime.MediaTypeNames;
+using fiskaltrust.ifPOS.v1.it;
 
 namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
 {
+    [XmlType("printRecLotteryID")]
+    public class LotteryID
+    {
+        [XmlAttribute(AttributeName = "operator")]
+        public string? Operator { get; set; }
+        [XmlAttribute(AttributeName = "code")]
+        public string? Code { get; set; }
+    }
+
+
     [XmlType("displayText")]
     public class DisplayText
     {
@@ -11,6 +24,8 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
         public string? Operator { get; set; }
         [XmlAttribute(AttributeName = "data")]
         public string? Data { get; set; }
+
+        public static explicit operator DisplayText(string text) => new() { Data = text };
     }
 
     [XmlType("printRecMessage")]
@@ -76,7 +91,67 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
         [XmlAttribute(AttributeName = "department")]
         public int Department { get; set; } = 1;
         [XmlAttribute(AttributeName = "justification")]
-        public int Justification { get; set; } = 1; 
+        public int Justification { get; set; } = 1;
+
+    }
+
+
+    [XmlRoot(ElementName = "printRecRefund")]
+    public class PrintRecRefund
+    {
+        [XmlAttribute(AttributeName = "operator")]
+        public string? Operator { get; set; }
+        [XmlAttribute(AttributeName = "description")]
+        public string? Description { get; set; }
+        [XmlIgnore]
+        public decimal Quantity { get; set; }
+        [XmlAttribute(AttributeName = "quantity")]
+        public string QuantityStr
+        {
+            get => Quantity.ToString(EpsonFormatter.GetQuantityFormatter());
+
+            set
+            {
+                if (decimal.TryParse(value, out var quantity))
+                {
+                    Quantity = quantity;
+                }
+            }
+        }
+        [XmlIgnore]
+        public decimal UnitPrice { get; set; }
+        [XmlAttribute(AttributeName = "unitPrice")]
+        public string UnitPriceStr
+        {
+            get => UnitPrice.ToString(EpsonFormatter.GetCurrencyFormatter());
+            set
+            {
+                if (decimal.TryParse(value, out var unitPrice))
+                {
+                    UnitPrice = unitPrice;
+                }
+            }
+        }
+        [XmlIgnore]
+        public decimal Ámount { get; set; }
+        [XmlAttribute(AttributeName = "amount")]
+        public string ÁmountStr
+        {
+            get => UnitPrice.ToString(EpsonFormatter.GetCurrencyFormatter());
+            set
+            {
+                if (decimal.TryParse(value, out var amount))
+                {
+                    Ámount = amount;
+                }
+            }
+        }
+        [XmlAttribute(AttributeName = "operationType")]
+        public int OperationType { get; set; } 
+        [XmlAttribute(AttributeName = "department")]
+        public int Department { get; set; } = 1;
+        [XmlAttribute(AttributeName = "justification")]
+        public int Justification { get; set; } = 1;
     }
 
     [XmlRoot(ElementName = "printRecItemVoid")]
@@ -226,6 +301,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
     [XmlRoot(ElementName = "printerFiscalReceipt")]
     public class FiscalReceipt
     {
+
         [XmlElement(ElementName = "displayText")]
         public DisplayText? DisplayText { get; set; }
         [XmlElement(ElementName = "printRecMessage")]
@@ -234,6 +310,8 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
         public BeginFiscalReceipt BeginFiscalReceipt { get; set; } = new BeginFiscalReceipt();
         [XmlElement(ElementName = "printRecItem")]
         public List<PrintRecItem>? PrintRecItem { get; set; }
+        [XmlElement(ElementName = "printRecRefund")]
+        public List<PrintRecRefund>? PrintRecRefund { get; set; }
         [XmlElement(ElementName = "printRecItemVoid")]
         public PrintRecItemVoid? PrintRecItemVoid { get; set; }
         [XmlElement(ElementName = "printRecSubtotalAdjustment")]
@@ -242,6 +320,8 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
         public PrintRecSubtotal? PrintRecSubtotal { get; set; }
         [XmlElement(ElementName = "printBarCode")]
         public PrintBarCode? PrintBarCode { get; set; }
+        [XmlElement(ElementName = "printRecLotteryID")]
+        public LotteryID? LotteryID { get; set; }
         [XmlElement(ElementName = "printRecTotal")]
         public List<PrintRecTotal>? PrintRecTotal { get; set; }
         [XmlElement(ElementName = "endFiscalReceipt")]

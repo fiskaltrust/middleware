@@ -19,8 +19,9 @@ public sealed class EpsonSCU : IITSSCD
 
     public Task<ScuItEchoResponse> EchoAsync(ScuItEchoRequest request) => throw new System.NotImplementedException();
     public Task<EndExportSessionResponse> EndExportSessionAsync(EndExportSessionRequest request) => throw new System.NotImplementedException();
-    public Task<FiscalReceiptResponse> FiscalReceiptAsync(FiscalReceiptRequest request) => throw new System.NotImplementedException();
-
+   public Task<FiscalReceiptResponse> FiscalReceiptInvoiceAsync(FiscalReceiptInvoice request) => throw new System.NotImplementedException();
+    public Task<FiscalReceiptResponse> FiscalReceiptRefundAsync(FiscalReceiptRefund request) => throw new System.NotImplementedException();
+    public Task<PrinterStatus> GetPrinterInfoAsync() => throw new System.NotImplementedException();
     public Task<PrinterStatus> GetPrinterStatusAsync() => throw new System.NotImplementedException();
     public Task<StartExportSessionResponse> StartExportSessionAsync(StartExportSessionRequest request) => throw new System.NotImplementedException();
 }
