@@ -1,12 +1,5 @@
-﻿using System;
-using System.Reflection.Emit;
-using System.Reflection;
-using System.Xml.Linq;
-using fiskaltrust.Middleware.SCU.IT.Configuration;
+﻿using fiskaltrust.Middleware.SCU.IT.Configuration;
 using fiskaltrust.Middleware.SCU.IT.Epson.Utilities;
-using fiskaltrust.Middleware.SCU.IT.FiscalizationService;
-using Microsoft.VisualBasic.FileIO;
-using Microsoft.VisualStudio.TestPlatform.CommunicationUtilities.ObjectModel;
 using Xunit;
 using fiskaltrust.ifPOS.v1.it;
 using System.Collections.Generic;
@@ -50,24 +43,16 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
             };
 
             var xml = epsonXmlWriter.GetFiscalReceiptfromRequestXml(fiscalReceiptRequest);
-            if (File.Exists("FiscalReceiptInvoice"))
-            {
-                File.Delete("FiscalReceiptInvoice");
-            }
-
-            using (var outputFileStream = new FileStream("FiscalReceiptInvoice", FileMode.Create))
-            {
-                xml.CopyTo(outputFileStream);
-            }
+            WriteFile(xml, "FiscalReceiptInvoice");
         }
         [Fact]
-        public void CommercailDocument_SendRefund_CreateValidXml()
+        public void CommercailDocument_SendRefundItem_CreateValidXml()
         {
             var epsonScuConfiguration = new EpsonScuConfiguration();
             var epsonXmlWriter = new EpsonXmlWriter(epsonScuConfiguration);
             var fiscalReceiptRequest = new FiscalReceiptRefund()
             {
-                Barcode = "0123456789",
+                Operator = "1",
                 DisplayText = "REFUND 0279 0010 08012021 99MEY123456",
                 RecRefunds= new List<Refund>()
                 {
@@ -80,11 +65,87 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
 
             };
             var xml = epsonXmlWriter.GetFiscalReceiptfromRequestXml(fiscalReceiptRequest);
-            if (File.Exists("FiscalReceiptRefund"))
+            WriteFile(xml, "FiscalReceiptRefund");
+        }
+
+        [Fact]
+        public void CommercailDocument_SendRefundAcconto_CreateValidXml()
+        {
+            var epsonScuConfiguration = new EpsonScuConfiguration();
+            var epsonXmlWriter = new EpsonXmlWriter(epsonScuConfiguration);
+            var fiscalReceiptRequest = new FiscalReceiptRefund()
             {
-                File.Delete("FiscalReceiptRefund");
+                Operator = "1",
+                DisplayText = "REFUND 0279 0010 08012021 99MEY123456",
+                RecRefunds = new List<Refund>()
+                {
+                    new Refund(){ Amount = 600, OperationType = OperationType.Acconto, VatGroup = 1, Description = "Acconto" }
+                },
+                Payments = new List<Payment>()
+                {
+                    new Payment(){ Description = "Payment in cash", Amount= 600, PaymentType = PaymentType.Cash, Index = 1}
+                }
+
+            };
+            var xml = epsonXmlWriter.GetFiscalReceiptfromRequestXml(fiscalReceiptRequest);
+            WriteFile(xml, "FiscalReceiptRefundAcconto");
+        }
+        [Fact]
+        public void CommercailDocument_SendInvoiceWithLottery_CreateValidXml()
+        {
+            var epsonScuConfiguration = new EpsonScuConfiguration();
+            var epsonXmlWriter = new EpsonXmlWriter(epsonScuConfiguration);
+            var fiscalReceiptRequest = new FiscalReceiptInvoice()
+            {
+                Operator = "1",
+                DisplayText = "Message on customer display",
+                LotteryID= "ABCDEFGN",
+                RecItems = new List<Item>()
+                {
+                    new Item(){ Quantity = 1, UnitPrice = 6, VatGroup = 1, Description = "PANINO" }
+                },
+                Payments = new List<Payment>()
+                {
+                    new Payment(){ Description = "Payment in cash", Amount= 0, PaymentType = PaymentType.Cash, Index = 1}
+                }
+            };
+            var xml = epsonXmlWriter.GetFiscalReceiptfromRequestXml(fiscalReceiptRequest);
+            WriteFile(xml, "FiscalReceiptLottery");
+        }
+        [Fact]
+        public void CommercailDocument_SendInvoiceWithDepositAdjustment_CreateValidXml()
+        {
+            var epsonScuConfiguration = new EpsonScuConfiguration();
+            var epsonXmlWriter = new EpsonXmlWriter(epsonScuConfiguration);
+            var fiscalReceiptRequest = new FiscalReceiptInvoice()
+            {
+                Operator = "1",
+                DisplayText = "Message on customer display",
+                RecItems = new List<Item>()
+                {
+                    new Item(){ Quantity = 1, UnitPrice = 650, VatGroup = 1, Description = "TELEVISION" }
+                },
+                PaymentAdjustments = new List<PaymentAdjustment>()
+                {
+                    new PaymentAdjustment(){ Description = "DEPOSIT ADJUSTMENT", Amount = 100}
+                },
+                Payments = new List<Payment>()
+                {
+                    new Payment(){ Description = "Payment in cash", Amount= 550, PaymentType = PaymentType.Cash, Index = 1}
+                }
+            };
+            var xml = epsonXmlWriter.GetFiscalReceiptfromRequestXml(fiscalReceiptRequest);
+            WriteFile(xml, "FiscalReceiptInvoiceDepositAdjustment");
+        }
+
+
+        private static void WriteFile(Stream xml, string filename)
+        {
+            if (File.Exists(filename))
+            {
+                File.Delete(filename);
             }
-            using (var outputFileStream = new FileStream("FiscalReceiptRefund", FileMode.Create))
+            using (var outputFileStream = new FileStream(filename, FileMode.Create))
             {
                 xml.CopyTo(outputFileStream);
             }

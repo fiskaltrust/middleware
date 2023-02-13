@@ -14,6 +14,8 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
         public string? Operator { get; set; }
         [XmlAttribute(AttributeName = "code")]
         public string? Code { get; set; }
+
+        public static explicit operator LotteryID(string code) => new() { Code = code };
     }
 
 
@@ -133,21 +135,38 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
             }
         }
         [XmlIgnore]
-        public decimal Ámount { get; set; }
+        public decimal? Amount { get; set; }
         [XmlAttribute(AttributeName = "amount")]
-        public string ÁmountStr
+        public string? AmountStr
         {
-            get => UnitPrice.ToString(EpsonFormatter.GetCurrencyFormatter());
+            get => Amount.HasValue ? Amount.Value.ToString(EpsonFormatter.GetCurrencyFormatter()) : null;
+
             set
             {
                 if (decimal.TryParse(value, out var amount))
                 {
-                    Ámount = amount;
+                    Amount = amount;
                 }
             }
         }
+        [XmlIgnore]
+        public int? OperationType { get; set; }
+
         [XmlAttribute(AttributeName = "operationType")]
-        public int OperationType { get; set; } 
+        public string? OperationTypeStr
+        {
+            get => OperationType.HasValue ? OperationType.ToString() : null;
+
+            set
+            {
+                if (int.TryParse(value, out var operationType))
+                {
+                    OperationType = operationType;
+                }
+            }
+        }
+
+
         [XmlAttribute(AttributeName = "department")]
         public int Department { get; set; } = 1;
         [XmlAttribute(AttributeName = "justification")]

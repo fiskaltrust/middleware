@@ -51,7 +51,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
             {
                 return new PrintRecRefund
                 {
-                    Ámount = recRefund.Amount,
+                    Amount = recRefund.Amount,
                     OperationType = (int) recRefund.OperationType
                 };
             }
@@ -73,6 +73,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
         {
             var fiscalReceipt = new FiscalReceipt
             {
+                LotteryID = !string.IsNullOrEmpty(request.LotteryID) ? (LotteryID)request.LotteryID : null,
                 PrintBarCode = !string.IsNullOrEmpty(request.Barcode) ? new PrintBarCode()
                 {
                     Code = request.Barcode,
