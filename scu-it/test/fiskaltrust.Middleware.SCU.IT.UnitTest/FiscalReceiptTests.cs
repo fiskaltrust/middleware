@@ -26,25 +26,25 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
             {
                 Barcode = "0123456789",
                 DisplayText = "Message on customer display",
-                RecItems = new List<RecItem>()
+                RecItems = new List<Item>()
                 {
-                    new RecItem() { Description = "PANINO", Quantity = 1, UnitPrice = 6.00m },
-                    new RecItem() { Description = "Selling Item 2 VAT 22%", Quantity = 1.234m, UnitPrice = 10.00m },
-                    new RecItem() { Description = "Selling Item 3 VAT 22%", Quantity = 2.5m, UnitPrice = 100.17m },
-                    new RecItem() { Description = "Selling Item 4 VAT 10%", Quantity = 12.13m, UnitPrice = 216.17m },
-                    new RecItem() { Description = "Selling Item 5 4%", Quantity = 12.13m, UnitPrice = 216.17m },
+                    new Item() { Description = "PANINO", Quantity = 1, UnitPrice = 6.00m, VatGroup = 2 },
+                    new Item() { Description = "Selling Item 2 VAT 22%", Quantity = 1.234m, UnitPrice = 10.00m, VatGroup = 1 },
+                    new Item() { Description = "Selling Item 3 VAT 22%", Quantity = 2.5m, UnitPrice = 100.17m, VatGroup = 1  },
+                    new Item() { Description = "Selling Item 4 VAT 10%", Quantity = 12.13m, UnitPrice = 216.17m, VatGroup = 2  },
+                    new Item() { Description = "Selling Item 5 4%", Quantity = 12.13m, UnitPrice = 216.17m, VatGroup = 3 },
                 },
-                RecSubtotalAdjustments = new List<RecSubtotalAdjustment>()
+                PaymentAdjustments = new List<PaymentAdjustment>()
                 {
-                    new RecSubtotalAdjustment()
+                    new PaymentAdjustment()
                     {
                         Description = "Discount applied to the subtotal",
                         Amount = -300.12m
                     }
                 },
-                RecTotals = new List<RecTotal>()
+                Payments = new List<Payment>()
                 {
-                    new RecTotal(){ Description = "Payment in cash", Payment= 0, PaymentType = PaymentType.Cash, Index = 1}
+                    new Payment(){ Description = "Payment in cash", Amount = 0, PaymentType = PaymentType.Cash, Index = 1}
                 }
 
             };
@@ -69,13 +69,13 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
             {
                 Barcode = "0123456789",
                 DisplayText = "REFUND 0279 0010 08012021 99MEY123456",
-                RecRefunds= new List<RecRefund>()
+                RecRefunds= new List<Refund>()
                 {
-                    new RecRefund(){ Amount = 600, Description = "TV" }
+                    new Refund(){ UnitPrice = 600, Quantity = 1, VatGroup = 1, Description = "TV" }
                 },
-                RecTotals = new List<RecTotal>()
+                Payments = new List<Payment>()
                 {
-                    new RecTotal(){ Description = "Payment in cash", Payment= 600, PaymentType = PaymentType.Cash, Index = 1}
+                    new Payment(){ Description = "Payment in cash", Amount= 600, PaymentType = PaymentType.Cash, Index = 1}
                 }
 
             };

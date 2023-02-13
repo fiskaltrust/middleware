@@ -27,9 +27,10 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
             {
                 Description = p.Description,
                 Quantity = p.Quantity,
-                UnitPrice = p.UnitPrice
+                UnitPrice = p.UnitPrice,
+                Department = p.VatGroup
             }).ToList();
-            fiscalReceipt.PrintRecSubtotalAdjustment = request.RecSubtotalAdjustments?.Select(p => new PrintRecSubtotalAdjustment
+            fiscalReceipt.PrintRecSubtotalAdjustment = request.PaymentAdjustments?.Select(p => new PrintRecSubtotalAdjustment
             {
                 Description = p.Description,
                 AdjustmentType = p.Amount < 0 ? 1 : 6,
@@ -44,9 +45,17 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
             return GetFiscalReceiptXml(fiscalReceipt);
         }
 
-        private PrintRecRefund GetPrintRecRefund(RecRefund recRefund)
+        private PrintRecRefund GetPrintRecRefund(Refund recRefund)
         {
-            if (recRefund.UnitPrice != 0 && recRefund.Quantity != 0)
+            if (recRefund.OperationType.HasValue)
+            {
+                return new PrintRecRefund
+                {
+                    Ámount = recRefund.Amount,
+                    OperationType = (int) recRefund.OperationType
+                };
+            }
+            else if (recRefund.UnitPrice != 0 && recRefund.Quantity != 0)
             {
                 return new PrintRecRefund
                 {
@@ -56,14 +65,8 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
                 };
             }else
             {
-                return new PrintRecRefund
-                {
-                    Ámount = recRefund.Amount,
-                    OperationType = (int) recRefund.OperationType
-                };
+                throw new Exception("Refund properties not set properly!");
             }
-
-
         }
 
         private FiscalReceipt CreateFiscalReceipt(FiscalReceiptRequest request)
@@ -80,10 +83,10 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
                     Position = _epsonScuConfiguration.BarCodePosition,
                     Width = _epsonScuConfiguration.BarCodeWidth
                 } : null,
-                PrintRecTotal = request.RecTotals?.Select(p => new PrintRecTotal
+                PrintRecTotal = request.Payments?.Select(p => new PrintRecTotal
                 {
                     Description= p.Description,
-                    Payment = p.Payment,
+                    Payment = p.Amount,
                     PaymentType = (int) p.PaymentType,
                     Index= p.Index,
                     Operator = request.Operator
