@@ -54,7 +54,7 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
             var sut = new QueueBootstrapper(queueId, config);
             sut.ConfigureServices(serviceCollection);
 
-            serviceCollection.Should().HaveCount(36);
+            serviceCollection.Should().HaveCount(35);
 
             var cryptoHelper = new ServiceDescriptor(typeof(ICryptoHelper), typeof(CryptoHelper), ServiceLifetime.Scoped);
             var signProcessorDecorator = new ServiceDescriptor(typeof(ISignProcessor), x => new LocalQueueSynchronizationDecorator(x.GetRequiredService<ISignProcessor>(), x.GetRequiredService<ILogger<LocalQueueSynchronizationDecorator>>()), ServiceLifetime.Scoped);
