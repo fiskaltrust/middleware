@@ -58,7 +58,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
 
         public bool IsLatestVersionDat(string fccDirectory, Version latestVersion)
         {
-            var text = File.ReadAllText(Path.Combine(fccDirectory, ".fccdata\\install\\fcc-version.dat"));
+            var text = File.ReadAllText(Path.Combine(fccDirectory, ".fccdata", "install", "fcc-version.dat"));
             var versionInDat = new Version(text);
             return versionInDat >= latestVersion;
         }
