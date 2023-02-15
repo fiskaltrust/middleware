@@ -56,9 +56,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
         [Fact]
         public async Task GetByTimeStampAsync_ShouldReturnAllEntries_WithinAGivenTimeStamp_ShouldReturnOnlyTheseEntries()
         {
-            var expectedEntries = StorageTestFixtureProvider.GetFixture().CreateMany<ftReceiptJournal>(10).ToList();
-            expectedEntries = await StorageTestFixtureProvider.SetDifferentTimestamps(expectedEntries).ConfigureAwait(false);
-            expectedEntries = expectedEntries.OrderByDescending(x => x.TimeStamp).ToList();
+            var expectedEntries = StorageTestFixtureProvider.GetFixture().CreateMany<ftReceiptJournal>(10).OrderByDescending(x => x.TimeStamp).ToList();
 
             var sut = await CreateRepository(expectedEntries);
 
@@ -74,9 +72,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
         [Fact]
         public async Task GetByTimeStampAsync_ShouldReturnAllEntries_FromAGivenTimeStamp_ShouldReturnOnlyTheseEntries()
         {
-            var expectedEntries = StorageTestFixtureProvider.GetFixture().CreateMany<ftReceiptJournal>(10).ToList();
-            expectedEntries = await StorageTestFixtureProvider.SetDifferentTimestamps(expectedEntries).ConfigureAwait(false);
-            expectedEntries = expectedEntries.OrderBy(x => x.TimeStamp).ToList();
+            var expectedEntries = StorageTestFixtureProvider.GetFixture().CreateMany<ftReceiptJournal>(10).OrderBy(x => x.TimeStamp).ToList();
 
             var sut = await CreateRepository(expectedEntries);
 
@@ -91,9 +87,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
         [Fact]
         public async Task GetByTimeStampAsync_ShouldReturnAllEntries_FromAGivenTimeStamp_WithTake_ShouldReturnOnlyTheSpecifiedAmountOfEntries()
         {
-            var expectedEntries = StorageTestFixtureProvider.GetFixture().CreateMany<ftReceiptJournal>(10).ToList();
-            expectedEntries = await StorageTestFixtureProvider.SetDifferentTimestamps(expectedEntries).ConfigureAwait(false);
-            expectedEntries = expectedEntries.OrderBy(x => x.TimeStamp).ToList();
+            var expectedEntries = StorageTestFixtureProvider.GetFixture().CreateMany<ftReceiptJournal>(10).OrderBy(x => x.TimeStamp).ToList();
 
             var sut = await CreateRepository(expectedEntries);
 
