@@ -7,11 +7,9 @@ using fiskaltrust.Middleware.Contracts.RequestCommands;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 {
-    internal class DailyClosingReceiptCommand : ClosingReceiptCommand
+    public class DailyClosingReceiptCommand : ClosingReceiptCommand
     {
         public DailyClosingReceiptCommand(IServiceProvider services)  : base(services) { }
         
-        protected override Task<RequestCommandResponse> ExecuteSpecificAsync(ftQueue queue, ftQueueDE queueDE, ReceiptRequest request, ftQueueItem queueItem) => throw new NotImplementedException();
-        protected override ActionJournalEntry GetActionJournalEntry(ReceiptRequest request) => throw new NotImplementedException();
     }
 }
