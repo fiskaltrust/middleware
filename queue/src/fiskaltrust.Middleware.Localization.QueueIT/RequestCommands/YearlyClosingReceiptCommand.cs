@@ -9,9 +9,5 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
     internal class YearlyClosingReceiptCommand : ClosingReceiptCommand
     {
         public YearlyClosingReceiptCommand(IServiceProvider services) : base(services) { }
-
-        protected override Task<RequestCommandResponse> ExecuteSpecificAsync(ftQueue queue, ftQueueDE queueDE, ReceiptRequest request, ftQueueItem queueItem) => throw new NotImplementedException();
-        protected override ActionJournalEntry GetActionJournalEntry(ReceiptRequest request) => throw new NotImplementedException();
-
-    }
+   }
 }
