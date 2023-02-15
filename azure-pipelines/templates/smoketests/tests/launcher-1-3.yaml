@@ -90,3 +90,8 @@ steps:
 
       Stop-Process $process
     displayName: Run Tests
+    
+  - pwsh: |
+      npm install -g rimraf
+      rimraf %temp%/NuGetScratch
+    displayName: Remove NugetScratch folder
