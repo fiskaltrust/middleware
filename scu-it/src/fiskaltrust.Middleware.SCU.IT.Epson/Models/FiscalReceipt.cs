@@ -91,7 +91,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
             }
         }
         [XmlAttribute(AttributeName = "department")]
-        public int Department { get; set; } = 1;
+        public int Department { get; set; }
         [XmlAttribute(AttributeName = "justification")]
         public int Justification { get; set; } = 1;
 
@@ -168,51 +168,39 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
 
 
         [XmlAttribute(AttributeName = "department")]
-        public int Department { get; set; } = 1;
+        public int Department { get; set; }
         [XmlAttribute(AttributeName = "justification")]
         public int Justification { get; set; } = 1;
     }
 
-    [XmlRoot(ElementName = "printRecItemVoid")]
-    public class PrintRecItemVoid
+    [XmlRoot(ElementName = "printRecItemAdjustment")]
+    public class PrintRecItemAdjustment
     {
         [XmlAttribute(AttributeName = "operator")]
         public string? Operator { get; set; }
         [XmlAttribute(AttributeName = "description")]
         public string? Description { get; set; }
+        [XmlAttribute(AttributeName = "adjustmentType")]
+        public int AdjustmentType { get; set; }
         [XmlIgnore]
-        public decimal Quantity { get; set; }
-        [XmlAttribute(AttributeName = "quantity")]
-        public string QuantityStr
+        public decimal? Amount { get; set; }
+        [XmlAttribute(AttributeName = "amount")]
+        public string? AmountStr
         {
-            get => Quantity.ToString(EpsonFormatter.GetQuantityFormatter());
-  
+            get => Amount.HasValue ? Amount.Value.ToString(EpsonFormatter.GetCurrencyFormatter()) : null;
+
             set
             {
-                if (decimal.TryParse(value, out var quantity))
+                if (decimal.TryParse(value, out var amount))
                 {
-                    Quantity = quantity;
-                }
-            }
-        }
-        [XmlIgnore]
-        public decimal UnitPrice { get; set; }
-        [XmlAttribute(AttributeName = "unitPrice")]
-        public string UnitPriceStr
-        {
-            get => UnitPrice.ToString(EpsonFormatter.GetCurrencyFormatter());
-            set
-            {
-                if (decimal.TryParse(value, out var unitPrice))
-                {
-                    UnitPrice = unitPrice;
+                    Amount = amount;
                 }
             }
         }
         [XmlAttribute(AttributeName = "department")]
-        public string? Department { get; set; }
+        public int Department { get; set; }
         [XmlAttribute(AttributeName = "justification")]
-        public string? Justification { get; set; }
+        public int Justification { get; set; } = 1;
     }
 
     [XmlRoot(ElementName = "printRecSubtotalAdjustment")]
@@ -332,7 +320,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
         [XmlElement(ElementName = "printRecRefund")]
         public List<PrintRecRefund>? PrintRecRefund { get; set; }
         [XmlElement(ElementName = "printRecItemVoid")]
-        public PrintRecItemVoid? PrintRecItemVoid { get; set; }
+        public List<PrintRecItemAdjustment>? PrintRecItemAdjustment { get; set; }
         [XmlElement(ElementName = "printRecSubtotalAdjustment")]
         public List<PrintRecSubtotalAdjustment>? PrintRecSubtotalAdjustment { get; set; }
         [XmlElement(ElementName = "printRecSubtotal")]

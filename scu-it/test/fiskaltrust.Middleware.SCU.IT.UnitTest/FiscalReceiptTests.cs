@@ -19,7 +19,7 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
             {
                 Barcode = "0123456789",
                 DisplayText = "Message on customer display",
-                RecItems = new List<Item>()
+                Items = new List<Item>()
                 {
                     new Item() { Description = "PANINO", Quantity = 1, UnitPrice = 6.00m, VatGroup = 2 },
                     new Item() { Description = "Selling Item 2 VAT 22%", Quantity = 1.234m, UnitPrice = 10.00m, VatGroup = 1 },
@@ -31,8 +31,20 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
                 {
                     new PaymentAdjustment()
                     {
+                        Description = "Discount",
+                        Amount = -5.12m,
+                        VatGroup = 1,
+                    },
+                    new PaymentAdjustment()
+                    {
+                        Description = "Surcharge",
+                        Amount = 3.12m,
+                        VatGroup = 2,
+                    },
+                    new PaymentAdjustment()
+                    {
                         Description = "Discount applied to the subtotal",
-                        Amount = -300.12m
+                        Amount = -100.12m
                     }
                 },
                 Payments = new List<Payment>()
@@ -54,7 +66,7 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
             {
                 Operator = "1",
                 DisplayText = "REFUND 0279 0010 08012021 99MEY123456",
-                RecRefunds= new List<Refund>()
+                Refunds= new List<Refund>()
                 {
                     new Refund(){ UnitPrice = 600, Quantity = 1, VatGroup = 1, Description = "TV" }
                 },
@@ -77,7 +89,7 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
             {
                 Operator = "1",
                 DisplayText = "REFUND 0279 0010 08012021 99MEY123456",
-                RecRefunds = new List<Refund>()
+                Refunds = new List<Refund>()
                 {
                     new Refund(){ Amount = 600, OperationType = OperationType.Acconto, VatGroup = 1, Description = "Acconto" }
                 },
@@ -100,7 +112,7 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
                 Operator = "1",
                 DisplayText = "Message on customer display",
                 LotteryID= "ABCDEFGN",
-                RecItems = new List<Item>()
+                Items = new List<Item>()
                 {
                     new Item(){ Quantity = 1, UnitPrice = 6, VatGroup = 1, Description = "PANINO" }
                 },
@@ -121,7 +133,7 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
             {
                 Operator = "1",
                 DisplayText = "Message on customer display",
-                RecItems = new List<Item>()
+                Items = new List<Item>()
                 {
                     new Item(){ Quantity = 1, UnitPrice = 650, VatGroup = 1, Description = "TELEVISION" }
                 },

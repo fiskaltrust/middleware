@@ -23,25 +23,32 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
         {
             var fiscalReceipt = CreateFiscalReceipt(request);
             fiscalReceipt.DisplayText = string.IsNullOrEmpty(request.DisplayText) ? null : (DisplayText) request.DisplayText;
-            fiscalReceipt.PrintRecItem = request.RecItems?.Select(p => new PrintRecItem
+            fiscalReceipt.PrintRecItem = request.Items?.Select(p => new PrintRecItem
             {
                 Description = p.Description,
                 Quantity = p.Quantity,
                 UnitPrice = p.UnitPrice,
                 Department = p.VatGroup
             }).ToList();
-            fiscalReceipt.PrintRecSubtotalAdjustment = request.PaymentAdjustments?.Select(p => new PrintRecSubtotalAdjustment
+            fiscalReceipt.PrintRecItemAdjustment = request.PaymentAdjustments?.Where(x => x.VatGroup.HasValue).Select(p => new PrintRecItemAdjustment
+            {
+                Description = p.Description,
+                AdjustmentType = p.Amount < 0 ? 3 : 8,
+                Amount = Math.Abs(p.Amount),
+                Department = p.VatGroup ?? 0
+            }).ToList();
+            fiscalReceipt.PrintRecSubtotalAdjustment = request.PaymentAdjustments?.Where(x => !x.VatGroup.HasValue).Select(p => new PrintRecSubtotalAdjustment
             {
                 Description = p.Description,
                 AdjustmentType = p.Amount < 0 ? 1 : 6,
-                Amount = p.Amount
+                Amount = Math.Abs(p.Amount)
             }).ToList();
             return GetFiscalReceiptXml(fiscalReceipt);
         }
         public Stream GetFiscalReceiptfromRequestXml(FiscalReceiptRefund request)
         {
             var fiscalReceipt = CreateFiscalReceipt(request);
-            fiscalReceipt.PrintRecRefund = request.RecRefunds?.Select(GetPrintRecRefund).ToList();
+            fiscalReceipt.PrintRecRefund = request.Refunds?.Select(GetPrintRecRefund).ToList();
             return GetFiscalReceiptXml(fiscalReceipt);
         }
 
