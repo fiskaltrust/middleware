@@ -43,6 +43,12 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
                 AdjustmentType = p.Amount < 0 ? 1 : 6,
                 Amount = Math.Abs(p.Amount)
             }).ToList();
+            fiscalReceipt.PrintRecTotal = request.Payments?.Select(p => new PrintRecTotal
+            {
+                Description = p.Description,
+                PaymentType = (int) p.PaymentType,
+                Payment = p.Amount
+            }).ToList();
             return GetFiscalReceiptXml(fiscalReceipt);
         }
         public Stream GetFiscalReceiptfromRequestXml(FiscalReceiptRefund request)

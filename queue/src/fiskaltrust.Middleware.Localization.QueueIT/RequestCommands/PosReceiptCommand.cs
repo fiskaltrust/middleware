@@ -21,8 +21,8 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 
             var fiscalReceiptRequest = new FiscalReceiptInvoice()
             {
-                Barcode = "0123456789",
-                DisplayText = "Message on customer display",
+                //TODO Barcode = "0123456789" 
+                //TODO DisplayText = "Message on customer display",
                 Items = request.cbChargeItems?.Select(p => new Item
                 {
                     Description = p.Description,
@@ -30,21 +30,15 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
                     UnitPrice = p.UnitPrice ?? 0,
                     VatGroup = p.GetVatRate()
                 }).ToList(),
-                PaymentAdjustments = new List<PaymentAdjustment>()
+                PaymentAdjustments = request.GetPaymentAdjustments(),
+                Payments = request.cbPayItems?.Select(p => new Payment
                 {
-                    new PaymentAdjustment()
-                    {
-                        Description = "Discount applied to the subtotal",
-                        Amount = -300.12m
-                    }
-                },
-                Payments = new List<Payment>()
-                {
-                    new Payment(){ Description = "Payment in cash", Amount = 0, PaymentType = PaymentType.Cash, Index = 1}
-                }
-
+                    Amount= p.Amount,
+                    Description = p.Description,
+                    PaymentType = p.GetPaymentType()                  
+                }).ToList()            
             };
-            await client.FiscalReceiptInvoiceAsync(fiscalReceiptRequest).ConfigureAwait(false);
+            var response = await client.FiscalReceiptInvoiceAsync(fiscalReceiptRequest).ConfigureAwait(false);
 
             return new RequestCommandResponse
             {

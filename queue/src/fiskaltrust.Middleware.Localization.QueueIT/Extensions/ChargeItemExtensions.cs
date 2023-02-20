@@ -5,11 +5,31 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
 {
     public static class ChargeItemExtensions
     {
+        public static bool IsPaymentAdjustment(this ChargeItem chargeItem)
+        {
+            return (chargeItem.ftChargeItemCase & 0xFFFF) switch
+            {
+                0x0023 or 0x0024 or 0x0025 or 0x0026 or 0x0027 => true,
+                _ => false,
+            };
+        }
+
         public static int GetVatRate(this ChargeItem chargeItem)
         {
             // TODO: check VAT rate table on printer at the moment according to xml example
             switch (chargeItem.ftChargeItemCase & 0xFFFF)
             {
+                //0
+                case 0x0005:
+                case 0x000C:
+                case 0x0011:
+                case 0x0016:
+                case 0x001B:
+                case 0x0020:
+                case 0x0027:
+                case 0x003C:
+                    return 0;
+                //22
                 case 0x0001:
                 case 0x0008:
                 case 0x000D:
@@ -19,6 +39,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
                 case 0x0023:
                 case 0x0028:
                     return 1;
+                //10
                 case 0x0002:
                 case 0x0009:
                 case 0x000E:
@@ -28,6 +49,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
                 case 0x0024:
                 case 0x0029:
                     return 2;
+                //5
                 case 0x0003:
                 case 0x000A:
                 case 0x000F:
@@ -37,6 +59,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
                 case 0x0025:
                 case 0x003A:
                     return 3;
+                //4
                 case 0x0004:
                 case 0x000B:
                 case 0x0010:
@@ -46,15 +69,6 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
                 case 0x0026:
                 case 0x003B:
                     return 4;
-                case 0x0005:
-                case 0x000C:
-                case 0x0011:
-                case 0x0016:
-                case 0x001B:
-                case 0x0020:
-                case 0x0027:
-                case 0x003C:
-                    return 5;
                 default:
                     throw new UnknownChargeItemException(chargeItem.ftChargeItemCase);
             }
