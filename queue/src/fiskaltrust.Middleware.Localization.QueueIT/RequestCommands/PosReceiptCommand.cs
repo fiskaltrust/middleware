@@ -38,10 +38,10 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
                 PaymentAdjustments = request.GetPaymentAdjustments(),
                 Payments = request.cbPayItems?.Select(p => new Payment
                 {
-                    Amount= p.Amount,
+                    Amount = p.Amount,
                     Description = p.Description,
-                    PaymentType = p.GetPaymentType()                  
-                }).ToList()            
+                    PaymentType = p.GetPaymentType()
+                }).ToList()
             };
             var response = await client.FiscalReceiptInvoiceAsync(fiscalReceiptRequest).ConfigureAwait(false);
             receiptResponse.ftSignatures = _signatureItemFactoryIT.CreatePosReceiptSignatures(response);
