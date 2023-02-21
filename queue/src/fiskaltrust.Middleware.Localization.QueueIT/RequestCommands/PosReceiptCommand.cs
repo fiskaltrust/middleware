@@ -13,7 +13,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 {
     public class PosReceiptCommand : RequestCommandIT
     {
-        public PosReceiptCommand(IServiceProvider services) { }
+        public PosReceiptCommand() { }
 
         public override async Task<RequestCommandResponse> ExecuteAsync(IITSSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftQueueIT queueIt)
         {

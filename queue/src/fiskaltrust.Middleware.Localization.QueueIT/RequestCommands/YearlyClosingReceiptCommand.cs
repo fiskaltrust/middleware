@@ -11,12 +11,12 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 {
     internal class YearlyClosingReceiptCommand : RequestCommandIT
     {
-        public YearlyClosingReceiptCommand(IServiceProvider services) { }
+        public YearlyClosingReceiptCommand() { }
 
         public override Task<RequestCommandResponse> ExecuteAsync(IITSSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftQueueIT queueIt)
         {
             var receiptResponse = CreateReceiptResponse(queue, request, queueItem, CountryBaseState);
-            var actionJournalEntry = CreateActionJournal(queue.ftQueueId, request.ftReceiptCase, queueItem.ftQueueItemId, "Yearly-closing receipt was processed.",
+            var actionJournalEntry = CreateActionJournal(queue.ftQueueId, $"{request.ftReceiptCase:X}", queueItem.ftQueueItemId, "Yearly-closing receipt was processed.",
                 JsonConvert.SerializeObject(new { ftReceiptNumerator = queue.ftReceiptNumerator + 1 }));
             var requestCommandResponse = new RequestCommandResponse
             {

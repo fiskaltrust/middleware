@@ -1,4 +1,5 @@
 ﻿using fiskaltrust.Middleware.Contracts;
+using fiskaltrust.Middleware.Localization.QueueIT.Factories;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT
@@ -9,7 +10,8 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
         {
             var _ = services
                 .AddScoped<IMarketSpecificSignProcessor, SignProcessorIT>()
-                .AddScoped<IMarketSpecificJournalProcessor, JournalProcessorIT>();
+                .AddScoped<IMarketSpecificJournalProcessor, JournalProcessorIT>()
+                .AddScoped<SignatureItemFactoryIT>();
         }
     }
 }

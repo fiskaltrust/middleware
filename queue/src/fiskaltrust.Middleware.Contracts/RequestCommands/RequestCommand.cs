@@ -1,10 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.ifPOS.v1.me;
 using fiskaltrust.storage.V0;
-using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Contracts.RequestCommands
 {
@@ -12,7 +8,7 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
     {
         public abstract long CountryBaseState { get;}
 
-        protected ReceiptResponse CreateReceiptResponse(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, long ftState)
+        protected ReceiptResponse CreateReceiptResponse(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, long? ftState = null)
         {
             var receiptIdentification = $"ft{queue.ftReceiptNumerator:X}#";
             return new ReceiptResponse
@@ -24,19 +20,19 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
                 cbTerminalID = request.cbTerminalID,
                 cbReceiptReference = request.cbReceiptReference,
                 ftReceiptMoment = DateTime.UtcNow,
-                ftState = ftState,
+                ftState = ftState ?? CountryBaseState,
                 ftReceiptIdentification = receiptIdentification
             };
         }
 
-        protected ftActionJournal CreateActionJournal(Guid queueId, long type, Guid queueItemId, string message, string data)
+        protected ftActionJournal CreateActionJournal(Guid queueId, string type, Guid queueItemId, string message, string data)
         {
             return new ftActionJournal
             {
                 ftActionJournalId = Guid.NewGuid(),
                 ftQueueId = queueId,
                 ftQueueItemId = queueItemId,
-                Type = $"{type:X}",
+                Type = type,
                 Moment = DateTime.UtcNow,
                 Message = message,
                 Priority = -1,
