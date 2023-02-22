@@ -107,7 +107,7 @@ namespace fiskaltrust.Middleware.Queue
 
         private void ThrowIfQueueHasIncorrectCountrySet(long journalType)
         {
-            var bytes = BitConverter.GetBytes(0xFFFF000000000000 & (ulong) journalType).Reverse().ToArray();
+            var bytes = BitConverter.GetBytes(0xFFFF000000000000 & (ulong) journalType).Reverse().Take(2).ToArray();
             var countryCode = Encoding.UTF8.GetString(bytes);
             if (countryCode != LocalizedQueueBootStrapperFactory.GetQueueLocalization(_middlewareConfiguration.QueueId, _middlewareConfiguration.Configuration))
             {
