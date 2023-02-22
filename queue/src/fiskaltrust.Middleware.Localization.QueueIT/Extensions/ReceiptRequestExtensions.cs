@@ -17,7 +17,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
                     {
                         Amount = item.Amount,
                         Description = item.Description,
-                        VatGroup = item.GetVatRate() == 0 ? null : item.GetVatRate()
+                        VatGroup = item.GetVatGroup() == 0 ? null : item.GetVatGroup()
                     });
                 }
             }

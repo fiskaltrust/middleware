@@ -14,7 +14,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
             };
         }
 
-        public static int GetVatRate(this ChargeItem chargeItem)
+        public static int GetVatGroup(this ChargeItem chargeItem)
         {
             // TODO: check VAT rate table on printer at the moment according to xml example
             switch (chargeItem.ftChargeItemCase & 0xFFFF)

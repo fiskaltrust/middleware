@@ -33,7 +33,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
                     Description = p.Description,
                     Quantity = p.Quantity,
                     UnitPrice = p.UnitPrice ?? 0,
-                    VatGroup = p.GetVatRate()
+                    VatGroup = p.GetVatGroup()
                 }).ToList(),
                 PaymentAdjustments = request.GetPaymentAdjustments(),
                 Payments = request.cbPayItems?.Select(p => new Payment

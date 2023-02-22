@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using fiskaltrust.Middleware.Contracts.RequestCommands;
 using fiskaltrust.storage.V0;
 using fiskaltrust.ifPOS.v1;
+using System.Globalization;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 {

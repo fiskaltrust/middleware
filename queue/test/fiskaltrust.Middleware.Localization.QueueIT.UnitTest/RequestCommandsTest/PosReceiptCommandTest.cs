@@ -1,0 +1,88 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using fiskaltrust.ifPOS.v1;
+using fiskaltrust.storage.V0;
+using fiskaltrust.ifPOS.v1.it;
+using System.Linq;
+using Xunit;
+using fiskaltrust.Middleware.Localization.QueueIT.RequestCommands;
+using FluentAssertions.Common;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
+using fiskaltrust.Middleware.Localization.QueueIT.Factories;
+using Fare;
+using FluentAssertions;
+
+namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
+{
+    public class PosReceiptCommandTest
+    {
+
+
+        [Fact]
+        public async Task ExecuteAsync_RegisterInvoice_ValidResultAsync()
+        {
+            var request = new ReceiptRequest()
+            {
+                cbReceiptReference = "Reference007",
+                cbChargeItems = new[]
+                {
+                    new ChargeItem()
+                    {
+                        Description = "Testitem1",
+                        Amount = 9999.98m,
+                        ftChargeItemCase = 0x4954000000000001,
+                        Quantity= 2,
+                    },
+                    new ChargeItem()
+                    {
+                        Description = "Testitem2",
+                        Amount = 10,
+                        ftChargeItemCase = 0x4954000000000002,
+                        Quantity= 1,
+                    },
+                    new ChargeItem()
+                    {
+                        Description = "Discount 22% vat",
+                        Amount = 100,
+                        ftChargeItemCase = 0x4954000000000023,
+                    },
+                    new ChargeItem()
+                    {
+                        Description = "Discount overeall",
+                        Amount = 100,
+                        ftChargeItemCase = 0x4954000000000027,
+                    }
+                },
+                cbPayItems = new PayItem[]
+                {
+                    new PayItem(){
+                        Description = "Cash",
+                        Amount = 9809.98m,
+                        ftPayItemCase = 0x4954000000000001
+                    }
+                }
+            };
+            var inMemoryTestScu = new InMemoryTestScu();
+   
+            var serviceCollection = new ServiceCollection();
+            serviceCollection.AddStandardLoggers(LogLevel.Debug);
+            serviceCollection.AddScoped<SignatureItemFactoryIT>();
+            var posreceitRommand = new PosReceiptCommand(serviceCollection.BuildServiceProvider());
+
+            var queue = new ftQueue() { ftQueueId = Guid.NewGuid(), ftReceiptNumerator = 5 };
+            var queueItem = new ftQueueItem() { ftQueueId = queue.ftQueueId, ftQueueItemId = Guid.NewGuid(), ftQueueRow = 7 };
+
+            var response = await posreceitRommand.ExecuteAsync(inMemoryTestScu, queue, request, queueItem, new ftQueueIT());
+
+            var znrSig = response.ReceiptResponse.ftSignatures.Where(x => x.Caption == "ZRepNumber").FirstOrDefault();
+            var amntSig = response.ReceiptResponse.ftSignatures.Where(x => x.Caption == "Amount").FirstOrDefault();
+            var tsmpSig = response.ReceiptResponse.ftSignatures.Where(x => x.Caption == "TimeStamp").FirstOrDefault();
+            znrSig.Data.Should().Be("245");
+            amntSig.Data.Should().Be("9809,98");
+            tsmpSig.Data.Should().Be("1999-01-01 00:00:01");
+
+         }
+    }
+}
