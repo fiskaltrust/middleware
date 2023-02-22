@@ -58,8 +58,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
         public async Task GetByTimeStampAsync_ShouldReturnAllEntries_WithinAGivenTimeStamp_ShouldReturnOnlyTheseEntries()
         {
             var expectedEntries = StorageTestFixtureProvider.GetFixture().CreateMany<ftActionJournal>(10).ToList();
-            expectedEntries = await StorageTestFixtureProvider.SetDifferentTimestamps(expectedEntries).ConfigureAwait(false);
-            expectedEntries = expectedEntries.OrderBy(x => x.TimeStamp).ToList();
+            await UpdateTimestamp(expectedEntries);
             var sut = await CreateRepository(expectedEntries);
 
             var allEntries = (await sut.GetAsync()).OrderBy(x => x.TimeStamp).ToList();
@@ -75,8 +74,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
         public async Task GetByTimeStampAsync_ShouldReturnAllEntries_FromAGivenTimeStamp_ShouldReturnOnlyTheseEntries()
         {
             var expectedEntries = StorageTestFixtureProvider.GetFixture().CreateMany<ftActionJournal>(10).ToList();
-            expectedEntries = await StorageTestFixtureProvider.SetDifferentTimestamps(expectedEntries).ConfigureAwait(false);
-            expectedEntries = expectedEntries.OrderBy(x => x.TimeStamp).ToList();
+            await UpdateTimestamp(expectedEntries);
             var sut = await CreateRepository(expectedEntries);
 
             var allEntries = (await sut.GetAsync()).OrderBy(x => x.TimeStamp).ToList();
@@ -91,8 +89,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
         public async Task GetByTimeStampAsync_ShouldReturnAllEntries_FromAGivenTimeStamp_WithTake_ShouldReturnOnlyTheSpecifiedAmountOfEntries()
         {
             var expectedEntries = StorageTestFixtureProvider.GetFixture().CreateMany<ftActionJournal>(10).ToList();
-            expectedEntries = await StorageTestFixtureProvider.SetDifferentTimestamps(expectedEntries).ConfigureAwait(false);
-            expectedEntries = expectedEntries.OrderBy(x => x.TimeStamp).ToList();
+            await UpdateTimestamp(expectedEntries);
             var sut = await CreateRepository(expectedEntries);
 
             var allEntries = (await sut.GetAsync()).OrderBy(x => x.TimeStamp).ToList();
@@ -141,6 +138,15 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
 
             var insertedEntry = await sut.GetAsync(entryToInsert.ftActionJournalId);
             insertedEntry.TimeStamp.Should().BeGreaterThan(initialTimeStamp);
+        }
+
+        private static async Task UpdateTimestamp(List<ftActionJournal> expectedEntries)
+        {
+            foreach (var entry in expectedEntries)
+            {
+                entry.TimeStamp = DateTime.Now.Ticks;
+                await Task.Delay(1);
+            }
         }
     }
 }

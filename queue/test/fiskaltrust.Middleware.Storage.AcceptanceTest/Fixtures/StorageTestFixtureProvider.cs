@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Text;
-using System.Threading.Tasks;
 using AutoFixture;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.storage.V0;
@@ -27,60 +25,6 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             fixture.Customize<ftActionJournal>(c => c.With(r => r.TimeStamp, DateTime.UtcNow.Ticks));
             
             return fixture;
-        }
-        public static async Task<List<ftJournalDE>> SetDifferentTimestamps(List<ftJournalDE> ftJournalDEs)
-        {
-            foreach(var ftJournalDE in ftJournalDEs)
-            {
-                ftJournalDE.TimeStamp= DateTime.UtcNow.Ticks;
-                await Task.Delay(1).ConfigureAwait(false);
-            }
-            return ftJournalDEs;
-        }
-        public static async Task<List<ftJournalAT>> SetDifferentTimestamps(List<ftJournalAT> ftJournalATs)
-        {
-            foreach (var ftJournalAT in ftJournalATs)
-            {
-                ftJournalAT.TimeStamp = DateTime.UtcNow.Ticks;
-                await Task.Delay(1).ConfigureAwait(false);
-            }
-            return ftJournalATs;
-        }
-        public static async Task<List<ftJournalFR>> SetDifferentTimestamps(List<ftJournalFR> ftJournalFRs)
-        {
-            foreach (var ftJournalFR in ftJournalFRs)
-            {
-                ftJournalFR.TimeStamp = DateTime.UtcNow.Ticks;
-                await Task.Delay(1).ConfigureAwait(false);
-            }
-            return ftJournalFRs;
-        }
-        public static async Task<List<ftReceiptJournal>> SetDifferentTimestamps(List<ftReceiptJournal> ftReceiptJournals)
-        {
-            foreach (var ftReceiptJournal in ftReceiptJournals)
-            {
-                ftReceiptJournal.TimeStamp = DateTime.UtcNow.Ticks;
-                await Task.Delay(1).ConfigureAwait(false);
-            }
-            return ftReceiptJournals;
-        }
-        public static async Task<List<ftActionJournal>> SetDifferentTimestamps(List<ftActionJournal> ftActionJournals)
-        {
-            foreach (var ftActionJournal in ftActionJournals)
-            {
-                ftActionJournal.TimeStamp = DateTime.UtcNow.Ticks;
-                await Task.Delay(1).ConfigureAwait(false);
-            }
-            return ftActionJournals;
-        }
-        public static async Task<List<ftQueueItem>> SetDifferentTimestamps(List<ftQueueItem> ftQueueItems)
-        {
-            foreach (var ftQueueItem in ftQueueItems)
-            {
-                ftQueueItem.TimeStamp = DateTime.UtcNow.Ticks;
-                await Task.Delay(1).ConfigureAwait(false);
-            }
-            return ftQueueItems;
         }
     }
 }
