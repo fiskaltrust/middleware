@@ -18,15 +18,13 @@ namespace fiskaltrust.Middleware.Storage.EF.AcceptanceTest
     public class EfConfigurationRepositoryTests : AbstractConfigurationRepositoryTests
     {
 
-        public override async Task<IReadOnlyConfigurationRepository> CreateReadOnlyRepository(IEnumerable<ftCashBox> cashBoxes = null, IEnumerable<ftQueue> queues = null, IEnumerable<ftQueueAT> queuesAT = null, IEnumerable<ftQueueDE> queuesDE = null, IEnumerable<ftQueueFR> queuesFR = null, IEnumerable<ftQueueME> queuesME = null, IEnumerable<ftSignaturCreationUnitAT> signatureCreateUnitsAT = null, IEnumerable<ftSignaturCreationUnitDE> signatureCreateUnitsDE = null, IEnumerable<ftSignaturCreationUnitFR> signatureCreateUnitsFR = null, IEnumerable<ftSignaturCreationUnitME> signatureCreateUnitsME = null)
-            => await CreateConfigurationRepository(cashBoxes, queues, queuesAT, queuesDE, queuesFR, queuesME, signatureCreateUnitsAT, signatureCreateUnitsDE, signatureCreateUnitsFR, signatureCreateUnitsME);
+        public override async Task<IReadOnlyConfigurationRepository> CreateReadOnlyRepository(IEnumerable<ftCashBox> cashBoxes = null, IEnumerable<ftQueue> queues = null, IEnumerable<ftQueueAT> queuesAT = null, IEnumerable<ftQueueDE> queuesDE = null, IEnumerable<ftQueueES> queuesES = null, IEnumerable<ftQueueFR> queuesFR = null, IEnumerable<ftQueueIT> queuesIT = null, IEnumerable<ftQueueME> queuesME = null, IEnumerable<ftSignaturCreationUnitAT> signatureCreateUnitsAT = null, IEnumerable<ftSignaturCreationUnitDE> signatureCreateUnitsDE = null, IEnumerable<ftSignaturCreationUnitES> signatureCreateUnitsES = null, IEnumerable<ftSignaturCreationUnitFR> signatureCreateUnitsFR = null, IEnumerable<ftSignaturCreationUnitIT> signatureCreateUnitsIT = null, IEnumerable<ftSignaturCreationUnitME> signatureCreateUnitsME = null)
+            => await CreateRepository(cashBoxes, queues, queuesAT, queuesDE, queuesES, queuesFR, queuesIT, queuesME, signatureCreateUnitsAT, signatureCreateUnitsDE, signatureCreateUnitsES, signatureCreateUnitsFR, signatureCreateUnitsIT, signatureCreateUnitsME);
 
+        public override async Task<IConfigurationRepository> CreateRepository(IEnumerable<ftCashBox> cashBoxes = null, IEnumerable<ftQueue> queues = null, IEnumerable<ftQueueAT> queuesAT = null, IEnumerable<ftQueueDE> queuesDE = null, IEnumerable<ftQueueES> queuesES = null, IEnumerable<ftQueueFR> queuesFR = null, IEnumerable<ftQueueIT> queuesIT = null, IEnumerable<ftQueueME> queuesME = null, IEnumerable<ftSignaturCreationUnitAT> signatureCreateUnitsAT = null, IEnumerable<ftSignaturCreationUnitDE> signatureCreateUnitsDE = null, IEnumerable<ftSignaturCreationUnitES> signatureCreateUnitsES = null, IEnumerable<ftSignaturCreationUnitFR> signatureCreateUnitsFR = null, IEnumerable<ftSignaturCreationUnitIT> signatureCreateUnitsIT = null, IEnumerable<ftSignaturCreationUnitME> signatureCreateUnitsME = null)
+            => await CreateConfigurationRepository(cashBoxes, queues, queuesAT, queuesDE, queuesES, queuesFR, queuesIT, queuesME, signatureCreateUnitsAT, signatureCreateUnitsDE,signatureCreateUnitsES, signatureCreateUnitsFR,signatureCreateUnitsIT, signatureCreateUnitsME);
 
-        public override async Task<IConfigurationRepository> CreateRepository(IEnumerable<ftCashBox> cashBoxes = null, IEnumerable<ftQueue> queues = null, IEnumerable<ftQueueAT> queuesAT = null, IEnumerable<ftQueueDE> queuesDE = null, IEnumerable<ftQueueFR> queuesFR = null, IEnumerable<ftQueueME> queuesME = null, IEnumerable<ftSignaturCreationUnitAT> signatureCreateUnitsAT = null, IEnumerable<ftSignaturCreationUnitDE> signatureCreateUnitsDE = null, IEnumerable<ftSignaturCreationUnitFR> signatureCreateUnitsFR = null, IEnumerable<ftSignaturCreationUnitME> signatureCreateUnitsME = null)
-            => await CreateConfigurationRepository(cashBoxes, queues, queuesAT, queuesDE, queuesFR, queuesME, signatureCreateUnitsAT, signatureCreateUnitsDE, signatureCreateUnitsFR, signatureCreateUnitsME);
-
-
-        private async Task<EfConfigurationRepository> CreateConfigurationRepository(IEnumerable<ftCashBox> cashBoxes = null, IEnumerable<ftQueue> queues = null, IEnumerable<ftQueueAT> queuesAT = null, IEnumerable<ftQueueDE> queuesDE = null, IEnumerable<ftQueueFR> queuesFR = null, IEnumerable<ftQueueME> queuesME = null, IEnumerable<ftSignaturCreationUnitAT> signatureCreateUnitsAT = null, IEnumerable<ftSignaturCreationUnitDE> signatureCreateUnitsDE = null, IEnumerable<ftSignaturCreationUnitFR> signatureCreateUnitsFR = null, IEnumerable<ftSignaturCreationUnitME> signatureCreateUnitsME = null)
+        private async Task<EfConfigurationRepository> CreateConfigurationRepository(IEnumerable<ftCashBox> cashBoxes = null, IEnumerable<ftQueue> queues = null, IEnumerable<ftQueueAT> queuesAT = null, IEnumerable<ftQueueDE> queuesDE = null, IEnumerable<ftQueueES> queuesES = null, IEnumerable<ftQueueFR> queuesFR = null, IEnumerable<ftQueueIT> queuesIT = null, IEnumerable<ftQueueME> queuesME = null, IEnumerable<ftSignaturCreationUnitAT> signatureCreateUnitsAT = null, IEnumerable<ftSignaturCreationUnitDE> signatureCreateUnitsDE = null, IEnumerable<ftSignaturCreationUnitES> signatureCreateUnitsES = null, IEnumerable<ftSignaturCreationUnitFR> signatureCreateUnitsFR = null, IEnumerable<ftSignaturCreationUnitIT> signatureCreateUnitsIT = null, IEnumerable<ftSignaturCreationUnitME> signatureCreateUnitsME = null)
         {
             var queueId = Guid.NewGuid();
             var repository = new EfConfigurationRepository(new MiddlewareDbContext(EfConnectionStringFixture.DatabaseConnectionString, queueId));
@@ -52,9 +50,19 @@ namespace fiskaltrust.Middleware.Storage.EF.AcceptanceTest
                 await repository.InsertOrUpdateQueueDEAsync(item);
             }
 
+            foreach (var item in queuesES ?? new List<ftQueueES>())
+            {
+                await repository.InsertOrUpdateQueueESAsync(item);
+            }
+
             foreach (var item in queuesFR ?? new List<ftQueueFR>())
             {
                 await repository.InsertOrUpdateQueueFRAsync(item);
+            }
+
+            foreach (var item in queuesIT ?? new List<ftQueueIT>())
+            {
+                await repository.InsertOrUpdateQueueITAsync(item);
             }
 
             foreach (var item in queuesME ?? new List<ftQueueME>())
@@ -72,9 +80,19 @@ namespace fiskaltrust.Middleware.Storage.EF.AcceptanceTest
                 await repository.InsertOrUpdateSignaturCreationUnitDEAsync(item);
             }
 
+            foreach (var item in signatureCreateUnitsES ?? new List<ftSignaturCreationUnitES>())
+            {
+                await repository.InsertOrUpdateSignaturCreationUnitESAsync(item);
+            }
+
             foreach (var item in signatureCreateUnitsFR ?? new List<ftSignaturCreationUnitFR>())
             {
                 await repository.InsertOrUpdateSignaturCreationUnitFRAsync(item);
+            }
+
+            foreach (var item in signatureCreateUnitsIT ?? new List<ftSignaturCreationUnitIT>())
+            {
+                await repository.InsertOrUpdateSignaturCreationUnitITAsync(item);
             }
 
             foreach (var item in signatureCreateUnitsME ?? new List<ftSignaturCreationUnitME>())

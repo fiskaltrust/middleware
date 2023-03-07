@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.storage.V0;
 
@@ -7,6 +8,8 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
     public abstract class RequestCommand
     {
         public abstract long CountryBaseState { get;}
+
+        public abstract Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem);
 
         protected ReceiptResponse CreateReceiptResponse(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, long? ftState = null)
         {

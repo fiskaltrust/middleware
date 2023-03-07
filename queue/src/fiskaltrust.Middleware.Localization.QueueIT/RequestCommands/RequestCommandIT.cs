@@ -14,6 +14,8 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
     {
         public override long CountryBaseState => 0x4954000000000000;
 
+        public override Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem) => throw new NotImplementedException();
+
         public abstract Task<RequestCommandResponse> ExecuteAsync(IITSSCD client, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, ftQueueIT queueIt);
     }
 }

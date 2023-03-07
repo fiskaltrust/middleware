@@ -1,18 +1,15 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.storage.V0;
-using fiskaltrust.Middleware.Contracts.RequestCommands;
-using fiskaltrust.ifPOS.v1.it;
 using Newtonsoft.Json;
 using System.Collections.Generic;
 
-namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
+namespace fiskaltrust.Middleware.Contracts.RequestCommands
 {
     public abstract class ClosingReceiptCommand : RequestCommand
     {
         protected abstract string ClosingReceiptName { get; }
-        public Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
+        public override Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
         {
             var receiptResponse = CreateReceiptResponse(queue, request, queueItem, CountryBaseState);
             var actionJournalEntry = CreateActionJournal(queue.ftQueueId, $"{request.ftReceiptCase:X}", queueItem.ftQueueItemId, $"{ClosingReceiptName} receipt was processed.",

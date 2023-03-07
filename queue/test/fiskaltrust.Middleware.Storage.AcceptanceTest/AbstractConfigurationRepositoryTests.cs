@@ -15,22 +15,30 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             IEnumerable<ftQueue> queues = null,
             IEnumerable<ftQueueAT> queuesAT = null,
             IEnumerable<ftQueueDE> queuesDE = null,
+            IEnumerable<ftQueueES> queuesES = null,
             IEnumerable<ftQueueFR> queuesFR = null,
+            IEnumerable<ftQueueIT> queuesIT = null,
             IEnumerable<ftQueueME> queuesME = null,
             IEnumerable<ftSignaturCreationUnitAT> signatureCreateUnitsAT = null,
             IEnumerable<ftSignaturCreationUnitDE> signatureCreateUnitsDE = null,
+            IEnumerable<ftSignaturCreationUnitES> signatureCreateUnitsES = null,
             IEnumerable<ftSignaturCreationUnitFR> signatureCreateUnitsFR = null,
+            IEnumerable<ftSignaturCreationUnitIT> signatureCreateUnitsIT = null,
             IEnumerable<ftSignaturCreationUnitME> signatureCreateUnitsME = null);
 
         public abstract Task<IReadOnlyConfigurationRepository> CreateReadOnlyRepository(IEnumerable<ftCashBox> cashBoxes = null,
             IEnumerable<ftQueue> queues = null,
             IEnumerable<ftQueueAT> queuesAT = null,
             IEnumerable<ftQueueDE> queuesDE = null,
+            IEnumerable<ftQueueES> queuesES = null,
             IEnumerable<ftQueueFR> queuesFR = null,
+            IEnumerable<ftQueueIT> queuesIT = null,
             IEnumerable<ftQueueME> queuesME = null,
             IEnumerable<ftSignaturCreationUnitAT> signatureCreateUnitsAT = null,
             IEnumerable<ftSignaturCreationUnitDE> signatureCreateUnitsDE = null,
+            IEnumerable<ftSignaturCreationUnitES> signatureCreateUnitsES = null,
             IEnumerable<ftSignaturCreationUnitFR> signatureCreateUnitsFR = null,
+            IEnumerable<ftSignaturCreationUnitIT> signatureCreateUnitsIT = null,
             IEnumerable<ftSignaturCreationUnitME> signatureCreateUnitsME = null);
 
         public virtual void DisposeDatabase() { return; }

@@ -12,11 +12,15 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
         private readonly MySQLQueueRepository _queueRepository;
         private readonly MySQLQueueATRepository _queueATRepository;
         private readonly MySQLQueueDERepository _queueDERepository;
+        private readonly MySQLQueueESRepository _queueESRepository;
         private readonly MySQLQueueFRRepository _queueFRRepository;
+        private readonly MySQLQueueITRepository _queueITRepository;
         private readonly MySQLQueueMERepository _queueMERepository;
         private readonly MySQLSignaturCreationUnitATRepository _signaturCreationUnitATRepository;
         private readonly MySQLSignaturCreationUnitDERepository _signaturCreationUnitDERepository;
+        private readonly MySQLSignaturCreationUnitESRepository _signaturCreationUnitESRepository;
         private readonly MySQLSignaturCreationUnitFRRepository _signaturCreationUnitFRRepository;
+        private readonly MySQLSignaturCreationUnitITRepository _signaturCreationUnitITRepository;
         private readonly MySQLSignaturCreationUnitMERepository _signaturCreationUnitMERepository;
 
         public MySQLConfigurationRepository() { }
@@ -27,11 +31,15 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
             _queueRepository = new MySQLQueueRepository(connectionString);
             _queueATRepository = new MySQLQueueATRepository(connectionString);
             _queueDERepository = new MySQLQueueDERepository(connectionString);
+            _queueESRepository = new MySQLQueueESRepository(connectionString);
             _queueFRRepository = new MySQLQueueFRRepository(connectionString);
+            _queueITRepository = new MySQLQueueITRepository(connectionString);
             _queueMERepository = new MySQLQueueMERepository(connectionString);
             _signaturCreationUnitATRepository = new MySQLSignaturCreationUnitATRepository(connectionString);
             _signaturCreationUnitDERepository = new MySQLSignaturCreationUnitDERepository(connectionString);
+            _signaturCreationUnitESRepository = new MySQLSignaturCreationUnitESRepository(connectionString);
             _signaturCreationUnitFRRepository = new MySQLSignaturCreationUnitFRRepository(connectionString);
+            _signaturCreationUnitITRepository = new MySQLSignaturCreationUnitITRepository(connectionString);
             _signaturCreationUnitMERepository = new MySQLSignaturCreationUnitMERepository(connectionString);
         }
 
@@ -59,11 +67,29 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
 
         public async Task InsertOrUpdateQueueDEAsync(ftQueueDE queueDE) => await _queueDERepository.InsertOrUpdateAsync(queueDE).ConfigureAwait(false);
 
+        public async Task<ftQueueES> GetQueueESAsync(Guid id) => await _queueESRepository.GetAsync(id).ConfigureAwait(false);
+
+        public async Task<IEnumerable<ftQueueES>> GetQueueESListAsync() => await _queueESRepository.GetAsync().ConfigureAwait(false);
+
+        public async Task InsertOrUpdateQueueESAsync(ftQueueES queueES) => await _queueESRepository.InsertOrUpdateAsync(queueES).ConfigureAwait(false);
+
         public async Task<ftQueueFR> GetQueueFRAsync(Guid id) => await _queueFRRepository.GetAsync(id).ConfigureAwait(false);
 
         public async Task<IEnumerable<ftQueueFR>> GetQueueFRListAsync() => await _queueFRRepository.GetAsync().ConfigureAwait(false);
 
         public async Task InsertOrUpdateQueueFRAsync(ftQueueFR queueFR) => await _queueFRRepository.InsertOrUpdateAsync(queueFR).ConfigureAwait(false);
+
+        public async Task<ftQueueIT> GetQueueITAsync(Guid id) => await _queueITRepository.GetAsync(id).ConfigureAwait(false);
+
+        public async Task<IEnumerable<ftQueueIT>> GetQueueITListAsync() => await _queueITRepository.GetAsync().ConfigureAwait(false);
+
+        public async Task InsertOrUpdateQueueITAsync(ftQueueIT queueIT) => await _queueITRepository.InsertOrUpdateAsync(queueIT).ConfigureAwait(false);
+
+        public async Task<ftQueueME> GetQueueMEAsync(Guid queueMEId) => await _queueMERepository.GetAsync(queueMEId).ConfigureAwait(false);
+
+        public async Task<IEnumerable<ftQueueME>> GetQueueMEListAsync() => await _queueMERepository.GetAsync().ConfigureAwait(false);
+
+        public async Task InsertOrUpdateQueueMEAsync(ftQueueME queue) => await _queueMERepository.InsertOrUpdateAsync(queue).ConfigureAwait(false);
 
         public async Task<ftSignaturCreationUnitAT> GetSignaturCreationUnitATAsync(Guid id) => await _signaturCreationUnitATRepository.GetAsync(id).ConfigureAwait(false);
 
@@ -77,16 +103,29 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
 
         public async Task InsertOrUpdateSignaturCreationUnitDEAsync(ftSignaturCreationUnitDE scu) => await _signaturCreationUnitDERepository.InsertOrUpdateAsync(scu).ConfigureAwait(false);
 
+        public async Task<ftSignaturCreationUnitES> GetSignaturCreationUnitESAsync(Guid id) => await _signaturCreationUnitESRepository.GetAsync(id).ConfigureAwait(false);
+
+        public async Task<IEnumerable<ftSignaturCreationUnitES>> GetSignaturCreationUnitESListAsync() => await _signaturCreationUnitESRepository.GetAsync().ConfigureAwait(false);
+
+        public async Task InsertOrUpdateSignaturCreationUnitESAsync(ftSignaturCreationUnitES scu) => await _signaturCreationUnitESRepository.InsertOrUpdateAsync(scu).ConfigureAwait(false);
+
         public async Task<ftSignaturCreationUnitFR> GetSignaturCreationUnitFRAsync(Guid id) => await _signaturCreationUnitFRRepository.GetAsync(id).ConfigureAwait(false);
 
         public async Task<IEnumerable<ftSignaturCreationUnitFR>> GetSignaturCreationUnitFRListAsync() => await _signaturCreationUnitFRRepository.GetAsync().ConfigureAwait(false);
 
         public async Task InsertOrUpdateSignaturCreationUnitFRAsync(ftSignaturCreationUnitFR scu) => await _signaturCreationUnitFRRepository.InsertOrUpdateAsync(scu).ConfigureAwait(false);
-        public async Task InsertOrUpdateSignaturCreationUnitMEAsync(ftSignaturCreationUnitME scu) => await _signaturCreationUnitMERepository.InsertOrUpdateAsync(scu).ConfigureAwait(false);
-        public async Task InsertOrUpdateQueueMEAsync(ftQueueME queue) => await _queueMERepository.InsertOrUpdateAsync(queue).ConfigureAwait(false);
-        public async Task<IEnumerable<ftSignaturCreationUnitME>> GetSignaturCreationUnitMEListAsync() => await _signaturCreationUnitMERepository.GetAsync().ConfigureAwait(false);
+
+        public async Task<ftSignaturCreationUnitIT> GetSignaturCreationUnitITAsync(Guid id) => await _signaturCreationUnitITRepository.GetAsync(id).ConfigureAwait(false);
+
+        public async Task<IEnumerable<ftSignaturCreationUnitIT>> GetSignaturCreationUnitITListAsync() => await _signaturCreationUnitITRepository.GetAsync().ConfigureAwait(false);
+
+        public async Task InsertOrUpdateSignaturCreationUnitITAsync(ftSignaturCreationUnitIT scu) => await _signaturCreationUnitITRepository.InsertOrUpdateAsync(scu).ConfigureAwait(false);
+     
         public async Task<ftSignaturCreationUnitME> GetSignaturCreationUnitMEAsync(Guid signaturCreationUnitMEId) => await _signaturCreationUnitMERepository.GetAsync(signaturCreationUnitMEId).ConfigureAwait(false);
-        public async Task<IEnumerable<ftQueueME>> GetQueueMEListAsync() => await _queueMERepository.GetAsync().ConfigureAwait(false);
-        public async Task<ftQueueME> GetQueueMEAsync(Guid queueMEId) => await _queueMERepository.GetAsync(queueMEId).ConfigureAwait(false);
+
+        public async Task<IEnumerable<ftSignaturCreationUnitME>> GetSignaturCreationUnitMEListAsync() => await _signaturCreationUnitMERepository.GetAsync().ConfigureAwait(false);
+        
+        public async Task InsertOrUpdateSignaturCreationUnitMEAsync(ftSignaturCreationUnitME scu) => await _signaturCreationUnitMERepository.InsertOrUpdateAsync(scu).ConfigureAwait(false);
+
     }
 }

@@ -10,7 +10,7 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
     {
         public OutOfOperationReceiptCommand() { }
 
-        public async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
+        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
         {
             var receiptResponse = CreateReceiptResponse(queue, request, queueItem);
 
