@@ -6,7 +6,7 @@ using fiskaltrust.Middleware.SCU.IT.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 
-namespace fiskaltrust.Middleware.SCU.IT.FiscalizationService
+namespace fiskaltrust.Middleware.SCU.IT.Epson
 {
     public class ScuBootstrapper : IMiddlewareBootstrapper
     {

@@ -3,7 +3,7 @@ using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.SCU.IT.Configuration;
 using Microsoft.Extensions.Logging;
 
-namespace fiskaltrust.Middleware.SCU.IT.FiscalizationService;
+namespace fiskaltrust.Middleware.SCU.IT.Epson;
 
 #nullable enable
 public sealed class EpsonSCU : IITSSCD 

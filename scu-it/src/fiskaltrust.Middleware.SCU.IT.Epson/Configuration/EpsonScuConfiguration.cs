@@ -1,10 +1,12 @@
-﻿using System.Reflection.Emit;
-using System.Xml.Serialization;
-
-namespace fiskaltrust.Middleware.SCU.IT.Configuration
+﻿namespace fiskaltrust.Middleware.SCU.IT.Configuration
 {
     public class EpsonScuConfiguration
     {
+        /// <summary>
+        /// PrinterUrl
+        /// </summary>
+        public string PrinterUrl { get; set; } = "127.0.0.1:4321";
+
         /// <summary>
         /// This command allows the real-time subtotal to be printed and/or shown on the display.
         /// • option sets the subtotal option:
@@ -48,7 +50,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Configuration
         /// o 2 = Below the barcode
         /// o 3 = Below and above the barcode
         /// </summary>
-        public int BarCodeHRIPosition { get; set; }
+        public int BarCodeHRIPosition { get; set; } = 1;
 
         /// <summary>
         ///  Indicates the font to be used for the HRI string.The options are as follows:
