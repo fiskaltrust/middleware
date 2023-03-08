@@ -11,8 +11,8 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
 {
     public abstract class InitialOperationReceiptCommand : RequestCommand
     {
-        private readonly ILogger _logger;
-        public InitialOperationReceiptCommand(ILogger logger)
+        private readonly ILogger<InitialOperationReceiptCommand> _logger;
+        public InitialOperationReceiptCommand(ILogger<InitialOperationReceiptCommand> logger)
         {
             _logger = logger;
         }

@@ -17,7 +17,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
         private readonly SignatureItemFactoryIT _signatureItemFactoryIT;
         private readonly ftQueueIT _queueIt;
 
-        public InitialOperationReceiptCommand(ILogger logger, SignatureItemFactoryIT signatureItemFactoryIT, ftQueueIT queueIt) : base(logger)
+        public InitialOperationReceiptCommand(ILogger<InitialOperationReceiptCommand> logger, SignatureItemFactoryIT signatureItemFactoryIT, ftQueueIT queueIt) : base(logger)
         {
             _signatureItemFactoryIT = signatureItemFactoryIT;
             _queueIt = queueIt;
