@@ -5,7 +5,12 @@
         /// <summary>
         /// PrinterUrl
         /// </summary>
-        public string PrinterUrl { get; set; } = "127.0.0.1:4321";
+        public string PrinterUrl { get; set; } = "http://127.0.0.1:4321";
+
+        /// <summary>
+        /// PrinterClientTimeout in Milliseconds
+        /// </summary>
+        public int PrinterClientTimeoutMs { get; set; } = 120000;
 
         /// <summary>
         /// This command allows the real-time subtotal to be printed and/or shown on the display.

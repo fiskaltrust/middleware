@@ -42,7 +42,7 @@ namespace TestLauncher
         {
             return new Dictionary<string, object>
             {
-                { "PrinterUrl", "127.0.0.1:4321" }
+                { "PrinterUrl", "http://127.0.0.1:4322"}
             };
         }
     }

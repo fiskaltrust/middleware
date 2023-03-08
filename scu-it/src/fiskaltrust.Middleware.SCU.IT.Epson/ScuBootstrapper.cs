@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.SCU.IT.Configuration;
+using fiskaltrust.Middleware.SCU.IT.Epson.Utilities;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 
@@ -19,6 +20,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson
 
             _ = serviceCollection
                 .AddSingleton(epsonScuConfig)
+                .AddScoped<EpsonXmlWriter>()
                 .AddScoped<IITSSCD, EpsonSCU>();
         }
     }

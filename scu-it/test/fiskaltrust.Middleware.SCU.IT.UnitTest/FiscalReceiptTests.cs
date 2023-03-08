@@ -54,7 +54,7 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
 
             };
 
-            var xml = epsonXmlWriter.GetFiscalReceiptfromRequestXml(fiscalReceiptRequest);
+            var xml = epsonXmlWriter.FiscalReceiptToXml(fiscalReceiptRequest);
             WriteFile(xml, "FiscalReceiptInvoice");
         }
         [Fact]
@@ -76,7 +76,7 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
                 }
 
             };
-            var xml = epsonXmlWriter.GetFiscalReceiptfromRequestXml(fiscalReceiptRequest);
+            var xml = epsonXmlWriter.FiscalReceiptToXml(fiscalReceiptRequest);
             WriteFile(xml, "FiscalReceiptRefund");
         }
 
@@ -99,7 +99,7 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
                 }
 
             };
-            var xml = epsonXmlWriter.GetFiscalReceiptfromRequestXml(fiscalReceiptRequest);
+            var xml = epsonXmlWriter.FiscalReceiptToXml(fiscalReceiptRequest);
             WriteFile(xml, "FiscalReceiptRefundAcconto");
         }
         [Fact]
@@ -121,7 +121,7 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
                     new Payment(){ Description = "Payment in cash", Amount= 0, PaymentType = PaymentType.Cash, Index = 1}
                 }
             };
-            var xml = epsonXmlWriter.GetFiscalReceiptfromRequestXml(fiscalReceiptRequest);
+            var xml = epsonXmlWriter.FiscalReceiptToXml(fiscalReceiptRequest);
             WriteFile(xml, "FiscalReceiptLottery");
         }
         [Fact]
@@ -146,7 +146,7 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
                     new Payment(){ Description = "Payment in cash", Amount= 550, PaymentType = PaymentType.Cash, Index = 1}
                 }
             };
-            var xml = epsonXmlWriter.GetFiscalReceiptfromRequestXml(fiscalReceiptRequest);
+            var xml = epsonXmlWriter.FiscalReceiptToXml(fiscalReceiptRequest);
             WriteFile(xml, "FiscalReceiptInvoiceDepositAdjustment");
         }
 

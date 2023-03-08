@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -19,7 +18,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
             _epsonScuConfiguration = epsonScuConfiguration;
         }
 
-        public Stream GetFiscalReceiptfromRequestXml(FiscalReceiptInvoice request)
+        public Stream FiscalReceiptToXml(FiscalReceiptInvoice request)
         {
             var fiscalReceipt = CreateFiscalReceipt(request);
             fiscalReceipt.DisplayText = string.IsNullOrEmpty(request.DisplayText) ? null : (DisplayText) request.DisplayText;
@@ -49,13 +48,14 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
                 PaymentType = (int) p.PaymentType,
                 Payment = p.Amount
             }).ToList();
-            return GetFiscalReceiptXml(fiscalReceipt);
+            return EpsonXmlWriter.GetFiscalReceiptXml(fiscalReceipt);
         }
-        public Stream GetFiscalReceiptfromRequestXml(FiscalReceiptRefund request)
+
+        public Stream FiscalReceiptToXml(FiscalReceiptRefund request)
         {
             var fiscalReceipt = CreateFiscalReceipt(request);
             fiscalReceipt.PrintRecRefund = request.Refunds?.Select(GetPrintRecRefund).ToList();
-            return GetFiscalReceiptXml(fiscalReceipt);
+            return EpsonXmlWriter.GetFiscalReceiptXml(fiscalReceipt);
         }
 
         private PrintRecRefund GetPrintRecRefund(Refund recRefund)
@@ -109,7 +109,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
             return fiscalReceipt;
         }
 
-        private Stream GetFiscalReceiptXml(FiscalReceipt fiscalReceipt)
+        private static Stream GetFiscalReceiptXml(FiscalReceipt fiscalReceipt)
         {
             var serializer = new XmlSerializer(typeof(FiscalReceipt));
             var stream = new MemoryStream();

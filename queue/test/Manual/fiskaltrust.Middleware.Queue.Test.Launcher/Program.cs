@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.de;
+using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.ifPOS.v1.me;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Queue.Test.Launcher.Helpers;
@@ -19,9 +20,9 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
 {
     public static class Program
     {
-        private static readonly string _cashBoxId = "";
-        private static readonly string _accessToken = "";
-        private static readonly string _localization = "";
+        private static readonly string _cashBoxId = "e9df1360-fdbc-45b7-aebf-36ee72bb35a8";
+        private static readonly string _accessToken = "BPptoxY4DL714FFnYQakyxoEV2se0sTQ/zeIot9kHiLpbcVDIEc0i95zbsLEEEP53mcozErdRJVdwSQMLKIHHAs=";
+        private static readonly string _localization = "IT";
 
         public static void Main(string configurationFilePath = "", string serviceFolder = @"C:\ProgramData\fiskaltrust\service")
         {
@@ -61,6 +62,10 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
                 if (_localization == "ME")
                 {
                     serviceCollection.AddScoped<IClientFactory<IMESSCD>, MESSCDClientFactory>();
+                }
+                else if (_localization == "IT")
+                {
+                    serviceCollection.AddScoped<IClientFactory<IITSSCD>, ITSSCDClientFactory>();
                 }
                 overrideLocalization(_localization, config);
 
