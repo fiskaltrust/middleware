@@ -1,18 +1,16 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.storage.V0;
-using fiskaltrust.ifPOS.v1.it;
 using System.Linq;
 using Xunit;
 using fiskaltrust.Middleware.Localization.QueueIT.RequestCommands;
-using FluentAssertions.Common;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using fiskaltrust.Middleware.Localization.QueueIT.Factories;
-using Fare;
 using FluentAssertions;
+using Moq;
+using fiskaltrust.Middleware.Localization.QueueIT.Services;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
 {
@@ -68,13 +66,14 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
    
             var serviceCollection = new ServiceCollection();
             serviceCollection.AddStandardLoggers(LogLevel.Debug);
-            serviceCollection.AddScoped<SignatureItemFactoryIT>();
-            var posreceitRommand = new PosReceiptCommand(serviceCollection.BuildServiceProvider());
+            var desscdMock = new Mock<IITSSCDProvider>();
+            desscdMock.SetupGet( x => x.Instance).Returns(inMemoryTestScu);
+            var posreceitRommand = new PosReceiptCommand(desscdMock.Object, new SignatureItemFactoryIT());
 
             var queue = new ftQueue() { ftQueueId = Guid.NewGuid(), ftReceiptNumerator = 5 };
             var queueItem = new ftQueueItem() { ftQueueId = queue.ftQueueId, ftQueueItemId = Guid.NewGuid(), ftQueueRow = 7 };
 
-            var response = await posreceitRommand.ExecuteAsync(inMemoryTestScu, queue, request, queueItem, new ftQueueIT());
+            var response = await posreceitRommand.ExecuteAsync(queue, request, queueItem);
 
             var znrSig = response.ReceiptResponse.ftSignatures.Where(x => x.Caption == "ZRepNumber").FirstOrDefault();
             var amntSig = response.ReceiptResponse.ftSignatures.Where(x => x.Caption == "Amount").FirstOrDefault();

@@ -5,7 +5,6 @@ using Microsoft.Extensions.Logging;
 using fiskaltrust.ifPOS.v1;
 using System.Collections.Generic;
 using fiskaltrust.Middleware.Contracts.Extensions;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace fiskaltrust.Middleware.Contracts.RequestCommands
 {

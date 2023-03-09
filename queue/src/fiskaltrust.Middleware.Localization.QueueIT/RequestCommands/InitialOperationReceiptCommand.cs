@@ -14,17 +14,27 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
     {
         public override long CountryBaseState => Constants.Cases.BASE_STATE;
 
+        private readonly IConfigurationRepository _configurationRepository;
         private readonly SignatureItemFactoryIT _signatureItemFactoryIT;
         private readonly ftQueueIT _queueIt;
 
-        public InitialOperationReceiptCommand(ILogger<InitialOperationReceiptCommand> logger, SignatureItemFactoryIT signatureItemFactoryIT, ftQueueIT queueIt) : base(logger)
+        public InitialOperationReceiptCommand(ILogger<InitialOperationReceiptCommand> logger, IConfigurationRepository configurationRepository, SignatureItemFactoryIT signatureItemFactoryIT, ftQueueIT queueIt) : base(logger)
         {
+            _configurationRepository = configurationRepository;
             _signatureItemFactoryIT = signatureItemFactoryIT;
             _queueIt = queueIt;
         }
 
-        protected override Task<(ftActionJournal, SignaturItem)> InitializeSCUAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
+        protected override async Task<(ftActionJournal, SignaturItem)> InitializeSCUAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
         {
+            if (!_queueIt.ftSignaturCreationUnitITId.HasValue)
+            {
+                var scu = new ftSignaturCreationUnitIT(){ ftSignaturCreationUnitITId = Guid.NewGuid()};
+                _queueIt.ftSignaturCreationUnitITId = scu.ftSignaturCreationUnitITId;
+                await _configurationRepository.InsertOrUpdateQueueITAsync(_queueIt).ConfigureAwait(false);
+                await _configurationRepository.InsertOrUpdateSignaturCreationUnitITAsync(scu).ConfigureAwait(false);
+            }
+
             var signatureItem = _signatureItemFactoryIT.CreateInitialOperationSignature($"Queue-ID: {queue.ftQueueId}");
             var notification = new ActivateQueueSCU
             {
@@ -38,7 +48,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
             var actionJournal = CreateActionJournal(queue.ftQueueId, $"{request.ftReceiptCase:X}-{nameof(ActivateQueueSCU)}",
                 queueItem.ftQueueItemId, $"Initial-Operation receipt. Queue-ID: {queue.ftQueueId}", JsonConvert.SerializeObject(notification));
 
-            return Task.FromResult((actionJournal, signatureItem));
+            return (actionJournal, signatureItem);
         }
     }
 }

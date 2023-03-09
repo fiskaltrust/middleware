@@ -10,7 +10,8 @@
     UsedFailedMomentMin          BIGINT                    NULL,                    
     UsedFailedMomentMax          BIGINT                    NULL,                    
     UsedFailedQueueItemId        NVARCHAR(36)              NULL,
-    DailyClosingNumber           BIGINT                    NULL
+    DailyClosingNumber           BIGINT                    NULL,
+    TimeStamp                    BIGINT                    NOT NULL
 );
 CREATE TABLE IF NOT EXISTS ftSignaturCreationUnitES
 (
@@ -29,7 +30,8 @@ CREATE TABLE IF NOT EXISTS ftQueueIT
     UsedFailedCount              BIGINT                    NOT NULL,           
     UsedFailedMomentMin          BIGINT                    NULL,                    
     UsedFailedMomentMax          BIGINT                    NULL,                    
-    UsedFailedQueueItemId        NVARCHAR(36)              NULL
+    UsedFailedQueueItemId        NVARCHAR(36)              NULL,
+    TimeStamp                    BIGINT                    NOT NULL
 );
 CREATE TABLE IF NOT EXISTS ftSignaturCreationUnitIT
 (

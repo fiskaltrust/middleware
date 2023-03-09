@@ -33,20 +33,43 @@ public sealed class EpsonSCU : IITSSCD
     public Task<EndExportSessionResponse> EndExportSessionAsync(EndExportSessionRequest request) => throw new NotImplementedException();
     public async Task<FiscalReceiptResponse> FiscalReceiptInvoiceAsync(FiscalReceiptInvoice request)
     {
-        var response = await _httpClient.PutAsync("", new StreamContent(_epsonXmlWriter.FiscalReceiptToXml(request)));
-
-        var responseContent = await response.Content.ReadAsStringAsync();
-        _logger.LogInformation(responseContent);
-        return new FiscalReceiptResponse();
-
+        try
+        {
+            var response = await _httpClient.PutAsync("", new StreamContent(_epsonXmlWriter.FiscalReceiptToXml(request)));
+            var responseContent = await response.Content.ReadAsStringAsync();
+            _logger.LogInformation(responseContent);
+            //Todo parse
+            return new FiscalReceiptResponse();
+        }
+        catch (Exception e)
+        {
+            var msg = e.Message;
+            if (e.InnerException != null)
+            {
+                msg = msg + " " +e.InnerException.Message;
+            }
+            return new FiscalReceiptResponse() { Success = false, ErrorInfo = msg};
+        }
     }
     public async Task<FiscalReceiptResponse> FiscalReceiptRefundAsync(FiscalReceiptRefund request)
     {
-        var response = await _httpClient.PutAsync("", new StreamContent(_epsonXmlWriter.FiscalReceiptToXml(request)));
+        try
+        {
+            var response = await _httpClient.PutAsync("", new StreamContent(_epsonXmlWriter.FiscalReceiptToXml(request)));
 
-        var responseContent = await response.Content.ReadAsStringAsync();
-        _logger.LogInformation(responseContent);
-        return new FiscalReceiptResponse();
+            var responseContent = await response.Content.ReadAsStringAsync();
+            _logger.LogInformation(responseContent);
+            return new FiscalReceiptResponse();
+        }
+        catch (Exception e)
+        {
+            var msg = e.Message;
+            if (e.InnerException != null)
+            {
+                msg = msg + " " + e.InnerException.Message;
+            }
+            return new FiscalReceiptResponse() { Success = true, ErrorInfo = msg };
+        }
 
     }
     public Task<PrinterStatus> GetPrinterInfoAsync() => throw new NotImplementedException();

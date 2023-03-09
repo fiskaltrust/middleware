@@ -84,6 +84,7 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
                 throw new NotSupportedException($"The given package {config.Package} is not supported.");
             }
             var provider = serviceCollection.BuildServiceProvider();
+
             var pos = provider.GetRequiredService<IPOS>();
             HostingHelper.SetupServiceForObject(config, pos, provider.GetRequiredService<ILoggerFactory>());
 

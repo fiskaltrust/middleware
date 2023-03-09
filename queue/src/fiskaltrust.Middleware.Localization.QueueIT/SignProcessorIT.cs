@@ -38,12 +38,10 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
         public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ftQueue queue, ftQueueItem queueItem)
         {
             var queueIT = await _configurationRepository.GetQueueITAsync(queue.ftQueueId).ConfigureAwait(false);
+
+            queueIT ??= new ftQueueIT() { ftQueueITId = queue.ftQueueId};
+
             var requestCommand = _requestCommandFactory.Create(request, queueIT);
-            if (requestCommand is RequestCommandIT iT)
-            {
-                var responseit = await iT.ExecuteAsync(_client, queue, request, queueItem, queueIT).ConfigureAwait(false);
-                return (responseit.ReceiptResponse, responseit.ActionJournals.ToList());
-            }
             var response = await requestCommand.ExecuteAsync(queue, request, queueItem).ConfigureAwait(false);
             return (response.ReceiptResponse, response.ActionJournals.ToList());
         }
