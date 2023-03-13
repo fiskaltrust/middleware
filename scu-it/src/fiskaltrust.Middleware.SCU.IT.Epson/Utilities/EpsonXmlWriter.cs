@@ -48,7 +48,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
                 PaymentType = (int) p.PaymentType,
                 Payment = p.Amount
             }).ToList();
-            return EpsonXmlWriter.GetFiscalReceiptXml(fiscalReceipt);
+            return GetFiscalReceiptXml(fiscalReceipt);
         }
 
         public Stream FiscalReceiptToXml(FiscalReceiptRefund request)
@@ -82,7 +82,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
             }
         }
 
-        private FiscalReceipt CreateFiscalReceipt(FiscalReceiptRequest request)
+        private FiscalReceipt CreateFiscalReceipt(FiscalReceiptInvoice request)
         {
             var fiscalReceipt = new FiscalReceipt
             {
@@ -103,6 +103,34 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
                     Payment = p.Amount,
                     PaymentType = (int) p.PaymentType,
                     Index= p.Index,
+                    Operator = request.Operator
+                }).ToList(),
+            };
+            return fiscalReceipt;
+        }
+
+
+        private FiscalReceipt CreateFiscalReceipt(FiscalReceiptRefund request)
+        {
+            var fiscalReceipt = new FiscalReceipt
+            {
+                LotteryID = !string.IsNullOrEmpty(request.LotteryID) ? (LotteryID) request.LotteryID : null,
+                PrintBarCode = !string.IsNullOrEmpty(request.Barcode) ? new PrintBarCode()
+                {
+                    Code = request.Barcode,
+                    CodeType = _epsonScuConfiguration.CodeType,
+                    Height = _epsonScuConfiguration.BarCodeHeight,
+                    HRIFont = _epsonScuConfiguration.BarCodeHRIFont,
+                    HRIPosition = _epsonScuConfiguration.BarCodeHRIPosition,
+                    Position = _epsonScuConfiguration.BarCodePosition,
+                    Width = _epsonScuConfiguration.BarCodeWidth
+                } : null,
+                PrintRecTotal = request.Payments?.Select(p => new PrintRecTotal
+                {
+                    Description = p.Description,
+                    Payment = p.Amount,
+                    PaymentType = (int) p.PaymentType,
+                    Index = p.Index,
                     Operator = request.Operator
                 }).ToList(),
             };

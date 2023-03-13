@@ -6,7 +6,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="fiskaltrust.interface" Version="1.3.40-ci-23068-61200">
+        <PackageReference Include="fiskaltrust.interface" Version="1.3.40-ci-23072-61293">
             <NoWarn>NU1605</NoWarn>
         </PackageReference>
         <PackageReference Include="fiskaltrust.storage" Version="1.3.43-ci-23066-61128">
