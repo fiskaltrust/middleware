@@ -29,11 +29,15 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Migrations
             await _tableServiceClient.CreateTableIfNotExistsAsync(GetTableName(nameof(ftQueue)));
             await _tableServiceClient.CreateTableIfNotExistsAsync(GetTableName(nameof(ftQueueAT)));
             await _tableServiceClient.CreateTableIfNotExistsAsync(GetTableName(nameof(ftQueueDE)));
+            await _tableServiceClient.CreateTableIfNotExistsAsync(GetTableName(nameof(ftQueueES)));
             await _tableServiceClient.CreateTableIfNotExistsAsync(GetTableName(nameof(ftQueueFR)));
+            await _tableServiceClient.CreateTableIfNotExistsAsync(GetTableName(nameof(ftQueueIT)));
             await _tableServiceClient.CreateTableIfNotExistsAsync(GetTableName(nameof(ftQueueME)));
             await _tableServiceClient.CreateTableIfNotExistsAsync(GetTableName(nameof(ftSignaturCreationUnitAT)));
             await _tableServiceClient.CreateTableIfNotExistsAsync(GetTableName(nameof(ftSignaturCreationUnitDE)));
+            await _tableServiceClient.CreateTableIfNotExistsAsync(GetTableName(nameof(ftSignaturCreationUnitES)));
             await _tableServiceClient.CreateTableIfNotExistsAsync(GetTableName(nameof(ftSignaturCreationUnitFR)));
+            await _tableServiceClient.CreateTableIfNotExistsAsync(GetTableName(nameof(ftSignaturCreationUnitIT)));
             await _tableServiceClient.CreateTableIfNotExistsAsync(GetTableName(nameof(ftSignaturCreationUnitME)));
             await _tableServiceClient.CreateTableIfNotExistsAsync(GetTableName(nameof(FailedFinishTransaction)));
             await _tableServiceClient.CreateTableIfNotExistsAsync(GetTableName(nameof(FailedStartTransaction)));
