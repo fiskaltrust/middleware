@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Diagnostics;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.Contracts.Exceptions;
-using Newtonsoft.Json.Linq;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
 {

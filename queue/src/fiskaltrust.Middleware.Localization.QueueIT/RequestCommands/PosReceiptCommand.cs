@@ -9,6 +9,7 @@ using System.Linq;
 using fiskaltrust.Middleware.Localization.QueueIT.Extensions;
 using fiskaltrust.Middleware.Localization.QueueIT.Factories;
 using fiskaltrust.Middleware.Localization.QueueIT.Services;
+using fiskaltrust.Middleware.Contracts.Extensions;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 {
@@ -26,6 +27,33 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
         {
             var receiptResponse = CreateReceiptResponse(queue, request, queueItem, CountryBaseState);
 
+            FiscalReceiptResponse response;
+            if (!request.IsVoid())
+            {
+                var fiscalReceiptinvoice = CreateInvoice(request);
+                response = await _client.FiscalReceiptInvoiceAsync(fiscalReceiptinvoice).ConfigureAwait(false);
+            }
+            else
+            {
+                var fiscalReceiptRefund = CreateRefund(request);
+                response = await _client.FiscalReceiptRefundAsync(fiscalReceiptRefund).ConfigureAwait(false);
+            }
+            receiptResponse.ftSignatures = _signatureItemFactoryIT.CreatePosReceiptSignatures(response);
+
+            if (!response.Success)
+            {
+                throw new Exception(response.ErrorInfo);
+            }
+
+            return new RequestCommandResponse
+            {
+                ReceiptResponse = receiptResponse,
+                ActionJournals = new List<ftActionJournal>()
+            };
+        }
+
+        private static FiscalReceiptInvoice CreateInvoice(ReceiptRequest request)
+        {
             var fiscalReceiptRequest = new FiscalReceiptInvoice()
             {
                 //TODO Barcode = "0123456789" 
@@ -46,19 +74,33 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
                     PaymentType = p.GetPaymentType()
                 }).ToList()
             };
-            var response = await _client.FiscalReceiptInvoiceAsync(fiscalReceiptRequest).ConfigureAwait(false);
-            receiptResponse.ftSignatures = _signatureItemFactoryIT.CreatePosReceiptSignatures(response);
+            return fiscalReceiptRequest;
+        }
 
-            if (!response.Success)
+        private static FiscalReceiptRefund CreateRefund(ReceiptRequest request)
+        {
+            var fiscalReceiptRequest = new FiscalReceiptRefund()
             {
-                throw new Exception(response.ErrorInfo);
-            }
-
-            return new RequestCommandResponse
-            {
-                ReceiptResponse = receiptResponse,
-                ActionJournals = new List<ftActionJournal>()
+                //TODO Barcode = "0123456789" 
+                //TODO DisplayText = "Message on customer display",
+                Refunds = request.cbChargeItems?.Select(p => new Refund
+                {
+                    Description = p.Description,
+                    Quantity = Math.Abs(p.Quantity),
+                    UnitPrice = p.UnitPrice ?? 0,
+                    Amount = Math.Abs(p.Amount),
+                    VatGroup = p.GetVatGroup(),
+                    OperationType = p.GetRefundOperationType()
+                }).ToList(),
+                PaymentAdjustments = request.GetPaymentAdjustments(),
+                Payments = request.cbPayItems?.Select(p => new Payment
+                {
+                    Amount = p.Amount,
+                    Description = p.Description,
+                    PaymentType = p.GetPaymentType()
+                }).ToList()
             };
+            return fiscalReceiptRequest;
         }
     }
 }

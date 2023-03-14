@@ -1,10 +1,22 @@
 ﻿using fiskaltrust.ifPOS.v1;
+using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.Contracts.Exceptions;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
 {
     public static class ChargeItemExtensions
     {
+        public static OperationType? GetRefundOperationType(this ChargeItem chargeItem)
+        {
+            return (chargeItem.ftChargeItemCase & 0x0000_0000_000F_0000) switch
+            {
+                0x10000 => OperationType.Acconto,
+                0x20000 => OperationType.FreeOfCharge,
+                0x30000 => OperationType.SingleUseVoucher,
+                _ => null,
+            };
+        }
+
         public static bool IsPaymentAdjustment(this ChargeItem chargeItem)
         {
             return (chargeItem.ftChargeItemCase & 0xFFFF) switch

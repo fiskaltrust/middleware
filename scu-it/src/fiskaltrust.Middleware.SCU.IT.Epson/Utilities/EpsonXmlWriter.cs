@@ -55,7 +55,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
         {
             var fiscalReceipt = CreateFiscalReceipt(request);
             fiscalReceipt.PrintRecRefund = request.Refunds?.Select(GetPrintRecRefund).ToList();
-            return EpsonXmlWriter.GetFiscalReceiptXml(fiscalReceipt);
+            return GetFiscalReceiptXml(fiscalReceipt);
         }
 
         private PrintRecRefund GetPrintRecRefund(Refund recRefund)
