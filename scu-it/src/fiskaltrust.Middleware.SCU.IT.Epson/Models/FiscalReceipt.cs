@@ -1,9 +1,6 @@
 ﻿using System.Xml.Serialization;
 using System.Collections.Generic;
 using fiskaltrust.Middleware.SCU.IT.Epson.Utilities;
-using System;
-using static System.Net.Mime.MediaTypeNames;
-using fiskaltrust.ifPOS.v1.it;
 
 namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
 {

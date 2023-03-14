@@ -58,6 +58,12 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
             return GetFiscalReceiptXml(fiscalReceipt);
         }
 
+        public static PrinterResponse? GetPrinterResponse(Stream stream)
+        {
+            var reader = new XmlSerializer(typeof(PrinterResponse));
+            return reader.Deserialize(stream) as PrinterResponse;
+        }
+
         private PrintRecRefund GetPrintRecRefund(Refund recRefund)
         {
             if (recRefund.OperationType.HasValue)
@@ -82,6 +88,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
             }
         }
 
+      
         private FiscalReceipt CreateFiscalReceipt(FiscalReceiptInvoice request)
         {
             var fiscalReceipt = new FiscalReceipt
