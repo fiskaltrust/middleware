@@ -2,11 +2,25 @@
 using Xunit;
 using System.IO;
 using FluentAssertions;
+using fiskaltrust.Middleware.SCU.IT.Epson.Models;
 
 namespace fiskaltrust.Middleware.SCU.IT.UnitTest
 {
     public class PrinterResponseTests
     {
+        [Fact]
+        public void DeviceStatuse_FromBytes_CreateObject()
+        {
+            var printerstatus = new int[] { 0, 0, 1, 1, 0 };
+            var deviceStatus = new DeviceStatus(printerstatus);
+            deviceStatus.CashDrawer.Should().Be(CashDrawer.Closed);
+            deviceStatus.ElectronicJournal.Should().Be(ElectronicJournal.Ok);
+            deviceStatus.Invoice.Should().Be(Invoice.NoDocument);
+            deviceStatus.Operative.Should().Be(Operative.RegistrationState);
+            deviceStatus.Printer.Should().Be(Printer.Ok);
+        }
+
+
         [Fact]
         public void GetPrinterResponse_PrinterStatusBasic_CreateObject()
         {
