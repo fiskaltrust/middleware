@@ -1,5 +1,6 @@
 ﻿using System;
 using fiskaltrust.ifPOS.v1;
+using fiskaltrust.Middleware.Contracts.Exceptions;
 using fiskaltrust.Middleware.Contracts.RequestCommands;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,7 +24,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands.Factories
                 0x0007 => _serviceProvider.GetService<DailyClosingReceiptCommand>(),
                 0x0005 => _serviceProvider.GetService<MonthlyClosingReceiptCommand>(),
                 0x0006 => _serviceProvider.GetService<YearlyClosingReceiptCommand>(),
-                _ => throw new NotImplementedException($"The given receipt case 0x{request.ftReceiptCase:x} is not supported. Please see docs.fiskaltrust.cloud for a list of supported types.")
+                _ => throw new UnknownReceiptCaseException(request.ftReceiptCase)
             };
             return command;
         }

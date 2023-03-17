@@ -75,9 +75,9 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
 
             var response = await posreceitRommand.ExecuteAsync(queue, request, queueItem);
 
-            var znrSig = response.ReceiptResponse.ftSignatures.Where(x => x.Caption == "ZRepNumber").FirstOrDefault();
-            var amntSig = response.ReceiptResponse.ftSignatures.Where(x => x.Caption == "Amount").FirstOrDefault();
-            var tsmpSig = response.ReceiptResponse.ftSignatures.Where(x => x.Caption == "TimeStamp").FirstOrDefault();
+            var znrSig = response.ReceiptResponse.ftSignatures.Where(x => x.Caption == "<z-number>").FirstOrDefault();
+            var amntSig = response.ReceiptResponse.ftSignatures.Where(x => x.Caption == "<amount>").FirstOrDefault();
+            var tsmpSig = response.ReceiptResponse.ftSignatures.Where(x => x.Caption == "<timestamp>").FirstOrDefault();
             znrSig.Data.Should().Be("245");
             amntSig.Data.Should().Be("9809,98");
             tsmpSig.Data.Should().Be("1999-01-01 00:00:01");

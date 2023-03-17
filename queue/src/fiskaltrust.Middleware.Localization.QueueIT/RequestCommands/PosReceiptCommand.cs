@@ -13,10 +13,12 @@ using fiskaltrust.Middleware.Contracts.Extensions;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 {
-    public class PosReceiptCommand : RequestCommandIT
+    public class PosReceiptCommand : RequestCommand
     {
         private readonly SignatureItemFactoryIT _signatureItemFactoryIT;
         private readonly IITSSCD _client;
+
+        public override long CountryBaseState => Constants.Cases.BASE_STATE;
 
         public PosReceiptCommand(IITSSCDProvider itIsscdProvider, SignatureItemFactoryIT signatureItemFactoryIT)
         {
@@ -56,7 +58,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
         {
             var fiscalReceiptRequest = new FiscalReceiptInvoice()
             {
-                //TODO Barcode = "0123456789" 
+                //Barcode = ChargeItem.ProductBarcode,
                 //TODO DisplayText = "Message on customer display",
                 Items = request.cbChargeItems?.Select(p => new Item
                 {

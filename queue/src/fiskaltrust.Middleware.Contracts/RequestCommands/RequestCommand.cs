@@ -28,7 +28,7 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
             };
         }
 
-        protected ftActionJournal CreateActionJournal(Guid queueId, string type, Guid queueItemId, string message, string data)
+        protected ftActionJournal CreateActionJournal(Guid queueId, string type, Guid queueItemId, string message, string data, int priority = -1)
         {
             return new ftActionJournal
             {
@@ -38,7 +38,7 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
                 Type = type,
                 Moment = DateTime.UtcNow,
                 Message = message,
-                Priority = -1,
+                Priority = priority,
                 DataJson = data
             };
         }
