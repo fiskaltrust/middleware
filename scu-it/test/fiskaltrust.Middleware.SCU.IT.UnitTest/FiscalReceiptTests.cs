@@ -1,9 +1,9 @@
-﻿using fiskaltrust.Middleware.SCU.IT.Configuration;
-using fiskaltrust.Middleware.SCU.IT.Epson.Utilities;
+﻿using fiskaltrust.Middleware.SCU.IT.Epson.Utilities;
 using Xunit;
 using fiskaltrust.ifPOS.v1.it;
 using System.Collections.Generic;
 using System.IO;
+using fiskaltrust.Middleware.SCU.IT.Epson;
 
 namespace fiskaltrust.Middleware.SCU.IT.UnitTest
 {
@@ -13,7 +13,7 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
         public void CommercailDocument_SendInvoice_CreateValidXml()
         {
             var epsonScuConfiguration = new EpsonScuConfiguration ();
-            var epsonXmlWriter = new EpsonXmlWriter(epsonScuConfiguration);
+            var epsonXmlWriter = new EpsonCommandFactory(epsonScuConfiguration);
 
             var fiscalReceiptRequest = new FiscalReceiptInvoice()
             {
@@ -54,14 +54,14 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
 
             };
 
-            var xml = epsonXmlWriter.FiscalReceiptToXml(fiscalReceiptRequest);
+            var xml = epsonXmlWriter.CreateInvoiceRequestContent(fiscalReceiptRequest);
             WriteFile(xml, "FiscalReceiptInvoice");
         }
         [Fact]
         public void CommercailDocument_SendRefundItem_CreateValidXml()
         {
             var epsonScuConfiguration = new EpsonScuConfiguration();
-            var epsonXmlWriter = new EpsonXmlWriter(epsonScuConfiguration);
+            var epsonXmlWriter = new EpsonCommandFactory(epsonScuConfiguration);
             var fiscalReceiptRequest = new FiscalReceiptRefund()
             {
                 Operator = "1",
@@ -76,7 +76,7 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
                 }
 
             };
-            var xml = epsonXmlWriter.FiscalReceiptToXml(fiscalReceiptRequest);
+            var xml = epsonXmlWriter.CreateRefundRequestContent(fiscalReceiptRequest);
             WriteFile(xml, "FiscalReceiptRefund");
         }
 
@@ -84,7 +84,7 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
         public void CommercailDocument_SendRefundAcconto_CreateValidXml()
         {
             var epsonScuConfiguration = new EpsonScuConfiguration();
-            var epsonXmlWriter = new EpsonXmlWriter(epsonScuConfiguration);
+            var epsonXmlWriter = new EpsonCommandFactory(epsonScuConfiguration);
             var fiscalReceiptRequest = new FiscalReceiptRefund()
             {
                 Operator = "1",
@@ -99,14 +99,14 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
                 }
 
             };
-            var xml = epsonXmlWriter.FiscalReceiptToXml(fiscalReceiptRequest);
+            var xml = epsonXmlWriter.CreateRefundRequestContent(fiscalReceiptRequest);
             WriteFile(xml, "FiscalReceiptRefundAcconto");
         }
         [Fact]
         public void CommercailDocument_SendInvoiceWithLottery_CreateValidXml()
         {
             var epsonScuConfiguration = new EpsonScuConfiguration();
-            var epsonXmlWriter = new EpsonXmlWriter(epsonScuConfiguration);
+            var epsonXmlWriter = new EpsonCommandFactory(epsonScuConfiguration);
             var fiscalReceiptRequest = new FiscalReceiptInvoice()
             {
                 Operator = "1",
@@ -121,14 +121,14 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
                     new Payment(){ Description = "Payment in cash", Amount= 0, PaymentType = PaymentType.Cash, Index = 1}
                 }
             };
-            var xml = epsonXmlWriter.FiscalReceiptToXml(fiscalReceiptRequest);
+            var xml = epsonXmlWriter.CreateInvoiceRequestContent(fiscalReceiptRequest);
             WriteFile(xml, "FiscalReceiptLottery");
         }
         [Fact]
         public void CommercailDocument_SendInvoiceWithDepositAdjustment_CreateValidXml()
         {
             var epsonScuConfiguration = new EpsonScuConfiguration();
-            var epsonXmlWriter = new EpsonXmlWriter(epsonScuConfiguration);
+            var epsonXmlWriter = new EpsonCommandFactory(epsonScuConfiguration);
             var fiscalReceiptRequest = new FiscalReceiptInvoice()
             {
                 Operator = "1",
@@ -146,7 +146,7 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
                     new Payment(){ Description = "Payment in cash", Amount= 550, PaymentType = PaymentType.Cash, Index = 1}
                 }
             };
-            var xml = epsonXmlWriter.FiscalReceiptToXml(fiscalReceiptRequest);
+            var xml = epsonXmlWriter.CreateInvoiceRequestContent(fiscalReceiptRequest);
             WriteFile(xml, "FiscalReceiptInvoiceDepositAdjustment");
         }
 

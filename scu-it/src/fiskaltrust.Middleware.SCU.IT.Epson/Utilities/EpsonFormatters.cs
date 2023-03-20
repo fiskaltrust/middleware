@@ -2,26 +2,22 @@
 
 namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
 {
-    public class EpsonFormatter
+    public class EpsonFormatters
     {
-        public static NumberFormatInfo GetCurrencyFormatter()
-        {
-            return new NumberFormatInfo
+        public static NumberFormatInfo CurrencyFormatter =
+            new NumberFormatInfo
             {
                 NumberDecimalSeparator = ",",
                 NumberGroupSeparator = "",
                 CurrencyDecimalDigits = 2
             };
-        }
 
-        public static NumberFormatInfo GetQuantityFormatter()
-        {
-            return new NumberFormatInfo
+        public static NumberFormatInfo QuantityFormatter =
+            new NumberFormatInfo
             {
                 NumberDecimalSeparator = ",",
                 NumberGroupSeparator = "",
                 NumberDecimalDigits = 3
             };
-        }
     }
 }

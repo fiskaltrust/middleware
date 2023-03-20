@@ -5,6 +5,21 @@ using System.Xml.Serialization;
 
 namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
 {
+    [XmlType("response")]
+    public class PrinterResponse
+    {
+        [XmlAttribute(AttributeName = "success")]
+        public bool Success { get; set; }
+
+        [XmlAttribute(AttributeName = "code")]
+        public string? Code { get; set; }
+
+        [XmlAttribute(AttributeName = "status")]
+        public string? Status { get; set; }
+
+        [XmlElement(ElementName = "addInfo")]
+        public AdditionalInfo? AdditionalInfo { get; set; }
+    }
 
     [XmlType("addInfo")]
     public class AdditionalInfo
@@ -57,21 +72,5 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
         [XmlElement(ElementName = "rtUpgradeResult")]
         public string? UpgradeResult { get; set; }
 
-    }
-
-    [XmlType("response")]
-    public class PrinterResponse
-    {
-        [XmlAttribute(AttributeName = "success")]
-        public bool Success { get; set; }
-
-        [XmlAttribute(AttributeName = "code")]
-        public string? Code { get; set; }
-
-        [XmlAttribute(AttributeName = "status")]
-        public string? Status { get; set; }
-
-        [XmlElement(ElementName = "addInfo")]
-        public AdditionalInfo? AdditionalInfo { get; set; }
     }
 }

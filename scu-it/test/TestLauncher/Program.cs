@@ -21,6 +21,7 @@ namespace TestLauncher
             var config = cashBoxConfiguration.ftSignaturCreationDevices[0];
             config.Package = "fiskaltrust.Middleware.SCU.IT.Epson";
             config.Configuration = CreateScuConfig();
+            config.Url[0] = "rest://localhost:1500/scu";
             var serviceCollection = new ServiceCollection();
             serviceCollection.AddStandardLoggers(LogLevel.Debug);
             var bootStrapper = new ScuBootstrapper
@@ -30,8 +31,9 @@ namespace TestLauncher
             };
             bootStrapper.ConfigureServices(serviceCollection);
             var provider = serviceCollection.BuildServiceProvider();
-            var messcd = provider.GetRequiredService<IITSSCD>();
-            HostingHelper.SetupServiceForObject(config, messcd, provider.GetRequiredService<ILoggerFactory>());
+            var sscd = provider.GetRequiredService<IITSSCD>();
+            await sscd.GetPrinterInfoAsync();
+            HostingHelper.SetupServiceForObject(config, sscd, provider.GetRequiredService<ILoggerFactory>());
 
             Console.WriteLine("Press key to end program");
             Console.ReadLine();
@@ -42,7 +44,7 @@ namespace TestLauncher
         {
             return new Dictionary<string, object>
             {
-                { "PrinterUrl", "http://127.0.0.1:4322"}
+                { nameof(EpsonScuConfiguration.DeviceUrl), "https://1fd4-194-93-177-143.eu.ngrok.io"}
             };
         }
     }

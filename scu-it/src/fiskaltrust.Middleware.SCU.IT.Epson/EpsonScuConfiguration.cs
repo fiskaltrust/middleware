@@ -1,30 +1,25 @@
-﻿namespace fiskaltrust.Middleware.SCU.IT.Configuration
+﻿namespace fiskaltrust.Middleware.SCU.IT.Epson
 {
     public class EpsonScuConfiguration
     {
         /// <summary>
-        /// PrinterUrl
+        /// The URL or IP address of the RT Printer or Server, e.g. http://192.168.0.100
         /// </summary>
-        public string PrinterUrl { get; set; } = "http://127.0.0.1:4321";
+        public string DeviceUrl { get; set; } = "http://127.0.0.1:4321";
 
         /// <summary>
-        /// PrinterClientTimeout in Milliseconds
+        /// The HTTP client timeout used when communicating with the RT Printer or Server
         /// </summary>
-        public int PrinterClientTimeoutMs { get; set; } = 120000;
+        public int ClientTimeoutMs { get; set; } = 15000;
 
         /// <summary>
-        /// This command allows the real-time subtotal to be printed and/or shown on the display.
-        /// • option sets the subtotal option:
-        ///     o 0 = Print and show on the display
-        ///     o 1 = Only print
-        ///     o 2 = Only show on the display
+        /// The server/printer timeout for executing commands
         /// </summary>
-        public int PrintRecSubtotal { get; set; }
+        public int ServerTimeoutMs { get; set; } = 10000;
 
-        /// <summary>
-        /// AdditionalMessageFont
-        /// </summary>
-        public int AdditionalMessageFont { get; set; }
+
+
+
 
         /// <summary>
         /// position defines the starting position from the left margin (range 0 to 511). Three special values 
@@ -36,7 +31,7 @@
         public int BarCodePosition { get; set; } = 10;
 
         /// <summary>
-        ///  Indicates the print dot width of each distinct bar (range 1 to 6). Please note that not all readers are able to read 
+        /// Indicates the print dot width of each distinct bar (range 1 to 6). Please note that not all readers are able to read 
         /// barcodes with a 1 dot width
         /// </summary>
         public int BarCodeWidth { get; set; } = 2;
@@ -82,5 +77,18 @@
         /// </summary>
         public string CodeType { get; set; } = "CODE39";
 
+        /// <summary>
+        /// This command allows the real-time subtotal to be printed and/or shown on the display.
+        /// • option sets the subtotal option:
+        ///     o 0 = Print and show on the display
+        ///     o 1 = Only print
+        ///     o 2 = Only show on the display
+        /// </summary>
+        public int PrintRecSubtotal { get; set; }
+
+        /// <summary>
+        /// AdditionalMessageFont
+        /// </summary>
+        public int AdditionalMessageFont { get; set; }
     }
 }

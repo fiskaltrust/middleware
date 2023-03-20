@@ -1,27 +1,26 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Xml.Serialization;
 using fiskaltrust.ifPOS.v1.it;
-using fiskaltrust.Middleware.SCU.IT.Configuration;
 using fiskaltrust.Middleware.SCU.IT.Epson.Models;
 
 namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
 {
-    public class EpsonXmlWriter
+    public class EpsonCommandFactory
     {
         private readonly EpsonScuConfiguration _epsonScuConfiguration;
 
-        public EpsonXmlWriter(EpsonScuConfiguration epsonScuConfiguration) { 
-        
+        public EpsonCommandFactory(EpsonScuConfiguration epsonScuConfiguration)
+        {
+
             _epsonScuConfiguration = epsonScuConfiguration;
         }
 
-        public Stream FiscalReceiptToXml(FiscalReceiptInvoice request)
+        public string CreateInvoiceRequestContent(FiscalReceiptInvoice request)
         {
             var fiscalReceipt = CreateFiscalReceipt(request);
-            fiscalReceipt.DisplayText = string.IsNullOrEmpty(request.DisplayText) ? null : (DisplayText) request.DisplayText;
+            fiscalReceipt.DisplayText = string.IsNullOrEmpty(request.DisplayText) ? null : DisplayText.FromString(request.DisplayText);
             fiscalReceipt.PrintRecItem = request.Items?.Select(p => new PrintRecItem
             {
                 Description = p.Description,
@@ -48,21 +47,27 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
                 PaymentType = (int) p.PaymentType,
                 Payment = p.Amount
             }).ToList();
-            return GetFiscalReceiptXml(fiscalReceipt);
+            return SoapSerializer.Serialize(fiscalReceipt);
         }
 
-        public Stream FiscalReceiptToXml(FiscalReceiptRefund request)
+        public string CreateRefundRequestContent(FiscalReceiptRefund request)
         {
             var fiscalReceipt = CreateFiscalReceipt(request);
             fiscalReceipt.PrintRecRefund = request.Refunds?.Select(GetPrintRecRefund).ToList();
-            return GetFiscalReceiptXml(fiscalReceipt);
+            return SoapSerializer.Serialize(fiscalReceipt);
         }
 
-        public static PrinterResponse? GetPrinterResponse(Stream stream)
+        public string CreateQueryPrinterStatusRequestContent()
         {
-            var reader = new XmlSerializer(typeof(PrinterResponse));
-            return reader.Deserialize(stream) as PrinterResponse;
+            var queryPrinterStatus = new QueryPrinterStatusCommand { QueryPrinterStatus = new QueryPrinterStatus { StatusType = 1 } };
+            return SoapSerializer.Serialize(queryPrinterStatus);
         }
+
+        //public static PrinterResponse? GetPrinterResponse(Stream stream)
+        //{
+        //    var reader = new XmlSerializer(typeof(PrinterResponse));
+        //    return reader.Deserialize(stream) as PrinterResponse;
+        //}
 
         private PrintRecRefund GetPrintRecRefund(Refund recRefund)
         {
@@ -82,46 +87,19 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
                     Quantity = recRefund.Quantity,
                     UnitPrice = recRefund.UnitPrice
                 };
-            }else
+            }
+            else
             {
                 throw new Exception("Refund properties not set properly!");
             }
         }
 
-      
+
         private FiscalReceipt CreateFiscalReceipt(FiscalReceiptInvoice request)
         {
             var fiscalReceipt = new FiscalReceipt
             {
-                LotteryID = !string.IsNullOrEmpty(request.LotteryID) ? (LotteryID)request.LotteryID : null,
-                PrintBarCode = !string.IsNullOrEmpty(request.Barcode) ? new PrintBarCode()
-                {
-                    Code = request.Barcode,
-                    CodeType = _epsonScuConfiguration.CodeType,
-                    Height = _epsonScuConfiguration.BarCodeHeight,
-                    HRIFont = _epsonScuConfiguration.BarCodeHRIFont,
-                    HRIPosition = _epsonScuConfiguration.BarCodeHRIPosition,
-                    Position = _epsonScuConfiguration.BarCodePosition,
-                    Width = _epsonScuConfiguration.BarCodeWidth
-                } : null,
-                PrintRecTotal = request.Payments?.Select(p => new PrintRecTotal
-                {
-                    Description= p.Description,
-                    Payment = p.Amount,
-                    PaymentType = (int) p.PaymentType,
-                    Index= p.Index,
-                    Operator = request.Operator
-                }).ToList(),
-            };
-            return fiscalReceipt;
-        }
-
-
-        private FiscalReceipt CreateFiscalReceipt(FiscalReceiptRefund request)
-        {
-            var fiscalReceipt = new FiscalReceipt
-            {
-                LotteryID = !string.IsNullOrEmpty(request.LotteryID) ? (LotteryID) request.LotteryID : null,
+                LotteryID = !string.IsNullOrEmpty(request.LotteryID) ? LotteryID.FromString(request.LotteryID) : null,
                 PrintBarCode = !string.IsNullOrEmpty(request.Barcode) ? new PrintBarCode()
                 {
                     Code = request.Barcode,
@@ -144,13 +122,32 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
             return fiscalReceipt;
         }
 
-        private static Stream GetFiscalReceiptXml(FiscalReceipt fiscalReceipt)
+
+        private FiscalReceipt CreateFiscalReceipt(FiscalReceiptRefund request)
         {
-            var serializer = new XmlSerializer(typeof(FiscalReceipt));
-            var stream = new MemoryStream();
-            serializer.Serialize(stream, fiscalReceipt);
-            stream.Position= 0;
-            return stream;
+            var fiscalReceipt = new FiscalReceipt
+            {
+                LotteryID = !string.IsNullOrEmpty(request.LotteryID) ? LotteryID.FromString(request.LotteryID) : null,
+                PrintBarCode = !string.IsNullOrEmpty(request.Barcode) ? new PrintBarCode()
+                {
+                    Code = request.Barcode,
+                    CodeType = _epsonScuConfiguration.CodeType,
+                    Height = _epsonScuConfiguration.BarCodeHeight,
+                    HRIFont = _epsonScuConfiguration.BarCodeHRIFont,
+                    HRIPosition = _epsonScuConfiguration.BarCodeHRIPosition,
+                    Position = _epsonScuConfiguration.BarCodePosition,
+                    Width = _epsonScuConfiguration.BarCodeWidth
+                } : null,
+                PrintRecTotal = request.Payments?.Select(p => new PrintRecTotal
+                {
+                    Description = p.Description,
+                    Payment = p.Amount,
+                    PaymentType = (int) p.PaymentType,
+                    Index = p.Index,
+                    Operator = request.Operator
+                }).ToList(),
+            };
+            return fiscalReceipt;
         }
     }
 }
