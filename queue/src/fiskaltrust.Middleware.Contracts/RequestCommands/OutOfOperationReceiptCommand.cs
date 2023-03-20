@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using fiskaltrust.storage.V0;
 using fiskaltrust.ifPOS.v1;
 using System.Collections.Generic;
+using fiskaltrust.Middleware.Contracts.Extensions;
 
 namespace fiskaltrust.Middleware.Contracts.RequestCommands
 {
@@ -14,6 +15,16 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
         {
             var receiptResponse = CreateReceiptResponse(queue, request, queueItem);
 
+            if (queue.IsDeactivated())
+            {
+                var actionjournal = CreateActionJournal(queue.ftQueueId, $"{request.ftReceiptCase:X}-Queue-already-deactivated",
+                queueItem.ftQueueItemId, $"Out-of-Operation receipt. Queue-ID: {queue.ftQueueId}", $"Queue was alreády deactivated on the {queue.StopMoment.Value.ToString("yyyy-MM-dd hh:mm:ss")}");
+                return new RequestCommandResponse
+                {
+                    ReceiptResponse = receiptResponse,
+                    ActionJournals = new List<ftActionJournal> { actionjournal }
+                };
+            }
             var (actionJournal, signatureItem) = await DeactivateSCUAsync(queue, request, queueItem);
             receiptResponse.ftSignatures = new SignaturItem[] { signatureItem };
 
