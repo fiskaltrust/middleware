@@ -1,11 +1,13 @@
 ﻿using System.Runtime.Serialization;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 
 namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
 {
     /// <summary>
     /// Byte 1: DeviceStatus, from STATUS given by the 5 bytes Alphanumeric
     /// </summary>
-    [DataContract]
+    [JsonConverter(typeof(StringEnumConverter))]
     public enum Printer
     {
         /// <summary>
@@ -29,7 +31,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
     /// <summary>
     /// Byte 2: EJ Electronic Journal, from STATUS given by the 5 bytes Alphanumeric
     /// </summary>
-    [DataContract]
+    [JsonConverter(typeof(StringEnumConverter))]
     public enum ElectronicJournal
     {
         /// <summary>
@@ -67,7 +69,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
     /// <summary>
     /// Byte 3: CashDrawer, from STATUS given by the 5 bytes Alphanumeric
     /// </summary>
-    [DataContract]
+    [JsonConverter(typeof(StringEnumConverter))]
     public enum CashDrawer
     {
         /// <summary>
@@ -86,7 +88,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
     /// <summary>
     /// Byte 4: Commercial Document / invoice, from STATUS given by the 5 bytes Alphanumeric
     /// </summary>
-    [DataContract]
+    [JsonConverter(typeof(StringEnumConverter))]
     public enum Invoice
     {
         /// <summary>
@@ -156,7 +158,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
     /// <summary>
     /// Byte 5: Operative
     /// </summary>
-    [DataContract]
+    [JsonConverter(typeof(StringEnumConverter))]
     public enum Operative
     {
         /// <summary>

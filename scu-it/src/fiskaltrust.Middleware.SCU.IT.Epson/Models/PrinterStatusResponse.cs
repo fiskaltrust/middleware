@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Xml.Serialization;
+﻿using System.Xml.Serialization;
 
 namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
 {
     [XmlType("response")]
-    public class PrinterResponse
+    public class PrinterStatusResponse
     {
         [XmlAttribute(AttributeName = "success")]
         public bool Success { get; set; }
@@ -18,11 +15,11 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
         public string? Status { get; set; }
 
         [XmlElement(ElementName = "addInfo")]
-        public AdditionalInfo? AdditionalInfo { get; set; }
+        public Printerstatus? Printerstatus { get; set; }
     }
 
     [XmlType("addInfo")]
-    public class AdditionalInfo
+    public class Printerstatus
     {
         [XmlElement(ElementName = "cpuRel")]
         public string? CpuRel { get; set; }

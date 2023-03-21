@@ -4,9 +4,11 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.SCU.IT.Epson;
+using fiskaltrust.Middleware.SCU.IT.Epson.Models;
 using fiskaltrust.Middleware.SCU.IT.Test.Launcher.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace TestLauncher
 {
@@ -21,7 +23,6 @@ namespace TestLauncher
             var config = cashBoxConfiguration.ftSignaturCreationDevices[0];
             config.Package = "fiskaltrust.Middleware.SCU.IT.Epson";
             config.Configuration = CreateScuConfig();
-            config.Url[0] = "rest://localhost:1500/scu";
             var serviceCollection = new ServiceCollection();
             serviceCollection.AddStandardLoggers(LogLevel.Debug);
             var bootStrapper = new ScuBootstrapper
@@ -44,7 +45,7 @@ namespace TestLauncher
         {
             return new Dictionary<string, object>
             {
-                { nameof(EpsonScuConfiguration.DeviceUrl), "https://1fd4-194-93-177-143.eu.ngrok.io"}
+                { nameof(EpsonScuConfiguration.DeviceUrl), "https://0b3b-194-93-177-143.eu.ngrok.io"}
             };
         }
     }

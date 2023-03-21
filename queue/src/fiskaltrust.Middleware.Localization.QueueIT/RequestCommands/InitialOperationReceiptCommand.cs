@@ -43,7 +43,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
                 Moment = DateTime.UtcNow,
                 SCUId = _queueIt.ftSignaturCreationUnitITId.GetValueOrDefault(),
                 IsStartReceipt = true,
-                Version = "V0"
+                Version = "V0",
             };
             var actionJournal = CreateActionJournal(queue.ftQueueId, $"{request.ftReceiptCase:X}-{nameof(ActivateQueueSCU)}",
                 queueItem.ftQueueItemId, $"Initial-Operation receipt. Queue-ID: {queue.ftQueueId}", JsonConvert.SerializeObject(notification));

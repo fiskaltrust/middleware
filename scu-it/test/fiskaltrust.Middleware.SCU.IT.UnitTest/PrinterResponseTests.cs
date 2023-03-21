@@ -26,7 +26,7 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
         {
             var file = new StreamReader(Path.Combine("Testdata", "ResponsePrinterStatusBasic.xml"));
             file.BaseStream.Position = 0;
-            var response = EpsonCommandFactory.GetPrinterResponse(file.BaseStream);
+            var response = EpsonCommandFactory.Deserialize<PrinterResponse>(file.BaseStream);
             Assert.NotNull(response);
             response.AdditionalInfo.CpuRel.Should().Be("07.00");
             response.AdditionalInfo.MfRel.Should().Be("04.3");
@@ -39,7 +39,7 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
         {
             var file = new StreamReader(Path.Combine("Testdata", "ResponsePrinterStatus.xml"));
             file.BaseStream.Position = 0;
-            var response = EpsonCommandFactory.GetPrinterResponse(file.BaseStream);
+            var response = EpsonCommandFactory.Deserialize<PrinterResponse>(file.BaseStream);
             Assert.NotNull(response);
             response.AdditionalInfo.RtType.Should().Be("12");
             response.AdditionalInfo.MainStatus.Should().Be("23");

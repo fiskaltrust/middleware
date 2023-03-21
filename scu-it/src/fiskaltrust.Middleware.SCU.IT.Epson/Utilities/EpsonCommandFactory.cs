@@ -20,7 +20,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
         public string CreateInvoiceRequestContent(FiscalReceiptInvoice request)
         {
             var fiscalReceipt = CreateFiscalReceipt(request);
-            fiscalReceipt.DisplayText = string.IsNullOrEmpty(request.DisplayText) ? null : DisplayText.FromString(request.DisplayText);
+            fiscalReceipt.DisplayText = string.IsNullOrEmpty(request.DisplayText) ? null : new DisplayText() { Data = request.DisplayText };
             fiscalReceipt.PrintRecItem = request.Items?.Select(p => new PrintRecItem
             {
                 Description = p.Description,
@@ -63,11 +63,11 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
             return SoapSerializer.Serialize(queryPrinterStatus);
         }
 
-        //public static PrinterResponse? GetPrinterResponse(Stream stream)
-        //{
-        //    var reader = new XmlSerializer(typeof(PrinterResponse));
-        //    return reader.Deserialize(stream) as PrinterResponse;
-        //}
+        public static T? Deserialize<T>(Stream stream) where T : class
+        {
+            var reader = new XmlSerializer(typeof(T));
+            return reader.Deserialize(stream) as T;
+        }
 
         private PrintRecRefund GetPrintRecRefund(Refund recRefund)
         {
@@ -99,7 +99,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
         {
             var fiscalReceipt = new FiscalReceipt
             {
-                LotteryID = !string.IsNullOrEmpty(request.LotteryID) ? LotteryID.FromString(request.LotteryID) : null,
+                LotteryID = !string.IsNullOrEmpty(request.LotteryID) ? new LotteryID() { Code = request.LotteryID} : null,
                 PrintBarCode = !string.IsNullOrEmpty(request.Barcode) ? new PrintBarCode()
                 {
                     Code = request.Barcode,
@@ -127,7 +127,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
         {
             var fiscalReceipt = new FiscalReceipt
             {
-                LotteryID = !string.IsNullOrEmpty(request.LotteryID) ? LotteryID.FromString(request.LotteryID) : null,
+                LotteryID = !string.IsNullOrEmpty(request.LotteryID) ? new LotteryID() { Code = request.LotteryID } : null,
                 PrintBarCode = !string.IsNullOrEmpty(request.Barcode) ? new PrintBarCode()
                 {
                     Code = request.Barcode,

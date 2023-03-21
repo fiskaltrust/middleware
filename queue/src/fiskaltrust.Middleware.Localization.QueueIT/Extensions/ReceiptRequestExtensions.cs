@@ -10,15 +10,19 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
         {
             var paymentAdjustments = new List<PaymentAdjustment>();
 
-            foreach(var item in receiptRequest.cbChargeItems)
+            if (receiptRequest.cbChargeItems != null)
             {
-                if (item.IsPaymentAdjustment()){
-                    paymentAdjustments.Add(new PaymentAdjustment
+                foreach (var item in receiptRequest.cbChargeItems)
+                {
+                    if (item.IsPaymentAdjustment())
                     {
-                        Amount = item.Amount,
-                        Description = item.Description,
-                        VatGroup = item.GetVatGroup() == 0 ? null : item.GetVatGroup()
-                    });
+                        paymentAdjustments.Add(new PaymentAdjustment
+                        {
+                            Amount = item.Amount,
+                            Description = item.Description,
+                            VatGroup = item.GetVatGroup() == 0 ? null : item.GetVatGroup()
+                        });
+                    }
                 }
             }
             return paymentAdjustments;

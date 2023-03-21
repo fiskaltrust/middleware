@@ -64,7 +64,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
                 {
                     Description = p.Description,
                     Quantity = p.Quantity,
-                    UnitPrice = p.UnitPrice ?? 0,
+                    UnitPrice = p.UnitPrice ?? p.Amount/p.Quantity,
                     Amount = p.Amount,
                     VatGroup = p.GetVatGroup()
                 }).ToList(),

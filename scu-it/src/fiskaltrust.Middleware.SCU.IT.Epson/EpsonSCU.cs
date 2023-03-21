@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.IO;
 using System.Net.Http;
 using System.Text;
@@ -7,6 +8,8 @@ using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.SCU.IT.Epson.Models;
 using fiskaltrust.Middleware.SCU.IT.Epson.Utilities;
 using Microsoft.Extensions.Logging;
+using Microsoft.VisualBasic;
+using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.SCU.IT.Epson;
 
@@ -17,6 +20,7 @@ public sealed class EpsonSCU : IITSSCD
     private readonly EpsonCommandFactory _epsonXmlWriter;
     private readonly HttpClient _httpClient;
     private readonly string _commandUrl;
+    private readonly ErrorCodeFactory _errorCodeFactory = new();
 
     public EpsonSCU(ILogger<EpsonSCU> logger, EpsonScuConfiguration configuration, EpsonCommandFactory epsonXmlWriter)
     {
@@ -36,14 +40,47 @@ public sealed class EpsonSCU : IITSSCD
     {
         try
         {
+
             var content = _epsonXmlWriter.CreateInvoiceRequestContent(request);
             var response = await _httpClient.PostAsync(_commandUrl, new StringContent(content, Encoding.UTF8, "application/xml"));
-            var responseContent = await response.Content.ReadAsStringAsync();
-            _logger.LogInformation(responseContent);
-            //Todo parse
-            return new FiscalReceiptResponse();
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new HttpRequestException($"Http-StatusCode {response.StatusCode} Content {await response.Content.ReadAsStringAsync()}");
+            }
+
+            using var responseContent = await response.Content.ReadAsStreamAsync();
+            var result = SoapSerializer.Deserialize<PrinterReceiptResponse>(responseContent);
+            var fiscalReceiptResponse = new FiscalReceiptResponse()
+            {
+                Success = result?.Success ?? false
+            };
+
+            if (result?.Success == false)
+            {
+                if (result.Code != null)
+                {
+                    var error = _errorCodeFactory.GetErrorInfo(result.Code);
+                    _logger.LogError(error);
+                    fiscalReceiptResponse.ErrorInfo = error;
+                 }
+            }
+            var pst = result?.ReceiptResponse?.PrinterStatus?.ToCharArray();
+            if (pst != null)
+            {
+                var printerstatus = new DeviceStatus(Array.ConvertAll(pst, c => (int) char.GetNumericValue(c)));
+                var status = JsonConvert.SerializeObject(printerstatus);
+                _logger.LogInformation(status);
+                fiscalReceiptResponse.ErrorInfo += " " + status;
+            }
+
+            decimal.TryParse(result?.ReceiptResponse?.FiscalReceiptAmount, NumberStyles.Any, new CultureInfo("it-It", false), out var amount);
+            fiscalReceiptResponse.Amount = amount;
+
+
+            return fiscalReceiptResponse;
         }
         catch (Exception e)
+
         {
             var msg = e.Message;
             if (e.InnerException != null)
@@ -82,16 +119,17 @@ public sealed class EpsonSCU : IITSSCD
         {
             var content = _epsonXmlWriter.CreateQueryPrinterStatusRequestContent();
             var response = await _httpClient.PostAsync(_commandUrl, new StringContent(content, Encoding.UTF8, "application/xml"));
-
             using var responseContent = await response.Content.ReadAsStreamAsync();
-            var result = SoapSerializer.Deserialize<PrinterResponse>(responseContent);
+            var result = SoapSerializer.Deserialize<PrinterStatusResponse>(responseContent);
+
+            _logger.LogInformation(JsonConvert.SerializeObject(result));
 
             return new PrinterStatus
             {
-                DailyOpen = result?.AdditionalInfo?.DailyOpen == "1",
-                DeviceStatus = ParseStatus(result?.AdditionalInfo?.MfStatus), // TODO Create enum
-                ExpireDeviceCertificateDate = result?.AdditionalInfo?.ExpiryCD, // TODO Use Datetime; this value seemingly can also be 20
-                ExpireTACommunicationCertificateDate = result?.AdditionalInfo?.ExpiryCA // TODO use DateTime?
+                DailyOpen = result?.Printerstatus?.DailyOpen == "1",
+                DeviceStatus = ParseStatus(result?.Printerstatus?.MfStatus), // TODO Create enum
+                ExpireDeviceCertificateDate = result?.Printerstatus?.ExpiryCD, // TODO Use Datetime; this value seemingly can also be 20
+                ExpireTACommunicationCertificateDate = result?.Printerstatus?.ExpiryCA // TODO use DateTime?
             };
         }
         catch 
