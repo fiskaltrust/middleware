@@ -160,7 +160,7 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
                 File.Delete(filename);
             }
 
-            File.WriteAllText(xml, filename);
+            File.WriteAllText(filename, xml);
         }
     }
 }
