@@ -60,7 +60,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
             {
                 //Barcode = ChargeItem.ProductBarcode,
                 //TODO DisplayText = "Message on customer display",
-                Items = request.cbChargeItems?.Select(p => new Item
+                Items = request.cbChargeItems.Where(x => !x.IsPaymentAdjustment()).Select(p => new Item
                 {
                     Description = p.Description,
                     Quantity = p.Quantity,
@@ -102,6 +102,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
                     PaymentType = p.GetPaymentType()
                 }).ToList()
             };
+
             return fiscalReceiptRequest;
         }
     }

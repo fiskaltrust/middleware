@@ -3,7 +3,7 @@
 namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
 {
     [XmlType("response")]
-    public class PrinterStatusResponse
+    public class StatusResponse
     {
         [XmlAttribute(AttributeName = "success")]
         public bool Success { get; set; }

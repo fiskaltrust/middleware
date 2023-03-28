@@ -3,7 +3,7 @@
 namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
 {
     [XmlType("response")]
-    public class PrinterReceiptResponse
+    public class ReportResponse
     {
         [XmlAttribute(AttributeName = "success")]
         public bool Success { get; set; }
@@ -15,28 +15,20 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
         public string? Status { get; set; }
 
         [XmlElement(ElementName = "addInfo")]
-        public ReceiptResponse? ReceiptResponse { get; set; }
+        public ReportInfo? ReportInfo { get; set; }
     }
 
     [XmlType("addInfo")]
-    public class ReceiptResponse
+    public class ReportInfo
     {
         [XmlElement(ElementName = "printerStatus")]
         public string? PrinterStatus { get; set; }
 
-        [XmlElement(ElementName = "fiscalReceiptNumber")]
-        public string? FiscalReceiptNumber { get; set; }
-
-        [XmlElement(ElementName = "fiscalReceiptAmount")]
-        public string? FiscalReceiptAmount { get; set; }
-
-        [XmlElement(ElementName = "fiscalReceiptDate")]
-        public string? FiscalReceiptDate { get; set; }
-
-        [XmlElement(ElementName = "fiscalReceiptTime")]
-        public string? FiscalReceiptTime { get; set; }
-
         [XmlElement(ElementName = "zRepNumber")]
         public string? ZRepNumber { get; set; }
+
+        [XmlElement(ElementName = "dailyAmount")]
+        public string? DailyAmount { get; set; }
+
     }
 }

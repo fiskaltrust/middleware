@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -40,48 +41,30 @@ public sealed class EpsonSCU : IITSSCD
     {
         try
         {
-
             var content = _epsonXmlWriter.CreateInvoiceRequestContent(request);
-            var response = await _httpClient.PostAsync(_commandUrl, new StringContent(content, Encoding.UTF8, "application/xml"));
-            if (!response.IsSuccessStatusCode)
-            {
-                throw new HttpRequestException($"Http-StatusCode {response.StatusCode} Content {await response.Content.ReadAsStringAsync()}");
-            }
+            var response = await SendRequest(content);
 
             using var responseContent = await response.Content.ReadAsStreamAsync();
-            var result = SoapSerializer.Deserialize<PrinterReceiptResponse>(responseContent);
+            var result = SoapSerializer.Deserialize<ReceiptResponse>(responseContent);
             var fiscalReceiptResponse = new FiscalReceiptResponse()
             {
                 Success = result?.Success ?? false
             };
+            SetPrinterstatus(result, fiscalReceiptResponse);
 
             if (result?.Success == false)
             {
-                if (result.Code != null)
-                {
-                    var error = _errorCodeFactory.GetErrorInfo(result.Code);
-                    _logger.LogError(error);
-                    fiscalReceiptResponse.ErrorInfo = error;
-                 }
+                SetErrorInfo(result, fiscalReceiptResponse);
+                await ResetPrinter();
             }
-            var pst = result?.ReceiptResponse?.PrinterStatus?.ToCharArray();
-            if (pst != null)
+            else
             {
-                var printerstatus = new DeviceStatus(Array.ConvertAll(pst, c => (int) char.GetNumericValue(c)));
-                var status = JsonConvert.SerializeObject(printerstatus);
-                _logger.LogInformation(status);
-                fiscalReceiptResponse.ErrorInfo += " " + status;
+                SetResponse(request, result, fiscalReceiptResponse);
             }
-
-            decimal.TryParse(result?.ReceiptResponse?.FiscalReceiptAmount, NumberStyles.Any, new CultureInfo("it-It", false), out var amount);
-            fiscalReceiptResponse.Amount = amount;
-
-
             return fiscalReceiptResponse;
         }
         catch (Exception e)
-
-        {
+        {         
             var msg = e.Message;
             if (e.InnerException != null)
             {
@@ -91,16 +74,92 @@ public sealed class EpsonSCU : IITSSCD
         }
     }
 
+    private async Task ResetPrinter()
+    {
+        var resetCommand = new ResetPrinterCommand() { ResetPrinter = new ResetPrinter() { Operator = "" } };
+        var xml = SoapSerializer.Serialize(resetCommand);
+        _ = await SendRequest(xml);
+    }
+
+    private async Task<HttpResponseMessage> SendRequest(string content)
+    {
+        var response = await _httpClient.PostAsync(_commandUrl, new StringContent(content, Encoding.UTF8, "application/xml"));
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException($"Http-StatusCode {response.StatusCode} Content {await response.Content.ReadAsStringAsync()}");
+        }
+
+        return response;
+    }
+
+    private static void SetResponse(FiscalReceiptInvoice request, ReceiptResponse? result, FiscalReceiptResponse fiscalReceiptResponse)
+    {
+        decimal.TryParse(result?.Receipt?.FiscalReceiptAmount, NumberStyles.Any, new CultureInfo("it-It", false), out var amount);
+        if (result?.Success == true && amount == 0)
+        {
+            amount = request.Payments.Sum(x => x.Amount);
+        }
+        fiscalReceiptResponse.Amount = amount;
+        fiscalReceiptResponse.Number = result?.Receipt?.ZRepNumber != null ? ulong.Parse(result.Receipt.ZRepNumber) : 0;
+        if (result?.Receipt?.FiscalReceiptDate != null && result?.Receipt?.FiscalReceiptTime != null)
+        {
+            fiscalReceiptResponse.TimeStamp = DateTime.ParseExact(result.Receipt.FiscalReceiptDate, "d/M/yyyy", CultureInfo.InvariantCulture);
+            var time = TimeSpan.Parse(result.Receipt.FiscalReceiptTime);
+            fiscalReceiptResponse.TimeStamp = fiscalReceiptResponse.TimeStamp + time;
+        }
+        else
+        {
+            fiscalReceiptResponse.TimeStamp = DateTime.Now;
+        }
+    }
+
+    private void SetErrorInfo(ReceiptResponse? result, FiscalReceiptResponse fiscalReceiptResponse)
+    {
+        if (result?.Code != null)
+        {
+            var error = _errorCodeFactory.GetErrorInfo(result.Code);
+            _logger.LogError(error);
+            fiscalReceiptResponse.ErrorInfo = error;
+        }
+    }
+
+    private void SetPrinterstatus(ReceiptResponse? result, FiscalReceiptResponse fiscalReceiptResponse)
+    {
+        var pst = result?.Receipt?.PrinterStatus?.ToCharArray();
+        if (pst != null)
+        {
+            var printerstatus = new DeviceStatus(Array.ConvertAll(pst, c => (int) char.GetNumericValue(c)));
+            var status = JsonConvert.SerializeObject(printerstatus);
+            _logger.LogInformation(status);
+            fiscalReceiptResponse.ErrorInfo += " " + status;
+        }
+    }
+
     public async Task<FiscalReceiptResponse> FiscalReceiptRefundAsync(FiscalReceiptRefund request)
     {
         try
         {
             var content = _epsonXmlWriter.CreateRefundRequestContent(request);
-            var response = await _httpClient.PostAsync(_commandUrl, new StringContent(content, Encoding.UTF8, "application/xml"));
+            var response = await SendRequest(content);
 
-            var responseContent = await response.Content.ReadAsStringAsync();
-            _logger.LogInformation(responseContent);
-            return new FiscalReceiptResponse();
+            using var responseContent = await response.Content.ReadAsStreamAsync();
+            var result = SoapSerializer.Deserialize<ReceiptResponse>(responseContent);
+            var fiscalReceiptResponse = new FiscalReceiptResponse()
+            {
+                Success = result?.Success ?? false
+            };
+            SetPrinterstatus(result, fiscalReceiptResponse);
+
+            if (result?.Success == false)
+            {
+                SetErrorInfo(result, fiscalReceiptResponse);
+                await ResetPrinter();
+            }
+            else
+            {
+                //SetResponse(request, result, fiscalReceiptResponse);
+            }
+            return fiscalReceiptResponse;
         }
         catch (Exception e)
         {
@@ -120,7 +179,7 @@ public sealed class EpsonSCU : IITSSCD
             var content = _epsonXmlWriter.CreateQueryPrinterStatusRequestContent();
             var response = await _httpClient.PostAsync(_commandUrl, new StringContent(content, Encoding.UTF8, "application/xml"));
             using var responseContent = await response.Content.ReadAsStreamAsync();
-            var result = SoapSerializer.Deserialize<PrinterStatusResponse>(responseContent);
+            var result = SoapSerializer.Deserialize<StatusResponse>(responseContent);
 
             _logger.LogInformation(JsonConvert.SerializeObject(result));
 

@@ -4,6 +4,8 @@ using fiskaltrust.ifPOS.v1.it;
 using System.Collections.Generic;
 using System.IO;
 using fiskaltrust.Middleware.SCU.IT.Epson;
+using System.Globalization;
+using System;
 
 namespace fiskaltrust.Middleware.SCU.IT.UnitTest
 {
@@ -151,16 +153,14 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
         }
 
 
-        private static void WriteFile(Stream xml, string filename)
+        private static void WriteFile(string xml, string filename)
         {
             if (File.Exists(filename))
             {
                 File.Delete(filename);
             }
-            using (var outputFileStream = new FileStream(filename, FileMode.Create))
-            {
-                xml.CopyTo(outputFileStream);
-            }
+
+            File.WriteAllText(xml, filename);
         }
     }
 }

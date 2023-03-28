@@ -93,5 +93,6 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
                     throw new UnknownChargeItemException(chargeItem.ftChargeItemCase);
             }
         }
+        public static decimal GetAmount(this ChargeItem chargeItem) => chargeItem.Quantity < 0 && chargeItem.Amount >= 0 ? chargeItem.Amount*(-1) : chargeItem.Amount;
     }
 }

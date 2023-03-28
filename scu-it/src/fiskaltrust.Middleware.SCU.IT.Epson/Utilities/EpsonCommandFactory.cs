@@ -28,18 +28,12 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
                 UnitPrice = p.UnitPrice,
                 Department = p.VatGroup
             }).ToList();
-            fiscalReceipt.PrintRecItemAdjustment = request.PaymentAdjustments?.Where(x => x.VatGroup.HasValue).Select(p => new PrintRecItemAdjustment
+            fiscalReceipt.PrintRecItemAdjustment = request.PaymentAdjustments?.Select(p => new PrintRecItemAdjustment
             {
                 Description = p.Description,
                 AdjustmentType = p.Amount < 0 ? 3 : 8,
                 Amount = Math.Abs(p.Amount),
                 Department = p.VatGroup ?? 0
-            }).ToList();
-            fiscalReceipt.PrintRecSubtotalAdjustment = request.PaymentAdjustments?.Where(x => !x.VatGroup.HasValue).Select(p => new PrintRecSubtotalAdjustment
-            {
-                Description = p.Description,
-                AdjustmentType = p.Amount < 0 ? 1 : 6,
-                Amount = Math.Abs(p.Amount)
             }).ToList();
             fiscalReceipt.PrintRecTotal = request.Payments?.Select(p => new PrintRecTotal
             {
