@@ -17,7 +17,10 @@
         /// </summary>
         public int ServerTimeoutMs { get; set; } = 10000;
 
-
+        /// <summary>
+        /// The timeout used for locking the SCU during requests. Should be greater than ClientTimeoutMs.
+        /// </summary>
+        public int LockTimeoutMs { get; set; } = 16000;
 
 
 

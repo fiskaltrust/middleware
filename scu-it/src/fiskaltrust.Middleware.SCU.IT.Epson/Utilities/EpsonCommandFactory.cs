@@ -57,6 +57,16 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
             return SoapSerializer.Serialize(queryPrinterStatus);
         }
 
+        public string CreatePrintZReportRequestContent(DailyClosingRequest request)
+        {
+            var fiscalReport = new FiscalReport
+            {
+                ZReport = new ZReport { Operator = request.Operator },
+                DisplayText = string.IsNullOrEmpty(request.DisplayText) ? null : new DisplayText() { Data = request.DisplayText }
+            };
+            return SoapSerializer.Serialize(fiscalReport);
+        }
+
         public static T? Deserialize<T>(Stream stream) where T : class
         {
             var reader = new XmlSerializer(typeof(T));

@@ -33,7 +33,7 @@ namespace TestLauncher
             bootStrapper.ConfigureServices(serviceCollection);
             var provider = serviceCollection.BuildServiceProvider();
             var sscd = provider.GetRequiredService<IITSSCD>();
-            await sscd.GetPrinterInfoAsync();
+            await sscd.GetDeviceInfoAsync();
             HostingHelper.SetupServiceForObject(config, sscd, provider.GetRequiredService<ILoggerFactory>());
 
             Console.WriteLine("Press key to end program");
