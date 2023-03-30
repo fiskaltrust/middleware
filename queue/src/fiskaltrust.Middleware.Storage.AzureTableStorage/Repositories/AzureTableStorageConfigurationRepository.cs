@@ -14,13 +14,11 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
         private readonly BaseAzureTableStorageRepository<Guid, AzureTableStorageFtQueue, ftQueue> _queueRepository;
         private readonly BaseAzureTableStorageRepository<Guid, AzureTableStorageFtQueueAT, ftQueueAT> _queueATRepository;
         private readonly BaseAzureTableStorageRepository<Guid, AzureTableStorageFtQueueDE, ftQueueDE> _queueDERepository;
-        private readonly BaseAzureTableStorageRepository<Guid, AzureTableStorageFtQueueES, ftQueueES> _queueESRepository;
         private readonly BaseAzureTableStorageRepository<Guid, AzureTableStorageFtQueueFR, ftQueueFR> _queueFRRepository;
         private readonly BaseAzureTableStorageRepository<Guid, AzureTableStorageFtQueueIT, ftQueueIT> _queueITRepository;
         private readonly BaseAzureTableStorageRepository<Guid, AzureTableStorageFtQueueME, ftQueueME> _queueMERepository;
         private readonly BaseAzureTableStorageRepository<Guid, AzureTableStorageFtSignaturCreationUnitAT, ftSignaturCreationUnitAT> _signaturCreationUnitATRepository;
         private readonly BaseAzureTableStorageRepository<Guid, AzureTableStorageFtSignaturCreationUnitDE, ftSignaturCreationUnitDE> _signaturCreationUnitDERepository;
-        private readonly BaseAzureTableStorageRepository<Guid, AzureTableStorageFtSignaturCreationUnitES, ftSignaturCreationUnitES> _signaturCreationUnitESRepository;
         private readonly BaseAzureTableStorageRepository<Guid, AzureTableStorageFtSignaturCreationUnitFR, ftSignaturCreationUnitFR> _signaturCreationUnitFRRepository;
         private readonly BaseAzureTableStorageRepository<Guid, AzureTableStorageFtSignaturCreationUnitIT, ftSignaturCreationUnitIT> _signaturCreationUnitITRepository;
         private readonly BaseAzureTableStorageRepository<Guid, AzureTableStorageFtSignaturCreationUnitME, ftSignaturCreationUnitME> _signaturCreationUnitMERepository;
@@ -33,13 +31,11 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
             _queueRepository = new AzureTableStorageQueueRepository(queueConfig, tableServiceClient);
             _queueATRepository = new AzureTableStorageQueueATRepository(queueConfig, tableServiceClient);
             _queueDERepository = new AzureTableStorageQueueDERepository(queueConfig, tableServiceClient);
-            _queueESRepository = new AzureTableStorageQueueESRepository(queueConfig, tableServiceClient);
             _queueFRRepository = new AzureTableStorageQueueFRRepository(queueConfig, tableServiceClient);
             _queueITRepository = new AzureTableStorageQueueITRepository(queueConfig, tableServiceClient);
             _queueMERepository = new AzureTableStorageQueueMERepository(queueConfig, tableServiceClient);
             _signaturCreationUnitATRepository = new AzureTableStorageSignaturCreationUnitATRepository(queueConfig, tableServiceClient);
             _signaturCreationUnitDERepository = new AzureTableStorageSignaturCreationUnitDERepository(queueConfig, tableServiceClient);
-            _signaturCreationUnitESRepository = new AzureTableStorageSignaturCreationUnitESRepository(queueConfig, tableServiceClient);
             _signaturCreationUnitFRRepository = new AzureTableStorageSignaturCreationUnitFRRepository(queueConfig, tableServiceClient);
             _signaturCreationUnitITRepository = new AzureTableStorageSignaturCreationUnitITRepository(queueConfig, tableServiceClient);
             _signaturCreationUnitMERepository = new AzureTableStorageSignaturCreationUnitMERepository(queueConfig, tableServiceClient);
@@ -61,10 +57,6 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
         public async Task<IEnumerable<ftQueueDE>> GetQueueDEListAsync() => await _queueDERepository.GetAsync().ConfigureAwait(false);
         public async Task InsertOrUpdateQueueDEAsync(ftQueueDE queueDE) => await _queueDERepository.InsertOrUpdateAsync(queueDE).ConfigureAwait(false);
 
-        public async Task<ftQueueES> GetQueueESAsync(Guid id) => await _queueESRepository.GetAsync(id).ConfigureAwait(false);
-        public async Task<IEnumerable<ftQueueES>> GetQueueESListAsync() => await _queueESRepository.GetAsync().ConfigureAwait(false);
-        public async Task InsertOrUpdateQueueESAsync(ftQueueES queueES) => await _queueESRepository.InsertOrUpdateAsync(queueES).ConfigureAwait(false);
-
         public async Task<ftQueueFR> GetQueueFRAsync(Guid id) => await _queueFRRepository.GetAsync(id).ConfigureAwait(false);
         public async Task<IEnumerable<ftQueueFR>> GetQueueFRListAsync() => await _queueFRRepository.GetAsync().ConfigureAwait(false);
         public async Task InsertOrUpdateQueueFRAsync(ftQueueFR queueFR) => await _queueFRRepository.InsertOrUpdateAsync(queueFR).ConfigureAwait(false);
@@ -84,10 +76,6 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
         public async Task<ftSignaturCreationUnitDE> GetSignaturCreationUnitDEAsync(Guid id) => await _signaturCreationUnitDERepository.GetAsync(id).ConfigureAwait(false);
         public async Task<IEnumerable<ftSignaturCreationUnitDE>> GetSignaturCreationUnitDEListAsync() => await _signaturCreationUnitDERepository.GetAsync().ConfigureAwait(false);
         public async Task InsertOrUpdateSignaturCreationUnitDEAsync(ftSignaturCreationUnitDE scu) => await _signaturCreationUnitDERepository.InsertOrUpdateAsync(scu).ConfigureAwait(false);
-
-        public async Task<ftSignaturCreationUnitES> GetSignaturCreationUnitESAsync(Guid id) => await _signaturCreationUnitESRepository.GetAsync(id).ConfigureAwait(false);
-        public async Task<IEnumerable<ftSignaturCreationUnitES>> GetSignaturCreationUnitESListAsync() => await _signaturCreationUnitESRepository.GetAsync().ConfigureAwait(false);
-        public async Task InsertOrUpdateSignaturCreationUnitESAsync(ftSignaturCreationUnitES scu) => await _signaturCreationUnitESRepository.InsertOrUpdateAsync(scu).ConfigureAwait(false);
 
         public async Task<ftSignaturCreationUnitFR> GetSignaturCreationUnitFRAsync(Guid id) => await _signaturCreationUnitFRRepository.GetAsync(id).ConfigureAwait(false);
         public async Task<IEnumerable<ftSignaturCreationUnitFR>> GetSignaturCreationUnitFRListAsync() => await _signaturCreationUnitFRRepository.GetAsync().ConfigureAwait(false);
