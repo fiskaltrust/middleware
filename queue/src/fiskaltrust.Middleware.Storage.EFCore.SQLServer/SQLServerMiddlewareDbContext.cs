@@ -49,6 +49,9 @@ namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer
             modelBuilder.Entity<ftQueueME>().ToTable(nameof(ftQueueME));
             modelBuilder.Entity<ftQueueME>().HasKey(x => x.ftQueueMEId);
 
+            modelBuilder.Entity<ftQueueIT>().ToTable(nameof(ftQueueIT));
+            modelBuilder.Entity<ftQueueIT>().HasKey(x => x.ftQueueITId);
+
             modelBuilder.Entity<ftSignaturCreationUnitAT>().ToTable(nameof(ftSignaturCreationUnitAT));
             modelBuilder.Entity<ftSignaturCreationUnitAT>().HasKey(x => x.ftSignaturCreationUnitATId);
 
@@ -60,6 +63,9 @@ namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer
 
             modelBuilder.Entity<ftSignaturCreationUnitME>().ToTable(nameof(ftSignaturCreationUnitME));
             modelBuilder.Entity<ftSignaturCreationUnitME>().HasKey(x => x.ftSignaturCreationUnitMEId);
+
+            modelBuilder.Entity<ftSignaturCreationUnitIT>().ToTable(nameof(ftSignaturCreationUnitIT));
+            modelBuilder.Entity<ftSignaturCreationUnitIT>().HasKey(x => x.ftSignaturCreationUnitITId);
 
             modelBuilder.Entity<ftJournalAT>().ToTable(nameof(ftJournalAT));
             modelBuilder.Entity<ftJournalAT>().HasKey(x => x.ftJournalATId);
@@ -75,6 +81,11 @@ namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer
 
             modelBuilder.Entity<ftJournalME>().ToTable(nameof(ftJournalME));
             modelBuilder.Entity<ftJournalME>().HasKey(x => x.ftJournalMEId);
+
+            modelBuilder.Entity<ftJournalIT>().ToTable(nameof(ftJournalIT));
+            modelBuilder.Entity<ftJournalIT>().HasKey(x => x.ftJournalITId);
+            modelBuilder.Entity<ftJournalIT>().HasIndex(x => x.TimeStamp);
+            modelBuilder.Entity<ftJournalIT>().HasIndex(x => x.cbReceiptReference);
 
             modelBuilder.Entity<ftQueueItem>().ToTable(nameof(ftQueueItem));
             modelBuilder.Entity<ftQueueItem>().HasKey(x => x.ftQueueItemId);

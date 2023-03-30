@@ -459,7 +459,8 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
                 UsedFailedMomentMin = src.UsedFailedMomentMin,
                 UsedFailedMomentMax = src.UsedFailedMomentMax,
                 UsedFailedQueueItemId = src.UsedFailedQueueItemId,
-                TimeStamp = src.TimeStamp
+                TimeStamp = src.TimeStamp,
+                CashBoxIdentification = src.CashBoxIdentification,
             };
         }
 
@@ -482,7 +483,8 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
                 UsedFailedMomentMin = src.UsedFailedMomentMin,
                 UsedFailedMomentMax = src.UsedFailedMomentMax,
                 UsedFailedQueueItemId = src.UsedFailedQueueItemId,
-                TimeStamp = src.TimeStamp                
+                TimeStamp = src.TimeStamp,
+                CashBoxIdentification = src.CashBoxIdentification
             };
         }
 
@@ -971,7 +973,8 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
                 RowKey = src.ftSignaturCreationUnitITId.ToString(),
                 ftSignaturCreationUnitITId = src.ftSignaturCreationUnitITId,
                 Url = src.Url,
-                TimeStamp = src.TimeStamp
+                TimeStamp = src.TimeStamp,
+                InfoJson = src.InfoJson
             };
         }
 
@@ -986,7 +989,8 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             {
                 ftSignaturCreationUnitITId = src.ftSignaturCreationUnitITId,
                 TimeStamp = src.TimeStamp,
-                Url = src.Url
+                Url = src.Url,
+                InfoJson = src.InfoJson
             };
         }
 

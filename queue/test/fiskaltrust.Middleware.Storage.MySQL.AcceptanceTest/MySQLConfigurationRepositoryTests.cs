@@ -118,8 +118,6 @@ namespace fiskaltrust.Middleware.Storage.MySQL.AcceptanceTest
                     command.ExecuteNonQuery();
                     command.CommandText = $@"DELETE FROM {TableNames.FtQueueDE}";
                     command.ExecuteNonQuery();
-                    command.CommandText = $@"DELETE FROM {TableNames.FtQueueES}";
-                    command.ExecuteNonQuery();
                     command.CommandText = $@"DELETE FROM {TableNames.FtQueueFR}";
                     command.ExecuteNonQuery();
                     command.CommandText = $@"DELETE FROM {TableNames.FtQueueIT}";

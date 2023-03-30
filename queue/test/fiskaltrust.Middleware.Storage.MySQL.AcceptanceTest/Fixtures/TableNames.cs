@@ -12,7 +12,6 @@
         public static string FtQueue = "ftQueue";
         public static string FtQueueAT = "ftQueueAT";
         public static string FtQueueDE = "ftQueueDE";
-        public static string FtQueueES = "ftQueueES";
         public static string FtQueueFR = "ftQueueFR";
         public static string FtQueueIT = "ftQueueIT";
         public static string FtQueueME = "ftQueueME";

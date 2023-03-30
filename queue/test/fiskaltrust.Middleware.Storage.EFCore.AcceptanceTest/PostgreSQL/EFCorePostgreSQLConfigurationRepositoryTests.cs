@@ -87,7 +87,6 @@ namespace fiskaltrust.Middleware.Storage.EFCore.AcceptanceTest.PostgreSQL
             _ = EFCorePostgreSQLStorageCollectionFixture.TruncateTableAsync("ftQueue");
             _ = EFCorePostgreSQLStorageCollectionFixture.TruncateTableAsync("ftQueueAT");
             _ = EFCorePostgreSQLStorageCollectionFixture.TruncateTableAsync("ftQueueDE");
-            _ = EFCorePostgreSQLStorageCollectionFixture.TruncateTableAsync("ftQueueES");
             _ = EFCorePostgreSQLStorageCollectionFixture.TruncateTableAsync("ftQueueFR");
             _ = EFCorePostgreSQLStorageCollectionFixture.TruncateTableAsync("ftQueueIT");
             _ = EFCorePostgreSQLStorageCollectionFixture.TruncateTableAsync("ftQueueME");
