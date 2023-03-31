@@ -17,7 +17,7 @@ namespace fiskaltrust.Middleware.Storage.EF.Migrations
                         RecNumber = c.Int(nullable: false),
                         ZRecNumber = c.Int(nullable: false),
                         JournalType = c.Long(nullable: false),
-                        cbReceiptReference = c.String(),
+                        cbReceiptReference = c.String(maxLength: 350),
                         RecordDataJson = c.String(),
                         RecDate = c.DateTime(nullable: false, precision: 7, storeType: "datetime2"),
                         TimeStamp = c.Long(nullable: false),
