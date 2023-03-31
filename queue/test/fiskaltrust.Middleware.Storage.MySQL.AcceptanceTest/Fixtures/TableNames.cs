@@ -5,6 +5,7 @@
         public static string FtJournalAT = "ftJournalAT";
         public static string FtJournalFR = "ftJournalFR";
         public static string FtJournalDE = "ftJournalDE";
+        public static string FtJournalIT = "ftJournalIT";
         public static string FActionJournal = "ftActionJournal";
         public static string FtQueueItem = "ftQueueItem";
         public static string FtReceiptJournal = "ftReceiptJournal";
