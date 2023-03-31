@@ -26,8 +26,15 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Factories
             {
                 new SignaturItem
                 {
+                    Caption = "<rec-number>",
+                    Data = fiscalReceiptResponse.RecNumber.ToString(),
+                    ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                    ftSignatureType = CountryBaseState & (long) SignaturItem.Types.Information
+                },
+                new SignaturItem
+                {
                     Caption = "<z-number>",
-                    Data = fiscalReceiptResponse.Number.ToString(),
+                    Data = fiscalReceiptResponse.ZRecNumber.ToString(),
                     ftSignatureFormat = (long) SignaturItem.Formats.Text,
                     ftSignatureType = CountryBaseState & (long) SignaturItem.Types.Information
                 },

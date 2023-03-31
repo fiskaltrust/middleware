@@ -223,6 +223,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             return new AzureTableStorageFtJournalME
             {
                 PartitionKey = GetHashString(src.TimeStamp),
+                RowKey = src.ftJournalMEId.ToString(),
                 ftJournalMEId = src.ftJournalMEId,
                 ftQueueItemId = src.ftQueueItemId,
                 cbReference = src.cbReference,
@@ -249,6 +250,55 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
                 InvoiceNumber = src.InvoiceNumber,
                 YearlyOrdinalNumber = src.YearlyOrdinalNumber,
                 ftQueueId = src.ftQueueId,
+                TimeStamp = src.TimeStamp
+            };
+        }
+
+        public static AzureTableStorageFtJournalIT Map(ftJournalIT src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+
+            return new AzureTableStorageFtJournalIT
+            {
+                PartitionKey = GetHashString(src.TimeStamp),
+                RowKey = src.ftJournalITId.ToString(),
+                ftJournalITId = src.ftJournalITId,
+                ftQueueItemId = src.ftQueueItemId,                
+                ftQueueId = src.ftQueueId,
+                ftSignaturCreationUnitITId = src.ftSignaturCreationUnitITId,
+                cbReceiptReference = src.cbReceiptReference,
+                JournalType = src.JournalType,
+                RecDate = src.RecDate,
+                RecNumber = src.RecNumber,
+                RecordDataJson = src.RecordDataJson,
+                ZRecNumber = src.ZRecNumber,
+                TimeStamp = src.TimeStamp
+            };
+        }
+
+        public static ftJournalIT Map(AzureTableStorageFtJournalIT src)
+        {
+            if (src == null)
+
+            {
+                return null;
+            }
+
+            return new ftJournalIT
+            {
+                ftJournalITId = src.ftJournalITId,
+                ftQueueItemId = src.ftQueueItemId,
+                ftQueueId = src.ftQueueId,
+                ftSignaturCreationUnitITId = src.ftSignaturCreationUnitITId,
+                cbReceiptReference = src.cbReceiptReference,
+                JournalType = src.JournalType,
+                RecDate = src.RecDate,
+                RecNumber = src.RecNumber,
+                RecordDataJson = src.RecordDataJson,
+                ZRecNumber = src.ZRecNumber,
                 TimeStamp = src.TimeStamp
             };
         }

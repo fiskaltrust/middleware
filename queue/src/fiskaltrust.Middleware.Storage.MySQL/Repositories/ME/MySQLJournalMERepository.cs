@@ -8,7 +8,7 @@ using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0;
 using MySqlConnector;
 
-namespace fiskaltrust.Middleware.Storage.MySQL.Repositories.DE
+namespace fiskaltrust.Middleware.Storage.MySQL.Repositories.ME
 {
     public class MySQLJournalMERepository : AbstractMySQLRepository<Guid, ftJournalME>, IJournalMERepository, IMiddlewareJournalMERepository
     {

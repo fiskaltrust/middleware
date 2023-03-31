@@ -24,6 +24,7 @@ using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.storage.V0.MasterData;
 using fiskaltrust.Middleware.Storage.EF.Repositories.ME;
 using fiskaltrust.Middleware.Storage.EF.Repositories.MasterData;
+using fiskaltrust.Middleware.Storage.EF.Repositories.IT;
 
 namespace fiskaltrust.Middleware.Storage.Ef
 {
@@ -107,6 +108,9 @@ namespace fiskaltrust.Middleware.Storage.Ef
             services.AddTransient<IJournalMERepository, EfJournalMERepository>();
             services.AddTransient<IReadOnlyJournalMERepository, EfJournalMERepository>();
             services.AddTransient<IMiddlewareRepository<ftJournalME>, EfJournalMERepository>();
+
+            services.AddTransient<IJournalITRepository, EfJournalITRepository>();
+            services.AddTransient<IReadOnlyJournalITRepository, EfJournalITRepository>();
 
             services.AddTransient<IReceiptJournalRepository, EfReceiptJournalRepository>();
             services.AddTransient<IReadOnlyReceiptJournalRepository, EfReceiptJournalRepository>();

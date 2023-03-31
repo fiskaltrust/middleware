@@ -25,6 +25,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Migrations
             await _tableServiceClient.CreateTableIfNotExistsAsync(GetTableName(nameof(ftJournalDE)));
             await _tableServiceClient.CreateTableIfNotExistsAsync(GetTableName(nameof(ftJournalFR)));
             await _tableServiceClient.CreateTableIfNotExistsAsync(GetTableName(nameof(ftJournalME)));
+            await _tableServiceClient.CreateTableIfNotExistsAsync(GetTableName(nameof(ftJournalIT)));
             await _tableServiceClient.CreateTableIfNotExistsAsync(GetTableName(nameof(ftCashBox)));
             await _tableServiceClient.CreateTableIfNotExistsAsync(GetTableName(nameof(ftQueue)));
             await _tableServiceClient.CreateTableIfNotExistsAsync(GetTableName(nameof(ftQueueAT)));
