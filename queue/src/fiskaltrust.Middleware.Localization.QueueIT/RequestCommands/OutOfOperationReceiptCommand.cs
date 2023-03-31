@@ -13,7 +13,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
         private readonly SignatureItemFactoryIT _signatureItemFactoryIT;
         private readonly ftQueueIT _queueIt;
 
-        public OutOfOperationReceiptCommand(SignatureItemFactoryIT signatureItemFactoryIT, ftQueueIT queueIt)
+        public OutOfOperationReceiptCommand(SignatureItemFactoryIT signatureItemFactoryIT, ftQueueIT queueIt, IReadOnlyConfigurationRepository configurationRepository) : base(configurationRepository)
         {
             _signatureItemFactoryIT = signatureItemFactoryIT;
             _queueIt = queueIt;

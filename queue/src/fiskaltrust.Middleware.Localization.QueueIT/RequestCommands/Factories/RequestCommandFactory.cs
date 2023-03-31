@@ -17,9 +17,9 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands.Factories
         {
             RequestCommand command = (request.ftReceiptCase & 0xFFFF) switch
             {
-                0x0000 => ActivatorUtilities.CreateInstance<PosReceiptCommand>(_serviceProvider, queueIt),
-                0x0001 => ActivatorUtilities.CreateInstance<PosReceiptCommand>(_serviceProvider, queueIt),  
-                0x0003 => ActivatorUtilities.CreateInstance<InitialOperationReceiptCommand>(_serviceProvider, queueIt),
+                0x0000 => _serviceProvider.GetService<PosReceiptCommand>(),
+                0x0001 => _serviceProvider.GetService<PosReceiptCommand>(),
+                0x0003 => _serviceProvider.GetService<InitialOperationReceiptCommand>(),
                 0x0004 => _serviceProvider.GetService<OutOfOperationReceiptCommand>(),
                 0x0007 => _serviceProvider.GetService<DailyClosingReceiptCommand>(),
                 0x0005 => _serviceProvider.GetService<MonthlyClosingReceiptCommand>(),

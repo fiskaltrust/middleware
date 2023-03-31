@@ -68,12 +68,16 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
             serviceCollection.AddStandardLoggers(LogLevel.Debug);
             var desscdMock = new Mock<IITSSCDProvider>();
             desscdMock.SetupGet( x => x.Instance).Returns(inMemoryTestScu);
-            var posreceitRommand = new PosReceiptCommand(desscdMock.Object, new SignatureItemFactoryIT(), new ftQueueIT(), Mock.Of<IJournalITRepository>());
+
+            var configRepoMock = new Mock<IReadOnlyConfigurationRepository>();
+            configRepoMock.Setup(x => x.GetQueueITAsync(It.IsAny<Guid>())).ReturnsAsync(new ftQueueIT());
+
+            var posReceiptCommand = new PosReceiptCommand(desscdMock.Object, new SignatureItemFactoryIT(), Mock.Of<IJournalITRepository>(), configRepoMock.Object);
 
             var queue = new ftQueue() { ftQueueId = Guid.NewGuid(), ftReceiptNumerator = 5 };
             var queueItem = new ftQueueItem() { ftQueueId = queue.ftQueueId, ftQueueItemId = Guid.NewGuid(), ftQueueRow = 7 };
 
-            var response = await posreceitRommand.ExecuteAsync(queue, request, queueItem);
+            var response = await posReceiptCommand.ExecuteAsync(queue, request, queueItem);
 
             var znrSig = response.ReceiptResponse.ftSignatures.Where(x => x.Caption == "<z-number>").FirstOrDefault();
             var amntSig = response.ReceiptResponse.ftSignatures.Where(x => x.Caption == "<amount>").FirstOrDefault();

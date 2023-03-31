@@ -11,17 +11,22 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
     public abstract class InitialOperationReceiptCommand : RequestCommand
     {
         private readonly ILogger<InitialOperationReceiptCommand> _logger;
-        public InitialOperationReceiptCommand(ILogger<InitialOperationReceiptCommand> logger)
+        private readonly IReadOnlyConfigurationRepository _configurationRepository;
+
+        public InitialOperationReceiptCommand(ILogger<InitialOperationReceiptCommand> logger, IReadOnlyConfigurationRepository configurationRepository)
         {
             _logger = logger;
+            _configurationRepository = configurationRepository;
         }
 
         public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
         {
+            var queueIt = await _configurationRepository.GetQueueITAsync(queue.ftQueueId);
+
             if (queue.IsNew())
             {
                 queue.StartMoment = DateTime.UtcNow;
-                var receiptResponse = CreateReceiptResponse(queue, request, queueItem);
+                var receiptResponse = CreateReceiptResponse(queue, request, queueItem, queueIt.CashBoxIdentification);
 
                 var (actionJournal, signature) = await InitializeSCUAsync(queue, request, queueItem);
 
@@ -42,7 +47,7 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
             return new RequestCommandResponse
             {
                 ActionJournals = new List<ftActionJournal> { actionJournalEntry },
-                ReceiptResponse = CreateReceiptResponse(queue, request, queueItem)
+                ReceiptResponse = CreateReceiptResponse(queue, request, queueItem, queueIt.CashBoxIdentification)
             };
         }
 

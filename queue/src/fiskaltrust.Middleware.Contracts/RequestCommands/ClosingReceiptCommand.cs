@@ -8,10 +8,20 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
 {
     public abstract class ClosingReceiptCommand : RequestCommand
     {
+        private readonly IReadOnlyConfigurationRepository _configurationRepository;
+
         protected abstract string ClosingReceiptName { get; }
-        public override Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
+
+        public ClosingReceiptCommand(IReadOnlyConfigurationRepository configurationRepository)
         {
-            var receiptResponse = CreateReceiptResponse(queue, request, queueItem, CountryBaseState);
+            _configurationRepository = configurationRepository;
+        }
+
+        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
+        {
+            var queueIt = await _configurationRepository.GetQueueITAsync(queue.ftQueueId);
+
+            var receiptResponse = CreateReceiptResponse(queue, request, queueItem, queueIt.CashBoxIdentification, CountryBaseState);
             var actionJournalEntry = CreateActionJournal(queue.ftQueueId, $"{request.ftReceiptCase:X}", queueItem.ftQueueItemId, $"{ClosingReceiptName} receipt was processed.",
                 JsonConvert.SerializeObject(new { ftReceiptNumerator = queue.ftReceiptNumerator + 1 }));
             var requestCommandResponse = new RequestCommandResponse
@@ -19,7 +29,7 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
                 ReceiptResponse = receiptResponse,
                 ActionJournals = new List<ftActionJournal> { actionJournalEntry }
             };
-            return SpecializeAsync(requestCommandResponse);
+            return await SpecializeAsync(requestCommandResponse);
         }
 
         // This is overkill for now ... just to demonstrate how we could maybe add some country specific funtionality

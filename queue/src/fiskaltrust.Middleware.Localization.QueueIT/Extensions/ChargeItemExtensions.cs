@@ -20,7 +20,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
             {
                 0x10000 => OperationType.Acconto,
                 0x20000 => OperationType.FreeOfCharge,
-                0x30000 => OperationType.SingleUseVoucher,
+                0x40000 => OperationType.SingleUseVoucher,
                 _ => null,
             };
         }

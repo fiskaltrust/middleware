@@ -26,31 +26,31 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Factories
             {
                 new SignaturItem
                 {
-                    Caption = "<rec-number>",
+                    Caption = "<recript-number>",
                     Data = fiscalReceiptResponse.ReceiptNumber.ToString(),
                     ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                    ftSignatureType = CountryBaseState & (long) SignaturItem.Types.Information
+                    ftSignatureType = CountryBaseState & (long) SignatureTypesIT.ReceiptNumber
                 },
                 new SignaturItem
                 {
                     Caption = "<z-number>",
                     Data = fiscalReceiptResponse.ZRepNumber.ToString(),
                     ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                    ftSignatureType = CountryBaseState & (long) SignaturItem.Types.Information
+                    ftSignatureType = CountryBaseState & (long) SignatureTypesIT.ZNumber
                 },
                 new SignaturItem
                 {
-                    Caption = "<amount>",
+                    Caption = "<receipt-amount>",
                     Data = fiscalReceiptResponse.Amount.ToString(CurrencyFormatter),
                     ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                    ftSignatureType = CountryBaseState & (long) SignaturItem.Types.Information
+                    ftSignatureType = CountryBaseState & (long) SignatureTypesIT.ReceiptAmount
                 },
                 new SignaturItem
                 {
-                    Caption = "<timestamp>",
+                    Caption = "<receipt-timestamp>",
                     Data = fiscalReceiptResponse.ReceiptDateTime.ToString("yyyy-MM-dd HH:mm:ss"),
                     ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                    ftSignatureType = CountryBaseState & (long) SignaturItem.Types.Information
+                    ftSignatureType = CountryBaseState & (long) SignatureTypesIT.ReceiptTimestamp
                 }
             };
         }
