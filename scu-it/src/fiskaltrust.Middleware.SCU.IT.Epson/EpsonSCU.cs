@@ -199,9 +199,10 @@ public sealed class EpsonSCU : IITSSCD
             }
             else
             {
-                dailyClosingResponse.ZRepNumber = result?.ReportInfo?.ZRepNumber != null ? ulong.Parse(result.ReportInfo.ZRepNumber) : 0;
+
+                dailyClosingResponse.ZRepNumber = result?.ReportInfo?.ZRepNumber != null ? long.Parse(result.ReportInfo.ZRepNumber) : 0;
                 dailyClosingResponse.DailyAmount = result?.ReportInfo?.DailyAmount != null ? decimal.Parse(result.ReportInfo.DailyAmount, new CultureInfo("it-It", false)) : 0;
-                dailyClosingResponse.RecordDataJson = await DownloadJsonAsync("www/json_files/zrep.json");
+                dailyClosingResponse.ReportDataJson = await DownloadJsonAsync("www/json_files/zrep.json");
             }
             return dailyClosingResponse;
         }
@@ -252,19 +253,19 @@ public sealed class EpsonSCU : IITSSCD
             amount = payments?.Sum(x => x.Amount) ?? 0;
         }
         fiscalReceiptResponse.Amount = amount;
-        fiscalReceiptResponse.RecNumber = result?.Receipt?.FiscalReceiptNumber != null ? ulong.Parse(result.Receipt.FiscalReceiptNumber) : 0;
-        fiscalReceiptResponse.ZRecNumber = result?.Receipt?.ZRepNumber != null ? ulong.Parse(result.Receipt.ZRepNumber) : 0;
-        fiscalReceiptResponse.RecordDataJson = await DownloadJsonAsync("www/json_files/rec.json");
+        fiscalReceiptResponse.ReceiptNumber = result?.Receipt?.FiscalReceiptNumber != null ? long.Parse(result.Receipt.FiscalReceiptNumber) : 0;
+        fiscalReceiptResponse.ZRepNumber = result?.Receipt?.ZRepNumber != null ? long.Parse(result.Receipt.ZRepNumber) : 0;
+        fiscalReceiptResponse.ReceiptDataJson = await DownloadJsonAsync("www/json_files/rec.json");
 
         if (result?.Receipt?.FiscalReceiptDate != null && result?.Receipt?.FiscalReceiptTime != null)
         {
-            fiscalReceiptResponse.TimeStamp = DateTime.ParseExact(result.Receipt.FiscalReceiptDate, "d/M/yyyy", CultureInfo.InvariantCulture);
+            fiscalReceiptResponse.ReceiptDateTime = DateTime.ParseExact(result.Receipt.FiscalReceiptDate, "d/M/yyyy", CultureInfo.InvariantCulture);
             var time = TimeSpan.Parse(result.Receipt.FiscalReceiptTime);
-            fiscalReceiptResponse.TimeStamp = fiscalReceiptResponse.TimeStamp + time;
+            fiscalReceiptResponse.ReceiptDateTime = fiscalReceiptResponse.ReceiptDateTime + time;
         }
         else
         {
-            fiscalReceiptResponse.TimeStamp = DateTime.Now;
+            fiscalReceiptResponse.ReceiptDateTime = DateTime.Now;
         }
     }
 
