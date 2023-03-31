@@ -47,6 +47,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
         public string CreateRefundRequestContent(FiscalReceiptRefund request)
         {
             var fiscalReceipt = CreateFiscalReceipt(request);
+            fiscalReceipt.DisplayText = DisplayText.FromString(request.DisplayText);
             fiscalReceipt.PrintRecRefund = request.Refunds?.Select(GetPrintRecRefund).ToList();
             return SoapSerializer.Serialize(fiscalReceipt);
         }
