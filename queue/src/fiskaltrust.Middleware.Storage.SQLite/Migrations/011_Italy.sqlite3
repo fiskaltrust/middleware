@@ -26,11 +26,11 @@ CREATE TABLE IF NOT EXISTS ftJournalIT
     ftQueueItemId                   NVARCHAR(36)                NOT NULL,
     ftQueueId                       NVARCHAR(36)                NOT NULL,
     ftSignaturCreationUnitITId      NVARCHAR(36)                NOT NULL,
-    RecNumber                       BIGINT                      NOT NULL,
-    ZRecNumber                      BIGINT                      NOT NULL,
+    ReceiptNumber                   BIGINT                      NOT NULL,
+    ZRepNumber                      BIGINT                      NOT NULL,
     JournalType                     BIGINT                      NOT NULL,
     cbReceiptReference              NVARCHAR(2147483647)        NULL,
-    RecordDataJson                  NVARCHAR(2147483647)        NULL,
-    RecDate                         BIGINT                      NULL,
+    DataJson                        NVARCHAR(2147483647)        NULL,
+    ReceiptDateTime                 BIGINT                      NULL,
     TimeStamp                       BIGINT                      NOT NULL
 );

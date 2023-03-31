@@ -27,14 +27,14 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Factories
                 new SignaturItem
                 {
                     Caption = "<rec-number>",
-                    Data = fiscalReceiptResponse.RecNumber.ToString(),
+                    Data = fiscalReceiptResponse.ReceiptNumber.ToString(),
                     ftSignatureFormat = (long) SignaturItem.Formats.Text,
                     ftSignatureType = CountryBaseState & (long) SignaturItem.Types.Information
                 },
                 new SignaturItem
                 {
                     Caption = "<z-number>",
-                    Data = fiscalReceiptResponse.ZRecNumber.ToString(),
+                    Data = fiscalReceiptResponse.ZRepNumber.ToString(),
                     ftSignatureFormat = (long) SignaturItem.Formats.Text,
                     ftSignatureType = CountryBaseState & (long) SignaturItem.Types.Information
                 },
@@ -48,7 +48,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Factories
                 new SignaturItem
                 {
                     Caption = "<timestamp>",
-                    Data = fiscalReceiptResponse.TimeStamp.ToString("yyyy-MM-dd HH:mm:ss"),
+                    Data = fiscalReceiptResponse.ReceiptDateTime.ToString("yyyy-MM-dd HH:mm:ss"),
                     ftSignatureFormat = (long) SignaturItem.Formats.Text,
                     ftSignatureType = CountryBaseState & (long) SignaturItem.Types.Information
                 }

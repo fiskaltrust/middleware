@@ -14,12 +14,12 @@ namespace fiskaltrust.Middleware.Storage.EF.Migrations
                         ftQueueItemId = c.Guid(nullable: false),
                         ftQueueId = c.Guid(nullable: false),
                         ftSignaturCreationUnitITId = c.Guid(nullable: false),
-                        RecNumber = c.Int(nullable: false),
-                        ZRecNumber = c.Int(nullable: false),
+                        ReceiptNumber = c.Long(nullable: false),
+                        ZRepNumber = c.Long(nullable: false),
                         JournalType = c.Long(nullable: false),
-                        cbReceiptReference = c.String(maxLength: 350),
-                        RecordDataJson = c.String(),
-                        RecDate = c.DateTime(nullable: false, precision: 7, storeType: "datetime2"),
+                        cbReceiptReference = c.String(),
+                        DataJson = c.String(),
+                        ReceiptDateTime = c.DateTime(nullable: false, precision: 7, storeType: "datetime2"),
                         TimeStamp = c.Long(nullable: false),
                     })
                 .PrimaryKey(t => t.ftJournalITId, clustered: false)

@@ -15,12 +15,12 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
                     ftQueueItemId = table.Column<Guid>(type: "uuid", nullable: false),
                     ftQueueId = table.Column<Guid>(type: "uuid", nullable: false),
                     ftSignaturCreationUnitITId = table.Column<Guid>(type: "uuid", nullable: false),
-                    RecNumber = table.Column<int>(type: "integer", nullable: false),
-                    ZRecNumber = table.Column<int>(type: "integer", nullable: false),
+                    ReceiptNumber = table.Column<long>(type: "bigint", nullable: false),
+                    ZRepNumber = table.Column<long>(type: "bigint", nullable: false),
                     JournalType = table.Column<long>(type: "bigint", nullable: false),
                     cbReceiptReference = table.Column<string>(type: "text", nullable: true),
-                    RecordDataJson = table.Column<string>(type: "text", nullable: true),
-                    RecDate = table.Column<DateTime>(type: "timestamp without time zone", nullable: false),
+                    DataJson = table.Column<string>(type: "text", nullable: true),
+                    ReceiptDateTime = table.Column<DateTime>(type: "timestamp without time zone", nullable: false),
                     TimeStamp = table.Column<long>(type: "bigint", nullable: false)
                 },
                 constraints: table =>

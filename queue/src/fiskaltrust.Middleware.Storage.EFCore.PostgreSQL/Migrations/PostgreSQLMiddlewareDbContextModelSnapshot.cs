@@ -369,23 +369,23 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("DataJson")
+                        .HasColumnType("text");
+
                     b.Property<long>("JournalType")
                         .HasColumnType("bigint");
 
-                    b.Property<DateTime>("RecDate")
+                    b.Property<DateTime>("ReceiptDateTime")
                         .HasColumnType("timestamp without time zone");
 
-                    b.Property<int>("RecNumber")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("RecordDataJson")
-                        .HasColumnType("text");
+                    b.Property<long>("ReceiptNumber")
+                        .HasColumnType("bigint");
 
                     b.Property<long>("TimeStamp")
                         .HasColumnType("bigint");
 
-                    b.Property<int>("ZRecNumber")
-                        .HasColumnType("integer");
+                    b.Property<long>("ZRepNumber")
+                        .HasColumnType("bigint");
 
                     b.Property<string>("cbReceiptReference")
                         .HasColumnType("text");

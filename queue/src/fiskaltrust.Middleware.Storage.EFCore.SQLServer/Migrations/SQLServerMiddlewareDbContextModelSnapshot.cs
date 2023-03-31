@@ -374,23 +374,23 @@ namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("DataJson")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<long>("JournalType")
                         .HasColumnType("bigint");
 
-                    b.Property<DateTime>("RecDate")
+                    b.Property<DateTime>("ReceiptDateTime")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("RecNumber")
-                        .HasColumnType("int");
-
-                    b.Property<string>("RecordDataJson")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<long>("ReceiptNumber")
+                        .HasColumnType("bigint");
 
                     b.Property<long>("TimeStamp")
                         .HasColumnType("bigint");
 
-                    b.Property<int>("ZRecNumber")
-                        .HasColumnType("int");
+                    b.Property<long>("ZRepNumber")
+                        .HasColumnType("bigint");
 
                     b.Property<string>("cbReceiptReference")
                         .HasColumnType("nvarchar(450)");

@@ -271,10 +271,10 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
                 ftSignaturCreationUnitITId = src.ftSignaturCreationUnitITId,
                 cbReceiptReference = src.cbReceiptReference,
                 JournalType = src.JournalType,
-                RecDate = src.RecDate,
-                RecNumber = src.RecNumber,
-                RecordDataJson = src.RecordDataJson,
-                ZRecNumber = src.ZRecNumber,
+                ReceiptDateTime = src.ReceiptDateTime,
+                ReceiptNumber = src.ReceiptNumber,
+                DataJson = src.DataJson,
+                ZRepNumber = src.ZRepNumber,
                 TimeStamp = src.TimeStamp
             };
         }
@@ -295,10 +295,10 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
                 ftSignaturCreationUnitITId = src.ftSignaturCreationUnitITId,
                 cbReceiptReference = src.cbReceiptReference,
                 JournalType = src.JournalType,
-                RecDate = src.RecDate,
-                RecNumber = src.RecNumber,
-                RecordDataJson = src.RecordDataJson,
-                ZRecNumber = src.ZRecNumber,
+                ReceiptDateTime = src.ReceiptDateTime,
+                ReceiptNumber = src.ReceiptNumber,
+                DataJson = src.DataJson,
+                ZRepNumber = src.ZRepNumber,
                 TimeStamp = src.TimeStamp
             };
         }

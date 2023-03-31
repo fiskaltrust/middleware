@@ -8,12 +8,12 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.TableEntities
         public Guid ftQueueItemId { get; set; }
         public Guid ftQueueId { get; set; }
         public Guid ftSignaturCreationUnitITId { get; set; }
-        public int RecNumber { get; set; }
-        public int ZRecNumber { get; set; }
+        public long ReceiptNumber { get; set; }
+        public long ZRepNumber { get; set; }
         public long JournalType { get; set; }
         public string cbReceiptReference { get; set; }
-        public string RecordDataJson { get; set; }
-        public DateTime RecDate { get; set; }
+        public string DataJson { get; set; }
+        public DateTime ReceiptDateTime { get; set; }
         public long TimeStamp { get; set; }
     }
 }

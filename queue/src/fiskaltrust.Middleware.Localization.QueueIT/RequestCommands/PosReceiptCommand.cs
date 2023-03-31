@@ -71,10 +71,10 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
                 cbReceiptReference = request.cbReceiptReference,
                 ftSignaturCreationUnitITId = _ftQueueIT.ftSignaturCreationUnitITId.Value,
                 JournalType = request.ftReceiptCase & 0xFFFF,
-                RecDate = response.TimeStamp,
-                RecNumber = response.RecNumber,
-                ZRecNumber = response.ZRecNumber,
-                RecordDataJson = response.RecordDataJson,
+                ReceiptDateTime = response.ReceiptDateTime,
+                ReceiptNumber = response.ReceiptNumber,
+                ZRepNumber = response.ZRepNumber,
+                DataJson = response.ReceiptDataJson,
                 TimeStamp = DateTime.UtcNow.Ticks
             };
 

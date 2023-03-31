@@ -124,7 +124,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL
         public PostgreSQLMiddlewareDbContext CreateDbContext(string[] args)
         {
             var optionsBuilder = new DbContextOptionsBuilder<PostgreSQLMiddlewareDbContext>();
-            optionsBuilder.UseNpgsql(@"Host=localhost;Username=postgres;Password=mysecretpassword;Database=postgres");
+            optionsBuilder.UseNpgsql(@"Host=localhost;port=5455;Username=postgres;Password=mysecretpassword;Database=postgres");
 
             return new PostgreSQLMiddlewareDbContext(optionsBuilder.Options);
         }
