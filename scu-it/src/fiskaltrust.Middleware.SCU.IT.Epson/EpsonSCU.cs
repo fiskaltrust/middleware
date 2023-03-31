@@ -24,6 +24,7 @@ public sealed class EpsonSCU : IITSSCD
     private readonly string _commandUrl;
     private readonly ErrorCodeFactory _errorCodeFactory = new();
     private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(0, 1);
+    private string _serialnr = "";
 
     public EpsonSCU(ILogger<EpsonSCU> logger, EpsonScuConfiguration configuration, EpsonCommandFactory epsonXmlWriter)
     {
@@ -93,6 +94,21 @@ public sealed class EpsonSCU : IITSSCD
             _semaphore.Release();
         }
     }
+
+    public async Task<string> GetSerialNumberAsync(string rtType)
+    {
+        var serialQuery = new PrinterCommand() { DirectIO =  DirectIO.GetSerialNrCommand() };
+        var content = SoapSerializer.Serialize(serialQuery);
+        var responseSerialnr = await SendRequestAsync(content);
+
+        using var responseContent = await responseSerialnr.Content.ReadAsStreamAsync();
+        var result = SoapSerializer.Deserialize<PrinterCommandResponse>(responseContent);
+
+        var serialnr = result?.CommandResponse?.ResponseData;
+
+        return serialnr?.Substring(10, 2) + rtType + serialnr?.Substring(8, 2)  + serialnr?.Substring(2, 6);
+    }
+
 
     public async Task<FiscalReceiptResponse> FiscalReceiptRefundAsync(FiscalReceiptRefund request)
     {
@@ -212,13 +228,19 @@ public sealed class EpsonSCU : IITSSCD
         var result = SoapSerializer.Deserialize<StatusResponse>(responseContent);
 
         _logger.LogInformation(JsonConvert.SerializeObject(result));
+        if (string.IsNullOrEmpty(_serialnr) && result?.Printerstatus?.RtType != null)
+        {
+            _serialnr = await GetSerialNumberAsync(result.Printerstatus.RtType).ConfigureAwait(false);
+        }
 
         return new DeviceInfo
         {
             DailyOpen = result?.Printerstatus?.DailyOpen == "1",
             DeviceStatus = ParseStatus(result?.Printerstatus?.MfStatus), // TODO Create enum
             ExpireDeviceCertificateDate = result?.Printerstatus?.ExpiryCD, // TODO Use Datetime; this value seemingly can also be 20
-            ExpireTACommunicationCertificateDate = result?.Printerstatus?.ExpiryCA // TODO use DateTime?
+            ExpireTACommunicationCertificateDate = result?.Printerstatus?.ExpiryCA, // TODO use DateTime?
+            SerialNumber = _serialnr
+
         };
     }
 
@@ -270,7 +292,7 @@ public sealed class EpsonSCU : IITSSCD
 
     private async Task ResetPrinter()
     {
-        var resetCommand = new ResetPrinterCommand() { ResetPrinter = new ResetPrinter() { Operator = "" } };
+        var resetCommand = new PrinterCommand() { ResetPrinter = new ResetPrinter() { Operator = "" } };
         var xml = SoapSerializer.Serialize(resetCommand);
         await SendRequestAsync(xml);
     }
