@@ -35,8 +35,8 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories.Configuration
         {
             EntityUpdated(entity);
             var sql = "REPLACE INTO ftQueueIT " +
-                      "(ftQueueITId, ftSignaturCreationUnitITId, LastHash, SSCDFailCount, SSCDFailMoment, SSCDFailQueueItemId, UsedFailedCount, UsedFailedMomentMin, UsedFailedMomentMax, UsedFailedQueueItemId, TimeStamp) " +
-                      "Values (@ftQueueITId, @ftSignaturCreationUnitITId, @LastHash, @SSCDFailCount, @SSCDFailMoment, @SSCDFailQueueItemId, @UsedFailedCount, @UsedFailedMomentMin, @UsedFailedMomentMax, @UsedFailedQueueItemId, @TimeStamp);";
+                      "(ftQueueITId, ftSignaturCreationUnitITId, LastHash, CashBoxIdentification, SSCDFailCount, SSCDFailMoment, SSCDFailQueueItemId, UsedFailedCount, UsedFailedMomentMin, UsedFailedMomentMax, UsedFailedQueueItemId, TimeStamp) " +
+                      "Values (@ftQueueITId, @ftSignaturCreationUnitITId, @LastHash, @CashBoxIdentification, @SSCDFailCount, @SSCDFailMoment, @SSCDFailQueueItemId, @UsedFailedCount, @UsedFailedMomentMin, @UsedFailedMomentMax, @UsedFailedQueueItemId, @TimeStamp);";
             using (var connection = new MySqlConnection(ConnectionString))
             {
                 await connection.OpenAsync().ConfigureAwait(false);

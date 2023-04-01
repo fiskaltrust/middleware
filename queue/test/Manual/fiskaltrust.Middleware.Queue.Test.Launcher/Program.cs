@@ -20,8 +20,8 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
 {
     public static class Program
     {
-        private static readonly string _cashBoxId = "e9df1360-fdbc-45b7-aebf-36ee72bb35a8";
-        private static readonly string _accessToken = "BPptoxY4DL714FFnYQakyxoEV2se0sTQ/zeIot9kHiLpbcVDIEc0i95zbsLEEEP53mcozErdRJVdwSQMLKIHHAs=";
+        private static readonly string _cashBoxId = "a3085d15-e122-4d0a-883b-98df559b4b0c";
+        private static readonly string _accessToken = "BKinP5lUapunDs92kEvji36dfhEQcRd9V3BD0BIhJ/yQOBRxCMHttW+8qhthQFUJlsebi4ifGF2Z5+wex/rb5DQ=";
         private static readonly string _localization = "IT";
 
         public static void Main(string configurationFilePath = "", string serviceFolder = @"C:\ProgramData\fiskaltrust\service")
@@ -62,19 +62,18 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
                 if (_localization == "ME")
                 {
                     serviceCollection.AddScoped<IClientFactory<IMESSCD>, MESSCDClientFactory>();
+                    OverrideMasterdata(_localization, config);
                 }
                 else if (_localization == "IT")
                 {
                     serviceCollection.AddScoped<IClientFactory<IITSSCD>, ITSSCDClientFactory>();
                 }
-                overrideLocalization(_localization, config);
-
             }
             else
             {
                 serviceCollection.AddScoped<IClientFactory<IDESSCD>, DESSCDClientFactory>();
             }
-            
+
             if (config.Package == "fiskaltrust.Middleware.Queue.SQLite")
             {
                 ConfigureSQLite(config, serviceCollection);
@@ -92,7 +91,7 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
             Console.ReadLine();
         }
 
-        private static void overrideLocalization(string localization, PackageConfiguration config)
+        private static void OverrideMasterdata(string localization, PackageConfiguration config)
         {
             var key = "init_ftQueue";
             if (config.Configuration.ContainsKey(key))
@@ -102,7 +101,7 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
                 config.Configuration[key] = JsonConvert.SerializeObject(queues);
             }
             var temp = config.Configuration["init_ftQueueDE"];
-            config.Configuration["init_ftQueue"+localization] = temp.ToString().Replace("DE", localization);
+            config.Configuration["init_ftQueue" + localization] = temp.ToString().Replace("DE", localization);
             temp = config.Configuration["init_ftSignaturCreationUnitDE"];
             config.Configuration["init_ftSignaturCreationUnit" + localization] = temp.ToString().Replace("DE", localization);
 
@@ -120,12 +119,12 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
 
         private static void ConfigureSQLite(PackageConfiguration queue, ServiceCollection serviceCollection)
         {
-                var bootStrapper = new SQLite.PosBootstrapper
-                {
-                    Id = queue.Id,
-                    Configuration = queue.Configuration
-                };
-                bootStrapper.ConfigureServices(serviceCollection);
+            var bootStrapper = new SQLite.PosBootstrapper
+            {
+                Id = queue.Id,
+                Configuration = queue.Configuration
+            };
+            bootStrapper.ConfigureServices(serviceCollection);
         }
     }
 }

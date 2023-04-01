@@ -534,6 +534,105 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
         }
 
         [Fact]
+        public async Task GetQueueITListAsync_ShouldReturnAllEntriesThatExistInRepository()
+        {
+            var expectedEntries = StorageTestFixtureProvider.GetFixture().CreateMany<ftQueueIT>(10);
+
+            var sut = await CreateReadOnlyRepository(queuesIT: expectedEntries);
+            var actualEntries = await sut.GetQueueITListAsync();
+
+            actualEntries.Should().BeEquivalentTo(expectedEntries);
+        }
+
+        [Fact]
+        public async Task GetQueueITAsync_WithId_ShouldReturn_TheElementWithTheGivenId_IfTheIdExists()
+        {
+            var entries = StorageTestFixtureProvider.GetFixture().CreateMany<ftQueueIT>(10).ToList();
+            var expectedEntry = entries[4];
+
+            var sut = await CreateReadOnlyRepository(queuesIT: entries);
+            var actualEntry = await sut.GetQueueFRAsync(expectedEntry.ftQueueITId);
+
+            actualEntry.Should().BeEquivalentTo(expectedEntry);
+        }
+
+        [Fact]
+        public async Task GetQueueITAsync_WithId_ShouldReturn_Null_IfTheGivenIdDoesntExist()
+        {
+            var entries = StorageTestFixtureProvider.GetFixture().CreateMany<ftQueueIT>(10).ToList();
+
+            var sut = await CreateReadOnlyRepository(queuesIT: entries);
+            var actualEntry = await sut.GetQueueITAsync(Guid.Empty);
+
+            actualEntry.Should().BeNull();
+        }
+
+        [Fact]
+        public async Task InsertOrUpdateQueueITAsync_ShouldAddEntry_ToTheDatabase()
+        {
+            var entries = StorageTestFixtureProvider.GetFixture().CreateMany<ftQueueIT>(10).ToList();
+            var entryToInsert = StorageTestFixtureProvider.GetFixture().Create<ftQueueIT>();
+
+            var sut = await CreateRepository(queuesIT: entries);
+            await sut.InsertOrUpdateQueueITAsync(entryToInsert);
+
+            var insertedEntry = await sut.GetQueueFRAsync(entryToInsert.ftQueueITId);
+            insertedEntry.Should().BeEquivalentTo(entryToInsert);
+        }
+
+        [Fact]
+        public async Task InsertOrUpdateQueueITAsync_ShouldUpdateEntry_IfEntryAlreadyExists()
+        {
+            var entries = StorageTestFixtureProvider.GetFixture().CreateMany<ftQueueIT>(10).ToList();
+            var updatedValue = Guid.NewGuid().ToString();
+
+            var sut = await CreateRepository(queuesIT: entries);
+
+            var entryToUpdate = await sut.GetQueueFRAsync(entries[0].ftQueueITId);
+            entryToUpdate.ALastHash = updatedValue;
+
+            await sut.InsertOrUpdateQueueFRAsync(entryToUpdate);
+
+            var updatedEntry = await sut.GetQueueFRAsync(entries[0].ftQueueITId);
+
+            updatedEntry.ALastHash.Should().BeEquivalentTo(updatedValue);
+        }
+
+        [Fact]
+        public async Task InsertOrUpdateQueueITAsync_ShouldUpdateTimeStampOfTheInsertedEntry()
+        {
+            var entries = StorageTestFixtureProvider.GetFixture().CreateMany<ftQueueIT>(10).ToList();
+            var entryToInsert = StorageTestFixtureProvider.GetFixture().Create<ftQueueIT>();
+            var initialTimeStamp = DateTime.UtcNow.AddHours(-1).Ticks;
+            entryToInsert.TimeStamp = initialTimeStamp;
+
+            var sut = await CreateRepository(queuesIT: entries);
+            await sut.InsertOrUpdateQueueITAsync(entryToInsert);
+
+            var insertedEntry = await sut.GetQueueITAsync(entryToInsert.ftQueueITId);
+            insertedEntry.TimeStamp.Should().BeGreaterThan(initialTimeStamp);
+        }
+
+        [Fact]
+        public async Task InsertOrUpdateQueueITAsync_ShouldUpdateTimeStampOfTheUpdatedEntry()
+        {
+            var entries = StorageTestFixtureProvider.GetFixture().CreateMany<ftQueueIT>(10).ToList();
+            var initialTimeStamp = DateTime.UtcNow.AddHours(-1).Ticks;
+            entries[0].TimeStamp = initialTimeStamp;
+            var updatedValue = Guid.NewGuid().ToString();
+
+            var sut = await CreateRepository(queuesIT: entries);
+
+            var entryToUpdate = await sut.GetQueueFRAsync(entries[0].ftQueueITId);
+            entryToUpdate.ALastHash = updatedValue;
+
+            await sut.InsertOrUpdateQueueITAsync(entries[0]);
+
+            var updatedEntry = await sut.GetQueueFRAsync(entries[0].ftQueueITId);
+            updatedEntry.TimeStamp.Should().BeGreaterThan(initialTimeStamp);
+        }
+
+        [Fact]
         public async Task GetSignaturCreationUnitATListAsync_ShouldReturnAllEntriesThatExistInRepository()
         {
             var expectedEntries = StorageTestFixtureProvider.GetFixture().CreateMany<ftSignaturCreationUnitAT>(10);

@@ -12,11 +12,13 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
     {
         private readonly SignatureItemFactoryIT _signatureItemFactoryIT;
         private readonly ftQueueIT _queueIt;
+        private readonly IReadOnlyConfigurationRepository _configurationRepository;
 
-        public OutOfOperationReceiptCommand(SignatureItemFactoryIT signatureItemFactoryIT, ftQueueIT queueIt, IReadOnlyConfigurationRepository configurationRepository) : base(configurationRepository)
+        public OutOfOperationReceiptCommand(SignatureItemFactoryIT signatureItemFactoryIT, ftQueueIT queueIt, IReadOnlyConfigurationRepository configurationRepository)
         {
             _signatureItemFactoryIT = signatureItemFactoryIT;
             _queueIt = queueIt;
+            _configurationRepository = configurationRepository;
         }
 
         public override long CountryBaseState => Constants.Cases.BASE_STATE;
@@ -39,6 +41,13 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
                 queueItem.ftQueueItemId, $"Out-of-Operation receipt. Queue-ID: {queue.ftQueueId}", JsonConvert.SerializeObject(notification));
 
             return Task.FromResult((actionJournal, signatureItem));
+        }
+
+        protected override async Task<string> GetCashboxIdentificationAsync(Guid ftQueueId)
+        {
+
+            var queueIt = await _configurationRepository.GetQueueITAsync(ftQueueId).ConfigureAwait(false);
+            return queueIt.CashBoxIdentification;
         }
     }
 }
