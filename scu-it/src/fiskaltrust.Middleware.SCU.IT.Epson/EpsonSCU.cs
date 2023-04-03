@@ -31,6 +31,10 @@ public sealed class EpsonSCU : IITSSCD
         _logger = logger;
         _configuration = configuration;
         _epsonXmlWriter = epsonXmlWriter;
+        if (string.IsNullOrEmpty(configuration.DeviceUrl))
+        {
+            throw new NullReferenceException("EpsonScuConfiguration DeviceUrl not set.");
+        }
         _httpClient = new HttpClient
         {
             BaseAddress = new Uri(configuration.DeviceUrl),
