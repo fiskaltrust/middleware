@@ -26,7 +26,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Factories
             {
                 new SignaturItem
                 {
-                    Caption = "<recript-number>",
+                    Caption = "<receipt-number>",
                     Data = fiscalReceiptResponse.ReceiptNumber.ToString(),
                     ftSignatureFormat = (long) SignaturItem.Formats.Text,
                     ftSignatureType = CountryBaseState & (long) SignatureTypesIT.ReceiptNumber

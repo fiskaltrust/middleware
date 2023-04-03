@@ -69,8 +69,10 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
             var desscdMock = new Mock<IITSSCDProvider>();
             desscdMock.SetupGet( x => x.Instance).Returns(inMemoryTestScu);
 
+
+            var queueIt = new ftQueueIT() { CashBoxIdentification = "testserial", ftSignaturCreationUnitITId = Guid.NewGuid()};
             var configRepoMock = new Mock<IReadOnlyConfigurationRepository>();
-            configRepoMock.Setup(x => x.GetQueueITAsync(It.IsAny<Guid>())).ReturnsAsync(new ftQueueIT());
+            configRepoMock.Setup(x => x.GetQueueITAsync(It.IsAny<Guid>())).ReturnsAsync(queueIt);
 
             var posReceiptCommand = new PosReceiptCommand(desscdMock.Object, new SignatureItemFactoryIT(), Mock.Of<IJournalITRepository>(), configRepoMock.Object);
 
@@ -79,10 +81,14 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
 
             var response = await posReceiptCommand.ExecuteAsync(queue, request, queueItem);
 
+            var nrSig = response.ReceiptResponse.ftSignatures.Where(x => x.Caption == "<receipt-number>").FirstOrDefault();
             var znrSig = response.ReceiptResponse.ftSignatures.Where(x => x.Caption == "<z-number>").FirstOrDefault();
-            var amntSig = response.ReceiptResponse.ftSignatures.Where(x => x.Caption == "<amount>").FirstOrDefault();
-            var tsmpSig = response.ReceiptResponse.ftSignatures.Where(x => x.Caption == "<timestamp>").FirstOrDefault();
-            znrSig.Data.Should().Be("245");
+            var amntSig = response.ReceiptResponse.ftSignatures.Where(x => x.Caption == "<receipt-amount>").FirstOrDefault();
+            var tsmpSig = response.ReceiptResponse.ftSignatures.Where(x => x.Caption == "<receipt-timestamp>").FirstOrDefault();
+
+
+            znrSig.Data.Should().Be("0");
+            nrSig.Data.Should().Be("245");
             amntSig.Data.Should().Be("9809,98");
             tsmpSig.Data.Should().Be("1999-01-01 00:00:01");
 
