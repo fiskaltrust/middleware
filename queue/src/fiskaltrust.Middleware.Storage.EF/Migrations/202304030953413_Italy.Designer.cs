@@ -13,7 +13,7 @@ namespace fiskaltrust.Middleware.Storage.EF.Migrations
         
         string IMigrationMetadata.Id
         {
-            get { return "202303311755226_Italy"; }
+            get { return "202304030953413_Italy"; }
         }
         
         string IMigrationMetadata.Source
