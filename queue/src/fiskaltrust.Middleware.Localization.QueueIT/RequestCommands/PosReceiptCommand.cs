@@ -10,6 +10,8 @@ using fiskaltrust.Middleware.Localization.QueueIT.Extensions;
 using fiskaltrust.Middleware.Localization.QueueIT.Factories;
 using fiskaltrust.Middleware.Localization.QueueIT.Services;
 using fiskaltrust.Middleware.Contracts.Extensions;
+using fiskaltrust.Middleware.Localization.QueueIT.Exceptions;
+using System.ServiceModel.Channels;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 {
@@ -32,6 +34,12 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 
         public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
         {
+            var journals = await _journalITRepository.GetAsync().ConfigureAwait(false);
+            if (journals.Where(x=> x.cbReceiptReference.Equals(request.cbReceiptReference)).Any())
+            {
+                throw new CbReferenceExistsException( request.cbReceiptReference);
+            }
+
             var queueIt = await _configurationRepository.GetQueueITAsync(queue.ftQueueId);
 
             var receiptResponse = CreateReceiptResponse(queue, request, queueItem, queueIt.CashBoxIdentification, CountryBaseState);
@@ -107,6 +115,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 
         private static FiscalReceiptRefund CreateRefund(ReceiptRequest request)
         {
+
             var fiscalReceiptRequest = new FiscalReceiptRefund()
             {
                 //TODO Barcode = "0123456789" 
