@@ -25,6 +25,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.TableEntities.Configu
         public Guid? UsedFailedQueueItemId { get; set; }
 
         public long TimeStamp { get; set; }
-        public string CashBoxIdentification { get; internal set; }
+
+        public string CashBoxIdentification { get; set; }
     }
 }
