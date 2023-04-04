@@ -18,7 +18,6 @@
         public static string FtQueueME = "ftQueueME";
         public static string FtSignaturCreationUnitAT = "ftSignaturCreationUnitAT";
         public static string FtSignaturCreationUnitDE = "ftSignaturCreationUnitDE";
-        public static string FtSignaturCreationUnitES = "ftSignaturCreationUnitES";
         public static string FtSignaturCreationUnitFR = "ftSignaturCreationUnitFR";
         public static string FtSignaturCreationUnitIT = "ftSignaturCreationUnitIT";
         public static string FtSignaturCreationUnitME = "ftSignaturCreationUnitME";

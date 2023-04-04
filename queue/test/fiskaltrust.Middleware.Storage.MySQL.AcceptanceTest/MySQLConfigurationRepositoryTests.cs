@@ -128,8 +128,6 @@ namespace fiskaltrust.Middleware.Storage.MySQL.AcceptanceTest
                     command.ExecuteNonQuery();
                     command.CommandText = $@"DELETE FROM {TableNames.FtSignaturCreationUnitDE}";
                     command.ExecuteNonQuery();
-                    command.CommandText = $@"DELETE FROM {TableNames.FtSignaturCreationUnitES}";
-                    command.ExecuteNonQuery();
                     command.CommandText = $@"DELETE FROM {TableNames.FtSignaturCreationUnitFR}";
                     command.ExecuteNonQuery();
                     command.CommandText = $@"DELETE FROM {TableNames.FtSignaturCreationUnitIT}";

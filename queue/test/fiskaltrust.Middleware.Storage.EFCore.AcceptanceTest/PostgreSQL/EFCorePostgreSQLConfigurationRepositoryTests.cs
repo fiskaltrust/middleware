@@ -51,7 +51,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.AcceptanceTest.PostgreSQL
                 await repository.InsertOrUpdateQueueITAsync(item);
             }
 
-                foreach (var item in queuesME ?? new List<ftQueueME>())
+            foreach (var item in queuesME ?? new List<ftQueueME>())
             {
                 await repository.InsertOrUpdateQueueMEAsync(item);
             }
@@ -82,7 +82,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.AcceptanceTest.PostgreSQL
             }
             return repository;
         }
-        public override void DisposeDatabase() 
+        public override void DisposeDatabase()
         {
             _ = EFCorePostgreSQLStorageCollectionFixture.TruncateTableAsync("ftQueue");
             _ = EFCorePostgreSQLStorageCollectionFixture.TruncateTableAsync("ftQueueAT");
@@ -92,7 +92,6 @@ namespace fiskaltrust.Middleware.Storage.EFCore.AcceptanceTest.PostgreSQL
             _ = EFCorePostgreSQLStorageCollectionFixture.TruncateTableAsync("ftQueueME");
             _ = EFCorePostgreSQLStorageCollectionFixture.TruncateTableAsync("ftSignaturCreationUnitAT");
             _ = EFCorePostgreSQLStorageCollectionFixture.TruncateTableAsync("ftSignaturCreationUnitDE");
-            _ = EFCorePostgreSQLStorageCollectionFixture.TruncateTableAsync("ftSignaturCreationUnitES");
             _ = EFCorePostgreSQLStorageCollectionFixture.TruncateTableAsync("ftSignaturCreationUnitFR");
             _ = EFCorePostgreSQLStorageCollectionFixture.TruncateTableAsync("ftSignaturCreationUnitIT");
             _ = EFCorePostgreSQLStorageCollectionFixture.TruncateTableAsync("ftSignaturCreationUnitME");
