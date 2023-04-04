@@ -12,9 +12,19 @@ using fiskaltrust.Middleware.Localization.QueueIT.Services;
 using fiskaltrust.Middleware.Contracts.Extensions;
 using fiskaltrust.Middleware.Localization.QueueIT.Exceptions;
 using System.ServiceModel.Channels;
+using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 {
+
+    public struct RefundDetails
+    {
+        public string Serialnumber { get; set; }
+        public long ZRepNumber { get; set; }
+        public long ReceiptNumber { get; set; }
+        public DateTime ReceiptDateTime { get; set; }
+    }
+
     public class PosReceiptCommand : RequestCommand
     {
         private readonly SignatureItemFactoryIT _signatureItemFactoryIT;
@@ -46,7 +56,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
             FiscalReceiptResponse response;
             if (request.IsVoid())
             {
-                var fiscalReceiptRefund = CreateRefund(request);
+                var fiscalReceiptRefund = await CreateRefundAsync(request).ConfigureAwait(false);
                 response = await _client.FiscalReceiptRefundAsync(fiscalReceiptRefund).ConfigureAwait(false);
             }
             else
@@ -54,16 +64,15 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
                 var fiscalReceiptinvoice = CreateInvoice(request);
                 response = await _client.FiscalReceiptInvoiceAsync(fiscalReceiptinvoice).ConfigureAwait(false);
             }
-
+            if (!response.Success)
+            {
+                throw new Exception(response.ErrorInfo);
+            }
             receiptResponse.ftSignatures = _signatureItemFactoryIT.CreatePosReceiptSignatures(response);
 
             var journalIT = CreateJournalIT(queue, queueIt, request, queueItem, response);
             await _journalITRepository.InsertAsync(journalIT).ConfigureAwait(false);
 
-            if (!response.Success)
-            {
-                throw new Exception(response.ErrorInfo);
-            }
 
             return new RequestCommandResponse
             {
@@ -113,13 +122,13 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
             return fiscalReceiptRequest;
         }
 
-        private static FiscalReceiptRefund CreateRefund(ReceiptRequest request)
+        private async Task<FiscalReceiptRefund> CreateRefundAsync(ReceiptRequest request)
         {
-
+            var refundDetails = await GetRefundDetailsAsync(request).ConfigureAwait(false);
             var fiscalReceiptRequest = new FiscalReceiptRefund()
             {
                 //TODO Barcode = "0123456789" 
-                //TODO DisplayText = "Message on customer display",
+                DisplayText = $"REFUND {refundDetails.ReceiptNumber:D4} {refundDetails.ZRepNumber:D4} {refundDetails.ReceiptDateTime:ddMMyyyy} {refundDetails.Serialnumber}",
                 Refunds = request.cbChargeItems?.Select(p => new Refund
                 {
                     Description = p.Description,
@@ -139,6 +148,21 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
             };
 
             return fiscalReceiptRequest;
+        }
+
+        private async Task<RefundDetails> GetRefundDetailsAsync(ReceiptRequest request)
+        {
+            var journalIt = await _journalITRepository.GetAsync().ConfigureAwait(false);
+            var receipt = journalIt.Where(x => x.cbReceiptReference.Equals(request.cbPreviousReceiptReference)).FirstOrDefault() ?? throw new RefundException($"Receipt {request.cbPreviousReceiptReference} was not found!");
+            var scu = await _configurationRepository.GetSignaturCreationUnitITAsync(receipt.ftSignaturCreationUnitITId).ConfigureAwait(false);
+            var deviceInfo =  JsonConvert.DeserializeObject<DeviceInfo>(scu.InfoJson);
+            return new RefundDetails()
+            {
+                ReceiptNumber = receipt.ReceiptNumber,
+                ZRepNumber = receipt.ZRepNumber,
+                ReceiptDateTime = receipt.ReceiptDateTime,
+                Serialnumber = deviceInfo.SerialNumber
+            };
         }
     }
 }
