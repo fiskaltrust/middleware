@@ -551,7 +551,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             var expectedEntry = entries[4];
 
             var sut = await CreateReadOnlyRepository(queuesIT: entries);
-            var actualEntry = await sut.GetQueueFRAsync(expectedEntry.ftQueueITId);
+            var actualEntry = await sut.GetQueueITAsync(expectedEntry.ftQueueITId);
 
             actualEntry.Should().BeEquivalentTo(expectedEntry);
         }
@@ -576,7 +576,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             var sut = await CreateRepository(queuesIT: entries);
             await sut.InsertOrUpdateQueueITAsync(entryToInsert);
 
-            var insertedEntry = await sut.GetQueueFRAsync(entryToInsert.ftQueueITId);
+            var insertedEntry = await sut.GetQueueITAsync(entryToInsert.ftQueueITId);
             insertedEntry.Should().BeEquivalentTo(entryToInsert);
         }
 
@@ -588,14 +588,14 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
 
             var sut = await CreateRepository(queuesIT: entries);
 
-            var entryToUpdate = await sut.GetQueueFRAsync(entries[0].ftQueueITId);
-            entryToUpdate.ALastHash = updatedValue;
+            var entryToUpdate = await sut.GetQueueITAsync(entries[0].ftQueueITId);
+            entryToUpdate.LastHash = updatedValue;
 
-            await sut.InsertOrUpdateQueueFRAsync(entryToUpdate);
+            await sut.InsertOrUpdateQueueITAsync(entryToUpdate);
 
-            var updatedEntry = await sut.GetQueueFRAsync(entries[0].ftQueueITId);
+            var updatedEntry = await sut.GetQueueITAsync(entries[0].ftQueueITId);
 
-            updatedEntry.ALastHash.Should().BeEquivalentTo(updatedValue);
+            updatedEntry.LastHash.Should().BeEquivalentTo(updatedValue);
         }
 
         [Fact]
@@ -623,12 +623,12 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
 
             var sut = await CreateRepository(queuesIT: entries);
 
-            var entryToUpdate = await sut.GetQueueFRAsync(entries[0].ftQueueITId);
-            entryToUpdate.ALastHash = updatedValue;
+            var entryToUpdate = await sut.GetQueueITAsync(entries[0].ftQueueITId);
+            entryToUpdate.LastHash = updatedValue;
 
             await sut.InsertOrUpdateQueueITAsync(entries[0]);
 
-            var updatedEntry = await sut.GetQueueFRAsync(entries[0].ftQueueITId);
+            var updatedEntry = await sut.GetQueueITAsync(entries[0].ftQueueITId);
             updatedEntry.TimeStamp.Should().BeGreaterThan(initialTimeStamp);
         }
 
