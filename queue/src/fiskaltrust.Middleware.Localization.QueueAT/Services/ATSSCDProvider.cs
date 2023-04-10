@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using fiskaltrust.ifPOS.v0;
+using fiskaltrust.ifPOS.v2.at;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
@@ -128,10 +128,10 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.Services
         {
             try
             {
-                var certificate = new X509CertificateParser().ReadCertificate(client.Certificate());
+                var certificate = new X509CertificateParser().ReadCertificate((await client.CertificateAsync()).Certificate);
                 var certificateSerial = certificate?.SerialNumber?.ToString(16);
 
-                scu.ZDA = client.ZDA();
+                scu.ZDA = (await client.ZdaAsync()).ZDA;
                 scu.SN = certificateSerial != null ? $"0x{certificateSerial}" : null;
                 scu.CertificateBase64 = Convert.ToBase64String(certificate.GetEncoded());
 

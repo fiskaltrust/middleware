@@ -5,6 +5,7 @@ using System.Linq;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.de;
 using fiskaltrust.ifPOS.v1.me;
+using fiskaltrust.ifPOS.v2.at;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Queue.Test.Launcher.Helpers;
 using fiskaltrust.storage.serialization.V0;
@@ -28,7 +29,7 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
             ftCashBoxConfiguration cashBoxConfiguration = null;
             if (!string.IsNullOrEmpty(configurationFilePath))
             {
-                cashBoxConfiguration = JsonConvert.DeserializeObject<ftCashBoxConfiguration>(configurationFilePath);
+                cashBoxConfiguration = JsonConvert.DeserializeObject<ftCashBoxConfiguration>(File.ReadAllText(configurationFilePath));
             }
             else
             {
@@ -62,14 +63,24 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
                 {
                     serviceCollection.AddScoped<IClientFactory<IMESSCD>, MESSCDClientFactory>();
                 }
-                overrideLocalization(_localization, config);
+                else if (_localization == "DE")
+                {
+                    serviceCollection.AddScoped<IClientFactory<IDESSCD>, DESSCDClientFactory>();
+                    OverrideGermanLocalization(_localization, config);
+                }
+                else if (_localization == "AT")
+                {
+                    AddFeatureFlag(config, "queue-at", true);
+                    config.Package = config.Package.Replace("fiskaltrust.service.sqlite", "fiskaltrust.Middleware.Queue.SQLite");
+                    serviceCollection.AddScoped<IClientFactory<IATSSCD>, ATSSCDClientFactory>();
+                }
 
             }
             else
             {
                 serviceCollection.AddScoped<IClientFactory<IDESSCD>, DESSCDClientFactory>();
             }
-            
+
             if (config.Package == "fiskaltrust.Middleware.Queue.SQLite")
             {
                 ConfigureSQLite(config, serviceCollection);
@@ -86,7 +97,18 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
             Console.ReadLine();
         }
 
-        private static void overrideLocalization(string localization, PackageConfiguration config)
+        private static void AddFeatureFlag(PackageConfiguration config, string featureFlagKey, bool value)
+        {
+            var key = "previewFeatures";
+            var previewFeatures = config.Configuration.ContainsKey(key)
+                ? JsonConvert.DeserializeObject<Dictionary<string, bool>>(config.Configuration[key].ToString())
+                : new Dictionary<string, bool>();
+            previewFeatures[featureFlagKey] = value;
+
+            config.Configuration[key] = JsonConvert.SerializeObject(previewFeatures);
+        }
+
+        private static void OverrideGermanLocalization(string localization, PackageConfiguration config)
         {
             var key = "init_ftQueue";
             if (config.Configuration.ContainsKey(key))
@@ -96,7 +118,7 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
                 config.Configuration[key] = JsonConvert.SerializeObject(queues);
             }
             var temp = config.Configuration["init_ftQueueDE"];
-            config.Configuration["init_ftQueue"+localization] = temp.ToString().Replace("DE", localization);
+            config.Configuration["init_ftQueue" + localization] = temp.ToString().Replace("DE", localization);
             temp = config.Configuration["init_ftSignaturCreationUnitDE"];
             config.Configuration["init_ftSignaturCreationUnit" + localization] = temp.ToString().Replace("DE", localization);
 
@@ -114,12 +136,12 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
 
         private static void ConfigureSQLite(PackageConfiguration queue, ServiceCollection serviceCollection)
         {
-                var bootStrapper = new SQLite.PosBootstrapper
-                {
-                    Id = queue.Id,
-                    Configuration = queue.Configuration
-                };
-                bootStrapper.ConfigureServices(serviceCollection);
+            var bootStrapper = new SQLite.PosBootstrapper
+            {
+                Id = queue.Id,
+                Configuration = queue.Configuration
+            };
+            bootStrapper.ConfigureServices(serviceCollection);
         }
     }
 }

@@ -15,6 +15,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT
             services.AddSingleton(sp => QueueATConfiguration.FromMiddlewareConfiguration(sp.GetRequiredService<MiddlewareConfiguration>()));
             
             services.AddScoped<IATSSCDProvider, ATSSCDProvider>();
+            services.AddScoped<IRequestCommandFactory, RequestCommandFactory>();
             services.AddScoped<ExportService>();
             services.AddScoped<RequestCommandFactory>();
 

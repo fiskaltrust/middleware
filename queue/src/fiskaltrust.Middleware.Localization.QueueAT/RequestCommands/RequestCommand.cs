@@ -540,8 +540,8 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 
                             try
                             {
-                                var zda = sscd.ZDA();
-                                var cert = new X509CertificateParser().ReadCertificate(sscd.Certificate());
+                                var zda = (await sscd.ZdaAsync()).ZDA;
+                                var cert = new X509CertificateParser().ReadCertificate((await sscd.CertificateAsync()).Certificate);
                                 var certificateSerialNumber = cert.SerialNumber.ToString(16);
 
                                 var sb2 = new StringBuilder();
@@ -568,9 +568,9 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                                 var jwsDataToSign = Encoding.UTF8.GetBytes($"{journalAT.JWSHeaderBase64url}.{journalAT.JWSPayloadBase64url}");
 
 
-                                var jwsSignature = sscd.Sign(jwsDataToSign);
+                                var signResult = await sscd.SignAsync(new ifPOS.v2.at.SignRequest { Data = jwsDataToSign });
 
-                                journalAT.JWSSignatureBase64url = ConversionHelper.ToBase64UrlString(jwsSignature);
+                                journalAT.JWSSignatureBase64url = ConversionHelper.ToBase64UrlString(signResult.SignedData);
                                 journalAT.ftSignaturCreationUnitId = scu.ftSignaturCreationUnitATId;
 
                                 queueAT.ftCashNumerator = cashNumerator;
@@ -580,7 +580,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                                 queueAT.LastSignatureCertificateSerialNumber = certificateSerialNumber;
 
 
-                                signatures.Add(new SignaturItem() { Caption = "www.fiskaltrust.at", Data = $"{jwsPayload}_{Convert.ToBase64String(jwsSignature)}", ftSignatureFormat = (long) SignaturItem.Formats.QR_Code, ftSignatureType = (long) SignaturItem.Types.AT_RKSV });
+                                signatures.Add(new SignaturItem() { Caption = "www.fiskaltrust.at", Data = $"{jwsPayload}_{Convert.ToBase64String(signResult.SignedData)}", ftSignatureFormat = (long) SignaturItem.Formats.QR_Code, ftSignatureType = (long) SignaturItem.Types.AT_RKSV });
 
                                 return (receiptIdentification, ftStateData, isBackupScuUsed, signatures, journalAT);
                             }

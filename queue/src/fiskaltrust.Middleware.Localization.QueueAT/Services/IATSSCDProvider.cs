@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using fiskaltrust.ifPOS.v0;
+using fiskaltrust.ifPOS.v2.at;
 using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueueAT.Services
