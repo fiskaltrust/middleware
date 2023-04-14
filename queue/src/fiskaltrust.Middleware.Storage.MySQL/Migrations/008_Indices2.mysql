@@ -1,36 +1,41 @@
 DROP PROCEDURE IF EXISTS CreateIndex;
 CREATE PROCEDURE CreateIndex(
-IN  queue VARCHAR(36),
-IN  tableName VARCHAR(64),
-IN  indexName VARCHAR(64),
-IN  columnName VARCHAR(64))
+    IN  queue VARCHAR(36),
+    IN  tableName VARCHAR(64),
+    IN  indexName VARCHAR(64),
+    IN  columnName VARCHAR(64))
 BEGIN
-DECLARE indexCount DECIMAL(10,0) DEFAULT 0;
-DECLARE indexCreation VARCHAR(1000);
+    DECLARE indexCount DECIMAL(10,0) DEFAULT 0;
+    DECLARE indexCreation VARCHAR(1000);
 
-SET indexCount = (SELECT
-count(index_name)
-FROM
-information_schema.statistics
-WHERE
-TABLE_NAME = tableName
-AND INDEX_NAME = indexName
-AND TABLE_SCHEMA = queue);
+    SET indexCount = (
+        SELECT
+            count(index_name)
+        FROM
+            information_schema.statistics
+        WHERE
+            TABLE_NAME = tableName
+            AND INDEX_NAME = indexName
+            AND TABLE_SCHEMA = queue
+    );
 
-IF indexCount = 0 THEN
-SET @indexCreation = CONCAT(
-'CREATE INDEX ',
-indexName,
-' ON ',
-tableName,
-' (',
-columnName,
-');');
-PREPARE stmt FROM  @indexCreation;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
-END IF;
+    IF indexCount = 0 THEN
+        SET @indexCreation = CONCAT(
+            'CREATE INDEX ',
+            indexName,
+            ' ON ',
+            tableName,
+            ' (',
+            columnName,
+            ');'
+        );
+
+        PREPARE stmt FROM @indexCreation;
+        EXECUTE stmt;
+        DEALLOCATE PREPARE stmt;
+    END IF;
 END;
+
 call CreateIndex(@queuid, 'ftQueueItem', 'idx_ftQueueItem_Timestamp' , 'TimeStamp');
 call CreateIndex(@queuid, 'ftQueueItem', 'idx_ftQueueItem_cbReceiptReference' , 'cbReceiptReference');
 call CreateIndex(@queuid, 'ftActionJournal', 'idx_ftActionJournal_Timestamp' , 'TimeStamp');
