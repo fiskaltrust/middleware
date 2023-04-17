@@ -70,8 +70,14 @@ namespace fiskaltrust.Middleware.Storage.MySQL.DatabaseInitialization
                 }
                 foreach (var migrationScript in notAppliedMigrations)
                 {
+                    var text = File.ReadAllText(migrationScript);
+                    if (text.Substring(0, 15).Equals("<DatabaseName!>"))
+                    {
+                        text = text.Replace("<DatabaseName>", $"'{_dbName}'");
+                        text = text.Remove(0, 15);
+                    }
                     _logger.LogDebug($"Updating database with migration script {migrationScript}..");
-                    await connection.ExecuteAsync(File.ReadAllText(migrationScript), new { queuid = $"'{_dbName}'" }).ConfigureAwait(false);
+                    await connection.ExecuteAsync(text).ConfigureAwait(false);
                     await SetCurrentVersionAsync(connection, Path.GetFileNameWithoutExtension(migrationScript)).ConfigureAwait(false);
                     _logger.LogDebug($"Applying the migration script was successful. Set current version to {Path.GetFileNameWithoutExtension(migrationScript)}.");
                 }
