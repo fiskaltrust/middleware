@@ -71,6 +71,7 @@ namespace fiskaltrust.Middleware.Storage.Ef
 
             var baseStorageConfig = ParseStorageConfiguration(configuration);
 
+            _connectionString += ";MultipleActiveResultSets=true";
             var context = new MiddlewareDbContext(_connectionString, _queueId);
             await PersistMasterDataAsync(baseStorageConfig, configurationRepository,
                 new EfAccountMasterDataRepository(context), new EfOutletMasterDataRepository(context),
