@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<response success="true" code="" status="x">
+    <addInfo>
+        <elementList>lastCommand,printerStatus</elementList>
+        <lastCommand>74</lastCommand>
+        <cpuRel>07.00</cpuRel>
+        <mfRel>04.3</mfRel>
+        <mfStatus>0</mfStatus>
+        <fpStatus>00110</fpStatus>
+    </addInfo>
+</response>

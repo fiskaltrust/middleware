@@ -11,6 +11,7 @@ using fiskaltrust.Middleware.Storage.EFCore.Repositories;
 using fiskaltrust.Middleware.Storage.EFCore.Repositories.AT;
 using fiskaltrust.Middleware.Storage.EFCore.Repositories.DE;
 using fiskaltrust.Middleware.Storage.EFCore.Repositories.FR;
+using fiskaltrust.Middleware.Storage.EFCore.Repositories.IT;
 using fiskaltrust.Middleware.Storage.EFCore.Repositories.MasterData;
 using fiskaltrust.Middleware.Storage.EFCore.Repositories.ME;
 using fiskaltrust.storage.encryption.V0;
@@ -104,6 +105,9 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL
             services.AddTransient<IJournalMERepository>(_ => new EFCoreJournalMERepository(new PostgreSQLMiddlewareDbContext(_optionsBuilder.Options, _queueId)));
             services.AddTransient<IReadOnlyJournalMERepository>(_ => new EFCoreJournalMERepository(new PostgreSQLMiddlewareDbContext(_optionsBuilder.Options, _queueId)));
             services.AddTransient<IMiddlewareRepository<ftJournalME>>(_ => new EFCoreJournalMERepository(new PostgreSQLMiddlewareDbContext(_optionsBuilder.Options, _queueId)));
+
+            services.AddTransient<IJournalITRepository>(_ => new EFCoreJournalITRepository(new PostgreSQLMiddlewareDbContext(_optionsBuilder.Options, _queueId)));
+            services.AddTransient<IReadOnlyJournalITRepository>(_ => new EFCoreJournalITRepository(new PostgreSQLMiddlewareDbContext(_optionsBuilder.Options, _queueId)));
 
             services.AddTransient<IReceiptJournalRepository>(_ => new EFCoreReceiptJournalRepository(new PostgreSQLMiddlewareDbContext(_optionsBuilder.Options, _queueId)));
             services.AddTransient<IReadOnlyReceiptJournalRepository>(_ => new EFCoreReceiptJournalRepository(new PostgreSQLMiddlewareDbContext(_optionsBuilder.Options, _queueId)));

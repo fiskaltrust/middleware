@@ -3,8 +3,9 @@ resources:
     - pipeline: build
       source: fiskaltrust.Middleware.SCU.IT
       trigger:
-        tags:
-          - scu-it/*
+        branches:
+          include:
+            - refs/tags/scu-it/*
 
 trigger: none
 pr: none

@@ -2,11 +2,11 @@
 using System.Collections.Generic;
 using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.Abstractions;
-using fiskaltrust.Middleware.SCU.IT.Configuration;
+using fiskaltrust.Middleware.SCU.IT.Epson.Utilities;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 
-namespace fiskaltrust.Middleware.SCU.IT.FiscalizationService
+namespace fiskaltrust.Middleware.SCU.IT.Epson
 {
     public class ScuBootstrapper : IMiddlewareBootstrapper
     {
@@ -19,6 +19,7 @@ namespace fiskaltrust.Middleware.SCU.IT.FiscalizationService
 
             _ = serviceCollection
                 .AddSingleton(epsonScuConfig)
+                .AddScoped<EpsonCommandFactory>()
                 .AddScoped<IITSSCD, EpsonSCU>();
         }
     }

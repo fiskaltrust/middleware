@@ -1,5 +1,5 @@
 {
-  "version": "1.3.44",
+  "version": "1.3.45-rc1",
   "releaseBranches": [
     "^refs/heads/main$",
     "^refs/tags/queue/inmemory/v\\d+(?:\\.\\d+)*(?:-.*)?$"

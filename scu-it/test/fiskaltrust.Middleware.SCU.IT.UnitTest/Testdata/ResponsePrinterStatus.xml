@@ -1,0 +1,22 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<response success="true" code="" status="x">
+    <addInfo>
+        <elementList>
+            lastCommand,rtType,rtMainStatus,rtSubStatus,rtDailyOpen,rtNoWorkingPeriod,rtFileToSend,
+            rtOldFileToSend,rtFileRejected,rtExpiryCD,rtExpiryCA,rtTrainingMode,rtUpgradeResult
+        </elementList>
+        <lastCommand>138</lastCommand>
+        <rtType>12</rtType>
+        <rtMainStatus>23</rtMainStatus>
+        <rtSubStatus>34</rtSubStatus>
+        <rtDailyOpen>45</rtDailyOpen>
+        <rtNoWorkingPeriod>56</rtNoWorkingPeriod>
+        <rtFileToSend>67</rtFileToSend>
+        <rtOldFileToSend>78</rtOldFileToSend>
+        <rtFileRejected>89</rtFileRejected>
+        <rtExpiryCD>90</rtExpiryCD>
+        <rtExpiryCA>001</rtExpiryCA>
+        <rtTrainingMode>012</rtTrainingMode>
+        <rtUpgradeResult>023</rtUpgradeResult>
+    </addInfo>
+</response>

@@ -223,6 +223,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             return new AzureTableStorageFtJournalME
             {
                 PartitionKey = GetHashString(src.TimeStamp),
+                RowKey = src.ftJournalMEId.ToString(),
                 ftJournalMEId = src.ftJournalMEId,
                 ftQueueItemId = src.ftQueueItemId,
                 cbReference = src.cbReference,
@@ -249,6 +250,55 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
                 InvoiceNumber = src.InvoiceNumber,
                 YearlyOrdinalNumber = src.YearlyOrdinalNumber,
                 ftQueueId = src.ftQueueId,
+                TimeStamp = src.TimeStamp
+            };
+        }
+
+        public static AzureTableStorageFtJournalIT Map(ftJournalIT src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+
+            return new AzureTableStorageFtJournalIT
+            {
+                PartitionKey = GetHashString(src.TimeStamp),
+                RowKey = src.ftJournalITId.ToString(),
+                ftJournalITId = src.ftJournalITId,
+                ftQueueItemId = src.ftQueueItemId,                
+                ftQueueId = src.ftQueueId,
+                ftSignaturCreationUnitITId = src.ftSignaturCreationUnitITId,
+                cbReceiptReference = src.cbReceiptReference,
+                JournalType = src.JournalType,
+                ReceiptDateTime = src.ReceiptDateTime,
+                ReceiptNumber = src.ReceiptNumber,
+                DataJson = src.DataJson,
+                ZRepNumber = src.ZRepNumber,
+                TimeStamp = src.TimeStamp
+            };
+        }
+
+        public static ftJournalIT Map(AzureTableStorageFtJournalIT src)
+        {
+            if (src == null)
+
+            {
+                return null;
+            }
+
+            return new ftJournalIT
+            {
+                ftJournalITId = src.ftJournalITId,
+                ftQueueItemId = src.ftQueueItemId,
+                ftQueueId = src.ftQueueId,
+                ftSignaturCreationUnitITId = src.ftSignaturCreationUnitITId,
+                cbReceiptReference = src.cbReceiptReference,
+                JournalType = src.JournalType,
+                ReceiptDateTime = src.ReceiptDateTime,
+                ReceiptNumber = src.ReceiptNumber,
+                DataJson = src.DataJson,
+                ZRepNumber = src.ZRepNumber,
                 TimeStamp = src.TimeStamp
             };
         }
@@ -438,55 +488,6 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
                 DailyClosingNumber = src.DailyClosingNumber
             };
         }
-
-        public static AzureTableStorageFtQueueES Map(ftQueueES src)
-        {
-            if (src == null)
-            {
-                return null;
-            }
-
-            return new AzureTableStorageFtQueueES
-            {
-                PartitionKey = src.ftQueueESId.ToString(),
-                RowKey = src.ftQueueESId.ToString(),
-                ftQueueESId = src.ftQueueESId,
-                ftSignaturCreationUnitESId = src.ftSignaturCreationUnitESId,
-                LastHash = src.LastHash,
-                SSCDFailCount = src.SSCDFailCount,
-                SSCDFailMoment = src.SSCDFailMoment,
-                SSCDFailQueueItemId = src.SSCDFailQueueItemId,
-                UsedFailedCount = src.UsedFailedCount,
-                UsedFailedMomentMin = src.UsedFailedMomentMin,
-                UsedFailedMomentMax = src.UsedFailedMomentMax,
-                UsedFailedQueueItemId = src.UsedFailedQueueItemId,
-                TimeStamp = src.TimeStamp
-            };
-        }
-
-        public static ftQueueES Map(AzureTableStorageFtQueueES src)
-        {
-            if (src == null)
-            {
-                return null;
-            }
-
-            return new ftQueueES
-            {
-                ftQueueESId = src.ftQueueESId,
-                ftSignaturCreationUnitESId = src.ftSignaturCreationUnitESId,
-                LastHash = src.LastHash,
-                SSCDFailCount = src.SSCDFailCount,
-                SSCDFailMoment = src.SSCDFailMoment,
-                SSCDFailQueueItemId = src.SSCDFailQueueItemId,
-                UsedFailedCount = src.UsedFailedCount,
-                UsedFailedMomentMin = src.UsedFailedMomentMin,
-                UsedFailedMomentMax = src.UsedFailedMomentMax,
-                UsedFailedQueueItemId = src.UsedFailedQueueItemId,
-                TimeStamp = src.TimeStamp
-            };
-        }
-
         public static AzureTableStorageFtQueueIT Map(ftQueueIT src)
         {
             if (src == null)
@@ -508,7 +509,8 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
                 UsedFailedMomentMin = src.UsedFailedMomentMin,
                 UsedFailedMomentMax = src.UsedFailedMomentMax,
                 UsedFailedQueueItemId = src.UsedFailedQueueItemId,
-                TimeStamp = src.TimeStamp
+                TimeStamp = src.TimeStamp,
+                CashBoxIdentification = src.CashBoxIdentification,
             };
         }
 
@@ -531,7 +533,8 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
                 UsedFailedMomentMin = src.UsedFailedMomentMin,
                 UsedFailedMomentMax = src.UsedFailedMomentMax,
                 UsedFailedQueueItemId = src.UsedFailedQueueItemId,
-                TimeStamp = src.TimeStamp                
+                TimeStamp = src.TimeStamp,
+                CashBoxIdentification = src.CashBoxIdentification
             };
         }
 
@@ -1007,38 +1010,6 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             };
         }
 
-        public static AzureTableStorageFtSignaturCreationUnitES Map(ftSignaturCreationUnitES src)
-        {
-            if (src == null)
-            {
-                return null;
-            }
-
-            return new AzureTableStorageFtSignaturCreationUnitES
-            {
-                PartitionKey = src.ftSignaturCreationUnitESId.ToString(),
-                RowKey = src.ftSignaturCreationUnitESId.ToString(),
-                ftSignaturCreationUnitESId = src.ftSignaturCreationUnitESId,
-                Url = src.Url,
-                TimeStamp = src.TimeStamp
-            };
-        }
-
-        public static ftSignaturCreationUnitES Map(AzureTableStorageFtSignaturCreationUnitES src)
-        {
-            if (src == null)
-            {
-                return null;
-            }
-
-            return new ftSignaturCreationUnitES
-            {
-                ftSignaturCreationUnitESId = src.ftSignaturCreationUnitESId,
-                TimeStamp = src.TimeStamp,
-                Url = src.Url
-            };
-        }
-
         public static AzureTableStorageFtSignaturCreationUnitIT Map(ftSignaturCreationUnitIT src)
         {
             if (src == null)
@@ -1052,7 +1023,8 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
                 RowKey = src.ftSignaturCreationUnitITId.ToString(),
                 ftSignaturCreationUnitITId = src.ftSignaturCreationUnitITId,
                 Url = src.Url,
-                TimeStamp = src.TimeStamp
+                TimeStamp = src.TimeStamp,
+                InfoJson = src.InfoJson
             };
         }
 
@@ -1067,7 +1039,8 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             {
                 ftSignaturCreationUnitITId = src.ftSignaturCreationUnitITId,
                 TimeStamp = src.TimeStamp,
-                Url = src.Url
+                Url = src.Url,
+                InfoJson = src.InfoJson
             };
         }
 

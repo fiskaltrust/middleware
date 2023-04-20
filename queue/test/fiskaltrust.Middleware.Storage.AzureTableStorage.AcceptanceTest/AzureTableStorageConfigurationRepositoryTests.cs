@@ -17,10 +17,10 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.AcceptanceTest
 
         public AzureTableStorageConfigurationRepositoryTests(AzureTableStorageFixture fixture) => _fixture = fixture;
 
-        public override async Task<IReadOnlyConfigurationRepository> CreateReadOnlyRepository(IEnumerable<ftCashBox> cashBoxes = null, IEnumerable<ftQueue> queues = null, IEnumerable<ftQueueAT> queuesAT = null, IEnumerable<ftQueueDE> queuesDE = null, IEnumerable<ftQueueFR> queuesFR = null, IEnumerable<ftQueueME> queuesME = null, IEnumerable<ftSignaturCreationUnitAT> signatureCreateUnitsAT = null, IEnumerable<ftSignaturCreationUnitDE> signatureCreateUnitsDE = null, IEnumerable<ftSignaturCreationUnitFR> signatureCreateUnitsFR = null, IEnumerable<ftSignaturCreationUnitME> signatureCreateUnitsME = null)
-            => await CreateRepository(cashBoxes, queues, queuesAT, queuesDE, queuesFR, queuesME, signatureCreateUnitsAT, signatureCreateUnitsDE, signatureCreateUnitsFR, signatureCreateUnitsME);
+        public override async Task<IReadOnlyConfigurationRepository> CreateReadOnlyRepository(IEnumerable<ftCashBox> cashBoxes = null, IEnumerable<ftQueue> queues = null, IEnumerable<ftQueueAT> queuesAT = null, IEnumerable<ftQueueDE> queuesDE = null, IEnumerable<ftQueueFR> queuesFR = null, IEnumerable<ftQueueIT> queuesIT = null, IEnumerable<ftQueueME> queuesME = null, IEnumerable<ftSignaturCreationUnitAT> signatureCreateUnitsAT = null, IEnumerable<ftSignaturCreationUnitDE> signatureCreateUnitsDE = null, IEnumerable<ftSignaturCreationUnitFR> signatureCreateUnitsFR = null, IEnumerable<ftSignaturCreationUnitIT> signatureCreateUnitsIT = null, IEnumerable<ftSignaturCreationUnitME> signatureCreateUnitsME = null)
+            => await CreateRepository(cashBoxes, queues, queuesAT, queuesDE, queuesFR, queuesIT, queuesME, signatureCreateUnitsAT, signatureCreateUnitsDE, signatureCreateUnitsFR, signatureCreateUnitsIT, signatureCreateUnitsME);
 
-        public override async Task<IConfigurationRepository> CreateRepository(IEnumerable<ftCashBox> cashBoxes = null, IEnumerable<ftQueue> queues = null, IEnumerable<ftQueueAT> queuesAT = null, IEnumerable<ftQueueDE> queuesDE = null, IEnumerable<ftQueueFR> queuesFR = null, IEnumerable<ftQueueME> queuesME = null, IEnumerable<ftSignaturCreationUnitAT> signatureCreateUnitsAT = null, IEnumerable<ftSignaturCreationUnitDE> signatureCreateUnitsDE = null, IEnumerable<ftSignaturCreationUnitFR> signatureCreateUnitsFR = null, IEnumerable<ftSignaturCreationUnitME> signatureCreateUnitsME = null)
+        public override async Task<IConfigurationRepository> CreateRepository(IEnumerable<ftCashBox> cashBoxes = null, IEnumerable<ftQueue> queues = null, IEnumerable<ftQueueAT> queuesAT = null, IEnumerable<ftQueueDE> queuesDE = null, IEnumerable<ftQueueFR> queuesFR = null, IEnumerable<ftQueueIT> queuesIT = null, IEnumerable<ftQueueME> queuesME = null, IEnumerable<ftSignaturCreationUnitAT> signatureCreateUnitsAT = null, IEnumerable<ftSignaturCreationUnitDE> signatureCreateUnitsDE = null, IEnumerable<ftSignaturCreationUnitFR> signatureCreateUnitsFR = null, IEnumerable<ftSignaturCreationUnitIT> signatureCreateUnitsIT = null, IEnumerable<ftSignaturCreationUnitME> signatureCreateUnitsME = null)
         {
             var azureConfigurationRepository = new AzureTableStorageConfigurationRepository(new QueueConfiguration { QueueId = _fixture.QueueId }, new TableServiceClient(Constants.AzureStorageConnectionString));
 
@@ -49,6 +49,11 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.AcceptanceTest
                 await azureConfigurationRepository.InsertOrUpdateQueueMEAsync(entry);
             }
 
+            foreach (var entry in queuesIT ?? new List<ftQueueIT>())
+            {
+                await azureConfigurationRepository.InsertOrUpdateQueueITAsync(entry);
+            }
+
             foreach (var entry in queuesFR ?? new List<ftQueueFR>())
             {
                 await azureConfigurationRepository.InsertOrUpdateQueueFRAsync(entry);
@@ -69,6 +74,11 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.AcceptanceTest
                 await azureConfigurationRepository.InsertOrUpdateSignaturCreationUnitFRAsync(entry);
             }
 
+            foreach (var entry in signatureCreateUnitsIT ?? new List<ftSignaturCreationUnitIT>())
+            {
+                await azureConfigurationRepository.InsertOrUpdateSignaturCreationUnitITAsync(entry);
+            }
+
             foreach (var entry in signatureCreateUnitsME ?? new List<ftSignaturCreationUnitME>())
             {
                 await azureConfigurationRepository.InsertOrUpdateSignaturCreationUnitMEAsync(entry);
@@ -84,10 +94,12 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.AcceptanceTest
             _fixture.CleanTable(nameof(ftQueueAT));
             _fixture.CleanTable(nameof(ftQueueDE));
             _fixture.CleanTable(nameof(ftQueueFR));
+            _fixture.CleanTable(nameof(ftQueueIT));
             _fixture.CleanTable(nameof(ftQueueME));
             _fixture.CleanTable(nameof(ftSignaturCreationUnitAT));
             _fixture.CleanTable(nameof(ftSignaturCreationUnitDE));
             _fixture.CleanTable(nameof(ftSignaturCreationUnitFR));
+            _fixture.CleanTable(nameof(ftSignaturCreationUnitIT));
             _fixture.CleanTable(nameof(ftSignaturCreationUnitME));
         }
     }

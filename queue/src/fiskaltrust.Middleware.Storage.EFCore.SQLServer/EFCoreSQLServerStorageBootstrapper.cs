@@ -11,6 +11,7 @@ using fiskaltrust.Middleware.Storage.EFCore.Repositories;
 using fiskaltrust.Middleware.Storage.EFCore.Repositories.AT;
 using fiskaltrust.Middleware.Storage.EFCore.Repositories.DE;
 using fiskaltrust.Middleware.Storage.EFCore.Repositories.FR;
+using fiskaltrust.Middleware.Storage.EFCore.Repositories.IT;
 using fiskaltrust.Middleware.Storage.EFCore.Repositories.MasterData;
 using fiskaltrust.Middleware.Storage.EFCore.Repositories.ME;
 using fiskaltrust.storage.encryption.V0;
@@ -102,6 +103,9 @@ namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer
             services.AddTransient<IJournalMERepository, EFCoreJournalMERepository>();
             services.AddTransient<IReadOnlyJournalMERepository, EFCoreJournalMERepository>();
             services.AddTransient<IMiddlewareRepository<ftJournalME>, EFCoreJournalMERepository>();
+
+            services.AddTransient<IJournalITRepository, EFCoreJournalITRepository>();
+            services.AddTransient<IReadOnlyJournalITRepository, EFCoreJournalITRepository>();
 
             services.AddTransient<IReceiptJournalRepository, EFCoreReceiptJournalRepository>();
             services.AddTransient<IReadOnlyReceiptJournalRepository, EFCoreReceiptJournalRepository>();

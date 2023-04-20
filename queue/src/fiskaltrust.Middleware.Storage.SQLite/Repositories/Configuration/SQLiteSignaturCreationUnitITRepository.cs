@@ -20,8 +20,8 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Repositories.Configuration
         {
             EntityUpdated(entity);
             var sql = "INSERT OR REPLACE INTO ftSignaturCreationUnitIT " +
-                            "(ftSignaturCreationUnitITId, Url, TimeStamp) " +
-                            "Values (@ftSignaturCreationUnitITId, @Url, @TimeStamp);";
+                            "(ftSignaturCreationUnitITId, Url, TimeStamp, InfoJson) " +
+                            "Values (@ftSignaturCreationUnitITId, @Url, @TimeStamp, @InfoJson);";
             await DbConnection.ExecuteAsync(sql, entity).ConfigureAwait(false);
         }
 

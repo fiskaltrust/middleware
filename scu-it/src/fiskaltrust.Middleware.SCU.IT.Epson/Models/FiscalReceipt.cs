@@ -1,9 +1,6 @@
 ﻿using System.Xml.Serialization;
 using System.Collections.Generic;
 using fiskaltrust.Middleware.SCU.IT.Epson.Utilities;
-using System;
-using static System.Net.Mime.MediaTypeNames;
-using fiskaltrust.ifPOS.v1.it;
 
 namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
 {
@@ -15,7 +12,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
         [XmlAttribute(AttributeName = "code")]
         public string? Code { get; set; }
 
-        public static explicit operator LotteryID(string code) => new() { Code = code };
+        public static LotteryID FromString(string code) => new() { Code = code };
     }
 
 
@@ -27,7 +24,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
         [XmlAttribute(AttributeName = "data")]
         public string? Data { get; set; }
 
-        public static explicit operator DisplayText(string text) => new() { Data = text };
+        public static DisplayText FromString(string data) => new() { Data = data };
     }
 
     [XmlType("printRecMessage")]
@@ -66,7 +63,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
         [XmlAttribute(AttributeName = "quantity")]
         public string QuantityStr
         {
-            get => Quantity.ToString(EpsonFormatter.GetQuantityFormatter());
+            get => Quantity.ToString(EpsonFormatters.QuantityFormatter);
 
             set
             {
@@ -81,7 +78,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
         [XmlAttribute(AttributeName = "unitPrice")]
         public string UnitPriceStr
         {
-            get => UnitPrice.ToString(EpsonFormatter.GetCurrencyFormatter());
+            get => UnitPrice.ToString(EpsonFormatters.CurrencyFormatter);
             set
             {
                 if (decimal.TryParse(value, out var unitPrice))
@@ -91,7 +88,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
             }
         }
         [XmlAttribute(AttributeName = "department")]
-        public int Department { get; set; } = 1;
+        public int Department { get; set; }
         [XmlAttribute(AttributeName = "justification")]
         public int Justification { get; set; } = 1;
 
@@ -110,7 +107,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
         [XmlAttribute(AttributeName = "quantity")]
         public string QuantityStr
         {
-            get => Quantity.ToString(EpsonFormatter.GetQuantityFormatter());
+            get => Quantity.ToString(EpsonFormatters.QuantityFormatter);
 
             set
             {
@@ -125,7 +122,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
         [XmlAttribute(AttributeName = "unitPrice")]
         public string UnitPriceStr
         {
-            get => UnitPrice.ToString(EpsonFormatter.GetCurrencyFormatter());
+            get => UnitPrice.ToString(EpsonFormatters.CurrencyFormatter);
             set
             {
                 if (decimal.TryParse(value, out var unitPrice))
@@ -139,7 +136,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
         [XmlAttribute(AttributeName = "amount")]
         public string? AmountStr
         {
-            get => Amount.HasValue ? Amount.Value.ToString(EpsonFormatter.GetCurrencyFormatter()) : null;
+            get => Amount.HasValue ? Amount.Value.ToString(EpsonFormatters.CurrencyFormatter) : null;
 
             set
             {
@@ -168,51 +165,39 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
 
 
         [XmlAttribute(AttributeName = "department")]
-        public int Department { get; set; } = 1;
+        public int Department { get; set; }
         [XmlAttribute(AttributeName = "justification")]
         public int Justification { get; set; } = 1;
     }
 
-    [XmlRoot(ElementName = "printRecItemVoid")]
-    public class PrintRecItemVoid
+    [XmlRoot(ElementName = "printRecItemAdjustment")]
+    public class PrintRecItemAdjustment
     {
         [XmlAttribute(AttributeName = "operator")]
         public string? Operator { get; set; }
         [XmlAttribute(AttributeName = "description")]
         public string? Description { get; set; }
+        [XmlAttribute(AttributeName = "adjustmentType")]
+        public int AdjustmentType { get; set; }
         [XmlIgnore]
-        public decimal Quantity { get; set; }
-        [XmlAttribute(AttributeName = "quantity")]
-        public string QuantityStr
+        public decimal? Amount { get; set; }
+        [XmlAttribute(AttributeName = "amount")]
+        public string? AmountStr
         {
-            get => Quantity.ToString(EpsonFormatter.GetQuantityFormatter());
-  
+            get => Amount.HasValue ? Amount.Value.ToString(EpsonFormatters.CurrencyFormatter) : null;
+
             set
             {
-                if (decimal.TryParse(value, out var quantity))
+                if (decimal.TryParse(value, out var amount))
                 {
-                    Quantity = quantity;
-                }
-            }
-        }
-        [XmlIgnore]
-        public decimal UnitPrice { get; set; }
-        [XmlAttribute(AttributeName = "unitPrice")]
-        public string UnitPriceStr
-        {
-            get => UnitPrice.ToString(EpsonFormatter.GetCurrencyFormatter());
-            set
-            {
-                if (decimal.TryParse(value, out var unitPrice))
-                {
-                    UnitPrice = unitPrice;
+                    Amount = amount;
                 }
             }
         }
         [XmlAttribute(AttributeName = "department")]
-        public string? Department { get; set; }
+        public int Department { get; set; }
         [XmlAttribute(AttributeName = "justification")]
-        public string? Justification { get; set; }
+        public int Justification { get; set; } = 1;
     }
 
     [XmlRoot(ElementName = "printRecSubtotalAdjustment")]
@@ -238,7 +223,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
         [XmlAttribute(AttributeName = "amount")]
         public string AmountStr
         {
-            get => Amount.ToString(EpsonFormatter.GetCurrencyFormatter());
+            get => Amount.ToString(EpsonFormatters.CurrencyFormatter);
             set
             {
                 if (decimal.TryParse(value, out var amount))
@@ -286,14 +271,17 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
     {
         [XmlAttribute(AttributeName = "operator")]
         public string? Operator { get; set; }
+
         [XmlAttribute(AttributeName = "description")]
         public string? Description { get; set; }
+
         [XmlIgnore]
         public decimal Payment { get; set; }
+
         [XmlAttribute(AttributeName = "payment")]
         public string PaymentStr
         {
-            get => Payment.ToString(EpsonFormatter.GetCurrencyFormatter());
+            get => Payment.ToString(EpsonFormatters.CurrencyFormatter);
             set
             {
                 if (decimal.TryParse(value, out var payment))
@@ -304,8 +292,10 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
         }
         [XmlAttribute(AttributeName = "paymentType")]
         public int PaymentType { get; set; }
+
         [XmlAttribute(AttributeName = "index")]
         public int Index { get; set; }
+
         [XmlAttribute(AttributeName = "justification")]
         public int Justification { get; set; } = 1;
     }
@@ -323,26 +313,37 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
 
         [XmlElement(ElementName = "displayText")]
         public DisplayText? DisplayText { get; set; }
+
         [XmlElement(ElementName = "printRecMessage")]
         public List<PrintRecMessage>? PrintRecMessage { get; set; }
+
         [XmlElement(ElementName = "beginFiscalReceipt")]
         public BeginFiscalReceipt BeginFiscalReceipt { get; set; } = new BeginFiscalReceipt();
+
         [XmlElement(ElementName = "printRecItem")]
         public List<PrintRecItem>? PrintRecItem { get; set; }
+
         [XmlElement(ElementName = "printRecRefund")]
         public List<PrintRecRefund>? PrintRecRefund { get; set; }
+
         [XmlElement(ElementName = "printRecItemVoid")]
-        public PrintRecItemVoid? PrintRecItemVoid { get; set; }
+        public List<PrintRecItemAdjustment>? PrintRecItemAdjustment { get; set; }
+
         [XmlElement(ElementName = "printRecSubtotalAdjustment")]
         public List<PrintRecSubtotalAdjustment>? PrintRecSubtotalAdjustment { get; set; }
+
         [XmlElement(ElementName = "printRecSubtotal")]
         public PrintRecSubtotal? PrintRecSubtotal { get; set; }
+
         [XmlElement(ElementName = "printBarCode")]
         public PrintBarCode? PrintBarCode { get; set; }
+
         [XmlElement(ElementName = "printRecLotteryID")]
         public LotteryID? LotteryID { get; set; }
+
         [XmlElement(ElementName = "printRecTotal")]
         public List<PrintRecTotal>? PrintRecTotal { get; set; }
+
         [XmlElement(ElementName = "endFiscalReceipt")]
         public EndFiscalReceipt EndFiscalReceipt { get; set; }= new EndFiscalReceipt();
     }

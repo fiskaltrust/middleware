@@ -12,11 +12,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="BouncyCastle" Version="1.7.0" />
     <PackageReference Include="fiskaltrust.Middleware.Abstractions" Version="1.3.3" />
-    <PackageReference Include="fiskaltrust.Middleware.Interface.Client.Grpc" Version="1.3.40" />
-    <PackageReference Include="fiskaltrust.Middleware.Interface.Client.Http" Version="1.3.40" />
-    <PackageReference Include="fiskaltrust.Middleware.Interface.Client.Soap" Version="1.3.40" />
+    <PackageReference Include="fiskaltrust.Middleware.Interface.Client.Grpc" Version="1.3.45-rc2" />
+    <PackageReference Include="fiskaltrust.Middleware.Interface.Client.Http" Version="1.3.45-rc3" />
+    <PackageReference Include="fiskaltrust.Middleware.Interface.Client.Soap" Version="1.3.45-rc2" />
     <PackageReference Include="fiskaltrust.service.Ihelper" Version="1.0.16322.1184" />
     <PackageReference Include="fiskaltrust.storage.encryption" Version="1.3.1" />
     <PackageReference Include="fiskaltrust.storage.serialization" Version="1.3.1" />

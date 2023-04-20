@@ -94,6 +94,9 @@ namespace fiskaltrust.Middleware.Storage.SQLite
             services.AddSingleton<IReadOnlyJournalMERepository>(x => new SQLiteJournalMERepository(_connectionFactory, _sqliteFile));
             services.AddSingleton<IMiddlewareRepository<ftJournalME>>(x => new SQLiteJournalMERepository(_connectionFactory, _sqliteFile));
 
+            services.AddSingleton<IJournalITRepository>(x => new SQLiteJournalITRepository(_connectionFactory, _sqliteFile));
+            services.AddSingleton<IReadOnlyJournalITRepository>(x => new SQLiteJournalITRepository(_connectionFactory, _sqliteFile));
+
             services.AddSingleton<IReceiptJournalRepository>(x => new SQLiteReceiptJournalRepository(_connectionFactory, _sqliteFile));
             services.AddSingleton<IReadOnlyReceiptJournalRepository>(x => new SQLiteReceiptJournalRepository(_connectionFactory, _sqliteFile));
             services.AddSingleton<IMiddlewareReceiptJournalRepository>(x => new SQLiteReceiptJournalRepository(_connectionFactory, _sqliteFile));

@@ -1,0 +1,36 @@
+﻿CREATE TABLE IF NOT EXISTS ftQueueIT
+(
+    ftQueueITId                  NVARCHAR(36) PRIMARY KEY  NOT NULL,
+    ftSignaturCreationUnitITId   NVARCHAR(36)              NULL,
+    LastHash                     NVARCHAR(2147483647)      NULL,
+    CashBoxIdentification        NVARCHAR(2147483647)      NULL,
+    SSCDFailCount                BIGINT                    NOT NULL,            
+    SSCDFailMoment               BIGINT                    NULL,                    
+    SSCDFailQueueItemId          NVARCHAR(36)              NULL, 
+    UsedFailedCount              BIGINT                    NOT NULL,           
+    UsedFailedMomentMin          BIGINT                    NULL,                    
+    UsedFailedMomentMax          BIGINT                    NULL,                    
+    UsedFailedQueueItemId        NVARCHAR(36)              NULL,
+    TimeStamp                    BIGINT                    NOT NULL
+);
+CREATE TABLE IF NOT EXISTS ftSignaturCreationUnitIT
+(
+    ftSignaturCreationUnitITId   NVARCHAR(36) PRIMARY KEY  NOT NULL,
+    Url                          NVARCHAR(2147483647)      NULL,    
+    InfoJson                     NVARCHAR(2147483647)      NULL,    
+    TimeStamp                    BIGINT                    NOT NULL
+);
+CREATE TABLE IF NOT EXISTS ftJournalIT
+(
+    ftJournalITId                   NVARCHAR(36) PRIMARY KEY    NOT NULL,
+    ftQueueItemId                   NVARCHAR(36)                NOT NULL,
+    ftQueueId                       NVARCHAR(36)                NOT NULL,
+    ftSignaturCreationUnitITId      NVARCHAR(36)                NOT NULL,
+    ReceiptNumber                   BIGINT                      NOT NULL,
+    ZRepNumber                      BIGINT                      NOT NULL,
+    JournalType                     BIGINT                      NOT NULL,
+    cbReceiptReference              NVARCHAR(2147483647)        NULL,
+    DataJson                        NVARCHAR(2147483647)        NULL,
+    ReceiptDateTime                 BIGINT                      NULL,
+    TimeStamp                       BIGINT                      NOT NULL
+);

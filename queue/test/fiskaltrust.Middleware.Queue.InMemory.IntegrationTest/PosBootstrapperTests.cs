@@ -47,7 +47,7 @@ namespace fiskaltrust.Middleware.Queue.InMemory.IntegrationTest
             var storageBootStrapper = new InMemoryStorageBootstrapper(values.ftQueues[0].Id, dictionary, Mock.Of<ILogger<IMiddlewareBootstrapper>>());
             storageBootStrapper.ConfigureStorageServices(serviceCollection);
 
-            serviceCollection.Count.Should().Be(46);
+            serviceCollection.Count.Should().Be(47);
 
             CheckServiceType(serviceCollection, typeof(IConfigurationRepository)).Should().BeTrue();
             CheckServiceType(serviceCollection, typeof(IReadOnlyConfigurationRepository)).Should().BeTrue();
