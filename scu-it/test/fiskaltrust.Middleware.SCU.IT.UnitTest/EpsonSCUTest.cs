@@ -15,7 +15,6 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
     {
 
         [Fact(Skip = "Only with active Testprinter")]
-        [Fact]
         public async Task GetSerialNumber_GetResult_11DigetSerialnrAsync()
         {
             var config = new EpsonScuConfiguration()
