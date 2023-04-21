@@ -22,7 +22,7 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher.Helpers
                     return GrpcITSSCDFactory.CreateSSCDAsync(new GrpcClientOptions { Url = new Uri(configuration.Url) }).Result;
                 case "rest":
                     var url = configuration.Url.Replace("rest://", "http://");
-                    return HttpITSSCDFactory.CreateSSCDAsync(new ClientOptions { Url = new Uri(url), RetryPolicyOptions = RetryPolicyOptions.Default }).Result;
+                    return HttpITSSCDFactory.CreateSSCDAsync(new HttpITSSCDClientOptions { Url = new Uri(url), RetryPolicyOptions = RetryPolicyOptions.Default }).Result;
                 default:
                     return GrpcITSSCDFactory.CreateSSCDAsync(new GrpcClientOptions { Url = new Uri(configuration.Url), RetryPolicyOptions = RetryPolicyOptions.Default }).Result;
 
