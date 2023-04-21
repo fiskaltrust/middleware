@@ -23,7 +23,7 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher.Helpers
                     return GrpcDESSCDFactory.CreateSSCDAsync(new GrpcClientOptions { Url = new Uri(configuration.Url), RetryPolicyOptions = RetryPolicyOptions.Default }).Result;
                 case "rest":
                     var url = configuration.Url.Replace("rest://", "http://");
-                    return HttpDESSCDFactory.CreateSSCDAsync(new ClientOptions { Url = new Uri(url), RetryPolicyOptions = RetryPolicyOptions.Default }).Result;
+                    return HttpDESSCDFactory.CreateSSCDAsync(new HttpDESSCDClientOptions { Url = new Uri(url), RetryPolicyOptions = RetryPolicyOptions.Default }).Result;
                 default:
                     return SoapDESSCDFactory.CreateSSCDAsync(new ClientOptions { Url = new Uri(configuration.Url), RetryPolicyOptions = RetryPolicyOptions.Default }).Result;
             }
