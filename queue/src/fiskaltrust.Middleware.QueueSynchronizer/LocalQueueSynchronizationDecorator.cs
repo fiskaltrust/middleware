@@ -35,17 +35,14 @@ namespace fiskaltrust.Middleware.QueueSynchronizer
             _concurrentQueue.Add((identifier, receiptRequest));
 
             _logger.LogTrace("LocalQueueSynchronizationDecorator.ProcessAsync: Waiting until result is available.");
-            syncResult.AutoResetEvent.WaitOne();
+            await syncResult.AutoResetEvent.WaitAsync();
             if (!_stateDictionary.TryRemove(identifier, out var synchronizedResult))
             {
                 throw new KeyNotFoundException(identifier.ToString());
             }
 
             _logger.LogTrace("LocalQueueSynchronizationDecorator.ProcessAsync: Got receipt result.");
-            if (synchronizedResult.ExceptionDispatchInfo != null)
-            {
-                synchronizedResult.ExceptionDispatchInfo.Throw();
-            }
+            synchronizedResult.ExceptionDispatchInfo?.Throw();
 
             return await Task.FromResult(synchronizedResult.Response).ConfigureAwait(false);
         }
