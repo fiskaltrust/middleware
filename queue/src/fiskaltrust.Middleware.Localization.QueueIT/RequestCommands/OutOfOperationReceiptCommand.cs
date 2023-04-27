@@ -23,6 +23,8 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 
         public override long CountryBaseState => Constants.Cases.BASE_STATE;
 
+        public override Task<bool> ReceiptNeedsReprocessing(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem) => Task.FromResult(false);
+
         protected override Task<(ftActionJournal, SignaturItem)> DeactivateSCUAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
         {
             var signatureItem = _signatureItemFactoryIT.CreateOutOfOperationSignature($"Queue-ID: {queue.ftQueueId}");
@@ -45,7 +47,6 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 
         protected override async Task<string> GetCashboxIdentificationAsync(Guid ftQueueId)
         {
-
             var queueIt = await _configurationRepository.GetQueueITAsync(ftQueueId).ConfigureAwait(false);
             return queueIt.CashBoxIdentification;
         }

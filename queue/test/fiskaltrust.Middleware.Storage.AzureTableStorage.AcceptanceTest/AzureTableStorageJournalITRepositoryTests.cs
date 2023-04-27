@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using AutoFixture;
 using Azure.Data.Tables;
+using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Storage.AcceptanceTest;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.AcceptanceTest.Fixtures;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.IT;
@@ -21,15 +22,15 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.AcceptanceTest
 
         public override async Task<IReadOnlyJournalITRepository> CreateReadOnlyRepository(IEnumerable<ftJournalIT> entries) => await CreateRepository(entries);
 
-        public override async Task<IJournalITRepository> CreateRepository(IEnumerable<ftJournalIT> entries)
+        public override async Task<IMiddlewareJournalITRepository> CreateRepository(IEnumerable<ftJournalIT> entries)
         {
-            var azureJournalFRRepository = new AzureTableStorageJournalITRepository(new QueueConfiguration { QueueId = _fixture.QueueId }, new TableServiceClient(Constants.AzureStorageConnectionString));
+            var azureJournalITRepository = new AzureTableStorageJournalITRepository(new QueueConfiguration { QueueId = _fixture.QueueId }, new TableServiceClient(Constants.AzureStorageConnectionString));
             foreach (var entry in entries)
             {
-                await azureJournalFRRepository.InsertAsync(entry);
+                await azureJournalITRepository.InsertAsync(entry);
             }
 
-            return azureJournalFRRepository;
+            return azureJournalITRepository;
         }
 
         public override void DisposeDatabase() => _fixture.CleanTable(nameof(ftJournalIT));

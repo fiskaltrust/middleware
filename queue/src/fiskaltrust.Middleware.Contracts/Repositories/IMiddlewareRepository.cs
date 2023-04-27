@@ -63,5 +63,10 @@ namespace fiskaltrust.Middleware.Contracts.Repositories
 
         IAsyncEnumerable<ftJournalME> GetByReceiptReference(string cbReceiptReference);
     }
+
+    public interface IMiddlewareJournalITRepository : IJournalITRepository
+    {
+        Task<ftJournalIT> GetByQueueItemId(Guid queueItemId);
+    }
 }
 

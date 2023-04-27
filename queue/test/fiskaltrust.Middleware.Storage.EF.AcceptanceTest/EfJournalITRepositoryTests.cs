@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.Abstractions;
+using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Storage.AcceptanceTest;
 using fiskaltrust.Middleware.Storage.Ef;
 using fiskaltrust.Middleware.Storage.EF.AcceptanceTest.Fixtures;
@@ -18,7 +19,7 @@ namespace fiskaltrust.Middleware.Storage.EF.AcceptanceTest
     {
         public override async Task<IReadOnlyJournalITRepository> CreateReadOnlyRepository(IEnumerable<ftJournalIT> entries) => await CreateRepository(entries);
 
-        public override async Task<IJournalITRepository> CreateRepository(IEnumerable<ftJournalIT> entries)
+        public override async Task<IMiddlewareJournalITRepository> CreateRepository(IEnumerable<ftJournalIT> entries)
         {
             var queueId = Guid.NewGuid();
             var repository = new EfJournalITRepository(new MiddlewareDbContext(EfConnectionStringFixture.DatabaseConnectionString, queueId));

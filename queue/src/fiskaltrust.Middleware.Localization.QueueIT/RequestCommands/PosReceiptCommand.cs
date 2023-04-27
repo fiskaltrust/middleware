@@ -13,6 +13,8 @@ using fiskaltrust.Middleware.Contracts.Extensions;
 using fiskaltrust.Middleware.Localization.QueueIT.Exceptions;
 using System.ServiceModel.Channels;
 using Newtonsoft.Json;
+using Microsoft.Extensions.Logging;
+using fiskaltrust.Middleware.Contracts.Repositories;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 {
@@ -25,16 +27,14 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
         public DateTime ReceiptDateTime { get; set; }
     }
 
-    public class PosReceiptCommand : RequestCommand
+    public class PosReceiptCommand : RequestCommandIT
     {
         private readonly SignatureItemFactoryIT _signatureItemFactoryIT;
-        private readonly IJournalITRepository _journalITRepository;
+        private readonly IMiddlewareJournalITRepository _journalITRepository;
         private readonly IReadOnlyConfigurationRepository _configurationRepository;
         private readonly IITSSCD _client;
 
-        public override long CountryBaseState => Constants.Cases.BASE_STATE;
-
-        public PosReceiptCommand(IITSSCDProvider itIsscdProvider, SignatureItemFactoryIT signatureItemFactoryIT, IJournalITRepository journalITRepository, IReadOnlyConfigurationRepository configurationRepository)
+        public PosReceiptCommand(IITSSCDProvider itIsscdProvider, SignatureItemFactoryIT signatureItemFactoryIT, IMiddlewareJournalITRepository journalITRepository, IConfigurationRepository configurationRepository, ILogger logger) : base(configurationRepository, logger)
         {
             _client = itIsscdProvider.Instance;
             _signatureItemFactoryIT = signatureItemFactoryIT;
@@ -163,6 +163,12 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
                 ReceiptDateTime = receipt.ReceiptDateTime,
                 Serialnumber = deviceInfo.SerialNumber
             };
+        }
+
+        public override async Task<bool> ReceiptNeedsReprocessing(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
+        {
+            var journalIt = await _journalITRepository.GetByQueueItemId(queueItem.ftQueueItemId).ConfigureAwait(false);
+            return journalIt == null ;
         }
     }
 }

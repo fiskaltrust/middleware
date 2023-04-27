@@ -2,11 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Storage.EF.Repositories.IT
 {
-    public class EfJournalITRepository : AbstractEFRepostiory<Guid, ftJournalIT>, IJournalITRepository
+    public class EfJournalITRepository : AbstractEFRepostiory<Guid, ftJournalIT>, IMiddlewareJournalITRepository
     {
         private long _lastInsertedTimeStamp;
 
@@ -32,5 +33,7 @@ namespace fiskaltrust.Middleware.Storage.EF.Repositories.IT
             }
             return result.ToAsyncEnumerable();
         }
+
+        public Task<ftJournalIT> GetByQueueItemId(Guid queueItemId) => Task.FromResult(DbContext.JournalITList.Where(x => x.ftQueueItemId == queueItemId).FirstOrDefault());
     }
 }

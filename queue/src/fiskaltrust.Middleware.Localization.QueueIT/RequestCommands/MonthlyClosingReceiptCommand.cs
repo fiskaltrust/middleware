@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using System;
 using fiskaltrust.storage.V0;
+using fiskaltrust.ifPOS.v1;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 {
@@ -20,5 +21,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
             var queueIt = await _configurationRepository.GetQueueITAsync(ftQueueId).ConfigureAwait(false);
             return queueIt.CashBoxIdentification;
         }
+
+        public override Task<bool> ReceiptNeedsReprocessing(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem) => Task.FromResult(false);
     }
 }

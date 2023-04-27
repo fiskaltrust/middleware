@@ -1,4 +1,5 @@
 ﻿using AutoFixture;
+using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
 using System;
@@ -11,7 +12,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
 {
     public abstract class AbstractJournalITRepositoryTests : IDisposable
     {
-        public abstract Task<IJournalITRepository> CreateRepository(IEnumerable<ftJournalIT> entries);
+        public abstract Task<IMiddlewareJournalITRepository> CreateRepository(IEnumerable<ftJournalIT> entries);
         public abstract Task<IReadOnlyJournalITRepository> CreateReadOnlyRepository(IEnumerable<ftJournalIT> entries);
 
         public virtual void DisposeDatabase() { return; }
@@ -50,6 +51,21 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             var actualEntry = await sut.GetAsync(Guid.Empty);
 
             actualEntry.Should().BeNull();
+        }
+
+        [Fact]
+        public async Task GetAsync_ByQueueItemId_ReturnValidObject()
+        {
+            var entries = StorageTestFixtureProvider.GetFixture().CreateMany<ftJournalIT>(10).ToList();
+
+            var queueItemId = Guid.NewGuid();
+            entries[0].ftQueueItemId = queueItemId;
+
+            var sut = await CreateRepository(entries);
+            var actualEntry = await sut.GetByQueueItemId(queueItemId);
+
+            actualEntry.Should().NotBeNull();
+            actualEntry.ftJournalITId.Should().Be(entries[0].ftJournalITId);
         }
 
         [Fact]

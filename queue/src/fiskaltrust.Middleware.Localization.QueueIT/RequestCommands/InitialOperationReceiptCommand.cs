@@ -52,5 +52,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 
             return (actionJournal, signatureItem);
         }
+
+        public override Task<bool> ReceiptNeedsReprocessing(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem) => Task.FromResult(false);
     }
 }

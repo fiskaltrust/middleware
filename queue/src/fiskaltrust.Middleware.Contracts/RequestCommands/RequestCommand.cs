@@ -11,6 +11,8 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
 
         public abstract Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem);
 
+        public abstract Task<bool> ReceiptNeedsReprocessing(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem);
+
         protected ReceiptResponse CreateReceiptResponse(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, string ftCashBoxIdentification, long? ftState = null)
         {
             var receiptIdentification = $"ft{queue.ftReceiptNumerator:X}#";

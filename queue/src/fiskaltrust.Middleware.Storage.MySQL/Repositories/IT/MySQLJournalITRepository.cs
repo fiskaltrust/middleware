@@ -2,12 +2,13 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Dapper;
+using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0;
 using MySqlConnector;
 
 namespace fiskaltrust.Middleware.Storage.MySQL.Repositories.IT
 {
-    public class MySQLJournalITRepository : AbstractMySQLRepository<Guid, ftJournalIT>, IJournalITRepository
+    public class MySQLJournalITRepository : AbstractMySQLRepository<Guid, ftJournalIT>, IMiddlewareJournalITRepository
     {
         public MySQLJournalITRepository(string connectionString) : base(connectionString) { }
         public override void EntityUpdated(ftJournalIT entity) => entity.TimeStamp = DateTime.UtcNow.Ticks;
@@ -25,6 +26,15 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories.IT
             {
                 await connection.OpenAsync().ConfigureAwait(false);
                 return await connection.QueryAsync<ftJournalIT>("select * from ftJournalIT").ConfigureAwait(false);
+            }
+        }
+
+        public async Task<ftJournalIT> GetByQueueItemId(Guid queueItemId)
+        {
+            using (var connection = new MySqlConnection(ConnectionString))
+            {
+                await connection.OpenAsync().ConfigureAwait(false);
+                return await connection.QueryFirstOrDefaultAsync<ftJournalIT>("select * from ftJournalIT where ftQueueItemId = @queueItemId").ConfigureAwait(false);
             }
         }
 
