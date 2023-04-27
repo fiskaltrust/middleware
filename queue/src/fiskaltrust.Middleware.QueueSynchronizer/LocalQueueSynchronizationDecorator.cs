@@ -13,13 +13,13 @@ namespace fiskaltrust.Middleware.QueueSynchronizer
         private readonly ISignProcessor _signProcessor;
         private readonly ILogger<LocalQueueSynchronizationDecorator> _logger;
         private readonly Channel<(ReceiptRequest request, ChannelWriter<SynchronizedResult>)> _channel;
+        private volatile bool _disposed = false;
 
         public LocalQueueSynchronizationDecorator(ISignProcessor signProcessor, ILogger<LocalQueueSynchronizationDecorator> logger)
         {
             _signProcessor = signProcessor;
             _logger = logger;
             _channel = Channel.CreateUnbounded<(ReceiptRequest, ChannelWriter<SynchronizedResult>)>();
-
             _ = Task.Run(ProcessReceipts);
         }
 
@@ -48,10 +48,16 @@ namespace fiskaltrust.Middleware.QueueSynchronizer
                 }
 
                 var (request, responseChannel) = await _channel.Reader.ReadAsync();
+
                 _logger.LogTrace("LocalQueueSynchronizationDecorator.ProcessReceipts: Processing a new receipt.");
                 var synchronizedResult = new SynchronizedResult();
                 try
                 {
+                    if (_disposed)
+                    {
+                        throw new ObjectDisposedException(nameof(ISignProcessor), "Queue was already disposed");
+                    }
+
                     var response = await _signProcessor.ProcessAsync(request).ConfigureAwait(false);
                     synchronizedResult.Response = response;
                 }
@@ -62,10 +68,15 @@ namespace fiskaltrust.Middleware.QueueSynchronizer
                 finally
                 {
                     await responseChannel.WriteAsync(synchronizedResult);
+                    responseChannel.Complete();
                 }
             }
         }
 
-        public void Dispose() => _channel.Writer.Complete();
+        public void Dispose()
+        {
+            _disposed = true;
+            _channel.Writer.Complete();
+        }
     }
 }
