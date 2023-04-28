@@ -23,7 +23,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
         private readonly IRequestCommandFactory _requestCommandFactory;
         private readonly ILogger<SignProcessorDE> _logger;
 
-        public SignProcessorDE(            
+        public SignProcessorDE(
             IConfigurationRepository configurationRepository,
             ITransactionPayloadFactory transactionPayloadFactory,
             IRequestCommandFactory requestCommandFactory,
@@ -68,9 +68,9 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             {
                 command = _requestCommandFactory.Create(queue, queueDE, request);
             }
-            catch
+            catch (NotImplementedException ex)
             {
-                throw new ArgumentException($"ReceiptCase {request.ftReceiptCase:X} unknown. ProcessType {processType}, ProcessData {payload}");
+                throw new ArgumentException($"ReceiptCase {request.ftReceiptCase:X} unknown. ProcessType {processType}, ProcessData {payload}", ex);
             }
 
             _logger.LogTrace("SignProcessorDE.PerformReceiptRequest: Executing command {CommandName}.", command.ReceiptName);
