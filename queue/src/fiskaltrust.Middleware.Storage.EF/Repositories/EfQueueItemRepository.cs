@@ -61,22 +61,31 @@ namespace fiskaltrust.Middleware.Storage.EF.Repositories
             return DbContext.QueueItemList.Where(x => x.ftQueueRow >= ftQueueItem.ftQueueRow).ToAsyncEnumerable();
         }
 
-        public async IAsyncEnumerable<string> GetGroupedReceiptReferenceAsync(long? fromIncl, long? toIncl)
+        public IAsyncEnumerable<string> GetGroupedReceiptReferenceAsync(long? fromIncl, long? toIncl)
         {
-            var groupByLastNamesQuery =
-                    from queueItem in DbContext.QueueItemList
-                    where
-                    (fromIncl.HasValue ? queueItem.TimeStamp >= fromIncl.Value : true) &&
-                    (toIncl.HasValue ? queueItem.TimeStamp <= toIncl.Value : true) &&
-                    !string.IsNullOrEmpty(queueItem.response)
-                    group queueItem by queueItem.cbReceiptReference into newGroup
-                    orderby newGroup.Key
-                    select newGroup;
-            await foreach (var entry in groupByLastNamesQuery.ToAsyncEnumerable())
-            {
-                yield return entry.Key;
-            }
+            var groupByReferencesQueryAll =
+                from queueItem in DbContext.QueueItemList
+                where
+                (fromIncl.HasValue ? queueItem.TimeStamp >= fromIncl.Value : true) &&
+                (toIncl.HasValue ? queueItem.TimeStamp <= toIncl.Value : true) &&
+                !string.IsNullOrEmpty(queueItem.response)
+                group queueItem by queueItem.cbReceiptReference into GroupedRefs
+                select new { GroupedRefs.Key, Cnt = GroupedRefs.Count() };
+
+            var groupedRefsMulti =  groupByReferencesQueryAll.Where(x => x.Cnt > 1).Select(x=>x.Key).ToList(); 
+
+            var previousRefs =from queueItem in DbContext.QueueItemList
+                                where
+                                (fromIncl.HasValue ? queueItem.TimeStamp >= fromIncl.Value : true) &&
+                                (toIncl.HasValue ? queueItem.TimeStamp <= toIncl.Value : true) &&
+                                !string.IsNullOrEmpty(queueItem.response) && !string.IsNullOrEmpty(queueItem.request) &&
+                                queueItem.request.Contains("cbPreviousReceiptReference")
+                                select new { previous = queueItem.cbReceiptReference };
+            var prevList = previousRefs.Select( x => x.previous).ToList();
+            var groupedList = groupedRefsMulti.Union(prevList).Distinct().Where(x => !x.Equals(""));
+            return groupedList.ToAsyncEnumerable();
         }
+
         public async IAsyncEnumerable<ftQueueItem> GetQueueItemsForReceiptReferenceAsync(string receiptReference)
         {
             var queueItemsForReceiptReference =

@@ -6,6 +6,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using fiskaltrust.Exports.Common.Helpers;
 using fiskaltrust.Exports.DSFinVK;
 using fiskaltrust.Exports.DSFinVK.Models;
 using fiskaltrust.Exports.TAR;
@@ -40,6 +41,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
         private readonly IMasterDataService _masterDataService;
         private readonly IMiddlewareQueueItemRepository _middlewareQueueItemRepository;
         private readonly ITarFileCleanupService _tarFileCleanupService;
+        private readonly QueueDEConfiguration _queueDEConfiguration;
 
         public JournalProcessorDE(
             ILogger<JournalProcessorDE> logger,
@@ -54,7 +56,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             MiddlewareConfiguration middlewareConfiguration,
             IMasterDataService masterDataService,
             IMiddlewareQueueItemRepository middlewareQueueItemRepository,
-            ITarFileCleanupService tarFileCleanupService)
+            ITarFileCleanupService tarFileCleanupService,
+            QueueDEConfiguration queueDEConfiguration)
         {
             _logger = logger;
             _configurationRepository = configurationRepository;
@@ -69,6 +72,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             _masterDataService = masterDataService;
             _middlewareQueueItemRepository = middlewareQueueItemRepository;
             _tarFileCleanupService = tarFileCleanupService;
+            _queueDEConfiguration = queueDEConfiguration;
         }
 
         public async IAsyncEnumerable<JournalResponse> ProcessAsync(JournalRequest request)
@@ -208,7 +212,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
                     CashboxIdentification = queueDE.CashBoxIdentification,
                     FirstZNumber = firstZNumber,
                     TargetDirectory = targetDirectory,
-                    TSECertificateBase64 = certificateBase64
+                    TSECertificateBase64 = certificateBase64,
+                    ReferencesLookUpType = _queueDEConfiguration.DsfinvkExportNoReferences ? ReferencesLookUpType.NoReferences : ReferencesLookUpType.GroupedReferencesMW
                 };
 
                 var readOnlyReceiptReferenceRepository = new ReadOnlyReceiptReferenceRepository(_middlewareQueueItemRepository, _actionJournalRepository);
