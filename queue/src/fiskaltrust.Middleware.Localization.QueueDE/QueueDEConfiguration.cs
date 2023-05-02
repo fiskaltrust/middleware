@@ -18,6 +18,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
 
         public bool StoreTemporaryExportFiles { get; set; } = false;
 
+        public bool DisableDsfinvkExportReferences { get; set; } = false;
+
         private bool EnableTarFileExport { get; set; } = true;
 
         public TarFileExportMode TarFileExportMode { get; set; } = TarFileExportMode.All;
