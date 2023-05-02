@@ -213,7 +213,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
                     FirstZNumber = firstZNumber,
                     TargetDirectory = targetDirectory,
                     TSECertificateBase64 = certificateBase64,
-                    ReferencesLookUpType = _queueDEConfiguration.DsfinvkExportNoReferences ? ReferencesLookUpType.NoReferences : ReferencesLookUpType.GroupedReferencesMW
+                    ReferencesLookUpType = _queueDEConfiguration.DisableDsfinvkExportReferences ? ReferencesLookUpType.NoReferences : ReferencesLookUpType.GroupedReferencesMW
                 };
 
                 var readOnlyReceiptReferenceRepository = new ReadOnlyReceiptReferenceRepository(_middlewareQueueItemRepository, _actionJournalRepository);
