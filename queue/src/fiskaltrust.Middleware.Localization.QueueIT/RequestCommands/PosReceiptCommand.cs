@@ -45,14 +45,26 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
         public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
         {
             var journals = await _journalITRepository.GetAsync().ConfigureAwait(false);
-            if (journals.Where(x=> x.cbReceiptReference.Equals(request.cbReceiptReference)).Any())
+            if (journals.Where(x => x.cbReceiptReference.Equals(request.cbReceiptReference)).Any())
             {
-                throw new CbReferenceExistsException( request.cbReceiptReference);
+                throw new CbReferenceExistsException(request.cbReceiptReference);
             }
 
             var queueIt = await _configurationRepository.GetQueueITAsync(queue.ftQueueId);
 
             var receiptResponse = CreateReceiptResponse(queue, request, queueItem, queueIt.CashBoxIdentification, CountryBaseState);
+
+            if (request.IsFailedReceipt() && request.cbReceiptMoment.Date >= DateTime.Now.Date.AddDays(-12)) // TODO We'll have to check if this calculation is correct. Or maybe we should check this on SCU side?
+            {
+                receiptResponse.ftState = Constants.States.ToOldForLateSigning;
+
+                return new RequestCommandResponse
+                {
+                    ReceiptResponse = receiptResponse,
+                    ActionJournals = new List<ftActionJournal>()
+                };
+            }
+
             FiscalReceiptResponse response;
             if (request.IsVoid())
             {
@@ -157,7 +169,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
             var journalIt = await _journalITRepository.GetAsync().ConfigureAwait(false);
             var receipt = journalIt.Where(x => x.cbReceiptReference.Equals(request.cbPreviousReceiptReference)).FirstOrDefault() ?? throw new RefundException($"Receipt {request.cbPreviousReceiptReference} was not found!");
             var scu = await _configurationRepository.GetSignaturCreationUnitITAsync(receipt.ftSignaturCreationUnitITId).ConfigureAwait(false);
-            var deviceInfo =  JsonConvert.DeserializeObject<DeviceInfo>(scu.InfoJson);
+            var deviceInfo = JsonConvert.DeserializeObject<DeviceInfo>(scu.InfoJson);
             return new RefundDetails()
             {
                 ReceiptNumber = receipt.ReceiptNumber,
@@ -170,7 +182,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
         public override async Task<bool> ReceiptNeedsReprocessing(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
         {
             var journalIt = await _journalITRepository.GetByQueueItemId(queueItem.ftQueueItemId).ConfigureAwait(false);
-            return journalIt == null ;
+            return journalIt == null;
         }
     }
 }
