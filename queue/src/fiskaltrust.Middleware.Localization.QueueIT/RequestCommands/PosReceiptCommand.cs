@@ -129,7 +129,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
             {
                 //TODO Barcode = "0123456789" 
                 Operator = "0",
-                DisplayText = $"REFUND {refundDetails.ReceiptNumber:D4} {refundDetails.ZRepNumber:D4} {refundDetails.ReceiptDateTime:ddMMyyyy} {refundDetails.Serialnumber}",
+                DisplayText = $"REFUND {refundDetails.ZRepNumber:D4} {refundDetails.ReceiptNumber:D4} {refundDetails.ReceiptDateTime:ddMMyyyy} {refundDetails.Serialnumber}",
                 Refunds = request.cbChargeItems?.Select(p => new Refund
                 {
                     Description = p.Description,
