@@ -47,7 +47,15 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
         public string CreateRefundRequestContent(FiscalReceiptRefund request)
         {
             var fiscalReceipt = CreateFiscalReceipt(request);
-            fiscalReceipt.DisplayText = DisplayText.FromString(request.DisplayText);
+            fiscalReceipt.BeginFiscalReceipt.Operator = "1";
+            fiscalReceipt.EndFiscalReceipt.Operator = "1";
+            fiscalReceipt.PrintRecTotal?.ForEach(x => x.Operator = "1");
+            fiscalReceipt.PrintRecMessage = new PrintRecMessage()
+            {
+                Operator = "1",
+                Message = request.DisplayText,
+                MessageType = "4"
+            };
             fiscalReceipt.PrintRecRefund = request.Refunds?.Select(GetPrintRecRefund).ToList();
             return SoapSerializer.Serialize(fiscalReceipt);
         }
@@ -90,7 +98,9 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
                 {
                     Description = recRefund.Description,
                     Quantity = recRefund.Quantity,
-                    UnitPrice = recRefund.UnitPrice
+                    UnitPrice = recRefund.UnitPrice,
+                    Department = recRefund.VatGroup,
+                    Operator = "1"
                 };
             }
             else
@@ -148,8 +158,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
                     Description = p.Description,
                     Payment = p.Amount,
                     PaymentType = (int) p.PaymentType,
-                    Index = p.Index,
-                    Operator = request.Operator
+                    Index = p.Index
                 }).ToList(),
             };
             return fiscalReceipt;

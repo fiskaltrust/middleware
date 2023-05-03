@@ -310,12 +310,11 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
     [XmlRoot(ElementName = "printerFiscalReceipt")]
     public class FiscalReceipt
     {
-
         [XmlElement(ElementName = "displayText")]
         public DisplayText? DisplayText { get; set; }
 
         [XmlElement(ElementName = "printRecMessage")]
-        public List<PrintRecMessage>? PrintRecMessage { get; set; }
+        public PrintRecMessage? PrintRecMessage { get; set; }
 
         [XmlElement(ElementName = "beginFiscalReceipt")]
         public BeginFiscalReceipt BeginFiscalReceipt { get; set; } = new BeginFiscalReceipt();

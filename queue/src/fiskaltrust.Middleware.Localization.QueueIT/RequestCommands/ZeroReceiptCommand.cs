@@ -18,9 +18,9 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
         private readonly IConfigurationRepository _configurationRepository;
         private readonly IActionJournalRepository _actionJournalRepository;
         private readonly IMiddlewareQueueItemRepository _queueItemRepository;
-        private readonly ILogger _logger;
+        private readonly ILogger<RequestCommand> _logger;
 
-        public ZeroReceiptCommand(IMiddlewareQueueItemRepository queueItemRepository, IRequestCommandFactory requestCommandFactory, IConfigurationRepository configurationRepository, ILogger logger, IActionJournalRepository actionJournalRepository) : base(configurationRepository, logger)
+        public ZeroReceiptCommand(IMiddlewareQueueItemRepository queueItemRepository, IRequestCommandFactory requestCommandFactory, IConfigurationRepository configurationRepository, ILogger<RequestCommand> logger, IActionJournalRepository actionJournalRepository) : base(configurationRepository, logger)
         {
             _requestCommandFactory = requestCommandFactory;
             _configurationRepository = configurationRepository;

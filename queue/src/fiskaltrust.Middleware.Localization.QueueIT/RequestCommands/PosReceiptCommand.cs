@@ -34,7 +34,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
         private readonly IReadOnlyConfigurationRepository _configurationRepository;
         private readonly IITSSCD _client;
 
-        public PosReceiptCommand(IITSSCDProvider itIsscdProvider, SignatureItemFactoryIT signatureItemFactoryIT, IMiddlewareJournalITRepository journalITRepository, IConfigurationRepository configurationRepository, ILogger logger) : base(configurationRepository, logger)
+        public PosReceiptCommand(IITSSCDProvider itIsscdProvider, SignatureItemFactoryIT signatureItemFactoryIT, IMiddlewareJournalITRepository journalITRepository, IConfigurationRepository configurationRepository, ILogger<RequestCommand> logger) : base(configurationRepository, logger)
         {
             _client = itIsscdProvider.Instance;
             _signatureItemFactoryIT = signatureItemFactoryIT;
@@ -128,6 +128,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
             var fiscalReceiptRequest = new FiscalReceiptRefund()
             {
                 //TODO Barcode = "0123456789" 
+                Operator = "0",
                 DisplayText = $"REFUND {refundDetails.ReceiptNumber:D4} {refundDetails.ZRepNumber:D4} {refundDetails.ReceiptDateTime:ddMMyyyy} {refundDetails.Serialnumber}",
                 Refunds = request.cbChargeItems?.Select(p => new Refund
                 {
@@ -143,7 +144,8 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
                 {
                     Amount = p.Amount,
                     Description = p.Description,
-                    PaymentType = p.GetPaymentType()
+                    PaymentType = p.GetPaymentType(),
+                    Index = 1
                 }).ToList()
             };
 

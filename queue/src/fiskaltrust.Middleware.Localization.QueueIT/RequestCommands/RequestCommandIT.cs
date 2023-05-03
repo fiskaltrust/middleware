@@ -4,6 +4,7 @@ using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 using System;
 using fiskaltrust.Middleware.Contracts.RequestCommands;
+using System.Runtime.CompilerServices;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 {
@@ -11,15 +12,15 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
     {
         public override long CountryBaseState => Constants.Cases.BASE_STATE;
         private readonly IConfigurationRepository _configurationRepository;
-        private readonly ILogger _logger;
+        private readonly ILogger<RequestCommand> _logger;
 
-        public RequestCommandIT(IConfigurationRepository configurationRepository, ILogger logger)
+        public RequestCommandIT(IConfigurationRepository configurationRepository, ILogger<RequestCommand> logger)
         {
             _configurationRepository = configurationRepository;
             _logger = logger;
         }
 
-        public async Task<RequestCommandResponse> ProcessFailedReceiptRequest(ftQueue queue, ftQueueItem queueItem, ReceiptRequest request)
+        protected async Task<RequestCommandResponse> ProcessFailedReceiptRequest(ftQueue queue, ftQueueItem queueItem, ReceiptRequest request)
         {
             var queueIt = await _configurationRepository.GetQueueITAsync(queue.ftQueueId).ConfigureAwait(false);
             if (queueIt.SSCDFailCount == 0)
@@ -36,5 +37,6 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 
             return new RequestCommandResponse { ReceiptResponse = receiptResponse };
         }
+
     }
 }
