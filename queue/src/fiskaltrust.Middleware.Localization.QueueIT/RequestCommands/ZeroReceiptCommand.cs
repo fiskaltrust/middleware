@@ -29,7 +29,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
             _actionJournalRepository = actionJournalRepository;
         }
 
-        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
+        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, bool isRebooking = false)
         {
             try
             {
@@ -47,12 +47,12 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
                 await foreach (var fqueueItem in queueItemsAfterFailure.ConfigureAwait(false))
                 {
                     var frequest = JsonConvert.DeserializeObject<ReceiptRequest>(fqueueItem.request);
-                    var command = _requestCommandFactory.Create(frequest, queueIt);
-                    if (await command.ReceiptNeedsReprocessing(queue, request, queueItem).ConfigureAwait(false))
+                    var command = _requestCommandFactory.Create(frequest);
+                    if (await command.ReceiptNeedsReprocessing(queue, frequest, fqueueItem).ConfigureAwait(false))
                     {
                         try
                         {
-                            var requestCommandResponse = await command.ExecuteAsync(queue, request, queueItem).ConfigureAwait(false);
+                            var requestCommandResponse = await command.ExecuteAsync(queue, frequest, fqueueItem).ConfigureAwait(false);
                             if (requestCommandResponse.ActionJournals != null)
                             {
                                 foreach (var journal in requestCommandResponse.ActionJournals)
@@ -88,7 +88,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
                 queueIt.SSCDFailQueueItemId = null;
                 await _configurationRepository.InsertOrUpdateQueueITAsync(queueIt).ConfigureAwait(false);
 
-                return await Task.FromResult(new RequestCommandResponse
+                return new RequestCommandResponse
                 {
                     ReceiptResponse = receiptResponse,
                     ActionJournals = new List<ftActionJournal>
@@ -102,11 +102,11 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
                             Priority = -1,
                             TimeStamp = 0,
                             Message = caption + data,
-                            Type = $"{0x4D45_0000_0000_0002:X}-{nameof(String)}",
+                            Type = $"{ CountryBaseState & 2:X}",
                             DataJson = JsonConvert.SerializeObject(caption + " " + data)
                         }
                     }
-                });
+                };
             }
             catch (EntryPointNotFoundException ex)
             {

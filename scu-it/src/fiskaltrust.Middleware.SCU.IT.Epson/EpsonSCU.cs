@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
+using System.ServiceModel;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -52,6 +54,7 @@ public sealed class EpsonSCU : IITSSCD
             _semaphore.Wait(_configuration.LockTimeoutMs);
 
             var content = _epsonXmlWriter.CreateInvoiceRequestContent(request);
+
             var response = await SendRequestAsync(content);
 
             using var responseContent = await response.Content.ReadAsStreamAsync();
@@ -60,43 +63,17 @@ public sealed class EpsonSCU : IITSSCD
             {
                 Success = result?.Success ?? false
             };
-
             await SetReceiptResponse(request?.Payments, result, fiscalReceiptResponse);
             return fiscalReceiptResponse;
         }
         catch (Exception e)
         {
-            var msg = e.Message;
-            if (e.InnerException != null)
-            {
-                msg = msg + " " + e.InnerException.Message;
-            }
-            return new FiscalReceiptResponse() { Success = false, ErrorInfo = msg };
+            return ExceptionInfo(e);
         }
         finally
         {
             _semaphore.Release();
         }
-    }
-
-    private string GetErrorInfo(ReceiptResponse receiptResponse)
-    {
-        var errorInf = "[ERR] Printer";
-        if (receiptResponse?.Code != null)
-        {
-            errorInf += $"\n Error Code {receiptResponse.Code}: {_errorCodeFactory.GetCodeInfo(receiptResponse.Code)} ";
-        }
-        if (receiptResponse?.Status != null)
-        {
-            errorInf += $"\n Status {receiptResponse.Status}: {_errorCodeFactory.GetStatusInfo(int.Parse(receiptResponse.Status))}";
-        }
-        var state = GetPrinterStatus(receiptResponse?.Receipt?.PrinterStatus);
-        if (state != null)
-        {
-            errorInf += $"\n Printer state {state}";
-        }
-        _logger.LogError(errorInf);
-        return errorInf;
     }
 
     public async Task<string> GetSerialNumberAsync(string rtType)
@@ -112,7 +89,6 @@ public sealed class EpsonSCU : IITSSCD
 
         return serialnr?.Substring(10, 2) + rtType + serialnr?.Substring(8, 2)  + serialnr?.Substring(2, 6);
     }
-
 
     public async Task<FiscalReceiptResponse> FiscalReceiptRefundAsync(FiscalReceiptRefund request)
     {
@@ -134,12 +110,7 @@ public sealed class EpsonSCU : IITSSCD
         }
         catch (Exception e)
         {
-            var msg = e.Message;
-            if (e.InnerException != null)
-            {
-                msg = msg + " " + e.InnerException.Message;
-            }
-            return new FiscalReceiptResponse() { Success = false, ErrorInfo = msg };
+            return ExceptionInfo(e);
         }
         finally
         {
@@ -317,5 +288,54 @@ public sealed class EpsonSCU : IITSSCD
         }
 
         return content;
+    }
+
+    private bool IsConnectionException(Exception e)
+    {
+        if (e.GetType().IsAssignableFrom(typeof(EndpointNotFoundException)) ||
+            e.GetType().IsAssignableFrom(typeof(WebException)) ||
+            e.GetType().IsAssignableFrom(typeof(CommunicationException))||
+            e.GetType().IsAssignableFrom(typeof(TaskCanceledException))||
+            e.GetType().IsAssignableFrom(typeof(HttpRequestException)))
+        {
+            return true;
+        }
+        return false;
+    }
+
+    private FiscalReceiptResponse ExceptionInfo(Exception e)
+    {
+        var msg = "[ERR] ";
+        if (IsConnectionException(e))
+        {
+            msg = "[ERR-Connection] ";
+        }
+        msg += e.Message;
+        if (e.InnerException != null)
+        {
+            msg += " " + e.InnerException.Message;
+        }
+        return new FiscalReceiptResponse() { Success = false, ErrorInfo = msg };
+    }
+
+    private string GetErrorInfo(ReceiptResponse receiptResponse)
+    {
+        var errorInf = "[ERR-Printer] ";
+
+        if (receiptResponse?.Code != null)
+        {
+            errorInf += $"\n Error Code {receiptResponse.Code}: {_errorCodeFactory.GetCodeInfo(receiptResponse.Code)} ";
+        }
+        if (receiptResponse?.Status != null)
+        {
+            errorInf += $"\n Status {receiptResponse.Status}: {_errorCodeFactory.GetStatusInfo(int.Parse(receiptResponse.Status))}";
+        }
+        var state = GetPrinterStatus(receiptResponse?.Receipt?.PrinterStatus);
+        if (state != null)
+        {
+            errorInf += $"\n Printer state {state}";
+        }
+        _logger.LogError(errorInf);
+        return errorInf;
     }
 }

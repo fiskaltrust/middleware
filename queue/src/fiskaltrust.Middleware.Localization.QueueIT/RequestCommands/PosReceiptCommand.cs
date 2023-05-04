@@ -42,7 +42,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
             _configurationRepository = configurationRepository;
         }
 
-        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
+        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, bool isRebooking = false)
         {
             var journals = await _journalITRepository.GetAsync().ConfigureAwait(false);
             if (journals.Where(x => x.cbReceiptReference.Equals(request.cbReceiptReference)).Any())
@@ -78,13 +78,21 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
             }
             if (!response.Success)
             {
-                throw new Exception(response.ErrorInfo);
+                if (response.ErrorInfo.StartsWith("[ERR-Connection]") && !isRebooking)
+                {
+                    await ProcessFailedReceiptRequest(queue, queueItem, request).ConfigureAwait(false);
+                }
+                else
+                {
+                    throw new Exception(response.ErrorInfo);
+                }
             }
-            receiptResponse.ftSignatures = _signatureItemFactoryIT.CreatePosReceiptSignatures(response);
-
-            var journalIT = CreateJournalIT(queue, queueIt, request, queueItem, response);
-            await _journalITRepository.InsertAsync(journalIT).ConfigureAwait(false);
-
+            else
+            {
+                receiptResponse.ftSignatures = _signatureItemFactoryIT.CreatePosReceiptSignatures(response);
+                var journalIT = CreateJournalIT(queue, queueIt, request, queueItem, response);
+                await _journalITRepository.InsertAsync(journalIT).ConfigureAwait(false);
+            }
 
             return new RequestCommandResponse
             {

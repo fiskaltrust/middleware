@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Exceptions;
 using fiskaltrust.Middleware.Contracts.RequestCommands;
@@ -13,7 +14,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands.Factories
 
         public RequestCommandFactory(IServiceProvider serviceCollection) => _serviceProvider = serviceCollection;
 
-        public RequestCommand Create(ReceiptRequest request, ftQueueIT queueIt)
+        public RequestCommand Create(ReceiptRequest request)
         {
             RequestCommand command = (request.ftReceiptCase & 0xFFFF) switch
             {
@@ -24,8 +25,10 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands.Factories
                 0x0007 => _serviceProvider.GetService<DailyClosingReceiptCommand>(),
                 0x0005 => _serviceProvider.GetService<MonthlyClosingReceiptCommand>(),
                 0x0006 => _serviceProvider.GetService<YearlyClosingReceiptCommand>(),
+                0x0002 => _serviceProvider.GetService<ZeroReceiptCommand>(),
                 _ => throw new UnknownReceiptCaseException(request.ftReceiptCase)
             };
+
             return command;
         }
     }

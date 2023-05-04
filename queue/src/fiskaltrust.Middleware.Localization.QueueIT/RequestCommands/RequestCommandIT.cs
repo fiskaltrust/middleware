@@ -4,7 +4,6 @@ using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 using System;
 using fiskaltrust.Middleware.Contracts.RequestCommands;
-using System.Runtime.CompilerServices;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 {
@@ -20,7 +19,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
             _logger = logger;
         }
 
-        protected async Task<RequestCommandResponse> ProcessFailedReceiptRequest(ftQueue queue, ftQueueItem queueItem, ReceiptRequest request)
+        public override async Task<RequestCommandResponse> ProcessFailedReceiptRequest(ftQueue queue, ftQueueItem queueItem, ReceiptRequest request)
         {
             var queueIt = await _configurationRepository.GetQueueITAsync(queue.ftQueueId).ConfigureAwait(false);
             if (queueIt.SSCDFailCount == 0)
@@ -31,9 +30,9 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
             queueIt.SSCDFailCount++;
             await _configurationRepository.InsertOrUpdateQueueITAsync(queueIt).ConfigureAwait(false);
             var receiptResponse = CreateReceiptResponse(queue, request, queueItem, queueIt.CashBoxIdentification);
-            receiptResponse.ftState += CountryBaseState & 2;
-            _logger.LogInformation(
-                $"Queue is in failed mode. SSCDFailMoment: {queueIt.SSCDFailMoment}, SSCDFailCount: {queueIt.SSCDFailCount}. When connection is established use zeroreceipt for subsequent booking!");
+            receiptResponse.ftState = CountryBaseState & 2;
+            receiptResponse.ftStateData = $"Queue is in failed mode. SSCDFailMoment: {queueIt.SSCDFailMoment}, SSCDFailCount: {queueIt.SSCDFailCount}. When connection is established use zeroreceipt for subsequent booking!";
+            _logger.LogInformation(receiptResponse.ftStateData);
 
             return new RequestCommandResponse { ReceiptResponse = receiptResponse };
         }

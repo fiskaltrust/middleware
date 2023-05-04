@@ -2,6 +2,7 @@
 using System;
 using fiskaltrust.storage.V0;
 using fiskaltrust.ifPOS.v1;
+using fiskaltrust.Middleware.Contracts.RequestCommands;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 {
@@ -23,5 +24,6 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
         }
 
         public override Task<bool> ReceiptNeedsReprocessing(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem) => Task.FromResult(false);
+        public override Task<RequestCommandResponse> ProcessFailedReceiptRequest(ftQueue queue, ftQueueItem queueItem, ReceiptRequest request) => throw new NotImplementedException();
     }
 }

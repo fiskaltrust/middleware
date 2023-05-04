@@ -5,6 +5,7 @@ using fiskaltrust.ifPOS.v1;
 using fiskaltrust.storage.serialization.DE.V0;
 using Newtonsoft.Json;
 using fiskaltrust.Middleware.Localization.QueueIT.Factories;
+using fiskaltrust.Middleware.Contracts.RequestCommands;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 {
@@ -23,6 +24,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 
         public override long CountryBaseState => Constants.Cases.BASE_STATE;
 
+        public override Task<RequestCommandResponse> ProcessFailedReceiptRequest(ftQueue queue, ftQueueItem queueItem, ReceiptRequest request) => throw new NotImplementedException();
         public override Task<bool> ReceiptNeedsReprocessing(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem) => Task.FromResult(false);
 
         protected override Task<(ftActionJournal, SignaturItem)> DeactivateSCUAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)

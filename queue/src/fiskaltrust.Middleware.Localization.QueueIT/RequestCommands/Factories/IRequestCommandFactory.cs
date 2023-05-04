@@ -6,6 +6,6 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands.Factories
 {
     public interface IRequestCommandFactory
     {
-        public RequestCommand Create(ReceiptRequest request, ftQueueIT queueIt);
+        public RequestCommand Create(ReceiptRequest request);
     }
 }
