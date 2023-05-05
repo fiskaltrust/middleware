@@ -89,6 +89,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
             }
             else
             {
+                receiptResponse.ftReceiptIdentification += $"{response.ReceiptNumber}Z{response.ZRepNumber}";
                 receiptResponse.ftSignatures = _signatureItemFactoryIT.CreatePosReceiptSignatures(response);
                 var journalIT = CreateJournalIT(queue, queueIt, request, queueItem, response);
                 await _journalITRepository.InsertAsync(journalIT).ConfigureAwait(false);
@@ -97,6 +98,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
             return new RequestCommandResponse
             {
                 ReceiptResponse = receiptResponse,
+                Signatures = receiptResponse.ftSignatures.ToList(),
                 ActionJournals = new List<ftActionJournal>()
             };
         }

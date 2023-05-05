@@ -31,19 +31,22 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 
         public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, bool isRebooking = false)
         {
-            try
-            {
                 var queueIt = await _configurationRepository.GetQueueITAsync(queue.ftQueueId).ConfigureAwait(false);
+                var receiptResponse = CreateReceiptResponse(queue, request, queueItem, queueIt.CashBoxIdentification);
                 if (queueIt.SSCDFailCount == 0)
                 {
-                    _logger.LogInformation("Queue has no failed receipts.");
+                    receiptResponse.ftStateData = "Queue has no failed receipts.";
+                    _logger.LogInformation(receiptResponse.ftStateData);
                     return new RequestCommandResponse()
                     {
-                        ReceiptResponse = CreateReceiptResponse(queue, request, queueItem, queueIt.CashBoxIdentification)
+                        ReceiptResponse = receiptResponse
                     };
                 }
+                
                 var failedQueueItem = await _queueItemRepository.GetAsync(queueIt.SSCDFailQueueItemId.Value).ConfigureAwait(false);
                 var queueItemsAfterFailure = _queueItemRepository.GetQueueItemsAfterQueueItem(failedQueueItem);
+                var sentReceipts = new List<string>();
+                var signatures = new List<SignaturItem>();
                 await foreach (var fqueueItem in queueItemsAfterFailure.ConfigureAwait(false))
                 {
                     var frequest = JsonConvert.DeserializeObject<ReceiptRequest>(fqueueItem.request);
@@ -52,7 +55,9 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
                     {
                         try
                         {
-                            var requestCommandResponse = await command.ExecuteAsync(queue, frequest, fqueueItem).ConfigureAwait(false);
+                            var requestCommandResponse = await command.ExecuteAsync(queue, frequest, fqueueItem, true).ConfigureAwait(false);
+                            signatures.AddRange(requestCommandResponse.Signatures);
+                            sentReceipts.Add(fqueueItem.cbReceiptReference);
                             if (requestCommandResponse.ActionJournals != null)
                             {
                                 foreach (var journal in requestCommandResponse.ActionJournals)
@@ -63,25 +68,28 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
                         }
                         catch (Exception ex)
                         {
+                            if (ex.Message.StartsWith("[ERR-Connection]"))
+                            {
+                                throw new Exception(ex.Message);
+                            }
                             _logger.LogError(ex, $"The receipt {frequest.cbReceiptReference} could not be proccessed!");
                         }
                     }
                 }
-                _logger.LogInformation($"Successfully closed failed-mode, re-sent {queueIt.SSCDFailCount} receipts that have been stored between {queueIt.SSCDFailMoment:G} and {DateTime.UtcNow:G}.");
+                receiptResponse.ftStateData = JsonConvert.SerializeObject(new { SentReceipts = sentReceipts });
+                _logger.LogInformation($"Successfully closed failed-mode, resent {queueIt.SSCDFailCount} receipts that have been stored between {queueIt.SSCDFailMoment:G} and {DateTime.UtcNow:G}.");
 
                 var caption = $"Restored connection to fiscalization service at {DateTime.UtcNow:G}.";
                 var data = $"{queueIt.SSCDFailCount} receipts from the timeframe between {queueIt.SSCDFailMoment:G} and {DateTime.UtcNow:G} have been re-processed at the fiscalization service.";
-                var receiptResponse = CreateReceiptResponse(queue, request, queueItem, queueIt.CashBoxIdentification);
-                receiptResponse.ftSignatures = receiptResponse.ftSignatures.Concat(new List<SignaturItem>
+
+                signatures.Add(new()
                 {
-                    new()
-                    {
-                        ftSignatureType = CountryBaseState & 2,
-                        ftSignatureFormat = (long) ifPOS.v0.SignaturItem.Formats.Text,
-                        Caption = caption,
-                        Data = data
-                    }
-                }).ToArray();
+                    ftSignatureType = CountryBaseState & 2,
+                    ftSignatureFormat = (long) ifPOS.v0.SignaturItem.Formats.Text,
+                    Caption = caption,
+                    Data = data
+                });
+                receiptResponse.ftSignatures = signatures.ToArray();
 
                 queueIt.SSCDFailCount = 0;
                 queueIt.SSCDFailMoment = null;
@@ -102,17 +110,11 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
                             Priority = -1,
                             TimeStamp = 0,
                             Message = caption + data,
-                            Type = $"{ CountryBaseState & 2:X}",
+                            Type = $"{ CountryBaseState | 2:X}",
                             DataJson = JsonConvert.SerializeObject(caption + " " + data)
                         }
                     }
                 };
-            }
-            catch (EntryPointNotFoundException ex)
-            {
-                _logger.LogDebug(ex, "TSE not reachable.");
-                throw;
-            }
         }
 
         public override Task<bool> ReceiptNeedsReprocessing(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem) => Task.FromResult(false);
