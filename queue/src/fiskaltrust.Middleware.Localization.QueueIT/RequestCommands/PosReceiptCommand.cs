@@ -11,14 +11,11 @@ using fiskaltrust.Middleware.Localization.QueueIT.Factories;
 using fiskaltrust.Middleware.Localization.QueueIT.Services;
 using fiskaltrust.Middleware.Contracts.Extensions;
 using fiskaltrust.Middleware.Localization.QueueIT.Exceptions;
-using System.ServiceModel.Channels;
 using Newtonsoft.Json;
-using Microsoft.Extensions.Logging;
 using fiskaltrust.Middleware.Contracts.Repositories;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 {
-
     public struct RefundDetails
     {
         public string Serialnumber { get; set; }
@@ -27,20 +24,24 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
         public DateTime ReceiptDateTime { get; set; }
     }
 
-    public class PosReceiptCommand : RequestCommandIT
+    public class PosReceiptCommand : RequestCommand
     {
+        public override long CountryBaseState => Constants.Cases.BASE_STATE;
+        private readonly IConfigurationRepository _configurationRepository;
         private readonly SignatureItemFactoryIT _signatureItemFactoryIT;
         private readonly IMiddlewareJournalITRepository _journalITRepository;
-        private readonly IReadOnlyConfigurationRepository _configurationRepository;
         private readonly IITSSCD _client;
 
-        public PosReceiptCommand(IITSSCDProvider itIsscdProvider, SignatureItemFactoryIT signatureItemFactoryIT, IMiddlewareJournalITRepository journalITRepository, IConfigurationRepository configurationRepository, ILogger<RequestCommand> logger) : base(configurationRepository, logger)
+        public PosReceiptCommand(IITSSCDProvider itIsscdProvider, SignatureItemFactoryIT signatureItemFactoryIT, IMiddlewareJournalITRepository journalITRepository, IConfigurationRepository configurationRepository)
         {
             _client = itIsscdProvider.Instance;
             _signatureItemFactoryIT = signatureItemFactoryIT;
             _journalITRepository = journalITRepository;
             _configurationRepository = configurationRepository;
         }
+
+        public override async Task<IQueue> GetIQueue(Guid queueId) => await _configurationRepository.GetQueueITAsync(queueId).ConfigureAwait(false);
+        public override async Task SaveIQueue(IQueue iQueue) => await _configurationRepository.InsertOrUpdateQueueITAsync((ftQueueIT) iQueue).ConfigureAwait(false);
 
         public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, bool isRebooking = false)
         {

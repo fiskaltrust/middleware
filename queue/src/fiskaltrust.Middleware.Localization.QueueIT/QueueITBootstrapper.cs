@@ -1,9 +1,8 @@
 ﻿using fiskaltrust.ifPOS.v1.it;
-using fiskaltrust.ifPOS.v1.me;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts;
-using fiskaltrust.Middleware.Contracts.Factories;
 using fiskaltrust.Middleware.Contracts.Models;
+using fiskaltrust.Middleware.Contracts.RequestCommands.Factories;
 using fiskaltrust.Middleware.Localization.QueueIT.Extensions;
 using fiskaltrust.Middleware.Localization.QueueIT.Factories;
 using fiskaltrust.Middleware.Localization.QueueIT.RequestCommands.Factories;

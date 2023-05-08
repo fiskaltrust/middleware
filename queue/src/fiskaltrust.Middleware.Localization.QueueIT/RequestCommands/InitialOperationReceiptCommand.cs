@@ -8,7 +8,6 @@ using fiskaltrust.storage.serialization.DE.V0;
 using fiskaltrust.Middleware.Localization.QueueIT.Factories;
 using fiskaltrust.Middleware.Localization.QueueIT.Services;
 using fiskaltrust.ifPOS.v1.it;
-using System.Threading;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 {
@@ -54,6 +53,5 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
         }
 
         public override Task<bool> ReceiptNeedsReprocessing(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem) => Task.FromResult(false);
-        public override Task<Contracts.RequestCommands.RequestCommandResponse> ProcessFailedReceiptRequest(ftQueue queue, ftQueueItem queueItem, ReceiptRequest request) => throw new NotImplementedException();
     }
 }

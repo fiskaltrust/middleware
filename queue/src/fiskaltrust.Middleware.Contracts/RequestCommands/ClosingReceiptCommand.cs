@@ -28,5 +28,7 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
         protected virtual Task<RequestCommandResponse> SpecializeAsync(RequestCommandResponse requestCommandResponse) => Task.FromResult(requestCommandResponse);
 
         protected abstract Task<string> GetCashboxIdentificationAsync(Guid ftQueueId);
+        public override Task<IQueue> GetIQueue(Guid queueId) => throw new NotImplementedException();
+        public override Task SaveIQueue(IQueue iQueue) => throw new NotImplementedException();
     }
 }

@@ -1,9 +1,8 @@
 ﻿using System;
-using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Exceptions;
 using fiskaltrust.Middleware.Contracts.RequestCommands;
-using fiskaltrust.storage.V0;
+using fiskaltrust.Middleware.Contracts.RequestCommands.Factories;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands.Factories

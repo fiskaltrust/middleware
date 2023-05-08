@@ -11,6 +11,7 @@ namespace fiskaltrust.Middleware.Contracts.Models
         public int TarFileChunkSize { get; set; } = 1024 * 1024; // 1 MB
         public int JournalChunkSize { get; set; } = 1024 * 1024; // 1 MB
         public bool IsSandbox { get; set; }
+        public bool ResendFailedReceipts { get; set; } = false;
         public string ServiceFolder { get; set; }
         public Action<string> OnMessage { get; set; }
         public Dictionary<string, object> Configuration { get; set; }
