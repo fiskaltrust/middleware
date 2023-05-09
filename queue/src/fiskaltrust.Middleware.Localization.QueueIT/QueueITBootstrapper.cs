@@ -2,9 +2,11 @@
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts;
 using fiskaltrust.Middleware.Contracts.Models;
+using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Contracts.RequestCommands.Factories;
 using fiskaltrust.Middleware.Localization.QueueIT.Extensions;
 using fiskaltrust.Middleware.Localization.QueueIT.Factories;
+using fiskaltrust.Middleware.Localization.QueueIT.Repositories;
 using fiskaltrust.Middleware.Localization.QueueIT.RequestCommands.Factories;
 using fiskaltrust.Middleware.Localization.QueueIT.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,6 +21,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
                 .AddScoped<IMarketSpecificSignProcessor, SignProcessorIT>()
                 .AddScoped<IMarketSpecificJournalProcessor, JournalProcessorIT>()
                 .AddScoped<SignatureItemFactoryIT>()
+                .AddScoped<IQueueRepository,QueueRepository>()
                 .AddSingleton(sp => QueueITConfiguration.FromMiddlewareConfiguration(sp.GetRequiredService<MiddlewareConfiguration>()))
                 .AddSingleton<IITSSCDProvider>(sp =>
                 {
