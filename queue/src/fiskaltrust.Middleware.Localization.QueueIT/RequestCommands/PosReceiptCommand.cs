@@ -27,21 +27,21 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
     public class PosReceiptCommand : RequestCommand
     {
         public override long CountryBaseState => Constants.Cases.BASE_STATE;
+        protected override IQueueRepository IQueueRepository => _iQueueRepository;
+        private readonly IQueueRepository _iQueueRepository;
         private readonly IConfigurationRepository _configurationRepository;
         private readonly SignatureItemFactoryIT _signatureItemFactoryIT;
         private readonly IMiddlewareJournalITRepository _journalITRepository;
         private readonly IITSSCD _client;
 
-        public PosReceiptCommand(IITSSCDProvider itIsscdProvider, SignatureItemFactoryIT signatureItemFactoryIT, IMiddlewareJournalITRepository journalITRepository, IConfigurationRepository configurationRepository)
+        public PosReceiptCommand(IITSSCDProvider itIsscdProvider, SignatureItemFactoryIT signatureItemFactoryIT, IMiddlewareJournalITRepository journalITRepository, IConfigurationRepository configurationRepository,IQueueRepository iQeueRepository)
         {
             _client = itIsscdProvider.Instance;
             _signatureItemFactoryIT = signatureItemFactoryIT;
             _journalITRepository = journalITRepository;
+            _iQueueRepository = iQeueRepository;
             _configurationRepository = configurationRepository;
         }
-
-        public override async Task<IQueue> GetIQueue(Guid queueId) => await _configurationRepository.GetQueueITAsync(queueId).ConfigureAwait(false);
-        public override async Task SaveIQueue(IQueue iQueue) => await _configurationRepository.InsertOrUpdateQueueITAsync((ftQueueIT) iQueue).ConfigureAwait(false);
 
         public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, bool isRebooking = false)
         {
@@ -51,7 +51,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
                 throw new CbReferenceExistsException(request.cbReceiptReference);
             }
 
-            var queueIt = await _configurationRepository.GetQueueITAsync(queue.ftQueueId);
+            var queueIt = await _iQueueRepository.GetQueueAsync(queue.ftQueueId).ConfigureAwait(false);
 
             var receiptResponse = CreateReceiptResponse(queue, request, queueItem, queueIt.CashBoxIdentification, CountryBaseState);
 
@@ -104,14 +104,14 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
             };
         }
 
-        private ftJournalIT CreateJournalIT(ftQueue queue, ftQueueIT queueIt, ReceiptRequest request, ftQueueItem queueItem, FiscalReceiptResponse response) =>
+        private ftJournalIT CreateJournalIT(ftQueue queue, IQueue queueIt, ReceiptRequest request, ftQueueItem queueItem, FiscalReceiptResponse response) =>
             new ftJournalIT
             {
                 ftJournalITId = Guid.NewGuid(),
                 ftQueueId = queue.ftQueueId,
                 ftQueueItemId = queueItem.ftQueueItemId,
                 cbReceiptReference = request.cbReceiptReference,
-                ftSignaturCreationUnitITId = queueIt.ftSignaturCreationUnitITId.Value,
+                ftSignaturCreationUnitITId = queueIt.ftSignaturCreationUnitId.Value,
                 JournalType = request.ftReceiptCase & 0xFFFF,
                 ReceiptDateTime = response.ReceiptDateTime,
                 ReceiptNumber = response.ReceiptNumber,

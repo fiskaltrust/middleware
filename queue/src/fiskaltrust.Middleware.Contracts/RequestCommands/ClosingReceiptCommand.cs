@@ -26,9 +26,7 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
 
         // This is overkill for now ... just to demonstrate how we could maybe add some country specific funtionality
         protected virtual Task<RequestCommandResponse> SpecializeAsync(RequestCommandResponse requestCommandResponse) => Task.FromResult(requestCommandResponse);
-
+        
         protected abstract Task<string> GetCashboxIdentificationAsync(Guid ftQueueId);
-        public override Task<IQueue> GetIQueue(Guid queueId) => throw new NotImplementedException();
-        public override Task SaveIQueue(IQueue iQueue) => throw new NotImplementedException();
     }
 }

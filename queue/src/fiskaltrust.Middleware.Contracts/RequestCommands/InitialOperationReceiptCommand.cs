@@ -52,7 +52,5 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
         }
 
         protected abstract Task<(ftActionJournal, SignaturItem)> InitializeSCUAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem);
-        public override Task<IQueue> GetIQueue(Guid queueId) => throw new NotImplementedException();
-        public override Task SaveIQueue(IQueue iQueue) => throw new NotImplementedException();
     }
 }

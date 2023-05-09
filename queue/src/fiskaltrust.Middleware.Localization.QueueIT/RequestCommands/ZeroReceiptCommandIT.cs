@@ -12,16 +12,16 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
     public class ZeroReceiptCommandIT : ZeroReceiptCommand
     {
         public override long CountryBaseState => Constants.Cases.BASE_STATE;
-        private readonly IConfigurationRepository _configurationRepository;
 
-        public ZeroReceiptCommandIT(IConfigurationRepository configurationRepository, MiddlewareConfiguration middlewareConfiguration, IMiddlewareQueueItemRepository queueItemRepository, IRequestCommandFactory requestCommandFactory, ILogger < RequestCommand > logger, IActionJournalRepository actionJournalRepository):
+        protected override IQueueRepository IQueueRepository => _iQueueRepository;
+
+        private readonly IQueueRepository _iQueueRepository;
+
+        public ZeroReceiptCommandIT(IQueueRepository iqueueRepository, MiddlewareConfiguration middlewareConfiguration, IMiddlewareQueueItemRepository queueItemRepository, IRequestCommandFactory requestCommandFactory, ILogger < RequestCommand > logger, IActionJournalRepository actionJournalRepository):
             base(middlewareConfiguration, queueItemRepository, requestCommandFactory, logger, actionJournalRepository)
             {
-            _configurationRepository = configurationRepository;
+            _iQueueRepository = iqueueRepository;
         }
-
-        public override async Task<IQueue> GetIQueue(Guid queueId) => await _configurationRepository.GetQueueITAsync(queueId).ConfigureAwait(false);
-        public override async Task SaveIQueue(IQueue iQueue) => await _configurationRepository.InsertOrUpdateQueueITAsync((ftQueueIT) iQueue).ConfigureAwait(false);
 
     }
 }

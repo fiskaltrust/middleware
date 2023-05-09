@@ -2,23 +2,24 @@
 using System;
 using fiskaltrust.storage.V0;
 using fiskaltrust.ifPOS.v1;
+using fiskaltrust.Middleware.Contracts.Repositories;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 {
     public class MonthlyClosingReceiptCommand : Contracts.RequestCommands.MonthlyClosingReceiptCommand
     {
-        private readonly IReadOnlyConfigurationRepository _configurationRepository;
-
+        protected override IQueueRepository IQueueRepository => _iQueueRepository;
+        private readonly IQueueRepository _iQueueRepository;
         public override long CountryBaseState => Constants.Cases.BASE_STATE;
 
-        public MonthlyClosingReceiptCommand(IReadOnlyConfigurationRepository configurationRepository)
+        public MonthlyClosingReceiptCommand(IQueueRepository iQeueRepository)
         {
-            _configurationRepository = configurationRepository;
+            _iQueueRepository = iQeueRepository;
         }
 
         protected override async Task<string> GetCashboxIdentificationAsync(Guid ftQueueId)
         {
-            var queueIt = await _configurationRepository.GetQueueITAsync(ftQueueId).ConfigureAwait(false);
+            var queueIt = await _iQueueRepository.GetQueueAsync(ftQueueId).ConfigureAwait(false);
             return queueIt.CashBoxIdentification;
         }
 

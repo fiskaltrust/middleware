@@ -1,24 +1,26 @@
 ﻿using System;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
+using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 {
     public class DailyClosingReceiptCommand : Contracts.RequestCommands.DailyClosingReceiptCommand
     {
-        private readonly IReadOnlyConfigurationRepository _configurationRepository;
+        protected override IQueueRepository IQueueRepository => _iQueueRepository;
+        private readonly IQueueRepository _iQueueRepository;
 
         public override long CountryBaseState => Constants.Cases.BASE_STATE;
 
-        public DailyClosingReceiptCommand(IReadOnlyConfigurationRepository configurationRepository)
+        public DailyClosingReceiptCommand(IQueueRepository iQeueRepository)
         {
-            _configurationRepository = configurationRepository;
+            _iQueueRepository = iQeueRepository;
         }
 
         protected override async Task<string> GetCashboxIdentificationAsync(Guid ftQueueId)
         {
-            var queueIt = await _configurationRepository.GetQueueITAsync(ftQueueId).ConfigureAwait(false);
+            var queueIt = await _iQueueRepository.GetQueueAsync(ftQueueId).ConfigureAwait(false);
             return queueIt.CashBoxIdentification;
         }
 

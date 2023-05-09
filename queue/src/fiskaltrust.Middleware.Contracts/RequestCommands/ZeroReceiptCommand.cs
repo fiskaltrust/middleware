@@ -31,7 +31,7 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
 
         public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, bool isResend = false)
         {
-            var iQueue = await GetIQueue(queue.ftQueueId).ConfigureAwait(false);
+            var iQueue = await IQueueRepository.GetQueueAsync(queue.ftQueueId).ConfigureAwait(false);
             var receiptResponse = CreateReceiptResponse(queue, request, queueItem, iQueue.CashBoxIdentification);
             if (iQueue.SSCDFailCount == 0)
             {
@@ -67,7 +67,7 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
             iQueue.SSCDFailCount = 0;
             iQueue.SSCDFailMoment = null;
             iQueue.SSCDFailQueueItemId = null;
-            await SaveIQueue(iQueue).ConfigureAwait(false);
+            await IQueueRepository.InsertOrUpdateQueueAsync(iQueue).ConfigureAwait(false);
 
             return new RequestCommandResponse
             {

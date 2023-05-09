@@ -8,6 +8,7 @@ using fiskaltrust.storage.serialization.DE.V0;
 using fiskaltrust.Middleware.Localization.QueueIT.Factories;
 using fiskaltrust.Middleware.Localization.QueueIT.Services;
 using fiskaltrust.ifPOS.v1.it;
+using fiskaltrust.Middleware.Contracts.Repositories;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 {
@@ -15,15 +16,19 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
     {
         public override long CountryBaseState => Constants.Cases.BASE_STATE;
 
+        protected override IQueueRepository IQueueRepository => _iQueueRepository;
+        private readonly IQueueRepository _iQueueRepository;
+
         private readonly IConfigurationRepository _configurationRepository;
         private readonly SignatureItemFactoryIT _signatureItemFactoryIT;
         private readonly IITSSCD _client;
 
-        public InitialOperationReceiptCommand(IITSSCDProvider itIsscdProvider, ILogger<InitialOperationReceiptCommand> logger, IConfigurationRepository configurationRepository, SignatureItemFactoryIT signatureItemFactoryIT) : base(logger, configurationRepository)
+        public InitialOperationReceiptCommand(IQueueRepository iQeueRepository,  IITSSCDProvider itIsscdProvider, ILogger<InitialOperationReceiptCommand> logger, IConfigurationRepository configurationRepository, SignatureItemFactoryIT signatureItemFactoryIT) : base(logger, configurationRepository)
         {
             _client = itIsscdProvider.Instance;
             _configurationRepository = configurationRepository;
             _signatureItemFactoryIT = signatureItemFactoryIT;
+            _iQueueRepository = iQeueRepository;
         }
 
         protected override async Task<(ftActionJournal, SignaturItem)> InitializeSCUAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)

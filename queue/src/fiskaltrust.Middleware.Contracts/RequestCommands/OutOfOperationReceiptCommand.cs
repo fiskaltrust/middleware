@@ -36,9 +36,7 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
         }
 
         protected abstract Task<(ftActionJournal, SignaturItem)> DeactivateSCUAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem);
-
+        
         protected abstract Task<string> GetCashboxIdentificationAsync(Guid ftQueueId);
-        public override Task<IQueue> GetIQueue(Guid queueId) => throw new NotImplementedException();
-        public override Task SaveIQueue(IQueue iQueue) => throw new NotImplementedException();
     }
 }

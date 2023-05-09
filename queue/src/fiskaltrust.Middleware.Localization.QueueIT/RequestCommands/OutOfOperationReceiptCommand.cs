@@ -5,6 +5,7 @@ using fiskaltrust.ifPOS.v1;
 using fiskaltrust.storage.serialization.DE.V0;
 using Newtonsoft.Json;
 using fiskaltrust.Middleware.Localization.QueueIT.Factories;
+using fiskaltrust.Middleware.Contracts.Repositories;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 {
@@ -12,13 +13,14 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
     {
         private readonly SignatureItemFactoryIT _signatureItemFactoryIT;
         private readonly ftQueueIT _queueIt;
-        private readonly IReadOnlyConfigurationRepository _configurationRepository;
+        protected override IQueueRepository IQueueRepository => _iQueueRepository;
+        private readonly IQueueRepository _iQueueRepository;
 
-        public OutOfOperationReceiptCommand(SignatureItemFactoryIT signatureItemFactoryIT, ftQueueIT queueIt, IReadOnlyConfigurationRepository configurationRepository)
+        public OutOfOperationReceiptCommand(SignatureItemFactoryIT signatureItemFactoryIT, ftQueueIT queueIt, IQueueRepository iQeueRepository)
         {
             _signatureItemFactoryIT = signatureItemFactoryIT;
             _queueIt = queueIt;
-            _configurationRepository = configurationRepository;
+            _iQueueRepository = iQeueRepository;
         }
 
         public override long CountryBaseState => Constants.Cases.BASE_STATE;
@@ -46,7 +48,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 
         protected override async Task<string> GetCashboxIdentificationAsync(Guid ftQueueId)
         {
-            var queueIt = await _configurationRepository.GetQueueITAsync(ftQueueId).ConfigureAwait(false);
+            var queueIt = await _iQueueRepository.GetQueueAsync(ftQueueId).ConfigureAwait(false);
             return queueIt.CashBoxIdentification;
         }
     }
