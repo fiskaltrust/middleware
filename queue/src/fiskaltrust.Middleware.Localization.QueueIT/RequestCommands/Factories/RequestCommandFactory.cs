@@ -24,7 +24,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands.Factories
                 0x0007 => _serviceProvider.GetService<DailyClosingReceiptCommand>(),
                 0x0005 => _serviceProvider.GetService<MonthlyClosingReceiptCommand>(),
                 0x0006 => _serviceProvider.GetService<YearlyClosingReceiptCommand>(),
-                0x0002 => _serviceProvider.GetService<ZeroReceiptCommand>(),
+                0x0002 => _serviceProvider.GetService<ZeroReceiptCommandIT>(),
                 _ => throw new UnknownReceiptCaseException(request.ftReceiptCase)
             };
 

@@ -81,7 +81,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
             {
                 if (response.ErrorInfo.StartsWith("[ERR-Connection]") && !isRebooking)
                 {
-                    await ProcessFailedReceiptRequest(queue, queueItem, request).ConfigureAwait(false);
+                    return await ProcessFailedReceiptRequest(queue, queueItem, request).ConfigureAwait(false);
                 }
                 else
                 {
