@@ -254,7 +254,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
                 if (scuDE.TseInfoJson != null)
                 {
                     var tseInfo = JsonConvert.DeserializeObject<TseInfo>(scuDE.TseInfoJson);
-                    return tseInfo.CertificatesBase64.FirstOrDefault() ?? string.Empty;
+                    return tseInfo.CertificatesBase64?.FirstOrDefault() ?? string.Empty;
                 }
             }
 
