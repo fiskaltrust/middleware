@@ -134,26 +134,13 @@ public sealed class EpsonSCU : IITSSCD
                 Success = result?.Success ?? false
             };
 
-            var status = GetPrinterStatus(result?.ReportInfo?.PrinterStatus);
-            if (status != null)
+            if (!dailyClosingResponse.Success)
             {
-                _logger.LogDebug("Printer status: {PrinterStatus}", status);
-                dailyClosingResponse.ErrorInfo = $"Status: {status}";
-            }
-
-            if (result?.Success == false)
-            {
-                if (result?.Code != null)
-                {
-                    var error = _errorCodeFactory.GetCodeInfo(result.Code);
-                    _logger.LogError("Printer status: {Error}", error);
-                    dailyClosingResponse.ErrorInfo += $", Error: {error}";
-                }
+                dailyClosingResponse.ErrorInfo = GetErrorInfo(result?.Code, result?.Status, null);
                 await ResetPrinter();
             }
             else
             {
-
                 dailyClosingResponse.ZRepNumber = result?.ReportInfo?.ZRepNumber != null ? long.Parse(result.ReportInfo.ZRepNumber) : 0;
                 dailyClosingResponse.DailyAmount = result?.ReportInfo?.DailyAmount != null ? decimal.Parse(result.ReportInfo.DailyAmount, new CultureInfo("it-It", false)) : 0;
                 dailyClosingResponse.ReportDataJson = await DownloadJsonAsync("www/json_files/zrep.json");
@@ -203,7 +190,7 @@ public sealed class EpsonSCU : IITSSCD
     {
         if (result?.Success == false)
         {
-            fiscalReceiptResponse.ErrorInfo = GetErrorInfo(result);
+            fiscalReceiptResponse.ErrorInfo = GetErrorInfo(result.Code, result.Status, result?.Receipt?.PrinterStatus);
             await ResetPrinter();
         }
         else
@@ -318,19 +305,19 @@ public sealed class EpsonSCU : IITSSCD
         return new FiscalReceiptResponse() { Success = false, ErrorInfo = msg };
     }
 
-    private string GetErrorInfo(ReceiptResponse receiptResponse)
+    private string GetErrorInfo(string? code, string? status, string? printerStatus)
     {
         var errorInf = "[ERR-Printer] ";
 
-        if (receiptResponse?.Code != null)
+        if (code != null)
         {
-            errorInf += $"\n Error Code {receiptResponse.Code}: {_errorCodeFactory.GetCodeInfo(receiptResponse.Code)} ";
+            errorInf += $"\n Error Code {code}: {_errorCodeFactory.GetCodeInfo(code)} ";
         }
-        if (receiptResponse?.Status != null)
+        if (status!= null)
         {
-            errorInf += $"\n Status {receiptResponse.Status}: {_errorCodeFactory.GetStatusInfo(int.Parse(receiptResponse.Status))}";
+            errorInf += $"\n Status {status}: {_errorCodeFactory.GetStatusInfo(int.Parse(status))}";
         }
-        var state = GetPrinterStatus(receiptResponse?.Receipt?.PrinterStatus);
+        var state = GetPrinterStatus(printerStatus);
         if (state != null)
         {
             errorInf += $"\n Printer state {state}";

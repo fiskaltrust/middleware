@@ -92,7 +92,14 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
             {
                 receiptResponse.ftReceiptIdentification += $"{response.ReceiptNumber}Z{response.ZRepNumber}";
                 receiptResponse.ftSignatures = _signatureItemFactoryIT.CreatePosReceiptSignatures(response);
-                var journalIT = CreateJournalIT(queue, queueIt, request, queueItem, response);
+                var journalIT = new ftJournalIT().FromResponse(queueIt, queueItem, new ScuResponse()
+                {
+                    DataJson = response.ReceiptDataJson,
+                    ftReceiptCase = request.ftReceiptCase,
+                    ReceiptDateTime = response.ReceiptDateTime,
+                    ReceiptNumber = response.ReceiptNumber,
+                    ZRepNumber = response.ZRepNumber
+                });
                 await _journalITRepository.InsertAsync(journalIT).ConfigureAwait(false);
             }
 
@@ -103,22 +110,6 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
                 ActionJournals = new List<ftActionJournal>()
             };
         }
-
-        private ftJournalIT CreateJournalIT(ftQueue queue, IQueue queueIt, ReceiptRequest request, ftQueueItem queueItem, FiscalReceiptResponse response) =>
-            new ftJournalIT
-            {
-                ftJournalITId = Guid.NewGuid(),
-                ftQueueId = queue.ftQueueId,
-                ftQueueItemId = queueItem.ftQueueItemId,
-                cbReceiptReference = request.cbReceiptReference,
-                ftSignaturCreationUnitITId = queueIt.ftSignaturCreationUnitId.Value,
-                JournalType = request.ftReceiptCase & 0xFFFF,
-                ReceiptDateTime = response.ReceiptDateTime,
-                ReceiptNumber = response.ReceiptNumber,
-                ZRepNumber = response.ZRepNumber,
-                DataJson = response.ReceiptDataJson,
-                TimeStamp = DateTime.UtcNow.Ticks
-            };
 
         private static FiscalReceiptInvoice CreateInvoice(ReceiptRequest request)
         {

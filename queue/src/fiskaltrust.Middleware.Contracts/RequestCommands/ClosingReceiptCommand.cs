@@ -21,11 +21,11 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
                 ReceiptResponse = receiptResponse,
                 ActionJournals = new List<ftActionJournal> { actionJournalEntry }
             };
-            return await SpecializeAsync(requestCommandResponse);
+            return await SpecializeAsync(requestCommandResponse, queue, request, queueItem);
         }
 
         // This is overkill for now ... just to demonstrate how we could maybe add some country specific funtionality
-        protected virtual Task<RequestCommandResponse> SpecializeAsync(RequestCommandResponse requestCommandResponse) => Task.FromResult(requestCommandResponse);
+        protected virtual Task<RequestCommandResponse> SpecializeAsync(RequestCommandResponse requestCommandResponse, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem) => Task.FromResult(requestCommandResponse);
         
         protected abstract Task<string> GetCashboxIdentificationAsync(Guid ftQueueId);
     }
