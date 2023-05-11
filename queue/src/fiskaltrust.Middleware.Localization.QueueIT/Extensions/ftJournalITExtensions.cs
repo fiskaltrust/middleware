@@ -13,7 +13,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
     }
     public static class ftJournalITExtensions
     {
-        public static ftJournalIT FromResponse(this ftJournalIT ftJournalIT, IQueue queueIt, ftQueueItem queueItem, ScuResponse scuResponse)
+        public static ftJournalIT FromResponse(this ftJournalIT ftJournalIT, ICountrySpecificQueue queueIt, ftQueueItem queueItem, ScuResponse scuResponse)
         {
             ftJournalIT.ftJournalITId = Guid.NewGuid();
             ftJournalIT.ftQueueId = queueIt.ftQueueId;

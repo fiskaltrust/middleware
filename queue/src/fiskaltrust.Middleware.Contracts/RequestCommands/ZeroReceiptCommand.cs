@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Contracts.RequestCommands.Factories;
 using fiskaltrust.Middleware.Contracts.Models;
+using fiskaltrust.Middleware.Contracts.Exceptions;
 
 namespace fiskaltrust.Middleware.Contracts.RequestCommands
 {
@@ -29,9 +30,9 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
             _actionJournalRepository = actionJournalRepository;
         }
 
-        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, bool isResend = false)
+        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
         {
-            var iQueue = await IQueueRepository.GetQueueAsync(queue.ftQueueId).ConfigureAwait(false);
+            var iQueue = await CountrySpecificQueueRepository.GetQueueAsync(queue.ftQueueId).ConfigureAwait(false);
             var receiptResponse = CreateReceiptResponse(queue, request, queueItem, iQueue.CashBoxIdentification);
             if (iQueue.SSCDFailCount == 0)
             {
@@ -67,7 +68,7 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
             iQueue.SSCDFailCount = 0;
             iQueue.SSCDFailMoment = null;
             iQueue.SSCDFailQueueItemId = null;
-            await IQueueRepository.InsertOrUpdateQueueAsync(iQueue).ConfigureAwait(false);
+            await CountrySpecificQueueRepository.InsertOrUpdateQueueAsync(iQueue).ConfigureAwait(false);
 
             return new RequestCommandResponse
             {
@@ -90,21 +91,22 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
             };
         }
 
-        private async Task ResendFailedReceipts(IQueue iQueue, ftQueue queue, List<string> sentReceipts, List<SignaturItem> signatures)
+        private async Task ResendFailedReceipts(ICountrySpecificQueue iQueue, ftQueue queue, List<string> sentReceipts, List<SignaturItem> signatures)
         {
             var failedQueueItem = await _queueItemRepository.GetAsync(iQueue.SSCDFailQueueItemId.Value).ConfigureAwait(false);
             var queueItemsAfterFailure = _queueItemRepository.GetQueueItemsAfterQueueItem(failedQueueItem);
-            await foreach (var fqueueItem in queueItemsAfterFailure.ConfigureAwait(false))
+            await foreach (var failqueueItem in queueItemsAfterFailure.ConfigureAwait(false))
             {
-                var frequest = JsonConvert.DeserializeObject<ReceiptRequest>(fqueueItem.request);
-                var command = _requestCommandFactory.Create(frequest);
-                if (await command.ReceiptNeedsReprocessing(queue, frequest, fqueueItem).ConfigureAwait(false))
+                var failRequest = JsonConvert.DeserializeObject<ReceiptRequest>(failqueueItem.request);
+                var command = _requestCommandFactory.Create(failRequest);
+                if (await command.ReceiptNeedsReprocessing(queue, failRequest, failqueueItem).ConfigureAwait(false))
                 {
+                    command.IsResend = true;
                     try
                     {
-                        var requestCommandResponse = await command.ExecuteAsync(queue, frequest, fqueueItem, true).ConfigureAwait(false);
+                        var requestCommandResponse = await command.ExecuteAsync(queue, failRequest, failqueueItem).ConfigureAwait(false);
                         signatures.AddRange(requestCommandResponse.Signatures);
-                        sentReceipts.Add(fqueueItem.cbReceiptReference);
+                        sentReceipts.Add(failqueueItem.cbReceiptReference);
                         if (requestCommandResponse.ActionJournals != null)
                         {
                             foreach (var journal in requestCommandResponse.ActionJournals)
@@ -115,11 +117,11 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
                     }
                     catch (Exception ex)
                     {
-                        if (ex.Message.StartsWith("[ERR-Connection]"))
+                        if (Errors.IsConnectionError(ex.Message))
                         {
                             throw new Exception(ex.Message);
                         }
-                        _logger.LogError(ex, $"The receipt {frequest.cbReceiptReference} could not be proccessed!");
+                        _logger.LogError(ex, $"The receipt {failRequest.cbReceiptReference} could not be proccessed!");
                     }
                 }
             }

@@ -16,19 +16,19 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
     {
         public override long CountryBaseState => Constants.Cases.BASE_STATE;
 
-        protected override IQueueRepository IQueueRepository => _iQueueRepository;
-        private readonly IQueueRepository _iQueueRepository;
+        protected override ICountrySpecificQueueRepository CountrySpecificQueueRepository => _countrySpecificQueueRepository;
+        private readonly ICountrySpecificQueueRepository _countrySpecificQueueRepository;
 
         private readonly IConfigurationRepository _configurationRepository;
         private readonly SignatureItemFactoryIT _signatureItemFactoryIT;
         private readonly IITSSCD _client;
 
-        public InitialOperationReceiptCommand(IQueueRepository iQeueRepository,  IITSSCDProvider itIsscdProvider, ILogger<InitialOperationReceiptCommand> logger, IConfigurationRepository configurationRepository, SignatureItemFactoryIT signatureItemFactoryIT) : base(logger, configurationRepository)
+        public InitialOperationReceiptCommand(ICountrySpecificQueueRepository countrySpecificQueueRepository,  IITSSCDProvider itIsscdProvider, ILogger<InitialOperationReceiptCommand> logger, IConfigurationRepository configurationRepository, SignatureItemFactoryIT signatureItemFactoryIT) : base(logger, configurationRepository)
         {
             _client = itIsscdProvider.Instance;
             _configurationRepository = configurationRepository;
             _signatureItemFactoryIT = signatureItemFactoryIT;
-            _iQueueRepository = iQeueRepository;
+            _countrySpecificQueueRepository = countrySpecificQueueRepository;
         }
 
         protected override async Task<(ftActionJournal, SignaturItem)> InitializeSCUAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)

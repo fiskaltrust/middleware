@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Xml.Serialization;
 using fiskaltrust.ifPOS.v1.it;
+using fiskaltrust.Middleware.SCU.IT.Epson.Exceptions;
 using fiskaltrust.Middleware.SCU.IT.Epson.Models;
 
 namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
@@ -47,14 +48,11 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
         public string CreateRefundRequestContent(FiscalReceiptRefund request)
         {
             var fiscalReceipt = CreateFiscalReceipt(request);
-            fiscalReceipt.BeginFiscalReceipt.Operator = "1";
-            fiscalReceipt.EndFiscalReceipt.Operator = "1";
-            fiscalReceipt.PrintRecTotal?.ForEach(x => x.Operator = "1");
             fiscalReceipt.PrintRecMessage = new PrintRecMessage()
             {
-                Operator = "1",
+                Operator  = request.Operator,
                 Message = request.DisplayText,
-                MessageType = "4"
+                MessageType = (int)Messagetype.AdditionalInfo
             };
             fiscalReceipt.PrintRecRefund = request.Refunds?.Select(GetPrintRecRefund).ToList();
             return SoapSerializer.Serialize(fiscalReceipt);
@@ -99,8 +97,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
                     Description = recRefund.Description,
                     Quantity = recRefund.Quantity,
                     UnitPrice = recRefund.UnitPrice,
-                    Department = recRefund.VatGroup,
-                    Operator = "1"
+                    Department = recRefund.VatGroup
                 };
             }
             else
@@ -130,13 +127,29 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
                     Description = p.Description,
                     Payment = p.Amount,
                     PaymentType = (int) p.PaymentType,
-                    Index = p.Index,
-                    Operator = request.Operator
+                    Index = p.Index
                 }).ToList(),
             };
+            fiscalReceipt.BeginFiscalReceipt.Operator = GetOperator(request.Operator);
+            fiscalReceipt.EndFiscalReceipt.Operator = GetOperator(request.Operator);
             return fiscalReceipt;
         }
 
+        private string GetOperator(string cbUser)
+        {
+            if (string.IsNullOrEmpty(cbUser))
+            {
+                return cbUser;
+            } 
+            var isvalid = int.TryParse(cbUser, out var operatory);
+            var inRange = operatory > 0 && operatory < 13;
+            isvalid = isvalid && inRange;
+            if (!isvalid)
+            {
+                throw new OperatorException(cbUser);
+            }
+            return cbUser;
+        }
 
         private FiscalReceipt CreateFiscalReceipt(FiscalReceiptRefund request)
         {
@@ -161,6 +174,8 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
                     Index = p.Index
                 }).ToList(),
             };
+            fiscalReceipt.BeginFiscalReceipt.Operator = GetOperator(request.Operator);
+            fiscalReceipt.EndFiscalReceipt.Operator = GetOperator(request.Operator);
             return fiscalReceipt;
         }
     }

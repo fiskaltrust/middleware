@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.it;
+using fiskaltrust.Middleware.Contracts.Exceptions;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Contracts.RequestCommands;
 using fiskaltrust.Middleware.Localization.QueueIT.Extensions;
@@ -15,16 +16,16 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
     public class DailyClosingReceiptCommand : Contracts.RequestCommands.DailyClosingReceiptCommand
     {
         private readonly SignatureItemFactoryIT _signatureItemFactoryIT;
-        protected override IQueueRepository IQueueRepository => _iQueueRepository;
-        private readonly IQueueRepository _iQueueRepository;
+        protected override ICountrySpecificQueueRepository CountrySpecificQueueRepository => _countrySpecificQueueRepository;
+        private readonly ICountrySpecificQueueRepository _countrySpecificQueueRepository;
         private readonly IMiddlewareJournalITRepository _journalITRepository;
         private readonly IITSSCD _client;
 
         public override long CountryBaseState => Constants.Cases.BASE_STATE;
 
-        public DailyClosingReceiptCommand(SignatureItemFactoryIT signatureItemFactoryIT, IQueueRepository iQeueRepository, IITSSCDProvider itIsscdProvider, IMiddlewareJournalITRepository journalITRepository)
+        public DailyClosingReceiptCommand(SignatureItemFactoryIT signatureItemFactoryIT, ICountrySpecificQueueRepository countrySpecificQueueRepository, IITSSCDProvider itIsscdProvider, IMiddlewareJournalITRepository journalITRepository)
         {
-            _iQueueRepository = iQeueRepository;
+            _countrySpecificQueueRepository = countrySpecificQueueRepository;
             _client = itIsscdProvider.Instance;
             _journalITRepository = journalITRepository;
             _signatureItemFactoryIT = signatureItemFactoryIT;
@@ -32,7 +33,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 
         protected override async Task<string> GetCashboxIdentificationAsync(Guid ftQueueId)
         {
-            var queueIt = await _iQueueRepository.GetQueueAsync(ftQueueId).ConfigureAwait(false);
+            var queueIt = await _countrySpecificQueueRepository.GetQueueAsync(ftQueueId).ConfigureAwait(false);
             return queueIt.CashBoxIdentification;
         }
 
@@ -44,7 +45,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 
             if (!response.Success)
             {
-                if (response.ErrorInfo.StartsWith("[ERR-Connection]"))
+                if (Errors.IsConnectionError(response.ErrorInfo))
                 {
                     return await ProcessFailedReceiptRequest(queue, queueItem, request).ConfigureAwait(false);
                 }
@@ -57,7 +58,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
             {
                 requestCommandResponse.ReceiptResponse.ftReceiptIdentification += $"Z{response.ZRepNumber}";
                 requestCommandResponse.ReceiptResponse.ftSignatures = _signatureItemFactoryIT.CreatePosReceiptSignatures(response);
-                var queueIt = await _iQueueRepository.GetQueueAsync(queue.ftQueueId).ConfigureAwait(false);
+                var queueIt = await _countrySpecificQueueRepository.GetQueueAsync(queue.ftQueueId).ConfigureAwait(false);
                 var journalIT = new ftJournalIT().FromResponse(queueIt, queueItem, new ScuResponse()
                 {
                     DataJson = response.ReportDataJson,

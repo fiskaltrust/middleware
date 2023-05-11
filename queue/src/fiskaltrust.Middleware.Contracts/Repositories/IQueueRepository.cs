@@ -4,10 +4,10 @@ using System.Threading.Tasks;
 
 namespace fiskaltrust.Middleware.Contracts.Repositories
 {
-    public interface IQueueRepository
+    public interface ICountrySpecificQueueRepository
     {
-        Task InsertOrUpdateQueueAsync(IQueue queue);
+        Task InsertOrUpdateQueueAsync(ICountrySpecificQueue countrySpecificQueue);
 
-        Task<IQueue> GetQueueAsync(Guid queueId);
+        Task<ICountrySpecificQueue> GetQueueAsync(Guid queueId);
     }
 }

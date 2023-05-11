@@ -76,7 +76,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
             var configRepoMock = new Mock<IConfigurationRepository>();
             configRepoMock.Setup(x => x.GetQueueITAsync(It.IsAny<Guid>())).ReturnsAsync(queueIt);
 
-            var queueRepoMock = new Mock<IQueueRepository>();
+            var queueRepoMock = new Mock<ICountrySpecificQueueRepository>();
             queueRepoMock.Setup(x => x.GetQueueAsync(It.IsAny<Guid>())).ReturnsAsync(queueIt);
 
             var posReceiptCommand = new PosReceiptCommand(desscdMock.Object, new SignatureItemFactoryIT(), Mock.Of<IMiddlewareJournalITRepository>(), configRepoMock.Object,queueRepoMock.Object);

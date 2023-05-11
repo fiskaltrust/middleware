@@ -21,7 +21,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
                 .AddScoped<IMarketSpecificSignProcessor, SignProcessorIT>()
                 .AddScoped<IMarketSpecificJournalProcessor, JournalProcessorIT>()
                 .AddScoped<SignatureItemFactoryIT>()
-                .AddScoped<IQueueRepository,QueueRepository>()
+                .AddScoped<ICountrySpecificQueueRepository,CountrySpecificQueueRepository>()
                 .AddSingleton(sp => QueueITConfiguration.FromMiddlewareConfiguration(sp.GetRequiredService<MiddlewareConfiguration>()))
                 .AddSingleton<IITSSCDProvider>(sp =>
                 {
