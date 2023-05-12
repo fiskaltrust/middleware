@@ -15,7 +15,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloud.IntegrationTest
         private SwissbitCloudSCU _instance;
 
         private const string FCC_ID = "";
-        public SwissbitCloudSCUConfiguration Configuration { get; } = new SwissbitCloudSCUConfiguration
+        public DeutscheFiskalSCUConfiguration Configuration { get; } = new DeutscheFiskalSCUConfiguration
         {
             FccId = FCC_ID,
             FccSecret = "",
