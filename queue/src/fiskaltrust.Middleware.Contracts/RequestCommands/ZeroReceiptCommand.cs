@@ -8,29 +8,28 @@ using System.Linq;
 using System.Collections.Generic;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Contracts.RequestCommands.Factories;
-using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Exceptions;
 
 namespace fiskaltrust.Middleware.Contracts.RequestCommands
 {
     public abstract class ZeroReceiptCommand : RequestCommand
     {
-        private readonly MiddlewareConfiguration _middlewareConfiguration;
+        public abstract bool ResendFailedReceipts { get; }
+
         private readonly IRequestCommandFactory _requestCommandFactory;
         private readonly IActionJournalRepository _actionJournalRepository;
         private readonly IMiddlewareQueueItemRepository _queueItemRepository;
         private readonly ILogger<RequestCommand> _logger;
 
-        public ZeroReceiptCommand(MiddlewareConfiguration middlewareConfiguration, IMiddlewareQueueItemRepository queueItemRepository, IRequestCommandFactory requestCommandFactory, ILogger<RequestCommand> logger, IActionJournalRepository actionJournalRepository)
+        public ZeroReceiptCommand(IMiddlewareQueueItemRepository queueItemRepository, IRequestCommandFactory requestCommandFactory, ILogger<RequestCommand> logger, IActionJournalRepository actionJournalRepository)
         {
-            _middlewareConfiguration = middlewareConfiguration;
             _requestCommandFactory = requestCommandFactory;
             _logger = logger;
             _queueItemRepository = queueItemRepository;
             _actionJournalRepository = actionJournalRepository;
         }
 
-        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
+        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, bool isBeingResent = false)
         {
             var iQueue = await CountrySpecificQueueRepository.GetQueueAsync(queue.ftQueueId).ConfigureAwait(false);
             var receiptResponse = CreateReceiptResponse(queue, request, queueItem, iQueue.CashBoxIdentification);
@@ -46,9 +45,9 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
             var sentReceipts = new List<string>();
             var signatures = new List<SignaturItem>();
 
-            if (_middlewareConfiguration.ResendFailedReceipts)
+            if (ResendFailedReceipts)
             {
-                await ResendFailedReceipts(iQueue, queue, sentReceipts, signatures).ConfigureAwait(false);
+                await ResendFailedReceiptsAsync(iQueue, queue, sentReceipts, signatures).ConfigureAwait(false);
             }
             receiptResponse.ftStateData = JsonConvert.SerializeObject(new { SentReceipts = sentReceipts });
             _logger.LogInformation($"Successfully closed failed-mode, resent {sentReceipts.Count()} receipts that have been stored between {iQueue.SSCDFailMoment:G} and {DateTime.UtcNow:G}.");
@@ -91,7 +90,7 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
             };
         }
 
-        private async Task ResendFailedReceipts(ICountrySpecificQueue iQueue, ftQueue queue, List<string> sentReceipts, List<SignaturItem> signatures)
+        private async Task ResendFailedReceiptsAsync(ICountrySpecificQueue iQueue, ftQueue queue, List<string> sentReceipts, List<SignaturItem> signatures)
         {
             var failedQueueItem = await _queueItemRepository.GetAsync(iQueue.SSCDFailQueueItemId.Value).ConfigureAwait(false);
             var queueItemsAfterFailure = _queueItemRepository.GetQueueItemsAfterQueueItem(failedQueueItem);
@@ -101,10 +100,9 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
                 var command = _requestCommandFactory.Create(failRequest);
                 if (await command.ReceiptNeedsReprocessing(queue, failRequest, failqueueItem).ConfigureAwait(false))
                 {
-                    command.IsResend = true;
                     try
                     {
-                        var requestCommandResponse = await command.ExecuteAsync(queue, failRequest, failqueueItem).ConfigureAwait(false);
+                        var requestCommandResponse = await command.ExecuteAsync(queue, failRequest, failqueueItem, true).ConfigureAwait(false);
                         signatures.AddRange(requestCommandResponse.Signatures);
                         sentReceipts.Add(failqueueItem.cbReceiptReference);
                         if (requestCommandResponse.ActionJournals != null)

@@ -35,7 +35,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
         private readonly IMiddlewareJournalITRepository _journalITRepository;
         private readonly IITSSCD _client;
 
-        public PosReceiptCommand(IITSSCDProvider itIsscdProvider, SignatureItemFactoryIT signatureItemFactoryIT, IMiddlewareJournalITRepository journalITRepository, IConfigurationRepository configurationRepository,ICountrySpecificQueueRepository countrySpecificQueueRepository)
+        public PosReceiptCommand(IITSSCDProvider itIsscdProvider, SignatureItemFactoryIT signatureItemFactoryIT, IMiddlewareJournalITRepository journalITRepository, IConfigurationRepository configurationRepository, ICountrySpecificQueueRepository countrySpecificQueueRepository)
         {
             _client = itIsscdProvider.Instance;
             _signatureItemFactoryIT = signatureItemFactoryIT;
@@ -44,7 +44,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
             _configurationRepository = configurationRepository;
         }
 
-        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
+        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, bool isBeingResent = false)
         {
             var journals = await _journalITRepository.GetAsync().ConfigureAwait(false);
             if (journals.Where(x => x.cbReceiptReference.Equals(request.cbReceiptReference)).Any())
@@ -69,7 +69,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
             }
             if (!response.Success)
             {
-                if (Errors.IsConnectionError(response.ErrorInfo) && !IsResend)
+                if (Errors.IsConnectionError(response.ErrorInfo) && !isBeingResent)
                 {
                     return await ProcessFailedReceiptRequest(queue, queueItem, request).ConfigureAwait(false);
                 }
