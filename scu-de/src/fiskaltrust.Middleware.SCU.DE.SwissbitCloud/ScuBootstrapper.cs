@@ -19,7 +19,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloud
 
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddSingleton<DeutscheFiskalSCUConfiguration>(JsonConvert.DeserializeObject<SwissbitCloudSCUConfiguration>(JsonConvert.SerializeObject(Configuration)));
+            services.AddSingleton(JsonConvert.DeserializeObject<DeutscheFiskalSCUConfiguration>(JsonConvert.SerializeObject(Configuration)));
             services.AddSingleton<IFccInitializationService, DeutscheFiskalFccInitializationService>();
             services.AddSingleton<IFccProcessHost, DeutscheFiskalFccProcessHost>();
             services.AddScoped<IFccDownloadService, DeutscheFiskalFccDownloadService>();
