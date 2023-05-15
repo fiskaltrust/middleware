@@ -11,7 +11,7 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
     {
         protected abstract string ClosingReceiptName { get; }
 
-        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
+        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, bool isBeingResent = false)
         {
             var receiptResponse = CreateReceiptResponse(queue, request, queueItem, await GetCashboxIdentificationAsync(queue.ftQueueId), CountryBaseState);
             var actionJournalEntry = CreateActionJournal(queue.ftQueueId, $"{request.ftReceiptCase:X}", queueItem.ftQueueItemId, $"{ClosingReceiptName} receipt was processed.",
@@ -24,9 +24,8 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
             return await SpecializeAsync(requestCommandResponse, queue, request, queueItem);
         }
 
-        // This is overkill for now ... just to demonstrate how we could maybe add some country specific funtionality
         protected virtual Task<RequestCommandResponse> SpecializeAsync(RequestCommandResponse requestCommandResponse, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem) => Task.FromResult(requestCommandResponse);
-        
+
         protected abstract Task<string> GetCashboxIdentificationAsync(Guid ftQueueId);
     }
 }

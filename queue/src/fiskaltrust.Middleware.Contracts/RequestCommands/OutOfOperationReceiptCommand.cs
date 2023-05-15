@@ -9,7 +9,7 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
 {
     public abstract class OutOfOperationReceiptCommand : RequestCommand
     {
-        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
+        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, bool isBeingResent = false)
         {
             var receiptResponse = CreateReceiptResponse(queue, request, queueItem, await GetCashboxIdentificationAsync(queue.ftQueueId));
 
@@ -36,7 +36,7 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
         }
 
         protected abstract Task<(ftActionJournal, SignaturItem)> DeactivateSCUAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem);
-        
+
         protected abstract Task<string> GetCashboxIdentificationAsync(Guid ftQueueId);
     }
 }

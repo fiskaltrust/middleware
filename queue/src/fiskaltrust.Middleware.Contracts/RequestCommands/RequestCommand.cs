@@ -8,13 +8,11 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
 {
     public abstract class RequestCommand
     {
-        public bool IsResend { get; set; } = false;
+        public abstract long CountryBaseState { get; }
 
-        public abstract long CountryBaseState { get;}
+        protected abstract ICountrySpecificQueueRepository CountrySpecificQueueRepository { get; }
 
-        protected abstract ICountrySpecificQueueRepository CountrySpecificQueueRepository { get;}
-
-        public abstract Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem);
+        public abstract Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, bool isBeingResent = false);
 
         public abstract Task<bool> ReceiptNeedsReprocessing(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem);
 

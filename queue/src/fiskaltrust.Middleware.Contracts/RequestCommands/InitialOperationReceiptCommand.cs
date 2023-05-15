@@ -19,7 +19,7 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
             _configurationRepository = configurationRepository;
         }
 
-        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
+        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, bool isBeingResent = false)
         {
             var queueIt = await _configurationRepository.GetQueueITAsync(queue.ftQueueId);
 
