@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
+using fiskaltrust.ifPOS.v1.errors;
 using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.Contracts.Exceptions;
 using fiskaltrust.Middleware.Contracts.Repositories;
@@ -45,13 +46,13 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 
             if (!response.Success)
             {
-                if (Errors.IsConnectionError(response.ErrorInfo))
+                if (response.SSCDErrorInfo.Type == SSCDErrorType.Connection)
                 {
                     return await ProcessFailedReceiptRequest(queue, queueItem, request).ConfigureAwait(false);
                 }
                 else
                 {
-                    throw new Exception(response.ErrorInfo);
+                    throw response.SSCDErrorInfo;
                 }
             }
             else

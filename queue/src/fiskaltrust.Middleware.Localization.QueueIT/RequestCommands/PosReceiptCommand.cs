@@ -14,6 +14,7 @@ using fiskaltrust.Middleware.Localization.QueueIT.Exceptions;
 using Newtonsoft.Json;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Contracts.Exceptions;
+using fiskaltrust.ifPOS.v1.errors;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 {
@@ -69,13 +70,13 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
             }
             if (!response.Success)
             {
-                if (Errors.IsConnectionError(response.ErrorInfo) && !isBeingResent)
+                if (response.SSCDErrorInfo.Type == SSCDErrorType.Connection & !isBeingResent)
                 {
                     return await ProcessFailedReceiptRequest(queue, queueItem, request).ConfigureAwait(false);
                 }
                 else
                 {
-                    throw new Exception(response.ErrorInfo);
+                    throw response.SSCDErrorInfo;
                 }
             }
             else

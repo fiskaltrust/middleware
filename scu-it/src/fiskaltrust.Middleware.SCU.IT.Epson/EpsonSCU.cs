@@ -8,6 +8,7 @@ using System.ServiceModel;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using fiskaltrust.ifPOS.v1.errors;
 using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.SCU.IT.Epson.Models;
 using fiskaltrust.Middleware.SCU.IT.Epson.Utilities;
@@ -78,7 +79,7 @@ public sealed class EpsonSCU : IITSSCD
 
     public async Task<string> GetSerialNumberAsync(string rtType)
     {
-        var serialQuery = new PrinterCommand() { DirectIO =  DirectIO.GetSerialNrCommand() };
+        var serialQuery = new PrinterCommand() { DirectIO = DirectIO.GetSerialNrCommand() };
         var content = SoapSerializer.Serialize(serialQuery);
         var responseSerialnr = await SendRequestAsync(content);
 
@@ -87,7 +88,7 @@ public sealed class EpsonSCU : IITSSCD
 
         var serialnr = result?.CommandResponse?.ResponseData;
 
-        return serialnr?.Substring(10, 2) + rtType + serialnr?.Substring(8, 2)  + serialnr?.Substring(2, 6);
+        return serialnr?.Substring(10, 2) + rtType + serialnr?.Substring(8, 2) + serialnr?.Substring(2, 6);
     }
 
     public async Task<FiscalReceiptResponse> FiscalReceiptRefundAsync(FiscalReceiptRefund request)
@@ -136,7 +137,7 @@ public sealed class EpsonSCU : IITSSCD
 
             if (!dailyClosingResponse.Success)
             {
-                dailyClosingResponse.ErrorInfo = GetErrorInfo(result?.Code, result?.Status, null);
+                dailyClosingResponse.SSCDErrorInfo = GetErrorInfo(result?.Code, result?.Status, null);
                 await ResetPrinter();
             }
             else
@@ -154,7 +155,11 @@ public sealed class EpsonSCU : IITSSCD
             {
                 msg = msg + " " + e.InnerException.Message;
             }
-            return new DailyClosingResponse() { Success = false, ErrorInfo = msg };
+            if (IsConnectionException(e))
+            {
+                return new DailyClosingResponse() { Success = false, SSCDErrorInfo = SSCDErrorInfo.FromConnection(msg) };
+            }
+            return new DailyClosingResponse() { Success = false, SSCDErrorInfo = new SSCDErrorInfo(msg) };
         }
         finally
         {
@@ -186,11 +191,11 @@ public sealed class EpsonSCU : IITSSCD
         };
     }
 
-    private async Task SetReceiptResponse(List<Payment>? payments,ReceiptResponse? result, FiscalReceiptResponse fiscalReceiptResponse)
+    private async Task SetReceiptResponse(List<Payment>? payments, ReceiptResponse? result, FiscalReceiptResponse fiscalReceiptResponse)
     {
         if (result?.Success == false)
         {
-            fiscalReceiptResponse.ErrorInfo = GetErrorInfo(result.Code, result.Status, result?.Receipt?.PrinterStatus);
+            fiscalReceiptResponse.SSCDErrorInfo = GetErrorInfo(result.Code, result.Status, result?.Receipt?.PrinterStatus);
             await ResetPrinter();
         }
         else
@@ -266,7 +271,7 @@ public sealed class EpsonSCU : IITSSCD
 
     private async Task<string?> DownloadJsonAsync(string path)
     {
-        var response = await _httpClient.GetAsync(path); 
+        var response = await _httpClient.GetAsync(path);
         var content = await response.Content.ReadAsStringAsync();
         if (!response.IsSuccessStatusCode)
         {
@@ -281,8 +286,8 @@ public sealed class EpsonSCU : IITSSCD
     {
         if (e.GetType().IsAssignableFrom(typeof(EndpointNotFoundException)) ||
             e.GetType().IsAssignableFrom(typeof(WebException)) ||
-            e.GetType().IsAssignableFrom(typeof(CommunicationException))||
-            e.GetType().IsAssignableFrom(typeof(TaskCanceledException))||
+            e.GetType().IsAssignableFrom(typeof(CommunicationException)) ||
+            e.GetType().IsAssignableFrom(typeof(TaskCanceledException)) ||
             e.GetType().IsAssignableFrom(typeof(HttpRequestException)))
         {
             return true;
@@ -292,28 +297,27 @@ public sealed class EpsonSCU : IITSSCD
 
     private FiscalReceiptResponse ExceptionInfo(Exception e)
     {
-        var msg = "[ERR] ";
-        if (IsConnectionException(e))
-        {
-            msg = "[ERR-Connection] ";
-        }
-        msg += e.Message;
+        var msg = e.Message;
         if (e.InnerException != null)
         {
             msg += " " + e.InnerException.Message;
         }
-        return new FiscalReceiptResponse() { Success = false, ErrorInfo = msg };
+        if (IsConnectionException(e))
+        {
+            return new FiscalReceiptResponse() { Success = false, SSCDErrorInfo = SSCDErrorInfo.FromConnection(msg) };
+        }
+
+        return new FiscalReceiptResponse() { Success = false, SSCDErrorInfo = new SSCDErrorInfo(msg) };
     }
 
-    private string GetErrorInfo(string? code, string? status, string? printerStatus)
+    private SSCDErrorInfo GetErrorInfo(string? code, string? status, string? printerStatus)
     {
-        var errorInf = "[ERR-Printer] ";
-
+        var errorInf = string.Empty;
         if (code != null)
         {
             errorInf += $"\n Error Code {code}: {_errorCodeFactory.GetCodeInfo(code)} ";
         }
-        if (status!= null)
+        if (status != null)
         {
             errorInf += $"\n Status {status}: {_errorCodeFactory.GetStatusInfo(int.Parse(status))}";
         }
@@ -323,6 +327,6 @@ public sealed class EpsonSCU : IITSSCD
             errorInf += $"\n Printer state {state}";
         }
         _logger.LogError(errorInf);
-        return errorInf;
+        return SSCDErrorInfo.FromDevice(errorInf);
     }
 }
