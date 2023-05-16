@@ -9,7 +9,7 @@
     <DefineConstants>WCF;GRPC</DefineConstants>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(TargetFramework)' == 'net6'">
+  <PropertyGroup Condition="'$(TargetFramework)' != 'net461'">
     <DefineConstants>GRPC</DefineConstants>
   </PropertyGroup>
 
