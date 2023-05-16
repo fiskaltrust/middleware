@@ -38,7 +38,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Test.Launcher.Grpc
         public static int AddCodeFirst(this Server.ServiceDefinitionCollection services, Type type, object service, BinderConfiguration binderConfiguration = null, TextWriter log = null, IEnumerable<Interceptor> interceptors = null)
         {
             var builder = ServerServiceDefinition.CreateBuilder();
-            var result = Binder.Create(log).Bind(builder, type, binderConfiguration, service);
+            var result = Binder.CreateBinder(log).Bind(builder, type, binderConfiguration, service);
             var serverServiceDefinition = builder.Build();
             if (interceptors != null)
             {

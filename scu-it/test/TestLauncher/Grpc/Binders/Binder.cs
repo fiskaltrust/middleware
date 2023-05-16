@@ -9,7 +9,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Test.Launcher.Grpc.Binders
         private readonly TextWriter _log;
         private Binder(TextWriter log) => _log = log;
         private static readonly Binder _default = new Binder(null);
-        public static Binder Create(TextWriter log) => log == null ? _default : new Binder(log);
+        public static Binder CreateBinder(TextWriter log) => log == null ? _default : new Binder(log);
 
         protected override bool TryBind<TService, TRequest, TResponse>(ServiceBindContext bindContext, Method<TRequest, TResponse> method, MethodStub<TService> stub)
         {
