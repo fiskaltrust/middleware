@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1.errors;
 using fiskaltrust.ifPOS.v1.it;
+using fiskaltrust.Middleware.SCU.IT.Epson.Exceptions;
 using fiskaltrust.Middleware.SCU.IT.Epson.Models;
 using fiskaltrust.Middleware.SCU.IT.Epson.Utilities;
 using Microsoft.Extensions.Logging;
@@ -157,9 +158,9 @@ public sealed class EpsonSCU : IITSSCD
             }
             if (IsConnectionException(e))
             {
-                return new DailyClosingResponse() { Success = false, SSCDErrorInfo = SSCDErrorInfo.FromConnection(msg) };
+                return new DailyClosingResponse() { Success = false, SSCDErrorInfo = new SSCDErrorInfo() {Info = msg, Type = SSCDErrorType.Connection } };
             }
-            return new DailyClosingResponse() { Success = false, SSCDErrorInfo = new SSCDErrorInfo(msg) };
+            return new DailyClosingResponse() { Success = false, SSCDErrorInfo = new SSCDErrorInfo() { Info = msg, Type = SSCDErrorType.General } };
         }
         finally
         {
@@ -304,10 +305,13 @@ public sealed class EpsonSCU : IITSSCD
         }
         if (IsConnectionException(e))
         {
-            return new FiscalReceiptResponse() { Success = false, SSCDErrorInfo = SSCDErrorInfo.FromConnection(msg) };
+            return new FiscalReceiptResponse() { Success = false, SSCDErrorInfo = new SSCDErrorInfo() { Info = msg, Type = SSCDErrorType.Connection } };
         }
-
-        return new FiscalReceiptResponse() { Success = false, SSCDErrorInfo = new SSCDErrorInfo(msg) };
+        if (e is OperatorException)
+        {
+            return new FiscalReceiptResponse() { Success = false, SSCDErrorInfo = new SSCDErrorInfo() { Info = msg, Type = SSCDErrorType.Device } };
+        }
+        return new FiscalReceiptResponse() { Success = false, SSCDErrorInfo = new SSCDErrorInfo() { Info = msg, Type = SSCDErrorType.General } };
     }
 
     private SSCDErrorInfo GetErrorInfo(string? code, string? status, string? printerStatus)
@@ -327,6 +331,6 @@ public sealed class EpsonSCU : IITSSCD
             errorInf += $"\n Printer state {state}";
         }
         _logger.LogError(errorInf);
-        return SSCDErrorInfo.FromDevice(errorInf);
+        return new SSCDErrorInfo() { Info = errorInf, Type = SSCDErrorType.Device};
     }
 }

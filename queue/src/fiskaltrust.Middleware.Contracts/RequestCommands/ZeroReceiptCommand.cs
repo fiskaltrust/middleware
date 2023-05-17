@@ -8,7 +8,7 @@ using System.Linq;
 using System.Collections.Generic;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Contracts.RequestCommands.Factories;
-using fiskaltrust.Middleware.Contracts.Exceptions;
+using fiskaltrust.ifPOS.v1.errors;
 
 namespace fiskaltrust.Middleware.Contracts.RequestCommands
 {
@@ -115,11 +115,11 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
                     }
                     catch (Exception ex)
                     {
-                        if (Errors.IsConnectionError(ex.Message))
+                        if (ex is SSCDErrorException exception && !(exception.Type == SSCDErrorType.Device))
                         {
-                            throw new Exception(ex.Message);
+                            throw;
                         }
-                        _logger.LogError(ex, $"The receipt {failRequest.cbReceiptReference} could not be proccessed!");
+                        _logger.LogError(ex, $"The receipt {failRequest.cbReceiptReference} could not be proccessed! \n {ex.Message}");
                     }
                 }
             }

@@ -76,7 +76,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
                 }
                 else
                 {
-                    throw response.SSCDErrorInfo;
+                    throw new SSCDErrorException(response.SSCDErrorInfo.Type, response.SSCDErrorInfo.Info);
                 }
             }
             else
