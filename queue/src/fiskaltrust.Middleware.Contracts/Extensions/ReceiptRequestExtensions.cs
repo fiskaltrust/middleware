@@ -8,5 +8,7 @@ namespace fiskaltrust.Middleware.Contracts.Extensions
         {
             return (receiptRequest.ftReceiptCase & 0x0000_0000_0004_0000) > 0x0000;
         }
+
+        public static bool IsFailedReceipt(this ReceiptRequest receiptRequest) => (receiptRequest.ftReceiptCase & 0x0000_0000_0001_0000) != 0;
     }
 }

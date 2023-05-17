@@ -1,15 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
-using fiskaltrust.Middleware.Contracts.Constants;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Storage.SQLite.Repositories.ME
 {
-    public class SQLiteJournalITRepository : AbstractSQLiteRepository<Guid, ftJournalIT>, IJournalITRepository
+    public class SQLiteJournalITRepository : AbstractSQLiteRepository<Guid, ftJournalIT>, IMiddlewareJournalITRepository
     {
         public SQLiteJournalITRepository(ISqliteConnectionFactory connectionFactory, string path) : base(connectionFactory, path) { }
         
@@ -19,6 +17,8 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Repositories.ME
        
         public override async Task<IEnumerable<ftJournalIT>> GetAsync() => await DbConnection.QueryAsync<ftJournalIT>("select * from ftJournalIT").ConfigureAwait(false);
         
+        public async Task<ftJournalIT> GetByQueueItemId(Guid queueItemId) => await DbConnection.QueryFirstOrDefaultAsync<ftJournalIT>("Select * from ftJournalIT where ftQueueItemId = @queueItemId", new { queueItemId }).ConfigureAwait(false);
+
         public async Task InsertAsync(ftJournalIT journal)
         {
             if (await GetAsync(GetIdForEntity(journal)).ConfigureAwait(false) != null)

@@ -115,6 +115,7 @@ namespace fiskaltrust.Middleware.Storage.Ef
 
             services.AddTransient<IJournalITRepository, EfJournalITRepository>();
             services.AddTransient<IReadOnlyJournalITRepository, EfJournalITRepository>();
+            services.AddTransient<IMiddlewareJournalITRepository, EfJournalITRepository>();
 
             services.AddTransient<IReceiptJournalRepository, EfReceiptJournalRepository>();
             services.AddTransient<IReadOnlyReceiptJournalRepository, EfReceiptJournalRepository>();

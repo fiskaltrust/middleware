@@ -11,6 +11,8 @@ using fiskaltrust.Middleware.Localization.QueueIT.Factories;
 using FluentAssertions;
 using Moq;
 using fiskaltrust.Middleware.Localization.QueueIT.Services;
+using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Contracts.RequestCommands;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
 {
@@ -71,10 +73,13 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
 
 
             var queueIt = new ftQueueIT() { CashBoxIdentification = "testserial", ftSignaturCreationUnitITId = Guid.NewGuid()};
-            var configRepoMock = new Mock<IReadOnlyConfigurationRepository>();
+            var configRepoMock = new Mock<IConfigurationRepository>();
             configRepoMock.Setup(x => x.GetQueueITAsync(It.IsAny<Guid>())).ReturnsAsync(queueIt);
 
-            var posReceiptCommand = new PosReceiptCommand(desscdMock.Object, new SignatureItemFactoryIT(), Mock.Of<IJournalITRepository>(), configRepoMock.Object);
+            var queueRepoMock = new Mock<ICountrySpecificQueueRepository>();
+            queueRepoMock.Setup(x => x.GetQueueAsync(It.IsAny<Guid>())).ReturnsAsync(queueIt);
+
+            var posReceiptCommand = new PosReceiptCommand(desscdMock.Object, new SignatureItemFactoryIT(), Mock.Of<IMiddlewareJournalITRepository>(), configRepoMock.Object,queueRepoMock.Object);
 
             var queue = new ftQueue() { ftQueueId = Guid.NewGuid(), ftReceiptNumerator = 5 };
             var queueItem = new ftQueueItem() { ftQueueId = queue.ftQueueId, ftQueueItemId = Guid.NewGuid(), ftQueueRow = 7 };

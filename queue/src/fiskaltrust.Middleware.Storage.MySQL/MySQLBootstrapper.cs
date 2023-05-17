@@ -110,6 +110,7 @@ namespace fiskaltrust.Middleware.Storage.MySQL
 
             services.AddSingleton<IJournalITRepository>(x => new MySQLJournalITRepository(_connectionString));
             services.AddSingleton<IReadOnlyJournalITRepository>(x => new MySQLJournalITRepository(_connectionString));
+            services.AddSingleton<IMiddlewareJournalITRepository>(x => new MySQLJournalITRepository(_connectionString));
 
             services.AddSingleton<IReceiptJournalRepository>(x => new MySQLReceiptJournalRepository(_connectionString));
             services.AddSingleton<IReadOnlyReceiptJournalRepository>(x => new MySQLReceiptJournalRepository(_connectionString));

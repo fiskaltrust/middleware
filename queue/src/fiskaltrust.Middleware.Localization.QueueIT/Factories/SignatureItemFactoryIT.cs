@@ -20,6 +20,27 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Factories
             CurrencyDecimalDigits = 2
         };
 
+        public SignaturItem[] CreatePosReceiptSignatures(DailyClosingResponse dailyClosingResponse)
+        {
+            return new SignaturItem[]
+            {
+                new SignaturItem
+                {
+                    Caption = "<z-number>",
+                    Data = dailyClosingResponse.ZRepNumber.ToString(),
+                    ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                    ftSignatureType = CountryBaseState & (long) SignatureTypesIT.ZNumber
+                },
+                new SignaturItem
+                {
+                    Caption = "<z-dailyamount>",
+                    Data = dailyClosingResponse.DailyAmount.ToString(CurrencyFormatter),
+                    ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                    ftSignatureType = CountryBaseState & (long) SignatureTypesIT.ReceiptAmount
+                }
+            };
+        }
+
         public SignaturItem []  CreatePosReceiptSignatures(FiscalReceiptResponse fiscalReceiptResponse)
         { 
             return new SignaturItem[]

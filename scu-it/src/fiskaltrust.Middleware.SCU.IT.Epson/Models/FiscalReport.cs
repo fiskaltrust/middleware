@@ -20,8 +20,22 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
         [XmlAttribute(AttributeName = "operator")]
         public string? Operator { get; set; }
 
-        [XmlAttribute(AttributeName = "timeout")]
+        [XmlIgnore]
         public int? Timeout { get; set; }
+
+        [XmlAttribute(AttributeName = "timeout")]
+        public string? TimeoutStr
+        {
+            get => Timeout.HasValue ? Timeout.ToString() : null;
+
+            set
+            {
+                if (int.TryParse(value, out var timeout))
+                {
+                    Timeout = timeout;
+                }
+            }
+        }
     }
 
     [XmlType("printXReport")]
@@ -37,7 +51,21 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
         [XmlAttribute(AttributeName = "operator")]
         public string? Operator { get; set; }
 
-        [XmlAttribute(AttributeName = "timeout")]
+        [XmlIgnore]
         public int? Timeout { get; set; }
+
+        [XmlAttribute(AttributeName = "timeout")]
+        public string? TimeoutStr
+        {
+            get => Timeout.HasValue ? Timeout.ToString() : null;
+
+            set
+            {
+                if (int.TryParse(value, out var timeout))
+                {
+                    Timeout = timeout;
+                }
+            }
+        }
     }
 }

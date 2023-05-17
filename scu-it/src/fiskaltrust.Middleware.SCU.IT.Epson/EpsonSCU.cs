@@ -2,11 +2,15 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
+using System.ServiceModel;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using fiskaltrust.ifPOS.v1.errors;
 using fiskaltrust.ifPOS.v1.it;
+using fiskaltrust.Middleware.SCU.IT.Epson.Exceptions;
 using fiskaltrust.Middleware.SCU.IT.Epson.Models;
 using fiskaltrust.Middleware.SCU.IT.Epson.Utilities;
 using Microsoft.Extensions.Logging;
@@ -22,7 +26,7 @@ public sealed class EpsonSCU : IITSSCD
     private readonly EpsonCommandFactory _epsonXmlWriter;
     private readonly HttpClient _httpClient;
     private readonly string _commandUrl;
-    private readonly ErrorCodeFactory _errorCodeFactory = new();
+    private readonly ErrorInfoFactory _errorCodeFactory = new();
     private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(0, 1);
     private string _serialnr = "";
 
@@ -52,6 +56,7 @@ public sealed class EpsonSCU : IITSSCD
             _semaphore.Wait(_configuration.LockTimeoutMs);
 
             var content = _epsonXmlWriter.CreateInvoiceRequestContent(request);
+
             var response = await SendRequestAsync(content);
 
             using var responseContent = await response.Content.ReadAsStreamAsync();
@@ -60,38 +65,12 @@ public sealed class EpsonSCU : IITSSCD
             {
                 Success = result?.Success ?? false
             };
-
-            var status = GetPrinterStatus(result?.Receipt?.PrinterStatus);
-            if (status != null)
-            {
-                _logger.LogDebug("Printer status: {PrinterStatus}", status);
-                fiscalReceiptResponse.ErrorInfo = $"Status: {status}";
-            }
-
-            if (result?.Success == false)
-            {
-                if (result?.Code != null)
-                {
-                    var error = _errorCodeFactory.GetErrorInfo(result.Code);
-                    _logger.LogError("Printer status: {Error}", error);
-                    fiscalReceiptResponse.ErrorInfo += $", Error: {error}";
-                }
-                await ResetPrinter();
-            }
-            else
-            {
-                await SetResponseAsync(request?.Payments, result, fiscalReceiptResponse);
-            }
+            await SetReceiptResponse(request?.Payments, result, fiscalReceiptResponse);
             return fiscalReceiptResponse;
         }
         catch (Exception e)
         {
-            var msg = e.Message;
-            if (e.InnerException != null)
-            {
-                msg = msg + " " + e.InnerException.Message;
-            }
-            return new FiscalReceiptResponse() { Success = false, ErrorInfo = msg };
+            return ExceptionInfo(e);
         }
         finally
         {
@@ -101,7 +80,7 @@ public sealed class EpsonSCU : IITSSCD
 
     public async Task<string> GetSerialNumberAsync(string rtType)
     {
-        var serialQuery = new PrinterCommand() { DirectIO =  DirectIO.GetSerialNrCommand() };
+        var serialQuery = new PrinterCommand() { DirectIO = DirectIO.GetSerialNrCommand() };
         var content = SoapSerializer.Serialize(serialQuery);
         var responseSerialnr = await SendRequestAsync(content);
 
@@ -110,9 +89,8 @@ public sealed class EpsonSCU : IITSSCD
 
         var serialnr = result?.CommandResponse?.ResponseData;
 
-        return serialnr?.Substring(10, 2) + rtType + serialnr?.Substring(8, 2)  + serialnr?.Substring(2, 6);
+        return serialnr?.Substring(10, 2) + rtType + serialnr?.Substring(8, 2) + serialnr?.Substring(2, 6);
     }
-
 
     public async Task<FiscalReceiptResponse> FiscalReceiptRefundAsync(FiscalReceiptRefund request)
     {
@@ -129,38 +107,12 @@ public sealed class EpsonSCU : IITSSCD
             {
                 Success = result?.Success ?? false
             };
-
-            var status = GetPrinterStatus(result?.Receipt?.PrinterStatus);
-            if (status != null)
-            {
-                _logger.LogDebug("Printer status: {PrinterStatus}", status);
-                fiscalReceiptResponse.ErrorInfo = $"Status: {status}";
-            }
-
-            if (result?.Success == false)
-            {
-                if (result?.Code != null)
-                {
-                    var error = _errorCodeFactory.GetErrorInfo(result.Code);
-                    _logger.LogError("Printer status: {Error}", error);
-                    fiscalReceiptResponse.ErrorInfo += $", Error: {error}";
-                }
-                await ResetPrinter();
-            }
-            else
-            {
-                await SetResponseAsync(request?.Payments, result, fiscalReceiptResponse);
-            }
+            await SetReceiptResponse(request.Payments, result, fiscalReceiptResponse);
             return fiscalReceiptResponse;
         }
         catch (Exception e)
         {
-            var msg = e.Message;
-            if (e.InnerException != null)
-            {
-                msg = msg + " " + e.InnerException.Message;
-            }
-            return new FiscalReceiptResponse() { Success = false, ErrorInfo = msg };
+            return ExceptionInfo(e);
         }
         finally
         {
@@ -184,26 +136,13 @@ public sealed class EpsonSCU : IITSSCD
                 Success = result?.Success ?? false
             };
 
-            var status = GetPrinterStatus(result?.ReportInfo?.PrinterStatus);
-            if (status != null)
+            if (!dailyClosingResponse.Success)
             {
-                _logger.LogDebug("Printer status: {PrinterStatus}", status);
-                dailyClosingResponse.ErrorInfo = $"Status: {status}";
-            }
-
-            if (result?.Success == false)
-            {
-                if (result?.Code != null)
-                {
-                    var error = _errorCodeFactory.GetErrorInfo(result.Code);
-                    _logger.LogError("Printer status: {Error}", error);
-                    dailyClosingResponse.ErrorInfo += $", Error: {error}";
-                }
+                dailyClosingResponse.SSCDErrorInfo = GetErrorInfo(result?.Code, result?.Status, null);
                 await ResetPrinter();
             }
             else
             {
-
                 dailyClosingResponse.ZRepNumber = result?.ReportInfo?.ZRepNumber != null ? long.Parse(result.ReportInfo.ZRepNumber) : 0;
                 dailyClosingResponse.DailyAmount = result?.ReportInfo?.DailyAmount != null ? decimal.Parse(result.ReportInfo.DailyAmount, new CultureInfo("it-It", false)) : 0;
                 dailyClosingResponse.ReportDataJson = await DownloadJsonAsync("www/json_files/zrep.json");
@@ -217,7 +156,11 @@ public sealed class EpsonSCU : IITSSCD
             {
                 msg = msg + " " + e.InnerException.Message;
             }
-            return new DailyClosingResponse() { Success = false, ErrorInfo = msg };
+            if (IsConnectionException(e))
+            {
+                return new DailyClosingResponse() { Success = false, SSCDErrorInfo = new SSCDErrorInfo() {Info = msg, Type = SSCDErrorType.Connection } };
+            }
+            return new DailyClosingResponse() { Success = false, SSCDErrorInfo = new SSCDErrorInfo() { Info = msg, Type = SSCDErrorType.General } };
         }
         finally
         {
@@ -247,6 +190,19 @@ public sealed class EpsonSCU : IITSSCD
             SerialNumber = _serialnr
 
         };
+    }
+
+    private async Task SetReceiptResponse(List<Payment>? payments, ReceiptResponse? result, FiscalReceiptResponse fiscalReceiptResponse)
+    {
+        if (result?.Success == false)
+        {
+            fiscalReceiptResponse.SSCDErrorInfo = GetErrorInfo(result.Code, result.Status, result?.Receipt?.PrinterStatus);
+            await ResetPrinter();
+        }
+        else
+        {
+            await SetResponseAsync(payments, result, fiscalReceiptResponse);
+        }
     }
 
     private async Task SetResponseAsync(List<Payment>? payments, ReceiptResponse? result, FiscalReceiptResponse fiscalReceiptResponse)
@@ -316,7 +272,7 @@ public sealed class EpsonSCU : IITSSCD
 
     private async Task<string?> DownloadJsonAsync(string path)
     {
-        var response = await _httpClient.GetAsync(path); 
+        var response = await _httpClient.GetAsync(path);
         var content = await response.Content.ReadAsStringAsync();
         if (!response.IsSuccessStatusCode)
         {
@@ -325,5 +281,56 @@ public sealed class EpsonSCU : IITSSCD
         }
 
         return content;
+    }
+
+    private bool IsConnectionException(Exception e)
+    {
+        if (e.GetType().IsAssignableFrom(typeof(EndpointNotFoundException)) ||
+            e.GetType().IsAssignableFrom(typeof(WebException)) ||
+            e.GetType().IsAssignableFrom(typeof(CommunicationException)) ||
+            e.GetType().IsAssignableFrom(typeof(TaskCanceledException)) ||
+            e.GetType().IsAssignableFrom(typeof(HttpRequestException)))
+        {
+            return true;
+        }
+        return false;
+    }
+
+    private FiscalReceiptResponse ExceptionInfo(Exception e)
+    {
+        var msg = e.Message;
+        if (e.InnerException != null)
+        {
+            msg += " " + e.InnerException.Message;
+        }
+        if (IsConnectionException(e))
+        {
+            return new FiscalReceiptResponse() { Success = false, SSCDErrorInfo = new SSCDErrorInfo() { Info = msg, Type = SSCDErrorType.Connection } };
+        }
+        if (e is OperatorException)
+        {
+            return new FiscalReceiptResponse() { Success = false, SSCDErrorInfo = new SSCDErrorInfo() { Info = msg, Type = SSCDErrorType.Device } };
+        }
+        return new FiscalReceiptResponse() { Success = false, SSCDErrorInfo = new SSCDErrorInfo() { Info = msg, Type = SSCDErrorType.General } };
+    }
+
+    private SSCDErrorInfo GetErrorInfo(string? code, string? status, string? printerStatus)
+    {
+        var errorInf = string.Empty;
+        if (code != null)
+        {
+            errorInf += $"\n Error Code {code}: {_errorCodeFactory.GetCodeInfo(code)} ";
+        }
+        if (status != null)
+        {
+            errorInf += $"\n Status {status}: {_errorCodeFactory.GetStatusInfo(int.Parse(status))}";
+        }
+        var state = GetPrinterStatus(printerStatus);
+        if (state != null)
+        {
+            errorInf += $"\n Printer state {state}";
+        }
+        _logger.LogError(errorInf);
+        return new SSCDErrorInfo() { Info = errorInf, Type = SSCDErrorType.Device};
     }
 }

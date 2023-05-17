@@ -1,15 +1,20 @@
 ﻿using System;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
+using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Contracts.RequestCommands
 {
     public abstract class RequestCommand
     {
-        public abstract long CountryBaseState { get;}
+        public abstract long CountryBaseState { get; }
 
-        public abstract Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem);
+        protected abstract ICountrySpecificQueueRepository CountrySpecificQueueRepository { get; }
+
+        public abstract Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, bool isBeingResent = false);
+
+        public abstract Task<bool> ReceiptNeedsReprocessing(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem);
 
         protected ReceiptResponse CreateReceiptResponse(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, string ftCashBoxIdentification, long? ftState = null)
         {
@@ -42,6 +47,22 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
                 Priority = priority,
                 DataJson = data
             };
+        }
+
+        public async Task<RequestCommandResponse> ProcessFailedReceiptRequest(ftQueue queue, ftQueueItem queueItem, ReceiptRequest request)
+        {
+            var queueIt = await CountrySpecificQueueRepository.GetQueueAsync(queue.ftQueueId).ConfigureAwait(false);
+            if (queueIt.SSCDFailCount == 0)
+            {
+                queueIt.SSCDFailMoment = DateTime.UtcNow;
+                queueIt.SSCDFailQueueItemId = queueItem.ftQueueItemId;
+            }
+            queueIt.SSCDFailCount++;
+            await CountrySpecificQueueRepository.InsertOrUpdateQueueAsync(queueIt).ConfigureAwait(false);
+            var receiptResponse = CreateReceiptResponse(queue, request, queueItem, queueIt.CashBoxIdentification);
+            receiptResponse.ftState = CountryBaseState | 0x2;
+            receiptResponse.ftStateData = $"Queue is in failed mode. SSCDFailMoment: {queueIt.SSCDFailMoment}, SSCDFailCount: {queueIt.SSCDFailCount}. When connection is established use zeroreceipt for subsequent booking!";
+            return new RequestCommandResponse { ReceiptResponse = receiptResponse };
         }
     }
 }

@@ -8,7 +8,7 @@ using fiskaltrust.storage.serialization.DE.V0;
 using fiskaltrust.Middleware.Localization.QueueIT.Factories;
 using fiskaltrust.Middleware.Localization.QueueIT.Services;
 using fiskaltrust.ifPOS.v1.it;
-using System.Threading;
+using fiskaltrust.Middleware.Contracts.Repositories;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 {
@@ -16,15 +16,19 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
     {
         public override long CountryBaseState => Constants.Cases.BASE_STATE;
 
+        protected override ICountrySpecificQueueRepository CountrySpecificQueueRepository => _countrySpecificQueueRepository;
+        private readonly ICountrySpecificQueueRepository _countrySpecificQueueRepository;
+
         private readonly IConfigurationRepository _configurationRepository;
         private readonly SignatureItemFactoryIT _signatureItemFactoryIT;
         private readonly IITSSCD _client;
 
-        public InitialOperationReceiptCommand(IITSSCDProvider itIsscdProvider, ILogger<InitialOperationReceiptCommand> logger, IConfigurationRepository configurationRepository, SignatureItemFactoryIT signatureItemFactoryIT) : base(logger, configurationRepository)
+        public InitialOperationReceiptCommand(ICountrySpecificQueueRepository countrySpecificQueueRepository,  IITSSCDProvider itIsscdProvider, ILogger<InitialOperationReceiptCommand> logger, IConfigurationRepository configurationRepository, SignatureItemFactoryIT signatureItemFactoryIT) : base(logger, configurationRepository)
         {
             _client = itIsscdProvider.Instance;
             _configurationRepository = configurationRepository;
             _signatureItemFactoryIT = signatureItemFactoryIT;
+            _countrySpecificQueueRepository = countrySpecificQueueRepository;
         }
 
         protected override async Task<(ftActionJournal, SignaturItem)> InitializeSCUAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
@@ -52,5 +56,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 
             return (actionJournal, signatureItem);
         }
+
+        public override Task<bool> ReceiptNeedsReprocessing(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem) => Task.FromResult(false);
     }
 }

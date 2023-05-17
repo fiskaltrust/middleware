@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts;
-using fiskaltrust.Middleware.Localization.QueueIT.RequestCommands.Factories;
 using fiskaltrust.storage.V0;
 using System.Linq;
+using fiskaltrust.Middleware.Contracts.Exceptions;
+using fiskaltrust.Middleware.Localization.QueueIT.RequestCommands;
+using fiskaltrust.Middleware.Contracts.RequestCommands.Factories;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT
 {
@@ -27,8 +29,17 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
             {
                 throw new NullReferenceException(nameof(queueIT.ftSignaturCreationUnitITId));
             }
-
-            var requestCommand = _requestCommandFactory.Create(request, queueIT);
+            var scu = await _configurationRepository.GetSignaturCreationUnitITAsync(queueIT.ftSignaturCreationUnitITId.Value);
+            if (string.IsNullOrEmpty(scu.InfoJson))
+            {
+                throw new MissiningInitialOpException();
+            }
+            var requestCommand = _requestCommandFactory.Create(request);
+            if (queueIT.SSCDFailCount > 0 && requestCommand is not ZeroReceiptCommandIT)
+            {
+                var requestCommandResponse = await requestCommand.ProcessFailedReceiptRequest(queue, queueItem, request).ConfigureAwait(false);
+                return (requestCommandResponse.ReceiptResponse, requestCommandResponse.ActionJournals.ToList());
+            }
             var response = await requestCommand.ExecuteAsync(queue, request, queueItem).ConfigureAwait(false);
             return (response.ReceiptResponse, response.ActionJournals.ToList());
         }

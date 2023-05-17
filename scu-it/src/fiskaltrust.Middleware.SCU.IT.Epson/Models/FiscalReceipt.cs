@@ -4,6 +4,14 @@ using fiskaltrust.Middleware.SCU.IT.Epson.Utilities;
 
 namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
 {
+    public enum Messagetype
+    {
+        TrailerLines = 2,
+        AdditionalInfo = 4,
+        Headerlines = 5,
+        InvoiceClientLines = 6,
+    }
+
     [XmlType("printRecLotteryID")]
     public class LotteryID
     {
@@ -33,7 +41,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
         [XmlAttribute(AttributeName = "operator")]
         public string? Operator { get; set; }
         [XmlAttribute(AttributeName = "messageType")]
-        public string? MessageType { get; set; }
+        public int MessageType { get; set; }
         [XmlAttribute(AttributeName = "index")]
         public string? Index { get; set; }
         [XmlAttribute(AttributeName = "font")]
@@ -310,12 +318,11 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
     [XmlRoot(ElementName = "printerFiscalReceipt")]
     public class FiscalReceipt
     {
-
         [XmlElement(ElementName = "displayText")]
         public DisplayText? DisplayText { get; set; }
 
         [XmlElement(ElementName = "printRecMessage")]
-        public List<PrintRecMessage>? PrintRecMessage { get; set; }
+        public PrintRecMessage? PrintRecMessage { get; set; }
 
         [XmlElement(ElementName = "beginFiscalReceipt")]
         public BeginFiscalReceipt BeginFiscalReceipt { get; set; } = new BeginFiscalReceipt();

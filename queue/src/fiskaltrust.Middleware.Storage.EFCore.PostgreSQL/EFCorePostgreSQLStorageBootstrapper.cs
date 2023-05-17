@@ -108,6 +108,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL
 
             services.AddTransient<IJournalITRepository>(_ => new EFCoreJournalITRepository(new PostgreSQLMiddlewareDbContext(_optionsBuilder.Options, _queueId)));
             services.AddTransient<IReadOnlyJournalITRepository>(_ => new EFCoreJournalITRepository(new PostgreSQLMiddlewareDbContext(_optionsBuilder.Options, _queueId)));
+            services.AddTransient<IMiddlewareJournalITRepository>(_ => new EFCoreJournalITRepository(new PostgreSQLMiddlewareDbContext(_optionsBuilder.Options, _queueId)));
 
             services.AddTransient<IReceiptJournalRepository>(_ => new EFCoreReceiptJournalRepository(new PostgreSQLMiddlewareDbContext(_optionsBuilder.Options, _queueId)));
             services.AddTransient<IReadOnlyReceiptJournalRepository>(_ => new EFCoreReceiptJournalRepository(new PostgreSQLMiddlewareDbContext(_optionsBuilder.Options, _queueId)));

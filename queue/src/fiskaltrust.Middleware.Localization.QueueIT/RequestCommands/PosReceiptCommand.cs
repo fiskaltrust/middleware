@@ -11,12 +11,13 @@ using fiskaltrust.Middleware.Localization.QueueIT.Factories;
 using fiskaltrust.Middleware.Localization.QueueIT.Services;
 using fiskaltrust.Middleware.Contracts.Extensions;
 using fiskaltrust.Middleware.Localization.QueueIT.Exceptions;
-using System.ServiceModel.Channels;
 using Newtonsoft.Json;
+using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Contracts.Exceptions;
+using fiskaltrust.ifPOS.v1.errors;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 {
-
     public struct RefundDetails
     {
         public string Serialnumber { get; set; }
@@ -27,32 +28,35 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 
     public class PosReceiptCommand : RequestCommand
     {
+        public override long CountryBaseState => Constants.Cases.BASE_STATE;
+        protected override ICountrySpecificQueueRepository CountrySpecificQueueRepository => _countrySpecificQueueRepository;
+        private readonly ICountrySpecificQueueRepository _countrySpecificQueueRepository;
+        private readonly IConfigurationRepository _configurationRepository;
         private readonly SignatureItemFactoryIT _signatureItemFactoryIT;
-        private readonly IJournalITRepository _journalITRepository;
-        private readonly IReadOnlyConfigurationRepository _configurationRepository;
+        private readonly IMiddlewareJournalITRepository _journalITRepository;
         private readonly IITSSCD _client;
 
-        public override long CountryBaseState => Constants.Cases.BASE_STATE;
-
-        public PosReceiptCommand(IITSSCDProvider itIsscdProvider, SignatureItemFactoryIT signatureItemFactoryIT, IJournalITRepository journalITRepository, IReadOnlyConfigurationRepository configurationRepository)
+        public PosReceiptCommand(IITSSCDProvider itIsscdProvider, SignatureItemFactoryIT signatureItemFactoryIT, IMiddlewareJournalITRepository journalITRepository, IConfigurationRepository configurationRepository, ICountrySpecificQueueRepository countrySpecificQueueRepository)
         {
             _client = itIsscdProvider.Instance;
             _signatureItemFactoryIT = signatureItemFactoryIT;
             _journalITRepository = journalITRepository;
+            _countrySpecificQueueRepository = countrySpecificQueueRepository;
             _configurationRepository = configurationRepository;
         }
 
-        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
+        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, bool isBeingResent = false)
         {
             var journals = await _journalITRepository.GetAsync().ConfigureAwait(false);
-            if (journals.Where(x=> x.cbReceiptReference.Equals(request.cbReceiptReference)).Any())
+            if (journals.Where(x => x.cbReceiptReference.Equals(request.cbReceiptReference)).Any())
             {
-                throw new CbReferenceExistsException( request.cbReceiptReference);
+                throw new CbReferenceExistsException(request.cbReceiptReference);
             }
 
-            var queueIt = await _configurationRepository.GetQueueITAsync(queue.ftQueueId);
+            var queueIt = await _countrySpecificQueueRepository.GetQueueAsync(queue.ftQueueId).ConfigureAwait(false);
 
             var receiptResponse = CreateReceiptResponse(queue, request, queueItem, queueIt.CashBoxIdentification, CountryBaseState);
+
             FiscalReceiptResponse response;
             if (request.IsVoid())
             {
@@ -66,36 +70,37 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
             }
             if (!response.Success)
             {
-                throw new Exception(response.ErrorInfo);
+                if (response.SSCDErrorInfo.Type == SSCDErrorType.Connection && !isBeingResent)
+                {
+                    return await ProcessFailedReceiptRequest(queue, queueItem, request).ConfigureAwait(false);
+                }
+                else
+                {
+                    throw new SSCDErrorException(response.SSCDErrorInfo.Type, response.SSCDErrorInfo.Info);
+                }
             }
-            receiptResponse.ftSignatures = _signatureItemFactoryIT.CreatePosReceiptSignatures(response);
-
-            var journalIT = CreateJournalIT(queue, queueIt, request, queueItem, response);
-            await _journalITRepository.InsertAsync(journalIT).ConfigureAwait(false);
-
+            else
+            {
+                receiptResponse.ftReceiptIdentification += $"{response.ReceiptNumber}";
+                receiptResponse.ftSignatures = _signatureItemFactoryIT.CreatePosReceiptSignatures(response);
+                var journalIT = new ftJournalIT().FromResponse(queueIt, queueItem, new ScuResponse()
+                {
+                    DataJson = response.ReceiptDataJson,
+                    ftReceiptCase = request.ftReceiptCase,
+                    ReceiptDateTime = response.ReceiptDateTime,
+                    ReceiptNumber = response.ReceiptNumber,
+                    ZRepNumber = response.ZRepNumber
+                });
+                await _journalITRepository.InsertAsync(journalIT).ConfigureAwait(false);
+            }
 
             return new RequestCommandResponse
             {
                 ReceiptResponse = receiptResponse,
+                Signatures = receiptResponse.ftSignatures.ToList(),
                 ActionJournals = new List<ftActionJournal>()
             };
         }
-
-        private ftJournalIT CreateJournalIT(ftQueue queue, ftQueueIT queueIt, ReceiptRequest request, ftQueueItem queueItem, FiscalReceiptResponse response) =>
-            new ftJournalIT
-            {
-                ftJournalITId = Guid.NewGuid(),
-                ftQueueId = queue.ftQueueId,
-                ftQueueItemId = queueItem.ftQueueItemId,
-                cbReceiptReference = request.cbReceiptReference,
-                ftSignaturCreationUnitITId = queueIt.ftSignaturCreationUnitITId.Value,
-                JournalType = request.ftReceiptCase & 0xFFFF,
-                ReceiptDateTime = response.ReceiptDateTime,
-                ReceiptNumber = response.ReceiptNumber,
-                ZRepNumber = response.ZRepNumber,
-                DataJson = response.ReceiptDataJson,
-                TimeStamp = DateTime.UtcNow.Ticks
-            };
 
         private static FiscalReceiptInvoice CreateInvoice(ReceiptRequest request)
         {
@@ -103,6 +108,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
             {
                 //Barcode = ChargeItem.ProductBarcode,
                 //TODO DisplayText = "Message on customer display",
+                Operator = request.cbUser,
                 Items = request.cbChargeItems.Where(x => !x.IsPaymentAdjustment()).Select(p => new Item
                 {
                     Description = p.Description,
@@ -128,7 +134,8 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
             var fiscalReceiptRequest = new FiscalReceiptRefund()
             {
                 //TODO Barcode = "0123456789" 
-                DisplayText = $"REFUND {refundDetails.ReceiptNumber:D4} {refundDetails.ZRepNumber:D4} {refundDetails.ReceiptDateTime:ddMMyyyy} {refundDetails.Serialnumber}",
+                Operator = request.cbUser,
+                DisplayText = $"REFUND {refundDetails.ZRepNumber:D4} {refundDetails.ReceiptNumber:D4} {refundDetails.ReceiptDateTime:ddMMyyyy} {refundDetails.Serialnumber}",
                 Refunds = request.cbChargeItems?.Select(p => new Refund
                 {
                     Description = p.Description,
@@ -143,7 +150,8 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
                 {
                     Amount = p.Amount,
                     Description = p.Description,
-                    PaymentType = p.GetPaymentType()
+                    PaymentType = p.GetPaymentType(),
+                    Index = 1
                 }).ToList()
             };
 
@@ -155,7 +163,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
             var journalIt = await _journalITRepository.GetAsync().ConfigureAwait(false);
             var receipt = journalIt.Where(x => x.cbReceiptReference.Equals(request.cbPreviousReceiptReference)).FirstOrDefault() ?? throw new RefundException($"Receipt {request.cbPreviousReceiptReference} was not found!");
             var scu = await _configurationRepository.GetSignaturCreationUnitITAsync(receipt.ftSignaturCreationUnitITId).ConfigureAwait(false);
-            var deviceInfo =  JsonConvert.DeserializeObject<DeviceInfo>(scu.InfoJson);
+            var deviceInfo = JsonConvert.DeserializeObject<DeviceInfo>(scu.InfoJson);
             return new RefundDetails()
             {
                 ReceiptNumber = receipt.ReceiptNumber,
@@ -163,6 +171,12 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
                 ReceiptDateTime = receipt.ReceiptDateTime,
                 Serialnumber = deviceInfo.SerialNumber
             };
+        }
+
+        public override async Task<bool> ReceiptNeedsReprocessing(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
+        {
+            var journalIt = await _journalITRepository.GetByQueueItemId(queueItem.ftQueueItemId).ConfigureAwait(false);
+            return journalIt == null;
         }
     }
 }
