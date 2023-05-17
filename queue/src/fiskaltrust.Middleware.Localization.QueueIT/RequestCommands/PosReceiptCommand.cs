@@ -70,7 +70,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
             }
             if (!response.Success)
             {
-                if (response.SSCDErrorInfo.Type == SSCDErrorType.Connection & !isBeingResent)
+                if (response.SSCDErrorInfo.Type == SSCDErrorType.Connection && !isBeingResent)
                 {
                     return await ProcessFailedReceiptRequest(queue, queueItem, request).ConfigureAwait(false);
                 }
