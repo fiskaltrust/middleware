@@ -34,7 +34,7 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories.IT
             using (var connection = new MySqlConnection(ConnectionString))
             {
                 await connection.OpenAsync().ConfigureAwait(false);
-                return await connection.QueryFirstOrDefaultAsync<ftJournalIT>("select * from ftJournalIT where ftQueueItemId = @queueItemId").ConfigureAwait(false);
+                return await connection.QueryFirstOrDefaultAsync<ftJournalIT>("select * from ftJournalIT where ftQueueItemId = @queueItemId", new { queueItemId = queueItemId }).ConfigureAwait(false);
             }
         }
 
