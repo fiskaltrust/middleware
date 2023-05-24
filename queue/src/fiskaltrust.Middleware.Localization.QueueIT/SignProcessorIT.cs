@@ -29,12 +29,14 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
             {
                 throw new NullReferenceException(nameof(queueIT.ftSignaturCreationUnitITId));
             }
+            var requestCommand = _requestCommandFactory.Create(request);
+
             var scu = await _configurationRepository.GetSignaturCreationUnitITAsync(queueIT.ftSignaturCreationUnitITId.Value);
-            if (string.IsNullOrEmpty(scu.InfoJson))
+            if (string.IsNullOrEmpty(scu.InfoJson) && requestCommand is not InitialOperationReceiptCommand)
             {
                 throw new MissiningInitialOpException();
             }
-            var requestCommand = _requestCommandFactory.Create(request);
+
             if (queueIT.SSCDFailCount > 0 && requestCommand is not ZeroReceiptCommandIT)
             {
                 var requestCommandResponse = await requestCommand.ProcessFailedReceiptRequest(queue, queueItem, request).ConfigureAwait(false);
