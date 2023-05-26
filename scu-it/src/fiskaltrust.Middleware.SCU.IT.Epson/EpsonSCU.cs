@@ -44,7 +44,7 @@ public sealed class EpsonSCU : IITSSCD
             BaseAddress = new Uri(configuration.DeviceUrl),
             Timeout = TimeSpan.FromMilliseconds(configuration.ClientTimeoutMs)
         };
-        _commandUrl = $"/cgi-bin/fpmate.cgi?timeout={configuration.ServerTimeoutMs}";
+        _commandUrl = $"cgi-bin/fpmate.cgi?timeout={configuration.ServerTimeoutMs}";
     }
 
     public Task<ScuItEchoResponse> EchoAsync(ScuItEchoRequest request) => Task.FromResult(new ScuItEchoResponse { Message = request.Message });
@@ -158,7 +158,7 @@ public sealed class EpsonSCU : IITSSCD
             }
             if (IsConnectionException(e))
             {
-                return new DailyClosingResponse() { Success = false, SSCDErrorInfo = new SSCDErrorInfo() {Info = msg, Type = SSCDErrorType.Connection } };
+                return new DailyClosingResponse() { Success = false, SSCDErrorInfo = new SSCDErrorInfo() { Info = msg, Type = SSCDErrorType.Connection } };
             }
             return new DailyClosingResponse() { Success = false, SSCDErrorInfo = new SSCDErrorInfo() { Info = msg, Type = SSCDErrorType.General } };
         }
@@ -331,6 +331,6 @@ public sealed class EpsonSCU : IITSSCD
             errorInf += $"\n Printer state {state}";
         }
         _logger.LogError(errorInf);
-        return new SSCDErrorInfo() { Info = errorInf, Type = SSCDErrorType.Device};
+        return new SSCDErrorInfo() { Info = errorInf, Type = SSCDErrorType.Device };
     }
 }
