@@ -125,7 +125,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Repositories
 
         private async Task<(long, DateTime?)> GetLastZNumberForQueueItem(ftQueueItem queueItem)
         {
-            var regexDaily = new Regex("4445[0-9]{11}7");
+            var regexDaily = new Regex("4445[0-9]{8}0007");
             var actionJournals = (await _actionJournalRepository.GetAsync()).Where(x => x.Type != null && regexDaily.IsMatch(x.Type)).OrderBy(x => x.TimeStamp);
             var actionJournal = actionJournals.Where(x => x.TimeStamp > queueItem.TimeStamp).FirstOrDefault();
             if (actionJournal == null)
