@@ -28,6 +28,7 @@
         <dependency id="System.Linq.Async" version="4.1.1" />
         <dependency id="SharpCompress" version="0.28.2"/>
         <dependency id="CsvHelper" version="28.0.1"/>
+        <dependency id="System.Threading.Channels" version="7.0.0" />
       </group>
     </dependencies>
   </metadata>
