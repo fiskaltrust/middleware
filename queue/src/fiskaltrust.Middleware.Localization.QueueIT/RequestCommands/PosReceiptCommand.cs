@@ -115,7 +115,8 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
                     Quantity = p.Quantity,
                     UnitPrice = p.UnitPrice ?? p.Amount / p.Quantity,
                     Amount = p.Amount,
-                    VatGroup = p.GetVatGroup()
+                    VatGroup = p.GetVatGroup(),
+                    AdditionalInformation = p.ftChargeItemCaseData
                 }).ToList(),
                 PaymentAdjustments = request.GetPaymentAdjustments(),
                 Payments = request.cbPayItems?.Select(p => new Payment
@@ -142,8 +143,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
                     Quantity = Math.Abs(p.Quantity),
                     UnitPrice = p.UnitPrice ?? 0,
                     Amount = Math.Abs(p.Amount),
-                    VatGroup = p.GetVatGroup(),
-                    OperationType = p.GetRefundOperationType()
+                    VatGroup = p.GetVatGroup()
                 }).ToList(),
                 PaymentAdjustments = request.GetPaymentAdjustments(),
                 Payments = request.cbPayItems?.Select(p => new Payment

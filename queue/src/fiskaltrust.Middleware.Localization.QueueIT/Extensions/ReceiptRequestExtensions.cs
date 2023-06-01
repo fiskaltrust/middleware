@@ -20,7 +20,8 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
                         {
                             Amount = item.GetAmount(),
                             Description = item.Description,
-                            VatGroup = item.GetVatGroup()
+                            VatGroup = item.GetVatGroup(),
+                            PaymentAdjustmentType = (PaymentAdjustmentType) item.GetPaymentAdjustmentType(),
                         });
                     }
                 }

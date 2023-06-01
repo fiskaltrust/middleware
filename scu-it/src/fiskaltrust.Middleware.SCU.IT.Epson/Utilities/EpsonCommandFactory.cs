@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Xml.Serialization;
@@ -22,17 +23,30 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
         {
             var fiscalReceipt = CreateFiscalReceipt(request);
             fiscalReceipt.DisplayText = string.IsNullOrEmpty(request.DisplayText) ? null : new DisplayText() { Data = request.DisplayText };
-            fiscalReceipt.PrintRecItem = request.Items?.Select(p => new PrintRecItem
+            foreach (var i in request.Items)
             {
-                Description = p.Description,
-                Quantity = p.Quantity,
-                UnitPrice = p.UnitPrice,
-                Department = p.VatGroup
-            }).ToList();
+                var printrecItem = new PrintRecItem
+                {
+                    Description = i.Description,
+                    Quantity = i.Quantity,
+                    UnitPrice = i.UnitPrice,
+                    Department = i.VatGroup
+                };
+                PrintRecMessage? printRecMessage = null;
+                if (!string.IsNullOrEmpty(i.AdditionalInformation))
+                {
+                    printRecMessage = new PrintRecMessage()
+                    {
+                        Message = i.AdditionalInformation,
+                        MessageType = 4
+                    };
+                }
+                fiscalReceipt.ItemAndMessages.Add(new (){ PrintRecItem = printrecItem, PrintRecMessage = printRecMessage });
+            }
             fiscalReceipt.PrintRecItemAdjustment = request.PaymentAdjustments?.Select(p => new PrintRecItemAdjustment
             {
                 Description = p.Description,
-                AdjustmentType = p.Amount < 0 ? 3 : 8,
+                AdjustmentType = GetAdjustmentType(p.PaymentAdjustmentType, p.Amount),
                 Amount = Math.Abs(p.Amount),
                 Department = p.VatGroup ?? 0
             }).ToList();
@@ -42,7 +56,30 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
                 PaymentType = (int) p.PaymentType,
                 Payment = p.Amount
             }).ToList();
-            return SoapSerializer.Serialize(fiscalReceipt);
+            var xml = SoapSerializer.Serialize(fiscalReceipt);
+            return xml.Replace("<NotExistingOnEpson>\r\n","").Replace("</NotExistingOnEpson>\r\n", "");
+
+        }
+
+        private int GetAdjustmentType(PaymentAdjustmentType paymentAdjustmentType, decimal amount)
+        {
+            if (paymentAdjustmentType == PaymentAdjustmentType.Adjustment)
+            {
+                return amount < 0 ? 3 : 8;
+             }
+            if (paymentAdjustmentType == PaymentAdjustmentType.SingleUseVoucher)
+            {
+                return 12;
+            }
+            if (paymentAdjustmentType == PaymentAdjustmentType.FreeOfCharge)
+            {
+                return 11;
+            }
+            if (paymentAdjustmentType == PaymentAdjustmentType.Acconto)
+            {
+                return 10;
+            }
+            return 0;
         }
 
         public string CreateRefundRequestContent(FiscalReceiptRefund request)
@@ -54,7 +91,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
                 Message = request.DisplayText,
                 MessageType = (int)Messagetype.AdditionalInfo
             };
-            fiscalReceipt.PrintRecRefund = request.Refunds?.Select(GetPrintRecRefund).ToList();
+            fiscalReceipt.PrintRecRefund = request.Refunds.Select(GetPrintRecRefund).ToList();
             return SoapSerializer.Serialize(fiscalReceipt);
         }
 
@@ -82,15 +119,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
 
         private PrintRecRefund GetPrintRecRefund(Refund recRefund)
         {
-            if (recRefund.OperationType.HasValue)
-            {
-                return new PrintRecRefund
-                {
-                    Amount = recRefund.Amount,
-                    OperationType = (int) recRefund.OperationType
-                };
-            }
-            else if (recRefund.UnitPrice != 0 && recRefund.Quantity != 0)
+            if (recRefund.UnitPrice != 0 && recRefund.Quantity != 0)
             {
                 return new PrintRecRefund
                 {

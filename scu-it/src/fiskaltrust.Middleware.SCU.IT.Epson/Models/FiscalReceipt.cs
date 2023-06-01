@@ -23,7 +23,6 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
         public static LotteryID FromString(string code) => new() { Code = code };
     }
 
-
     [XmlType("displayText")]
     public class DisplayText
     {
@@ -57,6 +56,15 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
     {
         [XmlAttribute(AttributeName = "operator")]
         public string? Operator { get; set; }
+    }
+
+    public class ItemAndMessage
+    {
+        [XmlElement(ElementName = "printRecMessage")]
+        public PrintRecMessage? PrintRecMessage { get; set; }
+
+        [XmlElement(ElementName = "printRecItem")]
+        public PrintRecItem? PrintRecItem { get; set; }
     }
 
     [XmlRoot(ElementName = "printRecItem")]
@@ -102,6 +110,14 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
 
     }
 
+    public class Item
+    {
+        [XmlElement(ElementName = "printRecMessage")]
+        public PrintRecMessage? PrintRecMessage { get; set; }
+
+        [XmlElement(ElementName = "printRecItem")]
+        public PrintRecItem? PrintRecItem { get; set; }
+    }
 
     [XmlRoot(ElementName = "printRecRefund")]
     public class PrintRecRefund
@@ -327,11 +343,11 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
         [XmlElement(ElementName = "beginFiscalReceipt")]
         public BeginFiscalReceipt BeginFiscalReceipt { get; set; } = new BeginFiscalReceipt();
 
-        [XmlElement(ElementName = "printRecItem")]
-        public List<PrintRecItem>? PrintRecItem { get; set; }
+        [XmlElement(ElementName = "NotExistingOnEpson")]
+        public List<ItemAndMessage> ItemAndMessages { get; set; } = new List<ItemAndMessage>();
 
         [XmlElement(ElementName = "printRecRefund")]
-        public List<PrintRecRefund>? PrintRecRefund { get; set; }
+        public List<PrintRecRefund> PrintRecRefund { get; set; } = new List<PrintRecRefund>();
 
         [XmlElement(ElementName = "printRecItemVoid")]
         public List<PrintRecItemAdjustment>? PrintRecItemAdjustment { get; set; }
