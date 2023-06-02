@@ -22,10 +22,13 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
         public string CreateInvoiceRequestContent(FiscalReceiptInvoice request)
         {
             var fiscalReceipt = CreateFiscalReceipt(request);
-            fiscalReceipt.DisplayText = string.IsNullOrEmpty(request.DisplayText) ? null : new DisplayText() { Data = request.DisplayText };
+            if (!string.IsNullOrEmpty(request.DisplayText))
+            {
+                fiscalReceipt.DisplayText.Add(new DisplayText() { Data = request.DisplayText });
+            }
             foreach (var i in request.Items)
             {
-                var printrecItem = new PrintRecItem
+                var printRecItem = new PrintRecItem
                 {
                     Description = i.Description,
                     Quantity = i.Quantity,
@@ -41,23 +44,54 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
                         MessageType = 4
                     };
                 }
-                fiscalReceipt.ItemAndMessages.Add(new (){ PrintRecItem = printrecItem, PrintRecMessage = printRecMessage });
+                fiscalReceipt.ItemAndMessages.Add(new (){ PrintRecItem = printRecItem, PrintRecMessage = printRecMessage });
             }
-            fiscalReceipt.PrintRecItemAdjustment = request.PaymentAdjustments?.Select(p => new PrintRecItemAdjustment
+            if (request.PaymentAdjustments != null)
             {
-                Description = p.Description,
-                AdjustmentType = GetAdjustmentType(p.PaymentAdjustmentType, p.Amount),
-                Amount = Math.Abs(p.Amount),
-                Department = p.VatGroup ?? 0
-            }).ToList();
+                foreach (var adj in request.PaymentAdjustments)
+                {
+                    var printRecItemAdjustment = new PrintRecItemAdjustment
+                    {
+                        Description = adj.Description,
+                        AdjustmentType = GetAdjustmentType(adj.PaymentAdjustmentType, adj.Amount),
+                        Amount = Math.Abs(adj.Amount),
+                        Department = adj.VatGroup ?? 0,
+                    };
+                    PrintRecMessage? printRecMessage = null;
+                    if (!string.IsNullOrEmpty(adj.AdditionalInformation))
+                    {
+                        printRecMessage = new PrintRecMessage()
+                        {
+                            Message = adj.AdditionalInformation,
+                            MessageType = 4
+                        };
+                    }
+                    fiscalReceipt.AdjustmentAndMessage.Add(new() { PrintRecItemAdjustment = printRecItemAdjustment, PrintRecMessage = printRecMessage });
+                }
+            }
             fiscalReceipt.PrintRecTotal = request.Payments?.Select(p => new PrintRecTotal
             {
                 Description = p.Description,
                 PaymentType = (int) p.PaymentType,
                 Payment = p.Amount
             }).ToList();
+            if(fiscalReceipt.PrintRecTotal == null)
+            {
+                fiscalReceipt.PrintRecTotal = new List<PrintRecTotal> { new PrintRecTotal()
+                     {
+                            Description = PaymentType.Cash.ToString(),
+                            PaymentType = (int) PaymentType.Cash,
+                            Payment = 0
+                     }
+                };
+            }
             var xml = SoapSerializer.Serialize(fiscalReceipt);
-            return xml.Replace("<NotExistingOnEpson>\r\n","").Replace("</NotExistingOnEpson>\r\n", "");
+            return xml.Replace("<NotExistingOnEpsonItemMsg>\r\n", "")
+                    .Replace("</NotExistingOnEpsonItemMsg>\r\n", "")
+                    .Replace("<NotExistingOnEpsonAdjMsg>\r\n", "")
+                    .Replace("</NotExistingOnEpsonAdjMsg>\r\n", "");
+
+            
 
         }
 
@@ -87,9 +121,9 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
             var fiscalReceipt = CreateFiscalReceipt(request);
             fiscalReceipt.PrintRecMessage = new PrintRecMessage()
             {
-                Operator  = request.Operator,
+                Operator = request.Operator,
                 Message = request.DisplayText,
-                MessageType = (int)Messagetype.AdditionalInfo
+                MessageType = (int) Messagetype.AdditionalInfo
             };
             fiscalReceipt.PrintRecRefund = request.Refunds.Select(GetPrintRecRefund).ToList();
             return SoapSerializer.Serialize(fiscalReceipt);

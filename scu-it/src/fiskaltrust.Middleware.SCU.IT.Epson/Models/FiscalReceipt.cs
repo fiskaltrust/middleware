@@ -67,6 +67,15 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
         public PrintRecItem? PrintRecItem { get; set; }
     }
 
+    public class AdjustmentAndMessage
+    {
+        [XmlElement(ElementName = "printRecMessage")]
+        public PrintRecMessage? PrintRecMessage { get; set; }
+
+        [XmlElement(ElementName = "printRecItemAdjustment")]
+        public PrintRecItemAdjustment? PrintRecItemAdjustment { get; set; }
+    }
+
     [XmlRoot(ElementName = "printRecItem")]
     public class PrintRecItem
     {
@@ -108,15 +117,6 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
         [XmlAttribute(AttributeName = "justification")]
         public int Justification { get; set; } = 1;
 
-    }
-
-    public class Item
-    {
-        [XmlElement(ElementName = "printRecMessage")]
-        public PrintRecMessage? PrintRecMessage { get; set; }
-
-        [XmlElement(ElementName = "printRecItem")]
-        public PrintRecItem? PrintRecItem { get; set; }
     }
 
     [XmlRoot(ElementName = "printRecRefund")]
@@ -186,8 +186,6 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
                 }
             }
         }
-
-
         [XmlAttribute(AttributeName = "department")]
         public int Department { get; set; }
         [XmlAttribute(AttributeName = "justification")]
@@ -335,7 +333,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
     public class FiscalReceipt
     {
         [XmlElement(ElementName = "displayText")]
-        public DisplayText? DisplayText { get; set; }
+        public List<DisplayText> DisplayText { get; set; } = new List<DisplayText>();
 
         [XmlElement(ElementName = "printRecMessage")]
         public PrintRecMessage? PrintRecMessage { get; set; }
@@ -343,14 +341,14 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
         [XmlElement(ElementName = "beginFiscalReceipt")]
         public BeginFiscalReceipt BeginFiscalReceipt { get; set; } = new BeginFiscalReceipt();
 
-        [XmlElement(ElementName = "NotExistingOnEpson")]
+        [XmlElement(ElementName = "NotExistingOnEpsonItemMsg")]
         public List<ItemAndMessage> ItemAndMessages { get; set; } = new List<ItemAndMessage>();
 
         [XmlElement(ElementName = "printRecRefund")]
         public List<PrintRecRefund> PrintRecRefund { get; set; } = new List<PrintRecRefund>();
 
-        [XmlElement(ElementName = "printRecItemVoid")]
-        public List<PrintRecItemAdjustment>? PrintRecItemAdjustment { get; set; }
+        [XmlElement(ElementName = "NotExistingOnEpsonAdjMsg")]
+        public List<AdjustmentAndMessage> AdjustmentAndMessage { get; set; } = new List<AdjustmentAndMessage>();
 
         [XmlElement(ElementName = "printRecSubtotalAdjustment")]
         public List<PrintRecSubtotalAdjustment>? PrintRecSubtotalAdjustment { get; set; }
