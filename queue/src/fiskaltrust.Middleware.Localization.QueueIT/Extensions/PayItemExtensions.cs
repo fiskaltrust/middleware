@@ -5,7 +5,7 @@ using fiskaltrust.Middleware.Contracts.Exceptions;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
 {
-    public static class PaymentExtensions
+    public static class PayItemExtensions
     {
         public static PaymentType GetPaymentType(this PayItem payItem)
         {
@@ -40,5 +40,8 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
                     throw new UnknownPayItemException(payItem.ftPayItemCase);
             }
         }
+
+        public static decimal GetAmount(this PayItem payItem) => payItem.Quantity < 0 && payItem.Amount >= 0 ? payItem.Amount * (-1) : payItem.Amount;
+
     }
 }

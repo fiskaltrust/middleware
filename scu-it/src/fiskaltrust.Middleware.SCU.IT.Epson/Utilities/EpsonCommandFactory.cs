@@ -2,10 +2,13 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.ServiceModel.Channels;
 using System.Xml.Serialization;
 using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.SCU.IT.Epson.Exceptions;
 using fiskaltrust.Middleware.SCU.IT.Epson.Models;
+using fiskaltrust.Middleware.SCU.IT.Epson.Extensions;
+
 
 namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
 {
@@ -26,95 +29,11 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
             {
                 fiscalReceipt.DisplayText.Add(new DisplayText() { Data = request.DisplayText });
             }
-            foreach (var i in request.Items)
-            {
-                var printRecItem = new PrintRecItem
-                {
-                    Description = i.Description,
-                    Quantity = i.Quantity,
-                    UnitPrice = i.UnitPrice,
-                    Department = i.VatGroup
-                };
-                PrintRecMessage? printRecMessage = null;
-                if (!string.IsNullOrEmpty(i.AdditionalInformation))
-                {
-                    printRecMessage = new PrintRecMessage()
-                    {
-                        Message = i.AdditionalInformation,
-                        MessageType = 4
-                    };
-                }
-                fiscalReceipt.ItemAndMessages.Add(new (){ PrintRecItem = printRecItem, PrintRecMessage = printRecMessage });
-            }
-            if (request.PaymentAdjustments != null)
-            {
-                foreach (var adj in request.PaymentAdjustments)
-                {
-                    var printRecItemAdjustment = new PrintRecItemAdjustment
-                    {
-                        Description = adj.Description,
-                        AdjustmentType = GetAdjustmentType(adj.PaymentAdjustmentType, adj.Amount),
-                        Amount = Math.Abs(adj.Amount),
-                        Department = adj.VatGroup ?? 0,
-                    };
-                    PrintRecMessage? printRecMessage = null;
-                    if (!string.IsNullOrEmpty(adj.AdditionalInformation))
-                    {
-                        printRecMessage = new PrintRecMessage()
-                        {
-                            Message = adj.AdditionalInformation,
-                            MessageType = 4
-                        };
-                    }
-                    fiscalReceipt.AdjustmentAndMessage.Add(new() { PrintRecItemAdjustment = printRecItemAdjustment, PrintRecMessage = printRecMessage });
-                }
-            }
-            fiscalReceipt.PrintRecTotal = request.Payments?.Select(p => new PrintRecTotal
-            {
-                Description = p.Description,
-                PaymentType = (int) p.PaymentType,
-                Payment = p.Amount
-            }).ToList();
-            if(fiscalReceipt.PrintRecTotal == null)
-            {
-                fiscalReceipt.PrintRecTotal = new List<PrintRecTotal> { new PrintRecTotal()
-                     {
-                            Description = PaymentType.Cash.ToString(),
-                            PaymentType = (int) PaymentType.Cash,
-                            Payment = 0
-                     }
-                };
-            }
-            var xml = SoapSerializer.Serialize(fiscalReceipt);
-            return xml.Replace("<NotExistingOnEpsonItemMsg>\r\n", "")
-                    .Replace("</NotExistingOnEpsonItemMsg>\r\n", "")
-                    .Replace("<NotExistingOnEpsonAdjMsg>\r\n", "")
-                    .Replace("</NotExistingOnEpsonAdjMsg>\r\n", "");
-
-            
-
+            fiscalReceipt.ItemAndMessages = request.GetItemAndMessages();
+            fiscalReceipt.AdjustmentAndMessages = request.GetAdjustmentAndMessages();
+            return SoapSerializer.Serialize(fiscalReceipt);
         }
 
-        private int GetAdjustmentType(PaymentAdjustmentType paymentAdjustmentType, decimal amount)
-        {
-            if (paymentAdjustmentType == PaymentAdjustmentType.Adjustment)
-            {
-                return amount < 0 ? 3 : 8;
-             }
-            if (paymentAdjustmentType == PaymentAdjustmentType.SingleUseVoucher)
-            {
-                return 12;
-            }
-            if (paymentAdjustmentType == PaymentAdjustmentType.FreeOfCharge)
-            {
-                return 11;
-            }
-            if (paymentAdjustmentType == PaymentAdjustmentType.Acconto)
-            {
-                return 10;
-            }
-            return 0;
-        }
 
         public string CreateRefundRequestContent(FiscalReceiptRefund request)
         {
@@ -184,17 +103,11 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
                     HRIPosition = _epsonScuConfiguration.BarCodeHRIPosition,
                     Position = _epsonScuConfiguration.BarCodePosition,
                     Width = _epsonScuConfiguration.BarCodeWidth
-                } : null,
-                PrintRecTotal = request.Payments?.Select(p => new PrintRecTotal
-                {
-                    Description = p.Description,
-                    Payment = p.Amount,
-                    PaymentType = (int) p.PaymentType,
-                    Index = p.Index
-                }).ToList(),
+                } : null
             };
             fiscalReceipt.BeginFiscalReceipt.Operator = GetOperator(request.Operator);
             fiscalReceipt.EndFiscalReceipt.Operator = GetOperator(request.Operator);
+            fiscalReceipt.RecTotalAndMessages = request.Payments.GetTotalAndMessages();
             return fiscalReceipt;
         }
 
@@ -228,18 +141,13 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
                     HRIPosition = _epsonScuConfiguration.BarCodeHRIPosition,
                     Position = _epsonScuConfiguration.BarCodePosition,
                     Width = _epsonScuConfiguration.BarCodeWidth
-                } : null,
-                PrintRecTotal = request.Payments?.Select(p => new PrintRecTotal
-                {
-                    Description = p.Description,
-                    Payment = p.Amount,
-                    PaymentType = (int) p.PaymentType,
-                    Index = p.Index
-                }).ToList(),
+                } : null
             };
             fiscalReceipt.BeginFiscalReceipt.Operator = GetOperator(request.Operator);
             fiscalReceipt.EndFiscalReceipt.Operator = GetOperator(request.Operator);
+            fiscalReceipt.RecTotalAndMessages = request.Payments.GetTotalAndMessages();
             return fiscalReceipt;
         }
+
     }
 }

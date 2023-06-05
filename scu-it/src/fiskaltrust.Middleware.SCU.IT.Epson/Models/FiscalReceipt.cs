@@ -57,6 +57,15 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
         [XmlAttribute(AttributeName = "operator")]
         public string? Operator { get; set; }
     }
+    
+    public class TotalAndMessage
+    {
+        [XmlElement(ElementName = "printRecMessage")]
+        public PrintRecMessage? PrintRecMessage { get; set; }
+
+        [XmlElement(ElementName = "printRecTotal")]
+        public PrintRecTotal? PrintRecTotal { get; set; }
+    }
 
     public class ItemAndMessage
     {
@@ -348,7 +357,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
         public List<PrintRecRefund> PrintRecRefund { get; set; } = new List<PrintRecRefund>();
 
         [XmlElement(ElementName = "NotExistingOnEpsonAdjMsg")]
-        public List<AdjustmentAndMessage> AdjustmentAndMessage { get; set; } = new List<AdjustmentAndMessage>();
+        public List<AdjustmentAndMessage> AdjustmentAndMessages { get; set; } = new List<AdjustmentAndMessage>();
 
         [XmlElement(ElementName = "printRecSubtotalAdjustment")]
         public List<PrintRecSubtotalAdjustment>? PrintRecSubtotalAdjustment { get; set; }
@@ -362,8 +371,8 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Models
         [XmlElement(ElementName = "printRecLotteryID")]
         public LotteryID? LotteryID { get; set; }
 
-        [XmlElement(ElementName = "printRecTotal")]
-        public List<PrintRecTotal>? PrintRecTotal { get; set; }
+        [XmlElement(ElementName = "NotExistingOnEpsonTotalMsg")]
+        public List<TotalAndMessage> RecTotalAndMessages { get; set; } = new List<TotalAndMessage>();
 
         [XmlElement(ElementName = "endFiscalReceipt")]
         public EndFiscalReceipt EndFiscalReceipt { get; set; }= new EndFiscalReceipt();

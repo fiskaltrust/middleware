@@ -26,7 +26,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="fiskaltrust.interface" Version="1.3.46-rc1-23151-63610" />
+        <PackageReference Include="fiskaltrust.interface" Version="1.3.46-rc1-23153-63683" />
     </ItemGroup>
 
 </Project>

@@ -119,12 +119,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
                     AdditionalInformation = p.ftChargeItemCaseData
                 }).ToList(),
                 PaymentAdjustments = request.GetPaymentAdjustments(),
-                Payments = request.cbPayItems?.Select(p => new Payment
-                {
-                    Amount = p.Amount,
-                    Description = p.Description,
-                    PaymentType = p.GetPaymentType()
-                }).ToList()
+                Payments = request.GetPayments()
             };
             return fiscalReceiptRequest;
         }
