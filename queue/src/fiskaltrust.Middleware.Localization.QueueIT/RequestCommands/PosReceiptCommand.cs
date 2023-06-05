@@ -30,6 +30,9 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
     {
         public override long CountryBaseState => Constants.Cases.BASE_STATE;
         protected override ICountrySpecificQueueRepository CountrySpecificQueueRepository => _countrySpecificQueueRepository;
+
+        public override bool ResendFailedReceipts => true;
+
         private readonly ICountrySpecificQueueRepository _countrySpecificQueueRepository;
         private readonly IConfigurationRepository _configurationRepository;
         private readonly SignatureItemFactoryIT _signatureItemFactoryIT;

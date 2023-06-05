@@ -14,7 +14,6 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
 {
     public abstract class ZeroReceiptCommand : RequestCommand
     {
-        public abstract bool ResendFailedReceipts { get; }
 
         private readonly IRequestCommandFactory _requestCommandFactory;
         private readonly IActionJournalRepository _actionJournalRepository;
