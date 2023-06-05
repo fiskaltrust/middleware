@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using fiskaltrust.ifPOS.v1;
@@ -17,7 +18,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
             {
                 foreach (var item in receiptRequest.cbChargeItems)
                 {
-                    if (item.IsPaymentAdjustment())
+                    if (item.IsPaymentAdjustment() && !item.IsMultiUseVoucher())
                     {
                         paymentAdjustments.Add(new PaymentAdjustment
                         {
@@ -42,31 +43,52 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
             {
                 throw new ItemPaymentInequalityException(sumPayItems, sumChargeItems);
             }
+            var sumChargeItemsNoVoucher = receiptRequest.cbChargeItems.Where(x => !x.IsPaymentAdjustment()).Sum(x => x.GetAmount());
 
-            if (receiptRequest.cbPayItems.Any(x => x.GetPaymentType() == PaymentType.Voucher))
+            if (receiptRequest.cbPayItems.Any(x => x.GetPaymentType() == PaymentType.Voucher) ||
+                receiptRequest.cbChargeItems.Any(x => x.IsMultiUseVoucher() && x.GetAmount() < 0))
             {
-                var sumVoucher = receiptRequest.cbPayItems.Where(x => x.GetPaymentType() == PaymentType.Voucher).Sum(x => x.GetAmount());
-                if (sumVoucher > sumChargeItems)
+                var sumVoucher = receiptRequest.cbPayItems.Where(x => x.GetPaymentType() == PaymentType.Voucher).Sum(x => x.GetAmount()) +
+                    receiptRequest.cbChargeItems.Where(x => x.IsMultiUseVoucher() && x.Amount < 0).Sum(x => Math.Abs(x.Amount));
+                if (sumVoucher > sumChargeItemsNoVoucher)
                 {
+                    var dscrPay = receiptRequest.cbPayItems.Where(x => x.GetPaymentType() == PaymentType.Voucher).Select(x => x.Description).ToList();
+                    var dscrCharge = receiptRequest.cbChargeItems.Where(x => x.IsMultiUseVoucher() && x.GetAmount() < 0).Select(x => x.Description).ToList();
+                    dscrPay.AddRange(dscrCharge);
+
+                    var addiPay = receiptRequest.cbPayItems.Where(x => x.GetPaymentType() == PaymentType.Voucher).Select(x => x.ftPayItemCaseData).ToList();
+                    var addiCharge = receiptRequest.cbChargeItems.Where(x => x.IsMultiUseVoucher() && x.GetAmount() < 0).Select(x => x.ftChargeItemCaseData).ToList();
+                    addiPay.AddRange(addiCharge);
+
                     return new List<Payment>()
                     {
                         new Payment
                         {
-                            Amount = sumChargeItems,
-                            Description = string.Join(" ", receiptRequest.cbPayItems.Where(x => x.GetPaymentType() == PaymentType.Voucher).Select(x => x.Description)),
+                            Amount = sumChargeItemsNoVoucher,
+                            Description = string.Join(" ",dscrPay),
                             PaymentType = PaymentType.Voucher,
-                            AdditionalInformation = string.Join(" ", receiptRequest.cbPayItems.Where(x => x.GetPaymentType() == PaymentType.Voucher).Select(x => x.ftPayItemCaseData))
+                            AdditionalInformation = string.Join(" ",addiPay),
                         }
                     };
                 }
             }
-            return receiptRequest.cbPayItems?.Select(p => new Payment
+            var payments = receiptRequest.cbPayItems?.Select(p => new Payment
             {
                 Amount = p.Amount,
                 Description = p.Description,
                 PaymentType = p.GetPaymentType(),
                 AdditionalInformation = p.ftPayItemCaseData
             }).ToList();
+            var vouchersFromChargeItms = receiptRequest.cbChargeItems.Where(x => x.IsMultiUseVoucher() && x.GetAmount() < 0).Select(ch =>
+                new Payment
+                {
+                    Amount = Math.Abs(ch.Amount),
+                    Description = ch.Description,
+                    PaymentType = PaymentType.Voucher,
+                    AdditionalInformation = ch.ftChargeItemCaseData
+                }).ToList();
+            payments.AddRange(vouchersFromChargeItms);
+            return payments;
         }
     }
 }

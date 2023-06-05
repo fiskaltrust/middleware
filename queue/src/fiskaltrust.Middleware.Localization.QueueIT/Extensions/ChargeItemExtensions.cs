@@ -29,7 +29,16 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
             return (chargeItem.ftChargeItemCase & 0xFFFF) switch
             {
                 long i when i >= 0x0023 && i <= 0x0027 => true,
-                long i when i >= 0x002D && i <= 0x0031 => true,
+                long i when i >= 0x002D && i <= 0x0032 => true,
+                _ => false,
+            };
+        }
+
+        public static bool IsMultiUseVoucher(this ChargeItem chargeItem)
+        {
+            return (chargeItem.ftChargeItemCase & 0xFFFF) switch
+            {
+                0x0032 => true,
                 _ => false,
             };
         }
