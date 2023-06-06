@@ -13,7 +13,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
         {
             return Task.FromResult(new FiscalReceiptResponse()
             {
-                Amount = 9809.98m,
+                Amount = 9909.98m,
                 ReceiptNumber = 245,
                 ReceiptDateTime = new DateTime(1999, 1, 1, 0, 0, 1),
                 Success = true,

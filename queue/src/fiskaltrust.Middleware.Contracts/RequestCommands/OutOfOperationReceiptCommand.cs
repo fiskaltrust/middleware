@@ -9,9 +9,11 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
 {
     public abstract class OutOfOperationReceiptCommand : RequestCommand
     {
+        protected abstract long CountryBaseState { get; }
+
         public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, bool isBeingResent = false)
         {
-            var receiptResponse = CreateReceiptResponse(queue, request, queueItem, await GetCashboxIdentificationAsync(queue.ftQueueId));
+            var receiptResponse = CreateReceiptResponse(queue, request, queueItem, await GetCashboxIdentificationAsync(queue.ftQueueId), CountryBaseState);
 
             if (queue.IsDeactivated())
             {

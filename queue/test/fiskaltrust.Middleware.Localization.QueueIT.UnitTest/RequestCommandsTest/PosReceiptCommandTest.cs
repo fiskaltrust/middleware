@@ -13,6 +13,7 @@ using Moq;
 using fiskaltrust.Middleware.Localization.QueueIT.Services;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Contracts.RequestCommands;
+using fiskaltrust.Middleware.Contracts.Constants;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
 {
@@ -45,21 +46,15 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
                     new ChargeItem()
                     {
                         Description = "Discount 22% vat",
-                        Amount = 100,
+                        Amount = -100,
                         ftChargeItemCase = 0x4954000000000023,
                     },
-                    new ChargeItem()
-                    {
-                        Description = "Discount overeall",
-                        Amount = 100,
-                        ftChargeItemCase = 0x4954000000000027,
-                    }
                 },
                 cbPayItems = new PayItem[]
                 {
                     new PayItem(){
                         Description = "Cash",
-                        Amount = 9809.98m,
+                        Amount = 9909.98m,
                         ftPayItemCase = 0x4954000000000001
                     }
                 }
@@ -79,7 +74,10 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
             var queueRepoMock = new Mock<ICountrySpecificQueueRepository>();
             queueRepoMock.Setup(x => x.GetQueueAsync(It.IsAny<Guid>())).ReturnsAsync(queueIt);
 
-            var posReceiptCommand = new PosReceiptCommand(desscdMock.Object, new SignatureItemFactoryIT(), Mock.Of<IMiddlewareJournalITRepository>(), configRepoMock.Object,queueRepoMock.Object);
+            var countrySettingsMock = new Mock<ICountrySpecificSettings>();
+            countrySettingsMock.Setup( x => x.CountrySpecificQueueRepository).Returns(queueRepoMock.Object);
+
+            var posReceiptCommand = new PosReceiptCommand(desscdMock.Object, new SignatureItemFactoryIT(), Mock.Of<IMiddlewareJournalITRepository>(), configRepoMock.Object, countrySettingsMock.Object);
 
             var queue = new ftQueue() { ftQueueId = Guid.NewGuid(), ftReceiptNumerator = 5 };
             var queueItem = new ftQueueItem() { ftQueueId = queue.ftQueueId, ftQueueItemId = Guid.NewGuid(), ftQueueRow = 7 };
@@ -94,7 +92,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
 
             znrSig.Data.Should().Be("0");
             nrSig.Data.Should().Be("245");
-            amntSig.Data.Should().Be("9809,98");
+            amntSig.Data.Should().Be("9909,98");
             tsmpSig.Data.Should().Be("1999-01-01 00:00:01");
 
          }

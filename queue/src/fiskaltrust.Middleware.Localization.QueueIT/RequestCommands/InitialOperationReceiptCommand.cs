@@ -9,26 +9,25 @@ using fiskaltrust.Middleware.Localization.QueueIT.Factories;
 using fiskaltrust.Middleware.Localization.QueueIT.Services;
 using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Contracts.Constants;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 {
     public class InitialOperationReceiptCommand : Contracts.RequestCommands.InitialOperationReceiptCommand
     {
-        public override long CountryBaseState => Constants.Cases.BASE_STATE;
-
-        protected override ICountrySpecificQueueRepository CountrySpecificQueueRepository => _countrySpecificQueueRepository;
         private readonly ICountrySpecificQueueRepository _countrySpecificQueueRepository;
 
         private readonly IConfigurationRepository _configurationRepository;
         private readonly SignatureItemFactoryIT _signatureItemFactoryIT;
         private readonly IITSSCD _client;
 
-        public InitialOperationReceiptCommand(ICountrySpecificQueueRepository countrySpecificQueueRepository,  IITSSCDProvider itIsscdProvider, ILogger<InitialOperationReceiptCommand> logger, IConfigurationRepository configurationRepository, SignatureItemFactoryIT signatureItemFactoryIT) : base(logger, configurationRepository)
+        public InitialOperationReceiptCommand(ICountrySpecificSettings countrySpecificQueueSettings,  IITSSCDProvider itIsscdProvider, ILogger<InitialOperationReceiptCommand> logger, IConfigurationRepository configurationRepository, SignatureItemFactoryIT signatureItemFactoryIT) : base(countrySpecificQueueSettings, logger, configurationRepository)
         {
             _client = itIsscdProvider.Instance;
             _configurationRepository = configurationRepository;
             _signatureItemFactoryIT = signatureItemFactoryIT;
-            _countrySpecificQueueRepository = countrySpecificQueueRepository;
+            _countrySpecificQueueRepository = countrySpecificQueueSettings.CountrySpecificQueueRepository;
+
         }
 
         protected override async Task<(ftActionJournal, SignaturItem)> InitializeSCUAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)

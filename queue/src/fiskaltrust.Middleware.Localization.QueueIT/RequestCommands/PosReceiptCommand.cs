@@ -15,6 +15,7 @@ using Newtonsoft.Json;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Contracts.Exceptions;
 using fiskaltrust.ifPOS.v1.errors;
+using fiskaltrust.Middleware.Contracts.Constants;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 {
@@ -28,23 +29,22 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 
     public class PosReceiptCommand : RequestCommand
     {
-        public override long CountryBaseState => Constants.Cases.BASE_STATE;
-        protected override ICountrySpecificQueueRepository CountrySpecificQueueRepository => _countrySpecificQueueRepository;
-
-        public override bool ResendFailedReceipts => true;
-
+        private readonly long _countryBaseState;
         private readonly ICountrySpecificQueueRepository _countrySpecificQueueRepository;
+        private readonly ICountrySpecificSettings _countryspecificSettings;
         private readonly IConfigurationRepository _configurationRepository;
         private readonly SignatureItemFactoryIT _signatureItemFactoryIT;
         private readonly IMiddlewareJournalITRepository _journalITRepository;
         private readonly IITSSCD _client;
 
-        public PosReceiptCommand(IITSSCDProvider itIsscdProvider, SignatureItemFactoryIT signatureItemFactoryIT, IMiddlewareJournalITRepository journalITRepository, IConfigurationRepository configurationRepository, ICountrySpecificQueueRepository countrySpecificQueueRepository)
+        public PosReceiptCommand(IITSSCDProvider itIsscdProvider, SignatureItemFactoryIT signatureItemFactoryIT, IMiddlewareJournalITRepository journalITRepository, IConfigurationRepository configurationRepository, ICountrySpecificSettings countrySpecificSettings)
         {
             _client = itIsscdProvider.Instance;
             _signatureItemFactoryIT = signatureItemFactoryIT;
             _journalITRepository = journalITRepository;
-            _countrySpecificQueueRepository = countrySpecificQueueRepository;
+            _countryspecificSettings = countrySpecificSettings;
+            _countrySpecificQueueRepository = countrySpecificSettings.CountrySpecificQueueRepository;
+            _countryBaseState = countrySpecificSettings.CountryBaseState;
             _configurationRepository = configurationRepository;
         }
 
@@ -58,7 +58,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 
             var queueIt = await _countrySpecificQueueRepository.GetQueueAsync(queue.ftQueueId).ConfigureAwait(false);
 
-            var receiptResponse = CreateReceiptResponse(queue, request, queueItem, queueIt.CashBoxIdentification, CountryBaseState);
+            var receiptResponse = CreateReceiptResponse(queue, request, queueItem, queueIt.CashBoxIdentification, _countryBaseState);
 
             FiscalReceiptResponse response;
             if (request.IsVoid())
@@ -75,7 +75,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
             {
                 if (response.SSCDErrorInfo.Type == SSCDErrorType.Connection && !isBeingResent)
                 {
-                    return await ProcessFailedReceiptRequest(queue, queueItem, request).ConfigureAwait(false);
+                    return await ProcessFailedReceiptRequest(_countryspecificSettings, queue, queueItem, request).ConfigureAwait(false);
                 }
                 else
                 {

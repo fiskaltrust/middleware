@@ -9,29 +9,35 @@ using System.Collections.Generic;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Contracts.RequestCommands.Factories;
 using fiskaltrust.ifPOS.v1.errors;
+using fiskaltrust.Middleware.Contracts.Constants;
 
 namespace fiskaltrust.Middleware.Contracts.RequestCommands
 {
     public abstract class ZeroReceiptCommand : RequestCommand
     {
-
+        private readonly ICountrySpecificQueueRepository _countrySpecificQueueRepository;
+        private readonly bool _resendFailedReceipts;
+        private readonly long _countryBaseState;
         private readonly IRequestCommandFactory _requestCommandFactory;
         private readonly IActionJournalRepository _actionJournalRepository;
         private readonly IMiddlewareQueueItemRepository _queueItemRepository;
         private readonly ILogger<RequestCommand> _logger;
 
-        public ZeroReceiptCommand(IMiddlewareQueueItemRepository queueItemRepository, IRequestCommandFactory requestCommandFactory, ILogger<RequestCommand> logger, IActionJournalRepository actionJournalRepository)
+        public ZeroReceiptCommand(ICountrySpecificSettings countryspecificSettings,IMiddlewareQueueItemRepository queueItemRepository, IRequestCommandFactory requestCommandFactory, ILogger<RequestCommand> logger, IActionJournalRepository actionJournalRepository)
         {
             _requestCommandFactory = requestCommandFactory;
             _logger = logger;
             _queueItemRepository = queueItemRepository;
             _actionJournalRepository = actionJournalRepository;
+            _countrySpecificQueueRepository = countryspecificSettings.CountrySpecificQueueRepository;
+            _resendFailedReceipts = countryspecificSettings.ResendFailedReceipts;
+            _countryBaseState = countryspecificSettings.CountryBaseState;
         }
 
         public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, bool isBeingResent = false)
         {
-            var iQueue = await CountrySpecificQueueRepository.GetQueueAsync(queue.ftQueueId).ConfigureAwait(false);
-            var receiptResponse = CreateReceiptResponse(queue, request, queueItem, iQueue.CashBoxIdentification);
+            var iQueue = await _countrySpecificQueueRepository.GetQueueAsync(queue.ftQueueId).ConfigureAwait(false);
+            var receiptResponse = CreateReceiptResponse(queue, request, queueItem, iQueue.CashBoxIdentification, _countryBaseState);
             if (iQueue.SSCDFailCount == 0)
             {
                 receiptResponse.ftStateData = "Queue has no failed receipts.";
@@ -44,7 +50,7 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
             var sentReceipts = new List<string>();
             var signatures = new List<SignaturItem>();
 
-            if (ResendFailedReceipts)
+            if (_resendFailedReceipts)
             {
                 await ResendFailedReceiptsAsync(iQueue, queue, sentReceipts, signatures).ConfigureAwait(false);
             }
@@ -56,7 +62,7 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
 
             signatures.Add(new()
             {
-                ftSignatureType = CountryBaseState & 2,
+                ftSignatureType = _countryBaseState | 2,
                 ftSignatureFormat = (long) ifPOS.v0.SignaturItem.Formats.Text,
                 Caption = caption,
                 Data = data
@@ -66,7 +72,7 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
             iQueue.SSCDFailCount = 0;
             iQueue.SSCDFailMoment = null;
             iQueue.SSCDFailQueueItemId = null;
-            await CountrySpecificQueueRepository.InsertOrUpdateQueueAsync(iQueue).ConfigureAwait(false);
+            await _countrySpecificQueueRepository.InsertOrUpdateQueueAsync(iQueue).ConfigureAwait(false);
 
             return new RequestCommandResponse
             {
@@ -82,7 +88,7 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
                             Priority = -1,
                             TimeStamp = 0,
                             Message = caption + data,
-                            Type = $"{ CountryBaseState | 2:X}",
+                            Type = $"{ _countryBaseState | 2:X}",
                             DataJson = JsonConvert.SerializeObject(caption + " " + data)
                         }
                     }
