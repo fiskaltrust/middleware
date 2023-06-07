@@ -19,7 +19,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
             return (chargeItem.ftChargeItemCase & 0xFFFF) switch
             {
                 long i when i >= 0x0023 && i <= 0x0027 => PaymentAdjustmentType.Adjustment,
-                long i when i >= 0x002D && i <= 0x0031 => PaymentAdjustmentType.SingleUseVoucher,
+                long i when i >= 0x0028 && i <= 0x002C => PaymentAdjustmentType.SingleUseVoucher,
                 _ => null,
             };
         }
@@ -29,16 +29,25 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
             return (chargeItem.ftChargeItemCase & 0xFFFF) switch
             {
                 long i when i >= 0x0023 && i <= 0x0027 => true,
-                long i when i >= 0x002D && i <= 0x0032 => true,
+                long i when i >= 0x0028 && i <= 0x002D && chargeItem.GetAmount() < 0 => true,
                 _ => false,
             };
         }
 
-        public static bool IsMultiUseVoucher(this ChargeItem chargeItem)
+        public static bool IsMultiUseVoucherRedeem(this ChargeItem chargeItem)
         {
             return (chargeItem.ftChargeItemCase & 0xFFFF) switch
             {
-                0x0032 => true,
+                0x002D => true && chargeItem.GetAmount() < 0,
+                _ => false,
+            };
+        }
+
+        public static bool IsMultiUseVoucherSale(this ChargeItem chargeItem)
+        {
+            return (chargeItem.ftChargeItemCase & 0xFFFF) switch
+            {
+                0x002D => true && chargeItem.GetAmount() > 0,
                 _ => false,
             };
         }
@@ -57,7 +66,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
                 case 0x0020:
                 case 0x0027:
                 case 0x002C:
-                case 0x0031:
+                case 0x002D:
                     return _vatRateZero;
                 //22
                 case 0x0001:
@@ -68,7 +77,6 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
                 case 0x001C:
                 case 0x0023:
                 case 0x0028:
-                case 0x002D:
                     return _vatRateBasic;
                 //10
                 case 0x0002:
@@ -79,7 +87,6 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
                 case 0x001D:
                 case 0x0024:
                 case 0x0029:
-                case 0x002E:
                     return _vatRateDeduction1;
                 //5
                 case 0x0003:
@@ -90,7 +97,6 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
                 case 0x001E:
                 case 0x0025:
                 case 0x002A:
-                case 0x002F:
                     return _vatRateDeduction2;
                 //4
                 case 0x0004:
@@ -101,7 +107,6 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
                 case 0x001F:
                 case 0x0026:
                 case 0x002B:
-                case 0x0030:
                     return _vatRateDeduction3;
                 default:
                     throw new UnknownChargeItemException(chargeItem.ftChargeItemCase);

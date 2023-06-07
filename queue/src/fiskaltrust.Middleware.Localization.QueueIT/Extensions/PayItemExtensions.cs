@@ -41,6 +41,16 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
             }
         }
 
+        public static bool IsVoucherRedeem(this PayItem payItem)
+        {
+            return payItem.GetPaymentType() == PaymentType.Voucher && payItem.GetAmount() > 0;
+        }
+
+        public static bool IsVoucherSale(this PayItem payItem)
+        {
+            return payItem.GetPaymentType() == PaymentType.Voucher && payItem.GetAmount() < 0;
+        }
+
         public static decimal GetAmount(this PayItem payItem) => payItem.Quantity < 0 && payItem.Amount >= 0 ? payItem.Amount * (-1) : payItem.Amount;
 
     }

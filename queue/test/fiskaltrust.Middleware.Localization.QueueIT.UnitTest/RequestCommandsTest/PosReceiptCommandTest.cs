@@ -12,14 +12,12 @@ using FluentAssertions;
 using Moq;
 using fiskaltrust.Middleware.Localization.QueueIT.Services;
 using fiskaltrust.Middleware.Contracts.Repositories;
-using fiskaltrust.Middleware.Contracts.RequestCommands;
 using fiskaltrust.Middleware.Contracts.Constants;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
 {
     public class PosReceiptCommandTest
     {
-
 
         [Fact]
         public async Task ExecuteAsync_RegisterInvoice_ValidResultAsync()
