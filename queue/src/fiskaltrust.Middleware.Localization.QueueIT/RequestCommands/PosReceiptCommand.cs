@@ -117,15 +117,26 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
             {
                 NonFiscalPrints = new List<NonFiscalPrint>()
             };
-            foreach (var chargeItem in request.cbChargeItems?.Where(x => x.IsMultiUseVoucherSale()))
+            if (request.cbChargeItems != null)
             {
-                AddVoucherNonFiscalPrints(nonFiscalRequest.NonFiscalPrints, chargeItem.Amount, chargeItem.ftChargeItemCaseData);
+                foreach (var chargeItem in request.cbChargeItems.Where(x => x.IsMultiUseVoucherSale()))
+                {
+                    AddVoucherNonFiscalPrints(nonFiscalRequest.NonFiscalPrints, chargeItem.Amount, chargeItem.ftChargeItemCaseData);
+                }
             }
-            foreach(var payItem in request.cbPayItems?.Where(x => x.IsVoucherSale()))
+            if (request.cbPayItems != null)
             {
-                AddVoucherNonFiscalPrints(nonFiscalRequest.NonFiscalPrints, payItem.Amount, payItem.ftPayItemCaseData);
+                foreach (var payItem in request.cbPayItems.Where(x => x.IsVoucherSale()))
+                {
+                    AddVoucherNonFiscalPrints(nonFiscalRequest.NonFiscalPrints, payItem.Amount, payItem.ftPayItemCaseData);
+                }
             }
             var response = await _client.NonFiscalReceiptAsync(nonFiscalRequest);
+
+            if (response.Success)
+            {
+                receiptResponse.ftSignatures = _signatureItemFactoryIT.CreateVoucherSignatures(nonFiscalRequest);
+            }
 
             return new RequestCommandResponse
             {
@@ -144,7 +155,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
             }
             nonFiscalPrints.Add(new NonFiscalPrint()
             {
-                Data = amount.ToString(new NumberFormatInfo
+                Data = Math.Abs(amount).ToString(new NumberFormatInfo
                 {
                     NumberDecimalSeparator = ",",
                     NumberGroupSeparator = "",
