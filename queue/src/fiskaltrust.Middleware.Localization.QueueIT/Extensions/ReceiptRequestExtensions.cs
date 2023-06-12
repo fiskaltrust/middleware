@@ -18,7 +18,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
 
             if(hasChargeItemVoucher || hasPayItemVoucher)
             {
-                if(receiptRequest?.cbChargeItems?.Any(x => !x.IsPaymentAdjustment()) ?? false)
+                if(receiptRequest?.cbChargeItems?.Any(x => !x.IsPaymentAdjustment() && !x.IsMultiUseVoucherSale()) ?? false)
                 {
                     throw new MultiUseVoucherNoSaleException();
                 }

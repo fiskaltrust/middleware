@@ -63,7 +63,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 
             if (request.IsMultiUseVoucherSale())
             {
-                return await CreateNonFiscalRequestAsync(receiptResponse, request).ConfigureAwait(false);
+                return await CreateNonFiscalRequestAsync(queueIt, queueItem, receiptResponse, request).ConfigureAwait(false);
             }
 
             FiscalReceiptResponse response;
@@ -111,7 +111,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
             };
         }
 
-        private async Task<RequestCommandResponse> CreateNonFiscalRequestAsync(ReceiptResponse receiptResponse, ReceiptRequest request)
+        private async Task<RequestCommandResponse> CreateNonFiscalRequestAsync(ICountrySpecificQueue queue, ftQueueItem queueItem, ReceiptResponse receiptResponse, ReceiptRequest request)
         {
             var nonFiscalRequest = new NonFiscalRequest
             {
@@ -137,6 +137,21 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
             {
                 receiptResponse.ftSignatures = _signatureItemFactoryIT.CreateVoucherSignatures(nonFiscalRequest);
             }
+            var journalIT = new ftJournalIT
+            {
+                ftJournalITId = Guid.NewGuid(),
+                ftQueueId = queue.ftQueueId,
+                ftQueueItemId = queueItem.ftQueueItemId,
+                cbReceiptReference = queueItem.cbReceiptReference,
+                ftSignaturCreationUnitITId = queue.ftSignaturCreationUnitId.Value,
+                JournalType = request.ftReceiptCase & 0xFFFF,
+                ReceiptDateTime = queueItem.cbReceiptMoment,
+                ReceiptNumber = -1,
+                ZRepNumber = -1,
+                DataJson = JsonConvert.SerializeObject(nonFiscalRequest),
+                TimeStamp = DateTime.UtcNow.Ticks
+            };
+            await _journalITRepository.InsertAsync(journalIT).ConfigureAwait(false);
 
             return new RequestCommandResponse
             {
