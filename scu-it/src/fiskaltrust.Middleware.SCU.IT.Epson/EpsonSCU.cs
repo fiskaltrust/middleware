@@ -192,6 +192,47 @@ public sealed class EpsonSCU : IITSSCD
         };
     }
 
+    public async Task<Response> NonFiscalReceiptAsync(NonFiscalRequest request)
+    {
+        try
+        {
+            _semaphore.Wait(_configuration.LockTimeoutMs);
+
+            var content = _epsonXmlWriter.CreateNonFiscalReceipt(request);
+            var httpResponse = await SendRequestAsync(content);
+
+            using var responseContent = await httpResponse.Content.ReadAsStreamAsync();
+            var result = SoapSerializer.Deserialize<ReceiptResponse>(responseContent);
+            var response = new Response()
+            {
+                Success = result?.Success ?? false
+            };
+
+            if (!response.Success)
+            {
+                response.SSCDErrorInfo = GetErrorInfo(result?.Code, result?.Status, null);
+            }
+            return response;
+        }
+        catch (Exception e)
+        {
+            var msg = e.Message;
+            if (e.InnerException != null)
+            {
+                msg = msg + " " + e.InnerException.Message;
+            }
+            if (IsConnectionException(e))
+            {
+                return new Response() { Success = false, SSCDErrorInfo = new SSCDErrorInfo() { Info = msg, Type = SSCDErrorType.Connection } };
+            }
+            return new Response() { Success = false, SSCDErrorInfo = new SSCDErrorInfo() { Info = msg, Type = SSCDErrorType.General } };
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
+    }
+
     private async Task SetReceiptResponse(List<Payment>? payments, ReceiptResponse? result, FiscalReceiptResponse fiscalReceiptResponse)
     {
         if (result?.Success == false)
@@ -333,4 +374,5 @@ public sealed class EpsonSCU : IITSSCD
         _logger.LogError(errorInf);
         return new SSCDErrorInfo() { Info = errorInf, Type = SSCDErrorType.Device };
     }
+
 }

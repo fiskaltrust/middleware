@@ -18,10 +18,7 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher.Grpc
 
         public void StartService(PackageConfiguration config, string url, Type type, object service, ILoggerFactory loggerFactory)
         {
-            if (_host != null)
-            {
-                _host.ShutdownAsync().RunSynchronously();
-            }
+            _host?.ShutdownAsync().RunSynchronously();
 
             _host = GrpcHelper.StartHost(url, type, service, loggerFactory);
             _logger.LogInformation("{Protocol}: {PackageName} ({PackageVersion}) - Endpoint: {EndpointUrl}", "gRPC Service", config.Package, config.Version, url);

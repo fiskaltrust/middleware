@@ -17,9 +17,11 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
                 ReceiptNumber = 245,
                 ReceiptDateTime = new DateTime(1999, 1, 1, 0, 0, 1),
                 Success = true,
+
             });
         }
         public Task<FiscalReceiptResponse> FiscalReceiptRefundAsync(FiscalReceiptRefund request) => throw new NotImplementedException();
         public Task<DeviceInfo> GetDeviceInfoAsync() => throw new NotImplementedException();
+        public Task<Response> NonFiscalReceiptAsync(NonFiscalRequest request) => throw new NotImplementedException();
     }
 }

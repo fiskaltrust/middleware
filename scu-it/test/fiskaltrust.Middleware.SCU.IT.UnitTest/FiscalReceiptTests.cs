@@ -51,7 +51,7 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
                 },
                 Payments = new List<Payment>()
                 {
-                    new Payment(){ Description = "Payment in cash", Amount = 0, PaymentType = PaymentType.Cash, Index = 1}
+                    new Payment(){ Description = "Payment in cash", Amount = 0, PaymentType = PaymentType.Cash}
                 }
 
             };
@@ -74,7 +74,7 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
                 },
                 Payments = new List<Payment>()
                 {
-                    new Payment(){ Description = "Payment in cash", Amount= 600, PaymentType = PaymentType.Cash, Index = 1}
+                    new Payment(){ Description = "Payment in cash", Amount= 600, PaymentType = PaymentType.Cash}
                 }
 
             };
@@ -98,7 +98,7 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
                 },
                 Payments = new List<Payment>()
                 {
-                    new Payment(){ Description = "Payment in cash", Amount= 0, PaymentType = PaymentType.Cash, Index = 1}
+                    new Payment(){ Description = "Payment in cash", Amount= 0, PaymentType = PaymentType.Cash}
                 }
             };
             var xml = epsonXmlWriter.CreateInvoiceRequestContent(fiscalReceiptRequest);
@@ -123,7 +123,7 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
                 },
                 Payments = new List<Payment>()
                 {
-                    new Payment(){ Description = "Payment in cash", Amount= 550, PaymentType = PaymentType.Cash, Index = 1}
+                    new Payment(){ Description = "Payment in cash", Amount= 550, PaymentType = PaymentType.Cash}
                 }
             };
             var xml = epsonXmlWriter.CreateInvoiceRequestContent(fiscalReceiptRequest);

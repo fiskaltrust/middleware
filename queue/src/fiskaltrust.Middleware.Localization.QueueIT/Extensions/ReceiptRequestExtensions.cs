@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Net.Http.Headers;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.Localization.QueueIT.Exceptions;
@@ -10,6 +11,22 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
 {
     public static class ReceiptRequestExtensions
     {
+        public static bool IsMultiUseVoucherSale(this ReceiptRequest receiptRequest)
+        {
+            var hasChargeItemVoucher = receiptRequest?.cbChargeItems?.Any(x => x.IsMultiUseVoucherSale()) ?? false;
+            var hasPayItemVoucher = receiptRequest?.cbPayItems?.Any(x => x.IsVoucherSale()) ?? false;
+
+            if(hasChargeItemVoucher || hasPayItemVoucher)
+            {
+                if(receiptRequest?.cbChargeItems?.Any(x => !x.IsPaymentAdjustment()) ?? false)
+                {
+                    throw new MultiUseVoucherNoSaleException();
+                }
+                return true;
+            }
+            return false;
+        }
+
         public static List<PaymentAdjustment> GetPaymentAdjustments(this ReceiptRequest receiptRequest)
         {
             var paymentAdjustments = new List<PaymentAdjustment>();

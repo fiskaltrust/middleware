@@ -14,8 +14,8 @@ namespace TestLauncher
 {
     public class Program
     {
-        private static readonly string cashBoxId = "";
-        private static readonly string accessToken = "";
+        private static readonly string cashBoxId = "c7446cf1-2bbc-4552-91e4-2ee28ca074d6";
+        private static readonly string accessToken = "BL1hdedmMqeldYRwvHN0EV/k6a6z6CApT7+Ok0FebiCQwDbdxWSn2+ntbejG/ls4p+ARMYGWcx1LZOykKKOByOA=";
 
         public static async Task Main()
         {

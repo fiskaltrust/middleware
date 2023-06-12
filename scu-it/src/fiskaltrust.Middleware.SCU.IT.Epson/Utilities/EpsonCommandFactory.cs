@@ -64,6 +64,15 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
             return SoapSerializer.Serialize(fiscalReport);
         }
 
+        public string CreateNonFiscalReceipt(NonFiscalRequest request)
+        {
+            var printerNonFiscal = new PrinterNonFiscal
+            {
+                PrintNormals = request.NonFiscalPrints.Select(x => new PrintNormal() { Data = x.Data, Font = x.Font }).ToList()
+            };
+            return SoapSerializer.Serialize(printerNonFiscal);
+        }
+
         public static T? Deserialize<T>(Stream stream) where T : class
         {
             var reader = new XmlSerializer(typeof(T));

@@ -16,6 +16,7 @@ using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Contracts.Exceptions;
 using fiskaltrust.ifPOS.v1.errors;
 using fiskaltrust.Middleware.Contracts.Constants;
+using System.Globalization;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 {
@@ -59,6 +60,11 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
             var queueIt = await _countrySpecificQueueRepository.GetQueueAsync(queue.ftQueueId).ConfigureAwait(false);
 
             var receiptResponse = CreateReceiptResponse(queue, request, queueItem, queueIt.CashBoxIdentification, _countryBaseState);
+
+            if (request.IsMultiUseVoucherSale())
+            {
+                return await CreateNonFiscalRequestAsync(receiptResponse, request).ConfigureAwait(false);
+            }
 
             FiscalReceiptResponse response;
             if (request.IsVoid())
@@ -105,6 +111,49 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
             };
         }
 
+        private async Task<RequestCommandResponse> CreateNonFiscalRequestAsync(ReceiptResponse receiptResponse, ReceiptRequest request)
+        {
+            var nonFiscalRequest = new NonFiscalRequest
+            {
+                NonFiscalPrints = new List<NonFiscalPrint>()
+            };
+            foreach (var chargeItem in request.cbChargeItems?.Where(x => x.IsMultiUseVoucherSale()))
+            {
+                AddVoucherNonFiscalPrints(nonFiscalRequest.NonFiscalPrints, chargeItem.Amount, chargeItem.ftChargeItemCaseData);
+            }
+            foreach(var payItem in request.cbPayItems?.Where(x => x.IsVoucherSale()))
+            {
+                AddVoucherNonFiscalPrints(nonFiscalRequest.NonFiscalPrints, payItem.Amount, payItem.ftPayItemCaseData);
+            }
+            var response = await _client.NonFiscalReceiptAsync(nonFiscalRequest);
+
+            return new RequestCommandResponse
+            {
+                ReceiptResponse = receiptResponse,
+                Signatures = receiptResponse.ftSignatures.ToList(),
+                ActionJournals = new List<ftActionJournal>()
+            };
+        }
+
+        private static void AddVoucherNonFiscalPrints(List<NonFiscalPrint> nonFiscalPrints, decimal amount, string info)
+        {
+            nonFiscalPrints.Add(new NonFiscalPrint() { Data = "***Voucher***", Font = 2 });
+            if (!string.IsNullOrEmpty(info))
+            {
+                nonFiscalPrints.Add(new NonFiscalPrint() { Data = info, Font = 2 });
+            }
+            nonFiscalPrints.Add(new NonFiscalPrint()
+            {
+                Data = amount.ToString(new NumberFormatInfo
+                {
+                    NumberDecimalSeparator = ",",
+                    NumberGroupSeparator = "",
+                    CurrencyDecimalDigits = 2
+                }),
+                Font = 2
+            });
+        }
+
         private static FiscalReceiptInvoice CreateInvoice(ReceiptRequest request)
         {
             var fiscalReceiptRequest = new FiscalReceiptInvoice()
@@ -149,7 +198,6 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
                     Amount = p.Amount,
                     Description = p.Description,
                     PaymentType = p.GetPaymentType(),
-                    Index = 1
                 }).ToList()
             };
 
