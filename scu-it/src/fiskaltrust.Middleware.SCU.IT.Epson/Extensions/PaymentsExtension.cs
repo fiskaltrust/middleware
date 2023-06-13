@@ -11,7 +11,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Extensions
 
         public static List<TotalAndMessage> GetTotalAndMessages(this List<Payment> payments)
         {
-            var TotalAndMessages = new List<TotalAndMessage>();
+            var totalAndMessages = new List<TotalAndMessage>();
             if (payments != null)
             {
                 foreach (var pay in payments)
