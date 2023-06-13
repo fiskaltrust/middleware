@@ -8,18 +8,21 @@ using System.Linq;
 using fiskaltrust.Middleware.Contracts.Exceptions;
 using fiskaltrust.Middleware.Localization.QueueIT.RequestCommands;
 using fiskaltrust.Middleware.Contracts.RequestCommands.Factories;
+using fiskaltrust.Middleware.Contracts.Constants;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT
 {
     public class SignProcessorIT : IMarketSpecificSignProcessor
     {
+        private readonly ICountrySpecificSettings _countrySpecificSettings;
         private readonly IRequestCommandFactory _requestCommandFactory;
         protected readonly IConfigurationRepository _configurationRepository;
 
-        public SignProcessorIT(IRequestCommandFactory requestCommandFactory, IConfigurationRepository configurationRepository)
+        public SignProcessorIT(ICountrySpecificSettings countrySpecificSettings,  IRequestCommandFactory requestCommandFactory, IConfigurationRepository configurationRepository)
         {
             _requestCommandFactory = requestCommandFactory;
             _configurationRepository = configurationRepository;
+            _countrySpecificSettings = countrySpecificSettings;
         }
 
         public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ftQueue queue, ftQueueItem queueItem)
@@ -39,7 +42,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
 
             if (queueIT.SSCDFailCount > 0 && requestCommand is not ZeroReceiptCommandIT)
             {
-                var requestCommandResponse = await requestCommand.ProcessFailedReceiptRequest(queue, queueItem, request).ConfigureAwait(false);
+                var requestCommandResponse = await requestCommand.ProcessFailedReceiptRequest(_countrySpecificSettings, queue, queueItem, request).ConfigureAwait(false);
                 return (requestCommandResponse.ReceiptResponse, requestCommandResponse.ActionJournals.ToList());
             }
             var response = await requestCommand.ExecuteAsync(queue, request, queueItem).ConfigureAwait(false);

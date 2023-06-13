@@ -11,6 +11,8 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
     {
         protected abstract string ClosingReceiptName { get; }
 
+        protected abstract long CountryBaseState { get; }
+
         public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, bool isBeingResent = false)
         {
             var receiptResponse = CreateReceiptResponse(queue, request, queueItem, await GetCashboxIdentificationAsync(queue.ftQueueId), CountryBaseState);

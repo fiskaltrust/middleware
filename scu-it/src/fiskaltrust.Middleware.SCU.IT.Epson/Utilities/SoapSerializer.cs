@@ -2,6 +2,7 @@
 using System.Text;
 using System.Xml.Serialization;
 using fiskaltrust.Middleware.SCU.IT.Epson.Models;
+using fiskaltrust.Middleware.SCU.IT.Epson.Extensions;
 
 namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
 {
@@ -19,7 +20,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
             using var textWriter = new Utf8StringWriter();
             serializer.Serialize(textWriter, envelope, ns);
             
-            return textWriter.ToString();
+            return textWriter.ToString().RemoveListObjectsForEpsonXml();
         }
 
         public static T? Deserialize<T>(Stream content) where T : class

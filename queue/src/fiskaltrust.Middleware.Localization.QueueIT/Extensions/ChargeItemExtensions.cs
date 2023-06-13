@@ -14,13 +14,12 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
         private static readonly int _vatRateDeduction3 = 4;
         private static readonly int _vatRateZero = 0;
 
-        public static OperationType? GetRefundOperationType(this ChargeItem chargeItem)
+        public static PaymentAdjustmentType? GetPaymentAdjustmentType(this ChargeItem chargeItem)
         {
-            return (chargeItem.ftChargeItemCase & 0x0000_0000_000F_0000) switch
+            return (chargeItem.ftChargeItemCase & 0xFFFF) switch
             {
-                0x10000 => OperationType.Acconto,
-                0x20000 => OperationType.FreeOfCharge,
-                0x40000 => OperationType.SingleUseVoucher,
+                long i when i >= 0x0023 && i <= 0x0027 => PaymentAdjustmentType.Adjustment,
+                long i when i >= 0x0028 && i <= 0x002C => PaymentAdjustmentType.SingleUseVoucher,
                 _ => null,
             };
         }
@@ -29,7 +28,26 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
         {
             return (chargeItem.ftChargeItemCase & 0xFFFF) switch
             {
-                0x0023 or 0x0024 or 0x0025 or 0x0026 or 0x0027 => true,
+                long i when i >= 0x0023 && i <= 0x0027 => true,
+                long i when i >= 0x0028 && i <= 0x002D && chargeItem.GetAmount() < 0 => true,
+                _ => false,
+            };
+        }
+
+        public static bool IsMultiUseVoucherRedeem(this ChargeItem chargeItem)
+        {
+            return (chargeItem.ftChargeItemCase & 0xFFFF) switch
+            {
+                0x002D => true && chargeItem.GetAmount() < 0,
+                _ => false,
+            };
+        }
+
+        public static bool IsMultiUseVoucherSale(this ChargeItem chargeItem)
+        {
+            return (chargeItem.ftChargeItemCase & 0xFFFF) switch
+            {
+                0x002D => true && chargeItem.GetAmount() > 0,
                 _ => false,
             };
         }
@@ -47,7 +65,8 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
                 case 0x001B:
                 case 0x0020:
                 case 0x0027:
-                case 0x003C:
+                case 0x002C:
+                case 0x002D:
                     return _vatRateZero;
                 //22
                 case 0x0001:
@@ -77,7 +96,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
                 case 0x0019:
                 case 0x001E:
                 case 0x0025:
-                case 0x003A:
+                case 0x002A:
                     return _vatRateDeduction2;
                 //4
                 case 0x0004:
@@ -87,7 +106,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
                 case 0x001A:
                 case 0x001F:
                 case 0x0026:
-                case 0x003B:
+                case 0x002B:
                     return _vatRateDeduction3;
                 default:
                     throw new UnknownChargeItemException(chargeItem.ftChargeItemCase);

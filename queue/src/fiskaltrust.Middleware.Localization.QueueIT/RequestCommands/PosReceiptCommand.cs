@@ -15,6 +15,8 @@ using Newtonsoft.Json;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Contracts.Exceptions;
 using fiskaltrust.ifPOS.v1.errors;
+using fiskaltrust.Middleware.Contracts.Constants;
+using System.Globalization;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 {
@@ -28,20 +30,22 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 
     public class PosReceiptCommand : RequestCommand
     {
-        public override long CountryBaseState => Constants.Cases.BASE_STATE;
-        protected override ICountrySpecificQueueRepository CountrySpecificQueueRepository => _countrySpecificQueueRepository;
+        private readonly long _countryBaseState;
         private readonly ICountrySpecificQueueRepository _countrySpecificQueueRepository;
+        private readonly ICountrySpecificSettings _countryspecificSettings;
         private readonly IConfigurationRepository _configurationRepository;
         private readonly SignatureItemFactoryIT _signatureItemFactoryIT;
         private readonly IMiddlewareJournalITRepository _journalITRepository;
         private readonly IITSSCD _client;
 
-        public PosReceiptCommand(IITSSCDProvider itIsscdProvider, SignatureItemFactoryIT signatureItemFactoryIT, IMiddlewareJournalITRepository journalITRepository, IConfigurationRepository configurationRepository, ICountrySpecificQueueRepository countrySpecificQueueRepository)
+        public PosReceiptCommand(IITSSCDProvider itIsscdProvider, SignatureItemFactoryIT signatureItemFactoryIT, IMiddlewareJournalITRepository journalITRepository, IConfigurationRepository configurationRepository, ICountrySpecificSettings countrySpecificSettings)
         {
             _client = itIsscdProvider.Instance;
             _signatureItemFactoryIT = signatureItemFactoryIT;
             _journalITRepository = journalITRepository;
-            _countrySpecificQueueRepository = countrySpecificQueueRepository;
+            _countryspecificSettings = countrySpecificSettings;
+            _countrySpecificQueueRepository = countrySpecificSettings.CountrySpecificQueueRepository;
+            _countryBaseState = countrySpecificSettings.CountryBaseState;
             _configurationRepository = configurationRepository;
         }
 
@@ -55,7 +59,12 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 
             var queueIt = await _countrySpecificQueueRepository.GetQueueAsync(queue.ftQueueId).ConfigureAwait(false);
 
-            var receiptResponse = CreateReceiptResponse(queue, request, queueItem, queueIt.CashBoxIdentification, CountryBaseState);
+            var receiptResponse = CreateReceiptResponse(queue, request, queueItem, queueIt.CashBoxIdentification, _countryBaseState);
+
+            if (request.IsMultiUseVoucherSale())
+            {
+                return await CreateNonFiscalRequestAsync(queueIt, queueItem, receiptResponse, request).ConfigureAwait(false);
+            }
 
             FiscalReceiptResponse response;
             if (request.IsVoid())
@@ -72,7 +81,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
             {
                 if (response.SSCDErrorInfo.Type == SSCDErrorType.Connection && !isBeingResent)
                 {
-                    return await ProcessFailedReceiptRequest(queue, queueItem, request).ConfigureAwait(false);
+                    return await ProcessFailedReceiptRequest(_countryspecificSettings, queue, queueItem, request).ConfigureAwait(false);
                 }
                 else
                 {
@@ -102,6 +111,75 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
             };
         }
 
+        private async Task<RequestCommandResponse> CreateNonFiscalRequestAsync(ICountrySpecificQueue queue, ftQueueItem queueItem, ReceiptResponse receiptResponse, ReceiptRequest request)
+        {
+            var nonFiscalRequest = new NonFiscalRequest
+            {
+                NonFiscalPrints = new List<NonFiscalPrint>()
+            };
+            if (request.cbChargeItems != null)
+            {
+                foreach (var chargeItem in request.cbChargeItems.Where(x => x.IsMultiUseVoucherSale()))
+                {
+                    AddVoucherNonFiscalPrints(nonFiscalRequest.NonFiscalPrints, chargeItem.Amount, chargeItem.ftChargeItemCaseData);
+                }
+            }
+            if (request.cbPayItems != null)
+            {
+                foreach (var payItem in request.cbPayItems.Where(x => x.IsVoucherSale()))
+                {
+                    AddVoucherNonFiscalPrints(nonFiscalRequest.NonFiscalPrints, payItem.Amount, payItem.ftPayItemCaseData);
+                }
+            }
+            var response = await _client.NonFiscalReceiptAsync(nonFiscalRequest);
+
+            if (response.Success)
+            {
+                receiptResponse.ftSignatures = _signatureItemFactoryIT.CreateVoucherSignatures(nonFiscalRequest);
+            }
+            var journalIT = new ftJournalIT
+            {
+                ftJournalITId = Guid.NewGuid(),
+                ftQueueId = queue.ftQueueId,
+                ftQueueItemId = queueItem.ftQueueItemId,
+                cbReceiptReference = queueItem.cbReceiptReference,
+                ftSignaturCreationUnitITId = queue.ftSignaturCreationUnitId.Value,
+                JournalType = request.ftReceiptCase & 0xFFFF,
+                ReceiptDateTime = queueItem.cbReceiptMoment,
+                ReceiptNumber = -1,
+                ZRepNumber = -1,
+                DataJson = JsonConvert.SerializeObject(nonFiscalRequest),
+                TimeStamp = DateTime.UtcNow.Ticks
+            };
+            await _journalITRepository.InsertAsync(journalIT).ConfigureAwait(false);
+
+            return new RequestCommandResponse
+            {
+                ReceiptResponse = receiptResponse,
+                Signatures = receiptResponse.ftSignatures.ToList(),
+                ActionJournals = new List<ftActionJournal>()
+            };
+        }
+
+        private static void AddVoucherNonFiscalPrints(List<NonFiscalPrint> nonFiscalPrints, decimal amount, string info)
+        {
+            nonFiscalPrints.Add(new NonFiscalPrint() { Data = "***Voucher***", Font = 2 });
+            if (!string.IsNullOrEmpty(info))
+            {
+                nonFiscalPrints.Add(new NonFiscalPrint() { Data = info, Font = 2 });
+            }
+            nonFiscalPrints.Add(new NonFiscalPrint()
+            {
+                Data = Math.Abs(amount).ToString(new NumberFormatInfo
+                {
+                    NumberDecimalSeparator = ",",
+                    NumberGroupSeparator = "",
+                    CurrencyDecimalDigits = 2
+                }),
+                Font = 2
+            });
+        }
+
         private static FiscalReceiptInvoice CreateInvoice(ReceiptRequest request)
         {
             var fiscalReceiptRequest = new FiscalReceiptInvoice()
@@ -115,15 +193,11 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
                     Quantity = p.Quantity,
                     UnitPrice = p.UnitPrice ?? p.Amount / p.Quantity,
                     Amount = p.Amount,
-                    VatGroup = p.GetVatGroup()
+                    VatGroup = p.GetVatGroup(),
+                    AdditionalInformation = p.ftChargeItemCaseData
                 }).ToList(),
                 PaymentAdjustments = request.GetPaymentAdjustments(),
-                Payments = request.cbPayItems?.Select(p => new Payment
-                {
-                    Amount = p.Amount,
-                    Description = p.Description,
-                    PaymentType = p.GetPaymentType()
-                }).ToList()
+                Payments = request.GetPayments()
             };
             return fiscalReceiptRequest;
         }
@@ -142,8 +216,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
                     Quantity = Math.Abs(p.Quantity),
                     UnitPrice = p.UnitPrice ?? 0,
                     Amount = Math.Abs(p.Amount),
-                    VatGroup = p.GetVatGroup(),
-                    OperationType = p.GetRefundOperationType()
+                    VatGroup = p.GetVatGroup()
                 }).ToList(),
                 PaymentAdjustments = request.GetPaymentAdjustments(),
                 Payments = request.cbPayItems?.Select(p => new Payment
@@ -151,7 +224,6 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
                     Amount = p.Amount,
                     Description = p.Description,
                     PaymentType = p.GetPaymentType(),
-                    Index = 1
                 }).ToList()
             };
 

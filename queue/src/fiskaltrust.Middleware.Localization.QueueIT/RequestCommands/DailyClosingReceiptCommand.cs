@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.errors;
 using fiskaltrust.ifPOS.v1.it;
+using fiskaltrust.Middleware.Contracts.Constants;
 using fiskaltrust.Middleware.Contracts.Exceptions;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Contracts.RequestCommands;
@@ -16,20 +17,22 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 {
     public class DailyClosingReceiptCommand : Contracts.RequestCommands.DailyClosingReceiptCommand
     {
-        private readonly SignatureItemFactoryIT _signatureItemFactoryIT;
-        protected override ICountrySpecificQueueRepository CountrySpecificQueueRepository => _countrySpecificQueueRepository;
+        private readonly long _countryBaseState;
+        protected override long CountryBaseState => _countryBaseState;
+        private readonly ICountrySpecificSettings _countryspecificSettings;
         private readonly ICountrySpecificQueueRepository _countrySpecificQueueRepository;
+        private readonly SignatureItemFactoryIT _signatureItemFactoryIT;
         private readonly IMiddlewareJournalITRepository _journalITRepository;
         private readonly IITSSCD _client;
 
-        public override long CountryBaseState => Constants.Cases.BASE_STATE;
-
-        public DailyClosingReceiptCommand(SignatureItemFactoryIT signatureItemFactoryIT, ICountrySpecificQueueRepository countrySpecificQueueRepository, IITSSCDProvider itIsscdProvider, IMiddlewareJournalITRepository journalITRepository)
+        public DailyClosingReceiptCommand(SignatureItemFactoryIT signatureItemFactoryIT, ICountrySpecificSettings countrySpecificSettings, IITSSCDProvider itIsscdProvider, IMiddlewareJournalITRepository journalITRepository)
         {
-            _countrySpecificQueueRepository = countrySpecificQueueRepository;
+            _countrySpecificQueueRepository = countrySpecificSettings.CountrySpecificQueueRepository;
             _client = itIsscdProvider.Instance;
             _journalITRepository = journalITRepository;
             _signatureItemFactoryIT = signatureItemFactoryIT;
+            _countryspecificSettings = countrySpecificSettings;
+            _countryBaseState = countrySpecificSettings.CountryBaseState;
         }
 
         protected override async Task<string> GetCashboxIdentificationAsync(Guid ftQueueId)
@@ -48,7 +51,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
             {
                 if (response.SSCDErrorInfo.Type == SSCDErrorType.Connection)
                 {
-                    return await ProcessFailedReceiptRequest(queue, queueItem, request).ConfigureAwait(false);
+                    return await ProcessFailedReceiptRequest(_countryspecificSettings, queue, queueItem, request).ConfigureAwait(false);
                 }
                 else
                 {

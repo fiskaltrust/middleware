@@ -6,30 +6,31 @@ using fiskaltrust.storage.serialization.DE.V0;
 using Newtonsoft.Json;
 using fiskaltrust.Middleware.Localization.QueueIT.Factories;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Contracts.Constants;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 {
     public class OutOfOperationReceiptCommand : Contracts.RequestCommands.OutOfOperationReceiptCommand
     {
+        protected override long CountryBaseState => _countryBaseState;
+        private readonly long _countryBaseState;
         private readonly SignatureItemFactoryIT _signatureItemFactoryIT;
         private readonly ftQueueIT _queueIt;
-        protected override ICountrySpecificQueueRepository CountrySpecificQueueRepository => _countrySpecificQueueRepository;
         private readonly ICountrySpecificQueueRepository _countrySpecificQueueRepository;
 
-        public OutOfOperationReceiptCommand(SignatureItemFactoryIT signatureItemFactoryIT, ftQueueIT queueIt, ICountrySpecificQueueRepository countrySpecificQueueRepository)
+        public OutOfOperationReceiptCommand(SignatureItemFactoryIT signatureItemFactoryIT, ftQueueIT queueIt, ICountrySpecificSettings countrySpecificSettings)
         {
             _signatureItemFactoryIT = signatureItemFactoryIT;
             _queueIt = queueIt;
-            _countrySpecificQueueRepository = countrySpecificQueueRepository;
+            _countrySpecificQueueRepository = countrySpecificSettings.CountrySpecificQueueRepository;
+            _countryBaseState = countrySpecificSettings.CountryBaseState;
         }
 
-        public override long CountryBaseState => Constants.Cases.BASE_STATE;
         public override Task<bool> ReceiptNeedsReprocessing(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem) => Task.FromResult(false);
 
         protected override Task<(ftActionJournal, SignaturItem)> DeactivateSCUAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
         {
             var signatureItem = _signatureItemFactoryIT.CreateOutOfOperationSignature($"Queue-ID: {queue.ftQueueId}");
-
             var notification = new DeactivateQueueSCU
             {
                 CashBoxId = Guid.Parse(request.ftCashBoxID),

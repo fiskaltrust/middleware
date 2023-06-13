@@ -13,13 +13,15 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
         {
             return Task.FromResult(new FiscalReceiptResponse()
             {
-                Amount = 9809.98m,
+                Amount = 9909.98m,
                 ReceiptNumber = 245,
                 ReceiptDateTime = new DateTime(1999, 1, 1, 0, 0, 1),
                 Success = true,
+
             });
         }
         public Task<FiscalReceiptResponse> FiscalReceiptRefundAsync(FiscalReceiptRefund request) => throw new NotImplementedException();
         public Task<DeviceInfo> GetDeviceInfoAsync() => throw new NotImplementedException();
+        public Task<Response> NonFiscalReceiptAsync(NonFiscalRequest request) => throw new NotImplementedException();
     }
 }

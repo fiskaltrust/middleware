@@ -1,10 +1,14 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.ServiceModel.Channels;
 using System.Xml.Serialization;
 using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.SCU.IT.Epson.Exceptions;
 using fiskaltrust.Middleware.SCU.IT.Epson.Models;
+using fiskaltrust.Middleware.SCU.IT.Epson.Extensions;
+
 
 namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
 {
@@ -21,40 +25,26 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
         public string CreateInvoiceRequestContent(FiscalReceiptInvoice request)
         {
             var fiscalReceipt = CreateFiscalReceipt(request);
-            fiscalReceipt.DisplayText = string.IsNullOrEmpty(request.DisplayText) ? null : new DisplayText() { Data = request.DisplayText };
-            fiscalReceipt.PrintRecItem = request.Items?.Select(p => new PrintRecItem
+            if (!string.IsNullOrEmpty(request.DisplayText))
             {
-                Description = p.Description,
-                Quantity = p.Quantity,
-                UnitPrice = p.UnitPrice,
-                Department = p.VatGroup
-            }).ToList();
-            fiscalReceipt.PrintRecItemAdjustment = request.PaymentAdjustments?.Select(p => new PrintRecItemAdjustment
-            {
-                Description = p.Description,
-                AdjustmentType = p.Amount < 0 ? 3 : 8,
-                Amount = Math.Abs(p.Amount),
-                Department = p.VatGroup ?? 0
-            }).ToList();
-            fiscalReceipt.PrintRecTotal = request.Payments?.Select(p => new PrintRecTotal
-            {
-                Description = p.Description,
-                PaymentType = (int) p.PaymentType,
-                Payment = p.Amount
-            }).ToList();
+                fiscalReceipt.DisplayText.Add(new DisplayText() { Data = request.DisplayText });
+            }
+            fiscalReceipt.ItemAndMessages = request.GetItemAndMessages();
+            fiscalReceipt.AdjustmentAndMessages = request.GetAdjustmentAndMessages();
             return SoapSerializer.Serialize(fiscalReceipt);
         }
+
 
         public string CreateRefundRequestContent(FiscalReceiptRefund request)
         {
             var fiscalReceipt = CreateFiscalReceipt(request);
             fiscalReceipt.PrintRecMessage = new PrintRecMessage()
             {
-                Operator  = request.Operator,
+                Operator = request.Operator,
                 Message = request.DisplayText,
-                MessageType = (int)Messagetype.AdditionalInfo
+                MessageType = (int) Messagetype.AdditionalInfo
             };
-            fiscalReceipt.PrintRecRefund = request.Refunds?.Select(GetPrintRecRefund).ToList();
+            fiscalReceipt.PrintRecRefund = request.Refunds.Select(GetPrintRecRefund).ToList();
             return SoapSerializer.Serialize(fiscalReceipt);
         }
 
@@ -74,6 +64,15 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
             return SoapSerializer.Serialize(fiscalReport);
         }
 
+        public string CreateNonFiscalReceipt(NonFiscalRequest request)
+        {
+            var printerNonFiscal = new PrinterNonFiscal
+            {
+                PrintNormals = request.NonFiscalPrints.Select(x => new PrintNormal() { Data = x.Data, Font = x.Font }).ToList()
+            };
+            return SoapSerializer.Serialize(printerNonFiscal);
+        }
+
         public static T? Deserialize<T>(Stream stream) where T : class
         {
             var reader = new XmlSerializer(typeof(T));
@@ -82,15 +81,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
 
         private PrintRecRefund GetPrintRecRefund(Refund recRefund)
         {
-            if (recRefund.OperationType.HasValue)
-            {
-                return new PrintRecRefund
-                {
-                    Amount = recRefund.Amount,
-                    OperationType = (int) recRefund.OperationType
-                };
-            }
-            else if (recRefund.UnitPrice != 0 && recRefund.Quantity != 0)
+            if (recRefund.UnitPrice != 0 && recRefund.Quantity != 0)
             {
                 return new PrintRecRefund
                 {
@@ -121,17 +112,11 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
                     HRIPosition = _epsonScuConfiguration.BarCodeHRIPosition,
                     Position = _epsonScuConfiguration.BarCodePosition,
                     Width = _epsonScuConfiguration.BarCodeWidth
-                } : null,
-                PrintRecTotal = request.Payments?.Select(p => new PrintRecTotal
-                {
-                    Description = p.Description,
-                    Payment = p.Amount,
-                    PaymentType = (int) p.PaymentType,
-                    Index = p.Index
-                }).ToList(),
+                } : null
             };
             fiscalReceipt.BeginFiscalReceipt.Operator = GetOperator(request.Operator);
             fiscalReceipt.EndFiscalReceipt.Operator = GetOperator(request.Operator);
+            fiscalReceipt.RecTotalAndMessages = request.Payments.GetTotalAndMessages();
             return fiscalReceipt;
         }
 
@@ -165,18 +150,13 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
                     HRIPosition = _epsonScuConfiguration.BarCodeHRIPosition,
                     Position = _epsonScuConfiguration.BarCodePosition,
                     Width = _epsonScuConfiguration.BarCodeWidth
-                } : null,
-                PrintRecTotal = request.Payments?.Select(p => new PrintRecTotal
-                {
-                    Description = p.Description,
-                    Payment = p.Amount,
-                    PaymentType = (int) p.PaymentType,
-                    Index = p.Index
-                }).ToList(),
+                } : null
             };
             fiscalReceipt.BeginFiscalReceipt.Operator = GetOperator(request.Operator);
             fiscalReceipt.EndFiscalReceipt.Operator = GetOperator(request.Operator);
+            fiscalReceipt.RecTotalAndMessages = request.Payments.GetTotalAndMessages();
             return fiscalReceipt;
         }
+
     }
 }

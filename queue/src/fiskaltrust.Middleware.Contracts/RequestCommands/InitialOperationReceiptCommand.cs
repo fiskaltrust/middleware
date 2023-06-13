@@ -5,16 +5,19 @@ using Microsoft.Extensions.Logging;
 using fiskaltrust.ifPOS.v1;
 using System.Collections.Generic;
 using fiskaltrust.Middleware.Contracts.Extensions;
+using fiskaltrust.Middleware.Contracts.Constants;
 
 namespace fiskaltrust.Middleware.Contracts.RequestCommands
 {
     public abstract class InitialOperationReceiptCommand : RequestCommand
     {
+        private readonly long _countryBaseState;
         private readonly ILogger<InitialOperationReceiptCommand> _logger;
         private readonly IReadOnlyConfigurationRepository _configurationRepository;
 
-        public InitialOperationReceiptCommand(ILogger<InitialOperationReceiptCommand> logger, IReadOnlyConfigurationRepository configurationRepository)
+        public InitialOperationReceiptCommand(ICountrySpecificSettings countryspecificSettings, ILogger<InitialOperationReceiptCommand> logger, IReadOnlyConfigurationRepository configurationRepository)
         {
+            _countryBaseState = countryspecificSettings.CountryBaseState;
             _logger = logger;
             _configurationRepository = configurationRepository;
         }
@@ -26,7 +29,7 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
             if (queue.IsNew())
             {
                 queue.StartMoment = DateTime.UtcNow;
-                var receiptResponse = CreateReceiptResponse(queue, request, queueItem, queueIt.CashBoxIdentification);
+                var receiptResponse = CreateReceiptResponse(queue, request, queueItem, queueIt.CashBoxIdentification, _countryBaseState);
 
                 var (actionJournal, signature) = await InitializeSCUAsync(queue, request, queueItem);
 
@@ -47,7 +50,7 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
             return new RequestCommandResponse
             {
                 ActionJournals = new List<ftActionJournal> { actionJournalEntry },
-                ReceiptResponse = CreateReceiptResponse(queue, request, queueItem, queueIt.CashBoxIdentification)
+                ReceiptResponse = CreateReceiptResponse(queue, request, queueItem, queueIt.CashBoxIdentification, _countryBaseState)
             };
         }
 

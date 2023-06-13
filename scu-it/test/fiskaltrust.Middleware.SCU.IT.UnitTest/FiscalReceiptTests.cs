@@ -51,7 +51,7 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
                 },
                 Payments = new List<Payment>()
                 {
-                    new Payment(){ Description = "Payment in cash", Amount = 0, PaymentType = PaymentType.Cash, Index = 1}
+                    new Payment(){ Description = "Payment in cash", Amount = 0, PaymentType = PaymentType.Cash}
                 }
 
             };
@@ -74,7 +74,7 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
                 },
                 Payments = new List<Payment>()
                 {
-                    new Payment(){ Description = "Payment in cash", Amount= 600, PaymentType = PaymentType.Cash, Index = 1}
+                    new Payment(){ Description = "Payment in cash", Amount= 600, PaymentType = PaymentType.Cash}
                 }
 
             };
@@ -82,28 +82,6 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
             WriteFile(xml, "FiscalReceiptRefund");
         }
 
-        [Fact]
-        public void CommercailDocument_SendRefundAcconto_CreateValidXml()
-        {
-            var epsonScuConfiguration = new EpsonScuConfiguration();
-            var epsonXmlWriter = new EpsonCommandFactory(epsonScuConfiguration);
-            var fiscalReceiptRequest = new FiscalReceiptRefund()
-            {
-                Operator = "1",
-                DisplayText = "REFUND 0279 0010 08012021 99MEY123456",
-                Refunds = new List<Refund>()
-                {
-                    new Refund(){ Amount = 600, OperationType = OperationType.Acconto, VatGroup = 1, Description = "Acconto" }
-                },
-                Payments = new List<Payment>()
-                {
-                    new Payment(){ Description = "Payment in cash", Amount= 600, PaymentType = PaymentType.Cash, Index = 1}
-                }
-
-            };
-            var xml = epsonXmlWriter.CreateRefundRequestContent(fiscalReceiptRequest);
-            WriteFile(xml, "FiscalReceiptRefundAcconto");
-        }
         [Fact]
         public void CommercailDocument_SendInvoiceWithLottery_CreateValidXml()
         {
@@ -120,7 +98,7 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
                 },
                 Payments = new List<Payment>()
                 {
-                    new Payment(){ Description = "Payment in cash", Amount= 0, PaymentType = PaymentType.Cash, Index = 1}
+                    new Payment(){ Description = "Payment in cash", Amount= 0, PaymentType = PaymentType.Cash}
                 }
             };
             var xml = epsonXmlWriter.CreateInvoiceRequestContent(fiscalReceiptRequest);
@@ -145,7 +123,7 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
                 },
                 Payments = new List<Payment>()
                 {
-                    new Payment(){ Description = "Payment in cash", Amount= 550, PaymentType = PaymentType.Cash, Index = 1}
+                    new Payment(){ Description = "Payment in cash", Amount= 550, PaymentType = PaymentType.Cash}
                 }
             };
             var xml = epsonXmlWriter.CreateInvoiceRequestContent(fiscalReceiptRequest);

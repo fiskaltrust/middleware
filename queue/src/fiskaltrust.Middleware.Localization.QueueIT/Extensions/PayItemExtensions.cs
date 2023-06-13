@@ -5,7 +5,7 @@ using fiskaltrust.Middleware.Contracts.Exceptions;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
 {
-    public static class PaymentExtensions
+    public static class PayItemExtensions
     {
         public static PaymentType GetPaymentType(this PayItem payItem)
         {
@@ -21,7 +21,8 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
                 case 0x0009:
                 case 0x000A:
                     return PaymentType.CreditCard;
-                case 0x0006: //TODO Voucher
+                case 0x0006:
+                    return PaymentType.Voucher;
                 case 0x0002: //TODO foreign currencies
                 case 0x0007: //TODO Online payment
                 case 0x0008: //TODO  Customer card payment
@@ -39,5 +40,18 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
                     throw new UnknownPayItemException(payItem.ftPayItemCase);
             }
         }
+
+        public static bool IsVoucherRedeem(this PayItem payItem)
+        {
+            return payItem.GetPaymentType() == PaymentType.Voucher && payItem.GetAmount() > 0;
+        }
+
+        public static bool IsVoucherSale(this PayItem payItem)
+        {
+            return payItem.GetPaymentType() == PaymentType.Voucher && payItem.GetAmount() < 0;
+        }
+
+        public static decimal GetAmount(this PayItem payItem) => payItem.Quantity < 0 && payItem.Amount >= 0 ? payItem.Amount * (-1) : payItem.Amount;
+
     }
 }
