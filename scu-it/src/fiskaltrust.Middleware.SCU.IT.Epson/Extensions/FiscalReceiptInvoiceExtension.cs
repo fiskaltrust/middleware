@@ -10,7 +10,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Extensions
     {
         public static List<AdjustmentAndMessage> GetAdjustmentAndMessages(this FiscalReceiptInvoice request)
         {
-            var AdjustmentAndMessages = new List<AdjustmentAndMessage>();
+            var adjustmentAndMessages = new List<AdjustmentAndMessage>();
             if (request.PaymentAdjustments != null)
             {
                 foreach (var adj in request.PaymentAdjustments)
@@ -31,19 +31,19 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Extensions
                             MessageType = 4
                         };
                     }
-                    AdjustmentAndMessages.Add(new()
+                    adjustmentAndMessages.Add(new()
                     {
                         PrintRecItemAdjustment = printRecItemAdjustment,
                         PrintRecMessage = printRecMessage
                     });
                 }
             }
-            return AdjustmentAndMessages;
+            return adjustmentAndMessages;
         }
 
         public static List<ItemAndMessage> GetItemAndMessages(this FiscalReceiptInvoice request)
         {
-            var ItemAndMessages = new List<ItemAndMessage>();
+            var itemAndMessages = new List<ItemAndMessage>();
             foreach (var i in request.Items)
             {
                 var printRecItem = new PrintRecItem
@@ -62,9 +62,9 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Extensions
                         MessageType = 4
                     };
                 }
-                ItemAndMessages.Add(new() { PrintRecItem = printRecItem, PrintRecMessage = printRecMessage });
+                itemAndMessages.Add(new() { PrintRecItem = printRecItem, PrintRecMessage = printRecMessage });
             }
-            return ItemAndMessages;
+            return itemAndMessages;
         }
     }
 }

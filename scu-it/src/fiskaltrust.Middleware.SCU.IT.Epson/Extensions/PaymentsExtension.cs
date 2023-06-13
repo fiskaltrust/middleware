@@ -32,16 +32,16 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Extensions
                             MessageType = 4
                         };
                     }
-                    TotalAndMessages.Add(new()
+                    totalAndMessages.Add(new()
                     {
                         PrintRecTotal = printRecTotal,
                         PrintRecMessage = printRecMessage
                     });
                 }
             }
-            if (TotalAndMessages.Count == 0)
+            if (totalAndMessages.Count == 0)
             {
-                TotalAndMessages.Add(new()
+                totalAndMessages.Add(new()
                 {
                     PrintRecTotal = new PrintRecTotal()
                     {
@@ -52,7 +52,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Extensions
                     PrintRecMessage = null
                 });
             }
-            return TotalAndMessages;
+            return totalAndMessages;
         }
     }
 }
