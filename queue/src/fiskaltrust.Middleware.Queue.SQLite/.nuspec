@@ -19,7 +19,7 @@
         <dependency id="fiskaltrust.Middleware.Abstractions" version="1.3.3" />
         <dependency id="fiskaltrust.storage.encryption" version="1.3.1" />
         <dependency id="fiskaltrust.storage.serialization" version="1.3.1" />
-        <dependency id="fiskaltrust.interface" version="1.3.46-rc1" />
+        <dependency id="fiskaltrust.interface" version="1.3.47-rc2" />
         <dependency id="fiskaltrust.storage" version="1.3.46-rc1" />
         <dependency id="Dapper" version="2.0.123" />
         <dependency id="fiskaltrust.Exports.DSFinVK" version="1.4.0" />
