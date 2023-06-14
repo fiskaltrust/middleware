@@ -20,7 +20,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands.Factories
                 return _serviceProvider.GetRequiredService<DisabledQueueReceiptCommand>();
             }
             // In the process of switching SCUs, and receipt is not finish-switch
-            if (queue.IsActive() && queueDE.ftSignaturCreationUnitDEId == null && !request.IsFinishScuSwitchReceipt())
+            if (queue.IsActive() && queueDE.ftSignaturCreationUnitDEId == null && !request.IsFinishScuSwitchReceipt() && !request.IsInitiateScuSwitchReceiptForce())
             {
                 return _serviceProvider.GetRequiredService<DisabledScuReceiptCommand>();
             }
