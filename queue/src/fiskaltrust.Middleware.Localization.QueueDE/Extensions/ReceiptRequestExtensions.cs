@@ -18,61 +18,65 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
 
         public static bool IsUsedFailed(this ReceiptRequest receiptRequest)
         {
-            return ((receiptRequest.ftReceiptCase & 0x0000_0000_000F_0000) == 0x0000_0000_0001_0000);
+            return ((receiptRequest.ftReceiptCase & 0x0000_0000_0001_0000) > 0x0000);
         }
 
         public static bool IsTraining(this ReceiptRequest receiptRequest)
         {
-            return ((receiptRequest.ftReceiptCase & 0x0000_0000_000F_0000) == 0x0000_0000_0002_0000);
+            return ((receiptRequest.ftReceiptCase & 0x0000_0000_0002_0000) > 0x0000);
         }
 
         public static bool IsReverse(this ReceiptRequest receiptRequest)
         {
-            return ((receiptRequest.ftReceiptCase & 0x0000_0000_000F_0000) == 0x0000_0000_0004_0000);
+            return ((receiptRequest.ftReceiptCase & 0x0000_0000_0004_0000) > 0x0000);
         }
 
         public static bool IsHandwritten(this ReceiptRequest receiptRequest)
         {
-            return ((receiptRequest.ftReceiptCase & 0x0000_0000_000F_0000) == 0x0000_0000_0008_0000);
+            return ((receiptRequest.ftReceiptCase & 0x0000_0000_0008_0000) > 0x0000);
         }
 
         public static bool HasFailOnOpenTransactionsFlag(this ReceiptRequest receiptRequest)
         {
-            return ((receiptRequest.ftReceiptCase & 0x0000_0000_F000_0000) == 0x0000_0000_1000_0000);
+            return ((receiptRequest.ftReceiptCase & 0x0000_0000_1000_0000) > 0x0000);
         }
         public static bool IsTseInfoRequest(this ReceiptRequest receiptRequest)
         {
-            return ((receiptRequest.ftReceiptCase & 0x0000_0000_00F0_0000) == 0x0000_0000_0080_0000);
+            return ((receiptRequest.ftReceiptCase & 0x0000_0000_0080_0000) > 0x0000);
         }
 
         public static bool IsTseSelftestRequest(this ReceiptRequest receiptRequest)
         {
-            return ((receiptRequest.ftReceiptCase & 0x0000_0000_0F00_0000) == 0x0000_0000_0100_0000);
+            return ((receiptRequest.ftReceiptCase & 0x0000_0000_0100_0000) > 0x0000);
         }
 
         public static bool IsModifyClientIdOnlyRequest(this ReceiptRequest receiptRequest)
         {
-            return ((receiptRequest.ftReceiptCase & 0x0000_0000_0F00_0000) == 0x0000_0000_0100_0000);
+            return ((receiptRequest.ftReceiptCase & 0x0000_0000_0100_0000) > 0x0000);
         }
 
         public static bool IsTseTarDownloadRequest(this ReceiptRequest receiptRequest)
         {
-            return ((receiptRequest.ftReceiptCase & 0x0000_0000_0F00_0000) == 0x0000_0000_0200_0000);
+            return ((receiptRequest.ftReceiptCase & 0x0000_0000_0200_0000) > 0x0000);
         }
 
         public static bool IsTseTarDownloadBypass(this ReceiptRequest receiptRequest)
         {
-            return ((receiptRequest.ftReceiptCase & 0x0000_0000_0F00_0000) == 0x0000_0000_0400_0000);
+            return ((receiptRequest.ftReceiptCase & 0x0000_0000_0400_0000) > 0x0000);
         }
 
         public static bool IsMasterDataUpdate(this ReceiptRequest receiptRequest)
         {
-            return ((receiptRequest.ftReceiptCase & 0x0000_0000_0F00_0000) == 0x0000_0000_0800_0000);
+            return ((receiptRequest.ftReceiptCase & 0x0000_0000_0800_0000) > 0x0000);
         }
 
         public static bool IsRemoveOpenTransactionsWhichAreNotOnTse(this ReceiptRequest receiptRequest)
         {
-            return ((receiptRequest.ftReceiptCase & 0x0000_0000_F000_0000) == 0x0000_0000_2000_0000);
+            return ((receiptRequest.ftReceiptCase & 0x0000_0000_2000_0000) > 0x0000);
+        }
+        public static bool IsInitiateScuSwitchReceiptForce(this ReceiptRequest receiptRequest)
+        {
+            return ((receiptRequest.ftReceiptCase & 0x0000_0000_0010_0000) > 0x0000);
         }
 
         public static bool IsInitialOperationReceipt(this ReceiptRequest receiptRequest)
@@ -93,11 +97,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
         public static bool IsInitiateScuSwitchReceipt(this ReceiptRequest receiptRequest)
         {
             return ((receiptRequest.ftReceiptCase & 0x0000_0000_0000_FFFF) == 0x0000_0000_0000_0017);
-        }
-
-        public static bool IsInitiateScuSwitchReceiptForce(this ReceiptRequest receiptRequest)
-        {
-            return ((receiptRequest.ftReceiptCase & 0x0000_0000_000F_FFFF) == 0x0000_0000_0003_0017);
         }
 
         public static bool IsFinishScuSwitchReceipt(this ReceiptRequest receiptRequest)
