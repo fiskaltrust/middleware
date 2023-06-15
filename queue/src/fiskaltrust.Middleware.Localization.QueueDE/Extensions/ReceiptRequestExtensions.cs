@@ -76,7 +76,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
         }
         public static bool IsInitiateScuSwitchReceiptForce(this ReceiptRequest receiptRequest)
         {
-            return ((receiptRequest.ftReceiptCase & 0x0000_0000_0010_0000) > 0x0000);
+            return ((receiptRequest.ftReceiptCase & 0x0000_0000_4000_0000) > 0x0000);
         }
 
         public static bool IsInitialOperationReceipt(this ReceiptRequest receiptRequest)
