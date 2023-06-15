@@ -54,7 +54,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer
 
             if (((string) configuration["connectionstring"]).StartsWith("raw:"))
             {
-                _connectionString = ((string) configuration["connectionstring"]).Substring("raw:".Length - 1);
+                _connectionString = ((string) configuration["connectionstring"]).Substring("raw:".Length);
             }
             else
             {

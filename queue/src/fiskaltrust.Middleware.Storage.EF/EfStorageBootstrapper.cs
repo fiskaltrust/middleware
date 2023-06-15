@@ -59,7 +59,7 @@ namespace fiskaltrust.Middleware.Storage.Ef
 
             if (_efStorageConfiguration.ConnectionString.StartsWith("raw:"))
             {
-                _connectionString = _efStorageConfiguration.ConnectionString.Substring("raw:".Length - 1);
+                _connectionString = _efStorageConfiguration.ConnectionString.Substring("raw:".Length);
             }
             else
             {

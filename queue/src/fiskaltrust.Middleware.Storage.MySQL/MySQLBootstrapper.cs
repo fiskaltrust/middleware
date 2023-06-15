@@ -57,7 +57,7 @@ namespace fiskaltrust.Middleware.Storage.MySQL
 
             if (_mySQLStorageConfiguration.ConnectionString.StartsWith("raw:"))
             {
-                _connectionString = _mySQLStorageConfiguration.ConnectionString.Substring("raw:".Length - 1);
+                _connectionString = _mySQLStorageConfiguration.ConnectionString.Substring("raw:".Length);
             }
             else
             {
