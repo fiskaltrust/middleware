@@ -427,6 +427,20 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision.Interop
             });
         }
 
+        /// <summary>
+        /// This is the overload of the InitializePinAsync command which is used ONLY with V2 hardware
+        /// </summary>
+        public async Task<SeResult> SeInitializePinsAsync(string userId, byte[] userPin)
+        {
+            return await CommandRunner.ExecuteAsync(async () =>
+            {
+                var command = AdditionalCommands.CreateInitializePinsTseCommand(userId, userPin);
+                var response = await _transportAdapter.ExecuteAsync(command);
+
+                return SeResult.ExecutionOk;
+            });
+        }
+
         public async Task<SeResult> SeLogOutAsync(string userId)
         {
             return await CommandRunner.ExecuteAsync(async () =>
