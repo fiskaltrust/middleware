@@ -56,7 +56,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL
 
             if (_posgresQLStorageConfiguration.ConnectionString.StartsWith("raw:"))
             {
-                _connectionString = _posgresQLStorageConfiguration.ConnectionString.Substring("raw:".Length - 1);
+                _connectionString = _posgresQLStorageConfiguration.ConnectionString.Substring("raw:".Length);
             }
             else
             {
