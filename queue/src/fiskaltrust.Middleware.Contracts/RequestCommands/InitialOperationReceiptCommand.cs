@@ -28,10 +28,9 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
 
             if (queue.IsNew())
             {
-                queue.StartMoment = DateTime.UtcNow;
                 var receiptResponse = CreateReceiptResponse(queue, request, queueItem, queueIt.CashBoxIdentification, _countryBaseState);
-
                 var (actionJournal, signature) = await InitializeSCUAsync(queue, request, queueItem);
+                queue.StartMoment = DateTime.UtcNow;
 
                 receiptResponse.ftSignatures = new SignaturItem[] { signature };
                 return new RequestCommandResponse
