@@ -584,7 +584,11 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision.IntegrationTest
             timeAdminPukInTransportState.Should().BeTrue();
 
             // initialize pins / puks
-            result = await (deviceFirmwareId == "462076 Dec 18 2019 00:11:50"
+            var releases = new List<string> { "240346", "425545", "793041" };
+
+            bool isV1Hardware = releases.Any(release => deviceFirmwareId.Contains(release));
+
+            result = await (isV1Hardware
                 ? sut.SeInitializePinsAsync(HardwareFixtures.AdminPuk, HardwareFixtures.AdminPin, HardwareFixtures.TimeAdminPuk, HardwareFixtures.TimeAdminPin)
                 : sut.SeInitializePinsAsync(HardwareFixtures.AdminName, HardwareFixtures.AdminPuk));
 
