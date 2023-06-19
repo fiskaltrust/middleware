@@ -87,7 +87,7 @@ namespace fiskaltrust.Middleware.Storage.Ef
         {
             services.AddTransient(x => new MiddlewareDbContext(_connectionString, _queueId));
 
-            services.AddTransient<IConfigurationRepository>(_ => new EfConfigurationRepository(new MiddlewareDbContext(_connectionString, _queueId)));
+            services.AddSingleton<IConfigurationRepository>(_ => new EfConfigurationRepository(new MiddlewareDbContext(_connectionString, _queueId)));
             services.AddTransient<IReadOnlyConfigurationRepository>(_ => new EfConfigurationRepository(new MiddlewareDbContext(_connectionString, _queueId)));
 
             services.AddTransient<IQueueItemRepository, EfQueueItemRepository>();
