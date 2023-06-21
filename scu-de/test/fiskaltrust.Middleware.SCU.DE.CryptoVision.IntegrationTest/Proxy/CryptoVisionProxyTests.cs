@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Text;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 using fiskaltrust.Middleware.SCU.DE.CryptoVision.Helpers;
 using fiskaltrust.Middleware.SCU.DE.CryptoVision.Exceptions;
 using fiskaltrust.Middleware.SCU.DE.CryptoVision.Interop;
@@ -588,11 +589,19 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision.IntegrationTest
 
             bool isV1Hardware = releases.Any(release => deviceFirmwareId.Contains(release));
 
-            result = await (isV1Hardware
-                ? sut.SeInitializePinsAsync(HardwareFixtures.AdminPuk, HardwareFixtures.AdminPin, HardwareFixtures.TimeAdminPuk, HardwareFixtures.TimeAdminPin)
-                : sut.SeInitializePinsAsync(HardwareFixtures.AdminName, HardwareFixtures.AdminPuk));
+            if (isV1Hardware)
+            {
+                result = await sut.SeInitializePinsAsync(HardwareFixtures.AdminPuk, HardwareFixtures.AdminPin, HardwareFixtures.TimeAdminPuk, HardwareFixtures.TimeAdminPin);
+                result.ThrowIfError();
+            }
+            else
+            {
+                result = await sut.SeInitializePinsAsync(HardwareFixtures.AdminName, HardwareFixtures.AdminPuk);
+                result.ThrowIfError();
 
-            result.ThrowIfError();
+                result = await sut.SeInitializePinsAsync(HardwareFixtures.TimeAdminName, HardwareFixtures.TimeAdminPuk);
+                result.ThrowIfError();
+            }
 
             // get lifecycle state
             (result, lifeCycleState) = await sut.SeGetLifeCycleStateAsync();

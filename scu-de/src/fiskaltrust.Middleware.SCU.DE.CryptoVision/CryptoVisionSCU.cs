@@ -143,6 +143,7 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision
                 _logger.LogDebug("Try to initialize CryptoVisionProxy with devicePath {0}", _devicePath);
                 SeResult seResult;
                 (seResult, deviceFirmwareId, deviceUniqueId) = await _proxy.SeStartAsync();
+
                 seResult.ThrowIfError();
                 await ReadTseInfoAsync(_proxy);
             }
@@ -351,7 +352,17 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision
             result.ThrowIfError();
             if (adminPinInTransportState || adminPukInTransportState || timeAdminPinInTransportState || timeAdminPukInTransportState)
             {
-                (await _proxy.SeInitializePinsAsync(_adminPuk, _adminPin, _timeAdminPuk, _timeAdminPin)).ThrowIfError();
+                // check if we are in V1 or V2 and call the appropiate method
+                var releases = new List<string> { "240346", "425545", "793041" };
+                bool isV1Hardware = releases.Any(release => deviceFirmwareId.Contains(release));
+                if (isV1Hardware)
+                {
+                    (await _proxy.SeInitializePinsAsync(_adminPuk, _adminPin, _timeAdminPuk, _timeAdminPin)).ThrowIfError();
+                } else
+                {
+                    (await _proxy.SeInitializePinsAsync(Constants.ADMINNAME, _adminPuk)).ThrowIfError();
+                    (await _proxy.SeInitializePinsAsync(Constants.TIMEADMINNAME, _timeAdminPuk)).ThrowIfError();
+                }
             }
 
             SeAuthenticationResult authenticationResult;

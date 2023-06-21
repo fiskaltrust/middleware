@@ -84,6 +84,7 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision.Interop
         public abstract Task<(SeResult, string deviceVersion, byte[] deviceUniqueId)> SeStartAsync();
         public abstract Task<(SeResult, bool adminPinInTransportState, bool adminPukInTransportState, bool timeAdminPinInTransportState, bool timeAdminPukInTransportState)> SeGetPinStatesAsync();
         public abstract Task<SeResult> SeInitializePinsAsync(byte[] adminPuk, byte[] adminPin, byte[] timeAdminPuk, byte[] timeAdminPin);
+        public abstract Task<SeResult> SeInitializePinsAsync(string userId, byte[] userPuk);
         public abstract Task<SeResult> SeMapERStoKeyAsync(string clientId, byte[] serialNumber);
         public abstract Task<SeResult> SeDeactivateAsync();
         public abstract Task<SeResult> SeActivateAsync();
