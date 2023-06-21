@@ -85,55 +85,55 @@ namespace fiskaltrust.Middleware.Storage.Ef
 
         private void AddRepositories(IServiceCollection services)
         {
-            services.AddTransient(x => new MiddlewareDbContext(_connectionString, _queueId));
+            services.AddSingleton(x => new MiddlewareDbContext(_connectionString, _queueId));
 
             services.AddSingleton<IConfigurationRepository>(_ => new EfConfigurationRepository(new MiddlewareDbContext(_connectionString, _queueId)));
-            services.AddTransient<IReadOnlyConfigurationRepository>(_ => new EfConfigurationRepository(new MiddlewareDbContext(_connectionString, _queueId)));
+            services.AddSingleton<IReadOnlyConfigurationRepository>(_ => new EfConfigurationRepository(new MiddlewareDbContext(_connectionString, _queueId)));
 
-            services.AddTransient<IQueueItemRepository, EfQueueItemRepository>();
-            services.AddTransient<IReadOnlyQueueItemRepository, EfQueueItemRepository>();
-            services.AddTransient<IMiddlewareQueueItemRepository, EfQueueItemRepository>();
-            services.AddTransient<IMiddlewareRepository<ftQueueItem>, EfQueueItemRepository>();
+            services.AddSingleton<IQueueItemRepository, EfQueueItemRepository>();
+            services.AddSingleton<IReadOnlyQueueItemRepository, EfQueueItemRepository>();
+            services.AddSingleton<IMiddlewareQueueItemRepository, EfQueueItemRepository>();
+            services.AddSingleton<IMiddlewareRepository<ftQueueItem>, EfQueueItemRepository>();
 
-            services.AddTransient<IJournalATRepository, EfJournalATRepository>();
-            services.AddTransient<IReadOnlyJournalATRepository, EfJournalATRepository>();
-            services.AddTransient<IMiddlewareRepository<ftJournalAT>, EfJournalATRepository>();
+            services.AddSingleton<IJournalATRepository, EfJournalATRepository>();
+            services.AddSingleton<IReadOnlyJournalATRepository, EfJournalATRepository>();
+            services.AddSingleton<IMiddlewareRepository<ftJournalAT>, EfJournalATRepository>();
 
-            services.AddTransient<IMiddlewareJournalDERepository, EfJournalDERepository>();
-            services.AddTransient<IJournalDERepository, EfJournalDERepository>();
-            services.AddTransient<IReadOnlyJournalDERepository, EfJournalDERepository>();
-            services.AddTransient<IMiddlewareRepository<ftJournalDE>, EfJournalDERepository>();
+            services.AddSingleton<IMiddlewareJournalDERepository, EfJournalDERepository>();
+            services.AddSingleton<IJournalDERepository, EfJournalDERepository>();
+            services.AddSingleton<IReadOnlyJournalDERepository, EfJournalDERepository>();
+            services.AddSingleton<IMiddlewareRepository<ftJournalDE>, EfJournalDERepository>();
 
-            services.AddTransient<IJournalFRRepository, EfJournalFRRepository>();
-            services.AddTransient<IReadOnlyJournalFRRepository, EfJournalFRRepository>();
-            services.AddTransient<IMiddlewareRepository<ftJournalFR>, EfJournalFRRepository>();
+            services.AddSingleton<IJournalFRRepository, EfJournalFRRepository>();
+            services.AddSingleton<IReadOnlyJournalFRRepository, EfJournalFRRepository>();
+            services.AddSingleton<IMiddlewareRepository<ftJournalFR>, EfJournalFRRepository>();
 
-            services.AddTransient<IMiddlewareJournalMERepository, EfJournalMERepository>();
-            services.AddTransient<IJournalMERepository, EfJournalMERepository>();
-            services.AddTransient<IReadOnlyJournalMERepository, EfJournalMERepository>();
-            services.AddTransient<IMiddlewareRepository<ftJournalME>, EfJournalMERepository>();
+            services.AddSingleton<IMiddlewareJournalMERepository, EfJournalMERepository>();
+            services.AddSingleton<IJournalMERepository, EfJournalMERepository>();
+            services.AddSingleton<IReadOnlyJournalMERepository, EfJournalMERepository>();
+            services.AddSingleton<IMiddlewareRepository<ftJournalME>, EfJournalMERepository>();
 
-            services.AddTransient<IJournalITRepository, EfJournalITRepository>();
-            services.AddTransient<IReadOnlyJournalITRepository, EfJournalITRepository>();
-            services.AddTransient<IMiddlewareJournalITRepository, EfJournalITRepository>();
+            services.AddSingleton<IJournalITRepository, EfJournalITRepository>();
+            services.AddSingleton<IReadOnlyJournalITRepository, EfJournalITRepository>();
+            services.AddSingleton<IMiddlewareJournalITRepository, EfJournalITRepository>();
 
-            services.AddTransient<IReceiptJournalRepository, EfReceiptJournalRepository>();
-            services.AddTransient<IReadOnlyReceiptJournalRepository, EfReceiptJournalRepository>();
-            services.AddTransient<IMiddlewareRepository<ftReceiptJournal>, EfReceiptJournalRepository>();
+            services.AddSingleton<IReceiptJournalRepository, EfReceiptJournalRepository>();
+            services.AddSingleton<IReadOnlyReceiptJournalRepository, EfReceiptJournalRepository>();
+            services.AddSingleton<IMiddlewareRepository<ftReceiptJournal>, EfReceiptJournalRepository>();
 
             services.AddSingleton<IMiddlewareActionJournalRepository, EfActionJournalRepository>();
-            services.AddTransient<IActionJournalRepository, EfActionJournalRepository>();
-            services.AddTransient<IReadOnlyActionJournalRepository, EfActionJournalRepository>();
-            services.AddTransient<IMiddlewareRepository<ftActionJournal>, EfActionJournalRepository>();
+            services.AddSingleton<IActionJournalRepository, EfActionJournalRepository>();
+            services.AddSingleton<IReadOnlyActionJournalRepository, EfActionJournalRepository>();
+            services.AddSingleton<IMiddlewareRepository<ftActionJournal>, EfActionJournalRepository>();
 
-            services.AddTransient<IPersistentTransactionRepository<FailedStartTransaction>, EfFailedStartTransactionRepository>();
-            services.AddTransient<IPersistentTransactionRepository<FailedFinishTransaction>, EfFailedFinishTransactionRepository>();
-            services.AddTransient<IPersistentTransactionRepository<OpenTransaction>, EfOpenTransactionRepository>();
+            services.AddSingleton<IPersistentTransactionRepository<FailedStartTransaction>, EfFailedStartTransactionRepository>();
+            services.AddSingleton<IPersistentTransactionRepository<FailedFinishTransaction>, EfFailedFinishTransactionRepository>();
+            services.AddSingleton<IPersistentTransactionRepository<OpenTransaction>, EfOpenTransactionRepository>();
 
-            services.AddTransient<IMasterDataRepository<AccountMasterData>, EfAccountMasterDataRepository>();
-            services.AddTransient<IMasterDataRepository<OutletMasterData>, EfOutletMasterDataRepository>();
-            services.AddTransient<IMasterDataRepository<AgencyMasterData>, EfAgencyMasterDataRepository>();
-            services.AddTransient<IMasterDataRepository<PosSystemMasterData>, EfPosSystemMasterDataRepository>();
+            services.AddSingleton<IMasterDataRepository<AccountMasterData>, EfAccountMasterDataRepository>();
+            services.AddSingleton<IMasterDataRepository<OutletMasterData>, EfOutletMasterDataRepository>();
+            services.AddSingleton<IMasterDataRepository<AgencyMasterData>, EfAgencyMasterDataRepository>();
+            services.AddSingleton<IMasterDataRepository<PosSystemMasterData>, EfPosSystemMasterDataRepository>();
         }
 
         public static void Update(string connectionString, int timeoutSec, Guid queueId, ILogger<IMiddlewareBootstrapper> logger)
