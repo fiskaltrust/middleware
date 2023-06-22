@@ -22,8 +22,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
 
         private bool EnableTarFileExport { get; set; } = true;
 
-        public bool ScuFailForceStart { get; set; } = false;
-
         public TarFileExportMode TarFileExportMode { get; set; } = TarFileExportMode.All;
 
         public static QueueDEConfiguration FromMiddlewareConfiguration(ILogger<QueueDEConfiguration> logger, MiddlewareConfiguration middlewareConfiguration)
