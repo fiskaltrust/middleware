@@ -80,7 +80,10 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
             {
                 ConfigureSQLite(config, serviceCollection);
             }
-            else
+            else if (config.Package == "fiskaltrust.Middleware.Queue.MySQL")
+            {
+                ConfigureMySQL(config, serviceCollection);
+            } else
             {
                 throw new NotSupportedException($"The given package {config.Package} is not supported.");
             }
@@ -122,6 +125,16 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
         private static void ConfigureSQLite(PackageConfiguration queue, ServiceCollection serviceCollection)
         {
             var bootStrapper = new SQLite.PosBootstrapper
+            {
+                Id = queue.Id,
+                Configuration = queue.Configuration
+            };
+            bootStrapper.ConfigureServices(serviceCollection);
+        }
+        
+        private static void ConfigureMySQL(PackageConfiguration queue, ServiceCollection serviceCollection)
+        {
+            var bootStrapper = new MySQL.PosBootstrapper
             {
                 Id = queue.Id,
                 Configuration = queue.Configuration
