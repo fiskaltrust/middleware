@@ -53,9 +53,8 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
                 shellProcess.ErrorDataReceived += (_, e) => LogFcc(LogLevel.Error, e?.Data);
                 shellProcess.BeginOutputReadLine();
                 shellProcess.BeginErrorReadLine();
-                var cancellationTokenSource = new CancellationTokenSource();
-                shellProcess.Exited += (_, __) => cancellationTokenSource.Cancel();
-                await WaitUntilFccIsAvailable(_configuration.ProcessTimeoutSec, cancellationTokenSource.Token);
+
+                await WaitUntilFccIsAvailable(_configuration.ProcessTimeoutSec, shellProcess);
                 _process = GetProcessIfRunning(fccDirectory, _logger);
                 _startedProcessInline = true;
             }
@@ -84,7 +83,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
             }
         }
 
-        private async Task WaitUntilFccIsAvailable(int timeoutSec, CancellationToken cancellationToken)
+        private async Task WaitUntilFccIsAvailable(int timeoutSec, Process shellProcess)
         {
             var endTime = DateTime.Now.AddSeconds(timeoutSec);
             while (DateTime.Now < endTime)
@@ -93,7 +92,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
                 {
                     return;
                 }
-                if (cancellationToken.IsCancellationRequested)
+                if (shellProcess.HasExited)
                 {
                     throw new OperationCanceledException("The FCC process has exited.");
                 }
