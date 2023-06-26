@@ -27,7 +27,6 @@
     <ItemGroup>
         <ProjectReference Include="..\fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser\fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser.csproj" PrivateAssets="all" />
         <ProjectReference Include="..\fiskaltrust.Middleware.SCU.DE.DeutscheFiskal\fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.csproj" PrivateAssets="all" />
-        <ProjectReference Include="..\fiskaltrust.Middleware.SCU.DE.Helpers.DisabledSCU\fiskaltrust.Middleware.SCU.DE.Helpers.DisabledSCU.csproj" PrivateAssets="all" />
     </ItemGroup>
 
     <Target DependsOnTargets="ResolveReferences" Name="CopyProjectReferencesToPackage">

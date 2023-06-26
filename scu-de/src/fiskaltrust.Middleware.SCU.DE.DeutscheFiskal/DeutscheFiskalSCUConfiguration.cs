@@ -25,7 +25,6 @@
         public string ProxyPassword { get; set; }
         public int? FccHeapMemory { get; set; }
         public int FccRetry { get; set; } = 8;
-        public bool Disable { get; set; } = false;
 
     }
 }

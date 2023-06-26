@@ -7,7 +7,6 @@ using fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Communication;
 using fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Helpers;
 using fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services;
 using fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services.Interfaces;
-using fiskaltrust.Middleware.SCU.DE.Helpers.DisabledSCU;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 
@@ -20,22 +19,14 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloud
 
         public void ConfigureServices(IServiceCollection services)
         {
-            var configuration = JsonConvert.DeserializeObject<DeutscheFiskalSCUConfiguration>(JsonConvert.SerializeObject(Configuration));
-            services.AddSingleton(configuration);
+            services.AddSingleton(JsonConvert.DeserializeObject<DeutscheFiskalSCUConfiguration>(JsonConvert.SerializeObject(Configuration)));
             services.AddSingleton<IFccInitializationService, DeutscheFiskalFccInitializationService>();
             services.AddSingleton<IFccProcessHost, DeutscheFiskalFccProcessHost>();
             services.AddScoped<IFccDownloadService, DeutscheFiskalFccDownloadService>();
             services.AddScoped<FccAdminApiProvider>();
             services.AddScoped<FccErsApiProvider>();
             services.AddScoped<FirewallHelper>();
-            if (!configuration.Disable)
-            {
-                services.AddScoped<IDESSCD, SwissbitCloudSCU>();
-            }
-            else
-            {
-                services.AddScoped<IDESSCD, DisabledSCU>();
-            }
+            services.AddScoped<IDESSCD, SwissbitCloudSCU>();
         }
     }
 }
