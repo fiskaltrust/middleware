@@ -34,11 +34,6 @@
 
 
     <ItemGroup>
-      <Folder Include="TestCertificates\" />
-    </ItemGroup>
-
-
-    <ItemGroup>
       <None Update="TestCertificates\PertsonaFisikoa_PersonaFísica.p12">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
