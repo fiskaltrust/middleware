@@ -34,6 +34,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
                         sp.GetRequiredService<IConfigurationRepository>(),
                         sp.GetRequiredService<MiddlewareConfiguration>(),
                         sp.GetRequiredService<QueueDEConfiguration>());
+
                     sscdProvider.RegisterCurrentScuAsync().Wait();
 
                     return sscdProvider;

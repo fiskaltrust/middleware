@@ -12,7 +12,6 @@ using Newtonsoft.Json;
 using fiskaltrust.Middleware.Localization.QueueDE.Services;
 using fiskaltrust.Middleware.Localization.QueueDE.Transactions;
 using fiskaltrust.Middleware.Contracts.Models;
-using fiskaltrust.Middleware.Localization.QueueDE.MasterData;
 using fiskaltrust.Middleware.Contracts.Data;
 using fiskaltrust.Middleware.Contracts.Models.Transactions;
 
@@ -49,7 +48,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 ? JsonConvert.DeserializeAnonymousType(lastDailyClosingJournal.DataJson, new { ftReceiptNumerator = 0L }).ftReceiptNumerator
                 : -1;
 
-            if (lastDailyClosingJournal == null || lastDailyClosingNumerator != queue.ftReceiptNumerator)
+            if (!request.IsInitiateScuSwitchReceiptForce() && ( lastDailyClosingJournal == null || lastDailyClosingNumerator != queue.ftReceiptNumerator))        
             {
                 var reachable = false;
                 try
@@ -122,7 +121,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 );
 
                 receiptResponse.ftStateData = await StateDataFactory.AppendTseInfoAsync(_deSSCDProvider.Instance, receiptResponse.ftStateData).ConfigureAwait(false);
-
             }
             catch (Exception ex)
             {
@@ -162,7 +160,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 signatures = new List<SignaturItem>();
                 transactionNumber = null;
             }
-
 
             actionJournals.Add(
                 new ftActionJournal()
