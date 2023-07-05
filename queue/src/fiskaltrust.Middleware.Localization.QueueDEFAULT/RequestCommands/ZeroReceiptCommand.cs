@@ -7,9 +7,9 @@ using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.RequestCommands
 {
-    public class ZeroReceiptCommandDEFAULT : ZeroReceiptCommand
+    public class ZeroReceiptCommand : Contracts.RequestCommands.ZeroReceiptCommand
     {
-        public ZeroReceiptCommandDEFAULT(ICountrySpecificSettings countryspecificSettings, IMiddlewareQueueItemRepository queueItemRepository, IRequestCommandFactory requestCommandFactory, ILogger<RequestCommand> logger, IActionJournalRepository actionJournalRepository) :
+        public ZeroReceiptCommand(ICountrySpecificSettings countryspecificSettings, IMiddlewareQueueItemRepository queueItemRepository, IRequestCommandFactory requestCommandFactory, ILogger<RequestCommand> logger, IActionJournalRepository actionJournalRepository) :
             base(countryspecificSettings, queueItemRepository, requestCommandFactory, logger, actionJournalRepository)
         {
         }

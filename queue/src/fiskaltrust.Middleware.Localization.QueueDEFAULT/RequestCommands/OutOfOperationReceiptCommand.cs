@@ -14,14 +14,12 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.RequestCommands
     {
         protected override long CountryBaseState => _countryBaseState;
         private readonly long _countryBaseState;
-        private readonly SignatureItemFactoryDEFAULT _signatureItemFactoryDefault;
-        private readonly ftQueueIT _queueIt;
+        
         private readonly ICountrySpecificQueueRepository _countrySpecificQueueRepository;
 
-        public OutOfOperationReceiptCommand(SignatureItemFactoryDEFAULT signatureItemFactoryDefault, ftQueueIT queueIt, ICountrySpecificSettings countrySpecificSettings)
+        public OutOfOperationReceiptCommand(SignatureItemFactoryDEFAULT signatureItemFactoryDefault, ICountrySpecificSettings countrySpecificSettings)
         {
             _signatureItemFactoryDefault = signatureItemFactoryDefault;
-            _queueIt = queueIt;
             _countrySpecificQueueRepository = countrySpecificSettings.CountrySpecificQueueRepository;
             _countryBaseState = countrySpecificSettings.CountryBaseState;
         }

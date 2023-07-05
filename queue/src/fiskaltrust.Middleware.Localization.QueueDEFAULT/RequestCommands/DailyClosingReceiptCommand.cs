@@ -1,14 +1,11 @@
 ﻿using System;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.ifPOS.v1.errors;
-using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.Contracts.Constants;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Contracts.RequestCommands;
-using fiskaltrust.Middleware.Localization.QueueDEFAULT.Extensions;
+using fiskaltrust.Middleware.Localization.QueueDEFAULT.Dummy;
 using fiskaltrust.Middleware.Localization.QueueDEFAULT.Factories;
-using fiskaltrust.Middleware.Localization.QueueDEFAULT.Services;
 using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.RequestCommands
@@ -19,15 +16,12 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.RequestCommands
         protected override long CountryBaseState => _countryBaseState;
         private readonly ICountrySpecificSettings _countryspecificSettings;
         private readonly ICountrySpecificQueueRepository _countrySpecificQueueRepository;
-        private readonly SignatureItemFactoryDEFAULT _signatureItemFactoryDefault;
-        private readonly IMiddlewareJournalITRepository _journalITRepository;
-        private readonly IITSSCD _client;
+        private readonly SignatureItemFactoryDEFAULT _signatureItemFactoryDefault; 
 
-        public DailyClosingReceiptCommand(SignatureItemFactoryDEFAULT signatureItemFactoryDefault, ICountrySpecificSettings countrySpecificSettings, IITSSCDProvider itIsscdProvider, IMiddlewareJournalITRepository journalITRepository)
+
+        public DailyClosingReceiptCommand(SignatureItemFactoryDEFAULT signatureItemFactoryDefault, ICountrySpecificSettings countrySpecificSettings)
         {
             _countrySpecificQueueRepository = countrySpecificSettings.CountrySpecificQueueRepository;
-            _client = itIsscdProvider.Instance;
-            _journalITRepository = journalITRepository;
             _signatureItemFactoryDefault = signatureItemFactoryDefault;
             _countryspecificSettings = countrySpecificSettings;
             _countryBaseState = countrySpecificSettings.CountryBaseState;
@@ -41,35 +35,9 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.RequestCommands
 
         public override Task<bool> ReceiptNeedsReprocessing(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem) => Task.FromResult(false);
 
-        protected override async Task<RequestCommandResponse> SpecializeAsync(RequestCommandResponse requestCommandResponse, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
+        protected override  Task<RequestCommandResponse> SpecializeAsync(RequestCommandResponse requestCommandResponse, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
         {
-            var response = await _client.ExecuteDailyClosingAsync(new DailyClosingRequest() ).ConfigureAwait(false);
-
-            if (!response.Success)
-            {
-                if (response.SSCDErrorInfo.Type == SSCDErrorType.Connection)
-                {
-                    return await ProcessFailedReceiptRequest(_countryspecificSettings, queue, queueItem, request).ConfigureAwait(false);
-                }
-                else
-                {
-                    throw new SSCDErrorException(response.SSCDErrorInfo.Type, response.SSCDErrorInfo.Info);
-                }
-            }
-            else
-            {
-                requestCommandResponse.ReceiptResponse.ftReceiptIdentification += $"Z{response.ZRepNumber}";
-                requestCommandResponse.ReceiptResponse.ftSignatures = _signatureItemFactoryDefault.CreatePosReceiptSignatures(response);
-                var queueIt = await _countrySpecificQueueRepository.GetQueueAsync(queue.ftQueueId).ConfigureAwait(false);
-                var journalIT = new ftJournalIT().FromResponse(queueIt, queueItem, new ScuResponse()
-                {
-                    DataJson = response.ReportDataJson,
-                    ftReceiptCase = request.ftReceiptCase,
-                    ZRepNumber = response.ZRepNumber
-                });
-                await _journalITRepository.InsertAsync(journalIT).ConfigureAwait(false);
-                return requestCommandResponse;
-            }
+            return Task.FromResult(requestCommandResponse);
         }
     }
 }

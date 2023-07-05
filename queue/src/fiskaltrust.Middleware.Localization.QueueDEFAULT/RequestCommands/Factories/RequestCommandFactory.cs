@@ -3,15 +3,9 @@ using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Exceptions;
 using fiskaltrust.Middleware.Contracts.RequestCommands;
 using fiskaltrust.Middleware.Contracts.RequestCommands.Factories;
-using fiskaltrust.Middleware.Localization.QueueDEFAULT.RequestCommands;
 using Microsoft.Extensions.DependencyInjection;
-using DailyClosingReceiptCommand = fiskaltrust.Middleware.Localization.QueueDEFAULT.RequestCommands.DailyClosingReceiptCommand;
-using InitialOperationReceiptCommand = fiskaltrust.Middleware.Localization.QueueDEFAULT.RequestCommands.InitialOperationReceiptCommand;
-using MonthlyClosingReceiptCommand = fiskaltrust.Middleware.Localization.QueueDEFAULT.RequestCommands.MonthlyClosingReceiptCommand;
-using OutOfOperationReceiptCommand = fiskaltrust.Middleware.Localization.QueueDEFAULT.RequestCommands.OutOfOperationReceiptCommand;
-using YearlyClosingReceiptCommand = fiskaltrust.Middleware.Localization.QueueDEFAULT.RequestCommands.YearlyClosingReceiptCommand;
 
-namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands.Factories
+namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.RequestCommands.Factories
 {
     public class RequestCommandFactory : IRequestCommandFactory
     {
@@ -30,7 +24,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands.Factories
                 0x0007 => _serviceProvider.GetService<DailyClosingReceiptCommand>(),
                 0x0005 => _serviceProvider.GetService<MonthlyClosingReceiptCommand>(),
                 0x0006 => _serviceProvider.GetService<YearlyClosingReceiptCommand>(),
-                0x0002 => _serviceProvider.GetService<ZeroReceiptCommandDEFAULT>(),
+                0x0002 => _serviceProvider.GetService<ZeroReceiptCommand>(),
                 _ => throw new UnknownReceiptCaseException(request.ftReceiptCase)
             };
 

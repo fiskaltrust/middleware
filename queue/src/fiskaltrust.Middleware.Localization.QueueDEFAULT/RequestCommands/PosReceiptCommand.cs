@@ -10,10 +10,6 @@ using fiskaltrust.Middleware.Contracts.Constants;
 using fiskaltrust.Middleware.Contracts.Extensions;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Contracts.RequestCommands;
-using fiskaltrust.Middleware.Localization.QueueDEFAULT.Exceptions;
-using fiskaltrust.Middleware.Localization.QueueDEFAULT.Extensions;
-using fiskaltrust.Middleware.Localization.QueueDEFAULT.Factories;
-using fiskaltrust.Middleware.Localization.QueueDEFAULT.Services;
 using fiskaltrust.storage.V0;
 using Newtonsoft.Json;
 
@@ -33,15 +29,9 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.RequestCommands
         private readonly ICountrySpecificQueueRepository _countrySpecificQueueRepository;
         private readonly ICountrySpecificSettings _countryspecificSettings;
         private readonly IConfigurationRepository _configurationRepository;
-        private readonly SignatureItemFactoryDEFAULT _signatureItemFactoryDefault;
-        private readonly IMiddlewareJournalITRepository _journalITRepository;
-        private readonly IITSSCD _client;
 
-        public PosReceiptCommand(IITSSCDProvider itIsscdProvider, SignatureItemFactoryDEFAULT signatureItemFactoryDefault, IMiddlewareJournalITRepository journalITRepository, IConfigurationRepository configurationRepository, ICountrySpecificSettings countrySpecificSettings)
+        public PosReceiptCommand(IConfigurationRepository configurationRepository, ICountrySpecificSettings countrySpecificSettings)
         {
-            _client = itIsscdProvider.Instance;
-            _signatureItemFactoryDefault = signatureItemFactoryDefault;
-            _journalITRepository = journalITRepository;
             _countryspecificSettings = countrySpecificSettings;
             _countrySpecificQueueRepository = countrySpecificSettings.CountrySpecificQueueRepository;
             _countryBaseState = countrySpecificSettings.CountryBaseState;

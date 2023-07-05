@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Localization.QueueDEFAULT.Dummy;
 using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.Repositories
@@ -14,7 +15,9 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.Repositories
             _configurationRepository = configurationRepository;
         }
 
-        public async Task<ICountrySpecificQueue> GetQueueAsync(Guid queueId) => await _configurationRepository.GetQueueITAsync(queueId).ConfigureAwait(false);
-        public async Task InsertOrUpdateQueueAsync(ICountrySpecificQueue queue) => await _configurationRepository.InsertOrUpdateQueueITAsync((ftQueueIT) queue).ConfigureAwait(false);
+        public  Task<ICountrySpecificQueue> GetQueueAsync(Guid queueId) => Task.FromResult<ICountrySpecificQueue>(new CountryDefaultQueue());
+        
+        public Task InsertOrUpdateQueueAsync(ICountrySpecificQueue countrySpecificQueue) => throw new NotImplementedException();
+
     }
 }

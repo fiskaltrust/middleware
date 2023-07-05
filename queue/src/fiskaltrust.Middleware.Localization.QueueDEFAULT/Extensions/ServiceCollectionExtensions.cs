@@ -13,7 +13,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.Extensions
             services.AddSingleton<OutOfOperationReceiptCommand>();
             services.AddSingleton<PosReceiptCommand>();
             services.AddSingleton<YearlyClosingReceiptCommand>();
-            services.AddSingleton<ZeroReceiptCommandDEFAULT>();
+            services.AddSingleton<ZeroReceiptCommand>();
             return services;
         }
     }
