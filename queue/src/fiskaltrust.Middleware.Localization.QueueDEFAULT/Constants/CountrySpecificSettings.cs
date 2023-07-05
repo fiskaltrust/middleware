@@ -7,7 +7,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.Constants
     {
         public long CountryBaseState => Cases.BASE_STATE;
 
-        public bool ResendFailedReceipts => true;
+        public bool ResendFailedReceipts => false;
 
         public ICountrySpecificQueueRepository CountrySpecificQueueRepository { get;  private set; }
 

@@ -16,6 +16,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.RequestCommands
         private readonly long _countryBaseState;
         
         private readonly ICountrySpecificQueueRepository _countrySpecificQueueRepository;
+        private readonly SignatureItemFactoryDEFAULT _signatureItemFactoryDefault;
 
         public OutOfOperationReceiptCommand(SignatureItemFactoryDEFAULT signatureItemFactoryDefault, ICountrySpecificSettings countrySpecificSettings)
         {
@@ -28,21 +29,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.RequestCommands
 
         protected override Task<(ftActionJournal, SignaturItem)> DeactivateSCUAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
         {
-            var signatureItem = _signatureItemFactoryDefault.CreateOutOfOperationSignature($"Queue-ID: {queue.ftQueueId}");
-            var notification = new DeactivateQueueSCU
-            {
-                CashBoxId = Guid.Parse(request.ftCashBoxID),
-                QueueId = queueItem.ftQueueId,
-                Moment = DateTime.UtcNow,
-                SCUId = _queueIt.ftSignaturCreationUnitITId.GetValueOrDefault(),
-                IsStopReceipt = true,
-                Version = "V0"
-            };
-
-            var actionJournal = CreateActionJournal(queue.ftQueueId, $"{request.ftReceiptCase:X}-{nameof(DeactivateQueueSCU)}",
-                queueItem.ftQueueItemId, $"Out-of-Operation receipt. Queue-ID: {queue.ftQueueId}", JsonConvert.SerializeObject(notification));
-
-            return Task.FromResult((actionJournal, signatureItem));
+            return Task.FromResult((new ftActionJournal {}, new SignaturItem {}));
         }
 
         protected override async Task<string> GetCashboxIdentificationAsync(Guid ftQueueId)

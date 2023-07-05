@@ -29,6 +29,11 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.RequestCommands
         }
 
         public override Task<bool> ReceiptNeedsReprocessing(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem) => Task.FromResult(false);
-        protected override Task<(ftActionJournal, SignaturItem)> InitializeSCUAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem) => throw new NotImplementedException();
+
+        protected override Task<(ftActionJournal, SignaturItem)> InitializeSCUAsync(ftQueue queue,
+            ReceiptRequest request, ftQueueItem queueItem)
+        {
+            return Task.FromResult((new ftActionJournal {}, new  SignaturItem {}));
+        }
     }
 }
