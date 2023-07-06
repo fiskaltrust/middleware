@@ -10,6 +10,7 @@ using fiskaltrust.Middleware.Contracts.Constants;
 using fiskaltrust.Middleware.Contracts.Extensions;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Contracts.RequestCommands;
+using fiskaltrust.Middleware.Localization.QueueDEFAULT.Factories;
 using fiskaltrust.storage.V0;
 using Newtonsoft.Json;
 
@@ -29,9 +30,15 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.RequestCommands
         private readonly ICountrySpecificQueueRepository _countrySpecificQueueRepository;
         private readonly ICountrySpecificSettings _countryspecificSettings;
         private readonly IConfigurationRepository _configurationRepository;
+        private readonly SignatureItemFactoryDEFAULT _signatureItemFactoryItemFactoryDefault;
+        private readonly IMiddlewareJournalITRepository _journalITRepository;
+        private readonly DEFAULTSSCD _client;
 
-        public PosReceiptCommand(IConfigurationRepository configurationRepository, ICountrySpecificSettings countrySpecificSettings)
+        public PosReceiptCommand(IITSSCDProvider itIsscdProvider, SignatureItemFactoryIT signatureItemFactoryIT, IMiddlewareJournalITRepository journalITRepository, IConfigurationRepository configurationRepository, ICountrySpecificSettings countrySpecificSettings)
         {
+            _client = itIsscdProvider.Instance;
+            _signatureItemFactoryD = signatureItemFactoryIT;
+            _journalITRepository = journalITRepository;
             _countryspecificSettings = countrySpecificSettings;
             _countrySpecificQueueRepository = countrySpecificSettings.CountrySpecificQueueRepository;
             _countryBaseState = countrySpecificSettings.CountryBaseState;
@@ -80,7 +87,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.RequestCommands
             else
             {
                 receiptResponse.ftReceiptIdentification += $"{response.ReceiptNumber}";
-                receiptResponse.ftSignatures = _signatureItemFactoryDefault.CreatePosReceiptSignatures(response);
+                receiptResponse.ftSignatures = _signatureItemFactoryIT.CreatePosReceiptSignatures(response);
                 var journalIT = new ftJournalIT().FromResponse(queueIt, queueItem, new ScuResponse()
                 {
                     DataJson = response.ReceiptDataJson,
@@ -124,7 +131,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.RequestCommands
 
             if (response.Success)
             {
-                receiptResponse.ftSignatures = _signatureItemFactoryDefault.CreateVoucherSignatures(nonFiscalRequest);
+                receiptResponse.ftSignatures = _signatureItemFactoryIT.CreateVoucherSignatures(nonFiscalRequest);
             }
             var journalIT = new ftJournalIT
             {
