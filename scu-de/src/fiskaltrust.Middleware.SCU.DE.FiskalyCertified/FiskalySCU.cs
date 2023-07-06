@@ -148,7 +148,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
                 return new TseInfo
                 {
                     CurrentNumberOfClients = clientDto.Where(x => x.State.Equals("REGISTERED")).ToList().Count,
-                    CurrentNumberOfStartedTransactions = (long) tssResult.NumberOfActiveTransactions,
+                    CurrentNumberOfStartedTransactions = tssResult.NumberOfActiveTransactions ?? startedTransactions.Count(),
                     SerialNumberOctet = serial,
                     PublicKeyBase64 = tssResult.PublicKey,
                     FirmwareIdentification = tssResult.Version,
