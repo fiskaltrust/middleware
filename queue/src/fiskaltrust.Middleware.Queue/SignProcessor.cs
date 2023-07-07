@@ -96,7 +96,7 @@ namespace fiskaltrust.Middleware.Queue
                     {
                         var message = $"Queue {_queueId} found cbReceiptReference \"{foundQueueItem.cbReceiptReference}\"";
                         _logger.LogWarning(message);
-                        await CreateActionJournalAsync(message, "", foundQueueItem.ftQueueItemId).ConfigureAwait(false);                        
+                        await CreateActionJournalAsync(message, "", foundQueueItem.ftQueueItemId).ConfigureAwait(false);
                         return JsonConvert.DeserializeObject<ReceiptResponse>(foundQueueItem.response);
                     }
                 }
@@ -170,7 +170,7 @@ namespace fiskaltrust.Middleware.Queue
                 await _configurationRepository.InsertOrUpdateQueueAsync(queue).ConfigureAwait(false);
                 _logger.LogTrace("SignProcessor.InternalSign: Adding ReceiptJournal to database.");
                 receiptJournal = await CreateReceiptJournalAsync(queue, queueItem, data).ConfigureAwait(false);
-                
+
                 return receiptResponse;
             }
             finally
