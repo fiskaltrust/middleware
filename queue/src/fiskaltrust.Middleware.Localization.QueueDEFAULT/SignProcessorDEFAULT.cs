@@ -16,7 +16,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT
         private readonly IRequestCommandFactory _requestCommandFactory;
 
 
-        public SignProcessorDEFAULT(ICountrySpecificSettings countrySpecificSettings,  IRequestCommandFactory requestCommandFactory, IConfigurationRepository configurationRepository)
+        public SignProcessorDEFAULT(ICountrySpecificSettings countrySpecificSettings, IRequestCommandFactory requestCommandFactory, IConfigurationRepository configurationRepository)
         {
             _requestCommandFactory = requestCommandFactory;
             _countrySpecificSettings = countrySpecificSettings;
@@ -24,9 +24,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT
 
         public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ftQueue queue, ftQueueItem queueItem)
         {
-            
+
             var requestCommand = _requestCommandFactory.Create(request);
-          
 
             if (requestCommand is not ZeroReceiptCommand)
             {

@@ -16,16 +16,13 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.RequestCommands
 
         private readonly IConfigurationRepository _configurationRepository;
         private readonly SignatureItemFactoryDEFAULT _signatureItemFactoryDefault;
-        private Contracts.RequestCommands.InitialOperationReceiptCommand _initialOperationReceiptCommandImplementation;
 
-        public InitialOperationReceiptCommand(ICountrySpecificSettings countrySpecificQueueSettings, ILogger<InitialOperationReceiptCommand> logger, IConfigurationRepository configurationRepository, SignatureItemFactoryDEFAULT signatureItemFactoryDefault, Contracts.RequestCommands.InitialOperationReceiptCommand initialOperationReceiptCommandImplementation) : base(countrySpecificQueueSettings, logger, configurationRepository)
+        public InitialOperationReceiptCommand(ICountrySpecificSettings countrySpecificQueueSettings, ILogger<InitialOperationReceiptCommand> logger, IConfigurationRepository configurationRepository, SignatureItemFactoryDEFAULT signatureItemFactoryDefault) : base(countrySpecificQueueSettings, logger, configurationRepository)
         {
 
             _configurationRepository = configurationRepository;
             _signatureItemFactoryDefault = signatureItemFactoryDefault;
-            _initialOperationReceiptCommandImplementation = initialOperationReceiptCommandImplementation;
             _countrySpecificQueueRepository = countrySpecificQueueSettings.CountrySpecificQueueRepository;
-
         }
 
         public override Task<bool> ReceiptNeedsReprocessing(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem) => Task.FromResult(false);
@@ -33,7 +30,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.RequestCommands
         protected override Task<(ftActionJournal, SignaturItem)> InitializeSCUAsync(ftQueue queue,
             ReceiptRequest request, ftQueueItem queueItem)
         {
-            return Task.FromResult((new ftActionJournal {}, new  SignaturItem {}));
+            return Task.FromResult((new ftActionJournal { }, new SignaturItem { }));
         }
     }
 }

@@ -10,14 +10,14 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.Repositories
     {
         private readonly IConfigurationRepository _configurationRepository;
 
-        public CountrySpecificQueueRepository(IConfigurationRepository configurationRepository) 
+        public CountrySpecificQueueRepository(IConfigurationRepository configurationRepository)
         {
             _configurationRepository = configurationRepository;
         }
 
-        public  Task<ICountrySpecificQueue> GetQueueAsync(Guid queueId) => Task.FromResult<ICountrySpecificQueue>(new CountryDefaultQueue());
-        
-        public Task InsertOrUpdateQueueAsync(ICountrySpecificQueue countrySpecificQueue) => throw new NotImplementedException();
+        public Task<ICountrySpecificQueue> GetQueueAsync(Guid queueId) => Task.FromResult<ICountrySpecificQueue>(new CountryDefaultQueue());
+
+        public Task InsertOrUpdateQueueAsync(ICountrySpecificQueue countrySpecificQueue) => Task.CompletedTask;
 
     }
 }
