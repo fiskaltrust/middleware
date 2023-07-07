@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Constants;
-using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Contracts.Extensions;
 using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Contracts.RequestCommands
@@ -57,16 +57,17 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
             queueIt.SSCDFailCount++;
             await countryspecificSettings.CountrySpecificQueueRepository.InsertOrUpdateQueueAsync(queueIt).ConfigureAwait(false);
             var receiptResponse = CreateReceiptResponse(queue, request, queueItem, queueIt.CashBoxIdentification, countryspecificSettings.CountryBaseState);
-            receiptResponse.ftStateData = $"Queue is in failed mode. SSCDFailMoment: {queueIt.SSCDFailMoment}, SSCDFailCount: {queueIt.SSCDFailCount}.";
+            var ftStateData = $"Queue is in failed mode. SSCDFailMoment: {queueIt.SSCDFailMoment}, SSCDFailCount: {queueIt.SSCDFailCount}.";
             if (countryspecificSettings.ResendFailedReceipts)
             {
                 receiptResponse.ftState = countryspecificSettings.CountryBaseState | 0x8;
-                receiptResponse.ftStateData += " When connection is established use zeroreceipt for subsequent booking!";
+                ftStateData += " When connection is established use zeroreceipt for subsequent booking!";
             }
             else
             {
                 receiptResponse.ftState = countryspecificSettings.CountryBaseState | 0x2;
             }
+            receiptResponse.SetFtStateData(ftStateType.Warning, ftStateData);
             return new RequestCommandResponse { ReceiptResponse = receiptResponse };
         }
     }
