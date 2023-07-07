@@ -38,14 +38,12 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.RequestCommands
             {
                 ReceiptResponse = new ReceiptResponse
                 {
+                    cbTerminalID = request.cbTerminalID,
+                    cbReceiptReference = request.cbReceiptReference,
                     ftCashBoxIdentification = $"ft{queueItem.ftQueueRow}",
                     ftQueueID = request.ftQueueID,
                     ftQueueItemID = $"ft{queueItem.ftQueueItemId}",
-                    cbTerminalID = request.cbTerminalID,
-                    cbReceiptReference = request.cbReceiptReference,
                     ftReceiptMoment = request.cbReceiptMoment,
-
-                    // TODO: add other fields
                 },
                 Signatures = new List<SignaturItem>(),
                 ActionJournals = new List<ftActionJournal>()
