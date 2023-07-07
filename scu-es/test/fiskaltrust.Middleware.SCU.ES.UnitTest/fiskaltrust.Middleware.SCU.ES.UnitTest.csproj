@@ -36,10 +36,21 @@
     <ItemGroup>
       <Folder Include="TestCertificates\" />
     </ItemGroup>
-
-
+    
     <ItemGroup>
       <None Update="TestCertificates\PertsonaFisikoa_PersonaFísica.p12">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Update="TestCertificates\autonomo_act.p12">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Update="TestCertificates\dispositivo_act.p12">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
     </ItemGroup>

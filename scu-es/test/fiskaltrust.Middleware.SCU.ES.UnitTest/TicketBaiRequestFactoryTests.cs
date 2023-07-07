@@ -11,7 +11,7 @@ namespace fiskaltrust.Middleware.SCU.ES.UnitTest
         [Fact]
         public void CreateSignedXmlContent_Should_Create_SignedXml()
         {
-            var cert = new X509Certificate2(@"TestCertificates/PertsonaFisikoa_PersonaFísica.p12", "IZDesa2021", X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet);
+            var cert = new X509Certificate2(@"TestCertificates/autonomo_act.p12", "Iz3np32023", X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet);
             var config = new TicketBaiSCUConfiguration
             {
                 Certificate = cert
