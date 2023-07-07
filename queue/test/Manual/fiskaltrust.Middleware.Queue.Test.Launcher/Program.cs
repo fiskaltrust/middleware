@@ -20,21 +20,21 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
 {
     public static class Program
     {
-        private static readonly string _cashBoxId = "";
-        private static readonly string _accessToken = "";
+        private static readonly string _cashBoxId = "161f695b-98f1-47e8-b99d-f8259b009841";
+        private static readonly string _accessToken = "BMsKTKr5b8536DgLhXgAUzOfkfnGnIyPVA3y7ANcPELVvDy+FZKlS8YS2f68X48J+jLrKAxyacvustMKPTIsavI=";
         private static readonly string _localization = "";
 
-        public static void Main(string configurationFilePath = "", string serviceFolder = @"C:\ProgramData\fiskaltrust\service")
+        public static void Main(string configurationFilePath = @"C:\ProgramData\fiskaltrust\service\configuration.json",
+            string serviceFolder = @"C:\ProgramData\fiskaltrust\service")
         {
 
             ftCashBoxConfiguration cashBoxConfiguration = null;
             if (!string.IsNullOrEmpty(configurationFilePath))
             {
-                cashBoxConfiguration = JsonConvert.DeserializeObject<ftCashBoxConfiguration>(configurationFilePath);
+                cashBoxConfiguration = JsonConvert.DeserializeObject<ftCashBoxConfiguration>(File.ReadAllText(configurationFilePath));
             }
             else
             {
-                
                 cashBoxConfiguration = HelipadHelper.GetConfigurationAsync(_cashBoxId, _accessToken).Result;
             }
             if (string.IsNullOrEmpty(serviceFolder))

@@ -1,18 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.ifPOS.v1.errors;
-using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.Contracts.Constants;
-using fiskaltrust.Middleware.Contracts.Extensions;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Contracts.RequestCommands;
-using fiskaltrust.Middleware.Localization.QueueDEFAULT.Factories;
 using fiskaltrust.storage.V0;
-using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.RequestCommands
 {
@@ -45,9 +38,13 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.RequestCommands
             {
                 ReceiptResponse = new ReceiptResponse
                 {
-                    cbReceiptReference = request.cbReceiptReference,
-                    cbTerminalID = request.cbTerminalID,
                     ftCashBoxIdentification = $"ft{queueItem.ftQueueRow}",
+                    ftQueueID = request.ftQueueID,
+                    ftQueueItemID = $"ft{queueItem.ftQueueItemId}",
+                    cbTerminalID = request.cbTerminalID,
+                    cbReceiptReference = request.cbReceiptReference,
+                    ftReceiptMoment = request.cbReceiptMoment,
+
                     // TODO: add other fields
                 },
                 Signatures = new List<SignaturItem>(),
