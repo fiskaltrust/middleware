@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
-using fiskaltrust.Middleware.Contracts;
+using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.storage.encryption.V0;
 using fiskaltrust.storage.V0;
 using Org.BouncyCastle.Asn1.Sec;

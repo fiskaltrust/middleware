@@ -13,10 +13,11 @@ using fiskaltrust.Middleware.Contracts.Extensions;
 using fiskaltrust.Middleware.Localization.QueueIT.Exceptions;
 using Newtonsoft.Json;
 using fiskaltrust.Middleware.Contracts.Repositories;
-using fiskaltrust.Middleware.Contracts.Exceptions;
 using fiskaltrust.ifPOS.v1.errors;
 using fiskaltrust.Middleware.Contracts.Constants;
 using System.Globalization;
+using Microsoft.Extensions.Logging;
+using fiskaltrust.Middleware.Contracts.Interfaces;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 {
@@ -37,8 +38,10 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
         private readonly SignatureItemFactoryIT _signatureItemFactoryIT;
         private readonly IMiddlewareJournalITRepository _journalITRepository;
         private readonly IITSSCD _client;
+        private readonly ISigningDevice _signingDevice;
+        private readonly ILogger<DailyClosingReceiptCommand> _logger;
 
-        public PosReceiptCommand(IITSSCDProvider itIsscdProvider, SignatureItemFactoryIT signatureItemFactoryIT, IMiddlewareJournalITRepository journalITRepository, IConfigurationRepository configurationRepository, ICountrySpecificSettings countrySpecificSettings)
+        public PosReceiptCommand(ISigningDevice signingDevice, ILogger<DailyClosingReceiptCommand> logger, IITSSCDProvider itIsscdProvider, SignatureItemFactoryIT signatureItemFactoryIT, IMiddlewareJournalITRepository journalITRepository, IConfigurationRepository configurationRepository, ICountrySpecificSettings countrySpecificSettings)
         {
             _client = itIsscdProvider.Instance;
             _signatureItemFactoryIT = signatureItemFactoryIT;
@@ -47,6 +50,8 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
             _countrySpecificQueueRepository = countrySpecificSettings.CountrySpecificQueueRepository;
             _countryBaseState = countrySpecificSettings.CountryBaseState;
             _configurationRepository = configurationRepository;
+            _signingDevice = signingDevice;
+            _logger = logger;
         }
 
         public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, bool isBeingResent = false)
@@ -81,7 +86,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
             {
                 if (response.SSCDErrorInfo.Type == SSCDErrorType.Connection && !isBeingResent)
                 {
-                    return await ProcessFailedReceiptRequest(_countryspecificSettings, queue, queueItem, request).ConfigureAwait(false);
+                    return await ProcessFailedReceiptRequest(_signingDevice, _logger, _countryspecificSettings, queue, queueItem, request).ConfigureAwait(false);
                 }
                 else
                 {

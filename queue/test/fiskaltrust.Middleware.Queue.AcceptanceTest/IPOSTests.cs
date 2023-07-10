@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using AutoFixture;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.Middleware.Contracts;
+using fiskaltrust.Middleware.Contracts.Extensions;
 using FluentAssertions;
 using Grpc.Core;
 using Moq;

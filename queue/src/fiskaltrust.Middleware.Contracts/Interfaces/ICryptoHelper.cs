@@ -1,6 +1,6 @@
 ﻿using fiskaltrust.storage.V0;
 
-namespace fiskaltrust.Middleware.Contracts
+namespace fiskaltrust.Middleware.Contracts.Interfaces
 {
     public interface ICryptoHelper
     {

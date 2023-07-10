@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.Middleware.Contracts;
 using fiskaltrust.Middleware.Contracts.Constants;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
@@ -12,6 +11,7 @@ using Newtonsoft.Json;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Localization.QueueAT.Helpers;
 using fiskaltrust.Middleware.Localization.QueueAT.Services;
+using fiskaltrust.Middleware.Contracts.Interfaces;
 
 namespace fiskaltrust.Middleware.Localization.QueueAT
 {

@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.Middleware.Contracts;
+using fiskaltrust.Middleware.Contracts.Interfaces;
 using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.QueueSynchronizer

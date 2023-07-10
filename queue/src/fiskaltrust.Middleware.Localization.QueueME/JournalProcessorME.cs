@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.Middleware.Contracts;
+using fiskaltrust.Middleware.Contracts.Interfaces;
 
 namespace fiskaltrust.Middleware.Localization.QueueME
 {

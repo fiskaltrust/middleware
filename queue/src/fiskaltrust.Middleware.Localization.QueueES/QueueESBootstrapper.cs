@@ -1,4 +1,4 @@
-﻿using fiskaltrust.Middleware.Contracts;
+﻿using fiskaltrust.Middleware.Contracts.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace fiskaltrust.Middleware.Localization.QueueES
