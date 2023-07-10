@@ -42,11 +42,11 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
         {
             var iQueue = await _countrySpecificQueueRepository.GetQueueAsync(queue.ftQueueId).ConfigureAwait(false);
             var receiptResponse = CreateReceiptResponse(queue, request, queueItem, iQueue.CashBoxIdentification, _countryBaseState);
-            var signingAvail = await _signingDevice.IsSigningDeviceAvailable().ConfigureAwait(false);
+            var signingAvailable = await _signingDevice.IsSigningDeviceAvailable().ConfigureAwait(false);
             if (iQueue.SSCDFailCount == 0)
             {
                 var log = "Queue has no failed receipts.";
-                if (!signingAvail)
+                if (!signingAvailable)
                 {
                     receiptResponse.ftState = _countryBaseState | 2;
                     log = $"Signing not available. {log}";
@@ -56,7 +56,7 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
                     log = $"Signing available. {log}";
                 }
                 _logger.LogInformation(log);
-                receiptResponse.SetFtStateData(new StateDetail() { FailedReceiptCount = iQueue.SSCDFailCount, FailMoment = iQueue.SSCDFailMoment, SigningDeviceAvailable = signingAvail });
+                receiptResponse.SetFtStateData(new StateDetail() { FailedReceiptCount = iQueue.SSCDFailCount, FailMoment = iQueue.SSCDFailMoment, SigningDeviceAvailable = signingAvailable });
                 return new RequestCommandResponse()
                 {
                     ReceiptResponse = receiptResponse
@@ -73,7 +73,7 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
 
             var resent = $"Resent {sentReceipts.Count()} receipts that have been stored between {iQueue.SSCDFailMoment:G} and {DateTime.UtcNow:G}.";
 
-            if (succeeded && signingAvail)
+            if (succeeded && signingAvailable)
             {
                 _logger.LogInformation($"Successfully closed failed-mode. {resent} ");
                 iQueue.SSCDFailCount = 0;
@@ -88,7 +88,7 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
 
             _logger.LogInformation($"{sentReceipts.Count()} receipts from the timeframe between {iQueue.SSCDFailMoment:G} and {DateTime.UtcNow:G} have been re-processed at the fiscalization service.");
 
-            var stateDetail = JsonConvert.SerializeObject(new StateDetail() { FailedReceiptCount = iQueue.SSCDFailCount, FailMoment = iQueue.SSCDFailMoment, SigningDeviceAvailable = signingAvail });
+            var stateDetail = JsonConvert.SerializeObject(new StateDetail() { FailedReceiptCount = iQueue.SSCDFailCount, FailMoment = iQueue.SSCDFailMoment, SigningDeviceAvailable = signingAvailable });
 
             signatures.Add(new()
             {
