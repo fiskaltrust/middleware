@@ -747,7 +747,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
                 {
                     if (_lastTransactionNr == 0)
                     {
-                        _logger.LogWarning("Before executing a partial export a daily closing has to be made.");
+                        _logger.LogError("Before executing a partial export a daily closing has to be made.");
                         throw new Exception("Missing Daily Closing.");
                     };
                     CacheExportIncrementalAsync(exportId, 0, _configuration.ChunkExportTransactionCount, (long) _lastTransactionNr).FireAndForget();
@@ -1033,7 +1033,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
                             }
                             try
                             {
-                                if (File.Exists(tempFileName) && !_configuration.StoreTemporaryFile)
+                                if (File.Exists(tempFileName) && !_configuration.StoreTemporaryExportFiles)
                                 {
                                     File.Delete(tempFileName);
                                 }
