@@ -747,7 +747,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
                 {
                     if (_lastTransactionNr == 0)
                     {
-                        _logger.LogError("Before executing a partial export a daily closing has to be made.");
+                        _logger.LogError("Before executing a partial export a daily closing has to be made. See https://link.fiskaltrust.cloud/market-de/swissbit-chunked-tar-export for more details.");
                         throw new Exception("Missing Daily Closing.");
                     };
                     CacheExportIncrementalAsync(exportId, 0, _configuration.ChunkExportTransactionCount, (long) _lastTransactionNr).FireAndForget();
