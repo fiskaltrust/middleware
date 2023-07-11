@@ -61,7 +61,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 if (reachable)
                 {
                     throw new Exception($"ReceiptCase {request.ftReceiptCase:X} (initiate-scu-switch-receipt) can only be called right after a daily-closing receipt." +
-                        $"If a daily-closing receipt can not be done use the Initiate-ScuSwitch-Force-Flag. See https://link.fiskaltrust.cloud/market-de/force-scu-switch-flag for more details. ");
+                        $"If no daily-closing receipt can be done or the tse is not reachable use the Initiate-ScuSwitch-Force-Flag. See https://link.fiskaltrust.cloud/market-de/force-scu-switch-flag for more details. ");
                 }
             }
 
