@@ -1,0 +1,160 @@
+# This repository adheres to the publiccode.yml standard by including this 
+# metadata file that makes public software easily discoverable.
+# More info at https://github.com/italia/publiccode.yml
+
+publiccodeYmlVersion: '0.2'
+categories:
+  - application-development
+  - e-signature
+dependsOn:
+  proprietary:
+    - name: .NET
+      optional: false
+      version: ''
+      versionMax: '5.0'
+      versionMin: '3.1'
+description:
+  it:
+    features:
+      - 'Creazione di firme of XAdES-BES, XAdES-EPES, XAdES-T y XAdES-XL.'
+      - |-
+        Utilizzo di tutti i tipi di certificati supportati da Windows, anche su
+        Smart Card, Token Usb, CNS
+      - |-
+        Formati Supportati: Externally Detached, Internally Detached,
+        Enveloped,Enveloping.
+      - Validazione dei Certificati tramite Authority OCSP o liste di revoca.
+      - Supporto di cofirmatari e controfirmatari.
+      - 'Supporto di RSA-SHA1, RSA-SHA256 y RSA-SHA512.'
+      - |-
+        Conforme alle Specifiche  dell'Agenzia delle Dogane e dei Monopoli per
+        la trasmissione di flussi Xml
+    genericName: Xades e-signature
+    longDescription: |2
+       
+
+      # **Xades.NetCore**
+
+
+      ## **INTRODUZIONE**
+
+
+      FirmaXadesNet è una libreria scritta in C# per .NET 5.0 per la creazione
+      di firme XAdES. È stata realizzata dal Dipartimento delle Nuove Tecnologie
+      del Dipartimento di Urbanistica del Comune Spagnolo di Cartagena (Murcia).
+      Si basa su una modifica dello starter kit XAdES sviluppato da Microsoft
+      France.
+
+
+      ## **CARATTERISTICHE**
+
+
+      - Creazione di firme of XAdES-BES, XAdES-EPES, XAdES-T y XAdES-XL.
+
+      - Utilizzo di tutti i tipi di certificati supportati da Windows, anche su
+      Smart Card, Token Usb, CNS
+
+      - Formati Supportati: Externally Detached, Internally Detached,
+      Enveloped,Enveloping.
+
+      - Validazione dei Certificati tramite Authority OCSP o liste di revoca.
+
+      - Supporto di cofirmatari e controfirmatari.
+
+      - Supporto di RSA-SHA1, RSA-SHA256 y RSA-SHA512.
+
+
+      All'interno della soluzione è presente un progetto con esempi di utilizzo
+      della libreria. Alcuni degli esempi fanno uso del timestamp server ACCV
+      (Agencia de Tecnología y Certificación Electrónica, Spagna).
+
+
+      Come esempio di uitlizzo avviare il progetto TextFirmaXades, che consente
+      di firmare digitalmente i file Xml.
+
+
+      **Esempio di utilizzo per firma Enveloped:**
+
+          private void button3\_Click(object sender, EventArgs e)
+          {
+              if (string.IsNullOrEmpty(nomeFileXml))
+              {
+                  MessageBox.Show("l'Xml non è pronto per la firma.");
+                  return;
+              }
+
+              XadesService xadesService = new XadesService();
+              SignatureParameters parametri = new SignatureParameters();
+              parametri.SignatureMethod = SignatureMethod.RSAwithSHA512;
+              parametri.SigningDate = DateTime.Now;
+
+              // Test SignatureCommitment
+              var sc = new SignatureCommitment(SignatureCommitmentType.ProofOfOrigin);
+              parametri.SignatureCommitments.Add(sc);
+
+              parametri.SignaturePackaging = SignaturePackaging.ENVELOPED;
+
+              using (parametri.Signer = new Signer(CertUtil.SelectCertificate()))
+              {
+                  using (FileStream fs = new FileStream(nomeFileXml, FileMode.Open))
+                  {
+                      \_signatureDocument = xadesService.Sign(fs, parametri);
+                  }
+
+              }
+              \_signatureDocument.Save(nomeFileXmlFirmato);
+              MessageBox.Show("File Firmato Correttamente.", "Firma XADES",
+                  MessageBoxButtons.OK, MessageBoxIcon.Information);
+            
+          }
+
+      ​
+    shortDescription: Libreria C# per la creazione di firme XAdES
+developmentStatus: stable
+inputTypes:
+  - text/xml
+intendedAudience:
+  countries:
+    - it
+    - es
+isBasedOn:
+  - 'https://github.com/ctt-gob-es/FirmaXadesNet45'
+it:
+  conforme:
+    gdpr: false
+    lineeGuidaDesign: false
+    misureMinimeSicurezza: false
+    modelloInteroperabilita: false
+  countryExtensionVersion: '0.2'
+  piattaforme:
+    anpr: false
+    cie: false
+    pagopa: false
+    spid: false
+legal:
+  license: LGPL-3.0-only
+  mainCopyrightOwner: |-
+    Dpto. de Nuevas Tecnologías de la Concejalía de Urbanismo del Ayuntamiento
+    de Cartagena (ES)
+  repoOwner: Seleuco Informatica di Giacomo Policicchio
+localisation:
+  availableLanguages:
+    - it
+    - es
+    - en
+  localisationReady: false
+maintenance:
+  contacts:
+    - email: info@seleuco.it
+      name: Giacomo Policicchio
+      phone: '+393483480783'
+  type: community
+name: Xades.NetCore
+outputTypes:
+  - text/xml
+platforms:
+  - windows
+  - web
+releaseDate: '2020-10-23'
+softwareType: library
+url: 'https://github.com/pgiacomo69/Xades.NetCore'
