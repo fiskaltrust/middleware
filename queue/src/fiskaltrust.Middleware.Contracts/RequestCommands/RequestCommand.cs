@@ -77,7 +77,5 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
 
             return new RequestCommandResponse { ReceiptResponse = receiptResponse };
         }
-
-
     }
 }
