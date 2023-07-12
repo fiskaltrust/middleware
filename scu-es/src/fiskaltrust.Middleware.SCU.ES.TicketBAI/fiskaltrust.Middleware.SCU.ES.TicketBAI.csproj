@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <Description>The fiskaltrust Middleware implementation of the Ticket BAI SCU for Spain (Basque).</Description>
-        <TargetFrameworks>netstandard2.0;net461;net6</TargetFrameworks>
+        <TargetFrameworks>netstandard2.0;net6</TargetFrameworks>
         <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);CopyProjectReferencesToPackage</TargetsForTfmSpecificBuildOutput>
         <Nullable>enable</Nullable>
     </PropertyGroup>
@@ -19,10 +19,7 @@
         <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
         <PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
         <PackageReference Include="System.Security.Cryptography.Xml" Version="7.0.1" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <ProjectReference Include="..\Xades.NetCore\FirmaXadesNet\FirmaXadesNet.csproj" />
+        <PackageReference Include="FirmaXadesNetCore" Version="1.1.0" />
     </ItemGroup>
 
     <Target DependsOnTargets="ResolveReferences" Name="CopyProjectReferencesToPackage">

@@ -5,10 +5,9 @@ using System.Security.Cryptography.Xml;
 using System.Text;
 using System.Xml;
 using System.Xml.Serialization;
-using FirmaXadesNet;
-using FirmaXadesNet.Crypto;
-using FirmaXadesNet.Signature.Parameters;
-using static System.Net.Mime.MediaTypeNames;
+using FirmaXadesNetCore;
+using FirmaXadesNetCore.Crypto;
+using FirmaXadesNetCore.Signature.Parameters;
 
 namespace fiskaltrust.Middleware.SCU.ES.TicketBAI
 {
