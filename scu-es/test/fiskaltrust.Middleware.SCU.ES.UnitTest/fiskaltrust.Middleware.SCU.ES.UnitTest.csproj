@@ -53,6 +53,30 @@
       <None Update="TestCertificates\dispositivo_act.p12">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
+      <None Update="TestData\Example_bizkaia_TicketBAI_79732487C_A2022_0399.xml">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Example_bizkaia_TicketBAI_79732487C_A2022_0399_signed.xml">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Example_bizkaia_TicketBAI_79732487C_A2022_0400.xml">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Example_bizkaia_TicketBAI_79732487C_A2022_0400_signed.xml">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Example_bizkaia_TicketBAI_B00000034_B2022_0100.xml">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Example_bizkaia_TicketBAI_B00000034_B2022_0100_signed.xml">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Example_bizkaia_TicketBAI_B00000034_B2022_0101.xml">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Example_bizkaia_TicketBAI_B00000034_B2022_0101_signed.xml">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
     </ItemGroup>
 
 </Project>
