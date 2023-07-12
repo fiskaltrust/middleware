@@ -1,4 +1,5 @@
-﻿using System.Security.Cryptography.X509Certificates;
+﻿using System;
+using System.Security.Cryptography.X509Certificates;
 using System.Security.Cryptography.Xml;
 using System.Xml;
 using System.Xml.Serialization;
@@ -46,6 +47,12 @@ namespace fiskaltrust.Middleware.SCU.ES.TicketBAI
             doc.DocumentElement!.AppendChild(signature);
 
             return doc.OuterXml;
+        }
+
+
+        public string SignXmlContentWithXades(string xml)
+        {
+            throw new NotImplementedException();
         }
     }
 }
