@@ -7,13 +7,13 @@ using fiskaltrust.Middleware.Contracts.Interfaces;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.Services
 {
-    public class SigningDeviceIT : ISSCD
+    public class SscdIT : ISSCD
     {
         private readonly IITSSCD _client;
         private readonly ILogger _logger;
 
 
-        public SigningDeviceIT(IITSSCDProvider itIsscdProvider, ILogger<SigningDeviceIT> logger)
+        public SscdIT(IITSSCDProvider itIsscdProvider, ILogger<SscdIT> logger)
         {
             _client = itIsscdProvider.Instance;
             _logger = logger;
@@ -24,7 +24,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Services
             try
             {
                 var deviceInfo = await _client.GetDeviceInfoAsync().ConfigureAwait(false);
-                _logger.LogInformation(JsonConvert.SerializeObject(deviceInfo));
+                _logger.LogDebug(JsonConvert.SerializeObject(deviceInfo));
                 return true;
             }catch (Exception ex) {
                 _logger.LogError(ex, "Error on DeviceInfo Request.");

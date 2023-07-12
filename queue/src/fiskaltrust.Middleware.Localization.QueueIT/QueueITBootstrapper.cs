@@ -20,7 +20,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
         public void ConfigureServices(IServiceCollection services)
         {
             var _ = services
-                .AddScoped<ISSCD, SigningDeviceIT>()
+                .AddScoped<ISSCD, SscdIT>()
                 .AddScoped<IMarketSpecificSignProcessor, SignProcessorIT>()
                 .AddScoped<IMarketSpecificJournalProcessor, JournalProcessorIT>()
                 .AddScoped<SignatureItemFactoryIT>()

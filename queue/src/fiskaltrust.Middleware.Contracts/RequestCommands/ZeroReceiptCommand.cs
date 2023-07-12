@@ -90,13 +90,6 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
 
             var stateDetail = JsonConvert.SerializeObject(new StateDetail() { FailedReceiptCount = iQueue.SSCDFailCount, FailMoment = iQueue.SSCDFailMoment, SigningDeviceAvailable = signingAvailable });
 
-            signatures.Add(new()
-            {
-                ftSignatureType = _countryBaseState | 2,
-                ftSignatureFormat = (long) ifPOS.v0.SignaturItem.Formats.Text,
-                Caption = stateDetail,
-                Data = JsonConvert.SerializeObject(new { SentReceipts = sentReceipts })
-            });
             receiptResponse.ftSignatures = signatures.ToArray();
             await _countrySpecificQueueRepository.InsertOrUpdateQueueAsync(iQueue).ConfigureAwait(false);
 
