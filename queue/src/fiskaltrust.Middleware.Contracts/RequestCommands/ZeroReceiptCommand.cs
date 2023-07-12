@@ -71,11 +71,9 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
                 succeeded = await ResendFailedReceiptsAsync(iQueue, queue, sentReceipts, signatures).ConfigureAwait(false);
             }
 
-            var resent = $"Resent {sentReceipts.Count()} receipts that have been stored between {iQueue.SSCDFailMoment:G} and {DateTime.UtcNow:G}.";
-
             if (succeeded && signingAvailable)
             {
-                _logger.LogInformation($"Successfully closed failed-mode. {resent} ");
+                _logger.LogInformation($"Successfully closed failed-mode. Resent {sentReceipts.Count()} receipts that have been stored between {iQueue.SSCDFailMoment:G} and {DateTime.UtcNow:G}. ");
                 iQueue.SSCDFailCount = 0;
                 iQueue.SSCDFailMoment = null;
                 iQueue.SSCDFailQueueItemId = null;
