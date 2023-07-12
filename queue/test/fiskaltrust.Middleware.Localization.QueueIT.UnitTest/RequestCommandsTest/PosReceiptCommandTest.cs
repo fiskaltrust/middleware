@@ -76,7 +76,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
             var countrySettingsMock = new Mock<ICountrySpecificSettings>();
             countrySettingsMock.Setup( x => x.CountrySpecificQueueRepository).Returns(queueRepoMock.Object);
 
-            var posReceiptCommand = new PosReceiptCommand(Mock.Of<ISigningDevice>(), Mock.Of<ILogger<DailyClosingReceiptCommand>>(), desscdMock.Object, new SignatureItemFactoryIT(), Mock.Of<IMiddlewareJournalITRepository>(), configRepoMock.Object, countrySettingsMock.Object);
+            var posReceiptCommand = new PosReceiptCommand(Mock.Of<ISSCD>(), Mock.Of<ILogger<DailyClosingReceiptCommand>>(), desscdMock.Object, new SignatureItemFactoryIT(), Mock.Of<IMiddlewareJournalITRepository>(), configRepoMock.Object, countrySettingsMock.Object);
 
             var queue = new ftQueue() { ftQueueId = Guid.NewGuid(), ftReceiptNumerator = 5 };
             var queueItem = new ftQueueItem() { ftQueueId = queue.ftQueueId, ftQueueItemId = Guid.NewGuid(), ftQueueRow = 7 };

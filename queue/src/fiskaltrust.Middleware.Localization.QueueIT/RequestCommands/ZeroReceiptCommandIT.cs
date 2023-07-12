@@ -10,7 +10,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 {
     public class ZeroReceiptCommandIT : ZeroReceiptCommand
     {
-        public ZeroReceiptCommandIT(ISigningDevice signingDevice, ICountrySpecificSettings countryspecificSettings, IMiddlewareQueueItemRepository queueItemRepository, IRequestCommandFactory requestCommandFactory, ILogger<RequestCommand> logger, IActionJournalRepository actionJournalRepository) :
+        public ZeroReceiptCommandIT(ISSCD signingDevice, ICountrySpecificSettings countryspecificSettings, IMiddlewareQueueItemRepository queueItemRepository, IRequestCommandFactory requestCommandFactory, ILogger<RequestCommand> logger, IActionJournalRepository actionJournalRepository) :
             base(signingDevice, countryspecificSettings, queueItemRepository, requestCommandFactory, logger, actionJournalRepository)
         {
         }

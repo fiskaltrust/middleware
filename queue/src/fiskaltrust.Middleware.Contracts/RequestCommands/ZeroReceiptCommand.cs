@@ -24,9 +24,9 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
         private readonly IActionJournalRepository _actionJournalRepository;
         private readonly IMiddlewareQueueItemRepository _queueItemRepository;
         private readonly ILogger<RequestCommand> _logger;
-        private readonly ISigningDevice _signingDevice;
+        private readonly ISSCD _signingDevice;
 
-        public ZeroReceiptCommand(ISigningDevice signingDevice, ICountrySpecificSettings countryspecificSettings,IMiddlewareQueueItemRepository queueItemRepository, IRequestCommandFactory requestCommandFactory, ILogger<RequestCommand> logger, IActionJournalRepository actionJournalRepository)
+        public ZeroReceiptCommand(ISSCD signingDevice, ICountrySpecificSettings countryspecificSettings,IMiddlewareQueueItemRepository queueItemRepository, IRequestCommandFactory requestCommandFactory, ILogger<RequestCommand> logger, IActionJournalRepository actionJournalRepository)
         {
             _requestCommandFactory = requestCommandFactory;
             _logger = logger;
@@ -42,7 +42,7 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
         {
             var iQueue = await _countrySpecificQueueRepository.GetQueueAsync(queue.ftQueueId).ConfigureAwait(false);
             var receiptResponse = CreateReceiptResponse(queue, request, queueItem, iQueue.CashBoxIdentification, _countryBaseState);
-            var signingAvailable = await _signingDevice.IsSigningDeviceAvailable().ConfigureAwait(false);
+            var signingAvailable = await _signingDevice.IsSSCDAvailable().ConfigureAwait(false);
             if (iQueue.SSCDFailCount == 0)
             {
                 var log = "Queue has no failed receipts.";
@@ -71,9 +71,11 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
                 succeeded = await ResendFailedReceiptsAsync(iQueue, queue, sentReceipts, signatures).ConfigureAwait(false);
             }
 
+            var resent = $"Resent {sentReceipts.Count()} receipts that have been stored between {iQueue.SSCDFailMoment:G} and {DateTime.UtcNow:G}.";
+
             if (succeeded && signingAvailable)
             {
-                _logger.LogInformation($"Successfully closed failed-mode. Resent {sentReceipts.Count()} receipts that have been stored between {iQueue.SSCDFailMoment:G} and {DateTime.UtcNow:G}. ");
+                _logger.LogInformation($"Successfully closed failed-mode. {resent} ");
                 iQueue.SSCDFailCount = 0;
                 iQueue.SSCDFailMoment = null;
                 iQueue.SSCDFailQueueItemId = null;

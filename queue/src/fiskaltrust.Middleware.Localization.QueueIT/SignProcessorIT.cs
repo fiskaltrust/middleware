@@ -18,10 +18,10 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
         private readonly ICountrySpecificSettings _countrySpecificSettings;
         private readonly IRequestCommandFactory _requestCommandFactory;
         protected readonly IConfigurationRepository _configurationRepository;
-        private readonly ISigningDevice _signingDevice;
+        private readonly ISSCD _signingDevice;
         private readonly ILogger<DailyClosingReceiptCommand> _logger;
 
-        public SignProcessorIT(ISigningDevice signingDevice, ILogger<DailyClosingReceiptCommand> logger, ICountrySpecificSettings countrySpecificSettings,  IRequestCommandFactory requestCommandFactory, IConfigurationRepository configurationRepository)
+        public SignProcessorIT(ISSCD signingDevice, ILogger<DailyClosingReceiptCommand> logger, ICountrySpecificSettings countrySpecificSettings,  IRequestCommandFactory requestCommandFactory, IConfigurationRepository configurationRepository)
         {
             _requestCommandFactory = requestCommandFactory;
             _configurationRepository = configurationRepository;

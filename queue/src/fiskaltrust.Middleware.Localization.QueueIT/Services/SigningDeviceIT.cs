@@ -7,7 +7,7 @@ using fiskaltrust.Middleware.Contracts.Interfaces;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.Services
 {
-    public class SigningDeviceIT : ISigningDevice
+    public class SigningDeviceIT : ISSCD
     {
         private readonly IITSSCD _client;
         private readonly ILogger _logger;
@@ -19,7 +19,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Services
             _logger = logger;
         }
 
-        public async Task<bool> IsSigningDeviceAvailable()
+        public async Task<bool> IsSSCDAvailable()
         {
             try
             {

@@ -48,7 +48,7 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
             };
         }
 
-        public async Task<RequestCommandResponse> ProcessFailedReceiptRequest(ISigningDevice signingDevice, ILogger logger, ICountrySpecificSettings countryspecificSettings, ftQueue queue, ftQueueItem queueItem, ReceiptRequest request)
+        public async Task<RequestCommandResponse> ProcessFailedReceiptRequest(ISSCD signingDevice, ILogger logger, ICountrySpecificSettings countryspecificSettings, ftQueue queue, ftQueueItem queueItem, ReceiptRequest request)
         {
             var queueIt = await countryspecificSettings.CountrySpecificQueueRepository.GetQueueAsync(queue.ftQueueId).ConfigureAwait(false);
             if (queueIt.SSCDFailCount == 0)
@@ -70,12 +70,14 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
                 receiptResponse.ftState = countryspecificSettings.CountryBaseState | 0x2;
             }
 
-            var signingAvail = await signingDevice.IsSigningDeviceAvailable().ConfigureAwait(false);
+            var signingAvail = await signingDevice.IsSSCDAvailable().ConfigureAwait(false);
             log += signingAvail ? " Signing device is available." : " Signing device is not available.";
             logger.LogInformation(log);
             receiptResponse.SetFtStateData(new StateDetail() { FailedReceiptCount = queueIt.SSCDFailCount, FailMoment = queueIt.SSCDFailMoment, SigningDeviceAvailable = signingAvail});
 
             return new RequestCommandResponse { ReceiptResponse = receiptResponse };
         }
+
+
     }
 }
