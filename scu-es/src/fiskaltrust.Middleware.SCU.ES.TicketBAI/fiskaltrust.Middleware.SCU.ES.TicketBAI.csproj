@@ -21,6 +21,10 @@
         <PackageReference Include="System.Security.Cryptography.Xml" Version="7.0.1" />
     </ItemGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\Xades.NetCore\FirmaXadesNet\FirmaXadesNet.csproj" />
+    </ItemGroup>
+
     <Target DependsOnTargets="ResolveReferences" Name="CopyProjectReferencesToPackage">
         <ItemGroup>
             <BuildOutputInPackage Include="@(ReferenceCopyLocalPaths-&gt;WithMetadataValue('ReferenceSourceTarget', 'ProjectReference'))" />
