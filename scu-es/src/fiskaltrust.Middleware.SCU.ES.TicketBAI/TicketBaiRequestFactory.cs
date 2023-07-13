@@ -58,6 +58,22 @@ namespace fiskaltrust.Middleware.SCU.ES.TicketBAI
             return doc.OuterXml;
         }
 
+        public string CreateXadesSignedXmlContent<T>(T request, string policyIdentifier, string policyHash, string policyUri)
+        {
+            var namespaceUri = "urn:ticketbai:emision";
+            var prefix = "t";
+            var doc = new XmlDocument();
+            var nav = doc.CreateNavigator();
+            using (var w = nav!.AppendChild())
+            {
+                var namespaces = new XmlSerializerNamespaces();
+                namespaces.Add(prefix, namespaceUri);
+                var ser = new XmlSerializer(typeof(T));
+                ser.Serialize(w, request, namespaces);
+            }
+            return SignXmlContentWithXades(doc.OuterXml, policyIdentifier, policyHash, policyUri);
+        }
+
         public string SignXmlContentWithXades(string xml, string policyIdentifier, string policyHash, string policyUri)
         {
             var xadesService = new XadesService();
