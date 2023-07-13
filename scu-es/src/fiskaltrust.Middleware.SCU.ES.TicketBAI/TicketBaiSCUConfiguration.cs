@@ -10,6 +10,10 @@ namespace fiskaltrust.Middleware.SCU.ES.TicketBAI
         public X509Certificate2 Certificate { get; set; } = null!;
 
         public TicketBaiTerritory TicketBaiTerritory { get; set; }
+
+        public string EmisorNif { get; set; } = null!;
+
+        public string EmisorApellidosNombreRazonSocial { get; set; } = null!;
     }
 
     public class X509Certificate2Converter : JsonConverter<X509Certificate2>

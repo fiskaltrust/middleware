@@ -1,14 +1,22 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
-using fiskaltrust.Middleware.SCU.ES.TicketBAI.Models;
+using fiskaltrust.ifPOS.v1;
 
 namespace fiskaltrust.Middleware.SCU.ES.TicketBAI;
 
 public interface IESSSCD
 {
-    Task<SubmitResponse> SubmitInvoiceAsync(TicketBaiRequest ticketBaiRequest);
+    Task<SubmitResponse> SubmitInvoiceAsync(SubmitInvoiceRequest request);
 
-    string GetRawXml(TicketBaiRequest ticketBaiRequest);
+    string GetRawXml(SubmitInvoiceRequest request);
+}
+
+public class SubmitInvoiceRequest
+{
+    public DateTime InvoiceMoment { get; set; }
+    public string Series { get; set; } = null!;
+    public string InvoiceNumber { get; set; } = null!;
 }
 
 public class SubmitResponse

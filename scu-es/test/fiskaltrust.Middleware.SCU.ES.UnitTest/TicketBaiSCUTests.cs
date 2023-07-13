@@ -1,15 +1,24 @@
 ﻿using System;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace fiskaltrust.Middleware.SCU.ES.UnitTest
 {
     public class TicketBaiSCUTests
     {
+        private readonly ITestOutputHelper _output;
+
+        public TicketBaiSCUTests(ITestOutputHelper output)
+        {
+            _output = output;
+        }
+
         [Fact]
         public async Task SubmitGipuzkoaInvoiceAsync()
         {
@@ -17,14 +26,19 @@ namespace fiskaltrust.Middleware.SCU.ES.UnitTest
             var config = new TicketBaiSCUConfiguration
             {
                 Certificate = cert,
-                TicketBaiTerritory = TicketBaiTerritory.Gipuzkoa
+                TicketBaiTerritory = TicketBaiTerritory.Gipuzkoa,
+                EmisorNif = "B10646545",
+                EmisorApellidosNombreRazonSocial = "CRISTIAN TECH AND CONSULTING S.L."
             };            
             var sut = new TicketBaiSCU(NullLogger<TicketBaiSCU>.Instance, config);
-            var req = TicketBaiDemo.GetTicketBayRequest();
-            req.Factura.CabeceraFactura.SerieFactura = $"T-{DateTime.Today.Ticks}";
-            req.Factura.CabeceraFactura.NumFactura = "1";
-            var response = await sut.SubmitInvoiceAsync(req);
-            response.Should().NotBeNull();
+            var response = await sut.SubmitInvoiceAsync(new SubmitInvoiceRequest
+            {
+                InvoiceMoment = DateTime.UtcNow,
+                Series = $"T-{DateTime.UtcNow.Ticks}",
+                InvoiceNumber = "001"
+            });
+            _output.WriteLine(FormatXml(response.ResponseContent));
+            response.Succeeded.Should().BeTrue(because: response.ResponseContent);
         }
 
         [Fact]
@@ -34,14 +48,19 @@ namespace fiskaltrust.Middleware.SCU.ES.UnitTest
             var config = new TicketBaiSCUConfiguration
             {
                 Certificate = cert,
-                TicketBaiTerritory = TicketBaiTerritory.Araba
+                TicketBaiTerritory = TicketBaiTerritory.Araba,
+                EmisorNif = "B10646545",
+                EmisorApellidosNombreRazonSocial = "CRISTIAN TECH AND CONSULTING S.L."
             };
             var sut = new TicketBaiSCU(NullLogger<TicketBaiSCU>.Instance, config);
-            var req = TicketBaiDemo.GetTicketBayRequest();
-            req.Factura.CabeceraFactura.SerieFactura = $"T-{DateTime.Today.Ticks}";
-            req.Factura.CabeceraFactura.NumFactura = "001";
-            var response = await sut.SubmitInvoiceAsync(req);
-            response.Should().NotBeNull();
+            var response = await sut.SubmitInvoiceAsync(new SubmitInvoiceRequest
+            {
+                InvoiceMoment = DateTime.UtcNow,
+                Series = $"T-{DateTime.UtcNow.Ticks}",
+                InvoiceNumber = "001"
+            });
+            _output.WriteLine(FormatXml(response.ResponseContent));
+            response.Succeeded.Should().BeTrue(because: response.ResponseContent);
         }
 
         [Fact]
@@ -51,14 +70,32 @@ namespace fiskaltrust.Middleware.SCU.ES.UnitTest
             var config = new TicketBaiSCUConfiguration
             {
                 Certificate = cert,
-                TicketBaiTerritory = TicketBaiTerritory.Bizkaia
+                TicketBaiTerritory = TicketBaiTerritory.Araba,
+                EmisorNif = "B10646545",
+                EmisorApellidosNombreRazonSocial = "CRISTIAN TECH AND CONSULTING S.L."
             };
             var sut = new TicketBaiSCU(NullLogger<TicketBaiSCU>.Instance, config);
-            var req = TicketBaiDemo.GetTicketBayRequest();
-            req.Factura.CabeceraFactura.SerieFactura = $"T-{DateTime.Today.Ticks}";
-            req.Factura.CabeceraFactura.NumFactura = "001";
-            var response = await sut.SubmitInvoiceAsync(req);
-            response.Should().NotBeNull();
+            var response = await sut.SubmitInvoiceAsync(new SubmitInvoiceRequest
+            {
+                InvoiceMoment = DateTime.UtcNow,
+                Series = $"T-{DateTime.UtcNow.Ticks}",
+                InvoiceNumber = "001"
+            });
+            _output.WriteLine(FormatXml(response.ResponseContent));
+            response.Succeeded.Should().BeTrue(because: response.ResponseContent);
+        }
+
+        private string FormatXml(string xml)
+        {
+            try
+            {
+                var doc = XDocument.Parse(xml);
+                return doc.ToString();
+            }
+            catch (Exception)
+            {
+                return xml;
+            }
         }
     }
 }
