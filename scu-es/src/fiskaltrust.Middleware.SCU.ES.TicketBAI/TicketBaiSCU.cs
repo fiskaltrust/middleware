@@ -69,4 +69,9 @@ public class TicketBaiSCU : IESSSCD
         var responseContent = await response.Content.ReadAsStringAsync();
         return _ticketBaiRequestFactory.GetResponseFromContent(responseContent);
     }
+
+    public string GetRawXml(TicketBaiRequest ticketBaiRequest)
+    {
+        return _ticketBaiRequestFactory.CreateXadesSignedXmlContent(ticketBaiRequest); 
+    }
 }

@@ -7,6 +7,8 @@ namespace fiskaltrust.Middleware.SCU.ES.TicketBAI;
 public interface IESSSCD
 {
     Task<SubmitResponse> SubmitInvoiceAsync(TicketBaiRequest ticketBaiRequest);
+
+    string GetRawXml(TicketBaiRequest ticketBaiRequest);
 }
 
 public class SubmitResponse
