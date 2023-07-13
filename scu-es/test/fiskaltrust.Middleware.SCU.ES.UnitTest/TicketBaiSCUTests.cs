@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using System.Xml.Linq;
@@ -42,7 +43,18 @@ namespace fiskaltrust.Middleware.SCU.ES.UnitTest
             {
                 InvoiceMoment = DateTime.UtcNow,
                 Series = series,
-                InvoiceNumber = "001"
+                InvoiceNumber = "001",
+                InvoiceLine = new List<InvoiceLine>
+                {
+                    new InvoiceLine
+                    {
+                        VATRate = 21.0m,
+                        Amount = 121,
+                        VATAmount = 21,
+                        Description = "test object",
+                        Quantity = 1
+                    }
+                }
             };
             var response = await sut.SubmitInvoiceAsync(request);
             _output.WriteLine(FormatXml(response.ResponseContent));
@@ -55,7 +67,18 @@ namespace fiskaltrust.Middleware.SCU.ES.UnitTest
                 InvoiceNumber = "002",
                 LastInvoiceMoment = request.LastInvoiceMoment,
                 LastInvoiceNumber = request.InvoiceNumber,
-                LastInvoiceSignature = response.ShortSignatureValue
+                LastInvoiceSignature = response.ShortSignatureValue,
+                InvoiceLine = new List<InvoiceLine>
+                {
+                    new InvoiceLine
+                    {
+                        VATRate = 21.0m,
+                        Amount = 121,
+                        VATAmount = 21,
+                        Description = "test object",
+                        Quantity = 1
+                    }
+                }
             });
 
             _output.WriteLine(FormatXml(response2.ResponseContent));
