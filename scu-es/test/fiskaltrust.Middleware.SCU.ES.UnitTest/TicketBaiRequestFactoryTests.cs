@@ -41,12 +41,13 @@ namespace fiskaltrust.Middleware.SCU.ES.UnitTest
             var cert = new X509Certificate2(@"TestCertificates/autonomo_act.p12", "Iz3np32023", X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet);
             var config = new TicketBaiSCUConfiguration
             {
-                Certificate = cert
+                Certificate = cert,
+                TicketBaiTerritory = TicketBaiTerritory.Bizkaia
             };
             var sut = new TicketBaiRequestFactory(config);
             var content = File.ReadAllText(xmlFile);
             var signedContent = File.ReadAllText(signedXmlFile);
-            var xml = sut.SignXmlContentWithXades(content, Digests.Bizkaia.POLICY_IDENTIFIER, Digests.Bizkaia.POLICY_DIGEST, Digests.Bizkaia.POLICY_IDENTIFIER);
+            var xml = sut.SignXmlContentWithXades(content);
             xml.Should().Be(signedContent);
         }
     }

@@ -86,7 +86,7 @@ public class TicketBaiRequestFactory
         return SignXmlContentWithXades(doc.OuterXml);
     }
 
-    private string SignXmlContentWithXades(string xml)
+    public string SignXmlContentWithXades(string xml)
     {
         var xadesService = new XadesService();
         var parameters = new SignatureParameters
