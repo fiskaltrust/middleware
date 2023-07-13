@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
-using System.Web;
-using fiskaltrust.Middleware.SCU.ES.TicketBAI.Helpers;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI.Models;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI.Territories;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 #pragma warning disable IDE0052
 
@@ -45,7 +45,19 @@ public class TicketBaiSCU : IESSSCD
     public async Task<SubmitResponse> SubmitInvoiceAsync(TicketBaiRequest ticketBaiRequest)
     {
         var content = _ticketBaiRequestFactory.CreateXadesSignedXmlContent(ticketBaiRequest);
-        var response = await _httpClient.PostAsync(_ticketBaiTerritory.SubmitInvoices, new StringContent(content, Encoding.UTF8, "application/xml"));
+        var httpRequestHeaders = new HttpRequestMessage(HttpMethod.Post, new Uri(_ticketBaiTerritory.SandboxEndpoint + _ticketBaiTerritory.SubmitInvoices))
+        {
+            Content = new StringContent(content, Encoding.UTF8, "application/xml")
+        };
+        if(_configuration.TicketBaiTerritory == TicketBaiTerritory.Bizkaia)
+        {
+            httpRequestHeaders.Headers.Add("eus-bizkaia-n3-version", "1.0");
+            httpRequestHeaders.Headers.Add("eus-bizkaia-n3-content-type", "application/xml");
+            // TODO which year needs to be transmitted?
+            httpRequestHeaders.Headers.Add("eus-bizkaia-n3-data", JsonConvert.SerializeObject(Bizkaia.GenerateHeader(ticketBaiRequest.Sujetos.Emisor.NIF, ticketBaiRequest.Sujetos.Emisor.ApellidosNombreRazonSocial, "240", DateTime.UtcNow.Year.ToString())));
+        }
+        
+        var response = await _httpClient.SendAsync(httpRequestHeaders);
         var responseContent = await response.Content.ReadAsStringAsync();
         return _ticketBaiRequestFactory.GetResponseFromContent(responseContent);
     }

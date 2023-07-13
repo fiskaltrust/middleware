@@ -14,7 +14,9 @@ public class Gipuzkoa : ITicketBaiTerritory
 
     public string SandboxEndpoint => "https://tbai-z.prep.gipuzkoa.eus";
 
-    public string QrCodeValidationEndpoint => "https://tbai.prep.gipuzkoa.eus/qr/"; // ?????
+    public string QrCodeValidationEndpoint => "https://tbai.prep.gipuzkoa.eus/qr/"; 
+
+    public string QrCodeSandboxValidationEndpoint => "https://tbai.prep.gipuzkoa.eus/qr/";
 
     public string SubmitInvoices => "/sarrerak/alta";
 

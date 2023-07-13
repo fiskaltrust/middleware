@@ -115,7 +115,7 @@ public class TicketBaiRequestFactory
     public Uri GetQrCodeUri(TicketBaiRequest ticketBaiRequest, TicketBaiResponse ticketBaiResponse)
     {
         var crc8 = new CRC8Calculator();
-        var url = $"{_ticketBaiTerritory.QrCodeValidationEndpoint}?{IdentifierUrl(ticketBaiResponse.Salida.IdentificadorTBAI, ticketBaiRequest)}";
+        var url = $"{_ticketBaiTerritory.QrCodeSandboxValidationEndpoint}?{IdentifierUrl(ticketBaiResponse.Salida.IdentificadorTBAI, ticketBaiRequest)}";
         var cr8 = crc8.ComputeChecksum(url).ToString();
         url += $"&cr={cr8.PadLeft(3, '0')}";
         return new Uri(url);
@@ -157,4 +157,6 @@ public class TicketBaiRequestFactory
             };
         }
     }
+
+
 }

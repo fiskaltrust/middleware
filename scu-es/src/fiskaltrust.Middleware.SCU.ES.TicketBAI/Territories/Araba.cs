@@ -8,17 +8,19 @@ public class Araba : ITicketBaiTerritory
 
     public string Algorithm => "SHA256";
 
-    public string ProdEndpoint => throw new System.NotImplementedException();
+    public string ProdEndpoint => "https://ticketbai.araba.eus/TicketBAI/v1";
 
-    public string SandboxEndpoint => throw new System.NotImplementedException();
+    public string SandboxEndpoint => "https://pruebas-ticketbai.araba.eus/TicketBAI/v1";
 
-    public string QrCodeValidationEndpoint => throw new System.NotImplementedException();
+    public string QrCodeValidationEndpoint => "https://ticketbai.araba.eus/tbai/qrtbai/";
 
-    public string SubmitInvoices => throw new System.NotImplementedException();
+    public string QrCodeSandboxValidationEndpoint => "https://pruebas-ticketbai.araba.eus/tbai/qrtbai/";
 
-    public string CancelInvoices => throw new System.NotImplementedException();
+    public string SubmitInvoices => "/facturas";
 
-    public string SubmitZuzendu => throw new System.NotImplementedException();
+    public string CancelInvoices => "/anulaciones";
 
-    public string CancelZuzendu => throw new System.NotImplementedException();
+    public string SubmitZuzendu => "/facturas/subsanarmodificar";
+
+    public string CancelZuzendu => "/anulaciones/baja";
 }

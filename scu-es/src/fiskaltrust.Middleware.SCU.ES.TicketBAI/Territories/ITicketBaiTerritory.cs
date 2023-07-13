@@ -8,6 +8,7 @@ public interface ITicketBaiTerritory
     string ProdEndpoint { get; }
     string SandboxEndpoint { get; }
     string QrCodeValidationEndpoint { get; }
+    string QrCodeSandboxValidationEndpoint { get; }
     string SubmitInvoices { get; }
     string CancelInvoices { get; }
     string SubmitZuzendu { get; }
