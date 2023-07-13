@@ -22,7 +22,23 @@ public static class TicketBaiDemo
                 ApellidosNombreRazonSocial = "CRISTIAN TECH AND CONSULTING S.L."
             },
             VariosDestinatarios = SiNoType.N,
-            EmitidaPorTercerosODestinatario = EmitidaPorTercerosType.N
+            EmitidaPorTercerosODestinatario = EmitidaPorTercerosType.N,
+            Destinatarios = new List<IDDestinatario>
+            {
+                new IDDestinatario
+                {
+                    ApellidosNombreRazonSocial = "CRISTIAN TECH AND CONSULTING S.L.",
+                    CodigoPostal = "01013",
+                    Direccion  = "",
+                    IDOtro =   new IDOtro
+                    {
+                        CodigoPais = CountryType2.ES,
+                        ID = "",
+                        IDType = IDTypeType.NIF
+                    },
+                    NIF = "B10646545"
+                }
+            }
         };
 
 
