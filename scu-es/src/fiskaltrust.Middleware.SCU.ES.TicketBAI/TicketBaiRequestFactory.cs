@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Security.Cryptography.Xml;
 using System.Text;
@@ -112,7 +113,7 @@ public class TicketBaiRequestFactory
         return Encoding.UTF8.GetString(signedXmlBytes, 0, signedXmlBytes.Length);
     }
 
-    public Uri GetQrCodeUri(TicketBaiRequest ticketBaiRequest, tcketBaiResponse ticketBaiResponse)
+    public Uri GetQrCodeUri(TicketBaiRequest ticketBaiRequest, TicketBaiResponse ticketBaiResponse)
     {
         var crc8 = new CRC8Calculator();
         var url = $"{_ticketBaiTerritory.QrCodeSandboxValidationEndpoint}?{IdentifierUrl(ticketBaiResponse.Salida.IdentificadorTBAI, ticketBaiRequest)}";
@@ -133,7 +134,7 @@ public class TicketBaiRequestFactory
 
     public SubmitResponse GetResponseFromContent(string responseContent, TicketBaiRequest ticketBaiRequest)
     {
-        var ticketBaiResponse = ParseHelpers.ParseXML<tcketBaiResponse>(responseContent) ?? throw new Exception("Something horrible has happened");
+        var ticketBaiResponse = ParseHelpers.ParseXML<TicketBaiResponse>(responseContent) ?? throw new Exception("Something horrible has happened");
         if (ticketBaiResponse.Salida.Estado == "00")
         {
             var identifier = ticketBaiResponse.Salida.IdentificadorTBAI.Split('-');
@@ -143,7 +144,7 @@ public class TicketBaiRequestFactory
                 ExpeditionDate = identifier[2],
                 ShortSignatureValue = identifier[3],
                 Identifier = ticketBaiResponse.Salida.IdentificadorTBAI,
-                Content = responseContent,
+                ResponseContent = responseContent,
                 Succeeded = true,
                 QrCode = GetQrCodeUri(ticketBaiRequest, ticketBaiResponse)
             };
@@ -153,8 +154,11 @@ public class TicketBaiRequestFactory
         {
             return new SubmitResponse
             {
-                Content = responseContent,
-                Succeeded = false
+                ResponseContent = responseContent,
+                Succeeded = false,
+                ErrorCode = ticketBaiResponse.Salida.ResultadosValidacion?.FirstOrDefault()?.Codigo,
+                Description = ticketBaiResponse.Salida.ResultadosValidacion?.FirstOrDefault()?.Descripcion,
+                Explanation = ticketBaiResponse.Salida.ResultadosValidacion?.FirstOrDefault()?.Azalpena,
             };
         }
     }

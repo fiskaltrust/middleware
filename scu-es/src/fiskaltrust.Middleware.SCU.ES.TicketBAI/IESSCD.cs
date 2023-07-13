@@ -13,11 +13,15 @@ public interface IESSSCD
 
 public class SubmitResponse
 {
-    public string? Content { get; set; }
+    public string? RequestContent { get; set; }
+    public string? ResponseContent { get; set; }
     public bool Succeeded { get; set; }
     public Uri? QrCode { get; set; }
     public string? ShortSignatureValue { get; set; }
     public string? ExpeditionDate { get; set; }
     public string? IssuerVatId { get; set; }
     public string? Identifier { get; set; }
+    public string? Explanation { get; set; }
+    public string? Description { get; set; }
+    public string? ErrorCode { get; set; }
 }

@@ -59,7 +59,9 @@ public class TicketBaiSCU : IESSSCD
         
         var response = await _httpClient.SendAsync(httpRequestHeaders);
         var responseContent = await response.Content.ReadAsStringAsync();
-        return _ticketBaiRequestFactory.GetResponseFromContent(responseContent, ticketBaiRequest);
+        var result =  _ticketBaiRequestFactory.GetResponseFromContent(responseContent, ticketBaiRequest);
+        result.RequestContent = content;
+        return result;
     }
 
     public async Task<SubmitResponse> CancelInvoiceAsync(TicketBaiRequest ticketBaiRequest)
@@ -67,7 +69,9 @@ public class TicketBaiSCU : IESSSCD
         var content = _ticketBaiRequestFactory.CreateXadesSignedXmlContent(ticketBaiRequest);
         var response = await _httpClient.PostAsync(_ticketBaiTerritory.CancelInvoices, new StringContent(content, Encoding.UTF8, "application/xml"));
         var responseContent = await response.Content.ReadAsStringAsync();
-        return _ticketBaiRequestFactory.GetResponseFromContent(responseContent, ticketBaiRequest);
+        var result = _ticketBaiRequestFactory.GetResponseFromContent(responseContent, ticketBaiRequest);
+        result.RequestContent = content;
+        return result;
     }
 
     public string GetRawXml(TicketBaiRequest ticketBaiRequest)

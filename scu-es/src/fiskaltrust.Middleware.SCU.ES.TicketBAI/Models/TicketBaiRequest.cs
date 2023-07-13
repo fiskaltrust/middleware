@@ -61,7 +61,7 @@ namespace fiskaltrust.Middleware.SCU.ES.TicketBAI.Models
         [XmlElement("Emisor")]
         public Emisor Emisor { get; set; }
 
-        [XmlArray("Destinatarios")]
+        [XmlArray("Destinatarios", IsNullable = true)]
         [XmlArrayItem("IDDestinatario")]
         public List<IDDestinatario> Destinatarios { get; set; }
 
