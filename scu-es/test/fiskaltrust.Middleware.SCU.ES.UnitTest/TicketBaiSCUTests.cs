@@ -20,7 +20,9 @@ namespace fiskaltrust.Middleware.SCU.ES.UnitTest
                 Certificate = cert
             };            
             var sut = new TicketBaiSCU(NullLogger<TicketBaiSCU>.Instance, config);
-            var response = await sut.SubmitInvoiceAsync(TicketBaiDemo.GetTicketBayRequest());
+            var req = TicketBaiDemo.GetTicketBayRequest();
+            req.Factura.CabeceraFactura.NumFactura = "002";
+            var response = await sut.SubmitInvoiceAsync(req);
             response.Should().NotBeNull();
         }
     }
