@@ -34,22 +34,6 @@ public class InvoiceLine
     public decimal Amount { get; set; }
     public decimal VATAmount { get; set; }
     public decimal VATRate { get; set; }
-    public InvoiceLineType LineType { get; set; }
-    public InvoiceSystemType SystemType { get; set; }
-}
-
-public enum InvoiceLineType
-{
-    NATIONAL_OR_SIMPLIFIED,
-    INTERNATIONAL_GOOD,
-    INTERNATIONAL_SERVICE
-}
-
-public enum InvoiceSystemType
-{
-    NATIONAL_OR_SIMPLIFIED,
-    INTERNATIONAL_GOOD,
-    INTERNATIONAL_SERVICE
 }
 
 public class SubmitResponse

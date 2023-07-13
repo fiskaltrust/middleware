@@ -20,6 +20,7 @@ public class TicketBaiSCU : IESSSCD
     private readonly TicketBaiRequestFactory _ticketBaiRequestFactory;
 
     private readonly HttpClient _httpClient;
+    private readonly TicketBaiFactory _ticketBaiFactory;
     private readonly ILogger<TicketBaiSCU> _logger;
     private readonly ITicketBaiTerritory _ticketBaiTerritory;
 
@@ -43,13 +44,12 @@ public class TicketBaiSCU : IESSSCD
         {
             BaseAddress = new Uri(_ticketBaiTerritory.SandboxEndpoint)
         };
+        _ticketBaiFactory = new TicketBaiFactory(configuration);
     }
 
     public async Task<SubmitResponse> SubmitInvoiceAsync(SubmitInvoiceRequest request)
     {
-        var ticketBaiRequest = ConvertTo(request);
-   
-
+        var ticketBaiRequest = _ticketBaiFactory.ConvertTo(request);
         var content = _ticketBaiRequestFactory.CreateXadesSignedXmlContent(ticketBaiRequest);
         var httpRequestHeaders = new HttpRequestMessage(HttpMethod.Post, new Uri(_ticketBaiTerritory.SandboxEndpoint + _ticketBaiTerritory.SubmitInvoices))
         {
@@ -72,7 +72,7 @@ public class TicketBaiSCU : IESSSCD
 
     public async Task<SubmitResponse> CancelInvoiceAsync(SubmitInvoiceRequest request)
     {
-        var ticketBaiRequest = ConvertTo(request);
+        var ticketBaiRequest = _ticketBaiFactory.ConvertTo(request);
         var content = _ticketBaiRequestFactory.CreateXadesSignedXmlContent(ticketBaiRequest);
         var response = await _httpClient.PostAsync(_ticketBaiTerritory.CancelInvoices, new StringContent(content, Encoding.UTF8, "application/xml"));
         var responseContent = await response.Content.ReadAsStringAsync();
@@ -83,7 +83,7 @@ public class TicketBaiSCU : IESSSCD
 
     public string GetRawXml(SubmitInvoiceRequest ticketBaiRequest)
     {
-        return _ticketBaiRequestFactory.CreateXadesSignedXmlContent(ConvertTo(ticketBaiRequest));
+        return _ticketBaiRequestFactory.CreateXadesSignedXmlContent(_ticketBaiFactory.ConvertTo(ticketBaiRequest));
     }
 
 }
