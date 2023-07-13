@@ -2,7 +2,7 @@
 using System.Xml;
 using System.Xml.Serialization;
 
-namespace fiskaltrust.Middleware.SCU.ES.TicketBAI
+namespace fiskaltrust.Middleware.SCU.ES.TicketBAI.Helpers
 {
     public static class ParseHelpers
     {

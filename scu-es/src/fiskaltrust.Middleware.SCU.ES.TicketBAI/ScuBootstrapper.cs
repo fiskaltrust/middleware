@@ -15,6 +15,6 @@ public class ScuBootstrapper : IMiddlewareBootstrapper
     {
         services.AddSingleton(JsonConvert.DeserializeObject<TicketBaiSCUConfiguration>(JsonConvert.SerializeObject(Configuration)));
         services.AddScoped<TicketBaiRequestFactory>();
-        // services.AddScoped<IESSSCD, TicketBaiSCU>();
+        services.AddScoped<IESSSCD, TicketBaiSCU>();
     }
 }

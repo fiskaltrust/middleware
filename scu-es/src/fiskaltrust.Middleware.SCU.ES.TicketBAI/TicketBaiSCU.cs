@@ -1,152 +1,60 @@
 ﻿using System;
-using System.IO;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web;
-using System.Xml;
-using System.Xml.Serialization;
+using fiskaltrust.Middleware.SCU.ES.TicketBAI.Helpers;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI.Models;
+using fiskaltrust.Middleware.SCU.ES.TicketBAI.Territories;
 using Microsoft.Extensions.Logging;
+
+#pragma warning disable IDE0052
 
 namespace fiskaltrust.Middleware.SCU.ES.TicketBAI;
 
-public sealed class TicketBaiSCU //: IESSSCD 
+public class TicketBaiSCU : IESSSCD 
 {
     private readonly TicketBaiSCUConfiguration _configuration;
     private readonly TicketBaiRequestFactory _ticketBaiRequestFactory;
     private readonly HttpClient _httpClient;
     private readonly ILogger<TicketBaiSCU> _logger;
+    private readonly ITicketBaiTerritory _ticketBaiTerritory;
 
     public TicketBaiSCU(ILogger<TicketBaiSCU> logger, TicketBaiSCUConfiguration configuration)
     {
         _logger = logger;
         _configuration = configuration;
         _ticketBaiRequestFactory = new TicketBaiRequestFactory(configuration);
+        _ticketBaiTerritory = configuration.TicketBaiTerritory switch
+        {
+            TicketBaiTerritory.Araba => new Araba(),
+            TicketBaiTerritory.Bizkaia => new Bizkaia(),
+            TicketBaiTerritory.Gipuzkoa => new Gipuzkoa(),
+            _ => throw new Exception("Not supported"),
+        };
+
         var handler = new HttpClientHandler();
         handler.ClientCertificates.Add(_configuration.Certificate);
+
         _httpClient = new HttpClient(handler)
         {
-            BaseAddress = new Uri(Digests.Gipuzkoa.SANDBOX_ENDPOINT)
+            BaseAddress = new Uri(_ticketBaiTerritory.SandboxEndpoint)
         };
     }
 
-    public async Task<TicketBaiResult> SubmitInvoiceAsync(TicketBaiRequest ticketBaiRequest)
+    public async Task<SubmitResponse> SubmitInvoiceAsync(TicketBaiRequest ticketBaiRequest)
     {
-        var content = _ticketBaiRequestFactory.CreateXadesSignedXmlContent(ticketBaiRequest, Digests.Gipuzkoa.POLICY_IDENTIFIER, Digests.Gipuzkoa.POLICY_DIGEST, Digests.Gipuzkoa.POLICY_IDENTIFIER);
-        var response = await _httpClient.PostAsync(Digests.Gipuzkoa.SUBMIT_INVOICES, new StringContent(content, Encoding.UTF8, "application/xml"));
-        if (!response.IsSuccessStatusCode)
-        {
-            _logger.LogInformation("Successful");
-        }
+        var content = _ticketBaiRequestFactory.CreateXadesSignedXmlContent(ticketBaiRequest);
+        var response = await _httpClient.PostAsync(_ticketBaiTerritory.SubmitInvoices, new StringContent(content, Encoding.UTF8, "application/xml"));
         var responseContent = await response.Content.ReadAsStringAsync();
-        var ticketBaiResponse = ParseHelpers.ParseXML<TicketBaiResponse>(responseContent) ?? throw new Exception("Something horrible has happened");
-        if (ticketBaiResponse.Salida.Estado == "00")
-        {
-            var identifier = ticketBaiResponse.Salida.IdentificadorTBAI.Split('-');
-            var result =  new TicketBaiResult
-            {
-                IssuerVatId = identifier[1],
-                ExpeditionDate = identifier[2],
-                ShortSignatureValue = identifier[3],
-                Identifier = ticketBaiResponse.Salida.IdentificadorTBAI,
-                Content = responseContent,
-                Succeeded = true,
-            };
-            var crc8 = new CRC8Calculator();
-            var url = $"{GetTerritoryUrl()}?{IdentifierUrl(ticketBaiResponse.Salida.IdentificadorTBAI, ticketBaiRequest)}";
-            var cr8 = crc8.ComputeChecksum(url).ToString();
-            url += $"&cr={cr8.PadLeft(3, '0')}";
-            result.QrCode = new Uri(url);
-            return result;
-        }
-        else
-        {
-            return new TicketBaiResult
-            {
-                Content = responseContent,
-                Succeeded = false
-            };
-        }
+        return _ticketBaiRequestFactory.GetResponseFromContent(responseContent);
     }
 
-    private string IdentifierUrl(string ticketBaiIdentifier, TicketBaiRequest ticketBaiRequest)
+    public async Task<SubmitResponse> CancelInvoiceAsync(TicketBaiRequest ticketBaiRequest)
     {
-        return string.Format("id={0}&s={1}&nf={2}&i={3}",
-            HttpUtility.UrlEncode(ticketBaiIdentifier),
-            HttpUtility.UrlEncode(ticketBaiRequest.Factura.CabeceraFactura.SerieFactura),
-            HttpUtility.UrlEncode(ticketBaiRequest.Factura.CabeceraFactura.NumFactura),
-            HttpUtility.UrlEncode(ticketBaiRequest.Factura.DatosFactura.ImporteTotalFactura)
-        ); 
+        var content = _ticketBaiRequestFactory.CreateXadesSignedXmlContent(ticketBaiRequest);
+        var response = await _httpClient.PostAsync(_ticketBaiTerritory.CancelInvoices, new StringContent(content, Encoding.UTF8, "application/xml"));
+        var responseContent = await response.Content.ReadAsStringAsync();
+        return _ticketBaiRequestFactory.GetResponseFromContent(responseContent);
     }
-
-public async Task<string> CancelInvoiceAsync(TicketBaiRequest ticketBaiRequest)
-    {
-        var content = _ticketBaiRequestFactory.CreateXadesSignedXmlContent(ticketBaiRequest, Digests.Gipuzkoa.POLICY_IDENTIFIER, Digests.Gipuzkoa.POLICY_DIGEST, Digests.Gipuzkoa.POLICY_IDENTIFIER);
-        var response = await _httpClient.PostAsync(Digests.Gipuzkoa.CANCEL_INVOICES, new StringContent(content, Encoding.UTF8, "application/xml"));
-        if (response.IsSuccessStatusCode)
-        {
-            _logger.LogInformation("Successful");
-        }
-        return await response.Content.ReadAsStringAsync();
-    }
-
-
-    public Uri GetTerritoryUrl()
-    {
-        return new Uri("https://tbai.prep.gipuzkoa.eus/qr/");
-    }
-}
-
-public class CRC8Calculator
-{
-    private readonly byte[] table = new byte[256];
-
-    public CRC8Calculator()
-    {
-        GenerateTable();
-    }
-
-    public byte ComputeChecksum(string input)
-    {
-        var data = Encoding.UTF8.GetBytes(input);
-        byte crc = 0;
-        foreach (var b in data)
-        {
-            crc = table[crc ^ b];
-        }
-        return crc;
-    }
-
-    private void GenerateTable()
-    {
-        byte polynomial = 0x07;
-        for (var i = 0; i < 256; i++)
-        {
-            var temp = (byte) i;
-            for (byte j = 0; j < 8; j++)
-            {
-                if ((temp & 0x80) != 0)
-                {
-                    temp = (byte) ((temp << 1) ^ polynomial);
-                }
-                else
-                {
-                    temp <<= 1;
-                }
-            }
-            table[i] = temp;
-        }
-    }
-}
-
-public class TicketBaiResult
-{
-    public string? Content { get; set; }
-    public bool Succeeded { get; set; }
-    public Uri? QrCode { get; set; }
-    public string? ShortSignatureValue { get; set; }
-    public string? ExpeditionDate { get; set; }
-    public string? IssuerVatId { get; set; }
-    public string? Identifier { get; set; }
 }

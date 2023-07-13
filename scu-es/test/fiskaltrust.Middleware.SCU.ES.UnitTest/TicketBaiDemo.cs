@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI.Models;
 
-namespace fiskaltrust.Middleware.SCU.ES.TicketBAI;
+namespace fiskaltrust.Middleware.SCU.ES.UnitTest;
 
 public static class TicketBaiDemo
 {

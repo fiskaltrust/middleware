@@ -8,6 +8,8 @@ namespace fiskaltrust.Middleware.SCU.ES.TicketBAI
     {
         [JsonConverter(typeof(X509Certificate2Converter))]
         public X509Certificate2 Certificate { get; set; } = null!;
+
+        public TicketBaiTerritory TicketBaiTerritory { get; set; }
     }
 
     public class X509Certificate2Converter : JsonConverter<X509Certificate2>
@@ -17,5 +19,12 @@ namespace fiskaltrust.Middleware.SCU.ES.TicketBAI
 
         public override void WriteJson(JsonWriter writer, X509Certificate2? value, JsonSerializer serializer)
             => writer.WriteValue(Convert.ToBase64String(value!.Export(X509ContentType.Pfx)));
+    }
+
+    public enum TicketBaiTerritory
+    {
+        Araba,
+        Bizkaia,
+        Gipuzkoa
     }
 }
