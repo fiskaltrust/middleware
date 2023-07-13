@@ -29,16 +29,37 @@ namespace fiskaltrust.Middleware.SCU.ES.UnitTest
                 TicketBaiTerritory = TicketBaiTerritory.Gipuzkoa,
                 EmisorNif = "B10646545",
                 EmisorApellidosNombreRazonSocial = "CRISTIAN TECH AND CONSULTING S.L."
-            };            
+            };
+            await PerformTicketBaiRequestChain(config);
+
+        }
+
+        private async Task PerformTicketBaiRequestChain(TicketBaiSCUConfiguration config)
+        {
             var sut = new TicketBaiSCU(NullLogger<TicketBaiSCU>.Instance, config);
-            var response = await sut.SubmitInvoiceAsync(new SubmitInvoiceRequest
+            var series = $"T-{DateTime.UtcNow.Ticks}";
+            var request = new SubmitInvoiceRequest
             {
                 InvoiceMoment = DateTime.UtcNow,
-                Series = $"T-{DateTime.UtcNow.Ticks}",
+                Series = series,
                 InvoiceNumber = "001"
-            });
+            };
+            var response = await sut.SubmitInvoiceAsync(request);
             _output.WriteLine(FormatXml(response.ResponseContent));
             response.Succeeded.Should().BeTrue(because: response.ResponseContent);
+
+            var response2 = await sut.SubmitInvoiceAsync(new SubmitInvoiceRequest
+            {
+                InvoiceMoment = DateTime.UtcNow,
+                Series = series,
+                InvoiceNumber = "002",
+                LastInvoiceMoment = request.LastInvoiceMoment,
+                LastInvoiceNumber = request.InvoiceNumber,
+                LastInvoiceSignature = response.ShortSignatureValue
+            });
+
+            _output.WriteLine(FormatXml(response2.ResponseContent));
+            response2.Succeeded.Should().BeTrue(because: response2.ResponseContent);
         }
 
         [Fact]
@@ -52,15 +73,7 @@ namespace fiskaltrust.Middleware.SCU.ES.UnitTest
                 EmisorNif = "B10646545",
                 EmisorApellidosNombreRazonSocial = "CRISTIAN TECH AND CONSULTING S.L."
             };
-            var sut = new TicketBaiSCU(NullLogger<TicketBaiSCU>.Instance, config);
-            var response = await sut.SubmitInvoiceAsync(new SubmitInvoiceRequest
-            {
-                InvoiceMoment = DateTime.UtcNow,
-                Series = $"T-{DateTime.UtcNow.Ticks}",
-                InvoiceNumber = "001"
-            });
-            _output.WriteLine(FormatXml(response.ResponseContent));
-            response.Succeeded.Should().BeTrue(because: response.ResponseContent);
+            await PerformTicketBaiRequestChain(config);
         }
 
         [Fact]
@@ -74,15 +87,7 @@ namespace fiskaltrust.Middleware.SCU.ES.UnitTest
                 EmisorNif = "B10646545",
                 EmisorApellidosNombreRazonSocial = "CRISTIAN TECH AND CONSULTING S.L."
             };
-            var sut = new TicketBaiSCU(NullLogger<TicketBaiSCU>.Instance, config);
-            var response = await sut.SubmitInvoiceAsync(new SubmitInvoiceRequest
-            {
-                InvoiceMoment = DateTime.UtcNow,
-                Series = $"T-{DateTime.UtcNow.Ticks}",
-                InvoiceNumber = "001"
-            });
-            _output.WriteLine(FormatXml(response.ResponseContent));
-            response.Succeeded.Should().BeTrue(because: response.ResponseContent);
+            await PerformTicketBaiRequestChain(config);
         }
 
         private string FormatXml(string xml)

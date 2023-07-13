@@ -14,9 +14,42 @@ public interface IESSSCD
 
 public class SubmitInvoiceRequest
 {
+    public string ftCashBoxIdentification { get; set; } = null!;
+
     public DateTime InvoiceMoment { get; set; }
     public string Series { get; set; } = null!;
     public string InvoiceNumber { get; set; } = null!;
+
+    public string? LastInvoiceNumber { get; set; }
+    public DateTime? LastInvoiceMoment { get; set; }
+    public string? LastInvoiceSignature { get; set; }
+
+    public List<InvoiceLine> InvoiceLine { get; set; } = new List<InvoiceLine>();
+}
+
+public class InvoiceLine
+{
+    public string Description { get; set; } = null!;
+    public decimal Quantity { get; set; }
+    public decimal Amount { get; set; }
+    public decimal VATAmount { get; set; }
+    public decimal VATRate { get; set; }
+    public InvoiceLineType LineType { get; set; }
+    public InvoiceSystemType SystemType { get; set; }
+}
+
+public enum InvoiceLineType
+{
+    NATIONAL_OR_SIMPLIFIED,
+    INTERNATIONAL_GOOD,
+    INTERNATIONAL_SERVICE
+}
+
+public enum InvoiceSystemType
+{
+    NATIONAL_OR_SIMPLIFIED,
+    INTERNATIONAL_GOOD,
+    INTERNATIONAL_SERVICE
 }
 
 public class SubmitResponse

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -17,8 +18,7 @@ public class TicketBaiSCU : IESSSCD
 {
     private readonly TicketBaiSCUConfiguration _configuration;
     private readonly TicketBaiRequestFactory _ticketBaiRequestFactory;
-    private readonly Sujetos _sujetos;
-    private readonly Cabecera _cabacera;
+
     private readonly HttpClient _httpClient;
     private readonly ILogger<TicketBaiSCU> _logger;
     private readonly ITicketBaiTerritory _ticketBaiTerritory;
@@ -38,20 +38,7 @@ public class TicketBaiSCU : IESSSCD
 
         var handler = new HttpClientHandler();
         handler.ClientCertificates.Add(_configuration.Certificate);
-        _sujetos = new Sujetos
-        {
-            Emisor = new Emisor
-            {
-                NIF = _configuration.EmisorNif,
-                ApellidosNombreRazonSocial = _configuration.EmisorApellidosNombreRazonSocial
-            },
-            VariosDestinatarios = SiNoType.N,
-            EmitidaPorTercerosODestinatario = EmitidaPorTercerosType.N
-        };
-        _cabacera = new Cabecera
-        {
-            IDVersionTBAI = IDVersionTicketBaiType.Item1Period2
-        };
+
         _httpClient = new HttpClient(handler)
         {
             BaseAddress = new Uri(_ticketBaiTerritory.SandboxEndpoint)
@@ -99,96 +86,4 @@ public class TicketBaiSCU : IESSSCD
         return _ticketBaiRequestFactory.CreateXadesSignedXmlContent(ConvertTo(ticketBaiRequest));
     }
 
-    public TicketBaiRequest ConvertTo(SubmitInvoiceRequest request)
-    {
-        var ticketBaiRequest = new TicketBaiRequest
-        {
-            Cabecera = _cabacera,
-            Sujetos = _sujetos,
-            HuellaTBAI = new HuellaTBAI
-            {
-                EncadenamientoFacturaAnterior = new EncadenamientoFacturaAnteriorType
-                {
-                    SerieFacturaAnterior = "CTS2-2023",
-                    NumFacturaAnterior = "0002",
-                    FechaExpedicionFacturaAnterior = "26-06-2023",
-                    SignatureValueFirmaFacturaAnterior = "VJzuyDtdogaJ7RgGvSSqpw17xj8QUVUp/9wOlWn8W+iCMRQ1u6HC+XuRkftbec/oD0ryoyp1iB1feZuR2hzEPTZIS49rv2atWlON"
-                },
-                Software = new SoftwareFacturacionType
-                {
-                    LicenciaTBAI = "TBAIGIPRE00000001035",
-                    EntidadDesarrolladora = new EntidadDesarrolladoraType
-                    {
-                        NIF = "B10646545"
-                    },
-                    Nombre = "Incodebiz",
-                    Version = "1.0"
-                },
-                NumSerieDispositivo = "GP4FC5J"
-            },
-            Factura = new Factura
-            {
-                CabeceraFactura = new CabeceraFacturaType
-                {
-                    SerieFactura = request.Series,
-                    NumFactura = request.InvoiceNumber,
-                    FechaExpedicionFactura = request.InvoiceMoment.ToString("dd-MM-yyyy"),
-                    HoraExpedicionFactura = request.InvoiceMoment.ToString("HH:mm:ss"),
-                    FacturaSimplificada = SiNoType.S,
-                    FacturaEmitidaSustitucionSimplificada = SiNoType.N,
-                },
-                DatosFactura = new DatosFacturaType
-                {
-                    FechaOperacion = "15-10-2021",
-                    DescripcionFactura = "Servicios Prueba",
-                    DetallesFactura = new List<IDDetalleFacturaType> {
-                          new IDDetalleFacturaType
-                                    {
-                                        DescripcionDetalle = "test object",
-                                        Cantidad = "1",
-                                        ImporteUnitario = "100.00",
-                                        Descuento = "0",
-                                        ImporteTotal = "121.00"
-                                    }
-                        },
-                    ImporteTotalFactura = "121.00",
-                    Claves = new List<IDClaveType>
-                        {
-                            new IDClaveType
-                            {
-                                ClaveRegimenIvaOpTrascendencia = IdOperacionesTrascendenciaTributariaType.Item01
-                            }
-                        }
-                },
-                TipoDesglose = new TipoDesgloseType
-                {
-                    DesgloseFactura = new DesgloseFacturaType
-                    {
-                        Sujeta = new SujetaType
-                        {
-                            NoExenta = new List<DetalleNoExentaType>
-                                 {
-                                     new DetalleNoExentaType
-                                     {
-                                         TipoNoExenta = TipoOperacionSujetaNoExentaType.S1,
-                                         DesgloseIVA = new List<DetalleIVAType>
-                                         {
-                                             new DetalleIVAType
-                                             {
-                                                 BaseImponible = "100.0",
-                                                 TipoImpositivo = "21.0",
-                                                 CuotaImpuesto = "21.0",
-                                                 OperacionEnRecargoDeEquivalenciaORegimenSimplificado = SiNoType.N
-                                             }
-                                         }
-                                     }
-                                 }
-                        }
-                    }
-                }
-            }
-        };
-
-        return ticketBaiRequest;
-    }
 }
