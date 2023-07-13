@@ -46,7 +46,7 @@ namespace fiskaltrust.Middleware.SCU.ES.UnitTest
             var sut = new TicketBaiRequestFactory(config);
             var content = File.ReadAllText(xmlFile);
             var signedContent = File.ReadAllText(signedXmlFile);
-            var xml = sut.SignXmlContentWithXades(content);
+            var xml = sut.SignXmlContentWithXades(content, Digests.Bizkaia.POLICY_IDENTIFIER, Digests.Bizkaia.POLICY_DIGEST, Digests.Bizkaia.POLICY_IDENTIFIER);
             xml.Should().Be(signedContent);
         }
     }
