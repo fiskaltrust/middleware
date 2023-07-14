@@ -180,6 +180,7 @@ namespace fiskaltrust.Middleware.Queue
                 0x4652000000000000 => "FR",
                 0x4D45000000000000 => "ME",
                 0x4954000000000000 => "IT",
+                0x4553000000000000 => "ES",
                 _ => "AT",
             };
         }

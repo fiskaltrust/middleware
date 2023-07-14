@@ -4,6 +4,8 @@ using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Interfaces;
 using Microsoft.Extensions.Logging;
 
+#pragma warning disable
+
 namespace fiskaltrust.Middleware.Localization.QueueES
 {
     public class JournalProcessorES : IMarketSpecificJournalProcessor
