@@ -4,7 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.de;
-using fiskaltrust.Middleware.Contracts;
+using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Localization.QueueDE.Extensions;
 using fiskaltrust.Middleware.Localization.QueueDE.Models;
 using fiskaltrust.Middleware.Localization.QueueDE.RequestCommands;

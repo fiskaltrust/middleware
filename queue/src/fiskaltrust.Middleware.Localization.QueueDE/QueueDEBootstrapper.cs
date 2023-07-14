@@ -1,6 +1,6 @@
 ﻿using fiskaltrust.ifPOS.v1.de;
 using fiskaltrust.Middleware.Abstractions;
-using fiskaltrust.Middleware.Contracts;
+using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueDE.Extensions;

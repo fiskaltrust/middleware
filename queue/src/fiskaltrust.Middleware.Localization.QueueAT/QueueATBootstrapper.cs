@@ -1,5 +1,5 @@
 ﻿using System;
-using fiskaltrust.Middleware.Contracts;
+using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Localization.QueueAT.RequestCommands;
 using fiskaltrust.Middleware.Localization.QueueAT.RequestCommands.Factories;

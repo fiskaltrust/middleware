@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.Middleware.Contracts;
 using fiskaltrust.Middleware.Localization.QueueAT.Models;
 using fiskaltrust.Middleware.Localization.QueueAT.RequestCommands;
 using fiskaltrust.Middleware.Localization.QueueAT.RequestCommands.Factories;
 using fiskaltrust.storage.V0;
 using fiskaltrust.Middleware.Localization.QueueAT.Extensions;
 using fiskaltrust.Middleware.Localization.QueueAT.Helpers;
+using fiskaltrust.Middleware.Contracts.Interfaces;
 
 namespace fiskaltrust.Middleware.Localization.QueueAT
 {

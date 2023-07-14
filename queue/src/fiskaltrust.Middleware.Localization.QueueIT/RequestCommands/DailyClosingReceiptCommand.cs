@@ -1,17 +1,17 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.errors;
 using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.Contracts.Constants;
-using fiskaltrust.Middleware.Contracts.Exceptions;
+using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Contracts.RequestCommands;
 using fiskaltrust.Middleware.Localization.QueueIT.Extensions;
 using fiskaltrust.Middleware.Localization.QueueIT.Factories;
 using fiskaltrust.Middleware.Localization.QueueIT.Services;
 using fiskaltrust.storage.V0;
+using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 {
@@ -24,8 +24,10 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
         private readonly SignatureItemFactoryIT _signatureItemFactoryIT;
         private readonly IMiddlewareJournalITRepository _journalITRepository;
         private readonly IITSSCD _client;
+        private readonly ISSCD _signingDevice;
+        private readonly ILogger<DailyClosingReceiptCommand> _logger;
 
-        public DailyClosingReceiptCommand(SignatureItemFactoryIT signatureItemFactoryIT, ICountrySpecificSettings countrySpecificSettings, IITSSCDProvider itIsscdProvider, IMiddlewareJournalITRepository journalITRepository)
+        public DailyClosingReceiptCommand(ISSCD signingDevice, ILogger<DailyClosingReceiptCommand> logger, SignatureItemFactoryIT signatureItemFactoryIT, ICountrySpecificSettings countrySpecificSettings, IITSSCDProvider itIsscdProvider, IMiddlewareJournalITRepository journalITRepository)
         {
             _countrySpecificQueueRepository = countrySpecificSettings.CountrySpecificQueueRepository;
             _client = itIsscdProvider.Instance;
@@ -33,6 +35,8 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
             _signatureItemFactoryIT = signatureItemFactoryIT;
             _countryspecificSettings = countrySpecificSettings;
             _countryBaseState = countrySpecificSettings.CountryBaseState;
+            _signingDevice = signingDevice;
+            _logger = logger;
         }
 
         protected override async Task<string> GetCashboxIdentificationAsync(Guid ftQueueId)
@@ -51,7 +55,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
             {
                 if (response.SSCDErrorInfo.Type == SSCDErrorType.Connection)
                 {
-                    return await ProcessFailedReceiptRequest(_countryspecificSettings, queue, queueItem, request).ConfigureAwait(false);
+                    return await ProcessFailedReceiptRequest(_signingDevice, _logger, _countryspecificSettings, queue, queueItem, request).ConfigureAwait(false);
                 }
                 else
                 {

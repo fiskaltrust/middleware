@@ -4,7 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.Middleware.Contracts;
+using fiskaltrust.Middleware.Contracts.Extensions;
+using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Contracts.Models;
 
 namespace fiskaltrust.Middleware.Queue

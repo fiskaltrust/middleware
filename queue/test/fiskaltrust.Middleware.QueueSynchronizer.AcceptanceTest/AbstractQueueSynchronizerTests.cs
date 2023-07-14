@@ -4,7 +4,7 @@ using FluentAssertions;
 using fiskaltrust.ifPOS.v1;
 using Moq;
 using System.Collections.Generic;
-using fiskaltrust.Middleware.Contracts;
+using fiskaltrust.Middleware.Contracts.Interfaces;
 
 namespace fiskaltrust.Middleware.QueueSynchronizer.AcceptanceTest
 {

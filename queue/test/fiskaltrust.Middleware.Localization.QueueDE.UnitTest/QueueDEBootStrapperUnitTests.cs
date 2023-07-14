@@ -7,8 +7,8 @@ using Xunit;
 using Newtonsoft.Json;
 using Microsoft.Extensions.DependencyInjection;
 using fiskaltrust.Middleware.Localization.QueueDE.Transactions;
-using fiskaltrust.Middleware.Contracts;
 using fiskaltrust.Middleware.Contracts.Models;
+using fiskaltrust.Middleware.Contracts.Interfaces;
 
 namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
 {

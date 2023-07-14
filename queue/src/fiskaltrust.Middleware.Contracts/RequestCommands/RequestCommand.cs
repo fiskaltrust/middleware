@@ -2,8 +2,10 @@
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Constants;
-using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Contracts.Extensions;
+using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.storage.V0;
+using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Contracts.RequestCommands
 {
@@ -46,7 +48,7 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
             };
         }
 
-        public async Task<RequestCommandResponse> ProcessFailedReceiptRequest(ICountrySpecificSettings countryspecificSettings, ftQueue queue, ftQueueItem queueItem, ReceiptRequest request)
+        public async Task<RequestCommandResponse> ProcessFailedReceiptRequest(ISSCD signingDevice, ILogger logger, ICountrySpecificSettings countryspecificSettings, ftQueue queue, ftQueueItem queueItem, ReceiptRequest request)
         {
             var queueIt = await countryspecificSettings.CountrySpecificQueueRepository.GetQueueAsync(queue.ftQueueId).ConfigureAwait(false);
             if (queueIt.SSCDFailCount == 0)
@@ -57,17 +59,25 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
             queueIt.SSCDFailCount++;
             await countryspecificSettings.CountrySpecificQueueRepository.InsertOrUpdateQueueAsync(queueIt).ConfigureAwait(false);
             var receiptResponse = CreateReceiptResponse(queue, request, queueItem, queueIt.CashBoxIdentification, countryspecificSettings.CountryBaseState);
-            receiptResponse.ftStateData = $"Queue is in failed mode. SSCDFailMoment: {queueIt.SSCDFailMoment}, SSCDFailCount: {queueIt.SSCDFailCount}.";
+            var log = $"Queue is in failed mode. SSCDFailMoment: {queueIt.SSCDFailMoment}, SSCDFailCount: {queueIt.SSCDFailCount}.";
             if (countryspecificSettings.ResendFailedReceipts)
             {
                 receiptResponse.ftState = countryspecificSettings.CountryBaseState | 0x8;
-                receiptResponse.ftStateData += " When connection is established use zeroreceipt for subsequent booking!";
+                log += " When connection is established use zeroreceipt for subsequent booking!";
             }
             else
             {
                 receiptResponse.ftState = countryspecificSettings.CountryBaseState | 0x2;
             }
+
+            var signingAvail = await signingDevice.IsSSCDAvailable().ConfigureAwait(false);
+            log += signingAvail ? " Signing device is available." : " Signing device is not available.";
+            logger.LogInformation(log);
+            receiptResponse.SetFtStateData(new StateDetail() { FailedReceiptCount = queueIt.SSCDFailCount, FailMoment = queueIt.SSCDFailMoment, SigningDeviceAvailable = signingAvail});
+
             return new RequestCommandResponse { ReceiptResponse = receiptResponse };
         }
+
+
     }
 }
