@@ -42,6 +42,66 @@ public class TicketBaiFactory
 
     public TicketBaiRequest ConvertTo(SubmitInvoiceRequest request)
     {
+        var ticketBaiRequest = new TicketBaiRequest
+        {
+            Cabecera = _cabacera,
+            Sujetos = _sujetos,
+            HuellaTBAI = CreateHuellTBai(request),
+            Factura = CreateFactura(request)
+        };
+        return ticketBaiRequest;
+    }
+
+    private static Factura CreateFactura(SubmitInvoiceRequest request)
+    {
+        var facturoa = new Factura
+        {
+            CabeceraFactura = new CabeceraFacturaType
+            {
+                SerieFactura = request.Series,
+                NumFactura = request.InvoiceNumber,
+                FechaExpedicionFactura = request.InvoiceMoment.ToString("dd-MM-yyyy"),
+                HoraExpedicionFactura = request.InvoiceMoment.ToString("HH:mm:ss"),
+                FacturaSimplificada = SiNoType.S,
+                FacturaEmitidaSustitucionSimplificada = SiNoType.N,
+            },
+            DatosFactura = new DatosFacturaType
+            {
+                FechaOperacion = request.InvoiceMoment.ToString("dd-MM-yyyy"), //TODO: needs to be set if issuing the invoice was different from the actual date
+                DescripcionFactura = "Invoice", //TODO: Can we hardcode this value?
+                DetallesFactura = CreateFacturas(request),
+                ImporteTotalFactura = request.InvoiceLine.Sum(x => x.Amount).ToString("#.##"),
+                Claves = new List<IDClaveType>
+                        {
+                            new IDClaveType
+                            {
+                                ClaveRegimenIvaOpTrascendencia = IdOperacionesTrascendenciaTributariaType.Item51
+                            }
+                        }
+            },
+            TipoDesglose = new TipoDesgloseType
+            {
+                DesgloseFactura = new DesgloseFacturaType
+                {
+                    Sujeta = new SujetaType
+                    {
+                        NoExenta = new List<DetalleNoExentaType>
+                                 {
+                                     new DetalleNoExentaType
+                                     {
+                                         TipoNoExenta = TipoOperacionSujetaNoExentaType.S1,
+                                         DesgloseIVA = CreateDetalleIVAType(request)
+                                     }
+                                 }
+                    }
+                }
+            }
+        };
+        return facturoa;
+    }
+
+    private HuellaTBAI CreateHuellTBai(SubmitInvoiceRequest request)
+    {
         var huellTbai = new HuellaTBAI
         {
             Software = _software,
@@ -59,92 +119,30 @@ public class TicketBaiFactory
             };
         }
 
-        var ticketBaiRequest = new TicketBaiRequest
-        {
-            Cabecera = _cabacera,
-            Sujetos = _sujetos,
-            HuellaTBAI = huellTbai,
-            Factura = new Factura
-            {
-                CabeceraFactura = new CabeceraFacturaType
-                {
-                    SerieFactura = request.Series,
-                    NumFactura = request.InvoiceNumber,
-                    FechaExpedicionFactura = request.InvoiceMoment.ToString("dd-MM-yyyy"),
-                    HoraExpedicionFactura = request.InvoiceMoment.ToString("HH:mm:ss"),
-                    FacturaSimplificada = SiNoType.S,
-                    FacturaEmitidaSustitucionSimplificada = SiNoType.N,
-                },
-                DatosFactura = new DatosFacturaType
-                {
-                    FechaOperacion = request.InvoiceMoment.ToString("dd-MM-yyyy"), //TODO: needs to be set if issuing the invoice was different from the actual date
-                    DescripcionFactura = "Invoice", //TODO: Can we hardcode this value?
-                    DetallesFactura = CreateFacturas(request),
-                    ImporteTotalFactura = request.InvoiceLine.Sum(x => x.Amount).ToString("#.##"),
-                    Claves = new List<IDClaveType>
-                        {
-                            new IDClaveType
-                            {
-                                ClaveRegimenIvaOpTrascendencia = IdOperacionesTrascendenciaTributariaType.Item51
-                            }
-                        }
-                },
-                TipoDesglose = new TipoDesgloseType
-                {
-                    DesgloseFactura = new DesgloseFacturaType
-                    {
-                        Sujeta = new SujetaType
-                        {
-                            NoExenta = new List<DetalleNoExentaType>
-                                 {
-                                     new DetalleNoExentaType
-                                     {
-                                         TipoNoExenta = TipoOperacionSujetaNoExentaType.S1,
-                                         DesgloseIVA = CreateDetalleIVAType(request)
-                                     }
-                                 }
-                        }
-                    }
-                }
-            }
-        };
-
-        return ticketBaiRequest;
+        return huellTbai;
     }
 
     private static List<DetalleIVAType> CreateDetalleIVAType(SubmitInvoiceRequest request)
     {
-        var facturas = new List<DetalleIVAType>();
         var vatRates = request.InvoiceLine.GroupBy(x => x.VATRate);
-        foreach (var line in vatRates)
+        return vatRates.Select(x => new DetalleIVAType
         {
-            facturas.Add(new DetalleIVAType
-            {
-                BaseImponible = line.Sum(x => x.Amount - x.VATAmount).ToString("#.##"),
-                TipoImpositivo = line.Key.ToString("#.##"),
-                CuotaImpuesto = line.Sum(x => x.VATAmount).ToString("#.##"),
-                OperacionEnRecargoDeEquivalenciaORegimenSimplificado = SiNoType.S
-            });
-        }
-
-        return facturas;
+            BaseImponible = x.Sum(x => x.Amount - x.VATAmount).ToString("#.##"),
+            TipoImpositivo = x.Key.ToString("#.##"),
+            CuotaImpuesto = x.Sum(x => x.VATAmount).ToString("#.##"),
+            OperacionEnRecargoDeEquivalenciaORegimenSimplificado = SiNoType.S
+        }).ToList();
     }
 
     private static List<IDDetalleFacturaType> CreateFacturas(SubmitInvoiceRequest request)
     {
-        var facturas = new List<IDDetalleFacturaType>();
-        foreach (var line in request.InvoiceLine)
+        return request.InvoiceLine.Select(x => new IDDetalleFacturaType
         {
-            facturas.Add(new IDDetalleFacturaType
-            {
-                DescripcionDetalle = line.Description,
-                Cantidad = line.Quantity.ToString("#.##"),
-                ImporteUnitario = (line.Amount - line.VATAmount).ToString("#.##"),
-                //Descuento = "0", TODO How should we handle discounts? is this a must have or can e ignore that
-                ImporteTotal = line.Amount.ToString("#.##")
-            });
-        }
-
-        return facturas;
+            DescripcionDetalle = x.Description,
+            Cantidad = x.Quantity.ToString("#.##"),
+            ImporteUnitario = (x.Amount - x.VATAmount).ToString("#.##"),
+            //Descuento = "0", TODO How should we handle discounts? is this a must have or can e ignore that
+            ImporteTotal = x.Amount.ToString("#.##")
+        }).ToList();
     }
 }
