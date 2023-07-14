@@ -44,7 +44,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Test.Launcher
             }
             else
             {
-                cashBoxConfiguration = JsonConvert.DeserializeObject<ftCashBoxConfiguration>(configurationFilePath);
+                cashBoxConfiguration = JsonConvert.DeserializeObject<ftCashBoxConfiguration>(File.ReadAllText(configurationFilePath));
             }
 
             var config = cashBoxConfiguration.ftSignaturCreationDevices[0];

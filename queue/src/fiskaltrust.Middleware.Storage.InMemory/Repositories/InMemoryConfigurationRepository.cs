@@ -14,10 +14,12 @@ namespace fiskaltrust.Middleware.Storage.InMemory.Repositories
         private readonly AbstractInMemoryRepository<Guid, ftQueueAT> _queueATRepository;
         private readonly AbstractInMemoryRepository<Guid, ftQueueDE> _queueDERepository;
         private readonly AbstractInMemoryRepository<Guid, ftQueueFR> _queueFRRepository;
+        private readonly AbstractInMemoryRepository<Guid, ftQueueIT> _queueITRepository;
         private readonly AbstractInMemoryRepository<Guid, ftQueueME> _queueMERepository;
         private readonly AbstractInMemoryRepository<Guid, ftSignaturCreationUnitAT> _signaturCreationUnitATRepository;
         private readonly InMemorySignaturCreationUnitDERepository _signaturCreationUnitDERepository;
         private readonly InMemorySignaturCreationUnitFRRepository _signaturCreationUnitFRRepository;
+        private readonly InMemorySignaturCreationUnitITRepository _signaturCreationUnitITRepository;
         private readonly InMemorySignaturCreationUnitMERepository _signaturCreationUnitMERepository;
 
         public InMemoryConfigurationRepository() 
@@ -27,10 +29,12 @@ namespace fiskaltrust.Middleware.Storage.InMemory.Repositories
             _queueATRepository = new InMemoryQueueATRepository();
             _queueDERepository = new InMemoryQueueDERepository();
             _queueFRRepository = new InMemoryQueueFRRepository();
+            _queueITRepository = new InMemoryQueueITRepository();
             _queueMERepository = new InMemoryQueueMERepository();
             _signaturCreationUnitATRepository = new InMemorySignaturCreationUnitATRepository();
             _signaturCreationUnitDERepository = new InMemorySignaturCreationUnitDERepository();
             _signaturCreationUnitFRRepository = new InMemorySignaturCreationUnitFRRepository();
+            _signaturCreationUnitITRepository = new InMemorySignaturCreationUnitITRepository();
             _signaturCreationUnitMERepository = new InMemorySignaturCreationUnitMERepository();
         }
 
@@ -39,10 +43,12 @@ namespace fiskaltrust.Middleware.Storage.InMemory.Repositories
             IEnumerable<ftQueueAT> queuesAT = null,
             IEnumerable<ftQueueDE> queuesDE = null,
             IEnumerable<ftQueueFR> queuesFR = null,
+            IEnumerable<ftQueueIT> queuesIT = null,
             IEnumerable<ftQueueME> queuesME = null,
             IEnumerable<ftSignaturCreationUnitAT> signatureCreateUnitsAT = null,
             IEnumerable<ftSignaturCreationUnitDE> signatureCreateUnitsDE = null,
             IEnumerable<ftSignaturCreationUnitFR> signatureCreateUnitsFR = null,
+            IEnumerable<ftSignaturCreationUnitIT> signatureCreateUnitsIT = null,
             IEnumerable<ftSignaturCreationUnitME> signatureCreateUnitsME = null)
         {
             _cashBoxRepository = new InMemoryCashBoxRepository(cashBoxes);
@@ -50,10 +56,12 @@ namespace fiskaltrust.Middleware.Storage.InMemory.Repositories
             _queueATRepository = new InMemoryQueueATRepository(queuesAT);
             _queueDERepository = new InMemoryQueueDERepository(queuesDE);
             _queueFRRepository = new InMemoryQueueFRRepository(queuesFR);
+            _queueITRepository = new InMemoryQueueITRepository(queuesIT);
             _queueMERepository = new InMemoryQueueMERepository(queuesME);
             _signaturCreationUnitATRepository = new InMemorySignaturCreationUnitATRepository(signatureCreateUnitsAT);
             _signaturCreationUnitDERepository = new InMemorySignaturCreationUnitDERepository(signatureCreateUnitsDE);
             _signaturCreationUnitFRRepository = new InMemorySignaturCreationUnitFRRepository(signatureCreateUnitsFR);
+            _signaturCreationUnitITRepository = new InMemorySignaturCreationUnitITRepository(signatureCreateUnitsIT);
             _signaturCreationUnitMERepository = new InMemorySignaturCreationUnitMERepository(signatureCreateUnitsME);
         }
 
@@ -77,6 +85,10 @@ namespace fiskaltrust.Middleware.Storage.InMemory.Repositories
         public async Task<IEnumerable<ftQueueFR>> GetQueueFRListAsync() => await _queueFRRepository.GetAsync().ConfigureAwait(false);
         public async Task InsertOrUpdateQueueFRAsync(ftQueueFR queueFR) => await _queueFRRepository.InsertOrUpdateAsync(queueFR).ConfigureAwait(false);
 
+        public async Task<ftQueueIT> GetQueueITAsync(Guid id) => await _queueITRepository.GetAsync(id).ConfigureAwait(false);
+        public async Task<IEnumerable<ftQueueIT>> GetQueueITListAsync() => await _queueITRepository.GetAsync().ConfigureAwait(false);
+        public async Task InsertOrUpdateQueueITAsync(ftQueueIT queueIT) => await _queueITRepository.InsertOrUpdateAsync(queueIT).ConfigureAwait(false);
+
         public async Task InsertOrUpdateQueueMEAsync(ftQueueME queue) => await _queueMERepository.InsertOrUpdateAsync(queue).ConfigureAwait(false);
         public async Task<IEnumerable<ftQueueME>> GetQueueMEListAsync() => await _queueMERepository.GetAsync().ConfigureAwait(false);
         public async Task<ftQueueME> GetQueueMEAsync(Guid queueMEId) => await _queueMERepository.GetAsync(queueMEId).ConfigureAwait(false);
@@ -92,6 +104,10 @@ namespace fiskaltrust.Middleware.Storage.InMemory.Repositories
         public async Task<ftSignaturCreationUnitFR> GetSignaturCreationUnitFRAsync(Guid id) => await _signaturCreationUnitFRRepository.GetAsync(id).ConfigureAwait(false);
         public async Task<IEnumerable<ftSignaturCreationUnitFR>> GetSignaturCreationUnitFRListAsync() => await _signaturCreationUnitFRRepository.GetAsync().ConfigureAwait(false);
         public async Task InsertOrUpdateSignaturCreationUnitFRAsync(ftSignaturCreationUnitFR scu) => await _signaturCreationUnitFRRepository.InsertOrUpdateAsync(scu).ConfigureAwait(false);
+
+        public async Task<ftSignaturCreationUnitIT> GetSignaturCreationUnitITAsync(Guid id) => await _signaturCreationUnitITRepository.GetAsync(id).ConfigureAwait(false);
+        public async Task<IEnumerable<ftSignaturCreationUnitIT>> GetSignaturCreationUnitITListAsync() => await _signaturCreationUnitITRepository.GetAsync().ConfigureAwait(false);
+        public async Task InsertOrUpdateSignaturCreationUnitITAsync(ftSignaturCreationUnitIT scu) => await _signaturCreationUnitITRepository.InsertOrUpdateAsync(scu).ConfigureAwait(false);
 
         public async Task InsertOrUpdateSignaturCreationUnitMEAsync(ftSignaturCreationUnitME scu) => await _signaturCreationUnitMERepository.InsertOrUpdateAsync(scu).ConfigureAwait(false);
         public async Task<IEnumerable<ftSignaturCreationUnitME>> GetSignaturCreationUnitMEListAsync() => await _signaturCreationUnitMERepository.GetAsync().ConfigureAwait(false);

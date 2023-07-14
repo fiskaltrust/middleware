@@ -368,6 +368,51 @@ namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer.Migrations
                     b.ToTable("ftJournalFR");
                 });
 
+            modelBuilder.Entity("fiskaltrust.storage.V0.ftJournalIT", b =>
+                {
+                    b.Property<Guid>("ftJournalITId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("DataJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long>("JournalType")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("ReceiptDateTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long>("ReceiptNumber")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("TimeStamp")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("ZRepNumber")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("cbReceiptReference")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<Guid>("ftQueueId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ftQueueItemId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ftSignaturCreationUnitITId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("ftJournalITId");
+
+                    b.HasIndex("TimeStamp");
+
+                    b.HasIndex("cbReceiptReference");
+
+                    b.ToTable("ftJournalIT");
+                });
+
             modelBuilder.Entity("fiskaltrust.storage.V0.ftJournalME", b =>
                 {
                     b.Property<Guid>("ftJournalMEId")
@@ -1008,6 +1053,50 @@ namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer.Migrations
                     b.ToTable("ftQueueFR");
                 });
 
+            modelBuilder.Entity("fiskaltrust.storage.V0.ftQueueIT", b =>
+                {
+                    b.Property<Guid>("ftQueueITId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CashBoxIdentification")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("LastHash")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("SSCDFailCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("SSCDFailMoment")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("SSCDFailQueueItemId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("TimeStamp")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("UsedFailedCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UsedFailedMomentMax")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("UsedFailedMomentMin")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UsedFailedQueueItemId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("ftSignaturCreationUnitITId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("ftQueueITId");
+
+                    b.ToTable("ftQueueIT");
+                });
+
             modelBuilder.Entity("fiskaltrust.storage.V0.ftQueueItem", b =>
                 {
                     b.Property<Guid>("ftQueueItemId")
@@ -1228,6 +1317,26 @@ namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer.Migrations
                     b.HasKey("ftSignaturCreationUnitFRId");
 
                     b.ToTable("ftSignaturCreationUnitFR");
+                });
+
+            modelBuilder.Entity("fiskaltrust.storage.V0.ftSignaturCreationUnitIT", b =>
+                {
+                    b.Property<Guid>("ftSignaturCreationUnitITId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("InfoJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long>("TimeStamp")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Url")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("ftSignaturCreationUnitITId");
+
+                    b.ToTable("ftSignaturCreationUnitIT");
                 });
 
             modelBuilder.Entity("fiskaltrust.storage.V0.ftSignaturCreationUnitME", b =>

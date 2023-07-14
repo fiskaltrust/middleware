@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.de;
+using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.ifPOS.v1.me;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Queue.Test.Launcher.Helpers;
@@ -21,10 +23,11 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
     {
         private static readonly string _cashBoxId = "";
         private static readonly string _accessToken = "";
-        private static readonly string _localization = "";
+        private static readonly string _localization = "DE";
 
-        public static void Main(string configurationFilePath = "", string serviceFolder = @"C:\ProgramData\fiskaltrust\service")
+        public static async Task Main(string configurationFilePath = "", string serviceFolder = @"C:\ProgramData\fiskaltrust\service")
         {
+
             ftCashBoxConfiguration cashBoxConfiguration = null;
             if (!string.IsNullOrEmpty(configurationFilePath))
             {
@@ -32,7 +35,7 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
             }
             else
             {
-                cashBoxConfiguration = HelipadHelper.GetConfigurationAsync(_cashBoxId, _accessToken).Result;
+                cashBoxConfiguration = await HelipadHelper.GetConfigurationAsync(_cashBoxId, _accessToken);
             }
             if (string.IsNullOrEmpty(serviceFolder))
             {
@@ -56,20 +59,21 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
             serviceCollection.AddStandardLoggers(LogLevel.Debug);
 
 
-            if (!string.IsNullOrEmpty(_localization))
-            {
-                if (_localization == "ME")
-                {
-                    serviceCollection.AddScoped<IClientFactory<IMESSCD>, MESSCDClientFactory>();
-                }
-                overrideLocalization(_localization, config);
-
-            }
-            else
+            if (_localization == "DE")
             {
                 serviceCollection.AddScoped<IClientFactory<IDESSCD>, DESSCDClientFactory>();
             }
-            
+            else if (_localization == "ME")
+            {
+                serviceCollection.AddScoped<IClientFactory<IMESSCD>, MESSCDClientFactory>();
+                OverrideMasterdata(_localization, config);
+            }
+            else if (_localization == "IT")
+            {
+                serviceCollection.AddScoped<IClientFactory<IITSSCD>, ITSSCDClientFactory>();
+            }
+
+
             if (config.Package == "fiskaltrust.Middleware.Queue.SQLite")
             {
                 ConfigureSQLite(config, serviceCollection);
@@ -79,6 +83,7 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
                 throw new NotSupportedException($"The given package {config.Package} is not supported.");
             }
             var provider = serviceCollection.BuildServiceProvider();
+
             var pos = provider.GetRequiredService<IPOS>();
             HostingHelper.SetupServiceForObject(config, pos, provider.GetRequiredService<ILoggerFactory>());
 
@@ -86,7 +91,7 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
             Console.ReadLine();
         }
 
-        private static void overrideLocalization(string localization, PackageConfiguration config)
+        private static void OverrideMasterdata(string localization, PackageConfiguration config)
         {
             var key = "init_ftQueue";
             if (config.Configuration.ContainsKey(key))
@@ -96,7 +101,7 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
                 config.Configuration[key] = JsonConvert.SerializeObject(queues);
             }
             var temp = config.Configuration["init_ftQueueDE"];
-            config.Configuration["init_ftQueue"+localization] = temp.ToString().Replace("DE", localization);
+            config.Configuration["init_ftQueue" + localization] = temp.ToString().Replace("DE", localization);
             temp = config.Configuration["init_ftSignaturCreationUnitDE"];
             config.Configuration["init_ftSignaturCreationUnit" + localization] = temp.ToString().Replace("DE", localization);
 
@@ -114,12 +119,12 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
 
         private static void ConfigureSQLite(PackageConfiguration queue, ServiceCollection serviceCollection)
         {
-                var bootStrapper = new SQLite.PosBootstrapper
-                {
-                    Id = queue.Id,
-                    Configuration = queue.Configuration
-                };
-                bootStrapper.ConfigureServices(serviceCollection);
+            var bootStrapper = new SQLite.PosBootstrapper
+            {
+                Id = queue.Id,
+                Configuration = queue.Configuration
+            };
+            bootStrapper.ConfigureServices(serviceCollection);
         }
     }
 }

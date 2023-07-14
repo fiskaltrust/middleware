@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System;
+using System.Text.RegularExpressions;
 
 namespace fiskaltrust.Middleware.Localization.QueueDE.Repositories
 {
@@ -124,19 +125,23 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Repositories
 
         private async Task<(long, DateTime?)> GetLastZNumberForQueueItem(ftQueueItem queueItem)
         {
-            var actionJournals = (await _actionJournalRepository.GetAsync()).Where(x => x.Type == "4445000000000007").OrderBy(x => x.TimeStamp);
+            var regexDaily = new Regex("4445[0-9]{8}0007");
+            var actionJournals = (await _actionJournalRepository.GetAsync()).Where(x => x.Type != null && regexDaily.IsMatch(x.Type)).OrderBy(x => x.TimeStamp);
             var actionJournal = actionJournals.Where(x => x.TimeStamp > queueItem.TimeStamp).FirstOrDefault();
             if (actionJournal == null)
             {
                 return (-1, null);
             }
-            var closingNumber = JsonConvert.DeserializeAnonymousType(actionJournal.DataJson, new { closingNumber = -1 }).closingNumber;
+            var closingNumber = -1;
+            if (actionJournal.DataJson != null)
+            {
+                closingNumber = JsonConvert.DeserializeAnonymousType(actionJournal.DataJson, new { closingNumber = -1 }).closingNumber;
+            }
 
             return closingNumber > -1
                 ? (closingNumber, actionJournal.Moment)
-                : (actionJournals.Where(x => x.Type == "4445000000000007" & x.TimeStamp <= queueItem.TimeStamp).Count(), actionJournals.Where(x => x.Type == "4445000000000007" & x.TimeStamp <= queueItem.TimeStamp).Last()?.Moment);
+                : (actionJournals.Where(x => (x.Type != null && regexDaily.IsMatch(x.Type)) & x.TimeStamp <= queueItem.TimeStamp).Count(),
+                actionJournals.Where(x => (x.Type != null && regexDaily.IsMatch(x.Type)) & x.TimeStamp <= queueItem.TimeStamp).LastOrDefault()?.Moment);
         }
-
-
     }
 }

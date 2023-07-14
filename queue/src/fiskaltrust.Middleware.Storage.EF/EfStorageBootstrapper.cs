@@ -24,6 +24,7 @@ using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.storage.V0.MasterData;
 using fiskaltrust.Middleware.Storage.EF.Repositories.ME;
 using fiskaltrust.Middleware.Storage.EF.Repositories.MasterData;
+using fiskaltrust.Middleware.Storage.EF.Repositories.IT;
 
 namespace fiskaltrust.Middleware.Storage.Ef
 {
@@ -58,7 +59,7 @@ namespace fiskaltrust.Middleware.Storage.Ef
 
             if (_efStorageConfiguration.ConnectionString.StartsWith("raw:"))
             {
-                _connectionString = _efStorageConfiguration.ConnectionString.Substring("raw:".Length - 1);
+                _connectionString = _efStorageConfiguration.ConnectionString.Substring("raw:".Length);
             }
             else
             {
@@ -71,6 +72,10 @@ namespace fiskaltrust.Middleware.Storage.Ef
 
             var baseStorageConfig = ParseStorageConfiguration(configuration);
 
+            if (!_connectionString.Contains("MultipleActiveResultSets"))
+            {
+                _connectionString += ";MultipleActiveResultSets=true";
+            }
             var context = new MiddlewareDbContext(_connectionString, _queueId);
             await PersistMasterDataAsync(baseStorageConfig, configurationRepository,
                 new EfAccountMasterDataRepository(context), new EfOutletMasterDataRepository(context),
@@ -82,7 +87,7 @@ namespace fiskaltrust.Middleware.Storage.Ef
         {
             services.AddTransient(x => new MiddlewareDbContext(_connectionString, _queueId));
 
-            services.AddTransient<IConfigurationRepository>(_ => new EfConfigurationRepository(new MiddlewareDbContext(_connectionString, _queueId)));
+            services.AddSingleton<IConfigurationRepository>(_ => new EfConfigurationRepository(new MiddlewareDbContext(_connectionString, _queueId)));
             services.AddTransient<IReadOnlyConfigurationRepository>(_ => new EfConfigurationRepository(new MiddlewareDbContext(_connectionString, _queueId)));
 
             services.AddTransient<IQueueItemRepository, EfQueueItemRepository>();
@@ -107,6 +112,10 @@ namespace fiskaltrust.Middleware.Storage.Ef
             services.AddTransient<IJournalMERepository, EfJournalMERepository>();
             services.AddTransient<IReadOnlyJournalMERepository, EfJournalMERepository>();
             services.AddTransient<IMiddlewareRepository<ftJournalME>, EfJournalMERepository>();
+
+            services.AddTransient<IJournalITRepository, EfJournalITRepository>();
+            services.AddTransient<IReadOnlyJournalITRepository, EfJournalITRepository>();
+            services.AddTransient<IMiddlewareJournalITRepository, EfJournalITRepository>();
 
             services.AddTransient<IReceiptJournalRepository, EfReceiptJournalRepository>();
             services.AddTransient<IReadOnlyReceiptJournalRepository, EfReceiptJournalRepository>();

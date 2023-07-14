@@ -26,6 +26,8 @@ namespace fiskaltrust.Middleware.Storage.EF
 
         public DbSet<ftQueueME> QueueMEList { get; set; }
 
+        public DbSet<ftQueueIT> QueueITList { get; set; }
+
         public DbSet<ftSignaturCreationUnitAT> SignatureCreationUnitATList { get; set; }
 
         public DbSet<ftSignaturCreationUnitDE> SignatureCreationUnitDEList { get; set; }
@@ -34,11 +36,15 @@ namespace fiskaltrust.Middleware.Storage.EF
 
         public DbSet<ftSignaturCreationUnitME> SignatureCreationUnitMEList { get; set; }
 
+        public DbSet<ftSignaturCreationUnitIT> SignatureCreationUnitITList { get; set; }
+
         public DbSet<ftJournalAT> JournalATList { get; set; }
 
         public DbSet<ftJournalDE> JournalDEList { get; set; }
 
         public DbSet<ftJournalFR> JournalFRList { get; set; }
+
+        public DbSet<ftJournalIT> JournalITList { get; set; }
 
         public DbSet<ftJournalME> JournalMEList { get; set; }
 
@@ -105,6 +111,9 @@ namespace fiskaltrust.Middleware.Storage.EF
             modelBuilder.Entity<ftQueueME>().ToTable(nameof(ftQueueME));
             modelBuilder.Entity<ftQueueME>().HasKey(x => x.ftQueueMEId, x => x.IsClustered(false));
 
+            modelBuilder.Entity<ftQueueIT>().ToTable(nameof(ftQueueIT));
+            modelBuilder.Entity<ftQueueIT>().HasKey(x => x.ftQueueITId, x => x.IsClustered(false));
+
             modelBuilder.Entity<ftSignaturCreationUnitAT>().ToTable(nameof(ftSignaturCreationUnitAT));
             modelBuilder.Entity<ftSignaturCreationUnitAT>().HasKey(x => x.ftSignaturCreationUnitATId, x => x.IsClustered(false));
 
@@ -117,6 +126,9 @@ namespace fiskaltrust.Middleware.Storage.EF
             modelBuilder.Entity<ftSignaturCreationUnitME>().ToTable(nameof(ftSignaturCreationUnitME));
             modelBuilder.Entity<ftSignaturCreationUnitME>().HasKey(x => x.ftSignaturCreationUnitMEId, x => x.IsClustered(false));
 
+            modelBuilder.Entity<ftSignaturCreationUnitIT>().ToTable(nameof(ftSignaturCreationUnitIT));
+            modelBuilder.Entity<ftSignaturCreationUnitIT>().HasKey(x => x.ftSignaturCreationUnitITId, x => x.IsClustered(false));
+
             modelBuilder.Entity<ftJournalAT>().ToTable(nameof(ftJournalAT));
             modelBuilder.Entity<ftJournalAT>().HasKey(x => x.ftJournalATId, x => x.IsClustered(false));
             modelBuilder.Entity<ftJournalAT>().HasIndex(x => x.TimeStamp);
@@ -128,6 +140,12 @@ namespace fiskaltrust.Middleware.Storage.EF
             modelBuilder.Entity<ftJournalFR>().ToTable(nameof(ftJournalFR));
             modelBuilder.Entity<ftJournalFR>().HasKey(x => x.ftJournalFRId, x => x.IsClustered(false));
             modelBuilder.Entity<ftJournalFR>().HasIndex(x => x.TimeStamp);
+
+            modelBuilder.Entity<ftJournalIT>().ToTable(nameof(ftJournalIT));
+            modelBuilder.Entity<ftJournalIT>().HasKey(x => x.ftJournalITId, x => x.IsClustered(false));
+            modelBuilder.Entity<ftJournalIT>().Property(x => x.cbReceiptReference).HasMaxLength(450);
+            modelBuilder.Entity<ftJournalIT>().HasIndex(x => x.TimeStamp);
+            modelBuilder.Entity<ftJournalIT>().HasIndex(x => x.cbReceiptReference);
 
             modelBuilder.Entity<ftJournalME>().ToTable(nameof(ftJournalME));
             modelBuilder.Entity<ftJournalME>().HasKey(x => x.ftJournalMEId, x => x.IsClustered(false));

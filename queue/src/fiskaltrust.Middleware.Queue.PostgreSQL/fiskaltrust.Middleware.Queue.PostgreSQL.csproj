@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <Description>The fiskaltrust Middleware Queue with an PostgreSQL storage provider.</Description>
-        <TargetFrameworks>net5.0;net6</TargetFrameworks>
+        <TargetFrameworks>net6</TargetFrameworks>
         <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);CopyProjectReferencesToPackage</TargetsForTfmSpecificBuildOutput>
     </PropertyGroup>
 
@@ -16,7 +16,7 @@
         <PackageReference Include="fiskaltrust.Exports.DSFinVK" Version="1.5.2"/>
         <PackageReference Include="fiskaltrust.Exports.TAR" Version="1.1.1" />
         <PackageReference Include="SharpCompress" Version="0.28.2" />
-        <PackageReference Include="CsvHelper" Version="28.0.1" />
+        <PackageReference Include="CsvHelper" Version="15.0.5" />
     </ItemGroup>
 
     <Target DependsOnTargets="ResolveReferences" Name="CopyProjectReferencesToPackage">

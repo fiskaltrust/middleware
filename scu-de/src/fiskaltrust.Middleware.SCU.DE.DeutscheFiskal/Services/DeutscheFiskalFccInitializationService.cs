@@ -111,12 +111,12 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
             };
             process.BeginOutputReadLine();
 
-            var hasExited = process.WaitForExit(DeutscheFiskalConstants.DefaultProcessTimeoutMs);
+            var hasExited = process.WaitForExit(_configuration.ProcessTimeoutSec * 1000);
             if (!hasExited)
             {
                 process.Kill();
                 _logger.LogError(stdout);
-                throw new TimeoutException($"Initializing or updating the FCC connector took longer than {DeutscheFiskalConstants.DefaultProcessTimeoutMs} ms, hence the process was canceled. Please refer to the ERROR messages in the FCC logs above to detect the issue.");
+                throw new TimeoutException($"Initializing or updating the FCC connector took longer than the configured ProcessTimeoutSec {_configuration.ProcessTimeoutSec} seconds, hence the process was canceled. Please refer to the ERROR messages in the FCC logs above to detect the issue.");
             }
 
             if (process.ExitCode != 0)

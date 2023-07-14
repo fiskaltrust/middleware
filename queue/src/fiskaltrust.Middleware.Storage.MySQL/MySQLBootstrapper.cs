@@ -14,7 +14,9 @@ using fiskaltrust.Middleware.Storage.MySQL.Repositories.AT;
 using fiskaltrust.Middleware.Storage.MySQL.Repositories.DE;
 using fiskaltrust.Middleware.Storage.MySQL.Repositories.DE.MasterData;
 using fiskaltrust.Middleware.Storage.MySQL.Repositories.FR;
+using fiskaltrust.Middleware.Storage.MySQL.Repositories.IT;
 using fiskaltrust.Middleware.Storage.MySQL.Repositories.MasterData;
+using fiskaltrust.Middleware.Storage.MySQL.Repositories.ME;
 using fiskaltrust.storage.encryption.V0;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
@@ -55,7 +57,7 @@ namespace fiskaltrust.Middleware.Storage.MySQL
 
             if (_mySQLStorageConfiguration.ConnectionString.StartsWith("raw:"))
             {
-                _connectionString = _mySQLStorageConfiguration.ConnectionString.Substring("raw:".Length - 1);
+                _connectionString = _mySQLStorageConfiguration.ConnectionString.Substring("raw:".Length);
             }
             else
             {
@@ -105,6 +107,10 @@ namespace fiskaltrust.Middleware.Storage.MySQL
             services.AddSingleton<IJournalMERepository>(x => new MySQLJournalMERepository(_connectionString));
             services.AddSingleton<IReadOnlyJournalMERepository>(x => new MySQLJournalMERepository(_connectionString));
             services.AddSingleton<IMiddlewareRepository<ftJournalME>>(x => new MySQLJournalMERepository(_connectionString));
+
+            services.AddSingleton<IJournalITRepository>(x => new MySQLJournalITRepository(_connectionString));
+            services.AddSingleton<IReadOnlyJournalITRepository>(x => new MySQLJournalITRepository(_connectionString));
+            services.AddSingleton<IMiddlewareJournalITRepository>(x => new MySQLJournalITRepository(_connectionString));
 
             services.AddSingleton<IReceiptJournalRepository>(x => new MySQLReceiptJournalRepository(_connectionString));
             services.AddSingleton<IReadOnlyReceiptJournalRepository>(x => new MySQLReceiptJournalRepository(_connectionString));

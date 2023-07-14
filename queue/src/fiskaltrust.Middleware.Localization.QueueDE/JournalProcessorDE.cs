@@ -6,13 +6,14 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using fiskaltrust.Exports.Common.Helpers;
 using fiskaltrust.Exports.DSFinVK;
 using fiskaltrust.Exports.DSFinVK.Models;
 using fiskaltrust.Exports.TAR;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.de;
-using fiskaltrust.Middleware.Contracts;
 using fiskaltrust.Middleware.Contracts.Constants;
+using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueDE.Helpers;
@@ -40,6 +41,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
         private readonly IMasterDataService _masterDataService;
         private readonly IMiddlewareQueueItemRepository _middlewareQueueItemRepository;
         private readonly ITarFileCleanupService _tarFileCleanupService;
+        private readonly QueueDEConfiguration _queueDEConfiguration;
 
         public JournalProcessorDE(
             ILogger<JournalProcessorDE> logger,
@@ -54,7 +56,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             MiddlewareConfiguration middlewareConfiguration,
             IMasterDataService masterDataService,
             IMiddlewareQueueItemRepository middlewareQueueItemRepository,
-            ITarFileCleanupService tarFileCleanupService)
+            ITarFileCleanupService tarFileCleanupService,
+            QueueDEConfiguration queueDEConfiguration)
         {
             _logger = logger;
             _configurationRepository = configurationRepository;
@@ -69,6 +72,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             _masterDataService = masterDataService;
             _middlewareQueueItemRepository = middlewareQueueItemRepository;
             _tarFileCleanupService = tarFileCleanupService;
+            _queueDEConfiguration = queueDEConfiguration;
         }
 
         public async IAsyncEnumerable<JournalResponse> ProcessAsync(JournalRequest request)
@@ -208,7 +212,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
                     CashboxIdentification = queueDE.CashBoxIdentification,
                     FirstZNumber = firstZNumber,
                     TargetDirectory = targetDirectory,
-                    TSECertificateBase64 = certificateBase64
+                    TSECertificateBase64 = certificateBase64,
+                    ReferencesLookUpType = _queueDEConfiguration.DisableDsfinvkExportReferences ? ReferencesLookUpType.NoReferences : ReferencesLookUpType.GroupedReferencesMW
                 };
 
                 var readOnlyReceiptReferenceRepository = new ReadOnlyReceiptReferenceRepository(_middlewareQueueItemRepository, _actionJournalRepository);
@@ -249,7 +254,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
                 if (scuDE.TseInfoJson != null)
                 {
                     var tseInfo = JsonConvert.DeserializeObject<TseInfo>(scuDE.TseInfoJson);
-                    return tseInfo.CertificatesBase64.FirstOrDefault() ?? string.Empty;
+                    return tseInfo.CertificatesBase64?.FirstOrDefault() ?? string.Empty;
                 }
             }
 

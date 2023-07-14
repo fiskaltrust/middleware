@@ -9,6 +9,6 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.TableEntities.Configu
         public string Url { get; set; }
 
         public long TimeStamp { get; set; }
-
+        public string InfoJson { get; internal set; }
     }
 }

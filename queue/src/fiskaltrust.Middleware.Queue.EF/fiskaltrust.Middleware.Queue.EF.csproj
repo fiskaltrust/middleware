@@ -22,7 +22,7 @@
         <PackageReference Include="EntityFramework" Version="6.4.4" />
         <PackageReference Include="SharpCompress" Version="0.28.2" />
         <PackageReference Include="System.Text.Encoding.CodePages" Version="5.0.0" />
-        <PackageReference Include="CsvHelper" Version="28.0.1" />
+        <PackageReference Include="CsvHelper" Version="15.0.5" />
     </ItemGroup>
 
     <ItemGroup Condition="'$(TargetFramework)' == 'net461'">

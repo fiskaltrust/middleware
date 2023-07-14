@@ -18,9 +18,10 @@ namespace fiskaltrust.Middleware.Storage.MySQL.AcceptanceTest
     {
         private MySQLConfigurationRepository _repo;
 
-        public override async Task<IReadOnlyConfigurationRepository> CreateReadOnlyRepository(IEnumerable<ftCashBox> cashBoxes = null, IEnumerable<ftQueue> queues = null, IEnumerable<ftQueueAT> queuesAT = null, IEnumerable<ftQueueDE> queuesDE = null, IEnumerable<ftQueueFR> queuesFR = null, IEnumerable<ftQueueME> queuesME = null, IEnumerable<ftSignaturCreationUnitAT> signatureCreateUnitsAT = null, IEnumerable<ftSignaturCreationUnitDE> signatureCreateUnitsDE = null, IEnumerable<ftSignaturCreationUnitFR> signatureCreateUnitsFR = null, IEnumerable<ftSignaturCreationUnitME> signatureCreateUnitsME = null) => await CreateRepository(cashBoxes, queues, queuesAT, queuesDE, queuesFR, queuesME, signatureCreateUnitsAT, signatureCreateUnitsDE, signatureCreateUnitsFR, signatureCreateUnitsME);
+        public override async Task<IReadOnlyConfigurationRepository> CreateReadOnlyRepository(IEnumerable<ftCashBox> cashBoxes = null, IEnumerable<ftQueue> queues = null, IEnumerable<ftQueueAT> queuesAT = null, IEnumerable<ftQueueDE> queuesDE = null, IEnumerable<ftQueueFR> queuesFR = null, IEnumerable<ftQueueIT> queuesIT = null, IEnumerable<ftQueueME> queuesME = null, IEnumerable<ftSignaturCreationUnitAT> signatureCreateUnitsAT = null, IEnumerable<ftSignaturCreationUnitDE> signatureCreateUnitsDE = null, IEnumerable<ftSignaturCreationUnitFR> signatureCreateUnitsFR = null, IEnumerable<ftSignaturCreationUnitIT> signatureCreateUnitsIT = null, IEnumerable<ftSignaturCreationUnitME> signatureCreateUnitsME = null)
+            => await CreateRepository(cashBoxes, queues, queuesAT, queuesDE, queuesFR, queuesIT, queuesME, signatureCreateUnitsAT, signatureCreateUnitsDE, signatureCreateUnitsFR, signatureCreateUnitsIT, signatureCreateUnitsME);
 
-        public override async Task<IConfigurationRepository> CreateRepository(IEnumerable<ftCashBox> cashBoxes = null, IEnumerable<ftQueue> queues = null, IEnumerable<ftQueueAT> queuesAT = null, IEnumerable<ftQueueDE> queuesDE = null, IEnumerable<ftQueueFR> queuesFR = null, IEnumerable<ftQueueME> queuesME = null, IEnumerable<ftSignaturCreationUnitAT> signatureCreateUnitsAT = null, IEnumerable<ftSignaturCreationUnitDE> signatureCreateUnitsDE = null, IEnumerable<ftSignaturCreationUnitFR> signatureCreateUnitsFR = null, IEnumerable<ftSignaturCreationUnitME> signatureCreateUnitsME = null)
+        public override async Task<IConfigurationRepository> CreateRepository(IEnumerable<ftCashBox> cashBoxes = null, IEnumerable<ftQueue> queues = null, IEnumerable<ftQueueAT> queuesAT = null, IEnumerable<ftQueueDE> queuesDE = null, IEnumerable<ftQueueFR> queuesFR = null, IEnumerable<ftQueueIT> queuesIT = null, IEnumerable<ftQueueME> queuesME = null, IEnumerable<ftSignaturCreationUnitAT> signatureCreateUnitsAT = null, IEnumerable<ftSignaturCreationUnitDE> signatureCreateUnitsDE = null, IEnumerable<ftSignaturCreationUnitFR> signatureCreateUnitsFR = null, IEnumerable<ftSignaturCreationUnitIT> signatureCreateUnitsIT = null, IEnumerable<ftSignaturCreationUnitME> signatureCreateUnitsME = null)
         {
             var databasMigrator = new DatabaseMigrator(MySQLConnectionStringFixture.ServerConnectionString, 30 * 60, MySQLConnectionStringFixture.QueueId, Mock.Of<ILogger<IMiddlewareBootstrapper>>());
             await databasMigrator.MigrateAsync();
@@ -56,6 +57,12 @@ namespace fiskaltrust.Middleware.Storage.MySQL.AcceptanceTest
                 { await _repo.InsertOrUpdateQueueFRAsync(queueFR); }
             }
 
+            if (queuesIT != null)
+            {
+                foreach (var queue in queuesIT)
+                { await _repo.InsertOrUpdateQueueITAsync(queue); }
+            }
+
             if (queuesME != null)
             {
                 foreach (var queueME in queuesME)
@@ -78,6 +85,12 @@ namespace fiskaltrust.Middleware.Storage.MySQL.AcceptanceTest
             {
                 foreach (var scuFR in signatureCreateUnitsFR)
                 { await _repo.InsertOrUpdateSignaturCreationUnitFRAsync(scuFR); }
+            }
+
+            if (signatureCreateUnitsIT != null)
+            {
+                foreach (var scu in signatureCreateUnitsIT)
+                { await _repo.InsertOrUpdateSignaturCreationUnitITAsync(scu); }
             }
 
             if (signatureCreateUnitsME != null)
@@ -107,6 +120,8 @@ namespace fiskaltrust.Middleware.Storage.MySQL.AcceptanceTest
                     command.ExecuteNonQuery();
                     command.CommandText = $@"DELETE FROM {TableNames.FtQueueFR}";
                     command.ExecuteNonQuery();
+                    command.CommandText = $@"DELETE FROM {TableNames.FtQueueIT}";
+                    command.ExecuteNonQuery();
                     command.CommandText = $@"DELETE FROM {TableNames.FtQueueME}";
                     command.ExecuteNonQuery();
                     command.CommandText = $@"DELETE FROM {TableNames.FtSignaturCreationUnitAT}";
@@ -114,6 +129,8 @@ namespace fiskaltrust.Middleware.Storage.MySQL.AcceptanceTest
                     command.CommandText = $@"DELETE FROM {TableNames.FtSignaturCreationUnitDE}";
                     command.ExecuteNonQuery();
                     command.CommandText = $@"DELETE FROM {TableNames.FtSignaturCreationUnitFR}";
+                    command.ExecuteNonQuery();
+                    command.CommandText = $@"DELETE FROM {TableNames.FtSignaturCreationUnitIT}";
                     command.ExecuteNonQuery();
                     command.CommandText = $@"DELETE FROM {TableNames.FtSignaturCreationUnitME}";
                     command.ExecuteNonQuery();

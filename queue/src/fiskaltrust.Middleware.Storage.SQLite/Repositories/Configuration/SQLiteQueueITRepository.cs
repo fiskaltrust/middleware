@@ -20,8 +20,8 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Repositories.Configuration
         {
             EntityUpdated(entity);
             var sql = "INSERT OR REPLACE INTO ftQueueIT " +
-                      "(ftQueueITId, ftSignaturCreationUnitITId, LastHash, SSCDFailCount, SSCDFailMoment, SSCDFailQueueItemId, UsedFailedCount, UsedFailedMomentMin, UsedFailedMomentMax, UsedFailedQueueItemId, TimeStamp) " +
-                      "Values (@ftQueueITId, @ftSignaturCreationUnitITId, @LastHash, @SSCDFailCount, @SSCDFailMoment, @SSCDFailQueueItemId, @UsedFailedCount, @UsedFailedMomentMin, @UsedFailedMomentMax, @UsedFailedQueueItemId, @TimeStamp);";
+                      "(ftQueueITId, ftSignaturCreationUnitITId, LastHash, CashBoxIdentification, SSCDFailCount, SSCDFailMoment, SSCDFailQueueItemId, UsedFailedCount, UsedFailedMomentMin, UsedFailedMomentMax, UsedFailedQueueItemId, TimeStamp) " +
+                      "Values (@ftQueueITId, @ftSignaturCreationUnitITId, @LastHash, @CashBoxIdentification, @SSCDFailCount, @SSCDFailMoment, @SSCDFailQueueItemId, @UsedFailedCount, @UsedFailedMomentMin, @UsedFailedMomentMax, @UsedFailedQueueItemId, @TimeStamp);";
             await DbConnection.ExecuteAsync(sql, entity).ConfigureAwait(false);
         }
 

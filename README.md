@@ -40,6 +40,17 @@ In general, we welcome all kinds of contributions and feedback, e.g. via [issues
 
 Please check out the [contribution guidelines](./CONTRIBUTING.md) for more detailed information about how to proceed.
 
+## Debugging using the Test Launcher
+
+For development purposes the `queue/fiskaltrust.Middleware.sln` solution and SCU market solutions (e.g. `scu-it/fiskaltrust.Middleware.SCU.IT.sln`) contain TestLauncher projects ([`queue/test/Manual/fiskaltrust.Middleware.Queue.Test.Launcher/Program.cs`](queue/test/Manual/fiskaltrust.Middleware.Queue.Test.Launcher/Program.cs), [`scu-it/test/TestLauncher/Program.cs`](scu-it/test/TestLauncher/Program.cs)).
+
+To run a queue or scu using the test launcher you need to configure a sandbox cashbox and set the cashboxId and accessToken (and localization for a queue) in the `Program.cs` file of the TestLauncher.
+
+You can start a debugging session from VisualStudio or VisualStudio Code and debug the launcher there.
+Or you can then start the TestLauncher on the commandline like so: `dotnet run --project queue\test\Manual\fiskaltrust.Middleware.Queue.Test.Launcher\fiskaltrust.Middleware.Queue.Test.Launcher.csproj`.
+
+> ***Note:** You may need to start the TestLauncher as an administrator or windows does not allow the ports to be bound. For that you need to start VisualStudio as an administrator.*
+
 ## License
 The fiskaltrust Middleware is released under the [EUPL 1.2](./LICENSE). 
 
