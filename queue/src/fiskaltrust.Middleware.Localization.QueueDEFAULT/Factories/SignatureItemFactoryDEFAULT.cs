@@ -33,7 +33,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.Factories
         {
             Caption = caption,
             ftSignatureFormat = (long)SignaturItem.Formats.QR_Code,
-            Data = data
+            Data = data,
+            ftSignatureType = 0x0
         };
     }
 }
