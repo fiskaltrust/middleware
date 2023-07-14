@@ -34,8 +34,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.RequestCommands
 
         protected override async Task<string> GetCashboxIdentificationAsync(Guid ftQueueId)
         {
-            var queueIt = await _countrySpecificQueueRepository.GetQueueAsync(ftQueueId).ConfigureAwait(false);
-            return queueIt.CashBoxIdentification;
+            var queueDefault = await _countrySpecificQueueRepository.GetQueueAsync(ftQueueId).ConfigureAwait(false);
+            return queueDefault.CashBoxIdentification;
         }
     }
 }
