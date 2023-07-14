@@ -6,7 +6,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT
     public class QueueDEFAULTConfiguration
     {
         public bool Sandbox { get; set; } = true;
-        public bool FlagOptionalSignatures { get; set; }
 
         public static QueueDEFAULTConfiguration FromMiddlewareConfiguration(MiddlewareConfiguration middlewareConfiguration) => JsonConvert.DeserializeObject<QueueDEFAULTConfiguration>(JsonConvert.SerializeObject(middlewareConfiguration.Configuration));
     }

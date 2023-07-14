@@ -1,38 +1,26 @@
 ﻿using System.Collections.Generic;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.ifPOS.v1.de;
 
 namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.Factories
 {
     public class SignatureFactoryDefault
     {
-        private const long OPTIONAL_FLAG = 0x10000;
-        private readonly QueueDEFAULTConfiguration _queueDefaultConfiguration;
-
-        public SignatureFactoryDefault(QueueDEFAULTConfiguration queueDefaultConfiguration)
-        {
-            _queueDefaultConfiguration = queueDefaultConfiguration;
-        }
-
-        public List<SignaturItem> GetSignaturesForFinishTransaction(FinishTransactionResponse finishTransactionResponse)
+        public List<SignaturItem> GetSignaturesForPosReceiptTransaction()
         {
             var signatures = new List<SignaturItem>
             {
-                CreateQrCodeSignature("www.fiskaltrust.eu", "<data-for-qr-code>", false)
+                CreateQrCodeSignature("www.fiskaltrust.eu", "<data-for-qr-code>")
             };
 
             return signatures;
         }
 
-        public SignaturItem CreateQrCodeSignature(string caption, string data, bool optional) => new SignaturItem
+        public SignaturItem CreateQrCodeSignature(string caption, string data) => new()
         {
             Caption = caption,
-            ftSignatureFormat = AddOptionalFlagIfRequired(SignaturItem.Formats.QR_Code, optional),
+            ftSignatureFormat = (long)SignaturItem.Formats.QR_Code,
             Data = data
         };
-
-
-        private long AddOptionalFlagIfRequired(SignaturItem.Formats format, bool optional) 
-            => _queueDefaultConfiguration.FlagOptionalSignatures && optional ? (long) format | OPTIONAL_FLAG : (long) format;
+        
     }
 }
