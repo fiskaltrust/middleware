@@ -14,6 +14,7 @@ using fiskaltrust.Middleware.SCU.ES.TicketBAI.Models;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI.Territories;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using System.Xml;
 
 #pragma warning disable IDE0052
 
@@ -59,6 +60,11 @@ public class TicketBaiSCU : IESSSCD
     public async Task<SubmitResponse> SubmitInvoiceAsync(SubmitInvoiceRequest request)
     {
         var ticketBaiRequest = _ticketBaiFactory.ConvertTo(request);
+        if (_configuration.TicketBaiTerritory == TicketBaiTerritory.Bizkaia)
+        {
+            ticketBaiRequest.Sujetos.Emisor.NIF = "99980645J";
+            ticketBaiRequest.Sujetos.Emisor.ApellidosNombreRazonSocial = "wfJnAHYUqt bPKctDve9Y YjkezB8PV9";
+        }
         var xml = XmlHelpers.GetXMLIncludingNamespace(ticketBaiRequest);
         var content = XmlHelpers.SignXmlContentWithXades(xml, _ticketBaiTerritory.PolicyIdentifier, _ticketBaiTerritory.PolicyDigest, _configuration.Certificate);
         if (_configuration.TicketBaiTerritory == TicketBaiTerritory.Bizkaia)
@@ -75,13 +81,13 @@ public class TicketBaiSCU : IESSSCD
 		<Version>1.0</Version>
 		<Ejercicio>{DateTime.UtcNow.Year.ToString()}</Ejercicio>
 		<ObligadoTributario>
-			<NIF>{ticketBaiRequest.Sujetos.Emisor.NIF}</NIF>
-			<ApellidosNombreRazonSocial>{ticketBaiRequest.Sujetos.Emisor.ApellidosNombreRazonSocial}</ApellidosNombreRazonSocial>
+	        <NIF>{ticketBaiRequest.Sujetos.Emisor.NIF}</NIF>
+            <ApellidosNombreRazonSocial>{ticketBaiRequest.Sujetos.Emisor.ApellidosNombreRazonSocial}</ApellidosNombreRazonSocial>
 		</ObligadoTributario>
 	</Cabecera>
 	<Ingresos>
 		<Ingreso>
-			<TicketBai>{Convert.ToBase64String(Encoding.UTF8.GetBytes(xml))}</TicektBai>
+			<TicketBai>{Convert.ToBase64String(Encoding.UTF8.GetBytes(content))}</TicketBai>
 		</Ingreso>
 	</Ingresos>
 </lrpficfcsgap:LROEPF140IngresosConFacturaConSGAltaPeticion>
@@ -98,7 +104,7 @@ public class TicketBaiSCU : IESSSCD
             httpRequestHeaders.Headers.Add("eus-bizkaia-n3-content-type", "application/xml");
             // TODO which year needs to be transmitted?
             httpRequestHeaders.Headers.Add("eus-bizkaia-n3-data",
-                    JsonConvert.SerializeObject(Bizkaia.GenerateHeader("99980645J", "wfJnAHYUqt bPKctDve9Y YjkezB8PV9", "140", DateTime.UtcNow.Year.ToString())));
+                    JsonConvert.SerializeObject(Bizkaia.GenerateHeader(ticketBaiRequest.Sujetos.Emisor.NIF, ticketBaiRequest.Sujetos.Emisor.ApellidosNombreRazonSocial, "140", DateTime.UtcNow.Year.ToString())));
             var response = await _httpClient.SendAsync(httpRequestHeaders);
             var responseContent = await response.Content.ReadAsStringAsync();
             var result = GetResponseFromContent(responseContent, ticketBaiRequest);
