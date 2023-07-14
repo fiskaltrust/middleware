@@ -41,7 +41,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.RequestCommands
                     cbTerminalID = request.cbTerminalID,
                     cbReceiptReference = request.cbReceiptReference,
                     ftCashBoxIdentification = $"ft{queueItem.ftQueueRow}",
-                    ftQueueID = request.ftQueueID,
+                    ftQueueID = queueItem.ftQueueId.ToString(),
                     ftQueueItemID = $"ft{queueItem.ftQueueItemId}",
                     ftReceiptMoment = request.cbReceiptMoment,
                 },
