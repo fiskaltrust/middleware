@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO.Compression;
+using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -43,6 +46,8 @@ public class TicketBaiSCU : IESSSCD
 
         var handler = new HttpClientHandler();
         handler.ClientCertificates.Add(_configuration.Certificate);
+        handler.AutomaticDecompression = DecompressionMethods.GZip;
+
 
         _httpClient = new HttpClient(handler)
         {
@@ -56,24 +61,79 @@ public class TicketBaiSCU : IESSSCD
         var ticketBaiRequest = _ticketBaiFactory.ConvertTo(request);
         var xml = XmlHelpers.GetXMLIncludingNamespace(ticketBaiRequest);
         var content = XmlHelpers.SignXmlContentWithXades(xml, _ticketBaiTerritory.PolicyIdentifier, _ticketBaiTerritory.PolicyDigest, _configuration.Certificate);
-        var httpRequestHeaders = new HttpRequestMessage(HttpMethod.Post, new Uri(_ticketBaiTerritory.SandboxEndpoint + _ticketBaiTerritory.SubmitInvoices))
-        {
-            Content = new StringContent(content, Encoding.UTF8, "application/xml")
-        };
         if (_configuration.TicketBaiTerritory == TicketBaiTerritory.Bizkaia)
         {
+            var rawContent = $"""
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<lrpficfcsgap:LROEPF140IngresosConFacturaConSGAltaPeticion
+	xmlns:lrpficfcsgap="https://www.batuz.eus/fitxategiak/batuz/LROE/esquemas/LROE_PF_140_1_1_Ingresos_ConfacturaConSG_AltaPeticion_V1_0_2.xsd">
+	<Cabecera>
+		<Modelo>140<Modelo>
+		<Capitulo>1</Capitulo>
+		<Subcapitulo>1.1</Subcapitulo>
+		<Operacion>A00</Operacion>
+		<Version>1.0</Version>
+		<Ejercicio>{DateTime.UtcNow.Year.ToString()}</Ejercicio>
+		<ObligadoTributario>
+			<NIF>{ticketBaiRequest.Sujetos.Emisor.NIF}</NIF>
+			<ApellidosNombreRazonSocial>{ticketBaiRequest.Sujetos.Emisor.ApellidosNombreRazonSocial}</ApellidosNombreRazonSocial>
+		</ObligadoTributario>
+	</Cabecera>
+	<Ingresos>
+		<Ingreso>
+			<TicketBai>{Convert.ToBase64String(Encoding.UTF8.GetBytes(xml))}</TicektBai>
+		</Ingreso>
+	</Ingresos>
+</lrpficfcsgap:LROEPF140IngresosConFacturaConSGAltaPeticion>
+""";
+            var requestContent = new ByteArrayContent(Compress(rawContent));
+            requestContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+            requestContent.Headers.Add("Content-Encoding", "gzip");
+
+            var httpRequestHeaders = new HttpRequestMessage(HttpMethod.Post, new Uri(_ticketBaiTerritory.SandboxEndpoint + _ticketBaiTerritory.SubmitInvoices))
+            {
+                Content = requestContent
+            };
             httpRequestHeaders.Headers.Add("eus-bizkaia-n3-version", "1.0");
             httpRequestHeaders.Headers.Add("eus-bizkaia-n3-content-type", "application/xml");
             // TODO which year needs to be transmitted?
-            httpRequestHeaders.Headers.Add("eus-bizkaia-n3-data", JsonConvert.SerializeObject(Bizkaia.GenerateHeader(ticketBaiRequest.Sujetos.Emisor.NIF, ticketBaiRequest.Sujetos.Emisor.ApellidosNombreRazonSocial, "240", DateTime.UtcNow.Year.ToString())));
+            httpRequestHeaders.Headers.Add("eus-bizkaia-n3-data",
+                    JsonConvert.SerializeObject(Bizkaia.GenerateHeader("99980645J", "wfJnAHYUqt bPKctDve9Y YjkezB8PV9", "140", DateTime.UtcNow.Year.ToString())));
+            var response = await _httpClient.SendAsync(httpRequestHeaders);
+            var responseContent = await response.Content.ReadAsStringAsync();
+            var result = GetResponseFromContent(responseContent, ticketBaiRequest);
+            result.RequestContent = content;
+            return result;
         }
-
-        var response = await _httpClient.SendAsync(httpRequestHeaders);
-        var responseContent = await response.Content.ReadAsStringAsync();
-        var result = GetResponseFromContent(responseContent, ticketBaiRequest);
-        result.RequestContent = content;
-        return result;
+        else
+        {
+            var httpRequestHeaders = new HttpRequestMessage(HttpMethod.Post, new Uri(_ticketBaiTerritory.SandboxEndpoint + _ticketBaiTerritory.SubmitInvoices))
+            {
+                Content = new StringContent(content, Encoding.UTF8, "application/xml")
+            };
+            var response = await _httpClient.SendAsync(httpRequestHeaders);
+            var responseContent = await response.Content.ReadAsStringAsync();
+            var result = GetResponseFromContent(responseContent, ticketBaiRequest);
+            result.RequestContent = content;
+            return result;
+        }
     }
+
+    public byte[] Compress(string data)
+    {
+        var bytes = Encoding.UTF8.GetBytes(data);
+        using (var compressedStream = new MemoryStream())
+        {
+            using (var zipStream = new GZipStream(compressedStream, CompressionMode.Compress))
+            {
+                zipStream.Write(bytes, 0, bytes.Length);
+                zipStream.Close();
+                return compressedStream.ToArray();
+            }
+        }
+    }
+
+
 
     public async Task<SubmitResponse> CancelInvoiceAsync(SubmitInvoiceRequest request)
     {
@@ -104,7 +164,7 @@ public class TicketBaiSCU : IESSSCD
         if (ticketBaiResponse.Salida.Estado == "00")
         {
             var identifier = ticketBaiResponse.Salida.IdentificadorTBAI.Split('-');
-            var result = new SubmitResponse
+            return new SubmitResponse
             {
                 IssuerVatId = identifier[1],
                 ExpeditionDate = identifier[2],
@@ -112,9 +172,9 @@ public class TicketBaiSCU : IESSSCD
                 Identifier = ticketBaiResponse.Salida.IdentificadorTBAI,
                 ResponseContent = responseContent,
                 Succeeded = true,
-                QrCode = GetQrCodeUri(ticketBaiRequest, ticketBaiResponse)
+                QrCode = GetQrCodeUri(ticketBaiRequest, ticketBaiResponse),
+                ResultMessages = ticketBaiResponse.Salida.ResultadosValidacion.Select(x => (x.Codigo, x.Descripcion)).ToList()
             };
-            return result;
         }
         else
         {
@@ -122,9 +182,7 @@ public class TicketBaiSCU : IESSSCD
             {
                 ResponseContent = responseContent,
                 Succeeded = false,
-                ErrorCode = ticketBaiResponse.Salida.ResultadosValidacion?.FirstOrDefault()?.Codigo,
-                Description = ticketBaiResponse.Salida.ResultadosValidacion?.FirstOrDefault()?.Descripcion,
-                Explanation = ticketBaiResponse.Salida.ResultadosValidacion?.FirstOrDefault()?.Azalpena,
+                ResultMessages = ticketBaiResponse.Salida.ResultadosValidacion.Select(x => (x.Codigo, x.Descripcion)).ToList()
             };
         }
     }

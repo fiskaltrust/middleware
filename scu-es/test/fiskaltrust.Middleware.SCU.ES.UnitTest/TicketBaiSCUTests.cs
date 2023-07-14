@@ -106,7 +106,7 @@ namespace fiskaltrust.Middleware.SCU.ES.UnitTest
             var config = new TicketBaiSCUConfiguration
             {
                 Certificate = cert,
-                TicketBaiTerritory = TicketBaiTerritory.Araba,
+                TicketBaiTerritory = TicketBaiTerritory.Bizkaia,
                 EmisorNif = "B10646545",
                 EmisorApellidosNombreRazonSocial = "CRISTIAN TECH AND CONSULTING S.L."
             };

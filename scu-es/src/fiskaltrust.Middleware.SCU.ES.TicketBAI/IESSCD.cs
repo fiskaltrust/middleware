@@ -44,7 +44,5 @@ public class SubmitResponse
     public string? ExpeditionDate { get; set; }
     public string? IssuerVatId { get; set; }
     public string? Identifier { get; set; }
-    public string? Explanation { get; set; }
-    public string? Description { get; set; }
-    public string? ErrorCode { get; set; }
+    public List<(string code, string message)> ResultMessages { get; set; } = new List<(string code, string message)>();
 }

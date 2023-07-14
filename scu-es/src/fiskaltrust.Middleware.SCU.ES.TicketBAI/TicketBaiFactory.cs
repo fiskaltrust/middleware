@@ -75,7 +75,7 @@ public class TicketBaiFactory
                         {
                             new IDClaveType
                             {
-                                ClaveRegimenIvaOpTrascendencia = IdOperacionesTrascendenciaTributariaType.Item51
+                                ClaveRegimenIvaOpTrascendencia = IdOperacionesTrascendenciaTributariaType.Item01
                             }
                         }
             },
@@ -130,7 +130,7 @@ public class TicketBaiFactory
             BaseImponible = x.Sum(x => x.Amount - x.VATAmount).ToString("#.##"),
             TipoImpositivo = x.Key.ToString("#.##"),
             CuotaImpuesto = x.Sum(x => x.VATAmount).ToString("#.##"),
-            OperacionEnRecargoDeEquivalenciaORegimenSimplificado = SiNoType.S
+            OperacionEnRecargoDeEquivalenciaORegimenSimplificado = SiNoType.N
         }).ToList();
     }
 
