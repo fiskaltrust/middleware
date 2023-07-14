@@ -30,13 +30,13 @@ public class TicketBaiFactory
         };
         _software = new SoftwareFacturacionType
         {
-            LicenciaTBAI = "TBAIARbKKFCFdCC00879",
+            LicenciaTBAI = TicketBaiConstants.LicenciaTBAI,
             EntidadDesarrolladora = new EntidadDesarrolladoraType
             {
-                NIF = "B10646545"
+                NIF = TicketBaiConstants.NIF
             },
-            Nombre = "Incodebiz",
-            Version = "1.0"
+            Nombre = TicketBaiConstants.Name,
+            Version = TicketBaiConstants.Version
         };
     }
 
