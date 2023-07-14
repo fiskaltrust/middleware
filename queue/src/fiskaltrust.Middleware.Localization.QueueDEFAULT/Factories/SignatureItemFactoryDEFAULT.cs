@@ -1,32 +1,38 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Globalization;
+﻿using System.Collections.Generic;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.ifPOS.v1.it;
-using fiskaltrust.Middleware.Contracts.Factories;
+using fiskaltrust.ifPOS.v1.de;
 
 namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.Factories
 {
-    public class SignatureItemFactoryDEFAULT : SignatureItemFactory
+    public class SignatureFactoryDefault
     {
-        public override long CountryBaseState => 000000000;
+        private const long OPTIONAL_FLAG = 0x10000;
+        private readonly QueueDEFAULTConfiguration _queueDefaultConfiguration;
 
-        public SignatureItemFactoryDEFAULT() { 
+        public SignatureFactoryDefault(QueueDEFAULTConfiguration queueDefaultConfiguration)
+        {
+            _queueDefaultConfiguration = queueDefaultConfiguration;
         }
 
-        protected static NumberFormatInfo CurrencyFormatter = new ()
+        public List<SignaturItem> GetSignaturesForFinishTransaction(FinishTransactionResponse finishTransactionResponse)
         {
-            NumberDecimalSeparator = ",",
-            NumberGroupSeparator = "",
-            CurrencyDecimalDigits = 2
+            var signatures = new List<SignaturItem>
+            {
+                CreateQrCodeSignature("www.fiskaltrust.eu", "<data-for-qr-code>", false)
+            };
+
+            return signatures;
+        }
+
+        public SignaturItem CreateQrCodeSignature(string caption, string data, bool optional) => new SignaturItem
+        {
+            Caption = caption,
+            ftSignatureFormat = AddOptionalFlagIfRequired(SignaturItem.Formats.QR_Code, optional),
+            Data = data
         };
 
-        public SignaturItem[] CreateSignatures(DailyClosingResponse dailyClosingResponse) //CreateSignatures then remove the other functions
-        {
-            return new SignaturItem[]
-            {
-                
-            };
-        }
+
+        private long AddOptionalFlagIfRequired(SignaturItem.Formats format, bool optional) 
+            => _queueDefaultConfiguration.FlagOptionalSignatures && optional ? (long) format | OPTIONAL_FLAG : (long) format;
     }
 }
