@@ -73,11 +73,9 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
             var signingAvail = await signingDevice.IsSSCDAvailable().ConfigureAwait(false);
             log += signingAvail ? " Signing device is available." : " Signing device is not available.";
             logger.LogInformation(log);
-            receiptResponse.SetFtStateData(new StateDetail() { FailedReceiptCount = queueIt.SSCDFailCount, FailMoment = queueIt.SSCDFailMoment, SigningDeviceAvailable = signingAvail});
+            receiptResponse.SetFtStateData(new StateDetail() { FailedReceiptCount = queueIt.SSCDFailCount, FailMoment = queueIt.SSCDFailMoment, SigningDeviceAvailable = signingAvail });
 
             return new RequestCommandResponse { ReceiptResponse = receiptResponse };
         }
-
-
     }
 }
