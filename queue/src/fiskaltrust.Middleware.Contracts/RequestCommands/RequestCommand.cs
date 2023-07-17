@@ -60,14 +60,10 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
             await countryspecificSettings.CountrySpecificQueueRepository.InsertOrUpdateQueueAsync(queueIt).ConfigureAwait(false);
             var receiptResponse = CreateReceiptResponse(queue, request, queueItem, queueIt.CashBoxIdentification, countryspecificSettings.CountryBaseState);
             var log = $"Queue is in failed mode. SSCDFailMoment: {queueIt.SSCDFailMoment}, SSCDFailCount: {queueIt.SSCDFailCount}.";
+            receiptResponse.ftState = countryspecificSettings.CountryBaseState | 0x2;
             if (countryspecificSettings.ResendFailedReceipts)
             {
-                receiptResponse.ftState = countryspecificSettings.CountryBaseState | 0x8;
                 log += " When connection is established use zeroreceipt for subsequent booking!";
-            }
-            else
-            {
-                receiptResponse.ftState = countryspecificSettings.CountryBaseState | 0x2;
             }
 
             var signingAvail = await signingDevice.IsSSCDAvailable().ConfigureAwait(false);
