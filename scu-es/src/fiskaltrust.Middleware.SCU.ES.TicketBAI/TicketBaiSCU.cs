@@ -139,8 +139,6 @@ public class TicketBaiSCU : IESSSCD
         }
     }
 
-
-
     public async Task<SubmitResponse> CancelInvoiceAsync(SubmitInvoiceRequest request)
     {
         var ticketBaiRequest = _ticketBaiFactory.ConvertTo(request);
