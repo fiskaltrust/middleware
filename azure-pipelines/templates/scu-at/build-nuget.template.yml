@@ -3,8 +3,9 @@ steps:
   inputs:
     mode: 'Multi'
     semverVersion: 'v1'
+    failOnTagVersionMismatch: true
 
-- powershell: |   
+- powershell: |
     $nugetFeed = if ($Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/release/") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/main") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/tags/")) { "middleware" } else { "dev" }
     Write-Host "##vso[task.setvariable variable=NuGetFeed;]$nugetFeed"
   displayName: Set NuGet feed
