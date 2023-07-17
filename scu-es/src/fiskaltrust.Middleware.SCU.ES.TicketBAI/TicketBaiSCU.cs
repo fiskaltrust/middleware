@@ -62,8 +62,8 @@ public class TicketBaiSCU : IESSSCD
         var ticketBaiRequest = _ticketBaiFactory.ConvertTo(request);
         if (_configuration.TicketBaiTerritory == TicketBaiTerritory.Bizkaia)
         {
-            ticketBaiRequest.Sujetos.Emisor.NIF = "99980645J";
-            ticketBaiRequest.Sujetos.Emisor.ApellidosNombreRazonSocial = "wfJnAHYUqt bPKctDve9Y YjkezB8PV9";
+            ticketBaiRequest.Sujetos.Emisor.NIF = "A99807000";
+            ticketBaiRequest.Sujetos.Emisor.ApellidosNombreRazonSocial = "yDhFHBTxpf6J3eD79i9eawNbaLRb22";
         }
         var xml = XmlHelpers.GetXMLIncludingNamespace(ticketBaiRequest);
         var content = XmlHelpers.SignXmlContentWithXades(xml, _ticketBaiTerritory.PolicyIdentifier, _ticketBaiTerritory.PolicyDigest, _configuration.Certificate);
@@ -71,10 +71,10 @@ public class TicketBaiSCU : IESSSCD
         {
             var rawContent = $"""
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<lrpficfcsgap:LROEPF140IngresosConFacturaConSGAltaPeticion
-	xmlns:lrpficfcsgap="https://www.batuz.eus/fitxategiak/batuz/LROE/esquemas/LROE_PF_140_1_1_Ingresos_ConfacturaConSG_AltaPeticion_V1_0_2.xsd">
+<lrpjfecsgap:LROEPJ240FacturasEmitidasConSGAltaPeticion
+	xmlns:lrpjfecsgap="https://www.batuz.eus/fitxategiak/batuz/LROE/esquemas/LROE_PJ_240_1_1_FacturasEmitidas_ConSG_AltaPeticion_V1_0_2.xsd">
 	<Cabecera>
-		<Modelo>140<Modelo>
+		<Modelo>240</Modelo>
 		<Capitulo>1</Capitulo>
 		<Subcapitulo>1.1</Subcapitulo>
 		<Operacion>A00</Operacion>
@@ -85,12 +85,12 @@ public class TicketBaiSCU : IESSSCD
             <ApellidosNombreRazonSocial>{ticketBaiRequest.Sujetos.Emisor.ApellidosNombreRazonSocial}</ApellidosNombreRazonSocial>
 		</ObligadoTributario>
 	</Cabecera>
-	<Ingresos>
-		<Ingreso>
+	<FacturasEmitidas>
+		<FacturaEmitida>
 			<TicketBai>{Convert.ToBase64String(Encoding.UTF8.GetBytes(content))}</TicketBai>
-		</Ingreso>
-	</Ingresos>
-</lrpficfcsgap:LROEPF140IngresosConFacturaConSGAltaPeticion>
+		</FacturaEmitida>
+	</FacturasEmitidas>
+</lrpjfecsgap:LROEPJ240FacturasEmitidasConSGAltaPeticion>
 """;
             var requestContent = new ByteArrayContent(Compress(rawContent));
             requestContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
@@ -104,7 +104,7 @@ public class TicketBaiSCU : IESSSCD
             httpRequestHeaders.Headers.Add("eus-bizkaia-n3-content-type", "application/xml");
             // TODO which year needs to be transmitted?
             httpRequestHeaders.Headers.Add("eus-bizkaia-n3-data",
-                    JsonConvert.SerializeObject(Bizkaia.GenerateHeader(ticketBaiRequest.Sujetos.Emisor.NIF, ticketBaiRequest.Sujetos.Emisor.ApellidosNombreRazonSocial, "140", DateTime.UtcNow.Year.ToString())));
+                    JsonConvert.SerializeObject(Bizkaia.GenerateHeader(ticketBaiRequest.Sujetos.Emisor.NIF, ticketBaiRequest.Sujetos.Emisor.ApellidosNombreRazonSocial, "240", DateTime.UtcNow.Year.ToString())));
             var response = await _httpClient.SendAsync(httpRequestHeaders);
             var responseContent = await response.Content.ReadAsStringAsync();
             var result = GetResponseFromContent(responseContent, ticketBaiRequest);
