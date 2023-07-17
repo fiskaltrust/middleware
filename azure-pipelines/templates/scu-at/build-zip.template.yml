@@ -5,6 +5,7 @@ steps:
     updateNuspecFiles: true
     updateBuildNumber: false
     semverVersion: 'v1'
+    failOnTagVersionMismatch: true
 
 - powershell: |
     $nugetFeed = if ($Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/release/") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/main") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/tags")) { "middleware" } else { "dev" }
