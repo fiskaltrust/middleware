@@ -23,7 +23,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.Factories
         {
             var signatures = new List<SignaturItem>
             {
-                CreateQrCodeSignature("www.fiskaltrust.eu", "<data-for-qr-code>")
+                CreateQrCodeSignature("www.fiskaltrust.eu", "<ftCashBoxIdentification>_<ftReceiptIdentification>_<SumOfPayItems>_<responseHashOfThePreviousQueueItem>")
             };
 
             return signatures;
