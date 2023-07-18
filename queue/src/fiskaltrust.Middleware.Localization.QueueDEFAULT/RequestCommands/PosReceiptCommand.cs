@@ -31,20 +31,14 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.RequestCommands
             _countryBaseState = countrySpecificSettings.CountryBaseState;
             _configurationRepository = configurationRepository;
         }
-
-        public override Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, bool isBeingResent = false)
+        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, bool isBeingResent = false)
         {
-            return Task.FromResult(new RequestCommandResponse
+            var response = CreateReceiptResponse(queue, request, queueItem, (await _countrySpecificQueueRepository.GetQueueAsync(queue.ftQueueId))
+                .CashBoxIdentification, _countryBaseState);
+    
+            return await Task.FromResult(new RequestCommandResponse
             {
-                ReceiptResponse = new ReceiptResponse
-                {
-                    cbTerminalID = request.cbTerminalID,
-                    cbReceiptReference = request.cbReceiptReference,
-                    ftCashBoxIdentification = $"ft{queueItem.ftQueueRow}",
-                    ftQueueID = queueItem.ftQueueId.ToString(),
-                    ftQueueItemID = $"ft{queueItem.ftQueueItemId}",
-                    ftReceiptMoment = request.cbReceiptMoment,
-                },
+                ReceiptResponse = response,
                 Signatures = new List<SignaturItem>(),
                 ActionJournals = new List<ftActionJournal>()
             });
