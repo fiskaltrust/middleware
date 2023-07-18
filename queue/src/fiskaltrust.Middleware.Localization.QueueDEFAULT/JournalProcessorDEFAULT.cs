@@ -24,12 +24,11 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT
 
         public async IAsyncEnumerable<JournalResponse> ProcessAsync(JournalRequest request)
         {
-            var result = new { QueueDEList = await _configurationRepository.GetQueueDEListAsync() };
+            var result = new { CashBoxList = await _configurationRepository.GetCashBoxListAsync() };
             yield return new JournalResponse
             {
                 Chunk = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(result)).ToList()
             };
-            throw new NotImplementedException();
         }
     }
 }
