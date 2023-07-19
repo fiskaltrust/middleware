@@ -19,17 +19,17 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.Factories
             CurrencyDecimalDigits = 2
         };
         
-        public List<SignaturItem> GetSignaturesForPosReceiptTransaction()
+    public List<SignaturItem> GetSignaturesForPosReceiptTransaction(string cashBoxId, string receiptId, decimal sumOfPayItems, string previousHash)
+    {
+        var signatures = new List<SignaturItem>
         {
-            var signatures = new List<SignaturItem>
-            {
-                CreateQrCodeSignature("www.fiskaltrust.eu", "<ftCashBoxIdentification>_<ftReceiptIdentification>_<SumOfPayItems>_<responseHashOfThePreviousQueueItem>")
-            };
+            CreateQrCodeSignature("www.fiskaltrust.eu", $"{cashBoxId}_{receiptId}_{sumOfPayItems}_{previousHash}")
+        };
 
-            return signatures;
-        }
+        return signatures;
+    }
 
-        public SignaturItem CreateQrCodeSignature(string caption, string data) => new()
+    public SignaturItem CreateQrCodeSignature(string caption, string data) => new()
         {
             Caption = caption,
             ftSignatureFormat = (long)SignaturItem.Formats.QR_Code,
