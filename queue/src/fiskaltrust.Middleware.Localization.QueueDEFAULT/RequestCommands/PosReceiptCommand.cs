@@ -9,14 +9,6 @@ using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.RequestCommands
 {
-    public struct RefundDetails
-    {
-        public string Serialnumber { get; set; }
-        public long ZRepNumber { get; set; }
-        public long ReceiptNumber { get; set; }
-        public DateTime ReceiptDateTime { get; set; }
-    }
-
     public class PosReceiptCommand : RequestCommand
     {
         private readonly long _countryBaseState;

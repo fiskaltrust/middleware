@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts;
+using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;

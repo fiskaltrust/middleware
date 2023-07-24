@@ -9,9 +9,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.Factories
     {
         public override long CountryBaseState => 000000000;
 
-        public SignatureItemFactoryDEFAULT() { 
-        }
-
         protected static NumberFormatInfo CurrencyFormatter = new ()
         {
             NumberDecimalSeparator = ".",
