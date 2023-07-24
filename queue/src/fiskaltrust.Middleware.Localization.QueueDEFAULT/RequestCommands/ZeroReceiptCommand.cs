@@ -1,4 +1,5 @@
 ﻿using fiskaltrust.Middleware.Contracts.Constants;
+using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Contracts.RequestCommands;
 using fiskaltrust.Middleware.Contracts.RequestCommands.Factories;
@@ -9,8 +10,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.RequestCommands
 {
     public class ZeroReceiptCommand : Contracts.RequestCommands.ZeroReceiptCommand
     {
-        public ZeroReceiptCommand(ICountrySpecificSettings countryspecificSettings, IMiddlewareQueueItemRepository queueItemRepository, IRequestCommandFactory requestCommandFactory, ILogger<RequestCommand> logger, IActionJournalRepository actionJournalRepository) :
-            base(countryspecificSettings, queueItemRepository, requestCommandFactory, logger, actionJournalRepository)
+        public ZeroReceiptCommand(ISSCD signingDevice, ICountrySpecificSettings countryspecificSettings, IMiddlewareQueueItemRepository queueItemRepository, IRequestCommandFactory requestCommandFactory, ILogger<RequestCommand> logger, IActionJournalRepository actionJournalRepository) :
+            base(signingDevice, countryspecificSettings, queueItemRepository, requestCommandFactory, logger, actionJournalRepository)
         {
         }
     }
