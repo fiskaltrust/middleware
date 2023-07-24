@@ -6,12 +6,13 @@ parameters:
   type: string
 
 steps:
-- task: yavt@1 
+- task: yavt@1
   inputs:
     mode: 'Multi'
     updateNuspecFiles: true
     updateBuildNumber: false
     semverVersion: 'v1'
+    failOnTagVersionMismatch: true
 
 - powershell: |
     $nugetFeed = if ($Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/release/") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/main") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/tags")) { "release" } else { "dev" }

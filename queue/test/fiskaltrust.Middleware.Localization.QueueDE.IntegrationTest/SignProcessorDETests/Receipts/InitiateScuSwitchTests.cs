@@ -142,7 +142,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
         {
             _fixture.actionJournalRepository = new InMemoryActionJournalRepository();
             await _receiptTests.ExpectExceptionReceiptcase(
-            _receiptTests.GetReceipt("InitiateScuSwitchReceipt", "InitiateScuSwitchNoImplFlow", 0x4445000100000017), "ReceiptCase {0:X} (initiate-scu-switch-receipt) can only be called right after a daily-closing receipt.").ConfigureAwait(false);
+            _receiptTests.GetReceipt("InitiateScuSwitchReceipt", "InitiateScuSwitchNoImplFlow", 0x4445000100000017),
+            "ReceiptCase {0:X} (initiate-scu-switch-receipt) can only be called right after a daily-closing receipt.If no daily-closing receipt can be done or the tse is not reachable use the Initiate-ScuSwitch-Force-Flag. See https://link.fiskaltrust.cloud/market-de/force-scu-switch-flag for more details.").ConfigureAwait(false);
         }
 
         [Fact]

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.de;
 using fiskaltrust.ifPOS.v1.it;
@@ -22,9 +23,9 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
     {
         private static readonly string _cashBoxId = "";
         private static readonly string _accessToken = "";
-        private static readonly string _localization = "";
+        private static readonly string _localization = "DE";
 
-        public static void Main(string configurationFilePath = "", string serviceFolder = @"C:\ProgramData\fiskaltrust\service")
+        public static async Task Main(string configurationFilePath = "", string serviceFolder = @"C:\ProgramData\fiskaltrust\service")
         {
 
             ftCashBoxConfiguration cashBoxConfiguration = null;
@@ -34,8 +35,7 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
             }
             else
             {
-                
-                cashBoxConfiguration = HelipadHelper.GetConfigurationAsync(_cashBoxId, _accessToken).Result;
+                cashBoxConfiguration = await HelipadHelper.GetConfigurationAsync(_cashBoxId, _accessToken);
             }
             if (string.IsNullOrEmpty(serviceFolder))
             {
@@ -59,22 +59,20 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
             serviceCollection.AddStandardLoggers(LogLevel.Debug);
 
 
-            if (!string.IsNullOrEmpty(_localization))
-            {
-                if (_localization == "ME")
-                {
-                    serviceCollection.AddScoped<IClientFactory<IMESSCD>, MESSCDClientFactory>();
-                    OverrideMasterdata(_localization, config);
-                }
-                else if (_localization == "IT")
-                {
-                    serviceCollection.AddScoped<IClientFactory<IITSSCD>, ITSSCDClientFactory>();
-                }
-            }
-            else
+            if (_localization == "DE")
             {
                 serviceCollection.AddScoped<IClientFactory<IDESSCD>, DESSCDClientFactory>();
             }
+            else if (_localization == "ME")
+            {
+                serviceCollection.AddScoped<IClientFactory<IMESSCD>, MESSCDClientFactory>();
+                OverrideMasterdata(_localization, config);
+            }
+            else if (_localization == "IT")
+            {
+                serviceCollection.AddScoped<IClientFactory<IITSSCD>, ITSSCDClientFactory>();
+            }
+
 
             if (config.Package == "fiskaltrust.Middleware.Queue.SQLite")
             {

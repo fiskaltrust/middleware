@@ -12,6 +12,7 @@
         public string FccDownloadUri { get; set; }
         public bool DontAddFccFirewallException { get; set; }
         public int MaxFccDownloadTimeSec { get; set; } = 60 * 60;
+        public int ProcessTimeoutSec { get; set; } = 5 * 60;
         public string FccUri { get; set; }
         public virtual string CertificationId { get; set; } = "BSI-K-TR-0474-2021";
         public bool DisplayCertificationIdAddition { get; set; } = true;

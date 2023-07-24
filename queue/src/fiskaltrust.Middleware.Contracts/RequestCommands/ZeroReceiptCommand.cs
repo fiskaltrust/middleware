@@ -10,6 +10,8 @@ using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Contracts.RequestCommands.Factories;
 using fiskaltrust.ifPOS.v1.errors;
 using fiskaltrust.Middleware.Contracts.Constants;
+using fiskaltrust.Middleware.Contracts.Extensions;
+using fiskaltrust.Middleware.Contracts.Interfaces;
 
 namespace fiskaltrust.Middleware.Contracts.RequestCommands
 {
@@ -22,8 +24,9 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
         private readonly IActionJournalRepository _actionJournalRepository;
         private readonly IMiddlewareQueueItemRepository _queueItemRepository;
         private readonly ILogger<RequestCommand> _logger;
+        private readonly ISSCD _signingDevice;
 
-        public ZeroReceiptCommand(ICountrySpecificSettings countryspecificSettings,IMiddlewareQueueItemRepository queueItemRepository, IRequestCommandFactory requestCommandFactory, ILogger<RequestCommand> logger, IActionJournalRepository actionJournalRepository)
+        public ZeroReceiptCommand(ISSCD signingDevice, ICountrySpecificSettings countryspecificSettings,IMiddlewareQueueItemRepository queueItemRepository, IRequestCommandFactory requestCommandFactory, ILogger<RequestCommand> logger, IActionJournalRepository actionJournalRepository)
         {
             _requestCommandFactory = requestCommandFactory;
             _logger = logger;
@@ -32,16 +35,28 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
             _countrySpecificQueueRepository = countryspecificSettings.CountrySpecificQueueRepository;
             _resendFailedReceipts = countryspecificSettings.ResendFailedReceipts;
             _countryBaseState = countryspecificSettings.CountryBaseState;
+            _signingDevice = signingDevice;
         }
 
         public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, bool isBeingResent = false)
         {
             var iQueue = await _countrySpecificQueueRepository.GetQueueAsync(queue.ftQueueId).ConfigureAwait(false);
             var receiptResponse = CreateReceiptResponse(queue, request, queueItem, iQueue.CashBoxIdentification, _countryBaseState);
+            var signingAvailable = await _signingDevice.IsSSCDAvailable().ConfigureAwait(false);
             if (iQueue.SSCDFailCount == 0)
             {
-                receiptResponse.ftStateData = "Queue has no failed receipts.";
-                _logger.LogInformation(receiptResponse.ftStateData);
+                var log = "Queue has no failed receipts.";
+                if (!signingAvailable)
+                {
+                    receiptResponse.ftState = _countryBaseState | 2;
+                    log = $"Signing not available. {log}";
+                }
+                else
+                {
+                    log = $"Signing available. {log}";
+                }
+                _logger.LogInformation(log);
+                receiptResponse.SetFtStateData(new StateDetail() { FailedReceiptCount = iQueue.SSCDFailCount, FailMoment = iQueue.SSCDFailMoment, SigningDeviceAvailable = signingAvailable });
                 return new RequestCommandResponse()
                 {
                     ReceiptResponse = receiptResponse
@@ -50,28 +65,32 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
             var sentReceipts = new List<string>();
             var signatures = new List<SignaturItem>();
 
+            var succeeded = true;
             if (_resendFailedReceipts)
             {
-                await ResendFailedReceiptsAsync(iQueue, queue, sentReceipts, signatures).ConfigureAwait(false);
+                succeeded = await ResendFailedReceiptsAsync(iQueue, queue, sentReceipts, signatures).ConfigureAwait(false);
+            }
+
+            var resent = $"Resent {sentReceipts.Count()} receipts that have been stored between {iQueue.SSCDFailMoment:G} and {DateTime.UtcNow:G}.";
+
+            if (succeeded && signingAvailable)
+            {
+                _logger.LogInformation($"Successfully closed failed-mode. {resent} ");
+                iQueue.SSCDFailCount = 0;
+                iQueue.SSCDFailMoment = null;
+                iQueue.SSCDFailQueueItemId = null;
+            }
+            else
+            {
+                receiptResponse.ftState = _countryBaseState | 2;
             }
             receiptResponse.ftStateData = JsonConvert.SerializeObject(new { SentReceipts = sentReceipts });
-            _logger.LogInformation($"Successfully closed failed-mode, resent {sentReceipts.Count()} receipts that have been stored between {iQueue.SSCDFailMoment:G} and {DateTime.UtcNow:G}.");
 
-            var caption = $"Restored connection to fiscalization service at {DateTime.UtcNow:G}.";
-            var data = $"{iQueue.SSCDFailCount} receipts from the timeframe between {iQueue.SSCDFailMoment:G} and {DateTime.UtcNow:G} have been re-processed at the fiscalization service.";
+            _logger.LogInformation($"{sentReceipts.Count()} receipts from the timeframe between {iQueue.SSCDFailMoment:G} and {DateTime.UtcNow:G} have been re-processed at the fiscalization service.");
 
-            signatures.Add(new()
-            {
-                ftSignatureType = _countryBaseState | 2,
-                ftSignatureFormat = (long) ifPOS.v0.SignaturItem.Formats.Text,
-                Caption = caption,
-                Data = data
-            });
+            var stateDetail = JsonConvert.SerializeObject(new StateDetail() { FailedReceiptCount = iQueue.SSCDFailCount, FailMoment = iQueue.SSCDFailMoment, SigningDeviceAvailable = signingAvailable });
+
             receiptResponse.ftSignatures = signatures.ToArray();
-
-            iQueue.SSCDFailCount = 0;
-            iQueue.SSCDFailMoment = null;
-            iQueue.SSCDFailQueueItemId = null;
             await _countrySpecificQueueRepository.InsertOrUpdateQueueAsync(iQueue).ConfigureAwait(false);
 
             return new RequestCommandResponse
@@ -87,21 +106,25 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
                             Moment = DateTime.UtcNow,
                             Priority = -1,
                             TimeStamp = 0,
-                            Message = caption + data,
+                            Message = stateDetail,
                             Type = $"{ _countryBaseState | 2:X}",
-                            DataJson = JsonConvert.SerializeObject(caption + " " + data)
-                        }
+                            DataJson =  JsonConvert.SerializeObject(new { SentReceipts = sentReceipts })
+        }
                     }
             };
         }
 
-        private async Task ResendFailedReceiptsAsync(ICountrySpecificQueue iQueue, ftQueue queue, List<string> sentReceipts, List<SignaturItem> signatures)
+        private async Task<bool> ResendFailedReceiptsAsync(ICountrySpecificQueue iQueue, ftQueue queue, List<string> sentReceipts, List<SignaturItem> signatures)
         {
             var failedQueueItem = await _queueItemRepository.GetAsync(iQueue.SSCDFailQueueItemId.Value).ConfigureAwait(false);
             var queueItemsAfterFailure = _queueItemRepository.GetQueueItemsAfterQueueItem(failedQueueItem);
             await foreach (var failqueueItem in queueItemsAfterFailure.ConfigureAwait(false))
             {
                 var failRequest = JsonConvert.DeserializeObject<ReceiptRequest>(failqueueItem.request);
+                if ((failRequest.ftReceiptCase & 0xFFFF) == 0x0002)
+                {
+                    continue;
+                }
                 var command = _requestCommandFactory.Create(failRequest);
                 if (await command.ReceiptNeedsReprocessing(queue, failRequest, failqueueItem).ConfigureAwait(false))
                 {
@@ -122,12 +145,20 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
                     {
                         if (ex is SSCDErrorException exception && !(exception.Type == SSCDErrorType.Device))
                         {
-                            throw;
+                            _logger.LogError(ex, "Error on Reprocessing");
+                            if (iQueue.SSCDFailQueueItemId != failqueueItem.ftQueueItemId)
+                            {
+                                iQueue.SSCDFailQueueItemId = failqueueItem.ftQueueItemId;
+                                iQueue.SSCDFailMoment = DateTime.UtcNow;
+                            }
+                            return false;
                         }
                         _logger.LogError(ex, $"The receipt {failRequest.cbReceiptReference} could not be proccessed! \n {ex.Message}");
                     }
                 }
+                iQueue.SSCDFailCount--;
             }
+            return true;
         }
 
         public override Task<bool> ReceiptNeedsReprocessing(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem) => Task.FromResult(false);

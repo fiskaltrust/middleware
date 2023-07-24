@@ -9,7 +9,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Xunit;
 using fiskaltrust.Middleware.Queue.Bootstrapper;
-using fiskaltrust.Middleware.Contracts;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.ifPOS.v1.de;
@@ -18,6 +17,7 @@ using Microsoft.Extensions.Logging;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Localization.QueueDE.RequestCommands.Factories;
 using fiskaltrust.Middleware.Localization.QueueDE;
+using fiskaltrust.Middleware.Contracts.Interfaces;
 
 namespace fiskaltrust.Middleware.Queue.InMemory.IntegrationTest
 {

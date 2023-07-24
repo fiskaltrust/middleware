@@ -114,26 +114,10 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
                     Width = _epsonScuConfiguration.BarCodeWidth
                 } : null
             };
-            fiscalReceipt.BeginFiscalReceipt.Operator = GetOperator(request.Operator);
-            fiscalReceipt.EndFiscalReceipt.Operator = GetOperator(request.Operator);
+            fiscalReceipt.BeginFiscalReceipt.Operator = "1";
+            fiscalReceipt.EndFiscalReceipt.Operator = "1";
             fiscalReceipt.RecTotalAndMessages = request.Payments.GetTotalAndMessages();
             return fiscalReceipt;
-        }
-
-        private string GetOperator(string cbUser)
-        {
-            if (string.IsNullOrEmpty(cbUser))
-            {
-                return cbUser;
-            } 
-            var isvalid = int.TryParse(cbUser, out var operatory);
-            var inRange = operatory > 0 && operatory < 13;
-            isvalid = isvalid && inRange;
-            if (!isvalid)
-            {
-                throw new OperatorException(cbUser);
-            }
-            return cbUser;
         }
 
         private FiscalReceipt CreateFiscalReceipt(FiscalReceiptRefund request)
@@ -152,8 +136,8 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
                     Width = _epsonScuConfiguration.BarCodeWidth
                 } : null
             };
-            fiscalReceipt.BeginFiscalReceipt.Operator = GetOperator(request.Operator);
-            fiscalReceipt.EndFiscalReceipt.Operator = GetOperator(request.Operator);
+            fiscalReceipt.BeginFiscalReceipt.Operator = "1";
+            fiscalReceipt.EndFiscalReceipt.Operator = "1";
             fiscalReceipt.RecTotalAndMessages = request.Payments.GetTotalAndMessages();
             return fiscalReceipt;
         }

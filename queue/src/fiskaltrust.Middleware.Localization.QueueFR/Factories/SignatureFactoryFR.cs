@@ -1,6 +1,6 @@
 ﻿using System;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.Middleware.Contracts;
+using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.storage.V0;
 using Newtonsoft.Json;
 

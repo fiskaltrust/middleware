@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using fiskaltrust.Middleware.Contracts;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Localization.QueueAT;
 using fiskaltrust.Middleware.Localization.QueueDE;
@@ -12,6 +11,7 @@ using fiskaltrust.Middleware.Localization.QueueFR;
 using fiskaltrust.Middleware.Localization.QueueME;
 using fiskaltrust.storage.V0;
 using Newtonsoft.Json;
+using fiskaltrust.Middleware.Contracts.Interfaces;
 
 namespace fiskaltrust.Middleware.Queue.Bootstrapper
 {

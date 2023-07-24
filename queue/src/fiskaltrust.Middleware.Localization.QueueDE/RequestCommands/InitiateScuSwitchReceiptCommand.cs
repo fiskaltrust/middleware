@@ -12,7 +12,6 @@ using Newtonsoft.Json;
 using fiskaltrust.Middleware.Localization.QueueDE.Services;
 using fiskaltrust.Middleware.Localization.QueueDE.Transactions;
 using fiskaltrust.Middleware.Contracts.Models;
-using fiskaltrust.Middleware.Localization.QueueDE.MasterData;
 using fiskaltrust.Middleware.Contracts.Data;
 using fiskaltrust.Middleware.Contracts.Models.Transactions;
 
@@ -49,7 +48,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 ? JsonConvert.DeserializeAnonymousType(lastDailyClosingJournal.DataJson, new { ftReceiptNumerator = 0L }).ftReceiptNumerator
                 : -1;
 
-            if (lastDailyClosingJournal == null || lastDailyClosingNumerator != queue.ftReceiptNumerator)
+            if (!request.IsInitiateScuSwitchReceiptForce() && ( lastDailyClosingJournal == null || lastDailyClosingNumerator != queue.ftReceiptNumerator))
             {
                 var reachable = false;
                 try
@@ -61,7 +60,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
                 if (reachable)
                 {
-                    throw new Exception($"ReceiptCase {request.ftReceiptCase:X} (initiate-scu-switch-receipt) can only be called right after a daily-closing receipt.");
+                    throw new Exception($"ReceiptCase {request.ftReceiptCase:X} (initiate-scu-switch-receipt) can only be called right after a daily-closing receipt." +
+                        $"If no daily-closing receipt can be done or the tse is not reachable use the Initiate-ScuSwitch-Force-Flag. See https://link.fiskaltrust.cloud/market-de/force-scu-switch-flag for more details.");
                 }
             }
 
@@ -122,7 +122,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 );
 
                 receiptResponse.ftStateData = await StateDataFactory.AppendTseInfoAsync(_deSSCDProvider.Instance, receiptResponse.ftStateData).ConfigureAwait(false);
-
             }
             catch (Exception ex)
             {
@@ -162,7 +161,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 signatures = new List<SignaturItem>();
                 transactionNumber = null;
             }
-
 
             actionJournals.Add(
                 new ftActionJournal()
