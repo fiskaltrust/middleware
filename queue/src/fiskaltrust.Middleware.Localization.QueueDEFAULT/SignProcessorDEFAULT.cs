@@ -16,27 +16,18 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT
     {
         private readonly ICountrySpecificSettings _countrySpecificSettings;
         private readonly IRequestCommandFactory _requestCommandFactory;
-        private readonly ISSCD _signingDevice;
-        private readonly ILogger _logger;
+        private readonly ILogger<SignProcessorDEFAULT> _logger;
 
-        public SignProcessorDEFAULT(ICountrySpecificSettings countrySpecificSettings, IRequestCommandFactory requestCommandFactory, ISSCD signingDevice, ILogger logger)
+        public SignProcessorDEFAULT(ICountrySpecificSettings countrySpecificSettings, IRequestCommandFactory requestCommandFactory, ILogger<SignProcessorDEFAULT> logger)
         {
             _requestCommandFactory = requestCommandFactory;
             _countrySpecificSettings = countrySpecificSettings;
-            _signingDevice = signingDevice;
             _logger = logger;
         }
 
         public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ftQueue queue, ftQueueItem queueItem)
         {
             var requestCommand = _requestCommandFactory.Create(request);
-
-            if (requestCommand is not ZeroReceiptCommand)
-            {
-                var requestCommandResponse = await requestCommand.ProcessFailedReceiptRequest(_signingDevice, _logger, _countrySpecificSettings, queue, queueItem, request).ConfigureAwait(false);
-                return (requestCommandResponse.ReceiptResponse, requestCommandResponse.ActionJournals.ToList());
-            }
-        
             var response = await requestCommand.ExecuteAsync(queue, request, queueItem).ConfigureAwait(false);
             return (response.ReceiptResponse, response.ActionJournals.ToList());
         }
