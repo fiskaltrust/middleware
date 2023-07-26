@@ -15,8 +15,10 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
 
         public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, bool isBeingResent = false)
         {
+            var ftReceiptCaseHex = request.ftReceiptCase.ToString("X");
+
             var receiptResponse = CreateReceiptResponse(queue, request, queueItem, await GetCashboxIdentificationAsync(queue.ftQueueId), CountryBaseState);
-            var actionJournalEntry = CreateActionJournal(queue.ftQueueId, $"{request.ftReceiptCase:X}", queueItem.ftQueueItemId, $"{ClosingReceiptName} receipt was processed.",
+            var actionJournalEntry = CreateActionJournal(queue.ftQueueId, ftReceiptCaseHex, queueItem.ftQueueItemId, $"{ClosingReceiptName} receipt was processed.",
                 JsonConvert.SerializeObject(new { ftReceiptNumerator = queue.ftReceiptNumerator + 1 }));
             var requestCommandResponse = new RequestCommandResponse
             {
@@ -25,6 +27,7 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
             };
             return await SpecializeAsync(requestCommandResponse, queue, request, queueItem);
         }
+
 
         protected virtual Task<RequestCommandResponse> SpecializeAsync(RequestCommandResponse requestCommandResponse, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem) => Task.FromResult(requestCommandResponse);
 
