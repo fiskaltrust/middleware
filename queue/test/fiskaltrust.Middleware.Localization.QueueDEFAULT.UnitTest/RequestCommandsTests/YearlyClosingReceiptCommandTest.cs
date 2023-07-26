@@ -26,9 +26,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.UnitTest.RequestComma
 
             var queueItem = new ftQueueItem
             {
-                ftQueueItemId = Guid.NewGuid(),
-                ftQueueId = queueId,
-                ftWorkMoment = DateTime.Now
+                ftQueueItemId = Guid.NewGuid(), ftQueueId = queueId, ftWorkMoment = DateTime.Now
             };
 
             var mockCountrySpecificQueue = new Mock<ICountrySpecificQueue>();
@@ -61,5 +59,27 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.UnitTest.RequestComma
             requestResponse.ActionJournals.FirstOrDefault()?.Type.Should().Be(receiptRequest.ftReceiptCase.ToString("X"));
 
         }
+        
+        [Fact]
+        public async Task ReceiptNeedsReprocessing_YearlyClosing_ValidResult()
+        {
+            var mockRepository = new Mock<ICountrySpecificQueueRepository>();
+            var mockSettings = new Mock<ICountrySpecificSettings>();
+            var command = new YearlyClosingReceiptCommand(mockSettings.Object);
+
+            var receiptRequest = new ReceiptRequest
+            {
+                ftReceiptCase = 12345 
+            };
+
+            var reprocessingResult = await command.ReceiptNeedsReprocessing(null, receiptRequest, null);
+
+            reprocessingResult.Should().BeFalse();
+        }
     }
 }
+
+
+
+
+
