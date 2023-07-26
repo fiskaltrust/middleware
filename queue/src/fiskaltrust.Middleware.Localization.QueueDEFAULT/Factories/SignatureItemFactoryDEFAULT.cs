@@ -16,22 +16,35 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.Factories
             CurrencyDecimalDigits = 2
         };
         
-    public List<SignaturItem> GetSignaturesForPosReceiptTransaction(string cashBoxId, string receiptId, decimal sumOfPayItems, string previousHash)
-    {
-        var signatures = new List<SignaturItem>
+        public List<SignaturItem> GetSignaturesForPosReceiptTransaction(string cashBoxId, string receiptId, decimal sumOfPayItems, string previousHash, long ftReceiptCase)
         {
-            CreateQrCodeSignature("www.fiskaltrust.eu", $"{cashBoxId}_{receiptId}_{sumOfPayItems}_{previousHash}")
-        };
+            var queueInfo = "DEFAULT";
+            var receiptCaseInfo = ftReceiptCase.ToString();
 
-        return signatures;
-    }
+            var signatures = new List<SignaturItem>
+            {
+                CreateQrCodeSignature("www.fiskaltrust.eu", $"{cashBoxId}_{receiptId}_{sumOfPayItems}_{previousHash}")
+            };
 
-    public SignaturItem CreateQrCodeSignature(string caption, string data) => new()
+            AddQueueAndReceiptCaseInfo(signatures, queueInfo, receiptCaseInfo);
+
+            return signatures;
+        }
+
+        public SignaturItem CreateQrCodeSignature(string caption, string data) => new()
         {
             Caption = caption,
             ftSignatureFormat = (long)SignaturItem.Formats.QR_Code,
             Data = data,
             ftSignatureType = 0x0
         };
+
+        private void AddQueueAndReceiptCaseInfo(List<SignaturItem> signatures, string queueInfo, string receiptCaseInfo)
+        {
+            foreach (var signature in signatures)
+            {
+                signature.Caption += $" - Queue Info: {queueInfo}, Receipt Case Info: {receiptCaseInfo}";
+            }
+        }
     }
 }
