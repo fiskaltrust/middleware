@@ -4,6 +4,7 @@ using System.Linq;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Localization.QueueAT;
 using fiskaltrust.Middleware.Localization.QueueDE;
+using fiskaltrust.Middleware.Localization.QueueDEFAULT;
 using fiskaltrust.Middleware.Localization.QueueES;
 using fiskaltrust.Middleware.Localization.QueueIT;
 using fiskaltrust.Middleware.Localization.QueueFR;
@@ -27,7 +28,9 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
                 "FR" => middlewareConfiguration.PreviewFeatures.TryGetValue("queue-fr", out var val) && val ? new QueueFRBootstrapper() : throw new NotImplementedException("The French Queue is not yet implemented in this version."),
                 "IT" => new QueueITBootstrapper(),
                 "ME" => new QueueMeBootstrapper(),
+                "DEFAULT" => new QueueDEFAULTBootstrapper(middlewareConfiguration),
                 _ => throw new ArgumentException($"Unkown country code: {countyCode}"),
+
             };
         }
 
