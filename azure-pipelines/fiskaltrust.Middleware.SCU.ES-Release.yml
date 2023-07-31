@@ -16,7 +16,7 @@ stages:
       type: fiskaltrust.Middleware.SCU.ES
       artifact: build
       projects:
-        - Epson
+        - TicketBai
       stages:
         - stage: Release_Sandbox
           dependsOn: []

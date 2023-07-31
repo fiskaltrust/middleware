@@ -20,7 +20,7 @@ namespace fiskaltrust.Middleware.SCU.ES.UnitTest
             _output = output;
         }
 
-        [Fact]
+        [Fact(Skip = "Gipuzkoa certificate is not working")]
         public async Task SubmitGipuzkoaInvoiceAsync()
         {
             var cert = new X509Certificate2(@"TestCertificates/Gipuzkoa/dispositivo_act.p12", "Iz3np32023", X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet);
@@ -99,7 +99,7 @@ namespace fiskaltrust.Middleware.SCU.ES.UnitTest
             await PerformTicketBaiRequestChain(config);
         }
 
-        [Fact]
+        [Fact(Skip = "Bizkaia certificate is not working")]
         public async Task SubmitBizkaiaInvoiceAsync()
         {
             var cert = new X509Certificate2(@"TestCertificates/Bizkaia/EntitateOrdezkaria_RepresentanteDeEntidad.p12", "IZDesa2021", X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet);
