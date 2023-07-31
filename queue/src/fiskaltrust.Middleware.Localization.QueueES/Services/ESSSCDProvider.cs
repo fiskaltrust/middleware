@@ -9,6 +9,8 @@ using fiskaltrust.Middleware.Localization.QueueES.Externals.ifpos;
 using fiskaltrust.storage.V0;
 using Newtonsoft.Json;
 
+#pragma warning disable
+
 namespace fiskaltrust.Middleware.Localization.QueueES.Services
 {
     public class ESSSCDProvider: IESSSCDProvider
@@ -29,11 +31,6 @@ namespace fiskaltrust.Middleware.Localization.QueueES.Services
                 try
                 {
                     _semaphoreInstance.Wait();
-                    if (_instance == null)
-                    {
-                        RegisterCurrentScuAsync().Wait();
-                    }
-
                     return _instance;
                 }
                 finally
@@ -47,28 +44,6 @@ namespace fiskaltrust.Middleware.Localization.QueueES.Services
         {
             _clientFactory = clientFactory;
             _middlewareConfiguration = middlewareConfiguration;
-        }
-
-        public async Task RegisterCurrentScuAsync()
-        {
-            try
-            {
-                await _semaphoreRegister.WaitAsync().ConfigureAwait(false);
-                var ftSignaturCreationUnitIT = JsonConvert.DeserializeObject<List<ftSignaturCreationUnitDE>>(_middlewareConfiguration.Configuration["init_ftSignaturCreationUnitIT"].ToString());
-
-                var uri = GetUriForSignaturCreationUnit(ftSignaturCreationUnitIT.FirstOrDefault().Url);
-                var config = new ClientConfiguration
-                {
-                    Url = uri.ToString(),
-                    UrlType = uri.Scheme
-                };
-
-                _instance = _clientFactory.CreateClient(config);
-            }
-            finally
-            {
-                _semaphoreRegister.Release();
-            }
         }
 
         private static Uri GetUriForSignaturCreationUnit(string url)
