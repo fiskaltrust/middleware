@@ -11,7 +11,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.Factories
 {
     public class SignatureItemFactoryES : SignatureItemFactory
     {
-        public override long CountryBaseState => 0x4954000000000000;
+        public override long CountryBaseState => 0x4553000000000000;
 
         public SignatureItemFactoryES() { 
         }

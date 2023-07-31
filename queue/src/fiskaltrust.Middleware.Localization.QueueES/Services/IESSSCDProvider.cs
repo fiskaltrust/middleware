@@ -1,8 +1,4 @@
-﻿using System.Collections.Generic;
-using System;
-using System.Threading.Tasks;
-using fiskaltrust.ifPOS.v1.it;
-using fiskaltrust.Middleware.Localization.QueueES.Externals.ifpos;
+﻿using fiskaltrust.Middleware.Localization.QueueES.Externals.ifpos;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.Services
 {
