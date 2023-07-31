@@ -27,16 +27,14 @@ namespace fiskaltrust.Middleware.Localization.QueueES.RequestCommands
         private readonly ICountrySpecificSettings _countryspecificSettings;
         private readonly IConfigurationRepository _configurationRepository;
         private readonly SignatureItemFactoryES _signatureItemFactory;
-        private readonly IMiddlewareJournalITRepository _journalITRepository;
         private readonly IESSSCD _client;
         private readonly ISSCD _signingDevice;
         private readonly ILogger<DailyClosingReceiptCommand> _logger;
 
-        public PosReceiptCommand(ISSCD signingDevice, ILogger<DailyClosingReceiptCommand> logger, IESSSCDProvider sscdProvider, SignatureItemFactoryES signatureItemFactory, IMiddlewareJournalITRepository journalITRepository, IConfigurationRepository configurationRepository, ICountrySpecificSettings countrySpecificSettings)
+        public PosReceiptCommand(ISSCD signingDevice, ILogger<DailyClosingReceiptCommand> logger, IESSSCDProvider sscdProvider, SignatureItemFactoryES signatureItemFactory, IConfigurationRepository configurationRepository, ICountrySpecificSettings countrySpecificSettings)
         {
             _client = sscdProvider.Instance;
             _signatureItemFactory = signatureItemFactory;
-            _journalITRepository = journalITRepository;
             _countryspecificSettings = countrySpecificSettings;
             _countrySpecificQueueRepository = countrySpecificSettings.CountrySpecificQueueRepository;
             _countryBaseState = countrySpecificSettings.CountryBaseState;
@@ -45,8 +43,28 @@ namespace fiskaltrust.Middleware.Localization.QueueES.RequestCommands
             _logger = logger;
         }
 
-        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, bool isBeingResent = false) => throw new NotImplementedException();
+        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, bool isBeingResent = false)
+        {
+            return new RequestCommandResponse
+            {
+                ReceiptResponse = new ReceiptResponse
+                {
+                    cbReceiptReference = request.cbReceiptReference,
+                    cbTerminalID = request.cbTerminalID,
+                    ftCashBoxID = request.ftCashBoxID,
+                    ftCashBoxIdentification = "demo",
+                    ftQueueRow = queueItem.ftQueueRow,
+                    ftQueueID = queueItem.ftQueueId.ToString(),
+                    ftQueueItemID = queueItem.ftQueueItemId.ToString(),
+                    ftReceiptMoment = DateTime.UtcNow,
+                    ftReceiptIdentification = "ft1#1",
+                    ftState = 0x00
+                },
+                Signatures = new List<SignaturItem>(),
+                ActionJournals = new List<ftActionJournal>()
+            };
+        }
 
-        public override Task<bool> ReceiptNeedsReprocessing(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem) => throw new NotImplementedException();
+        public override Task<bool> ReceiptNeedsReprocessing(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem) => Task.FromResult(false);
     }
 }

@@ -22,16 +22,14 @@ namespace fiskaltrust.Middleware.Localization.QueueES.RequestCommands
         private readonly ICountrySpecificSettings _countryspecificSettings;
         private readonly ICountrySpecificQueueRepository _countrySpecificQueueRepository;
         private readonly SignatureItemFactoryES _signatureItemFactory;
-        private readonly IMiddlewareJournalITRepository _journalITRepository;
         private readonly IESSSCD _client;
         private readonly ISSCD _signingDevice;
         private readonly ILogger<DailyClosingReceiptCommand> _logger;
 
-        public DailyClosingReceiptCommand(ISSCD signingDevice, ILogger<DailyClosingReceiptCommand> logger, SignatureItemFactoryES signatureItemFactory, ICountrySpecificSettings countrySpecificSettings, IESSSCDProvider sscdProvider, IMiddlewareJournalITRepository journalITRepository)
+        public DailyClosingReceiptCommand(ISSCD signingDevice, ILogger<DailyClosingReceiptCommand> logger, SignatureItemFactoryES signatureItemFactory, ICountrySpecificSettings countrySpecificSettings, IESSSCDProvider sscdProvider)
         {
             _countrySpecificQueueRepository = countrySpecificSettings.CountrySpecificQueueRepository;
             _client = sscdProvider.Instance;
-            _journalITRepository = journalITRepository;
             _signatureItemFactory = signatureItemFactory;
             _countryspecificSettings = countrySpecificSettings;
             _countryBaseState = countrySpecificSettings.CountryBaseState;
