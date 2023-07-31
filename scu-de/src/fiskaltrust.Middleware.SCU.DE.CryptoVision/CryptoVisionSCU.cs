@@ -350,18 +350,49 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision
             bool timeAdminPukInTransportState;
             (result, adminPinInTransportState, adminPukInTransportState, timeAdminPinInTransportState, timeAdminPukInTransportState) = await _proxy.SeGetPinStatesAsync();
             result.ThrowIfError();
-            if (adminPinInTransportState || adminPukInTransportState || timeAdminPinInTransportState || timeAdminPukInTransportState)
+
+            // check if we are in V1 or V2 and call the appropiate method
+            var releases = new List<string> { "240346", "425545", "793041" };
+            var isV1Hardware = releases.Any(release => deviceFirmwareId.Contains(release));
+            if (isV1Hardware)
             {
-                // check if we are in V1 or V2 and call the appropiate method
-                var releases = new List<string> { "240346", "425545", "793041" };
-                bool isV1Hardware = releases.Any(release => deviceFirmwareId.Contains(release));
-                if (isV1Hardware)
+                if (adminPinInTransportState || adminPukInTransportState || timeAdminPinInTransportState || timeAdminPukInTransportState)
                 {
                     (await _proxy.SeInitializePinsAsync(_adminPuk, _adminPin, _timeAdminPuk, _timeAdminPin)).ThrowIfError();
-                } else
+                }
+            }
+            else
+            {
+
+                if (adminPukInTransportState)
                 {
                     (await _proxy.SeInitializePinsAsync(Constants.ADMINNAME, _adminPuk)).ThrowIfError();
+                }
+
+                if (timeAdminPukInTransportState)
+                {
                     (await _proxy.SeInitializePinsAsync(Constants.TIMEADMINNAME, _timeAdminPuk)).ThrowIfError();
+                }
+
+                if (adminPinInTransportState)
+                {
+                    (var seResult, var unblockResult) = await _proxy.SeUnblockUserAsync(Constants.ADMINNAME, _adminPuk, _adminPin);
+                    seResult.ThrowIfError();
+                    if(unblockResult != SeAuthenticationResult.authenticationOk)
+                    {
+                        throw new CryptoVisionException("Failed to unblock user " + Constants.ADMINNAME);
+                    }
+
+                }
+
+                if (timeAdminPinInTransportState)
+                {
+                    (var seResult, var unblockResult) = await _proxy.SeUnblockUserAsync(Constants.TIMEADMINNAME, _timeAdminPuk, _timeAdminPin);
+                    seResult.ThrowIfError();
+                    if (unblockResult != SeAuthenticationResult.authenticationOk)
+                    {
+                        throw new CryptoVisionException("Failed to unblock user " + Constants.TIMEADMINNAME);
+                    }
                 }
             }
 
