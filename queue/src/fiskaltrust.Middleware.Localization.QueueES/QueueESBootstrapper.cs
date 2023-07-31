@@ -1,5 +1,4 @@
-﻿using fiskaltrust.Middleware.Abstractions;
-using fiskaltrust.Middleware.Contracts.Constants;
+﻿using fiskaltrust.Middleware.Contracts.Constants;
 using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Repositories;
@@ -11,7 +10,6 @@ using fiskaltrust.Middleware.Localization.QueueES.RequestCommands.Factories;
 using fiskaltrust.Middleware.Contracts.RequestCommands.Factories;
 using fiskaltrust.Middleware.Localization.QueueES.Extensions;
 using fiskaltrust.Middleware.Localization.QueueES.Repositories;
-using fiskaltrust.Middleware.Localization.QueueES.Externals.ifpos;
 
 namespace fiskaltrust.Middleware.Localization.QueueES
 {
