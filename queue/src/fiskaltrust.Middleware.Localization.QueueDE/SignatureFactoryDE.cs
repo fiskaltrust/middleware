@@ -134,7 +134,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
                 CreateBase64Signature(SignatureTypesDE.StartTransactionResult, "start-transaction-signature", startTransactionSignatureBase64, true),
                 CreateBase64Signature(SignatureTypesDE.FinishTransactionPayload, "finish-transaction-payload", finishResultResponse.ProcessDataBase64, true),
                 CreateBase64Signature(SignatureTypesDE.FinishTransactionResult, "finish-transaction-signature", finishResultResponse.SignatureData.SignatureBase64, true),
-                CreateTextSignature(SignatureTypesDE.CertificationId, "<certification-id>", certificationIdentification, false) //TODO clarify
+                CreateTextSignature(SignatureTypesDE.CertificationId, "<certification-id>", certificationIdentification, false), //TODO clarify
+                CreateTextSignature(SignatureTypesDE.TseSerialNumber, "<tse-seriennummer>", finishResultResponse.TseSerialNumberOctet, true)
             };
             signatures.AddRange(qrCodeSignatures);
             return signatures;
