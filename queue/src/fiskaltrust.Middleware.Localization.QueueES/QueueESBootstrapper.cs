@@ -29,10 +29,9 @@ namespace fiskaltrust.Middleware.Localization.QueueES
                 .AddSingleton(sp => QueueESConfiguration.FromMiddlewareConfiguration(sp.GetRequiredService<MiddlewareConfiguration>()))
                 .AddSingleton<IESSSCDProvider>(sp =>
                 {
-                    var sscdProvider = new ESSSCDProvider(
-                        sp.GetRequiredService<IClientFactory<IESSSCD>>(),
+                    var sscdProvider = new ESSSCDProvider(null,
                         sp.GetRequiredService<MiddlewareConfiguration>());
-                    sscdProvider.RegisterCurrentScuAsync().Wait();
+                    //sscdProvider.RegisterCurrentScuAsync().Wait();
                     return sscdProvider;
                 })
                 .AddSingleton<IRequestCommandFactory, RequestCommandFactory>()
