@@ -9,6 +9,8 @@ using fiskaltrust.Middleware.Contracts.Constants;
 using fiskaltrust.Middleware.Localization.QueueES.Factories;
 using fiskaltrust.Middleware.Localization.QueueES.Services;
 using fiskaltrust.Middleware.Localization.QueueES.Externals.ifpos;
+using fiskaltrust.storage.serialization.DE.V0;
+using Newtonsoft.Json;
 
 #pragma warning disable
 
@@ -30,8 +32,24 @@ namespace fiskaltrust.Middleware.Localization.QueueES.RequestCommands
             _countrySpecificQueueRepository = countrySpecificQueueSettings.CountrySpecificQueueRepository;
         }
 
-        protected override async Task<(ftActionJournal, SignaturItem)> InitializeSCUAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem) => throw new NotImplementedException();
+        protected override async Task<(ftActionJournal, SignaturItem)> InitializeSCUAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
+        {
+            var queueIt = await _countrySpecificQueueRepository.GetQueueAsync(queue.ftQueueId);
+            var signatureItem = _signatureItemFactory.CreateInitialOperationSignature($"Queue-ID: {queue.ftQueueId} Serial-Nr: ???");
+            var notification = new ActivateQueueSCU
+            {
+                CashBoxId = Guid.Parse(request.ftCashBoxID),
+                QueueId = queueItem.ftQueueId,
+                Moment = DateTime.UtcNow,
+                SCUId = queueIt.ftSignaturCreationUnitId.GetValueOrDefault(),
+                IsStartReceipt = true,
+                Version = "V0",
+            };
+            var actionJournal = CreateActionJournal(queue.ftQueueId, $"{request.ftReceiptCase:X}-{nameof(ActivateQueueSCU)}",
+                queueItem.ftQueueItemId, $"Initial-Operation receipt. Queue-ID: {queue.ftQueueId}", JsonConvert.SerializeObject(notification));
+            return (actionJournal, signatureItem);
+        }
 
-        public override Task<bool> ReceiptNeedsReprocessing(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem) => throw new NotImplementedException();
+        public override Task<bool> ReceiptNeedsReprocessing(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem) => Task.FromResult(false);
     }
 }

@@ -30,8 +30,30 @@ namespace fiskaltrust.Middleware.Localization.QueueES.RequestCommands
 
         public override Task<bool> ReceiptNeedsReprocessing(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem) => Task.FromResult(false);
 
-        protected override Task<(ftActionJournal, SignaturItem)> DeactivateSCUAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem) => throw new NotImplementedException();
+        protected override async Task<(ftActionJournal, SignaturItem)> DeactivateSCUAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
+        {
+            var queueIt = await _countrySpecificQueueRepository.GetQueueAsync(queue.ftQueueId);
+            var signatureItem = _signatureItemFactory.CreateOutOfOperationSignature($"Queue-ID: {queue.ftQueueId}");
+            var notification = new DeactivateQueueSCU
+            {
+                CashBoxId = Guid.Parse(request.ftCashBoxID),
+                QueueId = queueItem.ftQueueId,
+                Moment = DateTime.UtcNow,
+                SCUId = queueIt.ftSignaturCreationUnitId.GetValueOrDefault(),
+                IsStopReceipt = true,
+                Version = "V0"
+            };
 
-        protected override async Task<string> GetCashboxIdentificationAsync(Guid ftQueueId) => throw new NotImplementedException();
+            var actionJournal = CreateActionJournal(queue.ftQueueId, $"{request.ftReceiptCase:X}-{nameof(DeactivateQueueSCU)}",
+                queueItem.ftQueueItemId, $"Out-of-Operation receipt. Queue-ID: {queue.ftQueueId}", JsonConvert.SerializeObject(notification));
+
+            return await Task.FromResult((actionJournal, signatureItem));
+        }
+
+        protected override async Task<string> GetCashboxIdentificationAsync(Guid ftQueueId)
+        {
+            var queueIt = await _countrySpecificQueueRepository.GetQueueAsync(ftQueueId).ConfigureAwait(false);
+            return queueIt.CashBoxIdentification;
+        }
     }
 }

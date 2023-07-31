@@ -21,8 +21,12 @@ namespace fiskaltrust.Middleware.Localization.QueueES.RequestCommands
             _countryBaseState = countryspecificSettings.CountryBaseState;
         }
 
-        protected override async Task<string> GetCashboxIdentificationAsync(Guid ftQueueId) => throw new NotImplementedException();
+        protected override async Task<string> GetCashboxIdentificationAsync(Guid ftQueueId)
+        {
+            var queue = await _countrySpecificQueueRepository.GetQueueAsync(ftQueueId).ConfigureAwait(false);
+            return queue.CashBoxIdentification;
+        }
 
-        public override Task<bool> ReceiptNeedsReprocessing(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem) => throw new NotImplementedException();
+        public override Task<bool> ReceiptNeedsReprocessing(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem) => Task.FromResult(false);
     }
 }
