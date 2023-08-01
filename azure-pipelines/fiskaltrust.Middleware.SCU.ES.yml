@@ -62,4 +62,4 @@ stages:
             parameters:
               workingDirectory: scu-es
               projects:
-                - fiskaltrust.Middleware.SCU.es.Epson
+                - fiskaltrust.Middleware.SCU.ES.TicketBai
