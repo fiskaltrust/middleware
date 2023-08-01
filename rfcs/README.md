@@ -46,13 +46,13 @@ The goal is to move the discussion into a format where we can give each part of 
 ## The Process
 
 1. Fork this repository and create a new branch for your new RFC.
-2. Copy `0000-template.md` in the `rfcs` folder and rename it to `my_feature.md`, where `my_feature` is a unique identifier for your feature.
+2. Copy `0000-template.md` in the `rfcs` folder and rename it to `my-feature.md`, where `my_feature` is a unique identifier for your feature.
 3. Fill out the RFC template with your vision for `my_feature`.
 4. [Create a pull request](https://docs.github.com/en/github/collaborating-with-issues-and-pull-requests/creating-a-pull-request) in this repo. The first comment should include:
    1. A one-sentence description of what the RFC is about.
-   2. A link to the "rendered" form of the `my_feature.md` file. To do so, link directly to the file on your own branch, so then the link stays up to date as the file's contents changes.
-      See #191 for an example of what this looks like.
-5. With your PR created, note the PR number assigned to your RFC. Rename your file to `PR_NUMBER-my_feature.md` (ex: `7-visual_scripting.md`), and make sure to update the link to your rendered file.
+   2. A link to the "rendered" form of the `my-feature.md` file. To do so, link directly to the file on your own branch, so then the link stays up to date as the file's contents changes.
+      See #192 for an example of what this looks like.
+5. With your PR created, note the PR number assigned to your RFC. Rename your file to `PR_NUMBER-my-feature.md` (ex: `7-visual_scripting.md`), and make sure to update the link to your rendered file.
 6. Help us discuss and refine the RFC. Middleware contributors and fiskaltrust members will leave comments and suggestions.
    Ideally at some point relative consensus will be reached.
    Your RFC is "accepted" if your pull request is merged.

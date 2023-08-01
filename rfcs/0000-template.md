@@ -1,4 +1,4 @@
-- Feature Name: (fill me in with a unique ident, `my_awesome_feature`)
+- Feature Name: (fill me in with a unique ident, `my_feature`)
 - Start Date: (fill me in with today's date, YYYY-MM-DD)
 - RFC PR: [fiskaltrust/middleware#0000](https://github.com/fiskaltrust/middleware/pull/0000)
 - Tracking Issue: [fiskaltrust/middleware#0000](https://github.com/fiskaltrust/middleware/issues/0000)
@@ -30,14 +30,18 @@ and then focus in on the tricky details so that:
 - Its interaction with other features is clear.
 - It is reasonably clear how the feature would be implemented.
 - Corner cases are dissected by example.
-- Discuss how this impacts the ability to read, understand, and maintain middleware code. Code is read and modified far more often than written; will the proposed feature make code easier to maintain?
+- Discuss how this impacts the ability to read, understand, and maintain middleware code.
+  Code is read and modified far more often than written; will the proposed feature make code easier to maintain?
 
 When necessary, this section should return to the examples given in the previous section and explain the implementation details that make them work.
 
 When writing this section be mindful of the following:
-- **RFCs should be scoped:** Try to avoid creating RFCs for huge design spaces that span many features. Try to pick a specific feature slice and describe it in as much detail as possible. Feel free to create multiple RFCs if you need multiple features.
+- **RFCs should be scoped:** Try to avoid creating RFCs for huge design spaces that span many features.
+  Try to pick a specific feature slice and describe it in as much detail as possible.
+  Feel free to create multiple RFCs if you need multiple features.
 - **RFCs should avoid ambiguity:** Two developers implementing the same RFC should come up with nearly identical implementations.
-- **RFCs should be "implementable":** Merged RFCs should only depend on features from other merged RFCs and existing features. It is ok to create multiple dependent RFCs, but they should either be merged at the same time or have a clear merge order that ensures the "implementable" rule is respected.
+- **RFCs should be "implementable":** Merged RFCs should only depend on features from other merged RFCs and existing features.
+  It is ok to create multiple dependent RFCs, but they should either be merged at the same time or have a clear merge order that ensures the "implementable" rule is respected.
 
 # Drawbacks
 
@@ -57,7 +61,8 @@ A few examples of what this can include are:
 
 - Does this feature exist in other markets and what experience have their community had?
 - Does this feature exist in other possystems and what experience have their community had?
-- Papers: Are there any published papers or great posts that discuss this? If you have some relevant papers to refer to, this can serve as a more detailed theoretical background.
+- Papers: Are there any published papers or great posts that discuss this?
+  If you have some relevant papers to refer to, this can serve as a more detailed theoretical background.
 
 This section is intended to encourage you as an author to think about the lessons from other markets and projects, provide readers of your RFC with a fuller picture.
 If there is no prior art, that is fine - your ideas are interesting to us whether they are brand new or not.
