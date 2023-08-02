@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Factories;
@@ -16,14 +17,14 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.Factories
             CurrencyDecimalDigits = 2
         };
         
-        public List<SignaturItem> GetSignaturesForPosReceiptTransaction(string cashBoxId, string receiptId, decimal sumOfPayItems, string previousHash, long ftReceiptCase)
+        public List<SignaturItem> GetSignaturesForPosReceiptTransaction(Guid cashBoxId, Guid receiptId, decimal sumOfPayItems, long ftReceiptCase)
         {
             var queueInfo = "DEFAULT";
             var receiptCaseInfo = ftReceiptCase.ToString();
 
             var signatures = new List<SignaturItem>
             {
-                CreateQrCodeSignature("www.fiskaltrust.eu", $"{cashBoxId}_{receiptId}_{sumOfPayItems}_{previousHash}")
+                CreateQrCodeSignature("www.fiskaltrust.eu", $"{cashBoxId}_{receiptId}_{sumOfPayItems}")
             };
 
             AddQueueAndReceiptCaseInfo(signatures, queueInfo, receiptCaseInfo);

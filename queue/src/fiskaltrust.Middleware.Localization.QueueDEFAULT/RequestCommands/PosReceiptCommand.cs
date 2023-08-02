@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Constants;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Contracts.RequestCommands;
+using fiskaltrust.Middleware.Localization.QueueDEFAULT.Factories;
 using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.RequestCommands
@@ -15,23 +17,30 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.RequestCommands
         private readonly ICountrySpecificQueueRepository _countrySpecificQueueRepository;
         private readonly ICountrySpecificSettings _countryspecificSettings;
         private readonly IConfigurationRepository _configurationRepository;
+        private readonly IMiddlewareQueueItemRepository _middlewareQueueItemRepository;
+        private readonly SignatureItemFactoryDEFAULT _signatureItemFactory;
 
-        public PosReceiptCommand(IConfigurationRepository configurationRepository, ICountrySpecificSettings countrySpecificSettings)
+        public PosReceiptCommand(IConfigurationRepository configurationRepository, ICountrySpecificSettings countrySpecificSettings, IQueueItemRepository queueItemRepository, IMiddlewareQueueItemRepository middlewareQueueItemRepository)
         {
             _countryspecificSettings = countrySpecificSettings;
+            _middlewareQueueItemRepository = middlewareQueueItemRepository;
             _countrySpecificQueueRepository = countrySpecificSettings.CountrySpecificQueueRepository;
             _countryBaseState = countrySpecificSettings.CountryBaseState;
             _configurationRepository = configurationRepository;
+            _signatureItemFactory = new SignatureItemFactoryDEFAULT();
         }
         public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, bool isBeingResent = false)
         {
             var response = CreateReceiptResponse(queue, request, queueItem, (await _countrySpecificQueueRepository.GetQueueAsync(queue.ftQueueId))
                 .CashBoxIdentification, _countryBaseState);
     
+            var sumOfPayItems = request.cbPayItems.Sum(item => item.Amount);
+            var signatures = _signatureItemFactory.GetSignaturesForPosReceiptTransaction(queue.ftQueueId, queueItem.ftQueueItemId, sumOfPayItems, request.ftReceiptCase);
+    
             return await Task.FromResult(new RequestCommandResponse
             {
                 ReceiptResponse = response,
-                Signatures = new List<SignaturItem>(),
+                Signatures = signatures,
                 ActionJournals = new List<ftActionJournal>()
             });
         }
