@@ -18,14 +18,14 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.Factories
         };
         
         public List<SignaturItem> GetSignaturesForPosReceiptTransaction(Guid cashBoxId, Guid receiptId,
-            decimal sumOfPayItems, string receiptCase, long ftReceiptCase)
+            decimal sumOfPayItems, string lastHash, long ftReceiptCase)
         {
             var queueInfo = "DEFAULT";
             var receiptCaseInfo = ftReceiptCase.ToString();
 
             var signatures = new List<SignaturItem>
             {
-                CreateQrCodeSignature("www.fiskaltrust.eu", $"{cashBoxId}_{receiptId}_{sumOfPayItems}")
+                CreateQrCodeSignature("www.fiskaltrust.eu", $"{cashBoxId}_{receiptId}_{lastHash}_{sumOfPayItems}")
             };
 
             AddQueueAndReceiptCaseInfo(signatures, queueInfo, receiptCaseInfo);

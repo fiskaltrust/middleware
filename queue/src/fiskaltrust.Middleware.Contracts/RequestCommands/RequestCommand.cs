@@ -17,7 +17,7 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
 
         protected ReceiptResponse CreateReceiptResponse(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, string ftCashBoxIdentification, long ftState)
         {
-            var receiptIdentification = $"ft{queue.ftReceiptNumerator:X}";
+            var receiptIdentification = $"ft{queue.ftReceiptNumerator:X}#";
             return new ReceiptResponse
             {
                 ftCashBoxID = request.ftCashBoxID,
