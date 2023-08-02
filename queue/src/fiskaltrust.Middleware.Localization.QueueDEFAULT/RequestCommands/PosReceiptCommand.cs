@@ -31,21 +31,23 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.RequestCommands
         }
         public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, bool isBeingResent = false)
         {
-            var response = CreateReceiptResponse(queue, request, queueItem, (await _countrySpecificQueueRepository.GetQueueAsync(queue.ftQueueId))
-                .CashBoxIdentification, _countryBaseState);
-    
+            var countrySpecificQueue = await _countrySpecificQueueRepository.GetQueueAsync(queue.ftQueueId);
+
+            var response = CreateReceiptResponse(queue, request, queueItem, countrySpecificQueue.CashBoxIdentification, _countryBaseState);
+
             var sumOfPayItems = request.cbPayItems.Sum(item => item.Amount);
-            var signatures = _signatureItemFactory.GetSignaturesForPosReceiptTransaction(queue.ftQueueId, queueItem.ftQueueItemId, sumOfPayItems, request.ftReceiptCase);
-    
+            var lastHash = countrySpecificQueue.LastHash;
+            var signatures = _signatureItemFactory.GetSignaturesForPosReceiptTransaction(queue.ftQueueId, queueItem.ftQueueItemId, sumOfPayItems, lastHash, request.ftReceiptCase);
+            response.ftSignatures = signatures.ToArray();
+
             return await Task.FromResult(new RequestCommandResponse
             {
                 ReceiptResponse = response,
-                Signatures = signatures,
                 ActionJournals = new List<ftActionJournal>()
             });
         }
 
-        public override Task<bool> ReceiptNeedsReprocessing(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
+        public override Task<bool> ReceiptNeedsReprocessing(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem) 
         {
             return Task.FromResult(false);
         }

@@ -17,7 +17,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.Factories
             CurrencyDecimalDigits = 2
         };
         
-        public List<SignaturItem> GetSignaturesForPosReceiptTransaction(Guid cashBoxId, Guid receiptId, decimal sumOfPayItems, long ftReceiptCase)
+        public List<SignaturItem> GetSignaturesForPosReceiptTransaction(Guid cashBoxId, Guid receiptId,
+            decimal sumOfPayItems, string receiptCase, long ftReceiptCase)
         {
             var queueInfo = "DEFAULT";
             var receiptCaseInfo = ftReceiptCase.ToString();

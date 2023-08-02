@@ -111,7 +111,6 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
             return new RequestCommandResponse
             {
                 ReceiptResponse = receiptResponse,
-                Signatures = receiptResponse.ftSignatures.ToList(),
                 ActionJournals = new List<ftActionJournal>()
             };
         }
@@ -161,7 +160,6 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
             return new RequestCommandResponse
             {
                 ReceiptResponse = receiptResponse,
-                Signatures = receiptResponse.ftSignatures.ToList(),
                 ActionJournals = new List<ftActionJournal>()
             };
         }

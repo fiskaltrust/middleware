@@ -16,5 +16,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.Dummy
         public DateTime? UsedFailedMomentMin { get; set; }
         public DateTime? UsedFailedMomentMax { get; set; }
         public Guid? UsedFailedQueueItemId { get; set; }
+        
     }
 }

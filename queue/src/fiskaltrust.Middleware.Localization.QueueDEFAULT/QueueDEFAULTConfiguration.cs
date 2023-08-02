@@ -7,6 +7,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT
     {
         public bool Sandbox { get; set; } = true;
 
-        public static QueueDEFAULTConfiguration FromMiddlewareConfiguration(MiddlewareConfiguration middlewareConfiguration) => JsonConvert.DeserializeObject<QueueDEFAULTConfiguration>(JsonConvert.SerializeObject(middlewareConfiguration.Configuration));
+        public static QueueDEFAULTConfiguration FromMiddlewareConfiguration(MiddlewareConfiguration middlewareConfiguration)
+            => JsonConvert.DeserializeObject<QueueDEFAULTConfiguration>(JsonConvert.SerializeObject(middlewareConfiguration.Configuration));
     }
 }
