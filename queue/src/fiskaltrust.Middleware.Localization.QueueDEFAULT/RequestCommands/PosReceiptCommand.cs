@@ -36,8 +36,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.RequestCommands
             var response = CreateReceiptResponse(queue, request, queueItem, countrySpecificQueue.CashBoxIdentification, _countryBaseState);
 
             var sumOfPayItems = request.cbPayItems?.Sum(item => item.Amount) ?? 0;
-            var lastHash = countrySpecificQueue.LastHash;
-            var signatures = _signatureItemFactory.GetSignaturesForPosReceiptTransaction(queue.ftQueueId, queueItem.ftQueueItemId, sumOfPayItems, lastHash, request.ftReceiptCase);
+            var receiptHash = queue.ftReceiptHash;
+            var signatures = _signatureItemFactory.GetSignaturesForPosReceiptTransaction(queue.ftQueueId, queueItem.ftQueueItemId, sumOfPayItems, receiptHash, request.ftReceiptCase);
             response.ftSignatures = signatures.ToArray();
 
             return await Task.FromResult(new RequestCommandResponse
