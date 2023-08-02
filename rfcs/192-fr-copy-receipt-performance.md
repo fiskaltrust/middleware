@@ -29,7 +29,7 @@ They will work out of the box.
 
 The new table will be created on start up after updating the queue.
 
-The data will be migrated from the `ftJournalFR` table to the new `ftJournalFRCopyReceipts` table.
+The new `ftJournalFRCopyReceipts` table will be populated with data from the `ftJournalFR` table.
 This will take a similar timeframe as it takes to process a CopyReceipt with the old implementation.
 
 ## SignatureCloud
@@ -164,10 +164,6 @@ In the worst case scenario this would be as slow as the current implementation b
 ## SignatureCloud
 
 Will we perform the migration manually before switching the PosCreator to the new environment or will we have the SignatureCloud perform the migration automatically on start up?
-
-> - What parts of the design do you expect to resolve through the RFC process before this gets merged?
-> - What parts of the design do you expect to resolve through the implementation of this feature before before the feature PR is merged?
-> - What related issues do you consider out of scope for this RFC that could be addressed in the future independently of the solution that comes out of this RFC?
 
 # Future possibilities
 
