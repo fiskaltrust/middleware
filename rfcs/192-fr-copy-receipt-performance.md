@@ -161,6 +161,12 @@ In the worst case scenario this would be as slow as the current implementation b
 
 # Unresolved questions
 
+## Migration
+
+Can we populate the table asynchronously? This would mean we could start the Queue without waiting for the population of the `ftJournalFRCopyReceipts` table to finish.
+
+However this would mean we would have to either fail CopyReceipts until the process of population is complete or wait for the population to finish before we start processing the CopyReceipt.
+
 ## SignatureCloud
 
 Will we perform the migration manually before switching the PosCreator to the new environment or will we have the SignatureCloud perform the migration automatically on start up?
