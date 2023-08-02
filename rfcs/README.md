@@ -1,12 +1,12 @@
 # Middleware RFCs
 
-Thank you for contributing to the midleware! If you've been asked to make an RFC, it's because your contribution is significant enough that it warrants careful thought from the community.
+Thank you for contributing to the middleware! If you've been asked to make an RFC, it's because your contribution is significant enough that it warrants careful thought from the community.
 
 ## What is an RFC?
 
 RFCs (request for comments) provide a way for middleware contributors to propose designs for specific features in a [structured way](0000-template.md).
 Creating a new RFC starts a collaborative process where we and the community can review your design and suggest changes.
-If an RFC is accepted, this indicates that it is in line with our vision for the middlewares future.
+If an RFC is accepted, this indicates that it is in line with our vision for the middleware's future.
 Contributors can implement accepted RFCs comforted by the knowledge that the design has already been "approved".
 
 **RFCs are for large features, breaking into new design areas, major breaking changes, and significant changes to middleware development.**
@@ -21,10 +21,10 @@ Contributors can implement accepted RFCs comforted by the knowledge that the des
 * **RFCs should avoid ambiguity**: Two developers implementing the same RFC should come up with nearly identical implementations.
 * **RFCs should be "implementable"**: Merged RFCs should only depend on features from other merged RFCs and existing middleware features.
   It is ok to create multiple dependent RFCs, but they should either be merged at the same time or have a clear merge order that ensures the "implementable" rule is respected.
-* **Don't create RFCs before you have a design**: If you want to explore design spaces with the middleware community, consider finding or creating a [Github Discussion in the middleware repo](https://github.com/fiskaltrust/middleware/discussions).
+* **Don't create RFCs before you have a design**: If you want to explore design spaces with the middleware community, consider finding or creating a [GitHub Discussion in the middleware repo](https://github.com/fiskaltrust/middleware/discussions).
   If at any point during the discussion you discover a design you believe in enough to bring to completion, create an RFC.
-  You don't need to have _all_ of the details sorted out ahead of time, but Draft RFCs (RFCs created as "Draft PRs" on Github) should have more than just a few sentences describing the feature.
-  An initial Draft RFC should at a bare minimum describe the design and goals from a high level, draw out a first draft of the public apis, and prescribe a good portion of the technical details.
+  You don't need to have _all_ of the details sorted out ahead of time, but Draft RFCs (RFCs created as "Draft PRs" on GitHub) should have more than just a few sentences describing the feature.
+  An initial Draft RFC should at a bare minimum describe the design and goals from a high level, draw out a first draft of the public APIs, and prescribe a good portion of the technical details.
   RFCs are a platform for community members to share detailed technical designs for new middleware features, not for people to open discussions with the intent to eventually find a design.
 
 If you are uncertain if you should create an RFC for your change, don't hesitate to ask us in a [Discussion](https://github.com/fiskaltrust/middleware/discussions).

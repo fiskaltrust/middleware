@@ -60,7 +60,7 @@ Discuss prior art, both the good and the bad, in relation to this proposal.
 A few examples of what this can include are:
 
 - Does this feature exist in other markets and what experience have their community had?
-- Does this feature exist in other possystems and what experience have their community had?
+- Does this feature exist in other PosSystems and what experience have their community had?
 - Papers: Are there any published papers or great posts that discuss this?
   If you have some relevant papers to refer to, this can serve as a more detailed theoretical background.
 

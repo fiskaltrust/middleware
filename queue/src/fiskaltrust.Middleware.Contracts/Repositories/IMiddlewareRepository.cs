@@ -17,7 +17,7 @@ namespace fiskaltrust.Middleware.Contracts.Repositories
     {
         IAsyncEnumerable<ftQueueItem> GetByReceiptReferenceAsync(string cbReceiptReference, string cbTerminalId = null);
 
-        Task<ftQueueItem> GetByQueueRowAsync(long queueRow);
+        Task<ftQueueItem> GetByQueueRowAsync(long queueRow); 
 
         Task<ftQueueItem> GetClosestPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem);
 
@@ -50,7 +50,6 @@ namespace fiskaltrust.Middleware.Contracts.Repositories
     {
         Task<ftJournalFR> GetWithLastTimestampAsync();
         IAsyncEnumerable<ftJournalFR> GetProcessedCopyReceiptsAsync();
-        IAsyncEnumerable<ftJournalFR> GetProcessedCopyReceiptsDescAsync();
     }
 
     public interface IMiddlewareJournalDERepository : IJournalDERepository

@@ -59,7 +59,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
         {
             if (request.cbChargeItems != null && request.cbChargeItems.Length > 0)
             {
-                yield return new ValidationError { Message = $"The Copy receipt must not have charge items." };
+                yield return new ValidationError {Message = $"The Copy receipt must not have charge items." };
             }
             if (request.cbPayItems != null && request.cbPayItems.Length > 0)
             {
@@ -73,21 +73,21 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
 
         private async Task<int> GetCountOfExistingCopiesAsync(string cbPreviousReceiptReference)
         {
-            await foreach (var copyJournal in _journalFRRepository.GetProcessedCopyReceiptsDescAsync())
+            var count = 0;
+            await foreach (var copyJournal in _journalFRRepository.GetProcessedCopyReceiptsAsync())
             {
                 var queueItem = await _queueItemRepository.GetAsync(copyJournal.ftQueueItemId);
                 var response = queueItem?.response != null ? JsonConvert.DeserializeObject<ReceiptResponse>(queueItem.response) : null;
                 if (response != null)
                 {
-                    var duplicata = response.ftSignatures.FirstOrDefault(x => x.Caption == "Duplicata" && x.Data.EndsWith($"Duplicata de {cbPreviousReceiptReference}"));
-
-                    if (duplicata != null)
+                    if (response.ftSignatures.Any(x => x.Caption == "Duplicata" && x.Data.EndsWith($"Duplicata de {cbPreviousReceiptReference}")))
                     {
-                        return int.Parse(duplicata.Data.Split('.')[0]);
+                        count++;
                     }
                 }
             }
-            return 0;
+
+            return count;
         }
     }
 }
