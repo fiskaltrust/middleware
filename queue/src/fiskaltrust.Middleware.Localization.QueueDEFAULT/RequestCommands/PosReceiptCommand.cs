@@ -15,18 +15,12 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.RequestCommands
     {
         private readonly long _countryBaseState;
         private readonly ICountrySpecificQueueRepository _countrySpecificQueueRepository;
-        private readonly ICountrySpecificSettings _countryspecificSettings;
-        private readonly IConfigurationRepository _configurationRepository;
-        private readonly IMiddlewareQueueItemRepository _middlewareQueueItemRepository;
         private readonly SignatureItemFactoryDEFAULT _signatureItemFactory;
 
         public PosReceiptCommand(IConfigurationRepository configurationRepository, ICountrySpecificSettings countrySpecificSettings, IQueueItemRepository queueItemRepository, IMiddlewareQueueItemRepository middlewareQueueItemRepository)
         {
-            _countryspecificSettings = countrySpecificSettings;
-            _middlewareQueueItemRepository = middlewareQueueItemRepository;
             _countrySpecificQueueRepository = countrySpecificSettings.CountrySpecificQueueRepository;
             _countryBaseState = countrySpecificSettings.CountryBaseState;
-            _configurationRepository = configurationRepository;
             _signatureItemFactory = new SignatureItemFactoryDEFAULT();
         }
         public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, bool isBeingResent = false)
@@ -36,8 +30,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.RequestCommands
             var response = CreateReceiptResponse(queue, request, queueItem, countrySpecificQueue.CashBoxIdentification, _countryBaseState);
 
             var sumOfPayItems = request.cbPayItems?.Sum(item => item.Amount) ?? 0;
-            var receiptHash = queue.ftReceiptHash;
-            var signatures = _signatureItemFactory.GetSignaturesForPosReceiptTransaction(queue.ftQueueId, queueItem.ftQueueItemId, sumOfPayItems, receiptHash, request.ftReceiptCase);
+            var previousHash = queue.ftReceiptHash;
+            var signatures = _signatureItemFactory.GetSignaturesForPosReceiptTransaction(queue.ftQueueId, queueItem.ftQueueItemId, sumOfPayItems, previousHash, request.ftReceiptCase);
             response.ftSignatures = signatures.ToArray();
 
             return await Task.FromResult(new RequestCommandResponse
