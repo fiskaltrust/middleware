@@ -17,7 +17,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.RequestCommands
         private readonly ICountrySpecificQueueRepository _countrySpecificQueueRepository;
         private readonly SignatureItemFactoryDEFAULT _signatureItemFactory;
 
-        public PosReceiptCommand(IConfigurationRepository configurationRepository, ICountrySpecificSettings countrySpecificSettings, IQueueItemRepository queueItemRepository, IMiddlewareQueueItemRepository middlewareQueueItemRepository)
+        public PosReceiptCommand(ICountrySpecificSettings countrySpecificSettings)
         {
             _countrySpecificQueueRepository = countrySpecificSettings.CountrySpecificQueueRepository;
             _countryBaseState = countrySpecificSettings.CountryBaseState;
