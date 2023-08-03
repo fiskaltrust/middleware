@@ -130,6 +130,8 @@ An alternative way of doing this would be to keep the current implementation and
 
 One way to do that would be to not count every CopyReceipt in the `ftJournalFR` table but only find the latest one and increase its count by one.
 
+If we find a non copy receipt with the same `cbReceiptReference` as the `cbPreviousReceiptReference` we can return 0 directly.
+
 ```cs
 private async Task<int> GetCountOfExistingCopiesAsync(string cbPreviousReceiptReference)
 {
@@ -145,6 +147,10 @@ private async Task<int> GetCountOfExistingCopiesAsync(string cbPreviousReceiptRe
             {
                 return int.Parse(duplicata.Data.Split('.')[0]);
             }
+
+            if(response.cbReceiptReference == cbPreviousReceiptReference) {
+                return 0;
+            }
         }
     }
     return 0;
@@ -156,6 +162,7 @@ In the worst case scenario this would be as slow as the current implementation b
 ## Open questions
 
 * Can we implement a `GetProcessedCopyReceiptsDescAsync` method that gets us the CopyReceipts in descending order.
+* Taking non copy receipts into account would change the behaviour of the middleware in the case of multiple different receipts with the same receipt reference. Is this acceptable?
 * Is the performance of this solution in a real world scenario enough?
   And do we have clients which have a lot of CopyReceipts and need copies of older receipts where this would lean towards worst case performance?
 
