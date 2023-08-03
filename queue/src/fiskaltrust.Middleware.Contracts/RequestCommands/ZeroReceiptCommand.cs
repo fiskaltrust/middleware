@@ -131,7 +131,7 @@ namespace fiskaltrust.Middleware.Contracts.RequestCommands
                     try
                     {
                         var requestCommandResponse = await command.ExecuteAsync(queue, failRequest, failqueueItem, true).ConfigureAwait(false);
-                        signatures.AddRange(requestCommandResponse.Signatures);
+                        signatures.AddRange(requestCommandResponse.ReceiptResponse.ftSignatures);
                         sentReceipts.Add(failqueueItem.cbReceiptReference);
                         if (requestCommandResponse.ActionJournals != null)
                         {

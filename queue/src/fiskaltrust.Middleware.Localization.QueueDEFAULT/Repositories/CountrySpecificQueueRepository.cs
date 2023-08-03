@@ -16,7 +16,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.Repositories
         }
 
         public Task<ICountrySpecificQueue> GetQueueAsync(Guid queueId) 
-            => Task.FromResult<ICountrySpecificQueue>(new CountryDefaultQueue { CashBoxIdentification = queueId.ToString() });
+            => Task.FromResult<ICountrySpecificQueue>(new CountryDefaultQueue { CashBoxIdentification = queueId.ToString()});
 
         public Task InsertOrUpdateQueueAsync(ICountrySpecificQueue countrySpecificQueue) => Task.CompletedTask;
 
