@@ -28,6 +28,11 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
         {
             var closeSingleTransaction = !string.IsNullOrEmpty(request.cbReceiptReference);
 
+            if (!closeSingleTransaction && !request.ftReceiptCaseData.Contains("CurrentStartedTransactionNumbers"))
+            {
+                throw new ArgumentException($"CbReceiptReference must be set for one transaction! If you want to close multiple transactions, pass an array value for 'CurrentStartedTransactionNumbers' via ftReceiptCaseData.");
+            }
+
             if (closeSingleTransaction && request.IsImplictFlow())
             {
                 throw new ArgumentException($"ReceiptCase {request.ftReceiptCase:X} (fail-transaction-receipt) cannot use implicit-flow flag when a single transaction should be failed.");

@@ -38,11 +38,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
         public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ftQueue queue, ftQueueItem queueItem)
         {
             _logger.LogTrace("SignProcessorDE.ProcessAsync called.");
-            if (request.IsFailTransactionReceipt() && string.IsNullOrEmpty(request.cbReceiptReference) && !request.ftReceiptCaseData.Contains("CurrentStartedTransactionNumbers"))
-            {
-                throw new ArgumentException($"CbReceiptReference must be set for one transaction! If you want to close multiple transactions, pass an array value for 'CurrentStartedTransactionNumbers' via ftReceiptCaseData.");
-            }
-
             _logger.LogTrace("SignProcessorDE.ProcessAsync: Getting QueueDE from database.");
             var queueDE = await _configurationRepository.GetQueueDEAsync(queueItem.ftQueueId).ConfigureAwait(false);
 
