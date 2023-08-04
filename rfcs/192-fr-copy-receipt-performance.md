@@ -159,6 +159,26 @@ private async Task<int> GetCountOfExistingCopiesAsync(string cbPreviousReceiptRe
 
 In the worst case scenario this would be as slow as the current implementation but in the best case scenario only need one database query.
 
+Another even simpler alternative is to use parse JWS instead. This takes one db call less and the json to parse is smaller.
+
+```cs
+private int GetCountOfExistingCopies(string cbPreviousReceiptReference)
+{ 
+    var count = 0;
+    var copyJournals = parentStorage.JournalFRTableByType("C");
+    foreach (var journal in copyJournals)
+    {
+        var jwt = journal.JWT.Split('.');
+        var payload = JsonConvert.DeserializeObject<CopyPayload>(Encoding.UTF8.GetString(Utilities.FromBase64urlString(jwt[0])));
+        if (payload.CopiedReceiptReference == cbPreviousReceiptReference)
+        {
+            count++;
+        }
+    }
+    return count;
+}
+```
+
 ## Open questions
 
 * Can we implement a `GetProcessedCopyReceiptsDescAsync` method that gets us the CopyReceipts in descending order.
