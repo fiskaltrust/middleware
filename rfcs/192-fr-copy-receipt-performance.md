@@ -5,7 +5,7 @@
 
 # Summary
 
-Adding a `ftJournalFRCopyReceipts` table in the FR Queue where we store copy receipts.
+Adding a `ftJournalFRCopyPayload` table in the FR Queue where we store copy receipts.
 
 # Motivation
 
@@ -29,8 +29,7 @@ They will work out of the box.
 
 The new table will be created on start up after updating the queue.
 
-The new `ftJournalFRCopyReceipts` table will be populated with data from the `ftJournalFR` table.
-This will take a similar timeframe as it takes to process a CopyReceipt with the old implementation.
+The new `ftJournalFRCopyPayload` table will be populated with the `CopyPayload` (The deserialized JWT) data of each CopyReceipt from the `ftJournalFR` table.
 
 ## SignatureCloud
 
@@ -40,35 +39,45 @@ Instead we will time the switch to the new version accordingly with the PosCreat
 
 # Reference-level explanation
 
-We will add a migration which adds the new table `ftJournalFRCopyReceipts`.
+We will add a migration which adds the new table `ftJournalFRCopyPayload`.
 
-| Column Name                  | Type     | Description                                          |
-|------------------------------|----------|------------------------------------------------------|
-| `cbPreviousReceiptReference` | `string` | The `cbPreviousReceiptReference` of the CopyReceipt. |
-| `ftQueueItemID`              | `Guid`   | The `ftQueueItemID` of the CopyReceipt.              |
+This Table will contain the following columns:
 
-This table contains one row for each CopyReceipt. To get the count of copies of one receipt we can simply count the rows with the same `cbPreviousReceiptReference`.
+| Name                    | Data Type  |
+|-------------------------|------------|
+| QueueId                 | `Guid`     |
+| CashBoxIdentification   | `string`   |
+| Siret                   | `string`   |
+| ReceiptId               | `string`   |
+| ReceiptMoment           | `DateTime` |
+| QueueItemId             | `Guid`     |
+| CopiedReceiptReference  | `string`   |
+| CertificateSerialNumber | `string`   |
 
-When a new CopyReceipt is processed we take the count of rows with the same `cbPreviousReceiptReference` and return that plus one as the count.
-Then we insert the new CopyReceipt into the `ftJournalFRCopyReceipts` table.
+This table contains one row for each CopyReceipt and contains the deserialized JWT of the CopyReceipt taken from the `ftJournalFR` table.
+
+To get the count of copies of one receipt we can simply count the rows with the same `CopiedReceiptReference`.
+
+When a new CopyReceipt is processed we count the rows where the `CopiedReceiptReference` equals the `cbPreviousReceiptReference` and return that as the count.
+Then we insert the JWT payload of the new CopyReceipt into the `ftJournalFRCopyPayload` table.
 
 The `GetCountOfExistingCopiesAsync` method looks like this:
 ```cs
 private Task<int> GetCountOfExistingCopiesAsync(string cbPreviousReceiptReference)
 {
-  return _journalFRCopyReceiptsRepository.GetCountOfCopiesAsync(cbPreviousReceiptReference);
+  return _journalFRCopyPayloadRepository.GetCountOfCopiesAsync(cbPreviousReceiptReference);
 }
 ```
 
-The `GetCountOfCopiesAsync` method of the SQLite `JournalFRCopyReceiptsRepository` looks like this:
+The `GetCountOfCopiesAsync` method of the SQLite `JournalFRCopyPayloadRepository` looks like this:
 ```cs
 public async Task<int> GetCountOfCopiesAsync(string cbPreviousReceiptReference) {
-    var query = "SELECT count(*) AS ReceiptCase FROM ftJournalFRCopyReceipts WHERE cbPreviousReceiptReference = @cbPreviousReceiptReference";
+    var query = "SELECT count(*) FROM ftJournalFRCopyPayload WHERE CopiedReceiptReference = @cbPreviousReceiptReference";
     return await DbConnection.QuerySingleAsync<int>(query, new { cbPreviousReceiptReference });
 }
 ```
 
-## Migration
+## Initialization
 
 The new table will be created with the usual migration process.
 
@@ -77,29 +86,17 @@ On start up of the Queue (in the 1.2 `workerFR.cs`) we check if the table contai
 The population of the table will be done like this:
 
 ```cs
-private async Task<int> PopulateFtJournalFRCopyReceiptsTableAsync()
+private async Task PopulateFtJournalFRCopyPayloadTableAsync()
 {
-    await foreach (var copyJournal in _journalFRRepository.GetProcessedCopyReceiptsAsync())
+    foreach (var copyJournal in _journalFRRepository.GetProcessedCopyReceiptsAsync())
     {
-        var queueItem = await _queueItemRepository.GetAsync(copyJournal.ftQueueItemId);
-        var request = queueItem?.request != null ? JsonConvert.DeserializeObject<ReceiptRequest>(queueItem.request) : null;
-        var response = queueItem?.response != null ? JsonConvert.DeserializeObject<ReceiptResponse>(queueItem.response) : null;
-        if (response != null)
+        var jwt = copyJournal.JWT.Split('.');
+        var payload = JsonConvert.DeserializeObject<CopyPayload>(Encoding.UTF8.GetString(Utilities.FromBase64urlString(jwt[1])));
+        if (payload.CopiedReceiptReference == cbPreviousReceiptReference)
         {
-            var duplicata = response.ftSignatures.FirstOrDefault(x => x.Caption == "Duplicata");
-
-            if (duplicata != null)
-            {
-                _journalFRCopyReceiptsRepository.Insert(new FtJournalFRCopyReceipt
-                {
-                    cbPreviousReceiptReference = request.cbPreviousReceiptReference,
-                    ftQueueItemId = copyJournal.ftQueueItemId
-                });
-            }
+            _journalFRCopyPayloadRepository.Insert(payload);
         }
     }
-
-    return count;
 }
 ```
 
@@ -113,20 +110,48 @@ This will be done in coordination with the PosCreators and the recertification.
 
 ### AzureTableStorage
 
-The Azure Table Storage Queue will have the `cbPreviousReceiptReference` as a Partition key and the `ftQueueItemID` as a Row key.
+The Azure Table Storage Queue will have the `CopiedReceiptReference` as a Partition key and the `QueueItemId` as a Row key.
 
-This means counting all rows with the same `cbPreviousReceiptReference` will be very fast.
+This means counting all rows with the same `CopiedReceiptReference` will be very fast.
 
 # Drawbacks
 
 This solution involves a new table and we need to populate it with the data from the `ftJournalFR` table before we can use the new implementation.
 This brings some problems with it especially in the SignatureCloud.
 
-This update version of the middleware might need to be certified again.
+This updated version of the middleware might need to be certified again.
 
 # Rationale and alternatives
 
-An alternative way of doing this would be to keep the current implementation and improve it.
+## Option 1: Improve current implementation
+
+One alternative is to use the current implementation but parse the JWT instead of the `ReceiptResponse`.
+This takes `n` DB calls less than the old implementation (where `n` is the number of CopyReceipts in the `ftJournalFR`).
+Also the `json` payload we have to deserialize is smaller and less complex.
+
+```cs
+private int GetCountOfExistingCopies(string cbPreviousReceiptReference)
+{ 
+    var count = 0;
+    var copyJournals = parentStorage.JournalFRTableByType("C");
+    foreach (var journal in copyJournals)
+    {
+        var jwt = journal.JWT.Split('.');
+        var payload = JsonConvert.DeserializeObject<CopyPayload>(Encoding.UTF8.GetString(Utilities.FromBase64urlString(jwt[1])));
+        if (payload.CopiedReceiptReference == cbPreviousReceiptReference)
+        {
+            count++;
+        }
+    }
+    return count;
+}
+```
+
+> ***Note:** We will release this out first as an intermediate change to provide some initial improvements.*
+
+## Option 2: Search only for the latest CopyReceipt or receipt with the same `cbReceiptReference`
+
+An other alternative way of doing this would be to keep the current implementation and improve it.
 
 One way to do that would be to not count every CopyReceipt in the `ftJournalFR` table but only find the latest one and increase its count by one.
 
@@ -159,48 +184,35 @@ private async Task<int> GetCountOfExistingCopiesAsync(string cbPreviousReceiptRe
 
 In the worst case scenario this would be as slow as the current implementation but in the best case scenario only need one database query.
 
-Another even simpler alternative is to use parse JWS instead. This takes one db call less and the json to parse is smaller.
-
-```cs
-private int GetCountOfExistingCopies(string cbPreviousReceiptReference)
-{ 
-    var count = 0;
-    var copyJournals = parentStorage.JournalFRTableByType("C");
-    foreach (var journal in copyJournals)
-    {
-        var jwt = journal.JWT.Split('.');
-        var payload = JsonConvert.DeserializeObject<CopyPayload>(Encoding.UTF8.GetString(Utilities.FromBase64urlString(jwt[0])));
-        if (payload.CopiedReceiptReference == cbPreviousReceiptReference)
-        {
-            count++;
-        }
-    }
-    return count;
-}
-```
-
-## Open questions
+### Open questions
 
 * Can we implement a `GetProcessedCopyReceiptsDescAsync` method that gets us the CopyReceipts in descending order.
+  Can we sort by row number or `TimeStamp`?
 * Taking non copy receipts into account would change the behaviour of the middleware in the case of multiple different receipts with the same receipt reference. Is this acceptable?
 * Is the performance of this solution in a real world scenario enough?
   And do we have clients which have a lot of CopyReceipts and need copies of older receipts where this would lean towards worst case performance?
 
 # Unresolved questions
 
-## Migration
+## Initialization
 
-Can we populate the table asynchronously? This would mean we could start the Queue without waiting for the population of the `ftJournalFRCopyReceipts` table to finish.
+Can we populate the table asynchronously?
+This would mean we could start the Queue (and process non CopyReceipts) without waiting for the population of the `ftJournalFRCopyPayload` table to finish.
 
 However this would mean we would have to either fail CopyReceipts until the process of population is complete or wait for the population to finish before we start processing the CopyReceipt.
+This could be done using a `Semaphore` in the 1.2 middleware and a `TaskCompletionSource` in the 1.3 middleware.
+
+> ***Note:** This can be investigated and decides during the implementation phase.*
 
 ## SignatureCloud
 
 Will we perform the migration manually before switching the PosCreator to the new environment or will we have the SignatureCloud perform the migration automatically on start up?
 
+> ***Note:** The SignatureCloud will be tackled separately after the local implementation is rolled out.*
+
 # Future possibilities
 
-Adding a new table to the database is not ideal but there will almost certainly more cases in the future where we'll need to to such a change.
+Adding a new table to the database is not ideal but there will almost certainly more cases in the future where we'll need to do such a change.
 One example are the receipt references in the German market where a new table would certainly be helpful.
 
 Implementing this here we would learn a lot about how to do deal with these cases and could use that knowledge in the future.
