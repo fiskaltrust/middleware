@@ -81,7 +81,8 @@ public async Task<int> GetCountOfCopiesAsync(string cbPreviousReceiptReference) 
 
 The new table will be created with the usual migration process.
 
-On start up of the Queue (in the 1.2 `workerFR.cs`) we check if the table contains any entries and if not we will populate it with the old data from the `ftJournalFR` table.
+On start up of the Queue (in the 1.2 `workerFR.cs`) if the queue has already processed some CopyReceipts we will populate it with the old data from the `ftJournalFR` table.
+We can check the number of processed CopyReceipts by reading the `CNumerator` of the `ftQueueFR` table.
 
 The population of the table will be done like this:
 
@@ -202,7 +203,7 @@ This would mean we could start the Queue (and process non CopyReceipts) without 
 However this would mean we would have to either fail CopyReceipts until the process of population is complete or wait for the population to finish before we start processing the CopyReceipt.
 This could be done using a `Semaphore` in the 1.2 middleware and a `TaskCompletionSource` in the 1.3 middleware.
 
-> ***Note:** This can be investigated and decides during the implementation phase.*
+> ***Note:** This can be investigated and decides during the implementation phase. An initialization time of up to 25 seconds at the first start up should be acceptable.*
 
 ## SignatureCloud
 
