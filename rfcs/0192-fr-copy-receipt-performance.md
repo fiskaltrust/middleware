@@ -1,7 +1,7 @@
 - Feature Name: `fr_copy_receipt_performance`
 - Start Date: 2023-08-01
 - RFC PR: [fiskaltrust/middleware#192](https://github.com/fiskaltrust/middleware/pull/192)
-- Tracking Issue: [fiskaltrust/middleware#0000](https://github.com/fiskaltrust/middleware/issues/0000)
+<!-- - Tracking Issue: [fiskaltrust/middleware#0000](https://github.com/fiskaltrust/middleware/issues/0000) -->
 
 # Summary
 
