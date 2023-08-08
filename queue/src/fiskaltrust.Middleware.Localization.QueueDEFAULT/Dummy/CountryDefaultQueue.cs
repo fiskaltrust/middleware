@@ -3,6 +3,7 @@ using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.Dummy
 {
+    // Class representing a country-specific queue with various properties related to its state and operation.
     public class CountryDefaultQueue: ICountrySpecificQueue
     {
         public Guid ftQueueId { get; }

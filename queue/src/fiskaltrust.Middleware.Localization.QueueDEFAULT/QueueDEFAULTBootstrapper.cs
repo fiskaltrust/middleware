@@ -15,6 +15,7 @@ using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueueDEFAULT
 {
+    // Class responsible for bootstrapping and configuring the DEFAULT queue.
     public class QueueDEFAULTBootstrapper : ILocalizedQueueBootstrapper
     {
         private readonly MiddlewareConfiguration _middlewareConfiguration;
@@ -24,15 +25,16 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT
             _middlewareConfiguration = middlewareConfiguration;
         }
 
+        // Method to configure and register services that the application will use.
         public void ConfigureServices(IServiceCollection services)
         {
             var config = QueueDEFAULTConfiguration.FromMiddlewareConfiguration(_middlewareConfiguration);
-
+            // Check if the sandbox mode is disabled, and throw an exception if so.
             if (!config.Sandbox)
             {
                 throw new InvalidOperationException("Only sandbox mode is allowed in this context.");
             }
-        
+            // Register services and components with the DI container. Services will be available to the application via dependency injection.
             var _ = services
                 .AddScoped<IMarketSpecificSignProcessor, SignProcessorDEFAULT>()
                 .AddScoped<IMarketSpecificJournalProcessor, JournalProcessorDEFAULT>()
