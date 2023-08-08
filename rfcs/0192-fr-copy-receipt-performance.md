@@ -93,10 +93,7 @@ private async Task PopulateFtJournalFRCopyPayloadTableAsync()
     {
         var jwt = copyJournal.JWT.Split('.');
         var payload = JsonConvert.DeserializeObject<CopyPayload>(Encoding.UTF8.GetString(Utilities.FromBase64urlString(jwt[1])));
-        if (payload.CopiedReceiptReference == cbPreviousReceiptReference)
-        {
-            _journalFRCopyPayloadRepository.Insert(payload);
-        }
+        _journalFRCopyPayloadRepository.Insert(payload);
     }
 }
 ```
