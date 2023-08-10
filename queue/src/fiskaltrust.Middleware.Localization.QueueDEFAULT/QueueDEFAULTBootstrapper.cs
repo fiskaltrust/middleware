@@ -29,11 +29,14 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT
         public void ConfigureServices(IServiceCollection services)
         {
             var config = QueueDEFAULTConfiguration.FromMiddlewareConfiguration(_middlewareConfiguration);
+
             // Check if the sandbox mode is disabled, and throw an exception if so.
+            // NOTE: This check is only needed for the default queue and should be removed in a real market implementation.
             if (!config.Sandbox)
             {
                 throw new InvalidOperationException("Only sandbox mode is allowed in this context.");
             }
+
             // Register services and components with the DI container. Services will be available to the application via dependency injection.
             var _ = services
                 .AddScoped<IMarketSpecificSignProcessor, SignProcessorDEFAULT>()

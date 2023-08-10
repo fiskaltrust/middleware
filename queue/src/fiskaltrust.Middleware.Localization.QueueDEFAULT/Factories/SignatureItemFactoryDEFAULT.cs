@@ -3,10 +3,17 @@ using System.Collections.Generic;
 using System.Globalization;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Factories;
+using fiskaltrust.Middleware.Localization.QueueIT.Factories;
 
 namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.Factories
 {
-    // Class responsible for creating signature items for the DEFAULT country setup.
+    /// <summary>
+    /// Class responsible for creating signature items for the DEFAULT country setup.
+    /// Note: This implementation is specific to the default queue. In other markets, other
+    /// configurations may be required.
+    /// For a more advanced example, see <see cref="SignatureItemFactoryIT"/> or refer to
+    /// the documentation for the Italian market.
+    /// </summary>
     public class SignatureItemFactoryDEFAULT : SignatureItemFactory
     {
         // Represents the base state specific to the country's regulations.
@@ -19,8 +26,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.Factories
             NumberGroupSeparator = "",
             CurrencyDecimalDigits = 2
         };
-        // Method to create signatures for a POS receipt transaction.
-        public List<SignaturItem> GetSignaturesForPosReceiptTransaction(Guid cashBoxId, Guid receiptId,
+        // Method to create signatures for a POS receipt.
+        public List<SignaturItem> CreatePosReceiptSignatures(Guid cashBoxId, Guid receiptId,
             decimal sumOfPayItems, string previousHash, long ftReceiptCase)
         {
             var queueInfo = "DEFAULT";

@@ -34,7 +34,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.RequestCommands
 
             var sumOfPayItems = request.cbPayItems?.Sum(item => item.Amount) ?? 0;
             var previousHash = queue.ftReceiptHash;
-            var signatures = _signatureItemFactory.GetSignaturesForPosReceiptTransaction(queue.ftQueueId, queueItem.ftQueueItemId, sumOfPayItems, previousHash, request.ftReceiptCase);
+            var signatures = _signatureItemFactory.CreatePosReceiptSignatures(queue.ftQueueId, queueItem.ftQueueItemId, sumOfPayItems, previousHash, request.ftReceiptCase);
             response.ftSignatures = signatures.ToArray();
 
             return await Task.FromResult(new RequestCommandResponse
@@ -45,7 +45,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.RequestCommands
         }
 
         // Method to determine if a receipt needs reprocessing.
-        // This implementation always returns false, indicating that receipts do not need reprocessing.
+        // This default implementation always returns false, indicating that receipts do not need reprocessing. This needs to be checked in a real market.
         public override Task<bool> ReceiptNeedsReprocessing(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem) 
         {
             return Task.FromResult(false);

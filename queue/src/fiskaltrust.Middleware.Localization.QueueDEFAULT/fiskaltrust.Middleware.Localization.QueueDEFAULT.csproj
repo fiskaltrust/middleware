@@ -10,5 +10,6 @@
 
     <ItemGroup>
         <ProjectReference Include="..\fiskaltrust.Middleware.Contracts\fiskaltrust.Middleware.Contracts.csproj" />
+        <ProjectReference Include="..\fiskaltrust.Middleware.Localization.QueueIT\fiskaltrust.Middleware.Localization.QueueIT.csproj" />
     </ItemGroup>
 </Project>

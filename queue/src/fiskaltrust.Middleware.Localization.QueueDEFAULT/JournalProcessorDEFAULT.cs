@@ -11,7 +11,9 @@ using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueueDEFAULT
 {
-    // Class responsible for processing journal requests for the DEFAULT market.
+    /// <summary>
+    /// Class responsible for processing journal requests for the DEFAULT market.
+    /// </summary>
     public class JournalProcessorDEFAULT : IMarketSpecificJournalProcessor
     {
         private readonly ILogger<JournalProcessorDEFAULT> _logger;
@@ -24,7 +26,13 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT
             _configurationRepository = configurationRepository;
         }
 
-        // Method retrieves the list of cash boxes and returns it as a journal response.
+        /// <summary>
+        /// Processes journal calls, retrieves the list of cash boxes, and returns it as a journal response.
+        /// </summary>
+        /// <remarks>
+        /// In a real market, different journals based on the JournalRequest.ftJournalType may need to be implemented.
+        /// This implementation is specific to the DEFAULT market and should be adapted as needed for other markets.
+        /// </remarks>
         public async IAsyncEnumerable<JournalResponse> ProcessAsync(JournalRequest request)
         {
             var result = new { CashBoxList = await _configurationRepository.GetCashBoxListAsync() };

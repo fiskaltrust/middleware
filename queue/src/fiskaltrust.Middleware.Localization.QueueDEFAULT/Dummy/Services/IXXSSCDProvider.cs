@@ -7,10 +7,9 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.Dummy.Services
     // Implementations of this interface should provide thread-safe access to SCU instances, allowing registration and retrieval for the given market.
     public interface IXXSSCDProvider
     {
-        // Use the IXXSSCD of the new market instead of the Object
+        // Use the IXXSSCD of the new market instead of object as the type of Instance
         // Gets the current SCU instance for the market "XX" (replace with the actual market name).
-
-        public Object Instance { get; }
+        public object Instance { get; }
         
         Task RegisterCurrentScuAsync();
     }

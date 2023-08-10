@@ -21,7 +21,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.Dummy.Services
         private readonly SemaphoreSlim _semaphoreInstance = new SemaphoreSlim(1, 1);
         private readonly SemaphoreSlim _semaphoreRegister = new SemaphoreSlim(1, 1);
 
-        private Object _instance;
+        private object _instance;
 
         public object Instance
         {
@@ -55,9 +55,9 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.Dummy.Services
             try
             {
                 await _semaphoreRegister.WaitAsync().ConfigureAwait(false);
-                var ftSignaturCreationUnitXX = JsonConvert.DeserializeObject<List<ftSignaturCreationUnitDE>>(_middlewareConfiguration.Configuration["init_ftSignaturCreationUnitXX"].ToString());
+                var ftSignaturCreationUnitXX = JsonConvert.DeserializeObject<List<Dictionary<string, string>>>(_middlewareConfiguration.Configuration["init_ftSignaturCreationUnitXX"].ToString());
 
-                var uri = GetUriForSignaturCreationUnit(ftSignaturCreationUnitXX.FirstOrDefault().Url);
+                var uri = GetUriForSignaturCreationUnit(ftSignaturCreationUnitXX.FirstOrDefault()["Url"]);
                 var config = new ClientConfiguration
                 {
                     Url = uri.ToString(),
