@@ -50,11 +50,14 @@ The Default Queue project within the fiskaltrust Middleware system serves as a t
 
 ## Getting Started
 
-1. **Clone the Repository**: Clone the project to your local machine.
-2. **Explore the Components**: Familiarize yourself with the components, including classes responsible for specific functionalities.
-3. **Read the Official Documentation**: Check the [fiskaltrust documentation](https://docs.fiskaltrust.cloud/docs/poscreators/middleware-doc) for comprehensive details.
-4. **Customize for Your Market**: Adapt the code to fit your target market's requirements.
-5. **Run Tests**: Validate your adaptations with appropriate testing.
+1. **Clone the Repository**: Clone the project to your local machine to begin working with the code.
+2. **Understand the Basics**: The Default Queue project is a foundational template designed to be customized for various markets. Familiarize yourself with the goals and structure of the project by reading the [fiskaltrust documentation](https://docs.fiskaltrust.cloud/docs/poscreators/middleware-doc).
+3. **Explore the Components**: Dive into the code to explore the components, classes, and functionalities. Understanding how they work together will help you customize the project for your specific needs.
+4. **Adapt for Your Market**: This template is meant to be adapted. Modify the code to align with the regulations and practices of your target market.
+5. **Test Your Changes**: Ensure that your adaptations work as intended by running appropriate tests. Following established testing practices ensures that your customizations maintain the overall integrity of the system.
+
+> Note: As this project is a template, significant customization may be required. Collaborate with stakeholders and refer to local regulations to ensure that the final implementation meets the needs of your specific market.
+
 
 ## Contributing
 
