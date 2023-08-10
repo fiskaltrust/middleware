@@ -48,6 +48,16 @@ The Default Queue project within the fiskaltrust Middleware system serves as a t
 
 - `Cases.cs`: Enumerates various cases for handling specific functionalities and scenarios within the system.
 
+## Naming Convention
+
+In this project, you may notice the use of "XX" in various class and file names. This "XX" serves as a placeholder representing a specific market or country code. When adapting the code for a particular market, replace "XX" with the appropriate market identifier.
+
+For example:
+- `SscdXX.cs` would be renamed to `SscdIT.cs` for the Italian market.
+- `QueueDEFAULTConfiguration.cs` might be tailored to represent configurations specific to your target market.
+
+This convention helps maintain a clear and consistent structure, facilitating customization for different markets.
+
 ## Getting Started
 
 1. **Clone the Repository**: Clone the project to your local machine to begin working with the code.
