@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Factories;
-using fiskaltrust.Middleware.Localization.QueueIT.Factories;
 
 namespace fiskaltrust.Middleware.Localization.QueueDEFAULT.Factories
 {
