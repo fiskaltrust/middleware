@@ -50,7 +50,13 @@ The Default Queue project within the fiskaltrust Middleware system serves as a t
 
 ## Naming Convention
 
-In this project, you may notice the use of "XX" in various class and file names. This "XX" serves as a placeholder representing a specific market or country code. When adapting the code for a particular market, replace "XX" with the appropriate market identifier.
+In this project, you may notice the use of "XX" and "DEFAULT" in various class and file names.
+
+When using this as the basis for a new market _both_ "XX" and "DEFAULT" should be replaced with the market country code (e.g. "IT" for Italy).
+
+The "DEFAULT" files include a working minimum implementation that is used in the DEFAULT Queue. This implementation needs to be adapted to the new market.
+
+The "XX" files serve as a placeholders representing a feature that might be needed in a real market but not in the DEFAULT queue.
 
 For example:
 - `SscdXX.cs` would be renamed to `SscdIT.cs` for the Italian market.
