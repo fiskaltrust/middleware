@@ -10,7 +10,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1.errors;
 using fiskaltrust.ifPOS.v1.it;
-using fiskaltrust.Middleware.SCU.IT.Epson.Exceptions;
 using fiskaltrust.Middleware.SCU.IT.Epson.Models;
 using fiskaltrust.Middleware.SCU.IT.Epson.Utilities;
 using Microsoft.Extensions.Logging;
@@ -347,10 +346,6 @@ public sealed class EpsonSCU : IITSSCD
         if (IsConnectionException(e))
         {
             return new FiscalReceiptResponse() { Success = false, SSCDErrorInfo = new SSCDErrorInfo() { Info = msg, Type = SSCDErrorType.Connection } };
-        }
-        if (e is OperatorException)
-        {
-            return new FiscalReceiptResponse() { Success = false, SSCDErrorInfo = new SSCDErrorInfo() { Info = msg, Type = SSCDErrorType.Device } };
         }
         return new FiscalReceiptResponse() { Success = false, SSCDErrorInfo = new SSCDErrorInfo() { Info = msg, Type = SSCDErrorType.General } };
     }
