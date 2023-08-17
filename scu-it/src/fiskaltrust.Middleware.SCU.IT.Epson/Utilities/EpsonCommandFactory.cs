@@ -1,11 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.ServiceModel.Channels;
 using System.Xml.Serialization;
 using fiskaltrust.ifPOS.v1.it;
-using fiskaltrust.Middleware.SCU.IT.Epson.Exceptions;
 using fiskaltrust.Middleware.SCU.IT.Epson.Models;
 using fiskaltrust.Middleware.SCU.IT.Epson.Extensions;
 
@@ -40,7 +37,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
             var fiscalReceipt = CreateFiscalReceipt(request);
             fiscalReceipt.PrintRecMessage = new PrintRecMessage()
             {
-                Operator = request.Operator,
+                Operator = "1",
                 Message = request.DisplayText,
                 MessageType = (int) Messagetype.AdditionalInfo
             };
@@ -58,7 +55,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.Utilities
         {
             var fiscalReport = new FiscalReport
             {
-                ZReport = new ZReport { Operator = request.Operator },
+                ZReport = new ZReport { Operator = "1" },
                 DisplayText = string.IsNullOrEmpty(request.DisplayText) ? null : new DisplayText() { Data = request.DisplayText }
             };
             return SoapSerializer.Serialize(fiscalReport);
