@@ -41,7 +41,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
                 queueFR.CLastHash = hash;
                 journalFR.ReceiptType = "C";
 
-                var duplicateCount = (await GetCountOfExistingCopiesAsync(request.cbPreviousReceiptReference)) + 1;
+                var duplicateCount = await GetCountOfExistingCopiesAsync(request.cbPreviousReceiptReference) + 1;
 
                 var signatures = new[]
                 {
@@ -70,7 +70,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
                 yield return new ValidationError { Message = $"The Copy receipt must provide the POS System receipt reference of the receipt whose the copy has been asked." };
             }
         }
-
+ 
         private async Task<int> GetCountOfExistingCopiesAsync(string cbPreviousReceiptReference)
         {
             var count = 0;
