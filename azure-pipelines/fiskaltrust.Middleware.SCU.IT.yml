@@ -63,3 +63,5 @@ stages:
               workingDirectory: scu-it
               projects:
                 - fiskaltrust.Middleware.SCU.IT.Epson
+                - fiskaltrust.Middleware.SCU.IT.CustomRTServer
+                - fiskaltrust.Middleware.SCU.IT.CustomRTPrinter

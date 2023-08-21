@@ -17,6 +17,8 @@ stages:
       artifact: build
       projects:
         - Epson
+        - CustomRTPrinter
+        - CustomRTServer
       stages:
         - stage: Release_Sandbox
           dependsOn: []
