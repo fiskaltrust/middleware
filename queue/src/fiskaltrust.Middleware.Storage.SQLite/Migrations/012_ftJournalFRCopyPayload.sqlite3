@@ -1,0 +1,11 @@
+﻿CREATE TABLE IF NOT EXISTS ftJournalFRCopyPayload
+(
+    QueueId                   NVARCHAR(36) PRIMARY KEY NOT NULL,
+    CashBoxIdentification     NVARCHAR(2147483647) NULL,
+    Siret                     NVARCHAR(2147483647) NULL,
+    ReceiptId                 NVARCHAR(2147483647) NULL,
+    ReceiptMoment             DATETIME NULL,
+    QueueItemId               NVARCHAR(36) NOT NULL,
+    CopiedReceiptReference    NVARCHAR(2147483647) NULL,
+    CertificateSerialNumber  NVARCHAR(2147483647) NULL
+);
