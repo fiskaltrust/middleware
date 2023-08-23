@@ -1,4 +1,6 @@
-﻿namespace fiskaltrust.Middleware.Contracts.Repositories.FR
+﻿using fiskaltrust.Middleware.Contracts.Repositories.FR.TempSpace;
+
+namespace fiskaltrust.Middleware.Contracts.Repositories.FR
 {
     public interface IJournalFRCopyPayloadRepository
     {

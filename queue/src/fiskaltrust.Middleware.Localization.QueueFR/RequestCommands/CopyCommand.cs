@@ -26,13 +26,13 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
             _copyPayloadRepository = copyPayloadRepository;
         }
 
-        public override async Task<(ReceiptResponse receiptResponse, ftJournalFR journalFR, List<ftActionJournal> actionJournals)> ExecuteAsync(ftQueue queue, ftQueueFR queueFR, ftSignaturCreationUnitFR signaturCreationUnitFR, ReceiptRequest request, ftQueueItem queueItem)
+        public override Task<(ReceiptResponse receiptResponse, ftJournalFR journalFR, List<ftActionJournal> actionJournals)> ExecuteAsync(ftQueue queue, ftQueueFR queueFR, ftSignaturCreationUnitFR signaturCreationUnitFR, ReceiptRequest request, ftQueueItem queueItem)
         {
             if (request.HasTrainingReceiptFlag())
             {
                 var totals = request.GetTotals();
                 var (response, journalFR) = CreateTrainingReceiptResponse(queue, queueFR, request, queueItem, totals, signaturCreationUnitFR);
-                return (response, journalFR, new());
+                return Task.FromResult<(ReceiptResponse receiptResponse, ftJournalFR journalFR, List<ftActionJournal> actionJournals)>((response, journalFR, new()));
             }
             else
             {
@@ -45,7 +45,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
                 queueFR.CLastHash = hash;
                 journalFR.ReceiptType = "C";
 
-                var duplicateCount = await GetCountOfExistingCopiesAsync(request.cbPreviousReceiptReference) + 1;
+                var duplicateCount = GetCountOfExistingCopies(request.cbPreviousReceiptReference) + 1;
 
                 var signatures = new[]
                 {
@@ -55,7 +55,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
 
                 response.ftSignatures = response.ftSignatures.Extend(signatures);
 
-                return (response, journalFR, new());
+                return Task.FromResult<(ReceiptResponse receiptResponse, ftJournalFR journalFR, List<ftActionJournal> actionJournals)>((response, journalFR, new()));
             }
         }
 
@@ -75,9 +75,10 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
             }
         }
  
-        private async Task<int> GetCountOfExistingCopiesAsync(string cbPreviousReceiptReference)
+        private int GetCountOfExistingCopies(string cbPreviousReceiptReference)
         {
-            return await _copyPayloadRepository.JournalFRGetCountOfCopies(cbPreviousReceiptReference).ConfigureAwait(false);
+            return _copyPayloadRepository.JournalFRGetCountOfCopies(cbPreviousReceiptReference);
         }
+
     }
 }
