@@ -6,6 +6,7 @@ using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueFR.Extensions;
 using fiskaltrust.Middleware.Localization.QueueFR.Factories;
 using fiskaltrust.Middleware.Localization.QueueFR.Models;
+using fiskaltrust.Middleware.Storage.SQLite.Repositories.FR;
 using fiskaltrust.storage.V0;
 using Newtonsoft.Json;
 
@@ -15,11 +16,14 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
     {
         private readonly IMiddlewareJournalFRRepository _journalFRRepository;
         private readonly IReadOnlyQueueItemRepository _queueItemRepository;
+        private readonly SQLiteJournalFRCopyPayloadRepository _copyPayloadRepository;
 
-        public CopyCommand(ISignatureFactoryFR signatureFactoryFR, IMiddlewareJournalFRRepository journalFRRepository, IReadOnlyQueueItemRepository queueItemRepository) : base(signatureFactoryFR)
+        public CopyCommand(ISignatureFactoryFR signatureFactoryFR, IMiddlewareJournalFRRepository journalFRRepository, IReadOnlyQueueItemRepository queueItemRepository, SQLiteJournalFRCopyPayloadRepository copyPayloadRepository) 
+            : base(signatureFactoryFR)
         {
             _journalFRRepository = journalFRRepository;
             _queueItemRepository = queueItemRepository;
+            _copyPayloadRepository = copyPayloadRepository;
         }
 
         public override async Task<(ReceiptResponse receiptResponse, ftJournalFR journalFR, List<ftActionJournal> actionJournals)> ExecuteAsync(ftQueue queue, ftQueueFR queueFR, ftSignaturCreationUnitFR signaturCreationUnitFR, ReceiptRequest request, ftQueueItem queueItem)
@@ -73,21 +77,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
  
         private async Task<int> GetCountOfExistingCopiesAsync(string cbPreviousReceiptReference)
         {
-            var count = 0;
-            await foreach (var copyJournal in _journalFRRepository.GetProcessedCopyReceiptsAsync())
-            {
-                var queueItem = await _queueItemRepository.GetAsync(copyJournal.ftQueueItemId);
-                var response = queueItem?.response != null ? JsonConvert.DeserializeObject<ReceiptResponse>(queueItem.response) : null;
-                if (response != null)
-                {
-                    if (response.ftSignatures.Any(x => x.Caption == "Duplicata" && x.Data.EndsWith($"Duplicata de {cbPreviousReceiptReference}")))
-                    {
-                        count++;
-                    }
-                }
-            }
-
-            return count;
+            return await _copyPayloadRepository.JournalFRGetCountOfCopies(cbPreviousReceiptReference).ConfigureAwait(false);
         }
     }
 }
