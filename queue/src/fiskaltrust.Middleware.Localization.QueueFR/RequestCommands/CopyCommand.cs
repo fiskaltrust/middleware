@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Contracts.Repositories.FR;
+using fiskaltrust.Middleware.Contracts.Repositories.FR.TempSpace;
 using fiskaltrust.Middleware.Localization.QueueFR.Extensions;
 using fiskaltrust.Middleware.Localization.QueueFR.Factories;
 using fiskaltrust.Middleware.Localization.QueueFR.Models;
@@ -26,13 +27,13 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
             _copyPayloadRepository = copyPayloadRepository;
         }
 
-        public override Task<(ReceiptResponse receiptResponse, ftJournalFR journalFR, List<ftActionJournal> actionJournals)> ExecuteAsync(ftQueue queue, ftQueueFR queueFR, ftSignaturCreationUnitFR signaturCreationUnitFR, ReceiptRequest request, ftQueueItem queueItem)
+        public override async Task<(ReceiptResponse receiptResponse, ftJournalFR journalFR, List<ftActionJournal> actionJournals)> ExecuteAsync(ftQueue queue, ftQueueFR queueFR, ftSignaturCreationUnitFR signaturCreationUnitFR, ReceiptRequest request, ftQueueItem queueItem)
         {
             if (request.HasTrainingReceiptFlag())
             {
                 var totals = request.GetTotals();
                 var (response, journalFR) = CreateTrainingReceiptResponse(queue, queueFR, request, queueItem, totals, signaturCreationUnitFR);
-                return Task.FromResult<(ReceiptResponse receiptResponse, ftJournalFR journalFR, List<ftActionJournal> actionJournals)>((response, journalFR, new()));
+                return (response, journalFR, new());
             }
             else
             {
@@ -45,7 +46,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
                 queueFR.CLastHash = hash;
                 journalFR.ReceiptType = "C";
 
-                var duplicateCount = _copyPayloadRepository;
+                var duplicateCount = await _copyPayloadRepository.GetCountOfCopiesAsync(request.cbPreviousReceiptReference) + 1;
 
                 var signatures = new[]
                 {
@@ -54,8 +55,13 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
                 };
 
                 response.ftSignatures = response.ftSignatures.Extend(signatures);
+                
+                var copyPayload = JsonConvert.DeserializeObject<CopyPayload>(payload);
+                var journalFRCopyPayload = copyPayload.ToJournalFRCopyPayload();
 
-                return Task.FromResult<(ReceiptResponse receiptResponse, ftJournalFR journalFR, List<ftActionJournal> actionJournals)>((response, journalFR, new()));
+                await _copyPayloadRepository.InsertAsync(journalFRCopyPayload);
+
+                return (response, journalFR, new());
             }
         }
 
@@ -73,11 +79,6 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
             {
                 yield return new ValidationError { Message = $"The Copy receipt must provide the POS System receipt reference of the receipt whose the copy has been asked." };
             }
-        }
- 
-        private Task<int> GetCountOfExistingCopies(string cbPreviousReceiptReference)
-        {
-            return _copyPayloadRepository.GetCountOfCopiesAsync(cbPreviousReceiptReference);
         }
     }
 }

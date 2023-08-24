@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using System;
+using fiskaltrust.Middleware.Contracts.Repositories.FR.TempSpace;
 
 namespace fiskaltrust.Middleware.Localization.QueueFR.Models
 {
@@ -21,5 +22,17 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.Models
         public string CopiedReceiptReference { get; set; }
         [JsonProperty("csn", DefaultValueHandling = DefaultValueHandling.Ignore, Required = Required.Default)]
         public string CertificateSerialNumber { get; set; }
+        
+        public ftJournalFRCopyPayload ToJournalFRCopyPayload() => new()
+        {
+            QueueId = QueueId,
+            CashBoxIdentification = CashBoxIdentification,
+            Siret = Siret,
+            ReceiptId = ReceiptId,
+            ReceiptMoment = ReceiptMoment,
+            QueueItemId = QueueItemId,
+            CopiedReceiptReference = CopiedReceiptReference,
+            CertificateSerialNumber = CertificateSerialNumber
+        };
     }
 }
