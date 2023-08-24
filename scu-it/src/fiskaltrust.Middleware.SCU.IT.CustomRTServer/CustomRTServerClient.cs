@@ -283,13 +283,11 @@ public class CancelCashRegisterResponse
     public string responseDesc { get; set; } = string.Empty;
 }
 
-
 public class ReactivateCanceledCashRegisterResponse
 {
     public int responseCode { get; set; }
     public string responseDesc { get; set; } = string.Empty;
 }
-
 
 public class ResponseBodyErrory
 {
