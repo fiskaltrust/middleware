@@ -3,10 +3,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Contracts.Repositories.FR;
 using fiskaltrust.Middleware.Localization.QueueFR.Extensions;
 using fiskaltrust.Middleware.Localization.QueueFR.Factories;
 using fiskaltrust.Middleware.Localization.QueueFR.Models;
-using fiskaltrust.Middleware.Storage.SQLite.Repositories.FR;
 using fiskaltrust.storage.V0;
 using Newtonsoft.Json;
 
@@ -16,9 +16,9 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
     {
         private readonly IMiddlewareJournalFRRepository _journalFRRepository;
         private readonly IReadOnlyQueueItemRepository _queueItemRepository;
-        private readonly SQLiteJournalFRCopyPayloadRepository _copyPayloadRepository;
+        private readonly IJournalFRCopyPayloadRepository _copyPayloadRepository;
 
-        public CopyCommand(ISignatureFactoryFR signatureFactoryFR, IMiddlewareJournalFRRepository journalFRRepository, IReadOnlyQueueItemRepository queueItemRepository, SQLiteJournalFRCopyPayloadRepository copyPayloadRepository) 
+        public CopyCommand(ISignatureFactoryFR signatureFactoryFR, IMiddlewareJournalFRRepository journalFRRepository, IReadOnlyQueueItemRepository queueItemRepository, IJournalFRCopyPayloadRepository copyPayloadRepository) 
             : base(signatureFactoryFR)
         {
             _journalFRRepository = journalFRRepository;
