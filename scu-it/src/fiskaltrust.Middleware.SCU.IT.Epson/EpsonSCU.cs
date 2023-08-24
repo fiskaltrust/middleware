@@ -370,4 +370,7 @@ public sealed class EpsonSCU : IITSSCD
         return new SSCDErrorInfo() { Info = errorInf, Type = SSCDErrorType.Device };
     }
 
+    public Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request) => throw new NotImplementedException();
+    
+    public Task<RTInfo> GetRTInfoAsync() => throw new NotImplementedException();
 }
