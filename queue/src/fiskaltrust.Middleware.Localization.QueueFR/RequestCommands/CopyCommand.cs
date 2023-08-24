@@ -45,7 +45,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
                 queueFR.CLastHash = hash;
                 journalFR.ReceiptType = "C";
 
-                var duplicateCount = GetCountOfExistingCopies(request.cbPreviousReceiptReference) + 1;
+                var duplicateCount = _copyPayloadRepository;
 
                 var signatures = new[]
                 {
@@ -75,10 +75,9 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
             }
         }
  
-        private int GetCountOfExistingCopies(string cbPreviousReceiptReference)
+        private Task<int> GetCountOfExistingCopies(string cbPreviousReceiptReference)
         {
-            return _copyPayloadRepository.JournalFRGetCountOfCopies(cbPreviousReceiptReference);
+            return _copyPayloadRepository.GetCountOfCopiesAsync(cbPreviousReceiptReference);
         }
-
     }
 }

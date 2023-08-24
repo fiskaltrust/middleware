@@ -7,5 +7,6 @@
     ReceiptMoment             DATETIME NULL,
     QueueItemId               NVARCHAR(36) NOT NULL,
     CopiedReceiptReference    NVARCHAR(2147483647) NULL,
-    CertificateSerialNumber  NVARCHAR(2147483647) NULL
+    CertificateSerialNumber  NVARCHAR(2147483647) NULL,
+    TimeStamp                 DATETIME NOT NULL
 );

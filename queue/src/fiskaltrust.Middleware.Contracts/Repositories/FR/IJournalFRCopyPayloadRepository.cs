@@ -1,13 +1,12 @@
-﻿using fiskaltrust.Middleware.Contracts.Repositories.FR.TempSpace;
+﻿using System.Threading.Tasks;
+using fiskaltrust.Middleware.Contracts.Repositories.FR.TempSpace;
 
 namespace fiskaltrust.Middleware.Contracts.Repositories.FR
 {
     public interface IJournalFRCopyPayloadRepository
     {
-        int JournalFRGetCountOfCopies(string cbPreviousReceiptReference);
-
-        bool InsertJournalFRCopyPayload(ftJournalFRCopyPayload c);
-
-        bool HasJournalFRCopyPayloads();
+        Task<int> GetCountOfCopiesAsync(string cbPreviousReceiptReference);
+        Task<bool> InsertAsync(ftJournalFRCopyPayload c);
+        Task<bool> HasEntriesAsync();
     }
 }
