@@ -51,7 +51,7 @@ public static class SignatureFactory
             new SignaturItem
             {
                 Caption = "<receipt-amount>",
-                Data = amount.ToString(CurrencyFormatter),
+                Data = amount.ToString(ITConstants.CurrencyFormatter),
                 ftSignatureFormat = (long) SignaturItem.Formats.Text,
                 ftSignatureType = 0x4954000000000000 & (long) SignatureTypesIT.ReceiptAmount
             },
