@@ -35,5 +35,7 @@ public sealed class CustomRTPrinter : IITSSCD
     public Task<FiscalReceiptResponse> FiscalReceiptInvoiceAsync(FiscalReceiptInvoice request) => throw new NotImplementedException();
     public Task<FiscalReceiptResponse> FiscalReceiptRefundAsync(FiscalReceiptRefund request) => throw new NotImplementedException();
     public Task<DeviceInfo> GetDeviceInfoAsync() => throw new NotImplementedException();
+    public Task<RTInfo> GetRTInfoAsync() => throw new NotImplementedException();
     public Task<Response> NonFiscalReceiptAsync(NonFiscalRequest request) => throw new NotImplementedException();
+    public Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request) => throw new NotImplementedException();
 }

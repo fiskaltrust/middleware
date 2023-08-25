@@ -1,9 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1.it;
+using fiskaltrust.Middleware.SCU.IT.Abstraction;
 using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer;

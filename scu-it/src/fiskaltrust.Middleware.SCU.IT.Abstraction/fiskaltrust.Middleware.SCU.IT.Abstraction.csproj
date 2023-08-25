@@ -1,7 +1,7 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <Description>The fiskaltrust Middleware implementation of the Custom RT Server SCU for Italy.</Description>
+        <Description>The fiskaltrust Middleware implementation of the Custom RT Printer SCU for Italy.</Description>
         <TargetFrameworks>netstandard2.0;net461;net6</TargetFrameworks>
         <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);CopyProjectReferencesToPackage</TargetsForTfmSpecificBuildOutput>
         <Nullable>enable</Nullable>
@@ -26,9 +26,4 @@
             <PackageCopyToOutput>true</PackageCopyToOutput>
         </Content>
     </ItemGroup>
-
-    <ItemGroup>
-      <ProjectReference Include="..\fiskaltrust.Middleware.SCU.IT.Abstraction\fiskaltrust.Middleware.SCU.IT.Abstraction.csproj" />
-    </ItemGroup>
-    
 </Project>
