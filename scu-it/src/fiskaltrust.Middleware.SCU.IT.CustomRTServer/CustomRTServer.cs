@@ -7,17 +7,13 @@ using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.SCU.IT.Abstraction;
 using Microsoft.Extensions.Logging;
 using fiskaltrust.ifPOS.v1;
-using System.Security.Cryptography;
-using System.Globalization;
-using System.Security.Cryptography.X509Certificates;
 using System.Linq;
 
 namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer;
 
 #pragma warning disable
-
 #nullable enable
-public sealed partial class CustomRTServer : IITSSCD
+public sealed class CustomRTServer : IITSSCD
 {
     private readonly ILogger<CustomRTServer> _logger;
     private readonly CustomRTServerClient _client;
@@ -30,6 +26,21 @@ public sealed partial class CustomRTServer : IITSSCD
     private string _cashToken;
     private string _cashHmacKey;
     private int _currentZNumber;
+
+    private List<ITReceiptCases> _nonProcessingCases = new List<ITReceiptCases>
+        {
+            ITReceiptCases.ZeroReceipt0x200,
+            ITReceiptCases.OneReceipt0x2001,
+            ITReceiptCases.ShiftClosing0x2010,
+            ITReceiptCases.MonthlyClosing0x2012,
+            ITReceiptCases.YearlyClosing0x2013,
+            ITReceiptCases.ProtocolUnspecified0x3000,
+            ITReceiptCases.ProtocolTechnicalEvent0x3001,
+            ITReceiptCases.ProtocolAccountingEvent0x3002,
+            ITReceiptCases.InternalUsageMaterialConsumption0x3003,
+            ITReceiptCases.InitSCUSwitch,
+            ITReceiptCases.FinishSCUSwitch,
+        };
 
     public CustomRTServer(ILogger<CustomRTServer> logger, CustomRTServerConfiguration configuration, CustomRTServerClient client)
     {
@@ -46,15 +57,6 @@ public sealed partial class CustomRTServer : IITSSCD
         };
     }
 
-    /** These methods are kept for backwards compatibility with the interface but we will not use them **/
-
-    public Task<ScuItEchoResponse> EchoAsync(ScuItEchoRequest request) => throw new NotImplementedException();
-    public Task<DailyClosingResponse> ExecuteDailyClosingAsync(DailyClosingRequest request) => throw new NotImplementedException();
-    public Task<FiscalReceiptResponse> FiscalReceiptInvoiceAsync(FiscalReceiptInvoice request) => throw new NotImplementedException();
-    public Task<FiscalReceiptResponse> FiscalReceiptRefundAsync(FiscalReceiptRefund request) => throw new NotImplementedException();
-    public Task<DeviceInfo> GetDeviceInfoAsync() => throw new NotImplementedException();
-    public Task<Response> NonFiscalReceiptAsync(NonFiscalRequest request) => throw new NotImplementedException();
-
     public async Task<RTInfo> GetRTInfoAsync()
     {
         return new RTInfo
@@ -64,68 +66,66 @@ public sealed partial class CustomRTServer : IITSSCD
         };
     }
 
+    public bool IsNoActionCase(ReceiptRequest request)
+    {
+        return _nonProcessingCases.Select(x => (long) x).Contains(request.GetReceiptCase());
+    }
+
+    private static ProcessResponse CreateResponse(ReceiptResponse receiptResponse)
+    {
+        return new ProcessResponse
+        {
+            ReceiptResponse = receiptResponse
+        };
+    }
+
     public async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request)
     {
-        var receiptCaseVersion = request.ReceiptRequest.ftReceiptCase & 0xF000;
-        var receiptCase = request.ReceiptRequest.ftReceiptCase & 0xFFF;
-
-        if (receiptCaseVersion == 0x0000)
+        var receiptCase = request.ReceiptRequest.GetReceiptCase();
+        if (request.ReceiptRequest.IsLegacyReceipt())
         {
-            receiptCase = GetMappedReceitCase(receiptCase);
+            receiptCase = ITConstants.ConvertToV2Case(receiptCase);
+        }
+
+        if (IsNoActionCase(request.ReceiptRequest))
+        {
+            return CreateResponse(request.ReceiptResponse);
+        }
+
+        if (request.ReceiptRequest.IsVoid())
+        {
+            return await ProcessVoidReceipt(request);
+        }
+
+        if (request.ReceiptRequest.IsInitialOperationReceipt())
+        {
+            return CreateResponse(await PerformInitOperationAsync(request.ReceiptRequest, request.ReceiptResponse));
+        }
+
+        if (request.ReceiptRequest.IsOutOfOperationReceipt())
+        {
+            return CreateResponse(await PerformOutOfOperationAsync(request.ReceiptRequest, request.ReceiptResponse));
+        }
+
+        if (request.ReceiptRequest.IsDailyClosing())
+        {
+            return CreateResponse(await PerformDailyCosing(request.ReceiptRequest, request.ReceiptResponse));
         }
 
         switch (receiptCase)
         {
-            case (long) ITReceiptCases.ZeroReceipt0x200:
-                // TODO perform check for connection?
-                break;
-            case (long) ITReceiptCases.DailyClosing0x212:
-                break;
-            case (long) ITReceiptCases.ShiftClosing0x211:
-            case (long) ITReceiptCases.YearlyClosing0x214:
-            case (long) ITReceiptCases.MonthlyClosing0x213:
-                return new ProcessResponse
-                {
-                    ReceiptResponse = request.ReceiptResponse
-                };
-
-            case (long) ITReceiptCases.InitialOperationReceipt0xF01:
-                return new ProcessResponse
-                {
-                    ReceiptResponse = await PerformInitOperationAsync(request.ReceiptRequest, request.ReceiptResponse)
-                };
-            case (long) ITReceiptCases.OutOfOperationReceipt0xF02:
-                return new ProcessResponse
-                {
-                    ReceiptResponse = await PerformOutOfOperationAsync(request.ReceiptRequest, request.ReceiptResponse)
-                };
-
-            case (long) ITReceiptCases.ProtocolTechnicalEvent0x301:
-            case (long) ITReceiptCases.ProtocolAccountingEvent0x302:
-            case (long) ITReceiptCases.ProtoclUnspecified0x303:
-            case (long) ITReceiptCases.InternalUsageMaterialConsumption0x304:
-            case (long) ITReceiptCases.ECommerce0x006:
-                return new ProcessResponse
-                {
-                    ReceiptResponse = request.ReceiptResponse
-                };
-
-            case (long) ITReceiptCases.InvoiceUnpsecified0x101:
-            case (long) ITReceiptCases.InvoiceB2B0x102:
-            case (long) ITReceiptCases.InvoiceB2C0x103:
-            case (long) ITReceiptCases.InvoiceB2G0x104:
-            case (long) ITReceiptCases.CashDepositPayInn0x002:
-            case (long) ITReceiptCases.CashPayOut0x003:
-            case (long) ITReceiptCases.PaymentTransfer0x004:
-            case (long) ITReceiptCases.POSReceiptWithoutCashRegisterObligation0x005:
-            case (long) ITReceiptCases.SaleInForeignCountry0x007:
-            case (long) ITReceiptCases.UnknownReceipt0x00:
-            case (long) ITReceiptCases.POSReceipt0x001:
+            case (long) ITReceiptCases.UnknownReceipt0x0000:
+            case (long) ITReceiptCases.PointOfSaleReceipt0x0001:
+            case (long) ITReceiptCases.PaymentTransfer0x0002:
+            case (long) ITReceiptCases.PointOfSaleReceipt0x0003:
+            case (long) ITReceiptCases.ECommerce0x0004:
+            case (long) ITReceiptCases.Protocol0x0005:
+            case (long) ITReceiptCases.InvoiceUnknown0x1000:
+            case (long) ITReceiptCases.InvoiceB2C0x1001:
+            case (long) ITReceiptCases.InvoiceB2B0x1002:
+            case (long) ITReceiptCases.InvoiceB2G0x1003:
             default:
-                return new ProcessResponse
-                {
-                    ReceiptResponse = await PreformClassicReceiptAsync(request.ReceiptRequest, request.ReceiptResponse)
-                };
+                return CreateResponse(await PreformClassicReceiptAsync(request.ReceiptRequest, request.ReceiptResponse));
         }
     }
 
@@ -139,7 +139,7 @@ public sealed partial class CustomRTServer : IITSSCD
     private async Task<ReceiptResponse> PerformOutOfOperationAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
     {
         var result = await _client.CancelCashRegisterAsync(GetCashUUID(receiptResponse), "");
-        receiptResponse.ftSignatures = SignatureFactory.CreateInitialOperationSignatures();
+        receiptResponse.ftSignatures = SignatureFactory.CreateOutOfOperationSignatures();
         return receiptResponse;
     }
 
@@ -148,7 +148,15 @@ public sealed partial class CustomRTServer : IITSSCD
         return CashUUIdMappings[Guid.Parse(receiptResponse.ftQueueID)];
     }
 
-    private async Task<ReceiptResponse> PreformRefundReceiptAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
+    private async Task<ProcessResponse> ProcessVoidReceipt(ProcessRequest request)
+    {
+        return new ProcessResponse
+        {
+            ReceiptResponse = await PerformRefundReceiptAsync(request.ReceiptRequest, request.ReceiptResponse)
+        };
+    }
+
+    private async Task<ReceiptResponse> PerformRefundReceiptAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
     {
         var cashuuid = GetCashUUID(receiptResponse);
         var fiscalDocument = new FDocument();
@@ -185,7 +193,7 @@ public sealed partial class CustomRTServer : IITSSCD
             qrCodeData = qrCodeData,
         };
         _receiptQueue.Add(commercialDocument);
-        receiptResponse.ftSignatures = CreatePosReceiptSignatures(fiscalDocument.document.docnumber, fiscalDocument.document.docznumber, fiscalDocument.document.amount, receiptRequest.cbReceiptMoment);
+        receiptResponse.ftSignatures = SignatureFactory.CreatePosReceiptSignatures(fiscalDocument.document.docnumber, fiscalDocument.document.docznumber, fiscalDocument.document.amount, receiptRequest.cbReceiptMoment);
         return receiptResponse;
     }
 
@@ -263,27 +271,12 @@ public sealed partial class CustomRTServer : IITSSCD
         return receiptResponse;
     }
 
-    protected static NumberFormatInfo CurrencyFormatter = new()
-    {
-        NumberDecimalSeparator = ",",
-        NumberGroupSeparator = "",
-        CurrencyDecimalDigits = 2
-    };
-
-    private long GetMappedReceitCase(long legacyReceiptcase)
-    {
-        var value = legacyReceiptcase switch
-        {
-            0x002 => ITReceiptCases.ZeroReceipt0x200,
-            0x003 => ITReceiptCases.InitialOperationReceipt0xF01,
-            0x004 => ITReceiptCases.OutOfOperationReceipt0xF02,
-            0x005 => ITReceiptCases.MonthlyClosing0x213,
-            0x006 => ITReceiptCases.YearlyClosing0x214,
-            0x007 => ITReceiptCases.DailyClosing0x212,
-            0x000 => ITReceiptCases.UnknownReceipt0x00,
-            0x001 => ITReceiptCases.POSReceipt0x001,
-            _ => ITReceiptCases.UnknownReceipt0x00
-        };
-        return (long) value;
-    }
+    #region legacy
+    public Task<DeviceInfo> GetDeviceInfoAsync() => throw new NotImplementedException();
+    public Task<ScuItEchoResponse> EchoAsync(ScuItEchoRequest request) => throw new NotImplementedException();
+    public Task<FiscalReceiptResponse> FiscalReceiptInvoiceAsync(FiscalReceiptInvoice request) => throw new NotImplementedException();
+    public Task<FiscalReceiptResponse> FiscalReceiptRefundAsync(FiscalReceiptRefund request) => throw new NotImplementedException();
+    public Task<DailyClosingResponse> ExecuteDailyClosingAsync(DailyClosingRequest request) => throw new NotImplementedException();
+    public Task<Response> NonFiscalReceiptAsync(NonFiscalRequest request) => throw new NotImplementedException();
+    #endregion
 }
