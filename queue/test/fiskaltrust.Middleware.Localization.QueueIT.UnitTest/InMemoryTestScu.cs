@@ -22,6 +22,8 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
         }
         public Task<FiscalReceiptResponse> FiscalReceiptRefundAsync(FiscalReceiptRefund request) => throw new NotImplementedException();
         public Task<DeviceInfo> GetDeviceInfoAsync() => throw new NotImplementedException();
+        public Task<RTInfo> GetRTInfoAsync() => throw new NotImplementedException();
         public Task<Response> NonFiscalReceiptAsync(NonFiscalRequest request) => throw new NotImplementedException();
+        public Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request) => throw new NotImplementedException();
     }
 }
