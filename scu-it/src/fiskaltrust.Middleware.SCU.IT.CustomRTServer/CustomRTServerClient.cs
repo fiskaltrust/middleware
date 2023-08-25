@@ -69,14 +69,9 @@ public class CustomRTServerClient
         return JsonConvert.DeserializeObject<InsertZDocumentResponse>(resultContent);
     }
 
-    public async Task<InsertFiscalDocumentResponse> InsertFiscalDocumentAsync(FDocument fiscalData, QrCodeData qrCodeData)
+    public async Task<InsertFiscalDocumentResponse> InsertFiscalDocumentAsync(CommercialDocument commercialDocument)
     {
-        var request = new
-        {
-            fiscalData,
-            qrCodeData
-        };
-        var result = _httpClient.PostAsync("/insertFiscalDocument.php/", new StringContent(JsonConvert.SerializeObject(request)));
+        var result = _httpClient.PostAsync("/insertFiscalDocument.php/", new StringContent(JsonConvert.SerializeObject(commercialDocument)));
         // TODO Check error
         var resultContent = await result.Result.Content.ReadAsStringAsync();
         return JsonConvert.DeserializeObject<InsertFiscalDocumentResponse>(resultContent);
@@ -311,4 +306,10 @@ public class ResponseBodyErrory
     public int warn_ej_full_val { get; set; }
 
     public int err_fm_status { get; set; }
+}
+
+public class CommercialDocument
+{
+    public QrCodeData qrCodeData { get; set; } = null!;
+    public FDocument fiscalData { get; set; } = null!;
 }
