@@ -85,6 +85,8 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Services
             return new Uri(url);
         }
 
+        public async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request) => await Instance.ProcessReceiptAsync(request).ConfigureAwait(false);
+        public async Task<RTInfo> GetRTInfoAsync() => await Instance.GetRTInfoAsync().ConfigureAwait(false);
     }
 
 }

@@ -2,14 +2,12 @@
 using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.ifPOS.v1.errors;
 using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.Contracts.Constants;
 using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Contracts.RequestCommands;
 using fiskaltrust.Middleware.Localization.QueueIT.Extensions;
-using fiskaltrust.Middleware.Localization.QueueIT.Factories;
 using fiskaltrust.Middleware.Localization.QueueIT.Services;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
@@ -23,14 +21,14 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
         private readonly ICountrySpecificSettings _countryspecificSettings;
         private readonly ICountrySpecificQueueRepository _countrySpecificQueueRepository;
         private readonly IMiddlewareJournalITRepository _journalITRepository;
-        private readonly IITSSCD _client;
+        private readonly IITSSCDProvider _itIsscdProvider;
         private readonly ISSCD _signingDevice;
         private readonly ILogger<DailyClosingReceiptCommand> _logger;
 
         public DailyClosingReceiptCommand(ISSCD signingDevice, ILogger<DailyClosingReceiptCommand> logger, ICountrySpecificSettings countrySpecificSettings, IITSSCDProvider itIsscdProvider, IMiddlewareJournalITRepository journalITRepository)
         {
             _countrySpecificQueueRepository = countrySpecificSettings.CountrySpecificQueueRepository;
-            _client = itIsscdProvider.Instance;
+            _itIsscdProvider = itIsscdProvider;
             _journalITRepository = journalITRepository;
             _countryspecificSettings = countrySpecificSettings;
             _countryBaseState = countrySpecificSettings.CountryBaseState;
@@ -50,7 +48,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
         {
             try
             {
-                var result = await _client.ProcessReceiptAsync(new ProcessRequest
+                var result = await _itIsscdProvider.ProcessReceiptAsync(new ProcessRequest
                 {
                     ReceiptRequest = request,
                     ReceiptResponse = requestCommandResponse.ReceiptResponse,

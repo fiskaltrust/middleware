@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using fiskaltrust.ifPOS.v1.it;
 using Newtonsoft.Json;
 using fiskaltrust.Middleware.Contracts.Interfaces;
 
@@ -9,13 +8,13 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Services
 {
     public class SscdIT : ISSCD
     {
-        private readonly IITSSCD _client;
+        private readonly IITSSCDProvider _itIsscdProvider;
         private readonly ILogger _logger;
 
 
         public SscdIT(IITSSCDProvider itIsscdProvider, ILogger<SscdIT> logger)
         {
-            _client = itIsscdProvider.Instance;
+            _itIsscdProvider = itIsscdProvider;
             _logger = logger;
         }
 
@@ -23,7 +22,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Services
         {
             try
             {
-                var deviceInfo = await _client.GetDeviceInfoAsync().ConfigureAwait(false);
+                var deviceInfo = await _itIsscdProvider.GetRTInfoAsync().ConfigureAwait(false);
                 _logger.LogDebug(JsonConvert.SerializeObject(deviceInfo));
                 return true;
             }catch (Exception ex) {

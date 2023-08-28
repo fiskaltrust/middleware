@@ -5,8 +5,10 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Services
 {
     public interface IITSSCDProvider
     {
-        IITSSCD Instance { get; }
-
         Task RegisterCurrentScuAsync();
+
+        Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request);
+
+        Task<RTInfo> GetRTInfoAsync();
     }
 }
