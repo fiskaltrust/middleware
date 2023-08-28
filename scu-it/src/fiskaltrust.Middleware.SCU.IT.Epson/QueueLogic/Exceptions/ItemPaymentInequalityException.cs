@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Runtime.Serialization;
 
-namespace fiskaltrust.Middleware.Localization.QueueIT.Exceptions
+namespace fiskaltrust.Middleware.SCU.IT.Epson.QueueLogic.Exceptions
 {
     [Serializable]
     public class ItemPaymentInequalityException : Exception
     {
-        public static readonly string _message = "Pament sum of {0} is inequal to chargeitem sum {1}.";
+        public static readonly string _message = "Payment sum of {0} is inequal to chargeitem sum {1}.";
         public ItemPaymentInequalityException() { }
 
         public ItemPaymentInequalityException(decimal paymentSum, decimal chargeItemSum) : base(string.Format(_message, paymentSum, chargeItemSum)) { }

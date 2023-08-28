@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using fiskaltrust.ifPOS.v1;
+using fiskaltrust.ifPOS.v1.it;
 
 namespace fiskaltrust.Middleware.SCU.IT.Abstraction;
 
@@ -63,5 +65,42 @@ public static class SignatureFactory
                 ftSignatureType = 0x4954000000000000 & (long) SignatureTypesIT.ReceiptTimestamp
             }
         };
+    }
+
+    public static SignaturItem[] CreateVoucherSignatures(NonFiscalRequest nonFiscalRequest)
+    {
+
+        var signs = new List<SignaturItem>();
+        var cnt = nonFiscalRequest.NonFiscalPrints.Count;
+        for (var i = 0; i < cnt; i++)
+        {
+            var dat = nonFiscalRequest.NonFiscalPrints[i].Data;
+            if (dat == "***Voucher***")
+            {
+                var dat2 = i + 1 < cnt ? nonFiscalRequest.NonFiscalPrints[i + 1].Data : null;
+                var isAmount = decimal.TryParse(dat2, NumberStyles.Number, new CultureInfo("it-It", false), out var amnt);
+                if (!isAmount)
+                {
+                    dat2 = i + 2 < cnt ? nonFiscalRequest.NonFiscalPrints[i + 2].Data : null;
+                    isAmount = decimal.TryParse(dat2, NumberStyles.Number, new CultureInfo("it-It", false), out amnt);
+                }
+                if (isAmount)
+                {
+                    signs.Add(new SignaturItem
+                    {
+                        Caption = "<voucher>",
+                        Data = Math.Abs(amnt).ToString(new NumberFormatInfo
+                        {
+                            NumberDecimalSeparator = ",",
+                            NumberGroupSeparator = "",
+                            CurrencyDecimalDigits = 2
+                        }),
+                        ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                        ftSignatureType = 0x4954000000000000 & (long) SignatureTypesIT.ReceiptAmount
+                    });
+                }
+            }
+        }
+        return signs.ToArray();
     }
 }

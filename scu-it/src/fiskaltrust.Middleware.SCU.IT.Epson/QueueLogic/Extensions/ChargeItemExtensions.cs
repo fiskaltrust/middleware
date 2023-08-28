@@ -1,8 +1,7 @@
 ﻿using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.it;
-using fiskaltrust.Middleware.Contracts.Exceptions;
 
-namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
+namespace fiskaltrust.Middleware.SCU.IT.Epson.QueueLogic.Extensions
 {
     public static class ChargeItemExtensions
     {
@@ -13,6 +12,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
         private static readonly int _vatRateDeduction2 = 3;
         private static readonly int _vatRateDeduction3 = 4;
         private static readonly int _vatRateZero = 0;
+        private static readonly int _vatRateUnknown = -1;
 
         public static PaymentAdjustmentType? GetPaymentAdjustmentType(this ChargeItem chargeItem)
         {
@@ -109,9 +109,9 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
                 case 0x002B:
                     return _vatRateDeduction3;
                 default:
-                    throw new UnknownChargeItemException(chargeItem.ftChargeItemCase);
+                    return _vatRateUnknown;
             }
         }
-        public static decimal GetAmount(this ChargeItem chargeItem) => chargeItem.Quantity < 0 && chargeItem.Amount >= 0 ? chargeItem.Amount*(-1) : chargeItem.Amount;
+        public static decimal GetAmount(this ChargeItem chargeItem) => chargeItem.Quantity < 0 && chargeItem.Amount >= 0 ? chargeItem.Amount * -1 : chargeItem.Amount;
     }
 }

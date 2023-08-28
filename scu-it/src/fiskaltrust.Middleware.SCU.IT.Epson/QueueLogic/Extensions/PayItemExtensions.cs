@@ -1,9 +1,8 @@
 ﻿using System;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.it;
-using fiskaltrust.Middleware.Contracts.Exceptions;
 
-namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
+namespace fiskaltrust.Middleware.SCU.IT.Epson.QueueLogic.Extensions
 {
     public static class PayItemExtensions
     {
@@ -37,7 +36,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
                 case 0x000B:
                     return PaymentType.NotPaid;
                 default:
-                    throw new UnknownPayItemException(payItem.ftPayItemCase);
+                    return PaymentType.Cash;
             }
         }
 
@@ -51,7 +50,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
             return payItem.GetPaymentType() == PaymentType.Voucher && payItem.GetAmount() < 0;
         }
 
-        public static decimal GetAmount(this PayItem payItem) => payItem.Quantity < 0 && payItem.Amount >= 0 ? payItem.Amount * (-1) : payItem.Amount;
+        public static decimal GetAmount(this PayItem payItem) => payItem.Quantity < 0 && payItem.Amount >= 0 ? payItem.Amount * -1 : payItem.Amount;
 
     }
 }

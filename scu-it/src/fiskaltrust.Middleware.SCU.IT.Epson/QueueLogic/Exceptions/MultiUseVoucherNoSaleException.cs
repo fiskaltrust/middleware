@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.Serialization;
 
-namespace fiskaltrust.Middleware.Localization.QueueIT.Exceptions
+namespace fiskaltrust.Middleware.SCU.IT.Epson.QueueLogic.Exceptions
 {
     [Serializable]
     public class MultiUseVoucherNoSaleException : ArgumentException
