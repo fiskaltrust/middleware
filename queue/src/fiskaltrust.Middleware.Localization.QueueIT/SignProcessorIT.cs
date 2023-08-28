@@ -12,6 +12,7 @@ using fiskaltrust.Middleware.Localization.QueueIT.Constants;
 using fiskaltrust.Middleware.Localization.QueueIT.Extensions;
 using fiskaltrust.Middleware.Localization.QueueIT.v2.DailyOperations;
 using fiskaltrust.Middleware.Localization.QueueIT.v2.Lifecycle;
+using fiskaltrust.Middleware.Localization.QueueIT.Services;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT
 {
@@ -21,17 +22,17 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
         protected readonly IConfigurationRepository _configurationRepository;
         private readonly IJournalITRepository _journalITRepository;
         private readonly ReceiptTypeProcessorFactory _receiptTypeProcessor;
-        private readonly ISSCD _signingDevice;
+        private readonly IITSSCDProvider _itSSCDProvider;
         private readonly ILogger<SignProcessorIT> _logger;
         private bool _loggedDisabledQueueReceiptRequest;
 
-        public SignProcessorIT(ISSCD signingDevice, ILogger<SignProcessorIT> logger, ICountrySpecificSettings countrySpecificSettings, IConfigurationRepository configurationRepository, IJournalITRepository journalITRepository, ReceiptTypeProcessorFactory receiptTypeProcessor)
+        public SignProcessorIT(IITSSCDProvider itSSCDProvider, ILogger<SignProcessorIT> logger, ICountrySpecificSettings countrySpecificSettings, IConfigurationRepository configurationRepository, IJournalITRepository journalITRepository, ReceiptTypeProcessorFactory receiptTypeProcessor)
         {
             _configurationRepository = configurationRepository;
             _journalITRepository = journalITRepository;
             _receiptTypeProcessor = receiptTypeProcessor;
             _countrySpecificSettings = countrySpecificSettings;
-            _signingDevice = signingDevice;
+            _itSSCDProvider = itSSCDProvider;
             _logger = logger;
         }
 
@@ -131,7 +132,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
             var log = $"Queue is in failed mode. SSCDFailMoment: {queueIt.SSCDFailMoment}, SSCDFailCount: {queueIt.SSCDFailCount}.";
             receiptResponse.ftState |= 0x2;
             log += " When connection is established use zeroreceipt for subsequent booking!";
-            var signingAvail = await _signingDevice.IsSSCDAvailable().ConfigureAwait(false);
+            var signingAvail = await _itSSCDProvider.IsSSCDAvailable().ConfigureAwait(false);
             log += signingAvail ? " Signing device is available." : " Signing device is not available.";
             _logger.LogInformation(log);
             receiptResponse.SetFtStateData(new StateDetail() { FailedReceiptCount = queueIt.SSCDFailCount, FailMoment = queueIt.SSCDFailMoment, SigningDeviceAvailable = signingAvail });
