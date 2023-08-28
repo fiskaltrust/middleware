@@ -26,4 +26,8 @@
             <PackageCopyToOutput>true</PackageCopyToOutput>
         </Content>
     </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\fiskaltrust.Middleware.SCU.IT.Abstraction\fiskaltrust.Middleware.SCU.IT.Abstraction.csproj" />
+    </ItemGroup>
 </Project>

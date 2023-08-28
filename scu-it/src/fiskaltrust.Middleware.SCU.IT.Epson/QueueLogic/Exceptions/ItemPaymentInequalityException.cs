@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.Serialization;
+using fiskaltrust.ifPOS.v1.errors;
 
 namespace fiskaltrust.Middleware.SCU.IT.Epson.QueueLogic.Exceptions
 {

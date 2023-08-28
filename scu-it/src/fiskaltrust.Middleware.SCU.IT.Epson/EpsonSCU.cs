@@ -8,9 +8,13 @@ using System.ServiceModel;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.errors;
 using fiskaltrust.ifPOS.v1.it;
+using fiskaltrust.Middleware.SCU.IT.Abstraction;
 using fiskaltrust.Middleware.SCU.IT.Epson.Models;
+using fiskaltrust.Middleware.SCU.IT.Epson.QueueLogic.Exceptions;
+using fiskaltrust.Middleware.SCU.IT.Epson.QueueLogic.Extensions;
 using fiskaltrust.Middleware.SCU.IT.Epson.Utilities;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -59,7 +63,7 @@ public sealed class EpsonSCU : IITSSCD
             var response = await SendRequestAsync(content);
 
             using var responseContent = await response.Content.ReadAsStreamAsync();
-            var result = SoapSerializer.Deserialize<ReceiptResponse>(responseContent);
+            var result = SoapSerializer.Deserialize<PrinterResponse>(responseContent);
             var fiscalReceiptResponse = new FiscalReceiptResponse()
             {
                 Success = result?.Success ?? false
@@ -101,7 +105,7 @@ public sealed class EpsonSCU : IITSSCD
             var response = await SendRequestAsync(content);
 
             using var responseContent = await response.Content.ReadAsStreamAsync();
-            var result = SoapSerializer.Deserialize<ReceiptResponse>(responseContent);
+            var result = SoapSerializer.Deserialize<PrinterResponse>(responseContent);
             var fiscalReceiptResponse = new FiscalReceiptResponse()
             {
                 Success = result?.Success ?? false
@@ -201,7 +205,7 @@ public sealed class EpsonSCU : IITSSCD
             var httpResponse = await SendRequestAsync(content);
 
             using var responseContent = await httpResponse.Content.ReadAsStreamAsync();
-            var result = SoapSerializer.Deserialize<ReceiptResponse>(responseContent);
+            var result = SoapSerializer.Deserialize<PrinterResponse>(responseContent);
             var response = new Response()
             {
                 Success = result?.Success ?? false
@@ -232,7 +236,7 @@ public sealed class EpsonSCU : IITSSCD
         }
     }
 
-    private async Task SetReceiptResponse(List<Payment>? payments, ReceiptResponse? result, FiscalReceiptResponse fiscalReceiptResponse)
+    private async Task SetReceiptResponse(List<Payment>? payments, PrinterResponse? result, FiscalReceiptResponse fiscalReceiptResponse)
     {
         if (result?.Success == false)
         {
@@ -245,7 +249,7 @@ public sealed class EpsonSCU : IITSSCD
         }
     }
 
-    private async Task SetResponseAsync(List<Payment>? payments, ReceiptResponse? result, FiscalReceiptResponse fiscalReceiptResponse)
+    private async Task SetResponseAsync(List<Payment>? payments, PrinterResponse? result, FiscalReceiptResponse fiscalReceiptResponse)
     {
         decimal.TryParse(result?.Receipt?.FiscalReceiptAmount, NumberStyles.Any, new CultureInfo("it-It", false), out var amount);
         if (result?.Success == true && amount == 0)
@@ -370,7 +374,140 @@ public sealed class EpsonSCU : IITSSCD
         return new SSCDErrorInfo() { Info = errorInf, Type = SSCDErrorType.Device };
     }
 
-    public Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request) => throw new NotImplementedException();
-    
+
+    private async Task<ReceiptResponse> CreateNonFiscalRequestAsync(ReceiptResponse receiptResponse, ReceiptRequest request)
+    {
+        var nonFiscalRequest = new NonFiscalRequest
+        {
+            NonFiscalPrints = new List<NonFiscalPrint>()
+        };
+        if (request.cbChargeItems != null)
+        {
+            foreach (var chargeItem in request.cbChargeItems.Where(x => x.IsMultiUseVoucherSale()))
+            {
+                AddVoucherNonFiscalPrints(nonFiscalRequest.NonFiscalPrints, chargeItem.Amount, chargeItem.ftChargeItemCaseData);
+            }
+        }
+        if (request.cbPayItems != null)
+        {
+            foreach (var payItem in request.cbPayItems.Where(x => x.IsVoucherSale()))
+            {
+                AddVoucherNonFiscalPrints(nonFiscalRequest.NonFiscalPrints, payItem.Amount, payItem.ftPayItemCaseData);
+            }
+        }
+        var response = await NonFiscalReceiptAsync(nonFiscalRequest);
+        if (response.Success)
+        {
+            receiptResponse.ftSignatures = SignatureFactory.CreateVoucherSignatures(nonFiscalRequest);
+        }
+        return receiptResponse;
+    }
+
+    private static void AddVoucherNonFiscalPrints(List<NonFiscalPrint> nonFiscalPrints, decimal amount, string info)
+    {
+        nonFiscalPrints.Add(new NonFiscalPrint() { Data = "***Voucher***", Font = 2 });
+        if (!string.IsNullOrEmpty(info))
+        {
+            nonFiscalPrints.Add(new NonFiscalPrint() { Data = info, Font = 2 });
+        }
+        nonFiscalPrints.Add(new NonFiscalPrint()
+        {
+            Data = Math.Abs(amount).ToString(new NumberFormatInfo
+            {
+                NumberDecimalSeparator = ",",
+                NumberGroupSeparator = "",
+                CurrencyDecimalDigits = 2
+            }),
+            Font = 2
+        });
+    }
+
+    private static FiscalReceiptInvoice CreateInvoice(ReceiptRequest request)
+    {
+        var fiscalReceiptRequest = new FiscalReceiptInvoice()
+        {
+            //Barcode = ChargeItem.ProductBarcode,
+            //TODO DisplayText = "Message on customer display",
+            Operator = request.cbUser,
+            Items = request.cbChargeItems.Where(x => !x.IsPaymentAdjustment()).Select(p => new Item
+            {
+                Description = p.Description,
+                Quantity = p.Quantity,
+                UnitPrice = p.UnitPrice ?? p.Amount / p.Quantity,
+                Amount = p.Amount,
+                VatGroup = p.GetVatGroup(),
+                AdditionalInformation = p.ftChargeItemCaseData
+            }).ToList(),
+            PaymentAdjustments = request.GetPaymentAdjustments(),
+            Payments = request.GetPayments()
+        };
+        return fiscalReceiptRequest;
+    }
+
+    private async Task<FiscalReceiptRefund> CreateRefundAsync(ReceiptRequest request, long receiptnumber, long zReceiptNumber, DateTime receiptDateTime)
+    {
+        var deviceInfo = await GetDeviceInfoAsync();
+        var fiscalReceiptRequest = new FiscalReceiptRefund()
+        {
+            //TODO Barcode = "0123456789" 
+            Operator = "1",
+            DisplayText = $"REFUND {zReceiptNumber:D4} {receiptnumber:D4} {receiptDateTime:ddMMyyyy} {deviceInfo.SerialNumber}",
+            Refunds = request.cbChargeItems?.Select(p => new Refund
+            {
+                Description = p.Description,
+                Quantity = Math.Abs(p.Quantity),
+                UnitPrice = p.UnitPrice ?? 0,
+                Amount = Math.Abs(p.Amount),
+                VatGroup = p.GetVatGroup()
+            }).ToList(),
+            PaymentAdjustments = request.GetPaymentAdjustments(),
+            Payments = request.cbPayItems?.Select(p => new Payment
+            {
+                Amount = p.Amount,
+                Description = p.Description,
+                PaymentType = p.GetPaymentType(),
+            }).ToList()
+        };
+        return fiscalReceiptRequest;
+    }
+
+    public async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request)
+    {
+        var receiptResponse = request.ReceiptResponse;
+        if (request.ReceiptRequest.IsMultiUseVoucherSale())
+        {
+            return new ProcessResponse
+            {
+                ReceiptResponse = await CreateNonFiscalRequestAsync(receiptResponse, request.ReceiptRequest).ConfigureAwait(false)
+            };
+        }
+
+        FiscalReceiptResponse fiscalResponse;
+        if (request.ReceiptRequest.IsVoid())
+        {
+            // TODO how will we get the refund information? ==> signatures??
+            var fiscalReceiptRefund = await CreateRefundAsync(request.ReceiptRequest, -1, -1, DateTime.MinValue).ConfigureAwait(false);
+            fiscalResponse = await FiscalReceiptRefundAsync(fiscalReceiptRefund).ConfigureAwait(false);
+        }
+        else
+        {
+            var fiscalReceiptinvoice = CreateInvoice(request.ReceiptRequest);
+            fiscalResponse = await FiscalReceiptInvoiceAsync(fiscalReceiptinvoice).ConfigureAwait(false);
+        }
+        if (!fiscalResponse.Success)
+        {
+            throw new SSCDErrorException(fiscalResponse.SSCDErrorInfo.Type, fiscalResponse.SSCDErrorInfo.Info);
+        }
+        else
+        {
+            receiptResponse.ftReceiptIdentification += $"{fiscalResponse.ReceiptNumber}";
+            receiptResponse.ftSignatures = SignatureFactory.CreatePosReceiptSignatures(fiscalResponse.ReceiptNumber, fiscalResponse.ZRepNumber, fiscalResponse.Amount, fiscalResponse.ReceiptDateTime);
+        }
+        return new ProcessResponse
+        {
+            ReceiptResponse = receiptResponse
+        };
+    }
+
     public Task<RTInfo> GetRTInfoAsync() => throw new NotImplementedException();
 }

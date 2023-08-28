@@ -95,8 +95,8 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.QueueLogic.Extensions
             var sumChargeItemsNoVoucher = receiptRequest.cbChargeItems?.Where(x => !x.IsPaymentAdjustment()).Sum(x => x.GetAmount()) ?? 0;
 
             var payments = new List<Payment>();
-            if (receiptRequest.cbPayItems != null && receiptRequest.cbPayItems.Any(x => x.IsVoucherRedeem()) ||
-                receiptRequest.cbChargeItems != null && receiptRequest.cbChargeItems.Any(x => x.IsMultiUseVoucherRedeem()))
+            if ((receiptRequest.cbPayItems != null && receiptRequest.cbPayItems.Any(x => x.IsVoucherRedeem())) ||
+                (receiptRequest.cbChargeItems != null && receiptRequest.cbChargeItems.Any(x => x.IsMultiUseVoucherRedeem())))
             {
                 var sumVoucher = receiptRequest.cbPayItems.Where(x => x.IsVoucherRedeem()).Sum(x => x.GetAmount()) +
                     receiptRequest.cbChargeItems.Where(x => x.IsMultiUseVoucherRedeem()).Sum(x => Math.Abs(x.Amount));
