@@ -27,6 +27,12 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
         public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueDE queueDE, ReceiptRequest request, ftQueueItem queueItem)
         {
             var closeSingleTransaction = !string.IsNullOrEmpty(request.cbReceiptReference);
+            var closeMultipleTransactions = request.ftReceiptCaseData.Contains("CurrentStartedTransactionNumbers");
+
+            if (!closeSingleTransaction && !closeMultipleTransactions)
+            {
+                throw new ArgumentException($"CbReceiptReference must be set for one transaction! If you want to close multiple transactions, pass an array value for 'CurrentStartedTransactionNumbers' via ftReceiptCaseData.");
+            }
 
             if (closeSingleTransaction && request.IsImplictFlow())
             {
