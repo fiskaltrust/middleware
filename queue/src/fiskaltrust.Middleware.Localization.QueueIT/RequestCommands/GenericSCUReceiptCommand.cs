@@ -16,7 +16,7 @@ using fiskaltrust.Middleware.Contracts.Interfaces;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 {
-    public class PosReceiptCommand : RequestCommand
+    public class GenericSCUReceiptCommand : RequestCommand
     {
         private readonly long _countryBaseState;
         private readonly ICountrySpecificQueueRepository _countrySpecificQueueRepository;
@@ -26,7 +26,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
         private readonly ISSCD _signingDevice;
         private readonly ILogger<DailyClosingReceiptCommand> _logger;
 
-        public PosReceiptCommand(ISSCD signingDevice, ILogger<DailyClosingReceiptCommand> logger, IITSSCDProvider itIsscdProvider, IMiddlewareJournalITRepository journalITRepository, ICountrySpecificSettings countrySpecificSettings)
+        public GenericSCUReceiptCommand(ISSCD signingDevice, ILogger<DailyClosingReceiptCommand> logger, IITSSCDProvider itIsscdProvider, IMiddlewareJournalITRepository journalITRepository, ICountrySpecificSettings countrySpecificSettings)
         {
             _client = itIsscdProvider.Instance;
             _journalITRepository = journalITRepository;
@@ -41,6 +41,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
         {
             var queueIt = await _countrySpecificQueueRepository.GetQueueAsync(queue.ftQueueId).ConfigureAwait(false);
             var receiptResponse = CreateReceiptResponse(queue, request, queueItem, queueIt.CashBoxIdentification, _countryBaseState);
+
             try
             {
                 var result = await _client.ProcessReceiptAsync(new ProcessRequest

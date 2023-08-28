@@ -11,6 +11,7 @@ using fiskaltrust.Middleware.Localization.QueueIT.Extensions;
 using fiskaltrust.Middleware.Localization.QueueIT.RequestCommands;
 using fiskaltrust.Middleware.Contracts.RequestCommands.Factories;
 using System.Linq;
+using fiskaltrust.Middleware.Localization.QueueIT.Constants;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT
 {
@@ -22,6 +23,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
         private readonly ISSCD _signingDevice;
         private readonly ILogger<SignProcessorIT> _logger;
         private bool _loggedDisabledQueueReceiptRequest;
+
 
         public SignProcessorIT(ISSCD signingDevice, ILogger<SignProcessorIT> logger, ICountrySpecificSettings countrySpecificSettings, IRequestCommandFactory requestCommandFactory, IConfigurationRepository configurationRepository)
         {
@@ -40,12 +42,13 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
                 throw new NullReferenceException(nameof(queueIT.ftSignaturCreationUnitITId));
             }
 
-            if ((queue.IsNew() || queue.IsDeactivated()) && !request.IsInitialOperationReceipt())
+            var requestCommand = _requestCommandFactory.Create(request);
+
+            if ((queue.IsNew() || queue.IsDeactivated()) && requestCommand is not InitialOperationReceiptCommand)
             {
                 return await ReturnWithQueueIsDisabled(queue, queueIT, request, queueItem);
             }
 
-            var requestCommand = _requestCommandFactory.Create(request);
             if (queueIT.SSCDFailCount > 0 && requestCommand is not ZeroReceiptCommandIT)
             {
                 var requestCommandResponse = await requestCommand.ProcessFailedReceiptRequest(_signingDevice, _logger, _countrySpecificSettings, queue, queueItem, request).ConfigureAwait(false);

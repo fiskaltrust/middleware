@@ -374,7 +374,6 @@ public sealed class EpsonSCU : IITSSCD
         return new SSCDErrorInfo() { Info = errorInf, Type = SSCDErrorType.Device };
     }
 
-
     private async Task<ReceiptResponse> CreateNonFiscalRequestAsync(ReceiptResponse receiptResponse, ReceiptRequest request)
     {
         var nonFiscalRequest = new NonFiscalRequest

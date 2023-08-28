@@ -11,7 +11,8 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
             services.AddSingleton<InitialOperationReceiptCommand>();
             services.AddSingleton<MonthlyClosingReceiptCommand>();
             services.AddSingleton<OutOfOperationReceiptCommand>();
-            services.AddSingleton<PosReceiptCommand>();
+            services.AddSingleton<GenericSCUReceiptCommand>();
+            services.AddSingleton<QueueOnlyProcessingCommand>();
             services.AddSingleton<YearlyClosingReceiptCommand>();
             services.AddSingleton<ZeroReceiptCommandIT>();
             return services;
