@@ -29,7 +29,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands.Factories
                 case ITReceiptCases.UnknownReceipt0x0000:
                 case ITReceiptCases.PointOfSaleReceipt0x0001:
                 case ITReceiptCases.PaymentTransfer0x0002:
-                case ITReceiptCases.PointOfSaleReceipt0x0003:
+                case ITReceiptCases.PointOfSaleReceiptWithoutObligation0x0003:
                 case ITReceiptCases.ECommerce0x0004:
                 case ITReceiptCases.Protocol0x0005:
                 case ITReceiptCases.InvoiceUnknown0x1000:
