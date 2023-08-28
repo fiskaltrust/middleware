@@ -17,9 +17,9 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands.v2.DailyOp
 
         public ITReceiptCases ReceiptCase => ITReceiptCases.MonthlyClosing0x2012;
 
-        public bool FailureModeAllowed => false;
+        public bool FailureModeAllowed => true;
 
-        public bool GenerateJournalIT => false;
+        public bool GenerateJournalIT => true;
 
         public MonthlyClosing0x2012(IITSSCDProvider itSSCDProvider)
         {

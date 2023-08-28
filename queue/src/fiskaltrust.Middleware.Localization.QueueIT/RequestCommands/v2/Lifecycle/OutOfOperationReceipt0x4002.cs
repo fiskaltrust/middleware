@@ -5,6 +5,10 @@ using System.Threading.Tasks;
 using fiskaltrust.Middleware.Localization.QueueIT.Services;
 using fiskaltrust.ifPOS.v1.it;
 using System.Collections.Generic;
+using fiskaltrust.storage.serialization.DE.V0;
+using Newtonsoft.Json;
+using System;
+using fiskaltrust.Middleware.Contracts.Extensions;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands.v2.Lifecycle
 {
@@ -25,12 +29,61 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands.v2.Lifecyc
 
         public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ExecuteAsync(ftQueue queue, ftQueueIT queueIt, ReceiptRequest request, ReceiptResponse receiptResponse, ftQueueItem queueItem)
         {
-            var result = await _itSSCDProvider.ProcessReceiptAsync(new ProcessRequest
+            if (queue.IsDeactivated())
             {
-                ReceiptRequest = request,
-                ReceiptResponse = receiptResponse,
-            });
-            return (result.ReceiptResponse, new List<ftActionJournal>());
+                var actionjournal = CreateActionJournal(queue.ftQueueId, $"{request.ftReceiptCase:X}-Queue-already-deactivated",
+                queueItem.ftQueueItemId, $"Out-of-Operation receipt. Queue-ID: {queue.ftQueueId}", $"Queue was already deactivated on the {queue.StopMoment.Value.ToString("yyyy-MM-dd hh:mm:ss")}");
+                return (receiptResponse, new List<ftActionJournal> { actionjournal });
+            }
+            var (actionJournal, signatureItem) = await DeactivateSCUAsync(queue, queueIt, request, queueItem);
+            receiptResponse.ftSignatures = new SignaturItem[] { signatureItem };
+            queue.StopMoment = DateTime.UtcNow;
+            return (receiptResponse, new List<ftActionJournal> { actionJournal });
+        }
+
+        protected Task<(ftActionJournal, SignaturItem)> DeactivateSCUAsync(ftQueue queue, ftQueueIT queueIT, ReceiptRequest request, ftQueueItem queueItem)
+        {
+            var signatureItem = CreateOutOfOperationSignature($"Queue-ID: {queue.ftQueueId}");
+            var notification = new DeactivateQueueSCU
+            {
+                CashBoxId = Guid.Parse(request.ftCashBoxID),
+                QueueId = queueItem.ftQueueId,
+                Moment = DateTime.UtcNow,
+                SCUId = queueIT.ftSignaturCreationUnitITId.GetValueOrDefault(),
+                IsStopReceipt = true,
+                Version = "V0"
+            };
+
+            var actionJournal = CreateActionJournal(queue.ftQueueId, $"{request.ftReceiptCase:X}-{nameof(DeactivateQueueSCU)}",
+                queueItem.ftQueueItemId, $"Out-of-Operation receipt. Queue-ID: {queue.ftQueueId}", JsonConvert.SerializeObject(notification));
+
+            return Task.FromResult((actionJournal, signatureItem));
+        }
+
+        public SignaturItem CreateOutOfOperationSignature(string data)
+        {
+            return new SignaturItem()
+            {
+                ftSignatureType = Cases.BASE_STATE & 0x4,
+                ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                Caption = $"Out-of-operation receipt",
+                Data = data
+            };
+        }
+
+        protected ftActionJournal CreateActionJournal(Guid queueId, string type, Guid queueItemId, string message, string data, int priority = -1)
+        {
+            return new ftActionJournal
+            {
+                ftActionJournalId = Guid.NewGuid(),
+                ftQueueId = queueId,
+                ftQueueItemId = queueItemId,
+                Type = type,
+                Moment = DateTime.UtcNow,
+                Message = message,
+                Priority = priority,
+                DataJson = data
+            };
         }
     }
 }
