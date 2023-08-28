@@ -7,6 +7,7 @@ using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.storage.V0;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.Services
@@ -16,7 +17,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Services
 
         private readonly IClientFactory<IITSSCD> _clientFactory;
         private readonly MiddlewareConfiguration _middlewareConfiguration;
-
+        private readonly ILogger<ITSSCDProvider> _logger;
         private readonly SemaphoreSlim _semaphoreInstance = new SemaphoreSlim(1, 1);
         private readonly SemaphoreSlim _semaphoreRegister = new SemaphoreSlim(1, 1);
 
@@ -43,10 +44,11 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Services
             }
         }
 
-        public ITSSCDProvider(IClientFactory<IITSSCD> clientFactory, MiddlewareConfiguration middlewareConfiguration)
+        public ITSSCDProvider(IClientFactory<IITSSCD> clientFactory, MiddlewareConfiguration middlewareConfiguration, ILogger<ITSSCDProvider> logger)
         {
             _clientFactory = clientFactory;
             _middlewareConfiguration = middlewareConfiguration;
+            _logger = logger;
         }
 
         public async Task RegisterCurrentScuAsync()
@@ -83,6 +85,21 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Services
             catch { }
 
             return new Uri(url);
+        }
+
+        public async Task<bool> IsSSCDAvailable()
+        {
+            try
+            {
+                var deviceInfo = await _instance.GetRTInfoAsync().ConfigureAwait(false);
+                _logger.LogDebug(JsonConvert.SerializeObject(deviceInfo));
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error on DeviceInfo Request.");
+                return false;
+            }
         }
 
         public async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request) => await Instance.ProcessReceiptAsync(request).ConfigureAwait(false);

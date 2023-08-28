@@ -10,5 +10,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Services
         Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request);
 
         Task<RTInfo> GetRTInfoAsync();
+
+        Task<bool> IsSSCDAvailable();
     }
 }

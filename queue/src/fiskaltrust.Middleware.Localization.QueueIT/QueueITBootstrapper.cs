@@ -9,6 +9,7 @@ using fiskaltrust.Middleware.Localization.QueueIT.Extensions;
 using fiskaltrust.Middleware.Localization.QueueIT.Repositories;
 using fiskaltrust.Middleware.Localization.QueueIT.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT
 {
@@ -17,7 +18,6 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
         public void ConfigureServices(IServiceCollection services)
         {
             var _ = services
-                .AddScoped<ISSCD, SscdIT>()
                 .AddScoped<IMarketSpecificSignProcessor, SignProcessorIT>()
                 .AddScoped<IMarketSpecificJournalProcessor, JournalProcessorIT>()
                 .AddScoped<SignatureItemFactoryIT>()
@@ -29,11 +29,11 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
                 {
                     var sscdProvider = new ITSSCDProvider(
                         sp.GetRequiredService<IClientFactory<IITSSCD>>(),
-                        sp.GetRequiredService<MiddlewareConfiguration>());
+                        sp.GetRequiredService<MiddlewareConfiguration>(),
+                        sp.GetRequiredService<ILogger<ITSSCDProvider>>());
                     sscdProvider.RegisterCurrentScuAsync().Wait();
                     return sscdProvider;
-                })
-                .ConfigureReceiptCommands();
+                });
         }
     }
 }

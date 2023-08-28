@@ -97,7 +97,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
 
         public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ReturnWithQueueIsDisabled(ftQueue queue, ftQueueIT queueIT, ReceiptRequest request, ftQueueItem queueItem)
         {
-            var receiptResponse = CreateReceiptResponse(request, queueItem, queueIT);
+            var receiptResponse = CreateReceiptResponse(queue, request, queueItem, queueIT.CashBoxIdentification, Cases.BASE_STATE);
             var actionJournals = new List<ftActionJournal>();
             if (!_loggedDisabledQueueReceiptRequest)
             {
@@ -119,22 +119,6 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
             return await Task.FromResult((receiptResponse, actionJournals)).ConfigureAwait(false);
         }
 
-        protected static ReceiptResponse CreateReceiptResponse(ReceiptRequest request, ftQueueItem queueItem, ftQueueIT queueIT)
-        {
-            return new ReceiptResponse
-            {
-                ftCashBoxID = request.ftCashBoxID,
-                ftCashBoxIdentification = queueIT.CashBoxIdentification,
-                ftQueueID = queueItem.ftQueueId.ToString(),
-                ftQueueItemID = queueItem.ftQueueItemId.ToString(),
-                ftQueueRow = queueItem.ftQueueRow,
-                cbTerminalID = request.cbTerminalID,
-                cbReceiptReference = request.cbReceiptReference,
-                ftReceiptMoment = DateTime.UtcNow,
-                ftState = 0x4954000000000000
-            };
-        }
-
         public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessFailedReceiptRequest(ftQueueIT queueIt, ftQueueItem queueItem, ReceiptResponse receiptResponse)
         {
             if (queueIt.SSCDFailCount == 0)
@@ -154,7 +138,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
             return (receiptResponse, new List<ftActionJournal>());
         }
 
-        protected ReceiptResponse CreateReceiptResponse(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, string ftCashBoxIdentification, long ftState)
+        private ReceiptResponse CreateReceiptResponse(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, string ftCashBoxIdentification, long ftState)
         {
             var receiptIdentification = $"ft{queue.ftReceiptNumerator:X}#";
             return new ReceiptResponse

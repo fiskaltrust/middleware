@@ -8,11 +8,6 @@
 
 
     <ItemGroup>
-      <Folder Include="RequestCommandsTest\" />
-    </ItemGroup>
-
-
-    <ItemGroup>
         <PackageReference Include="Serilog" Version="2.9.0" />
         <PackageReference Include="Microsoft.Extensions.Logging" Version="3.1.4" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="3.1.4" />

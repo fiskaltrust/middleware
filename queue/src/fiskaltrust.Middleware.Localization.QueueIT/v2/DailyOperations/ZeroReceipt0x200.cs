@@ -13,30 +13,13 @@ using Newtonsoft.Json;
 using System;
 using fiskaltrust.Middleware.Contracts.Repositories;
 
-/* Unmerged change from project 'fiskaltrust.Middleware.Localization.QueueIT (netstandard2.0)'
-Before:
-using fiskaltrust.ifPOS.v1.errors;
-After:
-using fiskaltrust.ifPOS.v1.errors;
-using fiskaltrust;
-using fiskaltrust.Middleware;
-using fiskaltrust.Middleware.Localization;
-using fiskaltrust.Middleware.Localization.QueueIT;
-using fiskaltrust.Middleware.Localization.QueueIT.RequestCommands;
-using fiskaltrust.Middleware.Localization.QueueIT.RequestCommands.v2;
-using fiskaltrust.Middleware.Localization.QueueIT.RequestCommands.v2.DailyOperations;
-using fiskaltrust.Middleware.Localization.QueueIT.v2.DailyOperations;
-*/
-using fiskaltrust.ifPOS.v1.errors;
-
 namespace fiskaltrust.Middleware.Localization.QueueIT.v2.DailyOperations
 {
     public class ZeroReceipt0x200 : IReceiptTypeProcessor
     {
         private readonly IITSSCDProvider _itSSCDProvider;
-        private readonly ISSCD _signingDevice;
         private readonly ILogger<ZeroReceipt0x200> _logger;
-        private readonly IMiddlewareQueueItemRepository _queueItemRepository;
+        private readonly ICountrySpecificQueueRepository _countrySpecificQueueRepository;
 
         public ITReceiptCases ReceiptCase => ITReceiptCases.ZeroReceipt0x200;
 
@@ -44,17 +27,16 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.DailyOperations
 
         public bool GenerateJournalIT => true;
 
-        public ZeroReceipt0x200(IITSSCDProvider itSSCDProvider, ISSCD signingDevice, ILogger<ZeroReceipt0x200> logger, IMiddlewareQueueItemRepository queueItemRepository)
+        public ZeroReceipt0x200(IITSSCDProvider itSSCDProvider,ILogger<ZeroReceipt0x200> logger, ICountrySpecificQueueRepository countrySpecificQueueRepository)
         {
             _itSSCDProvider = itSSCDProvider;
-            _signingDevice = signingDevice;
             _logger = logger;
-            _queueItemRepository = queueItemRepository;
+            _countrySpecificQueueRepository = countrySpecificQueueRepository;
         }
 
         public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ExecuteAsync(ftQueue queue, ftQueueIT queueIT, ReceiptRequest request, ReceiptResponse receiptResponse, ftQueueItem queueItem)
         {
-            var signingAvailable = await _signingDevice.IsSSCDAvailable().ConfigureAwait(false);
+            var signingAvailable = await _itSSCDProvider.IsSSCDAvailable().ConfigureAwait(false);
             if (queueIT.SSCDFailCount == 0)
             {
                 var log = "Queue has no failed receipts.";
@@ -101,7 +83,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.DailyOperations
             var stateDetail = JsonConvert.SerializeObject(new StateDetail() { FailedReceiptCount = queueIT.SSCDFailCount, FailMoment = queueIT.SSCDFailMoment, SigningDeviceAvailable = signingAvailable });
 
             receiptResponse.ftSignatures = signatures.ToArray();
-            await _countrySpecificQueueRepository.InsertOrUpdateQueueAsync(iQueue).ConfigureAwait(false);
+            await _countrySpecificQueueRepository.InsertOrUpdateQueueAsync(queueIT).ConfigureAwait(false);
 
             return (receiptResponse, new List<ftActionJournal>
                     {

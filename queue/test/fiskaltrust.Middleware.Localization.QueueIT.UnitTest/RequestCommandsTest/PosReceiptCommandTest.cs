@@ -4,16 +4,16 @@ using fiskaltrust.ifPOS.v1;
 using fiskaltrust.storage.V0;
 using System.Linq;
 using Xunit;
-using fiskaltrust.Middleware.Localization.QueueIT.RequestCommands;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
-using fiskaltrust.Middleware.Localization.QueueIT.Factories;
 using FluentAssertions;
 using Moq;
 using fiskaltrust.Middleware.Localization.QueueIT.Services;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Contracts.Constants;
 using fiskaltrust.Middleware.Contracts.Interfaces;
+using fiskaltrust.ifPOS.v1.it;
+using fiskaltrust.Middleware.Localization.QueueIT.v2.Receipt;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
 {
@@ -58,35 +58,28 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
                     }
                 }
             };
-            var inMemoryTestScu = new InMemoryTestScu();
-   
-            var serviceCollection = new ServiceCollection();
-            serviceCollection.AddStandardLoggers(LogLevel.Debug);
+
             var desscdMock = new Mock<IITSSCDProvider>();
-            desscdMock.SetupGet( x => x.Instance).Returns(inMemoryTestScu);
+            desscdMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>())).Returns(() => throw new NotImplementedException());
+            desscdMock.Setup(x => x.GetRTInfoAsync()).ReturnsAsync(new RTInfo
+            {
+
+            });
 
 
-            var queueIt = new ftQueueIT() { CashBoxIdentification = "testserial", ftSignaturCreationUnitITId = Guid.NewGuid()};
-            var configRepoMock = new Mock<IConfigurationRepository>();
-            configRepoMock.Setup(x => x.GetQueueITAsync(It.IsAny<Guid>())).ReturnsAsync(queueIt);
-
-            var queueRepoMock = new Mock<ICountrySpecificQueueRepository>();
-            queueRepoMock.Setup(x => x.GetQueueAsync(It.IsAny<Guid>())).ReturnsAsync(queueIt);
-
-            var countrySettingsMock = new Mock<ICountrySpecificSettings>();
-            countrySettingsMock.Setup( x => x.CountrySpecificQueueRepository).Returns(queueRepoMock.Object);
-
-            var posReceiptCommand = new PosReceiptCommand(Mock.Of<ISSCD>(), Mock.Of<ILogger<DailyClosingReceiptCommand>>(), desscdMock.Object, new SignatureItemFactoryIT(), Mock.Of<IMiddlewareJournalITRepository>(), configRepoMock.Object, countrySettingsMock.Object);
+            var queueIt = new ftQueueIT() { CashBoxIdentification = "testserial", ftSignaturCreationUnitITId = Guid.NewGuid() };
+      
+            var posReceiptCommand = new PointOfSaleReceipt0x0001(desscdMock.Object);
 
             var queue = new ftQueue() { ftQueueId = Guid.NewGuid(), ftReceiptNumerator = 5 };
             var queueItem = new ftQueueItem() { ftQueueId = queue.ftQueueId, ftQueueItemId = Guid.NewGuid(), ftQueueRow = 7 };
 
-            var response = await posReceiptCommand.ExecuteAsync(queue, request, queueItem);
+            var (receiptResponse, actionJournals) = await posReceiptCommand.ExecuteAsync(queue, queueIt, request, new ReceiptResponse(), queueItem);
 
-            var nrSig = response.ReceiptResponse.ftSignatures.Where(x => x.Caption == "<receipt-number>").FirstOrDefault();
-            var znrSig = response.ReceiptResponse.ftSignatures.Where(x => x.Caption == "<z-number>").FirstOrDefault();
-            var amntSig = response.ReceiptResponse.ftSignatures.Where(x => x.Caption == "<receipt-amount>").FirstOrDefault();
-            var tsmpSig = response.ReceiptResponse.ftSignatures.Where(x => x.Caption == "<receipt-timestamp>").FirstOrDefault();
+            var nrSig = receiptResponse.ftSignatures.Where(x => x.Caption == "<receipt-number>").FirstOrDefault();
+            var znrSig = receiptResponse.ftSignatures.Where(x => x.Caption == "<z-number>").FirstOrDefault();
+            var amntSig = receiptResponse.ftSignatures.Where(x => x.Caption == "<receipt-amount>").FirstOrDefault();
+            var tsmpSig = receiptResponse.ftSignatures.Where(x => x.Caption == "<receipt-timestamp>").FirstOrDefault();
 
 
             znrSig.Data.Should().Be("0");
@@ -94,6 +87,6 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
             amntSig.Data.Should().Be("9909,98");
             tsmpSig.Data.Should().Be("1999-01-01 00:00:01");
 
-         }
+        }
     }
 }

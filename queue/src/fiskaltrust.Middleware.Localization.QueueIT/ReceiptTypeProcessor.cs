@@ -20,17 +20,15 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
     {
         private readonly IITSSCDProvider _itSSCDProvider;
         private readonly IConfigurationRepository _configurationRepository;
-        private readonly ISSCD _signingDevice;
         private readonly ILogger<ZeroReceipt0x200> _logger;
-        private readonly IMiddlewareQueueItemRepository _queueItemRepository;
+        private readonly ICountrySpecificQueueRepository _countrySpecificQueueRepository;
 
-        public ReceiptTypeProcessorFactory(IITSSCDProvider itSSCDProvider, IConfigurationRepository configurationRepository, ISSCD signingDevice, ILogger<ZeroReceipt0x200> logger, IMiddlewareQueueItemRepository queueItemRepository)
+        public ReceiptTypeProcessorFactory(IITSSCDProvider itSSCDProvider, IConfigurationRepository configurationRepository, ILogger<ZeroReceipt0x200> logger, ICountrySpecificQueueRepository countrySpecificQueueRepository)
         {
             _itSSCDProvider = itSSCDProvider;
             _configurationRepository = configurationRepository;
-            _signingDevice = signingDevice;
             _logger = logger;
-            _queueItemRepository = queueItemRepository;
+            _countrySpecificQueueRepository = countrySpecificQueueRepository;
         }
 
         public IReceiptTypeProcessor Create(ReceiptRequest request)
@@ -66,7 +64,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
                 ITReceiptCases.InvoiceB2C0x1001 => new InvoiceB2C0x1001(_itSSCDProvider),
                 ITReceiptCases.InvoiceB2B0x1002 => new InvoiceB2B0x1002(_itSSCDProvider),
                 ITReceiptCases.InvoiceB2G0x1003 => new InvoiceB2G0x1003(_itSSCDProvider),
-                ITReceiptCases.ZeroReceipt0x200 => new ZeroReceipt0x200(_itSSCDProvider, _signingDevice, _logger, _queueItemRepository),
+                ITReceiptCases.ZeroReceipt0x200 => new ZeroReceipt0x200(_itSSCDProvider, _logger, _countrySpecificQueueRepository),
                 ITReceiptCases.DailyClosing0x2011 => new DailyClosing0x2011(_itSSCDProvider),
                 ITReceiptCases.MonthlyClosing0x2012 => new MonthlyClosing0x2012(_itSSCDProvider),
                 ITReceiptCases.YearlyClosing0x2013 => new YearlyClosing0x2013(_itSSCDProvider),
@@ -92,7 +90,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
             {
                 0x0000 => new UnknownReceipt0x0000(_itSSCDProvider),
                 0x0001 => new PointOfSaleReceipt0x0001(_itSSCDProvider),
-                0x0002 => new ZeroReceipt0x200(_itSSCDProvider, _signingDevice, _logger, _queueItemRepository),
+                0x0002 => new ZeroReceipt0x200(_itSSCDProvider, _logger, _countrySpecificQueueRepository),
                 0x0003 => new InitialOperationReceipt0x4001(_itSSCDProvider, _configurationRepository),
                 0x0004 => new OutOfOperationReceipt0x4002(_itSSCDProvider),
                 0x0005 => new MonthlyClosing0x2012(_itSSCDProvider),
