@@ -24,18 +24,14 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands.v2.Invoice
             _itSSCDProvider = itSSCDProvider;
         }
 
-        public async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueIT queueIt, ReceiptRequest request, ReceiptResponse receiptResponse, ftQueueItem queueItem)
+        public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ExecuteAsync(ftQueue queue, ftQueueIT queueIt, ReceiptRequest request, ReceiptResponse receiptResponse, ftQueueItem queueItem)
         {
             var result = await _itSSCDProvider.ProcessReceiptAsync(new ProcessRequest
             {
                 ReceiptRequest = request,
                 ReceiptResponse = receiptResponse,
             });
-            return new RequestCommandResponse
-            {
-                ReceiptResponse = result.ReceiptResponse,
-                ActionJournals = new List<ftActionJournal>()
-            };
+            return (result.ReceiptResponse, new List<ftActionJournal>());
         }
     }
 }

@@ -1,7 +1,6 @@
 ﻿using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Localization.QueueIT.Constants;
 using fiskaltrust.storage.V0;
-using fiskaltrust.Middleware.Contracts.RequestCommands;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.Localization.QueueIT.Services;
 using fiskaltrust.ifPOS.v1.it;

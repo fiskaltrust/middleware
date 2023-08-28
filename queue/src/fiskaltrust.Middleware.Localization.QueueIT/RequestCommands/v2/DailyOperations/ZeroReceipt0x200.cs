@@ -1,7 +1,6 @@
 ﻿using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Localization.QueueIT.Constants;
 using fiskaltrust.storage.V0;
-using fiskaltrust.Middleware.Contracts.RequestCommands;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.Localization.QueueIT.Services;
 using fiskaltrust.ifPOS.v1.it;
@@ -24,18 +23,14 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands.v2.DailyOp
             _itSSCDProvider = itSSCDProvider;
         }
 
-        public async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueIT queueIt, ReceiptRequest request, ReceiptResponse receiptResponse, ftQueueItem queueItem)
+        public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ExecuteAsync(ftQueue queue, ftQueueIT queueIt, ReceiptRequest request, ReceiptResponse receiptResponse, ftQueueItem queueItem)
         {
             var result = await _itSSCDProvider.ProcessReceiptAsync(new ProcessRequest
             {
                 ReceiptRequest = request,
                 ReceiptResponse = receiptResponse,
             });
-            return new RequestCommandResponse
-            {
-                ReceiptResponse = result.ReceiptResponse,
-                ActionJournals = new List<ftActionJournal>()
-            };
+            return (result.ReceiptResponse, new List<ftActionJournal>());
         }
     }
 }
