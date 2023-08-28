@@ -7,13 +7,11 @@ using Microsoft.Extensions.Logging;
 using fiskaltrust.Middleware.Contracts.Constants;
 using System;
 using fiskaltrust.Middleware.Contracts.Extensions;
-using fiskaltrust.Middleware.Contracts.RequestCommands.Factories;
 using System.Linq;
 using fiskaltrust.Middleware.Localization.QueueIT.Constants;
-using fiskaltrust.Middleware.Localization.QueueIT.RequestCommands.v2.DailyOperations;
-using fiskaltrust.Middleware.Localization.QueueIT.RequestCommands;
-using fiskaltrust.Middleware.Localization.QueueIT.RequestCommands.v2.Lifecycle;
 using fiskaltrust.Middleware.Localization.QueueIT.Extensions;
+using fiskaltrust.Middleware.Localization.QueueIT.v2.DailyOperations;
+using fiskaltrust.Middleware.Localization.QueueIT.v2.Lifecycle;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT
 {
@@ -22,12 +20,12 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
         private readonly ICountrySpecificSettings _countrySpecificSettings;
         protected readonly IConfigurationRepository _configurationRepository;
         private readonly IJournalITRepository _journalITRepository;
-        private readonly ReceiptTypeProcessor _receiptTypeProcessor;
+        private readonly ReceiptTypeProcessorFactory _receiptTypeProcessor;
         private readonly ISSCD _signingDevice;
         private readonly ILogger<SignProcessorIT> _logger;
         private bool _loggedDisabledQueueReceiptRequest;
 
-        public SignProcessorIT(ISSCD signingDevice, ILogger<SignProcessorIT> logger, ICountrySpecificSettings countrySpecificSettings, IConfigurationRepository configurationRepository, IJournalITRepository journalITRepository, ReceiptTypeProcessor receiptTypeProcessor)
+        public SignProcessorIT(ISSCD signingDevice, ILogger<SignProcessorIT> logger, ICountrySpecificSettings countrySpecificSettings, IConfigurationRepository configurationRepository, IJournalITRepository journalITRepository, ReceiptTypeProcessorFactory receiptTypeProcessor)
         {
             _configurationRepository = configurationRepository;
             _journalITRepository = journalITRepository;
