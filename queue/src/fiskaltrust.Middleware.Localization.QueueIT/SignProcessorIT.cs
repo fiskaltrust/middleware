@@ -7,7 +7,6 @@ using Microsoft.Extensions.Logging;
 using fiskaltrust.Middleware.Contracts.Constants;
 using System;
 using fiskaltrust.Middleware.Contracts.Extensions;
-using fiskaltrust.Middleware.Localization.QueueIT.Extensions;
 using fiskaltrust.Middleware.Localization.QueueIT.RequestCommands;
 using fiskaltrust.Middleware.Contracts.RequestCommands.Factories;
 using System.Linq;
@@ -23,7 +22,6 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
         private readonly ISSCD _signingDevice;
         private readonly ILogger<SignProcessorIT> _logger;
         private bool _loggedDisabledQueueReceiptRequest;
-
 
         public SignProcessorIT(ISSCD signingDevice, ILogger<SignProcessorIT> logger, ICountrySpecificSettings countrySpecificSettings, IRequestCommandFactory requestCommandFactory, IConfigurationRepository configurationRepository)
         {

@@ -7,7 +7,6 @@ using fiskaltrust.Middleware.Contracts.RequestCommands;
 using fiskaltrust.ifPOS.v1.it;
 using System.Linq;
 using fiskaltrust.Middleware.Localization.QueueIT.Extensions;
-using fiskaltrust.Middleware.Localization.QueueIT.Factories;
 using fiskaltrust.Middleware.Localization.QueueIT.Services;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Contracts.Constants;
@@ -22,13 +21,13 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
         private readonly ICountrySpecificQueueRepository _countrySpecificQueueRepository;
         private readonly ICountrySpecificSettings _countryspecificSettings;
         private readonly IMiddlewareJournalITRepository _journalITRepository;
-        private readonly IITSSCD _client;
+        private readonly IITSSCDProvider _itIsscdProvider;
         private readonly ISSCD _signingDevice;
         private readonly ILogger<DailyClosingReceiptCommand> _logger;
 
         public GenericSCUReceiptCommand(ISSCD signingDevice, ILogger<DailyClosingReceiptCommand> logger, IITSSCDProvider itIsscdProvider, IMiddlewareJournalITRepository journalITRepository, ICountrySpecificSettings countrySpecificSettings)
         {
-            _client = itIsscdProvider.Instance;
+            _itIsscdProvider = itIsscdProvider;
             _journalITRepository = journalITRepository;
             _countryspecificSettings = countrySpecificSettings;
             _countrySpecificQueueRepository = countrySpecificSettings.CountrySpecificQueueRepository;
@@ -44,7 +43,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 
             try
             {
-                var result = await _client.ProcessReceiptAsync(new ProcessRequest
+                var result = await _itIsscdProvider.ProcessReceiptAsync(new ProcessRequest
                 {
                     ReceiptRequest = request,
                     ReceiptResponse = receiptResponse,

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
@@ -11,13 +12,13 @@ using fiskaltrust.Middleware.Localization.QueueIT.Extensions;
 using fiskaltrust.Middleware.Localization.QueueIT.Services;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
 {
-    public class DailyClosingReceiptCommand : Contracts.RequestCommands.DailyClosingReceiptCommand
+    public class DailyClosingReceiptCommand : RequestCommand
     {
         private readonly long _countryBaseState;
-        protected override long CountryBaseState => _countryBaseState;
         private readonly ICountrySpecificSettings _countryspecificSettings;
         private readonly ICountrySpecificQueueRepository _countrySpecificQueueRepository;
         private readonly IMiddlewareJournalITRepository _journalITRepository;
@@ -36,16 +37,20 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
             _logger = logger;
         }
 
-        protected override async Task<string> GetCashboxIdentificationAsync(Guid ftQueueId)
-        {
-            var queueIt = await _countrySpecificQueueRepository.GetQueueAsync(ftQueueId).ConfigureAwait(false);
-            return queueIt.CashBoxIdentification;
-        }
-
         public override Task<bool> ReceiptNeedsReprocessing(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem) => Task.FromResult(false);
 
-        protected override async Task<RequestCommandResponse> SpecializeAsync(RequestCommandResponse requestCommandResponse, ftQueue queue, ReceiptRequest request, ftQueueItem queueItem)
+        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ReceiptRequest request, ftQueueItem queueItem, bool isBeingResent = false)
         {
+            var ftReceiptCaseHex = request.ftReceiptCase.ToString("X");
+            var queueIt = await _countrySpecificQueueRepository.GetQueueAsync(queue.ftQueueId).ConfigureAwait(false);
+
+            var receiptResponse = CreateReceiptResponse(queue, request, queueItem, queueIt.CashBoxIdentification, _countryBaseState);
+            var actionJournalEntry = CreateActionJournal(queue.ftQueueId, ftReceiptCaseHex, queueItem.ftQueueItemId, $"Daily-Closing receipt was processed.", JsonConvert.SerializeObject(new { ftReceiptNumerator = queue.ftReceiptNumerator + 1 }));
+            var requestCommandResponse = new RequestCommandResponse
+            {
+                ReceiptResponse = receiptResponse,
+                ActionJournals = new List<ftActionJournal> { actionJournalEntry }
+            };
             try
             {
                 var result = await _itIsscdProvider.ProcessReceiptAsync(new ProcessRequest
@@ -55,7 +60,6 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.RequestCommands
                 });
                 var zNumber = long.Parse(result.ReceiptResponse.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 & (long) SignatureTypesIT.ZNumber)).Data);
                 requestCommandResponse.ReceiptResponse.ftReceiptIdentification += $"Z{zNumber}";
-                var queueIt = await _countrySpecificQueueRepository.GetQueueAsync(queue.ftQueueId).ConfigureAwait(false);
                 var journalIT = new ftJournalIT().FromResponse(queueIt, queueItem, new ScuResponse()
                 {
                     ftReceiptCase = request.ftReceiptCase,
