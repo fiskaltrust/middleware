@@ -6,6 +6,7 @@ using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts.Data;
 using fiskaltrust.Middleware.Contracts.Models.Transactions;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Contracts.Repositories.FR;
 using fiskaltrust.Middleware.Storage.Base;
 using fiskaltrust.Middleware.Storage.SQLite.Connection;
 using fiskaltrust.Middleware.Storage.SQLite.DatabaseInitialization;
@@ -33,7 +34,8 @@ namespace fiskaltrust.Middleware.Storage.SQLite
         private readonly SQLiteStorageConfiguration _sqliteStorageConfiguration;
         private readonly ILogger<IMiddlewareBootstrapper> _logger;
 
-        public SQLiteStorageBootstrapper(Guid queueId, Dictionary<string, object> configuration, SQLiteStorageConfiguration sqliteStorageConfiguration, ILogger<IMiddlewareBootstrapper> logger)
+        public SQLiteStorageBootstrapper(Guid queueId, Dictionary<string, object> configuration, SQLiteStorageConfiguration sqliteStorageConfiguration, ILogger<IMiddlewareBootstrapper> logger, IJournalFRCopyPayloadRepository journalFRCopyPayloadRepository)
+            : base(journalFRCopyPayloadRepository) 
         {
             _configuration = configuration;
             _sqliteStorageConfiguration = sqliteStorageConfiguration;

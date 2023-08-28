@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 using fiskaltrust.Middleware.Contracts.Repositories.FR.TempSpace;
 
 namespace fiskaltrust.Middleware.Contracts.Repositories.FR
@@ -8,5 +9,6 @@ namespace fiskaltrust.Middleware.Contracts.Repositories.FR
         Task<int> GetCountOfCopiesAsync(string cbPreviousReceiptReference);
         Task<bool> InsertAsync(ftJournalFRCopyPayload c);
         Task<bool> HasEntriesAsync();
+        Task<IEnumerable<ftJournalFRCopyPayload>> GetCopiesByReceiptReferenceAsync(string cbPreviousReceiptReference);
     }
 }

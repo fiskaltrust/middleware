@@ -1,10 +1,14 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Contracts.Repositories.FR;
+using fiskaltrust.Middleware.Localization.QueueFR.Models;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,6 +19,12 @@ namespace fiskaltrust.Middleware.Storage.Base
 {
     public abstract class BaseStorageBootStrapper
     {
+        private readonly IJournalFRCopyPayloadRepository _journalFRCopyPayloadRepository;
+
+        public BaseStorageBootStrapper(IJournalFRCopyPayloadRepository journalFRCopyPayloadRepository)
+        {
+            _journalFRCopyPayloadRepository = journalFRCopyPayloadRepository;
+        }
         public StorageBaseInitConfiguration ParseStorageConfiguration(Dictionary<string, object> configuration)
         {
             return new StorageBaseInitConfiguration()
@@ -63,6 +73,32 @@ namespace fiskaltrust.Middleware.Storage.Base
                         await posSystemMasterDataRepo.CreateAsync(posSystem).ConfigureAwait(false);
                     }
                 }
+            }
+        }
+
+        public enum Migrations
+        {
+            JournalFRCopyPayload
+        }
+        
+        public async Task PerformMigrationInitialization(Migrations migrations)
+        {
+            switch (migrations)
+            {
+                case Migrations.JournalFRCopyPayload:
+                    await PopulateFtJournalFRCopyPayloadTableAsync("0");
+                    break;
+            }
+        }
+
+        private async Task PopulateFtJournalFRCopyPayloadTableAsync(string cbPreviousReceiptReference)
+        {
+            var copyJournals = await _journalFRCopyPayloadRepository.GetCopiesByReceiptReferenceAsync(cbPreviousReceiptReference);
+            foreach (var copyJournal in copyJournals)
+            {
+                var jwt = copyJournal.JWT.Split('.');
+                var payload = JsonConvert.DeserializeObject<CopyPayload>(Encoding.UTF8.GetString(Convert.FromBase64String(jwt[1])));
+                await _journalFRCopyPayloadRepository.InsertAsync(payload.ToJournalFRCopyPayload()); 
             }
         }
 
