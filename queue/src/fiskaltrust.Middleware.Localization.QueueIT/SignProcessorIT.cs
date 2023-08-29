@@ -44,9 +44,14 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
             var receiptTypeProcessor = _receiptTypeProcessor.Create(request);
             var receiptResponse = CreateReceiptResponse(queue, request, queueItem, queueIT.CashBoxIdentification, Cases.BASE_STATE);
 
-            if ((queue.IsNew() || queue.IsDeactivated()) && receiptTypeProcessor is not InitialOperationReceipt0x4001)
+            if (queue.IsDeactivated())
             {
                 return await ReturnWithQueueIsDisabled(queue, queueIT, request, queueItem);
+            }
+
+            if (queue.IsNew() && receiptTypeProcessor is not InitialOperationReceipt0x4001)
+            {
+                return await ReturnWithQueueIsNotActive(queue, queueIT, request, queueItem);
             }
 
             if (queueIT.SSCDFailCount > 0 && receiptTypeProcessor is not ZeroReceipt0x200)
@@ -60,7 +65,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
                 (var response, var actionJournals)= await receiptTypeProcessor.ExecuteAsync(queue, queueIT, request, receiptResponse, queueItem).ConfigureAwait(false);
                 if (receiptTypeProcessor.GenerateJournalIT)
                 {
-                    if (response.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 & (long) SignatureTypesIT.ReceiptNumber)) != null)
+                    if (response.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 | (long)SignatureTypesIT.ReceiptNumber)) != null)
                     {
                         // TBD insert daily closing
                         //var journalIT = new ftJournalIT().FromResponse(queueIt, queueItem, new ScuResponse()
@@ -72,9 +77,9 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
                         var journalIT = ftJournalITFactory.CreateFrom(queueItem, queueIT, new ScuResponse()
                         {
                             ftReceiptCase = request.ftReceiptCase,
-                            ReceiptDateTime = DateTime.Parse(response.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 & (long) SignatureTypesIT.ReceiptTimestamp)).Data),
-                            ReceiptNumber = long.Parse(response.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 & (long) SignatureTypesIT.ReceiptNumber)).Data),
-                            ZRepNumber = long.Parse(response.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 & (long) SignatureTypesIT.ZNumber)).Data)
+                            ReceiptDateTime = DateTime.Parse(response.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.ReceiptTimestamp)).Data),
+                            ReceiptNumber = long.Parse(response.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.ReceiptNumber)).Data),
+                            ZRepNumber = long.Parse(response.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 | (long)SignatureTypesIT.ZNumber)).Data)
                         });
                         await _journalITRepository.InsertAsync(journalIT).ConfigureAwait(false);
                     }
@@ -93,6 +98,30 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
             }
         }
 
+        public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ReturnWithQueueIsNotActive(ftQueue queue, ftQueueIT queueIT, ReceiptRequest request, ftQueueItem queueItem)
+        {
+            var receiptResponse = CreateReceiptResponse(queue, request, queueItem, queueIT.CashBoxIdentification, Cases.BASE_STATE);
+            var actionJournals = new List<ftActionJournal>();
+            if (!_loggedDisabledQueueReceiptRequest)
+            {
+                actionJournals.Add(
+                        new ftActionJournal
+                        {
+                            ftActionJournalId = Guid.NewGuid(),
+                            ftQueueId = queueItem.ftQueueId,
+                            ftQueueItemId = queueItem.ftQueueItemId,
+                            Moment = DateTime.UtcNow,
+                            Message = $"QueueId {queueItem.ftQueueId} is not activated yet."
+                        }
+                    );
+                _loggedDisabledQueueReceiptRequest = true;
+            }
+
+            receiptResponse.ftState += ftStatesFlags.SECURITY_MECHAMISN_DEACTIVATED;
+            receiptResponse.ftReceiptIdentification = $"ft{queue.ftReceiptNumerator:X}#";
+            return await Task.FromResult((receiptResponse, actionJournals)).ConfigureAwait(false);
+        }
+
         public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ReturnWithQueueIsDisabled(ftQueue queue, ftQueueIT queueIT, ReceiptRequest request, ftQueueItem queueItem)
         {
             var receiptResponse = CreateReceiptResponse(queue, request, queueItem, queueIT.CashBoxIdentification, Cases.BASE_STATE);
@@ -106,7 +135,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
                             ftQueueId = queueItem.ftQueueId,
                             ftQueueItemId = queueItem.ftQueueItemId,
                             Moment = DateTime.UtcNow,
-                            Message = $"QueueId {queueItem.ftQueueId} was not activated or already deactivated"
+                            Message = $"QueueId {queueItem.ftQueueId} has been disabled."
                         }
                     );
                 _loggedDisabledQueueReceiptRequest = true;

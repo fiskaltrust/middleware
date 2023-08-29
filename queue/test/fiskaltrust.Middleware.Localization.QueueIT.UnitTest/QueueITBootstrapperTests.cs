@@ -9,6 +9,8 @@ using fiskaltrust.Middleware.Contracts.Models;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
 {
+
+
     public class ReceiptTypeProcessorFactoryTests
     {
         [Fact]
@@ -42,4 +44,5 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
             serviceCollection.BuildServiceProvider().GetRequiredService<IMarketSpecificSignProcessor>();
         }  
     }
+
 }
