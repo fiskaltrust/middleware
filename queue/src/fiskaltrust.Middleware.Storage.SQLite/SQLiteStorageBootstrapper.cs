@@ -6,6 +6,7 @@ using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts.Data;
 using fiskaltrust.Middleware.Contracts.Models.Transactions;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Contracts.Repositories.FR;
 using fiskaltrust.Middleware.Storage.Base;
 using fiskaltrust.Middleware.Storage.SQLite.Connection;
 using fiskaltrust.Middleware.Storage.SQLite.DatabaseInitialization;
@@ -32,14 +33,22 @@ namespace fiskaltrust.Middleware.Storage.SQLite
         private readonly Guid _queueId;
         private readonly SQLiteStorageConfiguration _sqliteStorageConfiguration;
         private readonly ILogger<IMiddlewareBootstrapper> _logger;
+        private readonly IJournalFRCopyPayloadRepository _journalFRCopyPayloadRepository;
 
-        public SQLiteStorageBootstrapper(Guid queueId, Dictionary<string, object> configuration, SQLiteStorageConfiguration sqliteStorageConfiguration, ILogger<IMiddlewareBootstrapper> logger, SQLiteJournalFRRepository journalFrRepository)
-            : base(journalFrRepository) 
+        public SQLiteStorageBootstrapper(
+            Guid queueId, 
+            Dictionary<string, object> configuration, 
+            SQLiteStorageConfiguration sqliteStorageConfiguration, 
+            ILogger<IMiddlewareBootstrapper> logger, 
+            SQLiteJournalFRRepository journalFrRepository, 
+            IJournalFRCopyPayloadRepository journalFRCopyPayloadRepository)
+            : base(journalFrRepository, journalFRCopyPayloadRepository) 
         {
             _configuration = configuration;
             _sqliteStorageConfiguration = sqliteStorageConfiguration;
             _queueId = queueId;
             _logger = logger;
+            _journalFRCopyPayloadRepository = journalFRCopyPayloadRepository;
         }
 
         public void ConfigureStorageServices(IServiceCollection serviceCollection)
