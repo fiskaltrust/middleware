@@ -21,10 +21,10 @@ namespace fiskaltrust.Middleware.Storage.Base
         private readonly SQLiteJournalFRRepository _journalFRRepository;
         private readonly IJournalFRCopyPayloadRepository _journalFRCopyPayloadRepository;
 
-        public BaseStorageBootStrapper(SQLiteJournalFRRepository journalFrRepository, IJournalFRCopyPayloadRepository journalFrCopyPayloadRepository)
+        public BaseStorageBootStrapper(SQLiteJournalFRRepository journalFRRepository, IJournalFRCopyPayloadRepository journalFRCopyPayloadRepository)
         {
-            _journalFRRepository = journalFrRepository;
-            _journalFRCopyPayloadRepository = journalFrCopyPayloadRepository;
+            _journalFRRepository = journalFRRepository;
+            _journalFRCopyPayloadRepository = journalFRCopyPayloadRepository;
         }
         public StorageBaseInitConfiguration ParseStorageConfiguration(Dictionary<string, object> configuration)
         {

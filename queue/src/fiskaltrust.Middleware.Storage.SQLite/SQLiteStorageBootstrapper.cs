@@ -37,9 +37,9 @@ namespace fiskaltrust.Middleware.Storage.SQLite
 
         public SQLiteStorageBootstrapper(Guid queueId, Dictionary<string, object> configuration,
             SQLiteStorageConfiguration sqliteStorageConfiguration, ILogger<IMiddlewareBootstrapper> logger,
-            SQLiteJournalFRRepository journalFrRepository,
+            SQLiteJournalFRRepository journalFRRepository,
             IJournalFRCopyPayloadRepository journalFRCopyPayloadRepository)
-            : base(journalFrRepository, journalFRCopyPayloadRepository) 
+            : base(journalFRRepository, journalFRCopyPayloadRepository) 
         {
             _configuration = configuration;
             _sqliteStorageConfiguration = sqliteStorageConfiguration;
@@ -93,6 +93,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite
             services.AddSingleton<IMiddlewareRepository<ftJournalDE>>(x => new SQLiteJournalDERepository(_connectionFactory, _sqliteFile));
 
             services.AddSingleton<IJournalFRRepository>(x => new SQLiteJournalFRRepository(_connectionFactory, _sqliteFile));
+            services.AddSingleton<IJournalFRCopyPayloadRepository>(x => new SQLiteJournalFRCopyPayloadRepository(_connectionFactory, _sqliteFile));
             services.AddSingleton<IReadOnlyJournalFRRepository>(x => new SQLiteJournalFRRepository(_connectionFactory, _sqliteFile));
             services.AddSingleton<IMiddlewareJournalFRRepository>(x => new SQLiteJournalFRRepository(_connectionFactory, _sqliteFile));
             services.AddSingleton<IMiddlewareRepository<ftJournalFR>>(x => new SQLiteJournalFRRepository(_connectionFactory, _sqliteFile));
