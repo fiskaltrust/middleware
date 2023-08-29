@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using fiskaltrust.Middleware.Localization.QueueIT.Services;
 using fiskaltrust.ifPOS.v1.it;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.v2.Invoice
 {
@@ -31,6 +32,10 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.Invoice
                 ReceiptRequest = request,
                 ReceiptResponse = receiptResponse,
             });
+            var documentNumber = result.ReceiptResponse.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentNumber)).Data;
+            var zNumber = result.ReceiptResponse.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTZNumber)).Data;
+            result.ReceiptResponse.ftReceiptIdentification += $"{zNumber}-{documentNumber}";
+
             return (result.ReceiptResponse, new List<ftActionJournal>());
         }
     }

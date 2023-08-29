@@ -23,13 +23,14 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
 
         private readonly ftQueue _queue = new ftQueue
         {
-            ftQueueId = _queueID
+            ftQueueId = _queueID,
         };
 
         private readonly ftQueue _queueStarted = new ftQueue
         {
             ftQueueId = _queueID,
-            StartMoment = DateTime.UtcNow
+            StartMoment = DateTime.UtcNow,
+            ftReceiptNumerator = 1
         };
 
         private readonly ftQueue _queueStopped = new ftQueue
@@ -59,6 +60,42 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
 
         private IMarketSpecificSignProcessor GetDefaultSUT(ftQueue queue) => GetSUT(queue, _queueIT);
 
+        public static SignaturItem[] CreateFakeReceiptSignatures()
+        {
+            return new SignaturItem[]
+            {
+                new SignaturItem
+                {
+                    Caption = "<receipt-number>",
+                    Data = "0002",
+                    ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                    ftSignatureType = 0x4954000000000012
+                },
+                new SignaturItem
+                {
+                    Caption = "<z-number>",
+                    Data = "0001",
+                    ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                    ftSignatureType = 0x4954000000000011
+                },
+                new SignaturItem
+                {
+                    Caption = "<receipt-amount>",
+                    Data = 23.01.ToString(Cases.CurrencyFormatter),
+                    ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                    ftSignatureType = 0x4954000000000014
+                },
+                new SignaturItem
+                {
+                    Caption = "<receipt-timestamp>",
+                    Data = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"),
+                    ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                    ftSignatureType = 0x4954000000000013
+                }
+            };
+        }
+
+
         private IMarketSpecificSignProcessor GetSUT(ftQueue queue, ftQueueIT queueIT)
         {
             var configurationRepositoryMock = new Mock<IConfigurationRepository>();
@@ -73,7 +110,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
             var itSSCDMock = new Mock<IITSSCD>();
             itSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>())).ReturnsAsync((ProcessRequest request) =>
             {
-                request.ReceiptResponse.ftSignatures = new SignaturItem[] { new SignaturItem() };
+                request.ReceiptResponse.ftSignatures = CreateFakeReceiptSignatures();
                 return new ProcessResponse
                 {
                     ReceiptResponse = request.ReceiptResponse
@@ -135,6 +172,17 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
             {
                 yield return new object[] { number };
             }
+        }
+
+        public static IEnumerable<object[]> rtHandledReceipts()
+        {
+            yield return new object[] { ITReceiptCases.UnknownReceipt0x0000 };
+            yield return new object[] { ITReceiptCases.PointOfSaleReceipt0x0001 };
+            yield return new object[] { ITReceiptCases.Protocol0x0005 };
+            yield return new object[] { ITReceiptCases.InvoiceUnknown0x1000 };
+            yield return new object[] { ITReceiptCases.InvoiceB2C0x1001 };
+            yield return new object[] { ITReceiptCases.InvoiceB2B0x1002 };
+            yield return new object[] { ITReceiptCases.InvoiceB2G0x1003 };
         }
 
         [Theory]
@@ -219,6 +267,32 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
 
             receiptResponse.ftSignatures.Should().BeEmpty();
             receiptResponse.ftState.Should().Be(0x4954_0000_0000_0002);
+        }
+
+        [Theory]
+        [MemberData(nameof(rtHandledReceipts))]
+        public async Task AllReceiptCases_ShouldContain_ZNumber_And_DocumentNumber_InReceiptIdentification(ITReceiptCases receiptCase)
+        {
+            var initOperationReceipt = $$"""
+{
+    "ftCashBoxID": "00000000-0000-0000-0000-000000000000",
+    "ftPosSystemId": "00000000-0000-0000-0000-000000000000",
+    "cbTerminalID": "00010001",
+    "cbReceiptReference": "{{Guid.NewGuid()}}",
+    "cbReceiptMoment": "{{DateTime.UtcNow.ToString("o")}}",
+    "cbChargeItems": [],
+    "cbPayItems": [],
+    "ftReceiptCase": {{0x4954200000000000 | (long) receiptCase}},
+    "ftReceiptCaseData": "",
+    "cbUser": "Admin"
+}
+""";
+            var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(initOperationReceipt);
+            var sut = GetDefaultSUT(_queueStarted);
+            var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, _queueStarted, new ftQueueItem { });
+
+            receiptResponse.ftState.Should().Be(0x4954_0000_0000_0000);
+            receiptResponse.ftReceiptIdentification.Should().Be("ft1#0001-0002");
         }
 
         [Fact]
@@ -319,6 +393,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
             var sut = GetDefaultSUT(_queueStarted);
             var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, _queueStarted, new ftQueueItem { });
 
+            receiptResponse.ftReceiptIdentification.Should().Be("ft1#Z0001");
             receiptResponse.ftState.Should().Be(0x4954_0000_0000_0000);
             actionJournals.Should().HaveCount(1);
             actionJournals[0].Type.Should().Be(receiptRequest.ftReceiptCase.ToString());
@@ -435,6 +510,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
             var sut = GetDefaultSUT(_queueStarted);
             var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, _queueStarted, new ftQueueItem { });
             receiptResponse.ftSignatures.Should().HaveCountGreaterOrEqualTo(1);
+            receiptResponse.ftReceiptIdentification.Should().Be("ft1#0001-0002");
             receiptResponse.ftState.Should().Be(0x4954_0000_0000_0000);
             actionJournals.Should().HaveCount(0);
         }
@@ -551,6 +627,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
             var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, _queueStarted, new ftQueueItem { });
             receiptResponse.ftSignatures.Should().HaveCountGreaterOrEqualTo(1);
             receiptResponse.ftState.Should().Be(0x4954_0000_0000_0000);
+            receiptResponse.ftReceiptIdentification.Should().Be("ft1#0001-0002");
             actionJournals.Should().HaveCount(0);
         }
     }

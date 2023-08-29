@@ -62,27 +62,29 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
 
             try
             {
-                (var response, var actionJournals)= await receiptTypeProcessor.ExecuteAsync(queue, queueIT, request, receiptResponse, queueItem).ConfigureAwait(false);
-                if (receiptTypeProcessor.GenerateJournalIT)
+                (var response, var actionJournals) = await receiptTypeProcessor.ExecuteAsync(queue, queueIT, request, receiptResponse, queueItem).ConfigureAwait(false);
+                if (response.ftSignatures.Any(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentNumber)) &&
+                         response.ftSignatures.Any(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTZNumber)))
                 {
-                    if (response.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 | (long)SignatureTypesIT.RTDocumentNumber)) != null)
+                    var documentNumber = response.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentNumber)).Data;
+                    var zNumber = response.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTZNumber)).Data;
+                    var journalIT = ftJournalITFactory.CreateFrom(queueItem, queueIT, new ScuResponse()
                     {
-                        // TBD insert daily closing
-                        //var journalIT = new ftJournalIT().FromResponse(queueIt, queueItem, new ScuResponse()
-                        //{
-                        //    ftReceiptCase = request.ftReceiptCase,
-                        //    ZRepNumber = zNumber
-                        //});
-                        //await _journalITRepository.InsertAsync(journalIT).ConfigureAwait(false);
-                        var journalIT = ftJournalITFactory.CreateFrom(queueItem, queueIT, new ScuResponse()
-                        {
-                            ftReceiptCase = request.ftReceiptCase,
-                            ReceiptDateTime = DateTime.Parse(response.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentMoment)).Data),
-                            ReceiptNumber = long.Parse(response.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentNumber)).Data),
-                            ZRepNumber = long.Parse(response.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 | (long)SignatureTypesIT.RTZNumber)).Data)
-                        });
-                        await _journalITRepository.InsertAsync(journalIT).ConfigureAwait(false);
-                    }
+                        ftReceiptCase = request.ftReceiptCase,
+                        ReceiptDateTime = DateTime.Parse(response.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentMoment)).Data),
+                        ReceiptNumber = long.Parse(response.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentNumber)).Data),
+                        ZRepNumber = long.Parse(response.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTZNumber)).Data)
+                    });
+                    await _journalITRepository.InsertAsync(journalIT).ConfigureAwait(false);
+                }
+                else if (response.ftSignatures.Any(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTZNumber)))
+                {
+                    var journalIT = ftJournalITFactory.CreateFrom(queueItem, queueIT, new ScuResponse()
+                    {
+                        ftReceiptCase = request.ftReceiptCase,
+                        ZRepNumber = long.Parse(response.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTZNumber)).Data)
+                    });
+                    await _journalITRepository.InsertAsync(journalIT).ConfigureAwait(false);
                 }
                 return (response, actionJournals);
             }

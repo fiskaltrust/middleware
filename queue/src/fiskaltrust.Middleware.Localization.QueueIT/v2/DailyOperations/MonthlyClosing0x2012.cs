@@ -34,7 +34,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.DailyOperations
                 ReceiptRequest = request,
                 ReceiptResponse = receiptResponse
             });
-            var zNumber = long.Parse(result.ReceiptResponse.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 & (long) SignatureTypesIT.ZNumber)).Data);
+            var zNumber = long.Parse(result.ReceiptResponse.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 & (long) SignatureTypesIT.RTZNumber)).Data);
             receiptResponse.ftReceiptIdentification += $"Z{zNumber}";
             return await Task.FromResult((receiptResponse, new List<ftActionJournal>
             {
