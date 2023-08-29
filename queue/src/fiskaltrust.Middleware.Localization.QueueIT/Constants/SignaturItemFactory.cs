@@ -1,4 +1,5 @@
-﻿using fiskaltrust.ifPOS.v1;
+﻿using System;
+using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.storage.V0;
 namespace fiskaltrust.Middleware.Localization.QueueIT.Constants

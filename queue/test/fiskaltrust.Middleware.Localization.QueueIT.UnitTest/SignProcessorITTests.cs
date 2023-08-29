@@ -245,6 +245,8 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
             actionJournals.Should().HaveCount(1);
             var notification = JsonConvert.DeserializeObject<ActivateQueueSCU>(actionJournals[0].DataJson);
             notification.IsStartReceipt.Should().BeTrue();
+
+            receiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == 0x4954_2000_0001_1000);
         }
 
         [Fact]

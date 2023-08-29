@@ -65,7 +65,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
                 (var response, var actionJournals)= await receiptTypeProcessor.ExecuteAsync(queue, queueIT, request, receiptResponse, queueItem).ConfigureAwait(false);
                 if (receiptTypeProcessor.GenerateJournalIT)
                 {
-                    if (response.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 | (long)SignatureTypesIT.ReceiptNumber)) != null)
+                    if (response.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 | (long)SignatureTypesIT.RTDocumentNumber)) != null)
                     {
                         // TBD insert daily closing
                         //var journalIT = new ftJournalIT().FromResponse(queueIt, queueItem, new ScuResponse()
@@ -77,9 +77,9 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
                         var journalIT = ftJournalITFactory.CreateFrom(queueItem, queueIT, new ScuResponse()
                         {
                             ftReceiptCase = request.ftReceiptCase,
-                            ReceiptDateTime = DateTime.Parse(response.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.ReceiptTimestamp)).Data),
-                            ReceiptNumber = long.Parse(response.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.ReceiptNumber)).Data),
-                            ZRepNumber = long.Parse(response.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 | (long)SignatureTypesIT.ZNumber)).Data)
+                            ReceiptDateTime = DateTime.Parse(response.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentMoment)).Data),
+                            ReceiptNumber = long.Parse(response.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentNumber)).Data),
+                            ZRepNumber = long.Parse(response.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 | (long)SignatureTypesIT.RTZNumber)).Data)
                         });
                         await _journalITRepository.InsertAsync(journalIT).ConfigureAwait(false);
                     }
