@@ -49,14 +49,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Repositories.FR
 
         public async Task<bool> HasEntriesAsync() =>
             await DbConnection.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM ftJournalFRCopyPayload LIMIT 1").ConfigureAwait(false) > 0;
-
-        public async Task<IEnumerable<ftJournalFRCopyPayload>> GetCopiesByReceiptReferenceAsync(string cbPreviousReceiptReference)
-        {
-            return await DbConnection.QueryAsync<ftJournalFRCopyPayload>(
-                "SELECT * FROM ftJournalFRCopyPayload WHERE CopiedReceiptReference = @Reference", 
-                new { Reference = cbPreviousReceiptReference }
-            ).ConfigureAwait(false);
-        }
+        
         protected override Guid GetIdForEntity(ftJournalFRCopyPayload entity) => entity.QueueItemId;
     }
 }
