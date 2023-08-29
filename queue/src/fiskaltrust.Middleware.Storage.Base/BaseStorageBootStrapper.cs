@@ -6,8 +6,8 @@ using System.Threading.Tasks;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Contracts.Repositories.FR;
 using fiskaltrust.Middleware.Contracts.Repositories.FR.TempSpace;
-using fiskaltrust.Middleware.Localization.QueueFR.Helpers;
 using fiskaltrust.Middleware.Storage.SQLite.Repositories.FR;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
@@ -19,10 +19,12 @@ namespace fiskaltrust.Middleware.Storage.Base
     public abstract class BaseStorageBootStrapper
     {
         private readonly SQLiteJournalFRRepository _journalFRRepository;
+        private readonly IJournalFRCopyPayloadRepository _journalFRCopyPayloadRepository;
 
-        public BaseStorageBootStrapper(SQLiteJournalFRRepository journalFrRepository)
+        public BaseStorageBootStrapper(SQLiteJournalFRRepository journalFrRepository, IJournalFRCopyPayloadRepository journalFrCopyPayloadRepository)
         {
             _journalFRRepository = journalFrRepository;
+            _journalFRCopyPayloadRepository = journalFrCopyPayloadRepository;
         }
         public StorageBaseInitConfiguration ParseStorageConfiguration(Dictionary<string, object> configuration)
         {
@@ -96,11 +98,12 @@ namespace fiskaltrust.Middleware.Storage.Base
             {
                 var jwt = copyJournal.JWT.Split('.');
                 var copyPayload = JsonConvert.DeserializeObject<ftJournalFRCopyPayload>(Encoding.UTF8.GetString(Convert.FromBase64String(jwt[1])));
-        
-                var journalFR = JournalConverter.ConvertToFtJournalFR(copyPayload, copyJournal.JWT);
-                await _journalFRRepository.InsertAsync(journalFR);
+                
+                await _journalFRCopyPayloadRepository.InsertAsync(copyPayload);
+                
             }
         }
+
 
         public async Task PersistConfigurationAsync(StorageBaseInitConfiguration config, IConfigurationRepository configurationRepository, ILogger<IMiddlewareBootstrapper> logger)
         {
