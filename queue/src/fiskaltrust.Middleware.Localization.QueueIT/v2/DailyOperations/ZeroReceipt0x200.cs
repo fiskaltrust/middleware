@@ -3,15 +3,12 @@ using fiskaltrust.Middleware.Localization.QueueIT.Constants;
 using fiskaltrust.storage.V0;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.Localization.QueueIT.Services;
-using fiskaltrust.ifPOS.v1.it;
 using System.Collections.Generic;
-using fiskaltrust.Middleware.Contracts.Interfaces;
 using Microsoft.Extensions.Logging;
 using fiskaltrust.Middleware.Contracts.Extensions;
 using System.Linq;
 using Newtonsoft.Json;
 using System;
-using fiskaltrust.Middleware.Contracts.Repositories;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.v2.DailyOperations
 {
@@ -19,7 +16,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.DailyOperations
     {
         private readonly IITSSCDProvider _itSSCDProvider;
         private readonly ILogger<ZeroReceipt0x200> _logger;
-        private readonly ICountrySpecificQueueRepository _countrySpecificQueueRepository;
+        private readonly IConfigurationRepository _configurationRepository;
 
         public ITReceiptCases ReceiptCase => ITReceiptCases.ZeroReceipt0x200;
 
@@ -27,11 +24,11 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.DailyOperations
 
         public bool GenerateJournalIT => true;
 
-        public ZeroReceipt0x200(IITSSCDProvider itSSCDProvider,ILogger<ZeroReceipt0x200> logger, ICountrySpecificQueueRepository countrySpecificQueueRepository)
+        public ZeroReceipt0x200(IITSSCDProvider itSSCDProvider,ILogger<ZeroReceipt0x200> logger, IConfigurationRepository configurationRepository)
         {
             _itSSCDProvider = itSSCDProvider;
             _logger = logger;
-            _countrySpecificQueueRepository = countrySpecificQueueRepository;
+            _configurationRepository = configurationRepository;
         }
 
         public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ExecuteAsync(ftQueue queue, ftQueueIT queueIT, ReceiptRequest request, ReceiptResponse receiptResponse, ftQueueItem queueItem)
@@ -83,7 +80,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.DailyOperations
             var stateDetail = JsonConvert.SerializeObject(new StateDetail() { FailedReceiptCount = queueIT.SSCDFailCount, FailMoment = queueIT.SSCDFailMoment, SigningDeviceAvailable = signingAvailable });
 
             receiptResponse.ftSignatures = signatures.ToArray();
-            await _countrySpecificQueueRepository.InsertOrUpdateQueueAsync(queueIT).ConfigureAwait(false);
+            await _configurationRepository.InsertOrUpdateQueueITAsync(queueIT).ConfigureAwait(false);
 
             return (receiptResponse, new List<ftActionJournal>
                     {

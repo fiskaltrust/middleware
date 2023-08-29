@@ -14,7 +14,6 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Services
 {
     public class ITSSCDProvider : IITSSCDProvider
     {
-
         private readonly IClientFactory<IITSSCD> _clientFactory;
         private readonly MiddlewareConfiguration _middlewareConfiguration;
         private readonly ILogger<ITSSCDProvider> _logger;
@@ -105,5 +104,4 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Services
         public async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request) => await Instance.ProcessReceiptAsync(request).ConfigureAwait(false);
         public async Task<RTInfo> GetRTInfoAsync() => await Instance.GetRTInfoAsync().ConfigureAwait(false);
     }
-
 }

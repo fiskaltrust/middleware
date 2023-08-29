@@ -4,7 +4,6 @@ using fiskaltrust.ifPOS.v1;
 using fiskaltrust.storage.V0;
 using fiskaltrust.Middleware.Contracts.Interfaces;
 using Microsoft.Extensions.Logging;
-using fiskaltrust.Middleware.Contracts.Constants;
 using System;
 using fiskaltrust.Middleware.Contracts.Extensions;
 using System.Linq;
@@ -18,7 +17,6 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
 {
     public class SignProcessorIT : IMarketSpecificSignProcessor
     {
-        private readonly ICountrySpecificSettings _countrySpecificSettings;
         protected readonly IConfigurationRepository _configurationRepository;
         private readonly IJournalITRepository _journalITRepository;
         private readonly ReceiptTypeProcessorFactory _receiptTypeProcessor;
@@ -26,12 +24,11 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
         private readonly ILogger<SignProcessorIT> _logger;
         private bool _loggedDisabledQueueReceiptRequest;
 
-        public SignProcessorIT(IITSSCDProvider itSSCDProvider, ILogger<SignProcessorIT> logger, ICountrySpecificSettings countrySpecificSettings, IConfigurationRepository configurationRepository, IJournalITRepository journalITRepository, ReceiptTypeProcessorFactory receiptTypeProcessor)
+        public SignProcessorIT(IITSSCDProvider itSSCDProvider, ILogger<SignProcessorIT> logger, IConfigurationRepository configurationRepository, IJournalITRepository journalITRepository, ReceiptTypeProcessorFactory receiptTypeProcessor)
         {
             _configurationRepository = configurationRepository;
             _journalITRepository = journalITRepository;
             _receiptTypeProcessor = receiptTypeProcessor;
-            _countrySpecificSettings = countrySpecificSettings;
             _itSSCDProvider = itSSCDProvider;
             _logger = logger;
         }
@@ -45,7 +42,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
             }
 
             var receiptTypeProcessor = _receiptTypeProcessor.Create(request);
-            var receiptResponse = CreateReceiptResponse(queue, request, queueItem, queueIT.CashBoxIdentification, _countrySpecificSettings.CountryBaseState);
+            var receiptResponse = CreateReceiptResponse(queue, request, queueItem, queueIT.CashBoxIdentification, Cases.BASE_STATE);
 
             if ((queue.IsNew() || queue.IsDeactivated()) && receiptTypeProcessor is not InitialOperationReceipt0x4001)
             {
@@ -72,7 +69,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
                         //    ZRepNumber = zNumber
                         //});
                         //await _journalITRepository.InsertAsync(journalIT).ConfigureAwait(false);
-                        var journalIT = new ftJournalIT().FromResponse(queueIT, queueItem, new ScuResponse()
+                        var journalIT = ftJournalITFactory.CreateFrom(queueItem, queueIT, new ScuResponse()
                         {
                             ftReceiptCase = request.ftReceiptCase,
                             ReceiptDateTime = DateTime.Parse(response.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 & (long) SignatureTypesIT.ReceiptTimestamp)).Data),
@@ -128,7 +125,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
                 queueIt.SSCDFailQueueItemId = queueItem.ftQueueItemId;
             }
             queueIt.SSCDFailCount++;
-            await _countrySpecificSettings.CountrySpecificQueueRepository.InsertOrUpdateQueueAsync(queueIt).ConfigureAwait(false);
+            await _configurationRepository.InsertOrUpdateQueueITAsync(queueIt).ConfigureAwait(false);
             var log = $"Queue is in failed mode. SSCDFailMoment: {queueIt.SSCDFailMoment}, SSCDFailCount: {queueIt.SSCDFailCount}.";
             receiptResponse.ftState |= 0x2;
             log += " When connection is established use zeroreceipt for subsequent booking!";

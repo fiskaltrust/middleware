@@ -4,9 +4,7 @@ using fiskaltrust.storage.V0;
 using System;
 using fiskaltrust.Middleware.Contracts.Exceptions;
 using fiskaltrust.Middleware.Localization.QueueIT.Services;
-using fiskaltrust.Middleware.Contracts.Interfaces;
 using Microsoft.Extensions.Logging;
-using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueIT.Extensions;
 using fiskaltrust.Middleware.Localization.QueueIT.v2.DailyOperations;
 using fiskaltrust.Middleware.Localization.QueueIT.v2.Invoice;
@@ -21,14 +19,12 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
         private readonly IITSSCDProvider _itSSCDProvider;
         private readonly IConfigurationRepository _configurationRepository;
         private readonly ILogger<ZeroReceipt0x200> _logger;
-        private readonly ICountrySpecificQueueRepository _countrySpecificQueueRepository;
 
-        public ReceiptTypeProcessorFactory(IITSSCDProvider itSSCDProvider, IConfigurationRepository configurationRepository, ILogger<ZeroReceipt0x200> logger, ICountrySpecificQueueRepository countrySpecificQueueRepository)
+        public ReceiptTypeProcessorFactory(IITSSCDProvider itSSCDProvider, IConfigurationRepository configurationRepository, ILogger<ZeroReceipt0x200> logger)
         {
             _itSSCDProvider = itSSCDProvider;
             _configurationRepository = configurationRepository;
             _logger = logger;
-            _countrySpecificQueueRepository = countrySpecificQueueRepository;
         }
 
         public IReceiptTypeProcessor Create(ReceiptRequest request)
@@ -39,7 +35,8 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
             }
             else
             {
-                return GetRequestCommandForV0(request.ftReceiptCase);
+                var v2Case = GetV2CaseForV0(request.ftReceiptCase);
+                return GetRequestCommandForV2((long) v2Case);
             }
         }
 
@@ -64,7 +61,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
                 ITReceiptCases.InvoiceB2C0x1001 => new InvoiceB2C0x1001(_itSSCDProvider),
                 ITReceiptCases.InvoiceB2B0x1002 => new InvoiceB2B0x1002(_itSSCDProvider),
                 ITReceiptCases.InvoiceB2G0x1003 => new InvoiceB2G0x1003(_itSSCDProvider),
-                ITReceiptCases.ZeroReceipt0x200 => new ZeroReceipt0x200(_itSSCDProvider, _logger, _countrySpecificQueueRepository),
+                ITReceiptCases.ZeroReceipt0x200 => new ZeroReceipt0x200(_itSSCDProvider, _logger, _configurationRepository),
                 ITReceiptCases.DailyClosing0x2011 => new DailyClosing0x2011(_itSSCDProvider),
                 ITReceiptCases.MonthlyClosing0x2012 => new MonthlyClosing0x2012(_itSSCDProvider),
                 ITReceiptCases.YearlyClosing0x2013 => new YearlyClosing0x2013(_itSSCDProvider),
@@ -83,20 +80,20 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
             };
         }
 
-        public IReceiptTypeProcessor GetRequestCommandForV0(long receiptCase)
+        public long GetV2CaseForV0(long receiptCase)
         {
             var casePart = receiptCase & 0xFFFF;
             return casePart switch
             {
-                0x0000 => new UnknownReceipt0x0000(_itSSCDProvider),
-                0x0001 => new PointOfSaleReceipt0x0001(_itSSCDProvider),
-                0x0002 => new ZeroReceipt0x200(_itSSCDProvider, _logger, _countrySpecificQueueRepository),
-                0x0003 => new InitialOperationReceipt0x4001(_itSSCDProvider, _configurationRepository),
-                0x0004 => new OutOfOperationReceipt0x4002(_itSSCDProvider),
-                0x0005 => new MonthlyClosing0x2012(_itSSCDProvider),
-                0x0006 => new YearlyClosing0x2013(_itSSCDProvider),
-                0x0007 => new DailyClosing0x2011(_itSSCDProvider),
-                _ => throw new UnknownReceiptCaseException(casePart),
+                0x0000 => (long) ITReceiptCases.UnknownReceipt0x0000,
+                0x0001 => (long) ITReceiptCases.PointOfSaleReceipt0x0001,
+                0x0002 => (long) ITReceiptCases.ZeroReceipt0x200,
+                0x0003 => (long) ITReceiptCases.InitialOperationReceipt0x4001,
+                0x0004 => (long) ITReceiptCases.OutOfOperationReceipt0x4002,
+                0x0005 => (long) ITReceiptCases.MonthlyClosing0x2012,
+                0x0006 => (long) ITReceiptCases.YearlyClosing0x2013,
+                0x0007 => (long) ITReceiptCases.DailyClosing0x2011,
+                _ => casePart
             };
         }
     }

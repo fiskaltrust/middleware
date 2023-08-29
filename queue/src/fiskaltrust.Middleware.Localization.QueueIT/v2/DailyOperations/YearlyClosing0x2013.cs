@@ -3,8 +3,6 @@ using fiskaltrust.Middleware.Localization.QueueIT.Constants;
 using fiskaltrust.storage.V0;
 using System.Threading.Tasks;
 using System.Collections.Generic;
-using Newtonsoft.Json;
-using System;
 using fiskaltrust.Middleware.Localization.QueueIT.Services;
 using fiskaltrust.ifPOS.v1.it;
 using System.Linq;

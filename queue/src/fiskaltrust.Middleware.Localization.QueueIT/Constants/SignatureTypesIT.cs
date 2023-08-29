@@ -1,4 +1,4 @@
-﻿namespace fiskaltrust.Middleware.Localization.QueueIT
+﻿namespace fiskaltrust.Middleware.Localization.QueueIT.Constants
 {
     public enum SignatureTypesIT
     {
