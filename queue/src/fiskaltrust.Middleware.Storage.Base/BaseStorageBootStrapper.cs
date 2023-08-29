@@ -82,6 +82,14 @@ namespace fiskaltrust.Middleware.Storage.Base
             JournalFRCopyPayload
         }
         
+        public async Task PersistMigrationDataAsync()
+        {
+            if (await _journalFRCopyPayloadRepository.HasEntriesAsync().ConfigureAwait(false) == false)
+            {
+                await PerformMigrationInitialization(Migrations.JournalFRCopyPayload).ConfigureAwait(false);
+            }
+        }
+        
         public async Task PerformMigrationInitialization(Migrations migrations)
         {
             switch (migrations)
@@ -103,8 +111,7 @@ namespace fiskaltrust.Middleware.Storage.Base
                 
             }
         }
-
-
+        
         public async Task PersistConfigurationAsync(StorageBaseInitConfiguration config, IConfigurationRepository configurationRepository, ILogger<IMiddlewareBootstrapper> logger)
         {
             var dbCashBox = await configurationRepository.GetCashBoxAsync(config.CashBox.ftCashBoxId).ConfigureAwait(false);

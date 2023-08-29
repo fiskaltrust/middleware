@@ -35,12 +35,9 @@ namespace fiskaltrust.Middleware.Storage.SQLite
         private readonly ILogger<IMiddlewareBootstrapper> _logger;
         private readonly IJournalFRCopyPayloadRepository _journalFRCopyPayloadRepository;
 
-        public SQLiteStorageBootstrapper(
-            Guid queueId, 
-            Dictionary<string, object> configuration, 
-            SQLiteStorageConfiguration sqliteStorageConfiguration, 
-            ILogger<IMiddlewareBootstrapper> logger, 
-            SQLiteJournalFRRepository journalFrRepository, 
+        public SQLiteStorageBootstrapper(Guid queueId, Dictionary<string, object> configuration,
+            SQLiteStorageConfiguration sqliteStorageConfiguration, ILogger<IMiddlewareBootstrapper> logger,
+            SQLiteJournalFRRepository journalFrRepository,
             IJournalFRCopyPayloadRepository journalFRCopyPayloadRepository)
             : base(journalFrRepository, journalFRCopyPayloadRepository) 
         {
@@ -72,6 +69,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite
             await PersistMasterDataAsync(baseStorageConfig, _configurationRepository,
                 new SQLiteAccountMasterDataRepository(_connectionFactory, _sqliteFile), new SQLiteOutletMasterDataRepository(_connectionFactory, _sqliteFile),
                 new SQLiteAgencyMasterDataRepository(_connectionFactory, _sqliteFile), new SQLitePosSystemMasterDataRepository(_connectionFactory, _sqliteFile)).ConfigureAwait(false);
+            await PersistMigrationDataAsync().ConfigureAwait(false);
             await PersistConfigurationAsync(baseStorageConfig, _configurationRepository, logger).ConfigureAwait(false);
         }
 
