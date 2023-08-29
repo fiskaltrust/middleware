@@ -393,7 +393,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
             var sut = GetDefaultSUT(_queueStarted);
             var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, _queueStarted, new ftQueueItem { });
 
-            receiptResponse.ftReceiptIdentification.Should().Be("ft1#Z0001");
+            receiptResponse.ftReceiptIdentification.Should().Be("ft1#Z1");
             receiptResponse.ftState.Should().Be(0x4954_0000_0000_0000);
             actionJournals.Should().HaveCount(1);
             actionJournals[0].Type.Should().Be(receiptRequest.ftReceiptCase.ToString());
