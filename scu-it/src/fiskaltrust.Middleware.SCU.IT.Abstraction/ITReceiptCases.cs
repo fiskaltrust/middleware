@@ -1,11 +1,11 @@
 ﻿namespace fiskaltrust.Middleware.SCU.IT.Abstraction;
 
-public enum ITReceiptCases
+public enum ITReceiptCases : long
 {
     UnknownReceipt0x0000 = 0x0000,
     PointOfSaleReceipt0x0001 = 0x0001,
     PaymentTransfer0x0002 = 0x0002,
-    PointOfSaleReceipt0x0003 = 0x0003,
+    PointOfSaleReceiptWithoutObligation0x0003 = 0x0003,
     ECommerce0x0004 = 0x0004,
     Protocol0x0005 = 0x0005,
 
@@ -29,6 +29,6 @@ public enum ITReceiptCases
 
     InitialOperationReceipt0x4001 = 0x4001,
     OutOfOperationReceipt0x4002 = 0x4002,
-    InitSCUSwitch = 0x4011,
-    FinishSCUSwitch = 0x4012,
+    InitSCUSwitch0x4011 = 0x4011,
+    FinishSCUSwitch0x4012 = 0x4012,
 }

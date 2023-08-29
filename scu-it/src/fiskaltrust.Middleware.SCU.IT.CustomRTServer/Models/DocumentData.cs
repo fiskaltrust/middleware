@@ -1,4 +1,4 @@
-namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer;
+﻿namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer;
 
 public class DocumentData
 {
@@ -14,11 +14,12 @@ public class DocumentData
     public string businessname { get; set; } = string.Empty;
     public string prevSignature { get; set; } = string.Empty;
     public string type_signature_id => "1";
-    public string? errSignature => null;
     public int grandTotal { get; set; }
     public int referenceClosurenumber { get; set; }
     public int referenceDocnumber { get; set; }
-    public string referenceDtime { get; set; } = string.Empty;
+    public string? referenceDtime { get; set; } = string.Empty;
+
+    public string? errSignature => null;
     public int err_number => 1;
     public int err_znumber => 1;
 }

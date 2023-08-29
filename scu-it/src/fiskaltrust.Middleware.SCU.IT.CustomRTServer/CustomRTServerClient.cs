@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Net.Http;
@@ -18,7 +18,6 @@ public class CustomRTServerClient
         _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", authHeader);
     }
 
-
     public async Task<GetDailyStatusResponse> GetDailyStatusAsync(string cashuuid)
     {
         var request = new
@@ -33,7 +32,6 @@ public class CustomRTServerClient
         var resultContent = await result.Result.Content.ReadAsStringAsync();
         return JsonConvert.DeserializeObject<GetDailyStatusResponse>(resultContent);
     }
-
 
     public async Task<GetDailyOpenResponse> GetDailyOpenAsync(string cashuuid, DateTime dateTime)
     {
@@ -88,7 +86,6 @@ public class CustomRTServerClient
         var resultContent = await result.Result.Content.ReadAsStringAsync();
         return JsonConvert.DeserializeObject<InsertFiscalDocumentArrayResponse>(resultContent);
     }
-
 
     public async Task<InsertCashRegisterAsyncResponse> InsertCashRegisterAsync(string description, string shop, string name, string password, string cf)
     {

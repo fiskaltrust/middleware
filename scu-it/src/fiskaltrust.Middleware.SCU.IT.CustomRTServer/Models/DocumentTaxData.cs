@@ -1,4 +1,4 @@
-namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer;
+﻿namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer;
 
 public class DocumentTaxData
 {
@@ -6,6 +6,8 @@ public class DocumentTaxData
     public int tax { get; set; }
     public int vatvalue { get; set; }
     public string vatcode { get; set; } = string.Empty;
-    public string businesscode { get; set; } = string.Empty;
+
+    // deprecated
+    public string? businesscode { get; set; } 
     public AdditionalTaxData? additional_tax_data { get; set; }
 }
