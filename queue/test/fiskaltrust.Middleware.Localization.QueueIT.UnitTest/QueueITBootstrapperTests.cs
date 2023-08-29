@@ -9,6 +9,15 @@ using fiskaltrust.Middleware.Contracts.Models;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
 {
+    public class ReceiptTypeProcessorFactoryTests
+    {
+        [Fact]
+        public void CreateWithWrongReceiptCase_ShouldThrow()
+        {
+
+        }
+    }
+
     public class QueueITBootstrapperTests
     {
         [Fact]

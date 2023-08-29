@@ -28,9 +28,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.DailyOperations
 
         public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ExecuteAsync(ftQueue queue, ftQueueIT queueIt, ReceiptRequest request, ReceiptResponse receiptResponse, ftQueueItem queueItem)
         {
-            var ftReceiptCaseHex = request.ftReceiptCase.ToString("X");
-            var actionJournalEntry = CreateActionJournal(queue.ftQueueId, ftReceiptCaseHex, queueItem.ftQueueItemId, $"Yearly-Closing receipt was processed.", JsonConvert.SerializeObject(new { ftReceiptNumerator = queue.ftReceiptNumerator + 1 }));
-
+            var actionJournalEntry = ActionJournalFactory.CreateDailyClosingActionJournal(queue, queueItem, request);
             var result = await _itSSCDProvider.ProcessReceiptAsync(new ProcessRequest
             {
                 ReceiptRequest = request,
@@ -42,21 +40,6 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.DailyOperations
             {
                 actionJournalEntry
             })).ConfigureAwait(false);
-        }
-
-        protected ftActionJournal CreateActionJournal(Guid queueId, string type, Guid queueItemId, string message, string data, int priority = -1)
-        {
-            return new ftActionJournal
-            {
-                ftActionJournalId = Guid.NewGuid(),
-                ftQueueId = queueId,
-                ftQueueItemId = queueItemId,
-                Type = type,
-                Moment = DateTime.UtcNow,
-                Message = message,
-                Priority = priority,
-                DataJson = data
-            };
         }
     }
 }

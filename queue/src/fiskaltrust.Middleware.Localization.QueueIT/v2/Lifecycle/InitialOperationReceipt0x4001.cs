@@ -34,7 +34,16 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.Lifecycle
         {
             if (queue.IsNew())
             {
-                var (actionJournal, signature) = await InitializeSCUAsync(queue, queueIt, request, queueItem);
+                var scu = await _configurationRepository.GetSignaturCreationUnitITAsync(queueIt.ftSignaturCreationUnitITId.Value).ConfigureAwait(false);
+                var deviceInfo = await _itSSCDProvider.GetRTInfoAsync().ConfigureAwait(false);
+                if (string.IsNullOrEmpty(scu.InfoJson))
+                {
+                    scu.InfoJson = JsonConvert.SerializeObject(deviceInfo);
+                    await _configurationRepository.InsertOrUpdateSignaturCreationUnitITAsync(scu).ConfigureAwait(false);
+                }
+
+                var signature = SignaturItemFactory.CreateInitialOperationSignature(queueIt, deviceInfo);
+                var actionJournal = ActionJournalFactory.CreateInitialOperationActionJournal(queue, queueItem, queueIt, request);
                 queue.StartMoment = DateTime.UtcNow;
 
                 var result = await _itSSCDProvider.ProcessReceiptAsync(new ProcessRequest
@@ -56,68 +65,11 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.Lifecycle
             }
             else
             {
-                var actionJournalEntry = CreateActionJournal(queue.ftQueueId, $"{request.ftReceiptCase:X}",
-                    queueItem.ftQueueItemId, queue.IsDeactivated()
-                            ? $"Queue {queue.ftQueueId} is de-activated, initial-operations-receipt can not be executed."
-                            : $"Queue {queue.ftQueueId} is already activated, initial-operations-receipt can not be executed.", "");
-
                 return (receiptResponse, new List<ftActionJournal>
                 {
-                    actionJournalEntry
+                    ActionJournalFactory.CreateWrongStateForInitialOperationActionJournal(queue, queueItem, request)
                 });
             }
-        }
-
-        private async Task<(ftActionJournal, SignaturItem)> InitializeSCUAsync(ftQueue queue, ftQueueIT queueIT, ReceiptRequest request, ftQueueItem queueItem)
-        {
-            var scu = await _configurationRepository.GetSignaturCreationUnitITAsync(queueIT.ftSignaturCreationUnitITId.Value).ConfigureAwait(false);
-            var deviceInfo = await _itSSCDProvider.GetRTInfoAsync().ConfigureAwait(false);
-            if (string.IsNullOrEmpty(scu.InfoJson))
-            {
-                scu.InfoJson = JsonConvert.SerializeObject(deviceInfo);
-                await _configurationRepository.InsertOrUpdateSignaturCreationUnitITAsync(scu).ConfigureAwait(false);
-            }
-
-            var signatureItem = CreateInitialOperationSignature($"Queue-ID: {queue.ftQueueId} Serial-Nr: {deviceInfo.SerialNumber}");
-            var notification = new ActivateQueueSCU
-            {
-                CashBoxId = Guid.Parse(request.ftCashBoxID),
-                QueueId = queueItem.ftQueueId,
-                Moment = DateTime.UtcNow,
-                SCUId = queueIT.ftSignaturCreationUnitITId.GetValueOrDefault(),
-                IsStartReceipt = true,
-                Version = "V0",
-            };
-            var actionJournal = CreateActionJournal(queue.ftQueueId, $"{request.ftReceiptCase:X}-{nameof(ActivateQueueSCU)}",
-                queueItem.ftQueueItemId, $"Initial-Operation receipt. Queue-ID: {queue.ftQueueId}", JsonConvert.SerializeObject(notification));
-
-            return (actionJournal, signatureItem);
-        }
-
-        public SignaturItem CreateInitialOperationSignature(string data)
-        {
-            return new SignaturItem()
-            {
-                ftSignatureType = Cases.BASE_STATE & 0x3,
-                ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                Caption = $"Initial-operation receipt",
-                Data = data
-            };
-        }
-
-        protected ftActionJournal CreateActionJournal(Guid queueId, string type, Guid queueItemId, string message, string data, int priority = -1)
-        {
-            return new ftActionJournal
-            {
-                ftActionJournalId = Guid.NewGuid(),
-                ftQueueId = queueId,
-                ftQueueItemId = queueItemId,
-                Type = type,
-                Moment = DateTime.UtcNow,
-                Message = message,
-                Priority = priority,
-                DataJson = data
-            };
         }
     }
 }
