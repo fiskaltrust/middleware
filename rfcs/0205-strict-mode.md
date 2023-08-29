@@ -1,6 +1,6 @@
 - Feature Name: `strict_mode`
 - Start Date: 2023-08-29
-- RFC PR: [fiskaltrust/middleware#0000](https://github.com/fiskaltrust/middleware/pull/0000)
+- RFC PR: [fiskaltrust/middleware#205](https://github.com/fiskaltrust/middleware/pull/205)
 <!-- - Tracking Issue: [fiskaltrust/middleware#0000](https://github.com/fiskaltrust/middleware/issues/0000) -->
 
 # Summary
