@@ -71,11 +71,6 @@ public sealed class CustomRTServer : IITSSCD
 
     public async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request)
     {
-        if (CashUUIdMappings.ContainsKey(Guid.Parse(request.ReceiptResponse.ftQueueID)))
-        {
-            await ReloadCashUUID(request.ReceiptResponse);
-        }
-
         var receiptCase = request.ReceiptRequest.GetReceiptCase();
         if (request.ReceiptRequest.IsLegacyReceipt())
         {
@@ -87,24 +82,34 @@ public sealed class CustomRTServer : IITSSCD
             return CreateResponse(request.ReceiptResponse);
         }
 
-        if (request.ReceiptRequest.IsVoid())
-        {
-            return await ProcessVoidReceipt(request);
-        }
 
         if (request.ReceiptRequest.IsInitialOperationReceipt())
         {
             return CreateResponse(await PerformInitOperationAsync(request.ReceiptRequest, request.ReceiptResponse));
         }
 
+
+        if (CashUUIdMappings.ContainsKey(Guid.Parse(request.ReceiptResponse.ftQueueID)))
+        {
+            await ReloadCashUUID(request.ReceiptResponse);
+        }
+
+        var cashuuid = CashUUIdMappings[Guid.Parse(request.ReceiptResponse.ftQueueID)];
+
+
         if (request.ReceiptRequest.IsOutOfOperationReceipt())
         {
-            return CreateResponse(await PerformOutOfOperationAsync(request.ReceiptRequest, request.ReceiptResponse));
+            return CreateResponse(await PerformOutOfOperationAsync(request.ReceiptRequest, request.ReceiptResponse, cashuuid));
+        }
+
+        if (request.ReceiptRequest.IsVoid())
+        {
+            return await ProcessVoidReceipt(request, cashuuid);
         }
 
         if (request.ReceiptRequest.IsDailyClosing())
         {
-            return CreateResponse(await PerformDailyCosing(request.ReceiptRequest, request.ReceiptResponse));
+            return CreateResponse(await PerformDailyCosing(request.ReceiptRequest, request.ReceiptResponse, cashuuid));
         }
 
         switch (receiptCase)
@@ -120,7 +125,7 @@ public sealed class CustomRTServer : IITSSCD
             case (long) ITReceiptCases.InvoiceB2B0x1002:
             case (long) ITReceiptCases.InvoiceB2G0x1003:
             default:
-                return CreateResponse(await PreformClassicReceiptAsync(request.ReceiptRequest, request.ReceiptResponse));
+                return CreateResponse(await PreformClassicReceiptAsync(request.ReceiptRequest, request.ReceiptResponse, cashuuid));
         }
     }
 
@@ -133,16 +138,11 @@ public sealed class CustomRTServer : IITSSCD
         return receiptResponse;
     }
 
-    private async Task<ReceiptResponse> PerformOutOfOperationAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
+    private async Task<ReceiptResponse> PerformOutOfOperationAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, QueueIdentification cashuuid)
     {
-        var result = await _client.CancelCashRegisterAsync(GetCashUUID(receiptResponse).CashUuId, "");
+        var result = await _client.CancelCashRegisterAsync(cashuuid.CashUuId, "");
         receiptResponse.ftSignatures = SignatureFactory.CreateOutOfOperationSignatures();
         return receiptResponse;
-    }
-
-    private QueueIdentification GetCashUUID(ReceiptResponse receiptResponse)
-    {
-        return CashUUIdMappings[Guid.Parse(receiptResponse.ftQueueID)];
     }
 
     private async Task ReloadCashUUID(ReceiptResponse receiptResponse)
@@ -158,35 +158,32 @@ public sealed class CustomRTServer : IITSSCD
         };
     }
 
-    private async Task<ProcessResponse> ProcessVoidReceipt(ProcessRequest request)
+    private async Task<ProcessResponse> ProcessVoidReceipt(ProcessRequest request, QueueIdentification cashuuid)
     {
         return new ProcessResponse
         {
-            ReceiptResponse = await PerformRefundReceiptAsync(request.ReceiptRequest, request.ReceiptResponse)
+            ReceiptResponse = await PerformRefundReceiptAsync(request.ReceiptRequest, request.ReceiptResponse, cashuuid)
         };
     }
 
-    private async Task<ReceiptResponse> PerformRefundReceiptAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
+    private async Task<ReceiptResponse> PerformRefundReceiptAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, QueueIdentification cashuuid)
     {
-        var cashuuid = GetCashUUID(receiptResponse);
         var commercialDocument = CustomRTServerMapping.CreateResoDocument(receiptRequest, receiptResponse, cashuuid);
         _receiptQueue.Add(commercialDocument);
         receiptResponse.ftSignatures = SignatureFactory.CreatePosReceiptSignatures(commercialDocument.fiscalData.document.docnumber, commercialDocument.fiscalData.document.docznumber, receiptRequest.cbReceiptMoment);
         return receiptResponse;
     }
 
-    private async Task<ReceiptResponse> PreformClassicReceiptAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
+    private async Task<ReceiptResponse> PreformClassicReceiptAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, QueueIdentification cashuuid)
     {
-        var cashuuid = GetCashUUID(receiptResponse);
         var commercialDocument = CustomRTServerMapping.GenerateFiscalDocument(receiptRequest, receiptResponse, cashuuid);
         _receiptQueue.Add(commercialDocument);
         receiptResponse.ftSignatures = SignatureFactory.CreatePosReceiptSignatures(commercialDocument.fiscalData.document.docnumber, commercialDocument.fiscalData.document.docznumber, receiptRequest.cbReceiptMoment);
         return receiptResponse;
     }
 
-    private async Task<ReceiptResponse> PerformDailyCosing(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
+    private async Task<ReceiptResponse> PerformDailyCosing(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, QueueIdentification cashuuid)
     {
-        var cashuuid = GetCashUUID(receiptResponse);
         var status = await _client.GetDailyStatusAsync(cashuuid.CashUuId);
         var currentDailyClosing = status.numberClosure;
         // process left over receipts
