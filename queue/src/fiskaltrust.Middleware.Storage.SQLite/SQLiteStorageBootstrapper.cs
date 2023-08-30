@@ -37,15 +37,15 @@ namespace fiskaltrust.Middleware.Storage.SQLite
 
         public SQLiteStorageBootstrapper(Guid queueId, Dictionary<string, object> configuration,
             SQLiteStorageConfiguration sqliteStorageConfiguration, ILogger<IMiddlewareBootstrapper> logger,
-            SQLiteJournalFRRepository journalFRRepository,
-            IJournalFRCopyPayloadRepository journalFRCopyPayloadRepository)
-            : base(journalFRRepository, journalFRCopyPayloadRepository) 
+            ISqliteConnectionFactory connectionFactory, string path)
+            : base(new SQLiteJournalFRRepository(connectionFactory, path),
+                new SQLiteJournalFRCopyPayloadRepository(connectionFactory, path))
         {
             _configuration = configuration;
             _sqliteStorageConfiguration = sqliteStorageConfiguration;
             _queueId = queueId;
             _logger = logger;
-            _journalFRCopyPayloadRepository = journalFRCopyPayloadRepository;
+            _journalFRCopyPayloadRepository = new SQLiteJournalFRCopyPayloadRepository(connectionFactory, path);
         }
 
         public void ConfigureStorageServices(IServiceCollection serviceCollection)
