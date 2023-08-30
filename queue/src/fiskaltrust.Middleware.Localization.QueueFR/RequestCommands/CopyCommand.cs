@@ -56,8 +56,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
 
                 response.ftSignatures = response.ftSignatures.Extend(signatures);
                 
-                var copyPayload = JsonConvert.DeserializeObject<CopyPayload>(payload);
-                var journalFRCopyPayload = copyPayload.ToJournalFRCopyPayload();
+                var journalFRCopyPayload = JsonConvert.DeserializeObject<ftJournalFRCopyPayload>(payload);
 
                 await _copyPayloadRepository.InsertAsync(journalFRCopyPayload);
 

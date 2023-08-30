@@ -74,24 +74,8 @@ namespace fiskaltrust.Middleware.Storage.SQLite.DatabaseInitialization
                 await SetCurrentVersionAsync(connection, Path.GetFileNameWithoutExtension(migrationScript)).ConfigureAwait(false);
                 _logger.LogDebug($"Applying the migration script was successful. Set current version to {Path.GetFileNameWithoutExtension(migrationScript)}.");
             }
-
-            if (await DoesFtJournalFRCopyPayloadTableExist(connection))
-            {
-                _logger.LogInformation("Migration was successful, the table ftJournalFRCopyPayload exists.");
-            }
-            else
-            {
-                _logger.LogError("Migration failed, the table ftJournalFRCopyPayload does not exist.");
-            }
         }
         
-        private async Task<bool> DoesFtJournalFRCopyPayloadTableExist(IDbConnection connection)
-        {
-            var tableName = await connection.ExecuteScalarAsync<string>("SELECT name FROM sqlite_master WHERE type='table' AND name='ftJournalFRCopyPayload'").ConfigureAwait(false);
-            return tableName != null;
-            
-        }
-
         private async Task<bool> IsLegacyDatabaseAsync(IDbConnection connection)
         {
             var legacyVersionHistoryTable = await connection.ExecuteScalarAsync<string>("SELECT name FROM sqlite_master WHERE type='table' AND name='__VersionHistory'").ConfigureAwait(false);

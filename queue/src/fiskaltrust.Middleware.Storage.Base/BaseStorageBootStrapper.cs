@@ -86,17 +86,20 @@ namespace fiskaltrust.Middleware.Storage.Base
         {
             if (await _journalFRCopyPayloadRepository.HasEntriesAsync().ConfigureAwait(false) == false)
             {
-                await PerformMigrationInitialization(Migrations.JournalFRCopyPayload).ConfigureAwait(false);
+                await PerformMigrationInitialization(new List<Migrations> { Migrations.JournalFRCopyPayload }).ConfigureAwait(false);
             }
         }
-        
-        public async Task PerformMigrationInitialization(Migrations migrations)
+
+        public async Task PerformMigrationInitialization(IEnumerable<Migrations> migrations)
         {
-            switch (migrations)
+            foreach (var migration in migrations)
             {
-                case Migrations.JournalFRCopyPayload:
-                    await PopulateFtJournalFRCopyPayloadTableAsync();
-                    break;
+                switch (migration)
+                {
+                    case Migrations.JournalFRCopyPayload:
+                        await PopulateFtJournalFRCopyPayloadTableAsync();
+                        break;
+                }
             }
         }
 
