@@ -9,22 +9,19 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System;
-using System.Text.RegularExpressions;
 
 namespace fiskaltrust.Middleware.Localization.QueueDE.Repositories
 {
     public class ReadOnlyReceiptReferenceRepository : IReadOnlyReceiptReferenceRepository
     {
         private readonly IMiddlewareQueueItemRepository _middlewareQueueItemRepository;
-        private readonly IReadOnlyActionJournalRepository _actionJournalRepository;
 
-        public ReadOnlyReceiptReferenceRepository(IMiddlewareQueueItemRepository middlewareQueueItemRepository, IReadOnlyActionJournalRepository actionJournalRepository)
+        public ReadOnlyReceiptReferenceRepository(IMiddlewareQueueItemRepository middlewareQueueItemRepository)
         {
             _middlewareQueueItemRepository = middlewareQueueItemRepository;
-            _actionJournalRepository = actionJournalRepository;
         }
 
-        public async Task<HashSet<ReceiptReferencesGroupedData>> GetReceiptReferenceAsync(long from, long to)
+        public async Task<HashSet<ReceiptReferencesGroupedData>> GetReceiptReferenceAsync(long from, long to, List<DailyClosingReceipt> dailyClosings)
         {
             var receiptReferencesGrouped = _middlewareQueueItemRepository.GetGroupedReceiptReferenceAsync(from, to);
             var receiptReferences = new HashSet<ReceiptReferencesGroupedData>();
@@ -40,9 +37,9 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Repositories
                         row++;
                         continue;
                     }
-                    await AddReference(receiptReferences, queueItem, selected);
+                    AddReference(receiptReferences, queueItem, selected, dailyClosings);
                     var source = await _middlewareQueueItemRepository.GetClosestPreviousReceiptReferencesAsync(queueItem);
-                    await AddReference(receiptReferences, queueItem, source);
+                    AddReference(receiptReferences, queueItem, source, dailyClosings);
 
                     selected = queueItem;
                     row++;
@@ -50,7 +47,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Repositories
                 if (row == 1 && !string.IsNullOrEmpty(selected.ftQueueItemId.ToString()))
                 {
                     var source = await _middlewareQueueItemRepository.GetClosestPreviousReceiptReferencesAsync(selected);
-                    await AddReference(receiptReferences, selected, source);
+                    AddReference(receiptReferences, selected, source, dailyClosings);
                 }
             }
             return receiptReferences;
@@ -58,13 +55,14 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Repositories
 
         public Task<HashSet<ReceiptReferenceData>> GetReceiptReferenceAsync(ftQueueItem queueItem) => throw new NotImplementedException();
 
-        private async Task<bool> AddReference(HashSet<ReceiptReferencesGroupedData> receiptReferences, ftQueueItem target, ftQueueItem source)
+        private bool AddReference(HashSet<ReceiptReferencesGroupedData> receiptReferences, ftQueueItem target, ftQueueItem source, List<DailyClosingReceipt> dailyClosings)
         {
             if (target == null || string.IsNullOrEmpty(target.response))
             {
                 return false;
             }
-            (var zNrTarget, var zErstTarget) = await GetLastZNumberForQueueItem(target).ConfigureAwait(false);
+            var dailyClosingTarget = dailyClosings.Where(x => x.ZTime >= target.cbReceiptMoment).FirstOrDefault();
+
             //external references
             if (source == null)
             {
@@ -85,13 +83,10 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Repositories
                     TargetQueueItemId = target.ftQueueItemId,
                     TargetReceiptCaseData = receiptCaseData,
                     TargetReceiptIdentification = respTarget.ftReceiptIdentification,
-                    TargetZNumber = zNrTarget
+                    TargetZNumber = dailyClosingTarget.ZNumber,
+                    TargetZErstellung = dailyClosingTarget.ZTime
                 };
 
-                if (zErstTarget.HasValue)
-                {
-                    extReceiptReference.TargetZErstellung = zErstTarget.Value;
-                }
                 return receiptReferences.Add(extReceiptReference);
             }
             if (string.IsNullOrEmpty(source.response))
@@ -102,46 +97,21 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Repositories
             var responseTarget = JsonConvert.DeserializeObject<ReceiptResponse>(target.response);
             var responseSource = JsonConvert.DeserializeObject<ReceiptResponse>(source.response);
 
-            (var znrSource, _) = await GetLastZNumberForQueueItem(source).ConfigureAwait(false);
+            var dailyClosingSource = dailyClosings.Where(x => x.ZTime >= source.cbReceiptMoment).FirstOrDefault();
 
             var receiptReference = new ReceiptReferencesGroupedData()
             {
-                RefMoment = source.cbReceiptMoment,
+                RefMoment = dailyClosingSource.ZTime,
                 RefReceiptId = responseSource.ftReceiptIdentification,
                 TargetQueueItemId = target.ftQueueItemId,
-                ZNumber = znrSource,
+                ZNumber = dailyClosingSource.ZNumber,
                 SourceQueueItemId = source.ftQueueItemId,
                 TargetReceiptIdentification = responseTarget.ftReceiptIdentification,
-                TargetZNumber = zNrTarget,
-                RefName = source.cbReceiptReference
+                TargetZNumber = dailyClosingTarget.ZNumber,
+                TargetZErstellung = dailyClosingTarget.ZTime
             };
 
-            if (zErstTarget.HasValue)
-            {
-                receiptReference.TargetZErstellung = zErstTarget.Value;
-            }
             return receiptReferences.Add(receiptReference);
-        }
-
-        private async Task<(long, DateTime?)> GetLastZNumberForQueueItem(ftQueueItem queueItem)
-        {
-            var regexDaily = new Regex("4445[0-9]{8}0007");
-            var actionJournals = (await _actionJournalRepository.GetAsync()).Where(x => x.Type != null && regexDaily.IsMatch(x.Type)).OrderBy(x => x.TimeStamp);
-            var actionJournal = actionJournals.Where(x => x.TimeStamp > queueItem.TimeStamp).FirstOrDefault();
-            if (actionJournal == null)
-            {
-                return (-1, null);
-            }
-            var closingNumber = -1;
-            if (actionJournal.DataJson != null)
-            {
-                closingNumber = JsonConvert.DeserializeAnonymousType(actionJournal.DataJson, new { closingNumber = -1 }).closingNumber;
-            }
-
-            return closingNumber > -1
-                ? (closingNumber, actionJournal.Moment)
-                : (actionJournals.Where(x => (x.Type != null && regexDaily.IsMatch(x.Type)) & x.TimeStamp <= queueItem.TimeStamp).Count(),
-                actionJournals.Where(x => (x.Type != null && regexDaily.IsMatch(x.Type)) & x.TimeStamp <= queueItem.TimeStamp).LastOrDefault()?.Moment);
         }
     }
 }
