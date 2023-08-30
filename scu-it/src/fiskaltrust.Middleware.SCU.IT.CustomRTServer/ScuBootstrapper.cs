@@ -18,6 +18,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer
 
             _ = serviceCollection
                 .AddSingleton(configuration)
+                .AddScoped<CustomRTServerClient>()
                 .AddScoped<IITSSCD, CustomRTServer>();
         }
     }

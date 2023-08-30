@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0.MasterData;

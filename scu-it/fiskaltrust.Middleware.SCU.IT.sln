@@ -22,7 +22,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.SCU.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.SCU.IT.CustomRTPrinter", "src\fiskaltrust.Middleware.SCU.IT.CustomRTPrinter\fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.csproj", "{9F015827-32AD-4C85-B35E-B912C5C04C07}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fiskaltrust.Middleware.SCU.IT.Abstraction", "src\fiskaltrust.Middleware.SCU.IT.Abstraction\fiskaltrust.Middleware.SCU.IT.Abstraction.csproj", "{5198570C-6420-4ACC-A8CD-EC86987810A5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.SCU.IT.Abstraction", "src\fiskaltrust.Middleware.SCU.IT.Abstraction\fiskaltrust.Middleware.SCU.IT.Abstraction.csproj", "{5198570C-6420-4ACC-A8CD-EC86987810A5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest", "test\fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest\fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest.csproj", "{77811328-6B61-4F31-BE0E-DD6C4D322F3F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -54,6 +56,10 @@ Global
 		{5198570C-6420-4ACC-A8CD-EC86987810A5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5198570C-6420-4ACC-A8CD-EC86987810A5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5198570C-6420-4ACC-A8CD-EC86987810A5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{77811328-6B61-4F31-BE0E-DD6C4D322F3F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{77811328-6B61-4F31-BE0E-DD6C4D322F3F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{77811328-6B61-4F31-BE0E-DD6C4D322F3F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{77811328-6B61-4F31-BE0E-DD6C4D322F3F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -66,6 +72,7 @@ Global
 		{93EDC9D1-2E21-4F2A-B785-4AE81AF92A50} = {D3735F43-830E-4992-8663-7182B6970DA2}
 		{9F015827-32AD-4C85-B35E-B912C5C04C07} = {D3735F43-830E-4992-8663-7182B6970DA2}
 		{5198570C-6420-4ACC-A8CD-EC86987810A5} = {D3735F43-830E-4992-8663-7182B6970DA2}
+		{77811328-6B61-4F31-BE0E-DD6C4D322F3F} = {D46180D0-C3B0-4544-8571-46FCF7783EE0}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {1855DFED-93D8-4A05-B062-5958E4B3114E}
