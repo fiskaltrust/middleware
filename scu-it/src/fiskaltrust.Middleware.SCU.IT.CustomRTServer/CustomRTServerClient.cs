@@ -11,11 +11,19 @@ public class CustomRTServerClient
 {
     private readonly HttpClient _httpClient;
 
-    public CustomRTServerClient(HttpClient httpClient, CustomRTServerConfiguration customRTServerConfiguration)
+    public CustomRTServerClient(CustomRTServerConfiguration customRTServerConfiguration)
     {
-        _httpClient = httpClient;
-        var authHeader = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{customRTServerConfiguration.Username}:{customRTServerConfiguration.Password}"));
-        _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", authHeader);
+        if (string.IsNullOrEmpty(customRTServerConfiguration.ServerUrl))
+        {
+            throw new NullReferenceException("ServerUrl is not set.");
+        }
+
+        _httpClient = new HttpClient
+        {
+            BaseAddress = new Uri(customRTServerConfiguration.ServerUrl),
+        };
+        //var authHeader = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{customRTServerConfiguration.Username}:{customRTServerConfiguration.Password}"));
+        //_httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", authHeader);
     }
 
     public async Task<GetDailyStatusResponse> GetDailyStatusAsync(string cashuuid)

@@ -45,16 +45,6 @@ public sealed class CustomRTServer : IITSSCD
         _logger = logger;
         _configuration = configuration;
         _client = client;
-        if (string.IsNullOrEmpty(configuration.ServerUrl))
-        {
-            throw new NullReferenceException("ServerUrl is not set.");
-        }
-        
-        _httpClient = new HttpClient
-        {
-            BaseAddress = new Uri(configuration.ServerUrl),
-            Timeout = TimeSpan.FromMilliseconds(configuration.ClientTimeoutMs)
-        };
     }
 
     public async Task<RTInfo> GetRTInfoAsync()
@@ -81,6 +71,11 @@ public sealed class CustomRTServer : IITSSCD
 
     public async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request)
     {
+        if (CashUUIdMappings.ContainsKey(Guid.Parse(request.ReceiptResponse.ftQueueID)))
+        {
+            await ReloadCashUUID(request.ReceiptResponse);
+        }
+
         var receiptCase = request.ReceiptRequest.GetReceiptCase();
         if (request.ReceiptRequest.IsLegacyReceipt())
         {
@@ -150,6 +145,19 @@ public sealed class CustomRTServer : IITSSCD
         return CashUUIdMappings[Guid.Parse(receiptResponse.ftQueueID)];
     }
 
+    private async Task ReloadCashUUID(ReceiptResponse receiptResponse)
+    {
+        var dailyOpen = await _client.GetDailyStatusAsync(receiptResponse.ftCashBoxIdentification);
+        CashUUIdMappings[Guid.Parse(receiptResponse.ftQueueID)] = new QueueIdentification
+        {
+            CashHmacKey = dailyOpen.cashHmacKey,
+            CurrentZNumber = int.Parse(dailyOpen.numberClosure),
+            CashUuId = receiptResponse.ftCashBoxIdentification,
+            CashToken = dailyOpen.cashToken,
+            LastSignature = dailyOpen.cashToken
+        };
+    }
+
     private async Task<ProcessResponse> ProcessVoidReceipt(ProcessRequest request)
     {
         return new ProcessResponse
@@ -179,30 +187,22 @@ public sealed class CustomRTServer : IITSSCD
     private async Task<ReceiptResponse> PerformDailyCosing(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
     {
         var cashuuid = GetCashUUID(receiptResponse);
-        var amount = "0";
         var status = await _client.GetDailyStatusAsync(cashuuid.CashUuId);
         var currentDailyClosing = status.numberClosure;
         // process left over receipts
-        var dailyClosing = await _client.InsertZDocumentAsync(cashuuid.CashUuId, receiptRequest.cbReceiptMoment, int.Parse(currentDailyClosing), amount);
+        var dailyClosing = await _client.InsertZDocumentAsync(cashuuid.CashUuId, receiptRequest.cbReceiptMoment, int.Parse(currentDailyClosing), status.grandTotalDB);
         var beforeStatus = await _client.GetDailyStatusAsync(cashuuid.CashUuId);
         // TODO should we really check the status? 
         var dailyOpen = await _client.GetDailyOpenAsync(cashuuid.CashUuId, receiptRequest.cbReceiptMoment);
-        _cashToken = dailyOpen.cashToken;
-        _cashHmacKey = dailyOpen.cashHmacKey;
+        CashUUIdMappings[Guid.Parse(receiptResponse.ftQueueID)] = new QueueIdentification
+        {
+            CashHmacKey = dailyOpen.cashHmacKey,
+            CurrentZNumber = int.Parse(dailyOpen.numberClosure),
+            CashUuId = cashuuid.CashUuId,
+            CashToken = dailyOpen.cashToken,
+            LastSignature = dailyOpen.cashToken
+        };
         receiptResponse.ftSignatures = SignatureFactory.CreateDailyClosingReceiptSignatures(long.Parse(currentDailyClosing));
-        /*
-        insertZDocument(cashuuid, znum=QueueITDailyCloingCounter, …) 
-
-    getDailyStatus(cashuuid) => check for Stato cassa == Chiusa 
-
-    getDailyOpen(cashuuid, …) 
-
-    store cashToken in QueueIT 
-
-    store cashHmacKey in QueueIT 
-
-    QueueDailyClosingCounter++ 
-        */
         return receiptResponse;
     }
 
