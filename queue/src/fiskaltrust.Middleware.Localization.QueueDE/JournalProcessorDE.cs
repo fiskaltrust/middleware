@@ -216,7 +216,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
                     ReferencesLookUpType = _queueDEConfiguration.DisableDsfinvkExportReferences ? ReferencesLookUpType.NoReferences : ReferencesLookUpType.GroupedReferencesMW
                 };
 
-                var readOnlyReceiptReferenceRepository = new ReadOnlyReceiptReferenceRepository(_middlewareQueueItemRepository, _actionJournalRepository);
+                var readOnlyReceiptReferenceRepository = new ReadOnlyReceiptReferenceRepository(_middlewareQueueItemRepository);
                 var fallbackMasterDataRepo = new ReadOnlyMasterDataConfigurationRepository(_masterDataService.GetFromConfig());
 
                 // No need to wrap the QueueItemRepository, as the DSFinV-K exporter only uses the GetAsync(Guid id) method
