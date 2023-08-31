@@ -35,8 +35,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite
         private readonly ILogger<IMiddlewareBootstrapper> _logger;
 
         public SQLiteStorageBootstrapper(Guid queueId, Dictionary<string, object> configuration,
-            SQLiteStorageConfiguration sqliteStorageConfiguration, ILogger<IMiddlewareBootstrapper> logger,
-            ISqliteConnectionFactory connectionFactory, string path)
+            SQLiteStorageConfiguration sqliteStorageConfiguration, ILogger<IMiddlewareBootstrapper> logger)
         {
             _configuration = configuration;
             _sqliteStorageConfiguration = sqliteStorageConfiguration;
