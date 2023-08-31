@@ -17,14 +17,14 @@ namespace fiskaltrust.Middleware.Storage.Base
 {
     public abstract class BaseStorageBootStrapper
     {
-        private readonly IMiddlewareJournalFRRepository _journalFRRepository;
-        private readonly IJournalFRCopyPayloadRepository _journalFRCopyPayloadRepository;
-
-        public BaseStorageBootStrapper(IJournalFRRepository journalFRRepository, IJournalFRCopyPayloadRepository journalFRCopyPayloadRepository)
-        {
-            _journalFRRepository = (IMiddlewareJournalFRRepository)journalFRRepository;
-            _journalFRCopyPayloadRepository = journalFRCopyPayloadRepository;
-        }
+        // // private readonly IMiddlewareJournalFRRepository _journalFRRepository;
+        // // private readonly IJournalFRCopyPayloadRepository _journalFRCopyPayloadRepository;
+        //
+        // public BaseStorageBootStrapper()
+        // {
+        //     // _journalFRRepository = (IMiddlewareJournalFRRepository)journalFRRepository;
+        //     // _journalFRCopyPayloadRepository = journalFRCopyPayloadRepository;
+        // }
         public StorageBaseInitConfiguration ParseStorageConfiguration(Dictionary<string, object> configuration)
         {
             return new StorageBaseInitConfiguration()
@@ -80,39 +80,39 @@ namespace fiskaltrust.Middleware.Storage.Base
         {
             JournalFRCopyPayload
         }
-        
-        public async Task PersistMigrationDataAsync()
+
+        public async Task PersistMigrationDataAsync(IJournalFRCopyPayloadRepository journalFRCopyPayloadRepository, IMiddlewareJournalFRRepository journalFRRepository)
         {
-            if (await _journalFRCopyPayloadRepository.HasEntriesAsync().ConfigureAwait(false) == false)
+            if (await journalFRCopyPayloadRepository.HasEntriesAsync().ConfigureAwait(false) == false)
             {
-                await PerformMigrationInitialization(new List<Migrations> { Migrations.JournalFRCopyPayload }).ConfigureAwait(false);
+                await PerformMigrationInitialization(new List<Migrations> { Migrations.JournalFRCopyPayload }, journalFRCopyPayloadRepository, journalFRRepository).ConfigureAwait(false);
             }
         }
 
-        public async Task PerformMigrationInitialization(IEnumerable<Migrations> migrations)
+        public async Task PerformMigrationInitialization(IEnumerable<Migrations> migrations, IJournalFRCopyPayloadRepository journalFRCopyPayloadRepository, IMiddlewareJournalFRRepository journalFRRepository)
         {
             foreach (var migration in migrations)
             {
                 switch (migration)
                 {
                     case Migrations.JournalFRCopyPayload:
-                        await PopulateFtJournalFRCopyPayloadTableAsync();
+                        await PopulateFtJournalFRCopyPayloadTableAsync(journalFRCopyPayloadRepository, journalFRRepository);
                         break;
                 }
             }
         }
 
-        private async Task PopulateFtJournalFRCopyPayloadTableAsync()
+        private async Task PopulateFtJournalFRCopyPayloadTableAsync(IJournalFRCopyPayloadRepository journalFRCopyPayloadRepository, IMiddlewareJournalFRRepository journalFRRepository)
         {
-            await foreach (var copyJournal in _journalFRRepository.GetProcessedCopyReceiptsAsync())
+            await foreach (var copyJournal in journalFRRepository.GetProcessedCopyReceiptsAsync())
             {
                 var jwt = copyJournal.JWT.Split('.');
                 var copyPayload = JsonConvert.DeserializeObject<ftJournalFRCopyPayload>(Encoding.UTF8.GetString(Convert.FromBase64String(jwt[1])));
-                
-                await _journalFRCopyPayloadRepository.InsertAsync(copyPayload);
-                
+        
+                await journalFRCopyPayloadRepository.InsertAsync(copyPayload);
             }
         }
+
         
         public async Task PersistConfigurationAsync(StorageBaseInitConfiguration config, IConfigurationRepository configurationRepository, ILogger<IMiddlewareBootstrapper> logger)
         {

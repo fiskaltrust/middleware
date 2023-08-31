@@ -33,19 +33,15 @@ namespace fiskaltrust.Middleware.Storage.SQLite
         private readonly Guid _queueId;
         private readonly SQLiteStorageConfiguration _sqliteStorageConfiguration;
         private readonly ILogger<IMiddlewareBootstrapper> _logger;
-        private readonly IJournalFRCopyPayloadRepository _journalFRCopyPayloadRepository;
 
         public SQLiteStorageBootstrapper(Guid queueId, Dictionary<string, object> configuration,
             SQLiteStorageConfiguration sqliteStorageConfiguration, ILogger<IMiddlewareBootstrapper> logger,
             ISqliteConnectionFactory connectionFactory, string path)
-            : base(new SQLiteJournalFRRepository(connectionFactory, path),
-                new SQLiteJournalFRCopyPayloadRepository(connectionFactory, path))
         {
             _configuration = configuration;
             _sqliteStorageConfiguration = sqliteStorageConfiguration;
             _queueId = queueId;
             _logger = logger;
-            _journalFRCopyPayloadRepository = new SQLiteJournalFRCopyPayloadRepository(connectionFactory, path);
         }
 
         public void ConfigureStorageServices(IServiceCollection serviceCollection)
@@ -69,9 +65,15 @@ namespace fiskaltrust.Middleware.Storage.SQLite
             await PersistMasterDataAsync(baseStorageConfig, _configurationRepository,
                 new SQLiteAccountMasterDataRepository(_connectionFactory, _sqliteFile), new SQLiteOutletMasterDataRepository(_connectionFactory, _sqliteFile),
                 new SQLiteAgencyMasterDataRepository(_connectionFactory, _sqliteFile), new SQLitePosSystemMasterDataRepository(_connectionFactory, _sqliteFile)).ConfigureAwait(false);
-            await PersistMigrationDataAsync().ConfigureAwait(false);
+            
+            var journalFRCopyPayloadRepository = new SQLiteJournalFRCopyPayloadRepository(_connectionFactory, _sqliteFile);
+            var journalFRRepository = new SQLiteJournalFRRepository(_connectionFactory, _sqliteFile);
+
+            await PersistMigrationDataAsync(journalFRCopyPayloadRepository, journalFRRepository).ConfigureAwait(false);
+            
             await PersistConfigurationAsync(baseStorageConfig, _configurationRepository, logger).ConfigureAwait(false);
         }
+
 
         private void AddRepositories(IServiceCollection services)
         {
