@@ -17,14 +17,6 @@ namespace fiskaltrust.Middleware.Storage.Base
 {
     public abstract class BaseStorageBootStrapper
     {
-        // // private readonly IMiddlewareJournalFRRepository _journalFRRepository;
-        // // private readonly IJournalFRCopyPayloadRepository _journalFRCopyPayloadRepository;
-        //
-        // public BaseStorageBootStrapper()
-        // {
-        //     // _journalFRRepository = (IMiddlewareJournalFRRepository)journalFRRepository;
-        //     // _journalFRCopyPayloadRepository = journalFRCopyPayloadRepository;
-        // }
         public StorageBaseInitConfiguration ParseStorageConfiguration(Dictionary<string, object> configuration)
         {
             return new StorageBaseInitConfiguration()
