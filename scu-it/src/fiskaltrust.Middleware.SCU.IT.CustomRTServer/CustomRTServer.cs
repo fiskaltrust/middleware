@@ -61,6 +61,15 @@ public sealed class CustomRTServer : IITSSCD
         return _nonProcessingCases.Select(x => (long) x).Contains(request.GetReceiptCase());
     }
 
+    private static ProcessResponse CreateDummyResponse(ReceiptResponse receiptResponse)
+    {
+        var signatures = SignatureFactory.CreatePosReceiptSignatures(1, 1, DateTime.UtcNow);
+        return new ProcessResponse
+        {
+            ReceiptResponse = receiptResponse
+        };
+    }
+
     private static ProcessResponse CreateResponse(ReceiptResponse receiptResponse)
     {
         return new ProcessResponse
@@ -76,6 +85,8 @@ public sealed class CustomRTServer : IITSSCD
         {
             receiptCase = ITConstants.ConvertToV2Case(receiptCase);
         }
+
+
 
         if (IsNoActionCase(request.ReceiptRequest))
         {

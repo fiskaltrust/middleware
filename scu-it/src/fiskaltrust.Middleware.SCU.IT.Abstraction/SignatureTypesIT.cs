@@ -9,5 +9,6 @@ public enum SignatureTypesIT
     RTDocumentMoment = 0x13,
     RTDocumentType = 0x14,
     RTLotteryID = 0x15,
-    RTCustomerID = 0x16
+    RTCustomerID = 0x16,
+    RTAmount = 0x17
 }
