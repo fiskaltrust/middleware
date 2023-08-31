@@ -11,9 +11,7 @@
   </ItemGroup>
   
   <ItemGroup>
-    <ProjectReference Include="..\fiskaltrust.Middleware.Contracts\fiskaltrust.Middleware.Contracts.csproj" />
-    <ProjectReference Include="..\fiskaltrust.Middleware.Storage.SQLite\fiskaltrust.Middleware.Storage.SQLite.csproj" />
-      
+    <ProjectReference Include="..\fiskaltrust.Middleware.Contracts\fiskaltrust.Middleware.Contracts.csproj" />     
   </ItemGroup>
 
 </Project>

@@ -8,7 +8,6 @@ using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Contracts.Repositories.FR;
 using fiskaltrust.Middleware.Contracts.Repositories.FR.TempSpace;
-using fiskaltrust.Middleware.Storage.SQLite.Repositories.FR;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 using Microsoft.Extensions.Logging;
@@ -18,12 +17,12 @@ namespace fiskaltrust.Middleware.Storage.Base
 {
     public abstract class BaseStorageBootStrapper
     {
-        private readonly SQLiteJournalFRRepository _journalFRRepository;
+        private readonly IMiddlewareJournalFRRepository _journalFRRepository;
         private readonly IJournalFRCopyPayloadRepository _journalFRCopyPayloadRepository;
 
-        public BaseStorageBootStrapper(SQLiteJournalFRRepository journalFRRepository, IJournalFRCopyPayloadRepository journalFRCopyPayloadRepository)
+        public BaseStorageBootStrapper(IJournalFRRepository journalFRRepository, IJournalFRCopyPayloadRepository journalFRCopyPayloadRepository)
         {
-            _journalFRRepository = journalFRRepository;
+            _journalFRRepository = (IMiddlewareJournalFRRepository)journalFRRepository;
             _journalFRCopyPayloadRepository = journalFRCopyPayloadRepository;
         }
         public StorageBaseInitConfiguration ParseStorageConfiguration(Dictionary<string, object> configuration)
