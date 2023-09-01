@@ -31,7 +31,7 @@ public sealed class EpsonSCU : IITSSCD
     private readonly HttpClient _httpClient;
     private readonly string _commandUrl;
     private readonly ErrorInfoFactory _errorCodeFactory = new();
-    private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(0, 1);
+    private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
     private string _serialnr = "";
 
     public EpsonSCU(ILogger<EpsonSCU> logger, EpsonScuConfiguration configuration, EpsonCommandFactory epsonXmlWriter, EpsonCommunicationClientV2 epsonCommunicationClientV2)

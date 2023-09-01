@@ -29,7 +29,7 @@ public class EpsonCommunicationClientV2
     private readonly HttpClient _httpClient;
     private readonly string _commandUrl;
     private readonly ErrorInfoFactory _errorCodeFactory = new();
-    private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(0, 1);
+    private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
 
     public EpsonCommunicationClientV2(ILogger<EpsonSCU> logger, EpsonScuConfiguration configuration, EpsonCommandFactory epsonXmlWriter)
     {

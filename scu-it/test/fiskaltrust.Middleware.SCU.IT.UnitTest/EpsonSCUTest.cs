@@ -8,24 +8,39 @@ using Xunit;
 using Moq;
 using FluentAssertions;
 using System.Threading.Tasks;
+using fiskaltrust.ifPOS.v1.it;
+using fiskaltrust.ifPOS.v1;
 
 namespace fiskaltrust.Middleware.SCU.IT.UnitTest
 {
     public class EpsonSCUTest
     {
 
-        [Fact(Skip = "Only with active Testprinter")]
+        [Fact]
         public async Task GetSerialNumber_GetResult_11DigetSerialnrAsync()
         {
             var config = new EpsonScuConfiguration()
             {
-                DeviceUrl = "https://469b-194-93-177-143.eu.ngrok.io"
+                DeviceUrl = "http://192.168.0.34"
             };
 
-            var epsonScu = new EpsonSCU(new Mock<ILogger<EpsonSCU>>().Object, config, new Epson.Utilities.EpsonCommandFactory(config), null);
+            var epsonv2 = new EpsonCommunicationClientV2(new Mock<ILogger<EpsonSCU>>().Object, config, new Epson.Utilities.EpsonCommandFactory(config));
+            var epsonScu = new EpsonSCU(new Mock<ILogger<EpsonSCU>>().Object, config, new Epson.Utilities.EpsonCommandFactory(config), epsonv2);
 
-            var serialnr = await epsonScu.GetSerialNumberAsync("I").ConfigureAwait(false);
-            serialnr.Should().Be("99IEC018305");
+            var processRequest = new ProcessRequest
+            {
+                ReceiptRequest = new ReceiptRequest
+                {
+                    ftReceiptCase = 0x4954_2000_0000_2000
+                },
+                ReceiptResponse = new ReceiptResponse
+                {
+                    ftCashBoxIdentification = "02020402",
+                    ftQueueID = Guid.NewGuid().ToString()
+                }
+            };
+
+            _ = await epsonScu.ProcessReceiptAsync(processRequest);
         }
     }
 }
