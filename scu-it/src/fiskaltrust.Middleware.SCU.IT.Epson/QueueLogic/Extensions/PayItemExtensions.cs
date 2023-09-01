@@ -4,9 +4,10 @@ using fiskaltrust.ifPOS.v1.it;
 
 namespace fiskaltrust.Middleware.SCU.IT.Epson.QueueLogic.Extensions
 {
+
     public static class PayItemExtensions
     {
-        public static PaymentType GetPaymentType(this PayItem payItem)
+        public static PaymentType GetV0PaymentType(this PayItem payItem)
         {
             switch (payItem.ftPayItemCase & 0xFFFF)
             {
@@ -40,15 +41,9 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.QueueLogic.Extensions
             }
         }
 
-        public static bool IsVoucherRedeem(this PayItem payItem)
-        {
-            return payItem.GetPaymentType() == PaymentType.Voucher && payItem.GetAmount() > 0;
-        }
+        public static bool IsV0VoucherRedeem(this PayItem payItem) => payItem.GetV0PaymentType() == PaymentType.Voucher && payItem.GetAmount() > 0;
 
-        public static bool IsVoucherSale(this PayItem payItem)
-        {
-            return payItem.GetPaymentType() == PaymentType.Voucher && payItem.GetAmount() < 0;
-        }
+        public static bool IsV0VoucherSale(this PayItem payItem) => payItem.GetV0PaymentType() == PaymentType.Voucher && payItem.GetAmount() < 0;
 
         public static decimal GetAmount(this PayItem payItem) => payItem.Quantity < 0 && payItem.Amount >= 0 ? payItem.Amount * -1 : payItem.Amount;
 

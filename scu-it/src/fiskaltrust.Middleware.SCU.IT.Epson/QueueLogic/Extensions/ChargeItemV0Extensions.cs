@@ -3,7 +3,8 @@ using fiskaltrust.ifPOS.v1.it;
 
 namespace fiskaltrust.Middleware.SCU.IT.Epson.QueueLogic.Extensions
 {
-    public static class ChargeItemExtensions
+
+    public static class ChargeItemV0Extensions
     {
 
         // TODO: check VAT rate table on printer at the moment according to xml example
@@ -14,7 +15,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.QueueLogic.Extensions
         private static readonly int _vatRateZero = 0;
         private static readonly int _vatRateUnknown = -1;
 
-        public static PaymentAdjustmentType? GetPaymentAdjustmentType(this ChargeItem chargeItem)
+        public static PaymentAdjustmentType? GetV0PaymentAdjustmentType(this ChargeItem chargeItem)
         {
             return (chargeItem.ftChargeItemCase & 0xFFFF) switch
             {
@@ -24,7 +25,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.QueueLogic.Extensions
             };
         }
 
-        public static bool IsPaymentAdjustment(this ChargeItem chargeItem)
+        public static bool IsV0PaymentAdjustment(this ChargeItem chargeItem)
         {
             return (chargeItem.ftChargeItemCase & 0xFFFF) switch
             {
@@ -34,7 +35,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.QueueLogic.Extensions
             };
         }
 
-        public static bool IsMultiUseVoucherRedeem(this ChargeItem chargeItem)
+        public static bool IsV0MultiUseVoucherRedeem(this ChargeItem chargeItem)
         {
             return (chargeItem.ftChargeItemCase & 0xFFFF) switch
             {
@@ -43,7 +44,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.QueueLogic.Extensions
             };
         }
 
-        public static bool IsMultiUseVoucherSale(this ChargeItem chargeItem)
+        public static bool IsV0MultiUseVoucherSale(this ChargeItem chargeItem)
         {
             return (chargeItem.ftChargeItemCase & 0xFFFF) switch
             {
@@ -52,7 +53,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.QueueLogic.Extensions
             };
         }
 
-        public static int GetVatGroup(this ChargeItem chargeItem)
+        public static int GetV0VatGroup(this ChargeItem chargeItem)
         {
             // TODO: check VAT rate table on printer at the moment according to xml example
             switch (chargeItem.ftChargeItemCase & 0xFFFF)

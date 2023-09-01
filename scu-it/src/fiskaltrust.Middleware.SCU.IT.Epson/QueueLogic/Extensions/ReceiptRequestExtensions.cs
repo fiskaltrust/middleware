@@ -7,16 +7,17 @@ using fiskaltrust.Middleware.SCU.IT.Epson.QueueLogic.Exceptions;
 
 namespace fiskaltrust.Middleware.SCU.IT.Epson.QueueLogic.Extensions
 {
+
     public static class ReceiptRequestExtensions
     {
-        public static bool IsV1MultiUseVoucherSale(this ReceiptRequest receiptRequest)
+        public static bool IsV0MultiUseVoucherSale(this ReceiptRequest receiptRequest)
         {
-            var hasChargeItemVoucher = receiptRequest?.cbChargeItems?.Any(x => x.IsMultiUseVoucherSale()) ?? false;
-            var hasPayItemVoucher = receiptRequest?.cbPayItems?.Any(x => x.IsVoucherSale()) ?? false;
+            var hasChargeItemVoucher = receiptRequest?.cbChargeItems?.Any(x => x.IsV0MultiUseVoucherSale()) ?? false;
+            var hasPayItemVoucher = receiptRequest?.cbPayItems?.Any(x => x.IsV0VoucherSale()) ?? false;
 
             if (hasChargeItemVoucher || hasPayItemVoucher)
             {
-                if (receiptRequest?.cbChargeItems?.Any(x => !x.IsPaymentAdjustment() && !x.IsMultiUseVoucherSale()) ?? false)
+                if (receiptRequest?.cbChargeItems?.Any(x => !x.IsV0PaymentAdjustment() && !x.IsV0MultiUseVoucherSale()) ?? false)
                 {
                     throw new MultiUseVoucherNoSaleException();
                 }
@@ -25,12 +26,12 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.QueueLogic.Extensions
             return false;
         }
 
-        public static bool IsV1Void(this ReceiptRequest receiptRequest)
+        public static bool IsV0Void(this ReceiptRequest receiptRequest)
         {
             return (receiptRequest.ftReceiptCase & 0x0000_0000_0004_0000) > 0x0000;
         }
 
-        public static List<PaymentAdjustment> GetPaymentAdjustments(this ReceiptRequest receiptRequest)
+        public static List<PaymentAdjustment> GetV0PaymentAdjustments(this ReceiptRequest receiptRequest)
         {
             var paymentAdjustments = new List<PaymentAdjustment>();
 
@@ -38,15 +39,15 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.QueueLogic.Extensions
             {
                 foreach (var item in receiptRequest.cbChargeItems)
                 {
-                    if (item.IsPaymentAdjustment() && !item.IsMultiUseVoucherRedeem())
+                    if (item.IsV0PaymentAdjustment() && !item.IsV0MultiUseVoucherRedeem())
                     {
 #pragma warning disable CS8629 // Nullable value type may be null.
                         paymentAdjustments.Add(new PaymentAdjustment
                         {
                             Amount = item.GetAmount(),
                             Description = item.Description,
-                            VatGroup = item.GetVatGroup(),
-                            PaymentAdjustmentType = (PaymentAdjustmentType) item.GetPaymentAdjustmentType(),
+                            VatGroup = item.GetV0VatGroup(),
+                            PaymentAdjustmentType = (PaymentAdjustmentType) item.GetV0PaymentAdjustmentType(),
                             AdditionalInformation = item.ftChargeItemCaseData
                         });
 #pragma warning restore CS8629 // Nullable value type may be null.
@@ -56,7 +57,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.QueueLogic.Extensions
             return paymentAdjustments;
         }
 
-        public static List<Payment> GetPayments(this ReceiptRequest receiptRequest)
+        public static List<Payment> GetV0Payments(this ReceiptRequest receiptRequest)
         {
             if (receiptRequest == null)
             {
@@ -69,7 +70,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.QueueLogic.Extensions
             {
                 throw new ItemPaymentInequalityException(sumPayItems, sumChargeItems);
             }
-            var payment = receiptRequest.GetPaymentFullyRedeemedByVouchers();
+            var payment = receiptRequest.GetV0PaymentFullyRedeemedByVouchers();
 
             if (payment.Any())
             {
@@ -79,10 +80,10 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.QueueLogic.Extensions
             {
                 Amount = p.Amount,
                 Description = p.Description,
-                PaymentType = p.GetPaymentType(),
+                PaymentType = p.GetV0PaymentType(),
                 AdditionalInformation = p.ftPayItemCaseData
             }).ToList() ?? new List<Payment>();
-            var vouchersFromChargeItms = receiptRequest.cbChargeItems?.Where(x => x.IsMultiUseVoucherRedeem()).Select(ch =>
+            var vouchersFromChargeItms = receiptRequest.cbChargeItems?.Where(x => x.IsV0MultiUseVoucherRedeem()).Select(ch =>
                 new Payment
                 {
                     Amount = Math.Abs(ch.Amount),
@@ -94,28 +95,28 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.QueueLogic.Extensions
             return payments;
         }
 
-        private static List<Payment> GetPaymentFullyRedeemedByVouchers(this ReceiptRequest receiptRequest)
+        private static List<Payment> GetV0PaymentFullyRedeemedByVouchers(this ReceiptRequest receiptRequest)
         {
             if(receiptRequest == null)
             {
                 return new List<Payment>();
             }
-            var sumChargeItemsNoVoucher = receiptRequest.cbChargeItems?.Where(x => !x.IsPaymentAdjustment()).Sum(x => x.GetAmount()) ?? 0;
+            var sumChargeItemsNoVoucher = receiptRequest.cbChargeItems?.Where(x => !x.IsV0PaymentAdjustment()).Sum(x => x.GetAmount()) ?? 0;
 
             var payments = new List<Payment>();
-            if ((receiptRequest.cbPayItems != null && receiptRequest.cbPayItems.Any(x => x.IsVoucherRedeem())) ||
-                (receiptRequest.cbChargeItems != null && receiptRequest.cbChargeItems.Any(x => x.IsMultiUseVoucherRedeem())))
+            if ((receiptRequest.cbPayItems != null && receiptRequest.cbPayItems.Any(x => x.IsV0VoucherRedeem())) ||
+                (receiptRequest.cbChargeItems != null && receiptRequest.cbChargeItems.Any(x => x.IsV0MultiUseVoucherRedeem())))
             {
-                var sumVoucher = receiptRequest.cbPayItems?.Where(x => x.IsVoucherRedeem()).Sum(x => x.GetAmount()) +
-                    receiptRequest.cbChargeItems?.Where(x => x.IsMultiUseVoucherRedeem()).Sum(x => Math.Abs(x.Amount));
+                var sumVoucher = receiptRequest.cbPayItems?.Where(x => x.IsV0VoucherRedeem()).Sum(x => x.GetAmount()) +
+                    receiptRequest.cbChargeItems?.Where(x => x.IsV0MultiUseVoucherRedeem()).Sum(x => Math.Abs(x.Amount));
                 if (sumVoucher > sumChargeItemsNoVoucher)
                 {
-                    var dscrPay = receiptRequest.cbPayItems?.Where(x => x.IsVoucherRedeem()).Select(x => x.Description).ToList() ?? new List<string>();
-                    var dscrCharge = receiptRequest.cbChargeItems?.Where(x => x.IsMultiUseVoucherRedeem()).Select(x => x.Description).ToList() ?? new List<string>();
+                    var dscrPay = receiptRequest.cbPayItems?.Where(x => x.IsV0VoucherRedeem()).Select(x => x.Description).ToList() ?? new List<string>();
+                    var dscrCharge = receiptRequest.cbChargeItems?.Where(x => x.IsV0MultiUseVoucherRedeem()).Select(x => x.Description).ToList() ?? new List<string>();
                     dscrPay.AddRange(dscrCharge);
 
-                    var addiPay = receiptRequest.cbPayItems?.Where(x => x.IsVoucherRedeem()).Select(x => x.ftPayItemCaseData).ToList() ?? new List<string>();
-                    var addiCharge = receiptRequest.cbChargeItems?.Where(x => x.IsMultiUseVoucherRedeem()).Select(x => x.ftChargeItemCaseData).ToList() ?? new List<string>();
+                    var addiPay = receiptRequest.cbPayItems?.Where(x => x.IsV0VoucherRedeem()).Select(x => x.ftPayItemCaseData).ToList() ?? new List<string>();
+                    var addiCharge = receiptRequest.cbChargeItems?.Where(x => x.IsV0MultiUseVoucherRedeem()).Select(x => x.ftChargeItemCaseData).ToList() ?? new List<string>();
                     addiPay.AddRange(addiCharge);
 
                     payments.Add(
@@ -130,7 +131,6 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.QueueLogic.Extensions
             }
             return payments;
         }
-
     }
 }
 

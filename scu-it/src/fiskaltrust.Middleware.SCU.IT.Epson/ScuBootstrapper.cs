@@ -20,7 +20,8 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson
             _ = serviceCollection
                 .AddSingleton(epsonScuConfig)
                 .AddScoped<EpsonCommandFactory>()
-                .AddScoped<IITSSCD, EpsonSCU>();
+                .AddScoped<IITSSCD, EpsonSCU>()
+                .AddScoped<EpsonCommunicationClientV2>();
         }
     }
 }

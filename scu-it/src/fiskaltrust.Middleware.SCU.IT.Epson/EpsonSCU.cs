@@ -4,7 +4,9 @@ using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Runtime.InteropServices.WindowsRuntime;
 using System.ServiceModel;
+using System.ServiceModel.Configuration;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -27,17 +29,19 @@ public sealed class EpsonSCU : IITSSCD
     private readonly ILogger<EpsonSCU> _logger;
     private readonly EpsonScuConfiguration _configuration;
     private readonly EpsonCommandFactory _epsonXmlWriter;
+    private readonly EpsonCommunicationClientV2 _epsonCommunicationClientV2;
     private readonly HttpClient _httpClient;
     private readonly string _commandUrl;
     private readonly ErrorInfoFactory _errorCodeFactory = new();
     private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(0, 1);
     private string _serialnr = "";
 
-    public EpsonSCU(ILogger<EpsonSCU> logger, EpsonScuConfiguration configuration, EpsonCommandFactory epsonXmlWriter)
+    public EpsonSCU(ILogger<EpsonSCU> logger, EpsonScuConfiguration configuration, EpsonCommandFactory epsonXmlWriter, EpsonCommunicationClientV2 epsonCommunicationClientV2)
     {
         _logger = logger;
         _configuration = configuration;
         _epsonXmlWriter = epsonXmlWriter;
+        _epsonCommunicationClientV2 = epsonCommunicationClientV2;
         if (string.IsNullOrEmpty(configuration.DeviceUrl))
         {
             throw new NullReferenceException("EpsonScuConfiguration DeviceUrl not set.");
@@ -382,14 +386,14 @@ public sealed class EpsonSCU : IITSSCD
         };
         if (request.cbChargeItems != null)
         {
-            foreach (var chargeItem in request.cbChargeItems.Where(x => x.IsMultiUseVoucherSale()))
+            foreach (var chargeItem in request.cbChargeItems.Where(x => x.IsV0MultiUseVoucherSale()))
             {
                 AddVoucherNonFiscalPrints(nonFiscalRequest.NonFiscalPrints, chargeItem.Amount, chargeItem.ftChargeItemCaseData);
             }
         }
         if (request.cbPayItems != null)
         {
-            foreach (var payItem in request.cbPayItems.Where(x => x.IsVoucherSale()))
+            foreach (var payItem in request.cbPayItems.Where(x => x.IsV0VoucherSale()))
             {
                 AddVoucherNonFiscalPrints(nonFiscalRequest.NonFiscalPrints, payItem.Amount, payItem.ftPayItemCaseData);
             }
@@ -428,17 +432,17 @@ public sealed class EpsonSCU : IITSSCD
             //Barcode = ChargeItem.ProductBarcode,
             //TODO DisplayText = "Message on customer display",
             Operator = request.cbUser,
-            Items = request.cbChargeItems.Where(x => !x.IsPaymentAdjustment()).Select(p => new Item
+            Items = request.cbChargeItems.Where(x => !x.IsV0PaymentAdjustment()).Select(p => new Item
             {
                 Description = p.Description,
                 Quantity = p.Quantity,
                 UnitPrice = p.UnitPrice ?? p.Amount / p.Quantity,
                 Amount = p.Amount,
-                VatGroup = p.GetVatGroup(),
+                VatGroup = p.GetV0VatGroup(),
                 AdditionalInformation = p.ftChargeItemCaseData
             }).ToList(),
-            PaymentAdjustments = request.GetPaymentAdjustments(),
-            Payments = request.GetPayments()
+            PaymentAdjustments = request.GetV0PaymentAdjustments(),
+            Payments = request.GetV0Payments()
         };
         return fiscalReceiptRequest;
     }
@@ -457,17 +461,45 @@ public sealed class EpsonSCU : IITSSCD
                 Quantity = Math.Abs(p.Quantity),
                 UnitPrice = p.UnitPrice ?? 0,
                 Amount = Math.Abs(p.Amount),
-                VatGroup = p.GetVatGroup()
+                VatGroup = p.GetV0VatGroup()
             }).ToList(),
-            PaymentAdjustments = request.GetPaymentAdjustments(),
+            PaymentAdjustments = request.GetV0PaymentAdjustments(),
             Payments = request.cbPayItems?.Select(p => new Payment
             {
                 Amount = p.Amount,
                 Description = p.Description,
-                PaymentType = p.GetPaymentType(),
+                PaymentType = p.GetV0PaymentType(),
             }).ToList()
         };
         return fiscalReceiptRequest;
+    }
+
+    public async Task<RTInfo> GetRTInfoAsync()
+    {
+        var content = _epsonXmlWriter.CreateQueryPrinterStatusRequestContent();
+        var response = await _httpClient.PostAsync(_commandUrl, new StringContent(content, Encoding.UTF8, "application/xml"));
+        using var responseContent = await response.Content.ReadAsStreamAsync();
+        var result = SoapSerializer.Deserialize<StatusResponse>(responseContent);
+
+        _logger.LogInformation(JsonConvert.SerializeObject(result));
+        if (string.IsNullOrEmpty(_serialnr) && result?.Printerstatus?.RtType != null)
+        {
+            _serialnr = await GetSerialNumberAsync(result.Printerstatus.RtType).ConfigureAwait(false);
+        }
+
+        return new RTInfo
+        {
+            SerialNumber = _serialnr,
+            InfoData = JsonConvert.SerializeObject(new DeviceInfo
+            {
+                DailyOpen = result?.Printerstatus?.DailyOpen == "1",
+                DeviceStatus = ParseStatus(result?.Printerstatus?.MfStatus), // TODO Create enum
+                ExpireDeviceCertificateDate = result?.Printerstatus?.ExpiryCD, // TODO Use Datetime; this value seemingly can also be 20
+                ExpireTACommunicationCertificateDate = result?.Printerstatus?.ExpiryCA, // TODO use DateTime?
+                SerialNumber = _serialnr
+
+            })
+        };
     }
 
     public async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request)
@@ -475,7 +507,7 @@ public sealed class EpsonSCU : IITSSCD
         if (!request.ReceiptRequest.IsV2Receipt())
         {
             var receiptResponse = request.ReceiptResponse;
-            if (request.ReceiptRequest.IsV1MultiUseVoucherSale())
+            if (request.ReceiptRequest.IsV0MultiUseVoucherSale())
             {
                 return new ProcessResponse
                 {
@@ -484,7 +516,7 @@ public sealed class EpsonSCU : IITSSCD
             }
 
             FiscalReceiptResponse fiscalResponse;
-            if (request.ReceiptRequest.IsV1Void())
+            if (request.ReceiptRequest.IsV0Void())
             {
                 // TODO how will we get the refund information? ==> signatures??
                 var fiscalReceiptRefund = await CreateRefundAsync(request.ReceiptRequest, -1, -1, DateTime.MinValue).ConfigureAwait(false);
@@ -510,162 +542,7 @@ public sealed class EpsonSCU : IITSSCD
         }
         else
         {
-            var receiptCase = request.ReceiptRequest.GetReceiptCase();
-            if (request.ReceiptRequest.IsInitialOperationReceipt())
-            {
-                return CreateResponse(await PerformInitOperationAsync(request.ReceiptRequest, request.ReceiptResponse));
-            }
-
-            if (request.ReceiptRequest.IsOutOfOperationReceipt())
-            {
-                return CreateResponse(await PerformOutOfOperationAsync(request.ReceiptRequest, request.ReceiptResponse));
-            }
-
-            if (request.ReceiptRequest.IsZeroReceipt())
-            {
-                return CreateResponse(await PerformZeroReceiptOperationAsync(request.ReceiptRequest, request.ReceiptResponse));
-            }
-
-            if (IsNoActionCase(request.ReceiptRequest))
-            {
-                return CreateResponse(request.ReceiptResponse);
-            }
-
-            if (request.ReceiptRequest.IsVoid())
-            {
-                return await ProcessVoidReceipt(request, cashuuid);
-            }
-
-            if (request.ReceiptRequest.IsDailyClosing())
-            {
-                return CreateResponse(await PerformDailyCosing(request.ReceiptRequest, request.ReceiptResponse, cashuuid));
-            }
-
-            switch (receiptCase)
-            {
-                case (long) ITReceiptCases.UnknownReceipt0x0000:
-                case (long) ITReceiptCases.PointOfSaleReceipt0x0001:
-                case (long) ITReceiptCases.PaymentTransfer0x0002:
-                case (long) ITReceiptCases.Protocol0x0005:
-                default:
-                    return CreateResponse(await PerformClassicReceiptAsync(request.ReceiptRequest, request.ReceiptResponse, cashuuid));
-            }
+            return await _epsonCommunicationClientV2.ProcessReceiptAsync(request);
         }
     }
-
-    private async Task<ProcessResponse> ProcessVoidReceipt(ProcessRequest request)
-    {
-        throw new NotImplementedException();
-    }
-
-
-    private async Task<ReceiptResponse> PerformInitOperationAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse) => await CreateMiddlewareNoFiscalRequestAsync(receiptResponse, receiptRequest).ConfigureAwait(false);
-
-    private async Task<ReceiptResponse> PerformZeroReceiptOperationAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse) => await CreateMiddlewareNoFiscalRequestAsync(receiptResponse, receiptRequest).ConfigureAwait(false);
-
-    private async Task<ReceiptResponse> PerformOutOfOperationAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse) => await CreateMiddlewareNoFiscalRequestAsync(receiptResponse, receiptRequest).ConfigureAwait(false);
-
-    private async Task<ReceiptResponse> CreateMiddlewareNoFiscalRequestAsync(ReceiptResponse receiptResponse, ReceiptRequest request)
-    {
-        var nonFiscalRequest = new NonFiscalRequest
-        {
-            NonFiscalPrints = new List<NonFiscalPrint>()
-        };
-
-        try
-        {
-            _semaphore.Wait(_configuration.LockTimeoutMs);
-            var content = _epsonXmlWriter.CreateNonFiscalReceipt(new NonFiscalRequest
-            {
-                NonFiscalPrints = new List<NonFiscalPrint>
-                {
-                    new NonFiscalPrint
-                    {
-                        Data = $"{request.ftReceiptCase.ToString("x")} case for Queue {receiptResponse.ftCashBoxIdentification}"
-                    },
-                    new NonFiscalPrint
-                    {
-                        Data = $"Processing"
-                    }
-                }
-            });
-            var httpResponse = await SendRequestAsync(content);
-
-            using var responseContent = await httpResponse.Content.ReadAsStreamAsync();
-            var result = SoapSerializer.Deserialize<PrinterResponse>(responseContent);
-            var response = new Response()
-            {
-                Success = result?.Success ?? false
-            };
-
-            if (!response.Success)
-            {
-                response.SSCDErrorInfo = GetErrorInfo(result?.Code, result?.Status, null);
-            }
-            if (response.Success)
-            {
-                receiptResponse.ftSignatures = SignatureFactory.CreateVoucherSignatures(nonFiscalRequest);
-            }
-        }
-        catch (Exception e)
-        {
-            var msg = e.Message;
-            if (e.InnerException != null)
-            {
-                msg = msg + " " + e.InnerException.Message;
-            }
-            Response? response = null;
-            if (IsConnectionException(e))
-            {
-                response = new Response() { Success = false, SSCDErrorInfo = new SSCDErrorInfo() { Info = msg, Type = SSCDErrorType.Connection } };
-            }
-            else
-            {
-                response = new Response() { Success = false, SSCDErrorInfo = new SSCDErrorInfo() { Info = msg, Type = SSCDErrorType.General } };
-            }
-
-            throw new SSCDErrorException(response.SSCDErrorInfo.Type, response.SSCDErrorInfo.Info);
-        }
-        finally
-        {
-            _semaphore.Release();
-        }
-        return receiptResponse;
-    }
-
-    private static ProcessResponse CreateResponse(ReceiptResponse receiptResponse)
-    {
-        return new ProcessResponse
-        {
-            ReceiptResponse = receiptResponse
-        };
-    }
-
-    public bool IsNoActionCase(ReceiptRequest request)
-    {
-        return _nonProcessingCases.Select(x => (long) x).Contains(request.GetReceiptCase());
-    }
-
-    private readonly List<ITReceiptCases> _nonProcessingCases = new List<ITReceiptCases>
-        {
-            ITReceiptCases.PointOfSaleReceiptWithoutObligation0x0003,
-            ITReceiptCases.ECommerce0x0004,
-            ITReceiptCases.InvoiceUnknown0x1000,
-            ITReceiptCases.InvoiceB2C0x1001,
-            ITReceiptCases.InvoiceB2B0x1002,
-            ITReceiptCases.InvoiceB2G0x1003,
-            ITReceiptCases.ZeroReceipt0x200,
-            ITReceiptCases.OneReceipt0x2001,
-            ITReceiptCases.ShiftClosing0x2010,
-            ITReceiptCases.MonthlyClosing0x2012,
-            ITReceiptCases.YearlyClosing0x2013,
-            ITReceiptCases.ProtocolUnspecified0x3000,
-            ITReceiptCases.ProtocolTechnicalEvent0x3001,
-            ITReceiptCases.ProtocolAccountingEvent0x3002,
-            ITReceiptCases.InternalUsageMaterialConsumption0x3003,
-            ITReceiptCases.InitSCUSwitch0x4011,
-            ITReceiptCases.FinishSCUSwitch0x4012,
-        };
-
-    public Task<RTInfo> GetRTInfoAsync() => throw new NotImplementedException();
 }
