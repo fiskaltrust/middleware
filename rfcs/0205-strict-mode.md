@@ -74,7 +74,7 @@ The Strict Mode can be disabled for each warning individually by setting the par
 
 # Drawbacks
 
-> Why should we *not* do this?
+It brings extra complexity to the Middleware.
 
 # Rationale and alternatives
 
@@ -83,24 +83,12 @@ The Strict Mode can be disabled for each warning individually by setting the par
 > - What objections immediately spring to mind? How have you addressed them?
 > - What is the impact of not doing this?
 
-# \[Optional\] Prior art
-
-> Discuss prior art, both the good and the bad, in relation to this proposal.
-> A few examples of what this can include are:
-> 
-> - Does this feature exist in other markets and what experience have their community had?
-> - Does this feature exist in other PosSystems and what experience have their community had?
-> - Papers: Are there any published papers or great posts that discuss this?
->   If you have some relevant papers to refer to, this can serve as a more detailed theoretical background.
->
-> This section is intended to encourage you as an author to think about the lessons from other markets and projects, provide readers of your RFC with a fuller picture.
-> If there is no prior art, that is fine - your ideas are interesting to us whether they are brand new or not.
-> 
-> Note that while precedent set by other projects and markets is some motivation, it does not on its own motivate an RFC.
-
 # Unresolved questions
 
 * Do we need to provide the possibility to set warning levels for each warning individually?
+* How is this related to the Basic Receipt Check in the portal?
+  Should the Basic Receipt Check check also adhere to the `StrictMode` and `StrictModeOverrides`?
+  Can we do this with a common code base?
 
 > - What parts of the design do you expect to resolve through the RFC process before this gets merged?
 > - What parts of the design do you expect to resolve through the implementation of this feature before before the feature PR is merged?
