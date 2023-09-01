@@ -12,6 +12,50 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
     public class ITSSCDTests
     {
         [Fact]
+        public async Task PerformInitOperationAsync()
+        {
+            var serviceCollection = new ServiceCollection();
+            serviceCollection.AddLogging();
+
+            var accountMasterData = new AccountMasterData
+            {
+                AccountId = Guid.NewGuid(),
+                VatId = "19239239"
+            };
+
+            var sut = new ScuBootstrapper
+            {
+                Id = Guid.NewGuid(),
+                Configuration = new Dictionary<string, object>
+                {
+                    { "ServerUrl", "https://a3e3-88-116-45-202.ngrok-free.app/" },
+                    { "Username", "0001ab05" },
+                    { "Password", "admin" },
+                    { "AccountMasterData", $"{JsonConvert.SerializeObject(accountMasterData)}" }
+                }
+            };
+            sut.ConfigureServices(serviceCollection);
+
+
+            var itsscd = serviceCollection.BuildServiceProvider().GetRequiredService<IITSSCD>();
+
+            var processRequest = new ProcessRequest
+            {
+                ReceiptRequest = new ReceiptRequest
+                {
+                    ftReceiptCase = 5283848262812434435
+                },
+                ReceiptResponse = new ReceiptResponse
+                {
+                    ftCashBoxIdentification = "02020402"
+                }
+            };
+
+            var rtInfo = await itsscd.ProcessReceiptAsync(processRequest);
+        }
+
+
+        [Fact]
         public async Task GetRTInfoAsync_ShouldReturn_SerialNumber()
         {
             var serviceCollection = new ServiceCollection();
@@ -34,7 +78,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
         }
 
         public static IEnumerable<object[]> rtNoHandleReceipts()
-        { 
+        {
             yield return new object[] { ITReceiptCases.ZeroReceipt0x200 };
             yield return new object[] { ITReceiptCases.OneReceipt0x2001 };
             yield return new object[] { ITReceiptCases.ShiftClosing0x2010 };

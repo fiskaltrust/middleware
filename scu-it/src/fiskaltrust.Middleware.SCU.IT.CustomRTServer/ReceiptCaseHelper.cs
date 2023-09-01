@@ -6,7 +6,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer;
 
 public static class ReceiptCaseHelper
 {
-    public static bool IsLegacyReceipt(this ReceiptRequest request) => (request.ftReceiptCase & 0xF000) == 0x0000;
+    public static bool IsV2Receipt(this ReceiptRequest receiptRequest) => (receiptRequest.ftReceiptCase & 0x0000_F000_0000_0000) == 0x0000_2000_0000_0000;
 
     public static long GetReceiptCase(this ReceiptRequest request) => request.ftReceiptCase & 0x0000_0000_0000_FFFF;
 

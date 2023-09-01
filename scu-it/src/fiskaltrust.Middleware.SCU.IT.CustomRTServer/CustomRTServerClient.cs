@@ -22,8 +22,8 @@ public class CustomRTServerClient
         {
             BaseAddress = new Uri(customRTServerConfiguration.ServerUrl),
         };
-        //var authHeader = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{customRTServerConfiguration.Username}:{customRTServerConfiguration.Password}"));
-        //_httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", authHeader);
+        var authHeader = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{customRTServerConfiguration.Username}:{customRTServerConfiguration.Password}"));
+        _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", authHeader);
     }
 
     public async Task<GetDailyStatusResponse> GetDailyStatusAsync(string cashuuid)
@@ -35,9 +35,9 @@ public class CustomRTServerClient
                 cashuuid
             }
         };
-        var result = _httpClient.PostAsync("/getdailystatus.php/", new StringContent(JsonConvert.SerializeObject(request)));
+        var result = await _httpClient.PostAsync("/getdailystatus.php", new StringContent(JsonConvert.SerializeObject(request)));
         // TODO Check error
-        var resultContent = await result.Result.Content.ReadAsStringAsync();
+        var resultContent = await result.Content.ReadAsStringAsync();
         return JsonConvert.DeserializeObject<GetDailyStatusResponse>(resultContent);
     }
 
@@ -51,9 +51,9 @@ public class CustomRTServerClient
                 dtime = dateTime.ToString("yyyy-MM-dd HH:mm:ss")
             }
         };
-        var result = _httpClient.PostAsync("/getDailyOpen.php/", new StringContent(JsonConvert.SerializeObject(request)));
+        var result = await _httpClient.PostAsync("/getDailyOpen.php", new StringContent(JsonConvert.SerializeObject(request)));
         // TODO Check error
-        var resultContent = await result.Result.Content.ReadAsStringAsync();
+        var resultContent = await result.Content.ReadAsStringAsync();
         return JsonConvert.DeserializeObject<GetDailyOpenResponse>(resultContent);
     }
 
@@ -69,17 +69,17 @@ public class CustomRTServerClient
                 amount
             }
         };
-        var result = _httpClient.PostAsync("/insertZDocument.php/", new StringContent(JsonConvert.SerializeObject(request)));
+        var result = await _httpClient.PostAsync("/insertZDocument.php", new StringContent(JsonConvert.SerializeObject(request)));
         // TODO Check error
-        var resultContent = await result.Result.Content.ReadAsStringAsync();
+        var resultContent = await result.Content.ReadAsStringAsync();
         return JsonConvert.DeserializeObject<InsertZDocumentResponse>(resultContent);
     }
 
     public async Task<InsertFiscalDocumentResponse> InsertFiscalDocumentAsync(CommercialDocument commercialDocument)
     {
-        var result = _httpClient.PostAsync("/insertFiscalDocument.php/", new StringContent(JsonConvert.SerializeObject(commercialDocument)));
+        var result = await _httpClient.PostAsync("/insertFiscalDocument.php", new StringContent(JsonConvert.SerializeObject(commercialDocument)));
         // TODO Check error
-        var resultContent = await result.Result.Content.ReadAsStringAsync();
+        var resultContent = await result.Content.ReadAsStringAsync();
         return JsonConvert.DeserializeObject<InsertFiscalDocumentResponse>(resultContent);
     }
 
@@ -89,9 +89,9 @@ public class CustomRTServerClient
         {
             fiscalArray = fiscalData
         };
-        var result = _httpClient.PostAsync("/insertFiscalDocumentArray.php/", new StringContent(JsonConvert.SerializeObject(request)));
+        var result = await _httpClient.PostAsync("/insertFiscalDocumentArray.php", new StringContent(JsonConvert.SerializeObject(request)));
         // TODO Check error
-        var resultContent = await result.Result.Content.ReadAsStringAsync();
+        var resultContent = await result.Content.ReadAsStringAsync();
         return JsonConvert.DeserializeObject<InsertFiscalDocumentArrayResponse>(resultContent);
     }
 
@@ -108,9 +108,9 @@ public class CustomRTServerClient
                 cf
             }
         };
-        var result = _httpClient.PostAsync("/insertCashRegister.php/", new StringContent(JsonConvert.SerializeObject(request)));
+        var result = await _httpClient.PostAsync("/insertCashRegister.php", new StringContent(JsonConvert.SerializeObject(request)));
         // TODO Check error
-        var resultContent = await result.Result.Content.ReadAsStringAsync();
+        var resultContent = await result.Content.ReadAsStringAsync();
         return JsonConvert.DeserializeObject<InsertCashRegisterAsyncResponse>(resultContent);
     }
 
@@ -266,7 +266,7 @@ public class InsertFiscalDocumentArraySubResponse
 
 public class InsertCashRegisterAsyncResponse
 {
-    public string uCashUuid { get; set; } = string.Empty;
+    public string cashUuid { get; set; } = string.Empty;
     public int responseCode { get; set; }
     public string responseDesc { get; set; } = string.Empty;
 }

@@ -81,7 +81,7 @@ public sealed class CustomRTServer : IITSSCD
     public async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request)
     {
         var receiptCase = request.ReceiptRequest.GetReceiptCase();
-        if (request.ReceiptRequest.IsLegacyReceipt())
+        if (!request.ReceiptRequest.IsV2Receipt())
         {
             receiptCase = ITConstants.ConvertToV2Case(receiptCase);
         }

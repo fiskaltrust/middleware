@@ -7,6 +7,8 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer
         public string? ServerUrl { get; set; }
 
         public AccountMasterData? AccountMasterData { get; set; }
+        public string Username { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
     }
 
     public class AccountMasterData
