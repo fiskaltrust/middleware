@@ -22,7 +22,7 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
                 DeviceUrl = "https://469b-194-93-177-143.eu.ngrok.io"
             };
 
-            var epsonScu = new EpsonSCU(new Mock<ILogger<EpsonSCU>>().Object, config, new Epson.Utilities.EpsonCommandFactory(config));
+            var epsonScu = new EpsonSCU(new Mock<ILogger<EpsonSCU>>().Object, config, new Epson.Utilities.EpsonCommandFactory(config), null);
 
             var serialnr = await epsonScu.GetSerialNumberAsync("I").ConfigureAwait(false);
             serialnr.Should().Be("99IEC018305");
