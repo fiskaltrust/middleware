@@ -472,41 +472,200 @@ public sealed class EpsonSCU : IITSSCD
 
     public async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request)
     {
-        var receiptResponse = request.ReceiptResponse;
-        if (request.ReceiptRequest.IsMultiUseVoucherSale())
+        if (!request.ReceiptRequest.IsV2Receipt())
         {
+            var receiptResponse = request.ReceiptResponse;
+            if (request.ReceiptRequest.IsV1MultiUseVoucherSale())
+            {
+                return new ProcessResponse
+                {
+                    ReceiptResponse = await CreateNonFiscalRequestAsync(receiptResponse, request.ReceiptRequest).ConfigureAwait(false)
+                };
+            }
+
+            FiscalReceiptResponse fiscalResponse;
+            if (request.ReceiptRequest.IsV1Void())
+            {
+                // TODO how will we get the refund information? ==> signatures??
+                var fiscalReceiptRefund = await CreateRefundAsync(request.ReceiptRequest, -1, -1, DateTime.MinValue).ConfigureAwait(false);
+                fiscalResponse = await FiscalReceiptRefundAsync(fiscalReceiptRefund).ConfigureAwait(false);
+            }
+            else
+            {
+                var fiscalReceiptinvoice = CreateInvoice(request.ReceiptRequest);
+                fiscalResponse = await FiscalReceiptInvoiceAsync(fiscalReceiptinvoice).ConfigureAwait(false);
+            }
+            if (!fiscalResponse.Success)
+            {
+                throw new SSCDErrorException(fiscalResponse.SSCDErrorInfo.Type, fiscalResponse.SSCDErrorInfo.Info);
+            }
+            else
+            {
+                receiptResponse.ftSignatures = SignatureFactory.CreatePosReceiptSignatures(fiscalResponse.ReceiptNumber, fiscalResponse.ZRepNumber, fiscalResponse.Amount, fiscalResponse.ReceiptDateTime);
+            }
             return new ProcessResponse
             {
-                ReceiptResponse = await CreateNonFiscalRequestAsync(receiptResponse, request.ReceiptRequest).ConfigureAwait(false)
+                ReceiptResponse = receiptResponse
             };
         }
+        else
+        {
+            var receiptCase = request.ReceiptRequest.GetReceiptCase();
+            if (request.ReceiptRequest.IsInitialOperationReceipt())
+            {
+                return CreateResponse(await PerformInitOperationAsync(request.ReceiptRequest, request.ReceiptResponse));
+            }
 
-        FiscalReceiptResponse fiscalResponse;
-        if (request.ReceiptRequest.IsVoid())
-        {
-            // TODO how will we get the refund information? ==> signatures??
-            var fiscalReceiptRefund = await CreateRefundAsync(request.ReceiptRequest, -1, -1, DateTime.MinValue).ConfigureAwait(false);
-            fiscalResponse = await FiscalReceiptRefundAsync(fiscalReceiptRefund).ConfigureAwait(false);
+            if (request.ReceiptRequest.IsOutOfOperationReceipt())
+            {
+                return CreateResponse(await PerformOutOfOperationAsync(request.ReceiptRequest, request.ReceiptResponse));
+            }
+
+            if (request.ReceiptRequest.IsZeroReceipt())
+            {
+                return CreateResponse(await PerformZeroReceiptOperationAsync(request.ReceiptRequest, request.ReceiptResponse));
+            }
+
+            if (IsNoActionCase(request.ReceiptRequest))
+            {
+                return CreateResponse(request.ReceiptResponse);
+            }
+
+            if (request.ReceiptRequest.IsVoid())
+            {
+                return await ProcessVoidReceipt(request, cashuuid);
+            }
+
+            if (request.ReceiptRequest.IsDailyClosing())
+            {
+                return CreateResponse(await PerformDailyCosing(request.ReceiptRequest, request.ReceiptResponse, cashuuid));
+            }
+
+            switch (receiptCase)
+            {
+                case (long) ITReceiptCases.UnknownReceipt0x0000:
+                case (long) ITReceiptCases.PointOfSaleReceipt0x0001:
+                case (long) ITReceiptCases.PaymentTransfer0x0002:
+                case (long) ITReceiptCases.Protocol0x0005:
+                default:
+                    return CreateResponse(await PerformClassicReceiptAsync(request.ReceiptRequest, request.ReceiptResponse, cashuuid));
+            }
         }
-        else
+    }
+
+    private async Task<ProcessResponse> ProcessVoidReceipt(ProcessRequest request)
+    {
+        throw new NotImplementedException();
+    }
+
+
+    private async Task<ReceiptResponse> PerformInitOperationAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse) => await CreateMiddlewareNoFiscalRequestAsync(receiptResponse, receiptRequest).ConfigureAwait(false);
+
+    private async Task<ReceiptResponse> PerformZeroReceiptOperationAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse) => await CreateMiddlewareNoFiscalRequestAsync(receiptResponse, receiptRequest).ConfigureAwait(false);
+
+    private async Task<ReceiptResponse> PerformOutOfOperationAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse) => await CreateMiddlewareNoFiscalRequestAsync(receiptResponse, receiptRequest).ConfigureAwait(false);
+
+    private async Task<ReceiptResponse> CreateMiddlewareNoFiscalRequestAsync(ReceiptResponse receiptResponse, ReceiptRequest request)
+    {
+        var nonFiscalRequest = new NonFiscalRequest
         {
-            var fiscalReceiptinvoice = CreateInvoice(request.ReceiptRequest);
-            fiscalResponse = await FiscalReceiptInvoiceAsync(fiscalReceiptinvoice).ConfigureAwait(false);
-        }
-        if (!fiscalResponse.Success)
+            NonFiscalPrints = new List<NonFiscalPrint>()
+        };
+
+        try
         {
-            throw new SSCDErrorException(fiscalResponse.SSCDErrorInfo.Type, fiscalResponse.SSCDErrorInfo.Info);
+            _semaphore.Wait(_configuration.LockTimeoutMs);
+            var content = _epsonXmlWriter.CreateNonFiscalReceipt(new NonFiscalRequest
+            {
+                NonFiscalPrints = new List<NonFiscalPrint>
+                {
+                    new NonFiscalPrint
+                    {
+                        Data = $"{request.ftReceiptCase.ToString("x")} case for Queue {receiptResponse.ftCashBoxIdentification}"
+                    },
+                    new NonFiscalPrint
+                    {
+                        Data = $"Processing"
+                    }
+                }
+            });
+            var httpResponse = await SendRequestAsync(content);
+
+            using var responseContent = await httpResponse.Content.ReadAsStreamAsync();
+            var result = SoapSerializer.Deserialize<PrinterResponse>(responseContent);
+            var response = new Response()
+            {
+                Success = result?.Success ?? false
+            };
+
+            if (!response.Success)
+            {
+                response.SSCDErrorInfo = GetErrorInfo(result?.Code, result?.Status, null);
+            }
+            if (response.Success)
+            {
+                receiptResponse.ftSignatures = SignatureFactory.CreateVoucherSignatures(nonFiscalRequest);
+            }
         }
-        else
+        catch (Exception e)
         {
-            receiptResponse.ftReceiptIdentification += $"{fiscalResponse.ReceiptNumber}";
-            receiptResponse.ftSignatures = SignatureFactory.CreatePosReceiptSignatures(fiscalResponse.ReceiptNumber, fiscalResponse.ZRepNumber, fiscalResponse.Amount, fiscalResponse.ReceiptDateTime);
+            var msg = e.Message;
+            if (e.InnerException != null)
+            {
+                msg = msg + " " + e.InnerException.Message;
+            }
+            Response? response = null;
+            if (IsConnectionException(e))
+            {
+                response = new Response() { Success = false, SSCDErrorInfo = new SSCDErrorInfo() { Info = msg, Type = SSCDErrorType.Connection } };
+            }
+            else
+            {
+                response = new Response() { Success = false, SSCDErrorInfo = new SSCDErrorInfo() { Info = msg, Type = SSCDErrorType.General } };
+            }
+
+            throw new SSCDErrorException(response.SSCDErrorInfo.Type, response.SSCDErrorInfo.Info);
         }
+        finally
+        {
+            _semaphore.Release();
+        }
+        return receiptResponse;
+    }
+
+    private static ProcessResponse CreateResponse(ReceiptResponse receiptResponse)
+    {
         return new ProcessResponse
         {
             ReceiptResponse = receiptResponse
         };
     }
+
+    public bool IsNoActionCase(ReceiptRequest request)
+    {
+        return _nonProcessingCases.Select(x => (long) x).Contains(request.GetReceiptCase());
+    }
+
+    private readonly List<ITReceiptCases> _nonProcessingCases = new List<ITReceiptCases>
+        {
+            ITReceiptCases.PointOfSaleReceiptWithoutObligation0x0003,
+            ITReceiptCases.ECommerce0x0004,
+            ITReceiptCases.InvoiceUnknown0x1000,
+            ITReceiptCases.InvoiceB2C0x1001,
+            ITReceiptCases.InvoiceB2B0x1002,
+            ITReceiptCases.InvoiceB2G0x1003,
+            ITReceiptCases.ZeroReceipt0x200,
+            ITReceiptCases.OneReceipt0x2001,
+            ITReceiptCases.ShiftClosing0x2010,
+            ITReceiptCases.MonthlyClosing0x2012,
+            ITReceiptCases.YearlyClosing0x2013,
+            ITReceiptCases.ProtocolUnspecified0x3000,
+            ITReceiptCases.ProtocolTechnicalEvent0x3001,
+            ITReceiptCases.ProtocolAccountingEvent0x3002,
+            ITReceiptCases.InternalUsageMaterialConsumption0x3003,
+            ITReceiptCases.InitSCUSwitch0x4011,
+            ITReceiptCases.FinishSCUSwitch0x4012,
+        };
 
     public Task<RTInfo> GetRTInfoAsync() => throw new NotImplementedException();
 }

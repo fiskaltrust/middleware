@@ -1,8 +1,7 @@
 ﻿using System.Collections.Generic;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.Middleware.SCU.IT.Abstraction;
 
-namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer;
+namespace fiskaltrust.Middleware.SCU.IT.Abstraction;
 
 public static class ReceiptCaseHelper
 {

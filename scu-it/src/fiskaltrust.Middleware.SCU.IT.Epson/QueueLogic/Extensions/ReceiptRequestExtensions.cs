@@ -9,7 +9,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.QueueLogic.Extensions
 {
     public static class ReceiptRequestExtensions
     {
-        public static bool IsMultiUseVoucherSale(this ReceiptRequest receiptRequest)
+        public static bool IsV1MultiUseVoucherSale(this ReceiptRequest receiptRequest)
         {
             var hasChargeItemVoucher = receiptRequest?.cbChargeItems?.Any(x => x.IsMultiUseVoucherSale()) ?? false;
             var hasPayItemVoucher = receiptRequest?.cbPayItems?.Any(x => x.IsVoucherSale()) ?? false;
@@ -25,7 +25,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.QueueLogic.Extensions
             return false;
         }
 
-        public static bool IsVoid(this ReceiptRequest receiptRequest)
+        public static bool IsV1Void(this ReceiptRequest receiptRequest)
         {
             return (receiptRequest.ftReceiptCase & 0x0000_0000_0004_0000) > 0x0000;
         }
