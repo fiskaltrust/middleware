@@ -54,7 +54,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
                 }
             };
 
-            var rtInfo = await itsscd.ProcessReceiptAsync(processRequest);
+            _ = await itsscd.ProcessReceiptAsync(processRequest);
         }
 
         [Fact]
@@ -98,7 +98,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
                 }
             };
 
-            var rtInfo = await itsscd.ProcessReceiptAsync(processRequest);
+            _ = await itsscd.ProcessReceiptAsync(processRequest);
         }
 
         [Fact]
@@ -142,7 +142,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
                 }
             };
 
-            var rtInfo = await itsscd.ProcessReceiptAsync(processRequest);
+            _ = await itsscd.ProcessReceiptAsync(processRequest);
         }
 
         [Fact]
@@ -164,7 +164,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
 
             var itsscd = serviceCollection.BuildServiceProvider().GetRequiredService<IITSSCD>();
 
-            var rtInfo = await itsscd.GetRTInfoAsync();
+            _ = await itsscd.GetRTInfoAsync();
         }
 
         public static IEnumerable<object[]> rtNoHandleReceipts()
@@ -230,7 +230,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
 
             var itsscd = serviceCollection.BuildServiceProvider().GetRequiredService<IITSSCD>();
 
-            var rtInfo = await itsscd.ProcessReceiptAsync(new ProcessRequest
+            _ = await itsscd.ProcessReceiptAsync(new ProcessRequest
             {
                 ReceiptRequest = receiptRequest,
                 ReceiptResponse = new ReceiptResponse
@@ -276,7 +276,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
 
             var itsscd = serviceCollection.BuildServiceProvider().GetRequiredService<IITSSCD>();
 
-            var rtInfo = await itsscd.ProcessReceiptAsync(new ProcessRequest
+            _ = await itsscd.ProcessReceiptAsync(new ProcessRequest
             {
                 ReceiptRequest = receiptRequest,
                 ReceiptResponse = new ReceiptResponse

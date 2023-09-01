@@ -58,6 +58,10 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.QueueLogic.Extensions
 
         public static List<Payment> GetPayments(this ReceiptRequest receiptRequest)
         {
+            if (receiptRequest == null)
+            {
+                return new List<Payment>();
+            }
             var sumChargeItems = receiptRequest.cbChargeItems?.Sum(x => x.GetAmount()) ?? 0;
             var sumPayItems = receiptRequest.cbPayItems?.Sum(x => x.GetAmount()) ?? 0;
 
@@ -78,36 +82,40 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson.QueueLogic.Extensions
                 PaymentType = p.GetPaymentType(),
                 AdditionalInformation = p.ftPayItemCaseData
             }).ToList() ?? new List<Payment>();
-            var vouchersFromChargeItms = receiptRequest.cbChargeItems.Where(x => x.IsMultiUseVoucherRedeem()).Select(ch =>
+            var vouchersFromChargeItms = receiptRequest.cbChargeItems?.Where(x => x.IsMultiUseVoucherRedeem()).Select(ch =>
                 new Payment
                 {
                     Amount = Math.Abs(ch.Amount),
                     Description = ch.Description,
                     PaymentType = PaymentType.Voucher,
                     AdditionalInformation = ch.ftChargeItemCaseData
-                }).ToList();
+                }).ToList() ?? new List<Payment>();
             payments.AddRange(vouchersFromChargeItms);
             return payments;
         }
 
         private static List<Payment> GetPaymentFullyRedeemedByVouchers(this ReceiptRequest receiptRequest)
         {
+            if(receiptRequest == null)
+            {
+                return new List<Payment>();
+            }
             var sumChargeItemsNoVoucher = receiptRequest.cbChargeItems?.Where(x => !x.IsPaymentAdjustment()).Sum(x => x.GetAmount()) ?? 0;
 
             var payments = new List<Payment>();
             if ((receiptRequest.cbPayItems != null && receiptRequest.cbPayItems.Any(x => x.IsVoucherRedeem())) ||
                 (receiptRequest.cbChargeItems != null && receiptRequest.cbChargeItems.Any(x => x.IsMultiUseVoucherRedeem())))
             {
-                var sumVoucher = receiptRequest.cbPayItems.Where(x => x.IsVoucherRedeem()).Sum(x => x.GetAmount()) +
-                    receiptRequest.cbChargeItems.Where(x => x.IsMultiUseVoucherRedeem()).Sum(x => Math.Abs(x.Amount));
+                var sumVoucher = receiptRequest.cbPayItems?.Where(x => x.IsVoucherRedeem()).Sum(x => x.GetAmount()) +
+                    receiptRequest.cbChargeItems?.Where(x => x.IsMultiUseVoucherRedeem()).Sum(x => Math.Abs(x.Amount));
                 if (sumVoucher > sumChargeItemsNoVoucher)
                 {
-                    var dscrPay = receiptRequest.cbPayItems.Where(x => x.IsVoucherRedeem()).Select(x => x.Description).ToList();
-                    var dscrCharge = receiptRequest.cbChargeItems.Where(x => x.IsMultiUseVoucherRedeem()).Select(x => x.Description).ToList();
+                    var dscrPay = receiptRequest.cbPayItems?.Where(x => x.IsVoucherRedeem()).Select(x => x.Description).ToList() ?? new List<string>();
+                    var dscrCharge = receiptRequest.cbChargeItems?.Where(x => x.IsMultiUseVoucherRedeem()).Select(x => x.Description).ToList() ?? new List<string>();
                     dscrPay.AddRange(dscrCharge);
 
-                    var addiPay = receiptRequest.cbPayItems.Where(x => x.IsVoucherRedeem()).Select(x => x.ftPayItemCaseData).ToList();
-                    var addiCharge = receiptRequest.cbChargeItems.Where(x => x.IsMultiUseVoucherRedeem()).Select(x => x.ftChargeItemCaseData).ToList();
+                    var addiPay = receiptRequest.cbPayItems?.Where(x => x.IsVoucherRedeem()).Select(x => x.ftPayItemCaseData).ToList() ?? new List<string>();
+                    var addiCharge = receiptRequest.cbChargeItems?.Where(x => x.IsMultiUseVoucherRedeem()).Select(x => x.ftChargeItemCaseData).ToList() ?? new List<string>();
                     addiPay.AddRange(addiCharge);
 
                     payments.Add(

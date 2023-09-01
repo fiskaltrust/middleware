@@ -14,7 +14,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
 
             var customRTServerClient = new CustomRTServerClient(new CustomRTServerConfiguration { ServerUrl = "https://a3e3-88-116-45-202.ngrok-free.app/", Username = "0001ab05", Password = "admin" });
 
-            var result = await customRTServerClient.InsertCashRegisterAsync("demo", "1010", "1000", "admin", "cf");
+            _ = await customRTServerClient.InsertCashRegisterAsync("demo", "1010", "1000", "admin", "cf");
         }
 
 
@@ -24,7 +24,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
 
             var customRTServerClient = new CustomRTServerClient(new CustomRTServerConfiguration { ServerUrl = "https://a3e3-88-116-45-202.ngrok-free.app/", Username = "0001ab05", Password = "admin" });
 
-            var result = await customRTServerClient.GetDailyStatusAsync("0001ab05");
+            _ = await customRTServerClient.GetDailyStatusAsync("0001ab05");
         }
 
         [Fact]
@@ -33,7 +33,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
 
             var customRTServerClient = new CustomRTServerClient(new CustomRTServerConfiguration { ServerUrl = "https://a3e3-88-116-45-202.ngrok-free.app/", Username = "0001ab05", Password = "admin" });
 
-            var result = await customRTServerClient.CancelCashRegisterAsync("0002ab77", "12345688909");
+            _ = await customRTServerClient.CancelCashRegisterAsync("0002ab77", "12345688909");
         }
     }
 }
