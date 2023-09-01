@@ -41,28 +41,28 @@ public static class SignatureFactory
                 Caption = "<receipt-number>",
                 Data = receiptNumber.ToString(),
                 ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                ftSignatureType = 0x4954000000000000 & (long) SignatureTypesIT.RTDocumentNumber
+                ftSignatureType = 0x4954000000000000 | (long) SignatureTypesIT.RTDocumentNumber
             },
             new SignaturItem
             {
                 Caption = "<z-number>",
                 Data = zRepNumber.ToString(),
                 ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                ftSignatureType = 0x4954000000000000 & (long) SignatureTypesIT.RTZNumber
+                ftSignatureType = 0x4954000000000000 | (long) SignatureTypesIT.RTZNumber
             },
             new SignaturItem
             {
                 Caption = "<receipt-amount>",
                 Data = amount.ToString(ITConstants.CurrencyFormatter),
                 ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                ftSignatureType = 0x4954000000000000 & (long) SignatureTypesIT.RTAmount
+                ftSignatureType = 0x4954000000000000 | (long) SignatureTypesIT.RTAmount
             },
             new SignaturItem
             {
                 Caption = "<receipt-timestamp>",
                 Data = receiptDateTime.ToString("yyyy-MM-dd HH:mm:ss"),
                 ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                ftSignatureType = 0x4954000000000000 & (long) SignatureTypesIT.RTDocumentMoment
+                ftSignatureType = 0x4954000000000000 | (long) SignatureTypesIT.RTDocumentMoment
             }
         };
     }
