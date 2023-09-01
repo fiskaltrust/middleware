@@ -18,7 +18,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
         }
 
 
-        [Fact]
+        [Fact(Skip = "Currently not working since we don't have a cert.")]
         public async Task GetDailyStatusAsync()
         {
 

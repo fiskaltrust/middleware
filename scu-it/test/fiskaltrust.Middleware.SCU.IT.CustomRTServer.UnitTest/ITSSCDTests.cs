@@ -241,7 +241,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
 
         }
 
-        [Theory]
+        [Theory(Skip = "Currently not working since we don't have a certificate")]
         [MemberData(nameof(rtHandledReceipts))]
         public async Task ProcessAsync_Should_Do_Things(ITReceiptCases receiptCase)
         {
