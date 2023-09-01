@@ -10,8 +10,6 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
     {
         public ITReceiptCases ReceiptCase { get; }
 
-        public bool FailureModeAllowed { get; }
-
         Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ExecuteAsync(ftQueue queue, ftQueueIT queueIt, ReceiptRequest request, ReceiptResponse receiptResponse, ftQueueItem queueItem);
     }
 }

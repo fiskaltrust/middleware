@@ -17,10 +17,6 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.DailyOperations
 
         public ITReceiptCases ReceiptCase => ITReceiptCases.MonthlyClosing0x2012;
 
-        public bool FailureModeAllowed => true;
-
-        public bool GenerateJournalIT => true;
-
         public MonthlyClosing0x2012(IITSSCDProvider itSSCDProvider)
         {
             _itSSCDProvider = itSSCDProvider;
@@ -36,6 +32,11 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.DailyOperations
             });
             var zNumber = long.Parse(result.ReceiptResponse.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 & (long) SignatureTypesIT.RTZNumber)).Data);
             receiptResponse.ftReceiptIdentification += $"Z{zNumber}";
+
+            var signatures = new List<SignaturItem>();
+            signatures.AddRange(receiptResponse.ftSignatures);
+            signatures.AddRange(result.ReceiptResponse.ftSignatures);
+            receiptResponse.ftSignatures = signatures.ToArray();
             return await Task.FromResult((receiptResponse, new List<ftActionJournal>
             {
                 actionJournalEntry

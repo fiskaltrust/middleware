@@ -9,6 +9,7 @@ using fiskaltrust.Middleware.Contracts.Extensions;
 using System.Linq;
 using Newtonsoft.Json;
 using System;
+using fiskaltrust.ifPOS.v1.it;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.v2.DailyOperations
 {
@@ -20,11 +21,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.DailyOperations
 
         public ITReceiptCases ReceiptCase => ITReceiptCases.ZeroReceipt0x200;
 
-        public bool FailureModeAllowed => true;
-
-        public bool GenerateJournalIT => true;
-
-        public ZeroReceipt0x200(IITSSCDProvider itSSCDProvider,ILogger<ZeroReceipt0x200> logger, IConfigurationRepository configurationRepository)
+        public ZeroReceipt0x200(IITSSCDProvider itSSCDProvider, ILogger<ZeroReceipt0x200> logger, IConfigurationRepository configurationRepository)
         {
             _itSSCDProvider = itSSCDProvider;
             _logger = logger;
@@ -50,6 +47,22 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.DailyOperations
                 receiptResponse.SetFtStateData(new StateDetail() { FailedReceiptCount = queueIT.SSCDFailCount, FailMoment = queueIT.SSCDFailMoment, SigningDeviceAvailable = signingAvailable });
                 return (receiptResponse, new List<ftActionJournal>());
             }
+            try
+            {
+
+                var establishConnection = await _itSSCDProvider.ProcessReceiptAsync(new ProcessRequest
+                {
+                    ReceiptRequest = request,
+                    ReceiptResponse = receiptResponse
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to re-establish connection to SCU.");
+                receiptResponse.SetFtStateData(new StateDetail() { FailedReceiptCount = queueIT.SSCDFailCount, FailMoment = queueIT.SSCDFailMoment, SigningDeviceAvailable = false });
+                return (receiptResponse, new List<ftActionJournal>());
+            }
+
             var sentReceipts = new List<string>();
             var signatures = new List<SignaturItem>();
 

@@ -187,7 +187,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
 
         [Theory]
         [MemberData(nameof(allNonInitialOperationReceipts))]
-        public async Task AllReceiptCases_ShouldReturnDisabledMessage_IfQueueHasNotStarted(ITReceiptCases receiptCase)
+        public async Task AllNonInitialOperationReceiptCases_ShouldReturnDisabledMessage_IfQueueHasNotStarted(ITReceiptCases receiptCase)
         {
             var initOperationReceipt = $$"""
 {

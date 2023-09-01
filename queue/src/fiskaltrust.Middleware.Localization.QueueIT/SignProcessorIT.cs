@@ -12,7 +12,6 @@ using fiskaltrust.Middleware.Localization.QueueIT.Extensions;
 using fiskaltrust.Middleware.Localization.QueueIT.v2.DailyOperations;
 using fiskaltrust.Middleware.Localization.QueueIT.v2.Lifecycle;
 using fiskaltrust.Middleware.Localization.QueueIT.Services;
-using Org.BouncyCastle.Bcpg;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT
 {
@@ -50,17 +49,20 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
                 return await ReturnWithQueueIsDisabled(queue, queueIT, request, queueItem);
             }
 
+            if (receiptTypeProcessor is InitialOperationReceipt0x4001)
+            {
+                if (queue.IsNew())
+                {
+                    throw new Exception("The queue is already operational. It is not allowed to send another InitOperation Receipt");
+                }
+
+                (var response, var actionJournals) = await receiptTypeProcessor.ExecuteAsync(queue, queueIT, request, receiptResponse, queueItem).ConfigureAwait(false);
+                return (response, actionJournals);
+            }
+
             if (queue.IsNew())
             {
-                if (receiptTypeProcessor is InitialOperationReceipt0x4001)
-                {
-                    return await ReturnWithQueueIsNotActive(queue, queueIT, request, queueItem);
-                }
-                else
-                {
-                    (var response, var actionJournals) = await receiptTypeProcessor.ExecuteAsync(queue, queueIT, request, receiptResponse, queueItem).ConfigureAwait(false);
-                    return (response, actionJournals);
-                }
+                return await ReturnWithQueueIsNotActive(queue, queueIT, request, queueItem);
             }
 
             if (queueIT.SSCDFailCount > 0 && receiptTypeProcessor is not ZeroReceipt0x200)
@@ -100,12 +102,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to process request");
-                if (receiptTypeProcessor.FailureModeAllowed)
-                {
-                    return await ProcessFailedReceiptRequest(queueIT, queueItem, receiptResponse);
-                }
-                // TBD => set errorstate because we arent' able to proceed with this
-                throw;
+                return await ProcessFailedReceiptRequest(queueIT, queueItem, receiptResponse);
             }
         }
 

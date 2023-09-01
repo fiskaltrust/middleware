@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using fiskaltrust.Middleware.Localization.QueueIT.Services;
 using fiskaltrust.ifPOS.v1.it;
 using System.Linq;
+using Org.BouncyCastle.Asn1.Ocsp;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.v2.DailyOperations
 {
@@ -14,10 +15,6 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.DailyOperations
         private readonly IITSSCDProvider _itSSCDProvider;
 
         public ITReceiptCases ReceiptCase => ITReceiptCases.YearlyClosing0x2013;
-
-        public bool FailureModeAllowed => true;
-
-        public bool GenerateJournalIT => true;
 
         public YearlyClosing0x2013(IITSSCDProvider itSSCDProvider)
         {
@@ -34,6 +31,11 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.DailyOperations
             });
             var zNumber = long.Parse(result.ReceiptResponse.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTZNumber)).Data);
             receiptResponse.ftReceiptIdentification += $"Z{zNumber}";
+
+            var signatures = new List<SignaturItem>();
+            signatures.AddRange(receiptResponse.ftSignatures);
+            signatures.AddRange(result.ReceiptResponse.ftSignatures);
+            receiptResponse.ftSignatures = signatures.ToArray();
             return await Task.FromResult((receiptResponse, new List<ftActionJournal>
             {
                 actionJournalEntry

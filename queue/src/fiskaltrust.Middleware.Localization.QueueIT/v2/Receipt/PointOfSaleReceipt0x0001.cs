@@ -15,10 +15,6 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.Receipt
 
         public ITReceiptCases ReceiptCase => ITReceiptCases.PointOfSaleReceipt0x0001;
 
-        public bool FailureModeAllowed => true;
-
-        public bool GenerateJournalIT => true;
-
         public PointOfSaleReceipt0x0001(IITSSCDProvider itSSCDProvider)
         {
             _itSSCDProvider = itSSCDProvider;
@@ -33,9 +29,13 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.Receipt
             });
             var documentNumber = result.ReceiptResponse.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentNumber)).Data;
             var zNumber = result.ReceiptResponse.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTZNumber)).Data;
-            result.ReceiptResponse.ftReceiptIdentification += $"{zNumber}-{documentNumber}";
+            receiptResponse.ftReceiptIdentification += $"{zNumber}-{documentNumber}";
 
-            return (result.ReceiptResponse, new List<ftActionJournal>());
+            var signatures = new List<SignaturItem>();
+            signatures.AddRange(receiptResponse.ftSignatures);
+            signatures.AddRange(result.ReceiptResponse.ftSignatures);
+            receiptResponse.ftSignatures = signatures.ToArray();
+            return (receiptResponse, new List<ftActionJournal>());
         }
     }
 }

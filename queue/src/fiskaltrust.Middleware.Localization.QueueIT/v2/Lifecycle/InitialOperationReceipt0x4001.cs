@@ -7,9 +7,7 @@ using fiskaltrust.ifPOS.v1.it;
 using System.Collections.Generic;
 using fiskaltrust.Middleware.Contracts.Extensions;
 using System;
-using System.Linq;
 using Newtonsoft.Json;
-using fiskaltrust.storage.serialization.DE.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.v2.Lifecycle
 {
@@ -19,10 +17,6 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.Lifecycle
         private readonly IConfigurationRepository _configurationRepository;
 
         public ITReceiptCases ReceiptCase => ITReceiptCases.InitialOperationReceipt0x4001;
-
-        public bool FailureModeAllowed => true;
-
-        public bool GenerateJournalIT => true;
 
         public InitialOperationReceipt0x4001(IITSSCDProvider itSSCDProvider, IConfigurationRepository configurationRepository)
         {
@@ -46,19 +40,21 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.Lifecycle
                 var actionJournal = ActionJournalFactory.CreateInitialOperationActionJournal(queue, queueItem, queueIt, request);
                 queue.StartMoment = DateTime.UtcNow;
 
+                await _configurationRepository.InsertOrUpdateQueueAsync(queue).ConfigureAwait(false);
                 var result = await _itSSCDProvider.ProcessReceiptAsync(new ProcessRequest
                 {
                     ReceiptRequest = request,
                     ReceiptResponse = receiptResponse,
                 });
-                if (!result.ReceiptResponse.ftSignatures.Any())
+                var signatures = new List<SignaturItem>
                 {
-                    result.ReceiptResponse.ftSignatures = new SignaturItem[]
-                    {
-                        signature
-                    };
-                }
-                return (result.ReceiptResponse, new List<ftActionJournal>
+                    signature
+                };
+                signatures.AddRange(receiptResponse.ftSignatures);
+                signatures.AddRange(result.ReceiptResponse.ftSignatures);
+                receiptResponse.ftSignatures = signatures.ToArray();
+
+                return (receiptResponse, new List<ftActionJournal>
                 {
                     actionJournal
                 });
