@@ -26,5 +26,14 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
 
             var result = await customRTServerClient.GetDailyStatusAsync("0001ab05");
         }
+
+        [Fact]
+        public async Task CancelCashRegister()
+        {
+
+            var customRTServerClient = new CustomRTServerClient(new CustomRTServerConfiguration { ServerUrl = "https://a3e3-88-116-45-202.ngrok-free.app/", Username = "0001ab05", Password = "admin" });
+
+            var result = await customRTServerClient.CancelCashRegisterAsync("0002ab77", "12345688909");
+        }
     }
 }

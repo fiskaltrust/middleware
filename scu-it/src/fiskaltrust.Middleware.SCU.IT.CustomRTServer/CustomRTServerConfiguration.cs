@@ -15,18 +15,18 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer
     {
         public Guid AccountId { get; set; }
 
-        public string AccountName { get; set; } = string.Empty;
+        public string? AccountName { get; set; }
 
-        public string Street { get; set; } = string.Empty;
+        public string? Street { get; set; } 
 
-        public string Zip { get; set; } = string.Empty;
+        public string? Zip { get; set; }
 
-        public string City { get; set; } = string.Empty;
+        public string? City { get; set; } 
 
-        public string Country { get; set; } = string.Empty;
+        public string? Country { get; set; } 
 
-        public string TaxId { get; set; } = string.Empty;
+        public string? TaxId { get; set; } 
 
-        public string VatId { get; set; } = string.Empty;
+        public string? VatId { get; set; } 
     }
 }

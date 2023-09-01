@@ -26,6 +26,26 @@ public class CustomRTServerClient
         _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", authHeader);
     }
 
+    public async Task<GetDeviceMemStatusResponse> GetDeviceMemStatusAsync()
+    {
+        var request = new
+        {
+            data = new
+            {
+                type = "3"
+            }
+        };
+        var result = await _httpClient.PostAsync("/getDeviceMemStatus.php", new StringContent(JsonConvert.SerializeObject(request)));
+        // TODO Check error
+        var resultContent = await result.Content.ReadAsStringAsync();
+        var data = JsonConvert.DeserializeObject<GetDeviceMemStatusResponse>(resultContent);
+        if (data.responseCode != 0)
+        {
+            throw new Exception(data.responseDesc);
+        }
+        return data;
+    }
+
     public async Task<GetDailyStatusResponse> GetDailyStatusAsync(string cashuuid)
     {
         var request = new
@@ -38,7 +58,12 @@ public class CustomRTServerClient
         var result = await _httpClient.PostAsync("/getdailystatus.php", new StringContent(JsonConvert.SerializeObject(request)));
         // TODO Check error
         var resultContent = await result.Content.ReadAsStringAsync();
-        return JsonConvert.DeserializeObject<GetDailyStatusResponse>(resultContent);
+        var data = JsonConvert.DeserializeObject<GetDailyStatusResponse>(resultContent);
+        if (data.responseCode != 0)
+        {
+            throw new Exception(data.responseDesc);
+        }
+        return data;
     }
 
     public async Task<GetDailyOpenResponse> GetDailyOpenAsync(string cashuuid, DateTime dateTime)
@@ -54,7 +79,12 @@ public class CustomRTServerClient
         var result = await _httpClient.PostAsync("/getDailyOpen.php", new StringContent(JsonConvert.SerializeObject(request)));
         // TODO Check error
         var resultContent = await result.Content.ReadAsStringAsync();
-        return JsonConvert.DeserializeObject<GetDailyOpenResponse>(resultContent);
+        var data = JsonConvert.DeserializeObject<GetDailyOpenResponse>(resultContent);
+        if (data.responseCode != 0)
+        {
+            throw new Exception(data.responseDesc);
+        }
+        return data;
     }
 
     public async Task<InsertZDocumentResponse> InsertZDocumentAsync(string cashuuid, DateTime dateTime, long znum, string amount)
@@ -72,7 +102,12 @@ public class CustomRTServerClient
         var result = await _httpClient.PostAsync("/insertZDocument.php", new StringContent(JsonConvert.SerializeObject(request)));
         // TODO Check error
         var resultContent = await result.Content.ReadAsStringAsync();
-        return JsonConvert.DeserializeObject<InsertZDocumentResponse>(resultContent);
+        var data = JsonConvert.DeserializeObject<InsertZDocumentResponse>(resultContent);
+        if (data.responseCode != 0)
+        {
+            throw new Exception(data.responseDesc);
+        }
+        return data;
     }
 
     public async Task<InsertFiscalDocumentResponse> InsertFiscalDocumentAsync(CommercialDocument commercialDocument)
@@ -80,7 +115,12 @@ public class CustomRTServerClient
         var result = await _httpClient.PostAsync("/insertFiscalDocument.php", new StringContent(JsonConvert.SerializeObject(commercialDocument)));
         // TODO Check error
         var resultContent = await result.Content.ReadAsStringAsync();
-        return JsonConvert.DeserializeObject<InsertFiscalDocumentResponse>(resultContent);
+        var data = JsonConvert.DeserializeObject<InsertFiscalDocumentResponse>(resultContent);
+        if (data.responseCode != 0)
+        {
+            throw new Exception(data.responseDesc);
+        }
+        return data;
     }
 
     public async Task<InsertFiscalDocumentArrayResponse> InsertFiscalDocumentArrayAsync(FDocumentArray fiscalData)
@@ -92,7 +132,12 @@ public class CustomRTServerClient
         var result = await _httpClient.PostAsync("/insertFiscalDocumentArray.php", new StringContent(JsonConvert.SerializeObject(request)));
         // TODO Check error
         var resultContent = await result.Content.ReadAsStringAsync();
-        return JsonConvert.DeserializeObject<InsertFiscalDocumentArrayResponse>(resultContent);
+        var data = JsonConvert.DeserializeObject<InsertFiscalDocumentArrayResponse>(resultContent);
+        if (data.responseCode != 0)
+        {
+            throw new Exception(data.responseDesc);
+        }
+        return data;
     }
 
     public async Task<InsertCashRegisterAsyncResponse> InsertCashRegisterAsync(string description, string shop, string name, string password, string cf)
@@ -111,7 +156,12 @@ public class CustomRTServerClient
         var result = await _httpClient.PostAsync("/insertCashRegister.php", new StringContent(JsonConvert.SerializeObject(request)));
         // TODO Check error
         var resultContent = await result.Content.ReadAsStringAsync();
-        return JsonConvert.DeserializeObject<InsertCashRegisterAsyncResponse>(resultContent);
+        var data = JsonConvert.DeserializeObject<InsertCashRegisterAsyncResponse>(resultContent);
+        if (data.responseCode != 0)
+        {
+            throw new Exception(data.responseDesc);
+        }
+        return data;
     }
 
     public async Task<UpdateCashRegisterResponse> UpdateCashRegisterAsync(string cashuuid, string password, string description, string cf)
@@ -130,7 +180,12 @@ public class CustomRTServerClient
         var result = _httpClient.PostAsync("/updateCashRegister.php/", new StringContent(JsonConvert.SerializeObject(request)));
         // TODO Check error
         var resultContent = await result.Result.Content.ReadAsStringAsync();
-        return JsonConvert.DeserializeObject<UpdateCashRegisterResponse>(resultContent);
+        var data = JsonConvert.DeserializeObject<UpdateCashRegisterResponse>(resultContent);
+        if (data.responseCode != 0)
+        {
+            throw new Exception(data.responseDesc);
+        }
+        return data;
     }
 
     public async Task<CancelCashRegisterResponse> CancelCashRegisterAsync(string cashuuid, string cf)
@@ -144,10 +199,15 @@ public class CustomRTServerClient
                 cashuuid
             }
         };
-        var result = _httpClient.PostAsync("/updateCashRegister.php/", new StringContent(JsonConvert.SerializeObject(request)));
+        var result = await _httpClient.PostAsync("/updateCashRegister.php", new StringContent(JsonConvert.SerializeObject(request)));
         // TODO Check error
-        var resultContent = await result.Result.Content.ReadAsStringAsync();
-        return JsonConvert.DeserializeObject<CancelCashRegisterResponse>(resultContent);
+        var resultContent = await result.Content.ReadAsStringAsync();
+        var data = JsonConvert.DeserializeObject<CancelCashRegisterResponse>(resultContent);
+        if (data.responseCode != 0)
+        {
+            throw new Exception(data.responseDesc);
+        }
+        return data;
     }
 
     public async Task<ReactivateCanceledCashRegisterResponse> ReactivateCanceledCashRegisterAsync(string cashuuid, string cf)
@@ -161,9 +221,9 @@ public class CustomRTServerClient
                 cashuuid
             }
         };
-        var result = _httpClient.PostAsync("/updateCashRegister.php/", new StringContent(JsonConvert.SerializeObject(request)));
+        var result = await _httpClient.PostAsync("/updateCashRegister.php/", new StringContent(JsonConvert.SerializeObject(request)));
         // TODO Check error
-        var resultContent = await result.Result.Content.ReadAsStringAsync();
+        var resultContent = await result.Content.ReadAsStringAsync();
         return JsonConvert.DeserializeObject<ReactivateCanceledCashRegisterResponse>(resultContent);
     }
 
@@ -174,10 +234,15 @@ public class CustomRTServerClient
             fiscalData,
             qrCodeData
         };
-        var result = _httpClient.PostAsync("/insertFiscalDocumentLottery.php/", new StringContent(JsonConvert.SerializeObject(request)));
+        var result = await _httpClient.PostAsync("/insertFiscalDocumentLottery.php/", new StringContent(JsonConvert.SerializeObject(request)));
         // TODO Check error
-        var resultContent = await result.Result.Content.ReadAsStringAsync();
-        return JsonConvert.DeserializeObject<InsertFiscalDocumentResponse>(resultContent);
+        var resultContent = await result.Content.ReadAsStringAsync();
+        var data = JsonConvert.DeserializeObject<InsertFiscalDocumentResponse>(resultContent);
+        if (data.responseCode != 0)
+        {
+            throw new Exception(data.responseDesc);
+        }
+        return data;
     }
 
     public async Task<InsertFiscalDocumentArrayResponse> InsertFiscalDocumentArrayLotteryAsync(FDocumentLotteryArray fiscalData)
@@ -186,11 +251,26 @@ public class CustomRTServerClient
         {
             fiscalArray = fiscalData
         };
-        var result = _httpClient.PostAsync("/insertFiscalDocumentArrayLottery.php/", new StringContent(JsonConvert.SerializeObject(request)));
+        var result = await _httpClient.PostAsync("/insertFiscalDocumentArrayLottery.php/", new StringContent(JsonConvert.SerializeObject(request)));
         // TODO Check error
-        var resultContent = await result.Result.Content.ReadAsStringAsync();
-        return JsonConvert.DeserializeObject<InsertFiscalDocumentArrayResponse>(resultContent);
+        var resultContent = await result.Content.ReadAsStringAsync();
+        var data = JsonConvert.DeserializeObject<InsertFiscalDocumentArrayResponse>(resultContent);
+        if (data.responseCode != 0)
+        {
+            throw new Exception(data.responseDesc);
+        }
+        return data;
     }
+}
+public class GetDeviceMemStatusResponse
+{
+    public int ej_capacity { get; set; }
+    public int ej_used { get; set; }
+    public int ej_available { get; set; }
+    public int responseCode { get; set; }
+    public string responseDesc { get; set; } = string.Empty;
+    public ResponseBodyErrory? responseErr { get; set; }
+    public int average_erase_count { get; set; }
 }
 
 public class GetDailyStatusResponse

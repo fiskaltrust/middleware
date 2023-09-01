@@ -11,8 +11,54 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
 {
     public class ITSSCDTests
     {
+        private readonly Guid _queueId = Guid.NewGuid();
+
         [Fact]
         public async Task PerformInitOperationAsync()
+        {
+            var serviceCollection = new ServiceCollection();
+            serviceCollection.AddLogging();
+
+            var accountMasterData = new AccountMasterData
+            {
+                AccountId = Guid.NewGuid(),
+                VatId = "12345688909"
+            };
+
+            var sut = new ScuBootstrapper
+            {
+                Id = Guid.NewGuid(),
+                Configuration = new Dictionary<string, object>
+                {
+                    { "ServerUrl", "https://a3e3-88-116-45-202.ngrok-free.app/" },
+                    { "Username", "0001ab05" },
+                    { "Password", "admin" },
+                    { "AccountMasterData", accountMasterData }
+                }
+            };
+            sut.ConfigureServices(serviceCollection);
+
+
+            var itsscd = serviceCollection.BuildServiceProvider().GetRequiredService<IITSSCD>();
+
+            var processRequest = new ProcessRequest
+            {
+                ReceiptRequest = new ReceiptRequest
+                {
+                    ftReceiptCase = 0x4954_2000_0000_4001
+                },
+                ReceiptResponse = new ReceiptResponse
+                {
+                    ftCashBoxIdentification = "02020402",
+                    ftQueueID = _queueId.ToString()
+                }
+            };
+
+            var rtInfo = await itsscd.ProcessReceiptAsync(processRequest);
+        }
+
+        [Fact]
+        public async Task PerformOutOfOperationAsync()
         {
             var serviceCollection = new ServiceCollection();
             serviceCollection.AddLogging();
@@ -31,7 +77,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
                     { "ServerUrl", "https://a3e3-88-116-45-202.ngrok-free.app/" },
                     { "Username", "0001ab05" },
                     { "Password", "admin" },
-                    { "AccountMasterData", $"{JsonConvert.SerializeObject(accountMasterData)}" }
+                    { "AccountMasterData", accountMasterData }
                 }
             };
             sut.ConfigureServices(serviceCollection);
@@ -43,17 +89,61 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
             {
                 ReceiptRequest = new ReceiptRequest
                 {
-                    ftReceiptCase = 5283848262812434435
+                    ftReceiptCase = 0x4954_2000_0000_4002
                 },
                 ReceiptResponse = new ReceiptResponse
                 {
-                    ftCashBoxIdentification = "02020402"
+                    ftCashBoxIdentification = "02020402",
+                    ftQueueID = _queueId.ToString()
                 }
             };
 
             var rtInfo = await itsscd.ProcessReceiptAsync(processRequest);
         }
 
+        [Fact]
+        public async Task PerformZeroReceiptAsync()
+        {
+            var serviceCollection = new ServiceCollection();
+            serviceCollection.AddLogging();
+
+            var accountMasterData = new AccountMasterData
+            {
+                AccountId = Guid.NewGuid(),
+                VatId = "19239239"
+            };
+
+            var sut = new ScuBootstrapper
+            {
+                Id = Guid.NewGuid(),
+                Configuration = new Dictionary<string, object>
+                {
+                    { "ServerUrl", "https://a3e3-88-116-45-202.ngrok-free.app/" },
+                    { "Username", "0001ab05" },
+                    { "Password", "admin" },
+                    { "AccountMasterData", accountMasterData }
+                }
+            };
+            sut.ConfigureServices(serviceCollection);
+
+
+            var itsscd = serviceCollection.BuildServiceProvider().GetRequiredService<IITSSCD>();
+
+            var processRequest = new ProcessRequest
+            {
+                ReceiptRequest = new ReceiptRequest
+                {
+                    ftReceiptCase = 0x4954_2000_0000_2000
+                },
+                ReceiptResponse = new ReceiptResponse
+                {
+                    ftCashBoxIdentification = "02020402",
+                    ftQueueID = _queueId.ToString()
+                }
+            };
+
+            var rtInfo = await itsscd.ProcessReceiptAsync(processRequest);
+        }
 
         [Fact]
         public async Task GetRTInfoAsync_ShouldReturn_SerialNumber()
@@ -79,7 +169,12 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
 
         public static IEnumerable<object[]> rtNoHandleReceipts()
         {
-            yield return new object[] { ITReceiptCases.ZeroReceipt0x200 };
+            yield return new object[] { ITReceiptCases.PointOfSaleReceiptWithoutObligation0x0003 };
+            yield return new object[] { ITReceiptCases.ECommerce0x0004 };
+            yield return new object[] { ITReceiptCases.InvoiceUnknown0x1000 };
+            yield return new object[] { ITReceiptCases.InvoiceB2C0x1001 };
+            yield return new object[] { ITReceiptCases.InvoiceB2B0x1002 };
+            yield return new object[] { ITReceiptCases.InvoiceB2G0x1003 };
             yield return new object[] { ITReceiptCases.OneReceipt0x2001 };
             yield return new object[] { ITReceiptCases.ShiftClosing0x2010 };
             yield return new object[] { ITReceiptCases.MonthlyClosing0x2012 };
@@ -92,16 +187,12 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
             yield return new object[] { ITReceiptCases.FinishSCUSwitch0x4012 };
         }
 
-
         public static IEnumerable<object[]> rtHandledReceipts()
         {
             yield return new object[] { ITReceiptCases.UnknownReceipt0x0000 };
             yield return new object[] { ITReceiptCases.PointOfSaleReceipt0x0001 };
+            yield return new object[] { ITReceiptCases.PaymentTransfer0x0002 };
             yield return new object[] { ITReceiptCases.Protocol0x0005 };
-            yield return new object[] { ITReceiptCases.InvoiceUnknown0x1000 };
-            yield return new object[] { ITReceiptCases.InvoiceB2C0x1001 };
-            yield return new object[] { ITReceiptCases.InvoiceB2B0x1002 };
-            yield return new object[] { ITReceiptCases.InvoiceB2G0x1003 };
         }
 
         [Theory]

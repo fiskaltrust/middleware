@@ -8,6 +8,7 @@ using fiskaltrust.Middleware.SCU.IT.Abstraction;
 using Microsoft.Extensions.Logging;
 using fiskaltrust.ifPOS.v1;
 using System.Linq;
+using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer;
 
@@ -27,6 +28,12 @@ public sealed class CustomRTServer : IITSSCD
 
     private List<ITReceiptCases> _nonProcessingCases = new List<ITReceiptCases>
         {
+            ITReceiptCases.PointOfSaleReceiptWithoutObligation0x0003,
+            ITReceiptCases.ECommerce0x0004,
+            ITReceiptCases.InvoiceUnknown0x1000,
+            ITReceiptCases.InvoiceB2C0x1001,
+            ITReceiptCases.InvoiceB2B0x1002,
+            ITReceiptCases.InvoiceB2G0x1003,
             ITReceiptCases.ZeroReceipt0x200,
             ITReceiptCases.OneReceipt0x2001,
             ITReceiptCases.ShiftClosing0x2010,
@@ -61,15 +68,6 @@ public sealed class CustomRTServer : IITSSCD
         return _nonProcessingCases.Select(x => (long) x).Contains(request.GetReceiptCase());
     }
 
-    private static ProcessResponse CreateDummyResponse(ReceiptResponse receiptResponse)
-    {
-        var signatures = SignatureFactory.CreatePosReceiptSignatures(1, 1, DateTime.UtcNow);
-        return new ProcessResponse
-        {
-            ReceiptResponse = receiptResponse
-        };
-    }
-
     private static ProcessResponse CreateResponse(ReceiptResponse receiptResponse)
     {
         return new ProcessResponse
@@ -86,19 +84,25 @@ public sealed class CustomRTServer : IITSSCD
             receiptCase = ITConstants.ConvertToV2Case(receiptCase);
         }
 
-
-
-        if (IsNoActionCase(request.ReceiptRequest))
-        {
-            return CreateResponse(request.ReceiptResponse);
-        }
-
-
         if (request.ReceiptRequest.IsInitialOperationReceipt())
         {
             return CreateResponse(await PerformInitOperationAsync(request.ReceiptRequest, request.ReceiptResponse));
         }
 
+        if (request.ReceiptRequest.IsOutOfOperationReceipt())
+        {
+            return CreateResponse(await PerformOutOfOperationAsync(request.ReceiptRequest, request.ReceiptResponse, request.ReceiptResponse.ftCashBoxIdentification));
+        }
+
+        if (request.ReceiptRequest.IsZeroReceipt())
+        {
+            return CreateResponse(await PerformZeroReceiptOperationAsync(request.ReceiptRequest, request.ReceiptResponse, request.ReceiptResponse.ftCashBoxIdentification));
+        }
+
+        if (IsNoActionCase(request.ReceiptRequest))
+        {
+            return CreateResponse(request.ReceiptResponse);
+        }
 
         if (CashUUIdMappings.ContainsKey(Guid.Parse(request.ReceiptResponse.ftQueueID)))
         {
@@ -106,12 +110,6 @@ public sealed class CustomRTServer : IITSSCD
         }
 
         var cashuuid = CashUUIdMappings[Guid.Parse(request.ReceiptResponse.ftQueueID)];
-
-
-        if (request.ReceiptRequest.IsOutOfOperationReceipt())
-        {
-            return CreateResponse(await PerformOutOfOperationAsync(request.ReceiptRequest, request.ReceiptResponse, cashuuid));
-        }
 
         if (request.ReceiptRequest.IsVoid())
         {
@@ -128,30 +126,37 @@ public sealed class CustomRTServer : IITSSCD
             case (long) ITReceiptCases.UnknownReceipt0x0000:
             case (long) ITReceiptCases.PointOfSaleReceipt0x0001:
             case (long) ITReceiptCases.PaymentTransfer0x0002:
-            case (long) ITReceiptCases.PointOfSaleReceiptWithoutObligation0x0003:
-            case (long) ITReceiptCases.ECommerce0x0004:
             case (long) ITReceiptCases.Protocol0x0005:
-            case (long) ITReceiptCases.InvoiceUnknown0x1000:
-            case (long) ITReceiptCases.InvoiceB2C0x1001:
-            case (long) ITReceiptCases.InvoiceB2B0x1002:
-            case (long) ITReceiptCases.InvoiceB2G0x1003:
             default:
-                return CreateResponse(await PreformClassicReceiptAsync(request.ReceiptRequest, request.ReceiptResponse, cashuuid));
+                return CreateResponse(await PerformClassicReceiptAsync(request.ReceiptRequest, request.ReceiptResponse, cashuuid));
         }
     }
 
     private async Task<ReceiptResponse> PerformInitOperationAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
     {
-        var shop = receiptResponse.ftCashBoxIdentification.Take(4).ToString();
-        var name = receiptResponse.ftCashBoxIdentification.Skip(4).Take(4).ToString();
-        var result = await _client.InsertCashRegisterAsync(receiptResponse.ftQueueID, shop, name, _configuration.AccountMasterData.AccountId.ToString(), _configuration.AccountMasterData.TaxId);
+        var shop = receiptResponse.ftCashBoxIdentification.Substring(0, 4);
+        var name = receiptResponse.ftCashBoxIdentification.Substring(4, 4);
+        var result = await _client.InsertCashRegisterAsync(receiptResponse.ftQueueID, shop, name, _configuration.AccountMasterData.AccountId.ToString(), _configuration.AccountMasterData.VatId ?? _configuration.AccountMasterData.TaxId);
         receiptResponse.ftSignatures = SignatureFactory.CreateInitialOperationSignatures();
         return receiptResponse;
     }
 
-    private async Task<ReceiptResponse> PerformOutOfOperationAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, QueueIdentification cashuuid)
+    private async Task<ReceiptResponse> PerformZeroReceiptOperationAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, string cashUuid)
     {
-        var result = await _client.CancelCashRegisterAsync(cashuuid.CashUuId, "");
+     //   var result = await _client.GetDailyStatusAsync(cashUuid);
+        var resultMemStatus = await _client.GetDeviceMemStatusAsync();
+        receiptResponse.ftSignatures = SignatureFactory.CreateOutOfOperationSignatures();
+        receiptResponse.ftStateData = JsonConvert.SerializeObject(new
+        {
+            DeviceMemStatus = resultMemStatus,
+           // DeviceDailyStatus = result
+        });
+        return receiptResponse;
+    }
+
+    private async Task<ReceiptResponse> PerformOutOfOperationAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, string cashUuid)
+    {
+        var result = await _client.CancelCashRegisterAsync(cashUuid, _configuration.AccountMasterData.VatId);
         receiptResponse.ftSignatures = SignatureFactory.CreateOutOfOperationSignatures();
         return receiptResponse;
     }
@@ -185,7 +190,7 @@ public sealed class CustomRTServer : IITSSCD
         return receiptResponse;
     }
 
-    private async Task<ReceiptResponse> PreformClassicReceiptAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, QueueIdentification cashuuid)
+    private async Task<ReceiptResponse> PerformClassicReceiptAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, QueueIdentification cashuuid)
     {
         var commercialDocument = CustomRTServerMapping.GenerateFiscalDocument(receiptRequest, receiptResponse, cashuuid);
         _receiptQueue.Add(commercialDocument);
