@@ -508,5 +508,31 @@ public sealed class EpsonSCU : IITSSCD
         };
     }
 
-    public Task<RTInfo> GetRTInfoAsync() => throw new NotImplementedException();
+    public async Task<RTInfo> GetRTInfoAsync()
+    {
+        var content = _epsonXmlWriter.CreateQueryPrinterStatusRequestContent();
+        var response = await _httpClient.PostAsync(_commandUrl, new StringContent(content, Encoding.UTF8, "application/xml"));
+        using var responseContent = await response.Content.ReadAsStreamAsync();
+        var result = SoapSerializer.Deserialize<StatusResponse>(responseContent);
+
+        _logger.LogInformation(JsonConvert.SerializeObject(result));
+        if (string.IsNullOrEmpty(_serialnr) && result?.Printerstatus?.RtType != null)
+        {
+            _serialnr = await GetSerialNumberAsync(result.Printerstatus.RtType).ConfigureAwait(false);
+        }
+
+        return new RTInfo
+        {
+            SerialNumber = _serialnr,
+            InfoData = JsonConvert.SerializeObject(new DeviceInfo
+            {
+                DailyOpen = result?.Printerstatus?.DailyOpen == "1",
+                DeviceStatus = ParseStatus(result?.Printerstatus?.MfStatus), // TODO Create enum
+                ExpireDeviceCertificateDate = result?.Printerstatus?.ExpiryCD, // TODO Use Datetime; this value seemingly can also be 20
+                ExpireTACommunicationCertificateDate = result?.Printerstatus?.ExpiryCA, // TODO use DateTime?
+                SerialNumber = _serialnr
+
+            })
+        };
+    }
 }
