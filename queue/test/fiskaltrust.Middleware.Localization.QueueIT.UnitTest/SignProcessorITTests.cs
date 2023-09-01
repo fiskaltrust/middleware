@@ -162,6 +162,11 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
                     continue;
                 }
 
+                if ((long) number == (long) ITReceiptCases.InitialOperationReceipt0x4001)
+                {
+                    continue;
+                }
+
                 yield return new object[] { number };
             }
         }
@@ -179,10 +184,6 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
             yield return new object[] { ITReceiptCases.UnknownReceipt0x0000 };
             yield return new object[] { ITReceiptCases.PointOfSaleReceipt0x0001 };
             yield return new object[] { ITReceiptCases.Protocol0x0005 };
-            yield return new object[] { ITReceiptCases.InvoiceUnknown0x1000 };
-            yield return new object[] { ITReceiptCases.InvoiceB2C0x1001 };
-            yield return new object[] { ITReceiptCases.InvoiceB2B0x1002 };
-            yield return new object[] { ITReceiptCases.InvoiceB2G0x1003 };
         }
 
         [Theory]
@@ -320,7 +321,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
             var notification = JsonConvert.DeserializeObject<ActivateQueueSCU>(actionJournals[0].DataJson);
             notification.IsStartReceipt.Should().BeTrue();
 
-            receiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == 0x4954_2000_0001_1000);
+            receiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == 0x4954_2000_0001_1001);
         }
 
         [Fact]
@@ -348,6 +349,8 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
             actionJournals.Should().HaveCount(1);
             var notification = JsonConvert.DeserializeObject<DeactivateQueueSCU>(actionJournals[0].DataJson);
             notification.IsStopReceipt.Should().BeTrue();
+
+            receiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == 0x4954_2000_0001_1002);
         }
 
         [Fact]
@@ -396,7 +399,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
             receiptResponse.ftReceiptIdentification.Should().Be("ft1#Z1");
             receiptResponse.ftState.Should().Be(0x4954_0000_0000_0000);
             actionJournals.Should().HaveCount(1);
-            actionJournals[0].Type.Should().Be(receiptRequest.ftReceiptCase.ToString());
+            actionJournals[0].Type.Should().Be(receiptRequest.ftReceiptCase.ToString("x"));
         }
 
         [Fact]

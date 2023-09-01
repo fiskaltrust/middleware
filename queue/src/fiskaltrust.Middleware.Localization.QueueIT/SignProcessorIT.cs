@@ -51,7 +51,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
 
             if (receiptTypeProcessor is InitialOperationReceipt0x4001)
             {
-                if (queue.IsNew())
+                if (!queue.IsNew())
                 {
                     throw new Exception("The queue is already operational. It is not allowed to send another InitOperation Receipt");
                 }

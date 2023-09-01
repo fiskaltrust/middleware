@@ -10,7 +10,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Constants
         {
             return new SignaturItem()
             {
-                ftSignatureType = Cases.BASE_STATE & 0x3,
+                ftSignatureType = 0x4954_2000_0001_1001,
                 ftSignatureFormat = (long) SignaturItem.Formats.Text,
                 Caption = $"Initial-operation receipt",
                 Data = $"Queue-ID: {queueIT.ftQueueITId} Serial-Nr: {rtInfo.SerialNumber}"
@@ -21,7 +21,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Constants
         {
             return new SignaturItem()
             {
-                ftSignatureType = Cases.BASE_STATE & 0x4,
+                ftSignatureType = 0x4954_2000_0001_1002,
                 ftSignatureFormat = (long) SignaturItem.Formats.Text,
                 Caption = $"Out-of-operation receipt",
                 Data = $"Queue-ID: {queueIT.ftQueueITId}"
