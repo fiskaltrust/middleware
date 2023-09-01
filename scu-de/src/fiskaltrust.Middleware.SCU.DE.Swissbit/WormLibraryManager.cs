@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -9,7 +10,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
     {
         private const string LINUX_LIB = "libWormAPI.so";
         private const string WINDOWS_LIB = "WormAPI.dll";
-        
+
         private const string PATH_RUNTIMES = "runtimes";
         private const string PATH_NATIVE = "native";
 
@@ -18,7 +19,35 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
         private static readonly string _linux32LibraryFile = Path.Combine(PATH_RUNTIMES, "linux-x86", PATH_NATIVE, LINUX_LIB);
         private static readonly string _linux64LibraryFile = Path.Combine(PATH_RUNTIMES, "linux-x64", PATH_NATIVE, LINUX_LIB);
         private static readonly string _linuxArmLibraryFile = Path.Combine(PATH_RUNTIMES, "linux-arm", PATH_NATIVE, LINUX_LIB);
+        private static readonly string _linuxArmelLibraryFile = Path.Combine(PATH_RUNTIMES, "linux-armel", PATH_NATIVE, LINUX_LIB);
         private static readonly string _linuxArm64LibraryFile = Path.Combine(PATH_RUNTIMES, "linux-arm64", PATH_NATIVE, LINUX_LIB);
+
+        public static bool IsArmHf()
+        {
+            try
+            {
+                var p = Process.Start(new ProcessStartInfo
+                {
+                    FileName = "dpkg",
+                    Arguments = "--print-architecture",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                });
+                var output = p.StandardOutput.ReadToEnd();
+                p.WaitForExit();
+                if (output.Contains("armhf"))
+                {
+                    return true;
+                }
+                else if (output.Contains("armel"))
+                {
+                    return false;
+                }
+            }
+            catch { }
+            return true;
+        }
 
         public static void CopyLibraryToWorkingDirectory(SwissbitSCUConfiguration configuration)
         {
@@ -33,14 +62,17 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
         private static string SelectPathBasedOnArchitecture()
         {
             var arch = RuntimeInformation.ProcessArchitecture;
-
             return Environment.OSVersion.Platform switch
             {
                 PlatformID.MacOSX or PlatformID.Unix => arch switch
                 {
                     Architecture.X86 => _linux32LibraryFile,
                     Architecture.X64 => _linux64LibraryFile,
-                    Architecture.Arm => _linuxArmLibraryFile,
+                    Architecture.Arm => IsArmHf() switch
+                    {
+                        true => _linuxArmLibraryFile,
+                        false => _linuxArmelLibraryFile
+                    },
                     Architecture.Arm64 => _linuxArm64LibraryFile,
                     _ => throw new NotImplementedException($"The CPU architecture {arch} is not supported on Unix by the Swissbit hardware TSE SDK.")
                 }

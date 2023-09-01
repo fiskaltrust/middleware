@@ -1,5 +1,5 @@
 {
-  "version": "1.3.48",
+  "version": "1.3.50",
   "releaseBranches": [
     "^refs/tags/scu-de/swissbit/v\\d+(?:\\.\\d+)*(?:-.*)?$"
   ]
