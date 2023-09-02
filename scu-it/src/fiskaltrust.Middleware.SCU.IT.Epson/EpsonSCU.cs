@@ -25,19 +25,16 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson;
 public sealed class EpsonSCU : IITSSCD
 {
     private readonly ILogger<EpsonSCU> _logger;
-    private readonly EpsonScuConfiguration _configuration;
     private readonly EpsonCommandFactory _epsonXmlWriter;
     private readonly EpsonCommunicationClientV2 _epsonCommunicationClientV2;
     private readonly HttpClient _httpClient;
     private readonly string _commandUrl;
     private readonly ErrorInfoFactory _errorCodeFactory = new();
-    private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
     private string _serialnr = "";
 
     public EpsonSCU(ILogger<EpsonSCU> logger, EpsonScuConfiguration configuration, EpsonCommandFactory epsonXmlWriter, EpsonCommunicationClientV2 epsonCommunicationClientV2)
     {
         _logger = logger;
-        _configuration = configuration;
         _epsonXmlWriter = epsonXmlWriter;
         _epsonCommunicationClientV2 = epsonCommunicationClientV2;
         if (string.IsNullOrEmpty(configuration.DeviceUrl))
@@ -58,8 +55,6 @@ public sealed class EpsonSCU : IITSSCD
     {
         try
         {
-            _semaphore.Wait(_configuration.LockTimeoutMs);
-
             var content = _epsonXmlWriter.CreateInvoiceRequestContent(request);
 
             var response = await SendRequestAsync(content);
@@ -76,10 +71,6 @@ public sealed class EpsonSCU : IITSSCD
         catch (Exception e)
         {
             return ExceptionInfo(e);
-        }
-        finally
-        {
-            _semaphore.Release();
         }
     }
 
@@ -101,8 +92,6 @@ public sealed class EpsonSCU : IITSSCD
     {
         try
         {
-            _semaphore.Wait(_configuration.LockTimeoutMs);
-
             var content = _epsonXmlWriter.CreateRefundRequestContent(request);
             var response = await SendRequestAsync(content);
 
@@ -119,18 +108,12 @@ public sealed class EpsonSCU : IITSSCD
         {
             return ExceptionInfo(e);
         }
-        finally
-        {
-            _semaphore.Release();
-        }
     }
 
     public async Task<DailyClosingResponse> ExecuteDailyClosingAsync(DailyClosingRequest request)
     {
         try
         {
-            _semaphore.Wait(_configuration.LockTimeoutMs);
-
             var content = _epsonXmlWriter.CreatePrintZReportRequestContent(request);
             var response = await SendRequestAsync(content);
 
@@ -167,10 +150,6 @@ public sealed class EpsonSCU : IITSSCD
             }
             return new DailyClosingResponse() { Success = false, SSCDErrorInfo = new SSCDErrorInfo() { Info = msg, Type = SSCDErrorType.General } };
         }
-        finally
-        {
-            _semaphore.Release();
-        }
     }
 
     public async Task<DeviceInfo> GetDeviceInfoAsync()
@@ -201,8 +180,6 @@ public sealed class EpsonSCU : IITSSCD
     {
         try
         {
-            _semaphore.Wait(_configuration.LockTimeoutMs);
-
             var content = _epsonXmlWriter.CreateNonFiscalReceipt(request);
             var httpResponse = await SendRequestAsync(content);
 
@@ -231,10 +208,6 @@ public sealed class EpsonSCU : IITSSCD
                 return new Response() { Success = false, SSCDErrorInfo = new SSCDErrorInfo() { Info = msg, Type = SSCDErrorType.Connection } };
             }
             return new Response() { Success = false, SSCDErrorInfo = new SSCDErrorInfo() { Info = msg, Type = SSCDErrorType.General } };
-        }
-        finally
-        {
-            _semaphore.Release();
         }
     }
 
