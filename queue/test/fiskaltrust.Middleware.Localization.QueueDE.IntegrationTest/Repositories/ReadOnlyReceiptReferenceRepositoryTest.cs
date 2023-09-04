@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using AutoFixture;
 using fiskaltrust.Exports.Common.Helpers;
-using fiskaltrust.Exports.Common.Repositories;
+using fiskaltrust.Exports.Common.Models;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Localization.QueueDE.Repositories;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories;
