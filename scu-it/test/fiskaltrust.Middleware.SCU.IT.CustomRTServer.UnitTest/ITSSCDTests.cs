@@ -353,8 +353,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
                 ReceiptResponse = new ReceiptResponse
                 {
                     ftQueueID = Guid.NewGuid().ToString(),
-                    ftCashBoxIdentification = "ske00003",
-                    ftReceiptIdentification = "ft192#0001"
+                    ftCashBoxIdentification = "ske00003"
                 }
             });
 
