@@ -356,8 +356,6 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
                     ftCashBoxIdentification = "ske00003"
                 }
             });
-
         }
-
     }
 }
