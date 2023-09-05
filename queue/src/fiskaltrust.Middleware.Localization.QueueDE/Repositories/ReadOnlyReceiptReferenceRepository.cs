@@ -86,7 +86,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Repositories
                 };
                 if (dailyClosingTarget != null)
                 {
-                    extReceiptReference.TargetZErstellung = dailyClosingTarget.ZTime;
+                    extReceiptReference.TargetZMoment = dailyClosingTarget.ZTime;
                     extReceiptReference.TargetZNumber = dailyClosingTarget.ZNumber;
                 }
                 return receiptReferences.Add(extReceiptReference);
@@ -110,12 +110,12 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Repositories
             };
             if(dailyClosingSource != null)
             {
-                receiptReference.RefMoment = dailyClosingSource.ZTime;
-                receiptReference.ZNumber = dailyClosingSource.ZNumber;
+                receiptReference.SourceZMoment = dailyClosingSource.ZTime;
+                receiptReference.SourceZNumber = dailyClosingSource.ZNumber;
             }
             if(dailyClosingTarget != null)
             {
-                receiptReference.TargetZErstellung = dailyClosingTarget.ZTime;
+                receiptReference.TargetZMoment = dailyClosingTarget.ZTime;
                 receiptReference.TargetZNumber = dailyClosingTarget.ZNumber;
             }
 
