@@ -82,11 +82,13 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Repositories
                 {
                     TargetQueueItemId = target.ftQueueItemId,
                     TargetReceiptCaseData = receiptCaseData,
-                    TargetReceiptIdentification = respTarget.ftReceiptIdentification,
-                    TargetZNumber = dailyClosingTarget.ZNumber,
-                    TargetZErstellung = dailyClosingTarget.ZTime
+                    TargetReceiptIdentification = respTarget.ftReceiptIdentification
                 };
-
+                if (dailyClosingTarget != null)
+                {
+                    extReceiptReference.TargetZErstellung = dailyClosingTarget.ZTime;
+                    extReceiptReference.TargetZNumber = dailyClosingTarget.ZNumber;
+                }
                 return receiptReferences.Add(extReceiptReference);
             }
             if (string.IsNullOrEmpty(source.response))
@@ -101,15 +103,21 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Repositories
 
             var receiptReference = new ReceiptReferencesGroupedData()
             {
-                RefMoment = dailyClosingSource.ZTime,
                 RefReceiptId = responseSource.ftReceiptIdentification,
                 TargetQueueItemId = target.ftQueueItemId,
-                ZNumber = dailyClosingSource.ZNumber,
                 SourceQueueItemId = source.ftQueueItemId,
                 TargetReceiptIdentification = responseTarget.ftReceiptIdentification,
-                TargetZNumber = dailyClosingTarget.ZNumber,
-                TargetZErstellung = dailyClosingTarget.ZTime
             };
+            if(dailyClosingSource != null)
+            {
+                receiptReference.RefMoment = dailyClosingSource.ZTime;
+                receiptReference.ZNumber = dailyClosingSource.ZNumber;
+            }
+            if(dailyClosingTarget != null)
+            {
+                receiptReference.TargetZErstellung = dailyClosingTarget.ZTime;
+                receiptReference.TargetZNumber = dailyClosingTarget.ZNumber;
+            }
 
             return receiptReferences.Add(receiptReference);
         }
