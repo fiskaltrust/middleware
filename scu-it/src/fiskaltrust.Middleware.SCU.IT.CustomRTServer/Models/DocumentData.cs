@@ -12,7 +12,7 @@ public class DocumentData
     public string vatcode { get; set; } = string.Empty;
     public string fiscaloperator { get; set; } = string.Empty;
     public string businessname { get; set; } = string.Empty;
-    public string prevSignature { get; set; } = string.Empty;
+    public string? prevSignature { get; set; } = string.Empty;
     public string type_signature_id => "1";
     public int grandTotal { get; set; }
     public int referenceClosurenumber { get; set; }
@@ -20,6 +20,6 @@ public class DocumentData
     public string? referenceDtime { get; set; } = string.Empty;
 
     public string? errSignature => null;
-    public int err_number => 1;
-    public int err_znumber => 1;
+    public int? err_number => null;
+    public int? err_znumber => null;
 }

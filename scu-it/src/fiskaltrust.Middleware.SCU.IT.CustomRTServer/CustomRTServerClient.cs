@@ -55,7 +55,7 @@ public class CustomRTServerClient
                 cashuuid
             }
         };
-        var result = await _httpClient.PostAsync("/getdailystatus.php", new StringContent(JsonConvert.SerializeObject(request)));
+        var result = await _httpClient.PostAsync("/getDailyStatus.php", new StringContent(JsonConvert.SerializeObject(request)));
         // TODO Check error
         var resultContent = await result.Content.ReadAsStringAsync();
         var data = JsonConvert.DeserializeObject<GetDailyStatusResponse>(resultContent);
@@ -112,7 +112,7 @@ public class CustomRTServerClient
 
     public async Task<InsertFiscalDocumentResponse> InsertFiscalDocumentAsync(CommercialDocument commercialDocument)
     {
-        var result = await _httpClient.PostAsync("/insertFiscalDocument.php", new StringContent(JsonConvert.SerializeObject(commercialDocument)));
+        var result = await _httpClient.PostAsync("/insertFiscalDocument2.php", new StringContent(JsonConvert.SerializeObject(commercialDocument)));
         // TODO Check error
         var resultContent = await result.Content.ReadAsStringAsync();
         var data = JsonConvert.DeserializeObject<InsertFiscalDocumentResponse>(resultContent);
@@ -262,6 +262,7 @@ public class CustomRTServerClient
         return data;
     }
 }
+
 public class GetDeviceMemStatusResponse
 {
     public int ej_capacity { get; set; }
@@ -321,7 +322,7 @@ public class InsertFiscalDocumentResponse
 {
     public int responseCode { get; set; }
     public string responseDesc { get; set; } = string.Empty;
-    public string responseSubCode { get; set; } = string.Empty;
+    public List<string> responseSubCode { get; set; } = new List<string>();
     public int fiscalDocId { get; set; }
     public ResponseBodyErrory? responseErr { get; set; }
 }
@@ -395,6 +396,6 @@ public class ResponseBodyErrory
 
 public class CommercialDocument
 {
-    public QrCodeData qrCodeData { get; set; } = null!;
-    public FDocument fiscalData { get; set; } = null!;
+    public QrCodeData qrData { get; set; } = null!;
+    public string fiscalData { get; set; } = null!;
 }

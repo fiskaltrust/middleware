@@ -12,6 +12,8 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
     public class ITSSCDTests
     {
         private readonly Guid _queueId = Guid.NewGuid();
+        private static readonly Uri _serverUri = new Uri("https://f51f-88-116-45-202.ngrok-free.app");
+        private readonly CustomRTServerConfiguration _config = new CustomRTServerConfiguration { ServerUrl = _serverUri.ToString(), Username = "0001ab05", Password = "admin" };
 
         [Fact]
         public async Task PerformInitOperationAsync()
@@ -30,7 +32,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
                 Id = Guid.NewGuid(),
                 Configuration = new Dictionary<string, object>
                 {
-                    { "ServerUrl", "https://a3e3-88-116-45-202.ngrok-free.app/" },
+                    { "ServerUrl", _serverUri },
                     { "Username", "0001ab05" },
                     { "Password", "admin" },
                     { "AccountMasterData", accountMasterData }
@@ -286,5 +288,77 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
             });
 
         }
+
+        [Fact]
+        public async Task ProcessPosReceipt_0x4954_2000_0000_0001()
+        {
+            var current_moment = DateTime.UtcNow.ToString("o");
+            var initOperationReceipt = $$"""
+{
+    "ftCashBoxID": "00000000-0000-0000-0000-000000000000",
+    "ftPosSystemId": "00000000-0000-0000-0000-000000000000",
+    "cbTerminalID": "00010001",
+    "cbReceiptReference": "0001-0002",
+    "cbUser": "user1234",
+    "cbReceiptMoment": "{{current_moment}}",
+    "cbChargeItems": [
+        {
+            "Quantity": 1,
+            "Amount": 107,
+            "VATRate": 10,
+            "ftChargeItemCase": 5283883447184523265,
+            "Description": "Food/Beverage - Item VAT 10%",
+            "Moment": "{{current_moment}}"
+        }
+    ],
+    "cbPayItems": [
+        {
+            "Quantity": 1,
+            "Description": "Cash",
+            "ftPayItemCase": 5283883447184523265,
+            "Moment": "{{current_moment}}",
+            "Amount": 107
+        }
+    ],
+    "ftReceiptCase": 5283883447184523265
+}
+""";
+            var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(initOperationReceipt);
+            var serviceCollection = new ServiceCollection();
+            serviceCollection.AddLogging();
+            var accountMasterData = new AccountMasterData
+            {
+                AccountId = Guid.NewGuid(),
+                VatId = "12345688909"
+            };
+            var sut = new ScuBootstrapper
+            {
+                Id = Guid.NewGuid(),
+                Configuration = new Dictionary<string, object>
+                {
+                    { "ServerUrl", _serverUri },
+                    { "Username", "ske00001" },
+                    { "Password", "admin" },
+                    { "AccountMasterData", accountMasterData }
+                }
+            };
+            sut.ConfigureServices(serviceCollection);
+   
+
+            var itsscd = serviceCollection.BuildServiceProvider().GetRequiredService<IITSSCD>();
+
+            var result = await itsscd.ProcessReceiptAsync(new ProcessRequest
+            {
+                ReceiptRequest = receiptRequest,
+                ReceiptResponse = new ReceiptResponse
+                {
+                    ftQueueID = Guid.NewGuid().ToString(),
+                    ftCashBoxIdentification = "ske00003",
+                    ftReceiptIdentification = "ft192#0001"
+                }
+            });
+
+        }
+
     }
 }

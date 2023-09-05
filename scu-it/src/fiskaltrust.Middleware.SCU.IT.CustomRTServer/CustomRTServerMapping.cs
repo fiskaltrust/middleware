@@ -3,29 +3,18 @@ using System;
 using fiskaltrust.ifPOS.v1;
 using System.Linq;
 using Newtonsoft.Json;
-using System.Text;
-using System.Security.Cryptography;
 
 namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer;
 
 public static class CustomRTServerMapping
 {
-    public static CommercialDocument CreateAnnuloDocument(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, QueueIdentification queueIdentification)
-    {
-        return GenerateFiscalDocument(receiptRequest, receiptResponse, queueIdentification, 3);
-    }
+    public static (CommercialDocument commercialDocument, FDocument fiscalDocument) CreateAnnuloDocument(ReceiptRequest receiptRequest, QueueIdentification queueIdentification) => GenerateFiscalDocument(receiptRequest, queueIdentification, 3);
 
-    public static CommercialDocument CreateResoDocument(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, QueueIdentification queueIdentification)
-    {
-        return GenerateFiscalDocument(receiptRequest, receiptResponse, queueIdentification, 2);
-    }
+    public static (CommercialDocument commercialDocument, FDocument fiscalDocument) CreateResoDocument(ReceiptRequest receiptRequest, QueueIdentification queueIdentification) => GenerateFiscalDocument(receiptRequest, queueIdentification, 2);
 
-    public static CommercialDocument GenerateFiscalDocument(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, QueueIdentification queueIdentification)
-    {
-        return GenerateFiscalDocument(receiptRequest, receiptResponse, queueIdentification, 1);
-    }
+    public static (CommercialDocument commercialDocument, FDocument fiscalDocument) GenerateFiscalDocument(ReceiptRequest receiptRequest, QueueIdentification queueIdentification) => GenerateFiscalDocument(receiptRequest, queueIdentification, 1);
 
-    private static CommercialDocument GenerateFiscalDocument(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, QueueIdentification queueIdentification, int docType)
+    private static (CommercialDocument commercialDocument, FDocument fiscalDocument) GenerateFiscalDocument(ReceiptRequest receiptRequest, QueueIdentification queueIdentification, int docType)
     {
         var fiscalDocument = new FDocument
         {
@@ -34,45 +23,40 @@ public static class CustomRTServerMapping
                 cashuuid = queueIdentification.CashUuId,
                 doctype = docType,
                 dtime = receiptRequest.cbReceiptMoment.ToString("yyyy-MM-dd HH:mm:ss"),
-                docnumber = int.Parse(receiptResponse.ftReceiptIdentification.Split('#')[0]),
-                docznumber = queueIdentification.CurrentZNumber,
+                docnumber = queueIdentification.LastDocNumber + 1,
+                docznumber = queueIdentification.LastZNumber + 1,
                 amount = (int) receiptRequest.cbChargeItems.Sum(x => x.Amount) * 100,
                 fiscalcode = "",
                 vatcode = "",
-                fiscaloperator = "",
+                fiscaloperator = "technician",
                 businessname = "",
                 prevSignature = queueIdentification.LastSignature,
-                grandTotal = (int) receiptRequest.cbChargeItems.Sum(x => x.Amount) * 100,
-                referenceClosurenumber = 999999,
-                referenceDocnumber = 99999,
-                referenceDtime = "",
+                grandTotal = queueIdentification.CurrentGrandTotal,
+                referenceClosurenumber = -1,
+                referenceDocnumber = -1,
+                referenceDtime = null,
             },
             items = GenerateItemDataForReceiptRequest(receiptRequest),
             taxs = GenerateTaxDataForReceiptRequest(receiptRequest)
         };
-        fiscalDocument.document.doctype = 3;
-        var qrCodeData = GenerateQRCodeData(fiscalDocument, queueIdentification.CashHmacKey);
+        var json = JsonConvert.SerializeObject(fiscalDocument);
+        var qrCodeData = GenerateQRCodeData(json, queueIdentification.CashHmacKey);
         var commercialDocument = new CommercialDocument
         {
-            fiscalData = fiscalDocument,
-            qrCodeData = qrCodeData,
+            fiscalData = json,
+            qrData = qrCodeData,
         };
-        return commercialDocument;
+        return (commercialDocument, fiscalDocument);
     }
 
-    private static QrCodeData GenerateQRCodeData(FDocument document, string key)
+    private static QrCodeData GenerateQRCodeData(string data, string key)
     {
-        var data = JsonConvert.SerializeObject(document);
-        var base64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(data));
-        var keyByte = Encoding.UTF8.GetBytes(key);
-        using var hmacsha256 = new HMACSHA256(keyByte);
-        var signPayload = hmacsha256.ComputeHash(Encoding.UTF8.GetBytes(base64));
-        var sign = Convert.ToBase64String(signPayload);
-        return new QrCodeData
+        var qrCode = new QrCodeData
         {
-            shaMetadata = base64,
-            signature = sign,
+            shaMetadata = GlobalTools.GetSHA256(data)
         };
+        qrCode.signature = GlobalTools.CreateHMAC(Convert.FromBase64String(key), qrCode.shaMetadata);
+        return qrCode;
     }
 
     private static List<DocumentItemData> GenerateItemDataForReceiptRequest(ReceiptRequest receiptRequest)
@@ -135,7 +119,9 @@ public static class CustomRTServerMapping
         };
     }
 
-    public static string ConvertToFullAmount(decimal? value) => decimal.ToOACurrency(value ?? 0.0m).ToString();
+    public static string ConvertToFullAmount(decimal? value) => ((int) (value ?? 0.0m) * 100).ToString();
+
+    public static int ConvertToFullAmountInt(decimal? value) => (int) ((value ?? 0.0m) * 100);
 
     private static List<DocumentTaxData> GenerateTaxDataForReceiptRequest(ReceiptRequest receiptRequest)
     {
@@ -145,9 +131,9 @@ public static class CustomRTServerMapping
         {
             items.Add(new DocumentTaxData
             {
-                gross = (int) item.Sum(x => decimal.ToOACurrency(x.Amount)),
-                tax = (int) item.Sum(x => decimal.ToOACurrency(x.VATAmount ?? 0.0m)),
-                vatvalue = (int) decimal.ToOACurrency(item.Key.VATRate),
+                gross = ConvertToFullAmountInt(item.Sum(x => x.Amount)),
+                tax = ConvertToFullAmountInt(item.Sum(x => x.VATAmount)),
+                vatvalue = ConvertToFullAmountInt(item.Key.VATRate),
                 vatcode = item.Key.Item1
             });
         }

@@ -19,8 +19,6 @@ public sealed class CustomRTServer : IITSSCD
     private readonly ILogger<CustomRTServer> _logger;
     private readonly CustomRTServerConfiguration _configuration;
     private readonly CustomRTServerClient _client;
-    private readonly HttpClient _httpClient;
-    private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(0, 1);
 
     private Dictionary<Guid, QueueIdentification> CashUUIdMappings = new Dictionary<Guid, QueueIdentification>();
 
@@ -104,7 +102,7 @@ public sealed class CustomRTServer : IITSSCD
             return CreateResponse(request.ReceiptResponse);
         }
 
-        if (CashUUIdMappings.ContainsKey(Guid.Parse(request.ReceiptResponse.ftQueueID)))
+        if (!CashUUIdMappings.ContainsKey(Guid.Parse(request.ReceiptResponse.ftQueueID)))
         {
             await ReloadCashUUID(request.ReceiptResponse);
         }
@@ -167,10 +165,12 @@ public sealed class CustomRTServer : IITSSCD
         CashUUIdMappings[Guid.Parse(receiptResponse.ftQueueID)] = new QueueIdentification
         {
             CashHmacKey = dailyOpen.cashHmacKey,
-            CurrentZNumber = int.Parse(dailyOpen.numberClosure),
+            LastZNumber = int.Parse(dailyOpen.numberClosure),
+            LastDocNumber = int.Parse(dailyOpen.cashLastDocNumber),
             CashUuId = receiptResponse.ftCashBoxIdentification,
             CashToken = dailyOpen.cashToken,
-            LastSignature = dailyOpen.cashToken
+            LastSignature = dailyOpen.cashToken,
+            CurrentGrandTotal = int.Parse(dailyOpen.grandTotalDB)
         };
     }
 
@@ -184,17 +184,21 @@ public sealed class CustomRTServer : IITSSCD
 
     private async Task<ReceiptResponse> PerformRefundReceiptAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, QueueIdentification cashuuid)
     {
-        var commercialDocument = CustomRTServerMapping.CreateResoDocument(receiptRequest, receiptResponse, cashuuid);
+        (var commercialDocument, var fiscalDocument) = CustomRTServerMapping.CreateResoDocument(receiptRequest, cashuuid);
         _receiptQueue.Add(commercialDocument);
-        receiptResponse.ftSignatures = SignatureFactory.CreatePosReceiptSignatures(commercialDocument.fiscalData.document.docnumber, commercialDocument.fiscalData.document.docznumber, receiptRequest.cbReceiptMoment);
+        receiptResponse.ftSignatures = SignatureFactory.CreatePosReceiptSignatures(fiscalDocument.document.docnumber, fiscalDocument.document.docznumber, receiptRequest.cbReceiptMoment);
         return receiptResponse;
     }
 
     private async Task<ReceiptResponse> PerformClassicReceiptAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, QueueIdentification cashuuid)
     {
-        var commercialDocument = CustomRTServerMapping.GenerateFiscalDocument(receiptRequest, receiptResponse, cashuuid);
+        (var commercialDocument, var fiscalDocument) = CustomRTServerMapping.GenerateFiscalDocument(receiptRequest, cashuuid);
         _receiptQueue.Add(commercialDocument);
-        receiptResponse.ftSignatures = SignatureFactory.CreatePosReceiptSignatures(commercialDocument.fiscalData.document.docnumber, commercialDocument.fiscalData.document.docznumber, receiptRequest.cbReceiptMoment);
+        foreach(var receipt in _receiptQueue)
+        {
+            var result = await _client.InsertFiscalDocumentAsync(receipt);
+        }
+        receiptResponse.ftSignatures = SignatureFactory.CreatePosReceiptSignatures(fiscalDocument.document.docnumber, fiscalDocument.document.docznumber, receiptRequest.cbReceiptMoment);
         return receiptResponse;
     }
 
@@ -210,10 +214,12 @@ public sealed class CustomRTServer : IITSSCD
         CashUUIdMappings[Guid.Parse(receiptResponse.ftQueueID)] = new QueueIdentification
         {
             CashHmacKey = dailyOpen.cashHmacKey,
-            CurrentZNumber = int.Parse(dailyOpen.numberClosure),
+            LastZNumber = int.Parse(dailyOpen.numberClosure),
+            LastDocNumber = int.Parse(dailyOpen.cashLastDocNumber),
             CashUuId = cashuuid.CashUuId,
             CashToken = dailyOpen.cashToken,
-            LastSignature = dailyOpen.cashToken
+            LastSignature = dailyOpen.cashToken,
+            CurrentGrandTotal = 0
         };
         receiptResponse.ftSignatures = SignatureFactory.CreateDailyClosingReceiptSignatures(long.Parse(currentDailyClosing));
         return receiptResponse;
