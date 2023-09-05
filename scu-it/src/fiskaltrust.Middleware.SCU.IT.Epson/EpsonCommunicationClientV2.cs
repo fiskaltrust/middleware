@@ -24,17 +24,14 @@ namespace fiskaltrust.Middleware.SCU.IT.Epson;
 public class EpsonCommunicationClientV2
 {
     private readonly ILogger<EpsonSCU> _logger;
-    private readonly EpsonScuConfiguration _configuration;
     private readonly EpsonCommandFactory _epsonXmlWriter;
     private readonly HttpClient _httpClient;
     private readonly string _commandUrl;
     private readonly ErrorInfoFactory _errorCodeFactory = new();
-    private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
 
     public EpsonCommunicationClientV2(ILogger<EpsonSCU> logger, EpsonScuConfiguration configuration, EpsonCommandFactory epsonXmlWriter)
     {
         _logger = logger;
-        _configuration = configuration;
         _epsonXmlWriter = epsonXmlWriter;
         if (string.IsNullOrEmpty(configuration.DeviceUrl))
         {
@@ -155,7 +152,6 @@ public class EpsonCommunicationClientV2
     {
         try
         {
-            _semaphore.Wait(_configuration.LockTimeoutMs);
             var request = CreateInvoice(receiptRequest);
             var content = _epsonXmlWriter.CreateInvoiceRequestContent(request);
 
@@ -175,10 +171,6 @@ public class EpsonCommunicationClientV2
         {
             var response = ExceptionInfo(e);
             throw new SSCDErrorException(response.SSCDErrorInfo.Type, response.SSCDErrorInfo.Info);
-        }
-        finally
-        {
-            _semaphore.Release();
         }
     }
 
@@ -200,8 +192,6 @@ public class EpsonCommunicationClientV2
         DailyClosingResponse dailyClosingResponse;
         try
         {
-            _semaphore.Wait(_configuration.LockTimeoutMs);
-
             var content = _epsonXmlWriter.CreatePrintZReportRequestContent(new DailyClosingRequest
             {
                 Operator = "1",
@@ -246,11 +236,6 @@ public class EpsonCommunicationClientV2
             }
             throw new SSCDErrorException(dailyClosingResponse.SSCDErrorInfo.Type, dailyClosingResponse.SSCDErrorInfo.Info);
         }
-        finally
-        {
-            _semaphore.Release();
-        }
-
         receiptResponse.ftSignatures = SignatureFactory.CreateDailyClosingReceiptSignatures(dailyClosingResponse.ZRepNumber);
         return receiptResponse;
     }
@@ -270,7 +255,6 @@ public class EpsonCommunicationClientV2
 
         try
         {
-            _semaphore.Wait(_configuration.LockTimeoutMs);
             var content = _epsonXmlWriter.CreateNonFiscalReceipt(new NonFiscalRequest
             {
                 NonFiscalPrints = new List<NonFiscalPrint>
@@ -310,7 +294,7 @@ public class EpsonCommunicationClientV2
             {
                 msg = msg + " " + e.InnerException.Message;
             }
-            Response? response = null;
+            Response? response;
             if (IsConnectionException(e))
             {
                 response = new Response() { Success = false, SSCDErrorInfo = new SSCDErrorInfo() { Info = msg, Type = SSCDErrorType.Connection } };
@@ -321,10 +305,6 @@ public class EpsonCommunicationClientV2
             }
 
             throw new SSCDErrorException(response.SSCDErrorInfo.Type, response.SSCDErrorInfo.Info);
-        }
-        finally
-        {
-            _semaphore.Release();
         }
         return receiptResponse;
     }
