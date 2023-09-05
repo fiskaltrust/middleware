@@ -15,34 +15,25 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
         private static readonly Uri _serverUri = new Uri("https://f51f-88-116-45-202.ngrok-free.app");
         private readonly CustomRTServerConfiguration _config = new CustomRTServerConfiguration { ServerUrl = _serverUri.ToString(), Username = "0001ab05", Password = "admin" };
 
-        [Fact]
-        public async Task PerformInitOperationAsync()
+
+        private IITSSCD GetSUT()
         {
             var serviceCollection = new ServiceCollection();
             serviceCollection.AddLogging();
 
-            var accountMasterData = new AccountMasterData
-            {
-                AccountId = Guid.NewGuid(),
-                VatId = "12345688909"
-            };
-
             var sut = new ScuBootstrapper
             {
                 Id = Guid.NewGuid(),
-                Configuration = new Dictionary<string, object>
-                {
-                    { "ServerUrl", _serverUri },
-                    { "Username", "0001ab05" },
-                    { "Password", "admin" },
-                    { "AccountMasterData", accountMasterData }
-                }
+                Configuration = JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(_config))
             };
             sut.ConfigureServices(serviceCollection);
+            return serviceCollection.BuildServiceProvider().GetRequiredService<IITSSCD>();
+        }
 
-
-            var itsscd = serviceCollection.BuildServiceProvider().GetRequiredService<IITSSCD>();
-
+        [Fact]
+        public async Task PerformInitOperationAsync()
+        {
+            var itsscd = GetSUT();
             var processRequest = new ProcessRequest
             {
                 ReceiptRequest = new ReceiptRequest
@@ -62,31 +53,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
         [Fact(Skip = "Currently not working since we don't have a cert.")]
         public async Task PerformOutOfOperationAsync()
         {
-            var serviceCollection = new ServiceCollection();
-            serviceCollection.AddLogging();
-
-            var accountMasterData = new AccountMasterData
-            {
-                AccountId = Guid.NewGuid(),
-                VatId = "19239239"
-            };
-
-            var sut = new ScuBootstrapper
-            {
-                Id = Guid.NewGuid(),
-                Configuration = new Dictionary<string, object>
-                {
-                    { "ServerUrl", "https://a3e3-88-116-45-202.ngrok-free.app/" },
-                    { "Username", "0001ab05" },
-                    { "Password", "admin" },
-                    { "AccountMasterData", accountMasterData }
-                }
-            };
-            sut.ConfigureServices(serviceCollection);
-
-
-            var itsscd = serviceCollection.BuildServiceProvider().GetRequiredService<IITSSCD>();
-
+            var itsscd = GetSUT();
             var processRequest = new ProcessRequest
             {
                 ReceiptRequest = new ReceiptRequest
@@ -106,31 +73,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
         [Fact]
         public async Task PerformZeroReceiptAsync()
         {
-            var serviceCollection = new ServiceCollection();
-            serviceCollection.AddLogging();
-
-            var accountMasterData = new AccountMasterData
-            {
-                AccountId = Guid.NewGuid(),
-                VatId = "19239239"
-            };
-
-            var sut = new ScuBootstrapper
-            {
-                Id = Guid.NewGuid(),
-                Configuration = new Dictionary<string, object>
-                {
-                    { "ServerUrl", "https://a3e3-88-116-45-202.ngrok-free.app/" },
-                    { "Username", "0001ab05" },
-                    { "Password", "admin" },
-                    { "AccountMasterData", accountMasterData }
-                }
-            };
-            sut.ConfigureServices(serviceCollection);
-
-
-            var itsscd = serviceCollection.BuildServiceProvider().GetRequiredService<IITSSCD>();
-
+            var itsscd = GetSUT();
             var processRequest = new ProcessRequest
             {
                 ReceiptRequest = new ReceiptRequest
@@ -156,10 +99,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
             var sut = new ScuBootstrapper
             {
                 Id = Guid.NewGuid(),
-                Configuration = new Dictionary<string, object>
-                {
-                    { "ServerUrl", "https://localhost:8000" }
-                }
+                Configuration = JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(_config))
             };
             sut.ConfigureServices(serviceCollection);
 
@@ -216,22 +156,8 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
 }
 """;
             var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(initOperationReceipt);
-            var serviceCollection = new ServiceCollection();
-            serviceCollection.AddLogging();
 
-            var sut = new ScuBootstrapper
-            {
-                Id = Guid.NewGuid(),
-                Configuration = new Dictionary<string, object>
-                {
-                    { "ServerUrl", "https://localhost:8000" }
-                }
-            };
-            sut.ConfigureServices(serviceCollection);
-
-
-            var itsscd = serviceCollection.BuildServiceProvider().GetRequiredService<IITSSCD>();
-
+            var itsscd = GetSUT();
             _ = await itsscd.ProcessReceiptAsync(new ProcessRequest
             {
                 ReceiptRequest = receiptRequest,
@@ -243,7 +169,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
 
         }
 
-        [Theory(Skip = "Currently not working since we don't have a certificate")]
+        [Theory]
         [MemberData(nameof(rtHandledReceipts))]
         public async Task ProcessAsync_Should_Do_Things(ITReceiptCases receiptCase)
         {
@@ -268,10 +194,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
             var sut = new ScuBootstrapper
             {
                 Id = Guid.NewGuid(),
-                Configuration = new Dictionary<string, object>
-                {
-                    { "ServerUrl", "https://localhost:8000" }
-                }
+                Configuration = JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(_config))
             };
             sut.ConfigureServices(serviceCollection);
 
@@ -286,7 +209,6 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
                     ftQueueID = Guid.NewGuid().ToString()
                 }
             });
-
         }
 
         [Fact]
@@ -343,7 +265,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
                 }
             };
             sut.ConfigureServices(serviceCollection);
-   
+
 
             var itsscd = serviceCollection.BuildServiceProvider().GetRequiredService<IITSSCD>();
 

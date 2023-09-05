@@ -28,7 +28,7 @@ public static class CustomRTServerMapping
                 amount = (int) receiptRequest.cbChargeItems.Sum(x => x.Amount) * 100,
                 fiscalcode = "",
                 vatcode = "",
-                fiscaloperator = "technician",
+                fiscaloperator = "",
                 businessname = "",
                 prevSignature = queueIdentification.LastSignature,
                 grandTotal = queueIdentification.CurrentGrandTotal,
