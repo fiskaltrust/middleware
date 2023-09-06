@@ -45,7 +45,6 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.Lifecycle
                 {
                     signatureItem
                 };
-            signatures.AddRange(receiptResponse.ftSignatures);
             signatures.AddRange(result.ReceiptResponse.ftSignatures);
             receiptResponse.ftSignatures = signatures.ToArray();
             return (receiptResponse, new List<ftActionJournal>

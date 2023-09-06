@@ -29,10 +29,9 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.Receipt
             });
             var documentNumber = result.ReceiptResponse.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentNumber)).Data;
             var zNumber = result.ReceiptResponse.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTZNumber)).Data;
-            receiptResponse.ftReceiptIdentification += $"{zNumber}-{documentNumber}";
+            receiptResponse.ftReceiptIdentification += $"{zNumber.PadLeft(4, '0')}-{documentNumber.PadLeft(4, '0')}";
 
             var signatures = new List<SignaturItem>();
-            signatures.AddRange(receiptResponse.ftSignatures);
             signatures.AddRange(result.ReceiptResponse.ftSignatures);
             receiptResponse.ftSignatures = signatures.ToArray();
             return (receiptResponse, new List<ftActionJournal>());

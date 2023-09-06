@@ -12,6 +12,9 @@ using fiskaltrust.Middleware.Localization.QueueIT.Extensions;
 using fiskaltrust.Middleware.Localization.QueueIT.v2.DailyOperations;
 using fiskaltrust.Middleware.Localization.QueueIT.v2.Lifecycle;
 using fiskaltrust.Middleware.Localization.QueueIT.Services;
+using fiskaltrust.Middleware.Contracts.Repositories;
+using Newtonsoft.Json;
+using fiskaltrust.ifPOS.v1.it;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT
 {
@@ -20,15 +23,17 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
         protected readonly IConfigurationRepository _configurationRepository;
         private readonly IJournalITRepository _journalITRepository;
         private readonly ReceiptTypeProcessorFactory _receiptTypeProcessor;
+        private readonly IMiddlewareQueueItemRepository _queueItemRepository;
         private readonly IITSSCDProvider _itSSCDProvider;
         private readonly ILogger<SignProcessorIT> _logger;
         private bool _loggedDisabledQueueReceiptRequest;
 
-        public SignProcessorIT(IITSSCDProvider itSSCDProvider, ILogger<SignProcessorIT> logger, IConfigurationRepository configurationRepository, IJournalITRepository journalITRepository, ReceiptTypeProcessorFactory receiptTypeProcessor)
+        public SignProcessorIT(IITSSCDProvider itSSCDProvider, ILogger<SignProcessorIT> logger, IConfigurationRepository configurationRepository, IJournalITRepository journalITRepository, ReceiptTypeProcessorFactory receiptTypeProcessor, IMiddlewareQueueItemRepository queueItemRepository)
         {
             _configurationRepository = configurationRepository;
             _journalITRepository = journalITRepository;
             _receiptTypeProcessor = receiptTypeProcessor;
+            _queueItemRepository = queueItemRepository;
             _itSSCDProvider = itSSCDProvider;
             _logger = logger;
         }
@@ -71,6 +76,46 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
                 return (response, actionJournals);
             }
 
+            if (request.IsVoid() || request.IsRefund())
+            {
+                var queueItems = _queueItemRepository.GetByReceiptReferenceAsync(request.cbPreviousReceiptReference, request.cbTerminalID);
+                // What should we do in this case? Cannot really proceed with the storno but we
+                await foreach (var existingQueueItem in queueItems)
+                {
+                    var referencedResponse = JsonConvert.DeserializeObject<ReceiptResponse>(queueItem.response);
+                    var documentNumber = referencedResponse.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentNumber)).Data;
+                    var zNumber = referencedResponse.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTZNumber)).Data;
+                    var signatures = new List<SignaturItem>();
+                    signatures.AddRange(receiptResponse.ftSignatures);
+                    signatures.AddRange(new List<SignaturItem>
+                    {
+                        new SignaturItem
+                        {
+                            Caption = "<reference-z-number>",
+                            Data = zNumber.ToString(),
+                            ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                            ftSignatureType = 0x4954000000000000 | (long) SignatureTypesIT.RTReferenceZNumber
+                        },
+                        new SignaturItem
+                        {
+                            Caption = "<reference-doc-number>",
+                            Data = documentNumber.ToString(),
+                            ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                            ftSignatureType = 0x4954000000000000 | (long) SignatureTypesIT.RTReferenceDocumentNumber
+                        },
+                        new SignaturItem
+                        {
+                            Caption = "<reference-timestamp>",
+                            Data = queueItem.cbReceiptMoment.ToString("yyyy-MM-dd HH:mm:ss"),
+                            ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                            ftSignatureType = 0x4954000000000000 | (long) SignatureTypesIT.RTDocumentMoment
+                        },
+                    });
+                    receiptResponse.ftSignatures = signatures.ToArray();
+                    break;
+                }
+            }
+
             try
             {
                 (var response, var actionJournals) = await receiptTypeProcessor.ExecuteAsync(queue, queueIT, request, receiptResponse, queueItem).ConfigureAwait(false);
@@ -82,18 +127,18 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
                     var journalIT = ftJournalITFactory.CreateFrom(queueItem, queueIT, new ScuResponse()
                     {
                         ftReceiptCase = request.ftReceiptCase,
-                        ReceiptDateTime = DateTime.Parse(response.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentMoment)).Data),
-                        ReceiptNumber = long.Parse(response.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentNumber)).Data),
-                        ZRepNumber = long.Parse(response.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTZNumber)).Data)
+                        ReceiptNumber = long.Parse(documentNumber),
+                        ZRepNumber = long.Parse(zNumber)
                     });
                     await _journalITRepository.InsertAsync(journalIT).ConfigureAwait(false);
                 }
                 else if (response.ftSignatures.Any(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTZNumber)))
                 {
+                    var zNumber = response.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTZNumber)).Data;
                     var journalIT = ftJournalITFactory.CreateFrom(queueItem, queueIT, new ScuResponse()
                     {
                         ftReceiptCase = request.ftReceiptCase,
-                        ZRepNumber = long.Parse(response.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTZNumber)).Data)
+                        ZRepNumber = long.Parse(zNumber)
                     });
                     await _journalITRepository.InsertAsync(journalIT).ConfigureAwait(false);
                 }

@@ -46,11 +46,11 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.Lifecycle
                     ReceiptRequest = request,
                     ReceiptResponse = receiptResponse,
                 });
+
                 var signatures = new List<SignaturItem>
                 {
                     signature
                 };
-                signatures.AddRange(receiptResponse.ftSignatures);
                 signatures.AddRange(result.ReceiptResponse.ftSignatures);
                 receiptResponse.ftSignatures = signatures.ToArray();
 
