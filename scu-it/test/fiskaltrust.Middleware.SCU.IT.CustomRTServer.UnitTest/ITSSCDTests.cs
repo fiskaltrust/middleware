@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.it;
@@ -189,6 +190,57 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
             result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentNumber));
             result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTSerialNumber));
             result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.CustomRTServerShaMetadata));
+        }
+
+        [Fact]
+        public async Task ProcessPosReceipt_0x4954_2000_0000_0001_TakeAway_Delivery_Cash_Refund()
+        {
+            var response = _receiptResponse;
+            var itsscd = GetSUT();
+            var request = ReceiptExamples.GetTakeAway_Delivery_Cash();
+            var result = await itsscd.ProcessReceiptAsync(new ProcessRequest
+            {
+                ReceiptRequest = request,
+                ReceiptResponse = _receiptResponse
+            });
+
+
+            var zNumber = result.ReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTZNumber)).Data;
+            var rtdocNumber = result.ReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentNumber)).Data;
+            var signatures = new List<SignaturItem>();
+            signatures.AddRange(response.ftSignatures);
+            signatures.AddRange(new List<SignaturItem>
+                    {
+                        new SignaturItem
+                        {
+                            Caption = "<reference-z-number>",
+                            Data = zNumber,
+                            ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                            ftSignatureType = 0x4954000000000000 | (long) SignatureTypesIT.RTReferenceZNumber
+                        },
+                        new SignaturItem
+                        {
+                            Caption = "<reference-doc-number>",
+                            Data = rtdocNumber,
+                            ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                            ftSignatureType = 0x4954000000000000 | (long) SignatureTypesIT.RTReferenceDocumentNumber
+                        },
+                        new SignaturItem
+                        {
+                            Caption = "<reference-timestamp>",
+                            Data = request.cbReceiptMoment.ToString("yyyy-MM-dd HH:mm:ss"),
+                            ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                            ftSignatureType = 0x4954000000000000 | (long) SignatureTypesIT.RTDocumentMoment
+                        },
+                    });
+            response.ftSignatures = signatures.ToArray();
+
+            var refundResult = await itsscd.ProcessReceiptAsync(new ProcessRequest
+            {
+                ReceiptRequest = ReceiptExamples.GetTakeAway_Delivery_Refund(),
+                ReceiptResponse = response
+            });
+
         }
 
         [Fact]

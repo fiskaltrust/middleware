@@ -130,9 +130,21 @@ public sealed class CustomRTServer : IITSSCD
             await OpenNewdayAsync(request.ReceiptRequest, request.ReceiptResponse, cashuuid.CashUuId);
             // TODO let's check if we really should auto open a day
         }
+
         if (request.ReceiptRequest.IsVoid())
         {
-            return await ProcessVoidReceipt(request, cashuuid);
+            return new ProcessResponse
+            {
+                ReceiptResponse = await PerformVoidReceiptAsync(request.ReceiptRequest, request.ReceiptResponse, cashuuid)
+            };
+        }
+
+        if (request.ReceiptRequest.IsRefund())
+        {
+            return new ProcessResponse
+            {
+                ReceiptResponse = await PerformRefundReceiptAsync(request.ReceiptRequest, request.ReceiptResponse, cashuuid)
+            };
         }
 
         if (request.ReceiptRequest.IsDailyClosing())
@@ -238,18 +250,26 @@ public sealed class CustomRTServer : IITSSCD
         CashUUIdMappings[Guid.Parse(receiptResponse.ftQueueID)].CurrentGrandTotal = CashUUIdMappings[Guid.Parse(receiptResponse.ftQueueID)].CurrentGrandTotal +  fDocument.document.amount;
     }
 
-    private async Task<ProcessResponse> ProcessVoidReceipt(ProcessRequest request, QueueIdentification cashuuid)
+    private async Task<ReceiptResponse> PerformVoidReceiptAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, QueueIdentification cashuuid)
     {
-        return new ProcessResponse
-        {
-            ReceiptResponse = await PerformRefundReceiptAsync(request.ReceiptRequest, request.ReceiptResponse, cashuuid)
-        };
+        var zNumber = receiptResponse.ftSignatures.First(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTReferenceZNumber)).Data;
+        var rtdocNumber = receiptResponse.ftSignatures.First(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTReferenceDocumentNumber)).Data;
+        var rtDocumentMoment = receiptResponse.ftSignatures.First(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentMoment)).Data;
+
+        (var commercialDocument, var fiscalDocument) = CustomRTServerMapping.CreateAnnuloDocument(receiptRequest, cashuuid, int.Parse(zNumber), int.Parse(rtdocNumber), rtDocumentMoment);
+        var result = _client.InsertFiscalDocumentAsync(commercialDocument);
+        receiptResponse.ftSignatures = SignatureFactory.CreatePosReceiptSignatures(fiscalDocument.document.docnumber, fiscalDocument.document.docznumber, receiptRequest.cbReceiptMoment);
+        return receiptResponse;
     }
 
     private async Task<ReceiptResponse> PerformRefundReceiptAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, QueueIdentification cashuuid)
     {
-        (var commercialDocument, var fiscalDocument) = CustomRTServerMapping.CreateResoDocument(receiptRequest, cashuuid);
-        _receiptQueue.Add(commercialDocument);
+        var zNumber = receiptResponse.ftSignatures.First(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTReferenceZNumber)).Data;
+        var rtdocNumber = receiptResponse.ftSignatures.First(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTReferenceDocumentNumber)).Data;
+        var rtDocumentMoment = receiptResponse.ftSignatures.First(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentMoment)).Data;
+
+        (var commercialDocument, var fiscalDocument) = CustomRTServerMapping.CreateResoDocument(receiptRequest, cashuuid, int.Parse(zNumber), int.Parse(rtdocNumber), rtDocumentMoment);
+        var result = await _client.InsertFiscalDocumentAsync(commercialDocument);
         receiptResponse.ftSignatures = SignatureFactory.CreatePosReceiptSignatures(fiscalDocument.document.docnumber, fiscalDocument.document.docznumber, receiptRequest.cbReceiptMoment);
         return receiptResponse;
     }

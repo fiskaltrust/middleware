@@ -12,5 +12,10 @@ public enum SignatureTypesIT
     RTCustomerID = 0x16,
     RTAmount = 0x17,
     CustomRTServerInfo = 0x18,
-    CustomRTServerShaMetadata = 0x19
+    CustomRTServerShaMetadata = 0x19,
+
+    RTReferenceZNumber = 0x20,
+    RTReferenceDocumentNumber = 0x21,
+    RTReferenceDocumentMoment = 0x22,
+    RTReferenceDocumentType = 0x23,
 }

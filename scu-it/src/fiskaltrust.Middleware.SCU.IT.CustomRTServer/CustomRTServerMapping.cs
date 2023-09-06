@@ -9,9 +9,79 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer;
 
 public static class CustomRTServerMapping
 {
-    public static (CommercialDocument commercialDocument, FDocument fiscalDocument) CreateAnnuloDocument(ReceiptRequest receiptRequest, QueueIdentification queueIdentification) => GenerateFiscalDocument(receiptRequest, queueIdentification, 3);
+    public static (CommercialDocument commercialDocument, FDocument fiscalDocument) CreateAnnuloDocument(ReceiptRequest receiptRequest, QueueIdentification queueIdentification, int referenceZNumber, int referenceDocnUmber, string referenceDTime)
+    {
+        var fiscalDocument = new FDocument
+        {
+            document = new DocumentData
+            {
+                cashuuid = queueIdentification.CashUuId,
+                doctype = 5,
+                dtime = receiptRequest.cbReceiptMoment.ToString("yyyy-MM-dd HH:mm:ss"),
+                docnumber = queueIdentification.LastDocNumber + 1,
+                docznumber = queueIdentification.LastZNumber + 1,
+                amount = (int) receiptRequest.cbChargeItems.Sum(x => x.Amount) * 100,
+                fiscalcode = "",
+                vatcode = "",
+                fiscaloperator = "",
+                businessname = null,
+                prevSignature = queueIdentification.LastSignature,
+                grandTotal = queueIdentification.CurrentGrandTotal,
+                referenceClosurenumber = referenceZNumber,
+                referenceDocnumber = referenceDocnUmber,
+                referenceDtime = referenceDTime,
+            },
+            items = GenerateItemDataForReceiptRequest(receiptRequest, queueIdentification.LastZNumber + 1, queueIdentification.LastDocNumber + 1),
+            taxs = GenerateTaxDataForReceiptRequest(receiptRequest)
+        };
+        var json = JsonConvert.SerializeObject(fiscalDocument);
+        var qrCodeData = GenerateQRCodeData(json, queueIdentification.CashHmacKey);
+        var commercialDocument = new CommercialDocument
+        {
+            fiscalData = json,
+            qrData = qrCodeData,
+        };
 
-    public static (CommercialDocument commercialDocument, FDocument fiscalDocument) CreateResoDocument(ReceiptRequest receiptRequest, QueueIdentification queueIdentification) => GenerateFiscalDocument(receiptRequest, queueIdentification, 2);
+
+        return (commercialDocument, fiscalDocument);
+    }
+
+    public static (CommercialDocument commercialDocument, FDocument fiscalDocument) CreateResoDocument(ReceiptRequest receiptRequest, QueueIdentification queueIdentification, int referenceZNumber, int referenceDocnUmber, string referenceDTime)
+    {
+        var fiscalDocument = new FDocument
+        {
+            document = new DocumentData
+            {
+                cashuuid = queueIdentification.CashUuId,
+                doctype = 3,
+                dtime = receiptRequest.cbReceiptMoment.ToString("yyyy-MM-dd HH:mm:ss"),
+                docnumber = queueIdentification.LastDocNumber + 1,
+                docznumber = queueIdentification.LastZNumber + 1,
+                amount = (int) receiptRequest.cbChargeItems.Sum(x => x.Amount) * 100,
+                fiscalcode = "",
+                vatcode = "",
+                fiscaloperator = "",
+                businessname = null,
+                prevSignature = queueIdentification.LastSignature,
+                grandTotal = queueIdentification.CurrentGrandTotal,
+                referenceClosurenumber = referenceZNumber,
+                referenceDocnumber = referenceDocnUmber,
+                referenceDtime = referenceDTime,
+            },
+            items = GenerateItemDataForReceiptRequest(receiptRequest, queueIdentification.LastZNumber + 1, queueIdentification.LastDocNumber + 1),
+            taxs = GenerateTaxDataForReceiptRequest(receiptRequest)
+        };
+        var json = JsonConvert.SerializeObject(fiscalDocument);
+        var qrCodeData = GenerateQRCodeData(json, queueIdentification.CashHmacKey);
+        var commercialDocument = new CommercialDocument
+        {
+            fiscalData = json,
+            qrData = qrCodeData,
+        };
+
+
+        return (commercialDocument, fiscalDocument);
+    }
 
     public static (CommercialDocument commercialDocument, FDocument fiscalDocument) GenerateFiscalDocument(ReceiptRequest receiptRequest, QueueIdentification queueIdentification) => GenerateFiscalDocument(receiptRequest, queueIdentification, 1);
 

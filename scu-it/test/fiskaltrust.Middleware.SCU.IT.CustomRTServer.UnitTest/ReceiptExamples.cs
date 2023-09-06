@@ -203,6 +203,126 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
             return JsonConvert.DeserializeObject<ReceiptRequest>(receipt);
         }
 
+        public static ReceiptRequest GetTakeAway_Delivery_Refund()
+        {
+            var current_moment = DateTime.UtcNow;
+            var receipt = $$"""
+{
+    "ftCashBoxID": "00000000-0000-0000-0000-000000000000",
+    "ftPosSystemId": "00000000-0000-0000-0000-000000000000",
+    "cbTerminalID": "00010001",
+    "cbReceiptReference": "0001-0004",
+    "cbPreviousReceiptReference": "96SRT900126,00010001;0001-0002;20230830120101",
+    "cbUser": "user1234",
+    "cbReceiptMoment": "{{current_moment}}",
+    "cbChargeItems": [
+        {
+            "Quantity": -2.0,
+            "Amount": -221,
+            "UnitPrice": 110.5,
+            "VATRate": 22,
+            "VATAmount": 39.85,
+            "Description": "Return/Refund - TakeAway - Delivery - Item VAT 22%",
+            "ftChargeItemCase": 5283883447186751507,
+            "Moment": "{{current_moment}}"
+        },
+        {
+            "Quantity": -1,
+            "Amount": -107,
+            "VATRate": 10,
+            "VATAmount": 9.73,
+            "ftChargeItemCase": 5283883447186751505,
+            "Description": "Return/Refund - TakeAway - Delivery - Item VAT 10%",
+            "Moment": "{{current_moment}}"
+        },
+        {
+            "Quantity": -1,
+            "Amount": -88,
+            "VATRate": 5,
+            "VATAmount": 4.19,
+            "ftChargeItemCase": 5283883447186751506,
+            "Description": "Return/Refund - TakeAway - Delivery - Item VAT 5%",
+            "Moment": "{{current_moment}}"
+        },
+        {
+            "Quantity": -1,
+            "Amount": -90,
+            "VATRate": 4,
+            "VATAmount": 3.46,
+            "ftChargeItemCase": 5283883447186751508,
+            "Description": "Return/Refund - TakeAway - Delivery - Item VAT 4%",
+            "Moment": "{{current_moment}}"
+        },
+        {
+            "Quantity": -1,
+            "Amount": -10,
+            "VATRate": 0,
+            "VATAmount": 0,
+            "ftChargeItemCase": 5283883447186755604,
+            "Description": "Return/Refund - TakeAway - Delivery - Item VAT NI",
+            "Moment": "{{current_moment}}"
+        },
+        {
+            "Quantity": -1,
+            "Amount": -10,
+            "VATRate": 0,
+            "VATAmount": 0,
+            "ftChargeItemCase": 5283883447186759700,
+            "Description": "Return/Refund - TakeAway - Delivery - Item VAT NS",
+            "Moment": "{{current_moment}}"
+        },
+        {
+            "Quantity": -1,
+            "Amount": -10,
+            "VATRate": 0,
+            "VATAmount": 0,
+            "ftChargeItemCase": 5283883447186763796,
+            "Description": "Return/Refund - TakeAway - Delivery - Item VAT ES",
+            "Moment": "{{current_moment}}"
+        },
+        {
+            "Quantity": -1,
+            "Amount": -10,
+            "VATRate": 0,
+            "VATAmount": 0,
+            "ftChargeItemCase": 5283883447186767892,
+            "Description": "Return/Refund - TakeAway - Delivery - Item VAT RM",
+            "Moment": "{{current_moment}}"
+        },
+        {
+            "Quantity": -1,
+            "Amount": -10,
+            "VATRate": 0,
+            "VATAmount": 0,
+            "ftChargeItemCase": 5283883447186771988,
+            "Description": "Return/Refund - TakeAway - Delivery - Item VAT AL",
+            "Moment": "{{current_moment}}"
+        },
+        {
+            "Quantity": -1,
+            "Amount": -10,
+            "VATRate": 0,
+            "VATAmount": 0,
+            "ftChargeItemCase": 5283883447186784276,
+            "Description": "Return/Refund - TakeAway - Delivery - Item VAT EE",
+            "Moment": "{{current_moment}}"
+        }
+    ],
+    "cbPayItems": [
+        {
+            "Quantity": 1,
+            "Description": "Return/Refund Cash",
+            "ftPayItemCase": 5283883447184654337,
+            "Moment": "{{current_moment}}",
+            "Amount": -566
+        }
+    ],
+    "ftReceiptCase": 5283883447201300481
+}
+""";
+            return JsonConvert.DeserializeObject<ReceiptRequest>(receipt);
+        }
+
         public static ReceiptRequest GetTakeAway_Delivery_Card()
         {
             var current_moment = DateTime.UtcNow;
