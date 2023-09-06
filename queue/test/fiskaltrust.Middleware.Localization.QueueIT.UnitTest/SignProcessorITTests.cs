@@ -6,6 +6,7 @@ using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Contracts.Models;
+using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueIT.Constants;
 using fiskaltrust.storage.serialization.DE.V0;
 using fiskaltrust.storage.V0;
@@ -98,6 +99,8 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
 
         private IMarketSpecificSignProcessor GetSUT(ftQueue queue, ftQueueIT queueIT)
         {
+            var middlewareQueueItemRepositoryMock = new Mock<IMiddlewareQueueItemRepository>();
+
             var configurationRepositoryMock = new Mock<IConfigurationRepository>();
             configurationRepositoryMock.Setup(x => x.GetQueueAsync(_queue.ftQueueId)).ReturnsAsync(queue);
             configurationRepositoryMock.Setup(x => x.GetQueueITAsync(_queue.ftQueueId)).ReturnsAsync(queueIT);
@@ -126,6 +129,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
             serviceCollection.AddSingleton(configurationRepositoryMock.Object);
             serviceCollection.AddSingleton(Mock.Of<IJournalITRepository>());
             serviceCollection.AddSingleton(clientFactoryMock.Object);
+            serviceCollection.AddSingleton(middlewareQueueItemRepositoryMock.Object);
             serviceCollection.AddSingleton(new MiddlewareConfiguration
             {
                 Configuration = new Dictionary<string, object>
@@ -396,7 +400,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
             var sut = GetDefaultSUT(_queueStarted);
             var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, _queueStarted, new ftQueueItem { });
 
-            receiptResponse.ftReceiptIdentification.Should().Be("ft1#Z1");
+            receiptResponse.ftReceiptIdentification.Should().Be("ft1#Z0001");
             receiptResponse.ftState.Should().Be(0x4954_0000_0000_0000);
             actionJournals.Should().HaveCount(1);
             actionJournals[0].Type.Should().Be(receiptRequest.ftReceiptCase.ToString("x"));

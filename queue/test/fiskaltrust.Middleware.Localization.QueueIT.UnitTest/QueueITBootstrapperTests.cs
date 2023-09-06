@@ -6,6 +6,7 @@ using fiskaltrust.storage.V0;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.Contracts.Models;
+using fiskaltrust.Middleware.Contracts.Repositories;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
 {
@@ -29,6 +30,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
             serviceCollection.AddLogging();
             serviceCollection.AddSingleton(Mock.Of<IConfigurationRepository>());
             serviceCollection.AddSingleton(Mock.Of<IJournalITRepository>());
+            serviceCollection.AddSingleton(Mock.Of<IMiddlewareQueueItemRepository>());
             serviceCollection.AddSingleton(Mock.Of<IClientFactory<IITSSCD>>());
             serviceCollection.AddSingleton(new MiddlewareConfiguration
             {
