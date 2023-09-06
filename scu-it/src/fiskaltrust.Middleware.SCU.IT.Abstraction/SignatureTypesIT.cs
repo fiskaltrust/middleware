@@ -10,5 +10,7 @@ public enum SignatureTypesIT
     RTDocumentType = 0x14,
     RTLotteryID = 0x15,
     RTCustomerID = 0x16,
-    RTAmount = 0x17
+    RTAmount = 0x17,
+    CustomRTServerInfo = 0x18,
+    CustomRTServerShaMetadata = 0x19
 }

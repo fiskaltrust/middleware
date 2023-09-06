@@ -54,10 +54,11 @@ public sealed class CustomRTServer : IITSSCD
 
     public async Task<RTInfo> GetRTInfoAsync()
     {
+        var result = await _client.GetDailyStatusArrayAsync();
         return new RTInfo
         {
-            SerialNumber = null,
-            InfoData = null
+            SerialNumber = result.ArrayResponse.FirstOrDefault()?.fiscalBoxId,
+            InfoData = JsonConvert.SerializeObject(result.ArrayResponse)
         };
     }
 
@@ -66,11 +67,22 @@ public sealed class CustomRTServer : IITSSCD
         return _nonProcessingCases.Select(x => (long) x).Contains(request.GetReceiptCase());
     }
 
-    private static ProcessResponse CreateResponse(ReceiptResponse receiptResponse)
+    private static ProcessResponse CreateResponse(ReceiptResponse response, string stateData, List<SignaturItem> signaturItems)
     {
+        response.ftSignatures = signaturItems.ToArray();
+        response.ftStateData = stateData;
         return new ProcessResponse
         {
-            ReceiptResponse = receiptResponse
+            ReceiptResponse = response
+        };
+    }
+
+    private static ProcessResponse CreateResponse(ReceiptResponse response, List<SignaturItem> signaturItems)
+    {
+        response.ftSignatures = signaturItems.ToArray();
+        return new ProcessResponse
+        {
+            ReceiptResponse = response
         };
     }
 
@@ -84,22 +96,23 @@ public sealed class CustomRTServer : IITSSCD
 
         if (request.ReceiptRequest.IsInitialOperationReceipt())
         {
-            return CreateResponse(await PerformInitOperationAsync(request.ReceiptRequest, request.ReceiptResponse));
+            return CreateResponse(request.ReceiptResponse, await PerformInitOperationAsync(request.ReceiptResponse));
         }
 
         if (request.ReceiptRequest.IsOutOfOperationReceipt())
         {
-            return CreateResponse(await PerformOutOfOperationAsync(request.ReceiptRequest, request.ReceiptResponse, request.ReceiptResponse.ftCashBoxIdentification));
+            return CreateResponse(request.ReceiptResponse, await PerformOutOfOperationAsync(request.ReceiptRequest, request.ReceiptResponse, request.ReceiptResponse.ftCashBoxIdentification));
         }
 
         if (request.ReceiptRequest.IsZeroReceipt())
         {
-            return CreateResponse(await PerformZeroReceiptOperationAsync(request.ReceiptRequest, request.ReceiptResponse, request.ReceiptResponse.ftCashBoxIdentification));
+            (var signatures, var stateData) = await PerformZeroReceiptOperationAsync(request.ReceiptRequest, request.ReceiptResponse, request.ReceiptResponse.ftCashBoxIdentification);
+            return CreateResponse(request.ReceiptResponse, stateData, signatures);
         }
 
         if (IsNoActionCase(request.ReceiptRequest))
         {
-            return CreateResponse(request.ReceiptResponse);
+            return CreateResponse(request.ReceiptResponse, new List<SignaturItem>());
         }
 
         if (!CashUUIdMappings.ContainsKey(Guid.Parse(request.ReceiptResponse.ftQueueID)))
@@ -116,7 +129,7 @@ public sealed class CustomRTServer : IITSSCD
 
         if (request.ReceiptRequest.IsDailyClosing())
         {
-            return CreateResponse(await PerformDailyCosing(request.ReceiptRequest, request.ReceiptResponse, cashuuid));
+            return CreateResponse(request.ReceiptResponse, await PerformDailyCosing(request.ReceiptRequest, request.ReceiptResponse, cashuuid));
         }
 
         switch (receiptCase)
@@ -126,37 +139,51 @@ public sealed class CustomRTServer : IITSSCD
             case (long) ITReceiptCases.PaymentTransfer0x0002:
             case (long) ITReceiptCases.Protocol0x0005:
             default:
-                return CreateResponse(await PerformClassicReceiptAsync(request.ReceiptRequest, request.ReceiptResponse, cashuuid));
+                return CreateResponse(request.ReceiptResponse, await PerformClassicReceiptAsync(request.ReceiptRequest, request.ReceiptResponse, cashuuid));
         }
     }
 
-    private async Task<ReceiptResponse> PerformInitOperationAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
+    private async Task<List<SignaturItem>> PerformInitOperationAsync(ReceiptResponse receiptResponse)
     {
         var shop = receiptResponse.ftCashBoxIdentification.Substring(0, 4);
         var name = receiptResponse.ftCashBoxIdentification.Substring(4, 4);
         var result = await _client.InsertCashRegisterAsync(receiptResponse.ftQueueID, shop, name, _configuration.AccountMasterData.AccountId.ToString(), _configuration.AccountMasterData.VatId ?? _configuration.AccountMasterData.TaxId);
-        receiptResponse.ftSignatures = SignatureFactory.CreateInitialOperationSignatures();
-        return receiptResponse;
+        var signatures = SignatureFactory.CreateInitialOperationSignatures().ToList();
+        signatures.Add(new SignaturItem
+        {
+            Caption = "<customrtserver-cashuuid>",
+            Data = result.cashUuid,
+            ftSignatureFormat = (long) SignaturItem.Formats.Text,
+            ftSignatureType = 0x4954000000000000 | (long) SignatureTypesIT.CustomRTServerInfo
+        });
+        return signatures;
     }
 
-    private async Task<ReceiptResponse> PerformZeroReceiptOperationAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, string cashUuid)
+    private async Task<(List<SignaturItem> signaturItems, string ftStateData)> PerformZeroReceiptOperationAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, string cashUuid)
     {
-     //   var result = await _client.GetDailyStatusAsync(cashUuid);
+        var result = await _client.GetDailyStatusAsync(cashUuid);
         var resultMemStatus = await _client.GetDeviceMemStatusAsync();
-        receiptResponse.ftSignatures = SignatureFactory.CreateOutOfOperationSignatures();
-        receiptResponse.ftStateData = JsonConvert.SerializeObject(new
+        var signatures = SignatureFactory.CreateZeroReceiptSignatures().ToList();
+        var stateData = JsonConvert.SerializeObject(new
         {
             DeviceMemStatus = resultMemStatus,
-           // DeviceDailyStatus = result
+            DeviceDailyStatus = result
         });
-        return receiptResponse;
+        return (signatures, stateData);
     }
 
-    private async Task<ReceiptResponse> PerformOutOfOperationAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, string cashUuid)
+    private async Task<List<SignaturItem>> PerformOutOfOperationAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, string cashUuid)
     {
         var result = await _client.CancelCashRegisterAsync(cashUuid, _configuration.AccountMasterData.VatId);
-        receiptResponse.ftSignatures = SignatureFactory.CreateOutOfOperationSignatures();
-        return receiptResponse;
+        var signatures = SignatureFactory.CreateOutOfOperationSignatures().ToList();
+        signatures.Add(new SignaturItem
+        {
+            Caption = "<customrtserver-cashuuid>",
+            Data = cashUuid,
+            ftSignatureFormat = (long) SignaturItem.Formats.Text,
+            ftSignatureType = 0x4954000000000000 | (long) SignatureTypesIT.CustomRTServerInfo
+        });
+        return signatures;
     }
 
     private async Task ReloadCashUUID(ReceiptResponse receiptResponse)
@@ -164,14 +191,21 @@ public sealed class CustomRTServer : IITSSCD
         var dailyOpen = await _client.GetDailyStatusAsync(receiptResponse.ftCashBoxIdentification);
         CashUUIdMappings[Guid.Parse(receiptResponse.ftQueueID)] = new QueueIdentification
         {
+            RTServerSerialNumber = dailyOpen.fiscalBoxId,
             CashHmacKey = dailyOpen.cashHmacKey,
             LastZNumber = int.Parse(dailyOpen.numberClosure),
             LastDocNumber = int.Parse(dailyOpen.cashLastDocNumber),
             CashUuId = receiptResponse.ftCashBoxIdentification,
-            CashToken = dailyOpen.cashToken,
             LastSignature = dailyOpen.cashToken,
             CurrentGrandTotal = int.Parse(dailyOpen.grandTotalDB)
         };
+    }
+
+    private async Task UpdatedCashUUID(ReceiptResponse receiptResponse, FDocument fDocument, QrCodeData qrCodeData)
+    {
+        CashUUIdMappings[Guid.Parse(receiptResponse.ftQueueID)].LastDocNumber = fDocument.document.docnumber;
+        CashUUIdMappings[Guid.Parse(receiptResponse.ftQueueID)].LastSignature = qrCodeData.signature;
+        CashUUIdMappings[Guid.Parse(receiptResponse.ftQueueID)].CurrentGrandTotal = CashUUIdMappings[Guid.Parse(receiptResponse.ftQueueID)].CurrentGrandTotal +  fDocument.document.amount;
     }
 
     private async Task<ProcessResponse> ProcessVoidReceipt(ProcessRequest request, QueueIdentification cashuuid)
@@ -190,39 +224,82 @@ public sealed class CustomRTServer : IITSSCD
         return receiptResponse;
     }
 
-    private async Task<ReceiptResponse> PerformClassicReceiptAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, QueueIdentification cashuuid)
+    private async Task<List<SignaturItem>> PerformClassicReceiptAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, QueueIdentification cashuuid)
     {
         (var commercialDocument, var fiscalDocument) = CustomRTServerMapping.GenerateFiscalDocument(receiptRequest, cashuuid);
-        _receiptQueue.Add(commercialDocument);
-        foreach(var receipt in _receiptQueue)
+        // Todo queue mechanism
+        Task.Run(() => _client.InsertFiscalDocumentAsync(commercialDocument)).ContinueWith(x =>
         {
-            var result = await _client.InsertFiscalDocumentAsync(receipt);
-        }
-        receiptResponse.ftSignatures = SignatureFactory.CreatePosReceiptSignatures(fiscalDocument.document.docnumber, fiscalDocument.document.docznumber, receiptRequest.cbReceiptMoment);
-        return receiptResponse;
+            if (x.IsFaulted)
+            {
+                _logger.LogError("Failed to insert fiscal document", x.Exception);
+            }
+            else
+            {
+                _logger.LogInformation("Transmitted commercial document with sha {shametadata} DOC {znumber}-{docnumber}.", commercialDocument.qrData.shaMetadata, fiscalDocument.document.docznumber.ToString().PadLeft(4, '0'), fiscalDocument.document.docnumber.ToString().PadLeft(4, '0'));
+            }
+        });
+        await UpdatedCashUUID(receiptResponse, fiscalDocument, commercialDocument.qrData);
+        var signatures = CreatePosReceiptCustomRTServerSignatures(fiscalDocument.document.docnumber, fiscalDocument.document.docznumber, commercialDocument.qrData.shaMetadata, cashuuid).ToList();
+        return signatures;
     }
 
-    private async Task<ReceiptResponse> PerformDailyCosing(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, QueueIdentification cashuuid)
+    public static SignaturItem[] CreatePosReceiptCustomRTServerSignatures(long receiptNumber, long zRepNumber, string shaMetadata, QueueIdentification cashuuid)
+    {
+        return new SignaturItem[]
+        {
+            new SignaturItem
+            {
+                Caption = "<z-number>",
+                Data = zRepNumber.ToString(),
+                ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                ftSignatureType = 0x4954000000000000 | (long) SignatureTypesIT.RTZNumber
+            },
+            new SignaturItem
+            {
+                Caption = "<receipt-number>",
+                Data = receiptNumber.ToString(),
+                ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                ftSignatureType = 0x4954000000000000 |(long) SignatureTypesIT.RTDocumentNumber
+            },
+            new SignaturItem
+            {
+                Caption = "<rt-serialnumber>",
+                Data = cashuuid.RTServerSerialNumber,
+                ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                ftSignatureType = 0x4954000000000000 |(long) SignatureTypesIT.RTSerialNumber
+            },
+            new SignaturItem
+            {
+                Caption = "<rt-server-shametadata>",
+                Data = shaMetadata,
+                ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                ftSignatureType = 0x4954000000000000 |(long) SignatureTypesIT.CustomRTServerShaMetadata
+            }
+        };
+    }
+
+    private async Task<List<SignaturItem>> PerformDailyCosing(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, QueueIdentification cashuuid)
     {
         var status = await _client.GetDailyStatusAsync(cashuuid.CashUuId);
         var currentDailyClosing = status.numberClosure;
         // process left over receipts
-        var dailyClosing = await _client.InsertZDocumentAsync(cashuuid.CashUuId, receiptRequest.cbReceiptMoment, int.Parse(currentDailyClosing), status.grandTotalDB);
+        var dailyClosing = await _client.InsertZDocumentAsync(cashuuid.CashUuId, receiptRequest.cbReceiptMoment, int.Parse(currentDailyClosing) + 1, status.grandTotalDB);
         var beforeStatus = await _client.GetDailyStatusAsync(cashuuid.CashUuId);
         // TODO should we really check the status? 
         var dailyOpen = await _client.GetDailyOpenAsync(cashuuid.CashUuId, receiptRequest.cbReceiptMoment);
         CashUUIdMappings[Guid.Parse(receiptResponse.ftQueueID)] = new QueueIdentification
         {
+            RTServerSerialNumber = dailyOpen.fiscalBoxId,
             CashHmacKey = dailyOpen.cashHmacKey,
             LastZNumber = int.Parse(dailyOpen.numberClosure),
-            LastDocNumber = int.Parse(dailyOpen.cashLastDocNumber),
+            LastDocNumber = int.Parse(string.IsNullOrWhiteSpace(dailyOpen.cashLastDocNumber) ? "0" : dailyOpen.cashLastDocNumber),
             CashUuId = cashuuid.CashUuId,
-            CashToken = dailyOpen.cashToken,
             LastSignature = dailyOpen.cashToken,
-            CurrentGrandTotal = 0
+            CurrentGrandTotal = int.Parse(string.IsNullOrWhiteSpace(dailyOpen.grandTotalDB) ? "0" : dailyOpen.grandTotalDB),
         };
-        receiptResponse.ftSignatures = SignatureFactory.CreateDailyClosingReceiptSignatures(long.Parse(currentDailyClosing));
-        return receiptResponse;
+        var signatures = SignatureFactory.CreateDailyClosingReceiptSignatures(long.Parse(currentDailyClosing)).ToList();
+        return signatures;
     }
 
     #region legacy

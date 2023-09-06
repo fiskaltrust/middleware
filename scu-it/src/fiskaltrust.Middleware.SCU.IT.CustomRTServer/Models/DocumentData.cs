@@ -11,13 +11,14 @@ public class DocumentData
     public string fiscalcode { get; set; } = string.Empty;
     public string vatcode { get; set; } = string.Empty;
     public string fiscaloperator { get; set; } = string.Empty;
-    public string businessname { get; set; } = string.Empty;
+    public string? businessname { get; set; } = null;
     public string? prevSignature { get; set; } = string.Empty;
     public string type_signature_id => "1";
     public int grandTotal { get; set; }
     public int referenceClosurenumber { get; set; }
     public int referenceDocnumber { get; set; }
-    public string? referenceDtime { get; set; } = string.Empty;
+    public string? referenceDtime { get; set; } = null;
+    public string? referenceCashuuid { get; set; } = string.Empty;
 
     public string? errSignature => null;
     public int? err_number => null;

@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.SCU.IT.Abstraction;
+using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 
@@ -11,103 +12,23 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
 {
     public class ITSSCDTests
     {
-        private readonly Guid _queueId = Guid.NewGuid();
+        private static readonly Guid _queueId = Guid.NewGuid();
         private static readonly Uri _serverUri = new Uri("https://f51f-88-116-45-202.ngrok-free.app");
-        private readonly CustomRTServerConfiguration _config = new CustomRTServerConfiguration { ServerUrl = _serverUri.ToString(), Username = "0001ab05", Password = "admin" };
-
-
-        private IITSSCD GetSUT()
-        {
-            var serviceCollection = new ServiceCollection();
-            serviceCollection.AddLogging();
-
-            var sut = new ScuBootstrapper
+        private readonly CustomRTServerConfiguration _config = new CustomRTServerConfiguration { 
+            ServerUrl = _serverUri.ToString(), 
+            Username = "0001ab05", 
+            Password = "admin",
+            AccountMasterData = new AccountMasterData
             {
-                Id = Guid.NewGuid(),
-                Configuration = JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(_config))
-            };
-            sut.ConfigureServices(serviceCollection);
-            return serviceCollection.BuildServiceProvider().GetRequiredService<IITSSCD>();
-        }
-
-        [Fact]
-        public async Task PerformInitOperationAsync()
+                AccountId = Guid.NewGuid(),
+                VatId = "MTLFNC75A16E783N"
+            }
+        };
+        private static readonly ReceiptResponse _receiptResponse = new ReceiptResponse
         {
-            var itsscd = GetSUT();
-            var processRequest = new ProcessRequest
-            {
-                ReceiptRequest = new ReceiptRequest
-                {
-                    ftReceiptCase = 0x4954_2000_0000_4001
-                },
-                ReceiptResponse = new ReceiptResponse
-                {
-                    ftCashBoxIdentification = "02020402",
-                    ftQueueID = _queueId.ToString()
-                }
-            };
-
-            _ = await itsscd.ProcessReceiptAsync(processRequest);
-        }
-
-        [Fact(Skip = "Currently not working since we don't have a cert.")]
-        public async Task PerformOutOfOperationAsync()
-        {
-            var itsscd = GetSUT();
-            var processRequest = new ProcessRequest
-            {
-                ReceiptRequest = new ReceiptRequest
-                {
-                    ftReceiptCase = 0x4954_2000_0000_4002
-                },
-                ReceiptResponse = new ReceiptResponse
-                {
-                    ftCashBoxIdentification = "02020402",
-                    ftQueueID = _queueId.ToString()
-                }
-            };
-
-            _ = await itsscd.ProcessReceiptAsync(processRequest);
-        }
-
-        [Fact]
-        public async Task PerformZeroReceiptAsync()
-        {
-            var itsscd = GetSUT();
-            var processRequest = new ProcessRequest
-            {
-                ReceiptRequest = new ReceiptRequest
-                {
-                    ftReceiptCase = 0x4954_2000_0000_2000
-                },
-                ReceiptResponse = new ReceiptResponse
-                {
-                    ftCashBoxIdentification = "02020402",
-                    ftQueueID = _queueId.ToString()
-                }
-            };
-
-            _ = await itsscd.ProcessReceiptAsync(processRequest);
-        }
-
-        [Fact]
-        public async Task GetRTInfoAsync_ShouldReturn_SerialNumber()
-        {
-            var serviceCollection = new ServiceCollection();
-            serviceCollection.AddLogging();
-
-            var sut = new ScuBootstrapper
-            {
-                Id = Guid.NewGuid(),
-                Configuration = JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(_config))
-            };
-            sut.ConfigureServices(serviceCollection);
-
-
-            var itsscd = serviceCollection.BuildServiceProvider().GetRequiredService<IITSSCD>();
-
-            _ = await itsscd.GetRTInfoAsync();
-        }
+            ftCashBoxIdentification = "ske09601",
+            ftQueueID = _queueId.ToString()
+        };
 
         public static IEnumerable<object[]> rtNoHandleReceipts()
         {
@@ -137,6 +58,29 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
             yield return new object[] { ITReceiptCases.Protocol0x0005 };
         }
 
+        private IITSSCD GetSUT()
+        {
+            var serviceCollection = new ServiceCollection();
+            serviceCollection.AddLogging();
+
+            var sut = new ScuBootstrapper
+            {
+                Id = Guid.NewGuid(),
+                Configuration = JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(_config))
+            };
+            sut.ConfigureServices(serviceCollection);
+            return serviceCollection.BuildServiceProvider().GetRequiredService<IITSSCD>();
+        }
+
+        [Fact]
+        public async Task GetRTInfoAsync_ShouldReturn_Serialnumber()
+        {
+            var itsscd = GetSUT();
+
+            var result = await itsscd.GetRTInfoAsync();
+            result.SerialNumber.Should().Be("96SRT001239");
+        }
+
         [Theory]
         [MemberData(nameof(rtNoHandleReceipts))]
         public async Task ProcessAsync_Should_Do_Nothing(ITReceiptCases receiptCase)
@@ -158,126 +102,160 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
             var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(initOperationReceipt);
 
             var itsscd = GetSUT();
-            _ = await itsscd.ProcessReceiptAsync(new ProcessRequest
-            {
-                ReceiptRequest = receiptRequest,
-                ReceiptResponse = new ReceiptResponse
-                {
-                    ftQueueID = Guid.NewGuid().ToString()
-                }
-            });
-
-        }
-
-        [Theory]
-        [MemberData(nameof(rtHandledReceipts))]
-        public async Task ProcessAsync_Should_Do_Things(ITReceiptCases receiptCase)
-        {
-            var initOperationReceipt = $$"""
-{
-    "ftCashBoxID": "00000000-0000-0000-0000-000000000000",
-    "ftPosSystemId": "00000000-0000-0000-0000-000000000000",
-    "cbTerminalID": "00010001",
-    "cbReceiptReference": "{{Guid.NewGuid()}}",
-    "cbReceiptMoment": "{{DateTime.UtcNow.ToString("o")}}",
-    "cbChargeItems": [],
-    "cbPayItems": [],
-    "ftReceiptCase": {{0x4954200000000000 | (long) receiptCase}},
-    "ftReceiptCaseData": "",
-    "cbUser": "Admin"
-}
-""";
-            var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(initOperationReceipt);
-            var serviceCollection = new ServiceCollection();
-            serviceCollection.AddLogging();
-
-            var sut = new ScuBootstrapper
-            {
-                Id = Guid.NewGuid(),
-                Configuration = JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(_config))
-            };
-            sut.ConfigureServices(serviceCollection);
-
-
-            var itsscd = serviceCollection.BuildServiceProvider().GetRequiredService<IITSSCD>();
-
-            _ = await itsscd.ProcessReceiptAsync(new ProcessRequest
-            {
-                ReceiptRequest = receiptRequest,
-                ReceiptResponse = new ReceiptResponse
-                {
-                    ftQueueID = Guid.NewGuid().ToString()
-                }
-            });
-        }
-
-        [Fact]
-        public async Task ProcessPosReceipt_0x4954_2000_0000_0001()
-        {
-            var current_moment = DateTime.UtcNow.ToString("o");
-            var initOperationReceipt = $$"""
-{
-    "ftCashBoxID": "00000000-0000-0000-0000-000000000000",
-    "ftPosSystemId": "00000000-0000-0000-0000-000000000000",
-    "cbTerminalID": "00010001",
-    "cbReceiptReference": "0001-0002",
-    "cbUser": "user1234",
-    "cbReceiptMoment": "{{current_moment}}",
-    "cbChargeItems": [
-        {
-            "Quantity": 1,
-            "Amount": 107,
-            "VATRate": 10,
-            "ftChargeItemCase": 5283883447184523265,
-            "Description": "Food/Beverage - Item VAT 10%",
-            "Moment": "{{current_moment}}"
-        }
-    ],
-    "cbPayItems": [
-        {
-            "Quantity": 1,
-            "Description": "Cash",
-            "ftPayItemCase": 5283883447184523265,
-            "Moment": "{{current_moment}}",
-            "Amount": 107
-        }
-    ],
-    "ftReceiptCase": 5283883447184523265
-}
-""";
-            var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(initOperationReceipt);
-            var serviceCollection = new ServiceCollection();
-            serviceCollection.AddLogging();
-            var accountMasterData = new AccountMasterData
-            {
-                AccountId = Guid.NewGuid(),
-                VatId = "12345688909"
-            };
-            var sut = new ScuBootstrapper
-            {
-                Id = Guid.NewGuid(),
-                Configuration = new Dictionary<string, object>
-                {
-                    { "ServerUrl", _serverUri },
-                    { "Username", "ske00001" },
-                    { "Password", "admin" },
-                    { "AccountMasterData", accountMasterData }
-                }
-            };
-            sut.ConfigureServices(serviceCollection);
-
-
-            var itsscd = serviceCollection.BuildServiceProvider().GetRequiredService<IITSSCD>();
-
             var result = await itsscd.ProcessReceiptAsync(new ProcessRequest
             {
                 ReceiptRequest = receiptRequest,
                 ReceiptResponse = new ReceiptResponse
                 {
-                    ftQueueID = Guid.NewGuid().ToString(),
-                    ftCashBoxIdentification = "ske00003"
+                    ftQueueID = Guid.NewGuid().ToString()
                 }
             });
+            result.ReceiptResponse.ftSignatures.Should().BeEmpty();
+        }
+
+
+        [Fact]
+        public async Task ProcessPosReceipt_InitialOperation_0x4954_2000_0000_4001()
+        {
+            var itsscd = GetSUT();
+            var result = await itsscd.ProcessReceiptAsync(new ProcessRequest
+            {
+                ReceiptRequest = ReceiptExamples.GetInitialOperation(),
+                ReceiptResponse = _receiptResponse
+            });
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.Caption == "<customrtserver-cashuuid>");
+        }
+
+        [Fact]
+        public async Task ProcessPosReceipt_OutOfOperation_0x4954_2000_0000_4002()
+        {
+            var itsscd = GetSUT();
+            var result = await itsscd.ProcessReceiptAsync(new ProcessRequest
+            {
+                ReceiptRequest = ReceiptExamples.GetOutOOperation(),
+                ReceiptResponse = _receiptResponse
+            });
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.Caption == "<customrtserver-cashuuid>");
+        }
+
+        [Fact]
+        public async Task ProcessPosReceipt_Daily_Closing0x4954_2000_0000_2011()
+        {
+
+            var itsscd = GetSUT();
+            var result = await itsscd.ProcessReceiptAsync(new ProcessRequest
+            {
+                ReceiptRequest = ReceiptExamples.GetDailyClosing(),
+                ReceiptResponse = _receiptResponse
+            });
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == 0x4954000000000011);
+        }
+
+        [Fact]
+        public async Task ProcessPosReceipt_ZeroReceipt0x4954_2000_0000_2000()
+        {
+            var itsscd = GetSUT();
+            var result = await itsscd.ProcessReceiptAsync(new ProcessRequest
+            {
+                ReceiptRequest = ReceiptExamples.GetZeroReceipt(),
+                ReceiptResponse = _receiptResponse
+            });
+            var dictioanry = JsonConvert.DeserializeObject<Dictionary<string, object>>(result.ReceiptResponse.ftStateData);
+            dictioanry.Should().ContainKey("DeviceMemStatus");
+            dictioanry.Should().ContainKey("DeviceDailyStatus");
+        }
+
+        [Fact]
+        public async Task ProcessPosReceipt_0x4954_2000_0000_0001_TakeAway_Delivery_Cash()
+        {
+            var itsscd = GetSUT();
+            var result = await itsscd.ProcessReceiptAsync(new ProcessRequest
+            {
+                ReceiptRequest = ReceiptExamples.GetTakeAway_Delivery_Cash(),
+                ReceiptResponse = _receiptResponse
+            });
+
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTZNumber));
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentNumber));
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTSerialNumber));
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.CustomRTServerShaMetadata));
+        }
+
+        [Fact]
+        public async Task ProcessPosReceipt_0x4954_2000_0000_0001_TakeAway_Delivery_Card()
+        {
+            var itsscd = GetSUT();
+            var result = await itsscd.ProcessReceiptAsync(new ProcessRequest
+            {
+                ReceiptRequest = ReceiptExamples.GetTakeAway_Delivery_Card(),
+                ReceiptResponse = _receiptResponse
+            });
+
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTZNumber));
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentNumber));
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTSerialNumber));
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.CustomRTServerShaMetadata));
+        }
+
+        [Fact]
+        public async Task ProcessPosReceipt_0x4954_2000_0000_0001_Sequence()
+        {
+            var itsscd = GetSUT();
+            var result = await itsscd.ProcessReceiptAsync(new ProcessRequest
+            {
+                ReceiptRequest = ReceiptExamples.GetTakeAway_Delivery_Card(),
+                ReceiptResponse = _receiptResponse
+            });
+
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTZNumber));
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentNumber));
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTSerialNumber));
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.CustomRTServerShaMetadata));
+
+            result = await itsscd.ProcessReceiptAsync(new ProcessRequest
+            {
+                ReceiptRequest = ReceiptExamples.GetTakeAway_Delivery_Cash(),
+                ReceiptResponse = _receiptResponse
+            });
+
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTZNumber));
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentNumber));
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTSerialNumber));
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.CustomRTServerShaMetadata));
+
+            result = await itsscd.ProcessReceiptAsync(new ProcessRequest
+            {
+                ReceiptRequest = ReceiptExamples.GetDailyClosing(),
+                ReceiptResponse = _receiptResponse
+            });
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == 0x4954000000000011);
+
+            result = await itsscd.ProcessReceiptAsync(new ProcessRequest
+            {
+                ReceiptRequest = ReceiptExamples.GetTakeAway_Delivery_Card(),
+                ReceiptResponse = _receiptResponse
+            });
+
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTZNumber));
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentNumber));
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTSerialNumber));
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.CustomRTServerShaMetadata));
+
+            result = await itsscd.ProcessReceiptAsync(new ProcessRequest
+            {
+                ReceiptRequest = ReceiptExamples.GetTakeAway_Delivery_Cash(),
+                ReceiptResponse = _receiptResponse
+            });
+
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTZNumber));
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentNumber));
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTSerialNumber));
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.CustomRTServerShaMetadata));
+
+            while(true)
+            {
+                await Task.Delay(1000);
+            }
         }
     }
 }

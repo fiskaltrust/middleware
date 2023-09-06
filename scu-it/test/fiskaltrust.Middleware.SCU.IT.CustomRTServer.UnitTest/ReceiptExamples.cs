@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using fiskaltrust.ifPOS.v1;
+using fiskaltrust.Middleware.SCU.IT.Abstraction;
 using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
@@ -25,7 +27,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
             return JsonConvert.DeserializeObject<ReceiptRequest>(receipt);
         }
 
-        public static ReceiptRequest GetOutOfInitialOperation()
+        public static ReceiptRequest GetOutOOperation()
         {
             var current_moment = DateTime.UtcNow;
             var receipt = $$"""
@@ -99,6 +101,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
             "Amount": 221,
             "UnitPrice": 110.5,
             "VATRate": 22,
+            "VATAmount": 39.85,
             "Description": "TakeAway - Delivery - Item VAT 22%",
             "ftChargeItemCase": 5283883447186620435,
             "Moment": "{{current_moment}}"
@@ -107,6 +110,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
             "Quantity": 1,
             "Amount": 107,
             "VATRate": 10,
+            "VATAmount": 9.73,
             "ftChargeItemCase": 5283883447186620433,
             "Description": "TakeAway - Delivery - Item VAT 10%",
             "Moment": "{{current_moment}}"
@@ -115,6 +119,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
             "Quantity": 1,
             "Amount": 88,
             "VATRate": 5,
+            "VATAmount": 4.19,
             "ftChargeItemCase": 5283883447186620434,
             "Description": "TakeAway - Delivery - Item VAT 5%",
             "Moment": "{{current_moment}}"
@@ -123,6 +128,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
             "Quantity": 1,
             "Amount": 90,
             "VATRate": 4,
+            "VATAmount": 3.46,
             "ftChargeItemCase": 5283883447186620436,
             "Description": "TakeAway - Delivery - Item VAT 4%",
             "Moment": "{{current_moment}}"
@@ -131,6 +137,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
             "Quantity": 1,
             "Amount": 10,
             "VATRate": 0,
+            "VATAmount": 0,
             "ftChargeItemCase": 5283883447186624532,
             "Description": "TakeAway - Delivery - Item VAT NI",
             "Moment": "{{current_moment}}"
@@ -139,6 +146,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
             "Quantity": 1,
             "Amount": 10,
             "VATRate": 0,
+            "VATAmount": 0,
             "ftChargeItemCase": 5283883447186628628,
             "Description": "TakeAway - Delivery - Item VAT NS",
             "Moment": "{{current_moment}}"
@@ -147,6 +155,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
             "Quantity": 1,
             "Amount": 10,
             "VATRate": 0,
+            "VATAmount": 0,
             "ftChargeItemCase": 5283883447186632724,
             "Description": "TakeAway - Delivery - Item VAT ES",
             "Moment": "{{current_moment}}"
@@ -155,6 +164,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
             "Quantity": 1,
             "Amount": 10,
             "VATRate": 0,
+            "VATAmount": 0,
             "ftChargeItemCase": 5283883447186636820,
             "Description": "TakeAway - Delivery - Item VAT RM",
             "Moment": "{{current_moment}}"
@@ -163,6 +173,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
             "Quantity": 1,
             "Amount": 10,
             "VATRate": 0,
+            "VATAmount": 0,
             "ftChargeItemCase": 5283883447186640916,
             "Description": "TakeAway - Delivery - Item VAT AL",
             "Moment": "{{current_moment}}"
@@ -171,6 +182,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
             "Quantity": 1,
             "Amount": 10,
             "VATRate": 0,
+            "VATAmount": 0,
             "ftChargeItemCase": 5283883447186653204,
             "Description": "TakeAway - Delivery - Item VAT EE",
             "Moment": "{{current_moment}}"

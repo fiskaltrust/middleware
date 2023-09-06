@@ -18,6 +18,11 @@ public static class SignatureFactory
         return new SignaturItem[] { };
     }
 
+    public static SignaturItem[] CreateZeroReceiptSignatures()
+    {
+        return new SignaturItem[] { };
+    }
+
     public static SignaturItem[] CreateDailyClosingReceiptSignatures(long zRepNumber)
     {
         return new SignaturItem[]
@@ -76,7 +81,7 @@ public static class SignatureFactory
                 Caption = "<receipt-number>",
                 Data = receiptNumber.ToString(),
                 ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                ftSignatureType = 0x4954000000000000 |(long) SignatureTypesIT.RTZNumber
+                ftSignatureType = 0x4954000000000000 |(long) SignatureTypesIT.RTDocumentNumber
             },
             new SignaturItem
             {

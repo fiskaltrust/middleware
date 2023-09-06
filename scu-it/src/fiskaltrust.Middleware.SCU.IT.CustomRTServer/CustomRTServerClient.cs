@@ -66,6 +66,23 @@ public class CustomRTServerClient
         return data;
     }
 
+    public async Task<GetDailyStatusArrayResponse> GetDailyStatusArrayAsync()
+    {
+        var request = new
+        {
+            data = new { }
+        };
+        var result = await _httpClient.PostAsync("/getDailyStatusArray.php", new StringContent(JsonConvert.SerializeObject(request)));
+        // TODO Check error
+        var resultContent = await result.Content.ReadAsStringAsync();
+        var data = JsonConvert.DeserializeObject<GetDailyStatusArrayResponse>(resultContent);
+        if (data.responseCode != 0)
+        {
+            throw new Exception(data.responseDesc);
+        }
+        return data;
+    }
+
     public async Task<GetDailyOpenResponse> GetDailyOpenAsync(string cashuuid, DateTime dateTime)
     {
         var request = new
@@ -154,14 +171,20 @@ public class CustomRTServerClient
             }
         };
         var result = await _httpClient.PostAsync("/insertCashRegister.php", new StringContent(JsonConvert.SerializeObject(request)));
-        // TODO Check error
         var resultContent = await result.Content.ReadAsStringAsync();
-        var data = JsonConvert.DeserializeObject<InsertCashRegisterAsyncResponse>(resultContent);
-        if (data.responseCode != 0)
+        if (result.IsSuccessStatusCode)
         {
-            throw new Exception(data.responseDesc);
+            var data = JsonConvert.DeserializeObject<InsertCashRegisterAsyncResponse>(resultContent);
+            if (data.responseCode != 0)
+            {
+                throw new Exception(data.responseDesc);
+            }
+            return data;
         }
-        return data;
+        else
+        {
+            throw new Exception($"Something went wrong while communicating with the RT Server. Statuscode: {result.StatusCode}. Reasonphrase: {result.ReasonPhrase}. Content: {resultContent}.");
+        }
     }
 
     public async Task<UpdateCashRegisterResponse> UpdateCashRegisterAsync(string cashuuid, string password, string description, string cf)
@@ -263,18 +286,53 @@ public class CustomRTServerClient
     }
 }
 
-public class GetDeviceMemStatusResponse
+public class CustomRTDResponse
+{
+    public int responseCode { get; set; }
+    public string responseDesc { get; set; } = string.Empty;
+}
+
+public class CustomRTDetailedResponse : CustomRTDResponse
+{
+    public ResponseBodyErrory? responseErr { get; set; }
+} 
+
+
+public class GetDeviceMemStatusResponse : CustomRTDetailedResponse
 {
     public int ej_capacity { get; set; }
     public int ej_used { get; set; }
     public int ej_available { get; set; }
-    public int responseCode { get; set; }
-    public string responseDesc { get; set; } = string.Empty;
-    public ResponseBodyErrory? responseErr { get; set; }
     public int average_erase_count { get; set; }
 }
 
-public class GetDailyStatusResponse
+public class GetDailyStatusArrayResponse : CustomRTDetailedResponse
+{
+    public List<GetDailyStatusResponseContent> ArrayResponse { get; set; } = new List<GetDailyStatusResponseContent>();
+
+}
+
+public class GetDailyStatusResponseContent
+{
+    public string numberClosure { get; set; } = string.Empty;
+    public string idClosure { get; set; } = string.Empty;
+    public string jsonResponse { get; set; } = string.Empty;
+    public string fiscalBoxId { get; set; } = string.Empty;
+    public string cashName { get; set; } = string.Empty;
+    public string cashShop { get; set; } = string.Empty;
+    public string cashDesc { get; set; } = string.Empty;
+    public string cashToken { get; set; } = string.Empty;
+    public string cashHmacKey { get; set; } = string.Empty;
+    public string cashStatus { get; set; } = string.Empty;
+    public int responseCode { get; set; }
+    public string responseDesc { get; set; } = string.Empty;
+    public string dateTimeServer { get; set; } = string.Empty;
+    public string cashLastDocNumber { get; set; } = string.Empty;
+    public string grandTotalDB { get; set; } = string.Empty;
+    public string cashuuid { get; set; } = string.Empty;
+}
+
+public class GetDailyStatusResponse : CustomRTDetailedResponse
 {
     public string numberClosure { get; set; } = string.Empty;
     public string idClosure { get; set; } = string.Empty;
@@ -285,15 +343,12 @@ public class GetDailyStatusResponse
     public string cashToken { get; set; } = string.Empty;
     public string cashHmacKey { get; set; } = string.Empty;
     public string cashStatus { get; set; } = string.Empty;
-    public int responseCode { get; set; }
-    public string responseDesc { get; set; } = string.Empty;
-    public ResponseBodyErrory? responseErr { get; set; }
     public string cashLastDocNumber { get; set; } = string.Empty;
     public string grandTotalDB { get; set; } = string.Empty;
     public string dateTimeServer { get; set; } = string.Empty;
 }
 
-public class GetDailyOpenResponse
+public class GetDailyOpenResponse : CustomRTDetailedResponse
 {
     public string numberClosure { get; set; } = string.Empty;
     public string idClosure { get; set; } = string.Empty;
@@ -304,36 +359,22 @@ public class GetDailyOpenResponse
     public string cashToken { get; set; } = string.Empty;
     public string cashHmacKey { get; set; } = string.Empty;
     public string cashStatus { get; set; } = string.Empty;
-    public int responseCode { get; set; }
-    public string responseDesc { get; set; } = string.Empty;
-    public ResponseBodyErrory? responseErr { get; set; }
     public string cashLastDocNumber { get; set; } = string.Empty;
     public string grandTotalDB { get; set; } = string.Empty;
 }
 
-public class InsertZDocumentResponse
-{
-    public int responseCode { get; set; }
-    public string responseDesc { get; set; } = string.Empty;
-    public ResponseBodyErrory? responseErr { get; set; }
-}
+public class InsertZDocumentResponse : CustomRTDetailedResponse { }
 
-public class InsertFiscalDocumentResponse
+public class InsertFiscalDocumentResponse : CustomRTDetailedResponse
 {
-    public int responseCode { get; set; }
-    public string responseDesc { get; set; } = string.Empty;
     public List<string> responseSubCode { get; set; } = new List<string>();
     public int fiscalDocId { get; set; }
-    public ResponseBodyErrory? responseErr { get; set; }
 }
 
-public class InsertFiscalDocumentArrayResponse
+public class InsertFiscalDocumentArrayResponse : CustomRTDetailedResponse
 {
-    public int responseCode { get; set; }
-    public string responseDesc { get; set; } = string.Empty;
     public string responseSubCode { get; set; } = string.Empty;
     public List<InsertFiscalDocumentArraySubResponse> ArrayResponse { get; set; } = new List<InsertFiscalDocumentArraySubResponse>();
-    public ResponseBodyErrory? responseErr { get; set; }
 }
 
 public class InsertFiscalDocumentArraySubResponse
@@ -345,30 +386,16 @@ public class InsertFiscalDocumentArraySubResponse
     public int fiscalDocId { get; set; }
 }
 
-public class InsertCashRegisterAsyncResponse
+public class InsertCashRegisterAsyncResponse : CustomRTDResponse
 {
     public string cashUuid { get; set; } = string.Empty;
-    public int responseCode { get; set; }
-    public string responseDesc { get; set; } = string.Empty;
 }
 
-public class UpdateCashRegisterResponse
-{
-    public int responseCode { get; set; }
-    public string responseDesc { get; set; } = string.Empty;
-}
+public class UpdateCashRegisterResponse : CustomRTDResponse { }
 
-public class CancelCashRegisterResponse
-{
-    public int responseCode { get; set; }
-    public string responseDesc { get; set; } = string.Empty;
-}
+public class CancelCashRegisterResponse : CustomRTDResponse { }
 
-public class ReactivateCanceledCashRegisterResponse
-{
-    public int responseCode { get; set; }
-    public string responseDesc { get; set; } = string.Empty;
-}
+public class ReactivateCanceledCashRegisterResponse : CustomRTDResponse { }
 
 public class ResponseBodyErrory
 {

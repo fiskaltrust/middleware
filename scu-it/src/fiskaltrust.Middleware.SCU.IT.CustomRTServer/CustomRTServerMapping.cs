@@ -3,6 +3,7 @@ using System;
 using fiskaltrust.ifPOS.v1;
 using System.Linq;
 using Newtonsoft.Json;
+using fiskaltrust.Middleware.SCU.IT.Abstraction;
 
 namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer;
 
@@ -14,7 +15,7 @@ public static class CustomRTServerMapping
 
     public static (CommercialDocument commercialDocument, FDocument fiscalDocument) GenerateFiscalDocument(ReceiptRequest receiptRequest, QueueIdentification queueIdentification) => GenerateFiscalDocument(receiptRequest, queueIdentification, 1);
 
-    private static (CommercialDocument commercialDocument, FDocument fiscalDocument) GenerateFiscalDocument(ReceiptRequest receiptRequest, QueueIdentification queueIdentification, int docType)
+    public static (CommercialDocument commercialDocument, FDocument fiscalDocument) GenerateFiscalDocument(ReceiptRequest receiptRequest, QueueIdentification queueIdentification, int docType)
     {
         var fiscalDocument = new FDocument
         {
@@ -29,14 +30,14 @@ public static class CustomRTServerMapping
                 fiscalcode = "",
                 vatcode = "",
                 fiscaloperator = "",
-                businessname = "",
+                businessname = null,
                 prevSignature = queueIdentification.LastSignature,
                 grandTotal = queueIdentification.CurrentGrandTotal,
                 referenceClosurenumber = -1,
                 referenceDocnumber = -1,
                 referenceDtime = null,
             },
-            items = GenerateItemDataForReceiptRequest(receiptRequest),
+            items = GenerateItemDataForReceiptRequest(receiptRequest, queueIdentification.LastZNumber + 1, queueIdentification.LastDocNumber + 1),
             taxs = GenerateTaxDataForReceiptRequest(receiptRequest)
         };
         var json = JsonConvert.SerializeObject(fiscalDocument);
@@ -46,10 +47,12 @@ public static class CustomRTServerMapping
             fiscalData = json,
             qrData = qrCodeData,
         };
+
+        
         return (commercialDocument, fiscalDocument);
     }
 
-    private static QrCodeData GenerateQRCodeData(string data, string key)
+    public static QrCodeData GenerateQRCodeData(string data, string key)
     {
         var qrCode = new QrCodeData
         {
@@ -59,7 +62,7 @@ public static class CustomRTServerMapping
         return qrCode;
     }
 
-    private static List<DocumentItemData> GenerateItemDataForReceiptRequest(ReceiptRequest receiptRequest)
+    public static List<DocumentItemData> GenerateItemDataForReceiptRequest(ReceiptRequest receiptRequest, long zNumber, long receiptNumber)
     {
         var items = new List<DocumentItemData>();
         foreach (var chargeItem in receiptRequest.cbChargeItems)
@@ -69,14 +72,41 @@ public static class CustomRTServerMapping
                 type = GetTypeForChargeItem(chargeItem),
                 description = chargeItem.Description,
                 amount = ConvertToFullAmount(chargeItem.Amount),
-                quantity = ConvertToFullAmount(chargeItem.Quantity),
-                unitprice = ConvertToFullAmount(chargeItem.UnitPrice),
+                quantity = ConvertTo1000FullAmount(chargeItem.Quantity),
+                unitprice = ConvertToFullAmount(chargeItem.Amount / chargeItem.Quantity),
                 vatvalue = ConvertToFullAmount(chargeItem.VATRate),
                 paymentid = "",
                 plu = "",
-                department = ""
+                department = "",
+                vatcode = GetVatCodeForChargeItemCase(chargeItem.ftChargeItemCase)
             });
         }
+        var totalAmount = receiptRequest.cbChargeItems.Sum(x => x.Amount);
+        var vatAmount = receiptRequest.cbChargeItems.Sum(x => x.VATAmount ?? 0.0m);
+        items.Add(new DocumentItemData
+        {
+            type = "97",
+            description = $"TOTALE  COMPLESSIVO               {totalAmount.ToString(ITConstants.CurrencyFormatter)}",
+            amount = ConvertToFullAmount(totalAmount),
+            quantity = ConvertTo1000FullAmount(1),
+            unitprice = "",
+            vatvalue = "",
+            paymentid = "",
+            plu = "",
+            department = ""
+        });
+        items.Add(new DocumentItemData
+        {
+            type = "97",
+            description = $"DI CUI IVA               {vatAmount.ToString(ITConstants.CurrencyFormatter)}",
+            amount = ConvertToFullAmount(vatAmount),
+            quantity = ConvertTo1000FullAmount(1),
+            unitprice = "",
+            vatvalue = "",
+            paymentid = "",
+            plu = "",
+            department = ""
+        });
         foreach (var payitem in receiptRequest.cbPayItems)
         {
             items.Add(new DocumentItemData
@@ -92,10 +122,35 @@ public static class CustomRTServerMapping
                 department = ""
             });
         }
+        var payedAmount = receiptRequest.cbPayItems.Sum(x => x.Amount);
+        items.Add(new DocumentItemData
+        {
+            type = "97",
+            description = $"IMPORTO PAGATO {payedAmount.ToString(ITConstants.CurrencyFormatter)}",
+            amount = ConvertToFullAmount(payedAmount),
+            quantity = ConvertTo1000FullAmount(1),
+            unitprice = "",
+            vatvalue = "",
+            paymentid = "",
+            plu = "",
+            department = ""
+        });
+        items.Add(new DocumentItemData
+        {
+            type = "97",
+            description = $"30/08/2023 12:01       DOC.N.{zNumber.ToString().PadLeft(4, '0')}-{receiptNumber.ToString().PadLeft(4, '0')}",
+            amount = ConvertToFullAmount(payedAmount),
+            quantity = ConvertTo1000FullAmount(1),
+            unitprice = "",
+            vatvalue = "",
+            paymentid = "",
+            plu = "",
+            department = ""
+        });
         return items;
     }
 
-    private static string GetTypeForChargeItem(ChargeItem chargeItem)
+    public static string GetTypeForChargeItem(ChargeItem chargeItem)
     {
         return chargeItem.ftChargeItemCase switch
         {
@@ -103,7 +158,7 @@ public static class CustomRTServerMapping
         };
     }
 
-    private static string GetTypeForPayItem(PayItem payItem)
+    public static string GetTypeForPayItem(PayItem payItem)
     {
         return payItem.ftPayItemCase switch
         {
@@ -111,7 +166,7 @@ public static class CustomRTServerMapping
         };
     }
 
-    private static string GetPaymentIdForPayItem(PayItem payItem)
+    public static string GetPaymentIdForPayItem(PayItem payItem)
     {
         return payItem.ftPayItemCase switch
         {
@@ -119,11 +174,13 @@ public static class CustomRTServerMapping
         };
     }
 
-    public static string ConvertToFullAmount(decimal? value) => ((int) (value ?? 0.0m) * 100).ToString();
+    public static string ConvertTo1000FullAmount(decimal? value) => ((int) ((value ?? 0.0m) * 1000)).ToString();
+
+    public static string ConvertToFullAmount(decimal? value) => ((int) ((value ?? 0.0m) * 100)).ToString();
 
     public static int ConvertToFullAmountInt(decimal? value) => (int) ((value ?? 0.0m) * 100);
 
-    private static List<DocumentTaxData> GenerateTaxDataForReceiptRequest(ReceiptRequest receiptRequest)
+    public static List<DocumentTaxData> GenerateTaxDataForReceiptRequest(ReceiptRequest receiptRequest)
     {
         var items = new List<DocumentTaxData>();
         var groupedItems = receiptRequest.cbChargeItems.GroupBy(x => (GetVatCodeForChargeItemCase(x.ftChargeItemCase), x.VATRate));
@@ -132,7 +189,7 @@ public static class CustomRTServerMapping
             items.Add(new DocumentTaxData
             {
                 gross = ConvertToFullAmountInt(item.Sum(x => x.Amount)),
-                tax = ConvertToFullAmountInt(item.Sum(x => x.VATAmount)),
+                tax = ConvertToFullAmountInt(item.Sum(x => x.VATAmount ?? 0.0m)),
                 vatvalue = ConvertToFullAmountInt(item.Key.VATRate),
                 vatcode = item.Key.Item1
             });

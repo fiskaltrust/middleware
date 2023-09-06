@@ -8,14 +8,12 @@ public class DocumentItemData
     public string quantity { get; set; } = string.Empty;
     public string unitprice { get; set; } = string.Empty;
     public string vatvalue { get; set; } = string.Empty;
+    public string? fiscalvoid { get; set; } = "0";
+    public string signid { get; set; } = "1";
     public string paymentid { get; set; } = string.Empty;
     public string plu { get; set; } = string.Empty;
     public string department { get; set; } = string.Empty;
-
-    // deprecated
-    public string? vatcode { get; set; } // this field is not used
-    public string? businesscode { get; set; } 
-    public string? service { get; set; } 
-    public string? fiscalvoid { get; set; }
-    public string? signid { get; set; } 
+    public string? vatcode { get; set; } = null;
+    public string? service { get; } = "0";
+    public string? businesscode { get; } = "";
 }
