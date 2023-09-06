@@ -1,8 +1,8 @@
-﻿using fiskaltrust.Middleware.SCU.IT.Epson.Utilities;
-using Xunit;
+﻿using Xunit;
 using System.IO;
 using FluentAssertions;
-using fiskaltrust.Middleware.SCU.IT.Epson.Models;
+using fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities;
+using fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models;
 
 namespace fiskaltrust.Middleware.SCU.IT.UnitTest
 {

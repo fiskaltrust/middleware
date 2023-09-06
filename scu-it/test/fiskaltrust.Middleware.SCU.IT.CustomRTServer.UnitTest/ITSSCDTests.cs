@@ -62,8 +62,6 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
 
         private IITSSCD GetSUT()
         {
-
-
             var serviceCollection = new ServiceCollection();
             serviceCollection.AddLogging();
 
@@ -76,15 +74,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
             return serviceCollection.BuildServiceProvider().GetRequiredService<IITSSCD>();
         }
 
-        [Fact]
-        public void SerializeTest()
-        {
-            var sas = "{\"ServerUrl\":\"https://f51f-88-116-45-202.ngrok-free.app\",\"Username\":\"0001ab05\",\"Password\":\"admin\",\"AccountMasterData\":\"{\\\"AccountId\\\":\\\"59ac3eff-69d1-47ec-b680-ac9ac3eff6f3\\\",\\\"AccountName\\\":null,\\\"Street\\\":null,\\\"Zip\\\":null,\\\"City\\\":null,\\\"Country\\\":null,\\\"TaxId\\\":null,\\\"VatId\\\":\\\"MTLFNC75A16E783N\\\"}\"}";
-
-            var config = JsonConvert.DeserializeObject<CustomRTServerConfiguration>(sas);
-        }
-
-        [Fact]
+        [Fact(Skip = "Needs device")]
         public async Task GetRTInfoAsync_ShouldReturn_Serialnumber()
         {
             var itsscd = GetSUT();
@@ -93,7 +83,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
             result.SerialNumber.Should().Be("96SRT001239");
         }
 
-        [Theory]
+        [Theory(Skip = "Needs device")]
         [MemberData(nameof(rtNoHandleReceipts))]
         public async Task ProcessAsync_Should_Do_Nothing(ITReceiptCases receiptCase)
         {
@@ -125,8 +115,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
             result.ReceiptResponse.ftSignatures.Should().BeEmpty();
         }
 
-
-        [Fact]
+        [Fact(Skip = "Needs device")]
         public async Task ProcessPosReceipt_InitialOperation_0x4954_2000_0000_4001()
         {
             var itsscd = GetSUT();
@@ -138,7 +127,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
             result.ReceiptResponse.ftSignatures.Should().Contain(x => x.Caption == "<customrtserver-cashuuid>");
         }
 
-        [Fact]
+        [Fact(Skip = "Needs device")]
         public async Task ProcessPosReceipt_OutOfOperation_0x4954_2000_0000_4002()
         {
             var itsscd = GetSUT();
@@ -150,7 +139,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
             result.ReceiptResponse.ftSignatures.Should().Contain(x => x.Caption == "<customrtserver-cashuuid>");
         }
 
-        [Fact]
+        [Fact(Skip = "Needs device")]
         public async Task ProcessPosReceipt_Daily_Closing0x4954_2000_0000_2011()
         {
 
@@ -163,7 +152,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
             result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == 0x4954000000000011);
         }
 
-        [Fact]
+        [Fact(Skip = "Needs device")]
         public async Task ProcessPosReceipt_ZeroReceipt0x4954_2000_0000_2000()
         {
             var itsscd = GetSUT();
@@ -177,7 +166,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
             dictioanry.Should().ContainKey("DeviceDailyStatus");
         }
 
-        [Fact]
+        [Fact(Skip = "Needs device")]
         public async Task ProcessPosReceipt_0x4954_2000_0000_0001_TakeAway_Delivery_Cash()
         {
             var itsscd = GetSUT();
@@ -193,7 +182,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
             result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.CustomRTServerShaMetadata));
         }
 
-        [Fact]
+        [Fact(Skip = "Needs device")]
         public async Task ProcessPosReceipt_0x4954_2000_0000_0001_TakeAway_Delivery_Cash_Refund()
         {
             var response = _receiptResponse;
@@ -244,7 +233,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
 
         }
 
-        [Fact]
+        [Fact(Skip = "Needs device")]
         public async Task ProcessPosReceipt_0x4954_2000_0000_0001_TakeAway_Delivery_Card()
         {
             var itsscd = GetSUT();
@@ -260,7 +249,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
             result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.CustomRTServerShaMetadata));
         }
 
-        [Fact]
+        [Fact(Skip = "Needs device")]
         public async Task ProcessPosReceipt_0x4954_2000_0000_0001_Sequence()
         {
             var itsscd = GetSUT();
@@ -321,7 +310,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Needs device")]
         public async Task ProcessPosReceipt_InitOperation_FullSequence()
         {
             var itsscd = GetSUT();

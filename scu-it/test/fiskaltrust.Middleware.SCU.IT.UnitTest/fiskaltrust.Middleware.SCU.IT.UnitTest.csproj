@@ -25,6 +25,11 @@
 
 
     <ItemGroup>
+      <ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter\fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.csproj" />
+    </ItemGroup>
+
+
+    <ItemGroup>
         <None Update="Testdata\ResponsePrinterStatus.xml">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>

@@ -1,11 +1,9 @@
-﻿using fiskaltrust.Middleware.SCU.IT.Epson.Utilities;
-using Xunit;
+﻿using Xunit;
 using fiskaltrust.ifPOS.v1.it;
 using System.Collections.Generic;
 using System.IO;
-using fiskaltrust.Middleware.SCU.IT.Epson;
-using System.Globalization;
-using System;
+using fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter;
+using fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities;
 
 namespace fiskaltrust.Middleware.SCU.IT.UnitTest
 {
@@ -14,7 +12,7 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
         [Fact]
         public void CommercailDocument_SendInvoice_CreateValidXml()
         {
-            var epsonScuConfiguration = new EpsonScuConfiguration ();
+            var epsonScuConfiguration = new EpsonRTPrinterSCUConfiguration ();
             var epsonXmlWriter = new EpsonCommandFactory(epsonScuConfiguration);
 
             var fiscalReceiptRequest = new FiscalReceiptInvoice()
@@ -62,7 +60,7 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
         [Fact]
         public void CommercailDocument_SendRefundItem_CreateValidXml()
         {
-            var epsonScuConfiguration = new EpsonScuConfiguration();
+            var epsonScuConfiguration = new EpsonRTPrinterSCUConfiguration();
             var epsonXmlWriter = new EpsonCommandFactory(epsonScuConfiguration);
             var fiscalReceiptRequest = new FiscalReceiptRefund()
             {
@@ -85,7 +83,7 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
         [Fact]
         public void CommercailDocument_SendInvoiceWithLottery_CreateValidXml()
         {
-            var epsonScuConfiguration = new EpsonScuConfiguration();
+            var epsonScuConfiguration = new EpsonRTPrinterSCUConfiguration();
             var epsonXmlWriter = new EpsonCommandFactory(epsonScuConfiguration);
             var fiscalReceiptRequest = new FiscalReceiptInvoice()
             {
@@ -107,7 +105,7 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
         [Fact]
         public void CommercailDocument_SendInvoiceWithDepositAdjustment_CreateValidXml()
         {
-            var epsonScuConfiguration = new EpsonScuConfiguration();
+            var epsonScuConfiguration = new EpsonRTPrinterSCUConfiguration();
             var epsonXmlWriter = new EpsonCommandFactory(epsonScuConfiguration);
             var fiscalReceiptRequest = new FiscalReceiptInvoice()
             {

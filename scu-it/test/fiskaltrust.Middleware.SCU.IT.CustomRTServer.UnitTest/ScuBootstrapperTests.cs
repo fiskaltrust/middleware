@@ -25,37 +25,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
             sut.ConfigureServices(serviceCollection);
 
 
-            var itsscd = serviceCollection.BuildServiceProvider().GetRequiredService<IITSSCD>();
-        }
-
-
-        [Fact]
-        public void Test22()
-        {
-            var result = CustomRTServer.CreatePrintSignature01(4, 5, "48548580asdjföekjfölavloöj==", DateTime.UtcNow, new QueueIdentification
-            {
-                RTServerSerialNumber = "96SRT001239",
-                CashUuId = "00010002"
-            }, "2348923409234", "823482382").ToString();
-
-            var nocustomer = CustomRTServer.CreatePrintSignature01(4, 5, "48548580asdjföekjfölavloöj==", DateTime.UtcNow, new QueueIdentification
-            {
-                RTServerSerialNumber = "96SRT001239",
-                CashUuId = "00010002"
-            }, "2348923409234", "").ToString();
-
-            var noasd = CustomRTServer.CreatePrintSignature01(4, 5, "48548580asdjföekjfölavloöj==", DateTime.UtcNow, new QueueIdentification
-            {
-                RTServerSerialNumber = "96SRT001239",
-                CashUuId = "00010002"
-            }, "", "").ToString();
-
-
-            var nolotteria = CustomRTServer.CreatePrintSignature01(4, 5, "48548580asdjföekjfölavloöj==", DateTime.UtcNow, new QueueIdentification
-            {
-                RTServerSerialNumber = "96SRT001239",
-                CashUuId = "00010002"
-            }, "", "823482382").ToString();
+            _ = serviceCollection.BuildServiceProvider().GetRequiredService<IITSSCD>();
         }
     }
 }

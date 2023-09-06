@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.it;
-using fiskaltrust.Middleware.SCU.IT.Epson.QueueLogic.Exceptions;
+using fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.QueueLogic.Exceptions;
 
 namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.QueueLogic.Extensions
 {
@@ -80,8 +80,8 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.QueueLogic.Extensions
             var sumChargeItemsNoVoucher = receiptRequest.cbChargeItems?.Where(x => !x.IsV2PaymentAdjustment()).Sum(x => x.GetAmount()) ?? 0;
 
             var payments = new List<Payment>();
-            if (receiptRequest.cbPayItems != null && receiptRequest.cbPayItems.Any(x => x.IsV2VoucherRedeem()) ||
-                receiptRequest.cbChargeItems != null && receiptRequest.cbChargeItems.Any(x => x.IsV2MultiUseVoucherRedeem()))
+            if ((receiptRequest.cbPayItems != null && receiptRequest.cbPayItems.Any(x => x.IsV2VoucherRedeem())) ||
+                (receiptRequest.cbChargeItems != null && receiptRequest.cbChargeItems.Any(x => x.IsV2MultiUseVoucherRedeem())))
             {
                 var sumVoucher = receiptRequest.cbPayItems?.Where(x => x.IsV2VoucherRedeem()).Sum(x => x.GetAmount()) +
                     receiptRequest.cbChargeItems?.Where(x => x.IsV2MultiUseVoucherRedeem()).Sum(x => Math.Abs(x.Amount));
