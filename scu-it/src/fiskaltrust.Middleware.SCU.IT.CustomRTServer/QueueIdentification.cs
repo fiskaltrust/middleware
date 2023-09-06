@@ -9,4 +9,5 @@ public class QueueIdentification
     public string LastSignature { get; set; } = string.Empty;
     public int LastDocNumber { get; set; }
     public int CurrentGrandTotal { get; set; }
+    public string CashStatus { get; set; } = string.Empty;
 }

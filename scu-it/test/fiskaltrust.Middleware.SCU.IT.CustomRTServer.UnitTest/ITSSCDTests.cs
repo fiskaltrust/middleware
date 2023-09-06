@@ -257,5 +257,73 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
                 await Task.Delay(1000);
             }
         }
+
+        [Fact]
+        public async Task ProcessPosReceipt_InitOperation_FullSequence()
+        {
+            var itsscd = GetSUT();
+
+            var receiptResponse = new ReceiptResponse
+            {
+                ftQueueID = Guid.NewGuid().ToString(),
+                ftCashBoxIdentification = "ske09602"
+            };
+            var result = await itsscd.ProcessReceiptAsync(new ProcessRequest
+            {
+                ReceiptRequest = ReceiptExamples.GetInitialOperation(),
+                ReceiptResponse = receiptResponse
+            });
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.Caption == "<customrtserver-cashuuid>");
+
+            result = await itsscd.ProcessReceiptAsync(new ProcessRequest
+            {
+                ReceiptRequest = ReceiptExamples.GetTakeAway_Delivery_Cash(),
+                ReceiptResponse = receiptResponse
+            });
+
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTZNumber));
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentNumber));
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTSerialNumber));
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.CustomRTServerShaMetadata));
+
+            while (true)
+            {
+                await Task.Delay(1000);
+            }
+
+            //result = await itsscd.ProcessReceiptAsync(new ProcessRequest
+            //{
+            //    ReceiptRequest = ReceiptExamples.GetDailyClosing(),
+            //    ReceiptResponse = receiptResponse
+            //});
+            //result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == 0x4954000000000011);
+
+            //result = await itsscd.ProcessReceiptAsync(new ProcessRequest
+            //{
+            //    ReceiptRequest = ReceiptExamples.GetTakeAway_Delivery_Card(),
+            //    ReceiptResponse = receiptResponse
+            //});
+
+            //result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTZNumber));
+            //result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentNumber));
+            //result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTSerialNumber));
+            //result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.CustomRTServerShaMetadata));
+
+            //result = await itsscd.ProcessReceiptAsync(new ProcessRequest
+            //{
+            //    ReceiptRequest = ReceiptExamples.GetTakeAway_Delivery_Cash(),
+            //    ReceiptResponse = receiptResponse
+            //});
+
+            //result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTZNumber));
+            //result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentNumber));
+            //result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTSerialNumber));
+            //result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.CustomRTServerShaMetadata));
+
+            //while (true)
+            //{
+            //    await Task.Delay(1000);
+            //}
+        }
     }
 }

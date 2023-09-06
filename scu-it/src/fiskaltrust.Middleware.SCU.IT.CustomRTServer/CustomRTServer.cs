@@ -121,7 +121,12 @@ public sealed class CustomRTServer : IITSSCD
         }
 
         var cashuuid = CashUUIdMappings[Guid.Parse(request.ReceiptResponse.ftQueueID)];
+        if(cashuuid.CashStatus == "0")
+        {
+            await OpenNewdayAsync(request.ReceiptRequest, request.ReceiptResponse, cashuuid.CashUuId);
+            // TODO let's check if we really should auto open a day
 
+        }
         if (request.ReceiptRequest.IsVoid())
         {
             return await ProcessVoidReceipt(request, cashuuid);
@@ -148,17 +153,7 @@ public sealed class CustomRTServer : IITSSCD
         var shop = receiptResponse.ftCashBoxIdentification.Substring(0, 4);
         var name = receiptResponse.ftCashBoxIdentification.Substring(4, 4);
         var result = await _client.InsertCashRegisterAsync(receiptResponse.ftQueueID, shop, name, _configuration.AccountMasterData.AccountId.ToString(), _configuration.AccountMasterData.VatId ?? _configuration.AccountMasterData.TaxId);
-        var dailyOpen = await _client.GetDailyOpenAsync(result.cashUuid, receiptRequest.cbReceiptMoment);
-        CashUUIdMappings[Guid.Parse(receiptResponse.ftQueueID)] = new QueueIdentification
-        {
-            RTServerSerialNumber = dailyOpen.fiscalBoxId,
-            CashHmacKey = dailyOpen.cashHmacKey,
-            LastZNumber = int.Parse(dailyOpen.numberClosure),
-            LastDocNumber = int.Parse(string.IsNullOrWhiteSpace(dailyOpen.cashLastDocNumber) ? "0" : dailyOpen.cashLastDocNumber),
-            CashUuId = result.cashUuid,
-            LastSignature = dailyOpen.cashToken,
-            CurrentGrandTotal = int.Parse(string.IsNullOrWhiteSpace(dailyOpen.grandTotalDB) ? "0" : dailyOpen.grandTotalDB),
-        };
+        await OpenNewdayAsync(receiptRequest, receiptResponse, result.cashUuid);
         var signatures = SignatureFactory.CreateInitialOperationSignatures().ToList();
         signatures.Add(new SignaturItem
         {
@@ -168,6 +163,21 @@ public sealed class CustomRTServer : IITSSCD
             ftSignatureType = 0x4954000000000000 | (long) SignatureTypesIT.CustomRTServerInfo
         });
         return signatures;
+    }
+
+    private async Task OpenNewdayAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, string cashUuid)
+    {
+        var dailyOpen = await _client.GetDailyOpenAsync(cashUuid, receiptRequest.cbReceiptMoment);
+        CashUUIdMappings[Guid.Parse(receiptResponse.ftQueueID)] = new QueueIdentification
+        {
+            RTServerSerialNumber = dailyOpen.fiscalBoxId,
+            CashHmacKey = dailyOpen.cashHmacKey,
+            LastZNumber = int.Parse(dailyOpen.numberClosure),
+            LastDocNumber = int.Parse(string.IsNullOrWhiteSpace(dailyOpen.cashLastDocNumber) ? "0" : dailyOpen.cashLastDocNumber),
+            CashUuId = cashUuid,
+            LastSignature = dailyOpen.cashToken,
+            CurrentGrandTotal = int.Parse(string.IsNullOrWhiteSpace(dailyOpen.grandTotalDB) ? "0" : dailyOpen.grandTotalDB),
+        };
     }
 
     private async Task<(List<SignaturItem> signaturItems, string ftStateData)> PerformZeroReceiptOperationAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, string cashUuid)
@@ -208,7 +218,8 @@ public sealed class CustomRTServer : IITSSCD
             LastDocNumber = int.Parse(dailyOpen.cashLastDocNumber),
             CashUuId = receiptResponse.ftCashBoxIdentification,
             LastSignature = dailyOpen.cashToken,
-            CurrentGrandTotal = int.Parse(dailyOpen.grandTotalDB)
+            CurrentGrandTotal = int.Parse(dailyOpen.grandTotalDB),
+            CashStatus = dailyOpen.cashStatus
         };
     }
 
@@ -308,6 +319,7 @@ public sealed class CustomRTServer : IITSSCD
             CashUuId = cashuuid.CashUuId,
             LastSignature = dailyOpen.cashToken,
             CurrentGrandTotal = int.Parse(string.IsNullOrWhiteSpace(dailyOpen.grandTotalDB) ? "0" : dailyOpen.grandTotalDB),
+            CashStatus = dailyOpen.cashStatus
         };
         var signatures = SignatureFactory.CreateDailyClosingReceiptSignatures(long.Parse(currentDailyClosing)).ToList();
         return signatures;
