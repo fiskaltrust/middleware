@@ -9,26 +9,19 @@ using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 
-namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
+namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
 {
     public class ITSSCDTests
     {
         private static readonly Guid _queueId = Guid.NewGuid();
-        private static readonly Uri _serverUri = new Uri("https://f51f-88-116-45-202.ngrok-free.app");
-        private readonly CustomRTServerConfiguration _config = new CustomRTServerConfiguration
+        private static readonly Uri _serverUri = new Uri("http://192.168.0.34/");
+        private readonly EpsonRTPrinterSCUConfiguration _config = new EpsonRTPrinterSCUConfiguration
         {
-            ServerUrl = _serverUri.ToString(),
-            Username = "0001ab05",
-            Password = "admin",
-            AccountMasterData = JsonConvert.SerializeObject(new AccountMasterData
-            {
-                AccountId = Guid.NewGuid(),
-                VatId = "MTLFNC75A16E783N"
-            })
+            DeviceUrl = _serverUri.ToString()
         };
         private static readonly ReceiptResponse _receiptResponse = new ReceiptResponse
         {
-            ftCashBoxIdentification = "ske09601",
+            ftCashBoxIdentification = "00010001",
             ftQueueID = _queueId.ToString()
         };
 
@@ -77,14 +70,6 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
         }
 
         [Fact]
-        public void SerializeTest()
-        {
-            var sas = "{\"ServerUrl\":\"https://f51f-88-116-45-202.ngrok-free.app\",\"Username\":\"0001ab05\",\"Password\":\"admin\",\"AccountMasterData\":\"{\\\"AccountId\\\":\\\"59ac3eff-69d1-47ec-b680-ac9ac3eff6f3\\\",\\\"AccountName\\\":null,\\\"Street\\\":null,\\\"Zip\\\":null,\\\"City\\\":null,\\\"Country\\\":null,\\\"TaxId\\\":null,\\\"VatId\\\":\\\"MTLFNC75A16E783N\\\"}\"}";
-
-            var config = JsonConvert.DeserializeObject<CustomRTServerConfiguration>(sas);
-        }
-
-        [Fact]
         public async Task GetRTInfoAsync_ShouldReturn_Serialnumber()
         {
             var itsscd = GetSUT();
@@ -124,7 +109,6 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
             });
             result.ReceiptResponse.ftSignatures.Should().BeEmpty();
         }
-
 
         [Fact]
         public async Task ProcessPosReceipt_InitialOperation_0x4954_2000_0000_4001()
@@ -258,135 +242,6 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
             result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentNumber));
             result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTSerialNumber));
             result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.CustomRTServerShaMetadata));
-        }
-
-        [Fact]
-        public async Task ProcessPosReceipt_0x4954_2000_0000_0001_Sequence()
-        {
-            var itsscd = GetSUT();
-            var result = await itsscd.ProcessReceiptAsync(new ProcessRequest
-            {
-                ReceiptRequest = ReceiptExamples.GetTakeAway_Delivery_Card(),
-                ReceiptResponse = _receiptResponse
-            });
-
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTZNumber));
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentNumber));
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTSerialNumber));
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.CustomRTServerShaMetadata));
-
-            result = await itsscd.ProcessReceiptAsync(new ProcessRequest
-            {
-                ReceiptRequest = ReceiptExamples.GetTakeAway_Delivery_Cash(),
-                ReceiptResponse = _receiptResponse
-            });
-
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTZNumber));
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentNumber));
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTSerialNumber));
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.CustomRTServerShaMetadata));
-
-            result = await itsscd.ProcessReceiptAsync(new ProcessRequest
-            {
-                ReceiptRequest = ReceiptExamples.GetDailyClosing(),
-                ReceiptResponse = _receiptResponse
-            });
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == 0x4954000000000011);
-
-            result = await itsscd.ProcessReceiptAsync(new ProcessRequest
-            {
-                ReceiptRequest = ReceiptExamples.GetTakeAway_Delivery_Card(),
-                ReceiptResponse = _receiptResponse
-            });
-
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTZNumber));
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentNumber));
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTSerialNumber));
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.CustomRTServerShaMetadata));
-
-            result = await itsscd.ProcessReceiptAsync(new ProcessRequest
-            {
-                ReceiptRequest = ReceiptExamples.GetTakeAway_Delivery_Cash(),
-                ReceiptResponse = _receiptResponse
-            });
-
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTZNumber));
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentNumber));
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTSerialNumber));
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.CustomRTServerShaMetadata));
-
-            while (true)
-            {
-                await Task.Delay(1000);
-            }
-        }
-
-        [Fact]
-        public async Task ProcessPosReceipt_InitOperation_FullSequence()
-        {
-            var itsscd = GetSUT();
-
-            var receiptResponse = new ReceiptResponse
-            {
-                ftQueueID = Guid.NewGuid().ToString(),
-                ftCashBoxIdentification = "ske09602"
-            };
-            var result = await itsscd.ProcessReceiptAsync(new ProcessRequest
-            {
-                ReceiptRequest = ReceiptExamples.GetInitialOperation(),
-                ReceiptResponse = receiptResponse
-            });
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.Caption == "<customrtserver-cashuuid>");
-
-            result = await itsscd.ProcessReceiptAsync(new ProcessRequest
-            {
-                ReceiptRequest = ReceiptExamples.GetTakeAway_Delivery_Cash(),
-                ReceiptResponse = receiptResponse
-            });
-
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTZNumber));
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentNumber));
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTSerialNumber));
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.CustomRTServerShaMetadata));
-
-            while (true)
-            {
-                await Task.Delay(1000);
-            }
-
-            //result = await itsscd.ProcessReceiptAsync(new ProcessRequest
-            //{
-            //    ReceiptRequest = ReceiptExamples.GetDailyClosing(),
-            //    ReceiptResponse = receiptResponse
-            //});
-            //result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == 0x4954000000000011);
-
-            //result = await itsscd.ProcessReceiptAsync(new ProcessRequest
-            //{
-            //    ReceiptRequest = ReceiptExamples.GetTakeAway_Delivery_Card(),
-            //    ReceiptResponse = receiptResponse
-            //});
-
-            //result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTZNumber));
-            //result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentNumber));
-            //result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTSerialNumber));
-            //result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.CustomRTServerShaMetadata));
-
-            //result = await itsscd.ProcessReceiptAsync(new ProcessRequest
-            //{
-            //    ReceiptRequest = ReceiptExamples.GetTakeAway_Delivery_Cash(),
-            //    ReceiptResponse = receiptResponse
-            //});
-
-            //result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTZNumber));
-            //result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentNumber));
-            //result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTSerialNumber));
-            //result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.CustomRTServerShaMetadata));
-
-            //while (true)
-            //{
-            //    await Task.Delay(1000);
-            //}
         }
     }
 }

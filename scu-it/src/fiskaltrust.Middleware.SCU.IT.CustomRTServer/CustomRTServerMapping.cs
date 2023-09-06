@@ -9,7 +9,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer;
 
 public static class CustomRTServerMapping
 {
-    public static (CommercialDocument commercialDocument, FDocument fiscalDocument) CreateAnnuloDocument(ReceiptRequest receiptRequest, QueueIdentification queueIdentification, int referenceZNumber, int referenceDocnUmber, string referenceDTime)
+    public static (CommercialDocument commercialDocument, FDocument fiscalDocument) CreateAnnuloDocument(ReceiptRequest receiptRequest, QueueIdentification queueIdentification, long referenceZNumber, long referenceDocnUmber, DateTime referenceDTime)
     {
         var fiscalDocument = new FDocument
         {
@@ -29,7 +29,7 @@ public static class CustomRTServerMapping
                 grandTotal = queueIdentification.CurrentGrandTotal,
                 referenceClosurenumber = referenceZNumber,
                 referenceDocnumber = referenceDocnUmber,
-                referenceDtime = referenceDTime,
+                referenceDtime = referenceDTime.ToString("yyyy-MM-dd"),
             },
             items = GenerateItemDataForReceiptRequest(receiptRequest, queueIdentification.LastZNumber + 1, queueIdentification.LastDocNumber + 1),
             taxs = GenerateTaxDataForReceiptRequest(receiptRequest)
@@ -46,7 +46,7 @@ public static class CustomRTServerMapping
         return (commercialDocument, fiscalDocument);
     }
 
-    public static (CommercialDocument commercialDocument, FDocument fiscalDocument) CreateResoDocument(ReceiptRequest receiptRequest, QueueIdentification queueIdentification, int referenceZNumber, int referenceDocnUmber, string referenceDTime)
+    public static (CommercialDocument commercialDocument, FDocument fiscalDocument) CreateResoDocument(ReceiptRequest receiptRequest, QueueIdentification queueIdentification, long referenceZNumber, long referenceDocnUmber, DateTime referenceDTime)
     {
         var fiscalDocument = new FDocument
         {
@@ -66,7 +66,7 @@ public static class CustomRTServerMapping
                 grandTotal = queueIdentification.CurrentGrandTotal,
                 referenceClosurenumber = referenceZNumber,
                 referenceDocnumber = referenceDocnUmber,
-                referenceDtime = referenceDTime,
+                referenceDtime = referenceDTime.ToString("yyyy-MM-dd")
             },
             items = GenerateItemDataForReceiptRequest(receiptRequest, queueIdentification.LastZNumber + 1, queueIdentification.LastDocNumber + 1),
             taxs = GenerateTaxDataForReceiptRequest(receiptRequest)

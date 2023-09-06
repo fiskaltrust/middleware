@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using fiskaltrust.ifPOS.v1;
 using System.Linq;
 using Newtonsoft.Json;
+using System.Text;
 
 namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer;
 
@@ -73,7 +74,17 @@ public sealed class CustomRTServer : IITSSCD
 
     private static ProcessResponse CreateResponse(ReceiptResponse response, string stateData, List<SignaturItem> signaturItems)
     {
-        response.ftSignatures = signaturItems.ToArray();
+        if (response.ftSignatures.Length > 0)
+        {
+            var list = new List<SignaturItem>();
+            list.AddRange(response.ftSignatures);
+            list.AddRange(signaturItems);
+            response.ftSignatures = list.ToArray();
+        }
+        else
+        {
+            response.ftSignatures = signaturItems.ToArray();
+        }
         response.ftStateData = stateData;
         return new ProcessResponse
         {
@@ -83,7 +94,18 @@ public sealed class CustomRTServer : IITSSCD
 
     private static ProcessResponse CreateResponse(ReceiptResponse response, List<SignaturItem> signaturItems)
     {
-        response.ftSignatures = signaturItems.ToArray();
+        if (response.ftSignatures.Length > 0)
+        {
+            var list = new List<SignaturItem>();
+            list.AddRange(response.ftSignatures);
+            list.AddRange(signaturItems);
+            response.ftSignatures = list.ToArray();
+        }
+        else
+        {
+            response.ftSignatures = signaturItems.ToArray();
+        }
+   
         return new ProcessResponse
         {
             ReceiptResponse = response
@@ -125,7 +147,7 @@ public sealed class CustomRTServer : IITSSCD
         }
 
         var cashuuid = CashUUIdMappings[Guid.Parse(request.ReceiptResponse.ftQueueID)];
-        if(cashuuid.CashStatus == "0")
+        if (cashuuid.CashStatus == "0")
         {
             await OpenNewdayAsync(request.ReceiptRequest, request.ReceiptResponse, cashuuid.CashUuId);
             // TODO let's check if we really should auto open a day
@@ -133,18 +155,14 @@ public sealed class CustomRTServer : IITSSCD
 
         if (request.ReceiptRequest.IsVoid())
         {
-            return new ProcessResponse
-            {
-                ReceiptResponse = await PerformVoidReceiptAsync(request.ReceiptRequest, request.ReceiptResponse, cashuuid)
-            };
+            var signatures = await PerformVoidReceiptAsync(request.ReceiptRequest, request.ReceiptResponse, cashuuid);
+            return CreateResponse(request.ReceiptResponse, signatures);
         }
 
         if (request.ReceiptRequest.IsRefund())
         {
-            return new ProcessResponse
-            {
-                ReceiptResponse = await PerformRefundReceiptAsync(request.ReceiptRequest, request.ReceiptResponse, cashuuid)
-            };
+            var signatures = await PerformRefundReceiptAsync(request.ReceiptRequest, request.ReceiptResponse, cashuuid);
+            return CreateResponse(request.ReceiptResponse, signatures);
         }
 
         if (request.ReceiptRequest.IsDailyClosing())
@@ -247,31 +265,30 @@ public sealed class CustomRTServer : IITSSCD
     {
         CashUUIdMappings[Guid.Parse(receiptResponse.ftQueueID)].LastDocNumber = fDocument.document.docnumber;
         CashUUIdMappings[Guid.Parse(receiptResponse.ftQueueID)].LastSignature = qrCodeData.signature;
-        CashUUIdMappings[Guid.Parse(receiptResponse.ftQueueID)].CurrentGrandTotal = CashUUIdMappings[Guid.Parse(receiptResponse.ftQueueID)].CurrentGrandTotal +  fDocument.document.amount;
+        CashUUIdMappings[Guid.Parse(receiptResponse.ftQueueID)].CurrentGrandTotal = CashUUIdMappings[Guid.Parse(receiptResponse.ftQueueID)].CurrentGrandTotal + fDocument.document.amount;
     }
 
-    private async Task<ReceiptResponse> PerformVoidReceiptAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, QueueIdentification cashuuid)
+    private async Task<List<SignaturItem>> PerformVoidReceiptAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, QueueIdentification cashuuid)
     {
-        var zNumber = receiptResponse.ftSignatures.First(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTReferenceZNumber)).Data;
-        var rtdocNumber = receiptResponse.ftSignatures.First(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTReferenceDocumentNumber)).Data;
-        var rtDocumentMoment = receiptResponse.ftSignatures.First(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentMoment)).Data;
+        var referenceZNumber = long.Parse(receiptResponse.ftSignatures.First(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTReferenceZNumber)).Data);
+        var referenceDocNumber = long.Parse(receiptResponse.ftSignatures.First(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTReferenceDocumentNumber)).Data);
+        var referenceDateTime = DateTime.Parse(receiptResponse.ftSignatures.First(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentMoment)).Data);
 
-        (var commercialDocument, var fiscalDocument) = CustomRTServerMapping.CreateAnnuloDocument(receiptRequest, cashuuid, int.Parse(zNumber), int.Parse(rtdocNumber), rtDocumentMoment);
+        (var commercialDocument, var fiscalDocument) = CustomRTServerMapping.CreateAnnuloDocument(receiptRequest, cashuuid, referenceZNumber, referenceDocNumber, referenceDateTime);
         var result = _client.InsertFiscalDocumentAsync(commercialDocument);
-        receiptResponse.ftSignatures = SignatureFactory.CreatePosReceiptSignatures(fiscalDocument.document.docnumber, fiscalDocument.document.docznumber, receiptRequest.cbReceiptMoment);
-        return receiptResponse;
+        var signatures = CreatePosReceiptCustomRTServerSignatures(fiscalDocument.document.docnumber, fiscalDocument.document.docznumber, fiscalDocument.document.doctype, commercialDocument.qrData.shaMetadata, receiptRequest.cbReceiptMoment, cashuuid).ToList();
+        return CreatePosReceiptCustomRTServerSignatures(fiscalDocument.document.docnumber, fiscalDocument.document.docznumber, fiscalDocument.document.doctype, commercialDocument.qrData.shaMetadata, receiptRequest.cbReceiptMoment, cashuuid, referenceDocNumber, referenceZNumber, referenceDateTime).ToList();
     }
 
-    private async Task<ReceiptResponse> PerformRefundReceiptAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, QueueIdentification cashuuid)
+    private async Task<List<SignaturItem>> PerformRefundReceiptAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, QueueIdentification cashuuid)
     {
-        var zNumber = receiptResponse.ftSignatures.First(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTReferenceZNumber)).Data;
-        var rtdocNumber = receiptResponse.ftSignatures.First(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTReferenceDocumentNumber)).Data;
-        var rtDocumentMoment = receiptResponse.ftSignatures.First(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentMoment)).Data;
+        var referenceZNumber = long.Parse(receiptResponse.ftSignatures.First(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTReferenceZNumber)).Data);
+        var referenceDocNumber = long.Parse(receiptResponse.ftSignatures.First(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTReferenceDocumentNumber)).Data);
+        var referenceDateTime = DateTime.Parse(receiptResponse.ftSignatures.First(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentMoment)).Data);
 
-        (var commercialDocument, var fiscalDocument) = CustomRTServerMapping.CreateResoDocument(receiptRequest, cashuuid, int.Parse(zNumber), int.Parse(rtdocNumber), rtDocumentMoment);
+        (var commercialDocument, var fiscalDocument) = CustomRTServerMapping.CreateResoDocument(receiptRequest, cashuuid, referenceZNumber, referenceDocNumber, referenceDateTime);
         var result = await _client.InsertFiscalDocumentAsync(commercialDocument);
-        receiptResponse.ftSignatures = SignatureFactory.CreatePosReceiptSignatures(fiscalDocument.document.docnumber, fiscalDocument.document.docznumber, receiptRequest.cbReceiptMoment);
-        return receiptResponse;
+        return CreatePosReceiptCustomRTServerSignatures(fiscalDocument.document.docnumber, fiscalDocument.document.docznumber, fiscalDocument.document.doctype, commercialDocument.qrData.shaMetadata, receiptRequest.cbReceiptMoment, cashuuid).ToList();
     }
 
     private async Task<List<SignaturItem>> PerformClassicReceiptAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, QueueIdentification cashuuid)
@@ -290,14 +307,29 @@ public sealed class CustomRTServer : IITSSCD
             }
         });
         await UpdatedCashUUID(receiptResponse, fiscalDocument, commercialDocument.qrData);
-        var signatures = CreatePosReceiptCustomRTServerSignatures(fiscalDocument.document.docnumber, fiscalDocument.document.docznumber, commercialDocument.qrData.shaMetadata, cashuuid).ToList();
+        var signatures = CreatePosReceiptCustomRTServerSignatures(fiscalDocument.document.docnumber, fiscalDocument.document.docznumber, fiscalDocument.document.doctype, commercialDocument.qrData.shaMetadata, receiptRequest.cbReceiptMoment, cashuuid).ToList();
         return signatures;
     }
 
-    public static SignaturItem[] CreatePosReceiptCustomRTServerSignatures(long receiptNumber, long zRepNumber, string shaMetadata, QueueIdentification cashuuid)
+    public static SignaturItem[] CreatePosReceiptCustomRTServerSignatures(long receiptNumber, long zRepNumber, long docType, string shaMetadata, DateTime receiptMoment, QueueIdentification cashuuid, string codiceLotteria = null, string customerIdentification = null)
     {
+        var stringBuilder = CreatePrintSignature01(receiptNumber, zRepNumber, shaMetadata, receiptMoment, cashuuid, codiceLotteria, customerIdentification);
         return new SignaturItem[]
         {
+            new SignaturItem
+            {
+                Caption = "[www.fiskaltrust.it]",
+                Data = stringBuilder.ToString(),
+                ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                ftSignatureType = 0x4954000000000001
+            },
+            new SignaturItem
+            {
+                Caption = "DOCUMENTO COMMERCIALE",
+                Data = "di vendita o prestazione",
+                ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                ftSignatureType = 0x4954000000000002
+            },
             new SignaturItem
             {
                 Caption = "<z-number>",
@@ -327,6 +359,121 @@ public sealed class CustomRTServer : IITSSCD
                 ftSignatureType = 0x4954000000000000 |(long) SignatureTypesIT.CustomRTServerShaMetadata
             }
         };
+    }
+
+    public static SignaturItem[] CreatePosReceiptCustomRTServerSignatures(long receiptNumber, long zRepNumber, long docType, string shaMetadata, DateTime receiptMoment, QueueIdentification cashuuid, long referenceReceiptNumber, long referenceZNumber, DateTime referenceDateTime, string codiceLotteria = null, string customerIdentification = null)
+    {
+        var stringBuilder = CreatePrintSignature01(receiptNumber, zRepNumber, shaMetadata, receiptMoment, cashuuid, codiceLotteria, customerIdentification);
+        var stringBuilder02 = CreatePrintSignatureForVoidOrReso(docType, cashuuid, referenceReceiptNumber, referenceZNumber, referenceDateTime);
+
+        return new SignaturItem[]
+        {
+            new SignaturItem
+            {
+                Caption = "[www.fiskaltrust.it]",
+                Data = stringBuilder.ToString(),
+                ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                ftSignatureType = 0x4954000000000001
+            },
+            new SignaturItem
+            {
+                Caption = "DOCUMENTO COMMERCIALE",
+                Data = stringBuilder02.ToString(),
+                ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                ftSignatureType = 0x4954000000000002
+            },
+            new SignaturItem
+            {
+                Caption = "<z-number>",
+                Data = zRepNumber.ToString(),
+                ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                ftSignatureType = 0x4954000000000000 | (long) SignatureTypesIT.RTZNumber
+            },
+            new SignaturItem
+            {
+                Caption = "<receipt-number>",
+                Data = receiptNumber.ToString(),
+                ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                ftSignatureType = 0x4954000000000000 |(long) SignatureTypesIT.RTDocumentNumber
+            },
+            new SignaturItem
+            {
+                Caption = "<rt-serialnumber>",
+                Data = cashuuid.RTServerSerialNumber,
+                ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                ftSignatureType = 0x4954000000000000 |(long) SignatureTypesIT.RTSerialNumber
+            },
+            new SignaturItem
+            {
+                Caption = "<rt-server-shametadata>",
+                Data = shaMetadata,
+                ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                ftSignatureType = 0x4954000000000000 |(long) SignatureTypesIT.CustomRTServerShaMetadata
+            }
+        };
+    }
+
+    public static StringBuilder CreatePrintSignature01(long receiptNumber, long zRepNumber, string shaMetadata, DateTime receiptMoment, QueueIdentification cashuuid, string codiceLotteria, string customerIdentification)
+    {
+        var stringBuilder = new StringBuilder();
+        stringBuilder.AppendLine($"{receiptMoment.ToString("dd-MM-yyyy HH:mm")}");
+        stringBuilder.AppendLine($"DOCUMENTO N. {zRepNumber.ToString().PadLeft(4, '0')}-{receiptNumber.ToString().PadLeft(4, '0')}");
+        if (!string.IsNullOrEmpty(codiceLotteria))
+        {
+            stringBuilder.AppendLine($"Codice Lotteria: {codiceLotteria}");
+            stringBuilder.AppendLine();
+        }
+        if (!string.IsNullOrEmpty(customerIdentification))
+        {
+            stringBuilder.AppendLine($"Codice Fiscale: {customerIdentification}");
+        }
+        stringBuilder.AppendLine($"Server RT {cashuuid.RTServerSerialNumber}");
+        stringBuilder.AppendLine($"Cassa {cashuuid.CashUuId}");
+        stringBuilder.AppendLine($"-----FIRMA ELETTRONICA-----");
+        stringBuilder.AppendLine(shaMetadata);
+        stringBuilder.AppendLine("---------------------------");
+        return stringBuilder;
+    }
+
+    public static StringBuilder CreatePrintSignatureForVoidOrReso(long docType, QueueIdentification cashuuid, long referencedReceiptNumber, long referencedZRepNumber, DateTime referencedReceiptMoment, string referencedRT = null, string referencedPrinterRT = null)
+    {
+        var stringBuilder = new StringBuilder();
+        if (docType == 3)
+        {
+            stringBuilder.AppendLine("emesso per RESO MERCE");
+            stringBuilder.AppendLine($"N. {referencedZRepNumber.ToString().PadLeft(4, '0')}-{referencedReceiptNumber.ToString().PadLeft(4, '0')} del {referencedReceiptMoment.ToString("dd-MM-yyyy")}");
+            if (!string.IsNullOrEmpty(referencedRT))
+            {
+                stringBuilder.AppendLine($"Server RT {referencedRT}");
+            }
+            if (!string.IsNullOrEmpty(referencedPrinterRT))
+            {
+                stringBuilder.AppendLine($"RT {referencedRT}");
+            }
+            stringBuilder.AppendLine($"Cassa {cashuuid.CashUuId}");
+        }
+        else if (docType == 5)
+        {
+            stringBuilder.AppendLine("emesso per ANNULLAMENTO");
+            stringBuilder.AppendLine($"N. {referencedZRepNumber.ToString().PadLeft(4, '0')}-{referencedReceiptNumber.ToString().PadLeft(4, '0')} del {referencedReceiptMoment.ToString("dd-MM-yyyy")}");
+            if (!string.IsNullOrEmpty(referencedRT))
+            {
+                stringBuilder.AppendLine($"Server RT {referencedRT}");
+            }
+            if (!string.IsNullOrEmpty(referencedPrinterRT))
+            {
+                stringBuilder.AppendLine($"RT {referencedRT}");
+            }
+            stringBuilder.AppendLine($"Cassa {cashuuid.CashUuId}");
+        }
+        return stringBuilder;
+    }
+
+    public static StringBuilder CreatePrintSignature02()
+    {
+        var stringBuilder = new StringBuilder();
+        stringBuilder.AppendLine("di vendita o prestazione");
+        return stringBuilder;
     }
 
     private async Task<List<SignaturItem>> PerformDailyCosing(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, QueueIdentification cashuuid)

@@ -16,7 +16,7 @@ stages:
       type: fiskaltrust.Middleware.SCU.IT
       artifact: build
       projects:
-        - Epson
+        - EpsonRTPrinter
         - CustomRTPrinter
         - CustomRTServer
       stages:

@@ -22,8 +22,4 @@
         <PackageReference Include="fiskaltrust.interface" Version="1.3.50-rc1" />
     </ItemGroup>
 
-    <ItemGroup>
-      <ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.IT.Epson\fiskaltrust.Middleware.SCU.IT.Epson.csproj" />
-    </ItemGroup>
-
 </Project>

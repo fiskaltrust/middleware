@@ -15,8 +15,8 @@ public class DocumentData
     public string? prevSignature { get; set; } = string.Empty;
     public string type_signature_id => "1";
     public int grandTotal { get; set; }
-    public int referenceClosurenumber { get; set; }
-    public int referenceDocnumber { get; set; }
+    public long referenceClosurenumber { get; set; }
+    public long referenceDocnumber { get; set; }
     public string? referenceDtime { get; set; } = null;
     public string? referenceCashuuid { get; set; } = string.Empty;
 

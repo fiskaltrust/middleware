@@ -1,0 +1,6 @@
+{
+  "version": "1.3.50-rc1",
+  "releaseBranches": [
+    "^refs/tags/scu-it/epsonrtprinter/v\\d+(?:\\.\\d+)*(?:-.*)?$"
+  ]
+}
