@@ -10,9 +10,13 @@
         RTDocumentType = 0x14,
         RTLotteryID = 0x15,
         RTCustomerID = 0x16,
-        RTReferenceZNumber = 0x17,
-        RTReferenceDocumentNumber = 0x18,
-        RTReferenceDocumentMoment = 0x19,
-        RTReferenceDocumentType = 0x20,
+        RTAmount = 0x17,
+        CustomRTServerInfo = 0x18,
+        CustomRTServerShaMetadata = 0x19,
+
+        RTReferenceZNumber = 0x20,
+        RTReferenceDocumentNumber = 0x21,
+        RTReferenceDocumentMoment = 0x22,
+        RTReferenceDocumentType = 0x23,
     }
 }
