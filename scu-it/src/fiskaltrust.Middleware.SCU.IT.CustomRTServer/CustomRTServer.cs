@@ -96,7 +96,7 @@ public sealed class CustomRTServer : IITSSCD
 
         if (request.ReceiptRequest.IsInitialOperationReceipt())
         {
-            return CreateResponse(request.ReceiptResponse, await PerformInitOperationAsync(request.ReceiptResponse));
+            return CreateResponse(request.ReceiptResponse, await PerformInitOperationAsync(request.ReceiptRequest, request.ReceiptResponse));
         }
 
         if (request.ReceiptRequest.IsOutOfOperationReceipt())
@@ -143,11 +143,22 @@ public sealed class CustomRTServer : IITSSCD
         }
     }
 
-    private async Task<List<SignaturItem>> PerformInitOperationAsync(ReceiptResponse receiptResponse)
+    private async Task<List<SignaturItem>> PerformInitOperationAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
     {
         var shop = receiptResponse.ftCashBoxIdentification.Substring(0, 4);
         var name = receiptResponse.ftCashBoxIdentification.Substring(4, 4);
         var result = await _client.InsertCashRegisterAsync(receiptResponse.ftQueueID, shop, name, _configuration.AccountMasterData.AccountId.ToString(), _configuration.AccountMasterData.VatId ?? _configuration.AccountMasterData.TaxId);
+        var dailyOpen = await _client.GetDailyOpenAsync(result.cashUuid, receiptRequest.cbReceiptMoment);
+        CashUUIdMappings[Guid.Parse(receiptResponse.ftQueueID)] = new QueueIdentification
+        {
+            RTServerSerialNumber = dailyOpen.fiscalBoxId,
+            CashHmacKey = dailyOpen.cashHmacKey,
+            LastZNumber = int.Parse(dailyOpen.numberClosure),
+            LastDocNumber = int.Parse(string.IsNullOrWhiteSpace(dailyOpen.cashLastDocNumber) ? "0" : dailyOpen.cashLastDocNumber),
+            CashUuId = result.cashUuid,
+            LastSignature = dailyOpen.cashToken,
+            CurrentGrandTotal = int.Parse(string.IsNullOrWhiteSpace(dailyOpen.grandTotalDB) ? "0" : dailyOpen.grandTotalDB),
+        };
         var signatures = SignatureFactory.CreateInitialOperationSignatures().ToList();
         signatures.Add(new SignaturItem
         {
