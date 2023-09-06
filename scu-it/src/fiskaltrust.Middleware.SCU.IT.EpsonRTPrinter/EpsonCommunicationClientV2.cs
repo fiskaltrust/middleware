@@ -23,6 +23,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter;
 
 public class EpsonCommunicationClientV2
 {
+    private string? _serialnr;
     private readonly ILogger<EpsonRTPrinterSCU> _logger;
     private readonly EpsonCommandFactory _epsonXmlWriter;
     private readonly HttpClient _httpClient;
@@ -71,6 +72,11 @@ public class EpsonCommunicationClientV2
         if (request.ReceiptRequest.IsVoid())
         {
             return await ProcessVoidReceipt(request);
+        }
+
+        if (request.ReceiptRequest.IsRefund())
+        {
+            return await ProcessRefundReceipt(request);
         }
 
         if (request.ReceiptRequest.IsDailyClosing())
@@ -174,9 +180,117 @@ public class EpsonCommunicationClientV2
         }
     }
 
+    private async Task<ProcessResponse> ProcessRefundReceipt(ProcessRequest request)
+    {
+        var referenceZNumber = long.Parse(request.ReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTReferenceZNumber)).Data);
+        var referenceDocNumber = long.Parse(request.ReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTReferenceDocumentNumber)).Data);
+        var referenceDateTime = DateTime.Parse(request.ReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentMoment)).Data);
+
+        _ = await GetDeviceInfoAsync();
+        var fiscalReceiptRefund = CreateRefund(request.ReceiptRequest, referenceDocNumber, referenceZNumber, referenceDateTime, _serialnr!);
+        var fiscalResponse = await FiscalReceiptRefundAsync(fiscalReceiptRefund).ConfigureAwait(false);
+        if (!fiscalResponse.Success)
+        {
+            throw new SSCDErrorException(fiscalResponse.SSCDErrorInfo.Type, fiscalResponse.SSCDErrorInfo.Info);
+        }
+        else
+        {
+            request.ReceiptResponse.ftSignatures = SignatureFactory.CreatePosReceiptSignatures(fiscalResponse.ReceiptNumber, fiscalResponse.ZRepNumber, fiscalResponse.Amount, fiscalResponse.ReceiptDateTime);
+        }
+        return new ProcessResponse
+        {
+            ReceiptResponse = request.ReceiptResponse
+        };
+    }
+
+    public async Task<DeviceInfo> GetDeviceInfoAsync()
+    {
+        var content = _epsonXmlWriter.CreateQueryPrinterStatusRequestContent();
+        var response = await _httpClient.PostAsync(_commandUrl, new StringContent(content, Encoding.UTF8, "application/xml"));
+        using var responseContent = await response.Content.ReadAsStreamAsync();
+        var result = SoapSerializer.Deserialize<StatusResponse>(responseContent);
+
+        _logger.LogInformation(JsonConvert.SerializeObject(result));
+        if (string.IsNullOrEmpty(_serialnr) && result?.Printerstatus?.RtType != null)
+        {
+            _serialnr = await GetSerialNumberAsync(result.Printerstatus.RtType).ConfigureAwait(false);
+        }
+
+        return new DeviceInfo
+        {
+            DailyOpen = result?.Printerstatus?.DailyOpen == "1",
+            DeviceStatus = ParseStatus(result?.Printerstatus?.MfStatus), // TODO Create enum
+            ExpireDeviceCertificateDate = result?.Printerstatus?.ExpiryCD, // TODO Use Datetime; this value seemingly can also be 20
+            ExpireTACommunicationCertificateDate = result?.Printerstatus?.ExpiryCA, // TODO use DateTime?
+            SerialNumber = _serialnr
+
+        };
+    }
+
+    public async Task<string> GetSerialNumberAsync(string rtType)
+    {
+        var serialQuery = new PrinterCommand() { DirectIO = DirectIO.GetSerialNrCommand() };
+        var content = SoapSerializer.Serialize(serialQuery);
+        var responseSerialnr = await SendRequestAsync(content);
+
+        using var responseContent = await responseSerialnr.Content.ReadAsStreamAsync();
+        var result = SoapSerializer.Deserialize<PrinterCommandResponse>(responseContent);
+
+        var serialnr = result?.CommandResponse?.ResponseData;
+
+        return serialnr?.Substring(10, 2) + rtType + serialnr?.Substring(8, 2) + serialnr?.Substring(2, 6);
+    }
+
     private Task<ProcessResponse> ProcessVoidReceipt(ProcessRequest request)
     {
         throw new NotImplementedException();
+    }
+
+    public async Task<FiscalReceiptResponse> FiscalReceiptRefundAsync(FiscalReceiptRefund request)
+    {
+        try
+        {
+            var content = _epsonXmlWriter.CreateRefundRequestContent(request);
+            var response = await SendRequestAsync(content);
+
+            using var responseContent = await response.Content.ReadAsStreamAsync();
+            var result = SoapSerializer.Deserialize<PrinterResponse>(responseContent);
+            var fiscalReceiptResponse = new FiscalReceiptResponse()
+            {
+                Success = result?.Success ?? false
+            };
+            await SetReceiptResponse(request.Payments, result, fiscalReceiptResponse);
+            return fiscalReceiptResponse;
+        }
+        catch (Exception e)
+        {
+            return ExceptionInfo(e);
+        }
+    }
+
+    private FiscalReceiptRefund CreateRefund(ReceiptRequest request, long receiptnumber, long zReceiptNumber, DateTime receiptDateTime, string serialNumber)
+    {
+        return new FiscalReceiptRefund()
+        {
+            //TODO Barcode = "0123456789" 
+            Operator = "1",
+            DisplayText = $"REFUND {zReceiptNumber:D4} {receiptnumber:D4} {receiptDateTime:ddMMyyyy} {serialNumber}",
+            Refunds = request.cbChargeItems?.Select(p => new Refund
+            {
+                Description = p.Description,
+                Quantity = Math.Abs(p.Quantity),
+                UnitPrice = Math.Abs(p.Amount) / Math.Abs(p.Quantity),
+                Amount = Math.Abs(p.Amount),
+                VatGroup = p.GetV0VatGroup()
+            }).ToList(),
+            PaymentAdjustments = request.GetV2PaymentAdjustments(),
+            Payments = request.cbPayItems?.Select(p => new Payment
+            {
+                Amount = Math.Abs(p.Amount),
+                Description = p.Description,
+                PaymentType = p.GetV0PaymentType(),
+            }).ToList()
+        };
     }
 
     private async Task ResetPrinter()
@@ -436,5 +550,4 @@ public class EpsonCommunicationClientV2
             ITReceiptCases.InitSCUSwitch0x4011,
             ITReceiptCases.FinishSCUSwitch0x4012,
         };
-
 }

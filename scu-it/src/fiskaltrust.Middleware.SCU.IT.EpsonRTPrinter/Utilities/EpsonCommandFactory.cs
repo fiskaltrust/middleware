@@ -82,6 +82,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
             {
                 return new PrintRecRefund
                 {
+                    Operator = "1",
                     Description = recRefund.Description,
                     Quantity = recRefund.Quantity,
                     UnitPrice = recRefund.UnitPrice,

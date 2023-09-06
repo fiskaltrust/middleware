@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using fiskaltrust.ifPOS.v1.it;
+﻿using fiskaltrust.ifPOS.v1.it;
 
 namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Extensions
 {
@@ -9,19 +6,14 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Extensions
     {
         public static int GetAdjustmentType(this PaymentAdjustmentType paymentAdjustmentType, decimal amount)
         {
-            switch (paymentAdjustmentType)
+            return paymentAdjustmentType switch
             {
-                case PaymentAdjustmentType.Adjustment:
-                    return amount < 0 ? 3 : 8;
-                case PaymentAdjustmentType.SingleUseVoucher:
-                    return 12;
-                case PaymentAdjustmentType.FreeOfCharge:
-                    return 11;
-                case PaymentAdjustmentType.Acconto:
-                    return 10;
-                default:
-                    return 0;
-            }
+                PaymentAdjustmentType.Adjustment => amount < 0 ? 3 : 8,
+                PaymentAdjustmentType.SingleUseVoucher => 12,
+                PaymentAdjustmentType.FreeOfCharge => 11,
+                PaymentAdjustmentType.Acconto => 10,
+                _ => 0,
+            };
         }
     }
 }

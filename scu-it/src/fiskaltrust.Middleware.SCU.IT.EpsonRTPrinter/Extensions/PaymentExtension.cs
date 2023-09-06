@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Runtime.CompilerServices;
-using System.Text;
-using fiskaltrust.ifPOS.v1.it;
+﻿using fiskaltrust.ifPOS.v1.it;
 
 namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Extensions
 {
@@ -16,20 +12,17 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Extensions
     {
         public static EpsonPaymentType GetEpsonPaymentType(this PaymentType paymentType)
         {
-            switch (paymentType)
+            return paymentType switch
             {
-                case PaymentType.Cash:
-                default:
-                    return new EpsonPaymentType() { PaymentType = 0, Index = 0 };
-                case PaymentType.Cheque:
-                    return new EpsonPaymentType() { PaymentType = 1, Index = 0 };
-                case PaymentType.CreditCard:
-                    return new EpsonPaymentType() { PaymentType = 2, Index = 0 };
-                case PaymentType.Voucher:
-                    return new EpsonPaymentType() { PaymentType = 6, Index = 1 };
-                case PaymentType.NotPaid:
-                    return new EpsonPaymentType() { PaymentType = 5, Index = 0 };
-            }
+                PaymentType.Cheque => new EpsonPaymentType() { PaymentType = 1, Index = 0 },
+                PaymentType.CreditCard => new EpsonPaymentType() { PaymentType = 2, Index = 1 },
+                PaymentType.Ticket => new EpsonPaymentType() { PaymentType = 3, Index = 0 },
+                PaymentType.MultipleTickets => new EpsonPaymentType() { PaymentType = 4, Index = 0 },
+                PaymentType.NotPaid => new EpsonPaymentType() { PaymentType = 5, Index = 0 },
+                PaymentType.Voucher => new EpsonPaymentType() { PaymentType = 6, Index = 1 },
+                PaymentType.PaymentDiscount => new EpsonPaymentType() { PaymentType = 6, Index = 0 },
+                _ => new EpsonPaymentType() { PaymentType = 0, Index = 0 },
+            };
         }
     }
 }

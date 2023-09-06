@@ -13,7 +13,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.QueueLogic.Extensions
         private static readonly int _vatRateDeduction2 = 3;
         private static readonly int _vatRateDeduction3 = 4;
         private static readonly int _vatRateZero = 0;
-        private static readonly int _vatRateUnknown = -1;
+        private static readonly int _vatRateUnknown = 0;
 
         public static PaymentAdjustmentType? GetV0PaymentAdjustmentType(this ChargeItem chargeItem)
         {
