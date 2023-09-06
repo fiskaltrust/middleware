@@ -18,11 +18,11 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
             ServerUrl = _serverUri.ToString(), 
             Username = "0001ab05", 
             Password = "admin",
-            AccountMasterData = new AccountMasterData
+            AccountMasterData = JsonConvert.SerializeObject(new AccountMasterData
             {
                 AccountId = Guid.NewGuid(),
                 VatId = "MTLFNC75A16E783N"
-            }
+            })
         };
         private static readonly ReceiptResponse _receiptResponse = new ReceiptResponse
         {
@@ -60,6 +60,8 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
 
         private IITSSCD GetSUT()
         {
+
+            
             var serviceCollection = new ServiceCollection();
             serviceCollection.AddLogging();
 
@@ -70,6 +72,14 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
             };
             sut.ConfigureServices(serviceCollection);
             return serviceCollection.BuildServiceProvider().GetRequiredService<IITSSCD>();
+        }
+
+        [Fact]
+        public void SerializeTest()
+        {
+            var sas = "{\"ServerUrl\":\"https://f51f-88-116-45-202.ngrok-free.app\",\"Username\":\"0001ab05\",\"Password\":\"admin\",\"AccountMasterData\":\"{\\\"AccountId\\\":\\\"59ac3eff-69d1-47ec-b680-ac9ac3eff6f3\\\",\\\"AccountName\\\":null,\\\"Street\\\":null,\\\"Zip\\\":null,\\\"City\\\":null,\\\"Country\\\":null,\\\"TaxId\\\":null,\\\"VatId\\\":\\\"MTLFNC75A16E783N\\\"}\"}";
+
+            var config = JsonConvert.DeserializeObject<CustomRTServerConfiguration>(sas);
         }
 
         [Fact]

@@ -19,7 +19,7 @@ public sealed class CustomRTServer : IITSSCD
     private readonly ILogger<CustomRTServer> _logger;
     private readonly CustomRTServerConfiguration _configuration;
     private readonly CustomRTServerClient _client;
-
+    private readonly AccountMasterData _accountMasterData;
     private Dictionary<Guid, QueueIdentification> CashUUIdMappings = new Dictionary<Guid, QueueIdentification>();
 
     private List<CommercialDocument> _receiptQueue = new List<CommercialDocument>();
@@ -50,6 +50,10 @@ public sealed class CustomRTServer : IITSSCD
         _logger = logger;
         _configuration = configuration;
         _client = client;
+        if (!string.IsNullOrEmpty(configuration.AccountMasterData))
+        {
+            _accountMasterData = JsonConvert.DeserializeObject<AccountMasterData>(configuration.AccountMasterData);
+        }
     }
 
     public async Task<RTInfo> GetRTInfoAsync()
@@ -125,7 +129,6 @@ public sealed class CustomRTServer : IITSSCD
         {
             await OpenNewdayAsync(request.ReceiptRequest, request.ReceiptResponse, cashuuid.CashUuId);
             // TODO let's check if we really should auto open a day
-
         }
         if (request.ReceiptRequest.IsVoid())
         {
@@ -152,8 +155,13 @@ public sealed class CustomRTServer : IITSSCD
     {
         var shop = receiptResponse.ftCashBoxIdentification.Substring(0, 4);
         var name = receiptResponse.ftCashBoxIdentification.Substring(4, 4);
-        var result = await _client.InsertCashRegisterAsync(receiptResponse.ftQueueID, shop, name, _configuration.AccountMasterData.AccountId.ToString(), _configuration.AccountMasterData.VatId ?? _configuration.AccountMasterData.TaxId);
-        await OpenNewdayAsync(receiptRequest, receiptResponse, result.cashUuid);
+        var result = await _client.InsertCashRegisterAsync(receiptResponse.ftQueueID, shop, name, _accountMasterData?.AccountId.ToString(), _accountMasterData?.VatId ?? _accountMasterData?.TaxId);
+        await ReloadCashUUID(receiptResponse);
+        var cashuuid = CashUUIdMappings[Guid.Parse(receiptResponse.ftQueueID)];
+        if (cashuuid.CashStatus == "0")
+        {
+            await OpenNewdayAsync(receiptRequest, receiptResponse, cashuuid.CashUuId);
+        }
         var signatures = SignatureFactory.CreateInitialOperationSignatures().ToList();
         signatures.Add(new SignaturItem
         {
@@ -195,7 +203,7 @@ public sealed class CustomRTServer : IITSSCD
 
     private async Task<List<SignaturItem>> PerformOutOfOperationAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, string cashUuid)
     {
-        var result = await _client.CancelCashRegisterAsync(cashUuid, _configuration.AccountMasterData.VatId);
+        var result = await _client.CancelCashRegisterAsync(cashUuid, _accountMasterData.VatId);
         var signatures = SignatureFactory.CreateOutOfOperationSignatures().ToList();
         signatures.Add(new SignaturItem
         {
