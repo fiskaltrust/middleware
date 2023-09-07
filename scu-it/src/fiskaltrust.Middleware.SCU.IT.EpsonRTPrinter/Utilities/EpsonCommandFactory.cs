@@ -41,15 +41,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
 
         public static List<Payment> GetV2Payments(ReceiptRequest receiptRequest)
         {
-            if (receiptRequest == null)
-            {
-                return new List<Payment>();
-            }
-            var sumChargeItems = receiptRequest.cbChargeItems?.Sum(x => x.GetAmount()) ?? 0;
-            var sumPayItems = receiptRequest.cbPayItems?.Sum(x => x.GetAmount()) ?? 0;
-
             var payment = GetV2PaymentFullyRedeemedByVouchers(receiptRequest);
-
             if (payment.Any())
             {
                 return payment;
@@ -206,10 +198,6 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
 
         private static List<Payment> GetV2PaymentFullyRedeemedByVouchers(ReceiptRequest receiptRequest)
         {
-            if (receiptRequest == null)
-            {
-                return new List<Payment>();
-            }
             var sumChargeItemsNoVoucher = receiptRequest.cbChargeItems?.Where(x => !x.IsV2PaymentAdjustment()).Sum(x => x.GetAmount()) ?? 0;
 
             var payments = new List<Payment>();
@@ -300,7 +288,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
             {
                 PaymentType.Cheque => new EpsonPaymentType() { PaymentType = 1, Index = 0 },
                 PaymentType.CreditCard => new EpsonPaymentType() { PaymentType = 2, Index = 1 },
-                PaymentType.Ticket => new EpsonPaymentType() { PaymentType = 3, Index = 0 },
+                PaymentType.Ticket => new EpsonPaymentType() { PaymentType = 3, Index = 1 },
                 PaymentType.MultipleTickets => new EpsonPaymentType() { PaymentType = 4, Index = 0 },
                 PaymentType.NotPaid => new EpsonPaymentType() { PaymentType = 5, Index = 0 },
                 PaymentType.Voucher => new EpsonPaymentType() { PaymentType = 6, Index = 1 },

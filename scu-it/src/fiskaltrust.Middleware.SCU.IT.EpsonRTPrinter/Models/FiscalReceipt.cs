@@ -390,4 +390,31 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models
         public EndFiscalReceipt EndFiscalReceipt { get; set; } = new EndFiscalReceipt();
     }
 
+
+    [XmlRoot(ElementName = "printerFiscalReceipt")]
+    public class VoidFiscalReceipt
+    {
+        [XmlElement(ElementName = "displayText")]
+        public List<DisplayText> DisplayText { get; set; } = new List<DisplayText>();
+
+        [XmlElement(ElementName = "printRecMessage")]
+        public PrintRecMessage? PrintRecMessage { get; set; }
+
+        [XmlElement(ElementName = "beginFiscalReceipt")]
+        public BeginFiscalReceipt BeginFiscalReceipt { get; set; } = new BeginFiscalReceipt();
+
+        [XmlElement(ElementName = "printRecVoid")]
+        public PrintRecVoid? PrintRecVoid { get; set; } 
+
+        [XmlElement(ElementName = "endFiscalReceipt")]
+        public EndFiscalReceipt EndFiscalReceipt { get; set; } = new EndFiscalReceipt();
+    }
+
+
+    [XmlRoot(ElementName = "printRecVoid")]
+    public class PrintRecVoid
+    {
+        [XmlAttribute(AttributeName = "operator")]
+        public string? Operator { get; } = "1";
+    }
 }

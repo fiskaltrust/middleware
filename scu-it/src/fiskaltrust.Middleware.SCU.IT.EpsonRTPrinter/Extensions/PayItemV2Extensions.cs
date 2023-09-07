@@ -15,7 +15,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Extensions
                 0x03 => PaymentType.Cheque,
                 0x04 => PaymentType.CreditCard,
                 0x05 => PaymentType.CreditCard,
-                0x06 => PaymentType.Voucher,
+                0x06 => PaymentType.Ticket,
                 0x07 => PaymentType.NotPaid,
                 0x08 => PaymentType.NotPaid,
                 0x09 => PaymentType.NotPaid,

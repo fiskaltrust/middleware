@@ -110,7 +110,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
             result.ReceiptResponse.ftSignatures.Should().BeEmpty();
         }
 
-        [Fact(Skip = "No device")]
+        [Fact]
         public async Task ProcessPosReceipt_InitialOperation_0x4954_2000_0000_4001()
         {
             var itsscd = GetSUT();
@@ -228,6 +228,59 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
 
         }
 
+        [Fact]
+        public async Task ProcessPosReceipt_0x4954_2000_0000_0001_TakeAway_Delivery_Cash_Void()
+        {
+            var response = _receiptResponse;
+            var itsscd = GetSUT();
+            var request = ReceiptExamples.GetTakeAway_Delivery_Cash();
+            var result = await itsscd.ProcessReceiptAsync(new ProcessRequest
+            {
+                ReceiptRequest = request,
+                ReceiptResponse = _receiptResponse
+            });
+
+
+            var zNumber = result.ReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTZNumber)).Data;
+            var rtdocNumber = result.ReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentNumber)).Data;
+            var rtDocumentMoment = DateTime.Parse(result.ReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentMoment)).Data);
+            var signatures = new List<SignaturItem>();
+            signatures.AddRange(response.ftSignatures);
+            signatures.AddRange(new List<SignaturItem>
+                    {
+                        new SignaturItem
+                        {
+                            Caption = "<reference-z-number>",
+                            Data = zNumber,
+                            ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                            ftSignatureType = 0x4954000000000000 | (long) SignatureTypesIT.RTReferenceZNumber
+                        },
+                        new SignaturItem
+                        {
+                            Caption = "<reference-doc-number>",
+                            Data = rtdocNumber,
+                            ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                            ftSignatureType = 0x4954000000000000 | (long) SignatureTypesIT.RTReferenceDocumentNumber
+                        },
+                        new SignaturItem
+                        {
+                            Caption = "<reference-timestamp>",
+                            Data = rtDocumentMoment.ToString("yyyy-MM-dd HH:mm:ss"),
+                            ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                            ftSignatureType = 0x4954000000000000 | (long) SignatureTypesIT.RTDocumentMoment
+                        },
+                    });
+            response.ftSignatures = signatures.ToArray();
+
+            var refundResult = await itsscd.ProcessReceiptAsync(new ProcessRequest
+            {
+                ReceiptRequest = ReceiptExamples.GetTakeAway_Delivery_Void(),
+                ReceiptResponse = response
+            });
+
+        }
+
+
         [Fact(Skip = "No device")]
         public async Task ProcessPosReceipt_0x4954_2000_0000_0001_TakeAway_Delivery_Card()
         {
@@ -243,13 +296,28 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
             result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTSerialNumber));
         }
 
-        [Fact(Skip = "No device")]
+        [Fact]
         public async Task ProcessPosReceipt_0x4954_2000_0000_0001_TakeAway_Delivery_Card_WithCustomerIVa()
         {
             var itsscd = GetSUT();
             var result = await itsscd.ProcessReceiptAsync(new ProcessRequest
             {
                 ReceiptRequest = ReceiptExamples.GetTakeAway_Delivery_Card_WithCustomerIva(),
+                ReceiptResponse = _receiptResponse
+            });
+
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTZNumber));
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentNumber));
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTSerialNumber));
+        }
+
+        [Fact]
+        public async Task ProcessPosReceipt_0x4954_2000_0000_0001_CashAndVoucher()
+        {
+            var itsscd = GetSUT();
+            var result = await itsscd.ProcessReceiptAsync(new ProcessRequest
+            {
+                ReceiptRequest = ReceiptExamples.FoodBeverage_CashAndVoucher(),
                 ReceiptResponse = _receiptResponse
             });
 

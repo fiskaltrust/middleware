@@ -93,7 +93,7 @@ public sealed class EpsonRTPrinterSCU : IITSSCD
 
         if (request.ReceiptRequest.IsVoid())
         {
-            return await ProcessRefundReceipt(request);
+            return await ProcessVoidReceipt(request);
         }
 
         if (request.ReceiptRequest.IsRefund())
@@ -215,6 +215,45 @@ public sealed class EpsonRTPrinterSCU : IITSSCD
         };
     }
 
+    private async Task<ProcessResponse> ProcessVoidReceipt(ProcessRequest request)
+    {
+        FiscalReceiptResponse fiscalResponse;
+        try
+        {
+            var referenceZNumber = long.Parse(request.ReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTReferenceZNumber)).Data);
+            var referenceDocNumber = long.Parse(request.ReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTReferenceDocumentNumber)).Data);
+            var referenceDateTime = DateTime.Parse(request.ReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentMoment)).Data);
+            var content = EpsonCommandFactory.CreateRefundRequestContent(request.ReceiptRequest, referenceDocNumber, referenceZNumber, referenceDateTime, _serialnr!);
+            var response = await SendRequestAsync(SoapSerializer.Serialize(content));
+
+            using var responseContent = await response.Content.ReadAsStreamAsync();
+            var result = SoapSerializer.DeserializeToSoapEnvelope<PrinterResponse>(responseContent);
+            var fiscalReceiptResponse = new FiscalReceiptResponse()
+            {
+                Success = result?.Success ?? false
+            };
+            await SetReceiptResponse(result, fiscalReceiptResponse);
+            fiscalResponse = fiscalReceiptResponse;
+        }
+        catch (Exception e)
+        {
+            fiscalResponse = Helpers.ExceptionInfo(e);
+        }
+
+        if (!fiscalResponse.Success)
+        {
+            throw new SSCDErrorException(fiscalResponse.SSCDErrorInfo.Type, fiscalResponse.SSCDErrorInfo.Info);
+        }
+        else
+        {
+            request.ReceiptResponse.ftSignatures = SignatureFactory.CreatePosReceiptSignatures(fiscalResponse.ReceiptNumber, fiscalResponse.ZRepNumber, fiscalResponse.Amount, fiscalResponse.ReceiptDateTime);
+        }
+        return new ProcessResponse
+        {
+            ReceiptResponse = request.ReceiptResponse
+        };
+    }
+
     public async Task<string> GetSerialNumberAsync(string rtType)
     {
         var serialQuery = new PrinterCommand() { DirectIO = DirectIO.GetSerialNrCommand() };
@@ -228,8 +267,6 @@ public sealed class EpsonRTPrinterSCU : IITSSCD
 
         return serialnr?.Substring(10, 2) + rtType + serialnr?.Substring(8, 2) + serialnr?.Substring(2, 6);
     }
-
-    private Task<ProcessResponse> ProcessVoidReceipt(ProcessRequest request) => throw new NotImplementedException();
 
     private async Task ResetPrinter()
     {
