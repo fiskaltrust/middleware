@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using fiskaltrust.ifPOS.v1;
+using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.SCU.IT.Abstraction;
 
@@ -38,4 +40,22 @@ public static class ReceiptCaseHelper
     public static bool IsRefund(this ReceiptRequest receiptRequest) => (receiptRequest.ftReceiptCase & 0x0000_0000_0100_0000) > 0x0000;
 
     public static bool IsReceiptRequest(this ReceiptRequest receiptRequest) => (receiptRequest.ftReceiptCase & 0x0000_0000_8000_0000) > 0x0000;
+    public static Customer? GetCustomer(this ReceiptRequest receiptRequest) => GetValueOrNull<Customer>(receiptRequest?.cbCustomer);
+
+    private static T? GetValueOrNull<T>(string? data) where T : class
+    {
+        if (string.IsNullOrEmpty(data))
+        {
+            return null;
+        }
+
+        try
+        {
+            return JsonConvert.DeserializeObject<T>(data!);
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
 }

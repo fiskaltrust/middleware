@@ -243,6 +243,20 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
             result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTSerialNumber));
         }
 
+        [Fact(Skip = "No device")]
+        public async Task ProcessPosReceipt_0x4954_2000_0000_0001_TakeAway_Delivery_Card_WithCustomerIVa()
+        {
+            var itsscd = GetSUT();
+            var result = await itsscd.ProcessReceiptAsync(new ProcessRequest
+            {
+                ReceiptRequest = ReceiptExamples.GetTakeAway_Delivery_Card_WithCustomerIva(),
+                ReceiptResponse = _receiptResponse
+            });
+
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTZNumber));
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentNumber));
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTSerialNumber));
+        }
 
         [Fact(Skip = "No device")]
         public async Task Cancellation()

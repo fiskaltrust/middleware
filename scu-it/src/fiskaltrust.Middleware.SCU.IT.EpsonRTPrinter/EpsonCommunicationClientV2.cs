@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.errors;
 using fiskaltrust.ifPOS.v1.it;
+using fiskaltrust.ifPOS.v1.me;
 using fiskaltrust.Middleware.SCU.IT.Abstraction;
 using fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models;
 using fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.QueueLogic.Exceptions;
@@ -91,7 +92,7 @@ public class EpsonCommunicationClientV2
         }
     }
 
-    private async Task SetReceiptResponse(List<Payment>? payments, PrinterResponse? result, FiscalReceiptResponse fiscalReceiptResponse)
+    private async Task SetReceiptResponse(PrinterResponse? result, FiscalReceiptResponse fiscalReceiptResponse)
     {
         if (result?.Success == false)
         {
@@ -100,18 +101,12 @@ public class EpsonCommunicationClientV2
         }
         else
         {
-            await SetResponseAsync(payments, result, fiscalReceiptResponse);
+            await SetResponseAsync(result, fiscalReceiptResponse);
         }
     }
 
-    private async Task SetResponseAsync(List<Payment>? payments, PrinterResponse? result, FiscalReceiptResponse fiscalReceiptResponse)
+    private async Task SetResponseAsync( PrinterResponse? result, FiscalReceiptResponse fiscalReceiptResponse)
     {
-        decimal.TryParse(result?.Receipt?.FiscalReceiptAmount, NumberStyles.Any, new CultureInfo("it-It", false), out var amount);
-        if (result?.Success == true && amount == 0)
-        {
-            amount = payments?.Sum(x => x.Amount) ?? 0;
-        }
-        fiscalReceiptResponse.Amount = amount;
         fiscalReceiptResponse.ReceiptNumber = result?.Receipt?.FiscalReceiptNumber != null ? long.Parse(result.Receipt.FiscalReceiptNumber) : 0;
         fiscalReceiptResponse.ZRepNumber = result?.Receipt?.ZRepNumber != null ? long.Parse(result.Receipt.ZRepNumber) : 0;
         fiscalReceiptResponse.ReceiptDataJson = await DownloadJsonAsync("www/json_files/rec.json");
@@ -132,9 +127,7 @@ public class EpsonCommunicationClientV2
     {
         try
         {
-            var request = Helpers.CreateInvoice(receiptRequest);
-            var content = _epsonXmlWriter.CreateInvoiceRequestContent(request);
-
+            var content = _epsonXmlWriter.CreateInvoiceRequestContent(receiptRequest);
             var response = await SendRequestAsync(content);
 
             using var responseContent = await response.Content.ReadAsStreamAsync();
@@ -143,7 +136,7 @@ public class EpsonCommunicationClientV2
             {
                 Success = result?.Success ?? false
             };
-            await SetReceiptResponse(request?.Payments, result, fiscalReceiptResponse);
+            await SetReceiptResponse(result, fiscalReceiptResponse);
             if (!fiscalReceiptResponse.Success)
             {
                 throw new SSCDErrorException(fiscalReceiptResponse.SSCDErrorInfo.Type, fiscalReceiptResponse.SSCDErrorInfo.Info);
@@ -234,7 +227,7 @@ public class EpsonCommunicationClientV2
             {
                 Success = result?.Success ?? false
             };
-            await SetReceiptResponse(request.Payments, result, fiscalReceiptResponse);
+            await SetReceiptResponse(result, fiscalReceiptResponse);
             return fiscalReceiptResponse;
         }
         catch (Exception e)

@@ -1,19 +1,5 @@
 ﻿using System.Xml.Serialization;
 using System.Collections.Generic;
-
-/* Unmerged change from project 'fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter (net461)'
-Before:
-using fiskaltrust.Middleware.SCU.IT.Epson.Utilities;
-After:
-using fiskaltrust.Middleware.SCU.IT.Epson.Utilities;
-using fiskaltrust;
-using fiskaltrust.Middleware;
-using fiskaltrust.Middleware.SCU;
-using fiskaltrust.Middleware.SCU.IT;
-using fiskaltrust.Middleware.SCU.IT.Epson;
-using fiskaltrust.Middleware.SCU.IT.Epson.Models;
-using fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models;
-*/
 using fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities;
 
 namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models
@@ -290,6 +276,15 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models
         public int Option { get; set; } = 0;
     }
 
+    [XmlRoot(ElementName = "directIO")]
+    public class DirectIOCommand
+    {
+        [XmlAttribute(AttributeName = "command")]
+        public string? Command { get; set; }
+        [XmlAttribute(AttributeName = "data")]
+        public string? Data { get; set; }
+    }
+
     [XmlRoot(ElementName = "printBarCode")]
     public class PrintBarCode
     {
@@ -387,6 +382,9 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models
 
         [XmlElement(ElementName = "NotExistingOnEpsonTotalMsg")]
         public List<TotalAndMessage> RecTotalAndMessages { get; set; } = new List<TotalAndMessage>();
+
+        [XmlElement(ElementName = "directIO")]
+        public List<DirectIO> DirectIOCommands { get; set; } = new List<DirectIO>();
 
         [XmlElement(ElementName = "endFiscalReceipt")]
         public EndFiscalReceipt EndFiscalReceipt { get; set; } = new EndFiscalReceipt();

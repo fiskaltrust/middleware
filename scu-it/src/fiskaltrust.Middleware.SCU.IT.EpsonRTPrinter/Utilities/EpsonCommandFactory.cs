@@ -2,10 +2,12 @@
 using System.IO;
 using System.Linq;
 using System.Xml.Serialization;
-using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models;
 using fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Extensions;
-using fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter;
+using fiskaltrust.ifPOS.v1.it;
+using fiskaltrust.ifPOS.v1;
+using fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.QueueLogic.Extensions;
+using fiskaltrust.Middleware.SCU.IT.Abstraction;
 
 namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
 {
@@ -19,6 +21,42 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
             _epsonScuConfiguration = epsonScuConfiguration;
         }
 
+        public string CreateInvoiceRequestContent(ReceiptRequest receiptRequest)
+        {
+            var request = new FiscalReceiptInvoice()
+            {
+                Operator = receiptRequest.cbUser,
+                Items = receiptRequest.cbChargeItems.Where(x => !x.IsV2PaymentAdjustment()).Select(p => new Item
+                {
+                    Description = p.Description,
+                    Quantity = p.Quantity,
+                    UnitPrice = p.UnitPrice ?? p.Amount / p.Quantity,
+                    Amount = p.Amount,
+                    VatGroup = p.GetV2VatGroup(),
+                    AdditionalInformation = p.ftChargeItemCaseData
+                }).ToList(),
+                PaymentAdjustments = receiptRequest.GetV2PaymentAdjustments(),
+                Payments = receiptRequest.GetV2Payments()
+            };
+            var fiscalReceipt = CreateFiscalReceipt(request);
+            if (!string.IsNullOrEmpty(request.DisplayText))
+            {
+                fiscalReceipt.DisplayText.Add(new DisplayText() { Data = request.DisplayText });
+            }
+            fiscalReceipt.ItemAndMessages = request.GetItemAndMessages();
+            fiscalReceipt.AdjustmentAndMessages = request.GetAdjustmentAndMessages();
+            var customerData = receiptRequest.GetCustomer();
+            if(customerData != null)
+            {
+                fiscalReceipt.DirectIOCommands.Add(new DirectIO
+                {
+                    Command = "1060",
+                    Data = "01" + customerData.CustomerVATId,
+                });
+            }
+            return SoapSerializer.Serialize(fiscalReceipt);
+        }
+
         public string CreateInvoiceRequestContent(FiscalReceiptInvoice request)
         {
             var fiscalReceipt = CreateFiscalReceipt(request);
@@ -30,7 +68,6 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
             fiscalReceipt.AdjustmentAndMessages = request.GetAdjustmentAndMessages();
             return SoapSerializer.Serialize(fiscalReceipt);
         }
-
 
         public string CreateRefundRequestContent(FiscalReceiptRefund request)
         {
@@ -95,7 +132,6 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
             }
         }
 
-
         private FiscalReceipt CreateFiscalReceipt(FiscalReceiptInvoice request)
         {
             var fiscalReceipt = new FiscalReceipt
@@ -139,6 +175,5 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
             fiscalReceipt.RecTotalAndMessages = request.Payments.GetTotalAndMessages();
             return fiscalReceipt;
         }
-
     }
 }
