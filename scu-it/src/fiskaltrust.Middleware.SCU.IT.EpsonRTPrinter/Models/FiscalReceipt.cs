@@ -132,6 +132,79 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models
     public class PrintRecRefund
     {
         [XmlAttribute(AttributeName = "operator")]
+        public string? Operator { get; set; } = "1";
+        [XmlAttribute(AttributeName = "description")]
+        public string? Description { get; set; }
+        [XmlIgnore]
+        public decimal Quantity { get; set; }
+        [XmlAttribute(AttributeName = "quantity")]
+        public string QuantityStr
+        {
+            get => Quantity.ToString(EpsonFormatters.QuantityFormatter);
+
+            set
+            {
+                if (decimal.TryParse(value, out var quantity))
+                {
+                    Quantity = quantity;
+                }
+            }
+        }
+        [XmlIgnore]
+        public decimal UnitPrice { get; set; }
+        [XmlAttribute(AttributeName = "unitPrice")]
+        public string UnitPriceStr
+        {
+            get => UnitPrice.ToString(EpsonFormatters.CurrencyFormatter);
+            set
+            {
+                if (decimal.TryParse(value, out var unitPrice))
+                {
+                    UnitPrice = unitPrice;
+                }
+            }
+        }
+        [XmlIgnore]
+        public decimal? Amount { get; set; }
+        [XmlAttribute(AttributeName = "amount")]
+        public string? AmountStr
+        {
+            get => Amount.HasValue ? Amount.Value.ToString(EpsonFormatters.CurrencyFormatter) : null;
+
+            set
+            {
+                if (decimal.TryParse(value, out var amount))
+                {
+                    Amount = amount;
+                }
+            }
+        }
+        [XmlIgnore]
+        public int? OperationType { get; set; }
+
+        [XmlAttribute(AttributeName = "operationType")]
+        public string? OperationTypeStr
+        {
+            get => OperationType.HasValue ? OperationType.ToString() : null;
+
+            set
+            {
+                if (int.TryParse(value, out var operationType))
+                {
+                    OperationType = operationType;
+                }
+            }
+        }
+        [XmlAttribute(AttributeName = "department")]
+        public int Department { get; set; }
+        [XmlAttribute(AttributeName = "justification")]
+        public int Justification { get; set; } = 1;
+    }
+
+    [XmlRoot(ElementName = "printRecVoid")]
+    public class PrintRecVoid
+    {
+        [XmlAttribute(AttributeName = "operator")]
         public string? Operator { get; } = "1";
         [XmlAttribute(AttributeName = "description")]
         public string? Description { get; set; }
@@ -365,6 +438,9 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models
         [XmlElement(ElementName = "printRecRefund")]
         public List<PrintRecRefund> PrintRecRefund { get; set; } = new List<PrintRecRefund>();
 
+        [XmlElement(ElementName = "printRecVoid")]
+        public List<PrintRecVoid> PrintRecVoid { get; set; } = new List<PrintRecVoid>();
+
         [XmlElement(ElementName = "NotExistingOnEpsonAdjMsg")]
         public List<AdjustmentAndMessage> AdjustmentAndMessages { get; set; } = new List<AdjustmentAndMessage>();
 
@@ -388,33 +464,5 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models
 
         [XmlElement(ElementName = "endFiscalReceipt")]
         public EndFiscalReceipt EndFiscalReceipt { get; set; } = new EndFiscalReceipt();
-    }
-
-
-    [XmlRoot(ElementName = "printerFiscalReceipt")]
-    public class VoidFiscalReceipt
-    {
-        [XmlElement(ElementName = "displayText")]
-        public List<DisplayText> DisplayText { get; set; } = new List<DisplayText>();
-
-        [XmlElement(ElementName = "printRecMessage")]
-        public PrintRecMessage? PrintRecMessage { get; set; }
-
-        [XmlElement(ElementName = "beginFiscalReceipt")]
-        public BeginFiscalReceipt BeginFiscalReceipt { get; set; } = new BeginFiscalReceipt();
-
-        [XmlElement(ElementName = "printRecVoid")]
-        public PrintRecVoid? PrintRecVoid { get; set; } 
-
-        [XmlElement(ElementName = "endFiscalReceipt")]
-        public EndFiscalReceipt EndFiscalReceipt { get; set; } = new EndFiscalReceipt();
-    }
-
-
-    [XmlRoot(ElementName = "printRecVoid")]
-    public class PrintRecVoid
-    {
-        [XmlAttribute(AttributeName = "operator")]
-        public string? Operator { get; } = "1";
     }
 }

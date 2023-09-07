@@ -101,6 +101,42 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
             return fiscalReceipt;
         }
 
+        public static FiscalReceipt CreateVoidRequestContent(ReceiptRequest receiptRequest, long referenceDocNumber, long referenceZNumber, DateTime referenceDateTime, string serialNr)
+        {
+            var refunds = receiptRequest.cbChargeItems?.Select(p => new Refund
+            {
+                Description = p.Description,
+                Quantity = Math.Abs(p.Quantity),
+                UnitPrice = Math.Abs(p.Amount) / Math.Abs(p.Quantity),
+                Amount = Math.Abs(p.Amount),
+                VatGroup = p.GetVatGroup()
+            }).ToList() ?? new List<Refund>();
+            var payments = receiptRequest.cbPayItems?.Select(p => new Payment
+            {
+                Amount = Math.Abs(p.Amount),
+                Description = p.Description,
+                PaymentType = p.GetV2PaymentType(),
+            }).ToList() ?? new List<Payment>();
+            var fiscalReceipt = new FiscalReceipt
+            {
+                PrintRecMessage = new PrintRecMessage()
+                {
+                    Message = $"VOID {referenceZNumber:D4} {referenceDocNumber:D4} {referenceDateTime:ddMMyyyy} {serialNr}",
+                    MessageType = (int) Messagetype.AdditionalInfo
+                },
+                PrintRecVoid = refunds.Select(recRefund => new PrintRecVoid
+                {
+                    Description = recRefund.Description,
+                    Quantity = recRefund.Quantity,
+                    UnitPrice = recRefund.UnitPrice,
+                    Department = recRefund.VatGroup
+                }).ToList(),
+                AdjustmentAndMessages = GetAdjustmentAndMessages(GetV2PaymentAdjustments(receiptRequest)),
+                RecTotalAndMessages = GetTotalAndMessages(payments)
+            };
+            return fiscalReceipt;
+        }
+
         public static List<AdjustmentAndMessage> GetAdjustmentAndMessages(List<PaymentAdjustment> paymentAdjustments)
         {
             var adjustmentAndMessages = new List<AdjustmentAndMessage>();

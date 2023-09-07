@@ -45,8 +45,8 @@ public sealed class EpsonRTPrinterSCU : IITSSCD
         var queryPrinterStatus = new QueryPrinterStatusCommand { QueryPrinterStatus = new QueryPrinterStatus { StatusType = 1 } };
         var response = await _httpClient.PostAsync(_commandUrl, new StringContent(SoapSerializer.Serialize(queryPrinterStatus), Encoding.UTF8, "application/xml"));
         using var responseContent = await response.Content.ReadAsStreamAsync();
-        var result = SoapSerializer.DeserializeToSoapEnvelope<StatusResponse>(responseContent);
 
+        var result = SoapSerializer.DeserializeToSoapEnvelope<StatusResponse>(responseContent);
         _logger.LogInformation(JsonConvert.SerializeObject(result));
         if (string.IsNullOrEmpty(_serialnr) && result?.Printerstatus?.RtType != null)
         {
@@ -184,6 +184,11 @@ public sealed class EpsonRTPrinterSCU : IITSSCD
             var referenceZNumber = long.Parse(request.ReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTReferenceZNumber)).Data);
             var referenceDocNumber = long.Parse(request.ReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTReferenceDocumentNumber)).Data);
             var referenceDateTime = DateTime.Parse(request.ReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentMoment)).Data);
+            if (string.IsNullOrEmpty(_serialnr))
+            {
+                var rtinfo = await GetRTInfoAsync();
+                _serialnr = rtinfo.SerialNumber;
+            }
             var content = EpsonCommandFactory.CreateRefundRequestContent(request.ReceiptRequest, referenceDocNumber, referenceZNumber, referenceDateTime, _serialnr!);
             var response = await SendRequestAsync(SoapSerializer.Serialize(content));
 
@@ -223,7 +228,12 @@ public sealed class EpsonRTPrinterSCU : IITSSCD
             var referenceZNumber = long.Parse(request.ReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTReferenceZNumber)).Data);
             var referenceDocNumber = long.Parse(request.ReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTReferenceDocumentNumber)).Data);
             var referenceDateTime = DateTime.Parse(request.ReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentMoment)).Data);
-            var content = EpsonCommandFactory.CreateRefundRequestContent(request.ReceiptRequest, referenceDocNumber, referenceZNumber, referenceDateTime, _serialnr!);
+            if (string.IsNullOrEmpty(_serialnr))
+            {
+                var rtinfo = await GetRTInfoAsync();
+                _serialnr = rtinfo.SerialNumber;
+            }
+            var content = EpsonCommandFactory.CreateVoidRequestContent(request.ReceiptRequest, referenceDocNumber, referenceZNumber, referenceDateTime, _serialnr!);
             var response = await SendRequestAsync(SoapSerializer.Serialize(content));
 
             using var responseContent = await response.Content.ReadAsStreamAsync();
