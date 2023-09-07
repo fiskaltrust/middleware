@@ -427,7 +427,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models
         public List<DisplayText> DisplayText { get; set; } = new List<DisplayText>();
 
         [XmlElement(ElementName = "printRecMessage")]
-        public PrintRecMessage? PrintRecMessage { get; set; }
+        public List<PrintRecMessage>? PrintRecMessage { get; set; }
 
         [XmlElement(ElementName = "beginFiscalReceipt")]
         public BeginFiscalReceipt BeginFiscalReceipt { get; set; } = new BeginFiscalReceipt();

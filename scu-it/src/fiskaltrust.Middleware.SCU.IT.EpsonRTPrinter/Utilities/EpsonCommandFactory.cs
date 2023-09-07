@@ -83,10 +83,13 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
             }).ToList() ?? new List<Payment>();
             var fiscalReceipt = new FiscalReceipt
             {
-                PrintRecMessage = new PrintRecMessage()
+                PrintRecMessage = new List<PrintRecMessage>
                 {
-                    Message = $"REFUND {referenceZNumber:D4} {referenceDocNumber:D4} {referenceDateTime:ddMMyyyy} {serialNr}",
-                    MessageType = (int) Messagetype.AdditionalInfo
+                    new PrintRecMessage()
+                    {
+                        Message = $"REFUND {referenceZNumber:D4} {referenceDocNumber:D4} {referenceDateTime:ddMMyyyy} {serialNr}",
+                        MessageType = (int) Messagetype.AdditionalInfo
+                    }
                 },
                 PrintRecRefund = refunds.Select(recRefund => new PrintRecRefund
                 {
@@ -119,10 +122,13 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
             }).ToList() ?? new List<Payment>();
             var fiscalReceipt = new FiscalReceipt
             {
-                PrintRecMessage = new PrintRecMessage()
+                PrintRecMessage = new List<PrintRecMessage>
                 {
-                    Message = $"VOID {referenceZNumber:D4} {referenceDocNumber:D4} {referenceDateTime:ddMMyyyy} {serialNr}",
-                    MessageType = (int) Messagetype.AdditionalInfo
+                   new PrintRecMessage()
+                    {
+                        Message = $"VOID {referenceZNumber:D4} {referenceDocNumber:D4} {referenceDateTime:ddMMyyyy} {serialNr}",
+                        MessageType = (int) Messagetype.AdditionalInfo
+                    }
                 },
                 PrintRecVoid = refunds.Select(recRefund => new PrintRecVoid
                 {
