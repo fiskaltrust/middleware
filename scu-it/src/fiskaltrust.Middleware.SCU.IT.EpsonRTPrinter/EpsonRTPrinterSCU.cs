@@ -93,7 +93,7 @@ public sealed class EpsonRTPrinterSCU : IITSSCD
 
         if (request.ReceiptRequest.IsVoid())
         {
-            return await ProcessVoidReceipt(request);
+            return await ProcessRefundReceipt(request);
         }
 
         if (request.ReceiptRequest.IsRefund())
