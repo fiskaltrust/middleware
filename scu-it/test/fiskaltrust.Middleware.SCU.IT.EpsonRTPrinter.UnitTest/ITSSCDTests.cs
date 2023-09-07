@@ -69,7 +69,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
             return serviceCollection.BuildServiceProvider().GetRequiredService<IITSSCD>();
         }
 
-        [Fact]
+        [Fact(Skip = "No device")]
         public async Task GetRTInfoAsync_ShouldReturn_Serialnumber()
         {
             var itsscd = GetSUT();
@@ -78,7 +78,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
             result.SerialNumber.Should().Be("96SRT001239");
         }
 
-        [Theory]
+        [Theory(Skip = "no device")]
         [MemberData(nameof(rtNoHandleReceipts))]
         public async Task ProcessAsync_Should_Do_Nothing(ITReceiptCases receiptCase)
         {
@@ -109,8 +109,8 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
             });
             result.ReceiptResponse.ftSignatures.Should().BeEmpty();
         }
-        
-        [Fact]
+
+        [Fact(Skip = "No device")]
         public async Task ProcessPosReceipt_InitialOperation_0x4954_2000_0000_4001()
         {
             var itsscd = GetSUT();
@@ -122,7 +122,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
             //result.ReceiptResponse.ftSignatures.Should().Contain(x => x.Caption == "<customrtserver-cashuuid>");
         }
 
-        [Fact]
+        [Fact(Skip = "No device")]
         public async Task ProcessPosReceipt_OutOfOperation_0x4954_2000_0000_4002()
         {
             var itsscd = GetSUT();
@@ -134,7 +134,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
             result.ReceiptResponse.ftSignatures.Should().Contain(x => x.Caption == "<customrtserver-cashuuid>");
         }
 
-        [Fact]
+        [Fact(Skip = "No device")]
         public async Task ProcessPosReceipt_Daily_Closing0x4954_2000_0000_2011()
         {
 
@@ -147,7 +147,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
             result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == 0x4954000000000011);
         }
 
-        [Fact]
+        [Fact(Skip = "No device")]
         public async Task ProcessPosReceipt_ZeroReceipt0x4954_2000_0000_2000()
         {
             var itsscd = GetSUT();
@@ -161,7 +161,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
             dictioanry.Should().ContainKey("DeviceDailyStatus");
         }
 
-        [Fact]
+        [Fact(Skip = "No device")]
         public async Task ProcessPosReceipt_0x4954_2000_0000_0001_TakeAway_Delivery_Cash()
         {
             var itsscd = GetSUT();
@@ -176,7 +176,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
             result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTSerialNumber));
         }
 
-        [Fact]
+        [Fact(Skip = "No device")]
         public async Task ProcessPosReceipt_0x4954_2000_0000_0001_TakeAway_Delivery_Cash_Refund()
         {
             var response = _receiptResponse;
@@ -228,7 +228,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
 
         }
 
-        [Fact]
+        [Fact(Skip = "No device")]
         public async Task ProcessPosReceipt_0x4954_2000_0000_0001_TakeAway_Delivery_Card()
         {
             var itsscd = GetSUT();
@@ -244,7 +244,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
         }
 
 
-        [Fact]
+        [Fact(Skip = "No device")]
         public async Task Cancellation()
         {
 
