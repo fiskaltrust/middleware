@@ -16,7 +16,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models
     public class LotteryID
     {
         [XmlAttribute(AttributeName = "operator")]
-        public string? Operator { get; set; }
+        public string? Operator { get; } = "1";
         [XmlAttribute(AttributeName = "code")]
         public string? Code { get; set; }
 
@@ -27,7 +27,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models
     public class DisplayText
     {
         [XmlAttribute(AttributeName = "operator")]
-        public string? Operator { get; set; }
+        public string? Operator { get; } = "1";
         [XmlAttribute(AttributeName = "data")]
         public string? Data { get; set; }
 
@@ -38,7 +38,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models
     public class PrintRecMessage
     {
         [XmlAttribute(AttributeName = "operator")]
-        public string? Operator { get; set; }
+        public string? Operator { get; } = "1";
         [XmlAttribute(AttributeName = "messageType")]
         public int MessageType { get; set; }
         [XmlAttribute(AttributeName = "index")]
@@ -55,7 +55,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models
     public class BeginFiscalReceipt
     {
         [XmlAttribute(AttributeName = "operator")]
-        public string? Operator { get; set; }
+        public string? Operator { get; } = "1";
     }
 
     public class TotalAndMessage
@@ -89,7 +89,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models
     public class PrintRecItem
     {
         [XmlAttribute(AttributeName = "operator")]
-        public string? Operator { get; set; }
+        public string? Operator { get; } = "1";
         [XmlAttribute(AttributeName = "description")]
         public string? Description { get; set; }
         [XmlIgnore]
@@ -132,7 +132,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models
     public class PrintRecRefund
     {
         [XmlAttribute(AttributeName = "operator")]
-        public string? Operator { get; set; }
+        public string? Operator { get; } = "1";
         [XmlAttribute(AttributeName = "description")]
         public string? Description { get; set; }
         [XmlIgnore]
@@ -205,7 +205,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models
     public class PrintRecItemAdjustment
     {
         [XmlAttribute(AttributeName = "operator")]
-        public string? Operator { get; set; }
+        public string? Operator { get; } = "1"; 
         [XmlAttribute(AttributeName = "description")]
         public string? Description { get; set; }
         [XmlAttribute(AttributeName = "adjustmentType")]
@@ -235,7 +235,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models
     public class PrintRecSubtotalAdjustment
     {
         [XmlAttribute(AttributeName = "operator")]
-        public string? Operator { get; set; }
+        public string? Operator     { get; } = "1";
         [XmlAttribute(AttributeName = "description")]
         public string? Description { get; set; }
 
@@ -271,7 +271,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models
     public class PrintRecSubtotal
     {
         [XmlAttribute(AttributeName = "operator")]
-        public string? Operator { get; set; }
+        public string? Operator     { get; } = "1";
         [XmlAttribute(AttributeName = "option")]
         public int Option { get; set; } = 0;
     }
@@ -289,7 +289,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models
     public class PrintBarCode
     {
         [XmlAttribute(AttributeName = "operator")]
-        public string? Operator { get; set; }
+        public string? Operator { get; } = "1";
         [XmlAttribute(AttributeName = "position")]
         public int Position { get; set; }
         [XmlAttribute(AttributeName = "width")]
@@ -310,7 +310,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models
     public class PrintRecTotal
     {
         [XmlAttribute(AttributeName = "operator")]
-        public string? Operator { get; set; }
+        public string? Operator { get; } = "1";
 
         [XmlAttribute(AttributeName = "description")]
         public string? Description { get; set; }
@@ -344,7 +344,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models
     public class EndFiscalReceipt
     {
         [XmlAttribute(AttributeName = "operator")]
-        public string? Operator { get; set; }
+        public string? Operator { get; } = "1";
     }
 
     [XmlRoot(ElementName = "printerFiscalReceipt")]

@@ -2,7 +2,7 @@
 using System.Runtime.Serialization;
 using fiskaltrust.ifPOS.v1.errors;
 
-namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.QueueLogic.Exceptions
+namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter
 {
     [Serializable]
     public class SSCDErrorException : Exception

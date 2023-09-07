@@ -1,8 +1,7 @@
 ﻿using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.it;
-using fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.QueueLogic.Extensions.v0;
 
-namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.QueueLogic.Extensions
+namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Extensions
 {
     public static class PayItemV2Extensions
     {
@@ -12,7 +11,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.QueueLogic.Extensions
             {
                 0x00 => PaymentType.Cash,
                 0x01 => PaymentType.Cash,
-                0x02 => PaymentType.Cheque,
+                0x02 => PaymentType.Cash,
                 0x03 => PaymentType.Cheque,
                 0x04 => PaymentType.CreditCard,
                 0x05 => PaymentType.CreditCard,
@@ -29,8 +28,10 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.QueueLogic.Extensions
             };
         }
 
-        public static bool IsV2VoucherRedeem(this PayItem payItem) => payItem.GetV0PaymentType() == PaymentType.Voucher && payItem.GetAmount() > 0;
+        public static bool IsV2VoucherRedeem(this PayItem payItem) => payItem.GetV2PaymentType() == PaymentType.Voucher && payItem.GetAmount() > 0;
 
-        public static bool IsV2VoucherSale(this PayItem payItem) => payItem.GetV0PaymentType() == PaymentType.Voucher && payItem.GetAmount() < 0;
+        public static bool IsV2VoucherSale(this PayItem payItem) => payItem.GetV2PaymentType() == PaymentType.Voucher && payItem.GetAmount() < 0;
+
+        public static decimal GetAmount(this PayItem payItem) => payItem.Quantity < 0 && payItem.Amount >= 0 ? payItem.Amount * -1 : payItem.Amount;
     }
 }

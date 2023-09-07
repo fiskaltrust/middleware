@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.Abstractions;
-using fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 
@@ -19,9 +18,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter
 
             _ = serviceCollection
                 .AddSingleton(epsonScuConfig)
-                .AddScoped<EpsonCommandFactory>()
-                .AddScoped<IITSSCD, EpsonRTPrinterSCU>()
-                .AddScoped<EpsonCommunicationClientV2>();
+                .AddScoped<IITSSCD, EpsonRTPrinterSCU>();
         }
     }
 }

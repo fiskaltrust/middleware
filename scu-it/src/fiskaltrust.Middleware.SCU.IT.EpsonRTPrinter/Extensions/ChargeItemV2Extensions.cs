@@ -1,9 +1,10 @@
 ﻿using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.it;
 
-namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.QueueLogic.Extensions
+namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Extensions
 {
     public static class ChargeItemV2Extensions
+
     {
         // TODO: check VAT rate table on printer at the moment according to xml example
         private static readonly int _vatRateBasic = 1;
@@ -52,7 +53,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.QueueLogic.Extensions
             };
         }
 
-        public static int GetV2VatGroup(this ChargeItem chargeItem)
+        public static int GetVatGroup(this ChargeItem chargeItem)
         {
             return (chargeItem.ftChargeItemCase & 0xF) switch
             {
@@ -68,5 +69,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.QueueLogic.Extensions
                 _ => _vatRateUnknown,
             };
         }
+
+        public static decimal GetAmount(this ChargeItem chargeItem) => chargeItem.Quantity < 0 && chargeItem.Amount >= 0 ? chargeItem.Amount * -1 : chargeItem.Amount;
     }
 }

@@ -9,61 +9,14 @@ using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.errors;
 using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.SCU.IT.Abstraction;
+using fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Extensions;
 using fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models;
-using fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.QueueLogic.Extensions;
 using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter;
 
 public class Helpers
 {
-    public static FiscalReceiptInvoice CreateInvoice(ReceiptRequest request)
-    {
-        var fiscalReceiptRequest = new FiscalReceiptInvoice()
-        {
-            //Barcode = ChargeItem.ProductBarcode,
-            //TODO DisplayText = "Message on customer display",
-            Operator = request.cbUser,
-            Items = request.cbChargeItems.Where(x => !x.IsV2PaymentAdjustment()).Select(p => new Item
-            {
-                Description = p.Description,
-                Quantity = p.Quantity,
-                UnitPrice = p.UnitPrice ?? p.Amount / p.Quantity,
-                Amount = p.Amount,
-                VatGroup = p.GetV2VatGroup(),
-                AdditionalInformation = p.ftChargeItemCaseData
-            }).ToList(),
-            PaymentAdjustments = request.GetV2PaymentAdjustments(),
-            Payments = request.GetV2Payments()
-        };
-        return fiscalReceiptRequest;
-    }
-
-    public static FiscalReceiptRefund CreateRefund(ReceiptRequest request, long receiptnumber, long zReceiptNumber, DateTime receiptDateTime, string serialNumber)
-    {
-        return new FiscalReceiptRefund()
-        {
-            //TODO Barcode = "0123456789" 
-            Operator = "1",
-            DisplayText = $"REFUND {zReceiptNumber:D4} {receiptnumber:D4} {receiptDateTime:ddMMyyyy} {serialNumber}",
-            Refunds = request.cbChargeItems?.Select(p => new Refund
-            {
-                Description = p.Description,
-                Quantity = Math.Abs(p.Quantity),
-                UnitPrice = Math.Abs(p.Amount) / Math.Abs(p.Quantity),
-                Amount = Math.Abs(p.Amount),
-                VatGroup = p.GetV2VatGroup()
-            }).ToList(),
-            PaymentAdjustments = request.GetV2PaymentAdjustments(),
-            Payments = request.cbPayItems?.Select(p => new Payment
-            {
-                Amount = Math.Abs(p.Amount),
-                Description = p.Description,
-                PaymentType = p.GetV2PaymentType(),
-            }).ToList()
-        };
-    }
-
     public static ProcessResponse CreateResponse(ReceiptResponse receiptResponse)
     {
         return new ProcessResponse

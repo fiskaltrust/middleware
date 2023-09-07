@@ -18,7 +18,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models
     public class ZReport
     {
         [XmlAttribute(AttributeName = "operator")]
-        public string? Operator { get; set; }
+        public string? Operator { get; } = "1";
 
         [XmlIgnore]
         public int? Timeout { get; set; }
@@ -42,14 +42,14 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models
     public class XReport
     {
         [XmlAttribute(AttributeName = "operator")]
-        public string? Operator { get; set; }
+        public string? Operator { get; } = "1";
     }
 
     [XmlType("printXZReport")]
     public class XZReport
     {
         [XmlAttribute(AttributeName = "operator")]
-        public string? Operator { get; set; }
+        public string? Operator { get; } = "1";
 
         [XmlIgnore]
         public int? Timeout { get; set; }
