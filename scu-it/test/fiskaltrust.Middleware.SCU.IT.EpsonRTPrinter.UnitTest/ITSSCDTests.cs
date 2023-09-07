@@ -110,7 +110,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
             result.ReceiptResponse.ftSignatures.Should().BeEmpty();
         }
 
-        [Fact]
+        [Fact(Skip = "No device")]
         public async Task ProcessPosReceipt_InitialOperation_0x4954_2000_0000_4001()
         {
             var itsscd = GetSUT();
