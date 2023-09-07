@@ -2,7 +2,7 @@
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.it;
 
-namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.QueueLogic.Extensions
+namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.QueueLogic.Extensions.v0
 {
 
     public static class PayItemExtensions

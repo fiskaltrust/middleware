@@ -12,6 +12,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.QueueLogic.Extensions
         private static readonly int _vatRateDeduction3 = 4;
         private static readonly int _vatRateZero = 0;
         private static readonly int _vatRateUnknown = -1;
+        private static readonly int _notTaxable = 0;
 
         public static PaymentAdjustmentType GetV2PaymentAdjustmentType(this ChargeItem chargeItem)
         {
@@ -63,7 +64,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.QueueLogic.Extensions
                 0x5 => throw new System.Exception("Currently not supported"),
                 0x6 => throw new System.Exception("Currently not supported"),
                 0x7 => _vatRateZero,
-                0x8 => _vatRateZero,
+                0x8 => _notTaxable,
                 _ => _vatRateUnknown,
             };
         }

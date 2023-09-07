@@ -4,6 +4,7 @@ using System.Linq;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.QueueLogic.Exceptions;
+using fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.QueueLogic.Extensions.v0;
 
 namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.QueueLogic.Extensions
 {

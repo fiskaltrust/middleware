@@ -5,7 +5,7 @@ using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.QueueLogic.Exceptions;
 
-namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.QueueLogic.Extensions
+namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.QueueLogic.Extensions.v0
 {
     public static class ReceiptRequestExtensions
     {
