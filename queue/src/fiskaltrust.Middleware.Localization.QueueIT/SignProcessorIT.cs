@@ -82,7 +82,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
                 // What should we do in this case? Cannot really proceed with the storno but we
                 await foreach (var existingQueueItem in queueItems)
                 {
-                    var referencedResponse = JsonConvert.DeserializeObject<ReceiptResponse>(queueItem.response);
+                    var referencedResponse = JsonConvert.DeserializeObject<ReceiptResponse>(existingQueueItem.response);
                     var documentNumber = referencedResponse.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentNumber)).Data;
                     var zNumber = referencedResponse.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTZNumber)).Data;
                     var signatures = new List<SignaturItem>();
