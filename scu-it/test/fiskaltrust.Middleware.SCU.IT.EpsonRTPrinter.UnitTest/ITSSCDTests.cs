@@ -228,7 +228,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
 
         }
 
-        [Fact(Skip = "No device")
+        [Fact(Skip = "No device")]
         public async Task ProcessPosReceipt_0x4954_2000_0000_0001_TakeAway_Delivery_Cash_Void()
         {
             var response = _receiptResponse;
