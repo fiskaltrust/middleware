@@ -655,7 +655,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
             "Amount": 566
         }
     ],
-    "cbCustomer": "{\"CustomerVATId\": \"01606720215\"}",
+    "cbCustomer": "{\"CustomerVATId\": \"IT01606720215\"}",
     "ftReceiptCase": 5283883447184523265
 }
 """;

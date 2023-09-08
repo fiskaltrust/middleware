@@ -19,7 +19,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
             {
                 Description = p.Description,
                 Quantity = p.Quantity,
-                UnitPrice = p.UnitPrice ?? p.Amount / p.Quantity,
+                UnitPrice = p.Amount / p.Quantity,
                 Amount = p.Amount,
                 VatGroup = p.GetVatGroup(),
                 AdditionalInformation = p.ftChargeItemCaseData
@@ -30,11 +30,22 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
             var customerData = receiptRequest.GetCustomer();
             if (customerData != null)
             {
-                fiscalReceipt.DirectIOCommands.Add(new DirectIO
+                if (!string.IsNullOrEmpty(customerData.CustomerVATId))
                 {
-                    Command = "1060",
-                    Data = "01" + customerData.CustomerVATId,
-                });
+                    var vat = customerData.CustomerVATId!;
+                    if (vat.ToUpper().StartsWith("IT"))
+                    {
+                        vat = vat.Substring(2);
+                    }
+                    if (vat.Length == 11)
+                    {
+                        fiscalReceipt.DirectIOCommands.Add(new DirectIO
+                        {
+                            Command = "1060",
+                            Data = "01" + vat,
+                        });
+                    }
+                }
             }
             return fiscalReceipt;
         }
@@ -198,7 +209,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                     Description = i.Description,
                     Quantity = i.Quantity,
                     UnitPrice = i.UnitPrice,
-                    Department = i.VatGroup
+                    Department = i.VatGroup,
                 };
                 PrintRecMessage? printRecMessage = null;
                 if (!string.IsNullOrEmpty(i.AdditionalInformation))

@@ -153,10 +153,17 @@ public sealed class EpsonRTPrinterSCU : IITSSCD
         try
         {
             var content = EpsonCommandFactory.CreateInvoiceRequestContent(receiptRequest);
-            var response = await SendRequestAsync(SoapSerializer.Serialize(content));
+            var data = SoapSerializer.Serialize(content);
+            _logger.LogDebug("Request content ({receiptreference}): {content}", receiptRequest.cbReceiptReference, SoapSerializer.Serialize(data));
+            var response = await SendRequestAsync(data);
 
             using var responseContent = await response.Content.ReadAsStreamAsync();
             var result = SoapSerializer.DeserializeToSoapEnvelope<PrinterResponse>(responseContent);
+            if (result != null)
+            {
+                _logger.LogDebug("Response content ({receiptreference}): {content}", receiptRequest.cbReceiptReference, SoapSerializer.Serialize(result));
+            }
+
             var fiscalReceiptResponse = new FiscalReceiptResponse()
             {
                 Success = result?.Success ?? false

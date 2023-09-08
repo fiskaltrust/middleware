@@ -478,3 +478,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
         }
     }
 }
+
+// TODO TEsts
+// - Add test that sends wrong CUstomer IVA
+// - Add test that sends customer data without iva
