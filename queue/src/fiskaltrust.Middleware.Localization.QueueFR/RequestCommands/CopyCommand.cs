@@ -42,7 +42,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
 
                 var payload = PayloadFactory.GetCopyPayload(request, response, signaturCreationUnitFR, queueFR.CLastHash);
 
-                var (hash, signatureItem, journalFR) = _signatureFactoryFR.CreateTotalsSignature(response, queue, signaturCreationUnitFR, payload, "www.fiskaltrust.fr", SignaturItem.Formats.QR_Code, (SignaturItem.Types) 0x4652000000000001);
+                var (hash, signatureItem, journalFR) = _signatureFactoryFR.CreateTotalsSignature(response, queue, signaturCreationUnitFR, JsonConvert.SerializeObject(payload), "www.fiskaltrust.fr", SignaturItem.Formats.QR_Code, (SignaturItem.Types) 0x4652000000000001);
                 queueFR.CLastHash = hash;
                 journalFR.ReceiptType = "C";
 
@@ -56,9 +56,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
 
                 response.ftSignatures = response.ftSignatures.Extend(signatures);
                 
-                var journalFRCopyPayload = JsonConvert.DeserializeObject<ftJournalFRCopyPayload>(payload);
-
-                await _copyPayloadRepository.InsertAsync(journalFRCopyPayload);
+                await _copyPayloadRepository.InsertAsync(payload.ToJournalFRCopyPayload());
 
                 return (response, journalFR, new());
             }
