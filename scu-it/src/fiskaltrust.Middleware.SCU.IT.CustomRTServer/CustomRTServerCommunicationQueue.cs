@@ -23,7 +23,7 @@ public class CustomRTServerCommunicationQueue
           {
               if (x.IsFaulted)
               {
-                  _logger.LogError("Failed to insert fiscal document", x.Exception);
+                  _logger.LogError(x.Exception, "Failed to insert fiscal document");
               }
               else
               {

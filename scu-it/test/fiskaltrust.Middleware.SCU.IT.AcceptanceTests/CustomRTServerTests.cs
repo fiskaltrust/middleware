@@ -1,15 +1,22 @@
 ﻿using fiskaltrust.Middleware.Abstractions;
-using fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter;
+using fiskaltrust.Middleware.SCU.IT.CustomRTServer;
 using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
 {
-    public class EpsonRTPrinterTests : ITSSCDTests
+    public class CustomRTServerTests : ITSSCDTests
     {
         private static readonly Uri _serverUri = new Uri("http://192.168.0.34/");
-        private readonly EpsonRTPrinterSCUConfiguration _config = new EpsonRTPrinterSCUConfiguration
+        private readonly CustomRTServerConfiguration _config = new CustomRTServerConfiguration
         {
-            DeviceUrl = _serverUri.ToString()
+            ServerUrl = _serverUri.ToString(),
+            Username = "0001ab05",
+            Password = "admin",
+            AccountMasterData = JsonConvert.SerializeObject(new AccountMasterData
+            {
+                AccountId = Guid.NewGuid(),
+                VatId = "MTLFNC75A16E783N"
+            })
         };
 
         protected override IMiddlewareBootstrapper GetMiddlewareBootstrapper() => new ScuBootstrapper
