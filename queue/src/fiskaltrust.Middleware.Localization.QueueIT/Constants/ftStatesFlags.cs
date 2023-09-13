@@ -15,7 +15,5 @@
         public const long ERROR = 0x0000_0000_EEEE_EEEE;
 
         public const long FAIIL = 0x0000_0000_FFFF_FFFF;
-
-        public const long ToOldForLateSigning = Cases.BASE_STATE + 0x03; // ???
     }
 }

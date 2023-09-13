@@ -7,7 +7,6 @@ using fiskaltrust.ifPOS.v1.it;
 using System.Collections.Generic;
 using System;
 using fiskaltrust.Middleware.Contracts.Extensions;
-using Org.BouncyCastle.Asn1.Ocsp;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.v2.Lifecycle
 {

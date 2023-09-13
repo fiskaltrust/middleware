@@ -59,7 +59,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
 
         private IMarketSpecificSignProcessor GetSCUDeviceOutOfServiceSUT(ftQueue queue) => GetSUT(queue, _queueIT);
 
-        private IMarketSpecificSignProcessor GetDefaultSUT(ftQueue queue) => GetSUT(queue, _queueIT);
+        private IMarketSpecificSignProcessor GetDefaultSUT(ftQueue queue, IITSSCD itSSCD = null) => GetSUT(queue, _queueIT, itSSCD);
 
         public static SignaturItem[] CreateFakeReceiptSignatures()
         {
@@ -97,7 +97,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
         }
 
 
-        private IMarketSpecificSignProcessor GetSUT(ftQueue queue, ftQueueIT queueIT)
+        private IMarketSpecificSignProcessor GetSUT(ftQueue queue, ftQueueIT queueIT, IITSSCD itSSCD = null)
         {
             var middlewareQueueItemRepositoryMock = new Mock<IMiddlewareQueueItemRepository>();
 
@@ -110,19 +110,23 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
                 InfoJson = null
             });
 
-            var itSSCDMock = new Mock<IITSSCD>();
-            itSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>())).ReturnsAsync((ProcessRequest request) =>
+            if (itSSCD == null)
             {
-                request.ReceiptResponse.ftSignatures = CreateFakeReceiptSignatures();
-                return new ProcessResponse
+                var itSSCDMock = new Mock<IITSSCD>();
+                itSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>())).ReturnsAsync((ProcessRequest request) =>
                 {
-                    ReceiptResponse = request.ReceiptResponse
-                };
-            });
-            itSSCDMock.Setup(x => x.GetRTInfoAsync()).ReturnsAsync(new RTInfo());
+                    request.ReceiptResponse.ftSignatures = CreateFakeReceiptSignatures();
+                    return new ProcessResponse
+                    {
+                        ReceiptResponse = request.ReceiptResponse
+                    };
+                });
+                itSSCDMock.Setup(x => x.GetRTInfoAsync()).ReturnsAsync(new RTInfo());
+                itSSCD = itSSCDMock.Object;
+            }
 
             var clientFactoryMock = new Mock<IClientFactory<IITSSCD>>();
-            clientFactoryMock.Setup(x => x.CreateClient(It.IsAny<ClientConfiguration>())).Returns(itSSCDMock.Object);
+            clientFactoryMock.Setup(x => x.CreateClient(It.IsAny<ClientConfiguration>())).Returns(itSSCD);
 
             var serviceCollection = new ServiceCollection();
             serviceCollection.AddLogging();
@@ -379,6 +383,35 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
             receiptResponse.ftState.Should().Be(0x4954_0000_0000_0000);
             actionJournals.Should().HaveCount(0);
         }
+
+        [Fact]
+        public async Task Process_ZeroReceipt_ShouldNeverFail()
+        {
+            var zeroReceipt = $$"""
+{
+    "ftCashBoxID": "00000000-0000-0000-0000-000000000000",
+    "ftPosSystemId": "00000000-0000-0000-0000-000000000000",
+    "cbTerminalID": "00010001",
+    "cbReceiptReference": "Zero",
+    "cbReceiptMoment": "{{DateTime.UtcNow.ToString("o")}}",
+    "cbChargeItems": [],
+    "cbPayItems": [],
+    "ftReceiptCase": 5283883447184531456,
+    "cbUser": "Admin"
+}
+""";
+            var itSSCDMock = new Mock<IITSSCD>();
+            itSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>())).ReturnsAsync((ProcessRequest request) => throw new Exception("So here we go no error"));
+            itSSCDMock.Setup(x => x.GetRTInfoAsync()).ReturnsAsync(() => throw new Exception("So here we go no error"));
+
+            var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(zeroReceipt);
+            var sut = GetDefaultSUT(_queueStarted, itSSCDMock.Object);
+   
+            var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, _queueStarted, new ftQueueItem { });
+            receiptResponse.ftState.Should().Be(0x4954_2000_0000_0000);
+            actionJournals.Should().HaveCount(0);
+        }
+
 
         [Fact]
         public async Task Process_DailyClosingReceipt()

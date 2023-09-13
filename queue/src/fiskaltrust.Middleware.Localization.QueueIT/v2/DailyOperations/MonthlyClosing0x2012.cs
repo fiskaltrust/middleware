@@ -8,6 +8,7 @@ using System;
 using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.Localization.QueueIT.Services;
 using System.Linq;
+using fiskaltrust.Middleware.Localization.QueueIT.Extensions;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.v2.DailyOperations
 {
@@ -24,22 +25,27 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.DailyOperations
 
         public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ExecuteAsync(ftQueue queue, ftQueueIT queueIt, ReceiptRequest request, ReceiptResponse receiptResponse, ftQueueItem queueItem)
         {
-            var actionJournalEntry = ActionJournalFactory.CreateDailyClosingActionJournal(queue, queueItem, request);
-            var result = await _itSSCDProvider.ProcessReceiptAsync(new ProcessRequest
+            try
             {
-                ReceiptRequest = request,
-                ReceiptResponse = receiptResponse
-            });
-            var zNumber = result.ReceiptResponse.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTZNumber)).Data;
-            receiptResponse.ftReceiptIdentification += $"Z{zNumber.PadLeft(4, '0')}";
-
-            var signatures = new List<SignaturItem>();
-            signatures.AddRange(result.ReceiptResponse.ftSignatures);
-            receiptResponse.ftSignatures = signatures.ToArray();
-            return await Task.FromResult((receiptResponse, new List<ftActionJournal>
+                var actionJournalEntry = ActionJournalFactory.CreateMonthlyClosingActionJournal(queue, queueItem, request);
+                var result = await _itSSCDProvider.ProcessReceiptAsync(new ProcessRequest
+                {
+                    ReceiptRequest = request,
+                    ReceiptResponse = receiptResponse
+                });
+                var zNumber = result.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTZNumber).Data;
+                receiptResponse.ftReceiptIdentification += $"Z{zNumber.PadLeft(4, '0')}";
+                receiptResponse.ftSignatures = result.ReceiptResponse.ftSignatures;
+                return (receiptResponse, new List<ftActionJournal>
+                {
+                    actionJournalEntry
+                });
+            }
+            catch (Exception ex)
             {
-                actionJournalEntry
-            })).ConfigureAwait(false);
+                receiptResponse.SetReceiptResponseErrored($"The monthly closing operation failed with the following error message: {ex.Message}");
+                return (receiptResponse, new List<ftActionJournal>());
+            }
         }
     }
 }

@@ -11,6 +11,7 @@ using fiskaltrust.Middleware.Localization.QueueIT.v2.Invoice;
 using fiskaltrust.Middleware.Localization.QueueIT.v2.Receipt;
 using fiskaltrust.Middleware.Localization.QueueIT.v2.Lifecycle;
 using fiskaltrust.Middleware.Localization.QueueIT.v2.Log;
+using fiskaltrust.Middleware.Contracts.Repositories;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT
 {
@@ -18,12 +19,14 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
     {
         private readonly IITSSCDProvider _itSSCDProvider;
         private readonly IConfigurationRepository _configurationRepository;
+        private readonly IMiddlewareQueueItemRepository _middlewareQueueItemRepository;
         private readonly ILogger<ZeroReceipt0x200> _logger;
 
-        public ReceiptTypeProcessorFactory(IITSSCDProvider itSSCDProvider, IConfigurationRepository configurationRepository, ILogger<ZeroReceipt0x200> logger)
+        public ReceiptTypeProcessorFactory(IITSSCDProvider itSSCDProvider, IConfigurationRepository configurationRepository, IMiddlewareQueueItemRepository middlewareQueueItemRepository, ILogger<ZeroReceipt0x200> logger)
         {
             _itSSCDProvider = itSSCDProvider;
             _configurationRepository = configurationRepository;
+            _middlewareQueueItemRepository = middlewareQueueItemRepository;
             _logger = logger;
         }
 
@@ -45,7 +48,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
             var casePart = receiptCase & 0xFFFF;
             if (!Enum.IsDefined(typeof(ITReceiptCases), casePart))
             {
-                throw new UnknownReceiptCaseException(casePart);
+                return null;
             }
 
             var itCase = (ITReceiptCases) casePart;
@@ -61,7 +64,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
                 ITReceiptCases.InvoiceB2C0x1001 => new InvoiceB2C0x1001(),
                 ITReceiptCases.InvoiceB2B0x1002 => new InvoiceB2B0x1002(),
                 ITReceiptCases.InvoiceB2G0x1003 => new InvoiceB2G0x1003(),
-                ITReceiptCases.ZeroReceipt0x200 => new ZeroReceipt0x200(_itSSCDProvider, _logger, _configurationRepository),
+                ITReceiptCases.ZeroReceipt0x200 => new ZeroReceipt0x200(_itSSCDProvider, _logger, _configurationRepository, _middlewareQueueItemRepository),
                 ITReceiptCases.DailyClosing0x2011 => new DailyClosing0x2011(_itSSCDProvider),
                 ITReceiptCases.MonthlyClosing0x2012 => new MonthlyClosing0x2012(_itSSCDProvider),
                 ITReceiptCases.YearlyClosing0x2013 => new YearlyClosing0x2013(_itSSCDProvider),
@@ -76,7 +79,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
                 ITReceiptCases.Order0x3004 => new Order0x3004(),
                 ITReceiptCases.InitSCUSwitch0x4011 => new InitSCUSwitch0x4011(),
                 ITReceiptCases.FinishSCUSwitch0x4012 => new FinishSCUSwitch0x4012(),
-                _ => throw new UnknownReceiptCaseException(casePart),
+                _ => null,
             };
         }
 
@@ -93,7 +96,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
                 0x0005 => (long) ITReceiptCases.MonthlyClosing0x2012,
                 0x0006 => (long) ITReceiptCases.YearlyClosing0x2013,
                 0x0007 => (long) ITReceiptCases.DailyClosing0x2011,
-                _ => casePart
+                _ => -1
             };
         }
     }
