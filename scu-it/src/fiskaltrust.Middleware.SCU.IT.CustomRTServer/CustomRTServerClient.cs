@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Text;
@@ -187,30 +186,6 @@ public class CustomRTServerClient
         }
     }
 
-    public async Task<UpdateCashRegisterResponse> UpdateCashRegisterAsync(string cashuuid, string password, string description, string cf)
-    {
-        var request = new
-        {
-            data = new
-            {
-                password,
-                type = 0,
-                desc = description,
-                cf,
-                cashuuid
-            }
-        };
-        var result = _httpClient.PostAsync("/updateCashRegister.php/", new StringContent(JsonConvert.SerializeObject(request)));
-        // TODO Check error
-        var resultContent = await result.Result.Content.ReadAsStringAsync();
-        var data = JsonConvert.DeserializeObject<UpdateCashRegisterResponse>(resultContent);
-        if (data.responseCode != 0)
-        {
-            throw new Exception(data.responseDesc);
-        }
-        return data;
-    }
-
     public async Task<CancelCashRegisterResponse> CancelCashRegisterAsync(string cashuuid, string cf)
     {
         var request = new
@@ -231,23 +206,6 @@ public class CustomRTServerClient
             throw new Exception(data.responseDesc);
         }
         return data;
-    }
-
-    public async Task<ReactivateCanceledCashRegisterResponse> ReactivateCanceledCashRegisterAsync(string cashuuid, string cf)
-    {
-        var request = new
-        {
-            data = new
-            {
-                type = 3,
-                cf,
-                cashuuid
-            }
-        };
-        var result = await _httpClient.PostAsync("/updateCashRegister.php/", new StringContent(JsonConvert.SerializeObject(request)));
-        // TODO Check error
-        var resultContent = await result.Content.ReadAsStringAsync();
-        return JsonConvert.DeserializeObject<ReactivateCanceledCashRegisterResponse>(resultContent);
     }
 
     public async Task<InsertFiscalDocumentResponse> InsertFiscalDocumentLotteryAsync(FDocumentLottery fiscalData, QrCodeData qrCodeData)

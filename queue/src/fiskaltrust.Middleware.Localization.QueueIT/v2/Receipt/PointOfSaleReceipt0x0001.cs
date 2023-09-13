@@ -6,6 +6,7 @@ using fiskaltrust.Middleware.Localization.QueueIT.Services;
 using fiskaltrust.ifPOS.v1.it;
 using System.Collections.Generic;
 using System.Linq;
+using fiskaltrust.Middleware.Localization.QueueIT.Extensions;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.v2.Receipt
 {
@@ -27,13 +28,10 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.Receipt
                 ReceiptRequest = request,
                 ReceiptResponse = receiptResponse,
             });
-            var documentNumber = result.ReceiptResponse.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentNumber)).Data;
-            var zNumber = result.ReceiptResponse.ftSignatures.FirstOrDefault(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTZNumber)).Data;
-            receiptResponse.ftReceiptIdentification += $"{zNumber.PadLeft(4, '0')}-{documentNumber.PadLeft(4, '0')}";
-
-            var signatures = new List<SignaturItem>();
-            signatures.AddRange(result.ReceiptResponse.ftSignatures);
-            receiptResponse.ftSignatures = signatures.ToArray();
+            var documentNumber = result.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTDocumentNumber);
+            var zNumber = result.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTZNumber);
+            receiptResponse.ftReceiptIdentification += $"{zNumber.Data.PadLeft(4, '0')}-{documentNumber.Data.PadLeft(4, '0')}";            
+            receiptResponse.ftSignatures = result.ReceiptResponse.ftSignatures;
             return (receiptResponse, new List<ftActionJournal>());
         }
     }

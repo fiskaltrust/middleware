@@ -4,13 +4,22 @@ using fiskaltrust.ifPOS.v1;
 using System.Linq;
 using Newtonsoft.Json;
 using fiskaltrust.Middleware.SCU.IT.Abstraction;
+using fiskaltrust.Middleware.SCU.IT.CustomRTServer.Models;
 
 namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer;
 
 public static class CustomRTServerMapping
 {
-    public static (CommercialDocument commercialDocument, FDocument fiscalDocument) CreateAnnuloDocument(ReceiptRequest receiptRequest, QueueIdentification queueIdentification, long referenceZNumber, long referenceDocnUmber, DateTime referenceDTime)
+    public static (CommercialDocument commercialDocument, FDocument fiscalDocument) CreateAnnuloDocument(ReceiptRequest receiptRequest, QueueIdentification queueIdentification, ReceiptResponse receiptResponse)
     {
+        var referenceZNumber = receiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceZNumber)?.Data;
+        var referenceDocNumber = receiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceDocumentNumber)?.Data;
+        var referenceDateTime = receiptResponse.GetSignaturItem(SignatureTypesIT.RTDocumentMoment)?.Data;
+        if(string.IsNullOrEmpty(referenceZNumber) || string.IsNullOrEmpty(referenceDocNumber) || string.IsNullOrEmpty(referenceDateTime))
+        {
+            throw new Exception("Cannot void receipt without references.");
+        }
+
         var fiscalDocument = new FDocument
         {
             document = new DocumentData
@@ -27,9 +36,9 @@ public static class CustomRTServerMapping
                 businessname = null,
                 prevSignature = queueIdentification.LastSignature,
                 grandTotal = queueIdentification.CurrentGrandTotal,
-                referenceClosurenumber = referenceZNumber,
-                referenceDocnumber = referenceDocnUmber,
-                referenceDtime = referenceDTime.ToString("yyyy-MM-dd"),
+                referenceClosurenumber = long.Parse(referenceZNumber),
+                referenceDocnumber = long.Parse(referenceDocNumber),
+                referenceDtime = DateTime.Parse(referenceDateTime).ToString("yyyy-MM-dd"),
             },
             items = GenerateItemDataForReceiptRequest(receiptRequest, queueIdentification.LastZNumber + 1, queueIdentification.LastDocNumber + 1),
             taxs = GenerateTaxDataForReceiptRequest(receiptRequest)
@@ -46,8 +55,16 @@ public static class CustomRTServerMapping
         return (commercialDocument, fiscalDocument);
     }
 
-    public static (CommercialDocument commercialDocument, FDocument fiscalDocument) CreateResoDocument(ReceiptRequest receiptRequest, QueueIdentification queueIdentification, long referenceZNumber, long referenceDocnUmber, DateTime referenceDTime)
+    public static (CommercialDocument commercialDocument, FDocument fiscalDocument) CreateResoDocument(ReceiptRequest receiptRequest, QueueIdentification queueIdentification, ReceiptResponse receiptResponse)
     {
+        var referenceZNumber = receiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceZNumber)?.Data;
+        var referenceDocNumber = receiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceDocumentNumber)?.Data;
+        var referenceDateTime = receiptResponse.GetSignaturItem(SignatureTypesIT.RTDocumentMoment)?.Data;
+        if (string.IsNullOrEmpty(referenceZNumber) || string.IsNullOrEmpty(referenceDocNumber) || string.IsNullOrEmpty(referenceDateTime))
+        {
+            throw new Exception("Cannot refund receipt without references.");
+        }
+
         var fiscalDocument = new FDocument
         {
             document = new DocumentData
@@ -64,9 +81,9 @@ public static class CustomRTServerMapping
                 businessname = null,
                 prevSignature = queueIdentification.LastSignature,
                 grandTotal = queueIdentification.CurrentGrandTotal,
-                referenceClosurenumber = referenceZNumber,
-                referenceDocnumber = referenceDocnUmber,
-                referenceDtime = referenceDTime.ToString("yyyy-MM-dd")
+                referenceClosurenumber = long.Parse(referenceZNumber),
+                referenceDocnumber = long.Parse(referenceDocNumber),
+                referenceDtime = DateTime.Parse(referenceDateTime).ToString("yyyy-MM-dd"),
             },
             items = GenerateItemDataForReceiptRequest(receiptRequest, queueIdentification.LastZNumber + 1, queueIdentification.LastDocNumber + 1),
             taxs = GenerateTaxDataForReceiptRequest(receiptRequest)

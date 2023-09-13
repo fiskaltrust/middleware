@@ -14,6 +14,7 @@ using fiskaltrust.Middleware.Localization.QueueIT.v2.Lifecycle;
 using fiskaltrust.Middleware.Localization.QueueIT.Services;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using Newtonsoft.Json;
+using System.Text;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT
 {
