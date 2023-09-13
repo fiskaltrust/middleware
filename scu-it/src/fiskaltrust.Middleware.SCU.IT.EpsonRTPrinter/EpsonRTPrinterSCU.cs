@@ -179,7 +179,7 @@ public sealed class EpsonRTPrinterSCU : IITSSCD
                 RTZNumber = fiscalReceiptResponse.ZRepNumber,
                 RTDocNumber = fiscalReceiptResponse.ReceiptNumber,
                 RTDocMoment = fiscalReceiptResponse.ReceiptDateTime,
-                RTDocType = "SALES",
+                RTDocType = "POSRECEIPT",
                 RTCodiceLotteria = "",
                 RTCustomerID = "", // Todo dread customerid from data           
             };
@@ -241,7 +241,7 @@ public sealed class EpsonRTPrinterSCU : IITSSCD
                 RTZNumber = fiscalResponse.ZRepNumber,
                 RTDocNumber = fiscalResponse.ReceiptNumber,
                 RTDocMoment = fiscalResponse.ReceiptDateTime,
-                RTDocType = "RESO",
+                RTDocType = "REFUND",
                 RTCodiceLotteria = "",
                 RTCustomerID = "", // Todo dread customerid from data
                 RTReferenceZNumber = long.Parse(referenceZNumber),

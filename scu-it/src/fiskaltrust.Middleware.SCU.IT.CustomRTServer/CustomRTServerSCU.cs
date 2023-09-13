@@ -183,13 +183,26 @@ public sealed class CustomRTServerSCU : LegacySCU
     {
         await _customRTServerCommunicationQueue.EnqueueDocument(commercialDocument);
         UpdatedCashUUID(receiptResponse, fiscalDocument.document, commercialDocument.qrData);
+        var docType = "";
+        if(fiscalDocument.document.doctype == 5)
+        {
+            docType = "VOID";
+        }
+        else if (fiscalDocument.document.doctype == 3)
+        {
+            docType = "REFUND";
+        }
+        else if (fiscalDocument.document.doctype == 1)
+        {
+            docType = "POSRECEIPT";
+        }
         var data = new POSReceiptSignatureData
         {
             RTSerialNumber = cashuuid.RTServerSerialNumber,
             RTZNumber = fiscalDocument.document.docznumber,
             RTDocNumber = fiscalDocument.document.docnumber,
             RTDocMoment = DateTime.Parse(fiscalDocument.document.dtime),
-            RTDocType = fiscalDocument.document.doctype.ToString(),
+            RTDocType = docType,
             RTServerSHAMetadata = commercialDocument.qrData.shaMetadata,
             RTCodiceLotteria = "",
             RTCustomerID = "",
