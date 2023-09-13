@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using fiskaltrust.ifPOS.v1;
 using System.Linq;
 using Newtonsoft.Json;
+using fiskaltrust.Middleware.SCU.IT.CustomRTServer.Models;
 
 namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer;
 

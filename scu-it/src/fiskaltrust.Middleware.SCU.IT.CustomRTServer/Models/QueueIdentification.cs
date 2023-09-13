@@ -1,4 +1,4 @@
-﻿namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer;
+﻿namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.Models;
 
 public class QueueIdentification
 {
