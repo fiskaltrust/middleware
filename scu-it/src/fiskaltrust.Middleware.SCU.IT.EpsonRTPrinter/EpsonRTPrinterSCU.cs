@@ -173,7 +173,17 @@ public sealed class EpsonRTPrinterSCU : IITSSCD
             {
                 throw new SSCDErrorException(fiscalReceiptResponse.SSCDErrorInfo.Type, fiscalReceiptResponse.SSCDErrorInfo.Info);
             }
-            receiptResponse.ftSignatures = SignatureFactory.CreatePosReceiptSignatures(fiscalReceiptResponse.ReceiptNumber, fiscalReceiptResponse.ZRepNumber, fiscalReceiptResponse.Amount, fiscalReceiptResponse.ReceiptDateTime);
+            var posReceiptSignatur = new POSReceiptSignatureData
+            {
+                RTSerialNumber = _serialnr,
+                RTZNumber = fiscalReceiptResponse.ZRepNumber,
+                RTDocNumber = fiscalReceiptResponse.ReceiptNumber,
+                RTDocMoment = fiscalReceiptResponse.ReceiptDateTime,
+                RTDocType = "SALES",
+                RTCodiceLotteria = "",
+                RTCustomerID = "", // Todo dread customerid from data           
+            };
+            receiptResponse.ftSignatures = SignatureFactory.CreateDocumentoCommercialeSignatures(posReceiptSignatur).ToArray();
             return receiptResponse;
         }
         catch (Exception e)
@@ -185,18 +195,24 @@ public sealed class EpsonRTPrinterSCU : IITSSCD
 
     private async Task<ProcessResponse> ProcessRefundReceipt(ProcessRequest request)
     {
+        var referenceZNumber = request.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceZNumber)?.Data;
+        var referenceDocNumber = request.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceDocumentNumber)?.Data;
+        var referenceDateTime = request.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTDocumentMoment)?.Data;
+        if (string.IsNullOrEmpty(referenceZNumber) || string.IsNullOrEmpty(referenceDocNumber) || string.IsNullOrEmpty(referenceDateTime))
+        {
+            throw new Exception("Cannot refund receipt without references.");
+        }
+
         FiscalReceiptResponse fiscalResponse;
         try
         {
-            var referenceZNumber = long.Parse(request.ReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTReferenceZNumber)).Data);
-            var referenceDocNumber = long.Parse(request.ReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTReferenceDocumentNumber)).Data);
-            var referenceDateTime = DateTime.Parse(request.ReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentMoment)).Data);
+
             if (string.IsNullOrEmpty(_serialnr))
             {
                 var rtinfo = await GetRTInfoAsync();
                 _serialnr = rtinfo.SerialNumber;
             }
-            var content = EpsonCommandFactory.CreateRefundRequestContent(request.ReceiptRequest, referenceDocNumber, referenceZNumber, referenceDateTime, _serialnr!);
+            var content = EpsonCommandFactory.CreateRefundRequestContent(request.ReceiptRequest, long.Parse(referenceDocNumber), long.Parse(referenceZNumber), DateTime.Parse(referenceDateTime), _serialnr!);
             var response = await SendRequestAsync(SoapSerializer.Serialize(content));
 
             using var responseContent = await response.Content.ReadAsStreamAsync();
@@ -219,7 +235,20 @@ public sealed class EpsonRTPrinterSCU : IITSSCD
         }
         else
         {
-            request.ReceiptResponse.ftSignatures = SignatureFactory.CreatePosReceiptSignatures(fiscalResponse.ReceiptNumber, fiscalResponse.ZRepNumber, fiscalResponse.Amount, fiscalResponse.ReceiptDateTime);
+            var posReceiptSignatur = new POSReceiptSignatureData
+            {
+                RTSerialNumber = _serialnr,
+                RTZNumber = fiscalResponse.ZRepNumber,
+                RTDocNumber = fiscalResponse.ReceiptNumber,
+                RTDocMoment = fiscalResponse.ReceiptDateTime,
+                RTDocType = "RESO",
+                RTCodiceLotteria = "",
+                RTCustomerID = "", // Todo dread customerid from data
+                RTReferenceZNumber = long.Parse(referenceZNumber),
+                RTReferenceDocNumber = long.Parse(referenceDocNumber),
+                RTReferenceDocMoment = DateTime.Parse(referenceDateTime)
+            };
+            request.ReceiptResponse.ftSignatures = SignatureFactory.CreateDocumentoCommercialeSignatures(posReceiptSignatur).ToArray();
         }
         return new ProcessResponse
         {
@@ -229,18 +258,23 @@ public sealed class EpsonRTPrinterSCU : IITSSCD
 
     private async Task<ProcessResponse> ProcessVoidReceipt(ProcessRequest request)
     {
+        var referenceZNumber = request.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceZNumber)?.Data;
+        var referenceDocNumber = request.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceDocumentNumber)?.Data;
+        var referenceDateTime = request.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTDocumentMoment)?.Data;
+        if (string.IsNullOrEmpty(referenceZNumber) || string.IsNullOrEmpty(referenceDocNumber) || string.IsNullOrEmpty(referenceDateTime))
+        {
+            throw new Exception("Cannot refund receipt without references.");
+        }
         FiscalReceiptResponse fiscalResponse;
         try
         {
-            var referenceZNumber = long.Parse(request.ReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTReferenceZNumber)).Data);
-            var referenceDocNumber = long.Parse(request.ReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTReferenceDocumentNumber)).Data);
-            var referenceDateTime = DateTime.Parse(request.ReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentMoment)).Data);
+
             if (string.IsNullOrEmpty(_serialnr))
             {
                 var rtinfo = await GetRTInfoAsync();
                 _serialnr = rtinfo.SerialNumber;
             }
-            var content = EpsonCommandFactory.CreateVoidRequestContent(request.ReceiptRequest, referenceDocNumber, referenceZNumber, referenceDateTime, _serialnr!);
+            var content = EpsonCommandFactory.CreateVoidRequestContent(request.ReceiptRequest, long.Parse(referenceDocNumber), long.Parse(referenceZNumber), DateTime.Parse(referenceDateTime), _serialnr!);
             var response = await SendRequestAsync(SoapSerializer.Serialize(content));
 
             using var responseContent = await response.Content.ReadAsStreamAsync();
@@ -263,7 +297,20 @@ public sealed class EpsonRTPrinterSCU : IITSSCD
         }
         else
         {
-            request.ReceiptResponse.ftSignatures = SignatureFactory.CreatePosReceiptSignatures(fiscalResponse.ReceiptNumber, fiscalResponse.ZRepNumber, fiscalResponse.Amount, fiscalResponse.ReceiptDateTime);
+            var posReceiptSignatur = new POSReceiptSignatureData
+            {
+                RTSerialNumber = _serialnr,
+                RTZNumber = fiscalResponse.ZRepNumber,
+                RTDocNumber = fiscalResponse.ReceiptNumber,
+                RTDocMoment = fiscalResponse.ReceiptDateTime,
+                RTDocType = "VOID",
+                RTCodiceLotteria = "",
+                RTCustomerID = "", // Todo dread customerid from data
+                RTReferenceZNumber = long.Parse(referenceZNumber),
+                RTReferenceDocNumber = long.Parse(referenceDocNumber),
+                RTReferenceDocMoment = DateTime.Parse(referenceDateTime)
+            };
+            request.ReceiptResponse.ftSignatures = SignatureFactory.CreateDocumentoCommercialeSignatures(posReceiptSignatur).ToArray();
         }
         return new ProcessResponse
         {

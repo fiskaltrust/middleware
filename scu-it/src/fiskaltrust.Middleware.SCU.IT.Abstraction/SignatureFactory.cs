@@ -12,7 +12,7 @@ public static class SignatureFactory
     {
         return new SignaturItem[] { };
     }
-  
+
     public static SignaturItem[] CreateOutOfOperationSignatures()
     {
         return new SignaturItem[] { };
@@ -29,74 +29,11 @@ public static class SignatureFactory
         {
             new SignaturItem
             {
-                Caption = "<z-number>",
-                Data = zRepNumber.ToString(),
+                Caption = "<rt-z-number>",
+                Data = zRepNumber.ToString().PadLeft(4, '0'),
                 ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                ftSignatureType = 0x4954000000000000 | (long) SignatureTypesIT.RTZNumber
+                ftSignatureType = ITConstants.BASE_STATE | (long) SignatureTypesIT.RTZNumber
             },
-        };
-    }
-
-    public static SignaturItem[] CreatePosReceiptSignatures(long receiptNumber, long zRepNumber, decimal amount, DateTime receiptDateTime)
-    {
-        return new SignaturItem[]
-        {
-            new SignaturItem
-            {
-                Caption = "<receipt-number>",
-                Data = receiptNumber.ToString(),
-                ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                ftSignatureType = 0x4954000000000000 | (long) SignatureTypesIT.RTDocumentNumber
-            },
-            new SignaturItem
-            {
-                Caption = "<z-number>",
-                Data = zRepNumber.ToString(),
-                ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                ftSignatureType = 0x4954000000000000 | (long) SignatureTypesIT.RTZNumber
-            },
-            new SignaturItem
-            {
-                Caption = "<receipt-amount>",
-                Data = amount.ToString(ITConstants.CurrencyFormatter),
-                ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                ftSignatureType = 0x4954000000000000 | (long) SignatureTypesIT.RTAmount
-            },
-            new SignaturItem
-            {
-                Caption = "<receipt-timestamp>",
-                Data = receiptDateTime.ToString("yyyy-MM-dd HH:mm:ss"),
-                ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                ftSignatureType = 0x4954000000000000 | (long) SignatureTypesIT.RTDocumentMoment
-            }
-        };
-    }
-
-    public static SignaturItem[] CreatePosReceiptSignatures(long receiptNumber, long zRepNumber, DateTime receiptDateTime)
-    {
-        return new SignaturItem[]
-        {
-            new SignaturItem
-            {
-                Caption = "<receipt-number>",
-                Data = receiptNumber.ToString(),
-                ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                ftSignatureType = 0x4954000000000000 |(long) SignatureTypesIT.RTDocumentNumber
-            },
-            new SignaturItem
-            {
-                Caption = "<z-number>",
-                Data = zRepNumber.ToString(),
-                ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                ftSignatureType = 0x4954000000000000 | (long) SignatureTypesIT.RTZNumber
-            },
-            new SignaturItem
-            {
-                Caption = "<receipt-timestamp>",
-                Data = receiptDateTime.ToString("yyyy-MM-dd HH:mm:ss"),
-                ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                ftSignatureType = 0x4954000000000000 |(long) SignatureTypesIT.RTZNumber
-            }
         };
     }
 
@@ -129,11 +66,112 @@ public static class SignatureFactory
                             CurrencyDecimalDigits = 2
                         }),
                         ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                        ftSignatureType = 0x4954000000000000 & (long) SignatureTypesIT.RTAmount
+                        ftSignatureType = ITConstants.BASE_STATE & (long) SignatureTypesIT.RTAmount
                     });
                 }
             }
         }
         return signs.ToArray();
+    }
+
+    public static List<SignaturItem> CreateDocumentoCommercialeSignatures(POSReceiptSignatureData data)
+    {
+        var signatureItems = new List<SignaturItem>()
+        {
+            new SignaturItem
+            {
+                Caption = "<rt-serialnumber>",
+                Data = data.RTSerialNumber,
+                ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                ftSignatureType = ITConstants.BASE_STATE |(long) SignatureTypesIT.RTSerialNumber
+            },
+            new SignaturItem
+            {
+                Caption = "<rt-z-number>",
+                Data =  data.RTZNumber.ToString().PadLeft(4, '0'),
+                ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                ftSignatureType = ITConstants.BASE_STATE | (long) SignatureTypesIT.RTZNumber
+            },
+            new SignaturItem
+            {
+                Caption = "<rt-doc-number>",
+                Data = data.RTDocNumber.ToString().PadLeft(4, '0'),
+                ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                ftSignatureType = ITConstants.BASE_STATE |(long) SignatureTypesIT.RTDocumentNumber
+            },
+             new SignaturItem
+            {
+                Caption = "<rt-doc-moment>",
+                Data = data.RTDocMoment.ToString("yyyy-MM-dd HH:mm:ss"),
+                ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                ftSignatureType = ITConstants.BASE_STATE |(long) SignatureTypesIT.RTDocumentMoment
+            },
+            new SignaturItem
+            {
+                Caption = "<rt-document-type>",
+                Data = data.RTDocType, // TODO CoNVert
+                ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                ftSignatureType = ITConstants.BASE_STATE |(long) SignatureTypesIT.RTDocumentType
+            }
+        };
+
+        if (!string.IsNullOrEmpty(data.RTServerSHAMetadata))
+        {
+            signatureItems.Add(new SignaturItem
+            {
+                Caption = "<rt-server-shametadata>",
+                Data = data.RTServerSHAMetadata,
+                ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                ftSignatureType = ITConstants.BASE_STATE | (long) SignatureTypesIT.RTServerShaMetadata
+            });
+        }
+
+        if (!string.IsNullOrEmpty(data.RTCodiceLotteria))
+        {
+            signatureItems.Add(new SignaturItem
+            {
+                Caption = "<rt-lottery-id>",
+                Data = data.RTCodiceLotteria,
+                ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                ftSignatureType = ITConstants.BASE_STATE | (long) SignatureTypesIT.RTLotteryID
+            });
+        }
+
+        if (!string.IsNullOrEmpty(data.RTCustomerID))
+        {
+            signatureItems.Add(new SignaturItem
+            {
+                Caption = "<rt-customer-id>",
+                Data = data.RTCustomerID,
+                ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                ftSignatureType = ITConstants.BASE_STATE | (long) SignatureTypesIT.RTCustomerID
+            });
+        }
+
+        if (data.RTDocType != "SALES") // TODO WE NEED TO CHECK THAT
+        {
+            signatureItems.Add(new SignaturItem
+            {
+                Caption = "<rt-reference-z-number>",
+                Data = data.RTZNumber.ToString().PadLeft(4, '0'),
+                ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                ftSignatureType = ITConstants.BASE_STATE | (long) SignatureTypesIT.RTReferenceZNumber
+            });
+            signatureItems.Add(new SignaturItem
+            {
+                Caption = "<rt-reference-doc-number>",
+                Data = data.RTReferenceDocNumber.ToString().PadLeft(4, '0'),
+                ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                ftSignatureType = ITConstants.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentNumber
+            });
+            signatureItems.Add(new SignaturItem
+            {
+                Caption = "<rt-reference-doc-moment>",
+                Data = data.RTReferenceDocMoment.ToString("yyyy-MM-dd"),
+                ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                ftSignatureType = ITConstants.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentMoment
+            });
+        }
+        return signatureItems;
     }
 }

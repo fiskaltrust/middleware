@@ -8,6 +8,7 @@ using fiskaltrust.ifPOS.v1;
 using System.Linq;
 using Newtonsoft.Json;
 using fiskaltrust.Middleware.SCU.IT.CustomRTServer.Models;
+using System.Xml.Linq;
 
 namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer;
 
@@ -106,36 +107,20 @@ public sealed class CustomRTServerSCU : LegacySCU
     {
         var shop = receiptResponse.ftCashBoxIdentification.Substring(0, 4);
         var name = receiptResponse.ftCashBoxIdentification.Substring(4, 4);
-        var result = await _client.InsertCashRegisterAsync(receiptResponse.ftQueueID, shop, name, _accountMasterData?.AccountId.ToString() ?? "", _accountMasterData?.VatId ?? _accountMasterData?.TaxId ?? "");
+        _ = await _client.InsertCashRegisterAsync(receiptResponse.ftQueueID, shop, name, _accountMasterData?.AccountId.ToString() ?? "", _accountMasterData?.VatId ?? _accountMasterData?.TaxId ?? "");
         await ReloadCashUUID(receiptResponse);
         var cashuuid = CashUUIdMappings[Guid.Parse(receiptResponse.ftQueueID)];
         if (cashuuid.CashStatus == "0")
         {
             await OpenNewdayAsync(receiptRequest, receiptResponse, cashuuid.CashUuId);
         }
-        var signatures = SignatureFactory.CreateInitialOperationSignatures().ToList();
-        signatures.Add(new SignaturItem
-        {
-            Caption = "<customrtserver-cashuuid>",
-            Data = result.cashUuid,
-            ftSignatureFormat = (long) SignaturItem.Formats.Text,
-            ftSignatureType = 0x4954000000000000 | (long) SignatureTypesIT.CustomRTServerInfo
-        });
-        return signatures;
+        return SignatureFactory.CreateInitialOperationSignatures().ToList();
     }
 
     private async Task<List<SignaturItem>> PerformOutOfOperationAsync(ReceiptResponse receiptResponse)
     {
         _ = await _client.CancelCashRegisterAsync(receiptResponse.ftCashBoxIdentification, _accountMasterData?.VatId ?? "");
-        var signatures = SignatureFactory.CreateOutOfOperationSignatures().ToList();
-        signatures.Add(new SignaturItem
-        {
-            Caption = "<customrtserver-cashuuid>",
-            Data = receiptResponse.ftCashBoxIdentification,
-            ftSignatureFormat = (long) SignaturItem.Formats.Text,
-            ftSignatureType = 0x4954000000000000 | (long) SignatureTypesIT.CustomRTServerInfo
-        });
-        return signatures;
+        return SignatureFactory.CreateOutOfOperationSignatures().ToList();
     }
 
     private async Task OpenNewdayAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, string cashUuid)
@@ -198,7 +183,21 @@ public sealed class CustomRTServerSCU : LegacySCU
     {
         await _customRTServerCommunicationQueue.EnqueueDocument(commercialDocument);
         UpdatedCashUUID(receiptResponse, fiscalDocument.document, commercialDocument.qrData);
-        return RTServerSignaturFactory.CreateDocumentoCommercialeSignatures(fiscalDocument.document, commercialDocument, cashuuid.RTServerSerialNumber).ToList();
+        var data = new POSReceiptSignatureData
+        {
+            RTSerialNumber = cashuuid.RTServerSerialNumber,
+            RTZNumber = fiscalDocument.document.docznumber,
+            RTDocNumber = fiscalDocument.document.docnumber,
+            RTDocMoment = DateTime.Parse(fiscalDocument.document.dtime),
+            RTDocType = fiscalDocument.document.doctype.ToString(),
+            RTServerSHAMetadata = commercialDocument.qrData.shaMetadata,
+            RTCodiceLotteria = "",
+            RTCustomerID = "",
+            RTReferenceZNumber = fiscalDocument.document.referenceClosurenumber,
+            RTReferenceDocNumber = fiscalDocument.document.referenceDocnumber,
+            RTReferenceDocMoment = string.IsNullOrEmpty(fiscalDocument.document.referenceDtime) ? null : DateTime.Parse(fiscalDocument.document.referenceDtime)
+        };
+        return SignatureFactory.CreateDocumentoCommercialeSignatures(data);
     }
 
     private async Task<List<SignaturItem>> PerformDailyCosingAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, QueueIdentification cashuuid)
