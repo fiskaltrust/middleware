@@ -6,7 +6,6 @@ using fiskaltrust.Middleware.Contracts.Interfaces;
 using Microsoft.Extensions.Logging;
 using System;
 using fiskaltrust.Middleware.Contracts.Extensions;
-using System.Linq;
 using fiskaltrust.Middleware.Localization.QueueIT.Constants;
 using fiskaltrust.Middleware.Localization.QueueIT.Extensions;
 using fiskaltrust.Middleware.Localization.QueueIT.v2.DailyOperations;
@@ -14,7 +13,7 @@ using fiskaltrust.Middleware.Localization.QueueIT.v2.Lifecycle;
 using fiskaltrust.Middleware.Localization.QueueIT.Services;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using Newtonsoft.Json;
-using System.Text;
+using System.Linq;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT
 {
@@ -122,6 +121,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
                 var zNumber = response.GetSignaturItem(SignatureTypesIT.RTZNumber);
                 if (documentNumber != null && zNumber != null)
                 {
+                    response.InsertSignatureItems(SignaturBuilder.CreatePOSReceiptFormatSignatures(response));
                     var journalIT = ftJournalITFactory.CreateFrom(queueItem, queueIT, new ScuResponse()
                     {
                         ftReceiptCase = request.ftReceiptCase,

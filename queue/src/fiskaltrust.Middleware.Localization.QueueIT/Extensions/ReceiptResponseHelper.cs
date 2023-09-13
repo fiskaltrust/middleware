@@ -20,6 +20,13 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
             });
         }
 
+        public static void InsertSignatureItems(this ReceiptResponse receiptResponse, List<SignaturItem> signaturItems)
+        {
+            var data = receiptResponse.ftSignatures.ToList();
+            data.InsertRange(0, signaturItems);
+            receiptResponse.ftSignatures = data.ToArray();
+        }
+
         public static void AddSignatureItem(this ReceiptResponse receiptResponse, SignaturItem signaturItem)
         {
             var data = receiptResponse.ftSignatures.ToList();

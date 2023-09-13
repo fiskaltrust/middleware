@@ -8,55 +8,28 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Constants
 {
     public static class SignaturBuilder
     {
-        public static SignaturItem[] CreatePosReceiptCustomRTServerSignatures(ReceiptResponse response)
+        public static List<SignaturItem> CreatePOSReceiptFormatSignatures(ReceiptResponse response)
         {
-            var stringBuilder = CreatePrintSignature01(response);
-            var signatures = new List<SignaturItem>
+            return new List<SignaturItem>
             {
                 new SignaturItem
                 {
                     Caption = "[www.fiskaltrust.it]",
-                    Data = stringBuilder.ToString(),
+                    Data = CreateFooter(response).ToString(),
                     ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                    ftSignatureType = 0x4954000000000001
+                    ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.PosReceiptPrimarySignature
                 },
                 new SignaturItem
                 {
                     Caption = "DOCUMENTO COMMERCIALE",
-                    Data = "di vendita o prestazione",
+                    Data = CreateHeader(response).ToString(),
                     ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                    ftSignatureType = 0x4954000000000002
+                    ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.PosReceiptSecondarySignature
                 }
             };
-            return signatures.ToArray();
         }
 
-        public static SignaturItem[] CreateRefundPosReceiptCustomRTServerSignatures(ReceiptResponse response)
-        {
-            var stringBuilder = CreatePrintSignature01(response);
-            var stringBuilder02 = CreatePrintSignatureForVoidOrReso(response);
-            var signatures = new List<SignaturItem>
-        {
-            new SignaturItem
-            {
-                Caption = "[www.fiskaltrust.it]",
-                Data = stringBuilder.ToString(),
-                ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                ftSignatureType = 0x4954000000000001
-            },
-            new SignaturItem
-            {
-                Caption = "DOCUMENTO COMMERCIALE",
-                Data = stringBuilder02.ToString(),
-                ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                ftSignatureType = 0x4954000000000002
-            }
-        };
-            signatures.AddRange(response.ftSignatures);
-            return signatures.ToArray();
-        }
-
-        private static StringBuilder CreatePrintSignature01(ReceiptResponse receiptResponse)
+        private static StringBuilder CreateFooter(ReceiptResponse receiptResponse)
         {
             var receiptNumber = long.Parse(receiptResponse.GetSignaturItem(SignatureTypesIT.RTDocumentNumber)?.Data);
             var zRepNumber = long.Parse(receiptResponse.GetSignaturItem(SignatureTypesIT.RTZNumber)?.Data);
@@ -92,9 +65,14 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Constants
             return stringBuilder;
         }
 
-        private static StringBuilder CreatePrintSignatureForVoidOrReso(ReceiptResponse receiptResponse, string referencedRT = null, string referencedPrinterRT = null)
+        private static StringBuilder CreateHeader(ReceiptResponse receiptResponse, string referencedRT = null, string referencedPrinterRT = null)
         {
             var docType = long.Parse(receiptResponse.GetSignaturItem(SignatureTypesIT.RTDocumentType)?.Data);
+            if (docType == 1)
+            {
+                return new StringBuilder("di vendita o prestazione");
+            }
+
             var referenceZNumber = long.Parse(receiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceZNumber)?.Data);
             var referenceDocNumber = long.Parse(receiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceDocumentNumber)?.Data);
             var referenceDateTime = DateTime.Parse(receiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceDocumentMoment)?.Data);

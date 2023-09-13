@@ -2,7 +2,8 @@
 {
     public enum SignatureTypesIT
     {
-        PosPayloadToPrintReceipt = 0x01,
+        PosReceiptPrimarySignature = 0x01,
+        PosReceiptSecondarySignature = 0x02,
         RTSerialNumber = 0x010,
         RTZNumber = 0x11,
         RTDocumentNumber = 0x12,
