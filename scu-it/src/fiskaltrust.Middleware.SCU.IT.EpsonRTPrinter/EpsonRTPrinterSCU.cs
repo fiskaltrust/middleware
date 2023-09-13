@@ -16,8 +16,7 @@ using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter;
 
-#nullable enable
-public sealed class EpsonRTPrinterSCU : IITSSCD
+public sealed class EpsonRTPrinterSCU : LegacySCU
 {
     private readonly ILogger<EpsonRTPrinterSCU> _logger;
     private readonly HttpClient _httpClient;
@@ -40,7 +39,9 @@ public sealed class EpsonRTPrinterSCU : IITSSCD
         _commandUrl = $"cgi-bin/fpmate.cgi?timeout={configuration.ServerTimeoutMs}";
     }
 
-    public async Task<RTInfo> GetRTInfoAsync()
+    public override Task<ScuItEchoResponse> EchoAsync(ScuItEchoRequest request) => Task.FromResult(new ScuItEchoResponse { Message = request.Message });
+
+    public override async Task<RTInfo> GetRTInfoAsync()
     {
         var queryPrinterStatus = new QueryPrinterStatusCommand { QueryPrinterStatus = new QueryPrinterStatus { StatusType = 1 } };
         var response = await _httpClient.PostAsync(_commandUrl, new StringContent(SoapSerializer.Serialize(queryPrinterStatus), Encoding.UTF8, "application/xml"));
@@ -66,9 +67,7 @@ public sealed class EpsonRTPrinterSCU : IITSSCD
         };
     }
 
-    public Task<Response> NonFiscalReceiptAsync(NonFiscalRequest request) => throw new NotImplementedException();
-
-    public async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request)
+    public override async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request)
     {
         var receiptCase = request.ReceiptRequest.GetReceiptCase();
         if (request.ReceiptRequest.IsInitialOperationReceipt())
@@ -505,13 +504,4 @@ public sealed class EpsonRTPrinterSCU : IITSSCD
         _logger.LogError(errorInf);
         return new SSCDErrorInfo() { Info = errorInf, Type = SSCDErrorType.Device };
     }
-
-    public Task<ScuItEchoResponse> EchoAsync(ScuItEchoRequest request) => Task.FromResult(new ScuItEchoResponse { Message = request.Message });
-
-    #region legacy
-    public Task<DailyClosingResponse> ExecuteDailyClosingAsync(DailyClosingRequest request) => throw new NotImplementedException();
-    public Task<FiscalReceiptResponse> FiscalReceiptInvoiceAsync(FiscalReceiptInvoice request) => throw new NotImplementedException();
-    public Task<FiscalReceiptResponse> FiscalReceiptRefundAsync(FiscalReceiptRefund request) => throw new NotImplementedException();
-    public Task<DeviceInfo> GetDeviceInfoAsync() => throw new NotImplementedException();
-    #endregion
 }

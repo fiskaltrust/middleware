@@ -8,20 +8,11 @@ namespace fiskaltrust.Middleware.SCU.IT.Abstraction;
 
 public static class SignatureFactory
 {
-    public static SignaturItem[] CreateInitialOperationSignatures()
-    {
-        return new SignaturItem[] { };
-    }
+    public static SignaturItem[] CreateInitialOperationSignatures() => new SignaturItem[] { };
 
-    public static SignaturItem[] CreateOutOfOperationSignatures()
-    {
-        return new SignaturItem[] { };
-    }
+    public static SignaturItem[] CreateOutOfOperationSignatures() => new SignaturItem[] { };
 
-    public static SignaturItem[] CreateZeroReceiptSignatures()
-    {
-        return new SignaturItem[] { };
-    }
+    public static SignaturItem[] CreateZeroReceiptSignatures() => new SignaturItem[] { };
 
     public static SignaturItem[] CreateDailyClosingReceiptSignatures(long zRepNumber)
     {
@@ -148,26 +139,26 @@ public static class SignatureFactory
             });
         }
 
-        if (data.RTDocType != "SALES") // TODO WE NEED TO CHECK THAT
+        if (data.RTReferenceZNumber.HasValue && data.RTReferenceDocNumber.HasValue && data.RTReferenceDocMoment.HasValue) // TODO WE NEED TO CHECK THAT
         {
             signatureItems.Add(new SignaturItem
             {
                 Caption = "<rt-reference-z-number>",
-                Data = data.RTZNumber.ToString().PadLeft(4, '0'),
+                Data = data.RTReferenceZNumber.Value.ToString().PadLeft(4, '0'),
                 ftSignatureFormat = (long) SignaturItem.Formats.Text,
                 ftSignatureType = ITConstants.BASE_STATE | (long) SignatureTypesIT.RTReferenceZNumber
             });
             signatureItems.Add(new SignaturItem
             {
                 Caption = "<rt-reference-doc-number>",
-                Data = data.RTReferenceDocNumber.ToString().PadLeft(4, '0'),
+                Data = data.RTReferenceDocNumber.Value.ToString().PadLeft(4, '0'),
                 ftSignatureFormat = (long) SignaturItem.Formats.Text,
                 ftSignatureType = ITConstants.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentNumber
             });
             signatureItems.Add(new SignaturItem
             {
                 Caption = "<rt-reference-doc-moment>",
-                Data = data.RTReferenceDocMoment.ToString("yyyy-MM-dd"),
+                Data = data.RTReferenceDocMoment.Value.ToString("yyyy-MM-dd"),
                 ftSignatureFormat = (long) SignaturItem.Formats.Text,
                 ftSignatureType = ITConstants.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentMoment
             });

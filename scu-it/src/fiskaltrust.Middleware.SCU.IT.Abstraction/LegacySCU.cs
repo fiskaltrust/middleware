@@ -8,11 +8,11 @@ public abstract class LegacySCU
     : IITSSCD
 {
     public Task<DeviceInfo> GetDeviceInfoAsync() => throw new NotImplementedException();
-    public Task<ScuItEchoResponse> EchoAsync(ScuItEchoRequest request) => throw new NotImplementedException();
     public Task<FiscalReceiptResponse> FiscalReceiptInvoiceAsync(FiscalReceiptInvoice request) => throw new NotImplementedException();
     public Task<FiscalReceiptResponse> FiscalReceiptRefundAsync(FiscalReceiptRefund request) => throw new NotImplementedException();
     public Task<DailyClosingResponse> ExecuteDailyClosingAsync(DailyClosingRequest request) => throw new NotImplementedException();
     public Task<Response> NonFiscalReceiptAsync(NonFiscalRequest request) => throw new NotImplementedException();
     public abstract Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request);
     public abstract Task<RTInfo> GetRTInfoAsync();
+    public abstract Task<ScuItEchoResponse> EchoAsync(ScuItEchoRequest request);
 }

@@ -22,7 +22,6 @@ public sealed class CustomRTServerSCU : LegacySCU
     private readonly AccountMasterData? _accountMasterData;
     private readonly Dictionary<Guid, QueueIdentification> CashUUIdMappings = new Dictionary<Guid, QueueIdentification>();
 
-
     public CustomRTServerSCU(ILogger<CustomRTServerSCU> logger, CustomRTServerConfiguration configuration, CustomRTServerClient client, CustomRTServerCommunicationQueue customRTServerCommunicationQueue)
     {
         _logger = logger;
@@ -33,6 +32,8 @@ public sealed class CustomRTServerSCU : LegacySCU
             _accountMasterData = JsonConvert.DeserializeObject<AccountMasterData>(configuration.AccountMasterData);
         }
     }
+
+    public override Task<ScuItEchoResponse> EchoAsync(ScuItEchoRequest request) => Task.FromResult(new ScuItEchoResponse { Message = request.Message });
 
     public override async Task<RTInfo> GetRTInfoAsync()
     {
