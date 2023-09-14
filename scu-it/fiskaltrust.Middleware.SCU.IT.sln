@@ -28,7 +28,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.SCU.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest", "test\fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest\fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest.csproj", "{8A91A975-2DE2-4D9D-9A0F-7EEE13034AE6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fiskaltrust.Middleware.SCU.IT.AcceptanceTests", "test\fiskaltrust.Middleware.SCU.IT.AcceptanceTests\fiskaltrust.Middleware.SCU.IT.AcceptanceTests.csproj", "{B530EACC-2000-45E9-BE23-DFF022FA5883}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.SCU.IT.AcceptanceTests", "test\fiskaltrust.Middleware.SCU.IT.AcceptanceTests\fiskaltrust.Middleware.SCU.IT.AcceptanceTests.csproj", "{B530EACC-2000-45E9-BE23-DFF022FA5883}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

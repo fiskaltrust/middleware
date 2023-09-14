@@ -8,9 +8,3 @@ public class FDocument
     public List<DocumentItemData> items { get; set; } = new List<DocumentItemData>();
     public List<DocumentTaxData> taxs { get; set; } = new List<DocumentTaxData>();
 }
-
-
-public class FDocumentArray
-{
-    public List<FDocument> fiscalData { get; set; } = new List<FDocument>();
-}

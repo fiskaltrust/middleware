@@ -8,43 +8,88 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer;
 
 public class CustomRTServerCommunicationQueue
 {
-    private readonly List<CommercialDocument> _receiptQueue = new List<CommercialDocument>();
+    private readonly Dictionary<string, List<CommercialDocument>> _receiptQueue = new Dictionary<string, List<CommercialDocument>>();
     private readonly CustomRTServerClient _client;
     private readonly ILogger<CustomRTServerCommunicationQueue> _logger;
+    private readonly CustomRTServerConfiguration _customRTServerConfiguration;
 
-    public CustomRTServerCommunicationQueue(CustomRTServerClient client, ILogger<CustomRTServerCommunicationQueue> logger)
+    private List<string> _startedUploads = new List<string>();
+
+    public CustomRTServerCommunicationQueue(CustomRTServerClient client, ILogger<CustomRTServerCommunicationQueue> logger, CustomRTServerConfiguration customRTServerConfiguration)
     {
         _client = client;
         _logger = logger;
+        _customRTServerConfiguration = customRTServerConfiguration;
     }
 
-    public async Task EnqueueDocument(CommercialDocument commercialDocument)
+    public async Task EnqueueDocument(string cashuuid, CommercialDocument commercialDocument)
     {
-        _receiptQueue.Add(commercialDocument);
-        try
+        if (_customRTServerConfiguration.SendReceiptsSync)
         {
-            await _client.InsertFiscalDocumentAsync(commercialDocument);
+            await _client.InsertFiscalDocumentAsync(cashuuid, commercialDocument);
         }
-        catch (Exception ex)
+        else
         {
+            if (!_receiptQueue.ContainsKey(cashuuid))
+            {
+                _receiptQueue[cashuuid] = new List<CommercialDocument>();
+            }
 
-            throw;
+            _receiptQueue[cashuuid].Add(commercialDocument);
+            if (!_startedUploads.Contains(cashuuid))
+            {
+                Task.Run(() => ProcessReceiptsInBackground(cashuuid));
+                _startedUploads.Add(cashuuid);
+            }
         }
-        //await Task.Run(() => _client.InsertFiscalDocumentAsync(commercialDocument)).ContinueWith(x =>
-        //  {
-        //      if (x.IsFaulted)
-        //      {
-        //          _logger.LogError(x.Exception, "Failed to insert fiscal document");
-        //      }
-        //      else
-        //      {
-        //          _logger.LogInformation("Transmitted commercial document with sha {shametadata}.", commercialDocument.qrData.shaMetadata);
-        //      }
-        //  });
     }
 
-    public async Task ProcessAllReceipts()
+    public async Task ProcessReceiptsInBackground(string cashuuid)
     {
-        await Task.CompletedTask;
+        while (true)
+        {
+            if (!_receiptQueue.ContainsKey(cashuuid))
+            {
+                await Task.Delay(TimeSpan.FromSeconds(10));
+                continue;
+            }
+
+            if (_receiptQueue[cashuuid].Count == 0)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(10));
+                continue;
+            }
+
+            // TODO we need to integrate more persistance
+            foreach (var receipts in _receiptQueue[cashuuid].SplitList(10))
+            {
+                await _client.InsertFiscalDocumentArrayAsync(cashuuid, receipts);
+            }
+            _receiptQueue[cashuuid].Clear();
+        }
+    }
+
+    public async Task ProcessAllReceipts(string cashuuid)
+    {
+        if (!_receiptQueue.ContainsKey(cashuuid))
+        {
+            return;
+        }
+
+        while (_receiptQueue[cashuuid].Count != 0)
+        {
+            await Task.Delay(TimeSpan.FromMilliseconds(500));
+        }
+    }
+}
+
+public static class ListExtensions
+{
+    public static IEnumerable<List<T>> SplitList<T>(this List<T> locations, int nSize = 30)
+    {
+        for (int i = 0; i < locations.Count; i += nSize)
+        {
+            yield return locations.GetRange(i, Math.Min(nSize, locations.Count - i));
+        }
     }
 }

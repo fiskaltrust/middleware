@@ -14,8 +14,8 @@ public static class CustomRTServerMapping
     {
         var referenceZNumber = receiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceZNumber)?.Data;
         var referenceDocNumber = receiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceDocumentNumber)?.Data;
-        var referenceDateTime = receiptResponse.GetSignaturItem(SignatureTypesIT.RTDocumentMoment)?.Data;
-        if(string.IsNullOrEmpty(referenceZNumber) || string.IsNullOrEmpty(referenceDocNumber) || string.IsNullOrEmpty(referenceDateTime))
+        var referenceDateTime = receiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceDocumentMoment)?.Data;
+        if (string.IsNullOrEmpty(referenceZNumber) || string.IsNullOrEmpty(referenceDocNumber) || string.IsNullOrEmpty(referenceDateTime))
         {
             throw new Exception("Cannot void receipt without references.");
         }
@@ -29,7 +29,7 @@ public static class CustomRTServerMapping
                 dtime = receiptRequest.cbReceiptMoment.ToString("yyyy-MM-dd HH:mm:ss"),
                 docnumber = queueIdentification.LastDocNumber + 1,
                 docznumber = queueIdentification.LastZNumber + 1,
-                amount = (int) receiptRequest.cbChargeItems.Sum(x => x.Amount) * 100,
+                amount = ConvertToFullAmountInt(receiptRequest.cbChargeItems.Sum(x => Math.Abs(x.Amount))),
                 fiscalcode = "",
                 vatcode = "",
                 fiscaloperator = "",
@@ -59,7 +59,7 @@ public static class CustomRTServerMapping
     {
         var referenceZNumber = receiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceZNumber)?.Data;
         var referenceDocNumber = receiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceDocumentNumber)?.Data;
-        var referenceDateTime = receiptResponse.GetSignaturItem(SignatureTypesIT.RTDocumentMoment)?.Data;
+        var referenceDateTime = receiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceDocumentMoment)?.Data;
         if (string.IsNullOrEmpty(referenceZNumber) || string.IsNullOrEmpty(referenceDocNumber) || string.IsNullOrEmpty(referenceDateTime))
         {
             throw new Exception("Cannot refund receipt without references.");
@@ -74,7 +74,7 @@ public static class CustomRTServerMapping
                 dtime = receiptRequest.cbReceiptMoment.ToString("yyyy-MM-dd HH:mm:ss"),
                 docnumber = queueIdentification.LastDocNumber + 1,
                 docznumber = queueIdentification.LastZNumber + 1,
-                amount = (int) receiptRequest.cbChargeItems.Sum(x => x.Amount) * 100,
+                amount = ConvertToFullAmountInt(receiptRequest.cbChargeItems.Sum(x => Math.Abs(x.Amount))),
                 fiscalcode = "",
                 vatcode = "",
                 fiscaloperator = "",
@@ -83,7 +83,7 @@ public static class CustomRTServerMapping
                 grandTotal = queueIdentification.CurrentGrandTotal,
                 referenceClosurenumber = long.Parse(referenceZNumber),
                 referenceDocnumber = long.Parse(referenceDocNumber),
-                referenceDtime = DateTime.Parse(referenceDateTime).ToString("yyyy-MM-dd"),
+                referenceDtime = referenceDateTime,
             },
             items = GenerateItemDataForReceiptRequest(receiptRequest, queueIdentification.LastZNumber + 1, queueIdentification.LastDocNumber + 1),
             taxs = GenerateTaxDataForReceiptRequest(receiptRequest)
@@ -113,7 +113,7 @@ public static class CustomRTServerMapping
                 dtime = receiptRequest.cbReceiptMoment.ToString("yyyy-MM-dd HH:mm:ss"),
                 docnumber = queueIdentification.LastDocNumber + 1,
                 docznumber = queueIdentification.LastZNumber + 1,
-                amount = (int) receiptRequest.cbChargeItems.Sum(x => x.Amount) * 100,
+                amount = ConvertToFullAmountInt(receiptRequest.cbChargeItems.Sum(x => Math.Abs(x.Amount))),
                 fiscalcode = "",
                 vatcode = "",
                 fiscaloperator = "",
@@ -135,7 +135,7 @@ public static class CustomRTServerMapping
             qrData = qrCodeData,
         };
 
-        
+
         return (commercialDocument, fiscalDocument);
     }
 
@@ -168,8 +168,8 @@ public static class CustomRTServerMapping
                 vatcode = GetVatCodeForChargeItemCase(chargeItem.ftChargeItemCase)
             });
         }
-        var totalAmount = receiptRequest.cbChargeItems.Sum(x => x.Amount);
-        var vatAmount = receiptRequest.cbChargeItems.Sum(x => x.VATAmount ?? 0.0m);
+        var totalAmount = receiptRequest.cbChargeItems.Sum(x => Math.Abs(x.Amount));
+        var vatAmount = receiptRequest.cbChargeItems.Sum(x => Math.Abs(x.VATAmount ?? 0.0m));
         items.Add(new DocumentItemData
         {
             type = "97",
@@ -237,35 +237,26 @@ public static class CustomRTServerMapping
         return items;
     }
 
-    public static string GetTypeForChargeItem(ChargeItem chargeItem)
+    public static string GetTypeForChargeItem(ChargeItem chargeItem) => chargeItem.ftChargeItemCase switch
     {
-        return chargeItem.ftChargeItemCase switch
-        {
-            _ => DocumentItemDataTaypes.VENDITA,
-        };
-    }
+        _ => DocumentItemDataTaypes.VENDITA,
+    };
 
-    public static string GetTypeForPayItem(PayItem payItem)
+    public static string GetTypeForPayItem(PayItem payItem) => payItem.ftPayItemCase switch
     {
-        return payItem.ftPayItemCase switch
-        {
-            _ => DocumentItemDataTaypes.PAGAMENTO,
-        };
-    }
+        _ => DocumentItemDataTaypes.PAGAMENTO,
+    };
 
-    public static string GetPaymentIdForPayItem(PayItem payItem)
+    public static string GetPaymentIdForPayItem(PayItem payItem) => payItem.ftPayItemCase switch
     {
-        return payItem.ftPayItemCase switch
-        {
-            _ => DocumentItemPaymentIds.CONTANTE
-        };
-    }
+        _ => DocumentItemPaymentIds.CONTANTE
+    };
 
-    public static string ConvertTo1000FullAmount(decimal? value) => ((int) ((value ?? 0.0m) * 1000)).ToString();
+    public static string ConvertTo1000FullAmount(decimal? value) => ((int) (Math.Abs(value ?? 0.0m) * 1000)).ToString();
 
-    public static string ConvertToFullAmount(decimal? value) => ((int) ((value ?? 0.0m) * 100)).ToString();
+    public static string ConvertToFullAmount(decimal? value) => ((int) (Math.Abs(value ?? 0.0m) * 100)).ToString();
 
-    public static int ConvertToFullAmountInt(decimal? value) => (int) ((value ?? 0.0m) * 100);
+    public static int ConvertToFullAmountInt(decimal? value) => (int) (Math.Abs(value ?? 0.0m) * 100);
 
     public static List<DocumentTaxData> GenerateTaxDataForReceiptRequest(ReceiptRequest receiptRequest)
     {
@@ -284,38 +275,35 @@ public static class CustomRTServerMapping
         return items;
     }
 
-    public static string GetVatCodeForChargeItemCase(long chargeItemCase)
+    public static string GetVatCodeForChargeItemCase(long chargeItemCase) => chargeItemCase switch
     {
-        return chargeItemCase switch
-        {
-            0x4954_2000_0020_0013 => "",
-            0x4954_2000_0020_0011 => "",
-            0x4954_2000_0020_0012 => "",
-            0x4954_2000_0020_0014 => "",
-            0x4954_2000_0020_1014 => "N3",
-            0x4954_2000_0020_2014 => "N2",
-            0x4954_2000_0020_3014 => "N4",
-            0x4954_2000_0020_4014 => "N5",
-            0x4954_2000_0020_5014 => "N6",
-            0x4954_2000_0020_8014 => "N1",
-            0x4954_2000_0020_7014 => "VI",
-            0x4954_2000_0000_8038 => "N1",
-            0x4954_2000_0022_0013 => "",
-            0x4954_2000_0022_0011 => "",
-            0x4954_2000_0022_0012 => "",
-            0x4954_2000_0022_0014 => "",
-            0x4954_2000_0022_1014 => "N3",
-            0x4954_2000_0022_2014 => "N2",
-            0x4954_2000_0022_3014 => "N4",
-            0x4954_2000_0022_4014 => "N5",
-            0x4954_2000_0022_5014 => "N6",
-            0x4954_2000_0022_8014 => "N1",
-            0x4954_2000_0022_7014 => "VI",
-            0x4954_2000_0021_0013 => "",
-            0x4954_2000_0021_0011 => "",
-            0x4954_2000_0021_0012 => "",
-            0x4954_2000_0021_0014 => "",
-            _ => ""
-        };
-    }
+        0x4954_2000_0020_0013 => "",
+        0x4954_2000_0020_0011 => "",
+        0x4954_2000_0020_0012 => "",
+        0x4954_2000_0020_0014 => "",
+        0x4954_2000_0020_1014 => "N3",
+        0x4954_2000_0020_2014 => "N2",
+        0x4954_2000_0020_3014 => "N4",
+        0x4954_2000_0020_4014 => "N5",
+        0x4954_2000_0020_5014 => "N6",
+        0x4954_2000_0020_8014 => "N1",
+        0x4954_2000_0020_7014 => "VI",
+        0x4954_2000_0000_8038 => "N1",
+        0x4954_2000_0022_0013 => "",
+        0x4954_2000_0022_0011 => "",
+        0x4954_2000_0022_0012 => "",
+        0x4954_2000_0022_0014 => "",
+        0x4954_2000_0022_1014 => "N3",
+        0x4954_2000_0022_2014 => "N2",
+        0x4954_2000_0022_3014 => "N4",
+        0x4954_2000_0022_4014 => "N5",
+        0x4954_2000_0022_5014 => "N6",
+        0x4954_2000_0022_8014 => "N1",
+        0x4954_2000_0022_7014 => "VI",
+        0x4954_2000_0021_0013 => "",
+        0x4954_2000_0021_0011 => "",
+        0x4954_2000_0021_0012 => "",
+        0x4954_2000_0021_0014 => "",
+        _ => ""
+    };
 }

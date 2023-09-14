@@ -25,33 +25,6 @@ public class Helpers
         };
     }
 
-    public static bool IsNoActionCase(ReceiptRequest request)
-    {
-        return NonProcessingCases.Select(x => (long) x).Contains(request.GetReceiptCase());
-    }
-
-
-    public static readonly List<ITReceiptCases> NonProcessingCases = new List<ITReceiptCases>
-        {
-            ITReceiptCases.PointOfSaleReceiptWithoutObligation0x0003,
-            ITReceiptCases.ECommerce0x0004,
-            ITReceiptCases.InvoiceUnknown0x1000,
-            ITReceiptCases.InvoiceB2C0x1001,
-            ITReceiptCases.InvoiceB2B0x1002,
-            ITReceiptCases.InvoiceB2G0x1003,
-            ITReceiptCases.ZeroReceipt0x200,
-            ITReceiptCases.OneReceipt0x2001,
-            ITReceiptCases.ShiftClosing0x2010,
-            ITReceiptCases.MonthlyClosing0x2012,
-            ITReceiptCases.YearlyClosing0x2013,
-            ITReceiptCases.ProtocolUnspecified0x3000,
-            ITReceiptCases.ProtocolTechnicalEvent0x3001,
-            ITReceiptCases.ProtocolAccountingEvent0x3002,
-            ITReceiptCases.InternalUsageMaterialConsumption0x3003,
-            ITReceiptCases.InitSCUSwitch0x4011,
-            ITReceiptCases.FinishSCUSwitch0x4012,
-        };
-
     public static FiscalReceiptResponse ExceptionInfo(Exception e)
     {
         var msg = e.Message;

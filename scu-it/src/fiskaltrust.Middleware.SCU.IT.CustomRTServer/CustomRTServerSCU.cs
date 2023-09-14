@@ -182,10 +182,10 @@ public sealed class CustomRTServerSCU : LegacySCU
 
     private async Task<List<SignaturItem>> ProcessFiscalDocumentAsync(ReceiptResponse receiptResponse, QueueIdentification cashuuid, CommercialDocument commercialDocument, FDocument fiscalDocument)
     {
-        await _customRTServerCommunicationQueue.EnqueueDocument(commercialDocument);
+        await _customRTServerCommunicationQueue.EnqueueDocument(receiptResponse.ftCashBoxIdentification, commercialDocument);
         UpdatedCashUUID(receiptResponse, fiscalDocument.document, commercialDocument.qrData);
         var docType = "";
-        if(fiscalDocument.document.doctype == 5)
+        if (fiscalDocument.document.doctype == 5)
         {
             docType = "VOID";
         }
@@ -216,14 +216,14 @@ public sealed class CustomRTServerSCU : LegacySCU
 
     private async Task<List<SignaturItem>> PerformDailyCosingAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, QueueIdentification cashuuid)
     {
-        await _customRTServerCommunicationQueue.ProcessAllReceipts();
-        
+        var warnings = new List<string>();
+
+        await _customRTServerCommunicationQueue.ProcessAllReceipts(receiptResponse.ftCashBoxIdentification);
+
         var status = await _client.GetDailyStatusAsync(cashuuid.CashUuId);
-        var currentDailyClosing = status.numberClosure;
+        var currentZNumber = int.Parse(status.numberClosure) + 1;
         // process left over receipts
-        _ = await _client.InsertZDocumentAsync(cashuuid.CashUuId, receiptRequest.cbReceiptMoment, int.Parse(currentDailyClosing) + 1, status.grandTotalDB);
-        _ = await _client.GetDailyStatusAsync(cashuuid.CashUuId);
-        // TODO should we really check the status? 
+        var dailyClosingResponse = await _client.InsertZDocumentAsync(cashuuid.CashUuId, receiptRequest.cbReceiptMoment, currentZNumber, status.grandTotalDB);
         var dailyOpen = await _client.GetDailyOpenAsync(cashuuid.CashUuId, receiptRequest.cbReceiptMoment);
         CashUUIdMappings[Guid.Parse(receiptResponse.ftQueueID)] = new QueueIdentification
         {
@@ -236,6 +236,18 @@ public sealed class CustomRTServerSCU : LegacySCU
             CurrentGrandTotal = int.Parse(string.IsNullOrWhiteSpace(dailyOpen.grandTotalDB) ? "0" : dailyOpen.grandTotalDB),
             CashStatus = dailyOpen.cashStatus
         };
-        return SignatureFactory.CreateDailyClosingReceiptSignatures(long.Parse(currentDailyClosing)).ToList();
+        warnings.AddRange(dailyClosingResponse.responseSubCode);
+        var signatures = SignatureFactory.CreateDailyClosingReceiptSignatures(currentZNumber).ToList();
+        if (warnings.Count > 0)
+        {
+            signatures.Add(new SignaturItem
+            {
+                Caption = "rt-server-dailyclosing-warning",
+                Data = $"[{string.Join(",", warnings.ToArray())}]",
+                ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                ftSignatureType = 0x4954_2000_0000_2000
+            });
+        }
+        return signatures;
     }
 }
