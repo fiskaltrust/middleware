@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer;
+#pragma warning disable
 
 public class CustomRTServerCommunicationQueue
 {
@@ -19,17 +20,18 @@ public class CustomRTServerCommunicationQueue
     public async Task EnqueueDocument(CommercialDocument commercialDocument)
     {
         _receiptQueue.Add(commercialDocument);
-        await Task.Run(() => _client.InsertFiscalDocumentAsync(commercialDocument)).ContinueWith(x =>
-          {
-              if (x.IsFaulted)
-              {
-                  _logger.LogError(x.Exception, "Failed to insert fiscal document");
-              }
-              else
-              {
-                  _logger.LogInformation("Transmitted commercial document with sha {shametadata}.", commercialDocument.qrData.shaMetadata);
-              }
-          });
+        await _client.InsertFiscalDocumentAsync(commercialDocument);
+        //await Task.Run(() => _client.InsertFiscalDocumentAsync(commercialDocument)).ContinueWith(x =>
+        //  {
+        //      if (x.IsFaulted)
+        //      {
+        //          _logger.LogError(x.Exception, "Failed to insert fiscal document");
+        //      }
+        //      else
+        //      {
+        //          _logger.LogInformation("Transmitted commercial document with sha {shametadata}.", commercialDocument.qrData.shaMetadata);
+        //      }
+        //  });
     }
 
     public async Task ProcessAllReceipts()
