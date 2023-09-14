@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
@@ -20,7 +21,15 @@ public class CustomRTServerCommunicationQueue
     public async Task EnqueueDocument(CommercialDocument commercialDocument)
     {
         _receiptQueue.Add(commercialDocument);
-        await _client.InsertFiscalDocumentAsync(commercialDocument);
+        try
+        {
+            await _client.InsertFiscalDocumentAsync(commercialDocument);
+        }
+        catch (Exception ex)
+        {
+
+            throw;
+        }
         //await Task.Run(() => _client.InsertFiscalDocumentAsync(commercialDocument)).ContinueWith(x =>
         //  {
         //      if (x.IsFaulted)
