@@ -26,7 +26,7 @@ public class CustomRTServerCommunicationQueue
     {
         if (_customRTServerConfiguration.SendReceiptsSync)
         {
-            await _client.InsertFiscalDocumentArrayAsync(cashuuid, new List<CommercialDocument> { commercialDocument });
+            await _client.InsertFiscalDocumentAsync(cashuuid, commercialDocument);
         }
         else
         {

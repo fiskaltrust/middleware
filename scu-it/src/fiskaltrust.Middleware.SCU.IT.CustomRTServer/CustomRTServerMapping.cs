@@ -14,7 +14,7 @@ public static class CustomRTServerMapping
     {
         var referenceZNumber = receiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceZNumber)?.Data;
         var referenceDocNumber = receiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceDocumentNumber)?.Data;
-        var referenceDateTime = receiptResponse.GetSignaturItem(SignatureTypesIT.RTDocumentMoment)?.Data;
+        var referenceDateTime = receiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceDocumentMoment)?.Data;
         if (string.IsNullOrEmpty(referenceZNumber) || string.IsNullOrEmpty(referenceDocNumber) || string.IsNullOrEmpty(referenceDateTime))
         {
             throw new Exception("Cannot void receipt without references.");

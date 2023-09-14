@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -9,9 +8,9 @@ using Newtonsoft.Json;
 
 public class CustomRTServerClient
 {
-    private readonly HttpClient _adminHttpClient;
-    private readonly HttpClient _queueHttpClient;
+    private readonly HttpClient _httpClient;
     private readonly string _password;
+    private readonly CustomRTServerConfiguration _customRTServerConfiguration;
 
     public CustomRTServerClient(CustomRTServerConfiguration customRTServerConfiguration)
     {
@@ -20,16 +19,11 @@ public class CustomRTServerClient
             throw new NullReferenceException("ServerUrl is not set.");
         }
 
-        _adminHttpClient = new HttpClient
+        _httpClient = new HttpClient
         {
             BaseAddress = new Uri(customRTServerConfiguration.ServerUrl),
         };
-        _queueHttpClient = new HttpClient
-        {
-            BaseAddress = new Uri(customRTServerConfiguration.ServerUrl),
-        };
-        var authHeader = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{customRTServerConfiguration.Username}:{customRTServerConfiguration.Password}"));
-        _adminHttpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", authHeader);
+
         if (!string.IsNullOrEmpty(customRTServerConfiguration.AccountMasterData))
         {
             var accountMasterData = JsonConvert.DeserializeObject<AccountMasterData>(customRTServerConfiguration.AccountMasterData);
@@ -39,27 +33,21 @@ public class CustomRTServerClient
         {
             _password = customRTServerConfiguration.Password;
         }
+        _customRTServerConfiguration = customRTServerConfiguration;
     }
 
-    public async Task<GetDeviceMemStatusResponse> GetDeviceMemStatusAsync()
+    public async Task<GetDeviceMemStatusResponse> GetDeviceMemStatusAsync() => await PerformCallToRTServerWithAdminAsync<GetDeviceMemStatusResponse>("/getDeviceMemStatus.php", JsonConvert.SerializeObject(new
     {
-        var request = new
+        data = new
         {
-            data = new
-            {
-                type = "3"
-            }
-        };
-        var result = await _adminHttpClient.PostAsync("/getDeviceMemStatus.php", new StringContent(JsonConvert.SerializeObject(request)));
-        // TODO Check error
-        var resultContent = await result.Content.ReadAsStringAsync();
-        var data = JsonConvert.DeserializeObject<GetDeviceMemStatusResponse>(resultContent);
-        if (data.responseCode != 0)
-        {
-            throw new Exception(data.responseDesc);
+            type = "3"
         }
-        return data;
-    }
+    }));
+
+    public async Task<GetDailyStatusArrayResponse> GetDailyStatusArrayAsync() => await PerformCallToRTServerWithAdminAsync<GetDailyStatusArrayResponse>("/getDailyStatusArray.php", JsonConvert.SerializeObject(new
+    {
+        data = new { }
+    }));
 
     public async Task<GetDailyStatusResponse> GetDailyStatusAsync(string cashuuid)
     {
@@ -71,39 +59,7 @@ public class CustomRTServerClient
             }
         };
 
-        var authHeader = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{cashuuid}:{_password}"));
-        var requestMessage = new HttpRequestMessage(HttpMethod.Post, "/getDailyStatus.php")
-        {
-            Content = new StringContent(JsonConvert.SerializeObject(request))
-        };
-        requestMessage.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", authHeader);
-
-        var result = await _queueHttpClient.SendAsync(requestMessage);
-        var resultContent = await result.Content.ReadAsStringAsync();
-        var data = JsonConvert.DeserializeObject<GetDailyStatusResponse>(resultContent);
-        if (data.responseCode != 0)
-        {
-            throw new Exception(data.responseDesc);
-        }
-
-        return data;
-    }
-
-    public async Task<GetDailyStatusArrayResponse> GetDailyStatusArrayAsync()
-    {
-        var request = new
-        {
-            data = new { }
-        };
-        var result = await _adminHttpClient.PostAsync("/getDailyStatusArray.php", new StringContent(JsonConvert.SerializeObject(request)));
-        // TODO Check error
-        var resultContent = await result.Content.ReadAsStringAsync();
-        var data = JsonConvert.DeserializeObject<GetDailyStatusArrayResponse>(resultContent);
-        if (data.responseCode != 0)
-        {
-            throw new Exception(data.responseDesc);
-        }
-        return data;
+        return await PerformCallToRTServerAsync<GetDailyStatusResponse>("/getDailyStatus.php", cashuuid, JsonConvert.SerializeObject(request));
     }
 
     public async Task<GetDailyOpenResponse> GetDailyOpenAsync(string cashuuid, DateTime dateTime)
@@ -117,22 +73,7 @@ public class CustomRTServerClient
             }
         };
 
-        var authHeader = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{cashuuid}:{_password}"));
-        var requestMessage = new HttpRequestMessage(HttpMethod.Post, "/getDailyOpen.php")
-        {
-            Content = new StringContent(JsonConvert.SerializeObject(request))
-        };
-        requestMessage.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", authHeader);
-
-        var result = await _queueHttpClient.SendAsync(requestMessage);
-        // TODO Check error
-        var resultContent = await result.Content.ReadAsStringAsync();
-        var data = JsonConvert.DeserializeObject<GetDailyOpenResponse>(resultContent);
-        if (data.responseCode != 0)
-        {
-            throw new Exception(data.responseDesc);
-        }
-        return data;
+        return await PerformCallToRTServerAsync<GetDailyOpenResponse>("/getDailyOpen.php", cashuuid, JsonConvert.SerializeObject(request));
     }
 
     public async Task<InsertZDocumentResponse> InsertZDocumentAsync(string cashuuid, DateTime dateTime, long znum, string amount)
@@ -147,43 +88,17 @@ public class CustomRTServerClient
                 amount
             }
         };
-
-        var authHeader = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{cashuuid}:{_password}"));
-        var requestMessage = new HttpRequestMessage(HttpMethod.Post, "/insertZDocument.php")
-        {
-            Content = new StringContent(JsonConvert.SerializeObject(request))
-        };
-        requestMessage.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", authHeader);
-
-        var result = await _queueHttpClient.SendAsync(requestMessage);
-        // TODO Check error
-        var resultContent = await result.Content.ReadAsStringAsync();
-        var data = JsonConvert.DeserializeObject<InsertZDocumentResponse>(resultContent);
-        if (data.responseCode != 0)
-        {
-            throw new Exception(data.responseDesc);
-        }
-        return data;
+        return await PerformCallToRTServerAsync<InsertZDocumentResponse>("/insertZDocument.php", cashuuid, JsonConvert.SerializeObject(request));
     }
 
-    public async Task<InsertFiscalDocumentResponse> InsertFiscalDocumentAsync(string cashuuid, CommercialDocument commercialDocument)
+    public async Task<InsertFiscalDocumentResponse> InsertFiscalDocumentAsync(string cashuuid, CommercialDocument commercialDocument) => await PerformCallToRTServerAsync<InsertFiscalDocumentResponse>("/insertFiscalDocument2.php", cashuuid, JsonConvert.SerializeObject(commercialDocument));
+
+    private static void ThrowExceptionForErrorCode(CustomRTDResponse data)
     {
-        var authHeader = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{cashuuid}:{_password}"));
-        var requestMessage = new HttpRequestMessage(HttpMethod.Post, "/insertFiscalDocument2.php")
-        {
-            Content = new StringContent(JsonConvert.SerializeObject(commercialDocument))
-        };
-        requestMessage.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", authHeader);
-
-        var result = await _queueHttpClient.SendAsync(requestMessage);
-        // TODO Check error
-        var resultContent = await result.Content.ReadAsStringAsync();
-        var data = JsonConvert.DeserializeObject<InsertFiscalDocumentResponse>(resultContent);
-
         if (data.responseCode == 1201)
         {
             var message = $"""
-Calling endpoint {result.RequestMessage?.RequestUri} failed with error code {data.responseCode}. 
+Calling endpoint '/insertFiscalDocument2.php' failed with error code {data.responseCode}. 
 Messagio: Reso/annulo: documento non travoto
 Esempio: È stato indicato un documento di refierimento inesistente
 Azione Corretiva: Verificare i dati insertiti e ripetere l'operazione. 
@@ -194,7 +109,7 @@ Azione Corretiva: Verificare i dati insertiti e ripetere l'operazione.
         if (data.responseCode == 1206)
         {
             var message = $"""
-Calling endpoint {result.RequestMessage?.RequestUri} failed with error code {data.responseCode}. 
+Calling endpoint '/insertFiscalDocument2.php' failed with error code {data.responseCode}. 
 Messagio: Valore non valido
 Esempio: Il valore del campo "amount" del metodo "insertFiscalDocument" o del metodo "insertFiscalDocument2" è negatiov o non numerico
 Azione Corretiva: Verificare i dati insertiti e ripetere l'operazione.
@@ -205,11 +120,10 @@ Azione Corretiva: Verificare i dati insertiti e ripetere l'operazione.
         if (data.responseCode != 0)
         {
             var message = $"""
-Calling endpoint {result.RequestMessage?.RequestUri} failed with error code {data.responseCode}. 
+Calling endpoint '/insertFiscalDocument2.php' failed with error code {data.responseCode}. 
 """;
             throw new CustomRTServerCommunicationException(message, data.responseCode);
         }
-        return data;
     }
 
     public async Task<InsertFiscalDocumentArrayResponse> InsertFiscalDocumentArrayAsync(string cashuuid, List<CommercialDocument> commercialDocuments)
@@ -218,21 +132,7 @@ Calling endpoint {result.RequestMessage?.RequestUri} failed with error code {dat
         {
             fiscalArray = commercialDocuments
         };
-        var authHeader = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{cashuuid}:{_password}"));
-        var requestMessage = new HttpRequestMessage(HttpMethod.Post, "/insertFiscalDocumentArray.php")
-        {
-            Content = new StringContent(JsonConvert.SerializeObject(request))
-        };
-        requestMessage.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", authHeader);
-
-        var result = await _queueHttpClient.SendAsync(requestMessage);
-        var resultContent = await result.Content.ReadAsStringAsync();
-        var data = JsonConvert.DeserializeObject<InsertFiscalDocumentArrayResponse>(resultContent);
-        if (data.responseCode != 0)
-        {
-            throw new Exception(data.responseDesc);
-        }
-        return data;
+        return await PerformCallToRTServerAsync<InsertFiscalDocumentArrayResponse>("/insertFiscalDocumentArray.php", cashuuid, JsonConvert.SerializeObject(request));
     }
 
     public async Task<InsertCashRegisterAsyncResponse> InsertCashRegisterAsync(string description, string shop, string name, string password, string cf)
@@ -248,21 +148,7 @@ Calling endpoint {result.RequestMessage?.RequestUri} failed with error code {dat
                 cf
             }
         };
-        var result = await _adminHttpClient.PostAsync("/insertCashRegister.php", new StringContent(JsonConvert.SerializeObject(request)));
-        var resultContent = await result.Content.ReadAsStringAsync();
-        if (result.IsSuccessStatusCode)
-        {
-            var data = JsonConvert.DeserializeObject<InsertCashRegisterAsyncResponse>(resultContent);
-            if (data.responseCode != 0)
-            {
-                throw new Exception(data.responseDesc);
-            }
-            return data;
-        }
-        else
-        {
-            throw new Exception($"Something went wrong while communicating with the RT Server. Statuscode: {result.StatusCode}. Reasonphrase: {result.ReasonPhrase}. Content: {resultContent}.");
-        }
+        return await PerformCallToRTServerWithAdminAsync<InsertCashRegisterAsyncResponse>("/insertCashRegister.php", JsonConvert.SerializeObject(request));
     }
 
     public async Task<CancelCashRegisterResponse> CancelCashRegisterAsync(string cashuuid, string cf)
@@ -276,7 +162,7 @@ Calling endpoint {result.RequestMessage?.RequestUri} failed with error code {dat
                 cashuuid
             }
         };
-        var result = await _adminHttpClient.PostAsync("/updateCashRegister.php", new StringContent(JsonConvert.SerializeObject(request)));
+        var result = await _httpClient.PostAsync("/updateCashRegister.php", new StringContent(JsonConvert.SerializeObject(request)));
         // TODO Check error
         var resultContent = await result.Content.ReadAsStringAsync();
         var data = JsonConvert.DeserializeObject<CancelCashRegisterResponse>(resultContent);
@@ -294,47 +180,70 @@ Calling endpoint {result.RequestMessage?.RequestUri} failed with error code {dat
             fiscalData,
             qrCodeData
         };
-
-        var authHeader = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{cashuuid}:{_password}"));
-        var requestMessage = new HttpRequestMessage(HttpMethod.Post, "/insertFiscalDocumentLottery.php")
-        {
-            Content = new StringContent(JsonConvert.SerializeObject(request))
-        };
-        requestMessage.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", authHeader);
-
-        var result = await _queueHttpClient.SendAsync(requestMessage);
-        // TODO Check error
-        var resultContent = await result.Content.ReadAsStringAsync();
-        var data = JsonConvert.DeserializeObject<InsertFiscalDocumentResponse>(resultContent);
-        if (data.responseCode != 0)
-        {
-            throw new Exception(data.responseDesc);
-        }
-        return data;
+        return await PerformCallToRTServerAsync<InsertFiscalDocumentResponse>("/insertFiscalDocumentLottery.php", cashuuid, JsonConvert.SerializeObject(request));
     }
 
-    public async Task<InsertFiscalDocumentArrayResponse> InsertFiscalDocumentArrayLotteryAsync(string cashuuid, FDocumentLotteryArray fiscalData)
+    public async Task<InsertFiscalDocumentArrayResponse> InsertFiscalDocumentArrayLotteryAsync(string cashuuid, List<CommercialDocument> commercialDocuments)
     {
         var request = new
         {
-            fiscalArray = fiscalData
+            fiscalArray = commercialDocuments
         };
+        return await PerformCallToRTServerAsync<InsertFiscalDocumentArrayResponse>("/insertFiscalDocumentArrayLottery.php", cashuuid, JsonConvert.SerializeObject(request));
+    }
+
+    private async Task<TResponse> PerformCallToRTServerAsync<TResponse>(string endpoint, string cashuuid, string payload) where TResponse : CustomRTDResponse
+    {
+        if (string.IsNullOrEmpty(_password))
+        {
+            return await PerformCallToRTServerWithAdminAsync<TResponse>(endpoint, payload);
+        }
 
         var authHeader = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{cashuuid}:{_password}"));
-        var requestMessage = new HttpRequestMessage(HttpMethod.Post, "/insertFiscalDocumentArrayLottery.php")
+        var requestMessage = new HttpRequestMessage(HttpMethod.Post, endpoint)
         {
-            Content = new StringContent(JsonConvert.SerializeObject(request))
+            Content = new StringContent(payload)
         };
         requestMessage.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", authHeader);
-
-        var result = await _queueHttpClient.SendAsync(requestMessage);
-        // TODO Check error
+        var result = await _httpClient.SendAsync(requestMessage);
         var resultContent = await result.Content.ReadAsStringAsync();
-        var data = JsonConvert.DeserializeObject<InsertFiscalDocumentArrayResponse>(resultContent);
-        if (data.responseCode != 0)
+        if (result.IsSuccessStatusCode)
         {
-            throw new Exception(data.responseDesc);
+            var data = JsonConvert.DeserializeObject<TResponse>(resultContent);
+            if (data.responseCode != 0)
+            {
+                ThrowExceptionForErrorCode(data);
+            }
+            return data;
         }
-        return data;
+        else
+        {
+            throw new Exception($"Something went wrong while communicating with the RT Server. Statuscode: {result.StatusCode}. Reasonphrase: {result.ReasonPhrase}. Content: {resultContent}.");
+        }
+    }
+
+    private async Task<TResponse> PerformCallToRTServerWithAdminAsync<TResponse>(string endpoint, string payload) where TResponse : CustomRTDResponse
+    {
+        var authHeader = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{_customRTServerConfiguration.Username}:{_customRTServerConfiguration.Password}"));
+        var requestMessage = new HttpRequestMessage(HttpMethod.Post, endpoint)
+        {
+            Content = new StringContent(payload)
+        };
+        requestMessage.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", authHeader);
+        var result = await _httpClient.SendAsync(requestMessage);
+        var resultContent = await result.Content.ReadAsStringAsync();
+        if (result.IsSuccessStatusCode)
+        {
+            var data = JsonConvert.DeserializeObject<TResponse>(resultContent);
+            if (data.responseCode != 0)
+            {
+                ThrowExceptionForErrorCode(data);
+            }
+            return data;
+        }
+        else
+        {
+            throw new Exception($"Something went wrong while communicating with the RT Server. Statuscode: {result.StatusCode}. Reasonphrase: {result.ReasonPhrase}. Content: {resultContent}.");
+        }
     }
 }

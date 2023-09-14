@@ -23,7 +23,7 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
                 AccountId = _accountid,
                 VatId = "MTLFNC75A16E783N"
             }),
-            SendReceiptsSync = false
+            SendReceiptsSync = true
         };
 
         protected override string SerialNumber => "96SRT001239";

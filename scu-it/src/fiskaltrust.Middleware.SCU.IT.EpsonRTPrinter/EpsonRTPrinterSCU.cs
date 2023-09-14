@@ -43,11 +43,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
 
     public override async Task<RTInfo> GetRTInfoAsync()
     {
-        var queryPrinterStatus = new QueryPrinterStatusCommand { QueryPrinterStatus = new QueryPrinterStatus { StatusType = 1 } };
-        var response = await _httpClient.PostAsync(_commandUrl, new StringContent(SoapSerializer.Serialize(queryPrinterStatus), Encoding.UTF8, "application/xml"));
-        using var responseContent = await response.Content.ReadAsStreamAsync();
-
-        var result = SoapSerializer.DeserializeToSoapEnvelope<StatusResponse>(responseContent);
+        var result = await QueryPrinterStatusAsync();
         _logger.LogInformation(JsonConvert.SerializeObject(result));
         if (string.IsNullOrEmpty(_serialnr) && result?.Printerstatus?.RtType != null)
         {
@@ -67,27 +63,31 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         };
     }
 
+    private async Task<StatusResponse?> QueryPrinterStatusAsync()
+    {
+        var queryPrinterStatus = new QueryPrinterStatusCommand { QueryPrinterStatus = new QueryPrinterStatus { StatusType = 1 } };
+        var response = await _httpClient.PostAsync(_commandUrl, new StringContent(SoapSerializer.Serialize(queryPrinterStatus), Encoding.UTF8, "application/xml"));
+        using var responseContent = await response.Content.ReadAsStreamAsync();
+        return SoapSerializer.DeserializeToSoapEnvelope<StatusResponse>(responseContent);
+    }
+
     public override async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request)
     {
         var receiptCase = request.ReceiptRequest.GetReceiptCase();
         if (request.ReceiptRequest.IsInitialOperationReceipt())
         {
-            return Helpers.CreateResponse(await PerformInitOperationAsync(request.ReceiptRequest, request.ReceiptResponse));
+            return ProcessResponseHelpers.CreateResponse(request.ReceiptResponse, SignatureFactory.CreateInitialOperationSignatures().ToList());
         }
 
         if (request.ReceiptRequest.IsOutOfOperationReceipt())
         {
-            return Helpers.CreateResponse(await PerformOutOfOperationAsync(request.ReceiptRequest, request.ReceiptResponse));
+            return ProcessResponseHelpers.CreateResponse(request.ReceiptResponse, SignatureFactory.CreateOutOfOperationSignatures().ToList());
         }
 
         if (request.ReceiptRequest.IsZeroReceipt())
         {
-            return Helpers.CreateResponse(await PerformZeroReceiptOperationAsync(request.ReceiptRequest, request.ReceiptResponse));
-        }
-
-        if (Helpers.IsNoActionCase(request.ReceiptRequest))
-        {
-            return Helpers.CreateResponse(request.ReceiptResponse);
+            (var signatures, var stateData) = await PerformZeroReceiptOperationAsync();
+            return ProcessResponseHelpers.CreateResponse(request.ReceiptResponse, stateData, signatures);
         }
 
         if (request.ReceiptRequest.IsVoid())
@@ -114,6 +114,8 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
             default:
                 return Helpers.CreateResponse(await PerformClassicReceiptAsync(request.ReceiptRequest, request.ReceiptResponse));
         }
+
+        throw new Exception($"The given receiptcase 0x{receiptCase.ToString("X")} is not supported.");
     }
 
     private async Task SetReceiptResponse(PrinterResponse? result, FiscalReceiptResponse fiscalReceiptResponse)
@@ -397,11 +399,18 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         return receiptResponse;
     }
 
-    private async Task<ReceiptResponse> PerformInitOperationAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse) => await CreateMiddlewareNoFiscalRequestAsync(receiptResponse, receiptRequest).ConfigureAwait(false);
+    private async Task<(List<SignaturItem> signaturItems, string ftStateData)> PerformZeroReceiptOperationAsync()
+    {
+        await ResetPrinter();
 
-    private async Task<ReceiptResponse> PerformZeroReceiptOperationAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse) => await CreateMiddlewareNoFiscalRequestAsync(receiptResponse, receiptRequest).ConfigureAwait(false);
-
-    private async Task<ReceiptResponse> PerformOutOfOperationAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse) => await CreateMiddlewareNoFiscalRequestAsync(receiptResponse, receiptRequest).ConfigureAwait(false);
+        var result = await QueryPrinterStatusAsync();
+        var signatures = SignatureFactory.CreateZeroReceiptSignatures().ToList();
+        var stateData = JsonConvert.SerializeObject(new
+        {
+            PrinterStatus = result
+        });
+        return (signatures, stateData);
+    }
 
     private async Task<ReceiptResponse> CreateMiddlewareNoFiscalRequestAsync(ReceiptResponse receiptResponse, ReceiptRequest request)
     {
