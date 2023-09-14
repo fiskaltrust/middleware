@@ -74,38 +74,27 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.DailyOperations
                 return (receiptResponse, new List<ftActionJournal>());
             }
 
-
-            var succeeded = true;
-            if (succeeded && signingAvailable)
-            {
-                _logger.LogInformation($"Successfully closed failed-mode.");
-                queueIT.SSCDFailCount = 0;
-                queueIT.SSCDFailMoment = null;
-                queueIT.SSCDFailQueueItemId = null;
-            }
-            else
-            {
-                receiptResponse.ftState |= 2;
-            }
-
-
             var fromQueueItem = await _middlewareQueueItemRepository.GetAsync(queueIT.SSCDFailQueueItemId.Value);
             var fromResponse = JsonConvert.DeserializeObject<ReceiptResponse>(fromQueueItem.response);
             var fromReceipt = fromResponse.ftReceiptIdentification;
             receiptResponse.ftSignatures = new List<SignaturItem>().ToArray();
+            queueIT.SSCDFailCount = 0;
+            queueIT.SSCDFailMoment = null;
+            queueIT.SSCDFailQueueItemId = null;
             await _configurationRepository.InsertOrUpdateQueueITAsync(queueIT).ConfigureAwait(false);
+            _logger.LogInformation($"Successfully closed failed-mode.");
             return (receiptResponse, new List<ftActionJournal>
-                    {
-                        new ftActionJournal
-                        {
-                            ftActionJournalId = Guid.NewGuid(),
-                            ftQueueId = queueItem.ftQueueId,
-                            ftQueueItemId = queueItem.ftQueueItemId,
-                            Moment = DateTime.UtcNow,
-                            Message = $"QueueItem {queueItem.ftQueueItemId} recovered Queue {queueIT.ftQueueITId} from sscd-failed mode. Closing chain of failed receipts from {fromReceipt} to {receiptResponse.ftReceiptIdentification}.",
-                            Type = $"{ Cases.BASE_STATE | 2:X}"
-                        }
-                    });
+            {
+                new ftActionJournal
+                {
+                    ftActionJournalId = Guid.NewGuid(),
+                    ftQueueId = queueItem.ftQueueId,
+                    ftQueueItemId = queueItem.ftQueueItemId,
+                    Moment = DateTime.UtcNow,
+                    Message = $"QueueItem {queueItem.ftQueueItemId} recovered Queue {queueIT.ftQueueITId} from sscd-failed mode. Closing chain of failed receipts from {fromReceipt} to {receiptResponse.ftReceiptIdentification}.",
+                    Type = $"{ Cases.BASE_STATE | 2:X}"
+                }
+            });
         }
     }
 }
