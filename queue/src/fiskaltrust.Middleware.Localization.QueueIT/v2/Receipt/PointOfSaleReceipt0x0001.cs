@@ -1,37 +1,45 @@
-﻿using fiskaltrust.ifPOS.v1;
-using fiskaltrust.Middleware.Localization.QueueIT.Constants;
-using fiskaltrust.storage.V0;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using fiskaltrust.Middleware.Localization.QueueIT.Services;
+using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.it;
-using System.Collections.Generic;
-using System.Linq;
+using fiskaltrust.Middleware.Localization.QueueIT.Constants;
 using fiskaltrust.Middleware.Localization.QueueIT.Extensions;
+using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.v2.Receipt
 {
     public class PointOfSaleReceipt0x0001 : IReceiptTypeProcessor
     {
-        private readonly IITSSCDProvider _itSSCDProvider;
+        private readonly IITSSCD _itSSCD;
+        private readonly IJournalITRepository _journalITRepository;
 
         public ITReceiptCases ReceiptCase => ITReceiptCases.PointOfSaleReceipt0x0001;
 
-        public PointOfSaleReceipt0x0001(IITSSCDProvider itSSCDProvider)
+        public PointOfSaleReceipt0x0001(IITSSCD itSSCD, IJournalITRepository journalITRepository)
         {
-            _itSSCDProvider = itSSCDProvider;
+            _itSSCD = itSSCD;
+            _journalITRepository = journalITRepository;
         }
 
         public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ExecuteAsync(ftQueue queue, ftQueueIT queueIt, ReceiptRequest request, ReceiptResponse receiptResponse, ftQueueItem queueItem)
         {
-            var result = await _itSSCDProvider.ProcessReceiptAsync(new ProcessRequest
+            var result = await _itSSCD.ProcessReceiptAsync(new ProcessRequest
             {
                 ReceiptRequest = request,
                 ReceiptResponse = receiptResponse,
             });
             var documentNumber = result.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTDocumentNumber);
             var zNumber = result.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTZNumber);
-            receiptResponse.ftReceiptIdentification += $"{zNumber.Data.PadLeft(4, '0')}-{documentNumber.Data.PadLeft(4, '0')}";            
+            receiptResponse.ftReceiptIdentification += $"{zNumber.Data.PadLeft(4, '0')}-{documentNumber.Data.PadLeft(4, '0')}";
             receiptResponse.ftSignatures = result.ReceiptResponse.ftSignatures;
+            receiptResponse.InsertSignatureItems(SignaturBuilder.CreatePOSReceiptFormatSignatures(receiptResponse));
+            var journalIT = ftJournalITFactory.CreateFrom(queueItem, queueIt, new ScuResponse()
+            {
+                ftReceiptCase = request.ftReceiptCase,
+                ReceiptNumber = long.Parse(documentNumber.Data),
+                ZRepNumber = long.Parse(zNumber.Data)
+            });
+            await _journalITRepository.InsertAsync(journalIT).ConfigureAwait(false);
             return (receiptResponse, new List<ftActionJournal>());
         }
     }

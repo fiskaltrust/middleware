@@ -1,10 +1,9 @@
-﻿using fiskaltrust.ifPOS.v1;
-using fiskaltrust.ifPOS.v1.it;
+﻿using System;
+using fiskaltrust.ifPOS.v1;
+using fiskaltrust.Middleware.Contracts.Extensions;
 using fiskaltrust.storage.serialization.DE.V0;
 using fiskaltrust.storage.V0;
 using Newtonsoft.Json;
-using System;
-using fiskaltrust.Middleware.Contracts.Extensions;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.Constants
 {
@@ -33,7 +32,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Constants
                 IsStartReceipt = true,
                 Version = "V0",
             };
-            return CreateActionJournal(queue.ftQueueId, $"{request.ftReceiptCase:X}-{nameof(ActivateQueueSCU)}", queueItem.ftQueueItemId, $"Initial-Operation receipt. Queue-ID: {queue.ftQueueId}", JsonConvert.SerializeObject(notification)); 
+            return CreateActionJournal(queue.ftQueueId, $"{request.ftReceiptCase:X}-{nameof(ActivateQueueSCU)}", queueItem.ftQueueItemId, $"Initial-Operation receipt. Queue-ID: {queue.ftQueueId}", JsonConvert.SerializeObject(notification));
         }
 
         public static ftActionJournal CreateWrongStateForInitialOperationActionJournal(ftQueue queue, ftQueueItem queueItem, ReceiptRequest request)

@@ -10,9 +10,9 @@ using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
-namespace fiskaltrust.Middleware.Localization.QueueIT.Services
+namespace fiskaltrust.Middleware.Localization.QueueIT
 {
-    public class ITSSCDProvider : IITSSCDProvider
+    public class ITSSCDProvider
     {
         private readonly IClientFactory<IITSSCD> _clientFactory;
         private readonly MiddlewareConfiguration _middlewareConfiguration;
@@ -55,9 +55,9 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Services
             try
             {
                 await _semaphoreRegister.WaitAsync().ConfigureAwait(false);
-                var ftSignaturCreationUnitIT = JsonConvert.DeserializeObject<List<ftSignaturCreationUnitIT>>(_middlewareConfiguration.Configuration["init_ftSignaturCreationUnitIT"].ToString());
+                var scuIT = JsonConvert.DeserializeObject<List<ftSignaturCreationUnitIT>>(_middlewareConfiguration.Configuration["init_ftSignaturCreationUnitIT"].ToString());
 
-                var uri = GetUriForSignaturCreationUnit(ftSignaturCreationUnitIT.FirstOrDefault().Url);
+                var uri = GetUriForSignaturCreationUnit(scuIT.FirstOrDefault().Url);
                 var config = new ClientConfiguration
                 {
                     Url = uri.ToString(),

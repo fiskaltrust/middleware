@@ -1,26 +1,25 @@
-﻿using fiskaltrust.ifPOS.v1;
-using fiskaltrust.Middleware.Localization.QueueIT.Constants;
-using fiskaltrust.storage.V0;
-using System.Threading.Tasks;
+﻿using System;
 using System.Collections.Generic;
-using Newtonsoft.Json;
-using System;
+using System.Threading.Tasks;
+using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.it;
-using fiskaltrust.Middleware.Localization.QueueIT.Services;
-using System.Linq;
+using fiskaltrust.Middleware.Localization.QueueIT.Constants;
 using fiskaltrust.Middleware.Localization.QueueIT.Extensions;
+using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.v2.DailyOperations
 {
     public class MonthlyClosing0x2012 : IReceiptTypeProcessor
     {
-        private readonly IITSSCDProvider _itSSCDProvider;
+        private readonly IITSSCD _itSSCD;
+        private readonly IJournalITRepository _journalITRepository;
 
         public ITReceiptCases ReceiptCase => ITReceiptCases.MonthlyClosing0x2012;
 
-        public MonthlyClosing0x2012(IITSSCDProvider itSSCDProvider)
+        public MonthlyClosing0x2012(IITSSCD itSSCD, IJournalITRepository journalITRepository)
         {
-            _itSSCDProvider = itSSCDProvider;
+            _itSSCD = itSSCD;
+            _journalITRepository = journalITRepository;
         }
 
         public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ExecuteAsync(ftQueue queue, ftQueueIT queueIt, ReceiptRequest request, ReceiptResponse receiptResponse, ftQueueItem queueItem)
@@ -28,7 +27,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.DailyOperations
             try
             {
                 var actionJournalEntry = ActionJournalFactory.CreateMonthlyClosingActionJournal(queue, queueItem, request);
-                var result = await _itSSCDProvider.ProcessReceiptAsync(new ProcessRequest
+                var result = await _itSSCD.ProcessReceiptAsync(new ProcessRequest
                 {
                     ReceiptRequest = request,
                     ReceiptResponse = receiptResponse
@@ -36,6 +35,14 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.DailyOperations
                 var zNumber = result.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTZNumber).Data;
                 receiptResponse.ftReceiptIdentification += $"Z{zNumber.PadLeft(4, '0')}";
                 receiptResponse.ftSignatures = result.ReceiptResponse.ftSignatures;
+
+                var journalIT = ftJournalITFactory.CreateFrom(queueItem, queueIt, new ScuResponse()
+                {
+                    ftReceiptCase = request.ftReceiptCase,
+                    ZRepNumber = long.Parse(zNumber)
+                });
+                await _journalITRepository.InsertAsync(journalIT).ConfigureAwait(false);
+
                 return (receiptResponse, new List<ftActionJournal>
                 {
                     actionJournalEntry

@@ -1,35 +1,31 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.storage.V0;
-using fiskaltrust.Middleware.Contracts.Interfaces;
-using Microsoft.Extensions.Logging;
-using System;
 using fiskaltrust.Middleware.Contracts.Extensions;
+using fiskaltrust.Middleware.Contracts.Interfaces;
+using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueIT.Constants;
 using fiskaltrust.Middleware.Localization.QueueIT.Extensions;
 using fiskaltrust.Middleware.Localization.QueueIT.v2.DailyOperations;
 using fiskaltrust.Middleware.Localization.QueueIT.v2.Lifecycle;
-using fiskaltrust.Middleware.Localization.QueueIT.Services;
-using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.storage.V0;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using System.Linq;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT
 {
     public class SignProcessorIT : IMarketSpecificSignProcessor
     {
         protected readonly IConfigurationRepository _configurationRepository;
-        private readonly IJournalITRepository _journalITRepository;
         private readonly ReceiptTypeProcessorFactory _receiptTypeProcessor;
         private readonly IMiddlewareQueueItemRepository _queueItemRepository;
-        private readonly IITSSCDProvider _itSSCDProvider;
+        private readonly ITSSCDProvider _itSSCDProvider;
         private readonly ILogger<SignProcessorIT> _logger;
 
-        public SignProcessorIT(IITSSCDProvider itSSCDProvider, ILogger<SignProcessorIT> logger, IConfigurationRepository configurationRepository, IJournalITRepository journalITRepository, ReceiptTypeProcessorFactory receiptTypeProcessor, IMiddlewareQueueItemRepository queueItemRepository)
+        public SignProcessorIT(ITSSCDProvider itSSCDProvider, ILogger<SignProcessorIT> logger, IConfigurationRepository configurationRepository, ReceiptTypeProcessorFactory receiptTypeProcessor, IMiddlewareQueueItemRepository queueItemRepository)
         {
             _configurationRepository = configurationRepository;
-            _journalITRepository = journalITRepository;
             _receiptTypeProcessor = receiptTypeProcessor;
             _queueItemRepository = queueItemRepository;
             _itSSCDProvider = itSSCDProvider;
@@ -57,7 +53,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
             var receiptTypeProcessor = _receiptTypeProcessor.Create(request);
             if (receiptTypeProcessor == null)
             {
-                receiptResponse.SetReceiptResponseErrored(string.Format("The given ReceiptCase 0x{0:x} is not supported. Please refer to docs.fiskaltrust.cloud for supported cases.", request.ftReceiptCase));
+                receiptResponse.SetReceiptResponseErrored($"The given ReceiptCase 0x{request.ftReceiptCase:x} is not supported. Please refer to docs.fiskaltrust.cloud for supported cases.");
                 return (receiptResponse, new List<ftActionJournal>());
             }
 
@@ -116,29 +112,6 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
                 {
                     return (response, actionJournals);
                 }
-
-                var documentNumber = response.GetSignaturItem(SignatureTypesIT.RTDocumentNumber);
-                var zNumber = response.GetSignaturItem(SignatureTypesIT.RTZNumber);
-                if (documentNumber != null && zNumber != null)
-                {
-                    response.InsertSignatureItems(SignaturBuilder.CreatePOSReceiptFormatSignatures(response));
-                    var journalIT = ftJournalITFactory.CreateFrom(queueItem, queueIT, new ScuResponse()
-                    {
-                        ftReceiptCase = request.ftReceiptCase,
-                        ReceiptNumber = long.Parse(documentNumber.Data),
-                        ZRepNumber = long.Parse(zNumber.Data)
-                    });
-                    await _journalITRepository.InsertAsync(journalIT).ConfigureAwait(false);
-                }
-                else if (zNumber != null)
-                {
-                    var journalIT = ftJournalITFactory.CreateFrom(queueItem, queueIT, new ScuResponse()
-                    {
-                        ftReceiptCase = request.ftReceiptCase,
-                        ZRepNumber = long.Parse(zNumber.Data)
-                    });
-                    await _journalITRepository.InsertAsync(journalIT).ConfigureAwait(false);
-                }
                 return (response, actionJournals);
             }
             catch (Exception ex)
@@ -157,6 +130,8 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
                 var referencedResponse = JsonConvert.DeserializeObject<ReceiptResponse>(existingQueueItem.response);
                 var documentNumber = referencedResponse.GetSignaturItem(SignatureTypesIT.RTDocumentNumber).Data;
                 var zNumber = referencedResponse.GetSignaturItem(SignatureTypesIT.RTZNumber).Data;
+                var documentMoment = referencedResponse.GetSignaturItem(SignatureTypesIT.RTDocumentMoment)?.Data;
+                documentMoment ??= queueItem.cbReceiptMoment.ToString("yyyy-MM-dd");
                 var signatures = new List<SignaturItem>();
                 signatures.AddRange(receiptResponse.ftSignatures);
                 signatures.AddRange(new List<SignaturItem>
@@ -178,7 +153,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
                         new SignaturItem
                         {
                             Caption = "<reference-timestamp>",
-                            Data = queueItem.cbReceiptMoment.ToString("yyyy-MM-dd HH:mm:ss"),
+                            Data = documentMoment,
                             ftSignatureFormat = (long) SignaturItem.Formats.Text,
                             ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentMoment
                         },
@@ -235,6 +210,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
             await _configurationRepository.InsertOrUpdateQueueITAsync(queueIt).ConfigureAwait(false);
             var log = $"Queue is in failed mode. SSCDFailMoment: {queueIt.SSCDFailMoment}, SSCDFailCount: {queueIt.SSCDFailCount}.";
             receiptResponse.ftState |= 0x2;
+            // TODO => we should probably use error state here for all receipts EEEE_EEEE, since it is not allowed to continuing operation while being in wrong mode
             log += " When connection is established use zeroreceipt for subsequent booking!";
             var signingAvail = await _itSSCDProvider.IsSSCDAvailable().ConfigureAwait(false);
             log += signingAvail ? " Signing device is available." : " Signing device is not available.";

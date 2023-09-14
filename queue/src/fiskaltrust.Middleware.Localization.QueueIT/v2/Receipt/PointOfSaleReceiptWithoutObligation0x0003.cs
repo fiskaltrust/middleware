@@ -1,8 +1,8 @@
-﻿using fiskaltrust.ifPOS.v1;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
+using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Localization.QueueIT.Constants;
 using fiskaltrust.storage.V0;
-using System.Threading.Tasks;
-using System.Collections.Generic;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.v2.Receipt
 {

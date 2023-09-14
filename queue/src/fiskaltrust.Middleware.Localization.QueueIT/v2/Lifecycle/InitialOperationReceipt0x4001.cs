@@ -1,26 +1,25 @@
-﻿using fiskaltrust.ifPOS.v1;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using fiskaltrust.ifPOS.v1;
+using fiskaltrust.ifPOS.v1.it;
+using fiskaltrust.Middleware.Contracts.Extensions;
 using fiskaltrust.Middleware.Localization.QueueIT.Constants;
 using fiskaltrust.storage.V0;
-using System.Threading.Tasks;
-using fiskaltrust.Middleware.Localization.QueueIT.Services;
-using fiskaltrust.ifPOS.v1.it;
-using System.Collections.Generic;
-using fiskaltrust.Middleware.Contracts.Extensions;
-using System;
 using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.v2.Lifecycle
 {
     public class InitialOperationReceipt0x4001 : IReceiptTypeProcessor
     {
-        private readonly IITSSCDProvider _itSSCDProvider;
+        private readonly IITSSCD _itSSCD;
         private readonly IConfigurationRepository _configurationRepository;
 
         public ITReceiptCases ReceiptCase => ITReceiptCases.InitialOperationReceipt0x4001;
 
-        public InitialOperationReceipt0x4001(IITSSCDProvider itSSCDProvider, IConfigurationRepository configurationRepository)
+        public InitialOperationReceipt0x4001(IITSSCD itSSCD, IConfigurationRepository configurationRepository)
         {
-            _itSSCDProvider = itSSCDProvider;
+            _itSSCD = itSSCD;
             _configurationRepository = configurationRepository;
         }
 
@@ -29,7 +28,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.Lifecycle
             if (queue.IsNew())
             {
                 var scu = await _configurationRepository.GetSignaturCreationUnitITAsync(queueIt.ftSignaturCreationUnitITId.Value).ConfigureAwait(false);
-                var deviceInfo = await _itSSCDProvider.GetRTInfoAsync().ConfigureAwait(false);
+                var deviceInfo = await _itSSCD.GetRTInfoAsync().ConfigureAwait(false);
                 if (string.IsNullOrEmpty(scu.InfoJson))
                 {
                     scu.InfoJson = JsonConvert.SerializeObject(deviceInfo);
@@ -41,7 +40,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.Lifecycle
                 queue.StartMoment = DateTime.UtcNow;
 
                 await _configurationRepository.InsertOrUpdateQueueAsync(queue).ConfigureAwait(false);
-                var result = await _itSSCDProvider.ProcessReceiptAsync(new ProcessRequest
+                var result = await _itSSCD.ProcessReceiptAsync(new ProcessRequest
                 {
                     ReceiptRequest = request,
                     ReceiptResponse = receiptResponse,

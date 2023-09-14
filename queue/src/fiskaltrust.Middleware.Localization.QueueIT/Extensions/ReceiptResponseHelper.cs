@@ -15,7 +15,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
             {
                 Caption = "FAILURE",
                 Data = errorMessage,
-                ftSignatureFormat = (long)SignaturItem.Formats.Text,
+                ftSignatureFormat = (long) SignaturItem.Formats.Text,
                 ftSignatureType = 0x4954_2000_0000_3000
             });
         }

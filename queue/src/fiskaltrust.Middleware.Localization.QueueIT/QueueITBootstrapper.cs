@@ -2,7 +2,6 @@
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Contracts.Models;
-using fiskaltrust.Middleware.Localization.QueueIT.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 

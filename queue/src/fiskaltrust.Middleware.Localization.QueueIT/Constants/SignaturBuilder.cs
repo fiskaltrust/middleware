@@ -1,8 +1,8 @@
-﻿using System.Collections.Generic;
-using fiskaltrust.ifPOS.v1;
-using System;
-using fiskaltrust.Middleware.Localization.QueueIT.Extensions;
+﻿using System;
+using System.Collections.Generic;
 using System.Text;
+using fiskaltrust.ifPOS.v1;
+using fiskaltrust.Middleware.Localization.QueueIT.Extensions;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.Constants
 {

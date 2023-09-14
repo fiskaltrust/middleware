@@ -5,7 +5,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
 {
     public static class ftJournalITFactory
     {
-        public static ftJournalIT CreateFrom(ftQueueItem queueItem,  ftQueueIT queueIT, ScuResponse scuResponse)
+        public static ftJournalIT CreateFrom(ftQueueItem queueItem, ftQueueIT queueIT, ScuResponse scuResponse)
         {
             var ftJournalIT = new ftJournalIT
             {

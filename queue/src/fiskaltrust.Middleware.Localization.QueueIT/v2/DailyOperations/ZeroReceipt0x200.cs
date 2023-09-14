@@ -1,15 +1,14 @@
-﻿using fiskaltrust.ifPOS.v1;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using fiskaltrust.ifPOS.v1;
+using fiskaltrust.ifPOS.v1.it;
+using fiskaltrust.Middleware.Contracts.Extensions;
+using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueIT.Constants;
 using fiskaltrust.storage.V0;
-using System.Threading.Tasks;
-using fiskaltrust.Middleware.Localization.QueueIT.Services;
-using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
-using fiskaltrust.Middleware.Contracts.Extensions;
 using Newtonsoft.Json;
-using System;
-using fiskaltrust.ifPOS.v1.it;
-using fiskaltrust.Middleware.Contracts.Repositories;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.v2.DailyOperations
 {
