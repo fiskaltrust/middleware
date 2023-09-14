@@ -36,7 +36,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Constants
             var rtDocumentMoment = DateTime.Parse(receiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceDocumentMoment)?.Data);
             var codiceLotteria = receiptResponse.GetSignaturItem(SignatureTypesIT.RTLotteryID)?.Data;
             var customerIdentification = receiptResponse.GetSignaturItem(SignatureTypesIT.RTCustomerID)?.Data;
-            var shaMetadata = receiptResponse.GetSignaturItem(SignatureTypesIT.CustomRTServerShaMetadata)?.Data;
+            var shaMetadata = receiptResponse.GetSignaturItem(SignatureTypesIT.RTServerShaMetadata)?.Data;
             var rtServerSerialNumber = receiptResponse.GetSignaturItem(SignatureTypesIT.RTSerialNumber)?.Data;
 
             var stringBuilder = new StringBuilder();

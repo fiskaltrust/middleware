@@ -1,5 +1,6 @@
 ﻿using System;
 using fiskaltrust.ifPOS.v1;
+using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueIT.Constants;
 using fiskaltrust.Middleware.Localization.QueueIT.v2.DailyOperations;
@@ -14,19 +15,19 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
 {
     public class ReceiptTypeProcessorFactory
     {
-        private readonly ITSSCDProvider _itSSCDProvider;
+        private readonly IITSSCD _iITSSCD;
         private readonly IConfigurationRepository _configurationRepository;
         private readonly IMiddlewareQueueItemRepository _middlewareQueueItemRepository;
         private readonly IJournalITRepository _journalITRepository;
         private readonly ILogger<ZeroReceipt0x200> _logger;
 
-        public ReceiptTypeProcessorFactory(ITSSCDProvider itSSCDProvider, IConfigurationRepository configurationRepository, IMiddlewareQueueItemRepository middlewareQueueItemRepository, IJournalITRepository journalITRepository, ILogger<ZeroReceipt0x200> logger)
+        public ReceiptTypeProcessorFactory(IITSSCD itSSCD, IConfigurationRepository configurationRepository, IMiddlewareQueueItemRepository middlewareQueueItemRepository, IJournalITRepository journalITRepository, ILogger<ZeroReceipt0x200> logger)
         {
-            _itSSCDProvider = itSSCDProvider;
             _configurationRepository = configurationRepository;
             _middlewareQueueItemRepository = middlewareQueueItemRepository;
             _journalITRepository = journalITRepository;
             _logger = logger;
+            _iITSSCD = itSSCD;
         }
 
         public IReceiptTypeProcessor Create(ReceiptRequest request)
@@ -40,22 +41,22 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
             var itCase = (ITReceiptCases) casePart;
             return itCase switch
             {
-                ITReceiptCases.UnknownReceipt0x0000 => new UnknownReceipt0x0000(_itSSCDProvider, _journalITRepository),
-                ITReceiptCases.PointOfSaleReceipt0x0001 => new PointOfSaleReceipt0x0001(_itSSCDProvider, _journalITRepository),
+                ITReceiptCases.UnknownReceipt0x0000 => new UnknownReceipt0x0000(_iITSSCD, _journalITRepository),
+                ITReceiptCases.PointOfSaleReceipt0x0001 => new PointOfSaleReceipt0x0001(_iITSSCD, _journalITRepository),
                 ITReceiptCases.PaymentTransfer0x0002 => new PaymentTransfer0x0002(),
                 ITReceiptCases.PointOfSaleReceiptWithoutObligation0x0003 => new PointOfSaleReceiptWithoutObligation0x0003(),
                 ITReceiptCases.ECommerce0x0004 => new ECommerce0x0004(),
-                ITReceiptCases.Protocol0x0005 => new Protocol0x0005(_itSSCDProvider, _journalITRepository),
+                ITReceiptCases.Protocol0x0005 => new Protocol0x0005(_iITSSCD, _journalITRepository),
                 ITReceiptCases.InvoiceUnknown0x1000 => new InvoiceUnknown0x1000(),
                 ITReceiptCases.InvoiceB2C0x1001 => new InvoiceB2C0x1001(),
                 ITReceiptCases.InvoiceB2B0x1002 => new InvoiceB2B0x1002(),
                 ITReceiptCases.InvoiceB2G0x1003 => new InvoiceB2G0x1003(),
-                ITReceiptCases.ZeroReceipt0x200 => new ZeroReceipt0x200(_itSSCDProvider, _logger, _configurationRepository, _middlewareQueueItemRepository),
-                ITReceiptCases.DailyClosing0x2011 => new DailyClosing0x2011(_itSSCDProvider, _journalITRepository),
-                ITReceiptCases.MonthlyClosing0x2012 => new MonthlyClosing0x2012(_itSSCDProvider, _journalITRepository),
-                ITReceiptCases.YearlyClosing0x2013 => new YearlyClosing0x2013(_itSSCDProvider, _journalITRepository),
-                ITReceiptCases.InitialOperationReceipt0x4001 => new InitialOperationReceipt0x4001(_itSSCDProvider, _configurationRepository),
-                ITReceiptCases.OutOfOperationReceipt0x4002 => new OutOfOperationReceipt0x4002(_itSSCDProvider, _configurationRepository),
+                ITReceiptCases.ZeroReceipt0x200 => new ZeroReceipt0x200(_iITSSCD, _logger, _configurationRepository, _middlewareQueueItemRepository),
+                ITReceiptCases.DailyClosing0x2011 => new DailyClosing0x2011(_iITSSCD, _journalITRepository),
+                ITReceiptCases.MonthlyClosing0x2012 => new MonthlyClosing0x2012(_iITSSCD, _journalITRepository),
+                ITReceiptCases.YearlyClosing0x2013 => new YearlyClosing0x2013(_iITSSCD, _journalITRepository),
+                ITReceiptCases.InitialOperationReceipt0x4001 => new InitialOperationReceipt0x4001(_iITSSCD, _configurationRepository),
+                ITReceiptCases.OutOfOperationReceipt0x4002 => new OutOfOperationReceipt0x4002(_iITSSCD, _configurationRepository),
                 ITReceiptCases.ShiftClosing0x2010 => new ShiftClosing0x2010(),
                 ITReceiptCases.OneReceipt0x2001 => new OneReceipt0x2001(),
                 ITReceiptCases.ProtocolUnspecified0x3000 => new ProtocolUnspecified0x3000(),

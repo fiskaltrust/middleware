@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
+using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.Contracts.Extensions;
 using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Contracts.Repositories;
@@ -20,15 +21,13 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
         protected readonly IConfigurationRepository _configurationRepository;
         private readonly ReceiptTypeProcessorFactory _receiptTypeProcessor;
         private readonly IMiddlewareQueueItemRepository _queueItemRepository;
-        private readonly ITSSCDProvider _itSSCDProvider;
         private readonly ILogger<SignProcessorIT> _logger;
 
-        public SignProcessorIT(ITSSCDProvider itSSCDProvider, ILogger<SignProcessorIT> logger, IConfigurationRepository configurationRepository, ReceiptTypeProcessorFactory receiptTypeProcessor, IMiddlewareQueueItemRepository queueItemRepository)
+        public SignProcessorIT(ILogger<SignProcessorIT> logger, IConfigurationRepository configurationRepository, ReceiptTypeProcessorFactory receiptTypeProcessor, IMiddlewareQueueItemRepository queueItemRepository)
         {
             _configurationRepository = configurationRepository;
             _receiptTypeProcessor = receiptTypeProcessor;
             _queueItemRepository = queueItemRepository;
-            _itSSCDProvider = itSSCDProvider;
             _logger = logger;
         }
 
@@ -211,11 +210,8 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
             var log = $"Queue is in failed mode. SSCDFailMoment: {queueIt.SSCDFailMoment}, SSCDFailCount: {queueIt.SSCDFailCount}.";
             receiptResponse.ftState |= 0x2;
             // TODO => we should probably use error state here for all receipts EEEE_EEEE, since it is not allowed to continuing operation while being in wrong mode
-            log += " When connection is established use zeroreceipt for subsequent booking!";
-            var signingAvail = await _itSSCDProvider.IsSSCDAvailable().ConfigureAwait(false);
-            log += signingAvail ? " Signing device is available." : " Signing device is not available.";
             _logger.LogInformation(log);
-            receiptResponse.SetFtStateData(new StateDetail() { FailedReceiptCount = queueIt.SSCDFailCount, FailMoment = queueIt.SSCDFailMoment, SigningDeviceAvailable = signingAvail });
+            receiptResponse.SetFtStateData(new StateDetail() { FailedReceiptCount = queueIt.SSCDFailCount, FailMoment = queueIt.SSCDFailMoment });
             return (receiptResponse, new List<ftActionJournal>());
         }
     }

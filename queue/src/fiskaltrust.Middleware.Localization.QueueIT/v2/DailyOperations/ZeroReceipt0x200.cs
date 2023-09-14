@@ -14,16 +14,16 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.DailyOperations
 {
     public class ZeroReceipt0x200 : IReceiptTypeProcessor
     {
-        private readonly IITSSCDProvider _itSSCDProvider;
+        private readonly IITSSCD _itSSCD;
         private readonly ILogger<ZeroReceipt0x200> _logger;
         private readonly IConfigurationRepository _configurationRepository;
         private readonly IMiddlewareQueueItemRepository _middlewareQueueItemRepository;
 
         public ITReceiptCases ReceiptCase => ITReceiptCases.ZeroReceipt0x200;
 
-        public ZeroReceipt0x200(IITSSCDProvider itSSCDProvider, ILogger<ZeroReceipt0x200> logger, IConfigurationRepository configurationRepository, IMiddlewareQueueItemRepository middlewareQueueItemRepository)
+        public ZeroReceipt0x200(IITSSCD itSSCD, ILogger<ZeroReceipt0x200> logger, IConfigurationRepository configurationRepository, IMiddlewareQueueItemRepository middlewareQueueItemRepository)
         {
-            _itSSCDProvider = itSSCDProvider;
+            _itSSCD = itSSCD;
             _logger = logger;
             _configurationRepository = configurationRepository;
             _middlewareQueueItemRepository = middlewareQueueItemRepository;
@@ -31,7 +31,18 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.DailyOperations
 
         public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ExecuteAsync(ftQueue queue, ftQueueIT queueIT, ReceiptRequest request, ReceiptResponse receiptResponse, ftQueueItem queueItem)
         {
-            var signingAvailable = await _itSSCDProvider.IsSSCDAvailable().ConfigureAwait(false);
+            var signingAvailable = false;
+            try
+            {
+                var deviceInfo = await _itSSCD.GetRTInfoAsync().ConfigureAwait(false);
+                _logger.LogDebug(JsonConvert.SerializeObject(deviceInfo));
+                signingAvailable = true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error on DeviceInfo Request.");
+            }
+
             if (queueIT.SSCDFailCount == 0)
             {
                 var log = "Queue has no failed receipts.";
@@ -50,7 +61,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.DailyOperations
             try
             {
 
-                var establishConnection = await _itSSCDProvider.ProcessReceiptAsync(new ProcessRequest
+                var establishConnection = await _itSSCD.ProcessReceiptAsync(new ProcessRequest
                 {
                     ReceiptRequest = request,
                     ReceiptResponse = receiptResponse
