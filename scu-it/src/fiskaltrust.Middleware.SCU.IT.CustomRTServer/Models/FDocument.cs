@@ -12,5 +12,5 @@ public class FDocument
 
 public class FDocumentArray
 {
-    public List<FDocument> fiscalData { get; set; } = new List<FDocument>();
+    public List<string> fiscalData { get; set; } = new List<string>();
 }

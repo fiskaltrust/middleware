@@ -196,7 +196,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
     {
         var referenceZNumber = request.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceZNumber)?.Data;
         var referenceDocNumber = request.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceDocumentNumber)?.Data;
-        var referenceDateTime = request.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTDocumentMoment)?.Data;
+        var referenceDateTime = request.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceDocumentMoment)?.Data;
         if (string.IsNullOrEmpty(referenceZNumber) || string.IsNullOrEmpty(referenceDocNumber) || string.IsNullOrEmpty(referenceDateTime))
         {
             throw new Exception("Cannot refund receipt without references.");
@@ -259,7 +259,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
     {
         var referenceZNumber = request.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceZNumber)?.Data;
         var referenceDocNumber = request.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceDocumentNumber)?.Data;
-        var referenceDateTime = request.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTDocumentMoment)?.Data;
+        var referenceDateTime = request.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceDocumentMoment)?.Data;
         if (string.IsNullOrEmpty(referenceZNumber) || string.IsNullOrEmpty(referenceDocNumber) || string.IsNullOrEmpty(referenceDateTime))
         {
             throw new Exception("Cannot refund receipt without references.");

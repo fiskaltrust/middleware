@@ -18,7 +18,7 @@ public class DocumentData
     public long referenceClosurenumber { get; set; }
     public long referenceDocnumber { get; set; }
     public string? referenceDtime { get; set; } = null;
-    public string? referenceCashuuid { get; set; } = string.Empty;
+    //public string? referenceCashuuid { get; set; } = string.Empty;
 
     public string? errSignature => null;
     public int? err_number => null;

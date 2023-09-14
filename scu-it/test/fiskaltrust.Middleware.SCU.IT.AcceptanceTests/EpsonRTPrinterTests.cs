@@ -14,14 +14,10 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
 
         protected override string SerialNumber => "99IEC018305";
 
-        protected override IMiddlewareBootstrapper GetMiddlewareBootstrapper() => new ScuBootstrapper
+        protected override IMiddlewareBootstrapper GetMiddlewareBootstrapper(Guid queueId) => new ScuBootstrapper
         {
-            Id = Guid.NewGuid(),
+            Id = queueId,
             Configuration = JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(_config))
         };
     }
 }
-
-// TODO TEsts
-// - Add test that sends wrong CUstomer IVA
-// - Add test that sends customer data without iva

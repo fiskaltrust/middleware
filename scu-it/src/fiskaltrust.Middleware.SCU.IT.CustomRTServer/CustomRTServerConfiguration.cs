@@ -8,6 +8,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer
         public string AccountMasterData { get; set; } = string.Empty;
         public string Username { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;
+        public bool SendReceiptsSync { get; set; }
     }
 
     public class AccountMasterData

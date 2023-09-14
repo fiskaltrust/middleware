@@ -11,24 +11,24 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
 {
     public abstract class ITSSCDTests
     {
-        private static readonly Guid _queueId = Guid.NewGuid();
+        private static readonly Guid _queueId = Guid.Parse("da8147d6-a0c2-42c6-8091-4ea7adbe4afc");
 
-        private static readonly ReceiptResponse _receiptResponse = new ReceiptResponse
+        protected static ReceiptResponse _receiptResponse => new ReceiptResponse
         {
-            ftCashBoxIdentification = "00010001",
+            ftCashBoxIdentification = "ACPT0001",
             ftQueueID = _queueId.ToString()
         };
 
-        protected abstract IMiddlewareBootstrapper GetMiddlewareBootstrapper();
+        protected abstract IMiddlewareBootstrapper GetMiddlewareBootstrapper(Guid queueId);
 
         protected abstract string SerialNumber { get; }
 
-        private IITSSCD GetSUT()
+        protected IITSSCD GetSUT()
         {
             var serviceCollection = new ServiceCollection();
             serviceCollection.AddLogging();
 
-            var sut = GetMiddlewareBootstrapper();
+            var sut = GetMiddlewareBootstrapper(_queueId);
             sut.ConfigureServices(serviceCollection);
             return serviceCollection.BuildServiceProvider().GetRequiredService<IITSSCD>();
         }
@@ -128,8 +128,8 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
             var zNumber = result.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTZNumber)?.Data;
             var rtdocNumber = result.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTDocumentNumber)?.Data;
             var rtDocumentMoment = DateTime.Parse(result.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTDocumentMoment)?.Data ?? DateTime.MinValue.ToString());
+            
             var signatures = new List<SignaturItem>();
-            signatures.AddRange(response.ftSignatures);
             signatures.AddRange(new List<SignaturItem>
                     {
                         new SignaturItem
@@ -151,7 +151,7 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
                             Caption = "<reference-timestamp>",
                             Data = rtDocumentMoment.ToString("yyyy-MM-dd HH:mm:ss"),
                             ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                            ftSignatureType = ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentMoment
+                            ftSignatureType = ITConstants.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentMoment
                         },
                     });
             response.ftSignatures = signatures.ToArray();
@@ -162,14 +162,14 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
                 ReceiptResponse = response
             });
             using var scope = new AssertionScope();
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTSerialNumber));
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTZNumber));
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentNumber));
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentMoment));
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentType));
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTReferenceZNumber));
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentNumber));
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentMoment));
+            refundResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTSerialNumber));
+            refundResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTZNumber));
+            refundResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentNumber));
+            refundResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentMoment));
+            refundResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentType));
+            refundResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTReferenceZNumber));
+            refundResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentNumber));
+            refundResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentMoment));
         }
 
         [Fact]
@@ -189,7 +189,6 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
             var rtdocNumber = result.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTDocumentNumber)?.Data;
             var rtDocumentMoment = DateTime.Parse(result.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTDocumentMoment)?.Data ?? DateTime.MinValue.ToString());
             var signatures = new List<SignaturItem>();
-            signatures.AddRange(response.ftSignatures);
             signatures.AddRange(new List<SignaturItem>
                     {
                         new SignaturItem
@@ -211,7 +210,7 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
                             Caption = "<reference-timestamp>",
                             Data = rtDocumentMoment.ToString("yyyy-MM-dd HH:mm:ss"),
                             ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                            ftSignatureType = ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentMoment
+                            ftSignatureType = ITConstants.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentMoment
                         },
                     });
             response.ftSignatures = signatures.ToArray();
@@ -222,14 +221,14 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
                 ReceiptResponse = response
             });
             using var scope = new AssertionScope();
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTSerialNumber));
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTZNumber));
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentNumber));
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentMoment));
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentType));
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTReferenceZNumber));
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentNumber));
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentMoment));
+            refundResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTSerialNumber));
+            refundResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTZNumber));
+            refundResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentNumber));
+            refundResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentMoment));
+            refundResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentType));
+            refundResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTReferenceZNumber));
+            refundResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentNumber));
+            refundResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentMoment));
         }
 
         [Fact]
