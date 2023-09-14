@@ -74,6 +74,12 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
     public override async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request)
     {
         var receiptCase = request.ReceiptRequest.GetReceiptCase();
+        if (string.IsNullOrEmpty(_serialnr))
+        {
+            var result = await QueryPrinterStatusAsync();
+            _logger.LogInformation(JsonConvert.SerializeObject(result));
+            _serialnr = await GetSerialNumberAsync(result?.Printerstatus?.RtType ?? "").ConfigureAwait(false);
+        }
         if (request.ReceiptRequest.IsInitialOperationReceipt())
         {
             return ProcessResponseHelpers.CreateResponse(request.ReceiptResponse, SignatureFactory.CreateInitialOperationSignatures().ToList());
@@ -127,25 +133,20 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         }
         else
         {
-            await SetResponseAsync(result, fiscalReceiptResponse);
-        }
-    }
+            fiscalReceiptResponse.ReceiptNumber = result?.Receipt?.FiscalReceiptNumber != null ? long.Parse(result.Receipt.FiscalReceiptNumber) : 0;
+            fiscalReceiptResponse.ZRepNumber = result?.Receipt?.ZRepNumber != null ? long.Parse(result.Receipt.ZRepNumber) : 0;
+            fiscalReceiptResponse.ReceiptDataJson = await DownloadJsonAsync("www/json_files/rec.json");
 
-    private async Task SetResponseAsync(PrinterResponse? result, FiscalReceiptResponse fiscalReceiptResponse)
-    {
-        fiscalReceiptResponse.ReceiptNumber = result?.Receipt?.FiscalReceiptNumber != null ? long.Parse(result.Receipt.FiscalReceiptNumber) : 0;
-        fiscalReceiptResponse.ZRepNumber = result?.Receipt?.ZRepNumber != null ? long.Parse(result.Receipt.ZRepNumber) : 0;
-        fiscalReceiptResponse.ReceiptDataJson = await DownloadJsonAsync("www/json_files/rec.json");
-
-        if (result?.Receipt?.FiscalReceiptDate != null && result?.Receipt?.FiscalReceiptTime != null)
-        {
-            fiscalReceiptResponse.ReceiptDateTime = DateTime.ParseExact(result.Receipt.FiscalReceiptDate, "d/M/yyyy", CultureInfo.InvariantCulture);
-            var time = TimeSpan.Parse(result.Receipt.FiscalReceiptTime);
-            fiscalReceiptResponse.ReceiptDateTime = fiscalReceiptResponse.ReceiptDateTime + time;
-        }
-        else
-        {
-            fiscalReceiptResponse.ReceiptDateTime = DateTime.Now;
+            if (result?.Receipt?.FiscalReceiptDate != null && result?.Receipt?.FiscalReceiptTime != null)
+            {
+                fiscalReceiptResponse.ReceiptDateTime = DateTime.ParseExact(result.Receipt.FiscalReceiptDate, "d/M/yyyy", CultureInfo.InvariantCulture);
+                var time = TimeSpan.Parse(result.Receipt.FiscalReceiptTime);
+                fiscalReceiptResponse.ReceiptDateTime = fiscalReceiptResponse.ReceiptDateTime + time;
+            }
+            else
+            {
+                fiscalReceiptResponse.ReceiptDateTime = DateTime.Now;
+            }
         }
     }
 
@@ -484,7 +485,6 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
             _logger.LogError("Could not download JSON file from device (URL: {Url}, Path: {Path}, Response content: {Content}", _httpClient.BaseAddress?.ToString(), path, content);
             return null; // TODO: Or better throw?
         }
-
         return content;
     }
 

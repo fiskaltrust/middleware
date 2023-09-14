@@ -48,24 +48,40 @@ public class CustomRTServerCommunicationQueue
     {
         while (true)
         {
-            if (!_receiptQueue.ContainsKey(cashuuid))
+            var doneEntries = new List<CommercialDocument>();
+            try
             {
-                await Task.Delay(TimeSpan.FromSeconds(10));
-                continue;
-            }
+                if (!_receiptQueue.ContainsKey(cashuuid))
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(10));
+                    continue;
+                }
 
-            if (_receiptQueue[cashuuid].Count == 0)
-            {
-                await Task.Delay(TimeSpan.FromSeconds(10));
-                continue;
-            }
+                if (_receiptQueue[cashuuid].Count == 0)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(10));
+                    continue;
+                }
 
-            // TODO we need to integrate more persistance
-            foreach (var receipts in _receiptQueue[cashuuid].SplitList(10))
-            {
-                await _client.InsertFiscalDocumentArrayAsync(cashuuid, receipts);
+                // TODO we need to integrate more persistance   
+                foreach (var receipts in _receiptQueue[cashuuid])
+                {
+                    await _client.InsertFiscalDocumentAsync(cashuuid, receipts);
+                    doneEntries.Add(receipts);
+                }
+                _receiptQueue[cashuuid].Clear();
             }
-            _receiptQueue[cashuuid].Clear();
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed tro transmit receipt. ");
+            }
+            finally
+            {
+                foreach (var item in doneEntries)
+                {
+                    _receiptQueue[cashuuid].Remove(item);
+                }
+            }
         }
     }
 
