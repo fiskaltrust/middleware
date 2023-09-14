@@ -221,8 +221,8 @@ public sealed class CustomRTServerSCU : LegacySCU
         var status = await _client.GetDailyStatusAsync(cashuuid.CashUuId);
         var currentDailyClosing = status.numberClosure;
         // process left over receipts
-        //var dailyClosing = await _client.InsertZDocumentAsync(cashuuid.CashUuId, receiptRequest.cbReceiptMoment, int.Parse(currentDailyClosing) + 1, status.grandTotalDB);
-        //var beforeStatus = await _client.GetDailyStatusAsync(cashuuid.CashUuId);
+        _ = await _client.InsertZDocumentAsync(cashuuid.CashUuId, receiptRequest.cbReceiptMoment, int.Parse(currentDailyClosing) + 1, status.grandTotalDB);
+        _ = await _client.GetDailyStatusAsync(cashuuid.CashUuId);
         // TODO should we really check the status? 
         var dailyOpen = await _client.GetDailyOpenAsync(cashuuid.CashUuId, receiptRequest.cbReceiptMoment);
         CashUUIdMappings[Guid.Parse(receiptResponse.ftQueueID)] = new QueueIdentification

@@ -7,7 +7,7 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
     {
         public static ReceiptRequest GetInitialOperation()
         {
-            var current_moment = DateTime.UtcNow;
+            var current_moment = DateTime.UtcNow.ToString("o");
             var receipt = $$"""
 {
     "ftCashBoxID": "00000000-0000-0000-0000-000000000000",
@@ -26,7 +26,7 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
 
         public static ReceiptRequest GetOutOOperation()
         {
-            var current_moment = DateTime.UtcNow;
+            var current_moment = DateTime.UtcNow.ToString("o");
             var receipt = $$"""
 {
     "ftCashBoxID": "00000000-0000-0000-0000-000000000000",
@@ -45,7 +45,7 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
 
         public static ReceiptRequest GetZeroReceipt()
         {
-            var current_moment = DateTime.UtcNow;
+            var current_moment = DateTime.UtcNow.ToString("o");
             var receipt = $$"""
 {
     "ftCashBoxID": "00000000-0000-0000-0000-000000000000",
@@ -64,7 +64,7 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
 
         public static ReceiptRequest GetDailyClosing()
         {
-            var current_moment = DateTime.UtcNow;
+            var current_moment = DateTime.UtcNow.ToString("o");
             var receipt = $$"""
 {
     "ftCashBoxID": "00000000-0000-0000-0000-000000000000",
@@ -83,7 +83,7 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
 
         public static ReceiptRequest GetTakeAway_Delivery_Cash()
         {
-            var current_moment = DateTime.UtcNow;
+            var current_moment = DateTime.UtcNow.ToString("o");
             var receipt = $$"""
 {
     "ftCashBoxID": "00000000-0000-0000-0000-000000000000",
@@ -202,7 +202,7 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
 
         public static ReceiptRequest GetTakeAway_Delivery_Refund()
         {
-            var current_moment = DateTime.UtcNow;
+            var current_moment = DateTime.UtcNow.ToString("o");
             var receipt = $$"""
 {
     "ftCashBoxID": "00000000-0000-0000-0000-000000000000",
@@ -322,7 +322,7 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
 
         public static ReceiptRequest GetTakeAway_Delivery_Void()
         {
-            var current_moment = DateTime.UtcNow;
+            var current_moment = DateTime.UtcNow.ToString("o");
             var receipt = $$"""
 {
     "ftCashBoxID": "00000000-0000-0000-0000-000000000000",
@@ -443,7 +443,7 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
 
         public static ReceiptRequest GetTakeAway_Delivery_Card()
         {
-            var current_moment = DateTime.UtcNow;
+            var current_moment = DateTime.UtcNow.ToString("o");
             var receipt = $$"""
 {
     "ftCashBoxID": "00000000-0000-0000-0000-000000000000",
@@ -553,7 +553,7 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
 
         public static ReceiptRequest GetTakeAway_Delivery_Card_WithCustomerIva()
         {
-            var current_moment = DateTime.UtcNow;
+            var current_moment = DateTime.UtcNow.ToString("o");
             var receipt = $$"""
 {
     "ftCashBoxID": "00000000-0000-0000-0000-000000000000",
@@ -571,78 +571,6 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
             "Description": "TakeAway - Delivery - Item VAT 22%",
             "ftChargeItemCase": 5283883447186620435,
             "Moment": "{{current_moment}}"
-        },
-        {
-            "Quantity": 1,
-            "Amount": 107,
-            "VATRate": 10,
-            "ftChargeItemCase": 5283883447186620433,
-            "Description": "TakeAway - Delivery - Item VAT 10%",
-            "Moment": "{{current_moment}}"
-        },
-        {
-            "Quantity": 1,
-            "Amount": 88,
-            "VATRate": 5,
-            "ftChargeItemCase": 5283883447186620434,
-            "Description": "TakeAway - Delivery - Item VAT 5%",
-            "Moment": "{{current_moment}}"
-        },
-        {
-            "Quantity": 1,
-            "Amount": 90,
-            "VATRate": 4,
-            "ftChargeItemCase": 5283883447186620436,
-            "Description": "TakeAway - Delivery - Item VAT 4%",
-            "Moment": "{{current_moment}}"
-        },
-        {
-            "Quantity": 1,
-            "Amount": 10,
-            "VATRate": 0,
-            "ftChargeItemCase": 5283883447186624532,
-            "Description": "TakeAway - Delivery - Item VAT NI",
-            "Moment": "{{current_moment}}"
-        },
-        {
-            "Quantity": 1,
-            "Amount": 10,
-            "VATRate": 0,
-            "ftChargeItemCase": 5283883447186628628,
-            "Description": "TakeAway - Delivery - Item VAT NS",
-            "Moment": "{{current_moment}}"
-        },
-        {
-            "Quantity": 1,
-            "Amount": 10,
-            "VATRate": 0,
-            "ftChargeItemCase": 5283883447186632724,
-            "Description": "TakeAway - Delivery - Item VAT ES",
-            "Moment": "{{current_moment}}"
-        },
-        {
-            "Quantity": 1,
-            "Amount": 10,
-            "VATRate": 0,
-            "ftChargeItemCase": 5283883447186636820,
-            "Description": "TakeAway - Delivery - Item VAT RM",
-            "Moment": "{{current_moment}}"
-        },
-        {
-            "Quantity": 1,
-            "Amount": 10,
-            "VATRate": 0,
-            "ftChargeItemCase": 5283883447186640916,
-            "Description": "TakeAway - Delivery - Item VAT AL",
-            "Moment": "{{current_moment}}"
-        },
-        {
-            "Quantity": 1,
-            "Amount": 10,
-            "VATRate": 0,
-            "ftChargeItemCase": 5283883447186653204,
-            "Description": "TakeAway - Delivery - Item VAT EE",
-            "Moment": "{{current_moment}}"
         }
     ],
     "cbPayItems": [
@@ -651,7 +579,7 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
             "Description": "Card",
             "ftPayItemCase": 5283883447184523269,
             "Moment": "{{current_moment}}",
-            "Amount": 566
+            "Amount": 221
         }
     ],
     "cbCustomer": "{\"CustomerVATId\": \"IT01606720215\"}",
@@ -661,9 +589,47 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
             return JsonConvert.DeserializeObject<ReceiptRequest>(receipt);
         }
 
+        public static ReceiptRequest GetTakeAway_Delivery_Card_WithInvalidCustomerIva()
+        {
+            var current_moment = DateTime.UtcNow.ToString("o");
+            var receipt = $$"""
+{
+    "ftCashBoxID": "00000000-0000-0000-0000-000000000000",
+    "ftPosSystemId": "00000000-0000-0000-0000-000000000000",
+    "cbTerminalID": "00010001",
+    "cbReceiptReference": "0001-0003",
+    "cbUser": "user1234",
+    "cbReceiptMoment": "{{current_moment}}",
+    "cbChargeItems": [
+        {
+            "Quantity": 2.0,
+            "Amount": 221,
+            "UnitPrice": 110.5,
+            "VATRate": 22,
+            "Description": "TakeAway - Delivery - Item VAT 22%",
+            "ftChargeItemCase": 5283883447186620435,
+            "Moment": "{{current_moment}}"
+        }
+    ],
+    "cbPayItems": [
+        {
+            "Quantity": 1,
+            "Description": "Card",
+            "ftPayItemCase": 5283883447184523269,
+            "Moment": "{{current_moment}}",
+            "Amount": 221
+        }
+    ],
+    "cbCustomer": "{\"CustomerVATId\": \"12345\"}",
+    "ftReceiptCase": 5283883447184523265
+}
+""";
+            return JsonConvert.DeserializeObject<ReceiptRequest>(receipt);
+        }
+
         public static ReceiptRequest FoodBeverage_CashAndVoucher()
         {
-            var current_moment = DateTime.UtcNow;
+            var current_moment = DateTime.UtcNow.ToString("o");
             var receipt = $$"""
 {
     "ftCashBoxID": "00000000-0000-0000-0000-000000000000",

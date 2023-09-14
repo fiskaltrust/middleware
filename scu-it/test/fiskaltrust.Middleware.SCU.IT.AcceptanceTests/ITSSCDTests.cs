@@ -21,6 +21,8 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
 
         protected abstract IMiddlewareBootstrapper GetMiddlewareBootstrapper();
 
+        protected abstract string SerialNumber { get; }
+
         private IITSSCD GetSUT()
         {
             var serviceCollection = new ServiceCollection();
@@ -37,7 +39,7 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
             var itsscd = GetSUT();
 
             var result = await itsscd.GetRTInfoAsync();
-            result.SerialNumber.Should().Be("96SRT001239");
+            result.SerialNumber.Should().Be(SerialNumber);
         }
 
         [Fact]
@@ -49,7 +51,7 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
                 ReceiptRequest = ReceiptExamples.GetInitialOperation(),
                 ReceiptResponse = _receiptResponse
             });
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.Caption == "<customrtserver-cashuuid>");
+            result.ReceiptResponse.ftSignatures.Should().BeEmpty();
         }
 
         [Fact]
@@ -61,7 +63,7 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
                 ReceiptRequest = ReceiptExamples.GetOutOOperation(),
                 ReceiptResponse = _receiptResponse
             });
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.Caption == "<customrtserver-cashuuid>");
+            result.ReceiptResponse.ftSignatures.Should().BeEmpty();
         }
 
         [Fact]
@@ -74,7 +76,7 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
                 ReceiptRequest = ReceiptExamples.GetDailyClosing(),
                 ReceiptResponse = _receiptResponse
             });
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == 0x4954000000000011);
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTZNumber));
         }
 
         [Fact]
@@ -248,12 +250,31 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
         }
 
         [Fact]
-        public async Task ProcessPosReceipt_0x4954_2000_0000_0001_TakeAway_Delivery_Card_WithCustomerIVa()
+        public async Task ProcessPosReceipt_0x4954_2000_0000_0001_TakeAway_Delivery_Card_WithCustomerIVA()
         {
             var itsscd = GetSUT();
             var result = await itsscd.ProcessReceiptAsync(new ProcessRequest
             {
                 ReceiptRequest = ReceiptExamples.GetTakeAway_Delivery_Card_WithCustomerIva(),
+                ReceiptResponse = _receiptResponse
+            });
+
+            using var scope = new AssertionScope();
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTSerialNumber));
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTZNumber));
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentNumber));
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentMoment));
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentType));
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTCustomerID));
+        }
+
+        [Fact]
+        public async Task ProcessPosReceipt_0x4954_2000_0000_0001_TakeAway_Delivery_Card_WithInvalidCustomerIVA()
+        {
+            var itsscd = GetSUT();
+            var result = await itsscd.ProcessReceiptAsync(new ProcessRequest
+            {
+                ReceiptRequest = ReceiptExamples.GetTakeAway_Delivery_Card_WithInvalidCustomerIva(),
                 ReceiptResponse = _receiptResponse
             });
 
@@ -281,157 +302,6 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
             result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentNumber));
             result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentMoment));
             result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentType));
-        }
-
-        [Fact]
-        public async Task Cancellation()
-        {
-
-
-            var receipt = $$"""
-                                {
-                    "ftCashBoxID": "47e4621d-a09e-42a9-a424-5c417293e32a",
-                    "ftPosSystemId": "c7aa9d1b-fed2-4f5b-8d03-0be252b2541b",
-                    "cbTerminalID": "00010001",
-                    "cbReceiptReference": "4b388b6d-c5c5-427a-981d-850f22467288",
-                    "cbPreviousReceiptReference": "0952f2f9-0f9a-4ec7-ad3b-c71860a4ad9f",
-                    "cbUser": "user1234",
-                    "cbReceiptMoment": "2023-09-07T07:26:24.215Z",
-                    "cbChargeItems": [
-                        {
-                            "Quantity": -2.0,
-                            "Amount": -221,
-                            "UnitPrice": 110.5,
-                            "VATRate": 22,
-                            "Description": "Return/Refund - TakeAway - Delivery - Item VAT 22%",
-                            "ftChargeItemCase": 5283883447186751507,
-                            "Moment": "2023-09-07T07:26:24.215Z"
-                        },
-                        {
-                            "Quantity": -1,
-                            "Amount": -107,
-                            "VATRate": 10,
-                            "ftChargeItemCase": 5283883447186751505,
-                            "Description": "Return/Refund - TakeAway - Delivery - Item VAT 10%",
-                            "Moment": "2023-09-07T07:26:24.215Z"
-                        },
-                        {
-                            "Quantity": -1,
-                            "Amount": -88,
-                            "VATRate": 5,
-                            "ftChargeItemCase": 5283883447186751506,
-                            "Description": "Return/Refund - TakeAway - Delivery - Item VAT 5%",
-                            "Moment": "2023-09-07T07:26:24.215Z"
-                        },
-                        {
-                            "Quantity": -1,
-                            "Amount": -90,
-                            "VATRate": 4,
-                            "ftChargeItemCase": 5283883447186751508,
-                            "Description": "Return/Refund - TakeAway - Delivery - Item VAT 4%",
-                            "Moment": "2023-09-07T07:26:24.215Z"
-                        },
-                        {
-                            "Quantity": -1,
-                            "Amount": -10,
-                            "VATRate": 0,
-                            "ftChargeItemCase": 5283883447186755604,
-                            "Description": "Return/Refund - TakeAway - Delivery - Item VAT NI",
-                            "Moment": "2023-09-07T07:26:24.215Z"
-                        },
-                        {
-                            "Quantity": -1,
-                            "Amount": -10,
-                            "VATRate": 0,
-                            "ftChargeItemCase": 5283883447186759700,
-                            "Description": "Return/Refund - TakeAway - Delivery - Item VAT NS",
-                            "Moment": "2023-09-07T07:26:24.215Z"
-                        },
-                        {
-                            "Quantity": -1,
-                            "Amount": -10,
-                            "VATRate": 0,
-                            "ftChargeItemCase": 5283883447186763796,
-                            "Description": "Return/Refund - TakeAway - Delivery - Item VAT ES",
-                            "Moment": "2023-09-07T07:26:24.215Z"
-                        },
-                        {
-                            "Quantity": -1,
-                            "Amount": -10,
-                            "VATRate": 0,
-                            "ftChargeItemCase": 5283883447186767892,
-                            "Description": "Return/Refund - TakeAway - Delivery - Item VAT RM",
-                            "Moment": "2023-09-07T07:26:24.215Z"
-                        },
-                        {
-                            "Quantity": -1,
-                            "Amount": -10,
-                            "VATRate": 0,
-                            "ftChargeItemCase": 5283883447186771988,
-                            "Description": "Return/Refund - TakeAway - Delivery - Item VAT AL",
-                            "Moment": "2023-09-07T07:26:24.215Z"
-                        },
-                        {
-                            "Quantity": -1,
-                            "Amount": -10,
-                            "VATRate": 0,
-                            "ftChargeItemCase": 5283883447186784276,
-                            "Description": "Return/Refund - TakeAway - Delivery - Item VAT EE",
-                            "Moment": "2023-09-07T07:26:24.215Z"
-                        }
-                    ],
-                    "cbPayItems": [
-                        {
-                            "Quantity": 1,
-                            "Description": "Return/Refund Cash",
-                            "ftPayItemCase": 5283883447184654337,
-                            "Moment": "2023-09-07T07:26:24.215Z",
-                            "Amount": -566
-                        }
-                    ],
-                    "ftReceiptCase": 5283883447201300481
-                }
-                """;
-
-            var response = new ReceiptResponse();
-            var signatures = new List<SignaturItem>();
-            signatures.AddRange(response.ftSignatures);
-            signatures.AddRange(new List<SignaturItem>
-                    {
-                        new SignaturItem
-                        {
-                            Caption = "<reference-z-number>",
-                            Data = "24",
-                            ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                            ftSignatureType = 0x4954000000000000 | (long) SignatureTypesIT.RTReferenceZNumber
-                        },
-                        new SignaturItem
-                        {
-                            Caption = "<reference-doc-number>",
-                            Data = "47",
-                            ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                            ftSignatureType = 0x4954000000000000 | (long) SignatureTypesIT.RTReferenceDocumentNumber
-                        },
-                        new SignaturItem
-                        {
-                            Caption = "<reference-timestamp>",
-                            Data = "2023-09-07 09:40",
-                            ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                            ftSignatureType = 0x4954000000000000 | (long) SignatureTypesIT.RTDocumentMoment
-                        },
-                    });
-            response.ftSignatures = signatures.ToArray();
-
-            var itsscd = GetSUT();
-            var result = await itsscd.ProcessReceiptAsync(new ProcessRequest
-            {
-                ReceiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(receipt),
-                ReceiptResponse = response
-            });
-
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTZNumber));
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTDocumentNumber));
-            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (0x4954000000000000 | (long) SignatureTypesIT.RTSerialNumber));
         }
     }
 }

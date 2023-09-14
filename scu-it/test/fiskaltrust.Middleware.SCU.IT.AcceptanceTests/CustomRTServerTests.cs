@@ -6,7 +6,7 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
 {
     public class CustomRTServerTests : ITSSCDTests
     {
-        private static readonly Uri _serverUri = new Uri("http://192.168.0.34/");
+        private static readonly Uri _serverUri = new Uri("https://f51f-88-116-45-202.ngrok-free.app/");
         private readonly CustomRTServerConfiguration _config = new CustomRTServerConfiguration
         {
             ServerUrl = _serverUri.ToString(),
@@ -18,6 +18,8 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
                 VatId = "MTLFNC75A16E783N"
             })
         };
+
+        protected override string SerialNumber => "96SRT001239";
 
         protected override IMiddlewareBootstrapper GetMiddlewareBootstrapper() => new ScuBootstrapper
         {

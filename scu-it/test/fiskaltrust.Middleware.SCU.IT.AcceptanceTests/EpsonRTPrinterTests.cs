@@ -12,6 +12,8 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
             DeviceUrl = _serverUri.ToString()
         };
 
+        protected override string SerialNumber => "99IEC018305";
+
         protected override IMiddlewareBootstrapper GetMiddlewareBootstrapper() => new ScuBootstrapper
         {
             Id = Guid.NewGuid(),

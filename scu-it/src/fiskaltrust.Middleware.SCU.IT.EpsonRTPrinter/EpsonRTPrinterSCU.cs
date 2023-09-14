@@ -363,6 +363,10 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
             {
                 dailyClosingResponse.SSCDErrorInfo = GetErrorInfo(result?.Code, result?.Status, null);
                 await ResetPrinter();
+                if (!dailyClosingResponse.Success)
+                {
+                    throw new SSCDErrorException(dailyClosingResponse.SSCDErrorInfo.Type, dailyClosingResponse.SSCDErrorInfo.Info);
+                }
             }
             else
             {
