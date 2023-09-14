@@ -63,39 +63,15 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
 
         public static SignaturItem[] CreateFakeReceiptSignatures()
         {
-            return new SignaturItem[]
+            return POSReceiptSignatureData.CreateDocumentoCommercialeSignatures(new POSReceiptSignatureData
             {
-                new SignaturItem
-                {
-                    Caption = "<receipt-number>",
-                    Data = "0002",
-                    ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                    ftSignatureType = 0x4954000000000012
-                },
-                new SignaturItem
-                {
-                    Caption = "<z-number>",
-                    Data = "0001",
-                    ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                    ftSignatureType = 0x4954000000000011
-                },
-                new SignaturItem
-                {
-                    Caption = "<receipt-amount>",
-                    Data = 23.01.ToString(Cases.CurrencyFormatter),
-                    ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                    ftSignatureType = 0x4954000000000014
-                },
-                new SignaturItem
-                {
-                    Caption = "<receipt-timestamp>",
-                    Data = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"),
-                    ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                    ftSignatureType = 0x4954000000000013
-                }
-            };
+                RTSerialNumber = "DEMORTDEVICE",
+                RTZNumber = 1,
+                RTDocNumber = 2,
+                RTDocMoment = DateTime.UtcNow,
+                RTDocType = "POSRECEIPT",
+            }).ToArray();
         }
-
 
         private IMarketSpecificSignProcessor GetSUT(ftQueue queue, ftQueueIT queueIT, IITSSCD itSSCD = null)
         {
@@ -217,10 +193,10 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
             var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, _queue, new ftQueueItem { });
 
             receiptResponse.ftSignatures.Should().BeEmpty();
-            receiptResponse.ftState.Should().Be(0x4954_0000_0000_0001);
+            receiptResponse.ftState.Should().Be(0x4954_2000_0000_0001);
 
             actionJournals.Should().HaveCount(1);
-            actionJournals[0].Message.Should().Be($"QueueId {_queue.ftQueueId} is not activated yet.");
+            actionJournals[0].Message.Should().Be($"QueueId {_queue.ftQueueId} has not been activated yet.");
         }
 
         [Theory]
@@ -246,7 +222,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
             var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, _queueStopped, new ftQueueItem { });
 
             receiptResponse.ftSignatures.Should().BeEmpty();
-            receiptResponse.ftState.Should().Be(0x4954_0000_0000_0001);
+            receiptResponse.ftState.Should().Be(0x4954_2000_0000_0001);
 
             actionJournals.Should().HaveCount(1);
             actionJournals[0].Message.Should().Be($"QueueId {_queue.ftQueueId} has been disabled.");
@@ -275,7 +251,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
             var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, _queueStarted, new ftQueueItem { });
 
             receiptResponse.ftSignatures.Should().BeEmpty();
-            receiptResponse.ftState.Should().Be(0x4954_0000_0000_0002);
+            receiptResponse.ftState.Should().Be(0x4954_2000_0000_0002);
         }
 
         [Theory]
@@ -300,7 +276,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
             var sut = GetDefaultSUT(_queueStarted);
             var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, _queueStarted, new ftQueueItem { });
 
-            receiptResponse.ftState.Should().Be(0x4954_0000_0000_0000);
+            receiptResponse.ftState.Should().Be(0x4954_2000_0000_0000);
             receiptResponse.ftReceiptIdentification.Should().Be("ft1#0001-0002");
         }
 
@@ -324,7 +300,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
             var sut = GetDefaultSUT(_queue);
             var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, _queue, new ftQueueItem { });
 
-            receiptResponse.ftState.Should().Be(0x4954_0000_0000_0000);
+            receiptResponse.ftState.Should().Be(0x4954_2000_0000_0000);
             actionJournals.Should().HaveCount(1);
             var notification = JsonConvert.DeserializeObject<ActivateQueueSCU>(actionJournals[0].DataJson);
             notification.IsStartReceipt.Should().BeTrue();
@@ -353,7 +329,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
             var sut = GetDefaultSUT(_queueStarted);
             var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, _queueStarted, new ftQueueItem { });
 
-            receiptResponse.ftState.Should().Be(0x4954_0000_0000_0000);
+            receiptResponse.ftState.Should().Be(0x4954_2000_0000_0000);
             actionJournals.Should().HaveCount(1);
             var notification = JsonConvert.DeserializeObject<DeactivateQueueSCU>(actionJournals[0].DataJson);
             notification.IsStopReceipt.Should().BeTrue();
@@ -380,7 +356,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
             var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(zeroReceipt);
             var sut = GetDefaultSUT(_queueStarted);
             var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, _queueStarted, new ftQueueItem { });
-            receiptResponse.ftState.Should().Be(0x4954_0000_0000_0000);
+            receiptResponse.ftState.Should().Be(0x4954_2000_0000_0000);
             actionJournals.Should().HaveCount(0);
         }
 
@@ -412,7 +388,6 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
             actionJournals.Should().HaveCount(0);
         }
 
-
         [Fact]
         public async Task Process_DailyClosingReceipt()
         {
@@ -434,7 +409,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
             var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, _queueStarted, new ftQueueItem { });
 
             receiptResponse.ftReceiptIdentification.Should().Be("ft1#Z0001");
-            receiptResponse.ftState.Should().Be(0x4954_0000_0000_0000);
+            receiptResponse.ftState.Should().Be(0x4954_2000_0000_0000);
             actionJournals.Should().HaveCount(1);
             actionJournals[0].Type.Should().Be(receiptRequest.ftReceiptCase.ToString("x"));
         }
@@ -551,7 +526,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
             var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, _queueStarted, new ftQueueItem { });
             receiptResponse.ftSignatures.Should().HaveCountGreaterOrEqualTo(1);
             receiptResponse.ftReceiptIdentification.Should().Be("ft1#0001-0002");
-            receiptResponse.ftState.Should().Be(0x4954_0000_0000_0000);
+            receiptResponse.ftState.Should().Be(0x4954_2000_0000_0000);
             actionJournals.Should().HaveCount(0);
         }
 
@@ -666,7 +641,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
             var sut = GetDefaultSUT(_queueStarted);
             var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, _queueStarted, new ftQueueItem { });
             receiptResponse.ftSignatures.Should().HaveCountGreaterOrEqualTo(1);
-            receiptResponse.ftState.Should().Be(0x4954_0000_0000_0000);
+            receiptResponse.ftState.Should().Be(0x4954_2000_0000_0000);
             receiptResponse.ftReceiptIdentification.Should().Be("ft1#0001-0002");
             actionJournals.Should().HaveCount(0);
         }

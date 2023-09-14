@@ -33,7 +33,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Constants
         {
             var receiptNumber = long.Parse(receiptResponse.GetSignaturItem(SignatureTypesIT.RTDocumentNumber)?.Data);
             var zRepNumber = long.Parse(receiptResponse.GetSignaturItem(SignatureTypesIT.RTZNumber)?.Data);
-            var rtDocumentMoment = DateTime.Parse(receiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceDocumentMoment)?.Data);
+            var rtDocumentMoment = DateTime.Parse(receiptResponse.GetSignaturItem(SignatureTypesIT.RTDocumentMoment)?.Data);
             var codiceLotteria = receiptResponse.GetSignaturItem(SignatureTypesIT.RTLotteryID)?.Data;
             var customerIdentification = receiptResponse.GetSignaturItem(SignatureTypesIT.RTCustomerID)?.Data;
             var shaMetadata = receiptResponse.GetSignaturItem(SignatureTypesIT.RTServerShaMetadata)?.Data;
@@ -67,8 +67,8 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Constants
 
         private static StringBuilder CreateHeader(ReceiptResponse receiptResponse, string referencedRT = null, string referencedPrinterRT = null)
         {
-            var docType = long.Parse(receiptResponse.GetSignaturItem(SignatureTypesIT.RTDocumentType)?.Data);
-            if (docType == 1)
+            var docType = receiptResponse.GetSignaturItem(SignatureTypesIT.RTDocumentType)?.Data;
+            if (docType.ToUpper() == "POSRECEIPT")
             {
                 return new StringBuilder("di vendita o prestazione");
             }
@@ -77,7 +77,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Constants
             var referenceDocNumber = long.Parse(receiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceDocumentNumber)?.Data);
             var referenceDateTime = DateTime.Parse(receiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceDocumentMoment)?.Data);
             var stringBuilder = new StringBuilder();
-            if (docType == 3)
+            if (docType.ToUpper() == "REFUND")
             {
                 stringBuilder.AppendLine("emesso per RESO MERCE");
                 stringBuilder.AppendLine($"N. {referenceZNumber.ToString().PadLeft(4, '0')}-{referenceDocNumber.ToString().PadLeft(4, '0')} del {referenceDateTime.ToString("dd-MM-yyyy")}");
@@ -91,7 +91,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Constants
                 }
                 stringBuilder.AppendLine($"Cassa {receiptResponse.ftCashBoxIdentification}");
             }
-            else if (docType == 5)
+            else if (docType.ToUpper() == "VOID")
             {
                 stringBuilder.AppendLine("emesso per ANNULLAMENTO");
                 stringBuilder.AppendLine($"N. {referenceZNumber.ToString().PadLeft(4, '0')}-{referenceDocNumber.ToString().PadLeft(4, '0')} del {referenceDateTime.ToString("dd-MM-yyyy")}");
