@@ -25,6 +25,8 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
 
         protected IITSSCD GetSUT()
         {
+            // Disable SSL checks for the test server
+            System.Net.ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
             var serviceCollection = new ServiceCollection();
             serviceCollection.AddLogging();
 
@@ -128,7 +130,7 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
             var zNumber = result.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTZNumber)?.Data;
             var rtdocNumber = result.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTDocumentNumber)?.Data;
             var rtDocumentMoment = DateTime.Parse(result.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTDocumentMoment)?.Data ?? DateTime.MinValue.ToString());
-            
+
             var signatures = new List<SignaturItem>();
             signatures.AddRange(new List<SignaturItem>
                     {
@@ -173,6 +175,29 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
         }
 
         [Fact]
+        public async Task ProcessPosReceipt_0x4954_2000_0000_0001_TakeAway_Delivery_Cash_Refund_WithoutReferencess()
+        {
+            var response = _receiptResponse;
+            var itsscd = GetSUT();
+
+            var refundResult = await itsscd.ProcessReceiptAsync(new ProcessRequest
+            {
+                ReceiptRequest = ReceiptExamples.GetTakeAway_Delivery_Refund(),
+                ReceiptResponse = response
+            });
+            using var scope = new AssertionScope();
+            refundResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTSerialNumber));
+            refundResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTZNumber));
+            refundResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentNumber));
+            refundResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentMoment));
+            refundResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentType));
+            refundResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTReferenceZNumber));
+            refundResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentNumber));
+            refundResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentMoment));
+        }
+
+
+        [Fact]
         public async Task ProcessPosReceipt_0x4954_2000_0000_0001_TakeAway_Delivery_Cash_Void()
         {
             var response = _receiptResponse;
@@ -215,6 +240,27 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
                     });
             response.ftSignatures = signatures.ToArray();
 
+            var refundResult = await itsscd.ProcessReceiptAsync(new ProcessRequest
+            {
+                ReceiptRequest = ReceiptExamples.GetTakeAway_Delivery_Void(),
+                ReceiptResponse = response
+            });
+            using var scope = new AssertionScope();
+            refundResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTSerialNumber));
+            refundResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTZNumber));
+            refundResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentNumber));
+            refundResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentMoment));
+            refundResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentType));
+            refundResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTReferenceZNumber));
+            refundResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentNumber));
+            refundResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentMoment));
+        }
+
+        [Fact]
+        public async Task ProcessPosReceipt_0x4954_2000_0000_0001_TakeAway_Delivery_Cash_Void_WithoutReferences()
+        {
+            var response = _receiptResponse;
+            var itsscd = GetSUT();
             var refundResult = await itsscd.ProcessReceiptAsync(new ProcessRequest
             {
                 ReceiptRequest = ReceiptExamples.GetTakeAway_Delivery_Void(),

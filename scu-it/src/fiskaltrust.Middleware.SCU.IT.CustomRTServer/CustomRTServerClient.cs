@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
+using System.ServiceModel.Security;
 using System.Text;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.SCU.IT.CustomRTServer;
@@ -19,10 +22,25 @@ public class CustomRTServerClient
             throw new NullReferenceException("ServerUrl is not set.");
         }
 
-        _httpClient = new HttpClient
+        if (customRTServerConfiguration.DisabelSSLValidation)
         {
-            BaseAddress = new Uri(customRTServerConfiguration.ServerUrl),
-        };
+            var handler = new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
+            };
+
+            _httpClient = new HttpClient(handler)
+            {
+                BaseAddress = new Uri(customRTServerConfiguration.ServerUrl),
+            };
+        }
+        else
+        {
+            _httpClient = new HttpClient()
+            {
+                BaseAddress = new Uri(customRTServerConfiguration.ServerUrl),
+            };
+        }
 
         if (!string.IsNullOrEmpty(customRTServerConfiguration.AccountMasterData))
         {

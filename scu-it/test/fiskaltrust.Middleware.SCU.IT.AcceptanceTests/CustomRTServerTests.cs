@@ -12,9 +12,10 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
     {
         private static readonly Guid _accountid = Guid.Parse("4b95ea47-dbf7-4ba6-bcab-ae46030bc0e9");
 
-        private static readonly Uri _serverUri = new Uri("https://f51f-88-116-45-202.ngrok-free.app/");
+        //private static readonly Uri _serverUri = new Uri("https://f51f-88-116-45-202.ngrok-free.app/");
+        private static readonly Uri _serverUri = new Uri("http://10.3.13.20");
         private readonly CustomRTServerConfiguration _config = new CustomRTServerConfiguration
-        {
+        { 
             ServerUrl = _serverUri.ToString(),
             Username = "0001ab05",
             Password = "admin",
@@ -33,7 +34,6 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
             Id = queueId,
             Configuration = JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(_config))
         };
-
 
         [Fact]
         public async Task ProcessPosReceipt_0x4954_2000_0000_0001_TakeAway_Delivery_Cash_MultipleResults()

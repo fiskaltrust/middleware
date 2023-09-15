@@ -15,9 +15,13 @@ public static class CustomRTServerMapping
         var referenceZNumber = receiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceZNumber)?.Data;
         var referenceDocNumber = receiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceDocumentNumber)?.Data;
         var referenceDateTime = receiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceDocumentMoment)?.Data;
+        string? refSerialNum = null;
         if (string.IsNullOrEmpty(referenceZNumber) || string.IsNullOrEmpty(referenceDocNumber) || string.IsNullOrEmpty(referenceDateTime))
         {
-            throw new Exception("Cannot void receipt without references.");
+            referenceZNumber = "-1";
+            referenceDocNumber =  "-1";
+            referenceDateTime = receiptRequest.cbReceiptMoment.ToString("yyyy-MM-dd HH:mm:ss");
+            refSerialNum = "96SR0000000";
         }
 
         var fiscalDocument = new FDocument
@@ -39,6 +43,7 @@ public static class CustomRTServerMapping
                 referenceClosurenumber = long.Parse(referenceZNumber),
                 referenceDocnumber = long.Parse(referenceDocNumber),
                 referenceDtime = DateTime.Parse(referenceDateTime).ToString("yyyy-MM-dd"),
+                refSerialNum = refSerialNum
             },
             items = GenerateItemDataForReceiptRequest(receiptRequest, queueIdentification.LastZNumber + 1, queueIdentification.LastDocNumber + 1),
             taxs = GenerateTaxDataForReceiptRequest(receiptRequest)
@@ -60,9 +65,13 @@ public static class CustomRTServerMapping
         var referenceZNumber = receiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceZNumber)?.Data;
         var referenceDocNumber = receiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceDocumentNumber)?.Data;
         var referenceDateTime = receiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceDocumentMoment)?.Data;
+        string? refSerialNum = null;
         if (string.IsNullOrEmpty(referenceZNumber) || string.IsNullOrEmpty(referenceDocNumber) || string.IsNullOrEmpty(referenceDateTime))
         {
-            throw new Exception("Cannot refund receipt without references.");
+            referenceZNumber = "-1";
+            referenceDocNumber =  "-1";
+            referenceDateTime = receiptRequest.cbReceiptMoment.ToString("yyyy-MM-dd HH:mm:ss");
+            refSerialNum = "96SR0000000";
         }
 
         var fiscalDocument = new FDocument
@@ -84,6 +93,7 @@ public static class CustomRTServerMapping
                 referenceClosurenumber = long.Parse(referenceZNumber),
                 referenceDocnumber = long.Parse(referenceDocNumber),
                 referenceDtime = referenceDateTime,
+                refSerialNum = refSerialNum
             },
             items = GenerateItemDataForReceiptRequest(receiptRequest, queueIdentification.LastZNumber + 1, queueIdentification.LastDocNumber + 1),
             taxs = GenerateTaxDataForReceiptRequest(receiptRequest)
