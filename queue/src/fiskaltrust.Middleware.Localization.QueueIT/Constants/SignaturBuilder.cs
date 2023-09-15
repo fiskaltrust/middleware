@@ -73,14 +73,21 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Constants
                 return new StringBuilder("di vendita o prestazione");
             }
 
-            var referenceZNumber = long.Parse(receiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceZNumber)?.Data);
-            var referenceDocNumber = long.Parse(receiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceDocumentNumber)?.Data);
-            var referenceDateTime = DateTime.Parse(receiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceDocumentMoment)?.Data);
+            var referenceZNumberString = receiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceZNumber)?.Data;
+            var referenceDocNumberString = receiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceDocumentNumber)?.Data;
+            var referenceDateTimeString = receiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceDocumentMoment)?.Data;
             var stringBuilder = new StringBuilder();
             if (docType.ToUpper() == "REFUND")
             {
                 stringBuilder.AppendLine("emesso per RESO MERCE");
-                stringBuilder.AppendLine($"N. {referenceZNumber.ToString().PadLeft(4, '0')}-{referenceDocNumber.ToString().PadLeft(4, '0')} del {referenceDateTime.ToString("dd-MM-yyyy")}");
+                if (string.IsNullOrEmpty(referenceZNumberString) || string.IsNullOrEmpty(referenceDocNumberString))
+                {
+                    stringBuilder.AppendLine($"POS del {DateTime.Parse(referenceDateTimeString).ToString("dd-MM-yyyy")}");
+                }
+                else
+                {
+                    stringBuilder.AppendLine($"N. {long.Parse(referenceZNumber).ToString().PadLeft(4, '0')}-{long.Parse(referenceDocNumberString).ToString().PadLeft(4, '0')} del {DateTime.Parse(referenceDateTime).ToString("dd-MM-yyyy")}");
+                }
                 if (!string.IsNullOrEmpty(referencedRT))
                 {
                     stringBuilder.AppendLine($"Server RT {referencedRT}");
@@ -94,7 +101,14 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Constants
             else if (docType.ToUpper() == "VOID")
             {
                 stringBuilder.AppendLine("emesso per ANNULLAMENTO");
-                stringBuilder.AppendLine($"N. {referenceZNumber.ToString().PadLeft(4, '0')}-{referenceDocNumber.ToString().PadLeft(4, '0')} del {referenceDateTime.ToString("dd-MM-yyyy")}");
+                if (string.IsNullOrEmpty(referenceZNumberString) || string.IsNullOrEmpty(referenceDocNumberString))
+                {
+                    stringBuilder.AppendLine($"POS del {referenceDateTime.ToString("dd-MM-yyyy")}");
+                }
+                else
+                {
+                    stringBuilder.AppendLine($"N. {long.Parse(referenceZNumber).ToString().PadLeft(4, '0')}-{long.Parse(referenceDocNumberString).ToString().PadLeft(4, '0')} del {DateTime.Parse(referenceDateTime).ToString("dd-MM-yyyy")}");
+                }
                 if (!string.IsNullOrEmpty(referencedRT))
                 {
                     stringBuilder.AppendLine($"Server RT {referencedRT}");

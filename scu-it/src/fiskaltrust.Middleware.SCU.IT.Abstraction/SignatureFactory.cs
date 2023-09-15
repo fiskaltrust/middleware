@@ -139,7 +139,7 @@ public static class SignatureFactory
             });
         }
 
-        if (data.RTReferenceZNumber.HasValue && data.RTReferenceDocNumber.HasValue && data.RTReferenceDocMoment.HasValue) // TODO WE NEED TO CHECK THAT
+        if (data.RTReferenceZNumber.HasValue && data.RTReferenceZNumber > 0)
         {
             signatureItems.Add(new SignaturItem
             {
@@ -148,6 +148,10 @@ public static class SignatureFactory
                 ftSignatureFormat = (long) SignaturItem.Formats.Text,
                 ftSignatureType = ITConstants.BASE_STATE | (long) SignatureTypesIT.RTReferenceZNumber
             });
+        }
+
+        if (data.RTReferenceDocNumber.HasValue && data.RTReferenceDocNumber > 0)
+        {
             signatureItems.Add(new SignaturItem
             {
                 Caption = "<rt-reference-doc-number>",
@@ -155,6 +159,10 @@ public static class SignatureFactory
                 ftSignatureFormat = (long) SignaturItem.Formats.Text,
                 ftSignatureType = ITConstants.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentNumber
             });
+        }
+
+        if (data.RTReferenceDocMoment.HasValue)
+        {
             signatureItems.Add(new SignaturItem
             {
                 Caption = "<rt-reference-doc-moment>",
