@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.ServiceModel.Security;
 using System.Text;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.SCU.IT.CustomRTServer;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
 public class CustomRTServerClient
@@ -14,8 +16,9 @@ public class CustomRTServerClient
     private readonly HttpClient _httpClient;
     private readonly string _password;
     private readonly CustomRTServerConfiguration _customRTServerConfiguration;
+    private readonly ILogger<CustomRTServerClient> _logger;
 
-    public CustomRTServerClient(CustomRTServerConfiguration customRTServerConfiguration)
+    public CustomRTServerClient(CustomRTServerConfiguration customRTServerConfiguration, ILogger<CustomRTServerClient> logger)
     {
         if (string.IsNullOrEmpty(customRTServerConfiguration.ServerUrl))
         {
@@ -52,6 +55,7 @@ public class CustomRTServerClient
             _password = customRTServerConfiguration.Password;
         }
         _customRTServerConfiguration = customRTServerConfiguration;
+        _logger = logger;
     }
 
     public async Task<GetDeviceMemStatusResponse> GetDeviceMemStatusAsync() => await PerformCallToRTServerWithAdminAsync<GetDeviceMemStatusResponse>("/getDeviceMemStatus.php", JsonConvert.SerializeObject(new
@@ -111,12 +115,12 @@ public class CustomRTServerClient
 
     public async Task<InsertFiscalDocumentResponse> InsertFiscalDocumentAsync(string cashuuid, CommercialDocument commercialDocument) => await PerformCallToRTServerAsync<InsertFiscalDocumentResponse>("/insertFiscalDocument2.php", cashuuid, JsonConvert.SerializeObject(commercialDocument));
 
-    private static void ThrowExceptionForErrorCode(CustomRTDResponse data)
+    private static void ThrowExceptionForErrorCode(string endpoint, CustomRTDResponse data)
     {
         if (data.responseCode == 1201)
         {
             var message = $"""
-Calling endpoint '/insertFiscalDocument2.php' failed with error code {data.responseCode}. 
+Calling endpoint '{endpoint}' failed with error code {data.responseCode}. 
 Messagio: Reso/annulo: documento non travoto
 Esempio: È stato indicato un documento di refierimento inesistente
 Azione Corretiva: Verificare i dati insertiti e ripetere l'operazione. 
@@ -127,7 +131,7 @@ Azione Corretiva: Verificare i dati insertiti e ripetere l'operazione.
         if (data.responseCode == 1206)
         {
             var message = $"""
-Calling endpoint '/insertFiscalDocument2.php' failed with error code {data.responseCode}. 
+Calling endpoint '{endpoint}' failed with error code {data.responseCode}. 
 Messagio: Valore non valido
 Esempio: Il valore del campo "amount" del metodo "insertFiscalDocument" o del metodo "insertFiscalDocument2" è negatiov o non numerico
 Azione Corretiva: Verificare i dati insertiti e ripetere l'operazione.
@@ -138,7 +142,9 @@ Azione Corretiva: Verificare i dati insertiti e ripetere l'operazione.
         if (data.responseCode != 0)
         {
             var message = $"""
-Calling endpoint '/insertFiscalDocument2.php' failed with error code {data.responseCode}. 
+Calling endpoint '{endpoint}' failed with error code {data.responseCode}. 
+
+{data.responseDesc}
 """;
             throw new CustomRTServerCommunicationException(message, data.responseCode);
         }
@@ -180,15 +186,7 @@ Calling endpoint '/insertFiscalDocument2.php' failed with error code {data.respo
                 cashuuid
             }
         };
-        var result = await _httpClient.PostAsync("/updateCashRegister.php", new StringContent(JsonConvert.SerializeObject(request)));
-        // TODO Check error
-        var resultContent = await result.Content.ReadAsStringAsync();
-        var data = JsonConvert.DeserializeObject<CancelCashRegisterResponse>(resultContent);
-        if (data.responseCode != 0)
-        {
-            throw new Exception(data.responseDesc);
-        }
-        return data;
+        return await PerformCallToRTServerAsync<CancelCashRegisterResponse>("/updateCashRegister.php", cashuuid, JsonConvert.SerializeObject(request));
     }
 
     public async Task<InsertFiscalDocumentResponse> InsertFiscalDocumentLotteryAsync(string cashuuid, FDocumentLottery fiscalData, QrCodeData qrCodeData)
@@ -217,12 +215,12 @@ Calling endpoint '/insertFiscalDocument2.php' failed with error code {data.respo
             return await PerformCallToRTServerWithAdminAsync<TResponse>(endpoint, payload);
         }
 
-        var authHeader = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{cashuuid}:{_password}"));
         var requestMessage = new HttpRequestMessage(HttpMethod.Post, endpoint)
         {
             Content = new StringContent(payload)
         };
-        requestMessage.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", authHeader);
+        var authHeader = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{cashuuid}:{_password}"));
+        requestMessage.Headers.Add("Authorization", $"Basic {authHeader}");
         var result = await _httpClient.SendAsync(requestMessage);
         var resultContent = await result.Content.ReadAsStringAsync();
         if (result.IsSuccessStatusCode)
@@ -230,7 +228,14 @@ Calling endpoint '/insertFiscalDocument2.php' failed with error code {data.respo
             var data = JsonConvert.DeserializeObject<TResponse>(resultContent);
             if (data.responseCode != 0)
             {
-                ThrowExceptionForErrorCode(data);
+                try
+                {
+                    ThrowExceptionForErrorCode(endpoint, data);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"Calling endpoint '{endpoint}' failed with error code {data.responseCode}. {data.responseDesc}");
+                }
             }
             return data;
         }
@@ -247,7 +252,7 @@ Calling endpoint '/insertFiscalDocument2.php' failed with error code {data.respo
         {
             Content = new StringContent(payload)
         };
-        requestMessage.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", authHeader);
+        requestMessage.Headers.Add("Authorization", $"Basic {authHeader}");
         var result = await _httpClient.SendAsync(requestMessage);
         var resultContent = await result.Content.ReadAsStringAsync();
         if (result.IsSuccessStatusCode)
@@ -255,7 +260,14 @@ Calling endpoint '/insertFiscalDocument2.php' failed with error code {data.respo
             var data = JsonConvert.DeserializeObject<TResponse>(resultContent);
             if (data.responseCode != 0)
             {
-                ThrowExceptionForErrorCode(data);
+                try
+                {
+                    ThrowExceptionForErrorCode(endpoint, data);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"Calling endpoint '{endpoint}' failed with error code {data.responseCode}. {data.responseDesc}");
+                }
             }
             return data;
         }
