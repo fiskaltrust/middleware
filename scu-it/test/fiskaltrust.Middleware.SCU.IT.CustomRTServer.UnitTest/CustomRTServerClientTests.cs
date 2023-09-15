@@ -11,7 +11,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
         [Fact(Skip = "Needs device")]
         public async Task GetRTInfoAsync_ShouldReturn_SerialNumber()
         {
-            var customRTServerClient = new CustomRTServerClient(_config);
+            var customRTServerClient = new CustomRTServerClient(_config, null);
 
             _ = await customRTServerClient.InsertCashRegisterAsync("demo", "1010", "1000", "admin", "cf");
         }
@@ -20,7 +20,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
         [Fact(Skip = "Needs device")]
         public async Task GetDailyStatusAsync()
         {
-            var customRTServerClient = new CustomRTServerClient(_config);
+            var customRTServerClient = new CustomRTServerClient(_config, null);
 
             _ = await customRTServerClient.GetDailyStatusAsync("0001ab05");
         }
@@ -28,7 +28,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
         [Fact(Skip = "Needs device")]
         public async Task GetDailyOpenAsync()
         {
-            var customRTServerClient = new CustomRTServerClient(_config);
+            var customRTServerClient = new CustomRTServerClient(_config, null);
 
             var result = await customRTServerClient.InsertCashRegisterAsync("SKE_DEBUG_TEST", "ske0", "0003", "admin", "MTLFNC75A16E783N");
 
@@ -49,7 +49,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
         [Fact(Skip = "Currently not working since we don't have a cert.")]
         public async Task CancelCashRegister()
         {
-            var customRTServerClient = new CustomRTServerClient(_config);
+            var customRTServerClient = new CustomRTServerClient(_config, null);
 
             _ = await customRTServerClient.CancelCashRegisterAsync("0002ab77", "12345688909");
         }

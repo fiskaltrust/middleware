@@ -86,7 +86,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Constants
                 }
                 else
                 {
-                    stringBuilder.AppendLine($"N. {long.Parse(referenceZNumber).ToString().PadLeft(4, '0')}-{long.Parse(referenceDocNumberString).ToString().PadLeft(4, '0')} del {DateTime.Parse(referenceDateTime).ToString("dd-MM-yyyy")}");
+                    stringBuilder.AppendLine($"N. {long.Parse(referenceZNumberString).ToString().PadLeft(4, '0')}-{long.Parse(referenceDocNumberString).ToString().PadLeft(4, '0')} del {DateTime.Parse(referenceDateTimeString).ToString("dd-MM-yyyy")}");
                 }
                 if (!string.IsNullOrEmpty(referencedRT))
                 {
@@ -103,11 +103,11 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Constants
                 stringBuilder.AppendLine("emesso per ANNULLAMENTO");
                 if (string.IsNullOrEmpty(referenceZNumberString) || string.IsNullOrEmpty(referenceDocNumberString))
                 {
-                    stringBuilder.AppendLine($"POS del {referenceDateTime.ToString("dd-MM-yyyy")}");
+                    stringBuilder.AppendLine($"POS del {DateTime.Parse(referenceDateTimeString).ToString("dd-MM-yyyy")}");
                 }
                 else
                 {
-                    stringBuilder.AppendLine($"N. {long.Parse(referenceZNumber).ToString().PadLeft(4, '0')}-{long.Parse(referenceDocNumberString).ToString().PadLeft(4, '0')} del {DateTime.Parse(referenceDateTime).ToString("dd-MM-yyyy")}");
+                    stringBuilder.AppendLine($"N. {long.Parse(referenceZNumberString).ToString().PadLeft(4, '0')}-{long.Parse(referenceDocNumberString).ToString().PadLeft(4, '0')} del {DateTime.Parse(referenceDateTimeString).ToString("dd-MM-yyyy")}");
                 }
                 if (!string.IsNullOrEmpty(referencedRT))
                 {
