@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using fiskaltrust.Middleware.Contracts.Repositories.FR.TempSpace;
+using fiskaltrust.Middleware.Contracts.Models.FR;
 
 namespace fiskaltrust.Middleware.Contracts.Repositories.FR
 {

@@ -1,10 +1,7 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Contracts.Repositories.FR;
-using fiskaltrust.Middleware.Contracts.Repositories.FR.TempSpace;
 using fiskaltrust.Middleware.Localization.QueueFR.Extensions;
 using fiskaltrust.Middleware.Localization.QueueFR.Factories;
 using fiskaltrust.Middleware.Localization.QueueFR.Models;
@@ -15,15 +12,12 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
 {
     public class CopyCommand : RequestCommand
     {
-        private readonly IMiddlewareJournalFRRepository _journalFRRepository;
-        private readonly IReadOnlyQueueItemRepository _queueItemRepository;
         private readonly IJournalFRCopyPayloadRepository _copyPayloadRepository;
 
-        public CopyCommand(ISignatureFactoryFR signatureFactoryFR, IMiddlewareJournalFRRepository journalFRRepository, IReadOnlyQueueItemRepository queueItemRepository, IJournalFRCopyPayloadRepository copyPayloadRepository) 
+        public CopyCommand(ISignatureFactoryFR signatureFactoryFR,
+            IJournalFRCopyPayloadRepository copyPayloadRepository) 
             : base(signatureFactoryFR)
         {
-            _journalFRRepository = journalFRRepository;
-            _queueItemRepository = queueItemRepository;
             _copyPayloadRepository = copyPayloadRepository;
         }
 

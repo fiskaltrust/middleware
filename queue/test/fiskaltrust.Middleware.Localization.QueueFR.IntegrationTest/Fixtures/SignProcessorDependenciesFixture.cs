@@ -24,7 +24,6 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.IntegrationTest.Fixtures
         public Guid QUEUEID => Guid.Parse("b00f3da1-5a6e-4a2d-8fdf-6c3d8900d2c1");
 
         private readonly Guid _signaturCreationUnitFRId = Guid.Parse("3e5a8784-c39a-4f96-af35-b4964f9f314f");
-        private readonly Guid _signaturCreationUnitFRTargetId = Guid.NewGuid();
 
 
         public static string terminalID = "369a013a-37e2-4c23-8614-6a8f282e6330";

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace fiskaltrust.Middleware.Contracts.Repositories.FR.TempSpace
+namespace fiskaltrust.Middleware.Contracts.Models.FR
 {
     public class ftJournalFRCopyPayload
     {

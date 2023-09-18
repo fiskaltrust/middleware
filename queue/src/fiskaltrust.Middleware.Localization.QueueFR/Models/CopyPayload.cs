@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 using System;
-using fiskaltrust.Middleware.Contracts.Repositories.FR.TempSpace;
+using fiskaltrust.Middleware.Contracts.Models.FR;
 
 namespace fiskaltrust.Middleware.Localization.QueueFR.Models
 {

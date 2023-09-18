@@ -4,7 +4,6 @@ using System.IO;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts.Repositories.FR;
-using fiskaltrust.Middleware.Contracts.Repositories.FR.TempSpace;
 using fiskaltrust.Middleware.Storage.AcceptanceTest;
 using fiskaltrust.Middleware.Storage.SQLite.Connection;
 using fiskaltrust.Middleware.Storage.SQLite.DatabaseInitialization;

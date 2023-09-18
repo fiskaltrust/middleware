@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
+using fiskaltrust.Middleware.Contracts.Models.FR;
 using fiskaltrust.Middleware.Contracts.Repositories.FR;
-using fiskaltrust.Middleware.Contracts.Repositories.FR.TempSpace;
 using Xunit;
 
 namespace fiskaltrust.Middleware.Storage.AcceptanceTest

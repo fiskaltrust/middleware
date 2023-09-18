@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Dapper;
+using fiskaltrust.Middleware.Contracts.Models.FR;
 using fiskaltrust.Middleware.Contracts.Repositories.FR;
-using fiskaltrust.Middleware.Contracts.Repositories.FR.TempSpace;
 
 namespace fiskaltrust.Middleware.Storage.SQLite.Repositories.FR
 {
