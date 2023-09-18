@@ -28,7 +28,9 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.UnitTest
         {
             var mockJournalFRCopyPayloadRepository = new Mock<IJournalFRCopyPayloadRepository>();
             var mockJournalFRRepository = new Mock<IMiddlewareJournalFRRepository>();
-            var jwt = Convert.ToBase64String(Encoding.UTF8.GetBytes("{}")) + "." + Convert.ToBase64String(Encoding.UTF8.GetBytes("{\"TestPayload\":\"TestValue\"}")) + "." + Convert.ToBase64String(Encoding.UTF8.GetBytes("{}"));
+            var jwt = Convert.ToBase64String(Encoding.UTF8.GetBytes("{}")) + "." +
+                      Convert.ToBase64String(Encoding.UTF8.GetBytes("{\"TestPayload\":\"TestValue\"}")) + "." +
+                      Convert.ToBase64String(Encoding.UTF8.GetBytes("{}"));
             var asyncEnumerableResult = new List<ftJournalFR>
             {
                 new ftJournalFR { JWT = jwt }
