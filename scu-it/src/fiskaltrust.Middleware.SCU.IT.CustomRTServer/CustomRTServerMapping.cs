@@ -170,10 +170,10 @@ public static class CustomRTServerMapping
                 {
                     type = DocumentItemDataTaypes.OMAGGIO,
                     description = chargeItem.Description,
-                    amount = ConvertToFullAmount(chargeItem.Amount),
-                    quantity = ConvertTo1000FullAmount(chargeItem.Quantity),
-                    unitprice = ConvertToFullAmount(chargeItem.Amount / chargeItem.Quantity),
-                    vatvalue = ConvertToFullAmount(chargeItem.VATRate),
+                    amount = ConvertToFull_NonAbsAmount(chargeItem.Amount),
+                    quantity = ConvertTo1000_NonAbsFullAmount(chargeItem.Quantity),
+                    unitprice = ConvertToFull_NonAbsAmount(chargeItem.Amount / chargeItem.Quantity),
+                    vatvalue = ConvertToFull_NonAbsAmount(chargeItem.VATRate),
                     paymentid = "",
                     plu = "",
                     department = "",
@@ -202,7 +202,7 @@ public static class CustomRTServerMapping
         items.Add(new DocumentItemData
         {
             type = "97",
-            description = $"TOTALE  COMPLESSIVO               {totalAmount.ToString(ITConstants.CurrencyFormatter)}",
+            description = $"TOTALE  COMPLESSIVO               {totalAmount.ToString(ITConstants.CurrencyFormatter)}",
             amount = ConvertToFullAmount(totalAmount),
             quantity = ConvertTo1000FullAmount(1),
             unitprice = "",
@@ -241,9 +241,45 @@ public static class CustomRTServerMapping
         var payedAmount = receiptRequest.cbPayItems.Sum(x => x.Amount);
         items.Add(new DocumentItemData
         {
+            type = DocumentItemDataTaypes.PAGAMENTO,
+            description = $"NON RISCOSSO                        0,00",
+            amount = "0",
+            quantity = "0",
+            unitprice = "",
+            vatvalue = "",
+            paymentid = "",
+            plu = "",
+            department = ""
+        });
+        items.Add(new DocumentItemData
+        {
+            type = DocumentItemDataTaypes.PAGAMENTO,
+            description = $"RESTO                               0,00",
+            amount = "0",
+            quantity = "0",
+            unitprice = "",
+            vatvalue = "",
+            paymentid = "",
+            plu = "",
+            department = ""
+        });
+        items.Add(new DocumentItemData
+        {
+            type = DocumentItemDataTaypes.PAGAMENTO,
+            description = $"SCONTO A PAGARE                     0,00",
+            amount = "0",
+            quantity = "0",
+            unitprice = "",
+            vatvalue = "",
+            paymentid = "",
+            plu = "",
+            department = ""
+        });
+        items.Add(new DocumentItemData
+        {
             type = "97",
-            description = $"IMPORTO PAGATO {payedAmount.ToString(ITConstants.CurrencyFormatter)}",
-            amount = ConvertToFullAmount(payedAmount),
+            description = $"IMPORTO PAGATO                      {totalAmount.ToString(ITConstants.CurrencyFormatter)}",
+            amount = ConvertToFullAmount(totalAmount),
             quantity = ConvertTo1000FullAmount(1),
             unitprice = "",
             vatvalue = "",
@@ -254,7 +290,7 @@ public static class CustomRTServerMapping
         items.Add(new DocumentItemData
         {
             type = "97",
-            description = $"30/08/2023 12:01       DOC.N.{zNumber.ToString().PadLeft(4, '0')}-{receiptNumber.ToString().PadLeft(4, '0')}",
+            description = $"${receiptRequest.cbReceiptMoment:dd/MM/yyyy HH:mm:ss}       DOC.N.{zNumber.ToString().PadLeft(4, '0')}-{receiptNumber.ToString().PadLeft(4, '0')}",
             amount = ConvertToFullAmount(payedAmount),
             quantity = ConvertTo1000FullAmount(1),
             unitprice = "",
@@ -271,17 +307,35 @@ public static class CustomRTServerMapping
         _ => DocumentItemDataTaypes.VENDITA,
     };
 
-    public static string GetTypeForPayItem(PayItem payItem) => payItem.ftPayItemCase switch
+    public static string GetTypeForPayItem(PayItem payItem) => ((long) payItem.ftPayItemCase & 0xFF) switch
     {
-        _ => DocumentItemDataTaypes.PAGAMENTO,
+        _ => DocumentItemDataTaypes.PAGAMENTO
     };
 
-    public static string GetPaymentIdForPayItem(PayItem payItem) => payItem.ftPayItemCase switch
+    public static string GetPaymentIdForPayItem(PayItem payItem) => ((long) payItem.ftPayItemCase & 0xFF) switch
     {
+        0x00 => DocumentItemPaymentIds.CONTANTE,
+        0x01 => DocumentItemPaymentIds.CONTANTE,
+        0x02 => DocumentItemPaymentIds.CONTANTE,
+        0x03 => DocumentItemPaymentIds.CONTANTE,
+        0x04 => DocumentItemPaymentIds.ELETTRONICO,
+        0x05 => DocumentItemPaymentIds.ELETTRONICO,
+        0x06 => DocumentItemPaymentIds.SCONTO_A_PAGARE,
+        0x07 => DocumentItemPaymentIds.ELETTRONICO,
+        0x08 => DocumentItemPaymentIds.SCONTO_A_PAGARE,
+        0x09 => DocumentItemPaymentIds.ELETTRONICO,
+        0x0A => DocumentItemPaymentIds.ELETTRONICO,
+        0x0B => DocumentItemPaymentIds.ELETTRONICO,
+        0x0C => DocumentItemPaymentIds.CONTANTE,
         _ => DocumentItemPaymentIds.CONTANTE
     };
 
+    public static string ConvertTo1000_NonAbsFullAmount(decimal? value) => ((int) (value ?? 0.0m * 1000)).ToString();
+
     public static string ConvertTo1000FullAmount(decimal? value) => ((int) (Math.Abs(value ?? 0.0m) * 1000)).ToString();
+
+
+    public static string ConvertToFull_NonAbsAmount(decimal? value) => ((int) (value ?? 0.0m * 100)).ToString();
 
     public static string ConvertToFullAmount(decimal? value) => ((int) (Math.Abs(value ?? 0.0m) * 100)).ToString();
 
