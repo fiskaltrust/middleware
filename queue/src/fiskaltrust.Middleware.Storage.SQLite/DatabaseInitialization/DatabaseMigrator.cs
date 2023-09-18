@@ -42,39 +42,49 @@ namespace fiskaltrust.Middleware.Storage.SQLite.DatabaseInitialization
             SqlMapper.AddTypeHandler(typeof(DateTime?), new SQLiteNullableDateTimeTypeHandler());
         }
 
-        public async Task MigrateAsync()
+public async Task<IEnumerable<BaseStorageBootStrapper.Migrations>> MigrateAsync()
+{
+    var appliedMigrations = new List<BaseStorageBootStrapper.Migrations>();
+
+    var migrationDir = _configuration.TryGetValue(MIGRATIONS_CONFIG_KEY, out var value)
+        ? value.ToString()
+        : Path.Combine(typeof(DatabaseMigrator).Assembly.GetDirectoryPath(), MIGRATION_DIR);
+
+    using var connection = _connectionFactory.GetNewConnection(_connectionString);
+
+    if (await IsLegacyDatabaseAsync(connection))
+    {
+        _logger.LogWarning("Legacy database detected. Migrating...");
+        await MigrateLegacyDatabaseAsync(connection, migrationDir);
+        _logger.LogWarning("Migration from legacy database complete.");
+    }
+
+    var migrations = Directory.GetFiles(migrationDir, "*.sqlite3").Where(x => !x.EndsWith(".legacy.sqlite3")).OrderBy(x => x);
+    _logger.LogDebug($"Found {migrations.Count()} migration files.");
+
+    var currentVersion = await GetCurrentVersionAsync(connection).ConfigureAwait(false);
+    var notAppliedMigrations = migrations.Where(x => string.Compare(Path.GetFileNameWithoutExtension(x), currentVersion, true) > 0);
+
+    if (notAppliedMigrations.Any())
+    {
+        _logger.LogInformation($"{notAppliedMigrations.Count()} pending database updates were detected. Updating database now.");
+    }
+    foreach (var migrationScript in notAppliedMigrations)
+    {
+        _logger.LogDebug($"Updating database with migration script {migrationScript}..");
+        await connection.ExecuteAsync(File.ReadAllText(migrationScript), commandTimeout: _timeoutSec).ConfigureAwait(false);
+        await SetCurrentVersionAsync(connection, Path.GetFileNameWithoutExtension(migrationScript)).ConfigureAwait(false);
+        _logger.LogDebug($"Applying the migration script was successful. Set current version to {Path.GetFileNameWithoutExtension(migrationScript)}.");
+
+        if (Path.GetFileName(migrationScript) == "012_ftJournalFRCopyPayload.sqlite")
         {
-            var migrationDir = _configuration.TryGetValue(MIGRATIONS_CONFIG_KEY, out var value)
-                ? value.ToString()
-                : Path.Combine(typeof(DatabaseMigrator).Assembly.GetDirectoryPath(), MIGRATION_DIR);
-
-            using var connection = _connectionFactory.GetNewConnection(_connectionString);
-
-            if (await IsLegacyDatabaseAsync(connection))
-            {
-                _logger.LogWarning("Legacy database detected. Migrating...");
-                await MigrateLegacyDatabaseAsync(connection, migrationDir);
-                _logger.LogWarning("Migration from legacy database complete.");
-            }
-
-            var migrations = Directory.GetFiles(migrationDir, "*.sqlite3").Where(x => !x.EndsWith(".legacy.sqlite3")).OrderBy(x => x);
-            _logger.LogDebug($"Found {migrations.Count()} migration files.");
-
-            var currentVersion = await GetCurrentVersionAsync(connection).ConfigureAwait(false);
-            var notAppliedMigrations = migrations.Where(x => string.Compare(Path.GetFileNameWithoutExtension(x), currentVersion, true) > 0);
-
-            if (notAppliedMigrations.Any())
-            {
-                _logger.LogInformation($"{notAppliedMigrations.Count()} pending database updates were detected. Updating database now.");
-            }
-            foreach (var migrationScript in notAppliedMigrations)
-            {
-                _logger.LogDebug($"Updating database with migration script {migrationScript}..");
-                await connection.ExecuteAsync(File.ReadAllText(migrationScript), commandTimeout: _timeoutSec).ConfigureAwait(false);
-                await SetCurrentVersionAsync(connection, Path.GetFileNameWithoutExtension(migrationScript)).ConfigureAwait(false);
-                _logger.LogDebug($"Applying the migration script was successful. Set current version to {Path.GetFileNameWithoutExtension(migrationScript)}.");
-            }
+            appliedMigrations.Add(BaseStorageBootStrapper.Migrations.JournalFRCopyPayload);
         }
+    }
+
+    return appliedMigrations;
+}
+
         
         private async Task<bool> IsLegacyDatabaseAsync(IDbConnection connection)
         {

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts.Data;
@@ -54,7 +55,8 @@ namespace fiskaltrust.Middleware.Storage.SQLite
             _sqliteFile = Path.Combine(configuration["servicefolder"].ToString(), $"{queueId}.sqlite");
             _connectionFactory = new SqliteConnectionFactory();
             var databaseMigrator = new DatabaseMigrator(_connectionFactory, _sqliteStorageConfiguration.MigrationsTimeoutSec, _sqliteFile, _configuration, logger);
-            await databaseMigrator.MigrateAsync().ConfigureAwait(false);
+
+            var appliedMigrations = await databaseMigrator.MigrateAsync().ConfigureAwait(false);
             await databaseMigrator.SetWALMode().ConfigureAwait(false);
 
             _configurationRepository = new SQLiteConfigurationRepository(_connectionFactory, _sqliteFile);
@@ -64,12 +66,15 @@ namespace fiskaltrust.Middleware.Storage.SQLite
             await PersistMasterDataAsync(baseStorageConfig, _configurationRepository,
                 new SQLiteAccountMasterDataRepository(_connectionFactory, _sqliteFile), new SQLiteOutletMasterDataRepository(_connectionFactory, _sqliteFile),
                 new SQLiteAgencyMasterDataRepository(_connectionFactory, _sqliteFile), new SQLitePosSystemMasterDataRepository(_connectionFactory, _sqliteFile)).ConfigureAwait(false);
-            
+
             var journalFRCopyPayloadRepository = new SQLiteJournalFRCopyPayloadRepository(_connectionFactory, _sqliteFile);
             var journalFRRepository = new SQLiteJournalFRRepository(_connectionFactory, _sqliteFile);
 
-            await PersistMigrationDataAsync(journalFRCopyPayloadRepository, journalFRRepository).ConfigureAwait(false);
-            
+            if (appliedMigrations.Contains(Migrations.JournalFRCopyPayload))
+            {
+                await PerformMigrationInitialization(appliedMigrations, journalFRCopyPayloadRepository, journalFRRepository).ConfigureAwait(false);
+            }
+
             await PersistConfigurationAsync(baseStorageConfig, _configurationRepository, logger).ConfigureAwait(false);
         }
 
