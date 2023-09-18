@@ -86,7 +86,7 @@ namespace fiskaltrust.Middleware.Storage.Base
             }
         }
 
-        private async Task PopulateFtJournalFRCopyPayloadTableAsync(IJournalFRCopyPayloadRepository journalFRCopyPayloadRepository, IMiddlewareJournalFRRepository journalFRRepository)
+        protected async Task PopulateFtJournalFRCopyPayloadTableAsync(IJournalFRCopyPayloadRepository journalFRCopyPayloadRepository, IMiddlewareJournalFRRepository journalFRRepository)
         {
             await foreach (var copyJournal in journalFRRepository.GetProcessedCopyReceiptsAsync())
             {
