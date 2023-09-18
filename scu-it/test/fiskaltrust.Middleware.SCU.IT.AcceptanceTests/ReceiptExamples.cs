@@ -669,5 +669,52 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
 """;
             return JsonConvert.DeserializeObject<ReceiptRequest>(receipt);
         }
+
+
+        public static ReceiptRequest FoodBeverage_CashAndVoucher_Discount()
+        {
+            var current_moment = DateTime.UtcNow.ToString("o");
+            var receipt = $$"""
+{
+    "ftCashBoxID": "00000000-0000-0000-0000-000000000000",
+    "ftPosSystemId": "00000000-0000-0000-0000-000000000000",
+    "cbTerminalID": "T2",
+    "cbReceiptReference":"IT-7203",
+    "cbUser": "1",
+    "cbReceiptMoment":"{{current_moment}}",
+    "cbChargeItems":[
+        {
+            "Quantity":2.0,
+            "Amount":221,
+            "UnitPrice": 110.5,
+            "VATRate" : 22,
+            "Description": "TestChargeItem22vat",
+            "ftChargeItemCase":5283848262812434433,
+            "Moment":"{{current_moment}}"
+        },
+        {
+            "Quantity":-1.0,
+            "Amount":-10,
+            "UnitPrice": 10,
+            "VATRate" : 22,
+            "Description": "Discount 22%",
+            "ftChargeItemCase":5283848262812434467,
+            "Moment":"{{current_moment}}"
+        }
+    ],
+    "cbPayItems":[
+            {
+                "Quantity": 1,
+                "Description":"Cash",
+                "ftPayItemCase":5283848262812434433,
+                "Moment":"{{current_moment}}",
+                "Amount" : 211
+            }
+    ], 
+    "ftReceiptCase": 5283848262812434433
+}
+""";
+            return JsonConvert.DeserializeObject<ReceiptRequest>(receipt);
+        }
     }
 }

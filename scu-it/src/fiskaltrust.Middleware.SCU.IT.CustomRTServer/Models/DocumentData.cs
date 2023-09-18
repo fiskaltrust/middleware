@@ -2,6 +2,7 @@
 
 public class DocumentData
 {
+
     public string cashuuid { get; set; } = string.Empty;
     public int doctype { get; set; }
     public string dtime { get; set; } = string.Empty;
@@ -18,7 +19,8 @@ public class DocumentData
     public long referenceClosurenumber { get; set; }
     public long referenceDocnumber { get; set; }
     public string? referenceDtime { get; set; } = null;
-    public string? refSerialNum { get; set; } = string.Empty;
+    public string? refSerialNum { get; set; } = null;
+    public string? refCashUuid { get; set; } = null;
 
     public string? errSignature => null;
     public int? err_number => null;

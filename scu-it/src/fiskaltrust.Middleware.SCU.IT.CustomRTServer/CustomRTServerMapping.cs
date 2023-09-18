@@ -15,13 +15,13 @@ public static class CustomRTServerMapping
         var referenceZNumber = receiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceZNumber)?.Data;
         var referenceDocNumber = receiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceDocumentNumber)?.Data;
         var referenceDateTime = receiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceDocumentMoment)?.Data;
-        string? refSerialNum = null;
+        string? refCashUuid = null;
         if (string.IsNullOrEmpty(referenceZNumber) || string.IsNullOrEmpty(referenceDocNumber) || string.IsNullOrEmpty(referenceDateTime))
         {
             referenceZNumber = "-1";
-            referenceDocNumber =  "-1";
+            referenceDocNumber = "-1";
             referenceDateTime = receiptRequest.cbReceiptMoment.ToString("yyyy-MM-dd HH:mm:ss");
-            refSerialNum = "96SR0000000";
+            refCashUuid = "ND";
         }
 
         var fiscalDocument = new FDocument
@@ -43,7 +43,7 @@ public static class CustomRTServerMapping
                 referenceClosurenumber = long.Parse(referenceZNumber),
                 referenceDocnumber = long.Parse(referenceDocNumber),
                 referenceDtime = DateTime.Parse(referenceDateTime).ToString("yyyy-MM-dd"),
-                refSerialNum = refSerialNum
+                refCashUuid = refCashUuid
             },
             items = GenerateItemDataForReceiptRequest(receiptRequest, queueIdentification.LastZNumber + 1, queueIdentification.LastDocNumber + 1),
             taxs = GenerateTaxDataForReceiptRequest(receiptRequest)
@@ -65,13 +65,13 @@ public static class CustomRTServerMapping
         var referenceZNumber = receiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceZNumber)?.Data;
         var referenceDocNumber = receiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceDocumentNumber)?.Data;
         var referenceDateTime = receiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceDocumentMoment)?.Data;
-        string? refSerialNum = null;
+        string? refCashUuid = null;
         if (string.IsNullOrEmpty(referenceZNumber) || string.IsNullOrEmpty(referenceDocNumber) || string.IsNullOrEmpty(referenceDateTime))
         {
-            referenceZNumber = "-1";
-            referenceDocNumber =  "-1";
+            referenceZNumber = "0";
+            referenceDocNumber = "0";
             referenceDateTime = receiptRequest.cbReceiptMoment.ToString("yyyy-MM-dd HH:mm:ss");
-            refSerialNum = "96SR0000000";
+            refCashUuid = "ND";
         }
 
         var fiscalDocument = new FDocument
@@ -93,7 +93,7 @@ public static class CustomRTServerMapping
                 referenceClosurenumber = long.Parse(referenceZNumber),
                 referenceDocnumber = long.Parse(referenceDocNumber),
                 referenceDtime = referenceDateTime,
-                refSerialNum = refSerialNum
+                refCashUuid = refCashUuid
             },
             items = GenerateItemDataForReceiptRequest(receiptRequest, queueIdentification.LastZNumber + 1, queueIdentification.LastDocNumber + 1),
             taxs = GenerateTaxDataForReceiptRequest(receiptRequest)
@@ -164,19 +164,38 @@ public static class CustomRTServerMapping
         var items = new List<DocumentItemData>();
         foreach (var chargeItem in receiptRequest.cbChargeItems)
         {
-            items.Add(new DocumentItemData
+            if ((chargeItem.ftChargeItemCase & 0x000F_0000) == 0x4_0000)
             {
-                type = GetTypeForChargeItem(chargeItem),
-                description = chargeItem.Description,
-                amount = ConvertToFullAmount(chargeItem.Amount),
-                quantity = ConvertTo1000FullAmount(chargeItem.Quantity),
-                unitprice = ConvertToFullAmount(chargeItem.Amount / chargeItem.Quantity),
-                vatvalue = ConvertToFullAmount(chargeItem.VATRate),
-                paymentid = "",
-                plu = "",
-                department = "",
-                vatcode = GetVatCodeForChargeItemCase(chargeItem.ftChargeItemCase)
-            });
+                items.Add(new DocumentItemData
+                {
+                    type = DocumentItemDataTaypes.OMAGGIO,
+                    description = chargeItem.Description,
+                    amount = ConvertToFullAmount(chargeItem.Amount),
+                    quantity = ConvertTo1000FullAmount(chargeItem.Quantity),
+                    unitprice = ConvertToFullAmount(chargeItem.Amount / chargeItem.Quantity),
+                    vatvalue = ConvertToFullAmount(chargeItem.VATRate),
+                    paymentid = "",
+                    plu = "",
+                    department = "",
+                    vatcode = GetVatCodeForChargeItemCase(chargeItem.ftChargeItemCase)
+                });
+            }
+            else
+            {
+                items.Add(new DocumentItemData
+                {
+                    type = GetTypeForChargeItem(chargeItem),
+                    description = chargeItem.Description,
+                    amount = ConvertToFullAmount(chargeItem.Amount),
+                    quantity = ConvertTo1000FullAmount(chargeItem.Quantity),
+                    unitprice = ConvertToFullAmount(chargeItem.Amount / chargeItem.Quantity),
+                    vatvalue = ConvertToFullAmount(chargeItem.VATRate),
+                    paymentid = "",
+                    plu = "",
+                    department = "",
+                    vatcode = GetVatCodeForChargeItemCase(chargeItem.ftChargeItemCase)
+                });
+            }
         }
         var totalAmount = receiptRequest.cbChargeItems.Sum(x => Math.Abs(x.Amount));
         var vatAmount = receiptRequest.cbChargeItems.Sum(x => Math.Abs(x.VATAmount ?? 0.0m));

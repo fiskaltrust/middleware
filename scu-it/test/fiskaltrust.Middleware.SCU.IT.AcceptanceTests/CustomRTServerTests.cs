@@ -13,7 +13,7 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
         private static readonly Guid _accountid = Guid.Parse("4b95ea47-dbf7-4ba6-bcab-ae46030bc0e9");
 
         //private static readonly Uri _serverUri = new Uri("https://f51f-88-116-45-202.ngrok-free.app/");
-        private static readonly Uri _serverUri = new Uri("https://10.3.13.20");
+        private static readonly Uri _serverUri = new Uri("https://at13-custom-rt-it.fiskaltrust.services/");
         private readonly CustomRTServerConfiguration _config = new CustomRTServerConfiguration
         {
             ServerUrl = _serverUri.ToString(),
@@ -50,7 +50,7 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
                 ReceiptRequest = ReceiptExamples.GetDailyClosing(),
                 ReceiptResponse = _receiptResponse
             });
-            lastZNumber = long.Parse(dailyClosingResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long)SignatureTypesIT.RTZNumber)).Subject.Data);
+            lastZNumber = long.Parse(dailyClosingResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTZNumber)).Subject.Data);
 
             for (var i = 0; i < 100; i++)
             {
@@ -60,15 +60,15 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
                     ReceiptRequest = request,
                     ReceiptResponse = _receiptResponse
                 });
-                result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long)SignatureTypesIT.RTSerialNumber)).Subject.Data.Should().Be(SerialNumber);
+                result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTSerialNumber)).Subject.Data.Should().Be(SerialNumber);
 
-                var zNumber = long.Parse(result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long)SignatureTypesIT.RTZNumber)).Subject.Data);
+                var zNumber = long.Parse(result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTZNumber)).Subject.Data);
                 zNumber.Should().Be(lastZNumber + 1);
-                var docNumber = long.Parse(result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long)SignatureTypesIT.RTDocumentNumber)).Subject.Data);
+                var docNumber = long.Parse(result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentNumber)).Subject.Data);
                 docNumber.Should().Be(lastReceiptNumber + 1);
                 lastReceiptNumber = docNumber;
-                DateTime.Parse(result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long)SignatureTypesIT.RTDocumentMoment)).Subject.Data).Should().BeCloseTo(request.cbReceiptMoment, TimeSpan.FromSeconds(1));
-                result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long)SignatureTypesIT.RTDocumentType)).Subject.Data.Should().Be("POSRECEIPT");
+                DateTime.Parse(result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentMoment)).Subject.Data).Should().BeCloseTo(request.cbReceiptMoment, TimeSpan.FromSeconds(1));
+                result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentType)).Subject.Data.Should().Be("POSRECEIPT");
             }
             await Task.Delay(TimeSpan.FromSeconds(30));
             dailyClosingResult = await itsscd.ProcessReceiptAsync(new ProcessRequest
@@ -76,8 +76,52 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
                 ReceiptRequest = ReceiptExamples.GetDailyClosing(),
                 ReceiptResponse = _receiptResponse
             });
-            var nextZNumber = long.Parse(dailyClosingResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long)SignatureTypesIT.RTZNumber)).Subject.Data);
+            var nextZNumber = long.Parse(dailyClosingResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTZNumber)).Subject.Data);
             nextZNumber.Should().Be(lastZNumber + 1);
+        }
+
+        [Fact]
+        public async Task ProcessPosReceipt_0x4954_2000_0000_0001_TakeAway_Delivery_Cash_Refund_WithoutReferencesfs()
+        {
+            var response = _receiptResponse;
+            var itsscd = GetSUT();
+
+            var refundResult = await itsscd.ProcessReceiptAsync(new ProcessRequest
+            {
+                ReceiptRequest = ReceiptExamples.GetTakeAway_Delivery_Refund(),
+                ReceiptResponse = response
+            });
+            using var scope = new AssertionScope();
+            refundResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTSerialNumber));
+            refundResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTZNumber));
+            refundResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentNumber));
+            refundResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentMoment));
+            refundResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentType));
+            refundResult.ReceiptResponse.ftSignatures.Should().NotContain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTReferenceZNumber));
+            refundResult.ReceiptResponse.ftSignatures.Should().NotContain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentNumber));
+            refundResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentMoment));
+        }
+
+         [Fact]
+        public async Task ProcessPosReceipt_0x4954_2000_0000_0001_TakeAway_Delivery_Cash_Discount()
+        {
+            var response = _receiptResponse;
+            var itsscd = GetSUT();
+
+            var refundResult = await itsscd.ProcessReceiptAsync(new ProcessRequest
+            {
+                ReceiptRequest = ReceiptExamples.GetTakeAway_Delivery_Refund(),
+                ReceiptResponse = response
+            });
+            using var scope = new AssertionScope();
+            refundResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTSerialNumber));
+            refundResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTZNumber));
+            refundResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentNumber));
+            refundResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentMoment));
+            refundResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentType));
+            refundResult.ReceiptResponse.ftSignatures.Should().NotContain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTReferenceZNumber));
+            refundResult.ReceiptResponse.ftSignatures.Should().NotContain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentNumber));
+            refundResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentMoment));
         }
     }
 }
