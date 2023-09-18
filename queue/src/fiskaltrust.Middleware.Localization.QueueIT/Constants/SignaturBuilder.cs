@@ -82,7 +82,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Constants
                 stringBuilder.AppendLine("emesso per RESO MERCE");
                 if (string.IsNullOrEmpty(referenceZNumberString) || string.IsNullOrEmpty(referenceDocNumberString))
                 {
-                    stringBuilder.AppendLine($"POS del {DateTime.Parse(referenceDateTimeString).ToString("dd-MM-yyyy")}");
+                    stringBuilder.AppendLine($"NP del {DateTime.Parse(referenceDateTimeString).ToString("dd-MM-yyyy")}");
                 }
                 else
                 {
@@ -96,7 +96,6 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Constants
                 {
                     stringBuilder.AppendLine($"RT {referencedRT}");
                 }
-                stringBuilder.AppendLine($"Cassa {receiptResponse.ftCashBoxIdentification}");
             }
             else if (docType.ToUpper() == "VOID")
             {
@@ -117,7 +116,6 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Constants
                 {
                     stringBuilder.AppendLine($"RT {referencedRT}");
                 }
-                stringBuilder.AppendLine($"Cassa {receiptResponse.ftCashBoxIdentification}");
             }
             return stringBuilder;
         }
