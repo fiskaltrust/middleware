@@ -116,7 +116,8 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to process request");
-                return await ProcessFailedReceiptRequest(queueIT, queueItem, receiptResponse);
+                receiptResponse.SetReceiptResponseErrored("Failed to process receipt with the following exception message: " + ex.Message);
+                return (receiptResponse, new List<ftActionJournal>());
             }
         }
 
