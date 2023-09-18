@@ -20,7 +20,7 @@ public class DocumentData
     public long referenceDocnumber { get; set; }
     public string? referenceDtime { get; set; } = null;
     public string? refSerialNum { get; set; } = null;
-    public string? refCashUuid { get; set; } = null;
+    public string? referenceCashuuid { get; set; } = null;
 
     public string? errSignature => null;
     public int? err_number => null;

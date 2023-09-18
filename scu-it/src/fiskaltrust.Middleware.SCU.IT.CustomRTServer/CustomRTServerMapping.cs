@@ -42,8 +42,8 @@ public static class CustomRTServerMapping
                 grandTotal = queueIdentification.CurrentGrandTotal,
                 referenceClosurenumber = long.Parse(referenceZNumber),
                 referenceDocnumber = long.Parse(referenceDocNumber),
-                referenceDtime = DateTime.Parse(referenceDateTime).ToString("yyyy-MM-dd"),
-                refCashUuid = refCashUuid
+                referenceDtime = DateTime.Parse(referenceDateTime).ToString("yyyy-MM-dd 00:00:00"),
+                referenceCashuuid = refCashUuid
             },
             items = GenerateItemDataForReceiptRequest(receiptRequest, queueIdentification.LastZNumber + 1, queueIdentification.LastDocNumber + 1),
             taxs = GenerateTaxDataForReceiptRequest(receiptRequest)
@@ -65,7 +65,7 @@ public static class CustomRTServerMapping
         var referenceZNumber = receiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceZNumber)?.Data;
         var referenceDocNumber = receiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceDocumentNumber)?.Data;
         var referenceDateTime = receiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceDocumentMoment)?.Data;
-        string? refCashUuid = null;
+        var refCashUuid = receiptResponse.ftCashBoxIdentification;
         if (string.IsNullOrEmpty(referenceZNumber) || string.IsNullOrEmpty(referenceDocNumber) || string.IsNullOrEmpty(referenceDateTime))
         {
             referenceZNumber = "0";
@@ -92,8 +92,8 @@ public static class CustomRTServerMapping
                 grandTotal = queueIdentification.CurrentGrandTotal,
                 referenceClosurenumber = long.Parse(referenceZNumber),
                 referenceDocnumber = long.Parse(referenceDocNumber),
-                referenceDtime = referenceDateTime,
-                refCashUuid = refCashUuid
+                referenceDtime = DateTime.Parse(referenceDateTime).ToString("yyyy-MM-dd 00:00:00"),
+                referenceCashuuid = refCashUuid
             },
             items = GenerateItemDataForReceiptRequest(receiptRequest, queueIdentification.LastZNumber + 1, queueIdentification.LastDocNumber + 1),
             taxs = GenerateTaxDataForReceiptRequest(receiptRequest)
