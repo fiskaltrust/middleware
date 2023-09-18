@@ -10,6 +10,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer
         public string Password { get; set; } = string.Empty;
         public bool SendReceiptsSync { get; set; }
         public bool DisabelSSLValidation { get; set; }
+        public string? ServiceFolder { get; set; }
     }
 
     public class AccountMasterData
@@ -18,16 +19,16 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer
 
         public string? AccountName { get; set; }
 
-        public string? Street { get; set; } 
+        public string? Street { get; set; }
 
         public string? Zip { get; set; }
 
-        public string? City { get; set; } 
+        public string? City { get; set; }
 
-        public string? Country { get; set; } 
+        public string? Country { get; set; }
 
-        public string? TaxId { get; set; } 
+        public string? TaxId { get; set; }
 
-        public string? VatId { get; set; } 
+        public string? VatId { get; set; }
     }
 }

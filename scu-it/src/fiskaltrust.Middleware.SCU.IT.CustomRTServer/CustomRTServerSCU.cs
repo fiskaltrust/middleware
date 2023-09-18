@@ -8,28 +8,39 @@ using fiskaltrust.ifPOS.v1;
 using System.Linq;
 using Newtonsoft.Json;
 using fiskaltrust.Middleware.SCU.IT.CustomRTServer.Models;
-using System.Xml.Linq;
+using System.IO;
 
 namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer;
 
 public sealed class CustomRTServerSCU : LegacySCU
 {
+    private readonly Guid _id;
 #pragma warning disable IDE0052 // Remove unread private members
     private readonly ILogger<CustomRTServerSCU> _logger;
 #pragma warning restore IDE0052 // Remove unread private members
     private readonly CustomRTServerClient _client;
     private readonly CustomRTServerCommunicationQueue _customRTServerCommunicationQueue;
     private readonly AccountMasterData? _accountMasterData;
-    private readonly Dictionary<Guid, QueueIdentification> CashUUIdMappings = new Dictionary<Guid, QueueIdentification>();
+    private Dictionary<Guid, QueueIdentification> CashUUIdMappings = new Dictionary<Guid, QueueIdentification>();
+    private readonly string? _scuCacheFolder;
 
-    public CustomRTServerSCU(ILogger<CustomRTServerSCU> logger, CustomRTServerConfiguration configuration, CustomRTServerClient client, CustomRTServerCommunicationQueue customRTServerCommunicationQueue)
+    private string _stateCacheFilePath => Path.Combine(_scuCacheFolder, $"{_id}_customrtserver_statecache.json");
+
+    public CustomRTServerSCU(Guid id, ILogger<CustomRTServerSCU> logger, CustomRTServerConfiguration configuration, CustomRTServerClient client, CustomRTServerCommunicationQueue customRTServerCommunicationQueue)
     {
+        _id = id;
         _logger = logger;
         _client = client;
         _customRTServerCommunicationQueue = customRTServerCommunicationQueue;
         if (!string.IsNullOrEmpty(configuration.AccountMasterData))
         {
             _accountMasterData = JsonConvert.DeserializeObject<AccountMasterData>(configuration.AccountMasterData);
+        }
+
+        _scuCacheFolder = configuration.ServiceFolder;
+        if (string.IsNullOrEmpty(_scuCacheFolder))
+        {
+            _scuCacheFolder = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
         }
     }
 
@@ -113,7 +124,7 @@ public sealed class CustomRTServerSCU : LegacySCU
         var cashuuid = CashUUIdMappings[Guid.Parse(receiptResponse.ftQueueID)];
         if (cashuuid.CashStatus == "0")
         {
-            await OpenNewdayAsync(receiptRequest, receiptResponse, cashuuid.CashUuId);
+            await OpenNewdayAsync(receiptRequest, receiptResponse);
         }
         return SignatureFactory.CreateInitialOperationSignatures().ToList();
     }
@@ -124,19 +135,10 @@ public sealed class CustomRTServerSCU : LegacySCU
         return SignatureFactory.CreateOutOfOperationSignatures().ToList();
     }
 
-    private async Task OpenNewdayAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, string cashUuid)
+    private async Task OpenNewdayAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
     {
-        var dailyOpen = await _client.GetDailyOpenAsync(cashUuid, receiptRequest.cbReceiptMoment);
-        CashUUIdMappings[Guid.Parse(receiptResponse.ftQueueID)] = new QueueIdentification
-        {
-            RTServerSerialNumber = dailyOpen.fiscalBoxId,
-            CashHmacKey = dailyOpen.cashHmacKey,
-            LastZNumber = int.Parse(dailyOpen.numberClosure),
-            LastDocNumber = int.Parse(string.IsNullOrWhiteSpace(dailyOpen.cashLastDocNumber) ? "0" : dailyOpen.cashLastDocNumber),
-            CashUuId = cashUuid,
-            LastSignature = dailyOpen.cashToken,
-            CurrentGrandTotal = int.Parse(string.IsNullOrWhiteSpace(dailyOpen.grandTotalDB) ? "0" : dailyOpen.grandTotalDB),
-        };
+        var dailyOpen = await _client.GetDailyOpenAsync(receiptResponse.ftCashBoxIdentification, receiptRequest.cbReceiptMoment);
+        UpdateCashUUIDMappingsWithDay(receiptResponse, dailyOpen);
     }
 
     private async Task<(List<SignaturItem> signaturItems, string ftStateData)> PerformZeroReceiptOperationAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, string cashUuid)
@@ -144,7 +146,7 @@ public sealed class CustomRTServerSCU : LegacySCU
         var result = await _client.GetDailyStatusAsync(cashUuid);
         if (result.cashStatus == "0")
         {
-            await OpenNewdayAsync(receiptRequest, receiptResponse, cashUuid);
+            await OpenNewdayAsync(receiptRequest, receiptResponse);
             // TODO let's check if we really should auto open a day
         }
         var resultMemStatus = await _client.GetDeviceMemStatusAsync();
@@ -159,6 +161,15 @@ public sealed class CustomRTServerSCU : LegacySCU
 
     private async Task ReloadCashUUID(ReceiptResponse receiptResponse)
     {
+        if (File.Exists(_stateCacheFilePath))
+        {
+            CashUUIdMappings = JsonConvert.DeserializeObject<Dictionary<Guid, QueueIdentification>>(File.ReadAllText(_stateCacheFilePath));
+        }
+        if (CashUUIdMappings.ContainsKey(Guid.Parse(receiptResponse.ftQueueID)))
+        {
+            return;
+        }
+
         var dailyOpen = await _client.GetDailyStatusAsync(receiptResponse.ftCashBoxIdentification);
         CashUUIdMappings[Guid.Parse(receiptResponse.ftQueueID)] = new QueueIdentification
         {
@@ -171,6 +182,23 @@ public sealed class CustomRTServerSCU : LegacySCU
             CurrentGrandTotal = int.Parse(dailyOpen.grandTotalDB),
             CashStatus = dailyOpen.cashStatus
         };
+        File.WriteAllText(_stateCacheFilePath, JsonConvert.SerializeObject(CashUUIdMappings));
+    }
+
+    private void UpdateCashUUIDMappingsWithDay(ReceiptResponse receiptResponse, GetDailyOpenResponse dailyOpen)
+    {
+        CashUUIdMappings[Guid.Parse(receiptResponse.ftQueueID)] = new QueueIdentification
+        {
+            RTServerSerialNumber = dailyOpen.fiscalBoxId,
+            CashHmacKey = dailyOpen.cashHmacKey,
+            LastZNumber = int.Parse(dailyOpen.numberClosure),
+            LastDocNumber = int.Parse(string.IsNullOrWhiteSpace(dailyOpen.cashLastDocNumber) ? "0" : dailyOpen.cashLastDocNumber),
+            CashUuId = receiptResponse.ftCashBoxIdentification,
+            LastSignature = dailyOpen.cashToken,
+            CurrentGrandTotal = int.Parse(string.IsNullOrWhiteSpace(dailyOpen.grandTotalDB) ? "0" : dailyOpen.grandTotalDB),
+            CashStatus = dailyOpen.cashStatus
+        };
+        File.WriteAllText(_stateCacheFilePath, JsonConvert.SerializeObject(CashUUIdMappings));
     }
 
     private void UpdatedCashUUID(ReceiptResponse receiptResponse, DocumentData document, QrCodeData qrCodeData)
@@ -178,6 +206,7 @@ public sealed class CustomRTServerSCU : LegacySCU
         CashUUIdMappings[Guid.Parse(receiptResponse.ftQueueID)].LastDocNumber = document.docnumber;
         CashUUIdMappings[Guid.Parse(receiptResponse.ftQueueID)].LastSignature = qrCodeData.signature;
         CashUUIdMappings[Guid.Parse(receiptResponse.ftQueueID)].CurrentGrandTotal = CashUUIdMappings[Guid.Parse(receiptResponse.ftQueueID)].CurrentGrandTotal + document.amount;
+        File.WriteAllText(_stateCacheFilePath, JsonConvert.SerializeObject(CashUUIdMappings));
     }
 
     private async Task<List<SignaturItem>> ProcessFiscalDocumentAsync(ReceiptResponse receiptResponse, QueueIdentification cashuuid, CommercialDocument commercialDocument, FDocument fiscalDocument)
@@ -224,18 +253,7 @@ public sealed class CustomRTServerSCU : LegacySCU
         var currentZNumber = int.Parse(status.numberClosure) + 1;
         // process left over receipts
         var dailyClosingResponse = await _client.InsertZDocumentAsync(cashuuid.CashUuId, receiptRequest.cbReceiptMoment, currentZNumber, status.grandTotalDB);
-        var dailyOpen = await _client.GetDailyOpenAsync(cashuuid.CashUuId, receiptRequest.cbReceiptMoment);
-        CashUUIdMappings[Guid.Parse(receiptResponse.ftQueueID)] = new QueueIdentification
-        {
-            RTServerSerialNumber = dailyOpen.fiscalBoxId,
-            CashHmacKey = dailyOpen.cashHmacKey,
-            LastZNumber = int.Parse(dailyOpen.numberClosure),
-            LastDocNumber = int.Parse(string.IsNullOrWhiteSpace(dailyOpen.cashLastDocNumber) ? "0" : dailyOpen.cashLastDocNumber),
-            CashUuId = cashuuid.CashUuId,
-            LastSignature = dailyOpen.cashToken,
-            CurrentGrandTotal = int.Parse(string.IsNullOrWhiteSpace(dailyOpen.grandTotalDB) ? "0" : dailyOpen.grandTotalDB),
-            CashStatus = dailyOpen.cashStatus
-        };
+        await OpenNewdayAsync(receiptRequest, receiptResponse);
         warnings.AddRange(dailyClosingResponse.responseSubCode);
         var signatures = SignatureFactory.CreateDailyClosingReceiptSignatures(currentZNumber).ToList();
         if (warnings.Count > 0)

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer
@@ -20,7 +21,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer
                 .AddSingleton(configuration)
                 .AddSingleton<CustomRTServerCommunicationQueue>()
                 .AddScoped<CustomRTServerClient>()
-                .AddScoped<IITSSCD, CustomRTServerSCU>();
+                .AddScoped<IITSSCD>(x => new CustomRTServerSCU(Id, x.GetRequiredService<ILogger<CustomRTServerSCU>>(), x.GetRequiredService<CustomRTServerConfiguration>(), x.GetRequiredService<CustomRTServerClient>(), x.GetRequiredService<CustomRTServerCommunicationQueue>()));
         }
     }
 }
