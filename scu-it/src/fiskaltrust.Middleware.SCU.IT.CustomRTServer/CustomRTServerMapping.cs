@@ -5,6 +5,7 @@ using System.Linq;
 using Newtonsoft.Json;
 using fiskaltrust.Middleware.SCU.IT.Abstraction;
 using fiskaltrust.Middleware.SCU.IT.CustomRTServer.Models;
+using System.Globalization;
 
 namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer;
 
@@ -173,7 +174,7 @@ public static class CustomRTServerMapping
             {
                 items.Add(new DocumentItemData
                 {
-                    type = DocumentItemDataTaypes.OMAGGIO,
+                    type = DocumentItemDataTaypes.VENDITA,
                     description = GenerateChargeItemCaseDescription(chargeItem),
                     amount = ConvertToFull_NonAbsAmount(chargeItem.Amount),
                     quantity = ConvertTo1000FullAmount(chargeItem.Quantity),
@@ -204,11 +205,10 @@ public static class CustomRTServerMapping
         }
         var totalAmount = GetTotalAmount(receiptRequest);
         var vatAmount = receiptRequest.cbChargeItems.Where(x => (x.ftChargeItemCase & 0x000F_0000) != 0x4_0000).Sum(x => Math.Abs(x.VATAmount ?? 0.0m));
-        vatAmount += receiptRequest.cbChargeItems.Where(x => (x.ftChargeItemCase & 0x000F_0000) == 0x4_0000).Sum(x => x.VATAmount ?? 0.0m);
         items.Add(new DocumentItemData
         {
             type = "97",
-            description = $"TOTALE  COMPLESSIVO               {totalAmount.ToString(ITConstants.CurrencyFormatter)}",
+            description = $"TOTALE  COMPLESSIVO               {ConvertToString(totalAmount)}",
             amount = ConvertToFullAmount(totalAmount),
             quantity = ConvertTo1000FullAmount(1),
             unitprice = "",
@@ -220,7 +220,7 @@ public static class CustomRTServerMapping
         items.Add(new DocumentItemData
         {
             type = "97",
-            description = $"DI CUI IVA               {vatAmount.ToString(ITConstants.CurrencyFormatter)}",
+            description = $"DI CUI IVA               {ConvertToString(vatAmount)}",
             amount = ConvertToFullAmount(vatAmount),
             quantity = ConvertTo1000FullAmount(1),
             unitprice = "",
@@ -285,7 +285,7 @@ public static class CustomRTServerMapping
         items.Add(new DocumentItemData
         {
             type = "97",
-            description = $"IMPORTO PAGATO                      {totalAmount.ToString(ITConstants.CurrencyFormatter)}",
+            description = $"IMPORTO PAGATO                      {ConvertToString(totalAmount)}",
             amount = ConvertToFullAmount(totalAmount),
             quantity = "1000",
             unitprice = "",
@@ -380,7 +380,7 @@ public static class CustomRTServerMapping
         return items;
     }
 
-    public static bool IsNonRiscosso(ChargeItem chargeItem) => (chargeItem.ftChargeItemCase & 0x000F_0000) != 0x4_0000;
+    public static bool IsNonRiscosso(ChargeItem chargeItem) => false;
 
     public static string GetVatCodeForChargeItemCase(long chargeItemCase) => chargeItemCase switch
     {
@@ -427,8 +427,16 @@ public static class CustomRTServerMapping
             chargeItemVatRate = $"{nature}*";
         }
         var chargeitemDesc = chargeItem.Description.TruncateLongString(20);
-        var charegItemPrice = chargeItem.Amount.ToString(ITConstants.CurrencyFormatter).PadLeft(14, ' ');
+        var charegItemPrice = ConvertToString(chargeItem.Amount);
         return $"{chargeitemDesc.PadRight(20, ' ')}{chargeItemVatRate.PadLeft(6, ' ')}{charegItemPrice.PadLeft(14, ' ')}";
+    }
+
+    public static string ConvertToString(decimal value)
+    {
+        var info = CultureInfo.InvariantCulture.Clone() as CultureInfo;
+        info.NumberFormat.NumberDecimalSeparator = ",";
+
+        return value.ToString($"F2", info);
     }
 
     public static string TruncateLongString(this string str, int maxLength)

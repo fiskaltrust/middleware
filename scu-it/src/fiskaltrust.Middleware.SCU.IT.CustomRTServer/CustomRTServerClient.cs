@@ -228,12 +228,14 @@ Calling endpoint '{endpoint}' failed with error code {data.responseCode}.
             var data = JsonConvert.DeserializeObject<TResponse>(resultContent);
             if (data.responseCode != 0)
             {
+                #pragma warning disable
                 try
                 {
                     ThrowExceptionForErrorCode(endpoint, data);
                 }
                 catch (Exception ex)
                 {
+                    throw;
                     _logger.LogError(ex, $"Calling endpoint '{endpoint}' failed with error code {data.responseCode}. {data.responseDesc}");
                 }
             }

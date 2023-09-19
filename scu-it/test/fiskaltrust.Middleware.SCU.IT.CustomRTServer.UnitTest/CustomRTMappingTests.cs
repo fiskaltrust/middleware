@@ -93,6 +93,11 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
             var allFiles = Directory.GetFiles("/Users/stefankert/Desktop/Sources/GitHub/middleware/scu-it/test/fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest/ReceiptCases/Sales");
             foreach (var file in allFiles)
             {
+                if(file.EndsWith("_rec.json"))
+                {
+                    continue;
+                }
+
                 var content = File.ReadAllText(file);
                 content = content.Replace("{{current_moment}}", DateTime.UtcNow.ToString("o"));
                 var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(content);
@@ -105,7 +110,8 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
                     CurrentGrandTotal = 1,
                     RTServerSerialNumber = "SSS"
                 });
-                File.WriteAllText(Path.Combine($"/Users/stefankert/Desktop/Sources/GitHub/middleware/scu-it/test/fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest/ReceiptCases/Sales/{Path.GetFileNameWithoutExtension(file)}_rec.json"), JsonConvert.SerializeObject(fiscalDocument, Formatting.Indented));
+                var filePath = Path.Combine($"/Users/stefankert/Desktop/Sources/GitHub/middleware/scu-it/test/fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest/ReceiptCases/Sales/{Path.GetFileNameWithoutExtension(file)}_rec.json");
+                File.WriteAllText(filePath, JsonConvert.SerializeObject(fiscalDocument, Formatting.Indented));
             }
         }
 

@@ -102,7 +102,7 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
             refundResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentMoment));
         }
 
-         [Fact]
+        [Fact]
         public async Task ProcessPosReceipt_0x4954_2000_0000_0001_TakeAway_Delivery_Cash_Discount()
         {
             var response = _receiptResponse;
