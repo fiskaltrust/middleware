@@ -54,85 +54,49 @@ namespace fiskaltrust.Middleware.Storage.SQLite.AcceptanceTest
         {
             DisposeDatabase().Wait();
         }
-        
-        
+
+        private ftJournalFRCopyPayload CreatePayload(string cashBoxId, string siret, string receiptId, string copiedReceiptRef, string certSerial)
+        {
+            return new ftJournalFRCopyPayload
+            {
+                QueueId = Guid.NewGuid(),
+                CashBoxIdentification = cashBoxId,
+                Siret = siret,
+                ReceiptId = receiptId,
+                ReceiptMoment = DateTime.UtcNow,
+                QueueItemId = Guid.NewGuid(),
+                CopiedReceiptReference = copiedReceiptRef,
+                CertificateSerialNumber = certSerial,
+                TimeStamp = DateTime.UtcNow.Ticks
+            };
+        }
+
         [Fact]
         public async Task GetCountOfCopiesAsync_ShouldReturnCorrectNumberOfCopies()
         {
             var repo = await CreateRepository();
 
-            var reference1 = "ref1";
-            var reference2 = "ref2";
-
-            var payload1 = new ftJournalFRCopyPayload
-            {
-                QueueId = Guid.NewGuid(),
-                CashBoxIdentification = "test1",
-                Siret = "12345",
-                ReceiptId = "receipt1",
-                ReceiptMoment = DateTime.UtcNow,
-                QueueItemId = Guid.NewGuid(),
-                CopiedReceiptReference = reference1,
-                CertificateSerialNumber = "cert123",
-                TimeStamp = DateTime.UtcNow.Ticks
-            };
-
-            var payload1b = new ftJournalFRCopyPayload
-            {
-                QueueId = Guid.NewGuid(),
-                CashBoxIdentification = "test1",
-                Siret = "12345",
-                ReceiptId = "receipt1",
-                ReceiptMoment = DateTime.UtcNow,
-                QueueItemId = Guid.NewGuid(),
-                CopiedReceiptReference = reference1,
-                CertificateSerialNumber = "cert123",
-                TimeStamp = DateTime.UtcNow.Ticks
-            };
-
-            var payload2 = new ftJournalFRCopyPayload
-            {
-                QueueId = Guid.NewGuid(),
-                CashBoxIdentification = "test2",
-                Siret = "54321",
-                ReceiptId = "receipt2",
-                ReceiptMoment = DateTime.UtcNow,
-                QueueItemId = Guid.NewGuid(),
-                CopiedReceiptReference = reference2,
-                CertificateSerialNumber = "cert456",
-                TimeStamp = DateTime.UtcNow.Ticks
-            };
+            var payload1 = CreatePayload("test1", "12345", "receipt1", "ref1", "cert123");
+            var payload1b = CreatePayload("test1", "12345", "receipt1", "ref1", "cert123");
+            var payload2 = CreatePayload("test2", "54321", "receipt2", "ref2", "cert456");
 
             await repo.InsertAsync(payload1);
             await repo.InsertAsync(payload1b);
             await repo.InsertAsync(payload2);
 
-            var countReference1 = await repo.GetCountOfCopiesAsync(reference1);
-            var countReference2 = await repo.GetCountOfCopiesAsync(reference2);
+            var countReference1 = await repo.GetCountOfCopiesAsync("ref1");
+            var countReference2 = await repo.GetCountOfCopiesAsync("ref2");
 
             Assert.Equal(2, countReference1);
             Assert.Equal(1, countReference2);
         }
-        
+
         [Fact]
         public async Task InsertingSameEntityTwice_ShouldThrowException()
         {
             var repo = await CreateRepository();
 
-            var reference1 = "ref1";
-
-            var payload1 = new ftJournalFRCopyPayload
-            {
-                QueueId = Guid.NewGuid(),
-                CashBoxIdentification = "test1",
-                Siret = "12345",
-                ReceiptId = "receipt1",
-                ReceiptMoment = DateTime.UtcNow,
-                QueueItemId = Guid.NewGuid(),
-                CopiedReceiptReference = reference1,
-                CertificateSerialNumber = "cert123",
-                TimeStamp = DateTime.UtcNow.Ticks
-            };
+            var payload1 = CreatePayload("test1", "12345", "receipt1", "ref1", "cert123");
 
             await repo.InsertAsync(payload1);
             
