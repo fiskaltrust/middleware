@@ -113,5 +113,30 @@ namespace fiskaltrust.Middleware.Storage.SQLite.AcceptanceTest
             Assert.Equal(2, countReference1);
             Assert.Equal(1, countReference2);
         }
+        
+        [Fact]
+        public async Task InsertingSameEntityTwice_ShouldThrowException()
+        {
+            var repo = await CreateRepository();
+
+            var reference1 = "ref1";
+
+            var payload1 = new ftJournalFRCopyPayload
+            {
+                QueueId = Guid.NewGuid(),
+                CashBoxIdentification = "test1",
+                Siret = "12345",
+                ReceiptId = "receipt1",
+                ReceiptMoment = DateTime.UtcNow,
+                QueueItemId = Guid.NewGuid(),
+                CopiedReceiptReference = reference1,
+                CertificateSerialNumber = "cert123",
+                TimeStamp = DateTime.UtcNow.Ticks
+            };
+
+            await repo.InsertAsync(payload1);
+            
+            await Assert.ThrowsAsync<System.Data.DataException>(() => repo.InsertAsync(payload1));
+        }
     }
 }
