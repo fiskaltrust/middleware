@@ -31,7 +31,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.DailyOperations
 
         public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ExecuteAsync(ftQueue queue, ftQueueIT queueIT, ReceiptRequest request, ReceiptResponse receiptResponse, ftQueueItem queueItem)
         {
-            var signingAvailable = false;
+            bool signingAvailable;
             try
             {
                 var deviceInfo = await _itSSCD.GetRTInfoAsync().ConfigureAwait(false);
@@ -41,6 +41,23 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.DailyOperations
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error on DeviceInfo Request.");
+            }
+
+            try
+            {
+
+                var establishConnection = await _itSSCD.ProcessReceiptAsync(new ProcessRequest
+                {
+                    ReceiptRequest = request,
+                    ReceiptResponse = receiptResponse
+                });
+                signingAvailable = true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to re-establish connection to SCU.");
+                receiptResponse.SetFtStateData(new StateDetail() { FailedReceiptCount = queueIT.SSCDFailCount, FailMoment = queueIT.SSCDFailMoment, SigningDeviceAvailable = false });
+                return (receiptResponse, new List<ftActionJournal>());
             }
 
             if (queueIT.SSCDFailCount == 0)
@@ -56,21 +73,6 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.DailyOperations
                 }
                 _logger.LogInformation(log);
                 receiptResponse.SetFtStateData(new StateDetail() { FailedReceiptCount = queueIT.SSCDFailCount, FailMoment = queueIT.SSCDFailMoment, SigningDeviceAvailable = signingAvailable });
-                return (receiptResponse, new List<ftActionJournal>());
-            }
-            try
-            {
-
-                var establishConnection = await _itSSCD.ProcessReceiptAsync(new ProcessRequest
-                {
-                    ReceiptRequest = request,
-                    ReceiptResponse = receiptResponse
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to re-establish connection to SCU.");
-                receiptResponse.SetFtStateData(new StateDetail() { FailedReceiptCount = queueIT.SSCDFailCount, FailMoment = queueIT.SSCDFailMoment, SigningDeviceAvailable = false });
                 return (receiptResponse, new List<ftActionJournal>());
             }
 
