@@ -22,7 +22,7 @@ public sealed class CustomRTServerSCU : LegacySCU
     private readonly CustomRTServerCommunicationQueue _customRTServerCommunicationQueue;
     private readonly AccountMasterData? _accountMasterData;
     private Dictionary<Guid, QueueIdentification> CashUUIdMappings = new Dictionary<Guid, QueueIdentification>();
-    private readonly string? _scuCacheFolder;
+    private readonly string _scuCacheFolder = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
 
     private string _stateCacheFilePath => Path.Combine(_scuCacheFolder, $"{_id}_customrtserver_statecache.json");
 
@@ -37,7 +37,11 @@ public sealed class CustomRTServerSCU : LegacySCU
             _accountMasterData = JsonConvert.DeserializeObject<AccountMasterData>(configuration.AccountMasterData);
         }
 
-        _scuCacheFolder = configuration.ServiceFolder;
+
+        if (!string.IsNullOrEmpty(configuration.ServiceFolder))
+        {
+            _scuCacheFolder = configuration.ServiceFolder!;
+        }
         if (string.IsNullOrEmpty(_scuCacheFolder))
         {
             _scuCacheFolder = Environment.GetFolderPath(Environment.SpecialFolder.Personal);

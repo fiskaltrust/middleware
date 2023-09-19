@@ -110,7 +110,7 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
 
             var refundResult = await itsscd.ProcessReceiptAsync(new ProcessRequest
             {
-                ReceiptRequest = ReceiptExamples.GetTakeAway_Delivery_Refund(),
+                ReceiptRequest = ReceiptExamples.FoodBeverage_CashAndVoucher_Discount(),
                 ReceiptResponse = response
             });
             using var scope = new AssertionScope();

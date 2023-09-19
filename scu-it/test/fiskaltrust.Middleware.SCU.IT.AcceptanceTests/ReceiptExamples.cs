@@ -678,40 +678,40 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
 {
     "ftCashBoxID": "00000000-0000-0000-0000-000000000000",
     "ftPosSystemId": "00000000-0000-0000-0000-000000000000",
-    "cbTerminalID": "T2",
-    "cbReceiptReference":"IT-7203",
-    "cbUser": "1",
-    "cbReceiptMoment":"{{current_moment}}",
-    "cbChargeItems":[
+    "cbTerminalID": "00010001",
+    "cbReceiptReference": "0001-0002",
+    "cbUser": "user1234",
+    "cbReceiptMoment": "{{current_moment}}",
+    "cbChargeItems": [
         {
-            "Quantity":2.0,
-            "Amount":221,
-            "UnitPrice": 110.5,
-            "VATRate" : 22,
-            "Description": "TestChargeItem22vat",
-            "ftChargeItemCase":5283848262812434433,
-            "Moment":"{{current_moment}}"
+            "Quantity": 1,
+            "Amount": 107,
+            "VATRate": 10,
+            "ftChargeItemCase": 5283883447184523265,
+            "VATAmount": 10.7,
+            "Description": "Food/Beverage - Item VAT 10%",
+            "Moment": "{{current_moment}}"
         },
         {
-            "Quantity":-1.0,
-            "Amount":-10,
-            "UnitPrice": 10,
-            "VATRate" : 22,
-            "Description": "Discount 22%",
-            "ftChargeItemCase":5283848262812434467,
-            "Moment":"{{current_moment}}"
+            "Quantity": -1,
+            "Amount": -107,
+            "VATRate": 10,
+            "VATAmount": -10.7,
+            "ftChargeItemCase": 5283883447184785409,
+            "Description": "Discount/Free item - Food/Beverage - Item VAT 10%",
+            "Moment": "{{current_moment}}"
         }
     ],
-    "cbPayItems":[
-            {
-                "Quantity": 1,
-                "Description":"Cash",
-                "ftPayItemCase":5283848262812434433,
-                "Moment":"{{current_moment}}",
-                "Amount" : 211
-            }
-    ], 
-    "ftReceiptCase": 5283848262812434433
+    "cbPayItems": [
+        {
+            "Quantity": 1,
+            "Description": "Cash",
+            "ftPayItemCase": 5283883447184523265,
+            "Moment": "{{current_moment}}",
+            "Amount": 0
+        }
+    ],
+    "ftReceiptCase": 5283883447184523265
 }
 """;
             return JsonConvert.DeserializeObject<ReceiptRequest>(receipt);

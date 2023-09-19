@@ -24,6 +24,8 @@ public static class CustomRTServerMapping
             refCashUuid = "ND";
         }
 
+        var totalAmount = receiptRequest.cbChargeItems.Sum(x => Math.Abs(x.Amount));
+
         var fiscalDocument = new FDocument
         {
             document = new DocumentData
@@ -33,7 +35,7 @@ public static class CustomRTServerMapping
                 dtime = receiptRequest.cbReceiptMoment.ToString("yyyy-MM-dd HH:mm:ss"),
                 docnumber = queueIdentification.LastDocNumber + 1,
                 docznumber = queueIdentification.LastZNumber + 1,
-                amount = ConvertToFullAmountInt(receiptRequest.cbChargeItems.Sum(x => Math.Abs(x.Amount))),
+                amount = ConvertToFullAmountInt(GetTotalAmount(receiptRequest)),
                 fiscalcode = "",
                 vatcode = "",
                 fiscaloperator = "",
@@ -83,7 +85,7 @@ public static class CustomRTServerMapping
                 dtime = receiptRequest.cbReceiptMoment.ToString("yyyy-MM-dd HH:mm:ss"),
                 docnumber = queueIdentification.LastDocNumber + 1,
                 docznumber = queueIdentification.LastZNumber + 1,
-                amount = ConvertToFullAmountInt(receiptRequest.cbChargeItems.Sum(x => Math.Abs(x.Amount))),
+                amount = ConvertToFullAmountInt(GetTotalAmount(receiptRequest)),
                 fiscalcode = "",
                 vatcode = "",
                 fiscaloperator = "",
@@ -106,7 +108,8 @@ public static class CustomRTServerMapping
             qrData = qrCodeData,
         };
 
-
+#pragma warning disable
+        var data = JsonConvert.SerializeObject(fiscalDocument);
         return (commercialDocument, fiscalDocument);
     }
 
@@ -123,7 +126,7 @@ public static class CustomRTServerMapping
                 dtime = receiptRequest.cbReceiptMoment.ToString("yyyy-MM-dd HH:mm:ss"),
                 docnumber = queueIdentification.LastDocNumber + 1,
                 docznumber = queueIdentification.LastZNumber + 1,
-                amount = ConvertToFullAmountInt(receiptRequest.cbChargeItems.Sum(x => Math.Abs(x.Amount))),
+                amount = ConvertToFullAmountInt(GetTotalAmount(receiptRequest)),
                 fiscalcode = "",
                 vatcode = "",
                 fiscaloperator = "",
@@ -145,6 +148,8 @@ public static class CustomRTServerMapping
             qrData = qrCodeData,
         };
 
+#pragma warning disable
+        var data = JsonConvert.SerializeObject(fiscalDocument);
 
         return (commercialDocument, fiscalDocument);
     }
@@ -169,10 +174,10 @@ public static class CustomRTServerMapping
                 items.Add(new DocumentItemData
                 {
                     type = DocumentItemDataTaypes.OMAGGIO,
-                    description = chargeItem.Description,
+                    description = GenerateChargeItemCaseDescription(chargeItem),
                     amount = ConvertToFull_NonAbsAmount(chargeItem.Amount),
-                    quantity = ConvertTo1000_NonAbsFullAmount(chargeItem.Quantity),
-                    unitprice = ConvertToFull_NonAbsAmount(chargeItem.Amount / chargeItem.Quantity),
+                    quantity = ConvertTo1000FullAmount(chargeItem.Quantity),
+                    unitprice = ConvertToFull_NonAbsAmount(chargeItem.Amount / Math.Abs(chargeItem.Quantity)),
                     vatvalue = ConvertToFull_NonAbsAmount(chargeItem.VATRate),
                     paymentid = "",
                     plu = "",
@@ -185,7 +190,7 @@ public static class CustomRTServerMapping
                 items.Add(new DocumentItemData
                 {
                     type = GetTypeForChargeItem(chargeItem),
-                    description = chargeItem.Description,
+                    description = GenerateChargeItemCaseDescription(chargeItem),
                     amount = ConvertToFullAmount(chargeItem.Amount),
                     quantity = ConvertTo1000FullAmount(chargeItem.Quantity),
                     unitprice = ConvertToFullAmount(chargeItem.Amount / chargeItem.Quantity),
@@ -197,12 +202,13 @@ public static class CustomRTServerMapping
                 });
             }
         }
-        var totalAmount = receiptRequest.cbChargeItems.Sum(x => Math.Abs(x.Amount));
-        var vatAmount = receiptRequest.cbChargeItems.Sum(x => Math.Abs(x.VATAmount ?? 0.0m));
+        var totalAmount = GetTotalAmount(receiptRequest);
+        var vatAmount = receiptRequest.cbChargeItems.Where(x => (x.ftChargeItemCase & 0x000F_0000) != 0x4_0000).Sum(x => Math.Abs(x.VATAmount ?? 0.0m));
+        vatAmount += receiptRequest.cbChargeItems.Where(x => (x.ftChargeItemCase & 0x000F_0000) == 0x4_0000).Sum(x => x.VATAmount ?? 0.0m);
         items.Add(new DocumentItemData
         {
             type = "97",
-            description = $"TOTALE  COMPLESSIVO               {totalAmount.ToString(ITConstants.CurrencyFormatter)}",
+            description = $"TOTALE  COMPLESSIVO               {totalAmount.ToString(ITConstants.CurrencyFormatter)}",
             amount = ConvertToFullAmount(totalAmount),
             quantity = ConvertTo1000FullAmount(1),
             unitprice = "",
@@ -214,7 +220,7 @@ public static class CustomRTServerMapping
         items.Add(new DocumentItemData
         {
             type = "97",
-            description = $"DI CUI IVA               {vatAmount.ToString(ITConstants.CurrencyFormatter)}",
+            description = $"DI CUI IVA               {vatAmount.ToString(ITConstants.CurrencyFormatter)}",
             amount = ConvertToFullAmount(vatAmount),
             quantity = ConvertTo1000FullAmount(1),
             unitprice = "",
@@ -223,6 +229,7 @@ public static class CustomRTServerMapping
             plu = "",
             department = ""
         });
+
         foreach (var payitem in receiptRequest.cbPayItems)
         {
             items.Add(new DocumentItemData
@@ -244,7 +251,7 @@ public static class CustomRTServerMapping
             type = DocumentItemDataTaypes.PAGAMENTO,
             description = $"NON RISCOSSO                        0,00",
             amount = "0",
-            quantity = "0",
+            quantity = "1000",
             unitprice = "",
             vatvalue = "",
             paymentid = "",
@@ -256,7 +263,7 @@ public static class CustomRTServerMapping
             type = DocumentItemDataTaypes.PAGAMENTO,
             description = $"RESTO                               0,00",
             amount = "0",
-            quantity = "0",
+            quantity = "1000",
             unitprice = "",
             vatvalue = "",
             paymentid = "",
@@ -268,7 +275,7 @@ public static class CustomRTServerMapping
             type = DocumentItemDataTaypes.PAGAMENTO,
             description = $"SCONTO A PAGARE                     0,00",
             amount = "0",
-            quantity = "0",
+            quantity = "1000",
             unitprice = "",
             vatvalue = "",
             paymentid = "",
@@ -280,7 +287,7 @@ public static class CustomRTServerMapping
             type = "97",
             description = $"IMPORTO PAGATO                      {totalAmount.ToString(ITConstants.CurrencyFormatter)}",
             amount = ConvertToFullAmount(totalAmount),
-            quantity = ConvertTo1000FullAmount(1),
+            quantity = "1000",
             unitprice = "",
             vatvalue = "",
             paymentid = "",
@@ -290,9 +297,9 @@ public static class CustomRTServerMapping
         items.Add(new DocumentItemData
         {
             type = "97",
-            description = $"${receiptRequest.cbReceiptMoment:dd/MM/yyyy HH:mm:ss}       DOC.N.{zNumber.ToString().PadLeft(4, '0')}-{receiptNumber.ToString().PadLeft(4, '0')}",
+            description = $"{receiptRequest.cbReceiptMoment:dd/MM/yyyy HH:mm:ss}       DOC.N.{zNumber.ToString().PadLeft(4, '0')}-{receiptNumber.ToString().PadLeft(4, '0')}",
             amount = ConvertToFullAmount(payedAmount),
-            quantity = ConvertTo1000FullAmount(1),
+            quantity = "1000",
             unitprice = "",
             vatvalue = "",
             paymentid = "",
@@ -300,6 +307,13 @@ public static class CustomRTServerMapping
             department = ""
         });
         return items;
+    }
+
+    private static decimal GetTotalAmount(ReceiptRequest receiptRequest)
+    {
+        var totalAmount = receiptRequest.cbChargeItems.Where(x => (x.ftChargeItemCase & 0x000F_0000) != 0x4_0000).Sum(x => Math.Abs(x.Amount));
+        totalAmount += receiptRequest.cbChargeItems.Where(x => (x.ftChargeItemCase & 0x000F_0000) == 0x4_0000).Sum(x => x.Amount);
+        return totalAmount;
     }
 
     public static string GetTypeForChargeItem(ChargeItem chargeItem) => chargeItem.ftChargeItemCase switch
@@ -330,12 +344,11 @@ public static class CustomRTServerMapping
         _ => DocumentItemPaymentIds.CONTANTE
     };
 
-    public static string ConvertTo1000_NonAbsFullAmount(decimal? value) => ((int) (value ?? 0.0m * 1000)).ToString();
+    public static string ConvertTo1000_NonAbsFullAmount(decimal? value) => ((int) ((value ?? 0.0m) * 1000)).ToString();
 
     public static string ConvertTo1000FullAmount(decimal? value) => ((int) (Math.Abs(value ?? 0.0m) * 1000)).ToString();
 
-
-    public static string ConvertToFull_NonAbsAmount(decimal? value) => ((int) (value ?? 0.0m * 100)).ToString();
+    public static string ConvertToFull_NonAbsAmount(decimal? value) => ((int) ((value ?? 0.0m) * 100)).ToString();
 
     public static string ConvertToFullAmount(decimal? value) => ((int) (Math.Abs(value ?? 0.0m) * 100)).ToString();
 
@@ -344,7 +357,7 @@ public static class CustomRTServerMapping
     public static List<DocumentTaxData> GenerateTaxDataForReceiptRequest(ReceiptRequest receiptRequest)
     {
         var items = new List<DocumentTaxData>();
-        var groupedItems = receiptRequest.cbChargeItems.GroupBy(x => (GetVatCodeForChargeItemCase(x.ftChargeItemCase), x.VATRate));
+        var groupedItems = receiptRequest.cbChargeItems.Where(x => IsTaxable(x)).GroupBy(x => (GetVatCodeForChargeItemCase(x.ftChargeItemCase), x.VATRate));
         foreach (var item in groupedItems)
         {
             items.Add(new DocumentTaxData
@@ -357,6 +370,8 @@ public static class CustomRTServerMapping
         }
         return items;
     }
+
+    public static bool IsTaxable(ChargeItem chargeItem) => (chargeItem.ftChargeItemCase & 0x000F_0000) != 0x4_0000;
 
     public static string GetVatCodeForChargeItemCase(long chargeItemCase) => chargeItemCase switch
     {
@@ -389,4 +404,29 @@ public static class CustomRTServerMapping
         0x4954_2000_0021_0014 => "",
         _ => ""
     };
+
+    public static string GenerateChargeItemCaseDescription(ChargeItem chargeItem)
+    {
+        var chargeItemVatRate = "";
+        if (chargeItem.VATRate > 0)
+        {
+            chargeItemVatRate = $"{chargeItem.VATRate}%";
+        }
+        else
+        {
+            var nature = GetVatCodeForChargeItemCase(chargeItem.ftChargeItemCase);
+            chargeItemVatRate = $"{nature}*";
+        }
+        var chargeitemDesc = chargeItem.Description.TruncateLongString(20);
+        var charegItemPrice = chargeItem.Amount.ToString(ITConstants.CurrencyFormatter).PadLeft(14, ' ');
+        return $"{chargeitemDesc.PadRight(20, ' ')}{chargeItemVatRate.PadLeft(6, ' ')}{charegItemPrice.PadLeft(14, ' ')}";
+    }
+
+    public static string TruncateLongString(this string str, int maxLength)
+    {
+        if (string.IsNullOrEmpty(str))
+            return str;
+
+        return str.Substring(0, Math.Min(str.Length, maxLength));
+    }
 }
