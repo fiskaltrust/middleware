@@ -8,6 +8,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\fiskaltrust.Middleware.Contracts\fiskaltrust.Middleware.Contracts.csproj" />
     <ProjectReference Include="..\..\src\fiskaltrust.Middleware.Storage.Base\fiskaltrust.Middleware.Storage.Base.csproj" />
+    <ProjectReference Include="..\..\src\fiskaltrust.Middleware.Storage.InMemory\fiskaltrust.Middleware.Storage.InMemory.csproj" />
   </ItemGroup>
 
   <ItemGroup>

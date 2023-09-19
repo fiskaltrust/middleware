@@ -7,6 +7,7 @@ using fiskaltrust.Middleware.Contracts.Models.FR;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Contracts.Repositories.FR;
 using fiskaltrust.Middleware.Storage.Base;
+using fiskaltrust.Middleware.Storage.InMemory.Repositories.FR;
 using fiskaltrust.storage.V0;
 using Moq;
 using Xunit;
@@ -45,6 +46,30 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.UnitTest
             await bootstrapper.PopulateFtJournalFRCopyPayloadTableAsync(mockJournalFRCopyPayloadRepository.Object, mockJournalFRRepository.Object);
 
             mockJournalFRCopyPayloadRepository.Verify(repo => repo.InsertAsync(It.IsAny<ftJournalFRCopyPayload>()), Times.Once());
+        }
+        
+        [Fact]
+        public async Task TestInsertionOfCopyPayloadWithPreviousReceiptReference()
+        {
+            var inMemoryJournalFRCopyPayloadRepository = new InMemoryJournalFRCopyPayloadRepository();
+            var mockJournalFRRepository = new Mock<IMiddlewareJournalFRRepository>();
+            var jwt = Convert.ToBase64String(Encoding.UTF8.GetBytes("{}")) + "." +
+                      Convert.ToBase64String(Encoding.UTF8.GetBytes("{\"CopiedReceiptReference\":\"TestValue\"}")) + "." +
+                      Convert.ToBase64String(Encoding.UTF8.GetBytes("{}"));
+            var asyncEnumerableResult = new List<ftJournalFR>
+            {
+                new ftJournalFR { JWT = jwt }
+            }.ToAsyncEnumerable();
+
+            mockJournalFRRepository.Setup(r => r.GetProcessedCopyReceiptsAsync()).Returns(asyncEnumerableResult);
+
+            var bootstrapper = new TestableBaseStorageBootStrapper();
+
+            await bootstrapper.PopulateFtJournalFRCopyPayloadTableAsync(inMemoryJournalFRCopyPayloadRepository, mockJournalFRRepository.Object);
+
+            var count = await inMemoryJournalFRCopyPayloadRepository.GetCountOfCopiesAsync("TestValue"); 
+
+            Assert.Equal(1, count); 
         }
     }
 }
