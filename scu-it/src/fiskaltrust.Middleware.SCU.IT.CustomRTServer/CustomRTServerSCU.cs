@@ -80,7 +80,8 @@ public sealed class CustomRTServerSCU : LegacySCU
 
         if (request.ReceiptRequest.IsZeroReceipt())
         {
-            (var signatures, var stateData) = await PerformZeroReceiptOperationAsync(request.ReceiptRequest, request.ReceiptResponse, request.ReceiptResponse.ftCashBoxIdentification);
+            (var signatures, var stateData, var state) = await PerformZeroReceiptOperationAsync(request.ReceiptRequest, request.ReceiptResponse, request.ReceiptResponse.ftCashBoxIdentification);
+            request.ReceiptResponse.ftState = state;
             return ProcessResponseHelpers.CreateResponse(request.ReceiptResponse, stateData, signatures);
         }
 
@@ -107,7 +108,9 @@ public sealed class CustomRTServerSCU : LegacySCU
 
         if (request.ReceiptRequest.IsDailyClosing())
         {
-            return ProcessResponseHelpers.CreateResponse(request.ReceiptResponse, await PerformDailyCosingAsync(request.ReceiptRequest, request.ReceiptResponse, cashuuid));
+            (var signatures, var state) = await PerformDailyCosingAsync(request.ReceiptRequest, request.ReceiptResponse, cashuuid);
+            request.ReceiptResponse.ftState = state;
+            return ProcessResponseHelpers.CreateResponse(request.ReceiptResponse, signatures);
         }
 
         switch (receiptCase)
@@ -150,22 +153,39 @@ public sealed class CustomRTServerSCU : LegacySCU
         UpdateCashUUIDMappingsWithDay(receiptResponse, dailyOpen);
     }
 
-    private async Task<(List<SignaturItem> signaturItems, string ftStateData)> PerformZeroReceiptOperationAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, string cashUuid)
+    private async Task<(List<SignaturItem> signaturItems, string? ftStateData, long ftState)> PerformZeroReceiptOperationAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, string cashUuid)
     {
-        var result = await _client.GetDailyStatusAsync(cashUuid);
-        if (result.cashStatus == "0")
+        try
         {
-            await OpenNewdayAsync(receiptRequest, receiptResponse);
-            // TODO let's check if we really should auto open a day
+            var result = await _client.GetDailyStatusAsync(cashUuid);
+            if (result.cashStatus == "0")
+            {
+                await OpenNewdayAsync(receiptRequest, receiptResponse);
+                // TODO let's check if we really should auto open a day
+            }
+            var resultMemStatus = await _client.GetDeviceMemStatusAsync();
+            var signatures = SignatureFactory.CreateZeroReceiptSignatures().ToList();
+            var stateData = JsonConvert.SerializeObject(new
+            {
+                DeviceMemStatus = resultMemStatus,
+                DeviceDailyStatus = result
+            });
+            return (signatures, stateData, 0x4954_2000_0000_0000);
         }
-        var resultMemStatus = await _client.GetDeviceMemStatusAsync();
-        var signatures = SignatureFactory.CreateZeroReceiptSignatures().ToList();
-        var stateData = JsonConvert.SerializeObject(new
+        catch (Exception ex)
         {
-            DeviceMemStatus = resultMemStatus,
-            DeviceDailyStatus = result
-        });
-        return (signatures, stateData);
+            _logger.LogWarning(ex, "Faild to call RT Server");
+            return (new List<SignaturItem>
+            {
+                new SignaturItem
+                {
+                    Caption = "rt-server-dailyclosing-warning",
+                    Data = $"{ex}",
+                    ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                    ftSignatureType = 0x4954_2000_0000_2000
+                }
+            }, null, 0x4954_2001_0000_0000);
+        }
     }
 
     private async Task ReloadCashUUID(ReceiptResponse receiptResponse)
@@ -252,13 +272,32 @@ public sealed class CustomRTServerSCU : LegacySCU
         return SignatureFactory.CreateDocumentoCommercialeSignatures(data);
     }
 
-    private async Task<List<SignaturItem>> PerformDailyCosingAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, QueueIdentification cashuuid)
+    private async Task<(List<SignaturItem>, long ftState)> PerformDailyCosingAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, QueueIdentification cashuuid)
     {
         var warnings = new List<string>();
 
+        GetDailyStatusResponse? status;
+        try
+        {
+            status = await _client.GetDailyStatusAsync(cashuuid.CashUuId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Faild to call RT Server");
+            return (new List<SignaturItem>
+            {
+                new SignaturItem
+                {
+                    Caption = "rt-server-dailyclosing-error",
+                    Data = $"{ex}",
+                    ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                    ftSignatureType = 0x4954_2000_0000_3000
+                }
+            }, 0x4954_2001_EEEE_EEEE);
+        }
+
         await _customRTServerCommunicationQueue.ProcessAllReceipts(receiptResponse.ftCashBoxIdentification);
 
-        var status = await _client.GetDailyStatusAsync(cashuuid.CashUuId);
         var currentZNumber = int.Parse(status.numberClosure) + 1;
         // process left over receipts
         var dailyClosingResponse = await _client.InsertZDocumentAsync(cashuuid.CashUuId, receiptRequest.cbReceiptMoment, currentZNumber, status.grandTotalDB);
@@ -275,6 +314,6 @@ public sealed class CustomRTServerSCU : LegacySCU
                 ftSignatureType = 0x4954_2000_0000_2000
             });
         }
-        return signatures;
+        return (signatures, 0x4954_2000_0000_0000);
     }
 }

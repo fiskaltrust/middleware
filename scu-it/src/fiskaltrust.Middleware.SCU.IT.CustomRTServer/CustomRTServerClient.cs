@@ -35,6 +35,7 @@ public class CustomRTServerClient
             _httpClient = new HttpClient(handler)
             {
                 BaseAddress = new Uri(customRTServerConfiguration.ServerUrl),
+                Timeout = TimeSpan.FromMilliseconds(customRTServerConfiguration.RTServerHttpTimeoutInMs)
             };
         }
         else
@@ -42,6 +43,7 @@ public class CustomRTServerClient
             _httpClient = new HttpClient()
             {
                 BaseAddress = new Uri(customRTServerConfiguration.ServerUrl),
+                Timeout = TimeSpan.FromMilliseconds(customRTServerConfiguration.RTServerHttpTimeoutInMs)
             };
         }
 
@@ -235,7 +237,6 @@ Calling endpoint '{endpoint}' failed with error code {data.responseCode}.
                 }
                 catch (Exception ex)
                 {
-                    throw;
                     _logger.LogError(ex, $"Calling endpoint '{endpoint}' failed with error code {data.responseCode}. {data.responseDesc}");
                 }
             }

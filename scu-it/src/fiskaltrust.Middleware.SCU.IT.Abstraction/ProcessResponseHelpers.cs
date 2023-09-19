@@ -6,7 +6,7 @@ namespace fiskaltrust.Middleware.SCU.IT.Abstraction;
 
 public class ProcessResponseHelpers
 {
-    public static ProcessResponse CreateResponse(ReceiptResponse response, string stateData, List<SignaturItem> signaturItems)
+    public static ProcessResponse CreateResponse(ReceiptResponse response, string? stateData, List<SignaturItem> signaturItems)
     {
         if (response.ftSignatures.Length > 0)
         {

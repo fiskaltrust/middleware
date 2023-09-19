@@ -26,11 +26,24 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
         protected IITSSCD GetSUT()
         {
             // Disable SSL checks for the test server
-            System.Net.ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
+            System.Net.ServicePointManager.ServerCertificateValidationCallback = delegate
+            { return true; };
             var serviceCollection = new ServiceCollection();
             serviceCollection.AddLogging();
 
             var sut = GetMiddlewareBootstrapper(_queueId);
+            sut.ConfigureServices(serviceCollection);
+            return serviceCollection.BuildServiceProvider().GetRequiredService<IITSSCD>();
+        }
+
+        protected IITSSCD GetSUT(IMiddlewareBootstrapper sut)
+        {
+            // Disable SSL checks for the test server
+            System.Net.ServicePointManager.ServerCertificateValidationCallback = delegate
+            { return true; };
+            var serviceCollection = new ServiceCollection();
+            serviceCollection.AddLogging();
+
             sut.ConfigureServices(serviceCollection);
             return serviceCollection.BuildServiceProvider().GetRequiredService<IITSSCD>();
         }

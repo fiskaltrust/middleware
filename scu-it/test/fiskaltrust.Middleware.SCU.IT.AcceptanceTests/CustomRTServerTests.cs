@@ -4,6 +4,7 @@ using fiskaltrust.Middleware.SCU.IT.Abstraction;
 using fiskaltrust.Middleware.SCU.IT.CustomRTServer;
 using FluentAssertions;
 using FluentAssertions.Execution;
+using FluentAssertions.Extensions;
 using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
@@ -11,6 +12,7 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
     public class CustomRTServerTests : ITSSCDTests
     {
         private static readonly Guid _accountid = Guid.Parse("4b95ea47-dbf7-4ba6-bcab-ae46030bc0e9");
+        private static readonly Guid _scuId = Guid.Parse("5b95ea47-dbf7-4ba6-bcab-ae46030bc0e9");
 
         //private static readonly Uri _serverUri = new Uri("https://f51f-88-116-45-202.ngrok-free.app/");
         private static readonly Uri _serverUri = new Uri("https://at13-custom-rt-it.fiskaltrust.services/");
@@ -35,6 +37,7 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
             Id = queueId,
             Configuration = JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(_config))
         };
+
 
         [Fact]
         public async Task ProcessPosReceipt_0x4954_2000_0000_0001_TakeAway_Delivery_Cash_MultipleResults()
@@ -122,6 +125,50 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
             refundResult.ReceiptResponse.ftSignatures.Should().NotContain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTReferenceZNumber));
             refundResult.ReceiptResponse.ftSignatures.Should().NotContain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentNumber));
             refundResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentMoment));
+        }
+
+        [Fact]
+        public async Task BrokenConnectionTest_ZeroReceipt()
+        {
+            var response = _receiptResponse;
+            var config = JsonConvert.DeserializeObject<CustomRTServerConfiguration>(JsonConvert.SerializeObject(JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(_config))));
+            config.ServerUrl = "https://10.23.10.222/";
+            config.RTServerHttpTimeoutInMs = 1000;
+            var itsscd = GetSUT(new ScuBootstrapper
+            {
+                Id = _scuId,
+                Configuration = JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(config))
+            });
+
+            Func<Task<ProcessResponse>> method = async () => await itsscd.ProcessReceiptAsync(new ProcessRequest
+            {
+                ReceiptRequest = ReceiptExamples.GetZeroReceipt(),
+                ReceiptResponse = response
+            });
+            var rsult = await method.Should().CompleteWithinAsync(1010.Milliseconds());
+            rsult.Subject.ReceiptResponse.ftState.Should().Be(0x4954_2001_0000_0000);
+        }
+
+        [Fact]
+        public async Task BrokenConnectionTest_DailyClosing()
+        {
+            var response = _receiptResponse;
+            var config = JsonConvert.DeserializeObject<CustomRTServerConfiguration>(JsonConvert.SerializeObject(JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(_config))));
+            config.RTServerHttpTimeoutInMs = 1000;
+            config.ServerUrl = "https://10.23.10.222/";
+            var itsscd = GetSUT(new ScuBootstrapper
+            {
+                Id = _scuId,
+                Configuration = JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(config))
+            });
+
+            Func<Task<ProcessResponse>> method = async () => await itsscd.ProcessReceiptAsync(new ProcessRequest
+            {
+                ReceiptRequest = ReceiptExamples.GetDailyClosing(),
+                ReceiptResponse = response
+            });
+            var rsult = await method.Should().CompleteWithinAsync(1100.Milliseconds());
+            rsult.Subject.ReceiptResponse.ftState.Should().Be(0x4954_2001_EEEE_EEEE);
         }
     }
 }
