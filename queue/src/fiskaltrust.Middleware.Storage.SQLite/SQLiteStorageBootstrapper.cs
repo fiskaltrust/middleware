@@ -70,10 +70,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite
             var journalFRCopyPayloadRepository = new SQLiteJournalFRCopyPayloadRepository(_connectionFactory, _sqliteFile);
             var journalFRRepository = new SQLiteJournalFRRepository(_connectionFactory, _sqliteFile);
 
-            if (appliedMigrations.Contains(Migrations.JournalFRCopyPayload))
-            {
-                await PerformMigrationInitialization(appliedMigrations, journalFRCopyPayloadRepository, journalFRRepository).ConfigureAwait(false);
-            }
+            await PerformMigrationInitialization(appliedMigrations, journalFRCopyPayloadRepository, journalFRRepository).ConfigureAwait(false);
 
             await PersistConfigurationAsync(baseStorageConfig, _configurationRepository, logger).ConfigureAwait(false);
         }
