@@ -1,5 +1,9 @@
-﻿using FluentAssertions;
+﻿using System;
+using System.IO;
+using fiskaltrust.ifPOS.v1;
+using FluentAssertions;
 using FluentAssertions.Execution;
+using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
 {
@@ -80,6 +84,74 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
                    });
                 // RM??
                 // AL?
+            }
+        }
+
+        [Fact]
+        public void Sales()
+        {
+            var allFiles = Directory.GetFiles("/Users/stefankert/Desktop/Sources/GitHub/middleware/scu-it/test/fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest/ReceiptCases/Sales");
+            foreach (var file in allFiles)
+            {
+                var content = File.ReadAllText(file);
+                content = content.Replace("{{current_moment}}", DateTime.UtcNow.ToString("o"));
+                var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(content);
+                var (_, fiscalDocument) = CustomRTServerMapping.GenerateFiscalDocument(receiptRequest , new Models.QueueIdentification {
+                    CashUuId = "ske00003",
+                    CashHmacKey = "123djfjasdfj",
+                    LastDocNumber = 1,
+                    LastZNumber = 1,
+                    LastSignature = "asdf",
+                    CurrentGrandTotal = 1,
+                    RTServerSerialNumber = "SSS"
+                });
+                File.WriteAllText(Path.Combine($"/Users/stefankert/Desktop/Sources/GitHub/middleware/scu-it/test/fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest/ReceiptCases/Sales/{Path.GetFileNameWithoutExtension(file)}_rec.json"), JsonConvert.SerializeObject(fiscalDocument, Formatting.Indented));
+            }
+        }
+
+
+        [Fact]
+        public void Void()
+        {
+            var allFiles = Directory.GetFiles("/Users/stefankert/Desktop/Sources/GitHub/middleware/scu-it/test/fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest/ReceiptCases/Storno");
+            foreach (var file in allFiles)
+            {
+                var content = File.ReadAllText(file);
+                content = content.Replace("{{current_moment}}", DateTime.UtcNow.ToString("o"));
+                var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(content);
+                var (_, fiscalDocument) = CustomRTServerMapping.GenerateFiscalDocument(receiptRequest , new Models.QueueIdentification {
+                    CashUuId = "ske00003",
+                    CashHmacKey = "123djfjasdfj",
+                    LastDocNumber = 1,
+                    LastZNumber = 1,
+                    LastSignature = "asdf",
+                    CurrentGrandTotal = 1,
+                    RTServerSerialNumber = "SSS"
+                });
+                File.WriteAllText(Path.Combine($"/Users/stefankert/Desktop/Sources/GitHub/middleware/scu-it/test/fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest/ReceiptCases/Storno/{Path.GetFileNameWithoutExtension(file)}_rec.json"), JsonConvert.SerializeObject(fiscalDocument, Formatting.Indented));
+            }
+        }
+
+
+        [Fact]
+        public void Refund()
+        {
+            var allFiles = Directory.GetFiles("/Users/stefankert/Desktop/Sources/GitHub/middleware/scu-it/test/fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest/ReceiptCases/Refund");
+            foreach (var file in allFiles)
+            {
+                var content = File.ReadAllText(file);
+                content = content.Replace("{{current_moment}}", DateTime.UtcNow.ToString("o"));
+                var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(content);
+                var (_, fiscalDocument) = CustomRTServerMapping.GenerateFiscalDocument(receiptRequest , new Models.QueueIdentification {
+                    CashUuId = "ske00003",
+                    CashHmacKey = "123djfjasdfj",
+                    LastDocNumber = 1,
+                    LastZNumber = 1,
+                    LastSignature = "asdf",
+                    CurrentGrandTotal = 1,
+                    RTServerSerialNumber = "SSS"
+                });
+                File.WriteAllText(Path.Combine($"/Users/stefankert/Desktop/Sources/GitHub/middleware/scu-it/test/fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest/ReceiptCases/Refund/{Path.GetFileNameWithoutExtension(file)}_rec.json"), JsonConvert.SerializeObject(fiscalDocument, Formatting.Indented));
             }
         }
     }

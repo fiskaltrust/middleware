@@ -62,6 +62,11 @@ public sealed class CustomRTServerSCU : LegacySCU
 
     public override async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request)
     {
+        foreach (var chargeItem in request.ReceiptRequest.cbChargeItems)
+        {
+            chargeItem.VATAmount = chargeItem.Amount - (chargeItem.Amount / (1m + (chargeItem.VATRate / 100m)));
+        }
+
         var receiptCase = request.ReceiptRequest.GetReceiptCase();
         if (request.ReceiptRequest.IsInitialOperationReceipt())
         {
