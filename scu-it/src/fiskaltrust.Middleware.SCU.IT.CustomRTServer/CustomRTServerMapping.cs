@@ -357,21 +357,30 @@ public static class CustomRTServerMapping
     public static List<DocumentTaxData> GenerateTaxDataForReceiptRequest(ReceiptRequest receiptRequest)
     {
         var items = new List<DocumentTaxData>();
-        var groupedItems = receiptRequest.cbChargeItems.Where(x => IsTaxable(x)).GroupBy(x => (GetVatCodeForChargeItemCase(x.ftChargeItemCase), x.VATRate));
+        var groupedItems = receiptRequest.cbChargeItems.Where(x => !IsNonRiscosso(x)).GroupBy(x => (GetVatCodeForChargeItemCase(x.ftChargeItemCase), x.VATRate));
         foreach (var item in groupedItems)
         {
-            items.Add(new DocumentTaxData
+            var nonriscossoitems = receiptRequest.cbChargeItems.Where(x => IsNonRiscosso(x)).GroupBy(x => (GetVatCodeForChargeItemCase(x.ftChargeItemCase), x.VATRate)).Where(x => x.Key == item.Key);
+            var additionalTaxDatas = nonriscossoitems.Select(x => new AdditionalTaxData
+            {
+                type = "5",
+                gross = ConvertToFullAmountInt(x.Sum(y => y.Amount)),
+                vatvalue = ConvertToFullAmountInt(item.Key.VATRate),
+            }).ToList();
+            var taxData = new DocumentTaxData
             {
                 gross = ConvertToFullAmountInt(item.Sum(x => x.Amount)),
                 tax = ConvertToFullAmountInt(item.Sum(x => x.VATAmount ?? 0.0m)),
                 vatvalue = ConvertToFullAmountInt(item.Key.VATRate),
-                vatcode = item.Key.Item1
-            });
+                vatcode = item.Key.Item1,
+                additional_tax_data = additionalTaxDatas
+            };
+            items.Add(taxData);
         }
         return items;
     }
 
-    public static bool IsTaxable(ChargeItem chargeItem) => (chargeItem.ftChargeItemCase & 0x000F_0000) != 0x4_0000;
+    public static bool IsNonRiscosso(ChargeItem chargeItem) => (chargeItem.ftChargeItemCase & 0x000F_0000) != 0x4_0000;
 
     public static string GetVatCodeForChargeItemCase(long chargeItemCase) => chargeItemCase switch
     {

@@ -1,4 +1,6 @@
-﻿namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer;
+﻿using System.Collections.Generic;
+
+namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer;
 
 public class DocumentTaxData
 {
@@ -9,5 +11,5 @@ public class DocumentTaxData
 
     // deprecated
     public string? businesscode { get; set; } 
-    public AdditionalTaxData? additional_tax_data { get; set; }
+    public List<AdditionalTaxData> additional_tax_data { get; set; } = new List<AdditionalTaxData>();
 }

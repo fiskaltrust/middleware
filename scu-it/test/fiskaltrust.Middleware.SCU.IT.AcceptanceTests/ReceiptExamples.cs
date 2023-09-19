@@ -688,7 +688,7 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
             "Amount": 107,
             "VATRate": 10,
             "ftChargeItemCase": 5283883447184523265,
-            "VATAmount": 10.7,
+            "VATAmount": 9.73,
             "Description": "Food/Beverage - Item VAT 10%",
             "Moment": "{{current_moment}}"
         },
@@ -696,7 +696,7 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
             "Quantity": -1,
             "Amount": -107,
             "VATRate": 10,
-            "VATAmount": -10.7,
+            "VATAmount": -9.73,
             "ftChargeItemCase": 5283883447184785409,
             "Description": "Discount/Free item - Food/Beverage - Item VAT 10%",
             "Moment": "{{current_moment}}"
