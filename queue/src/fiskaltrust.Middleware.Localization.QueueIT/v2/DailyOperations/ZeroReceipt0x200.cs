@@ -39,12 +39,16 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.DailyOperations
                     ReceiptRequest = request,
                     ReceiptResponse = receiptResponse
                 });
+                if(establishConnection.ReceiptResponse.ftState == 0x4954_2001_0000_0000)
+                {
+                    return (establishConnection.ReceiptResponse, new List<ftActionJournal>());
+                }
                 signingAvailable = true;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to re-establish connection to SCU.");
-                receiptResponse.SetFtStateData(new StateDetail() { FailedReceiptCount = queueIT.SSCDFailCount, FailMoment = queueIT.SSCDFailMoment, SigningDeviceAvailable = false });
+                receiptResponse.ftState = 0x4954_2000_EEEE_EEEE;
                 return (receiptResponse, new List<ftActionJournal>());
             }
 
