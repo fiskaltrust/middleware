@@ -206,7 +206,7 @@ public static class CustomRTServerMapping
             }
         }
         var totalAmount = GetTotalAmount(receiptRequest);
-        var vatAmount = receiptRequest.cbChargeItems.Where(x => (x.ftChargeItemCase & 0x000F_0000) != 0x4_0000).Sum(x => Math.Abs(x.VATAmount ?? 0.0m));
+        var vatAmount = receiptRequest.cbChargeItems.Sum(x => Math.Abs(x.VATAmount ?? 0.0m));
         items.Add(new DocumentItemData
         {
             type = "97",
@@ -237,12 +237,24 @@ public static class CustomRTServerMapping
             items.Add(new DocumentItemData
             {
                 type = GetTypeForPayItem(payitem),
-                description = payitem.Description,
+                description = GeneratePayItemCaseDescription(payitem),
                 amount = ConvertToFullAmount(payitem.Amount),
                 quantity = ConvertToFullAmount(payitem.Quantity),
                 unitprice = "",
                 vatvalue = "",
                 paymentid = GetPaymentIdForPayItem(payitem),
+                plu = "",
+                department = ""
+            });
+            items.Add(new DocumentItemData
+            {
+                type = DocumentItemDataTaypes.DESCRITTIVA,
+                description = payitem.Description,
+                amount = "0",
+                quantity = "1000",
+                unitprice = "",
+                vatvalue = "",
+                paymentid = "",
                 plu = "",
                 department = ""
             });
@@ -346,6 +358,24 @@ public static class CustomRTServerMapping
         _ => DocumentItemPaymentIds.CONTANTE
     };
 
+    public static string GetDescriptionForPayItem(PayItem payItem) => ((long) payItem.ftPayItemCase & 0xFF) switch
+    {
+        0x00 => "PAGAMENTO CONTANTE",
+        0x01 => "PAGAMENTO CONTANTE",
+        0x02 => "PAGAMENTO CONTANTE",
+        0x03 => "PAGAMENTO CONTANTE",
+        0x04 => "PAGAMENTO ELETTRONICO",
+        0x05 => "PAGAMENTO ELETTRONICO",
+        0x06 => "SCONTO A PAGARE",
+        0x07 => "PAGAMENTO ELETTRONICO",
+        0x08 => "SCONTO A PAGARE",
+        0x09 => "PAGAMENTO ELETTRONICO",
+        0x0A => "PAGAMENTO ELETTRONICO",
+        0x0B => "PAGAMENTO ELETTRONICO",
+        0x0C => "PAGAMENTO CONTANTE",
+        _ => "PAGAMENTO CONTANTE"
+    };
+
     public static string ConvertTo1000_NonAbsFullAmount(decimal? value) => ((int) ((value ?? 0.0m) * 1000)).ToString();
 
     public static string ConvertTo1000FullAmount(decimal? value) => ((int) (Math.Abs(value ?? 0.0m) * 1000)).ToString();
@@ -415,6 +445,15 @@ public static class CustomRTServerMapping
         0x4954_2000_0021_0014 => "",
         _ => ""
     };
+
+
+    public static string GeneratePayItemCaseDescription(PayItem payItem)
+    {
+        var payItemDesc = GetDescriptionForPayItem(payItem);
+        var payItemAmount = ConvertToString(payItem.Amount);
+        var lengthRest = 40 - payItemDesc.Length + payItemAmount.Length;
+        return $"{payItemDesc.PadRight(lengthRest, ' ')}{payItemAmount}";
+    }
 
     public static string GenerateChargeItemCaseDescription(ChargeItem chargeItem)
     {

@@ -45,6 +45,7 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
             var config = JsonConvert.DeserializeObject<CustomRTServerConfiguration>(JsonConvert.SerializeObject(JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(_config))));
             config.SendReceiptsSync = false;
             config.IgnoreRTServerErrors = false;
+            config.RTServerHttpTimeoutInMs = 10;
             var itsscd = GetSUT(new ScuBootstrapper
             {
                 Id = _scuId,
