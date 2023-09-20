@@ -9,9 +9,11 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer
         public string Username { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;
         public bool SendReceiptsSync { get; set; }
+        public bool IgnoreRTServerErrors { get; set; } = true;
         public int RTServerHttpTimeoutInMs { get; set; } = 5000;
         public bool DisabelSSLValidation { get; set; }
         public string? ServiceFolder { get; set; }
+        public string? CacheDirectory { get; set; }
     }
 
     public class AccountMasterData

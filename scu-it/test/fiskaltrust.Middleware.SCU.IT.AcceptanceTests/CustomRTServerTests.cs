@@ -42,7 +42,14 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
         [Fact]
         public async Task ProcessPosReceipt_0x4954_2000_0000_0001_TakeAway_Delivery_Cash_MultipleResults()
         {
-            var itsscd = GetSUT();
+            var config = JsonConvert.DeserializeObject<CustomRTServerConfiguration>(JsonConvert.SerializeObject(JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(_config))));
+            config.SendReceiptsSync = false;
+            config.IgnoreRTServerErrors = false;
+            var itsscd = GetSUT(new ScuBootstrapper
+            {
+                Id = _scuId,
+                Configuration = JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(config))
+            });
             using var scope = new AssertionScope();
 
             var lastZNumber = 0L;

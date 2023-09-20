@@ -240,7 +240,7 @@ public sealed class CustomRTServerSCU : LegacySCU
 
     private async Task<List<SignaturItem>> ProcessFiscalDocumentAsync(ReceiptResponse receiptResponse, QueueIdentification cashuuid, CommercialDocument commercialDocument, FDocument fiscalDocument)
     {
-        await _customRTServerCommunicationQueue.EnqueueDocument(receiptResponse.ftCashBoxIdentification, commercialDocument);
+        await _customRTServerCommunicationQueue.EnqueueDocument(receiptResponse.ftCashBoxIdentification, commercialDocument, fiscalDocument.document.docznumber, fiscalDocument.document.docnumber);
         UpdatedCashUUID(receiptResponse, fiscalDocument.document, commercialDocument.qrData);
         var docType = "";
         if (fiscalDocument.document.doctype == 5)

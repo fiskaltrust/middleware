@@ -1,7 +1,13 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Runtime.ExceptionServices;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer;
 #pragma warning disable
@@ -13,99 +19,129 @@ public class CustomRTServerCommunicationQueue
     private readonly ILogger<CustomRTServerCommunicationQueue> _logger;
     private readonly CustomRTServerConfiguration _customRTServerConfiguration;
 
-    private List<string> _startedUploads = new List<string>();
+    private string _scuCacheFolder;
+    private string _documentsPath;
 
-    public CustomRTServerCommunicationQueue(CustomRTServerClient client, ILogger<CustomRTServerCommunicationQueue> logger, CustomRTServerConfiguration customRTServerConfiguration)
+    private bool _requestCancellation = false;
+    private bool _processingReceipts = false;
+
+    public CustomRTServerCommunicationQueue(Guid id, CustomRTServerClient client, ILogger<CustomRTServerCommunicationQueue> logger, CustomRTServerConfiguration customRTServerConfiguration)
     {
         _client = client;
         _logger = logger;
         _customRTServerConfiguration = customRTServerConfiguration;
+
+        if (!string.IsNullOrEmpty(customRTServerConfiguration.ServiceFolder))
+        {
+            _scuCacheFolder = customRTServerConfiguration.ServiceFolder!;
+        }
+        if (string.IsNullOrEmpty(_scuCacheFolder))
+        {
+            _scuCacheFolder = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
+        }
+
+        _documentsPath = Path.Combine(_scuCacheFolder, "customrtservercache", id.ToString());
+        if (!string.IsNullOrEmpty(customRTServerConfiguration.CacheDirectory))
+        {
+            _documentsPath = customRTServerConfiguration.CacheDirectory;
+        }
+        if (!Directory.Exists(_documentsPath))
+        {
+            Directory.CreateDirectory(_documentsPath);
+        }
+
+        _ = Task.Run(ProcessReceiptsInBackground);
     }
 
-    public async Task EnqueueDocument(string cashuuid, CommercialDocument commercialDocument)
+    public async Task EnqueueDocument(string cashuuid, CommercialDocument commercialDocument, long zRepNumber, long docNumber)
     {
         if (_customRTServerConfiguration.SendReceiptsSync)
         {
             await _client.InsertFiscalDocumentAsync(cashuuid, commercialDocument);
+  
         }
         else
         {
-            if (!_receiptQueue.ContainsKey(cashuuid))
+            if (!Directory.Exists(Path.Combine(_documentsPath, cashuuid)))
             {
-                _receiptQueue[cashuuid] = new List<CommercialDocument>();
+                Directory.CreateDirectory(Path.Combine(_documentsPath, cashuuid));
             }
-
-            _receiptQueue[cashuuid].Add(commercialDocument);
-            if (!_startedUploads.Contains(cashuuid))
-            {
-                Task.Run(() => ProcessReceiptsInBackground(cashuuid));
-                _startedUploads.Add(cashuuid);
-            }
+            File.WriteAllText(Path.Combine(_documentsPath, cashuuid, $"{DateTime.UtcNow.Ticks}__{zRepNumber.ToString().PadLeft(4, '0')}-{docNumber.ToString().PadLeft(4, '0')}_commercialdocument.json"), JsonConvert.SerializeObject(commercialDocument));
         }
     }
 
-    public async Task ProcessReceiptsInBackground(string cashuuid)
+
+    public async Task ProcessReceiptsInBackground()
     {
         while (true)
         {
-            var doneEntries = new List<CommercialDocument>();
+            _processingReceipts = true;
+            if (_requestCancellation)
+            {
+                _processingReceipts = false;
+                return;
+            }
+
             try
             {
-                if (!_receiptQueue.ContainsKey(cashuuid))
+                foreach(var directory in Directory.GetDirectories(_documentsPath))
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(10));
-                    continue;
+                    var cashuuid = Path.GetFileName(directory);
+                    foreach (var document in Directory.GetFiles(directory, "*_commercialdocument.json").OrderBy(x => x))
+                    {
+                        if (_requestCancellation)
+                        {
+                            _processingReceipts = false;
+                            return;
+                        }
+
+                        var fileName = Path.GetFileNameWithoutExtension(document);
+                        await _client.InsertFiscalDocumentAsync(cashuuid, JsonConvert.DeserializeObject<CommercialDocument>(File.ReadAllText(document)));
+                        File.Delete(document);
+                    }
                 }
 
-                if (_receiptQueue[cashuuid].Count == 0)
-                {
-                    await Task.Delay(TimeSpan.FromSeconds(10));
-                    continue;
-                }
-
-                // TODO we need to integrate more persistance   
-                foreach (var receipts in _receiptQueue[cashuuid])
-                {
-                    await _client.InsertFiscalDocumentAsync(cashuuid, receipts);
-                    doneEntries.Add(receipts);
-                }
-                _receiptQueue[cashuuid].Clear();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed tro transmit receipt. ");
+                _logger.LogError(ex, "Failed tro transmit receipt...");
             }
             finally
             {
-                foreach (var item in doneEntries)
-                {
-                    _receiptQueue[cashuuid].Remove(item);
-                }
+                await Task.Delay(2000);
             }
         }
     }
 
     public async Task ProcessAllReceipts(string cashuuid)
     {
-        if (!_receiptQueue.ContainsKey(cashuuid))
+        _requestCancellation = true;
+        while (_processingReceipts)
         {
-            return;
+            await Task.Delay(10);
         }
-
-        while (_receiptQueue[cashuuid].Count != 0)
+        try
         {
-            await Task.Delay(TimeSpan.FromMilliseconds(500));
+            if(!Directory.Exists(Path.Combine(_documentsPath, cashuuid)))
+            {
+                return;
+            }
+
+            foreach (var document in Directory.GetFiles(Path.Combine(_documentsPath, cashuuid), $"*_commercialdocument.json").OrderBy(x => x))
+            {
+                await _client.InsertFiscalDocumentAsync(cashuuid, JsonConvert.DeserializeObject<CommercialDocument>(File.ReadAllText(document)));
+                File.Delete(document);
+            }
         }
-    }
-}
-
-public static class ListExtensions
-{
-    public static IEnumerable<List<T>> SplitList<T>(this List<T> locations, int nSize = 30)
-    {
-        for (int i = 0; i < locations.Count; i += nSize)
+        catch (Exception ex)
         {
-            yield return locations.GetRange(i, Math.Min(nSize, locations.Count - i));
+            _logger.LogError(ex, "Failed tro transmit receipt...");
+            throw;
+        }
+        finally
+        {
+            _requestCancellation = false;
+            Task.Run(() => ProcessReceiptsInBackground());
         }
     }
 }
