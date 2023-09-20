@@ -238,6 +238,10 @@ Calling endpoint '{endpoint}' failed with error code {data.responseCode}.
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, $"Calling endpoint '{endpoint}' failed with error code {data.responseCode}. {data.responseDesc}");
+                    if(!_customRTServerConfiguration.IgnoreRTServerErrors)
+                    {
+                        throw;
+                    }
                 }
             }
             return data;

@@ -19,7 +19,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer
 
             _ = serviceCollection
                 .AddSingleton(configuration)
-                .AddSingleton<CustomRTServerCommunicationQueue>()
+                .AddSingleton(x => new CustomRTServerCommunicationQueue(Id, x.GetRequiredService<CustomRTServerClient>(), x.GetRequiredService<ILogger<CustomRTServerCommunicationQueue>>(), x.GetRequiredService<CustomRTServerConfiguration>()))
                 .AddScoped<CustomRTServerClient>()
                 .AddScoped<IITSSCD>(x => new CustomRTServerSCU(Id, x.GetRequiredService<ILogger<CustomRTServerSCU>>(), x.GetRequiredService<CustomRTServerConfiguration>(), x.GetRequiredService<CustomRTServerClient>(), x.GetRequiredService<CustomRTServerCommunicationQueue>()));
         }

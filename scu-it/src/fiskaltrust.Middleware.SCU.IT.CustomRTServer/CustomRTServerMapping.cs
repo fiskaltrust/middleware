@@ -9,6 +9,8 @@ using System.Globalization;
 
 namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer;
 
+#pragma warning disable
+
 public static class CustomRTServerMapping
 {
     public static (CommercialDocument commercialDocument, FDocument fiscalDocument) CreateAnnuloDocument(ReceiptRequest receiptRequest, QueueIdentification queueIdentification, ReceiptResponse receiptResponse)
