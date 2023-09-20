@@ -2,7 +2,7 @@
   "document": {
     "cashuuid": "ske00003",
     "doctype": 3,
-    "dtime": "2023-09-20 11:26:16",
+    "dtime": "2023-09-20 11:36:15",
     "docnumber": 2,
     "docznumber": 2,
     "amount": 10700,
@@ -25,7 +25,7 @@
   "items": [
     {
       "type": "1",
-      "description": "Return/Refund - Food   10%       -107,00",
+      "description": "Return/Refund - Food   10%        107,00",
       "amount": "10700",
       "quantity": "1000",
       "unitprice": "10700",
@@ -57,8 +57,8 @@
     },
     {
       "type": "97",
-      "description": "DI CUI IVA               -9,73",
-      "amount": "-973",
+      "description": "DI CUI IVA               9,73",
+      "amount": "973",
       "quantity": "1000",
       "unitprice": "",
       "vatvalue": "",
@@ -169,7 +169,7 @@
     },
     {
       "type": "97",
-      "description": "20/09/2023 11:26:16       DOC.N.0002-0002",
+      "description": "20/09/2023 11:36:15       DOC.N.0002-0002",
       "amount": "",
       "quantity": "1000",
       "unitprice": "",
@@ -187,7 +187,7 @@
   "taxs": [
     {
       "gross": 10700,
-      "tax": -973,
+      "tax": 973,
       "vatvalue": 1000,
       "vatcode": "",
       "businesscode": null,

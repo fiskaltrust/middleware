@@ -179,13 +179,13 @@ public static class CustomRTServerMapping
         foreach (var chargeItem in receiptRequest.cbChargeItems)
         {
             var amount = GetGrossAmount(receiptRequest, chargeItem);
-            var vatAmount = GetVATAmount(chargeItem);
+            var vatAmount = GetVATAmount(receiptRequest, chargeItem);
             totalAmount += amount;
             totalVatAmount += vatAmount;
             items.Add(new DocumentItemData
             {
                 type = GetTypeForChargeItem(chargeItem),
-                description = GenerateChargeItemCaseDescription(chargeItem),
+                description = GenerateChargeItemCaseDescription(receiptRequest, chargeItem),
                 amount = ConvertToFullAmount(amount),
                 quantity = ConvertTo1000FullAmount(GetQuantity(chargeItem)),
                 unitprice = ConvertToFullAmount(amount / GetQuantity(chargeItem)),
@@ -383,7 +383,7 @@ public static class CustomRTServerMapping
             var gross = 0.0m;
             foreach (var chargeItem in chargeItems)
             {
-                tax += GetVATAmount(chargeItem);
+                tax += GetVATAmount(receiptRequest, chargeItem);
                 gross += GetGrossAmount(receiptRequest, chargeItem);
             }
 
@@ -440,7 +440,7 @@ public static class CustomRTServerMapping
         return $"{payItemDesc.PadRight(lengthRest, ' ')}{payItemAmount}";
     }
 
-    public static string GenerateChargeItemCaseDescription(ChargeItem chargeItem)
+    public static string GenerateChargeItemCaseDescription(ReceiptRequest receiptRequest, ChargeItem chargeItem)
     {
         var chargeItemVatRate = "";
         if (chargeItem.VATRate > 0)
@@ -453,7 +453,7 @@ public static class CustomRTServerMapping
             chargeItemVatRate = $"{nature}*";
         }
         var chargeitemDesc = chargeItem.Description.TruncateLongString(20);
-        var charegItemPrice = ConvertToString(chargeItem.Amount);
+        var charegItemPrice = ConvertToString(GetGrossAmount(receiptRequest, chargeItem));
         return $"{chargeitemDesc.PadRight(20, ' ')}{chargeItemVatRate.PadLeft(6, ' ')}{charegItemPrice.PadLeft(14, ' ')}";
     }
 
@@ -478,6 +478,8 @@ public static class CustomRTServerMapping
     public static decimal GetPayItemAmount(ReceiptRequest receiptRequest, PayItem payItem) => InverseAmount(receiptRequest, payItem) ? Math.Abs(payItem.Amount) : payItem.Amount;
 
     public static decimal GetGrossAmount(ReceiptRequest receiptRequest, ChargeItem chargeItem) => InverseAmount(receiptRequest, chargeItem) ? Math.Abs(chargeItem.Amount) : chargeItem.Amount;
+
+    public static decimal GetVATAmount(ReceiptRequest receiptRequest, ChargeItem chargeItem) => InverseAmount(receiptRequest, chargeItem) ? Math.Abs(GetVATAmount(chargeItem)) : GetVATAmount(chargeItem);
 
     public static decimal GetVATAmount(ChargeItem chargeItem) => (decimal) (chargeItem.VATAmount.HasValue ? chargeItem.VATAmount : Math.Round((chargeItem.Amount - (chargeItem.Amount / (1m + (chargeItem.VATRate / 100m)))), 2, MidpointRounding.AwayFromZero));
 }

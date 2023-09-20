@@ -2,7 +2,7 @@
   "document": {
     "cashuuid": "ske00003",
     "doctype": 1,
-    "dtime": "2023-09-20 11:26:16",
+    "dtime": "2023-09-20 11:36:15",
     "docnumber": 2,
     "docznumber": 2,
     "amount": 0,
@@ -185,7 +185,7 @@
     },
     {
       "type": "97",
-      "description": "20/09/2023 11:26:16       DOC.N.0002-0002",
+      "description": "20/09/2023 11:36:15       DOC.N.0002-0002",
       "amount": "",
       "quantity": "1000",
       "unitprice": "",
