@@ -10,6 +10,8 @@ using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
+#pragma warning disable
+
 namespace fiskaltrust.Middleware.Localization.QueueIT.v2.DailyOperations
 {
     public class ZeroReceipt0x200 : IReceiptTypeProcessor
@@ -31,7 +33,13 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.DailyOperations
 
         public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ExecuteAsync(ftQueue queue, ftQueueIT queueIT, ReceiptRequest request, ReceiptResponse receiptResponse, ftQueueItem queueItem)
         {
-            bool signingAvailable;
+            if (queueIT.SSCDFailCount != 0)
+            {
+                queueIT.SSCDFailCount = 0;
+                queueIT.SSCDFailMoment = null;
+                queueIT.SSCDFailQueueItemId = null;
+                await _configurationRepository.InsertOrUpdateQueueITAsync(queueIT).ConfigureAwait(false);
+            }
             try
             {
                 var establishConnection = await _itSSCD.ProcessReceiptAsync(new ProcessRequest
@@ -43,7 +51,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.DailyOperations
                 {
                     return (establishConnection.ReceiptResponse, new List<ftActionJournal>());
                 }
-                signingAvailable = true;
+                return (establishConnection.ReceiptResponse, new List<ftActionJournal>());
             }
             catch (Exception ex)
             {
@@ -51,44 +59,6 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.DailyOperations
                 receiptResponse.ftState = 0x4954_2000_EEEE_EEEE;
                 return (receiptResponse, new List<ftActionJournal>());
             }
-
-            if (queueIT.SSCDFailCount == 0)
-            {
-                var log = "Queue has no failed receipts.";
-                if (!signingAvailable)
-                {
-                    log = $"Signing not available. {log}";
-                }
-                else
-                {
-                    log = $"Signing available. {log}";
-                }
-                _logger.LogInformation(log);
-                receiptResponse.SetFtStateData(new StateDetail() { FailedReceiptCount = queueIT.SSCDFailCount, FailMoment = queueIT.SSCDFailMoment, SigningDeviceAvailable = signingAvailable });
-                return (receiptResponse, new List<ftActionJournal>());
-            }
-
-            var fromQueueItem = await _middlewareQueueItemRepository.GetAsync(queueIT.SSCDFailQueueItemId.Value);
-            var fromResponse = JsonConvert.DeserializeObject<ReceiptResponse>(fromQueueItem.response);
-            var fromReceipt = fromResponse.ftReceiptIdentification;
-            receiptResponse.ftSignatures = new List<SignaturItem>().ToArray();
-            queueIT.SSCDFailCount = 0;
-            queueIT.SSCDFailMoment = null;
-            queueIT.SSCDFailQueueItemId = null;
-            await _configurationRepository.InsertOrUpdateQueueITAsync(queueIT).ConfigureAwait(false);
-            _logger.LogInformation($"Successfully closed failed-mode.");
-            return (receiptResponse, new List<ftActionJournal>
-            {
-                new ftActionJournal
-                {
-                    ftActionJournalId = Guid.NewGuid(),
-                    ftQueueId = queueItem.ftQueueId,
-                    ftQueueItemId = queueItem.ftQueueItemId,
-                    Moment = DateTime.UtcNow,
-                    Message = $"QueueItem {queueItem.ftQueueItemId} recovered Queue {queueIT.ftQueueITId} from sscd-failed mode. Closing chain of failed receipts from {fromReceipt} to {receiptResponse.ftReceiptIdentification}.",
-                    Type = $"{ Cases.BASE_STATE | 2:X}"
-                }
-            });
         }
     }
 }
