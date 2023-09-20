@@ -164,7 +164,8 @@ public sealed class CustomRTServerSCU : LegacySCU
             {
                 DeviceMemStatus = resultMemStatus,
                 DeviceDailyStatus = result,
-                DocumentsInCache = _customRTServerCommunicationQueue.GetCountOfDocumentsForInCache(cashUuid)
+                DocumentsInCache = _customRTServerCommunicationQueue.GetCountOfDocumentsForInCache(cashUuid),
+                SigningDeviceAvailable = true
             });
             return (signatures, stateData, 0x4954_2000_0000_0000);
         }
@@ -173,7 +174,8 @@ public sealed class CustomRTServerSCU : LegacySCU
             _logger.LogWarning(ex, "Faild to call RT Server");
             var stateData = JsonConvert.SerializeObject(new
             {
-                DocumentsInCache = _customRTServerCommunicationQueue.GetCountOfDocumentsForInCache(cashUuid)
+                DocumentsInCache = _customRTServerCommunicationQueue.GetCountOfDocumentsForInCache(cashUuid),
+                SigningDeviceAvailable = false
             });
             return (new List<SignaturItem>
             {
@@ -286,7 +288,7 @@ public sealed class CustomRTServerSCU : LegacySCU
         GetDailyStatusResponse? status;
         try
         {
-            status = await _client.GetDailyStatusAsync(cashuuid.CashUuId);
+            status = await _client.GetDailyStatusAsync(receiptResponse.ftCashBoxIdentification);
         }
         catch (Exception ex)
         {
@@ -303,7 +305,7 @@ public sealed class CustomRTServerSCU : LegacySCU
                 new SignaturItem
                 {
                     Caption = "rt-server-dailyclosing-cached-documents",
-                    Data = $"{_customRTServerCommunicationQueue.GetCountOfDocumentsForInCache(cashuuid.CashUuId)}",
+                    Data = $"{_customRTServerCommunicationQueue.GetCountOfDocumentsForInCache(receiptResponse.ftCashBoxIdentification)}",
                     ftSignatureFormat = (long) SignaturItem.Formats.Text,
                     ftSignatureType = 0x4954_2000_0000_1000
                 }
