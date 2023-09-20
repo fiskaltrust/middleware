@@ -32,6 +32,11 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.DailyOperations
                     ReceiptRequest = request,
                     ReceiptResponse = receiptResponse
                 });
+                if (result.ReceiptResponse.HasFailed())
+                {
+                    return (result.ReceiptResponse, new List<ftActionJournal>());
+                }
+
                 var zNumber = result.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTZNumber).Data;
                 receiptResponse.ftReceiptIdentification += $"Z{zNumber.PadLeft(4, '0')}";
                 receiptResponse.ftSignatures = result.ReceiptResponse.ftSignatures;
