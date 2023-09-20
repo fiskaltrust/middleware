@@ -239,7 +239,7 @@ public static class CustomRTServerMapping
             {
                 type = DocumentItemDataTaypes.DESCRITTIVA,
                 description = payitem.Description,
-                amount = "0",
+                amount = ConvertToFullAmount(GetPayItemAmount(receiptRequest, payitem)),
                 quantity = ConvertTo1000FullAmount(1),
                 unitprice = "",
                 vatvalue = "",

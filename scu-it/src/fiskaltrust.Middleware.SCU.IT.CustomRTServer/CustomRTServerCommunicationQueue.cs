@@ -12,9 +12,10 @@ using Newtonsoft.Json;
 namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer;
 #pragma warning disable
 
-public class CustomRTServerCommunicationQueue
+public class CustomRTServerCommunicationQueue : IDisposable
 {
     private readonly Dictionary<string, List<CommercialDocument>> _receiptQueue = new Dictionary<string, List<CommercialDocument>>();
+    private readonly Guid _id;
     private readonly CustomRTServerClient _client;
     private readonly ILogger<CustomRTServerCommunicationQueue> _logger;
     private readonly CustomRTServerConfiguration _customRTServerConfiguration;
@@ -27,6 +28,7 @@ public class CustomRTServerCommunicationQueue
 
     public CustomRTServerCommunicationQueue(Guid id, CustomRTServerClient client, ILogger<CustomRTServerCommunicationQueue> logger, CustomRTServerConfiguration customRTServerConfiguration)
     {
+        _id = id;
         _client = client;
         _logger = logger;
         _customRTServerConfiguration = customRTServerConfiguration;
@@ -162,5 +164,11 @@ public class CustomRTServerCommunicationQueue
             _requestCancellation = false;
             Task.Run(() => ProcessReceiptsInBackground());
         }
+    }
+
+    public void Dispose()
+    {
+        _requestCancellation = true;
+        _logger.LogInformation("Stopping to process receipts in background for scu {scuid}. {amountofdocuments} documents left.", _id, GetCountOfDocumentsForInCache());
     }
 }
