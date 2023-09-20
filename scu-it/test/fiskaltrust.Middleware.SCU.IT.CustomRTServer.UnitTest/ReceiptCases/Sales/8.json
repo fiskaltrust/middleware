@@ -1,0 +1,56 @@
+{
+  "ftCashBoxID": "7e250f35-890e-429a-96ed-34d78b6ff22b",
+  "ftPosSystemId": "bf2a1f54-cebf-4763-8cf6-58e349c037a3",
+  "cbTerminalID": "15",
+  "cbReceiptReference": "1500000067",
+  "cbReceiptMoment": "2023-09-19T13:55:06.336Z",
+  "cbChargeItems": [
+    {
+      "Quantity": 1,
+      "Description": "Tea In Cup",
+      "Amount": 3.5,
+      "VATRate": 10,
+      "ftChargeItemCase": 5283883447184523265,
+      "ftChargeItemCaseData": "{\"NetAmount\":3.18}",
+      "VATAmount": 0.32,
+      "AccountNumber": "",
+      "CostCenter": "",
+      "ProductGroup": "",
+      "ProductNumber": "3201",
+      "ProductBarcode": "",
+      "Unit": "PCS",
+      "UnitPrice": 3.5
+    },
+    {
+      "Quantity": 1,
+      "Description": "Hot Choc In Cup",
+      "Amount": 0.001,
+      "VATRate": 10,
+      "ftChargeItemCase": 5283883447184523265,
+      "ftChargeItemCaseData": "{\"NetAmount\":0.0}",
+      "VATAmount": 0.001,
+      "AccountNumber": "",
+      "CostCenter": "",
+      "ProductGroup": "",
+      "ProductNumber": "3202",
+      "ProductBarcode": "",
+      "Unit": "PCS",
+      "UnitPrice": 0.001
+    }
+  ],
+  "cbPayItems": [
+    {
+      "Quantity": 1,
+      "Description": "Contanti",
+      "Amount": 3.5,
+      "ftPayItemCase": 5283883447184523269,
+      "ftPayItemCaseData": "",
+      "AccountNumber": "",
+      "CostCenter": "",
+      "MoneyGroup": "",
+      "MoneyNumber": ""
+    }
+  ],
+  "ftReceiptCase": 5283883447184523265,
+  "cbReceiptAmount": 0
+}
