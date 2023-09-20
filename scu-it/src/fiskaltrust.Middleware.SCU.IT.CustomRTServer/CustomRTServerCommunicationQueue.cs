@@ -129,7 +129,7 @@ public class CustomRTServerCommunicationQueue
         {
             return 0;
         }
-        return Directory.GetFiles(Path.Combine(_documentsPath, cashuuid), $"*_commercialdocument.json").Length;
+        return Directory.GetFiles(Path.Combine(_documentsPath, cashuuid), $"*_commercialdocument.json")?.Length ?? 0;
     }
 
     public async Task ProcessAllReceipts(string cashuuid)
