@@ -18,7 +18,7 @@ public static class CustomRTServerMapping
         var referenceZNumber = receiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceZNumber)?.Data;
         var referenceDocNumber = receiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceDocumentNumber)?.Data;
         var referenceDateTime = receiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceDocumentMoment)?.Data;
-        string? refCashUuid = null;
+        string? refCashUuid = receiptResponse.ftCashBoxIdentification;
         if (string.IsNullOrEmpty(referenceZNumber) || string.IsNullOrEmpty(referenceDocNumber) || string.IsNullOrEmpty(referenceDateTime))
         {
             referenceZNumber = "-1";
@@ -169,6 +169,8 @@ public static class CustomRTServerMapping
 
     public static bool InverseAmount(ReceiptRequest receiptRequest, ChargeItem chargeItem) => receiptRequest.IsRefund() || receiptRequest.IsVoid() || chargeItem.IsRefund() || chargeItem.IsVoid();
 
+    public static bool InverseAmount(ReceiptRequest receiptRequest, PayItem payItem) => receiptRequest.IsRefund() || receiptRequest.IsVoid() || payItem.IsRefund() || payItem.IsVoid();
+
     public static (decimal totalAmount, decimal vatAmount, List<DocumentItemData>) GenerateItemDataForReceiptRequest(ReceiptRequest receiptRequest, long zNumber, long receiptNumber)
     {
         var items = new List<DocumentItemData>();
@@ -225,7 +227,7 @@ public static class CustomRTServerMapping
             {
                 type = GetTypeForPayItem(payitem),
                 description = GeneratePayItemCaseDescription(payitem),
-                amount = ConvertToFullAmount(payitem.Amount),
+                amount = ConvertToFullAmount(GetPayItemAmount(receiptRequest, payitem)),
                 quantity = ConvertTo1000FullAmount(payitem.Quantity),
                 unitprice = "",
                 vatvalue = "",
@@ -246,7 +248,7 @@ public static class CustomRTServerMapping
                 department = ""
             });
         }
-        var payedAmount = receiptRequest.cbPayItems.Sum(x => x.Amount);
+        var payedAmount = receiptRequest.cbPayItems.Sum(x => GetPayItemAmount(receiptRequest, x));
         items.Add(new DocumentItemData
         {
             type = DocumentItemDataTaypes.PAGAMENTO,
@@ -465,6 +467,8 @@ public static class CustomRTServerMapping
     public static decimal GetQuantity(ChargeItem chargeItem) => Math.Abs(chargeItem.Quantity);
 
     public static decimal GetUnitPrice(ChargeItem chargeItem) => Math.Abs(chargeItem.Amount / chargeItem.Quantity);
+
+    public static decimal GetPayItemAmount(ReceiptRequest receiptRequest, PayItem payItem) => InverseAmount(receiptRequest, payItem) ? Math.Abs(payItem.Amount) : payItem.Amount;
 
     public static decimal GetGrossAmount(ReceiptRequest receiptRequest, ChargeItem chargeItem) => InverseAmount(receiptRequest, chargeItem) ? Math.Abs(chargeItem.Amount) : chargeItem.Amount;
 

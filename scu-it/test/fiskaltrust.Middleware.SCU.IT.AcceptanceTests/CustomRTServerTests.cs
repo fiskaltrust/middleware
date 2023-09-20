@@ -27,6 +27,7 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
                 VatId = "MTLFNC75A16E783N"
             }),
             SendReceiptsSync = true,
+            IgnoreRTServerErrors = false,
             DisabelSSLValidation = true
         };
 
