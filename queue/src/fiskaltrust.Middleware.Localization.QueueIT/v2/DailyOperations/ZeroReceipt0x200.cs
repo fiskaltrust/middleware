@@ -34,18 +34,6 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.DailyOperations
             bool signingAvailable;
             try
             {
-                var deviceInfo = await _itSSCD.GetRTInfoAsync().ConfigureAwait(false);
-                _logger.LogDebug(JsonConvert.SerializeObject(deviceInfo));
-                signingAvailable = true;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error on DeviceInfo Request.");
-            }
-
-            try
-            {
-
                 var establishConnection = await _itSSCD.ProcessReceiptAsync(new ProcessRequest
                 {
                     ReceiptRequest = request,
