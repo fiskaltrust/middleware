@@ -62,11 +62,6 @@ public sealed class CustomRTServerSCU : LegacySCU
 
     public override async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request)
     {
-        foreach (var chargeItem in request.ReceiptRequest.cbChargeItems)
-        {
-            chargeItem.VATAmount = chargeItem.Amount - (chargeItem.Amount / (1m + (chargeItem.VATRate / 100m)));
-        }
-
         var receiptCase = request.ReceiptRequest.GetReceiptCase();
         if (request.ReceiptRequest.IsInitialOperationReceipt())
         {
@@ -168,23 +163,35 @@ public sealed class CustomRTServerSCU : LegacySCU
             var stateData = JsonConvert.SerializeObject(new
             {
                 DeviceMemStatus = resultMemStatus,
-                DeviceDailyStatus = result
+                DeviceDailyStatus = result,
+                DocumentsInCache = _customRTServerCommunicationQueue.GetCountOfDocumentsForInCache(cashUuid)
             });
             return (signatures, stateData, 0x4954_2000_0000_0000);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Faild to call RT Server");
+            var stateData = JsonConvert.SerializeObject(new
+            {
+                DocumentsInCache = _customRTServerCommunicationQueue.GetCountOfDocumentsForInCache(cashUuid)
+            });
             return (new List<SignaturItem>
             {
                 new SignaturItem
                 {
-                    Caption = "rt-server-dailyclosing-warning",
+                    Caption = "rt-server-zeroreceipt-warning",
                     Data = $"{ex}",
                     ftSignatureFormat = (long) SignaturItem.Formats.Text,
                     ftSignatureType = 0x4954_2000_0000_2000
+                },
+                new SignaturItem
+                {
+                    Caption = "rt-server-zeroreceipt-cached-documents",
+                    Data = $"{_customRTServerCommunicationQueue.GetCountOfDocumentsForInCache(cashUuid)}",
+                    ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                    ftSignatureType = 0x4954_2000_0000_2000
                 }
-            }, null, 0x4954_2001_0000_0000);
+            }, stateData, 0x4954_2001_0000_0000);
         }
     }
 
@@ -292,6 +299,13 @@ public sealed class CustomRTServerSCU : LegacySCU
                     Data = $"{ex}",
                     ftSignatureFormat = (long) SignaturItem.Formats.Text,
                     ftSignatureType = 0x4954_2000_0000_3000
+                },
+                new SignaturItem
+                {
+                    Caption = "rt-server-dailyclosing-cached-documents",
+                    Data = $"{_customRTServerCommunicationQueue.GetCountOfDocumentsForInCache(cashuuid.CashUuId)}",
+                    ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                    ftSignatureType = 0x4954_2000_0000_1000
                 }
             }, 0x4954_2001_EEEE_EEEE);
         }

@@ -58,7 +58,7 @@ public class CustomRTServerCommunicationQueue
         if (_customRTServerConfiguration.SendReceiptsSync)
         {
             await _client.InsertFiscalDocumentAsync(cashuuid, commercialDocument);
-  
+
         }
         else
         {
@@ -84,7 +84,7 @@ public class CustomRTServerCommunicationQueue
 
             try
             {
-                foreach(var directory in Directory.GetDirectories(_documentsPath))
+                foreach (var directory in Directory.GetDirectories(_documentsPath))
                 {
                     var cashuuid = Path.GetFileName(directory);
                     foreach (var document in Directory.GetFiles(directory, "*_commercialdocument.json").OrderBy(x => x))
@@ -113,6 +113,25 @@ public class CustomRTServerCommunicationQueue
         }
     }
 
+    public long GetCountOfDocumentsForInCache()
+    {
+        var count = 0;
+        foreach (var directory in Directory.GetDirectories(_documentsPath))
+        {
+            count += Directory.GetFiles(directory, $"*_commercialdocument.json").Length;
+        }
+        return count;
+    }
+
+    public long GetCountOfDocumentsForInCache(string cashuuid)
+    {
+        if (!Directory.Exists(Path.Combine(_documentsPath, cashuuid)))
+        {
+            return 0;
+        }
+        return Directory.GetFiles(Path.Combine(_documentsPath, cashuuid), $"*_commercialdocument.json").Length;
+    }
+
     public async Task ProcessAllReceipts(string cashuuid)
     {
         _requestCancellation = true;
@@ -122,7 +141,7 @@ public class CustomRTServerCommunicationQueue
         }
         try
         {
-            if(!Directory.Exists(Path.Combine(_documentsPath, cashuuid)))
+            if (!Directory.Exists(Path.Combine(_documentsPath, cashuuid)))
             {
                 return;
             }

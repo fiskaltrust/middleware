@@ -90,10 +90,10 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
         [Fact]
         public void Sales()
         {
-            var allFiles = Directory.GetFiles("/Users/stefankert/Desktop/Sources/GitHub/middleware/scu-it/test/fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest/ReceiptCases/Sales");
+            var allFiles = Directory.GetFiles("C:\\Users\\Stefan\\Documents\\GitHub\\middleware\\scu-it\\test\\fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest\\ReceiptCases\\Sales");
             foreach (var file in allFiles)
             {
-                if(file.EndsWith("_rec.json"))
+                if (file.EndsWith("_rec.json"))
                 {
                     continue;
                 }
@@ -101,7 +101,14 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
                 var content = File.ReadAllText(file);
                 content = content.Replace("{{current_moment}}", DateTime.UtcNow.ToString("o"));
                 var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(content);
-                var (_, fiscalDocument) = CustomRTServerMapping.GenerateFiscalDocument(receiptRequest , new Models.QueueIdentification {
+
+                foreach (var chargeItem in receiptRequest.cbChargeItems)
+                {
+                    chargeItem.VATAmount = Math.Round(chargeItem.Amount - (chargeItem.Amount / (1m + (chargeItem.VATRate / 100m))), 2, MidpointRounding.AwayFromZero);
+                }
+
+                var (_, fiscalDocument) = CustomRTServerMapping.GenerateFiscalDocument(receiptRequest, new Models.QueueIdentification
+                {
                     CashUuId = "ske00003",
                     CashHmacKey = "123djfjasdfj",
                     LastDocNumber = 1,
@@ -110,7 +117,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
                     CurrentGrandTotal = 1,
                     RTServerSerialNumber = "SSS"
                 });
-                var filePath = Path.Combine($"/Users/stefankert/Desktop/Sources/GitHub/middleware/scu-it/test/fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest/ReceiptCases/Sales/{Path.GetFileNameWithoutExtension(file)}_rec.json");
+                var filePath = Path.Combine($"C:\\Users\\Stefan\\Documents\\GitHub\\middleware\\scu-it\\test\\fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest\\ReceiptCases\\Sales\\{Path.GetFileNameWithoutExtension(file)}_rec.json");
                 File.WriteAllText(filePath, JsonConvert.SerializeObject(fiscalDocument, Formatting.Indented));
             }
         }
@@ -125,7 +132,8 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
                 var content = File.ReadAllText(file);
                 content = content.Replace("{{current_moment}}", DateTime.UtcNow.ToString("o"));
                 var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(content);
-                var (_, fiscalDocument) = CustomRTServerMapping.CreateAnnuloDocument(receiptRequest , new Models.QueueIdentification {
+                var (_, fiscalDocument) = CustomRTServerMapping.CreateAnnuloDocument(receiptRequest, new Models.QueueIdentification
+                {
                     CashUuId = "ske00003",
                     CashHmacKey = "123djfjasdfj",
                     LastDocNumber = 1,
@@ -148,7 +156,8 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
                 var content = File.ReadAllText(file);
                 content = content.Replace("{{current_moment}}", DateTime.UtcNow.ToString("o"));
                 var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(content);
-                var (_, fiscalDocument) = CustomRTServerMapping.CreateResoDocument(receiptRequest , new Models.QueueIdentification {
+                var (_, fiscalDocument) = CustomRTServerMapping.CreateResoDocument(receiptRequest, new Models.QueueIdentification
+                {
                     CashUuId = "ske00003",
                     CashHmacKey = "123djfjasdfj",
                     LastDocNumber = 1,
