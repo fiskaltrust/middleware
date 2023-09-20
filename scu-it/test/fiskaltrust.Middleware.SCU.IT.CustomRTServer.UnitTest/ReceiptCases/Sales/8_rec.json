@@ -106,7 +106,7 @@
     {
       "type": "97",
       "description": "Contanti",
-      "amount": "0",
+      "amount": "350",
       "quantity": "1000",
       "unitprice": "",
       "vatvalue": "",
@@ -186,7 +186,7 @@
     {
       "type": "97",
       "description": "19/09/2023 13:55:06       DOC.N.0002-0002",
-      "amount": "350",
+      "amount": "",
       "quantity": "1000",
       "unitprice": "",
       "vatvalue": "",

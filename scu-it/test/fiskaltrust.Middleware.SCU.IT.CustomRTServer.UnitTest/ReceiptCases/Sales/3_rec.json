@@ -2,7 +2,7 @@
   "document": {
     "cashuuid": "ske00003",
     "doctype": 1,
-    "dtime": "2023-09-20 09:43:31",
+    "dtime": "2023-09-20 11:26:16",
     "docnumber": 2,
     "docznumber": 2,
     "amount": 10700,
@@ -90,7 +90,7 @@
     {
       "type": "97",
       "description": "Card",
-      "amount": "0",
+      "amount": "10700",
       "quantity": "1000",
       "unitprice": "",
       "vatvalue": "",
@@ -169,8 +169,8 @@
     },
     {
       "type": "97",
-      "description": "20/09/2023 09:43:31       DOC.N.0002-0002",
-      "amount": "10700",
+      "description": "20/09/2023 11:26:16       DOC.N.0002-0002",
+      "amount": "",
       "quantity": "1000",
       "unitprice": "",
       "vatvalue": "",

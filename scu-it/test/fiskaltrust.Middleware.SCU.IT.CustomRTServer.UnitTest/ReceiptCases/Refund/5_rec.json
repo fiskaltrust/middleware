@@ -2,7 +2,7 @@
   "document": {
     "cashuuid": "ske00003",
     "doctype": 3,
-    "dtime": "2023-09-20 09:56:40",
+    "dtime": "2023-09-20 11:26:16",
     "docnumber": 2,
     "docznumber": 2,
     "amount": 10700,
@@ -74,7 +74,7 @@
     {
       "type": "5",
       "description": "PAGAMENTO ELETTRONICO     -107,00",
-      "amount": "-10700",
+      "amount": "10700",
       "quantity": "1000",
       "unitprice": "",
       "vatvalue": "",
@@ -90,7 +90,7 @@
     {
       "type": "97",
       "description": "Return/Refund Card",
-      "amount": "0",
+      "amount": "10700",
       "quantity": "1000",
       "unitprice": "",
       "vatvalue": "",
@@ -169,8 +169,8 @@
     },
     {
       "type": "97",
-      "description": "20/09/2023 09:56:40       DOC.N.0002-0002",
-      "amount": "-10700",
+      "description": "20/09/2023 11:26:16       DOC.N.0002-0002",
+      "amount": "",
       "quantity": "1000",
       "unitprice": "",
       "vatvalue": "",

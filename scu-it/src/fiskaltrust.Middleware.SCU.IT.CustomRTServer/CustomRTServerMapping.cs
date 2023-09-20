@@ -188,7 +188,7 @@ public static class CustomRTServerMapping
                 description = GenerateChargeItemCaseDescription(chargeItem),
                 amount = ConvertToFullAmount(amount),
                 quantity = ConvertTo1000FullAmount(GetQuantity(chargeItem)),
-                unitprice = ConvertToFullAmount(GetUnitPrice(chargeItem)),
+                unitprice = ConvertToFullAmount(amount / GetQuantity(chargeItem)),
                 vatvalue = ConvertToFullAmount(chargeItem.VATRate),
                 paymentid = "",
                 plu = "",
@@ -248,7 +248,7 @@ public static class CustomRTServerMapping
                 department = ""
             });
         }
-        var payedAmount = receiptRequest.cbPayItems.Sum(x => GetPayItemAmount(receiptRequest, x));
+        var payedAmount = receiptRequest.cbPayItems.Where(x => !IsScontoAPagare(x)).Sum(x => GetPayItemAmount(receiptRequest, x));
         items.Add(new DocumentItemData
         {
             type = DocumentItemDataTaypes.PAGAMENTO,
@@ -273,23 +273,26 @@ public static class CustomRTServerMapping
             plu = "",
             department = ""
         });
-        items.Add(new DocumentItemData
+        if (receiptRequest.cbPayItems.Count(x => IsScontoAPagare(x)) == 0)
         {
-            type = DocumentItemDataTaypes.PAGAMENTO,
-            description = $"SCONTO A PAGARE                     0,00",
-            amount = "0",
-            quantity = ConvertTo1000FullAmount(1),
-            unitprice = "",
-            vatvalue = "",
-            paymentid = "",
-            plu = "",
-            department = ""
-        });
+            items.Add(new DocumentItemData
+            {
+                type = DocumentItemDataTaypes.PAGAMENTO,
+                description = $"SCONTO A PAGARE                     0,00",
+                amount = "0",
+                quantity = ConvertTo1000FullAmount(1),
+                unitprice = "",
+                vatvalue = "",
+                paymentid = "",
+                plu = "",
+                department = ""
+            });
+        }
         items.Add(new DocumentItemData
         {
             type = "97",
-            description = $"IMPORTO PAGATO                      {ConvertToString(totalAmount)}",
-            amount = ConvertToFullAmount(totalAmount),
+            description = $"IMPORTO PAGATO                      {ConvertToString(payedAmount)}",
+            amount = ConvertToFullAmount(payedAmount),
             quantity = ConvertTo1000FullAmount(1),
             unitprice = "",
             vatvalue = "",
@@ -301,7 +304,7 @@ public static class CustomRTServerMapping
         {
             type = "97",
             description = $"{receiptRequest.cbReceiptMoment:dd/MM/yyyy HH:mm:ss}       DOC.N.{zNumber.ToString().PadLeft(4, '0')}-{receiptNumber.ToString().PadLeft(4, '0')}",
-            amount = ConvertToFullAmount(payedAmount),
+            amount = "",
             quantity = ConvertTo1000FullAmount(1),
             unitprice = "",
             vatvalue = "",
@@ -320,6 +323,12 @@ public static class CustomRTServerMapping
     public static string GetTypeForPayItem(PayItem payItem) => ((long) payItem.ftPayItemCase & 0xFF) switch
     {
         _ => DocumentItemDataTaypes.PAGAMENTO
+    };
+
+    public static bool IsScontoAPagare(PayItem payItem) => ((long) payItem.ftPayItemCase & 0xFF) switch
+    {
+        0x06 => true,
+        _ => false
     };
 
     public static string GetPaymentIdForPayItem(PayItem payItem) => ((long) payItem.ftPayItemCase & 0xFF) switch
@@ -465,8 +474,6 @@ public static class CustomRTServerMapping
     }
 
     public static decimal GetQuantity(ChargeItem chargeItem) => Math.Abs(chargeItem.Quantity);
-
-    public static decimal GetUnitPrice(ChargeItem chargeItem) => Math.Abs(chargeItem.Amount / chargeItem.Quantity);
 
     public static decimal GetPayItemAmount(ReceiptRequest receiptRequest, PayItem payItem) => InverseAmount(receiptRequest, payItem) ? Math.Abs(payItem.Amount) : payItem.Amount;
 
