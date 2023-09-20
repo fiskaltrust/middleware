@@ -27,6 +27,8 @@ public static class ReceiptCaseHelper
 
     public static bool IsVoid(this ReceiptRequest receiptRequest) => (receiptRequest.ftReceiptCase & 0x0000_0000_0004_0000) > 0x0000;
 
+    public static bool IsVoid(this ChargeItem chargeItem) => (chargeItem.ftChargeItemCase & 0x0000_0000_0001_0000) > 0x0000;
+
     public static bool IsHandwritten(this ReceiptRequest receiptRequest) => (receiptRequest.ftReceiptCase & 0x0000_0000_0008_0000) > 0x0000;
 
     public static bool IsSmallBusinessReceipt(this ReceiptRequest receiptRequest) => (receiptRequest.ftReceiptCase & 0x0000_0000_0010_0000) > 0x0000;
@@ -38,6 +40,8 @@ public static class ReceiptCaseHelper
     public static bool IsSalesInForeignCountry(this ReceiptRequest receiptRequest) => (receiptRequest.ftReceiptCase & 0x0000_0000_0080_0000) > 0x0000;
 
     public static bool IsRefund(this ReceiptRequest receiptRequest) => (receiptRequest.ftReceiptCase & 0x0000_0000_0100_0000) > 0x0000;
+
+    public static bool IsRefund(this ChargeItem chargeItem) => (chargeItem.ftChargeItemCase & 0x0000_0000_0002_0000) > 0x0000;
 
     public static bool IsReceiptRequest(this ReceiptRequest receiptRequest) => (receiptRequest.ftReceiptCase & 0x0000_0000_8000_0000) > 0x0000;
     public static Customer? GetCustomer(this ReceiptRequest receiptRequest) => GetValueOrNull<Customer>(receiptRequest?.cbCustomer);

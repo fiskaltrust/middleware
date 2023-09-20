@@ -167,7 +167,7 @@ public static class CustomRTServerMapping
         return qrCode;
     }
 
-    public static bool InverseAmount(ReceiptRequest receiptRequest) => receiptRequest.IsRefund() || receiptRequest.IsVoid();
+    public static bool InverseAmount(ReceiptRequest receiptRequest, ChargeItem chargeItem) => receiptRequest.IsRefund() || receiptRequest.IsVoid() || chargeItem.IsRefund() || chargeItem.IsVoid();
 
     public static (decimal totalAmount, decimal vatAmount, List<DocumentItemData>) GenerateItemDataForReceiptRequest(ReceiptRequest receiptRequest, long zNumber, long receiptNumber)
     {
@@ -466,7 +466,7 @@ public static class CustomRTServerMapping
 
     public static decimal GetUnitPrice(ChargeItem chargeItem) => Math.Abs(chargeItem.Amount / chargeItem.Quantity);
 
-    public static decimal GetGrossAmount(ReceiptRequest receiptRequest, ChargeItem chargeItem) => InverseAmount(receiptRequest) ? Math.Abs(chargeItem.Amount) : chargeItem.Amount;
+    public static decimal GetGrossAmount(ReceiptRequest receiptRequest, ChargeItem chargeItem) => InverseAmount(receiptRequest, chargeItem) ? Math.Abs(chargeItem.Amount) : chargeItem.Amount;
 
     public static decimal GetVATAmount(ChargeItem chargeItem) => (decimal) (chargeItem.VATAmount.HasValue ? chargeItem.VATAmount : Math.Round((chargeItem.Amount - (chargeItem.Amount / (1m + (chargeItem.VATRate / 100m)))), 2, MidpointRounding.AwayFromZero));
 }
