@@ -62,84 +62,140 @@ public sealed class CustomRTServerSCU : LegacySCU
 
     public override async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request)
     {
-        var receiptCase = request.ReceiptRequest.GetReceiptCase();
-        if (request.ReceiptRequest.IsInitialOperationReceipt())
+        try
         {
-            return ProcessResponseHelpers.CreateResponse(request.ReceiptResponse, await PerformInitOperationAsync(request.ReceiptRequest, request.ReceiptResponse));
-        }
+            var receiptCase = request.ReceiptRequest.GetReceiptCase();
+            if (request.ReceiptRequest.IsInitialOperationReceipt())
+            {
+                (var signatures, var state) = await PerformInitOperationAsync(request.ReceiptRequest, request.ReceiptResponse);
+                request.ReceiptResponse.ftState = state;
+                return ProcessResponseHelpers.CreateResponse(request.ReceiptResponse, signatures);
+            }
 
-        if (request.ReceiptRequest.IsOutOfOperationReceipt())
-        {
-            return ProcessResponseHelpers.CreateResponse(request.ReceiptResponse, await PerformOutOfOperationAsync(request.ReceiptResponse));
-        }
+            if (request.ReceiptRequest.IsOutOfOperationReceipt())
+            {
+                (var signatures, var state) = await PerformOutOfOperationAsync(request.ReceiptResponse);
+                request.ReceiptResponse.ftState = state;
+                return ProcessResponseHelpers.CreateResponse(request.ReceiptResponse, signatures);
+            }
 
-        if (request.ReceiptRequest.IsZeroReceipt())
-        {
-            (var signatures, var stateData, var state) = await PerformZeroReceiptOperationAsync(request.ReceiptRequest, request.ReceiptResponse, request.ReceiptResponse.ftCashBoxIdentification);
-            request.ReceiptResponse.ftState = state;
-            return ProcessResponseHelpers.CreateResponse(request.ReceiptResponse, stateData, signatures);
-        }
+            if (request.ReceiptRequest.IsZeroReceipt())
+            {
+                (var signatures, var stateData, var state) = await PerformZeroReceiptOperationAsync(request.ReceiptRequest, request.ReceiptResponse, request.ReceiptResponse.ftCashBoxIdentification);
+                request.ReceiptResponse.ftState = state;
+                return ProcessResponseHelpers.CreateResponse(request.ReceiptResponse, stateData, signatures);
+            }
 
-        if (!CashUUIdMappings.ContainsKey(Guid.Parse(request.ReceiptResponse.ftQueueID)))
-        {
-            await ReloadCashUUID(request.ReceiptResponse);
-        }
+            if (!CashUUIdMappings.ContainsKey(Guid.Parse(request.ReceiptResponse.ftQueueID)))
+            {
+                await ReloadCashUUID(request.ReceiptResponse);
+            }
 
-        var cashuuid = CashUUIdMappings[Guid.Parse(request.ReceiptResponse.ftQueueID)];
+            var cashuuid = CashUUIdMappings[Guid.Parse(request.ReceiptResponse.ftQueueID)];
 
-        if (request.ReceiptRequest.IsVoid())
-        {
-            (var commercialDocument, var fiscalDocument) = CustomRTServerMapping.CreateAnnuloDocument(request.ReceiptRequest, cashuuid, request.ReceiptResponse);
-            var signatures = await ProcessFiscalDocumentAsync(request.ReceiptResponse, cashuuid, commercialDocument, fiscalDocument);
-            return ProcessResponseHelpers.CreateResponse(request.ReceiptResponse, signatures);
-        }
-
-        if (request.ReceiptRequest.IsRefund())
-        {
-            (var commercialDocument, var fiscalDocument) = CustomRTServerMapping.CreateResoDocument(request.ReceiptRequest, cashuuid, request.ReceiptResponse);
-            var signatures = await ProcessFiscalDocumentAsync(request.ReceiptResponse, cashuuid, commercialDocument, fiscalDocument);
-            return ProcessResponseHelpers.CreateResponse(request.ReceiptResponse, signatures);
-        }
-
-        if (request.ReceiptRequest.IsDailyClosing())
-        {
-            (var signatures, var state) = await PerformDailyCosingAsync(request.ReceiptRequest, request.ReceiptResponse, cashuuid);
-            request.ReceiptResponse.ftState = state;
-            return ProcessResponseHelpers.CreateResponse(request.ReceiptResponse, signatures);
-        }
-
-        switch (receiptCase)
-        {
-            case (long) ITReceiptCases.UnknownReceipt0x0000:
-            case (long) ITReceiptCases.PointOfSaleReceipt0x0001:
-            case (long) ITReceiptCases.PaymentTransfer0x0002:
-            case (long) ITReceiptCases.Protocol0x0005:
-                (var commercialDocument, var fiscalDocument) = CustomRTServerMapping.GenerateFiscalDocument(request.ReceiptRequest, cashuuid);
+            if (request.ReceiptRequest.IsVoid())
+            {
+                (var commercialDocument, var fiscalDocument) = CustomRTServerMapping.CreateAnnuloDocument(request.ReceiptRequest, cashuuid, request.ReceiptResponse);
                 var signatures = await ProcessFiscalDocumentAsync(request.ReceiptResponse, cashuuid, commercialDocument, fiscalDocument);
                 return ProcessResponseHelpers.CreateResponse(request.ReceiptResponse, signatures);
+            }
+
+            if (request.ReceiptRequest.IsRefund())
+            {
+                (var commercialDocument, var fiscalDocument) = CustomRTServerMapping.CreateResoDocument(request.ReceiptRequest, cashuuid, request.ReceiptResponse);
+                var signatures = await ProcessFiscalDocumentAsync(request.ReceiptResponse, cashuuid, commercialDocument, fiscalDocument);
+                return ProcessResponseHelpers.CreateResponse(request.ReceiptResponse, signatures);
+            }
+
+            if (request.ReceiptRequest.IsDailyClosing())
+            {
+                (var signatures, var state) = await PerformDailyCosingAsync(request.ReceiptRequest, request.ReceiptResponse, cashuuid);
+                request.ReceiptResponse.ftState = state;
+                return ProcessResponseHelpers.CreateResponse(request.ReceiptResponse, signatures);
+            }
+
+            switch (receiptCase)
+            {
+                case (long) ITReceiptCases.UnknownReceipt0x0000:
+                case (long) ITReceiptCases.PointOfSaleReceipt0x0001:
+                case (long) ITReceiptCases.PaymentTransfer0x0002:
+                case (long) ITReceiptCases.Protocol0x0005:
+                    (var commercialDocument, var fiscalDocument) = CustomRTServerMapping.GenerateFiscalDocument(request.ReceiptRequest, cashuuid);
+                    var signatures = await ProcessFiscalDocumentAsync(request.ReceiptResponse, cashuuid, commercialDocument, fiscalDocument);
+                    return ProcessResponseHelpers.CreateResponse(request.ReceiptResponse, signatures);
+            }
+
+            throw new Exception($"The given receiptcase 0x{receiptCase.ToString("X")} is not supported.");
         }
-
-        throw new Exception($"The given receiptcase 0x{receiptCase.ToString("X")} is not supported.");
-    }
-
-    private async Task<List<SignaturItem>> PerformInitOperationAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
-    {
-        var shop = receiptResponse.ftCashBoxIdentification.Substring(0, 4);
-        var name = receiptResponse.ftCashBoxIdentification.Substring(4, 4);
-        _ = await _client.InsertCashRegisterAsync(receiptResponse.ftQueueID, shop, name, _accountMasterData?.AccountId.ToString() ?? "", _accountMasterData?.VatId ?? _accountMasterData?.TaxId ?? "");
-        await ReloadCashUUID(receiptResponse);
-        var cashuuid = CashUUIdMappings[Guid.Parse(receiptResponse.ftQueueID)];
-        if (cashuuid.CashStatus == "0")
+        catch (Exception ex)
         {
-            await OpenNewdayAsync(receiptRequest, receiptResponse);
+            var signatures = new List<SignaturItem>
+            {
+                new SignaturItem
+                {
+                    Caption = "rt-server-generic-error",
+                    Data = $"{ex}",
+                    ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                    ftSignatureType = 0x4954_2000_0000_3000
+                }
+            };
+            request.ReceiptResponse.ftState = 0x4954_2001_EEEE_EEEE;
+            return ProcessResponseHelpers.CreateResponse(request.ReceiptResponse, signatures);
         }
-        return SignatureFactory.CreateInitialOperationSignatures().ToList();
     }
 
-    private async Task<List<SignaturItem>> PerformOutOfOperationAsync(ReceiptResponse receiptResponse)
+    private async Task<(List<SignaturItem> signatures, long ftState)> PerformInitOperationAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
     {
-        _ = await _client.CancelCashRegisterAsync(receiptResponse.ftCashBoxIdentification, _accountMasterData?.VatId ?? "");
-        return SignatureFactory.CreateOutOfOperationSignatures().ToList();
+        try
+        {
+            var shop = receiptResponse.ftCashBoxIdentification.Substring(0, 4);
+            var name = receiptResponse.ftCashBoxIdentification.Substring(4, 4);
+            _ = await _client.InsertCashRegisterAsync(receiptResponse.ftQueueID, shop, name, _accountMasterData?.AccountId.ToString() ?? "", _accountMasterData?.VatId ?? _accountMasterData?.TaxId ?? "");
+            await ReloadCashUUID(receiptResponse);
+            var cashuuid = CashUUIdMappings[Guid.Parse(receiptResponse.ftQueueID)];
+            if (cashuuid.CashStatus == "0")
+            {
+                await OpenNewdayAsync(receiptRequest, receiptResponse);
+            }
+            return (SignatureFactory.CreateInitialOperationSignatures().ToList(), 0x4954_2000_0000_0000);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Faild to call RT Server");
+            return (new List<SignaturItem>
+            {
+                new SignaturItem
+                {
+                    Caption = "rt-server-initoperation-error",
+                    Data = $"{ex}",
+                    ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                    ftSignatureType = 0x4954_2000_0000_3000
+                }
+            }, 0x4954_2001_EEEE_EEEE);
+        }
+    }
+
+    private async Task<(List<SignaturItem> signatures, long ftState)> PerformOutOfOperationAsync(ReceiptResponse receiptResponse)
+    {
+        try
+        {
+            _ = await _client.CancelCashRegisterAsync(receiptResponse.ftCashBoxIdentification, _accountMasterData?.VatId ?? "");
+            return (SignatureFactory.CreateOutOfOperationSignatures().ToList(), 0x4954_2000_0000_0000);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Faild to call RT Server");
+            return (new List<SignaturItem>
+            {
+                new SignaturItem
+                {
+                    Caption = "rt-server-outofoperation-error",
+                    Data = $"{ex}",
+                    ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                    ftSignatureType = 0x4954_2000_0000_3000
+                }
+            }, 0x4954_2001_EEEE_EEEE);
+        }
     }
 
     private async Task OpenNewdayAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
