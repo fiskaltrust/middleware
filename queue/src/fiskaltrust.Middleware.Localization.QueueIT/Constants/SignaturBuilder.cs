@@ -82,7 +82,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Constants
                 stringBuilder.AppendLine("emesso per RESO MERCE");
                 if (string.IsNullOrEmpty(referenceZNumberString) || string.IsNullOrEmpty(referenceDocNumberString))
                 {
-                    stringBuilder.AppendLine($"NP del {DateTime.Parse(referenceDateTimeString).ToString("dd-MM-yyyy")}");
+                    stringBuilder.AppendLine($"ND del {DateTime.Parse(referenceDateTimeString).ToString("dd-MM-yyyy")}");
                 }
                 else
                 {
@@ -102,7 +102,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Constants
                 stringBuilder.AppendLine("emesso per ANNULLAMENTO");
                 if (string.IsNullOrEmpty(referenceZNumberString) || string.IsNullOrEmpty(referenceDocNumberString))
                 {
-                    stringBuilder.AppendLine($"POS del {DateTime.Parse(referenceDateTimeString).ToString("dd-MM-yyyy")}");
+                    stringBuilder.AppendLine($"ND del {DateTime.Parse(referenceDateTimeString).ToString("dd-MM-yyyy")}");
                 }
                 else
                 {
