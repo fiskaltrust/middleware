@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using fiskaltrust.ifPOS.v1;
+using fiskaltrust.Middleware.Contracts.Extensions;
 using fiskaltrust.Middleware.Localization.QueueDE.Constants;
 using Microsoft.Extensions.Logging;
 
@@ -376,6 +377,11 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
             {
                 switch (item.ftPayItemCase & 0xFFFF)
                 {
+                    case 0x000A:
+                    {
+                        zero += item.InverseAmountIfNotVoidReceipt(request.IsVoid());
+                        break;
+                    }
                     case 0x000D:
                     case 0x000E:
                     case 0x000F:

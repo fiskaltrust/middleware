@@ -23,7 +23,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Repositories
 
         public async Task<HashSet<ReceiptReferencesGroupedData>> GetReceiptReferenceAsync(long from, long to, List<DailyClosingReceipt> dailyClosings)
         {
-            var receiptReferencesGrouped = _middlewareQueueItemRepository.GetGroupedReceiptReferenceAsync(from, to);
+            var receiptReferencesGrouped = _middlewareQueueItemRepository.GetGroupedReceiptReferenceAsync(from, to).Where(x => !string.IsNullOrEmpty(x));
             var receiptReferences = new HashSet<ReceiptReferencesGroupedData>();
             await foreach (var receiptReference in receiptReferencesGrouped)
             {
@@ -108,12 +108,12 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Repositories
                 SourceQueueItemId = source.ftQueueItemId,
                 TargetReceiptIdentification = responseTarget.ftReceiptIdentification,
             };
-            if(dailyClosingSource != null)
+            if (dailyClosingSource != null)
             {
                 receiptReference.SourceZMoment = dailyClosingSource.ZTime;
                 receiptReference.SourceZNumber = dailyClosingSource.ZNumber;
             }
-            if(dailyClosingTarget != null)
+            if (dailyClosingTarget != null)
             {
                 receiptReference.TargetZMoment = dailyClosingTarget.ZTime;
                 receiptReference.TargetZNumber = dailyClosingTarget.ZNumber;
