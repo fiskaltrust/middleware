@@ -10,6 +10,7 @@ using fiskaltrust.Middleware.Storage.Base;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories.FR;
 using fiskaltrust.storage.V0;
 using Moq;
+using Newtonsoft.Json;
 using Xunit;
 
 namespace fiskaltrust.Middleware.Localization.QueueFR.UnitTest
@@ -53,9 +54,17 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.UnitTest
         {
             var inMemoryJournalFRCopyPayloadRepository = new InMemoryJournalFRCopyPayloadRepository();
             var mockJournalFRRepository = new Mock<IMiddlewareJournalFRRepository>();
+
+            var copyPayload = new ftJournalFRCopyPayload 
+            {
+                CopiedReceiptReference = "TestValue"
+            };
+            var serializedPayload = JsonConvert.SerializeObject(copyPayload);
+
             var jwt = Convert.ToBase64String(Encoding.UTF8.GetBytes("{}")) + "." +
-                      Convert.ToBase64String(Encoding.UTF8.GetBytes("{\"CopiedReceiptReference\":\"TestValue\"}")) + "." +
+                      Convert.ToBase64String(Encoding.UTF8.GetBytes(serializedPayload)) + "." +
                       Convert.ToBase64String(Encoding.UTF8.GetBytes("{}"));
+
             var asyncEnumerableResult = new List<ftJournalFR>
             {
                 new ftJournalFR { JWT = jwt }
