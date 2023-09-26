@@ -7,6 +7,7 @@ using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts.Data;
 using fiskaltrust.Middleware.Contracts.Models.Transactions;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Contracts.Repositories.FR;
 using fiskaltrust.Middleware.Storage.Base;
 using fiskaltrust.Middleware.Storage.MySQL.DatabaseInitialization;
 using fiskaltrust.Middleware.Storage.MySQL.Repositories;
@@ -97,10 +98,10 @@ namespace fiskaltrust.Middleware.Storage.MySQL
             services.AddSingleton<IJournalDERepository>(x => new MySQLJournalDERepository(_connectionString));
             services.AddSingleton<IReadOnlyJournalDERepository>(x => new MySQLJournalDERepository(_connectionString));
             services.AddSingleton<IMiddlewareRepository<ftJournalDE>>(x => new MySQLJournalDERepository(_connectionString));
-
             services.AddSingleton<IJournalFRRepository>(x => new MySQLJournalFRRepository(_connectionString));
             services.AddSingleton<IReadOnlyJournalFRRepository>(x => new MySQLJournalFRRepository(_connectionString));
             services.AddSingleton<IMiddlewareJournalFRRepository>(x => new MySQLJournalFRRepository(_connectionString));
+            services.AddSingleton<IJournalFRCopyPayloadRepository>(x => new MySQLJournalFRCopyPayloadRepository(_connectionString));
             services.AddSingleton<IMiddlewareRepository<ftJournalFR>>(x => new MySQLJournalFRRepository(_connectionString));
 
             services.AddSingleton<IMiddlewareJournalMERepository>(x => new MySQLJournalMERepository(_connectionString));

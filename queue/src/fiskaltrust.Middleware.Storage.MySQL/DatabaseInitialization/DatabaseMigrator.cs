@@ -18,8 +18,7 @@ namespace fiskaltrust.Middleware.Storage.MySQL.DatabaseInitialization
 
         private readonly string _serverConnectionString;
         private readonly string _databaseConnectionString;
-        //QueueId is used as dbName
-        private readonly string _dbName;
+        private readonly string _dbName;  // QueueId is used as dbName
         private readonly ILogger<IMiddlewareBootstrapper> _logger;
 
         public DatabaseMigrator(string serverConnectionString, uint timeoutSec, Guid queueId, ILogger<IMiddlewareBootstrapper> logger)
@@ -35,10 +34,12 @@ namespace fiskaltrust.Middleware.Storage.MySQL.DatabaseInitialization
             };
             _databaseConnectionString = builder.ConnectionString;
             _logger = logger;
+
             SqlMapper.RemoveTypeMap(typeof(DateTime?));
             SqlMapper.RemoveTypeMap(typeof(DateTime));
             SqlMapper.RemoveTypeMap(typeof(Guid));
             SqlMapper.RemoveTypeMap(typeof(Guid?));
+
             SqlMapper.AddTypeHandler(typeof(Guid), new GuidTypeHandler());
             SqlMapper.AddTypeHandler(typeof(Guid?), new NullableGuidTypeHandler());
             SqlMapper.AddTypeHandler(typeof(DateTime), new MySQLDateTimeTypeHandler());
@@ -50,8 +51,8 @@ namespace fiskaltrust.Middleware.Storage.MySQL.DatabaseInitialization
             var parentPath = typeof(DatabaseMigrator).Assembly.GetDirectoryPath();
             var migrations = Directory.GetFiles(Path.Combine(parentPath, MIGRATION_DIR), "*.mysql").OrderBy(x => x);
 
-
             _logger.LogDebug($"Found {migrations.Count()} migration files.");
+
             using (var connection = new MySqlConnection(_serverConnectionString))
             {
                 await connection.OpenAsync().ConfigureAwait(false);
@@ -61,8 +62,8 @@ namespace fiskaltrust.Middleware.Storage.MySQL.DatabaseInitialization
             using (var connection = new MySqlConnection(_databaseConnectionString))
             {
                 await connection.OpenAsync().ConfigureAwait(false);
-                var currentVersion = await GetCurrentVersionAsync(connection, _dbName).ConfigureAwait(false);
-                var notAppliedMigrations = migrations.Where(x => string.Compare(Path.GetFileNameWithoutExtension(x), currentVersion, true) > 0);
+                var currentVersion = await GetCurrentVersionAsync(connection).ConfigureAwait(false);
+                var notAppliedMigrations = migrations.Where(x => string.Compare(Path.GetFileNameWithoutExtension(x), currentVersion, StringComparison.OrdinalIgnoreCase) > 0);
 
                 if (notAppliedMigrations.Any())
                 {
@@ -70,14 +71,8 @@ namespace fiskaltrust.Middleware.Storage.MySQL.DatabaseInitialization
                 }
                 foreach (var migrationScript in notAppliedMigrations)
                 {
-                    var text = File.ReadAllText(migrationScript);
-                    if (text.Substring(0, 15).Equals("<DatabaseName!>"))
-                    {
-                        text = text.Replace("<DatabaseName>", $"'{_dbName}'");
-                        text = text.Remove(0, 15);
-                    }
                     _logger.LogDebug($"Updating database with migration script {migrationScript}..");
-                    await connection.ExecuteAsync(text).ConfigureAwait(false);
+                    await connection.ExecuteAsync(File.ReadAllText(migrationScript)).ConfigureAwait(false);
                     await SetCurrentVersionAsync(connection, Path.GetFileNameWithoutExtension(migrationScript)).ConfigureAwait(false);
                     _logger.LogDebug($"Applying the migration script was successful. Set current version to {Path.GetFileNameWithoutExtension(migrationScript)}.");
                 }
@@ -85,9 +80,9 @@ namespace fiskaltrust.Middleware.Storage.MySQL.DatabaseInitialization
             return _dbName;
         }
 
-        private async Task<string> GetCurrentVersionAsync(IDbConnection connection, string dbName)
+        private async Task<string> GetCurrentVersionAsync(IDbConnection connection)
         {
-            var tableCount = await connection.ExecuteScalarAsync<int>($"SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='{dbName}' AND TABLE_NAME='ftDatabaseSchema' ").ConfigureAwait(false);
+            var tableCount = await connection.ExecuteScalarAsync<int>($"SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='{_dbName}' AND TABLE_NAME='ftDatabaseSchema' ").ConfigureAwait(false);
             return tableCount == 0 ? null : await connection.ExecuteScalarAsync<string>("SELECT CurrentVersion FROM ftDatabaseSchema LIMIT 1").ConfigureAwait(false);
         }
 

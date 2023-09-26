@@ -84,8 +84,6 @@ public async Task<IEnumerable<BaseStorageBootStrapper.Migrations>> MigrateAsync(
 
     return appliedMigrations;
 }
-
-        
         private async Task<bool> IsLegacyDatabaseAsync(IDbConnection connection)
         {
             var legacyVersionHistoryTable = await connection.ExecuteScalarAsync<string>("SELECT name FROM sqlite_master WHERE type='table' AND name='__VersionHistory'").ConfigureAwait(false);
