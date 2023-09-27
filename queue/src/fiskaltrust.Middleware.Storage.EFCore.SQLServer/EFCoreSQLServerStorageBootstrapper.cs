@@ -6,6 +6,7 @@ using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts.Data;
 using fiskaltrust.Middleware.Contracts.Models.Transactions;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Contracts.Repositories.FR;
 using fiskaltrust.Middleware.Storage.Base;
 using fiskaltrust.Middleware.Storage.EFCore.Repositories;
 using fiskaltrust.Middleware.Storage.EFCore.Repositories.AT;
@@ -99,6 +100,10 @@ namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer
             services.AddTransient<IJournalFRRepository, EFCoreJournalFRRepository>();
             services.AddTransient<IReadOnlyJournalFRRepository, EFCoreJournalFRRepository>();
             services.AddTransient<IMiddlewareRepository<ftJournalFR>, EFCoreJournalFRRepository>();
+            
+            services.AddTransient<IJournalFRCopyPayloadRepository>(_ =>
+                new EFCoreJournalFRCopyPayloadRepository(
+                    new SQLServerMiddlewareDbContext(_optionsBuilder.Options, _queueId)));
 
             services.AddTransient<IJournalMERepository, EFCoreJournalMERepository>();
             services.AddTransient<IReadOnlyJournalMERepository, EFCoreJournalMERepository>();

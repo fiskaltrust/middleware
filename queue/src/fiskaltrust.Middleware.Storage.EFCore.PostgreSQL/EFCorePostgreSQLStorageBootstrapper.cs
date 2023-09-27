@@ -6,6 +6,7 @@ using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts.Data;
 using fiskaltrust.Middleware.Contracts.Models.Transactions;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Contracts.Repositories.FR;
 using fiskaltrust.Middleware.Storage.Base;
 using fiskaltrust.Middleware.Storage.EFCore.Repositories;
 using fiskaltrust.Middleware.Storage.EFCore.Repositories.AT;
@@ -102,6 +103,8 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL
             services.AddTransient<IMiddlewareJournalFRRepository>(_ => new EFCoreJournalFRRepository(new PostgreSQLMiddlewareDbContext(_optionsBuilder.Options, _queueId)));
             services.AddTransient<IMiddlewareRepository<ftJournalFR>>(_ => new EFCoreJournalFRRepository(new PostgreSQLMiddlewareDbContext(_optionsBuilder.Options, _queueId)));
 
+            services.AddTransient<IJournalFRCopyPayloadRepository>(_ => new EFCoreJournalFRCopyPayloadRepository(new PostgreSQLMiddlewareDbContext(_optionsBuilder.Options, _queueId)));
+            
             services.AddTransient<IJournalMERepository>(_ => new EFCoreJournalMERepository(new PostgreSQLMiddlewareDbContext(_optionsBuilder.Options, _queueId)));
             services.AddTransient<IReadOnlyJournalMERepository>(_ => new EFCoreJournalMERepository(new PostgreSQLMiddlewareDbContext(_optionsBuilder.Options, _queueId)));
             services.AddTransient<IMiddlewareRepository<ftJournalME>>(_ => new EFCoreJournalMERepository(new PostgreSQLMiddlewareDbContext(_optionsBuilder.Options, _queueId)));
