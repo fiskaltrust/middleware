@@ -7,6 +7,7 @@ using fiskaltrust.Middleware.Contracts.Models.FR;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Contracts.Repositories.FR;
 using fiskaltrust.Middleware.Localization.QueueFR.Models;
+using fiskaltrust.Middleware.Localization.QueueFR.UnitTest.Helper;
 using fiskaltrust.Middleware.Storage.Base;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories.FR;
 using fiskaltrust.storage.V0;
@@ -36,10 +37,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.UnitTest
             {
                 CopiedReceiptReference = "TestValue"
             };
-            var serializedPayload = JsonConvert.SerializeObject(copyPayload);
-            var jwt = Convert.ToBase64String(Encoding.UTF8.GetBytes("{}")) + "." +
-                      Convert.ToBase64String(Encoding.UTF8.GetBytes(serializedPayload)) + "." +
-                      Convert.ToBase64String(Encoding.UTF8.GetBytes("{}"));
+            var jwt = JwtTestHelper.GenerateJwt(copyPayload);
 
             var asyncEnumerableResult = new List<ftJournalFR>
             {
@@ -62,9 +60,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.UnitTest
         {
             var inMemoryJournalFRCopyPayloadRepository = new InMemoryJournalFRCopyPayloadRepository();
             
-            var jwt = Convert.ToBase64String(Encoding.UTF8.GetBytes("{}")) + "." +
-                      Convert.ToBase64String(Encoding.UTF8.GetBytes("{\"CopiedReceiptReference\":\"TestValue\"}")) + "." +
-                      Convert.ToBase64String(Encoding.UTF8.GetBytes("{}"));
+            var jwt = JwtTestHelper.GenerateJwt(new CopyPayload { CopiedReceiptReference = "TestValue" });
 
             var mockJournalFRRepository = new Mock<IMiddlewareJournalFRRepository>();
             var asyncEnumerableResult = new List<ftJournalFR>
