@@ -34,10 +34,10 @@ BEGIN
     END IF;
 END;
 
-call CreateIndex(@dbName, 'ftQueueItem', 'idx_ftQueueItem_Timestamp', 'TimeStamp');
-call CreateIndex(@dbName, 'ftQueueItem', 'idx_ftQueueItem_cbReceiptReference', 'cbReceiptReference');
-call CreateIndex(@dbName, 'ftActionJournal', 'idx_ftActionJournal_Timestamp', 'TimeStamp');
-call CreateIndex(@dbName, 'ftReceiptJournal', 'idx_ftReceiptJournal_Timestamp', 'TimeStamp');
-call CreateIndex(@dbName, 'ftJournalAT', 'idx_ftJournalAT_Timestamp', 'TimeStamp');
-call CreateIndex(@dbName, 'ftJournalDE', 'idx_ftJournalDE_Timestamp', 'TimeStamp');
-call CreateIndex(@dbName, 'ftJournalFR', 'idx_ftJournalFR_Timestamp', 'TimeStamp');
+call CreateIndex(DATABASE(), 'ftQueueItem', 'idx_ftQueueItem_Timestamp', 'TimeStamp');
+call CreateIndex(DATABASE(), 'ftQueueItem', 'idx_ftQueueItem_cbReceiptReference', 'cbReceiptReference');
+call CreateIndex(DATABASE(), 'ftActionJournal', 'idx_ftActionJournal_Timestamp', 'TimeStamp');
+call CreateIndex(DATABASE(), 'ftReceiptJournal', 'idx_ftReceiptJournal_Timestamp', 'TimeStamp');
+call CreateIndex(DATABASE(), 'ftJournalAT', 'idx_ftJournalAT_Timestamp', 'TimeStamp');
+call CreateIndex(DATABASE(), 'ftJournalDE', 'idx_ftJournalDE_Timestamp', 'TimeStamp');
+call CreateIndex(DATABASE(), 'ftJournalFR', 'idx_ftJournalFR_Timestamp', 'TimeStamp');
