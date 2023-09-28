@@ -21,6 +21,7 @@ using fiskaltrust.Middleware.Contracts.Data;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using Microsoft.Extensions.Logging;
 using fiskaltrust.Middleware.Abstractions;
+using fiskaltrust.Middleware.Contracts.Repositories.FR;
 using fiskaltrust.storage.V0.MasterData;
 using fiskaltrust.Middleware.Storage.EF.Repositories.ME;
 using fiskaltrust.Middleware.Storage.EF.Repositories.MasterData;
@@ -107,6 +108,8 @@ namespace fiskaltrust.Middleware.Storage.Ef
             services.AddTransient<IJournalFRRepository, EfJournalFRRepository>();
             services.AddTransient<IReadOnlyJournalFRRepository, EfJournalFRRepository>();
             services.AddTransient<IMiddlewareRepository<ftJournalFR>, EfJournalFRRepository>();
+            
+            services.AddTransient<IJournalFRCopyPayloadRepository, EfJournalFRCopyPayloadRepository>();
 
             services.AddTransient<IMiddlewareJournalMERepository, EfJournalMERepository>();
             services.AddTransient<IJournalMERepository, EfJournalMERepository>();
