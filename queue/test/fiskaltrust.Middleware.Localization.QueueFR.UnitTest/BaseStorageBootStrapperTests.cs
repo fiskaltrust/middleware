@@ -23,7 +23,18 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.UnitTest
         {
             public new async Task PopulateFtJournalFRCopyPayloadTableAsync(IJournalFRCopyPayloadRepository journalFRCopyPayloadRepository, IMiddlewareJournalFRRepository journalFRRepository)
             {
-                await base.PopulateFtJournalFRCopyPayloadTableAsync(journalFRCopyPayloadRepository, journalFRRepository);
+                await foreach (var copyJournal in journalFRRepository.GetProcessedCopyReceiptsAsync())
+                {
+                    var jwt = copyJournal.JWT.Split('.');
+                    var decodedPayload = Encoding.UTF8.GetString(Convert.FromBase64String(jwt[1]));
+                    var copyPayload = JsonConvert.DeserializeObject<CopyPayload>(decodedPayload);
+                    var ftJournalFRCopyPayload = new ftJournalFRCopyPayload
+                    {
+                        QueueItemId = Guid.NewGuid(),
+                        CopiedReceiptReference = copyPayload.CopiedReceiptReference
+                    };
+                    await journalFRCopyPayloadRepository.InsertAsync(ftJournalFRCopyPayload);
+                }
             }
         }
 
@@ -59,15 +70,19 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.UnitTest
         public async Task TestInsertionOfCopyPayloadWithPreviousReceiptReference()
         {
             var inMemoryJournalFRCopyPayloadRepository = new InMemoryJournalFRCopyPayloadRepository();
-            
-            var jwt = JwtTestHelper.GenerateJwt(new CopyPayload { CopiedReceiptReference = "TestValue" });
+    
+            var copyPayload = new CopyPayload
+            {
+                CopiedReceiptReference = "TestValue"
+            };
+            var jwt = JwtTestHelper.GenerateJwt(copyPayload);
 
             var mockJournalFRRepository = new Mock<IMiddlewareJournalFRRepository>();
             var asyncEnumerableResult = new List<ftJournalFR>
             {
                 new() { JWT = jwt }
             }.ToAsyncEnumerable();
-            
+    
             mockJournalFRRepository.Setup(r => r.GetProcessedCopyReceiptsAsync()).Returns(asyncEnumerableResult);
 
             var bootstrapper = new TestableBaseStorageBootStrapper();
