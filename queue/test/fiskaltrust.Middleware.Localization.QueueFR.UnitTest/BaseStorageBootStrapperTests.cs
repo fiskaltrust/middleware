@@ -14,6 +14,7 @@ using fiskaltrust.storage.V0;
 using Moq;
 using Newtonsoft.Json;
 using Xunit;
+using FluentAssertions;
 
 namespace fiskaltrust.Middleware.Localization.QueueFR.UnitTest
 {
@@ -25,6 +26,32 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.UnitTest
             {
                 return base.PopulateFtJournalFRCopyPayloadTableAsync(journalFRCopyPayloadRepository, journalFRRepository);
             }
+        }
+
+        [Fact]
+        public void ftJournalFRCopyPayload_ShouldSerializeCorrectly()
+        {
+            var copyPayload = new CopyPayload
+            {
+                CashBoxIdentification = "sadf",
+                CertificateSerialNumber = "1234567890",
+                CopiedReceiptReference = "1234567890",
+                QueueId = Guid.NewGuid(),
+                QueueItemId = Guid.NewGuid(),
+                ReceiptId = "sdfas;dlfkjas",
+                ReceiptMoment = DateTime.Now,
+                Siret = "asdlfajsdofj"
+            };
+            var jCopyPayload = copyPayload.ToJournalFRCopyPayload();
+            
+            var copyPayloadSer = JsonConvert.SerializeObject(copyPayload);
+            var jCopyPayloadSer = JsonConvert.SerializeObject(jCopyPayload);
+
+            var copyPayloadDe = JsonConvert.DeserializeObject<CopyPayload>(jCopyPayloadSer);
+            var jCopyPayloadDe = JsonConvert.DeserializeObject<ftJournalFRCopyPayload>(copyPayloadSer);
+
+            copyPayload.Should().BeEquivalentTo(copyPayloadDe);
+            jCopyPayload.Should().BeEquivalentTo(jCopyPayloadDe);
         }
 
         [Fact]
