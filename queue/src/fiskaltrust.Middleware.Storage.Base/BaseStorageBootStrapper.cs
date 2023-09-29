@@ -92,11 +92,11 @@ namespace fiskaltrust.Middleware.Storage.Base
             {
                 var jwt = copyJournal.JWT.Split('.');
                 var copyPayload = JsonConvert.DeserializeObject<ftJournalFRCopyPayload>(Encoding.UTF8.GetString(Convert.FromBase64String(jwt[1])));
-        
+
                 await journalFRCopyPayloadRepository.InsertAsync(copyPayload);
             }
         }
-        
+
         public async Task PersistConfigurationAsync(StorageBaseInitConfiguration config, IConfigurationRepository configurationRepository, ILogger<IMiddlewareBootstrapper> logger)
         {
             var dbCashBox = await configurationRepository.GetCashBoxAsync(config.CashBox.ftCashBoxId).ConfigureAwait(false);

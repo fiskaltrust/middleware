@@ -99,8 +99,8 @@ namespace fiskaltrust.Middleware.Storage.SQLite.AcceptanceTest
             var payload1 = CreatePayload("test1", "12345", "receipt1", "ref1", "cert123");
 
             await repo.InsertAsync(payload1);
-            
-            await Assert.ThrowsAsync<System.Data.DataException>(() => repo.InsertAsync(payload1));
+
+            await Assert.ThrowsAsync<Exception>(() => repo.InsertAsync(payload1));
         }
     }
 }

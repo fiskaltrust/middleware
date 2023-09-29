@@ -21,20 +21,9 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.UnitTest
     {
         private class TestableBaseStorageBootStrapper : BaseStorageBootStrapper
         {
-            public new async Task PopulateFtJournalFRCopyPayloadTableAsync(IJournalFRCopyPayloadRepository journalFRCopyPayloadRepository, IMiddlewareJournalFRRepository journalFRRepository)
+            public new Task PopulateFtJournalFRCopyPayloadTableAsync(IJournalFRCopyPayloadRepository journalFRCopyPayloadRepository, IMiddlewareJournalFRRepository journalFRRepository)
             {
-                await foreach (var copyJournal in journalFRRepository.GetProcessedCopyReceiptsAsync())
-                {
-                    var jwt = copyJournal.JWT.Split('.');
-                    var decodedPayload = Encoding.UTF8.GetString(Convert.FromBase64String(jwt[1]));
-                    var copyPayload = JsonConvert.DeserializeObject<CopyPayload>(decodedPayload);
-                    var ftJournalFRCopyPayload = new ftJournalFRCopyPayload
-                    {
-                        QueueItemId = Guid.NewGuid(),
-                        CopiedReceiptReference = copyPayload.CopiedReceiptReference
-                    };
-                    await journalFRCopyPayloadRepository.InsertAsync(ftJournalFRCopyPayload);
-                }
+                return base.PopulateFtJournalFRCopyPayloadTableAsync(journalFRCopyPayloadRepository, journalFRRepository);
             }
         }
 
@@ -43,7 +32,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.UnitTest
         {
             var mockJournalFRCopyPayloadRepository = new Mock<IJournalFRCopyPayloadRepository>();
             var mockJournalFRRepository = new Mock<IMiddlewareJournalFRRepository>();
-            
+
             var copyPayload = new CopyPayload
             {
                 CopiedReceiptReference = "TestValue"
@@ -70,7 +59,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.UnitTest
         public async Task TestInsertionOfCopyPayloadWithPreviousReceiptReference()
         {
             var inMemoryJournalFRCopyPayloadRepository = new InMemoryJournalFRCopyPayloadRepository();
-    
+
             var copyPayload = new CopyPayload
             {
                 CopiedReceiptReference = "TestValue"
@@ -82,13 +71,13 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.UnitTest
             {
                 new() { JWT = jwt }
             }.ToAsyncEnumerable();
-    
+
             mockJournalFRRepository.Setup(r => r.GetProcessedCopyReceiptsAsync()).Returns(asyncEnumerableResult);
 
             var bootstrapper = new TestableBaseStorageBootStrapper();
             await bootstrapper.PopulateFtJournalFRCopyPayloadTableAsync(inMemoryJournalFRCopyPayloadRepository, mockJournalFRRepository.Object);
 
-            var count = await inMemoryJournalFRCopyPayloadRepository.GetCountOfCopiesAsync("TestValue"); 
+            var count = await inMemoryJournalFRCopyPayloadRepository.GetCountOfCopiesAsync("TestValue");
             Assert.Equal(1, count);
         }
     }
