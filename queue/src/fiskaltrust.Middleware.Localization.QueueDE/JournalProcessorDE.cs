@@ -86,7 +86,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
                 }
             }
             else if (request.ftJournalType == (long) JournalTypes.DSFinVKExport ||
-                request.ftJournalType == (long) JournalTypes.DSFinVKOrdersExport)
+                request.ftJournalType == (long) JournalTypes.DSFinVKExcludeOrders)
             {
                 await foreach (var value in ProcessDSFinVKExportAsync(request).ConfigureAwait(false))
                 {
@@ -215,7 +215,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
                     TargetDirectory = targetDirectory,
                     TSECertificateBase64 = certificateBase64,
                     ReferencesLookUpType = _queueDEConfiguration.DisableDsfinvkExportReferences ? ReferencesLookUpType.NoReferences : ReferencesLookUpType.GroupedReferencesMW,
-                    IncludeOrders = request.ftJournalType == (long) JournalTypes.DSFinVKOrdersExport
+                    IncludeOrders = request.ftJournalType != (long) JournalTypes.DSFinVKExcludeOrders
                 };
 
                 var readOnlyReceiptReferenceRepository = new ReadOnlyReceiptReferenceRepository(_middlewareQueueItemRepository);
