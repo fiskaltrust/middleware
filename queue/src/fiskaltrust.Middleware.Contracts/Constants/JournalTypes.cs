@@ -14,7 +14,6 @@
         QueueDEStatus =          0x4445000000000000,
         TarExportFromTSE =       0x4445000000000001,
         DSFinVKExport =          0x4445000000000002,
-        DSFinVKExcludeOrders =   0x4445000000010002,
         TarExportFromDatabase =  0x4445000000000003,
         QueueFRStatus =          0x4652000000000000,
         TicketJournalsFR =       0x4652000000000001,
