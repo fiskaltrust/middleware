@@ -44,7 +44,8 @@ namespace fiskaltrust.Middleware.Storage.EF
         public DbSet<ftJournalDE> JournalDEList { get; set; }
 
         public DbSet<ftJournalFR> JournalFRList { get; set; }
-
+        
+        public DbSet<ftJournalFRCopyPayload> JournalFRCopyPayloadList { get; set; }
         public DbSet<ftJournalIT> JournalITList { get; set; }
 
         public DbSet<ftJournalME> JournalMEList { get; set; }
