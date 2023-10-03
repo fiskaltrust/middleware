@@ -19,6 +19,43 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
                 .HasAnnotation("ProductVersion", "5.0.10")
                 .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
+            modelBuilder.Entity("fiskaltrust.Middleware.Contracts.Models.FR.ftJournalFRCopyPayload", b =>
+                {
+                    b.Property<Guid>("QueueItemId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CashBoxIdentification")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CertificateSerialNumber")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CopiedReceiptReference")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("QueueId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ReceiptId")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("ReceiptMoment")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Siret")
+                        .HasColumnType("text");
+
+                    b.Property<long>("TimeStamp")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("QueueItemId");
+
+                    b.HasIndex("TimeStamp");
+
+                    b.ToTable("ftJournalFRCopyPayload");
+                });
+
             modelBuilder.Entity("fiskaltrust.Middleware.Contracts.Models.Transactions.FailedFinishTransaction", b =>
                 {
                     b.Property<string>("cbReceiptReference")
