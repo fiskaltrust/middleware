@@ -152,7 +152,6 @@ namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer
                 return pendingMigrations.ToList();
             }
         }
-        
 
         private List<BaseStorageBootStrapper.Migrations> ConvertAppliedMigrationsToEnum(List<string> appliedMigrations)
         {
