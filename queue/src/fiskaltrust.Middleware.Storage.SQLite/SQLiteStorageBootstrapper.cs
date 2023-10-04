@@ -56,7 +56,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite
             _connectionFactory = new SqliteConnectionFactory();
             var databaseMigrator = new DatabaseMigrator(_connectionFactory, _sqliteStorageConfiguration.MigrationsTimeoutSec, _sqliteFile, _configuration, logger);
 
-            var appliedMigrations = await databaseMigrator.MigrateAsync().ConfigureAwait(false);
+            var newlyAppliedMigrations = await databaseMigrator.MigrateAsync().ConfigureAwait(false);
             await databaseMigrator.SetWALMode().ConfigureAwait(false);
 
             _configurationRepository = new SQLiteConfigurationRepository(_connectionFactory, _sqliteFile);
@@ -70,7 +70,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite
             var journalFRCopyPayloadRepository = new SQLiteJournalFRCopyPayloadRepository(_connectionFactory, _sqliteFile);
             var journalFRRepository = new SQLiteJournalFRRepository(_connectionFactory, _sqliteFile);
 
-            await PerformMigrationInitialization(appliedMigrations, journalFRCopyPayloadRepository, journalFRRepository).ConfigureAwait(false);
+            await PerformMigrationInitialization(newlyAppliedMigrations, journalFRCopyPayloadRepository, journalFRRepository).ConfigureAwait(false);
 
             await PersistConfigurationAsync(baseStorageConfig, _configurationRepository, logger).ConfigureAwait(false);
         }

@@ -73,9 +73,9 @@ namespace fiskaltrust.Middleware.Storage.Base
             JournalFRCopyPayload
         }
 
-        public async Task PerformMigrationInitialization(IEnumerable<Migrations> migrations, IJournalFRCopyPayloadRepository journalFRCopyPayloadRepository, IMiddlewareJournalFRRepository journalFRRepository)
+        public async Task PerformMigrationInitialization(IEnumerable<Migrations> newlyAppliedMigrations, IJournalFRCopyPayloadRepository journalFRCopyPayloadRepository, IMiddlewareJournalFRRepository journalFRRepository)
         {
-            foreach (var migration in migrations)
+            foreach (var migration in newlyAppliedMigrations)
             {
                 switch (migration)
                 {

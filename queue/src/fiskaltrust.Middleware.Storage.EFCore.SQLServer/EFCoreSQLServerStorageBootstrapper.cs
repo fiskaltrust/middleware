@@ -66,8 +66,8 @@ namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer
             _optionsBuilder = new DbContextOptionsBuilder<SQLServerMiddlewareDbContext>();
             _optionsBuilder.UseSqlServer(_connectionString);
 
-            var appliedMigrations = Update(_optionsBuilder.Options, queueId, logger);
-            var baseMigrations = ConvertAppliedMigrationsToEnum(appliedMigrations);
+            var newlyAppliedMigrations = Update(_optionsBuilder.Options, queueId, logger);
+            var baseMigrations = ConvertAppliedMigrationsToEnum(newlyAppliedMigrations);
 
             var journalFRCopyPayloadRepository = new EFCoreJournalFRCopyPayloadRepository(
                 new SQLServerMiddlewareDbContext(_optionsBuilder.Options, _queueId));
@@ -110,7 +110,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer
             services.AddTransient<IJournalFRRepository, EFCoreJournalFRRepository>();
             services.AddTransient<IReadOnlyJournalFRRepository, EFCoreJournalFRRepository>();
             services.AddTransient<IMiddlewareRepository<ftJournalFR>, EFCoreJournalFRRepository>();
-            
+
             services.AddTransient<IJournalFRCopyPayloadRepository>(_ =>
                 new EFCoreJournalFRCopyPayloadRepository(
                     new SQLServerMiddlewareDbContext(_optionsBuilder.Options, _queueId)));
@@ -148,23 +148,22 @@ namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer
             {
                 context.Database.SetCommandTimeout(160);
                 context.Database.EnsureCreated();
-                var appliedMigrations = context.Database.GetAppliedMigrations().ToList();
                 var pendingMigrations = context.Database.GetPendingMigrations().ToList();
                 context.Database.Migrate();
-                return pendingMigrations.Except(appliedMigrations).ToList(); 
+                return pendingMigrations.ToList();
             }
         }
 
         private List<BaseStorageBootStrapper.Migrations> ConvertAppliedMigrationsToEnum(List<string> appliedMigrations)
         {
-            return appliedMigrations.Select(x => 
+            return appliedMigrations.Select(x =>
             {
                 if (x.EndsWith("JournalFRCopyPayload"))
                 {
                     return BaseStorageBootStrapper.Migrations.JournalFRCopyPayload;
                 }
-                return (BaseStorageBootStrapper.Migrations)(-1);
-            }).Where(x => x != (BaseStorageBootStrapper.Migrations)(-1)).ToList();
+                return (BaseStorageBootStrapper.Migrations) (-1);
+            }).Where(x => x != (BaseStorageBootStrapper.Migrations) (-1)).ToList();
         }
     }
 }

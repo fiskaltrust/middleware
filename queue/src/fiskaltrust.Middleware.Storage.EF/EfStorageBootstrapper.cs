@@ -52,48 +52,51 @@ namespace fiskaltrust.Middleware.Storage.Ef
             AddRepositories(serviceCollection);
         }
 
-    private async Task InitAsync(Guid queueId, Dictionary<string, object> configuration, ILogger<IMiddlewareBootstrapper> logger)
-    {
-        if (string.IsNullOrEmpty(_efStorageConfiguration.ConnectionString))
+        private async Task InitAsync(Guid queueId, Dictionary<string, object> configuration, ILogger<IMiddlewareBootstrapper> logger)
         {
-            throw new Exception("Database connectionstring not defined");
-        }
-
-        if (_efStorageConfiguration.ConnectionString.StartsWith("raw:"))
-        {
-            _connectionString = _efStorageConfiguration.ConnectionString.Substring("raw:".Length);
-        }
-        else
-        {
-            _connectionString = Encoding.UTF8.GetString(Encryption.Decrypt(Convert.FromBase64String(_efStorageConfiguration.ConnectionString), queueId.ToByteArray()));
-        }
-
-        var appliedMigrations = Update(_connectionString, _efStorageConfiguration.MigrationsTimeoutSec, queueId, logger);
-
-        if (!_connectionString.Contains("MultipleActiveResultSets"))
-        {
-            _connectionString += ";MultipleActiveResultSets=true";
-        }
-        var context = new MiddlewareDbContext(_connectionString, _queueId);
-        await PersistMasterDataAsync(ParseStorageConfiguration(configuration), new EfConfigurationRepository(context),
-            new EfAccountMasterDataRepository(context), new EfOutletMasterDataRepository(context),
-            new EfAgencyMasterDataRepository(context), new EfPosSystemMasterDataRepository(context)).ConfigureAwait(false);
-        await PersistConfigurationAsync(ParseStorageConfiguration(configuration), new EfConfigurationRepository(context), logger).ConfigureAwait(false);
-
-        var journalFRCopyPayloadRepository = new EfJournalFRCopyPayloadRepository(context);
-        var journalFRRepository = new EfJournalFRRepository(context);
-
-        var baseMigrations = appliedMigrations.Select(x => 
-        {
-            if (x.EndsWith("JournalFRCopyPayload"))
+            if (string.IsNullOrEmpty(_efStorageConfiguration.ConnectionString))
             {
-                return BaseStorageBootStrapper.Migrations.JournalFRCopyPayload;
+                throw new Exception("Database connectionstring not defined");
             }
-            return (BaseStorageBootStrapper.Migrations)(-1);
-        }).Where(x => x != (BaseStorageBootStrapper.Migrations)(-1)).ToList();
 
-        await PerformMigrationInitialization(baseMigrations, journalFRCopyPayloadRepository, journalFRRepository).ConfigureAwait(false);
-    }
+            if (_efStorageConfiguration.ConnectionString.StartsWith("raw:"))
+            {
+                _connectionString = _efStorageConfiguration.ConnectionString.Substring("raw:".Length);
+            }
+            else
+            {
+                _connectionString = Encoding.UTF8.GetString(Encryption.Decrypt(Convert.FromBase64String(_efStorageConfiguration.ConnectionString), queueId.ToByteArray()));
+            }
+
+            var newlyAppliedMigrations = Update(_connectionString, _efStorageConfiguration.MigrationsTimeoutSec, queueId, logger);
+
+            if (!_connectionString.Contains("MultipleActiveResultSets"))
+            {
+                _connectionString += ";MultipleActiveResultSets=true";
+            }
+            var context = new MiddlewareDbContext(_connectionString, _queueId);
+            var configurationRepository = new EfConfigurationRepository(context);
+            var baseStorageConfig = ParseStorageConfiguration(configuration);
+
+            await PersistMasterDataAsync(baseStorageConfig, configurationRepository,
+                new EfAccountMasterDataRepository(context), new EfOutletMasterDataRepository(context),
+                new EfAgencyMasterDataRepository(context), new EfPosSystemMasterDataRepository(context)).ConfigureAwait(false);
+            await PersistConfigurationAsync(baseStorageConfig, configurationRepository, logger).ConfigureAwait(false);
+
+            var journalFRCopyPayloadRepository = new EfJournalFRCopyPayloadRepository(context);
+            var journalFRRepository = new EfJournalFRRepository(context);
+
+            var baseMigrations = newlyAppliedMigrations.Select(x =>
+            {
+                if (x.EndsWith("JournalFRCopyPayload"))
+                {
+                    return BaseStorageBootStrapper.Migrations.JournalFRCopyPayload;
+                }
+                return (BaseStorageBootStrapper.Migrations) (-1);
+            }).Where(x => x != (BaseStorageBootStrapper.Migrations) (-1)).ToList();
+
+            await PerformMigrationInitialization(baseMigrations, journalFRCopyPayloadRepository, journalFRRepository).ConfigureAwait(false);
+        }
 
 
         private void AddRepositories(IServiceCollection services)
