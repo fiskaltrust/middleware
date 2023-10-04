@@ -1,10 +1,7 @@
 ﻿using fiskaltrust.Middleware.Contracts.Models.FR;
 using fiskaltrust.Middleware.Contracts.Repositories.FR;
-using fiskaltrust.Middleware.Storage.EFCore;
 using Microsoft.EntityFrameworkCore;
 using System;
-using System.Data.Entity;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace fiskaltrust.Middleware.Storage.EFCore.Repositories.FR
@@ -17,22 +14,21 @@ namespace fiskaltrust.Middleware.Storage.EFCore.Repositories.FR
 
         public async Task<int> GetCountOfCopiesAsync(string cbPreviousReceiptReference)
         {
-            return await DbContext.Set<ftJournalFRCopyPayload>().CountAsync(x => x.CopiedReceiptReference == cbPreviousReceiptReference);
+            return await DbContext.FtJournalFRCopyPayloads.CountAsync(x => x.CopiedReceiptReference == cbPreviousReceiptReference);
         }
 
-        public new async Task<bool> InsertAsync(ftJournalFRCopyPayload entity)
+        public override async Task<bool> InsertAsync(ftJournalFRCopyPayload entity)
         {
             var id = GetIdForEntity(entity);
-            if (await DbContext.Set<ftJournalFRCopyPayload>().AnyAsync(e => e.QueueItemId == id))
+            if (await DbContext.FtJournalFRCopyPayloads.AnyAsync(e => e.QueueItemId == id))
             {
                 throw new Exception($"Entity with id {id} already exists");
             }
 
             EntityUpdated(entity);
 
-            DbContext.Set<ftJournalFRCopyPayload>().Add(entity);
+            DbContext.FtJournalFRCopyPayloads.Add(entity);
             await DbContext.SaveChangesAsync();
-
             return true;
         }
 
