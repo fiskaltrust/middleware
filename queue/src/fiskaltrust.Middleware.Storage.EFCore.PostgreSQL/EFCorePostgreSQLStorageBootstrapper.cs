@@ -155,6 +155,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL
                 return pendingMigrations;
             }
         }
+        
 
         private List<BaseStorageBootStrapper.Migrations> ConvertAppliedMigrationsToEnum(List<string> appliedMigrations)
         {

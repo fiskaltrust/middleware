@@ -3,6 +3,7 @@ using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer
 {
+    
     public class SQLServerStorageConfiguration
     {
         [JsonProperty("connectionstring")]
