@@ -8,6 +8,5 @@ namespace fiskaltrust.Middleware.Contracts.Repositories.FR
     {
         Task<int> GetCountOfCopiesAsync(string cbPreviousReceiptReference);
         Task<bool> InsertAsync(ftJournalFRCopyPayload c);
-        Task<bool> HasEntriesAsync();
     }
 }

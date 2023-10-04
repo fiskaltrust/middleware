@@ -27,18 +27,13 @@ namespace fiskaltrust.Middleware.Storage.EFCore.Repositories.FR
             {
                 throw new Exception($"Entity with id {id} already exists");
             }
-            
+
             EntityUpdated(entity);
-            
+
             DbContext.Set<ftJournalFRCopyPayload>().Add(entity);
             await DbContext.SaveChangesAsync();
 
             return true;
-        }
-
-        public async Task<bool> HasEntriesAsync()
-        {
-            return await DbContext.Set<ftJournalFRCopyPayload>().AnyAsync();
         }
 
         protected override void EntityUpdated(ftJournalFRCopyPayload entity)

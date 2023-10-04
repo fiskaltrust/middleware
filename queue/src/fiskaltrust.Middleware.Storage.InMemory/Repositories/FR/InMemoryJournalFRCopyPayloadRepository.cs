@@ -39,7 +39,5 @@ namespace fiskaltrust.Middleware.Storage.InMemory.Repositories.FR
             await base.InsertAsync(c);
             return true;
         }
-
-        public Task<bool> HasEntriesAsync() => Task.FromResult(Data.Any());
     }
 }

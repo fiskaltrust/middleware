@@ -46,11 +46,9 @@ namespace fiskaltrust.Middleware.Storage.EF.AcceptanceTest
 
             var countReference1 = await _repo.GetCountOfCopiesAsync("ref1");
             var countReference2 = await _repo.GetCountOfCopiesAsync("ref2");
-            var hasEntries = await _repo.HasEntriesAsync();
-            
+
             Assert.Equal(2, countReference1);
             Assert.Equal(1, countReference2);
-            Assert.True(hasEntries);
         }
 
         [Fact]
@@ -59,8 +57,8 @@ namespace fiskaltrust.Middleware.Storage.EF.AcceptanceTest
             var payload1 = CreatePayload("test1", "12345", "receipt1", "ref1", "cert123");
 
             await _repo.InsertAsync(payload1);
-            
-            await Assert.ThrowsAsync<DbUpdateException>(() => _repo.InsertAsync(payload1)); 
+
+            await Assert.ThrowsAsync<DbUpdateException>(() => _repo.InsertAsync(payload1));
         }
 
         private ftJournalFRCopyPayload CreatePayload(string cashBoxId, string siret, string receiptId, string copiedReceiptRef, string certSerial)

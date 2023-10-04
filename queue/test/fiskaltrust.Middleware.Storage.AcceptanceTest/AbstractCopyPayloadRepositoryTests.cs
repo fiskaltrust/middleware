@@ -30,10 +30,8 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             };
 
             var inserted = await repo.InsertAsync(payload);
-            var hasEntries = await repo.HasEntriesAsync();
 
             Assert.True(inserted);
-            Assert.True(hasEntries);
         }
     }
 }

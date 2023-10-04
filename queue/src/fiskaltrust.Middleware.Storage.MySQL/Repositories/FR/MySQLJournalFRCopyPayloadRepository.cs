@@ -20,7 +20,7 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories.FR
             {
                 await connection.OpenAsync().ConfigureAwait(false);
                 return await connection.QueryFirstOrDefaultAsync<ftJournalFRCopyPayload>(
-                    "SELECT * FROM ftJournalFRCopyPayload WHERE QueueItemId = @Id", 
+                    "SELECT * FROM ftJournalFRCopyPayload WHERE QueueItemId = @Id",
                     new { Id = id }
                 ).ConfigureAwait(false);
             }
@@ -41,7 +41,7 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories.FR
             {
                 await connection.OpenAsync().ConfigureAwait(false);
                 return await connection.ExecuteScalarAsync<int>(
-                    "SELECT COUNT(*) FROM ftJournalFRCopyPayload WHERE CopiedReceiptReference = @Reference", 
+                    "SELECT COUNT(*) FROM ftJournalFRCopyPayload WHERE CopiedReceiptReference = @Reference",
                     new { Reference = cbPreviousReceiptReference }
                 ).ConfigureAwait(false);
             }
@@ -53,7 +53,7 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories.FR
             {
                 await connection.OpenAsync().ConfigureAwait(false);
                 var existingEntity = await connection.QueryFirstOrDefaultAsync<ftJournalFRCopyPayload>(
-                    "SELECT * FROM ftJournalFRCopyPayload WHERE QueueItemId = @Id LIMIT 1", 
+                    "SELECT * FROM ftJournalFRCopyPayload WHERE QueueItemId = @Id LIMIT 1",
                     new { Id = GetIdForEntity(payload) }
                 ).ConfigureAwait(false);
 
@@ -65,7 +65,7 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories.FR
                 EntityUpdated(payload);
                 var affectedRows = await connection.ExecuteAsync(
                     "INSERT INTO ftJournalFRCopyPayload (QueueId, CashBoxIdentification, Siret, ReceiptId, ReceiptMoment, QueueItemId, CopiedReceiptReference, CertificateSerialNumber, TimeStamp) " +
-                    "Values (@QueueId, @CashBoxIdentification, @Siret, @ReceiptId, @ReceiptMoment, @QueueItemId, @CopiedReceiptReference, @CertificateSerialNumber, @TimeStamp);", 
+                    "Values (@QueueId, @CashBoxIdentification, @Siret, @ReceiptId, @ReceiptMoment, @QueueItemId, @CopiedReceiptReference, @CertificateSerialNumber, @TimeStamp);",
                     payload
                 ).ConfigureAwait(false);
 
@@ -73,15 +73,6 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories.FR
             }
         }
 
-        public async Task<bool> HasEntriesAsync()
-        {
-            using (var connection = new MySqlConnection(ConnectionString))
-            {
-                await connection.OpenAsync().ConfigureAwait(false);
-                return await connection.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM ftJournalFRCopyPayload LIMIT 1").ConfigureAwait(false) > 0;
-            }
-        }
-        
         protected override Guid GetIdForEntity(ftJournalFRCopyPayload entity) => entity.QueueItemId;
     }
 }

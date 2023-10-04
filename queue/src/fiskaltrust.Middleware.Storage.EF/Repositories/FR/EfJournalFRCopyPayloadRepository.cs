@@ -37,11 +37,6 @@ namespace fiskaltrust.Middleware.Storage.EF.Repositories.FR
             return true;
         }
 
-        public async Task<bool> HasEntriesAsync()
-        {
-            return await _dbContext.Set<ftJournalFRCopyPayload>().AnyAsync();
-        }
-
         protected void EntityUpdated(ftJournalFRCopyPayload entity)
         {
             entity.TimeStamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
