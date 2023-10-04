@@ -31,53 +31,54 @@ namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer
         private string _connectionString;
         private DbContextOptionsBuilder<SQLServerMiddlewareDbContext> _optionsBuilder;
         private readonly Dictionary<string, object> _configuration;
+        private readonly SQLServerStorageConfiguration _sqlServerStorageConfiguration; // Added this line
         private readonly ILogger<IMiddlewareBootstrapper> _logger;
         private readonly Guid _queueId;
 
-        public EFCoreSQLServerStorageBootstrapper(Guid queueId, Dictionary<string, object> configuration, ILogger<IMiddlewareBootstrapper> logger)
+        public EFCoreSQLServerStorageBootstrapper(Guid queueId, Dictionary<string, object> configuration, SQLServerStorageConfiguration sqlServerStorageConfiguration, ILogger<IMiddlewareBootstrapper> logger) // Added sqlServerStorageConfiguration parameter
         {
             _configuration = configuration;
+            _sqlServerStorageConfiguration = sqlServerStorageConfiguration; // Initialized the value here
             _logger = logger;
             _queueId = queueId;
         }
 
         public void ConfigureStorageServices(IServiceCollection serviceCollection)
         {
-            InitAsync(_queueId, _configuration, _logger).Wait();
+            InitAsync(_queueId, _logger).Wait();
             AddRepositories(serviceCollection);
         }
 
-        private async Task InitAsync(Guid queueId, Dictionary<string, object> configuration, ILogger<IMiddlewareBootstrapper> logger)
+        private async Task InitAsync(Guid queueId, ILogger<IMiddlewareBootstrapper> logger)
         {
-            if (!configuration.ContainsKey("connectionstring"))
+            if (string.IsNullOrEmpty(_sqlServerStorageConfiguration.ConnectionString))
             {
                 throw new Exception("Database connectionstring not defined");
             }
 
-            if (((string) configuration["connectionstring"]).StartsWith("raw:"))
+            if (_sqlServerStorageConfiguration.ConnectionString.StartsWith("raw:"))
             {
-                _connectionString = ((string) configuration["connectionstring"]).Substring("raw:".Length);
+                _connectionString = _sqlServerStorageConfiguration.ConnectionString.Substring("raw:".Length);
             }
             else
             {
-                _connectionString = Encoding.UTF8.GetString(Encryption.Decrypt(Convert.FromBase64String((string) configuration["connectionstring"]), queueId.ToByteArray()));
+                _connectionString = Encoding.UTF8.GetString(Encryption.Decrypt(Convert.FromBase64String(_sqlServerStorageConfiguration.ConnectionString), queueId.ToByteArray()));
             }
-
+            
             _optionsBuilder = new DbContextOptionsBuilder<SQLServerMiddlewareDbContext>();
             _optionsBuilder.UseSqlServer(_connectionString);
 
             var newlyAppliedMigrations = Update(_optionsBuilder.Options, queueId, logger);
             var baseMigrations = ConvertAppliedMigrationsToEnum(newlyAppliedMigrations);
 
-            var journalFRCopyPayloadRepository = new EFCoreJournalFRCopyPayloadRepository(
-                new SQLServerMiddlewareDbContext(_optionsBuilder.Options, _queueId));
-            var journalFRRepository = new EFCoreJournalFRRepository(
-                new SQLServerMiddlewareDbContext(_optionsBuilder.Options, _queueId));
+            var journalFRCopyPayloadRepository = new EFCoreJournalFRCopyPayloadRepository(new SQLServerMiddlewareDbContext(_optionsBuilder.Options, _queueId));
+            var journalFRRepository = new EFCoreJournalFRRepository(new SQLServerMiddlewareDbContext(_optionsBuilder.Options, _queueId));
 
             await PerformMigrationInitialization(baseMigrations, journalFRCopyPayloadRepository, journalFRRepository);
 
             var configurationRepository = new EFCoreConfigurationRepository(new SQLServerMiddlewareDbContext(_optionsBuilder.Options, _queueId));
-            var baseStorageConfig = ParseStorageConfiguration(configuration);
+            var baseStorageConfig = ParseStorageConfiguration(_configuration);
+
             var context = new SQLServerMiddlewareDbContext(_optionsBuilder.Options, _queueId);
 
             await PersistMasterDataAsync(baseStorageConfig, configurationRepository,
@@ -90,7 +91,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer
         private void AddRepositories(IServiceCollection services)
         {
             services.AddTransient(x => new SQLServerMiddlewareDbContext(_optionsBuilder.Options, _queueId));
-
+            
             services.AddTransient<IConfigurationRepository>(_ => new EFCoreConfigurationRepository(new SQLServerMiddlewareDbContext(_optionsBuilder.Options, _queueId)));
             services.AddTransient<IReadOnlyConfigurationRepository>(_ => new EFCoreConfigurationRepository(new SQLServerMiddlewareDbContext(_optionsBuilder.Options, _queueId)));
 
@@ -160,8 +161,8 @@ namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer
                 {
                     return BaseStorageBootStrapper.Migrations.JournalFRCopyPayload;
                 }
-                return (BaseStorageBootStrapper.Migrations) (-1);
-            }).Where(x => x != (BaseStorageBootStrapper.Migrations) (-1)).ToList();
+                return (BaseStorageBootStrapper.Migrations)(-1);
+            }).Where(x => x != (BaseStorageBootStrapper.Migrations)(-1)).ToList();
         }
     }
 }
