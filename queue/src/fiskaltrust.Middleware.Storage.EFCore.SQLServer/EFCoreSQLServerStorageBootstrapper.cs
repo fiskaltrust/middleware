@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
+using System.Linq;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts.Data;
 using fiskaltrust.Middleware.Contracts.Models.Transactions;
@@ -64,16 +65,25 @@ namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer
 
             _optionsBuilder = new DbContextOptionsBuilder<SQLServerMiddlewareDbContext>();
             _optionsBuilder.UseSqlServer(_connectionString);
-            Update(_optionsBuilder.Options, queueId, logger);
+
+            var appliedMigrations = Update(_optionsBuilder.Options, queueId, logger);
+            var baseMigrations = ConvertAppliedMigrationsToEnum(appliedMigrations);
+
+            var journalFRCopyPayloadRepository = new EFCoreJournalFRCopyPayloadRepository(
+                new SQLServerMiddlewareDbContext(_optionsBuilder.Options, _queueId));
+            var journalFRRepository = new EFCoreJournalFRRepository(
+                new SQLServerMiddlewareDbContext(_optionsBuilder.Options, _queueId));
+
+            await PerformMigrationInitialization(baseMigrations, journalFRCopyPayloadRepository, journalFRRepository);
 
             var configurationRepository = new EFCoreConfigurationRepository(new SQLServerMiddlewareDbContext(_optionsBuilder.Options, _queueId));
-
             var baseStorageConfig = ParseStorageConfiguration(configuration);
-
             var context = new SQLServerMiddlewareDbContext(_optionsBuilder.Options, _queueId);
+
             await PersistMasterDataAsync(baseStorageConfig, configurationRepository,
                 new EFCoreAccountMasterDataRepository(context), new EFCoreOutletMasterDataRepository(context),
                 new EFCoreAgencyMasterDataRepository(context), new EFCorePosSystemMasterDataRepository(context));
+
             await PersistConfigurationAsync(baseStorageConfig, configurationRepository, logger);
         }
 
@@ -132,14 +142,29 @@ namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer
             services.AddTransient<IMasterDataRepository<PosSystemMasterData>, EFCorePosSystemMasterDataRepository>();
         }
 
-        public static void Update(DbContextOptions dbContextOptions, Guid queueId, ILogger<IMiddlewareBootstrapper> logger)
+        public static List<string> Update(DbContextOptions dbContextOptions, Guid queueId, ILogger<IMiddlewareBootstrapper> logger)
         {
             using (var context = new SQLServerMiddlewareDbContext(dbContextOptions, queueId))
             {
                 context.Database.SetCommandTimeout(160);
                 context.Database.EnsureCreated();
+                var appliedMigrations = context.Database.GetAppliedMigrations().ToList();
+                var pendingMigrations = context.Database.GetPendingMigrations().ToList();
                 context.Database.Migrate();
+                return pendingMigrations.Except(appliedMigrations).ToList(); 
             }
+        }
+
+        private List<BaseStorageBootStrapper.Migrations> ConvertAppliedMigrationsToEnum(List<string> appliedMigrations)
+        {
+            return appliedMigrations.Select(x => 
+            {
+                if (x.EndsWith("JournalFRCopyPayload"))
+                {
+                    return BaseStorageBootStrapper.Migrations.JournalFRCopyPayload;
+                }
+                return (BaseStorageBootStrapper.Migrations)(-1);
+            }).Where(x => x != (BaseStorageBootStrapper.Migrations)(-1)).ToList();
         }
     }
 }
