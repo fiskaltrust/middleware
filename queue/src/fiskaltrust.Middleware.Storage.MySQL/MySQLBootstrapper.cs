@@ -67,9 +67,7 @@ namespace fiskaltrust.Middleware.Storage.MySQL
             }
 
             var databaseMigrator = new DatabaseMigrator(_connectionString, _mySQLStorageConfiguration.MigrationsTimeoutSec, queueId, logger);
-            var migrationResult = await databaseMigrator.MigrateAsync().ConfigureAwait(false);
-            var dbName = migrationResult.Item1;
-            var newlyAppliedMigrations = migrationResult.Item2;
+            var (dbName, newlyAppliedMigrations) = await databaseMigrator.MigrateAsync().ConfigureAwait(false);
 
             _connectionString += $"database={dbName};";
 
@@ -89,11 +87,11 @@ namespace fiskaltrust.Middleware.Storage.MySQL
             {
                 if (x == "JournalFRCopyPayload")
                 {
-                    return BaseStorageBootStrapper.Migrations.JournalFRCopyPayload;
+                    return Migrations.JournalFRCopyPayload;
                 }
 
-                return (BaseStorageBootStrapper.Migrations) (-1);
-            }).Where(x => x != (BaseStorageBootStrapper.Migrations) (-1)).ToList();
+                return (Migrations) (-1);
+            }).Where(x => x != (Migrations) (-1)).ToList();
 
             await PerformMigrationInitialization(baseMigrations, journalFRCopyPayloadRepository, journalFRRepository).ConfigureAwait(false);
         }
@@ -116,6 +114,7 @@ namespace fiskaltrust.Middleware.Storage.MySQL
             services.AddSingleton<IJournalDERepository>(x => new MySQLJournalDERepository(_connectionString));
             services.AddSingleton<IReadOnlyJournalDERepository>(x => new MySQLJournalDERepository(_connectionString));
             services.AddSingleton<IMiddlewareRepository<ftJournalDE>>(x => new MySQLJournalDERepository(_connectionString));
+
             services.AddSingleton<IJournalFRRepository>(x => new MySQLJournalFRRepository(_connectionString));
             services.AddSingleton<IReadOnlyJournalFRRepository>(x => new MySQLJournalFRRepository(_connectionString));
             services.AddSingleton<IMiddlewareJournalFRRepository>(x => new MySQLJournalFRRepository(_connectionString));

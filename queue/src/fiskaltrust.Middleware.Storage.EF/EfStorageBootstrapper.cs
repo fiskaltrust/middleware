@@ -90,10 +90,10 @@ namespace fiskaltrust.Middleware.Storage.Ef
             {
                 if (x.EndsWith("JournalFRCopyPayload"))
                 {
-                    return BaseStorageBootStrapper.Migrations.JournalFRCopyPayload;
+                    return Migrations.JournalFRCopyPayload;
                 }
-                return (BaseStorageBootStrapper.Migrations) (-1);
-            }).Where(x => x != (BaseStorageBootStrapper.Migrations) (-1)).ToList();
+                return (Migrations) (-1);
+            }).Where(x => x != (Migrations) (-1)).ToList();
 
             await PerformMigrationInitialization(baseMigrations, journalFRCopyPayloadRepository, journalFRRepository).ConfigureAwait(false);
         }

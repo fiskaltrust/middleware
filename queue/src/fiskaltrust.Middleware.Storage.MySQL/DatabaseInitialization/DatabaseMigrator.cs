@@ -19,7 +19,7 @@ namespace fiskaltrust.Middleware.Storage.MySQL.DatabaseInitialization
 
         private readonly string _serverConnectionString;
         private readonly string _databaseConnectionString;
-        private readonly string _dbName;  // QueueId is used as dbName
+        private readonly string _dbName; // QueueId is used as dbName
         private readonly ILogger<IMiddlewareBootstrapper> _logger;
 
         public DatabaseMigrator(string serverConnectionString, uint timeoutSec, Guid queueId, ILogger<IMiddlewareBootstrapper> logger)
@@ -47,7 +47,7 @@ namespace fiskaltrust.Middleware.Storage.MySQL.DatabaseInitialization
             SqlMapper.AddTypeHandler(typeof(DateTime?), new MySQLNullableDateTimeTypeHandler());
         }
 
-        public async Task<Tuple<string, List<string>>> MigrateAsync()
+        public async Task<(string, List<string>)> MigrateAsync()
         {
             var parentPath = typeof(DatabaseMigrator).Assembly.GetDirectoryPath();
             var migrations = Directory.GetFiles(Path.Combine(parentPath, MIGRATION_DIR), "*.mysql").OrderBy(x => x);
@@ -72,7 +72,7 @@ namespace fiskaltrust.Middleware.Storage.MySQL.DatabaseInitialization
                 {
                     _logger.LogInformation($"{notAppliedMigrations.Count()} pending database updates were detected. Updating database now.");
                 }
-        
+
                 foreach (var migrationScript in notAppliedMigrations)
                 {
                     _logger.LogDebug($"Updating database with migration script {migrationScript}..");
@@ -83,7 +83,7 @@ namespace fiskaltrust.Middleware.Storage.MySQL.DatabaseInitialization
                     _logger.LogDebug($"Applying the migration script was successful. Set current version to {migrationName}.");
                 }
             }
-            return new Tuple<string, List<string>>(_dbName, appliedMigrations);
+            return (_dbName, appliedMigrations);
         }
 
 

@@ -1,19 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
-using fiskaltrust.Middleware.Contracts.Data;
-using fiskaltrust.Middleware.Contracts.Models;
-using fiskaltrust.Middleware.Contracts.Models.Transactions;
-using fiskaltrust.Middleware.Contracts.Repositories;
-using fiskaltrust.Middleware.Queue;
-using fiskaltrust.Middleware.Queue.Helpers;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories;
-using fiskaltrust.Middleware.Storage.InMemory.Repositories.MasterData;
 using fiskaltrust.storage.V0;
-using fiskaltrust.storage.V0.MasterData;
-using Microsoft.Extensions.Logging;
-using Moq;
 
 namespace fiskaltrust.Middleware.Localization.QueueFR.IntegrationTest.Fixtures
 {
@@ -64,7 +53,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.IntegrationTest.Fixtures
                     PrivateKey = "BesdtJZF4EWlK7YdIfIZu3etdTlxfhvrxsv47QzeYMYRFN18B8RZO/M8IbGgFKnAFypCPexupvFix8Xop7QgdQ==",
                     CertificateBase64 = "MIIDqjCCApKgAwIBAgIICNqxEmA4xicwDQYJKoZIhvcNAQELBQAwga4xDzANBgNVBAYTBkZyYW5jZTEoMCYGA1UEAwwfZmlza2FsdHJ1c3QgU0FTIFNhbmRib3ggUm9vdCBDQTEgMB4GA1UECgwXZmlza2FsdHJ1c3QgU0FTIFNhbmRib3gxDjAMBgNVBAcMBVBhcmlzMSUwIwYJKoZIhvcNAQkBFhZjb250YWN0QGZpc2thbHRydXN0LmZyMRgwFgYDVQQLDA8wMDAwMDAwMDAwMDAwMDAwHhcNMjIxMDE4MDAwMDAwWhcNNDIxMDE4MDAwMDAwWjA7MSAwHgYDVQQKDBdfZGV2X3Bvc2NyZWF0b3JfY29tcGFueTEXMBUGA1UEAwwOMTIzNDU2Nzg5MTIzNDUwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAReOFmn26Cki+Xsfl+AzQ499WGTY/iS1eWan7qEi1/3Om8aBItWoEbC5PGeyiUPjSXHeCGVYOORJKNR4kuwiDo4o4IBBzCCAQMwgeIGA1UdIwSB2jCB14AU80TP+mFGheT0sx7YlBKL1sBl40ehgbSkgbEwga4xDzANBgNVBAYTBkZyYW5jZTEoMCYGA1UEAwwfZmlza2FsdHJ1c3QgU0FTIFNhbmRib3ggUm9vdCBDQTEgMB4GA1UECgwXZmlza2FsdHJ1c3QgU0FTIFNhbmRib3gxDjAMBgNVBAcMBVBhcmlzMSUwIwYJKoZIhvcNAQkBFhZjb250YWN0QGZpc2thbHRydXN0LmZyMRgwFgYDVQQLDA8wMDAwMDAwMDAwMDAwMDCCCAjXMRv3EXLvMAwGA1UdEwEB/wQCMAAwDgYDVR0PAQH/BAQDAgeAMA0GCSqGSIb3DQEBCwUAA4IBAQAEGzaSp2h0ZRUd67orh+jER1+J1RicZqPC0N85FEy7QZJ9xh8Uo4N79s3qzCs/J2hNa/lk3PlHzx3mbiqGoMQL3Zm0Q1LtshmJEL2Q94wEBqoglRfeKsPaaoILi/S6nI5bdwtMJcng7mr++fGqFkMzJrV0RXYMpueodPtTk+Zei/GD/xUiGzshJfNyI+x858rbXkfeXMzH18uuNXaGHpMb0ceX+I8h0gkZZX6rZ9tTbG9TubVaaoUSuQXHx+ZxjJYDY/8qae5vWWSQ4y5JVPyhBDSJ2vgolTLmS63agrpXMbWenu9ng5IQMFxqGfX6EDoMHYdqch1M88A0sJBmjxxm"
                 }).ConfigureAwait(false);
-                
+
                 return repo;
             }).Result;
         }

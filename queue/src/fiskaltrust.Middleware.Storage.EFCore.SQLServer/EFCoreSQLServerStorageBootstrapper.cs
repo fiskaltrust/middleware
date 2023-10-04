@@ -111,9 +111,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer
             services.AddTransient<IReadOnlyJournalFRRepository, EFCoreJournalFRRepository>();
             services.AddTransient<IMiddlewareRepository<ftJournalFR>, EFCoreJournalFRRepository>();
 
-            services.AddTransient<IJournalFRCopyPayloadRepository>(_ =>
-                new EFCoreJournalFRCopyPayloadRepository(
-                    new SQLServerMiddlewareDbContext(_optionsBuilder.Options, _queueId)));
+            services.AddTransient<IJournalFRCopyPayloadRepository, EFCoreJournalFRCopyPayloadRepository>();
 
             services.AddTransient<IJournalMERepository, EFCoreJournalMERepository>();
             services.AddTransient<IReadOnlyJournalMERepository, EFCoreJournalMERepository>();

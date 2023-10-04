@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts.Data;
@@ -74,7 +73,6 @@ namespace fiskaltrust.Middleware.Storage.SQLite
 
             await PersistConfigurationAsync(baseStorageConfig, _configurationRepository, logger).ConfigureAwait(false);
         }
-
 
         private void AddRepositories(IServiceCollection services)
         {

@@ -32,7 +32,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore
         public DbSet<ftJournalDE> JournalDEList { get; set; }
 
         public DbSet<ftJournalFR> JournalFRList { get; set; }
-        
+
         public DbSet<ftJournalFRCopyPayload> FtJournalFRCopyPayloads { get; set; }
 
         public DbSet<ftJournalME> JournalMEList { get; set; }
