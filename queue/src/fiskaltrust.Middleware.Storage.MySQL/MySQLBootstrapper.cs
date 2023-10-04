@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.Abstractions;
@@ -49,36 +50,53 @@ namespace fiskaltrust.Middleware.Storage.MySQL
             AddRepositories(serviceCollection);
         }
 
-        private async Task InitAsync(Guid queueId, Dictionary<string, object> configuration, ILogger<IMiddlewareBootstrapper> logger)
+    private async Task InitAsync(Guid queueId, Dictionary<string, object> configuration, ILogger<IMiddlewareBootstrapper> logger)
+    {
+        if (string.IsNullOrEmpty(_mySQLStorageConfiguration.ConnectionString))
         {
-            if (string.IsNullOrEmpty(_mySQLStorageConfiguration.ConnectionString))
-            {
-                throw new Exception("Database connectionstring not defined");
-            }
-
-            if (_mySQLStorageConfiguration.ConnectionString.StartsWith("raw:"))
-            {
-                _connectionString = _mySQLStorageConfiguration.ConnectionString.Substring("raw:".Length);
-            }
-            else
-            {
-                _connectionString = Encoding.UTF8.GetString(Encryption.Decrypt(Convert.FromBase64String(_mySQLStorageConfiguration.ConnectionString), queueId.ToByteArray()));
-            }
-
-            var databaseMigrator = new DatabaseMigrator(_connectionString, _mySQLStorageConfiguration.MigrationsTimeoutSec, queueId, logger);
-            var dbName = await databaseMigrator.MigrateAsync().ConfigureAwait(false);
-
-            _connectionString += $"database={dbName};";
-
-            _configurationRepository = new MySQLConfigurationRepository(_connectionString);
-
-            var baseStorageConfig = ParseStorageConfiguration(configuration);
-
-            await PersistMasterDataAsync(baseStorageConfig, _configurationRepository,
-                    new MySQLAccountMasterDataRepository(_connectionString), new MySQLOutletMasterDataRepository(_connectionString),
-                    new MySQLAgencyMasterDataRepository(_connectionString), new MySQLPosSystemMasterDataRepository(_connectionString)).ConfigureAwait(false);
-            await PersistConfigurationAsync(baseStorageConfig, _configurationRepository, logger).ConfigureAwait(false);
+            throw new Exception("Database connectionstring not defined");
         }
+
+        if (_mySQLStorageConfiguration.ConnectionString.StartsWith("raw:"))
+        {
+            _connectionString = _mySQLStorageConfiguration.ConnectionString.Substring("raw:".Length);
+        }
+        else
+        {
+            _connectionString = Encoding.UTF8.GetString(Encryption.Decrypt(Convert.FromBase64String(_mySQLStorageConfiguration.ConnectionString), queueId.ToByteArray()));
+        }
+
+        var databaseMigrator = new DatabaseMigrator(_connectionString, _mySQLStorageConfiguration.MigrationsTimeoutSec, queueId, logger);
+        var migrationResult = await databaseMigrator.MigrateAsync().ConfigureAwait(false);
+        var dbName = migrationResult.Item1;
+        var appliedMigrations = migrationResult.Item2;
+
+        _connectionString += $"database={dbName};";
+
+        _configurationRepository = new MySQLConfigurationRepository(_connectionString);
+
+        var baseStorageConfig = ParseStorageConfiguration(configuration);
+
+        await PersistMasterDataAsync(baseStorageConfig, _configurationRepository,
+                new MySQLAccountMasterDataRepository(_connectionString), new MySQLOutletMasterDataRepository(_connectionString),
+                new MySQLAgencyMasterDataRepository(_connectionString), new MySQLPosSystemMasterDataRepository(_connectionString)).ConfigureAwait(false);
+        await PersistConfigurationAsync(baseStorageConfig, _configurationRepository, logger).ConfigureAwait(false);
+
+        var journalFRCopyPayloadRepository = new MySQLJournalFRCopyPayloadRepository(_connectionString);
+        var journalFRRepository = new MySQLJournalFRRepository(_connectionString);
+
+        var baseMigrations = appliedMigrations.Select(x => 
+        {
+            if (x == "JournalFRCopyPayload")
+            {
+                return BaseStorageBootStrapper.Migrations.JournalFRCopyPayload;
+            }
+            
+            return (BaseStorageBootStrapper.Migrations)(-1);
+        }).Where(x => x != (BaseStorageBootStrapper.Migrations)(-1)).ToList();
+
+        await PerformMigrationInitialization(baseMigrations, journalFRCopyPayloadRepository, journalFRRepository).ConfigureAwait(false);
+    }
 
         private void AddRepositories(IServiceCollection services)
         {

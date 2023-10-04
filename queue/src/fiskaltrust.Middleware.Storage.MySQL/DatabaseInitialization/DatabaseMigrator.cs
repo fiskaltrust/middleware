@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.Linq;
@@ -46,12 +47,14 @@ namespace fiskaltrust.Middleware.Storage.MySQL.DatabaseInitialization
             SqlMapper.AddTypeHandler(typeof(DateTime?), new MySQLNullableDateTimeTypeHandler());
         }
 
-        public async Task<string> MigrateAsync()
+        public async Task<Tuple<string, List<string>>> MigrateAsync()
         {
             var parentPath = typeof(DatabaseMigrator).Assembly.GetDirectoryPath();
             var migrations = Directory.GetFiles(Path.Combine(parentPath, MIGRATION_DIR), "*.mysql").OrderBy(x => x);
 
             _logger.LogDebug($"Found {migrations.Count()} migration files.");
+
+            var appliedMigrations = new List<string>();
 
             using (var connection = new MySqlConnection(_serverConnectionString))
             {
@@ -69,16 +72,20 @@ namespace fiskaltrust.Middleware.Storage.MySQL.DatabaseInitialization
                 {
                     _logger.LogInformation($"{notAppliedMigrations.Count()} pending database updates were detected. Updating database now.");
                 }
+        
                 foreach (var migrationScript in notAppliedMigrations)
                 {
                     _logger.LogDebug($"Updating database with migration script {migrationScript}..");
                     await connection.ExecuteAsync(File.ReadAllText(migrationScript)).ConfigureAwait(false);
-                    await SetCurrentVersionAsync(connection, Path.GetFileNameWithoutExtension(migrationScript)).ConfigureAwait(false);
-                    _logger.LogDebug($"Applying the migration script was successful. Set current version to {Path.GetFileNameWithoutExtension(migrationScript)}.");
+                    var migrationName = Path.GetFileNameWithoutExtension(migrationScript);
+                    appliedMigrations.Add(migrationName);
+                    await SetCurrentVersionAsync(connection, migrationName).ConfigureAwait(false);
+                    _logger.LogDebug($"Applying the migration script was successful. Set current version to {migrationName}.");
                 }
             }
-            return _dbName;
+            return new Tuple<string, List<string>>(_dbName, appliedMigrations);
         }
+
 
         private async Task<string> GetCurrentVersionAsync(IDbConnection connection)
         {
