@@ -6,6 +6,7 @@ using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts.Data;
 using fiskaltrust.Middleware.Contracts.Models.Transactions;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Contracts.Repositories.FR;
 using fiskaltrust.Middleware.Storage.Base;
 using fiskaltrust.Middleware.Storage.SQLite.Connection;
 using fiskaltrust.Middleware.Storage.SQLite.DatabaseInitialization;
@@ -33,7 +34,8 @@ namespace fiskaltrust.Middleware.Storage.SQLite
         private readonly SQLiteStorageConfiguration _sqliteStorageConfiguration;
         private readonly ILogger<IMiddlewareBootstrapper> _logger;
 
-        public SQLiteStorageBootstrapper(Guid queueId, Dictionary<string, object> configuration, SQLiteStorageConfiguration sqliteStorageConfiguration, ILogger<IMiddlewareBootstrapper> logger)
+        public SQLiteStorageBootstrapper(Guid queueId, Dictionary<string, object> configuration,
+            SQLiteStorageConfiguration sqliteStorageConfiguration, ILogger<IMiddlewareBootstrapper> logger)
         {
             _configuration = configuration;
             _sqliteStorageConfiguration = sqliteStorageConfiguration;
@@ -52,7 +54,8 @@ namespace fiskaltrust.Middleware.Storage.SQLite
             _sqliteFile = Path.Combine(configuration["servicefolder"].ToString(), $"{queueId}.sqlite");
             _connectionFactory = new SqliteConnectionFactory();
             var databaseMigrator = new DatabaseMigrator(_connectionFactory, _sqliteStorageConfiguration.MigrationsTimeoutSec, _sqliteFile, _configuration, logger);
-            await databaseMigrator.MigrateAsync().ConfigureAwait(false);
+
+            var newlyAppliedMigrations = await databaseMigrator.MigrateAsync().ConfigureAwait(false);
             await databaseMigrator.SetWALMode().ConfigureAwait(false);
 
             _configurationRepository = new SQLiteConfigurationRepository(_connectionFactory, _sqliteFile);
@@ -62,6 +65,12 @@ namespace fiskaltrust.Middleware.Storage.SQLite
             await PersistMasterDataAsync(baseStorageConfig, _configurationRepository,
                 new SQLiteAccountMasterDataRepository(_connectionFactory, _sqliteFile), new SQLiteOutletMasterDataRepository(_connectionFactory, _sqliteFile),
                 new SQLiteAgencyMasterDataRepository(_connectionFactory, _sqliteFile), new SQLitePosSystemMasterDataRepository(_connectionFactory, _sqliteFile)).ConfigureAwait(false);
+
+            var journalFRCopyPayloadRepository = new SQLiteJournalFRCopyPayloadRepository(_connectionFactory, _sqliteFile);
+            var journalFRRepository = new SQLiteJournalFRRepository(_connectionFactory, _sqliteFile);
+
+            await PerformMigrationInitialization(newlyAppliedMigrations, journalFRCopyPayloadRepository, journalFRRepository).ConfigureAwait(false);
+
             await PersistConfigurationAsync(baseStorageConfig, _configurationRepository, logger).ConfigureAwait(false);
         }
 
@@ -85,6 +94,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite
             services.AddSingleton<IMiddlewareRepository<ftJournalDE>>(x => new SQLiteJournalDERepository(_connectionFactory, _sqliteFile));
 
             services.AddSingleton<IJournalFRRepository>(x => new SQLiteJournalFRRepository(_connectionFactory, _sqliteFile));
+            services.AddSingleton<IJournalFRCopyPayloadRepository>(x => new SQLiteJournalFRCopyPayloadRepository(_connectionFactory, _sqliteFile));
             services.AddSingleton<IReadOnlyJournalFRRepository>(x => new SQLiteJournalFRRepository(_connectionFactory, _sqliteFile));
             services.AddSingleton<IMiddlewareJournalFRRepository>(x => new SQLiteJournalFRRepository(_connectionFactory, _sqliteFile));
             services.AddSingleton<IMiddlewareRepository<ftJournalFR>>(x => new SQLiteJournalFRRepository(_connectionFactory, _sqliteFile));

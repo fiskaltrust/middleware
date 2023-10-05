@@ -1,0 +1,26 @@
+{
+  "ftCashBoxID": "fb1b79e2-f269-4fc0-9065-4821fed073d0",
+  "ftQueueID": "b00f3da1-5a6e-4a2d-8fdf-6c3d8900d2c1",
+  "ftQueueItemID": "3b17546f-d6a9-4900-b770-8ceba050d9e4",
+  "ftQueueRow": 96,
+  "cbTerminalID": "369a013a-37e2-4c23-8614-6a8f282e6330",
+  "cbReceiptReference": "2333489",
+  "ftCashBoxIdentification": "ddffc471-b101-4b89-8761-dd3c7f779f7c",
+  "ftReceiptIdentification": "ft0#C1",
+  "ftReceiptMoment": "2023-09-12T11:28:48.3050397Z",
+  "ftSignatures": [
+    {
+      "ftSignatureFormat": 3,
+      "ftSignatureType": 5067112530745229313,
+      "Caption": "www.fiskaltrust.fr",
+      "Data": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJxaWQiOiJiMDBmM2RhMS01YTZlLTRhMmQtOGZkZi02YzNkODkwMGQyYzEiLCJjYmlkIjoiZGRmZmM0NzEtYjEwMS00Yjg5LTg3NjEtZGQzYzdmNzc5ZjdjIiwic2lyZXQiOiIxMjM0NSIsInJpZCI6ImZ0MCNDMSIsImR0IjoiMjAyMy0wOS0xMlQxMToyODo0OC4zMDUwMzk3WiIsInFpaWQiOiIzYjE3NTQ2Zi1kNmE5LTQ5MDAtYjc3MC04Y2ViYTA1MGQ5ZTQiLCJjcnIiOiIyMzMzNDgiLCJjc24iOiI2Nzg5MCIsInJjIjo1MDY3MTEyNTMwNzQ1MjI5MzM0fQ.MEUCIQCbMmZl47zuNQlVuoeIvcz7ArRIWUdmP17tFBxUD83UXwIgJTZjSzF0Z9paPI6hWZxlHchIXkF2E_Eyv-elJ-Gw8fY"
+    },
+    {
+      "ftSignatureFormat": 1,
+      "ftSignatureType": 5067112530745229312,
+      "Caption": "Duplicata",
+      "Data": "1. Duplicata de 233348"
+    }
+  ],
+  "ftState": 5067112530745229312
+}

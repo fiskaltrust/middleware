@@ -1,8 +1,7 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Contracts.Repositories.FR;
 using fiskaltrust.Middleware.Localization.QueueFR.Extensions;
 using fiskaltrust.Middleware.Localization.QueueFR.Factories;
 using fiskaltrust.Middleware.Localization.QueueFR.Models;
@@ -13,13 +12,13 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
 {
     public class CopyCommand : RequestCommand
     {
-        private readonly IMiddlewareJournalFRRepository _journalFRRepository;
-        private readonly IReadOnlyQueueItemRepository _queueItemRepository;
+        private readonly IJournalFRCopyPayloadRepository _copyPayloadRepository;
 
-        public CopyCommand(ISignatureFactoryFR signatureFactoryFR, IMiddlewareJournalFRRepository journalFRRepository, IReadOnlyQueueItemRepository queueItemRepository) : base(signatureFactoryFR)
+        public CopyCommand(ISignatureFactoryFR signatureFactoryFR,
+            IJournalFRCopyPayloadRepository copyPayloadRepository) 
+            : base(signatureFactoryFR)
         {
-            _journalFRRepository = journalFRRepository;
-            _queueItemRepository = queueItemRepository;
+            _copyPayloadRepository = copyPayloadRepository;
         }
 
         public override async Task<(ReceiptResponse receiptResponse, ftJournalFR journalFR, List<ftActionJournal> actionJournals)> ExecuteAsync(ftQueue queue, ftQueueFR queueFR, ftSignaturCreationUnitFR signaturCreationUnitFR, ReceiptRequest request, ftQueueItem queueItem)
@@ -37,11 +36,11 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
 
                 var payload = PayloadFactory.GetCopyPayload(request, response, signaturCreationUnitFR, queueFR.CLastHash);
 
-                var (hash, signatureItem, journalFR) = _signatureFactoryFR.CreateTotalsSignature(response, queue, signaturCreationUnitFR, payload, "www.fiskaltrust.fr", SignaturItem.Formats.QR_Code, (SignaturItem.Types) 0x4652000000000001);
+                var (hash, signatureItem, journalFR) = _signatureFactoryFR.CreateTotalsSignature(response, queue, signaturCreationUnitFR, JsonConvert.SerializeObject(payload), "www.fiskaltrust.fr", SignaturItem.Formats.QR_Code, (SignaturItem.Types) 0x4652000000000001);
                 queueFR.CLastHash = hash;
                 journalFR.ReceiptType = "C";
 
-                var duplicateCount = (await GetCountOfExistingCopiesAsync(request.cbPreviousReceiptReference)) + 1;
+                var duplicateCount = await _copyPayloadRepository.GetCountOfCopiesAsync(request.cbPreviousReceiptReference) + 1;
 
                 var signatures = new[]
                 {
@@ -50,6 +49,8 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
                 };
 
                 response.ftSignatures = response.ftSignatures.Extend(signatures);
+                
+                await _copyPayloadRepository.InsertAsync(payload.ToJournalFRCopyPayload());
 
                 return (response, journalFR, new());
             }
@@ -69,25 +70,6 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
             {
                 yield return new ValidationError { Message = $"The Copy receipt must provide the POS System receipt reference of the receipt whose the copy has been asked." };
             }
-        }
-
-        private async Task<int> GetCountOfExistingCopiesAsync(string cbPreviousReceiptReference)
-        {
-            var count = 0;
-            await foreach (var copyJournal in _journalFRRepository.GetProcessedCopyReceiptsAsync())
-            {
-                var queueItem = await _queueItemRepository.GetAsync(copyJournal.ftQueueItemId);
-                var response = queueItem?.response != null ? JsonConvert.DeserializeObject<ReceiptResponse>(queueItem.response) : null;
-                if (response != null)
-                {
-                    if (response.ftSignatures.Any(x => x.Caption == "Duplicata" && x.Data.EndsWith($"Duplicata de {cbPreviousReceiptReference}")))
-                    {
-                        count++;
-                    }
-                }
-            }
-
-            return count;
         }
     }
 }

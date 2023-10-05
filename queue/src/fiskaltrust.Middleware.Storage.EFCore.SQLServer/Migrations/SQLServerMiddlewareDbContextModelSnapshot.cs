@@ -19,6 +19,43 @@ namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer.Migrations
                 .HasAnnotation("ProductVersion", "5.0.10")
                 .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
+            modelBuilder.Entity("fiskaltrust.Middleware.Contracts.Models.FR.ftJournalFRCopyPayload", b =>
+                {
+                    b.Property<Guid>("QueueItemId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CashBoxIdentification")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CertificateSerialNumber")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CopiedReceiptReference")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("QueueId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ReceiptId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("ReceiptMoment")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Siret")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long>("TimeStamp")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("QueueItemId");
+
+                    b.HasIndex("TimeStamp");
+
+                    b.ToTable("ftJournalFRCopyPayload");
+                });
+
             modelBuilder.Entity("fiskaltrust.Middleware.Contracts.Models.Transactions.FailedFinishTransaction", b =>
                 {
                     b.Property<long?>("TransactionNumber")

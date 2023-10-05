@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts.Data;
 using fiskaltrust.Middleware.Contracts.Models.Transactions;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Contracts.Repositories.FR;
 using fiskaltrust.Middleware.Storage.Base;
 using fiskaltrust.Middleware.Storage.EFCore.Repositories;
 using fiskaltrust.Middleware.Storage.EFCore.Repositories.AT;
@@ -62,18 +64,26 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL
             {
                 _connectionString = Encoding.UTF8.GetString(Encryption.Decrypt(Convert.FromBase64String(_posgresQLStorageConfiguration.ConnectionString), queueId.ToByteArray()));
             }
+
             _optionsBuilder = new DbContextOptionsBuilder<PostgreSQLMiddlewareDbContext>();
             _optionsBuilder.UseNpgsql(_connectionString);
-            Update(_optionsBuilder.Options, queueId, logger);
+
+            var newlyAppliedMigrations = Update(_optionsBuilder.Options, queueId, logger);
+            var baseMigrations = ConvertAppliedMigrationsToEnum(newlyAppliedMigrations);
+
+            var journalFRCopyPayloadRepository = new EFCoreJournalFRCopyPayloadRepository(new PostgreSQLMiddlewareDbContext(_optionsBuilder.Options, _queueId));
+            var journalFRRepository = new EFCoreJournalFRRepository(new PostgreSQLMiddlewareDbContext(_optionsBuilder.Options, _queueId));
+
+            await PerformMigrationInitialization(baseMigrations, journalFRCopyPayloadRepository, journalFRRepository);
 
             var configurationRepository = new EFCoreConfigurationRepository(new PostgreSQLMiddlewareDbContext(_optionsBuilder.Options, _queueId));
-
             var baseStorageConfig = ParseStorageConfiguration(configuration);
-
             var context = new PostgreSQLMiddlewareDbContext(_optionsBuilder.Options, _queueId);
+
             await PersistMasterDataAsync(baseStorageConfig, configurationRepository,
                 new EFCoreAccountMasterDataRepository(context), new EFCoreOutletMasterDataRepository(context),
                 new EFCoreAgencyMasterDataRepository(context), new EFCorePosSystemMasterDataRepository(context));
+
             await PersistConfigurationAsync(baseStorageConfig, configurationRepository, logger);
         }
 
@@ -101,6 +111,8 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL
             services.AddTransient<IReadOnlyJournalFRRepository>(_ => new EFCoreJournalFRRepository(new PostgreSQLMiddlewareDbContext(_optionsBuilder.Options, _queueId)));
             services.AddTransient<IMiddlewareJournalFRRepository>(_ => new EFCoreJournalFRRepository(new PostgreSQLMiddlewareDbContext(_optionsBuilder.Options, _queueId)));
             services.AddTransient<IMiddlewareRepository<ftJournalFR>>(_ => new EFCoreJournalFRRepository(new PostgreSQLMiddlewareDbContext(_optionsBuilder.Options, _queueId)));
+
+            services.AddTransient<IJournalFRCopyPayloadRepository>(_ => new EFCoreJournalFRCopyPayloadRepository(new PostgreSQLMiddlewareDbContext(_optionsBuilder.Options, _queueId)));
 
             services.AddTransient<IJournalMERepository>(_ => new EFCoreJournalMERepository(new PostgreSQLMiddlewareDbContext(_optionsBuilder.Options, _queueId)));
             services.AddTransient<IReadOnlyJournalMERepository>(_ => new EFCoreJournalMERepository(new PostgreSQLMiddlewareDbContext(_optionsBuilder.Options, _queueId)));
@@ -132,14 +144,28 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL
 
         }
 
-        public static void Update(DbContextOptions dbContextOptions, Guid queueId, ILogger<IMiddlewareBootstrapper> logger)
+        public static List<string> Update(DbContextOptions dbContextOptions, Guid queueId, ILogger<IMiddlewareBootstrapper> logger)
         {
             using (var context = new PostgreSQLMiddlewareDbContext(dbContextOptions, queueId))
             {
                 context.Database.SetCommandTimeout(160);
                 context.Database.EnsureCreated();
+                var pendingMigrations = context.Database.GetPendingMigrations().ToList();
                 context.Database.Migrate();
+                return pendingMigrations;
             }
+        }
+
+        private List<BaseStorageBootStrapper.Migrations> ConvertAppliedMigrationsToEnum(List<string> appliedMigrations)
+        {
+            return appliedMigrations.Select(x =>
+            {
+                if (x.EndsWith("JournalFRCopyPayload"))
+                {
+                    return BaseStorageBootStrapper.Migrations.JournalFRCopyPayload;
+                }
+                return (BaseStorageBootStrapper.Migrations) (-1);
+            }).Where(x => x != (BaseStorageBootStrapper.Migrations) (-1)).ToList();
         }
     }
 }
