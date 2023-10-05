@@ -47,7 +47,7 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories.FR
             }
         }
 
-        public async Task<bool> InsertAsync(ftJournalFRCopyPayload payload)
+        public async Task InsertAsync(ftJournalFRCopyPayload payload)
         {
             using (var connection = new MySqlConnection(ConnectionString))
             {
@@ -63,13 +63,11 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories.FR
                 }
 
                 EntityUpdated(payload);
-                var affectedRows = await connection.ExecuteAsync(
+                await connection.ExecuteAsync(
                     "INSERT INTO ftJournalFRCopyPayload (QueueId, CashBoxIdentification, Siret, ReceiptId, ReceiptMoment, QueueItemId, CopiedReceiptReference, CertificateSerialNumber, TimeStamp) " +
                     "Values (@QueueId, @CashBoxIdentification, @Siret, @ReceiptId, @ReceiptMoment, @QueueItemId, @CopiedReceiptReference, @CertificateSerialNumber, @TimeStamp);",
                     payload
                 ).ConfigureAwait(false);
-
-                return affectedRows > 0;
             }
         }
 

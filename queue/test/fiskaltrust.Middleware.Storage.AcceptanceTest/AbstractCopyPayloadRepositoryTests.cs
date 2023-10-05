@@ -29,9 +29,9 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
                 TimeStamp = DateTime.UtcNow.Ticks
             };
 
-            var inserted = await repo.InsertAsync(payload);
+            await repo.InsertAsync(payload);
 
-            Assert.True(inserted);
+            Assert.Equal(payload, await repo.GetAsync(payload.QueueItemId));
         }
     }
 }

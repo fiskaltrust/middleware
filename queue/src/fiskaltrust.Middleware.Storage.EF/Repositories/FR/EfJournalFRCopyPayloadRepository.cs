@@ -1,45 +1,46 @@
 ﻿using fiskaltrust.Middleware.Contracts.Models.FR;
 using fiskaltrust.Middleware.Contracts.Repositories.FR;
 using System;
+using System.Collections.Generic;
 using System.Data.Entity;
 using System.Linq;
 using System.Threading.Tasks;
 
 namespace fiskaltrust.Middleware.Storage.EF.Repositories.FR
 {
-    public class EfJournalFRCopyPayloadRepository : IJournalFRCopyPayloadRepository
+    public class EfJournalFRCopyPayloadRepository : AbstractEFRepostiory<Guid, ftJournalFRCopyPayload>, IJournalFRCopyPayloadRepository
     {
-        private readonly DbContext _dbContext;
+        private long _lastInsertedTimeStamp;
 
-        public EfJournalFRCopyPayloadRepository(DbContext dbContext)
+        public EfJournalFRCopyPayloadRepository(MiddlewareDbContext dbContext) : base(dbContext) { }
+
+        protected override void EntityUpdated(ftJournalFRCopyPayload entity)
         {
-            _dbContext = dbContext;
+            if (_lastInsertedTimeStamp == DateTime.UtcNow.Ticks)
+            {
+                Task.Run(() => Task.Delay(1)).Wait();
+            }
+            entity.TimeStamp = DateTime.UtcNow.Ticks;
+            _lastInsertedTimeStamp = entity.TimeStamp;
+        }
+
+        protected override Guid GetIdForEntity(ftJournalFRCopyPayload entity) => entity.QueueItemId;
+
+        public override IAsyncEnumerable<ftJournalFRCopyPayload> GetByTimeStampRangeAsync(long fromInclusive, long toInclusive) => DbContext.JournalFRCopyPayloadList.Where(x => x.TimeStamp >= fromInclusive && x.TimeStamp <= toInclusive).OrderBy(x => x.TimeStamp).ToAsyncEnumerable();
+
+        public override IAsyncEnumerable<ftJournalFRCopyPayload> GetEntriesOnOrAfterTimeStampAsync(long fromInclusive, int? take = null)
+        {
+            var result = DbContext.JournalFRCopyPayloadList.Where(x => x.TimeStamp >= fromInclusive).OrderBy(x => x.TimeStamp);
+            if (take.HasValue)
+            {
+                return result.Take(take.Value).ToAsyncEnumerable();
+            }
+            return result.ToAsyncEnumerable();
         }
 
         public async Task<int> GetCountOfCopiesAsync(string cbPreviousReceiptReference)
         {
-            return await _dbContext.Set<ftJournalFRCopyPayload>().CountAsync(x => x.CopiedReceiptReference == cbPreviousReceiptReference);
-        }
-
-        public async Task<bool> InsertAsync(ftJournalFRCopyPayload entity)
-        {
-            var id = entity.QueueItemId;
-            if (await _dbContext.Set<ftJournalFRCopyPayload>().AnyAsync(e => e.QueueItemId == id))
-            {
-                throw new Exception($"Entity with id {id} already exists");
-            }
-
-            EntityUpdated(entity);
-
-            _dbContext.Set<ftJournalFRCopyPayload>().Add(entity);
-            await _dbContext.SaveChangesAsync();
-
-            return true;
-        }
-
-        protected void EntityUpdated(ftJournalFRCopyPayload entity)
-        {
-            entity.TimeStamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            return await DbContext.JournalFRCopyPayloadList.CountAsync(x => x.CopiedReceiptReference == cbPreviousReceiptReference);
         }
     }
 }

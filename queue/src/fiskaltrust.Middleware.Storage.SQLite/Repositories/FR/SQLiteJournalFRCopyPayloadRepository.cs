@@ -28,7 +28,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Repositories.FR
                 new { Reference = cbPreviousReceiptReference }
             ).ConfigureAwait(false);
 
-        public async Task<bool> InsertAsync(ftJournalFRCopyPayload payload)
+        public async Task InsertAsync(ftJournalFRCopyPayload payload)
         {
             if (await DbConnection.QueryFirstOrDefaultAsync<ftJournalFRCopyPayload>(
                 "SELECT * FROM ftJournalFRCopyPayload WHERE QueueItemId = @Id LIMIT 1",
@@ -38,13 +38,11 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Repositories.FR
             }
 
             EntityUpdated(payload);
-            var affectedRows = await DbConnection.ExecuteAsync(
+            await DbConnection.ExecuteAsync(
                 "INSERT INTO ftJournalFRCopyPayload (QueueId, CashBoxIdentification, Siret, ReceiptId, ReceiptMoment, QueueItemId, CopiedReceiptReference, CertificateSerialNumber, TimeStamp) " +
                 "Values (@QueueId, @CashBoxIdentification, @Siret, @ReceiptId, @ReceiptMoment, @QueueItemId, @CopiedReceiptReference, @CertificateSerialNumber, @TimeStamp);",
                 payload
             ).ConfigureAwait(false);
-
-            return affectedRows > 0;
         }
 
         protected override Guid GetIdForEntity(ftJournalFRCopyPayload entity) => entity.QueueItemId;

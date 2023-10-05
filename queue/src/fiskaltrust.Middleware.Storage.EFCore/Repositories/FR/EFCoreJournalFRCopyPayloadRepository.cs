@@ -17,21 +17,6 @@ namespace fiskaltrust.Middleware.Storage.EFCore.Repositories.FR
             return await DbContext.FtJournalFRCopyPayloads.CountAsync(x => x.CopiedReceiptReference == cbPreviousReceiptReference);
         }
 
-        public override async Task<bool> InsertAsync(ftJournalFRCopyPayload entity)
-        {
-            var id = GetIdForEntity(entity);
-            if (await DbContext.FtJournalFRCopyPayloads.AnyAsync(e => e.QueueItemId == id))
-            {
-                throw new Exception($"Entity with id {id} already exists");
-            }
-
-            EntityUpdated(entity);
-
-            DbContext.FtJournalFRCopyPayloads.Add(entity);
-            await DbContext.SaveChangesAsync();
-            return true;
-        }
-
         protected override void EntityUpdated(ftJournalFRCopyPayload entity)
         {
             entity.TimeStamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();

@@ -33,11 +33,5 @@ namespace fiskaltrust.Middleware.Storage.InMemory.Repositories.FR
 
         public Task<int> GetCountOfCopiesAsync(string cbPreviousReceiptReference) =>
             Task.FromResult(Data.Count(c => c.Value.CopiedReceiptReference == cbPreviousReceiptReference));
-
-        public new async Task<bool> InsertAsync(ftJournalFRCopyPayload c)
-        {
-            await base.InsertAsync(c);
-            return true;
-        }
     }
 }
