@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1.it;
@@ -6,6 +6,7 @@ using fiskaltrust.Middleware.Localization.QueueIT.Constants;
 using fiskaltrust.Middleware.Localization.QueueIT.Extensions;
 using fiskaltrust.Middleware.Localization.QueueIT.Factories;
 using fiskaltrust.Middleware.Localization.QueueIT.Helpers;
+using fiskaltrust.Middleware.Localization.QueueIT.Models;
 using fiskaltrust.storage.V0;
 
 #pragma warning disable

@@ -16,7 +16,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.Lifecycle
         private readonly IITSSCD _itSSCD;
         private readonly IConfigurationRepository _configurationRepository;
 
-        public ITReceiptCases ReceiptCase => ITReceiptCases.InitialOperationReceipt0x4001;
+        public ReceiptCases ReceiptCase => ReceiptCases.InitialOperationReceipt0x4001;
 
         public InitialOperationReceipt0x4001(IITSSCD itSSCD, IConfigurationRepository configurationRepository)
         {
