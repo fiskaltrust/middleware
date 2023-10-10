@@ -2,34 +2,31 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.Middleware.Contracts.Repositories;
-using fiskaltrust.Middleware.Localization.QueueIT.Constants;
 using fiskaltrust.Middleware.Localization.QueueIT.Extensions;
 using fiskaltrust.Middleware.Localization.QueueIT.v2;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT
 {
     public class SignProcessorIT
     {
         protected readonly IConfigurationRepository _configurationRepository;
+        private readonly LifecyclCommandProcessorIT _lifecyclCommandProcessorIT;
         private readonly ReceiptCommandProcessorIT _receiptCommandProcessorIT;
         private readonly DailyOperationsCommandProcessorIT _dailyOperationsCommandProcessorIT;
         private readonly InvoiceCommandProcessorIT _invoiceCommandProcessorIT;
         private readonly ProtocolCommandProcessorIT _protocolCommandProcessorIT;
-        private readonly IMiddlewareQueueItemRepository _queueItemRepository;
         private readonly ILogger<SignProcessorIT> _logger;
 
-        public SignProcessorIT(ILogger<SignProcessorIT> logger, IConfigurationRepository configurationRepository, ReceiptCommandProcessorIT receiptCommandProcessorIT, DailyOperationsCommandProcessorIT dailyOperationsCommandProcessorIT, InvoiceCommandProcessorIT invoiceCommandProcessorIT, ProtocolCommandProcessorIT protocolCommandProcessorIT, IMiddlewareQueueItemRepository queueItemRepository)
+        public SignProcessorIT(ILogger<SignProcessorIT> logger, IConfigurationRepository configurationRepository, LifecyclCommandProcessorIT lifecyclCommandProcessorIT, ReceiptCommandProcessorIT receiptCommandProcessorIT, DailyOperationsCommandProcessorIT dailyOperationsCommandProcessorIT, InvoiceCommandProcessorIT invoiceCommandProcessorIT, ProtocolCommandProcessorIT protocolCommandProcessorIT)
         {
             _configurationRepository = configurationRepository;
+            _lifecyclCommandProcessorIT = lifecyclCommandProcessorIT;
             _receiptCommandProcessorIT = receiptCommandProcessorIT;
             _dailyOperationsCommandProcessorIT = dailyOperationsCommandProcessorIT;
             _invoiceCommandProcessorIT = invoiceCommandProcessorIT;
             _protocolCommandProcessorIT = protocolCommandProcessorIT;
-            _queueItemRepository = queueItemRepository;
             _logger = logger;
         }
 
@@ -51,9 +48,19 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
                 }
             }
 
-            if (request.IsVoid() || request.IsRefund())
+            if (request.IsLifeCycleOperation())
             {
-                await LoadReceiptReferencesToResponse(request, queueItem, receiptResponse);
+                try
+                {
+                    (var response, var actionJournals) = await _lifecyclCommandProcessorIT.ProcessReceiptAsync(new ProcessCommandRequest(queue, queueIT, request, receiptResponse, queueItem)).ConfigureAwait(false);
+                    return (response, actionJournals);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to process {receiptcase}.", request.ftReceiptCase);
+                    receiptResponse.SetReceiptResponseErrored("Failed to process ZeroReceipt with the following exception message: " + ex.Message);
+                    return (receiptResponse, new List<ftActionJournal>());
+                }
             }
 
             try

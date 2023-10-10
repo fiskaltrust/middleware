@@ -58,6 +58,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
                 queueIT.SSCDFailQueueItemId = null;
                 await _configurationRepository.InsertOrUpdateQueueITAsync(queueIT).ConfigureAwait(false);
             }
+            
             try
             {
                 var establishConnection = await _itSSCD.ProcessReceiptAsync(new ProcessRequest
@@ -184,7 +185,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
             }
             catch (Exception ex)
             {
-                receiptResponse.SetReceiptResponseErrored($"The monthly closing operation failed with the following error message: {ex.Message}");
+                receiptResponse.SetReceiptResponseErrored($"The yearly closing operation failed with the following error message: {ex.Message}");
                 return new ProcessCommandResponse(receiptResponse, new List<ftActionJournal>());
             }
         }

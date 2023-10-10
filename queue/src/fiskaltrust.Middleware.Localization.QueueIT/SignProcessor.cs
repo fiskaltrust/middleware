@@ -6,9 +6,7 @@ using fiskaltrust.Middleware.Contracts.Extensions;
 using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Localization.QueueIT.Constants;
 using fiskaltrust.Middleware.Localization.QueueIT.Extensions;
-using fiskaltrust.Middleware.Localization.QueueIT.v2;
 using fiskaltrust.storage.V0;
-using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT
 {
@@ -16,13 +14,11 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
     {
         protected readonly IConfigurationRepository _configurationRepository;
         private readonly SignProcessorIT _signProcessorIT;
-        private readonly LifecyclCommandProcessorIT _lifecyclCommandProcessorIT;
 
-        public SignProcessor(IConfigurationRepository configurationRepository, SignProcessorIT signProcessorIT, LifecyclCommandProcessorIT lifecyclCommandProcessorIT)
+        public SignProcessor(IConfigurationRepository configurationRepository, SignProcessorIT signProcessorIT)
         {
             _configurationRepository = configurationRepository;
             _signProcessorIT = signProcessorIT;
-            _lifecyclCommandProcessorIT = lifecyclCommandProcessorIT;
         }
 
         public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ftQueue queue, ftQueueItem queueItem)
@@ -48,26 +44,20 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
                 return ReturnWithQueueIsDisabled(queue, receiptResponse, queueItem);
             }
 
-            if (request.IsLifeCycleOperation())
+            if (request.IsInitialOperation() && !queue.IsNew())
             {
-                if (request.IsInitialOperation() && !queue.IsNew())
-                {
-                    receiptResponse.SetReceiptResponseErrored("The queue is already operational. It is not allowed to send another InitOperation Receipt");
-                    return (receiptResponse, new List<ftActionJournal>());
-                }
-
-                (var response, var actionJournals) = await _lifecyclCommandProcessorIT.ProcessReceiptAsync(new ProcessCommandRequest(queue, queueIT, request, receiptResponse, queueItem)).ConfigureAwait(false);
-                return (response, actionJournals);
+                receiptResponse.SetReceiptResponseErrored("The queue is already operational. It is not allowed to send another InitOperation Receipt");
+                return (receiptResponse, new List<ftActionJournal>());
             }
 
-            if (queue.IsNew())
+            if (!request.IsInitialOperation() && queue.IsNew())
             {
                 return ReturnWithQueueIsNotActive(queue, receiptResponse, queueItem);
             }
 
             return await _signProcessorIT.ProcessAsync(request, receiptResponse, queue, queueItem).ConfigureAwait(false);
-
         }
+
         public (ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals) ReturnWithQueueIsNotActive(ftQueue queue, ReceiptResponse receiptResponse, ftQueueItem queueItem)
         {
             var actionJournals = new List<ftActionJournal>
