@@ -1,13 +1,15 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts.Models;
+using fiskaltrust.Middleware.Contracts.Models.FR;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Contracts.Repositories.FR;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -63,6 +65,35 @@ namespace fiskaltrust.Middleware.Storage.Base
                         await posSystemMasterDataRepo.CreateAsync(posSystem).ConfigureAwait(false);
                     }
                 }
+            }
+        }
+
+        public enum Migrations
+        {
+            JournalFRCopyPayload
+        }
+
+        public async Task PerformMigrationInitialization(IEnumerable<Migrations> newlyAppliedMigrations, IJournalFRCopyPayloadRepository journalFRCopyPayloadRepository, IMiddlewareJournalFRRepository journalFRRepository)
+        {
+            foreach (var migration in newlyAppliedMigrations)
+            {
+                switch (migration)
+                {
+                    case Migrations.JournalFRCopyPayload:
+                        await PopulateFtJournalFRCopyPayloadTableAsync(journalFRCopyPayloadRepository, journalFRRepository);
+                        break;
+                }
+            }
+        }
+
+        protected async Task PopulateFtJournalFRCopyPayloadTableAsync(IJournalFRCopyPayloadRepository journalFRCopyPayloadRepository, IMiddlewareJournalFRRepository journalFRRepository)
+        {
+            await foreach (var copyJournal in journalFRRepository.GetProcessedCopyReceiptsAsync())
+            {
+                var jwt = copyJournal.JWT.Split('.');
+                var copyPayload = JsonConvert.DeserializeObject<ftJournalFRCopyPayload>(Encoding.UTF8.GetString(Convert.FromBase64String(jwt[1])));
+
+                await journalFRCopyPayloadRepository.InsertAsync(copyPayload);
             }
         }
 

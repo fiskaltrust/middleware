@@ -4,6 +4,7 @@
     {
         public static string FtJournalAT = "ftJournalAT";
         public static string FtJournalFR = "ftJournalFR";
+        public static string FtJournalFRCopyPayload = "ftJournalFRCopyPayload";
         public static string FtJournalDE = "ftJournalDE";
         public static string FtJournalIT = "ftJournalIT";
         public static string FActionJournal = "ftActionJournal";
