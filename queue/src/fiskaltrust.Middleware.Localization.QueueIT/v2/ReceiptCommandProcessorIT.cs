@@ -1,10 +1,12 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueIT.Constants;
 using fiskaltrust.Middleware.Localization.QueueIT.Extensions;
+using fiskaltrust.Middleware.Localization.QueueIT.Factories;
+using fiskaltrust.Middleware.Localization.QueueIT.Helpers;
 using fiskaltrust.storage.V0;
 using Newtonsoft.Json;
 
@@ -32,7 +34,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
                 return await UnknownReceipt0x0000Async(request);
 
             if (receiptCase == (int) ReceiptCases.PointOfSaleReceipt0x0001)
-                return await UnknownReceipt0x0000Async(request);
+                return await PointOfSaleReceipt0x0001Async(request);
 
             if (receiptCase == (int) ReceiptCases.PaymentTransfer0x0002)
                 return await PaymentTransfer0x0002Async(request);
@@ -46,7 +48,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
             if (receiptCase == (int) ReceiptCases.Protocol0x0005)
                 return await Protocol0x0005Async(request);
 
-            request.ReceiptResponse.SetReceiptResponseErrored($"The given ReceiptCase 0x{request.ReceiptRequest.ftReceiptCase:x} is not supported. Please refer to docs.fiskaltrust.cloud for supported cases.");
+            request.ReceiptResponse.SetReceiptResponseError($"The given ftReceiptCase 0x{request.ReceiptRequest.ftReceiptCase:x} is not supported. Please refer to docs.fiskaltrust.cloud for supported cases.");
             return new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>());
         }
 

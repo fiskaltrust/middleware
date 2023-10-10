@@ -6,6 +6,7 @@ using fiskaltrust.Middleware.Contracts.Extensions;
 using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Localization.QueueIT.Constants;
 using fiskaltrust.Middleware.Localization.QueueIT.Extensions;
+using fiskaltrust.Middleware.Localization.QueueIT.Helpers;
 using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT
@@ -46,7 +47,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
 
             if (request.IsInitialOperation() && !queue.IsNew())
             {
-                receiptResponse.SetReceiptResponseErrored("The queue is already operational. It is not allowed to send another InitOperation Receipt");
+                receiptResponse.SetReceiptResponseError("The queue is already operational. It is not allowed to send another InitOperation Receipt");
                 return (receiptResponse, new List<ftActionJournal>());
             }
 

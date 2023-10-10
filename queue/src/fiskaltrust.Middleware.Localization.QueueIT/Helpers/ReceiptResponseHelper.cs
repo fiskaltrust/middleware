@@ -3,11 +3,11 @@ using System.Linq;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Localization.QueueIT.Constants;
 
-namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
+namespace fiskaltrust.Middleware.Localization.QueueIT.Helpers
 {
     public static class ReceiptResponseHelper
     {
-        public static void SetReceiptResponseErrored(this ReceiptResponse receiptResponse, string errorMessage)
+        public static void SetReceiptResponseError(this ReceiptResponse receiptResponse, string errorMessage)
         {
             receiptResponse.ftState |= 0xEEEE_EEEE;
             receiptResponse.ftSignatures = new List<SignaturItem>().ToArray();

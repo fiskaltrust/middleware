@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.Localization.QueueIT.Constants;
 using fiskaltrust.Middleware.Localization.QueueIT.Extensions;
+using fiskaltrust.Middleware.Localization.QueueIT.Factories;
+using fiskaltrust.Middleware.Localization.QueueIT.Helpers;
 using fiskaltrust.storage.V0;
 
 #pragma warning disable
@@ -44,7 +46,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
             if (receiptCase == (int) ReceiptCases.YearlyClosing0x2013)
                 return await YearlyClosing0x2013Async(request);
 
-            request.ReceiptResponse.SetReceiptResponseErrored($"The given ReceiptCase 0x{request.ReceiptRequest.ftReceiptCase:x} is not supported. Please refer to docs.fiskaltrust.cloud for supported cases.");
+            request.ReceiptResponse.SetReceiptResponseError($"The given ReceiptCase 0x{request.ReceiptRequest.ftReceiptCase:x} is not supported. Please refer to docs.fiskaltrust.cloud for supported cases.");
             return new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>());
         }
 
@@ -88,7 +90,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
             var (queue, queueIt, receiptRequest, receiptResponse, queueItem) = request;
             try
             {
-                var actionJournalEntry = ActionJournalFactory.CreateDailyClosingActionJournal(queue, queueItem, receiptRequest);
+                var actionJournalEntry = ftActionJournalFactory.CreateDailyClosingActionJournal(queue, queueItem, receiptRequest);
                 var result = await _itSSCD.ProcessReceiptAsync(new ProcessRequest
                 {
                     ReceiptRequest = receiptRequest,
@@ -117,7 +119,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
             }
             catch (Exception ex)
             {
-                receiptResponse.SetReceiptResponseErrored($"The daily closing operation failed with the following error message: {ex.Message}");
+                receiptResponse.SetReceiptResponseError($"The daily closing operation failed with the following error message: {ex.Message}");
                 return new ProcessCommandResponse(receiptResponse, new List<ftActionJournal>());
             }
         }
@@ -127,7 +129,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
             var (queue, queueIt, receiptRequest, receiptResponse, queueItem) = request;
             try
             {
-                var actionJournalEntry = ActionJournalFactory.CreateMonthlyClosingActionJournal(queue, queueItem, receiptRequest);
+                var actionJournalEntry = ftActionJournalFactory.CreateMonthlyClosingActionJournal(queue, queueItem, receiptRequest);
                 var result = await _itSSCD.ProcessReceiptAsync(new ProcessRequest
                 {
                     ReceiptRequest = receiptRequest,
@@ -151,7 +153,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
             }
             catch (Exception ex)
             {
-                receiptResponse.SetReceiptResponseErrored($"The monthly closing operation failed with the following error message: {ex.Message}");
+                receiptResponse.SetReceiptResponseError($"The monthly closing operation failed with the following error message: {ex.Message}");
                 return new ProcessCommandResponse(receiptResponse, new List<ftActionJournal>());
             }
         }
@@ -161,7 +163,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
             var (queue, queueIt, receiptRequest, receiptResponse, queueItem) = request;
             try
             {
-                var actionJournalEntry = ActionJournalFactory.CreateYearlyClosingClosingActionJournal(queue, queueItem, receiptRequest);
+                var actionJournalEntry = ftActionJournalFactory.CreateYearlyClosingClosingActionJournal(queue, queueItem, receiptRequest);
                 var result = await _itSSCD.ProcessReceiptAsync(new ProcessRequest
                 {
                     ReceiptRequest = receiptRequest,
@@ -185,7 +187,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
             }
             catch (Exception ex)
             {
-                receiptResponse.SetReceiptResponseErrored($"The yearly closing operation failed with the following error message: {ex.Message}");
+                receiptResponse.SetReceiptResponseError($"The yearly closing operation failed with the following error message: {ex.Message}");
                 return new ProcessCommandResponse(receiptResponse, new List<ftActionJournal>());
             }
         }

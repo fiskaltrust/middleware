@@ -15,7 +15,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
 
         public static bool IsInvoiceOperation(this ReceiptRequest receiptRequest) => (receiptRequest.ftReceiptCase & 0x0000_0000_0000_F000) == 0x1000;
 
-        public static bool IsProtcolOperation(this ReceiptRequest receiptRequest) => (receiptRequest.ftReceiptCase & 0x0000_0000_0000_F000) == 0x2000;
+        public static bool IsProtocolOperation(this ReceiptRequest receiptRequest) => (receiptRequest.ftReceiptCase & 0x0000_0000_0000_F000) == 0x2000;
         
         public static bool IsDailyOperation(this ReceiptRequest receiptRequest) => (receiptRequest.ftReceiptCase & 0x0000_0000_0000_F000) == 0x3000;
 

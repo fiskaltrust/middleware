@@ -1,7 +1,8 @@
 ﻿using System;
+using fiskaltrust.Middleware.Localization.QueueIT.Models;
 using fiskaltrust.storage.V0;
 
-namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
+namespace fiskaltrust.Middleware.Localization.QueueIT.Factories
 {
     public static class ftJournalITFactory
     {

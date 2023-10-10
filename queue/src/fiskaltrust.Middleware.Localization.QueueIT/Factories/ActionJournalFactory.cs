@@ -5,9 +5,10 @@ using fiskaltrust.storage.serialization.DE.V0;
 using fiskaltrust.storage.V0;
 using Newtonsoft.Json;
 
-namespace fiskaltrust.Middleware.Localization.QueueIT.Constants
+namespace fiskaltrust.Middleware.Localization.QueueIT.Factories
 {
     public static class ActionJournalFactory
+
     {
         public static ftActionJournal CreateDailyClosingActionJournal(ftQueue queue, ftQueueItem queueItem, ReceiptRequest request)
         {

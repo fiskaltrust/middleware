@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace fiskaltrust.Middleware.Localization.QueueIT.Extensions
+namespace fiskaltrust.Middleware.Localization.QueueIT.Models
 {
     public struct ScuResponse
     {
