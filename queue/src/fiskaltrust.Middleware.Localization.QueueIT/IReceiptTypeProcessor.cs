@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.Middleware.Localization.QueueIT.Constants;
+using fiskaltrust.Middleware.Localization.QueueIT.v2;
 using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT

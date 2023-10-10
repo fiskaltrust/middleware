@@ -1,6 +1,6 @@
-﻿namespace fiskaltrust.Middleware.Localization.QueueIT.Constants
+﻿namespace fiskaltrust.Middleware.Localization.QueueIT.v2
 {
-    public enum ITReceiptCases : long
+    public enum ReceiptCases : long
     {
         UnknownReceipt0x0000 = 0x0000,
         PointOfSaleReceipt0x0001 = 0x0001,
@@ -14,7 +14,7 @@
         InvoiceB2B0x1002 = 0x1002,
         InvoiceB2G0x1003 = 0x1003,
 
-        ZeroReceipt0x200 = 0x2000,
+        ZeroReceipt0x2000 = 0x2000,
         OneReceipt0x2001 = 0x2001,
         ShiftClosing0x2010 = 0x2010,
         DailyClosing0x2011 = 0x2011,

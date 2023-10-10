@@ -41,12 +41,14 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.Lifecycle
                     var signature = SignaturItemFactory.CreateInitialOperationSignature(queueIt, deviceInfo);
                     var actionJournal = ActionJournalFactory.CreateInitialOperationActionJournal(queue, queueItem, queueIt, request);
                     queue.StartMoment = DateTime.UtcNow;
-
+                    
                     var result = await _itSSCD.ProcessReceiptAsync(new ProcessRequest
                     {
                         ReceiptRequest = request,
                         ReceiptResponse = receiptResponse,
                     });
+                    await _configurationRepository.InsertOrUpdateQueueAsync(queue).ConfigureAwait(false);
+                    
 
                     if (result.ReceiptResponse.HasFailed())
                     {
@@ -55,7 +57,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.Lifecycle
                             actionJournal
                         });
                     }
-                    await _configurationRepository.InsertOrUpdateQueueAsync(queue).ConfigureAwait(false);
+
                     var signatures = new List<SignaturItem>
                     {
                         signature

@@ -1,0 +1,130 @@
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using fiskaltrust.ifPOS.v1;
+using fiskaltrust.ifPOS.v1.it;
+using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Localization.QueueIT.Constants;
+using fiskaltrust.Middleware.Localization.QueueIT.Extensions;
+using fiskaltrust.storage.V0;
+using Newtonsoft.Json;
+
+#pragma warning disable
+
+namespace fiskaltrust.Middleware.Localization.QueueIT.v2
+{
+    public class ReceiptCommandProcessorIT
+    {
+        private readonly IJournalITRepository _journalITRepository;
+        private readonly IMiddlewareQueueItemRepository _queueItemRepository;
+        private readonly IITSSCD _itSSCD;
+
+        public ReceiptCommandProcessorIT(IITSSCD iTSSCD, IJournalITRepository journalITRepository, IMiddlewareQueueItemRepository queueItemRepository)
+        {
+            _itSSCD = iTSSCD;
+            _journalITRepository = journalITRepository;
+            _queueItemRepository = queueItemRepository;
+        }
+
+        public async Task<ProcessCommandResponse> ProcessReceiptAsync(ProcessCommandRequest request)
+        {
+            var receiptCase = (request.ReceiptRequest.ftReceiptCase & 0xFFFF);
+            if (receiptCase == (int) ReceiptCases.UnknownReceipt0x0000)
+                return await UnknownReceipt0x0000Async(request);
+
+            if (receiptCase == (int) ReceiptCases.PointOfSaleReceipt0x0001)
+                return await UnknownReceipt0x0000Async(request);
+
+            if (receiptCase == (int) ReceiptCases.PaymentTransfer0x0002)
+                return await PaymentTransfer0x0002Async(request);
+
+            if (receiptCase == (int) ReceiptCases.PointOfSaleReceiptWithoutObligation0x0003)
+                return await PointOfSaleReceiptWithoutObligation0x0003Async(request);
+
+            if (receiptCase == (int) ReceiptCases.ECommerce0x0004)
+                return await ECommerce0x0004Async(request);
+
+            if (receiptCase == (int) ReceiptCases.Protocol0x0005)
+                return await Protocol0x0005Async(request);
+
+            request.ReceiptResponse.SetReceiptResponseErrored($"The given ReceiptCase 0x{request.ReceiptRequest.ftReceiptCase:x} is not supported. Please refer to docs.fiskaltrust.cloud for supported cases.");
+            return new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>());
+        }
+
+        public async Task<ProcessCommandResponse> UnknownReceipt0x0000Async(ProcessCommandRequest request) => await PointOfSaleReceipt0x0001Async(request);
+
+        public async Task<ProcessCommandResponse> PointOfSaleReceipt0x0001Async(ProcessCommandRequest request)
+        {
+            var (queue, queueIt, receiptRequest, receiptResponse, queueItem) = request;
+
+            var result = await _itSSCD.ProcessReceiptAsync(new ProcessRequest
+            {
+                ReceiptRequest = receiptRequest,
+                ReceiptResponse = receiptResponse,
+            });
+            var documentNumber = result.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTDocumentNumber);
+            var zNumber = result.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTZNumber);
+            receiptResponse.ftReceiptIdentification += $"{zNumber.Data.PadLeft(4, '0')}-{documentNumber.Data.PadLeft(4, '0')}";
+            receiptResponse.ftSignatures = result.ReceiptResponse.ftSignatures;
+            receiptResponse.InsertSignatureItems(SignaturBuilder.CreatePOSReceiptFormatSignatures(receiptResponse));
+            var journalIT = ftJournalITFactory.CreateFrom(queueItem, queueIt, new ScuResponse()
+            {
+                ftReceiptCase = receiptRequest.ftReceiptCase,
+                ReceiptNumber = long.Parse(documentNumber.Data),
+                ZRepNumber = long.Parse(zNumber.Data)
+            });
+            await _journalITRepository.InsertAsync(journalIT).ConfigureAwait(false);
+            return new ProcessCommandResponse(receiptResponse, new List<ftActionJournal>());
+        }
+
+        public async Task<ProcessCommandResponse> PaymentTransfer0x0002Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+
+        public async Task<ProcessCommandResponse> PointOfSaleReceiptWithoutObligation0x0003Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+
+        public async Task<ProcessCommandResponse> ECommerce0x0004Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+
+        public async Task<ProcessCommandResponse> Protocol0x0005Async(ProcessCommandRequest request) => await PointOfSaleReceipt0x0001Async(request);
+
+
+        private async Task LoadReceiptReferencesToResponse(ReceiptRequest request, ftQueueItem queueItem, ReceiptResponse receiptResponse)
+        {
+            var queueItems = _queueItemRepository.GetByReceiptReferenceAsync(request.cbPreviousReceiptReference, request.cbTerminalID);
+            // What should we do in this case? Cannot really proceed with the storno but we
+            await foreach (var existingQueueItem in queueItems)
+            {
+                var referencedResponse = JsonConvert.DeserializeObject<ReceiptResponse>(existingQueueItem.response);
+                var documentNumber = referencedResponse.GetSignaturItem(SignatureTypesIT.RTDocumentNumber).Data;
+                var zNumber = referencedResponse.GetSignaturItem(SignatureTypesIT.RTZNumber).Data;
+                var documentMoment = referencedResponse.GetSignaturItem(SignatureTypesIT.RTDocumentMoment)?.Data;
+                documentMoment ??= queueItem.cbReceiptMoment.ToString("yyyy-MM-dd");
+                var signatures = new List<SignaturItem>();
+                signatures.AddRange(receiptResponse.ftSignatures);
+                signatures.AddRange(new List<SignaturItem>
+                    {
+                        new SignaturItem
+                        {
+                            Caption = "<reference-z-number>",
+                            Data = zNumber.ToString(),
+                            ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                            ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceZNumber
+                        },
+                        new SignaturItem
+                        {
+                            Caption = "<reference-doc-number>",
+                            Data = documentNumber.ToString(),
+                            ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                            ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentNumber
+                        },
+                        new SignaturItem
+                        {
+                            Caption = "<reference-timestamp>",
+                            Data = documentMoment,
+                            ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                            ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentMoment
+                        },
+                    });
+                receiptResponse.ftSignatures = signatures.ToArray();
+                break;
+            }
+        }
+    }
+}

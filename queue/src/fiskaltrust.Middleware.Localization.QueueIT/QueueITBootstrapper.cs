@@ -5,6 +5,7 @@ using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Contracts.Models;
+using fiskaltrust.Middleware.Localization.QueueIT.v2;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
@@ -16,9 +17,13 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
         public void ConfigureServices(IServiceCollection services)
         {
             var _ = services
-                .AddScoped<IMarketSpecificSignProcessor, SignProcessorIT>()
+                .AddScoped<IMarketSpecificSignProcessor, SignProcessor>(x => new SignProcessor(x.GetRequiredService<IConfigurationRepository>(), x.GetRequiredService<SignProcessorIT>(), x.GetRequiredService<LifecyclCommandProcessorIT>()))
                 .AddScoped<IMarketSpecificJournalProcessor, JournalProcessorIT>()
-                .AddScoped<ReceiptTypeProcessorFactory>()
+                .AddScoped<ReceiptCommandProcessorIT>()
+                .AddScoped<ProtocolCommandProcessorIT>()
+                .AddScoped<LifecyclCommandProcessorIT>()
+                .AddScoped<InvoiceCommandProcessorIT>()
+                .AddScoped<DailyOperationsCommandProcessorIT>()
                 .AddSingleton(sp => QueueITConfiguration.FromMiddlewareConfiguration(sp.GetRequiredService<MiddlewareConfiguration>()))
                 .AddSingleton(sp =>
                 {

@@ -7,7 +7,7 @@ using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Repositories;
-using fiskaltrust.Middleware.Localization.QueueIT.Constants;
+using fiskaltrust.Middleware.Localization.QueueIT.v2;
 using fiskaltrust.storage.serialization.DE.V0;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
@@ -141,7 +141,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
         {
             foreach (var number in Enum.GetValues(typeof(ITReceiptCases)))
             {
-                if ((long) number == (long) ITReceiptCases.ZeroReceipt0x200)
+                if ((long) number == (long) ITReceiptCases.ZeroReceipt0x2000)
                 {
                     continue;
                 }
