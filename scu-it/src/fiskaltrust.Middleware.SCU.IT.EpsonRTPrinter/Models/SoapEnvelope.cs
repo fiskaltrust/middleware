@@ -22,12 +22,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models
 
         public void ReadXml(XmlReader reader)
         {
-            var innerTypeName = typeof(T).GetCustomAttribute<XmlTypeAttribute>()?.TypeName;
-            if (innerTypeName == null)
-            {
-                throw new InvalidOperationException("Could not deserialize the device's response, because the given type does not have the XmlType attribute specified.");
-            }
-
+            var innerTypeName = (typeof(T).GetCustomAttribute<XmlTypeAttribute>()?.TypeName) ?? throw new InvalidOperationException("Could not deserialize the device's response, because the given type does not have the XmlType attribute specified.");
             reader.ReadToDescendant(innerTypeName);
             var serializer = new XmlSerializer(typeof(T));
             Value = serializer.Deserialize(reader) as T;

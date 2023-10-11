@@ -73,59 +73,77 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
 
     public override async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request)
     {
-        var receiptCase = request.ReceiptRequest.GetReceiptCase();
-        if (string.IsNullOrEmpty(_serialnr))
+        try
         {
-            var result = await QueryPrinterStatusAsync();
-            _logger.LogInformation(JsonConvert.SerializeObject(result));
-            _serialnr = await GetSerialNumberAsync(result?.Printerstatus?.RtType ?? "").ConfigureAwait(false);
-        }
-        if (request.ReceiptRequest.IsInitialOperationReceipt())
-        {
-            return ProcessResponseHelpers.CreateResponse(request.ReceiptResponse, SignatureFactory.CreateInitialOperationSignatures().ToList());
-        }
+            var receiptCase = request.ReceiptRequest.GetReceiptCase();
+            if (string.IsNullOrEmpty(_serialnr))
+            {
+                var result = await QueryPrinterStatusAsync();
+                _logger.LogInformation(JsonConvert.SerializeObject(result));
+                _serialnr = await GetSerialNumberAsync(result?.Printerstatus?.RtType ?? "").ConfigureAwait(false);
+            }
+            if (request.ReceiptRequest.IsInitialOperationReceipt())
+            {
+                return ProcessResponseHelpers.CreateResponse(request.ReceiptResponse, SignatureFactory.CreateInitialOperationSignatures().ToList());
+            }
 
-        if (request.ReceiptRequest.IsOutOfOperationReceipt())
-        {
-            return ProcessResponseHelpers.CreateResponse(request.ReceiptResponse, SignatureFactory.CreateOutOfOperationSignatures().ToList());
-        }
+            if (request.ReceiptRequest.IsOutOfOperationReceipt())
+            {
+                return ProcessResponseHelpers.CreateResponse(request.ReceiptResponse, SignatureFactory.CreateOutOfOperationSignatures().ToList());
+            }
 
-        if (request.ReceiptRequest.IsZeroReceipt())
-        {
-            (var signatures, var stateData) = await PerformZeroReceiptOperationAsync();
-            return ProcessResponseHelpers.CreateResponse(request.ReceiptResponse, stateData, signatures);
-        }
+            if (request.ReceiptRequest.IsZeroReceipt())
+            {
+                (var signatures, var stateData) = await PerformZeroReceiptOperationAsync();
+                return ProcessResponseHelpers.CreateResponse(request.ReceiptResponse, stateData, signatures);
+            }
 
-        if (request.ReceiptRequest.IsVoid())
-        {
-            return await ProcessVoidReceipt(request);
-        }
+            if (request.ReceiptRequest.IsVoid())
+            {
+                return await ProcessVoidReceipt(request);
+            }
 
-        if (request.ReceiptRequest.IsRefund())
-        {
-            return await ProcessRefundReceipt(request);
-        }
+            if (request.ReceiptRequest.IsRefund())
+            {
+                return await ProcessRefundReceipt(request);
+            }
 
-        if (request.ReceiptRequest.IsDailyClosing())
-        {
-            return Helpers.CreateResponse(await PerformDailyCosing(request.ReceiptRequest, request.ReceiptResponse));
-        }
+            if (request.ReceiptRequest.IsDailyClosing())
+            {
+                return Helpers.CreateResponse(await PerformDailyCosing(request.ReceiptResponse));
+            }
 
-        switch (receiptCase)
-        {
-            case (long) ITReceiptCases.UnknownReceipt0x0000:
-            case (long) ITReceiptCases.PointOfSaleReceipt0x0001:
-            case (long) ITReceiptCases.PaymentTransfer0x0002:
-            case (long) ITReceiptCases.Protocol0x0005:
-            default:
-                return Helpers.CreateResponse(await PerformClassicReceiptAsync(request.ReceiptRequest, request.ReceiptResponse));
+            switch (receiptCase)
+            {
+                case (long) ITReceiptCases.UnknownReceipt0x0000:
+                case (long) ITReceiptCases.PointOfSaleReceipt0x0001:
+                case (long) ITReceiptCases.PaymentTransfer0x0002:
+                case (long) ITReceiptCases.Protocol0x0005:
+                    return Helpers.CreateResponse(await PerformClassicReceiptAsync(request.ReceiptRequest, request.ReceiptResponse));
+            }
+            request.ReceiptResponse.SetReceiptResponseErrored($"The given receiptcase 0x{receiptCase.ToString("X")} is not supported by Epson RT Printer.");
+            return Helpers.CreateResponse(request.ReceiptResponse);
         }
-
-        throw new Exception($"The given receiptcase 0x{receiptCase.ToString("X")} is not supported.");
+        catch (Exception ex)
+        {
+            var signatures = new List<SignaturItem>
+            {
+                new SignaturItem
+                {
+                    Caption = "epson-printer-generic-error",
+                    Data = $"{ex}",
+                    ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                    ftSignatureType = 0x4954_2000_0000_3000
+                }
+            };
+            request.ReceiptResponse.ftState |= 0xEEEE_EEEE;
+            return ProcessResponseHelpers.CreateResponse(request.ReceiptResponse, signatures);
+        }
     }
 
-    private async Task SetReceiptResponse(PrinterResponse? result, FiscalReceiptResponse fiscalReceiptResponse)
+    private async Task<FiscalReceiptResponse> SetReceiptResponse(PrinterResponse? result)
     {
+        var fiscalReceiptResponse = new FiscalReceiptResponse();
         if (result?.Success == false)
         {
             fiscalReceiptResponse.SSCDErrorInfo = GetErrorInfo(result.Code, result.Status, result?.Receipt?.PrinterStatus);
@@ -135,8 +153,6 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         {
             fiscalReceiptResponse.ReceiptNumber = result?.Receipt?.FiscalReceiptNumber != null ? long.Parse(result.Receipt.FiscalReceiptNumber) : 0;
             fiscalReceiptResponse.ZRepNumber = result?.Receipt?.ZRepNumber != null ? long.Parse(result.Receipt.ZRepNumber) : 0;
-            fiscalReceiptResponse.ReceiptDataJson = await DownloadJsonAsync("www/json_files/rec.json");
-
             if (result?.Receipt?.FiscalReceiptDate != null && result?.Receipt?.FiscalReceiptTime != null)
             {
                 fiscalReceiptResponse.ReceiptDateTime = DateTime.ParseExact(result.Receipt.FiscalReceiptDate, "d/M/yyyy", CultureInfo.InvariantCulture);
@@ -145,9 +161,10 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
             }
             else
             {
-                fiscalReceiptResponse.ReceiptDateTime = DateTime.Now;
+                fiscalReceiptResponse.ReceiptDateTime = DateTime.Now; // ???????
             }
         }
+        return fiscalReceiptResponse;
     }
 
     public async Task<ReceiptResponse> PerformClassicReceiptAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
@@ -166,14 +183,11 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
                 _logger.LogDebug("Response content ({receiptreference}): {content}", receiptRequest.cbReceiptReference, SoapSerializer.Serialize(result));
             }
 
-            var fiscalReceiptResponse = new FiscalReceiptResponse()
-            {
-                Success = result?.Success ?? false
-            };
-            await SetReceiptResponse(result, fiscalReceiptResponse);
+            var fiscalReceiptResponse = await SetReceiptResponse(result);
             if (!fiscalReceiptResponse.Success)
             {
-                throw new SSCDErrorException(fiscalReceiptResponse.SSCDErrorInfo.Type, fiscalReceiptResponse.SSCDErrorInfo.Info);
+                receiptResponse.SetReceiptResponseErrored(fiscalReceiptResponse.SSCDErrorInfo?.Info ?? "");
+                return receiptResponse;
             }
             var posReceiptSignatur = new POSReceiptSignatureData
             {
@@ -191,7 +205,8 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         catch (Exception e)
         {
             var response = Helpers.ExceptionInfo(e);
-            throw new SSCDErrorException(response.SSCDErrorInfo.Type, response.SSCDErrorInfo.Info);
+            receiptResponse.SetReceiptResponseErrored(response.SSCDErrorInfo?.Info ?? "");
+            return receiptResponse;
         }
     }
 
@@ -202,7 +217,11 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         var referenceDateTime = request.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceDocumentMoment)?.Data;
         if (string.IsNullOrEmpty(referenceZNumber) || string.IsNullOrEmpty(referenceDocNumber) || string.IsNullOrEmpty(referenceDateTime))
         {
-            throw new Exception("Cannot refund receipt without references.");
+            request.ReceiptResponse.SetReceiptResponseErrored("Cannot refund receipt without references.");
+            return new ProcessResponse
+            {
+                ReceiptResponse = request.ReceiptResponse
+            };
         }
 
         FiscalReceiptResponse fiscalResponse;
@@ -219,11 +238,15 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
 
             using var responseContent = await response.Content.ReadAsStreamAsync();
             var result = SoapSerializer.DeserializeToSoapEnvelope<PrinterResponse>(responseContent);
-            var fiscalReceiptResponse = new FiscalReceiptResponse()
+            var fiscalReceiptResponse = await SetReceiptResponse(result);
+            if (!fiscalReceiptResponse.Success)
             {
-                Success = result?.Success ?? false
-            };
-            await SetReceiptResponse(result, fiscalReceiptResponse);
+                request.ReceiptResponse.SetReceiptResponseErrored(fiscalReceiptResponse.SSCDErrorInfo?.Info ?? "");
+                return new ProcessResponse
+                {
+                    ReceiptResponse = request.ReceiptResponse
+                };
+            }
             fiscalResponse = fiscalReceiptResponse;
         }
         catch (Exception e)
@@ -233,7 +256,11 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
 
         if (!fiscalResponse.Success)
         {
-            throw new SSCDErrorException(fiscalResponse.SSCDErrorInfo.Type, fiscalResponse.SSCDErrorInfo.Info);
+            request.ReceiptResponse.SetReceiptResponseErrored(fiscalResponse.SSCDErrorInfo?.Info ?? "");
+            return new ProcessResponse
+            {
+                ReceiptResponse = request.ReceiptResponse
+            };
         }
         else
         {
@@ -265,7 +292,11 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         var referenceDateTime = request.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceDocumentMoment)?.Data;
         if (string.IsNullOrEmpty(referenceZNumber) || string.IsNullOrEmpty(referenceDocNumber) || string.IsNullOrEmpty(referenceDateTime))
         {
-            throw new Exception("Cannot refund receipt without references.");
+            request.ReceiptResponse.SetReceiptResponseErrored("Cannot void receipt without references.");
+            return new ProcessResponse
+            {
+                ReceiptResponse = request.ReceiptResponse
+            };
         }
         FiscalReceiptResponse fiscalResponse;
         try
@@ -281,11 +312,15 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
 
             using var responseContent = await response.Content.ReadAsStreamAsync();
             var result = SoapSerializer.DeserializeToSoapEnvelope<PrinterResponse>(responseContent);
-            var fiscalReceiptResponse = new FiscalReceiptResponse()
+            var fiscalReceiptResponse = await SetReceiptResponse(result);
+            if (!fiscalReceiptResponse.Success)
             {
-                Success = result?.Success ?? false
-            };
-            await SetReceiptResponse(result, fiscalReceiptResponse);
+                request.ReceiptResponse.SetReceiptResponseErrored(fiscalReceiptResponse.SSCDErrorInfo?.Info ?? "");
+                return new ProcessResponse
+                {
+                    ReceiptResponse = request.ReceiptResponse
+                };
+            }
             fiscalResponse = fiscalReceiptResponse;
         }
         catch (Exception e)
@@ -295,7 +330,11 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
 
         if (!fiscalResponse.Success)
         {
-            throw new SSCDErrorException(fiscalResponse.SSCDErrorInfo.Type, fiscalResponse.SSCDErrorInfo.Info);
+            request.ReceiptResponse.SetReceiptResponseErrored(fiscalResponse.SSCDErrorInfo?.Info ?? "");
+            return new ProcessResponse
+            {
+                ReceiptResponse = request.ReceiptResponse
+            };
         }
         else
         {
@@ -320,7 +359,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         };
     }
 
-    public async Task<string> GetSerialNumberAsync(string rtType)
+    private async Task<string> GetSerialNumberAsync(string rtType)
     {
         var serialQuery = new PrinterCommand() { DirectIO = DirectIO.GetSerialNrCommand() };
         var content = SoapSerializer.Serialize(serialQuery);
@@ -330,7 +369,6 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         var result = SoapSerializer.DeserializeToSoapEnvelope<PrinterCommandResponse>(responseContent);
 
         var serialnr = result?.CommandResponse?.ResponseData;
-
         return serialnr?.Substring(10, 2) + rtType + serialnr?.Substring(8, 2) + serialnr?.Substring(2, 6);
     }
 
@@ -341,69 +379,39 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         await SendRequestAsync(xml);
     }
 
-    public async Task<ReceiptResponse> PerformDailyCosing(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
+    private async Task<ReceiptResponse> PerformDailyCosing(ReceiptResponse receiptResponse)
     {
-        DailyClosingResponse dailyClosingResponse;
         try
         {
             var fiscalReport = new FiscalReport
             {
-                ZReport = new ZReport(),
-                DisplayText = new DisplayText
-                {
-                    Data = receiptResponse.ftCashBoxIdentification + " " + receiptRequest.cbReceiptReference
-                }
+                ZReport = new ZReport()
             };
             var response = await SendRequestAsync(SoapSerializer.Serialize(fiscalReport));
             using var responseContent = await response.Content.ReadAsStreamAsync();
             var result = SoapSerializer.DeserializeToSoapEnvelope<ReportResponse>(responseContent);
-            dailyClosingResponse = new DailyClosingResponse()
+            if (!result?.Success ?? false)
             {
-                Success = result?.Success ?? false
-            };
-
-            if (!dailyClosingResponse.Success)
-            {
-                dailyClosingResponse.SSCDErrorInfo = GetErrorInfo(result?.Code, result?.Status, null);
+                var errorInfo = GetErrorInfo(result?.Code, result?.Status, null);
                 await ResetPrinter();
-                if (!dailyClosingResponse.Success)
-                {
-                    throw new SSCDErrorException(dailyClosingResponse.SSCDErrorInfo.Type, dailyClosingResponse.SSCDErrorInfo.Info);
-                }
+                receiptResponse.SetReceiptResponseErrored(errorInfo.Info);
+                return receiptResponse;
             }
-            else
-            {
-                dailyClosingResponse.ZRepNumber = result?.ReportInfo?.ZRepNumber != null ? long.Parse(result.ReportInfo.ZRepNumber) : 0;
-                dailyClosingResponse.DailyAmount = result?.ReportInfo?.DailyAmount != null ? decimal.Parse(result.ReportInfo.DailyAmount, new CultureInfo("it-It", false)) : 0;
-                dailyClosingResponse.ReportDataJson = await DownloadJsonAsync("www/json_files/zrep.json");
-            }
+
+            var zRepNumber = result?.ReportInfo?.ZRepNumber != null ? long.Parse(result.ReportInfo.ZRepNumber) : 0;
+            receiptResponse.ftSignatures = SignatureFactory.CreateDailyClosingReceiptSignatures(zRepNumber);
+            return receiptResponse;
         }
         catch (Exception e)
         {
-            var msg = e.Message;
-            if (e.InnerException != null)
-            {
-                msg = msg + " " + e.InnerException.Message;
-            }
-
-            if (Helpers.IsConnectionException(e))
-            {
-                dailyClosingResponse = new DailyClosingResponse() { Success = false, SSCDErrorInfo = new SSCDErrorInfo() { Info = msg, Type = SSCDErrorType.Connection } };
-            }
-            else
-            {
-                dailyClosingResponse = new DailyClosingResponse() { Success = false, SSCDErrorInfo = new SSCDErrorInfo() { Info = msg, Type = SSCDErrorType.General } };
-            }
-            throw new SSCDErrorException(dailyClosingResponse.SSCDErrorInfo.Type, dailyClosingResponse.SSCDErrorInfo.Info);
+            receiptResponse.SetReceiptResponseErrored(e.Message);
+            return receiptResponse;
         }
-        receiptResponse.ftSignatures = SignatureFactory.CreateDailyClosingReceiptSignatures(dailyClosingResponse.ZRepNumber);
-        return receiptResponse;
     }
 
     private async Task<(List<SignaturItem> signaturItems, string ftStateData)> PerformZeroReceiptOperationAsync()
     {
         await ResetPrinter();
-
         var result = await QueryPrinterStatusAsync();
         var signatures = SignatureFactory.CreateZeroReceiptSignatures().ToList();
         var stateData = JsonConvert.SerializeObject(new
@@ -411,81 +419,6 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
             PrinterStatus = result
         });
         return (signatures, stateData);
-    }
-
-    private async Task<ReceiptResponse> CreateMiddlewareNoFiscalRequestAsync(ReceiptResponse receiptResponse, ReceiptRequest request)
-    {
-        var nonFiscalRequest = new NonFiscalRequest
-        {
-            NonFiscalPrints = new List<NonFiscalPrint>()
-        };
-
-        try
-        {
-            var nonFiscalPrints = new List<NonFiscalPrint>
-                {
-                    new NonFiscalPrint
-                    {
-                        Data = $"{request.ftReceiptCase.ToString("x")} case for Queue {receiptResponse.ftCashBoxIdentification}"
-                    },
-                    new NonFiscalPrint
-                    {
-                        Data = $"Processing"
-                    }
-                };
-            var printerNonFiscal = new PrinterNonFiscal
-            {
-                PrintNormals = nonFiscalPrints.Select(x => new PrintNormal() { Data = x.Data, Font = x.Font }).ToList()
-            };
-            var httpResponse = await SendRequestAsync(SoapSerializer.Serialize(printerNonFiscal));
-            using var responseContent = await httpResponse.Content.ReadAsStreamAsync();
-            var result = SoapSerializer.DeserializeToSoapEnvelope<PrinterResponse>(responseContent);
-            var response = new Response()
-            {
-                Success = result?.Success ?? false
-            };
-
-            if (!response.Success)
-            {
-                response.SSCDErrorInfo = GetErrorInfo(result?.Code, result?.Status, null);
-            }
-            if (response.Success)
-            {
-                receiptResponse.ftSignatures = SignatureFactory.CreateVoucherSignatures(nonFiscalRequest);
-            }
-        }
-        catch (Exception e)
-        {
-            var msg = e.Message;
-            if (e.InnerException != null)
-            {
-                msg = msg + " " + e.InnerException.Message;
-            }
-            Response? response;
-            if (Helpers.IsConnectionException(e))
-            {
-                response = new Response() { Success = false, SSCDErrorInfo = new SSCDErrorInfo() { Info = msg, Type = SSCDErrorType.Connection } };
-            }
-            else
-            {
-                response = new Response() { Success = false, SSCDErrorInfo = new SSCDErrorInfo() { Info = msg, Type = SSCDErrorType.General } };
-            }
-
-            throw new SSCDErrorException(response.SSCDErrorInfo.Type, response.SSCDErrorInfo.Info);
-        }
-        return receiptResponse;
-    }
-
-    private async Task<string?> DownloadJsonAsync(string path)
-    {
-        var response = await _httpClient.GetAsync(path);
-        var content = await response.Content.ReadAsStringAsync();
-        if (!response.IsSuccessStatusCode)
-        {
-            _logger.LogError("Could not download JSON file from device (URL: {Url}, Path: {Path}, Response content: {Content}", _httpClient.BaseAddress?.ToString(), path, content);
-            return null; // TODO: Or better throw?
-        }
-        return content;
     }
 
     private async Task<HttpResponseMessage> SendRequestAsync(string content)
@@ -517,4 +450,15 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         _logger.LogError(errorInf);
         return new SSCDErrorInfo() { Info = errorInf, Type = SSCDErrorType.Device };
     }
+}
+
+
+
+public class FiscalReceiptResponse
+{
+    public bool Success { get; set; }
+    public SSCDErrorInfo? SSCDErrorInfo { get; set; }
+    public DateTime ReceiptDateTime { get; set; }
+    public long ReceiptNumber { get; set; }
+    public long ZRepNumber { get; set; }
 }
