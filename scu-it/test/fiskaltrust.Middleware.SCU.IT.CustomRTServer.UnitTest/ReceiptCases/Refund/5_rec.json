@@ -2,7 +2,7 @@
   "document": {
     "cashuuid": "ske00003",
     "doctype": 3,
-    "dtime": "2023-09-20 11:36:15",
+    "dtime": "2023-09-30 07:17:39",
     "docnumber": 2,
     "docznumber": 2,
     "amount": 10700,
@@ -15,7 +15,7 @@
     "grandTotal": 1,
     "referenceClosurenumber": 0,
     "referenceDocnumber": 0,
-    "referenceDtime": "2023-09-20 00:00:00",
+    "referenceDtime": "2023-09-30 00:00:00",
     "refSerialNum": null,
     "referenceCashuuid": "ND",
     "errSignature": null,
@@ -169,7 +169,7 @@
     },
     {
       "type": "97",
-      "description": "20/09/2023 11:36:15       DOC.N.0002-0002",
+      "description": "30/09/2023 07:17:39       DOC.N.0002-0002",
       "amount": "",
       "quantity": "1000",
       "unitprice": "",
