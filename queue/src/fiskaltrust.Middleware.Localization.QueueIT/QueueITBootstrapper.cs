@@ -34,7 +34,8 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
                     var config = new ClientConfiguration
                     {
                         Url = uri.ToString(),
-                        UrlType = uri.Scheme
+                        UrlType = uri.Scheme,
+                        RetryCount = 0 // SKE => currently we don't perform any retries, we'll have to think about how we can handle this differently in the future, probably letting one of either component decide
                     };
                     return clientFactory.CreateClient(config);
                 });

@@ -40,7 +40,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
 
             if (receiptCase == (int) ReceiptCases.DailyClosing0x2011)
                 return await DailyClosing0x2011Async(request);
- 
+
             if (receiptCase == (int) ReceiptCases.MonthlyClosing0x2012)
                 return await MonthlyClosing0x2012Async(request);
 
@@ -61,25 +61,17 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
                 queueIT.SSCDFailQueueItemId = null;
                 await _configurationRepository.InsertOrUpdateQueueITAsync(queueIT).ConfigureAwait(false);
             }
-            
-            try
+
+            var establishConnection = await _itSSCD.ProcessReceiptAsync(new ProcessRequest
             {
-                var establishConnection = await _itSSCD.ProcessReceiptAsync(new ProcessRequest
-                {
-                    ReceiptRequest = receiptRequest,
-                    ReceiptResponse = receiptResponse
-                });
-                if (establishConnection.ReceiptResponse.ftState == 0x4954_2001_0000_0000)
-                {
-                    return new ProcessCommandResponse(establishConnection.ReceiptResponse, new List<ftActionJournal>());
-                }
+                ReceiptRequest = receiptRequest,
+                ReceiptResponse = receiptResponse
+            });
+            if (establishConnection.ReceiptResponse.ftState == 0x4954_2001_0000_0000)
+            {
                 return new ProcessCommandResponse(establishConnection.ReceiptResponse, new List<ftActionJournal>());
             }
-            catch (Exception ex)
-            {
-                receiptResponse.ftState = 0x4954_2000_EEEE_EEEE;
-                return new ProcessCommandResponse(receiptResponse, new List<ftActionJournal>());
-            }
+            return new ProcessCommandResponse(establishConnection.ReceiptResponse, new List<ftActionJournal>());
         }
 
         public async Task<ProcessCommandResponse> OneReceipt0x2001Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>()));
@@ -89,108 +81,85 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
         public async Task<ProcessCommandResponse> DailyClosing0x2011Async(ProcessCommandRequest request)
         {
             var (queue, queueIt, receiptRequest, receiptResponse, queueItem) = request;
-            try
+            var actionJournalEntry = ftActionJournalFactory.CreateDailyClosingActionJournal(queue, queueItem, receiptRequest);
+            var result = await _itSSCD.ProcessReceiptAsync(new ProcessRequest
             {
-                var actionJournalEntry = ftActionJournalFactory.CreateDailyClosingActionJournal(queue, queueItem, receiptRequest);
-                var result = await _itSSCD.ProcessReceiptAsync(new ProcessRequest
-                {
-                    ReceiptRequest = receiptRequest,
-                    ReceiptResponse = receiptResponse
-                });
-                if (result.ReceiptResponse.HasFailed())
-                {
-                    return new ProcessCommandResponse(result.ReceiptResponse, new List<ftActionJournal>());
-                }
+                ReceiptRequest = receiptRequest,
+                ReceiptResponse = receiptResponse
+            });
+            if (result.ReceiptResponse.HasFailed())
+            {
+                return new ProcessCommandResponse(result.ReceiptResponse, new List<ftActionJournal>());
+            }
 
-                var zNumber = result.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTZNumber).Data;
-                receiptResponse.ftReceiptIdentification += $"Z{zNumber.PadLeft(4, '0')}";
-                receiptResponse.ftSignatures = result.ReceiptResponse.ftSignatures;
+            var zNumber = result.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTZNumber).Data;
+            receiptResponse.ftReceiptIdentification += $"Z{zNumber.PadLeft(4, '0')}";
+            receiptResponse.ftSignatures = result.ReceiptResponse.ftSignatures;
 
-                var journalIT = ftJournalITFactory.CreateFrom(queueItem, queueIt, new ScuResponse()
-                {
-                    ftReceiptCase = receiptRequest.ftReceiptCase,
-                    ZRepNumber = long.Parse(zNumber)
-                });
-                await _journalITRepository.InsertAsync(journalIT).ConfigureAwait(false);
+            var journalIT = ftJournalITFactory.CreateFrom(queueItem, queueIt, new ScuResponse()
+            {
+                ftReceiptCase = receiptRequest.ftReceiptCase,
+                ZRepNumber = long.Parse(zNumber)
+            });
+            await _journalITRepository.InsertAsync(journalIT).ConfigureAwait(false);
 
-                return new ProcessCommandResponse(receiptResponse, new List<ftActionJournal>
+            return new ProcessCommandResponse(receiptResponse, new List<ftActionJournal>
                 {
                     actionJournalEntry
                 });
-            }
-            catch (Exception ex)
-            {
-                receiptResponse.SetReceiptResponseError($"The daily closing operation failed with the following error message: {ex.Message}");
-                return new ProcessCommandResponse(receiptResponse, new List<ftActionJournal>());
-            }
         }
 
         public async Task<ProcessCommandResponse> MonthlyClosing0x2012Async(ProcessCommandRequest request)
         {
             var (queue, queueIt, receiptRequest, receiptResponse, queueItem) = request;
-            try
+            var actionJournalEntry = ftActionJournalFactory.CreateMonthlyClosingActionJournal(queue, queueItem, receiptRequest);
+            var result = await _itSSCD.ProcessReceiptAsync(new ProcessRequest
             {
-                var actionJournalEntry = ftActionJournalFactory.CreateMonthlyClosingActionJournal(queue, queueItem, receiptRequest);
-                var result = await _itSSCD.ProcessReceiptAsync(new ProcessRequest
-                {
-                    ReceiptRequest = receiptRequest,
-                    ReceiptResponse = receiptResponse
-                });
-                var zNumber = result.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTZNumber).Data;
-                receiptResponse.ftReceiptIdentification += $"Z{zNumber.PadLeft(4, '0')}";
-                receiptResponse.ftSignatures = result.ReceiptResponse.ftSignatures;
+                ReceiptRequest = receiptRequest,
+                ReceiptResponse = receiptResponse
+            });
+            var zNumber = result.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTZNumber).Data;
+            receiptResponse.ftReceiptIdentification += $"Z{zNumber.PadLeft(4, '0')}";
+            receiptResponse.ftSignatures = result.ReceiptResponse.ftSignatures;
 
-                var journalIT = ftJournalITFactory.CreateFrom(queueItem, queueIt, new ScuResponse()
-                {
-                    ftReceiptCase = receiptRequest.ftReceiptCase,
-                    ZRepNumber = long.Parse(zNumber)
-                });
-                await _journalITRepository.InsertAsync(journalIT).ConfigureAwait(false);
+            var journalIT = ftJournalITFactory.CreateFrom(queueItem, queueIt, new ScuResponse()
+            {
+                ftReceiptCase = receiptRequest.ftReceiptCase,
+                ZRepNumber = long.Parse(zNumber)
+            });
+            await _journalITRepository.InsertAsync(journalIT).ConfigureAwait(false);
 
-                return new ProcessCommandResponse(receiptResponse, new List<ftActionJournal>
+            return new ProcessCommandResponse(receiptResponse, new List<ftActionJournal>
                 {
                     actionJournalEntry
                 });
-            }
-            catch (Exception ex)
-            {
-                receiptResponse.SetReceiptResponseError($"The monthly closing operation failed with the following error message: {ex.Message}");
-                return new ProcessCommandResponse(receiptResponse, new List<ftActionJournal>());
-            }
         }
 
         public async Task<ProcessCommandResponse> YearlyClosing0x2013Async(ProcessCommandRequest request)
         {
             var (queue, queueIt, receiptRequest, receiptResponse, queueItem) = request;
-            try
+
+            var actionJournalEntry = ftActionJournalFactory.CreateYearlyClosingClosingActionJournal(queue, queueItem, receiptRequest);
+            var result = await _itSSCD.ProcessReceiptAsync(new ProcessRequest
             {
-                var actionJournalEntry = ftActionJournalFactory.CreateYearlyClosingClosingActionJournal(queue, queueItem, receiptRequest);
-                var result = await _itSSCD.ProcessReceiptAsync(new ProcessRequest
-                {
-                    ReceiptRequest = receiptRequest,
-                    ReceiptResponse = receiptResponse
-                });
-                var zNumber = result.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTZNumber).Data;
-                receiptResponse.ftReceiptIdentification += $"Z{zNumber.PadLeft(4, '0')}";
-                receiptResponse.ftSignatures = result.ReceiptResponse.ftSignatures;
+                ReceiptRequest = receiptRequest,
+                ReceiptResponse = receiptResponse
+            });
+            var zNumber = result.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTZNumber).Data;
+            receiptResponse.ftReceiptIdentification += $"Z{zNumber.PadLeft(4, '0')}";
+            receiptResponse.ftSignatures = result.ReceiptResponse.ftSignatures;
 
-                var journalIT = ftJournalITFactory.CreateFrom(queueItem, queueIt, new ScuResponse()
-                {
-                    ftReceiptCase = receiptRequest.ftReceiptCase,
-                    ZRepNumber = long.Parse(zNumber)
-                });
-                await _journalITRepository.InsertAsync(journalIT).ConfigureAwait(false);
+            var journalIT = ftJournalITFactory.CreateFrom(queueItem, queueIt, new ScuResponse()
+            {
+                ftReceiptCase = receiptRequest.ftReceiptCase,
+                ZRepNumber = long.Parse(zNumber)
+            });
+            await _journalITRepository.InsertAsync(journalIT).ConfigureAwait(false);
 
-                return new ProcessCommandResponse(receiptResponse, new List<ftActionJournal>
+            return new ProcessCommandResponse(receiptResponse, new List<ftActionJournal>
                 {
                     actionJournalEntry
                 });
-            }
-            catch (Exception ex)
-            {
-                receiptResponse.SetReceiptResponseError($"The yearly closing operation failed with the following error message: {ex.Message}");
-                return new ProcessCommandResponse(receiptResponse, new List<ftActionJournal>());
-            }
         }
     }
 }

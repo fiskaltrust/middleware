@@ -55,7 +55,6 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
             // A few more points regarding the activation
             // - If we fail to receive the result the point of activation doesn't match with the one given in the QueueItem.
             // - 
-
             var (queue, queueIt, receiptRequest, receiptResponse, queueItem) = request;
             var scu = await _configurationRepository.GetSignaturCreationUnitITAsync(queueIt.ftSignaturCreationUnitITId.Value).ConfigureAwait(false);
             var deviceInfo = await _itSSCD.GetRTInfoAsync().ConfigureAwait(false);
@@ -92,6 +91,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
         public async Task<ProcessCommandResponse> OutOfOperationReceipt0x4002Async(ProcessCommandRequest request)
         {
             var (queue, queueIt, receiptRequest, receiptResponse, queueItem) = request;
+
             var result = await _itSSCD.ProcessReceiptAsync(new ProcessRequest
             {
                 ReceiptRequest = receiptRequest,
