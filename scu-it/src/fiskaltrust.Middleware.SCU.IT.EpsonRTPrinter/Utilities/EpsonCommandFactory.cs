@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models;
-using fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Extensions;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.SCU.IT.Abstraction;
 using System.Collections.Generic;
@@ -10,7 +9,7 @@ using System.Collections.Generic;
 
 namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
 {
-    public class EpsonCommandFactory
+    public static class EpsonCommandFactory
     {
         public static FiscalReceipt CreateInvoiceRequestContent(ReceiptRequest receiptRequest)
         {
@@ -188,5 +187,55 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                 _ => throw new NotSupportedException($"The payitemcase {payItem.ftPayItemCase} is not supported")
             };
         }
+
+        // TODO: check VAT rate table on printer at the moment according to xml example
+        private static readonly int _vatRateBasic = 1;
+        private static readonly int _vatRateDeduction1 = 2;
+        private static readonly int _vatRateDeduction2 = 3;
+        private static readonly int _vatRateSuperReduced1 = 4;
+        private static readonly int _vatRateZero = 0;
+        private static readonly int _vatRateUnknown = -1;
+        private static readonly int _notTaxable = 0;
+        private static int _vatRateSuperReduced2;
+        private static int _vatRateParking;
+
+        public static int GetVatGroup(this ChargeItem chargeItem)
+        {
+            return (chargeItem.ftChargeItemCase & 0xF) switch
+            {
+                0x0 => _vatRateUnknown, // 0 ???
+                0x1 => _vatRateDeduction1, // 10%
+                0x2 => _vatRateDeduction2, // 4%
+                0x3 => _vatRateBasic, // 22%
+                0x4 => _vatRateSuperReduced1, // ?
+                0x5 => _vatRateSuperReduced2, // ?
+                0x6 => _vatRateParking, // ?
+                0x7 => _vatRateZero, // ?
+                0x8 => _notTaxable, // ? 
+                _ => _vatRateUnknown // ?
+            };
+        }
     }
+}
+
+public class EpsonPrinterDepartmentConfiguration
+{
+    public Dictionary<string, long> DepartmentMapping { get; set; } = new Dictionary<string, long>();
+
+
+    public static EpsonPrinterDepartmentConfiguration Default => new EpsonPrinterDepartmentConfiguration
+    {
+        DepartmentMapping = new Dictionary<string, long>
+        {
+            { "0", 8 }, // unknown
+            { "1", 2 }, // reduced1 => 10%
+            { "2", 3 }, // reduced 2 => 5%
+            { "3", 1 }, // basic => 22%
+            { "4", -1 }, // superreduced 1
+            { "5", -1 }, // superreduced 2
+            { "6", -1 }, // parking rate
+            { "7", 7 }, // zero rate => 0%
+            { "8", 8 }, // not taxable => 0%
+        }
+    };
 }

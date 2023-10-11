@@ -421,6 +421,16 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         return (signatures, stateData);
     }
 
+    private async Task<HttpResponseMessage> LoginAsync()
+    {
+        var data = """
+<printerCommand>
+    <directIO command="4038" data="0212345 "/>
+</printerCommand>
+""";
+        return await SendRequestAsync(data);
+    }
+
     private async Task<HttpResponseMessage> SendRequestAsync(string content)
     {
         var response = await _httpClient.PostAsync(_commandUrl, new StringContent(content, Encoding.UTF8, "application/xml"));
