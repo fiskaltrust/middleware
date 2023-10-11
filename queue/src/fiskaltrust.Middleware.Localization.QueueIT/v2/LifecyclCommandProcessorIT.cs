@@ -46,6 +46,16 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
 
         public async Task<ProcessCommandResponse> InitialOperationReceipt0x4001Async(ProcessCommandRequest request)
         {
+            // TODO SKE =>  We need to figure a way to retry this functionality in case we fail to do something. There are a few states that 
+            //              we need to take care of:
+            // - SCU is not rechable => initial operation fails with EEEE_EEEE and needs to be retried by the caller
+            // - SCU is reachable but fails internall => initial operation fails with EEEE_EEEE and needs to be retried by the caller
+            // - SCU succeeds, but the Queue fails to receive / store the result for whatever reason => initial operation fails with EEEE_EEEE and needs to be retried by the caller but the SCU should be capable of handling that
+            // 
+            // A few more points regarding the activation
+            // - If we fail to receive the result the point of activation doesn't match with the one given in the QueueItem.
+            // - 
+
             var (queue, queueIt, receiptRequest, receiptResponse, queueItem) = request;
             var scu = await _configurationRepository.GetSignaturCreationUnitITAsync(queueIt.ftSignaturCreationUnitITId.Value).ConfigureAwait(false);
             var deviceInfo = await _itSSCD.GetRTInfoAsync().ConfigureAwait(false);
