@@ -1,13 +1,37 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Text;
+using System;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.Middleware.Localization.QueueIT.Extensions;
-
-namespace fiskaltrust.Middleware.Localization.QueueIT.Constants
+using fiskaltrust.ifPOS.v1.it;
+using fiskaltrust.Middleware.Localization.QueueIT.Helpers;
+using fiskaltrust.storage.V0;
+using fiskaltrust.Middleware.Localization.QueueIT.Constants;
+namespace fiskaltrust.Middleware.Localization.QueueIT.Factories
 {
-    public static class SignaturBuilder
+    public static class SignaturItemFactory
     {
+        public static SignaturItem CreateInitialOperationSignature(ftQueueIT queueIT, RTInfo rtInfo)
+        {
+            return new SignaturItem()
+            {
+                ftSignatureType = Cases.BASE_STATE | 0x1_1001,
+                ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                Caption = $"Initial-operation receipt",
+                Data = $"Queue-ID: {queueIT.ftQueueITId} Serial-Nr: {rtInfo.SerialNumber}"
+            };
+        }
+
+        public static SignaturItem CreateOutOfOperationSignature(ftQueueIT queueIT)
+        {
+            return new SignaturItem()
+            {
+                ftSignatureType = Cases.BASE_STATE | 0x1_1002,
+                ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                Caption = $"Out-of-operation receipt",
+                Data = $"Queue-ID: {queueIT.ftQueueITId}"
+            };
+        }
+
         public static List<SignaturItem> CreatePOSReceiptFormatSignatures(ReceiptResponse response)
         {
             return new List<SignaturItem>

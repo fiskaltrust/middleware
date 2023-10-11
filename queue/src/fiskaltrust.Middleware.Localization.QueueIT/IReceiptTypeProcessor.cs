@@ -8,7 +8,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
 {
     public interface IReceiptTypeProcessor
     {
-        public ITReceiptCases ReceiptCase { get; }
+        public ReceiptCases ReceiptCase { get; }
 
         Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ExecuteAsync(ftQueue queue, ftQueueIT queueIt, ReceiptRequest request, ReceiptResponse receiptResponse, ftQueueItem queueItem);
     }
