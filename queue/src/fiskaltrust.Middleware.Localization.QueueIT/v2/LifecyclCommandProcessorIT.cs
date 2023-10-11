@@ -72,6 +72,10 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
                 ReceiptRequest = receiptRequest,
                 ReceiptResponse = receiptResponse,
             });
+            if (result.ReceiptResponse.HasFailed())
+            {
+                return new ProcessCommandResponse(receiptResponse, new List<ftActionJournal>());
+            }
 
             var signatures = new List<SignaturItem>
                 {
@@ -97,6 +101,11 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
                 ReceiptRequest = receiptRequest,
                 ReceiptResponse = receiptResponse,
             });
+            if (result.ReceiptResponse.HasFailed())
+            {
+                return new ProcessCommandResponse(receiptResponse, new List<ftActionJournal>());
+            }
+
             queue.StopMoment = DateTime.UtcNow;
             await _configurationRepository.InsertOrUpdateQueueAsync(queue);
 

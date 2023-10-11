@@ -67,16 +67,16 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
             await LoadReceiptReferencesToResponse(request.ReceiptRequest, request.QueueItem, request.ReceiptResponse);
             try
             {
-                var establishConnection = await _itSSCD.ProcessReceiptAsync(new ProcessRequest
+                var result = await _itSSCD.ProcessReceiptAsync(new ProcessRequest
                 {
                     ReceiptRequest = receiptRequest,
                     ReceiptResponse = receiptResponse
                 });
-                if (establishConnection.ReceiptResponse.ftState == 0x4954_2001_0000_0000)
+                if (result.ReceiptResponse.HasFailed())
                 {
-                    return new ProcessCommandResponse(establishConnection.ReceiptResponse, new List<ftActionJournal>());
+                    return new ProcessCommandResponse(result.ReceiptResponse, new List<ftActionJournal>());
                 }
-                return new ProcessCommandResponse(establishConnection.ReceiptResponse, new List<ftActionJournal>());
+                return new ProcessCommandResponse(result.ReceiptResponse, new List<ftActionJournal>());
             }
             catch (Exception ex)
             {

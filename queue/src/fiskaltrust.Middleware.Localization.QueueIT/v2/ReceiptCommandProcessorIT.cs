@@ -56,7 +56,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
         public async Task<ProcessCommandResponse> UnknownReceipt0x0000Async(ProcessCommandRequest request) => await PointOfSaleReceipt0x0001Async(request);
 
         public async Task<ProcessCommandResponse> PointOfSaleReceipt0x0001Async(ProcessCommandRequest request)
-        {  
+        {
             if (request.ReceiptRequest.IsVoid() || request.ReceiptRequest.IsRefund())
             {
                 await LoadReceiptReferencesToResponse(request.ReceiptRequest, request.QueueItem, request.ReceiptResponse);
@@ -69,6 +69,11 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
                 ReceiptRequest = receiptRequest,
                 ReceiptResponse = receiptResponse,
             });
+            if (result.ReceiptResponse.HasFailed())
+            {
+                return new ProcessCommandResponse(result.ReceiptResponse, new List<ftActionJournal>());
+            }
+            
             var documentNumber = result.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTDocumentNumber);
             var zNumber = result.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTZNumber);
             receiptResponse.ftReceiptIdentification += $"{zNumber.Data.PadLeft(4, '0')}-{documentNumber.Data.PadLeft(4, '0')}";

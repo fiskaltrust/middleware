@@ -67,6 +67,11 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
                 ReceiptRequest = receiptRequest,
                 ReceiptResponse = receiptResponse
             });
+            if (establishConnection.ReceiptResponse.HasFailed())
+            {
+                return new ProcessCommandResponse(establishConnection.ReceiptResponse, new List<ftActionJournal>());
+            }
+
             if (establishConnection.ReceiptResponse.ftState == 0x4954_2001_0000_0000)
             {
                 return new ProcessCommandResponse(establishConnection.ReceiptResponse, new List<ftActionJournal>());
@@ -118,6 +123,11 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
                 ReceiptRequest = receiptRequest,
                 ReceiptResponse = receiptResponse
             });
+            if (result.ReceiptResponse.HasFailed())
+            {
+                return new ProcessCommandResponse(result.ReceiptResponse, new List<ftActionJournal>());
+            }
+
             var zNumber = result.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTZNumber).Data;
             receiptResponse.ftReceiptIdentification += $"Z{zNumber.PadLeft(4, '0')}";
             receiptResponse.ftSignatures = result.ReceiptResponse.ftSignatures;
@@ -145,17 +155,20 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
                 ReceiptRequest = receiptRequest,
                 ReceiptResponse = receiptResponse
             });
+            if (result.ReceiptResponse.HasFailed())
+            {
+                return new ProcessCommandResponse(result.ReceiptResponse, new List<ftActionJournal>());
+            }
+
             var zNumber = result.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTZNumber).Data;
             receiptResponse.ftReceiptIdentification += $"Z{zNumber.PadLeft(4, '0')}";
             receiptResponse.ftSignatures = result.ReceiptResponse.ftSignatures;
-
             var journalIT = ftJournalITFactory.CreateFrom(queueItem, queueIt, new ScuResponse()
             {
                 ftReceiptCase = receiptRequest.ftReceiptCase,
                 ZRepNumber = long.Parse(zNumber)
             });
             await _journalITRepository.InsertAsync(journalIT).ConfigureAwait(false);
-
             return new ProcessCommandResponse(receiptResponse, new List<ftActionJournal>
                 {
                     actionJournalEntry
