@@ -1,6 +1,6 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using fiskaltrust.Middleware.Localization.QueueIT.Extensions;
+using fiskaltrust.Middleware.Localization.QueueIT.Helpers;
 using fiskaltrust.storage.V0;
 
 #pragma warning disable
@@ -24,7 +24,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
             if (receiptCase == (int)ReceiptCases.InvoiceB2G0x1003)
                 return await InvoiceB2G0x1003Async(request);
 
-            request.ReceiptResponse.SetReceiptResponseErrored($"The given ReceiptCase 0x{request.ReceiptRequest.ftReceiptCase:x} is not supported. Please refer to docs.fiskaltrust.cloud for supported cases.");
+            request.ReceiptResponse.SetReceiptResponseError($"The given ftReceiptCase 0x{request.ReceiptRequest.ftReceiptCase:x} is not supported. Please refer to docs.fiskaltrust.cloud for supported cases.");
             return new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>());
         }
 

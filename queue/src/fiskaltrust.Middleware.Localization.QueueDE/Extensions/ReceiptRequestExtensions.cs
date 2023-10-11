@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using fiskaltrust.ifPOS.v1;
+using fiskaltrust.Middleware.Contracts.Extensions;
 using fiskaltrust.Middleware.Localization.QueueDE.Constants;
 using Microsoft.Extensions.Logging;
 
@@ -107,6 +108,11 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
         public static bool IsFailTransactionReceipt(this ReceiptRequest receiptRequest)
         {
             return ((receiptRequest.ftReceiptCase & 0x0000_0000_0000_FFFF) == 0x0000_0000_0000_000B);
+        }
+        
+        public static bool IsVoid(this ReceiptRequest receiptRequest)
+        {
+            return (receiptRequest.ftReceiptCase & 0x0000_0000_0004_0000) > 0x0000;
         }
 
         public static string GetReceiptIdentification(this ReceiptRequest receiptRequest, long receiptNumerator, ulong? transactionNumber)
@@ -367,7 +373,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
                         special_2 += item.Amount * GetSignForAmount(item.Quantity, item.Amount);
                         break;
                     default:
-                        zero += item.Amount * GetSignForAmount(item.Quantity, item.Amount); 
+                        zero += item.Amount * GetSignForAmount(item.Quantity, item.Amount);
 
                         break;
                 }
@@ -376,6 +382,11 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
             {
                 switch (item.ftPayItemCase & 0xFFFF)
                 {
+                    case 0x000A:
+                    {
+                        zero += item.InverseAmountIfNotVoidReceipt(request.IsVoid());
+                        break;
+                    }
                     case 0x000D:
                     case 0x000E:
                     case 0x000F:
@@ -387,7 +398,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
                     case 0x0015:
                     case 0x0016:
                     case 0x0017:
-                        item.Amount = item.Amount*GetSignForAmount(item.Quantity, item.Amount);
+                        item.Amount = item.Amount * GetSignForAmount(item.Quantity, item.Amount);
                         zero += item.Amount * -1;
                         break;
                     default:
@@ -396,8 +407,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
             }
 
             //TODO check rounding problesm: round sum(results) towards receipt.totalamount if given
-            return FormatAmount(normal) + "_" + FormatAmount(discounted_1) + "_" + FormatAmount( special_1) +
-                                "_" + FormatAmount(special_2) + "_" + FormatAmount( zero);
+            return FormatAmount(normal) + "_" + FormatAmount(discounted_1) + "_" + FormatAmount(special_1) +
+                                "_" + FormatAmount(special_2) + "_" + FormatAmount(zero);
         }
         private static string FormatAmount(decimal value)
         {
@@ -418,10 +429,10 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
                 request.cbReceiptMoment
             }).Min();
         }
-        private static decimal GetSignForAmount(decimal quantity, decimal amount)  => quantity < 0 && amount >= 0 ? -1 : 1;
+        private static decimal GetSignForAmount(decimal quantity, decimal amount) => quantity < 0 && amount >= 0 ? -1 : 1;
         public static void CheckForEqualSumChargePayItems(this ReceiptRequest request, ILogger logger)
         {
-            var chargeAmount = request.cbChargeItems != null ? request.cbChargeItems.Sum( x => x.Amount != null ? x.Amount * GetSignForAmount(x.Quantity, x.Amount) : 0) : 0;
+            var chargeAmount = request.cbChargeItems != null ? request.cbChargeItems.Sum(x => x.Amount != null ? x.Amount * GetSignForAmount(x.Quantity, x.Amount) : 0) : 0;
             var payAmount = request.cbPayItems != null ? request.cbPayItems.Sum(x => x.Amount != null ? x.Amount * GetSignForAmount(x.Quantity, x.Amount) : 0) : 0;
             if (chargeAmount != payAmount)
             {

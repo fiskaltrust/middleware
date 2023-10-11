@@ -4,6 +4,7 @@ using fiskaltrust.storage.V0.MasterData;
 using fiskaltrust.Middleware.Contracts.Models.Transactions;
 using Microsoft.EntityFrameworkCore.Design;
 using System;
+using fiskaltrust.Middleware.Contracts.Models.FR;
 
 namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL
 {
@@ -72,6 +73,10 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL
             modelBuilder.Entity<ftJournalFR>().ToTable(nameof(ftJournalFR));
             modelBuilder.Entity<ftJournalFR>().HasKey(x => x.ftJournalFRId);
             modelBuilder.Entity<ftJournalFR>().HasIndex(x => x.TimeStamp);
+
+            modelBuilder.Entity<ftJournalFRCopyPayload>().ToTable(nameof(ftJournalFRCopyPayload));
+            modelBuilder.Entity<ftJournalFRCopyPayload>().HasKey(x => x.QueueItemId);
+            modelBuilder.Entity<ftJournalFRCopyPayload>().HasIndex(x => x.TimeStamp);
 
             modelBuilder.Entity<ftJournalME>().ToTable(nameof(ftJournalME));
             modelBuilder.Entity<ftJournalME>().HasKey(x => x.ftJournalMEId);

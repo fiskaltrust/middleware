@@ -4,8 +4,8 @@ using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.Contracts.Extensions;
-using fiskaltrust.Middleware.Localization.QueueIT.Constants;
-using fiskaltrust.Middleware.Localization.QueueIT.Extensions;
+using fiskaltrust.Middleware.Localization.QueueIT.Factories;
+using fiskaltrust.Middleware.Localization.QueueIT.Helpers;
 using fiskaltrust.storage.V0;
 using Newtonsoft.Json;
 
@@ -16,7 +16,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.Lifecycle
         private readonly IITSSCD _itSSCD;
         private readonly IConfigurationRepository _configurationRepository;
 
-        public ITReceiptCases ReceiptCase => ITReceiptCases.InitialOperationReceipt0x4001;
+        public ReceiptCases ReceiptCase => ReceiptCases.InitialOperationReceipt0x4001;
 
         public InitialOperationReceipt0x4001(IITSSCD itSSCD, IConfigurationRepository configurationRepository)
         {
@@ -39,7 +39,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.Lifecycle
                     }
 
                     var signature = SignaturItemFactory.CreateInitialOperationSignature(queueIt, deviceInfo);
-                    var actionJournal = ActionJournalFactory.CreateInitialOperationActionJournal(queue, queueItem, queueIt, request);
+                    var actionJournal = ftActionJournalFactory.CreateInitialOperationActionJournal(queue, queueItem, queueIt, request);
                     queue.StartMoment = DateTime.UtcNow;
                     
                     var result = await _itSSCD.ProcessReceiptAsync(new ProcessRequest
@@ -74,7 +74,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2.Lifecycle
                 {
                     return (receiptResponse, new List<ftActionJournal>
                     {
-                        ActionJournalFactory.CreateWrongStateForInitialOperationActionJournal(queue, queueItem, request)
+                        ftActionJournalFactory.CreateWrongStateForInitialOperationActionJournal(queue, queueItem, request)
                     });
                 }
             }

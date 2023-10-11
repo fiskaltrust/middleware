@@ -4,6 +4,7 @@ using fiskaltrust.storage.V0.MasterData;
 using fiskaltrust.Middleware.Contracts.Models.Transactions;
 using System;
 using System.Linq;
+using fiskaltrust.Middleware.Contracts.Models.FR;
 using Microsoft.EntityFrameworkCore.Design;
 
 namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer
@@ -78,6 +79,10 @@ namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer
             modelBuilder.Entity<ftJournalFR>().ToTable(nameof(ftJournalFR));
             modelBuilder.Entity<ftJournalFR>().HasKey(x => x.ftJournalFRId);
             modelBuilder.Entity<ftJournalFR>().HasIndex(x => x.TimeStamp);
+            
+            modelBuilder.Entity<ftJournalFRCopyPayload>().ToTable(nameof(ftJournalFRCopyPayload));
+            modelBuilder.Entity<ftJournalFRCopyPayload>().HasKey(x => x.QueueItemId);
+            modelBuilder.Entity<ftJournalFRCopyPayload>().HasIndex(x => x.TimeStamp);
 
             modelBuilder.Entity<ftJournalME>().ToTable(nameof(ftJournalME));
             modelBuilder.Entity<ftJournalME>().HasKey(x => x.ftJournalMEId);

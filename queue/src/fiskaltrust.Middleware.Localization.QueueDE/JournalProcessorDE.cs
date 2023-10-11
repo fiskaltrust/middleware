@@ -122,7 +122,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             try
             {
                 var tarPath = Path.Combine(workingDirectory, "export.tar");
-                
+
                 var exporter = new TarExporter(_logger, journalDERepository);
                 await exporter.ExportAsync(tarPath);
 
@@ -213,10 +213,11 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
                     FirstZNumber = firstZNumber,
                     TargetDirectory = targetDirectory,
                     TSECertificateBase64 = certificateBase64,
-                    ReferencesLookUpType = _queueDEConfiguration.DisableDsfinvkExportReferences ? ReferencesLookUpType.NoReferences : ReferencesLookUpType.GroupedReferencesMW
+                    ReferencesLookUpType = _queueDEConfiguration.DisableDsfinvkExportReferences ? ReferencesLookUpType.NoReferences : ReferencesLookUpType.GroupedReferencesMW,
+                    IncludeOrders = _queueDEConfiguration.ExcludeDsfinvkOrders ? false : true
                 };
 
-                var readOnlyReceiptReferenceRepository = new ReadOnlyReceiptReferenceRepository(_middlewareQueueItemRepository, _actionJournalRepository);
+                var readOnlyReceiptReferenceRepository = new ReadOnlyReceiptReferenceRepository(_middlewareQueueItemRepository);
                 var fallbackMasterDataRepo = new ReadOnlyMasterDataConfigurationRepository(_masterDataService.GetFromConfig());
 
                 // No need to wrap the QueueItemRepository, as the DSFinV-K exporter only uses the GetAsync(Guid id) method

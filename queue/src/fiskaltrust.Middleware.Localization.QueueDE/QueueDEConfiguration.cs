@@ -24,6 +24,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
 
         public TarFileExportMode TarFileExportMode { get; set; } = TarFileExportMode.All;
 
+        public bool ExcludeDsfinvkOrders { get; set; } = false;
+
         public static QueueDEConfiguration FromMiddlewareConfiguration(ILogger<QueueDEConfiguration> logger, MiddlewareConfiguration middlewareConfiguration)
         {
             var configuration = JsonConvert.DeserializeObject<QueueDEConfiguration>(JsonConvert.SerializeObject(middlewareConfiguration.Configuration));

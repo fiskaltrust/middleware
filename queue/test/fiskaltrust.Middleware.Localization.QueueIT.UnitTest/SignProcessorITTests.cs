@@ -20,7 +20,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
 {
     public class SignProcessorITTests
     {
-        private static Guid _queueID = new Guid();
+        private static readonly Guid _queueID = new Guid();
 
         private readonly ftQueue _queue = new ftQueue
         {
@@ -126,9 +126,9 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
 
         public static IEnumerable<object[]> allNonInitialOperationReceipts()
         {
-            foreach (var number in Enum.GetValues(typeof(ITReceiptCases)))
+            foreach (var number in Enum.GetValues(typeof(ReceiptCases)))
             {
-                if ((long) number == (long) ITReceiptCases.InitialOperationReceipt0x4001)
+                if ((long) number == (long) ReceiptCases.InitialOperationReceipt0x4001)
                 {
                     continue;
                 }
@@ -139,14 +139,14 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
 
         public static IEnumerable<object[]> allNonZeroReceiptReceipts()
         {
-            foreach (var number in Enum.GetValues(typeof(ITReceiptCases)))
+            foreach (var number in Enum.GetValues(typeof(ReceiptCases)))
             {
-                if ((long) number == (long) ITReceiptCases.ZeroReceipt0x2000)
+                if ((long) number == (long) ReceiptCases.ZeroReceipt0x2000)
                 {
                     continue;
                 }
 
-                if ((long) number == (long) ITReceiptCases.InitialOperationReceipt0x4001)
+                if ((long) number == (long) ReceiptCases.InitialOperationReceipt0x4001)
                 {
                     continue;
                 }
@@ -157,7 +157,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
 
         public static IEnumerable<object[]> allReceipts()
         {
-            foreach (var number in Enum.GetValues(typeof(ITReceiptCases)))
+            foreach (var number in Enum.GetValues(typeof(ReceiptCases)))
             {
                 yield return new object[] { number };
             }
@@ -165,14 +165,14 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
 
         public static IEnumerable<object[]> rtHandledReceipts()
         {
-            yield return new object[] { ITReceiptCases.UnknownReceipt0x0000 };
-            yield return new object[] { ITReceiptCases.PointOfSaleReceipt0x0001 };
-            yield return new object[] { ITReceiptCases.Protocol0x0005 };
+            yield return new object[] { ReceiptCases.UnknownReceipt0x0000 };
+            yield return new object[] { ReceiptCases.PointOfSaleReceipt0x0001 };
+            yield return new object[] { ReceiptCases.Protocol0x0005 };
         }
 
         [Theory]
         [MemberData(nameof(allNonInitialOperationReceipts))]
-        public async Task AllNonInitialOperationReceiptCases_ShouldReturnDisabledMessage_IfQueueHasNotStarted(ITReceiptCases receiptCase)
+        public async Task AllNonInitialOperationReceiptCases_ShouldReturnDisabledMessage_IfQueueHasNotStarted(ReceiptCases receiptCase)
         {
             var initOperationReceipt = $$"""
 {
@@ -201,7 +201,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
 
         [Theory]
         [MemberData(nameof(allReceipts))]
-        public async Task AllReceiptCases_ShouldReturnDisabledMessage_IfQueueIsDeactivated(ITReceiptCases receiptCase)
+        public async Task AllReceiptCases_ShouldReturnDisabledMessage_IfQueueIsDeactivated(ReceiptCases receiptCase)
         {
             var initOperationReceipt = $$"""
 {
@@ -230,7 +230,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
 
         [Theory]
         [MemberData(nameof(allNonZeroReceiptReceipts))]
-        public async Task AllReceiptCases_ShouldReturnInFailureMode_IfQueueIsInFailedMode(ITReceiptCases receiptCase)
+        public async Task AllReceiptCases_ShouldReturnInFailureMode_IfQueueIsInFailedMode(ReceiptCases receiptCase)
         {
             var initOperationReceipt = $$"""
 {
@@ -256,7 +256,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
 
         [Theory]
         [MemberData(nameof(rtHandledReceipts))]
-        public async Task AllReceiptCases_ShouldContain_ZNumber_And_DocumentNumber_InReceiptIdentification(ITReceiptCases receiptCase)
+        public async Task AllReceiptCases_ShouldContain_ZNumber_And_DocumentNumber_InReceiptIdentification(ReceiptCases receiptCase)
         {
             var initOperationReceipt = $$"""
 {
