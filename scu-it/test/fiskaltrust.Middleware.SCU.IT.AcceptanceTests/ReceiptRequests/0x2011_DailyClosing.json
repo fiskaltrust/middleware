@@ -1,0 +1,11 @@
+{
+    "ftCashBoxID": "00000000-0000-0000-0000-000000000000",
+    "ftPosSystemId": "00000000-0000-0000-0000-000000000000",
+    "cbTerminalID": "00010001",
+    "cbReceiptReference": "Daily-Closing",
+    "cbReceiptMoment": "{{current_moment}}",
+    "cbChargeItems": [],
+    "cbPayItems": [],
+    "ftReceiptCase": 5283883447184531473,
+    "cbUser": "Admin"
+}

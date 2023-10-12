@@ -8,76 +8,35 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
         public static ReceiptRequest GetInitialOperation()
         {
             var current_moment = DateTime.UtcNow.ToString("o");
-            var receipt = $$"""
-{
-    "ftCashBoxID": "00000000-0000-0000-0000-000000000000",
-    "ftPosSystemId": "00000000-0000-0000-0000-000000000000",
-    "cbTerminalID": "00010001",
-    "cbReceiptReference": "INIT",
-    "cbReceiptMoment": "{{current_moment}}",
-    "cbChargeItems": [],
-    "cbPayItems": [],
-    "ftReceiptCase": {{0x4954200000004001}},
-    "cbUser": "Admin"
-}
-""";
+            var receipt = File.ReadAllText(Path.Combine("ReceiptRequests", "0x4001_InitialOperation.json")).Replace("{{current_moment}}", current_moment);
             return JsonConvert.DeserializeObject<ReceiptRequest>(receipt);
         }
 
         public static ReceiptRequest GetOutOOperation()
         {
             var current_moment = DateTime.UtcNow.ToString("o");
-            var receipt = $$"""
-{
-    "ftCashBoxID": "00000000-0000-0000-0000-000000000000",
-    "ftPosSystemId": "00000000-0000-0000-0000-000000000000",
-    "cbTerminalID": "00010001",
-    "cbReceiptReference": "OutOfOperation",
-    "cbReceiptMoment": "{{current_moment}}",
-    "cbChargeItems": [],
-    "cbPayItems": [],
-    "ftReceiptCase": {{0x4954200000004002}},
-    "cbUser": "Admin"
-}
-""";
+            var receipt = File.ReadAllText(Path.Combine("ReceiptRequests", "0x4002_OutOfOperation.json")).Replace("{{current_moment}}", current_moment);
             return JsonConvert.DeserializeObject<ReceiptRequest>(receipt);
         }
 
         public static ReceiptRequest GetZeroReceipt()
         {
             var current_moment = DateTime.UtcNow.ToString("o");
-            var receipt = $$"""
-{
-    "ftCashBoxID": "00000000-0000-0000-0000-000000000000",
-    "ftPosSystemId": "00000000-0000-0000-0000-000000000000",
-    "cbTerminalID": "00010001",
-    "cbReceiptReference": "Zero",
-    "cbReceiptMoment": "{{current_moment}}",
-    "cbChargeItems": [],
-    "cbPayItems": [],
-    "ftReceiptCase": {{0x4954200000002000}},
-    "cbUser": "Admin"
-}
-""";
+            var receipt = File.ReadAllText(Path.Combine("ReceiptRequests", "0x2011_ZeroReceipt.json")).Replace("{{current_moment}}", current_moment);
             return JsonConvert.DeserializeObject<ReceiptRequest>(receipt);
         }
 
         public static ReceiptRequest GetDailyClosing()
         {
             var current_moment = DateTime.UtcNow.ToString("o");
-            var receipt = $$"""
-{
-    "ftCashBoxID": "00000000-0000-0000-0000-000000000000",
-    "ftPosSystemId": "00000000-0000-0000-0000-000000000000",
-    "cbTerminalID": "00010001",
-    "cbReceiptReference": "Daily-Closing",
-    "cbReceiptMoment": "{{current_moment}}",
-    "cbChargeItems": [],
-    "cbPayItems": [],
-    "ftReceiptCase": {{0x4954200000002011}},
-    "cbUser": "Admin"
-}
-""";
+            var receipt = File.ReadAllText(Path.Combine("ReceiptRequests", "0x2011_DailyClosing.json")).Replace("{{current_moment}}", current_moment);
+            return JsonConvert.DeserializeObject<ReceiptRequest>(receipt);
+        }
+
+        public static ReceiptRequest GetReprintReceipt()
+        {
+            var current_moment = DateTime.UtcNow.ToString("o");
+            var receipt = File.ReadAllText(Path.Combine("ReceiptRequests", "0x3010_Reprint.json")).Replace("{{current_moment}}", current_moment);
             return JsonConvert.DeserializeObject<ReceiptRequest>(receipt);
         }
 
@@ -439,7 +398,6 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
 """;
             return JsonConvert.DeserializeObject<ReceiptRequest>(receipt);
         }
-
 
         public static ReceiptRequest GetTakeAway_Delivery_Card()
         {

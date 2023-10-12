@@ -1,0 +1,28 @@
+{
+  "ftCashBoxID": "00000000-0000-0000-0000-000000000000",
+  "ftPosSystemId": "00000000-0000-0000-0000-000000000000",
+  "cbTerminalID": "T2",
+  "cbReceiptReference": "RT123823",
+  "cbUser": "Sepp",
+  "cbReceiptMoment": "{{current_moment}}",
+  "cbChargeItems": [
+    {
+      "Quantity": 1.0,
+      "Amount": 110.5,
+      "UnitPrice": 110.5,
+      "VATRate": 22,
+      "Description": "TestChargeItem22vat",
+      "ftChargeItemCase": 5283883447184654339
+    }
+  ],
+  "cbPayItems": [
+    {
+      "Quantity": 1,
+      "Description": "Cash",
+      "ftPayItemCase": 5283883447184654337,
+      "Amount": 110.5
+    }
+  ],
+  "cbPreviousReceiptReference": "{{receiptreference_of_receipt_to_reprint}}",
+  "ftReceiptCase": 5283883447184535568
+}

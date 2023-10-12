@@ -31,4 +31,10 @@
         <ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.IT.CustomRTServer\fiskaltrust.Middleware.SCU.IT.CustomRTServer.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <None Update="ReceiptRequests\**">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+
 </Project>

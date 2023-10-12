@@ -26,6 +26,7 @@ public enum ITReceiptCases : long
     ProtocolAccountingEvent0x3002 = 0x3002,
     InternalUsageMaterialConsumption0x3003 = 0x3003,
     Order0x3004 = 0x3004,
+    Reprint0x3010 = 0x3010,
 
     InitialOperationReceipt0x4001 = 0x4001,
     OutOfOperationReceipt0x4002 = 0x4002,
