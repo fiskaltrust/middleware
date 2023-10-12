@@ -90,7 +90,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
         [Fact]
         public void Sales()
         {
-            var allFiles = Directory.GetFiles("C:\\Users\\Stefan\\Documents\\GitHub\\middleware\\scu-it\\test\\fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest\\ReceiptCases\\Sales");
+            var allFiles = Directory.GetFiles("ReceiptCases\\Sales");
             foreach (var file in allFiles)
             {
                 if (file.EndsWith("_rec.json"))
@@ -117,7 +117,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
                     CurrentGrandTotal = 1,
                     RTServerSerialNumber = "SSS"
                 });
-                var filePath = Path.Combine($"C:\\Users\\Stefan\\Documents\\GitHub\\middleware\\scu-it\\test\\fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest\\ReceiptCases\\Sales\\{Path.GetFileNameWithoutExtension(file)}_rec.json");
+                var filePath = Path.Combine($"ReceiptCases\\Sales\\{Path.GetFileNameWithoutExtension(file)}_rec.json");
                 File.WriteAllText(filePath, JsonConvert.SerializeObject(fiscalDocument, Formatting.Indented));
             }
         }
@@ -126,7 +126,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
         [Fact]
         public void Void()
         {
-            var allFiles = Directory.GetFiles("C:\\Users\\Stefan\\Documents\\GitHub\\middleware\\scu-it\\test\\fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest\\ReceiptCases\\Storno");
+            var allFiles = Directory.GetFiles("ReceiptCases\\Storno");
             foreach (var file in allFiles)
             {
                 if (file.EndsWith("_rec.json"))
@@ -153,7 +153,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
                     CurrentGrandTotal = 1,
                     RTServerSerialNumber = "SSS"
                 }, new ReceiptResponse());
-                File.WriteAllText(Path.Combine($"C:\\Users\\Stefan\\Documents\\GitHub\\middleware\\scu-it\\test\\fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest\\ReceiptCases\\Storno\\{Path.GetFileNameWithoutExtension(file)}_rec.json"), JsonConvert.SerializeObject(fiscalDocument, Formatting.Indented));
+                File.WriteAllText(Path.Combine($"ReceiptCases\\Storno\\{Path.GetFileNameWithoutExtension(file)}_rec.json"), JsonConvert.SerializeObject(fiscalDocument, Formatting.Indented));
             }
         }
 
@@ -161,7 +161,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
         [Fact]
         public void Refund()
         {
-            var allFiles = Directory.GetFiles("C:\\Users\\Stefan\\Documents\\GitHub\\middleware\\scu-it\\test\\fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest\\ReceiptCases\\Refund");
+            var allFiles = Directory.GetFiles("ReceiptCases\\Refund");
             foreach (var file in allFiles)
             {
                 if (file.EndsWith("_rec.json"))
@@ -188,7 +188,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
                     CurrentGrandTotal = 1,
                     RTServerSerialNumber = "SSS"
                 }, new ReceiptResponse());
-                File.WriteAllText(Path.Combine($"C:\\Users\\Stefan\\Documents\\GitHub\\middleware\\scu-it\\test\\fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest\\ReceiptCases\\Refund\\{Path.GetFileNameWithoutExtension(file)}_rec.json"), JsonConvert.SerializeObject(fiscalDocument, Formatting.Indented));
+                File.WriteAllText(Path.Combine($"ReceiptCases\\Refund\\{Path.GetFileNameWithoutExtension(file)}_rec.json"), JsonConvert.SerializeObject(fiscalDocument, Formatting.Indented));
             }
         }
     }
