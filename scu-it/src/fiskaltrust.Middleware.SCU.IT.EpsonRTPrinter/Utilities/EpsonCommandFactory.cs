@@ -107,23 +107,47 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
             // Todo handle payment adjustments / discounts
             foreach (var i in receiptRequest.cbChargeItems)
             {
-                var printRecItem = new PrintRecItem
+                if (i.IsTip())
                 {
-                    Description = i.Description,
-                    Quantity = i.Quantity,
-                    UnitPrice = i.Amount / i.Quantity,
-                    Department = i.GetVatGroup(),
-                };
-                PrintRecMessage? printRecMessage = null;
-                if (!string.IsNullOrEmpty(i.ftChargeItemCaseData))
-                {
-                    printRecMessage = new PrintRecMessage()
+                    var printRecItem = new PrintRecItem
                     {
-                        Message = i.ftChargeItemCaseData,
-                        MessageType = 4
+                        Description = i.Description,
+                        Quantity = i.Quantity,
+                        UnitPrice = i.Amount / i.Quantity,
+                        Department = 11,
                     };
+                    PrintRecMessage? printRecMessage = null;
+                    if (!string.IsNullOrEmpty(i.ftChargeItemCaseData))
+                    {
+                        printRecMessage = new PrintRecMessage()
+                        {
+                            Message = i.ftChargeItemCaseData,
+                            MessageType = 4
+                        };
+                    }
+                    itemAndMessages.Add(new() { PrintRecItem = printRecItem, PrintRecMessage = printRecMessage });
                 }
-                itemAndMessages.Add(new() { PrintRecItem = printRecItem, PrintRecMessage = printRecMessage });
+                else
+                {
+
+                    var printRecItem = new PrintRecItem
+                    {
+                        Description = i.Description,
+                        Quantity = i.Quantity,
+                        UnitPrice = i.Amount / i.Quantity,
+                        Department = i.GetVatGroup(),
+                    };
+                    PrintRecMessage? printRecMessage = null;
+                    if (!string.IsNullOrEmpty(i.ftChargeItemCaseData))
+                    {
+                        printRecMessage = new PrintRecMessage()
+                        {
+                            Message = i.ftChargeItemCaseData,
+                            MessageType = 4
+                        };
+                    }
+                    itemAndMessages.Add(new() { PrintRecItem = printRecItem, PrintRecMessage = printRecMessage });
+                }
             }
             return itemAndMessages;
         }

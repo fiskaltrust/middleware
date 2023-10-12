@@ -26,6 +26,15 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
             return JsonConvert.DeserializeObject<ReceiptRequest>(receipt);
         }
 
+
+        public static ReceiptRequest GetCashReceiptWithTip()
+        {
+            var current_moment = DateTime.UtcNow.ToString("o");
+            var receipt = File.ReadAllText(Path.Combine("ReceiptRequests", "PosReceipts", "0x0001_Cash_Tip.json")).Replace("{{current_moment}}", current_moment);
+            return JsonConvert.DeserializeObject<ReceiptRequest>(receipt);
+        }
+
+
         public static ReceiptRequest GetDailyClosing()
         {
             var current_moment = DateTime.UtcNow.ToString("o");
