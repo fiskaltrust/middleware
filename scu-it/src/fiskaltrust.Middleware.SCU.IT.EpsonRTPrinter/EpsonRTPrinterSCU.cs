@@ -21,6 +21,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
     private readonly ILogger<EpsonRTPrinterSCU> _logger;
     private readonly HttpClient _httpClient;
     private readonly string _commandUrl;
+    private readonly EpsonRTPrinterSCUConfiguration _configuration;
     private readonly ErrorInfoFactory _errorCodeFactory = new();
     private string _serialnr = "";
 
@@ -37,6 +38,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
             Timeout = TimeSpan.FromMilliseconds(configuration.ClientTimeoutMs)
         };
         _commandUrl = $"cgi-bin/fpmate.cgi?timeout={configuration.ServerTimeoutMs}";
+        _configuration = configuration;
     }
 
     public override Task<ScuItEchoResponse> EchoAsync(ScuItEchoRequest request) => Task.FromResult(new ScuItEchoResponse { Message = request.Message });
@@ -502,12 +504,12 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
 
     private async Task<HttpResponseMessage> LoginAsync()
     {
-        var data = """
+        var data = $"""
 <?xml version="1.0" encoding="utf-8"?>
 <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
     <s:Body>
         <printerCommand>
-            <directIO command="4038" data="0262264                                                                                                                               " />
+            <directIO command="4038" data="02{_configuration.Password}                                                                                                                               " />
         </printerCommand>
     </s:Body>
 </s:Envelope>

@@ -16,5 +16,7 @@
         /// The server/printer timeout for executing commands
         /// </summary>
         public int ServerTimeoutMs { get; set; } = 10000;
+
+        public string? Password { get; set; }
     }
 }
