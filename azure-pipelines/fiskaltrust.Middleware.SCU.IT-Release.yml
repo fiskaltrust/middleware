@@ -47,8 +47,8 @@ stages:
           dependsOn: []
           templateContext:
             environment: sandbox
-            storage: stdevwesteuropepackages
-            serviceConnection: rg-dev-westeurope-packages
+            storage: fiskaltrustsandbox
+            serviceConnection: sandbox-legacy-packages
 
         # - stage: Release_Production
         #   templateContext:
