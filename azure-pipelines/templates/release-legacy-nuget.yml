@@ -5,9 +5,6 @@ parameters:
 - name: type
   type: string
 
-- name: feed
-  type: string
-
 - name: artifact
   type: string
   default: current
