@@ -43,7 +43,7 @@ stages:
         - CustomRTPrinter
         - CustomRTServer
       stages:
-        - stage: Release_Sandbox
+        - stage: Release_Sandbox_Legacy
           dependsOn: []
           templateContext:
             environment: sandbox
