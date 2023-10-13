@@ -26,7 +26,7 @@ stages:
       ${{ if ne(stage.templateContext.dependsOnPrefix, '') }}:
         dependsOn: ${{ stage.templateContext.dependsOnPrefix }}_${{ replace(project, '.', '_') }}
 
-      ${{ if eq(stage.templateContext.environment, 'production') }}:
+      ${{ if eq(stage.templateContext.environment, 'production-legacy') }}:
         condition: and(startsWith(variables['Build.SourceBranch'], 'refs/tags/'), contains(variables['Build.SourceBranch'], lower('/${{ project }}/v')))
       ${{ else }}:
         condition: or(not(startsWith(variables['Build.SourceBranch'], 'refs/tags/')), and(startsWith(variables['Build.SourceBranch'], 'refs/tags/'), contains(variables['Build.SourceBranch'], lower('/${{ project }}/v'))))
@@ -55,11 +55,3 @@ stages:
                       scriptLocation: inlineScript
                       inlineScript: |
                         az storage blob upload-batch --account-name ${{ stage.templateContext.storage }} -d "packages" -s "$(Pipeline.Workspace)/${{ parameters.artifact }}/packages-v1/" --pattern "${{ parameters.type }}.${{ project }}.*.nupkg"
-
-                  # - task: NuGetCommand@2
-                  #   displayName: 'NuGet push'
-                  #   inputs:
-                  #     command: push
-                  #     packagesToPush: '$(System.DefaultWorkingDirectory)/_fiskaltrust.Middleware.SCU.IT/packages-v1/$(SigningPackage).*.nupkg'
-                  #     publishVstsFeed: '03889fe3-67c8-414f-89bf-ecee52b3b2b1'
-                  #     allowPackageConflicts: true
