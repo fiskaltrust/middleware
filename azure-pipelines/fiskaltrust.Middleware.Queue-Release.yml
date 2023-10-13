@@ -35,3 +35,53 @@ stages:
             environment: production
             storage: stprodwesteuropepackages
             serviceConnection: rg-prod-westeurope-packages
+
+  - template: templates/release-legacy.yml
+    parameters:
+      type: fiskaltrust.Middleware.Queue
+      artifact: build
+      projects:
+        - InMemory
+        - SQLite
+        - EF
+        - MySQL
+        - PostgreSQL
+      stages:
+        - stage: Release_Sandbox_Legacy
+          dependsOn: []
+          templateContext:
+            environment: sandbox
+            storage: fiskaltrustsandbox
+            serviceConnection: sandbox-legacy-packages
+
+        - stage: Release_Production_Legacy
+          templateContext:
+            dependsOnPrefix: Release_Sandbox
+            environment: production
+            storage: fiskaltrustsandbox
+            serviceConnection: production-legacy-packages
+
+  - template: templates/release-legacy-nuget.yml
+    parameters:
+      type: fiskaltrust.Middleware.Queue
+      artifact: build
+      projects:
+        - InMemory
+        - SQLite
+        - EF
+        - MySQL
+        - PostgreSQL
+      stages:
+        - stage: Release_Sandbox_Legacy
+          dependsOn: []
+          templateContext:
+            environment: sandbox
+            feed: dev
+            serviceConnection: sandbox-legacy-packages
+
+        - stage: Release_Production_Legacy
+          templateContext:
+            dependsOnPrefix: Release_Sandbox
+            environment: production
+            feed: middleware
+            serviceConnection: production-legacy-packages
