@@ -238,7 +238,23 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         try
         {
 
-            await LoginAsync();
+            var loginResult = await LoginAsync();
+            if (!loginResult.IsSuccessStatusCode)
+            {
+                throw new HttpRequestException($"An error occured while sending a request to the Epson device (StatusCode: {loginResult.StatusCode}, Content: {await loginResult.Content.ReadAsStringAsync()})");
+            }
+            using var loginResultresponseContent = await loginResult.Content.ReadAsStreamAsync();
+            var loginprinterresult = SoapSerializer.DeserializeToSoapEnvelope<PrinterResponse>(loginResultresponseContent);
+            var loginReceiptResponse = await SetReceiptResponse(loginprinterresult);
+            if (!loginReceiptResponse.Success)
+            {
+                request.ReceiptResponse.SetReceiptResponseErrored($"Unable to login to the Printer. Please check the configured password. (Details: {loginReceiptResponse.SSCDErrorInfo?.Info ?? ""})");
+                return new ProcessResponse
+                {
+                    ReceiptResponse = request.ReceiptResponse
+                };
+            }
+
             var date = DateTime.Parse(referenceDateTime);
             var response = await PerformReprint(date.ToString("dd"), date.ToString("MM"), date.ToString("yy"), long.Parse(referenceDocNumber));
             using var responseContent = await response.Content.ReadAsStreamAsync();
