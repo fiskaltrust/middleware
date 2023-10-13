@@ -74,7 +74,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to process request.");
+                _logger.LogError(ex, "Failed to process receiptcase 0x{receiptcase}", request.ftReceiptCase.ToString("X"));
                 receiptResponse.SetReceiptResponseError($"Failed to process receiptcase 0x{request.ftReceiptCase.ToString("X")}. with the following exception message: " + ex.Message);
                 return (receiptResponse, new List<ftActionJournal>());
             }

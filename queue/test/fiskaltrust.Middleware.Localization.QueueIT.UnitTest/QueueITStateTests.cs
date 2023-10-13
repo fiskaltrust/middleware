@@ -40,59 +40,15 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
             StopMoment = DateTime.UtcNow
         };
 
-        private readonly ftQueueIT _queueIT = new ftQueueIT
+        private IMarketSpecificSignProcessor GetSUT()
         {
-            ftQueueITId = _queueID,
-            ftSignaturCreationUnitITId = Guid.NewGuid(),
-        };
-
-        private readonly ftQueueIT _queueITSCUDeviceOutOfService = new ftQueueIT
-        {
-            ftQueueITId = _queueID,
-            ftSignaturCreationUnitITId = Guid.NewGuid(),
-            SSCDFailCount = 1,
-            SSCDFailMoment = DateTime.UtcNow,
-            SSCDFailQueueItemId = Guid.NewGuid()
-        };
-
-        private IMarketSpecificSignProcessor GetSCUDeviceOutOfServiceSUT(ftQueue queue) => GetSUT(queue);
-
-        private IMarketSpecificSignProcessor GetDefaultSUT(ftQueue queue) => GetSUT(queue);
-
-        public static SignaturItem[] CreateFakeReceiptSignatures()
-        {
-            return POSReceiptSignatureData.CreateDocumentoCommercialeSignatures(new POSReceiptSignatureData
-            {
-                RTSerialNumber = "DEMORTDEVICE",
-                RTZNumber = 1,
-                RTDocNumber = 2,
-                RTDocMoment = DateTime.UtcNow,
-                RTDocType = "POSRECEIPT",
-            }).ToArray();
-        }
-
-        private IMarketSpecificSignProcessor GetSUT(ftQueue queue)
-        {
-            var middlewareQueueItemRepositoryMock = new Mock<IMiddlewareQueueItemRepository>();
-
-            var configurationRepositoryMock = new Mock<IConfigurationRepository>();
-            configurationRepositoryMock.Setup(x => x.GetQueueAsync(_queue.ftQueueId)).ReturnsAsync(queue);
-
-            var clientFactoryMock = new Mock<IClientFactory<IITSSCD>>(MockBehavior.Strict);
-
             var serviceCollection = new ServiceCollection();
             serviceCollection.AddLogging();
-            serviceCollection.AddSingleton(configurationRepositoryMock.Object);
+            serviceCollection.AddSingleton(Mock.Of<IConfigurationRepository>(MockBehavior.Strict));
             serviceCollection.AddSingleton(Mock.Of<IJournalITRepository>());
-            serviceCollection.AddSingleton(clientFactoryMock.Object);
-            serviceCollection.AddSingleton(middlewareQueueItemRepositoryMock.Object);
-            serviceCollection.AddSingleton(new MiddlewareConfiguration
-            {
-                Configuration = new Dictionary<string, object>
-                {
-                    { "init_ftSignaturCreationUnitIT", "[{\"Url\":\"grpc://localhost:14300\"}]" }
-                }
-            });
+            serviceCollection.AddSingleton(Mock.Of<IClientFactory<IITSSCD>>(MockBehavior.Strict));
+            serviceCollection.AddSingleton(Mock.Of<IMiddlewareQueueItemRepository>(MockBehavior.Strict));
+            serviceCollection.AddSingleton(new MiddlewareConfiguration());
 
             var bootstrapper = new QueueITBootstrapper();
             bootstrapper.ConfigureServices(serviceCollection);
@@ -139,7 +95,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
 }
 """;
             var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(initOperationReceipt);
-            var sut = GetDefaultSUT(_queue);
+            var sut = GetSUT();
             var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, _queueStarted, new ftQueueItem { });
 
             receiptResponse.ftSignatures.Should().HaveCount(1);
@@ -166,7 +122,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
 }
 """;
             var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(initOperationReceipt);
-            var sut = GetDefaultSUT(_queue);
+            var sut = GetSUT();
             var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, _queue, new ftQueueItem { });
 
             receiptResponse.ftSignatures.Should().BeEmpty();
@@ -195,7 +151,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
 }
 """;
             var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(initOperationReceipt);
-            var sut = GetDefaultSUT(_queueStopped);
+            var sut = GetSUT();
             var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, _queueStopped, new ftQueueItem { });
 
             receiptResponse.ftSignatures.Should().BeEmpty();
