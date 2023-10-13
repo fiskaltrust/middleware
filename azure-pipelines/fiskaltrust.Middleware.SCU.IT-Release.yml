@@ -33,3 +33,26 @@ stages:
         #     storage: stprodwesteuropepackages
         #     serviceConnection: rg-prod-westeurope-packages
         #     dependsOnPrefix: Release_Sandbox
+
+  - template: templates/release-legacy.yml
+    parameters:
+      type: fiskaltrust.Middleware.SCU.IT
+      artifact: build
+      projects:
+        - EpsonRTPrinter
+        - CustomRTPrinter
+        - CustomRTServer
+      stages:
+        - stage: Release_Sandbox
+          dependsOn: []
+          templateContext:
+            environment: sandbox
+            storage: stdevwesteuropepackages
+            serviceConnection: rg-dev-westeurope-packages
+
+        # - stage: Release_Production
+        #   templateContext:
+        #     environment: production
+        #     storage: stprodwesteuropepackages
+        #     serviceConnection: rg-prod-westeurope-packages
+        #     dependsOnPrefix: Release_Sandbox

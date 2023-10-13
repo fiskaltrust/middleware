@@ -239,7 +239,8 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         {
 
             await LoginAsync();
-            var response = await PerformReprint("11", "10", "23", long.Parse(referenceDocNumber));
+            var date = DateTime.Parse(referenceDateTime);
+            var response = await PerformReprint(date.ToString("dd"), date.ToString("MM"), date.ToString("yy"), long.Parse(referenceDocNumber));
             using var responseContent = await response.Content.ReadAsStreamAsync();
             var result = SoapSerializer.DeserializeToSoapEnvelope<PrinterResponse>(responseContent);
             var fiscalReceiptResponse = await SetReceiptResponse(result);
