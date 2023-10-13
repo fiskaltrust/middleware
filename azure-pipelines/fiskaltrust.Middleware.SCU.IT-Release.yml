@@ -46,13 +46,13 @@ stages:
         - stage: Release_Sandbox_Legacy
           dependsOn: []
           templateContext:
-            environment: sandbox
-            feed: dev
+            environment: sandbox-legacy
+            storage: fiskaltrustsandbox
             serviceConnection: sandbox-legacy-packages
 
         - stage: Release_Production_Legacy
           templateContext:
-            dependsOnPrefix: Release_Sandbox
-            environment: production
-            feed: middleware
+            dependsOnPrefix: Release_Sandbox_Legacy
+            environment: production-legacy
+            storage: fiskaltrustcommonwe1
             serviceConnection: production-legacy-packages

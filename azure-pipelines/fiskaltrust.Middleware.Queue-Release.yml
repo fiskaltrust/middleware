@@ -50,15 +50,15 @@ stages:
         - stage: Release_Sandbox_Legacy
           dependsOn: []
           templateContext:
-            environment: sandbox
+            environment: sandbox-legacy
             storage: fiskaltrustsandbox
             serviceConnection: sandbox-legacy-packages
 
         - stage: Release_Production_Legacy
           templateContext:
-            dependsOnPrefix: Release_Sandbox
-            environment: production
-            storage: fiskaltrustsandbox
+            dependsOnPrefix: Release_Sandbox_Legacy
+            environment: production-legacy
+            storage: fiskaltrustcommonwe1
             serviceConnection: production-legacy-packages
 
   - template: templates/release-legacy-nuget.yml
@@ -72,16 +72,16 @@ stages:
         - MySQL
         - PostgreSQL
       stages:
-        - stage: Release_Sandbox_Legacy
+        - stage: Release_Sandbox_Legacy_Nuget
           dependsOn: []
           templateContext:
-            environment: sandbox
+            environment: sandbox-legacy-nuget
             feed: dev
             serviceConnection: sandbox-legacy-packages
 
-        - stage: Release_Production_Legacy
+        - stage: Release_Production_Legacy_Nuget
           templateContext:
-            dependsOnPrefix: Release_Sandbox
-            environment: production
+            dependsOnPrefix: Release_Sandbox_Legacy_Nuget
+            environment: production-legacy-nuget
             feed: middleware
             serviceConnection: production-legacy-packages

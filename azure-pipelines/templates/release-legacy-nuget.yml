@@ -26,7 +26,7 @@ stages:
       ${{ if ne(stage.templateContext.dependsOnPrefix, '') }}:
         dependsOn: ${{ stage.templateContext.dependsOnPrefix }}_${{ replace(project, '.', '_') }}
 
-      ${{ if eq(stage.templateContext.environment, 'production-legacy') }}:
+      ${{ if eq(stage.templateContext.environment, 'production-legacy-nuget') }}:
         condition: and(startsWith(variables['Build.SourceBranch'], 'refs/tags/'), contains(variables['Build.SourceBranch'], lower('/${{ project }}/v')))
       ${{ else }}:
         condition: or(not(startsWith(variables['Build.SourceBranch'], 'refs/tags/')), and(startsWith(variables['Build.SourceBranch'], 'refs/tags/'), contains(variables['Build.SourceBranch'], lower('/${{ project }}/v'))))
