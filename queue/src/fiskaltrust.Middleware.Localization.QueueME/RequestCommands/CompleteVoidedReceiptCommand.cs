@@ -15,7 +15,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
     public class CompleteVoidedReceiptCommand : PosReceiptCommand
     {
         public CompleteVoidedReceiptCommand(ILogger<RequestCommand> logger, IConfigurationRepository configurationRepository,
-            IMiddlewareJournalMERepository journalMeRepository, IMiddlewareQueueItemRepository queueItemRepository, 
+            IMiddlewareJournalMERepository journalMeRepository, IMiddlewareQueueItemRepository queueItemRepository,
             IMiddlewareActionJournalRepository actionJournalRepository, QueueMEConfiguration queueMeConfiguration, SignatureItemFactory signatureItemFactory) :
             base(logger, configurationRepository, journalMeRepository, queueItemRepository, actionJournalRepository, queueMeConfiguration, signatureItemFactory)
         { }
@@ -41,8 +41,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
         }
         protected async Task<ReceiptToCancel> GetReceiptToCancel(ReceiptRequest request)
         {
-            var journalMeToCancel = JournalMeRepository.GetByReceiptReference(request.cbPreviousReceiptReference).ToListAsync()
-                .Result.FirstOrDefault();
+            var journalMeToCancel = (await JournalMeRepository.GetByReceiptReference(request.cbPreviousReceiptReference).ToListAsync()).FirstOrDefault();
             if (journalMeToCancel?.IIC == null)
             {
                 throw new InvoiceNotSignedException("Invoice was not signed. No IIC was created by the CA");

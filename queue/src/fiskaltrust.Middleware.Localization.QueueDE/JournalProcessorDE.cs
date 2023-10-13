@@ -103,7 +103,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             {
                 var result = new
                 {
-                    QueueDEList = _configurationRepository.GetQueueDEListAsync().Result
+                    QueueDEList = await _configurationRepository.GetQueueDEListAsync()
                 };
                 yield return new JournalResponse
                 {

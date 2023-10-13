@@ -59,7 +59,15 @@ namespace fiskaltrust.Middleware.Queue
             _middlewareConfiguration = middlewareConfiguration;
         }
 
-        public IAsyncEnumerable<JournalResponse> ProcessAsync(JournalRequest request)
+        public async IAsyncEnumerable<JournalResponse> ProcessAsync(JournalRequest request)
+        {
+            await foreach (var item in await ProcessInnerAsync(request))
+            {
+                yield return item;
+            }
+        }
+
+        public async Task<IAsyncEnumerable<JournalResponse>> ProcessInnerAsync(JournalRequest request)
         {
             try
             {
@@ -82,7 +90,7 @@ namespace fiskaltrust.Middleware.Queue
                     (long) JournalTypes.Configuration => new List<JournalResponse> {
                     new JournalResponse
                     {
-                        Chunk = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(GetConfiguration().Result)).ToList()
+                        Chunk = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(await GetConfiguration())).ToList()
                     }
                 }.ToAsyncEnumerable(),
                     _ => new List<JournalResponse> {
