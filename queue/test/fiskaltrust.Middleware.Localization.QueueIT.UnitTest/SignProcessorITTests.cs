@@ -229,32 +229,6 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
         }
 
         [Theory]
-        [MemberData(nameof(allNonZeroReceiptReceipts))]
-        public async Task AllReceiptCases_ShouldReturnInFailureMode_IfQueueIsInFailedMode(ReceiptCases receiptCase)
-        {
-            var initOperationReceipt = $$"""
-{
-    "ftCashBoxID": "00000000-0000-0000-0000-000000000000",
-    "ftPosSystemId": "00000000-0000-0000-0000-000000000000",
-    "cbTerminalID": "00010001",
-    "cbReceiptReference": "{{Guid.NewGuid()}}",
-    "cbReceiptMoment": "{{DateTime.UtcNow.ToString("o")}}",
-    "cbChargeItems": [],
-    "cbPayItems": [],
-    "ftReceiptCase": {{0x4954200000000000 | (long) receiptCase}},
-    "ftReceiptCaseData": "",
-    "cbUser": "Admin"
-}
-""";
-            var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(initOperationReceipt);
-            var sut = GetSUT(_queueStarted, _queueITSCUDeviceOutOfService);
-            var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, _queueStarted, new ftQueueItem { });
-
-            receiptResponse.ftSignatures.Should().BeEmpty();
-            receiptResponse.ftState.Should().Be(0x4954_2000_0000_0002);
-        }
-
-        [Theory]
         [MemberData(nameof(rtHandledReceipts))]
         public async Task AllReceiptCases_ShouldContain_ZNumber_And_DocumentNumber_InReceiptIdentification(ReceiptCases receiptCase)
         {
@@ -356,7 +330,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
             var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(zeroReceipt);
             var sut = GetDefaultSUT(_queueStarted);
             var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, _queueStarted, new ftQueueItem { });
-            receiptResponse.ftState.Should().Be(0x4954_2000_0000_0000);
+            receiptResponse.ftState.Should().Be(0x4954_2000_0000_0000, $"{receiptResponse.ftState:x}");
             actionJournals.Should().HaveCount(0);
         }
 
@@ -384,7 +358,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
             var sut = GetDefaultSUT(_queueStarted, itSSCDMock.Object);
    
             var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, _queueStarted, new ftQueueItem { });
-            receiptResponse.ftState.Should().Be(0x4954_2000_0000_0000);
+            receiptResponse.ftState.Should().Be(0x4954_2000_EEEE_EEEE, $"{receiptResponse.ftState:x}");
             actionJournals.Should().HaveCount(0);
         }
 

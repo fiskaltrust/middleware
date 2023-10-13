@@ -17,6 +17,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
         public void ConfigureServices(IServiceCollection services)
         {
             var _ = services
+                .AddScoped<SignProcessorIT>()
                 .AddScoped<IMarketSpecificSignProcessor, SignProcessor>(x => new SignProcessor(x.GetRequiredService<IConfigurationRepository>(), x.GetRequiredService<SignProcessorIT>()))
                 .AddScoped<IMarketSpecificJournalProcessor, JournalProcessorIT>()
                 .AddScoped<ReceiptCommandProcessorIT>()

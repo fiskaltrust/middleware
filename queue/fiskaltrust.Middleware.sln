@@ -75,6 +75,9 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.Storage.InMemory.AcceptanceTest", "test\fiskaltrust.Middleware.Storage.InMemory.AcceptanceTest\fiskaltrust.Middleware.Storage.InMemory.AcceptanceTest.csproj", "{A984EC5A-0C33-4375-B2F9-45E0E13C7716}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Queue", "Queue", "{B22FF43C-8AA2-4B70-B2EE-4171C600F734}"
+	ProjectSection(SolutionItems) = preProject
+		src\fiskaltrust.Middleware.Localization.QueueIT\Models\ScuResponse.cs = src\fiskaltrust.Middleware.Localization.QueueIT\Models\ScuResponse.cs
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.Queue.EF", "src\fiskaltrust.Middleware.Queue.EF\fiskaltrust.Middleware.Queue.EF.csproj", "{DF8A0F14-19DE-4523-B5AA-944896D01B48}"
 EndProject
@@ -127,13 +130,13 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.Loca
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.Localization.QueueIT", "src\fiskaltrust.Middleware.Localization.QueueIT\fiskaltrust.Middleware.Localization.QueueIT.csproj", "{65633C3A-65AA-4E05-8E56-7A348872CCC3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fiskaltrust.Middleware.Localization.QueueIT.UnitTest", "test\fiskaltrust.Middleware.Localization.QueueIT.UnitTest\fiskaltrust.Middleware.Localization.QueueIT.UnitTest.csproj", "{5FAB9D88-4B90-4DF0-B1B7-1F50DF7CFCA4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.Localization.QueueIT.UnitTest", "test\fiskaltrust.Middleware.Localization.QueueIT.UnitTest\fiskaltrust.Middleware.Localization.QueueIT.UnitTest.csproj", "{5FAB9D88-4B90-4DF0-B1B7-1F50DF7CFCA4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fiskaltrust.Middleware.Localization.QueueDEFAULT", "src\fiskaltrust.Middleware.Localization.QueueDEFAULT\fiskaltrust.Middleware.Localization.QueueDEFAULT.csproj", "{3C0310D9-EC55-4115-A2D5-0DC8C1246645}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.Localization.QueueDEFAULT", "src\fiskaltrust.Middleware.Localization.QueueDEFAULT\fiskaltrust.Middleware.Localization.QueueDEFAULT.csproj", "{3C0310D9-EC55-4115-A2D5-0DC8C1246645}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fiskaltrust.Middleware.Localization.QueueDEFAULT.UnitTest", "test\fiskaltrust.Middleware.Localization.QueueDEFAULT.UnitTest\fiskaltrust.Middleware.Localization.QueueDEFAULT.UnitTest.csproj", "{04B32BB6-2E1D-400F-B7B2-2638483B0825}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.Localization.QueueDEFAULT.UnitTest", "test\fiskaltrust.Middleware.Localization.QueueDEFAULT.UnitTest\fiskaltrust.Middleware.Localization.QueueDEFAULT.UnitTest.csproj", "{04B32BB6-2E1D-400F-B7B2-2638483B0825}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fiskaltrust.Middleware.Localization.QueueFR.IntegrationTest", "test\fiskaltrust.Middleware.Localization.QueueFR.IntegrationTest\fiskaltrust.Middleware.Localization.QueueFR.IntegrationTest.csproj", "{7F52D143-9179-4FCF-9DC7-B5F1681BD22A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.Localization.QueueFR.IntegrationTest", "test\fiskaltrust.Middleware.Localization.QueueFR.IntegrationTest\fiskaltrust.Middleware.Localization.QueueFR.IntegrationTest.csproj", "{7F52D143-9179-4FCF-9DC7-B5F1681BD22A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
