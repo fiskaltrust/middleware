@@ -24,7 +24,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
 
         public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ftQueue queue, ftQueueItem queueItem)
         {
-            var queueIT = await _configurationRepository.GetQueueITAsync(queue.ftQueueId).ConfigureAwait(false);
+          
             var receiptIdentification = $"ft{queue.ftReceiptNumerator:X}#";
             var receiptResponse = new ReceiptResponse
             {
@@ -36,8 +36,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
                 cbReceiptReference = request.cbReceiptReference,
                 ftReceiptMoment = DateTime.UtcNow,
                 ftState = Cases.BASE_STATE,
-                ftReceiptIdentification = receiptIdentification,
-                ftCashBoxIdentification = queueIT.CashBoxIdentification
+                ftReceiptIdentification = receiptIdentification
             };
 
             if (queue.IsDeactivated())

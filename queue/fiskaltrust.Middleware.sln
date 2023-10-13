@@ -75,9 +75,6 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.Storage.InMemory.AcceptanceTest", "test\fiskaltrust.Middleware.Storage.InMemory.AcceptanceTest\fiskaltrust.Middleware.Storage.InMemory.AcceptanceTest.csproj", "{A984EC5A-0C33-4375-B2F9-45E0E13C7716}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Queue", "Queue", "{B22FF43C-8AA2-4B70-B2EE-4171C600F734}"
-	ProjectSection(SolutionItems) = preProject
-		src\fiskaltrust.Middleware.Localization.QueueIT\Models\ScuResponse.cs = src\fiskaltrust.Middleware.Localization.QueueIT\Models\ScuResponse.cs
-	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.Queue.EF", "src\fiskaltrust.Middleware.Queue.EF\fiskaltrust.Middleware.Queue.EF.csproj", "{DF8A0F14-19DE-4523-B5AA-944896D01B48}"
 EndProject

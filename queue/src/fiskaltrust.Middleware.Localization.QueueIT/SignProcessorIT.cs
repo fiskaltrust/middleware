@@ -34,38 +34,23 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
         public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ReceiptResponse receiptResponse, ftQueue queue, ftQueueItem queueItem)
         {
             var queueIT = await _configurationRepository.GetQueueITAsync(queue.ftQueueId).ConfigureAwait(false);
-            if (request.IsDailyOperation())
+            receiptResponse.ftCashBoxIdentification = queueIT.CashBoxIdentification;
+
+            try
             {
-                try
+
+                if (request.IsDailyOperation())
                 {
                     (var response, var actionJournals) = await _dailyOperationsCommandProcessorIT.ProcessReceiptAsync(new ProcessCommandRequest(queue, queueIT, request, receiptResponse, queueItem)).ConfigureAwait(false);
                     return (response, actionJournals);
                 }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Failed to process ftReceiptCase 0x{receiptcase}.", request.ftReceiptCase.ToString("X"));
-                    receiptResponse.SetReceiptResponseError("Failed to process daily operation zero receipt with the following exception message: " + ex.Message);
-                    return (receiptResponse, new List<ftActionJournal>());
-                }
-            }
 
-            if (request.IsLifeCycleOperation())
-            {
-                try
+                if (request.IsLifeCycleOperation())
                 {
                     (var response, var actionJournals) = await _lifecyclCommandProcessorIT.ProcessReceiptAsync(new ProcessCommandRequest(queue, queueIT, request, receiptResponse, queueItem)).ConfigureAwait(false);
                     return (response, actionJournals);
                 }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Failed to process ftReceiptCase 0x{receiptcase}.", request.ftReceiptCase.ToString("X"));
-                    receiptResponse.SetReceiptResponseError("Failed to process lifecycle zero receipt with the following exception message: " + ex.Message);
-                    return (receiptResponse, new List<ftActionJournal>());
-                }
-            }
 
-            try
-            {
                 if (request.IsReceiptOperation())
                 {
                     var (response, actionJournals) = await _receiptCommandProcessorIT.ProcessReceiptAsync(new ProcessCommandRequest(queue, queueIT, request, receiptResponse, queueItem)).ConfigureAwait(false);
@@ -90,7 +75,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to process request.");
-                receiptResponse.SetReceiptResponseError("Failed to process receipt with the following exception message: " + ex.Message);
+                receiptResponse.SetReceiptResponseError($"Failed to process receiptcase 0x{request.ftReceiptCase.ToString("X")}. with the following exception message: " + ex.Message);
                 return (receiptResponse, new List<ftActionJournal>());
             }
         }

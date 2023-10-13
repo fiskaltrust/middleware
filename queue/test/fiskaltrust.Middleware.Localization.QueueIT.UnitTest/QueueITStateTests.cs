@@ -121,6 +121,32 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
             }
         }
 
+        [Fact]
+        public async Task DoNotAllowInitialOperationDuringInitializedState()
+        {
+            var initOperationReceipt = $$"""
+{
+    "ftCashBoxID": "00000000-0000-0000-0000-000000000000",
+    "ftPosSystemId": "00000000-0000-0000-0000-000000000000",
+    "cbTerminalID": "00010001",
+    "cbReceiptReference": "{{Guid.NewGuid()}}",
+    "cbReceiptMoment": "{{DateTime.UtcNow.ToString("o")}}",
+    "cbChargeItems": [],
+    "cbPayItems": [],
+    "ftReceiptCase": {{0x4954200000000000 | (long) ReceiptCases.InitialOperationReceipt0x4001}},
+    "ftReceiptCaseData": "",
+    "cbUser": "Admin"
+}
+""";
+            var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(initOperationReceipt);
+            var sut = GetDefaultSUT(_queue);
+            var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, _queueStarted, new ftQueueItem { });
+
+            receiptResponse.ftSignatures.Should().HaveCount(1);
+            receiptResponse.ftSignatures[0].Data.Should().Be($"The queue is already operational. It is not allowed to send another InitOperation Receipt");
+            receiptResponse.ftState.Should().Be(0x4954_2000_EEEE_EEEE);
+        }
+
         [Theory]
         [MemberData(nameof(allNonInitialOperationReceipts))]
         public async Task AllNonInitialOperationReceiptCases_ShouldReturnDisabledMessage_IfQueueHasNotStarted(ReceiptCases receiptCase)
