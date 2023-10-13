@@ -44,17 +44,17 @@ stages:
               deploy:
                 steps:
                   - download: ${{ parameters.artifact }}
-                    artifact: package-${{ parameters.type }}.${{ project }}
+                    artifact: package-v1
                     displayName: "Download artifact"
 
-                  - task: AzureFileCopy@2
-                    displayName: 'AzureBlob File'
+                  - task: AzureCLI@2
+                    displayName: "Publish to blob storage"
                     inputs:
-                      SourcePath: '$(System.DefaultWorkingDirectory)/_fiskaltrust.Middleware.SCU.IT/packages-v1/$(SigningPackage).*.nupkg'
                       azureSubscription: ${{ stage.templateContext.serviceConnection }}
-                      Destination: AzureBlob
-                      storage: fiskaltrustsandbox
-                      ContainerName: packages
+                      scriptType: ps
+                      scriptLocation: inlineScript
+                      inlineScript: |
+                        az storage blob upload-batch --account-name ${{ stage.templateContext.storage }} -d "packages" -s "$(Pipeline.Workspace)/${{ parameters.artifact }}/package-v1/" --pattern "${{ project }}.*.nupkg"
 
                   # - task: NuGetCommand@2
                   #   displayName: 'NuGet push'
