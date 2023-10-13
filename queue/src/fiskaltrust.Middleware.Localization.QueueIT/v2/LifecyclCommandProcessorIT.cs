@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
@@ -14,13 +14,13 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
 {
     public class LifecyclCommandProcessorIT
     {
+        private readonly IITSSCDProvider _itSSCDProvider;
         private readonly IJournalITRepository _journalITRepository;
         private readonly IConfigurationRepository _configurationRepository;
-        private readonly IITSSCD _itSSCD;
 
-        public LifecyclCommandProcessorIT(IITSSCD iTSSCD, IJournalITRepository journalITRepository, IConfigurationRepository configurationRepository)
+        public LifecyclCommandProcessorIT(IITSSCDProvider itSSCDProvider, IJournalITRepository journalITRepository, IConfigurationRepository configurationRepository)
         {
-            _itSSCD = iTSSCD;
+            _itSSCDProvider = itSSCDProvider;
             _journalITRepository = journalITRepository;
             _configurationRepository = configurationRepository;
         }
@@ -57,7 +57,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
             // - 
             var (queue, queueIt, receiptRequest, receiptResponse, queueItem) = request;
             var scu = await _configurationRepository.GetSignaturCreationUnitITAsync(queueIt.ftSignaturCreationUnitITId.Value).ConfigureAwait(false);
-            var deviceInfo = await _itSSCD.GetRTInfoAsync().ConfigureAwait(false);
+            var deviceInfo = await _itSSCDProvider.GetRTInfoAsync().ConfigureAwait(false);
             if (string.IsNullOrEmpty(scu.InfoJson))
             {
                 scu.InfoJson = JsonConvert.SerializeObject(deviceInfo);
@@ -67,7 +67,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
             var signature = SignaturItemFactory.CreateInitialOperationSignature(queueIt, deviceInfo);
             var actionJournal = ftActionJournalFactory.CreateInitialOperationActionJournal(queue, queueItem, queueIt, receiptRequest);
 
-            var result = await _itSSCD.ProcessReceiptAsync(new ProcessRequest
+            var result = await _itSSCDProvider.ProcessReceiptAsync(new ProcessRequest
             {
                 ReceiptRequest = receiptRequest,
                 ReceiptResponse = receiptResponse,
@@ -96,7 +96,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
         {
             var (queue, queueIt, receiptRequest, receiptResponse, queueItem) = request;
 
-            var result = await _itSSCD.ProcessReceiptAsync(new ProcessRequest
+            var result = await _itSSCDProvider.ProcessReceiptAsync(new ProcessRequest
             {
                 ReceiptRequest = receiptRequest,
                 ReceiptResponse = receiptResponse,

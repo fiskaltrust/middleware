@@ -17,13 +17,13 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
 {
     public class ReceiptCommandProcessorIT
     {
+        private readonly IITSSCDProvider _itSSCDProvider;
         private readonly IJournalITRepository _journalITRepository;
         private readonly IMiddlewareQueueItemRepository _queueItemRepository;
-        private readonly IITSSCD _itSSCD;
 
-        public ReceiptCommandProcessorIT(IITSSCD iTSSCD, IJournalITRepository journalITRepository, IMiddlewareQueueItemRepository queueItemRepository)
+        public ReceiptCommandProcessorIT(IITSSCDProvider itSSCDProvider, IJournalITRepository journalITRepository, IMiddlewareQueueItemRepository queueItemRepository)
         {
-            _itSSCD = iTSSCD;
+            _itSSCDProvider = itSSCDProvider;
             _journalITRepository = journalITRepository;
             _queueItemRepository = queueItemRepository;
         }
@@ -64,7 +64,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
 
             var (queue, queueIt, receiptRequest, receiptResponse, queueItem) = request;
 
-            var result = await _itSSCD.ProcessReceiptAsync(new ProcessRequest
+            var result = await _itSSCDProvider.ProcessReceiptAsync(new ProcessRequest
             {
                 ReceiptRequest = receiptRequest,
                 ReceiptResponse = receiptResponse,

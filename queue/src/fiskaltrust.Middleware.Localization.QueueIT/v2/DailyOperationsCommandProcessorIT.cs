@@ -1,9 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.Localization.QueueIT.Constants;
-using fiskaltrust.Middleware.Localization.QueueIT.Extensions;
 using fiskaltrust.Middleware.Localization.QueueIT.Factories;
 using fiskaltrust.Middleware.Localization.QueueIT.Helpers;
 using fiskaltrust.Middleware.Localization.QueueIT.Models;
@@ -17,11 +15,11 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
     {
         private readonly IJournalITRepository _journalITRepository;
         private readonly IConfigurationRepository _configurationRepository;
-        private readonly IITSSCD _itSSCD;
+        private readonly IITSSCDProvider _itSSCDProvider;
 
-        public DailyOperationsCommandProcessorIT(IITSSCD iTSSCD, IJournalITRepository journalITRepository, IConfigurationRepository configurationRepository)
+        public DailyOperationsCommandProcessorIT(IITSSCDProvider itSSCDProvider, IJournalITRepository journalITRepository, IConfigurationRepository configurationRepository)
         {
-            _itSSCD = iTSSCD;
+            _itSSCDProvider = itSSCDProvider;
             _journalITRepository = journalITRepository;
             _configurationRepository = configurationRepository;
         }
@@ -62,7 +60,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
                 await _configurationRepository.InsertOrUpdateQueueITAsync(queueIT).ConfigureAwait(false);
             }
 
-            var establishConnection = await _itSSCD.ProcessReceiptAsync(new ProcessRequest
+            var establishConnection = await _itSSCDProvider.ProcessReceiptAsync(new ProcessRequest
             {
                 ReceiptRequest = receiptRequest,
                 ReceiptResponse = receiptResponse
@@ -87,7 +85,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
         {
             var (queue, queueIt, receiptRequest, receiptResponse, queueItem) = request;
             var actionJournalEntry = ftActionJournalFactory.CreateDailyClosingActionJournal(queue, queueItem, receiptRequest);
-            var result = await _itSSCD.ProcessReceiptAsync(new ProcessRequest
+            var result = await _itSSCDProvider.ProcessReceiptAsync(new ProcessRequest
             {
                 ReceiptRequest = receiptRequest,
                 ReceiptResponse = receiptResponse
@@ -118,7 +116,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
         {
             var (queue, queueIt, receiptRequest, receiptResponse, queueItem) = request;
             var actionJournalEntry = ftActionJournalFactory.CreateMonthlyClosingActionJournal(queue, queueItem, receiptRequest);
-            var result = await _itSSCD.ProcessReceiptAsync(new ProcessRequest
+            var result = await _itSSCDProvider.ProcessReceiptAsync(new ProcessRequest
             {
                 ReceiptRequest = receiptRequest,
                 ReceiptResponse = receiptResponse
@@ -150,7 +148,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
             var (queue, queueIt, receiptRequest, receiptResponse, queueItem) = request;
 
             var actionJournalEntry = ftActionJournalFactory.CreateYearlyClosingClosingActionJournal(queue, queueItem, receiptRequest);
-            var result = await _itSSCD.ProcessReceiptAsync(new ProcessRequest
+            var result = await _itSSCDProvider.ProcessReceiptAsync(new ProcessRequest
             {
                 ReceiptRequest = receiptRequest,
                 ReceiptResponse = receiptResponse

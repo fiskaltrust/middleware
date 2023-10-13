@@ -18,6 +18,7 @@ using Xunit;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
 {
+
     public class SignProcessorITTests
     {
         private static readonly Guid _queueID = new Guid();
