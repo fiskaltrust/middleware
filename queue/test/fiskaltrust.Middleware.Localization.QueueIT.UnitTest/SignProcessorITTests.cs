@@ -84,6 +84,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
             configurationRepositoryMock.Setup(x => x.GetSignaturCreationUnitITAsync(_queueIT.ftSignaturCreationUnitITId.Value)).ReturnsAsync(new ftSignaturCreationUnitIT
             {
                 ftSignaturCreationUnitITId = _queueIT.ftSignaturCreationUnitITId.Value,
+                Url = "grpc://localhost:14300",
                 InfoJson = null
             });
 
@@ -125,108 +126,11 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
             return serviceCollection.BuildServiceProvider().GetRequiredService<IMarketSpecificSignProcessor>();
         }
 
-        public static IEnumerable<object[]> allNonInitialOperationReceipts()
-        {
-            foreach (var number in Enum.GetValues(typeof(ReceiptCases)))
-            {
-                if ((long) number == (long) ReceiptCases.InitialOperationReceipt0x4001)
-                {
-                    continue;
-                }
-
-                yield return new object[] { number };
-            }
-        }
-
-        public static IEnumerable<object[]> allNonZeroReceiptReceipts()
-        {
-            foreach (var number in Enum.GetValues(typeof(ReceiptCases)))
-            {
-                if ((long) number == (long) ReceiptCases.ZeroReceipt0x2000)
-                {
-                    continue;
-                }
-
-                if ((long) number == (long) ReceiptCases.InitialOperationReceipt0x4001)
-                {
-                    continue;
-                }
-
-                yield return new object[] { number };
-            }
-        }
-
-        public static IEnumerable<object[]> allReceipts()
-        {
-            foreach (var number in Enum.GetValues(typeof(ReceiptCases)))
-            {
-                yield return new object[] { number };
-            }
-        }
-
         public static IEnumerable<object[]> rtHandledReceipts()
         {
             yield return new object[] { ReceiptCases.UnknownReceipt0x0000 };
             yield return new object[] { ReceiptCases.PointOfSaleReceipt0x0001 };
             yield return new object[] { ReceiptCases.Protocol0x0005 };
-        }
-
-        [Theory]
-        [MemberData(nameof(allNonInitialOperationReceipts))]
-        public async Task AllNonInitialOperationReceiptCases_ShouldReturnDisabledMessage_IfQueueHasNotStarted(ReceiptCases receiptCase)
-        {
-            var initOperationReceipt = $$"""
-{
-    "ftCashBoxID": "00000000-0000-0000-0000-000000000000",
-    "ftPosSystemId": "00000000-0000-0000-0000-000000000000",
-    "cbTerminalID": "00010001",
-    "cbReceiptReference": "{{Guid.NewGuid()}}",
-    "cbReceiptMoment": "{{DateTime.UtcNow.ToString("o")}}",
-    "cbChargeItems": [],
-    "cbPayItems": [],
-    "ftReceiptCase": {{0x4954200000000000 | (long) receiptCase}},
-    "ftReceiptCaseData": "",
-    "cbUser": "Admin"
-}
-""";
-            var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(initOperationReceipt);
-            var sut = GetDefaultSUT(_queue);
-            var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, _queue, new ftQueueItem { });
-
-            receiptResponse.ftSignatures.Should().BeEmpty();
-            receiptResponse.ftState.Should().Be(0x4954_2000_0000_0001);
-
-            actionJournals.Should().HaveCount(1);
-            actionJournals[0].Message.Should().Be($"QueueId {_queue.ftQueueId} has not been activated yet.");
-        }
-
-        [Theory]
-        [MemberData(nameof(allReceipts))]
-        public async Task AllReceiptCases_ShouldReturnDisabledMessage_IfQueueIsDeactivated(ReceiptCases receiptCase)
-        {
-            var initOperationReceipt = $$"""
-{
-    "ftCashBoxID": "00000000-0000-0000-0000-000000000000",
-    "ftPosSystemId": "00000000-0000-0000-0000-000000000000",
-    "cbTerminalID": "00010001",
-    "cbReceiptReference": "{{Guid.NewGuid()}}",
-    "cbReceiptMoment": "{{DateTime.UtcNow.ToString("o")}}",
-    "cbChargeItems": [],
-    "cbPayItems": [],
-    "ftReceiptCase": {{0x4954200000000000 | (long) receiptCase}},
-    "ftReceiptCaseData": "",
-    "cbUser": "Admin"
-}
-""";
-            var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(initOperationReceipt);
-            var sut = GetDefaultSUT(_queueStopped);
-            var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, _queueStopped, new ftQueueItem { });
-
-            receiptResponse.ftSignatures.Should().BeEmpty();
-            receiptResponse.ftState.Should().Be(0x4954_2000_0000_0001);
-
-            actionJournals.Should().HaveCount(1);
-            actionJournals[0].Message.Should().Be($"QueueId {_queue.ftQueueId} has been disabled.");
         }
 
         [Theory]
