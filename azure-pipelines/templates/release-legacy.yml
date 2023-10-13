@@ -44,7 +44,7 @@ stages:
               deploy:
                 steps:
                   - download: ${{ parameters.artifact }}
-                    artifact: package-v1
+                    artifact: packages-v1
                     displayName: "Download artifact"
 
                   - task: AzureCLI@2
@@ -54,7 +54,7 @@ stages:
                       scriptType: ps
                       scriptLocation: inlineScript
                       inlineScript: |
-                        az storage blob upload-batch --account-name fiskaltrustsandbox -d "packages" -s "$(Pipeline.Workspace)/${{ parameters.artifact }}/package-v1/" --pattern "${{ project }}.*.nupkg"
+                        az storage blob upload-batch --account-name fiskaltrustsandbox -d "packages" -s "$(Pipeline.Workspace)/${{ parameters.artifact }}/packages-v1/" --pattern "${{ project }}.*.nupkg"
 
                   # - task: NuGetCommand@2
                   #   displayName: 'NuGet push'
