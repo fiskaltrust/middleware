@@ -52,4 +52,4 @@ stages:
                     inputs:
                       command: push
                       packagesToPush: '${{ parameters.type }}.${{ project }}.*.nupkg'
-                      publishVstsFeed: '${{ feed }}'
+                      publishVstsFeed: '${{ stage.templateContext.feed }}'
