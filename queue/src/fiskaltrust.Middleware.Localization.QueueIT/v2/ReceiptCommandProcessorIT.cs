@@ -131,7 +131,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
                             Caption = "<reference-timestamp>",
                             Data = documentMoment,
                             ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                            ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentMoment
+                            ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentMoment
                         },
                     });
                 receiptResponse.ftSignatures = signatures.ToArray();

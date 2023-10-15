@@ -7,6 +7,7 @@ using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueIT.Constants;
 using fiskaltrust.Middleware.Localization.QueueIT.Helpers;
 using fiskaltrust.storage.V0;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
 #pragma warning disable
@@ -18,12 +19,14 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
         private readonly IITSSCDProvider _itSSCDProvider;
         private readonly IJournalITRepository _journalITRepository;
         private readonly IMiddlewareQueueItemRepository _queueItemRepository;
+        private readonly ILogger<ProtocolCommandProcessorIT> _logger;
 
-        public ProtocolCommandProcessorIT(IITSSCDProvider itSSCDProvider, IJournalITRepository journalITRepository, IMiddlewareQueueItemRepository queueItemRepository)
+        public ProtocolCommandProcessorIT(IITSSCDProvider itSSCDProvider, IJournalITRepository journalITRepository, IMiddlewareQueueItemRepository queueItemRepository, ILogger<ProtocolCommandProcessorIT> logger)
         {
             _itSSCDProvider = itSSCDProvider;
             _journalITRepository = journalITRepository;
             _queueItemRepository = queueItemRepository;
+            _logger = logger;
         }
 
         public async Task<ProcessCommandResponse> ProcessReceiptAsync(ProcessCommandRequest request)
@@ -64,7 +67,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
         public async Task<ProcessCommandResponse> CopyReceiptPrintExistingReceipt0x3010Async(ProcessCommandRequest request)
         {
             var (queue, queueIT, receiptRequest, receiptResponse, queueItem) = request;
-            await LoadReceiptReferencesToResponse(request.ReceiptRequest, request.QueueItem, request.ReceiptResponse);
+            await LoadReceiptReferencesToResponse(receiptRequest, queueItem, receiptResponse);
             try
             {
                 var result = await _itSSCDProvider.ProcessReceiptAsync(new ProcessRequest
@@ -118,7 +121,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
                             Caption = "<reference-timestamp>",
                             Data = documentMoment,
                             ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                            ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentMoment
+                            ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentMoment
                         },
                     });
                 receiptResponse.ftSignatures = signatures.ToArray();
