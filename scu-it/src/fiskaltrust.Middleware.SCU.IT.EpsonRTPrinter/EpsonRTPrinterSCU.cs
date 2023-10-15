@@ -521,12 +521,13 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
 
     private async Task<HttpResponseMessage> LoginAsync()
     {
+        var password = (_configuration.Password ?? "").PadRight(100, ' ').PadRight(32, ' ');
         var data = $"""
 <?xml version="1.0" encoding="utf-8"?>
 <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
     <s:Body>
         <printerCommand>
-            <directIO command="4038" data="02{_configuration.Password}                                                                                                                               " />
+            <directIO command="4038" data="02{password}" />
         </printerCommand>
     </s:Body>
 </s:Envelope>

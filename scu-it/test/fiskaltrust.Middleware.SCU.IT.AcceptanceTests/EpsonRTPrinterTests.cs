@@ -6,11 +6,11 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
 {
     public class EpsonRTPrinterTests : ITSSCDTests
     {
-        private static readonly Uri _serverUri = new Uri("http://192.168.0.34/");
+        private static readonly Uri _serverUri = new Uri("http://192.168.0.14/");
         private readonly EpsonRTPrinterSCUConfiguration _config = new EpsonRTPrinterSCUConfiguration
         {
             DeviceUrl = _serverUri.ToString(),
-            Password = "62264"
+            Password = "21719"
         };
 
         protected override string SerialNumber => "99IEC018305";
