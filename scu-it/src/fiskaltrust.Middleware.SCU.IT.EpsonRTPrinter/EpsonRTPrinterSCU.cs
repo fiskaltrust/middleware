@@ -120,12 +120,15 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
                 return await ProcessPerformReprint(request);
             }
 
+            if (receiptCase == (long) ITReceiptCases.Protocol0x0005)
+            {
+                return Helpers.CreateResponse(await PerformProtocolReceiptAsync(request.ReceiptRequest, request.ReceiptResponse));
+            }
+
             switch (receiptCase)
             {
                 case (long) ITReceiptCases.UnknownReceipt0x0000:
                 case (long) ITReceiptCases.PointOfSaleReceipt0x0001:
-                case (long) ITReceiptCases.PaymentTransfer0x0002:
-                case (long) ITReceiptCases.Protocol0x0005:
                     return Helpers.CreateResponse(await PerformClassicReceiptAsync(request.ReceiptRequest, request.ReceiptResponse));
             }
             request.ReceiptResponse.SetReceiptResponseErrored($"The given receiptcase 0x{receiptCase.ToString("X")} is not supported by Epson RT Printer.");
@@ -177,11 +180,81 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         return fiscalReceiptResponse;
     }
 
+    public async Task<ReceiptResponse> PerformProtocolReceiptAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
+    {
+        try
+        {
+            var content = EpsonCommandFactory.CreateInvoiceRequestContent(_configuration, receiptRequest);
+            var customerData = receiptRequest.GetCustomer();
+            if (customerData != null)
+            {
+                if (content.PrintRecMessage == null)
+                {
+                    content.PrintRecMessage = new List<PrintRecMessage>();
+                }
+                content.PrintRecMessage?.Add(new PrintRecMessage
+                {
+                    MessageType = 2,
+                    Index = "1",
+                    Message = customerData.CustomerName ?? ""
+                });
+                content.PrintRecMessage?.Add(new PrintRecMessage
+                {
+                    MessageType = 2,
+                    Index = "2",
+                    Message = customerData.CustomerStreet ?? ""
+                });
+                content.PrintRecMessage?.Add(new PrintRecMessage
+                {
+                    MessageType = 2,
+                    Index = "3",
+                    Message = string.Format("{0} {1} {2}", customerData.CustomerCountry ?? "", customerData.CustomerZip ?? "", customerData.CustomerCity ?? "")
+                });
+            }
+
+            var data = SoapSerializer.Serialize(content);
+            _logger.LogDebug("Request content ({receiptreference}): {content}", receiptRequest.cbReceiptReference, SoapSerializer.Serialize(data));
+            var response = await SendRequestAsync(data);
+
+            using var responseContent = await response.Content.ReadAsStreamAsync();
+            var result = SoapSerializer.DeserializeToSoapEnvelope<PrinterResponse>(responseContent);
+            if (result != null)
+            {
+                _logger.LogDebug("Response content ({receiptreference}): {content}", receiptRequest.cbReceiptReference, SoapSerializer.Serialize(result));
+            }
+
+            var fiscalReceiptResponse = await SetReceiptResponse(result);
+            if (!fiscalReceiptResponse.Success)
+            {
+                receiptResponse.SetReceiptResponseErrored(fiscalReceiptResponse.SSCDErrorInfo?.Info ?? "");
+                return receiptResponse;
+            }
+            var posReceiptSignatur = new POSReceiptSignatureData
+            {
+                RTSerialNumber = _serialnr,
+                RTZNumber = fiscalReceiptResponse.ZRepNumber,
+                RTDocNumber = fiscalReceiptResponse.ReceiptNumber,
+                RTDocMoment = fiscalReceiptResponse.ReceiptDateTime,
+                RTDocType = "POSRECEIPT",
+                RTCodiceLotteria = "",
+                RTCustomerID = "", // Todo dread customerid from data           
+            };
+            receiptResponse.ftSignatures = SignatureFactory.CreateDocumentoCommercialeSignatures(posReceiptSignatur).ToArray();
+            return receiptResponse;
+        }
+        catch (Exception e)
+        {
+            var response = Helpers.ExceptionInfo(e);
+            receiptResponse.SetReceiptResponseErrored(response.SSCDErrorInfo?.Info ?? "");
+            return receiptResponse;
+        }
+    }
+
     public async Task<ReceiptResponse> PerformClassicReceiptAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
     {
         try
         {
-            var content = EpsonCommandFactory.CreateInvoiceRequestContent(receiptRequest);
+            var content = EpsonCommandFactory.CreateInvoiceRequestContent(_configuration, receiptRequest);
             var data = SoapSerializer.Serialize(content);
             _logger.LogDebug("Request content ({receiptreference}): {content}", receiptRequest.cbReceiptReference, SoapSerializer.Serialize(data));
             var response = await SendRequestAsync(data);
@@ -237,22 +310,24 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         FiscalReceiptResponse fiscalResponse;
         try
         {
-
-            var loginResult = await LoginAsync();
-            if (!loginResult.IsSuccessStatusCode)
+            if (!string.IsNullOrEmpty(_configuration.Password))
             {
-                throw new HttpRequestException($"An error occured while sending a request to the Epson device (StatusCode: {loginResult.StatusCode}, Content: {await loginResult.Content.ReadAsStringAsync()})");
-            }
-            using var loginResultresponseContent = await loginResult.Content.ReadAsStreamAsync();
-            var loginprinterresult = SoapSerializer.DeserializeToSoapEnvelope<PrinterResponse>(loginResultresponseContent);
-            var loginReceiptResponse = await SetReceiptResponse(loginprinterresult);
-            if (!loginReceiptResponse.Success)
-            {
-                request.ReceiptResponse.SetReceiptResponseErrored($"Unable to login to the Printer. Please check the configured password. (Details: {loginReceiptResponse.SSCDErrorInfo?.Info ?? ""})");
-                return new ProcessResponse
+                var loginResult = await LoginAsync();
+                if (!loginResult.IsSuccessStatusCode)
                 {
-                    ReceiptResponse = request.ReceiptResponse
-                };
+                    throw new HttpRequestException($"An error occured while sending a request to the Epson device (StatusCode: {loginResult.StatusCode}, Content: {await loginResult.Content.ReadAsStringAsync()})");
+                }
+                using var loginResultresponseContent = await loginResult.Content.ReadAsStreamAsync();
+                var loginprinterresult = SoapSerializer.DeserializeToSoapEnvelope<PrinterResponse>(loginResultresponseContent);
+                var loginReceiptResponse = await SetReceiptResponse(loginprinterresult);
+                if (!loginReceiptResponse.Success)
+                {
+                    request.ReceiptResponse.SetReceiptResponseErrored($"Unable to login to the Printer. Please check the configured password. (Details: {loginReceiptResponse.SSCDErrorInfo?.Info ?? ""})");
+                    return new ProcessResponse
+                    {
+                        ReceiptResponse = request.ReceiptResponse
+                    };
+                }
             }
 
             var date = DateTime.Parse(referenceDateTime);
@@ -307,7 +382,6 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         };
     }
 
-
     private async Task<ProcessResponse> ProcessRefundReceipt(ProcessRequest request)
     {
         var referenceZNumber = request.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceZNumber)?.Data;
@@ -331,7 +405,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
                 var rtinfo = await GetRTInfoAsync();
                 _serialnr = rtinfo.SerialNumber;
             }
-            var content = EpsonCommandFactory.CreateRefundRequestContent(request.ReceiptRequest, long.Parse(referenceDocNumber), long.Parse(referenceZNumber), DateTime.Parse(referenceDateTime), _serialnr!);
+            var content = EpsonCommandFactory.CreateRefundRequestContent(_configuration, request.ReceiptRequest, long.Parse(referenceDocNumber), long.Parse(referenceZNumber), DateTime.Parse(referenceDateTime), _serialnr!);
             var response = await SendRequestAsync(SoapSerializer.Serialize(content));
 
             using var responseContent = await response.Content.ReadAsStreamAsync();
@@ -405,7 +479,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
                 var rtinfo = await GetRTInfoAsync();
                 _serialnr = rtinfo.SerialNumber;
             }
-            var content = EpsonCommandFactory.CreateVoidRequestContent(request.ReceiptRequest, long.Parse(referenceDocNumber), long.Parse(referenceZNumber), DateTime.Parse(referenceDateTime), _serialnr!);
+            var content = EpsonCommandFactory.CreateVoidRequestContent(_configuration, request.ReceiptRequest, long.Parse(referenceDocNumber), long.Parse(referenceZNumber), DateTime.Parse(referenceDateTime), _serialnr!);
             var response = await SendRequestAsync(SoapSerializer.Serialize(content));
 
             using var responseContent = await response.Content.ReadAsStreamAsync();

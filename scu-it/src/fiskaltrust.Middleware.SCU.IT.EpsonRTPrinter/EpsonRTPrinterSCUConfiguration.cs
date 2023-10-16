@@ -1,4 +1,6 @@
-﻿namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter
+﻿using System.Collections.Generic;
+
+namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter
 {
     public class EpsonRTPrinterSCUConfiguration
     {
@@ -18,5 +20,7 @@
         public int ServerTimeoutMs { get; set; } = 10000;
 
         public string? Password { get; set; }
+
+        public List<string> AdditionalTrailerLines { get; set;} = new List<string>();
     }
 }

@@ -11,7 +11,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
 {
     public static class EpsonCommandFactory
     {
-        public static FiscalReceipt CreateInvoiceRequestContent(ReceiptRequest receiptRequest)
+        public static FiscalReceipt CreateInvoiceRequestContent(EpsonRTPrinterSCUConfiguration configuration, ReceiptRequest receiptRequest)
         {
             // TODO check for lottery ID
             var fiscalReceipt = new FiscalReceipt();
@@ -38,12 +38,30 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                     }
                 }
             }
+            AddTrailerLines(configuration, receiptRequest, fiscalReceipt);
             return fiscalReceipt;
         }
 
-        public static FiscalReceipt CreateRefundRequestContent(ReceiptRequest receiptRequest, long referenceDocNumber, long referenceZNumber, DateTime referenceDateTime, string serialNr)
+        private static void AddTrailerLines(EpsonRTPrinterSCUConfiguration configuration, ReceiptRequest receiptRequest, FiscalReceipt fiscalReceipt)
         {
-            return new FiscalReceipt
+            var index = 1;
+            foreach (var trailerLine in configuration.AdditionalTrailerLines)
+            {
+                var data = trailerLine.Replace("{cbArea}", receiptRequest.cbArea).Replace("{cbUser}", receiptRequest.cbUser);
+                fiscalReceipt.PrintRecMessage?.Add(new PrintRecMessage
+                {
+                    MessageType = 3,
+                    Index = index.ToString(),
+                    Font = "1",
+                    Message = data
+                });
+                index++;
+            }
+        }
+
+        public static FiscalReceipt CreateRefundRequestContent(EpsonRTPrinterSCUConfiguration configuration, ReceiptRequest receiptRequest, long referenceDocNumber, long referenceZNumber, DateTime referenceDateTime, string serialNr)
+        {
+            var fiscalReceipt = new FiscalReceipt
             {
                 PrintRecMessage = new List<PrintRecMessage>
                 {
@@ -57,11 +75,13 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                 AdjustmentAndMessages = new List<AdjustmentAndMessage>(),
                 RecTotalAndMessages = GetTotalAndMessages(receiptRequest)
             };
+            AddTrailerLines(configuration, receiptRequest, fiscalReceipt);
+            return fiscalReceipt;
         }
 
-        public static FiscalReceipt CreateVoidRequestContent(ReceiptRequest receiptRequest, long referenceDocNumber, long referenceZNumber, DateTime referenceDateTime, string serialNr)
+        public static FiscalReceipt CreateVoidRequestContent(EpsonRTPrinterSCUConfiguration configuration, ReceiptRequest receiptRequest, long referenceDocNumber, long referenceZNumber, DateTime referenceDateTime, string serialNr)
         {
-            return new FiscalReceipt
+            var fiscalReceipt = new FiscalReceipt
             {
                 PrintRecMessage = new List<PrintRecMessage>
                 {
@@ -75,6 +95,8 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                 AdjustmentAndMessages = new List<AdjustmentAndMessage>(),
                 RecTotalAndMessages = GetTotalAndMessages(receiptRequest)
             };
+            AddTrailerLines(configuration, receiptRequest, fiscalReceipt);
+            return fiscalReceipt;
         }
 
         public static List<PrintRecRefund> GetRecRefunds(ReceiptRequest receiptRequest)
