@@ -406,10 +406,17 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
                 _serialnr = rtinfo.SerialNumber;
             }
             var content = EpsonCommandFactory.CreateRefundRequestContent(_configuration, request.ReceiptRequest, long.Parse(referenceDocNumber), long.Parse(referenceZNumber), DateTime.Parse(referenceDateTime), _serialnr!);
-            var response = await SendRequestAsync(SoapSerializer.Serialize(content));
+            var data = SoapSerializer.Serialize(content);
+            _logger.LogDebug("Request content ({receiptreference}): {content}", request.ReceiptRequest.cbReceiptReference, SoapSerializer.Serialize(data));
+            var response = await SendRequestAsync(data);
 
             using var responseContent = await response.Content.ReadAsStreamAsync();
             var result = SoapSerializer.DeserializeToSoapEnvelope<PrinterResponse>(responseContent);
+            if (result != null)
+            {
+                _logger.LogDebug("Response content ({receiptreference}): {content}", request.ReceiptRequest.cbReceiptReference, SoapSerializer.Serialize(result));
+            }
+
             var fiscalReceiptResponse = await SetReceiptResponse(result);
             if (!fiscalReceiptResponse.Success)
             {
@@ -480,10 +487,16 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
                 _serialnr = rtinfo.SerialNumber;
             }
             var content = EpsonCommandFactory.CreateVoidRequestContent(_configuration, request.ReceiptRequest, long.Parse(referenceDocNumber), long.Parse(referenceZNumber), DateTime.Parse(referenceDateTime), _serialnr!);
-            var response = await SendRequestAsync(SoapSerializer.Serialize(content));
+            var data = SoapSerializer.Serialize(content);
+            _logger.LogDebug("Request content ({receiptreference}): {content}", request.ReceiptRequest.cbReceiptReference, SoapSerializer.Serialize(data));
+            var response = await SendRequestAsync(data);
 
             using var responseContent = await response.Content.ReadAsStreamAsync();
             var result = SoapSerializer.DeserializeToSoapEnvelope<PrinterResponse>(responseContent);
+            if (result != null)
+            {
+                _logger.LogDebug("Response content ({receiptreference}): {content}", request.ReceiptRequest.cbReceiptReference, SoapSerializer.Serialize(result));
+            }
             var fiscalReceiptResponse = await SetReceiptResponse(result);
             if (!fiscalReceiptResponse.Success)
             {
