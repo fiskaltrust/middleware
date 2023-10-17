@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Queue.Bootstrapper;
 using fiskaltrust.Middleware.Storage.AzureTableStorage;
@@ -22,6 +23,17 @@ namespace fiskaltrust.Middleware.Queue.AzureTableStorage
 
             var queueBootstrapper = new QueueBootstrapper(Id, Configuration);
             queueBootstrapper.ConfigureServices(serviceCollection);
+        }
+
+        public async Task<Func<IServiceProvider, Task>> ConfigureServicesAsync(IServiceCollection serviceCollection)
+        {
+            var logger = serviceCollection.BuildServiceProvider().GetRequiredService<ILogger<IMiddlewareBootstrapper>>();
+
+            var storageBootStrapper = new AzureTableStorageBootstrapper(Id, Configuration, logger);
+            await storageBootStrapper.ConfigureStorageServicesAsync(serviceCollection);
+
+            var queueBootstrapper = new QueueBootstrapper(Id, Configuration);
+            return await queueBootstrapper.ConfigureServicesAsync(serviceCollection);
         }
     }
 }

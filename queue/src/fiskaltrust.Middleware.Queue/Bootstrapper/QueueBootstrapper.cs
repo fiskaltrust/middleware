@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Extensions;
 using fiskaltrust.Middleware.Contracts.Interfaces;
@@ -26,7 +27,7 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
             _activeQueueId = queueId;
         }
 
-        public void ConfigureServices(IServiceCollection services)
+        public ILocalizedQueueBootstrapper ConfigureServicesInner(IServiceCollection services)
         {
             var middlewareConfiguration = new MiddlewareConfiguration
             {
@@ -45,9 +46,11 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
             services.AddScoped<IJournalProcessor, JournalProcessor>();
             services.AddScoped<IPOS, Queue>();
 
-            var businessLogicFactoryBoostrapper = LocalizedQueueBootStrapperFactory.GetBootstrapperForLocalizedQueue(_activeQueueId, middlewareConfiguration);
-            businessLogicFactoryBoostrapper.ConfigureServices(services);
+            return LocalizedQueueBootStrapperFactory.GetBootstrapperForLocalizedQueue(_activeQueueId, middlewareConfiguration);
         }
+        public void ConfigureServices(IServiceCollection services) => ConfigureServicesInner(services).ConfigureServices(services);
+
+        public async Task<Func<IServiceProvider, Task>> ConfigureServicesAsync(IServiceCollection services) => await ConfigureServicesInner(services).ConfigureServicesAsync(services);
 
         private static Guid GetQueueCashbox(Guid queueId, Dictionary<string, object> configuration)
         {

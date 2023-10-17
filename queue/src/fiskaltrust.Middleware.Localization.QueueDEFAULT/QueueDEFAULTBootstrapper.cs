@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using fiskaltrust.Middleware.Contracts;
 using fiskaltrust.Middleware.Contracts.Constants;
 using fiskaltrust.Middleware.Contracts.Interfaces;
@@ -47,6 +48,11 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT
                 .AddSingleton(sp => config)
                 .AddSingleton<IRequestCommandFactory, RequestCommandFactory>()
                 .ConfigureReceiptCommands();
+        }
+        public Task<Func<IServiceProvider, Task>> ConfigureServicesAsync(IServiceCollection services)
+        {
+            ConfigureServices(services);
+            return Task.FromResult<Func<IServiceProvider, Task>>(_ => Task.CompletedTask);
         }
     }
 }

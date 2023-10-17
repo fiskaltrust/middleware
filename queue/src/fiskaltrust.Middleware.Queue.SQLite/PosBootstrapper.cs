@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Queue.Bootstrapper;
@@ -27,6 +28,20 @@ namespace fiskaltrust.Middleware.Queue.SQLite
 
             var queueBootstrapper = new QueueBootstrapper(Id, Configuration);
             queueBootstrapper.ConfigureServices(serviceCollection);
+        }
+
+        public async Task<Func<IServiceProvider, Task>> ConfigureServicesAsync(IServiceCollection serviceCollection)
+        {
+            var logger = serviceCollection.BuildServiceProvider().GetRequiredService<ILogger<IMiddlewareBootstrapper>>();
+
+            var storageConfiguration = SQLiteStorageConfiguration.FromConfigurationDictionary(Configuration);
+            serviceCollection.AddSingleton(sp => storageConfiguration);
+
+            var storageBootStrapper = new SQLiteStorageBootstrapper(Id, Configuration, storageConfiguration, logger);
+            await storageBootStrapper.ConfigureStorageServicesAsync(serviceCollection);
+
+            var queueBootstrapper = new QueueBootstrapper(Id, Configuration);
+            return await queueBootstrapper.ConfigureServicesAsync(serviceCollection);
         }
     }
 }

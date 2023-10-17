@@ -1,4 +1,6 @@
-﻿using fiskaltrust.Middleware.Contracts.Interfaces;
+﻿using System;
+using System.Threading.Tasks;
+using fiskaltrust.Middleware.Contracts.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace fiskaltrust.Middleware.Localization.QueueES
@@ -10,6 +12,12 @@ namespace fiskaltrust.Middleware.Localization.QueueES
             var _ = services
                     .AddScoped<IMarketSpecificSignProcessor, SignProcessorES>()
                     .AddScoped<IMarketSpecificJournalProcessor, JournalProcessorES>();
+        }
+
+        public Task<Func<IServiceProvider, Task>> ConfigureServicesAsync(IServiceCollection services)
+        {
+            ConfigureServices(services);
+            return Task.FromResult<Func<IServiceProvider, Task>>(_ => Task.CompletedTask);
         }
     }
 }

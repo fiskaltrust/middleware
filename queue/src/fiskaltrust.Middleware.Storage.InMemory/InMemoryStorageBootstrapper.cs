@@ -39,6 +39,12 @@ namespace fiskaltrust.Middleware.Storage.InMemory
             AddRepositories(serviceCollection);
         }
 
+        public async Task ConfigureStorageServicesAsync(IServiceCollection serviceCollection)
+        {
+            await InitAsync(_configuration, _logger);
+            AddRepositories(serviceCollection);
+        }
+
         public async Task InitAsync(Dictionary<string, object> configuration, ILogger<IMiddlewareBootstrapper> logger)
         {
             _configurationRepository = new InMemoryConfigurationRepository();

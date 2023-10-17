@@ -7,6 +7,8 @@ using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.ifPOS.v1.me;
 using fiskaltrust.Middleware.Localization.QueueME.Factories;
 using fiskaltrust.Middleware.Contracts.Interfaces;
+using System.Threading.Tasks;
+using System;
 
 namespace fiskaltrust.Middleware.Localization.QueueME
 {
@@ -18,18 +20,16 @@ namespace fiskaltrust.Middleware.Localization.QueueME
                 .AddScoped<IMarketSpecificSignProcessor, SignProcessorME>()
                 .AddScoped<IMarketSpecificJournalProcessor, JournalProcessorME>()
                 .AddSingleton(sp => QueueMEConfiguration.FromMiddlewareConfiguration(sp.GetRequiredService<MiddlewareConfiguration>()))
-                .AddSingleton<IMESSCDProvider>(sp =>
-                {
-                    var sscdProvider = new MESSCDProvider(
-                        sp.GetRequiredService<IClientFactory<IMESSCD>>(),
-                        sp.GetRequiredService<MiddlewareConfiguration>());
-                    sscdProvider.RegisterCurrentScuAsync().Wait();
-
-                    return sscdProvider;
-                })
+                .AddSingleton<IMESSCDProvider, MESSCDProvider>()
                 .AddSingleton<IRequestCommandFactory, RequestCommandFactory>()
                 .AddSingleton<SignatureItemFactory>()
                 .ConfigureReceiptCommands();
+        }
+
+        public Task<Func<IServiceProvider, Task>> ConfigureServicesAsync(IServiceCollection services)
+        {
+            ConfigureServices(services);
+            return Task.FromResult<Func<IServiceProvider, Task>>(_ => Task.CompletedTask);
         }
     }
 }

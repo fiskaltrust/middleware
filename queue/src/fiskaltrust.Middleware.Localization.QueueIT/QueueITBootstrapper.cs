@@ -1,4 +1,6 @@
-﻿using fiskaltrust.ifPOS.v1.it;
+﻿using System;
+using System.Threading.Tasks;
+using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts.Constants;
 using fiskaltrust.Middleware.Contracts.Interfaces;
@@ -24,19 +26,18 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
                 .AddScoped<IMarketSpecificSignProcessor, SignProcessorIT>()
                 .AddScoped<IMarketSpecificJournalProcessor, JournalProcessorIT>()
                 .AddScoped<SignatureItemFactoryIT>()
-                .AddScoped<ICountrySpecificQueueRepository,CountrySpecificQueueRepository>()
+                .AddScoped<ICountrySpecificQueueRepository, CountrySpecificQueueRepository>()
                 .AddScoped<ICountrySpecificSettings, CountrySpecificSettings>()
                 .AddSingleton(sp => QueueITConfiguration.FromMiddlewareConfiguration(sp.GetRequiredService<MiddlewareConfiguration>()))
-                .AddSingleton<IITSSCDProvider>(sp =>
-                {
-                    var sscdProvider = new ITSSCDProvider(
-                        sp.GetRequiredService<IClientFactory<IITSSCD>>(),
-                        sp.GetRequiredService<MiddlewareConfiguration>());
-                    sscdProvider.RegisterCurrentScuAsync().Wait();
-                    return sscdProvider;
-                })
+                .AddSingleton<IITSSCDProvider, ITSSCDProvider>()
                 .AddSingleton<IRequestCommandFactory, RequestCommandFactory>()
                 .ConfigureReceiptCommands();
+        }
+
+        public Task<Func<IServiceProvider, Task>> ConfigureServicesAsync(IServiceCollection services)
+        {
+            ConfigureServices(services);
+            return Task.FromResult<Func<IServiceProvider, Task>>(_ => Task.CompletedTask);
         }
     }
 }

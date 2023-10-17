@@ -50,6 +50,12 @@ namespace fiskaltrust.Middleware.Storage.MySQL
             AddRepositories(serviceCollection);
         }
 
+        public async Task ConfigureStorageServicesAsync(IServiceCollection serviceCollection)
+        {
+            await InitAsync(_queueId, _configuration, _logger);
+            AddRepositories(serviceCollection);
+        }
+
         private async Task InitAsync(Guid queueId, Dictionary<string, object> configuration, ILogger<IMiddlewareBootstrapper> logger)
         {
             if (string.IsNullOrEmpty(_mySQLStorageConfiguration.ConnectionString))

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace fiskaltrust.Middleware.Abstractions
@@ -11,5 +12,6 @@ namespace fiskaltrust.Middleware.Abstractions
         Dictionary<string, object> Configuration { get; set; }
 
         void ConfigureServices(IServiceCollection serviceCollection);
+        Task<Func<IServiceProvider, Task>> ConfigureServicesAsync(IServiceCollection serviceCollection);
     }
 }

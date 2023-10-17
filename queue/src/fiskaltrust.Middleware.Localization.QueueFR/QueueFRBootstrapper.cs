@@ -1,4 +1,6 @@
-﻿using fiskaltrust.Middleware.Contracts.Interfaces;
+﻿using System;
+using System.Threading.Tasks;
+using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Localization.QueueFR.Factories;
 using fiskaltrust.Middleware.Localization.QueueFR.RequestCommands;
 using Microsoft.Extensions.DependencyInjection;
@@ -37,6 +39,11 @@ namespace fiskaltrust.Middleware.Localization.QueueFR
             services.AddScoped<ArchiveCommand>();
             services.AddScoped<CopyCommand>();
             services.AddScoped<TicketCommand>();
+        }
+        public Task<Func<IServiceProvider, Task>> ConfigureServicesAsync(IServiceCollection services)
+        {
+            ConfigureServices(services);
+            return Task.FromResult<Func<IServiceProvider, Task>>(_ => Task.CompletedTask);
         }
     }
 }

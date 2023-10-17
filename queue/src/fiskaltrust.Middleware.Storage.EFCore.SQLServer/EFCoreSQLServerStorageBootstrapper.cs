@@ -49,6 +49,12 @@ namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer
             AddRepositories(serviceCollection);
         }
 
+        public async Task ConfigureStorageServicesAsync(IServiceCollection serviceCollection)
+        {
+            await InitAsync(_queueId, _logger);
+            AddRepositories(serviceCollection);
+        }
+
         private async Task InitAsync(Guid queueId, ILogger<IMiddlewareBootstrapper> logger)
         {
             if (string.IsNullOrEmpty(_sqlServerStorageConfiguration.ConnectionString))
@@ -64,7 +70,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer
             {
                 _connectionString = Encoding.UTF8.GetString(Encryption.Decrypt(Convert.FromBase64String(_sqlServerStorageConfiguration.ConnectionString), queueId.ToByteArray()));
             }
-            
+
             _optionsBuilder = new DbContextOptionsBuilder<SQLServerMiddlewareDbContext>();
             _optionsBuilder.UseSqlServer(_connectionString);
 
@@ -91,7 +97,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer
         private void AddRepositories(IServiceCollection services)
         {
             services.AddTransient(x => new SQLServerMiddlewareDbContext(_optionsBuilder.Options, _queueId));
-            
+
             services.AddTransient<IConfigurationRepository>(_ => new EFCoreConfigurationRepository(new SQLServerMiddlewareDbContext(_optionsBuilder.Options, _queueId)));
             services.AddTransient<IReadOnlyConfigurationRepository>(_ => new EFCoreConfigurationRepository(new SQLServerMiddlewareDbContext(_optionsBuilder.Options, _queueId)));
 
@@ -161,8 +167,8 @@ namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer
                 {
                     return BaseStorageBootStrapper.Migrations.JournalFRCopyPayload;
                 }
-                return (BaseStorageBootStrapper.Migrations)(-1);
-            }).Where(x => x != (BaseStorageBootStrapper.Migrations)(-1)).ToList();
+                return (BaseStorageBootStrapper.Migrations) (-1);
+            }).Where(x => x != (BaseStorageBootStrapper.Migrations) (-1)).ToList();
         }
     }
 }

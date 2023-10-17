@@ -46,6 +46,12 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage
             AddRepositories(serviceCollection);
         }
 
+        public async Task ConfigureStorageServicesAsync(IServiceCollection serviceCollection)
+        {
+            await InitAsync(_configuration, _logger);
+            AddRepositories(serviceCollection);
+        }
+
         private async Task InitAsync(Dictionary<string, object> configuration, ILogger<IMiddlewareBootstrapper> logger)
         {
             if (string.IsNullOrEmpty(configuration["storageaccountname"]?.ToString()))
@@ -103,7 +109,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage
             services.AddSingleton<IJournalITRepository, AzureTableStorageJournalITRepository>();
             services.AddSingleton<IReadOnlyJournalITRepository, AzureTableStorageJournalITRepository>();
             services.AddSingleton<IMiddlewareJournalITRepository, AzureTableStorageJournalITRepository>();
-            
+
             services.AddSingleton<IReceiptJournalRepository, AzureTableStorageReceiptJournalRepository>();
             services.AddSingleton<IReadOnlyReceiptJournalRepository, AzureTableStorageReceiptJournalRepository>();
             services.AddSingleton<IMiddlewareRepository<ftReceiptJournal>, AzureTableStorageReceiptJournalRepository>();
