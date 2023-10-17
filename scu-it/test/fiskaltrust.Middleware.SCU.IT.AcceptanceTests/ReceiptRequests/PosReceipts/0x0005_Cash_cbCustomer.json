@@ -24,6 +24,6 @@
       "Amount": 107
     }
   ],
-  "cbCustomer": "{\"CustomerVATId\": \"01606720215\"}",
-  "ftReceiptCase": 5283883447184523265
+  "cbCustomer": "{\r\n    \"CustomerName\": \"fiskaltrust\",\r\n    \"CustomerId\": \"0\",\r\n    \"CustomerType\": \"\",\r\n    \"CustomerStreet\": \"Alpenstra\u00DFe 99\",\r\n    \"CustomerZip\": \"5020\",\r\n    \"CustomerCity\": \"Salzburg\",\r\n    \"CustomerCountry\": \"AT\"  }",
+  "ftReceiptCase": 5283883447184523269
 }

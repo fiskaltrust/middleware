@@ -188,23 +188,23 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
             var customerData = receiptRequest.GetCustomer();
             if (customerData != null)
             {
-                if (content.PrintRecMessage == null)
+                if (content.PrintRecMessageType3 == null)
                 {
-                    content.PrintRecMessage = new List<PrintRecMessage>();
+                    content.PrintRecMessageType3 = new List<PrintRecMessage>();
                 }
-                content.PrintRecMessage?.Add(new PrintRecMessage
+                content.PrintRecMessageType3?.Add(new PrintRecMessage
                 {
                     MessageType = 2,
                     Index = "1",
                     Message = customerData.CustomerName ?? ""
                 });
-                content.PrintRecMessage?.Add(new PrintRecMessage
+                content.PrintRecMessageType3?.Add(new PrintRecMessage
                 {
                     MessageType = 2,
                     Index = "2",
                     Message = customerData.CustomerStreet ?? ""
                 });
-                content.PrintRecMessage?.Add(new PrintRecMessage
+                content.PrintRecMessageType3?.Add(new PrintRecMessage
                 {
                     MessageType = 2,
                     Index = "3",
@@ -256,7 +256,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         {
             var content = EpsonCommandFactory.CreateInvoiceRequestContent(_configuration, receiptRequest);
             var data = SoapSerializer.Serialize(content);
-            _logger.LogDebug("Request content ({receiptreference}): {content}", receiptRequest.cbReceiptReference, SoapSerializer.Serialize(data));
+            _logger.LogDebug("Request content ({receiptreference}): {content}", receiptRequest.cbReceiptReference, data);
             var response = await SendRequestAsync(data);
 
             using var responseContent = await response.Content.ReadAsStreamAsync();

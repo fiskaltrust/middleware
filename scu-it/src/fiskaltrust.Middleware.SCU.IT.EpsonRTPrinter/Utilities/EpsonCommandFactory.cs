@@ -48,7 +48,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
             foreach (var trailerLine in configuration.AdditionalTrailerLines)
             {
                 var data = trailerLine.Replace("{cbArea}", receiptRequest.cbArea).Replace("{cbUser}", receiptRequest.cbUser);
-                fiscalReceipt.PrintRecMessage?.Add(new PrintRecMessage
+                fiscalReceipt.PrintRecMessageType3?.Add(new PrintRecMessage
                 {
                     MessageType = 3,
                     Index = index.ToString(),
@@ -63,7 +63,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
         {
             var fiscalReceipt = new FiscalReceipt
             {
-                PrintRecMessage = new List<PrintRecMessage>
+                PrintRecMessageType4 = new List<PrintRecMessage>
                 {
                     new PrintRecMessage()
                     {
@@ -75,6 +75,26 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                 AdjustmentAndMessages = new List<AdjustmentAndMessage>(),
                 RecTotalAndMessages = GetTotalAndMessages(receiptRequest)
             };
+            var customerData = receiptRequest.GetCustomer();
+            if (customerData != null)
+            {
+                if (!string.IsNullOrEmpty(customerData.CustomerVATId))
+                {
+                    var vat = customerData.CustomerVATId!;
+                    if (vat.ToUpper().StartsWith("IT"))
+                    {
+                        vat = vat.Substring(2);
+                    }
+                    if (vat.Length == 11)
+                    {
+                        fiscalReceipt.DirectIOCommands.Add(new DirectIO
+                        {
+                            Command = "1060",
+                            Data = "01" + vat,
+                        });
+                    }
+                }
+            }
             AddTrailerLines(configuration, receiptRequest, fiscalReceipt);
             return fiscalReceipt;
         }
@@ -83,7 +103,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
         {
             var fiscalReceipt = new FiscalReceipt
             {
-                PrintRecMessage = new List<PrintRecMessage>
+                PrintRecMessageType4 = new List<PrintRecMessage>
                 {
                    new PrintRecMessage()
                     {
@@ -95,6 +115,26 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                 AdjustmentAndMessages = new List<AdjustmentAndMessage>(),
                 RecTotalAndMessages = GetTotalAndMessages(receiptRequest)
             };
+            var customerData = receiptRequest.GetCustomer();
+            if (customerData != null)
+            {
+                if (!string.IsNullOrEmpty(customerData.CustomerVATId))
+                {
+                    var vat = customerData.CustomerVATId!;
+                    if (vat.ToUpper().StartsWith("IT"))
+                    {
+                        vat = vat.Substring(2);
+                    }
+                    if (vat.Length == 11)
+                    {
+                        fiscalReceipt.DirectIOCommands.Add(new DirectIO
+                        {
+                            Command = "1060",
+                            Data = "01" + vat,
+                        });
+                    }
+                }
+            }
             AddTrailerLines(configuration, receiptRequest, fiscalReceipt);
             return fiscalReceipt;
         }

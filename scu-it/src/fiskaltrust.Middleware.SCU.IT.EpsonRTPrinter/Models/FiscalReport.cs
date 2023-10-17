@@ -6,12 +6,8 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models
     [XmlType("printerFiscalReport")]
     public class FiscalReport
     {
-        [XmlElement(ElementName = "displayText")]
-        public DisplayText? DisplayText { get; set; }
-
         [XmlElement(ElementName = "printZReport")]
         public ZReport? ZReport { get; set; }
-
     }
 
     [XmlType("printZReport")]
