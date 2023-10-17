@@ -20,24 +20,52 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
 {
     public class QueueDEBootstrapper : ILocalizedQueueBootstrapper
     {
-        public void ConfigureServices(IServiceCollection services)
-        {
-            var _ = services
+        private IServiceCollection ConfigureServicesInner(IServiceCollection services) => services
                 .AddScoped<ITransactionPayloadFactory, DSFinVKTransactionPayloadFactory>()
                 .AddScoped<SignatureFactoryDE>()
                 .AddScoped<IMarketSpecificSignProcessor, SignProcessorDE>()
                 .AddScoped<IMarketSpecificJournalProcessor, JournalProcessorDE>()
                 .AddScoped<IMasterDataService, MasterDataService>()
                 .AddSingleton(sp => QueueDEConfiguration.FromMiddlewareConfiguration(sp.GetRequiredService<ILogger<QueueDEConfiguration>>(), sp.GetRequiredService<MiddlewareConfiguration>()))
-                .AddSingleton<IDESSCDProvider, DESSCDProvider>()
-                .AddSingleton<ITarFileCleanupService, TarFileCleanupService>()
                 .AddSingleton<IRequestCommandFactory, RequestCommandFactory>()
                 .ConfigureReceiptCommands();
+
+        public void ConfigureServices(IServiceCollection services)
+        {
+            var _ = ConfigureServicesInner(services)
+                .AddSingleton<IDESSCDProvider>(sp =>
+                {
+                    var sscdProvider = new DESSCDProvider(
+                        sp.GetRequiredService<ILogger<DESSCDProvider>>(),
+                        sp.GetRequiredService<IClientFactory<IDESSCD>>(),
+                        sp.GetRequiredService<IConfigurationRepository>(),
+                        sp.GetRequiredService<MiddlewareConfiguration>(),
+                        sp.GetRequiredService<QueueDEConfiguration>());
+
+                    sscdProvider.RegisterCurrentScuAsync().Wait();
+
+                    return sscdProvider;
+                })
+                .AddSingleton<ITarFileCleanupService>(sp =>
+                {
+                    var tarFileCleanupService = new TarFileCleanupService(
+                        sp.GetRequiredService<ILogger<TarFileCleanupService>>(),
+                        sp.GetRequiredService<IMiddlewareJournalDERepository>(),
+                        sp.GetRequiredService<MiddlewareConfiguration>(),
+                        sp.GetRequiredService<QueueDEConfiguration>());
+
+                    tarFileCleanupService.CleanupAllTarFilesAsync().Wait();
+
+                    return tarFileCleanupService;
+                });
         }
 
         public Task<Func<IServiceProvider, Task>> ConfigureServicesAsync(IServiceCollection services)
         {
-            ConfigureServices(services);
+            var _ = ConfigureServicesInner(services)
+                .AddSingleton<IDESSCDProvider, DESSCDProvider>()
+                .AddSingleton<ITarFileCleanupService, TarFileCleanupService>();
+
             return Task.FromResult<Func<IServiceProvider, Task>>(async (IServiceProvider services) =>
             {
                 await services.GetRequiredService<IDESSCDProvider>().RegisterCurrentScuAsync();
