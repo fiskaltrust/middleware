@@ -1,7 +1,7 @@
 - Feature Name: `close_transactions_on_daily_closing`
 - Start Date: 2023-10-18
 - RFC PR: [fiskaltrust/middleware#211](https://github.com/fiskaltrust/middleware/pull/211)
-- Tracking Issue: [fiskaltrust/middleware#0000](https://github.com/fiskaltrust/middleware/issues/0000)
+- Tracking Issue: [fiskaltrust/middleware#212](https://github.com/fiskaltrust/middleware/issues/212)
 - Markets: `DE`
 
 # Summary
