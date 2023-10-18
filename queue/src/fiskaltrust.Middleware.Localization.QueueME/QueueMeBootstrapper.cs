@@ -29,7 +29,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME
         public Task<Func<IServiceProvider, Task>> ConfigureServicesAsync(IServiceCollection services)
         {
             ConfigureServices(services);
-            return Task.FromResult<Func<IServiceProvider, Task>>(_ => Task.CompletedTask);
+            return Task.FromResult<Func<IServiceProvider, Task>>((IServiceProvider serviceProvider) => serviceProvider.GetRequiredService<IMESSCDProvider>().RegisterCurrentScuAsync());
         }
     }
 }

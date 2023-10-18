@@ -33,7 +33,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
                 var (response, journalFR) = CreateTrainingReceiptResponse(queue, queueFR, request, queueItem, totals, signaturCreationUnitFR);
                 response.ftSignatures = response.ftSignatures.Extend(await GetPendingMessageSignatures(queueFR, request));
 
-                var actionJournals = await ResetFailedMode(request, response, queue, queueFR, queueItem);
+                var actionJournals = await ResetFailedModeAsync(request, response, queue, queueFR, queueItem).ConfigureAwait(false);
 
                 return (response, journalFR, actionJournals);
             }
@@ -45,7 +45,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
 
                 var payload = PayloadFactory.GetGrandTotalPayload(request, response, queueFR, signaturCreationUnitFR, queueFR.GLastHash);
 
-                var actionJournals = await ResetFailedMode(request, response, queue, queueFR, queueItem);
+                var actionJournals = await ResetFailedModeAsync(request, response, queue, queueFR, queueItem).ConfigureAwait(false);
 
                 var (hash, signatureItem, journalFR) = _signatureFactoryFR.CreateTotalsSignature(response, queue, signaturCreationUnitFR, payload, "www.fiskaltrust.fr", SignaturItem.Formats.QR_Code, (SignaturItem.Types) 0x4652000000000001);
                 queueFR.GLastHash = hash;
@@ -70,7 +70,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
             }
         }
 
-        private async Task<List<ftActionJournal>> ResetFailedMode(ReceiptRequest request, ReceiptResponse response, ftQueue queue, ftQueueFR queueFR, ftQueueItem queueItem)
+        private async Task<List<ftActionJournal>> ResetFailedModeAsync(ReceiptRequest request, ReceiptResponse response, ftQueue queue, ftQueueFR queueFR, ftQueueItem queueItem)
         {
             var actionJournals = new List<ftActionJournal>();
             if (queueFR.UsedFailedCount > 0)
@@ -81,7 +81,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
                 var fromReceipt = "#";
                 try
                 {
-                    var fromQueueItem = await _queueItemRepository.GetAsync(queueFR.UsedFailedQueueItemId.Value);
+                    var fromQueueItem = await _queueItemRepository.GetAsync(queueFR.UsedFailedQueueItemId.Value).ConfigureAwait(false);
                     var fromResponse = JsonConvert.DeserializeObject<ReceiptResponse>(fromQueueItem.response);
                     fromReceipt = fromResponse.ftReceiptIdentification;
                 }
