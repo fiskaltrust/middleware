@@ -13,6 +13,7 @@ public static class ReceiptCaseHelper
 
     public static bool IsDailyClosing(this ReceiptRequest request) => (request.ftReceiptCase & 0x0000_0000_0000_FFFF) == (long) ITReceiptCases.DailyClosing0x2011;
 
+
     public static bool IsReprint(this ReceiptRequest request) => (request.ftReceiptCase & 0x0000_0000_0000_FFFF) == (long) ITReceiptCases.Reprint0x3010;
 
     public static bool IsZeroReceipt(this ReceiptRequest request) => (request.ftReceiptCase & 0x0000_0000_0000_FFFF) == (long) ITReceiptCases.ZeroReceipt0x200;
@@ -24,6 +25,8 @@ public static class ReceiptCaseHelper
     public static bool IsUsedFailed(this ReceiptRequest receiptRequest) => (receiptRequest.ftReceiptCase & 0x0000_0000_0001_0000) > 0x0000;
 
     public static bool IsLateSigning(this ReceiptRequest receiptRequest) => (receiptRequest.ftReceiptCase & 0x0000_0000_0001_0000) > 0x0000;
+
+    public static bool IsGroupingRequest(this ReceiptRequest receiptRequest) => (receiptRequest.ftReceiptCase & 0x0000_0000_0800_0000) > 0x0000;
 
     public static bool IsTraining(this ReceiptRequest receiptRequest) => (receiptRequest.ftReceiptCase & 0x0000_0000_0002_0000) > 0x0000;
 

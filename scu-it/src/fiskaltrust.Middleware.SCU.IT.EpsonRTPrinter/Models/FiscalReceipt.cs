@@ -61,6 +61,12 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models
 
         [XmlElement(ElementName = "printRecItem")]
         public PrintRecItem? PrintRecItem { get; set; }
+
+        [XmlElement(ElementName = "printRecItemAdjustment")]
+        public PrintRecItemAdjustment? PrintRecItemAdjustment { get; set; }
+
+        [XmlElement(ElementName = "printRecVoidItem")]
+        public PrintRecVoidItem? PrintRecVoidItem { get; set; }
     }
 
     public class AdjustmentAndMessage
@@ -188,6 +194,67 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models
         public int Justification { get; set; } = 1;
     }
 
+
+    [XmlRoot(ElementName = "printRecVoidItem")]
+    public class PrintRecVoidItem
+    {
+        [XmlAttribute(AttributeName = "operator")]
+        public string? Operator { get; } = "1";
+        [XmlAttribute(AttributeName = "description")]
+        public string? Description { get; set; }
+        [XmlIgnore]
+        public decimal Quantity { get; set; }
+        [XmlAttribute(AttributeName = "quantity")]
+        public string QuantityStr
+        {
+            get => Quantity.ToString(EpsonFormatters.QuantityFormatter);
+
+            set
+            {
+                if (decimal.TryParse(value, out var quantity))
+                {
+                    Quantity = quantity;
+                }
+            }
+        }
+        [XmlIgnore]
+        public decimal UnitPrice { get; set; }
+        [XmlAttribute(AttributeName = "unitPrice")]
+        public string UnitPriceStr
+        {
+            get => UnitPrice.ToString(EpsonFormatters.CurrencyFormatter);
+            set
+            {
+                if (decimal.TryParse(value, out var unitPrice))
+                {
+                    UnitPrice = unitPrice;
+                }
+            }
+        }
+
+        [XmlIgnore]
+        public int? OperationType { get; set; }
+
+        [XmlAttribute(AttributeName = "operationType")]
+        public string? OperationTypeStr
+        {
+            get => OperationType.HasValue ? OperationType.ToString() : null;
+
+            set
+            {
+                if (int.TryParse(value, out var operationType))
+                {
+                    OperationType = operationType;
+                }
+            }
+        }
+        [XmlAttribute(AttributeName = "department")]
+        public int Department { get; set; }
+        [XmlAttribute(AttributeName = "justification")]
+        public int Justification { get; set; } = 1;
+    }
+
+
     [XmlRoot(ElementName = "printRecVoid")]
     public class PrintRecVoid
     {
@@ -287,8 +354,6 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models
         }
         [XmlAttribute(AttributeName = "department")]
         public int Department { get; set; }
-        [XmlAttribute(AttributeName = "justification")]
-        public int Justification { get; set; } = 1;
     }
 
     [XmlRoot(ElementName = "printRecSubtotalAdjustment")]

@@ -145,7 +145,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
             {
                 Description = p.Description,
                 Quantity = Math.Abs(p.Quantity),
-                UnitPrice = Math.Abs(p.Amount) / Math.Abs(p.Quantity),
+                UnitPrice = p.Quantity == 0 || p.Amount == 0 ? 0 : Math.Abs(p.Amount) / Math.Abs(p.Quantity),
                 Amount = Math.Abs(p.Amount),
                 Department = p.GetVatGroup()
             }).ToList();
@@ -157,7 +157,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
             {
                 Description = p.Description,
                 Quantity = Math.Abs(p.Quantity),
-                UnitPrice = Math.Abs(p.Amount) / Math.Abs(p.Quantity),
+                UnitPrice = p.Quantity == 0 || p.Amount == 0 ? 0 : Math.Abs(p.Amount) / Math.Abs(p.Quantity),
                 Amount = Math.Abs(p.Amount),
                 Department = p.GetVatGroup()
             }).ToList();
@@ -166,52 +166,123 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
         public static List<ItemAndMessage> GetItemAndMessages(ReceiptRequest receiptRequest)
         {
             var itemAndMessages = new List<ItemAndMessage>();
-            // Todo handle payment adjustments / discounts
-            foreach (var i in receiptRequest.cbChargeItems)
+            if (receiptRequest.IsGroupingRequest())
             {
-                if (i.IsTip())
+                var chargeItemGroups = receiptRequest.cbChargeItems.GroupBy(x => x.Position / 100);
+                foreach (var chargeItemGroup in chargeItemGroups)
                 {
-                    var printRecItem = new PrintRecItem
+                    var mainItem = chargeItemGroup.FirstOrDefault(x => x.Position % 100 == 0);
+                    if (mainItem.Quantity == 0 || mainItem.Amount == 0)
                     {
-                        Description = i.Description,
-                        Quantity = i.Quantity,
-                        UnitPrice = i.Amount / i.Quantity,
-                        Department = 11,
-                    };
-                    PrintRecMessage? printRecMessage = null;
-                    if (!string.IsNullOrEmpty(i.ftChargeItemCaseData))
-                    {
-                        printRecMessage = new PrintRecMessage()
+                        itemAndMessages.Add(new()
                         {
-                            Message = i.ftChargeItemCaseData,
-                            MessageType = 4
-                        };
+                            PrintRecMessage = new PrintRecMessage()
+                            {
+                                Message = mainItem.Description,
+                                MessageType = 4
+                            }
+                        });
                     }
-                    itemAndMessages.Add(new() { PrintRecItem = printRecItem, PrintRecMessage = printRecMessage });
-                }
-                else
-                {
+                    else
+                    {
+                        GenerateItems(itemAndMessages, mainItem);
+                        foreach (var chargeItem in chargeItemGroup.Where(x => x != mainItem))
+                        {
+                            if (chargeItem.Amount < 0)
+                            {        
+                                itemAndMessages.Add(new()
+                                {
+                                    PrintRecVoidItem = new PrintRecVoidItem()
+                                    {
+                                        Description = chargeItem.Description,
+                                        Quantity = Math.Abs(chargeItem.Quantity),
+                                        UnitPrice = chargeItem.Quantity == 0 || chargeItem.Amount == 0 ? 0 : Math.Abs(chargeItem.Amount) / Math.Abs(chargeItem.Quantity),
+                                        Department = chargeItem.GetVatGroup()
+                                    }
+                                });
 
-                    var printRecItem = new PrintRecItem
-                    {
-                        Description = i.Description,
-                        Quantity = i.Quantity,
-                        UnitPrice = i.Amount / i.Quantity,
-                        Department = i.GetVatGroup(),
-                    };
-                    PrintRecMessage? printRecMessage = null;
-                    if (!string.IsNullOrEmpty(i.ftChargeItemCaseData))
-                    {
-                        printRecMessage = new PrintRecMessage()
-                        {
-                            Message = i.ftChargeItemCaseData,
-                            MessageType = 4
-                        };
+
+                                //itemAndMessages.Add(new()
+                                //{
+                                //    PrintRecItemAdjustment = new PrintRecItemAdjustment()
+                                //    {
+                                //        AdjustmentType = 0,
+                                //        Amount = Math.Abs(chargeItem.Amount),
+                                //        Department = chargeItem.GetVatGroup(),
+                                //        Description = chargeItem.Description
+                                //    }
+                                //});
+                            }
+                            else
+                            {
+                                itemAndMessages.Add(new()
+                                {
+                                    PrintRecItemAdjustment = new PrintRecItemAdjustment()
+                                    {
+                                        AdjustmentType = 5,
+                                        Amount = chargeItem.Amount,
+                                        Department = chargeItem.GetVatGroup(),
+                                        Description = chargeItem.Description
+                                    }
+                                });
+                            }
+                        }
                     }
-                    itemAndMessages.Add(new() { PrintRecItem = printRecItem, PrintRecMessage = printRecMessage });
+                }
+            }
+            else
+            {
+                // Todo handle payment adjustments / discounts
+                foreach (var i in receiptRequest.cbChargeItems)
+                {
+                    GenerateItems(itemAndMessages, i);
                 }
             }
             return itemAndMessages;
+        }
+
+        private static void GenerateItems(List<ItemAndMessage> itemAndMessages, ChargeItem? i)
+        {
+            if (i.IsTip())
+            {
+                var printRecItem = new PrintRecItem
+                {
+                    Description = i.Description,
+                    Quantity = i.Quantity,
+                    UnitPrice = i.Quantity == 0 || i.Amount == 0 ? 0 : i.Amount / i.Quantity,
+                    Department = 11,
+                };
+                PrintRecMessage? printRecMessage = null;
+                if (!string.IsNullOrEmpty(i.ftChargeItemCaseData))
+                {
+                    printRecMessage = new PrintRecMessage()
+                    {
+                        Message = i.ftChargeItemCaseData,
+                        MessageType = 4
+                    };
+                }
+                itemAndMessages.Add(new() { PrintRecItem = printRecItem, PrintRecMessage = printRecMessage });
+            }
+            else
+            {
+                var printRecItem = new PrintRecItem
+                {
+                    Description = i.Description,
+                    Quantity = i.Quantity,
+                    UnitPrice = i.Quantity == 0 || i.Amount == 0 ? 0 : i.Amount / i.Quantity,
+                    Department = i.GetVatGroup(),
+                };
+                PrintRecMessage? printRecMessage = null;
+                if (!string.IsNullOrEmpty(i.ftChargeItemCaseData))
+                {
+                    printRecMessage = new PrintRecMessage()
+                    {
+                        Message = i.ftChargeItemCaseData,
+                        MessageType = 4
+                    };
+                }
+                itemAndMessages.Add(new() { PrintRecItem = printRecItem, PrintRecMessage = printRecMessage });
+            }
         }
 
         public static List<TotalAndMessage> GetTotalAndMessages(ReceiptRequest request)
