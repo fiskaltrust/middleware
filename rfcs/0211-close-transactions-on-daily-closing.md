@@ -69,6 +69,9 @@ private CloseOpenTransactionsOnTseAsync(IEnumerable<long> openTransactionsOnTSE,
 }
 ```
 
+It goes through all open transactions on the TSE and closes them on the TSE (`_transactionFactory.PerformFinishTransactionRequestAsync`).
+Then it removes the open transaction from the Queue if it was also open there (`_openTransactionRepo.RemoveAsync`).
+
 # Drawbacks
 
 ## Latency
