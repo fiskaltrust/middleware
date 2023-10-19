@@ -39,19 +39,38 @@ If the the ftReceiptCaseFlag `0x0000000200000000` is set when sending a Daily-Cl
 
 The Daily-Closing already gets the TSE-Info from the TSE and the middleware already has the ability to close open transactions on the TSE as done in the Fail-Transaction Receipt.
 
-In the we now introduce a check for the new flag and close the transactions if it is set.
+We now introduce a check for the new flag and close the transactions if it is set.
+We then close the open transactions on the TSE, add the signatures to the receipt and create an single ActionJournal entry for all transaction that were closed.
 
 ```cs
+// pseudo code
 if (request.HasCloseOpenTransactionsOnTseFlag() && tseInfo.CurrentStartedTransactionNumbers!.Any())
 {
-    await CloseOpenTransactionsOnTseAsync(tseInfo.CurrentStartedTransactionNumbers);
+    var openSignatures = await CloseOpenTransactionsOnTseAsync(tseInfo.CurrentStartedTransactionNumbers);
+    receiptResponse.ftSignatures.AddRange(openSignatures);
+    actionJournals.Add(
+        new ftActionJournal
+        {
+            ftActionJournalId = Guid.NewGuid(),
+            ftQueueId = queueItem.ftQueueId,
+            ftQueueItemId = queueItem.ftQueueItemId,
+            Moment = DateTime.UtcNow,
+            Priority = -1,
+            TimeStamp = 0,
+            Message = $"Closed all open transactions on the TSE {tseInfo.SerialNumberOctet}.",
+            Type = $"{0x4445_0000_2000_0000:X}-{nameof(OpenTransaction)}",
+            DataJson = JsonConvert.SerializeObject(tseInfo.CurrentStartedTransactionNumbers)
+        }
+    );
 }
 ```
 
 The method `CloseOpenTransactionsOnTseAsync` looks like this which is inspired by the current [Fail-Transaction Receipt](https://github.com/fiskaltrust/middleware/blob/1a9abd80430e9dfecdd17289024e9d19e798d19b/queue/src/fiskaltrust.Middleware.Localization.QueueDE/RequestCommands/FailTransactionReceiptCommand.cs#L64-L77).
 
 ```cs
-private CloseOpenTransactionsOnTseAsync(IEnumerable<long> openTransactionsOnTSE, ftQueueItem queueItem, ftQueueDE queueDE)
+// pseudo code
+private async Task<IEnumerable<SignaturItem>> CloseOpenTransactionsOnTseAsync(IEnumerable<long> openTransactionsOnTSE, ftQueueItem queueItem, ftQueueDE queueDE)
+{
   var openSignatures = new List<SignaturItem>();
   var openTransactionsOnQueue = (await _openTransactionRepo.GetAsync().ConfigureAwait(false)).ToList();
 
@@ -66,6 +85,7 @@ private CloseOpenTransactionsOnTseAsync(IEnumerable<long> openTransactionsOnTSE,
           await _openTransactionRepo.RemoveAsync(openTransactionOnQueue.cbReceiptReference).ConfigureAwait(false);
       }
   }
+  return openSignatures;
 }
 ```
 
