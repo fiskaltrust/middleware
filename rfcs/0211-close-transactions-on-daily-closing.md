@@ -51,19 +51,19 @@ if (request.HasCloseOpenTransactionsOnTseFlag() && tseInfo.CurrentStartedTransac
 The method `CloseOpenTransactionsOnTseAsync` looks like this which is inspired by the current [Fail-Transaction Receipt](https://github.com/fiskaltrust/middleware/blob/1a9abd80430e9dfecdd17289024e9d19e798d19b/queue/src/fiskaltrust.Middleware.Localization.QueueDE/RequestCommands/FailTransactionReceiptCommand.cs#L64-L77).
 
 ```cs
-private CloseOpenTransactionsOnTseAsync(IEnumerable<long> currentStartedTransactionNumbers)
+private CloseOpenTransactionsOnTseAsync(IEnumerable<long> openTransactionsOnTSE, ftQueueItem queueItem, ftQueueDE queueDE)
   var openSignatures = new List<SignaturItem>();
-  var openTransactions = (await _openTransactionRepo.GetAsync().ConfigureAwait(false)).ToList();
-  var transactionsToClose = JsonConvert.DeserializeObject<TseInfo>(request.ftReceiptCaseData);
-  foreach (var openTransactionNumber in currentStartedTransactionNumbers)
+  var openTransactionsOnQueue = (await _openTransactionRepo.GetAsync().ConfigureAwait(false)).ToList();
+
+  foreach (var openTransactionOnTSE in openTransactionsOnTSE)
   {
       (var openProcessType, var openPayload) = _transactionPayloadFactory.CreateAutomaticallyCanceledReceiptPayload();
-      var finishResult = await _transactionFactory.PerformFinishTransactionRequestAsync(openProcessType, openPayload, queueItem.ftQueueItemId, queueDE.CashBoxIdentification, openTransactionNumber).ConfigureAwait(false);
+      var finishResult = await _transactionFactory.PerformFinishTransactionRequestAsync(openProcessType, openPayload, queueItem.ftQueueItemId, queueDE.CashBoxIdentification, openTransactionOnTSE).ConfigureAwait(false);
       openSignatures.AddRange(_signatureFactory.GetSignaturesForFinishTransaction(finishResult));
-      var openTransaction = openTransactions.FirstOrDefault(x => (ulong) x.TransactionNumber == openTransactionNumber);
-      if (openTransaction != null)
+      var openTransactionOnQueue = openTransactionsOnQueue.FirstOrDefault(x => (ulong) x.TransactionNumber == openTransactionOnTSE);
+      if (openTransactionOnQueue != null)
       {
-          await _openTransactionRepo.RemoveAsync(openTransaction.cbReceiptReference).ConfigureAwait(false);
+          await _openTransactionRepo.RemoveAsync(openTransactionOnQueue.cbReceiptReference).ConfigureAwait(false);
       }
   }
 }
