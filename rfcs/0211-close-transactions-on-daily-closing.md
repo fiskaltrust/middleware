@@ -58,7 +58,7 @@ if (request.HasCloseOpenTransactionsOnTseFlag() && tseInfo.CurrentStartedTransac
             Priority = -1,
             TimeStamp = 0,
             Message = $"Closed all open transactions on the TSE {tseInfo.SerialNumberOctet}.",
-            Type = $"{0x4445_0000_2000_0000:X}-{nameof(OpenTransaction)}",
+            Type = $"{0x4445_0000_2000_0000:X}-{nameof(tseInfo.CurrentStartedTransactionNumbers)}",
             DataJson = JsonConvert.SerializeObject(tseInfo.CurrentStartedTransactionNumbers)
         }
     );
