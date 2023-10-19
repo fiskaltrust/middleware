@@ -37,4 +37,10 @@
       </None>
     </ItemGroup>
 
+    <ItemGroup>
+      <None Update="ReceiptRequests\PosReceipts\0x0001_Cash_withSubItems.json">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+
 </Project>

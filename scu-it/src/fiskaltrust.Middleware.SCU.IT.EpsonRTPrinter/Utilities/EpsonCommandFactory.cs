@@ -56,7 +56,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                     Message = data
                 });
                 index++;
-            }
+            } 
         }
 
         public static FiscalReceipt CreateRefundRequestContent(EpsonRTPrinterSCUConfiguration configuration, ReceiptRequest receiptRequest, long referenceDocNumber, long referenceZNumber, DateTime referenceDateTime, string serialNr)
@@ -182,49 +182,98 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                                 MessageType = 4
                             }
                         });
+
+                        foreach (var chargeItem in chargeItemGroup.Where(x => x != mainItem))
+                        {
+                            if (chargeItem.Amount == 0 || chargeItem.Quantity == 0)
+                            {
+                                itemAndMessages.Add(new()
+                                {
+                                    PrintRecMessage = new PrintRecMessage()
+                                    {
+                                        Message = chargeItem.Description,
+                                        MessageType = 4
+                                    }
+                                });
+                            }
+                            else
+                            {
+                                if (chargeItem.Amount < 0)
+                                {
+                                    itemAndMessages.Add(new()
+                                    {
+                                        PrintRecVoidItem = new PrintRecVoidItem()
+                                        {
+                                            Description = chargeItem.Description,
+                                            Quantity = Math.Abs(chargeItem.Quantity),
+                                            UnitPrice = chargeItem.Quantity == 0 || chargeItem.Amount == 0 ? 0 : Math.Abs(chargeItem.Amount) / Math.Abs(chargeItem.Quantity),
+                                            Department = chargeItem.GetVatGroup()
+                                        }
+                                    });
+                                }
+                                else
+                                {
+                                    GenerateItems(itemAndMessages, chargeItem);
+                                }
+                            }
+                        }
                     }
                     else
                     {
                         GenerateItems(itemAndMessages, mainItem);
                         foreach (var chargeItem in chargeItemGroup.Where(x => x != mainItem))
                         {
-                            if (chargeItem.Amount < 0)
-                            {        
-                                itemAndMessages.Add(new()
-                                {
-                                    PrintRecVoidItem = new PrintRecVoidItem()
-                                    {
-                                        Description = chargeItem.Description,
-                                        Quantity = Math.Abs(chargeItem.Quantity),
-                                        UnitPrice = chargeItem.Quantity == 0 || chargeItem.Amount == 0 ? 0 : Math.Abs(chargeItem.Amount) / Math.Abs(chargeItem.Quantity),
-                                        Department = chargeItem.GetVatGroup()
-                                    }
-                                });
-
-
-                                //itemAndMessages.Add(new()
-                                //{
-                                //    PrintRecItemAdjustment = new PrintRecItemAdjustment()
-                                //    {
-                                //        AdjustmentType = 0,
-                                //        Amount = Math.Abs(chargeItem.Amount),
-                                //        Department = chargeItem.GetVatGroup(),
-                                //        Description = chargeItem.Description
-                                //    }
-                                //});
-                            }
-                            else
+                            if (chargeItem.Amount == 0 || chargeItem.Quantity == 0)
                             {
                                 itemAndMessages.Add(new()
                                 {
-                                    PrintRecItemAdjustment = new PrintRecItemAdjustment()
+                                    PrintRecMessage = new PrintRecMessage()
                                     {
-                                        AdjustmentType = 5,
-                                        Amount = chargeItem.Amount,
-                                        Department = chargeItem.GetVatGroup(),
-                                        Description = chargeItem.Description
+                                        Message = chargeItem.Description,
+                                        MessageType = 4
                                     }
                                 });
+                            }
+                            else
+                            {
+                                if (chargeItem.Amount < 0)
+                                {
+                                    itemAndMessages.Add(new()
+                                    {
+                                        PrintRecVoidItem = new PrintRecVoidItem()
+                                        {
+                                            Description = chargeItem.Description,
+                                            Quantity = Math.Abs(chargeItem.Quantity),
+                                            UnitPrice = chargeItem.Quantity == 0 || chargeItem.Amount == 0 ? 0 : Math.Abs(chargeItem.Amount) / Math.Abs(chargeItem.Quantity),
+                                            Department = chargeItem.GetVatGroup()
+                                        }
+                                    });
+
+
+                                    //itemAndMessages.Add(new()
+                                    //{
+                                    //    PrintRecItemAdjustment = new PrintRecItemAdjustment()
+                                    //    {
+                                    //        AdjustmentType = 0,
+                                    //        Amount = Math.Abs(chargeItem.Amount),
+                                    //        Department = chargeItem.GetVatGroup(),
+                                    //        Description = chargeItem.Description
+                                    //    }
+                                    //});
+                                }
+                                else
+                                {
+                                    itemAndMessages.Add(new()
+                                    {
+                                        PrintRecItemAdjustment = new PrintRecItemAdjustment()
+                                        {
+                                            AdjustmentType = 5,
+                                            Amount = chargeItem.Amount,
+                                            Department = chargeItem.GetVatGroup(),
+                                            Description = chargeItem.Description
+                                        }
+                                    });
+                                }
                             }
                         }
                     }
@@ -243,45 +292,59 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
 
         private static void GenerateItems(List<ItemAndMessage> itemAndMessages, ChargeItem? i)
         {
-            if (i.IsTip())
+            if (i.Amount == 0 || i.Quantity == 0)
             {
-                var printRecItem = new PrintRecItem
+                itemAndMessages.Add(new()
                 {
-                    Description = i.Description,
-                    Quantity = i.Quantity,
-                    UnitPrice = i.Quantity == 0 || i.Amount == 0 ? 0 : i.Amount / i.Quantity,
-                    Department = 11,
-                };
-                PrintRecMessage? printRecMessage = null;
-                if (!string.IsNullOrEmpty(i.ftChargeItemCaseData))
-                {
-                    printRecMessage = new PrintRecMessage()
+                    PrintRecMessage = new PrintRecMessage()
                     {
-                        Message = i.ftChargeItemCaseData,
+                        Message = i.Description,
                         MessageType = 4
-                    };
-                }
-                itemAndMessages.Add(new() { PrintRecItem = printRecItem, PrintRecMessage = printRecMessage });
+                    }
+                });
             }
             else
             {
-                var printRecItem = new PrintRecItem
+                if (i.IsTip())
                 {
-                    Description = i.Description,
-                    Quantity = i.Quantity,
-                    UnitPrice = i.Quantity == 0 || i.Amount == 0 ? 0 : i.Amount / i.Quantity,
-                    Department = i.GetVatGroup(),
-                };
-                PrintRecMessage? printRecMessage = null;
-                if (!string.IsNullOrEmpty(i.ftChargeItemCaseData))
-                {
-                    printRecMessage = new PrintRecMessage()
+                    var printRecItem = new PrintRecItem
                     {
-                        Message = i.ftChargeItemCaseData,
-                        MessageType = 4
+                        Description = i.Description,
+                        Quantity = i.Quantity,
+                        UnitPrice = i.Quantity == 0 || i.Amount == 0 ? 0 : i.Amount / i.Quantity,
+                        Department = 11,
                     };
+                    PrintRecMessage? printRecMessage = null;
+                    if (!string.IsNullOrEmpty(i.ftChargeItemCaseData))
+                    {
+                        printRecMessage = new PrintRecMessage()
+                        {
+                            Message = i.ftChargeItemCaseData,
+                            MessageType = 4
+                        };
+                    }
+                    itemAndMessages.Add(new() { PrintRecItem = printRecItem, PrintRecMessage = printRecMessage });
                 }
-                itemAndMessages.Add(new() { PrintRecItem = printRecItem, PrintRecMessage = printRecMessage });
+                else
+                {
+                    var printRecItem = new PrintRecItem
+                    {
+                        Description = i.Description,
+                        Quantity = i.Quantity,
+                        UnitPrice = i.Quantity == 0 || i.Amount == 0 ? 0 : i.Amount / i.Quantity,
+                        Department = i.GetVatGroup(),
+                    };
+                    PrintRecMessage? printRecMessage = null;
+                    if (!string.IsNullOrEmpty(i.ftChargeItemCaseData))
+                    {
+                        printRecMessage = new PrintRecMessage()
+                        {
+                            Message = i.ftChargeItemCaseData,
+                            MessageType = 4
+                        };
+                    }
+                    itemAndMessages.Add(new() { PrintRecItem = printRecItem, PrintRecMessage = printRecMessage });
+                }
             }
         }
 
