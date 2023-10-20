@@ -21,8 +21,16 @@ variables:
     value: "windows-latest"
 
 jobs:
+  - job: Test
+    displayName: Unit and integration tests
+    pool:
+      vmImage: $(vmImageName)
+    steps:
+      - template: templates/queue/test.template.yml
+
   - job: Build
     displayName: Build job
+    dependsOn: Test
     pool:
       vmImage: $(vmImageName)
 
@@ -54,22 +62,6 @@ jobs:
         inputs:
           projects: $(Solution)
           arguments: "--configuration $(BuildConfiguration) --no-restore"
-
-      - task: DotNetCoreCLI@2
-        inputs:
-          command: "test"
-          projects: "**/*.UnitTest.csproj"
-          arguments: "--configuration $(BuildConfiguration) --no-restore /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:Include=[fiskaltrust.*]*"
-          nobuild: true
-        displayName: "Run unit tests"
-
-      - task: DotNetCoreCLI@2
-        inputs:
-          command: "test"
-          projects: "**/*.IntegrationTest.csproj"
-          arguments: "--configuration $(BuildConfiguration) --no-restore /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:Include=[fiskaltrust.*]*"
-          nobuild: true
-        displayName: "Run integration tests"
 
       - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --configuration $(buildConfiguration) --no-restore
         displayName: "dotnet pack fiskaltrust.Middleware.Abstractions"
