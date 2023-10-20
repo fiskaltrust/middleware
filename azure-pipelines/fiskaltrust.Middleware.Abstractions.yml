@@ -21,8 +21,6 @@ variables:
   - name: BuildPlatform
     value: any cpu
   - group: "Middleware Tests"
-  - name: Solution
-    value: "fiskaltrust.Middleware.sln"
   - name: WorkingDirectory
     value: "queue"
   - name: Solution
