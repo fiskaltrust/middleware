@@ -35,6 +35,11 @@ jobs:
           semverVersion: "v1"
           failOnTagVersionMismatch: true
 
+      - powershell: |
+          $nugetFeed = if ($Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/release/") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/master") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/tags/v")) { "release" } else { "dev" }
+          Write-Host "##vso[task.setvariable variable=NuGetFeed;]$nugetFeed"
+        displayName: Set NuGet feed
+
       - task: DotNetCoreCLI@2
         inputs:
           command: "restore"
