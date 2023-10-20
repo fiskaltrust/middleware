@@ -5,18 +5,28 @@ trigger:
   batch: true
   branches:
     include:
-      - main
       - refs/tags/queue/abstractions/*
 
-pr: none
+pr:
+  branches:
+    include:
+      - refs/tags/queue/*
+  paths:
+    include:
+      - queue
 
 variables:
   - name: BuildConfiguration
     value: release
   - name: BuildPlatform
     value: any cpu
+  - group: "Middleware Tests"
   - name: Solution
-    value: "queue/fiskaltrust.Middleware.sln"
+    value: "fiskaltrust.Middleware.sln"
+  - name: WorkingDirectory
+    value: "queue"
+  - name: Solution
+    value: "fiskaltrust.Middleware.sln"
   - name: vmImageName
     value: "windows-latest"
 
@@ -51,7 +61,7 @@ jobs:
       - task: DotNetCoreCLI@2
         inputs:
           command: "restore"
-          projects: "$(Solution)"
+          projects: "$(WorkingDirectory)$(Solution)"
           feedsToUse: "select"
           vstsFeed: "$(NuGetFeed)"
           verbosityRestore: "minimal"
@@ -60,12 +70,12 @@ jobs:
       - task: DotNetCoreCLI@2
         displayName: Build
         inputs:
-          projects: $(Solution)
+          projects: $(WorkingDirectory)$(Solution)
           arguments: "--configuration $(BuildConfiguration) --no-restore"
 
       - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --configuration $(buildConfiguration) --no-restore
         displayName: "dotnet pack fiskaltrust.Middleware.Abstractions"
-        workingDirectory: "queue/src/fiskaltrust.Middleware.Abstractions"
+        workingDirectory: "$(WorkingDirectory)/src/fiskaltrust.Middleware.Abstractions"
 
       - task: PublishBuildArtifacts@1
         displayName: "Publish Artifact: drop"
