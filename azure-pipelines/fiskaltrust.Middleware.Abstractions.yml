@@ -40,7 +40,6 @@ jobs:
 
   - job: Build
     displayName: Build job
-    dependsOn: Test
     pool:
       vmImage: $(vmImageName)
 
@@ -61,16 +60,15 @@ jobs:
       - task: DotNetCoreCLI@2
         inputs:
           command: "restore"
-          projects: "$(WorkingDirectory)$(Solution)"
+          projects: "$(WorkingDirectory)/$(Solution)"
           feedsToUse: "select"
           vstsFeed: "$(NuGetFeed)"
-          verbosityRestore: "minimal"
         displayName: "Restore"
 
       - task: DotNetCoreCLI@2
         displayName: Build
         inputs:
-          projects: $(WorkingDirectory)$(Solution)
+          projects: $(WorkingDirectory)/$(Solution)
           arguments: "--configuration $(BuildConfiguration) --no-restore"
 
       - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --configuration $(buildConfiguration) --no-restore
