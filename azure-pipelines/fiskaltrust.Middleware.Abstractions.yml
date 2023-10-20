@@ -16,7 +16,7 @@ variables:
   - name: BuildPlatform
     value: any cpu
   - name: Solution
-    value: "fiskaltrust.Middleware.sln"
+    value: "queue/fiskaltrust.Middleware.sln"
   - name: vmImageName
     value: "windows-latest"
 
@@ -68,7 +68,7 @@ jobs:
 
       - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --configuration $(buildConfiguration) --no-restore
         displayName: "dotnet pack fiskaltrust.Middleware.Abstractions"
-        workingDirectory: "src/fiskaltrust.Middleware.Abstractions"
+        workingDirectory: "queue/src/fiskaltrust.Middleware.Abstractions"
 
       - task: PublishBuildArtifacts@1
         displayName: "Publish Artifact: drop"
