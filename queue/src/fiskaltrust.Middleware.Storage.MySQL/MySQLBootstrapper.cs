@@ -69,7 +69,7 @@ namespace fiskaltrust.Middleware.Storage.MySQL
             var databaseMigrator = new DatabaseMigrator(_connectionString, _mySQLStorageConfiguration.MigrationsTimeoutSec, queueId, logger);
             var (dbName, newlyAppliedMigrations) = await databaseMigrator.MigrateAsync().ConfigureAwait(false);
 
-            _connectionString += $"database={dbName};";
+            _connectionString += $"database={dbName};Maximum Pool Size={_mySQLStorageConfiguration.MaxPoolSize};";
 
             _configurationRepository = new MySQLConfigurationRepository(_connectionString);
 
