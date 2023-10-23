@@ -4,7 +4,7 @@ namespace DE.Fiskal.Connector.Android.Api.Exception
 {
     public sealed partial class TssNotAllowedToStartException
     {
-        public new sealed partial class Creator
+        public sealed partial class Creator
         {
             Java.Lang.Object IParcelableCreator.CreateFromParcel(Parcel source) => source;
 

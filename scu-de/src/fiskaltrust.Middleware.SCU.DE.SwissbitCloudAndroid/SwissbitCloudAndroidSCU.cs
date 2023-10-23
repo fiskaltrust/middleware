@@ -4,17 +4,14 @@ using DE.Fiskal.Connector.Android.Client.Library;
 using fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser.Logs.Models;
 using fiskaltrust.Middleware.SCU.DE.SwissbitCloudAndroid.Callbacks;
 using fiskaltrust.Middleware.SCU.DE.SwissbitCloudAndroid.Constants;
-using fiskaltrust.Middleware.SCU.DE.SwissbitCloudAndroid.Extensions;
 using fiskaltrust.Middleware.SCU.DE.SwissbitCloudAndroid.Helpers;
 using fiskaltrust.Middleware.SCU.DE.SwissbitCloudAndroid.Management;
-using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using static DE.Fiskal.Connector.Android.Api.Model.SelfCheckTssKeyInfo;
 
 namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudAndroid
 {
@@ -23,7 +20,6 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudAndroid
         private static readonly byte[] _emptyProcessData = Encoding.UTF8.GetBytes("<none>");
 
         private readonly FccClient _fccClient;
-        private readonly ILogger<SwissbitCloudAndroidSCU> _logger;
         private readonly SwissbitCloudAndroidSCUConfiguration _configuration;
         private readonly ISwissbitCloudManagementClient _managementClient;
         private readonly ConcurrentDictionary<ulong, DateTime> _startTransactionTimeStampCache;
@@ -33,9 +29,8 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudAndroid
         private ifPOS.v1.de.TseInfo _lastTseInfo;
         private long _lastSignatureCount = -1;
 
-        public SwissbitCloudAndroidSCU(ILogger<SwissbitCloudAndroidSCU> logger, SwissbitCloudAndroidSCUConfiguration configuration, ISwissbitCloudManagementClient managementClient)
+        public SwissbitCloudAndroidSCU(SwissbitCloudAndroidSCUConfiguration configuration, ISwissbitCloudManagementClient managementClient)
         {
-            _logger = logger;
             _configuration = configuration;
             _managementClient = managementClient;
             _startTransactionTimeStampCache = new ConcurrentDictionary<ulong, DateTime>();
@@ -220,23 +215,23 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudAndroid
             };
         }
 
-        public Task<TseState> SetTseStateAsync(TseState state) => throw new NotImplementedException();
-        public Task<RegisterClientIdResponse> RegisterClientIdAsync(RegisterClientIdRequest request) => throw new NotImplementedException();
-        public Task<UnregisterClientIdResponse> UnregisterClientIdAsync(UnregisterClientIdRequest request) => throw new NotImplementedException();
+        public Task<ifPOS.v1.de.TseState> SetTseStateAsync(ifPOS.v1.de.TseState state) => throw new NotImplementedException();
+        public Task<ifPOS.v1.de.RegisterClientIdResponse> RegisterClientIdAsync(ifPOS.v1.de.RegisterClientIdRequest request) => throw new NotImplementedException();
+        public Task<ifPOS.v1.de.UnregisterClientIdResponse> UnregisterClientIdAsync(ifPOS.v1.de.UnregisterClientIdRequest request) => throw new NotImplementedException();
 
         public Task ExecuteSelfTestAsync() => throw new NotImplementedException();
         public Task ExecuteSetTseTimeAsync() => throw new NotImplementedException();
 
-        public Task<StartExportSessionResponse> StartExportSessionAsync(StartExportSessionRequest request) => throw new NotImplementedException();
-        public Task<StartExportSessionResponse> StartExportSessionByTimeStampAsync(StartExportSessionByTimeStampRequest request) => throw new NotImplementedException();
-        public Task<StartExportSessionResponse> StartExportSessionByTransactionAsync(StartExportSessionByTransactionRequest request) => throw new NotImplementedException();
-        public Task<ExportDataResponse> ExportDataAsync(ExportDataRequest request) => throw new NotImplementedException();
-        public Task<EndExportSessionResponse> EndExportSessionAsync(EndExportSessionRequest request) => throw new NotImplementedException();
+        public Task<ifPOS.v1.de.StartExportSessionResponse> StartExportSessionAsync(ifPOS.v1.de.StartExportSessionRequest request) => throw new NotImplementedException();
+        public Task<ifPOS.v1.de.StartExportSessionResponse> StartExportSessionByTimeStampAsync(ifPOS.v1.de.StartExportSessionByTimeStampRequest request) => throw new NotImplementedException();
+        public Task<ifPOS.v1.de.StartExportSessionResponse> StartExportSessionByTransactionAsync(ifPOS.v1.de.StartExportSessionByTransactionRequest request) => throw new NotImplementedException();
+        public Task<ifPOS.v1.de.ExportDataResponse> ExportDataAsync(ifPOS.v1.de.ExportDataRequest request) => throw new NotImplementedException();
+        public Task<ifPOS.v1.de.EndExportSessionResponse> EndExportSessionAsync(ifPOS.v1.de.EndExportSessionRequest request) => throw new NotImplementedException();
 
-        private async Task<List<TransactionLogMessage>> GetLogsForTransaction(ulong transactionNumber)
+        private Task<List<TransactionLogMessage>> GetLogsForTransaction(ulong transactionNumber)
         {
             // TODO implement if possible
-            return NotImplementedException();
+            throw new NotImplementedException();
         }
 
         private async Task<TResult> ExecuteAsync<TResult>(Action<TaskCompletionSource<TResult>> func)

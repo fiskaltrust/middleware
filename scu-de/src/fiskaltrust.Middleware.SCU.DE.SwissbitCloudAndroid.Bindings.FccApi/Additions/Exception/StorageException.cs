@@ -4,7 +4,7 @@ namespace DE.Fiskal.Connector.Android.Api.Exception
 {
     public partial class StorageException
     {
-        public new sealed partial class Creator
+        public sealed partial class Creator
         {
             Java.Lang.Object IParcelableCreator.CreateFromParcel(Parcel source) => source;
 
