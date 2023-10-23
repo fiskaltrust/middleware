@@ -1,0 +1,7 @@
+CREATE INDEX IF NOT EXISTS idx_ftQueueItem_Timestamp ON ftQueueItem (TimeStamp);
+CREATE INDEX IF NOT EXISTS idx_ftQueueItem_cbReceiptReference ON ftQueueItem (cbReceiptReference);
+CREATE INDEX IF NOT EXISTS idx_ftActionJournal_Timestamp ON ftActionJournal (TimeStamp);
+CREATE INDEX IF NOT EXISTS idx_ftReceiptJournal_Timestamp ON ftReceiptJournal (TimeStamp);
+CREATE INDEX IF NOT EXISTS idx_ftJournalAT_Timestamp ON ftJournalAT (TimeStamp);
+CREATE INDEX IF NOT EXISTS idx_ftJournalDE_Timestamp ON ftJournalDE (TimeStamp);
+CREATE INDEX IF NOT EXISTS idx_ftJournalFR_Timestamp ON ftJournalFR (TimeStamp);

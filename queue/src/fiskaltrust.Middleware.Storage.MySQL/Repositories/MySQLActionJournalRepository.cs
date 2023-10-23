@@ -4,10 +4,12 @@ using System.Threading.Tasks;
 using Dapper;
 using MySqlConnector;
 using fiskaltrust.storage.V0;
+using fiskaltrust.Middleware.Contracts.Repositories;
+using System.Linq;
 
 namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
 {
-    public class MySQLActionJournalRepository : AbstractMySQLRepository<Guid, ftActionJournal>, IActionJournalRepository
+    public class MySQLActionJournalRepository : AbstractMySQLRepository<Guid, ftActionJournal>, IActionJournalRepository, IMiddlewareActionJournalRepository
     {
         public MySQLActionJournalRepository(string connectionString) : base(connectionString) { }
 
@@ -47,6 +49,36 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
             {
                 await connection.OpenAsync().ConfigureAwait(false);
                 await connection.ExecuteAsync(sql, entity).ConfigureAwait(false);
+            }
+        }
+
+        public async IAsyncEnumerable<ftActionJournal> GetByQueueItemId(Guid queueItemId)
+        {
+            var query = "SELECT * FROM ftActionJournal WHERE ftQueueItemId = @queueItemId;";
+            using (var connection = new MySqlConnection(ConnectionString))
+            {
+                await connection.OpenAsync().ConfigureAwait(false);
+                await foreach (var entry in connection.Query<ftActionJournal>(query, new { queueItemId }, buffered: false).ToAsyncEnumerable().ConfigureAwait(false))
+                {
+                    yield return entry;
+                }
+            }
+        }
+
+        public async Task<ftActionJournal> GetWithLastTimestampAsync()
+        {
+            using (var connection = new MySqlConnection(ConnectionString))
+            {
+                await connection.OpenAsync().ConfigureAwait(false);
+                return await connection.QueryFirstOrDefaultAsync<ftActionJournal>("SELECT * FROM ftActionJournal ORDER BY TimeStamp DESC LIMIT 1").ConfigureAwait(false);
+            }
+        }
+
+        public IAsyncEnumerable<ftActionJournal> GetByPriorityAfterTimestampAsync(int lowerThanPriority, long fromTimestampInclusive)
+        {
+            using (var connection = new MySqlConnection(ConnectionString))
+            {
+                return connection.Query<ftActionJournal>($"SELECT * FROM ftActionJournal WHERE TimeStamp >= @from AND Priority < @prio ORDER BY TimeStamp", new { from = fromTimestampInclusive, prio = lowerThanPriority }, buffered: false).ToAsyncEnumerable();
             }
         }
     }

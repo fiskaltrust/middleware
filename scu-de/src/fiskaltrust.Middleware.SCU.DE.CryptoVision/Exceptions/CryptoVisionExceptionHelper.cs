@@ -29,7 +29,7 @@
                 case Models.SeResult.ErrorIO:
                     throw new CryptoVisionException("transport I/O connection error", error);
                 case Models.SeResult.ErrorTSETimeout:
-                    throw new CryptoVisionException("transport I/O timeout error", error);
+                    throw new CryptoVisionTimeoutException("transport I/O timeout error");
                 case Models.SeResult.ErrorBufferTooSmall:
                     throw new CryptoVisionException("transport I/O buffer too small", error);
                 case Models.SeResult.ErrorCallback:
@@ -103,7 +103,7 @@
                 case Models.SeResult.ErrorUserNotAuthorized:
                     throw new CryptoVisionException("the user who has invoked a restricted SE API function is not authorized to execute this function", error);
                 case Models.SeResult.ErrorUserNotAuthenticated:
-                    throw new CryptoVisionException("the user who has invoked a restricted SE API function has not the status \"authenticated\"", error);
+                    throw new CryptoVisionNotAuthenticatedException("the user who has invoked a restricted SE API function has not the status \"authenticated\"");
                 case Models.SeResult.ErrorDescriptionNotSetByManufacturer:
                     throw new CryptoVisionException("the function initialize has been invoked without a value for the input parameter description although the description of the SE API has not been set by the manufacturer", error);
                 case Models.SeResult.ErrorDescriptionSetByManufacturer:

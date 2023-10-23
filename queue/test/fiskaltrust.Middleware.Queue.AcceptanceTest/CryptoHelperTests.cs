@@ -1,5 +1,5 @@
 ﻿using System;
-using fiskaltrust.Middleware.Contracts;
+using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Queue.Helpers;
 using fiskaltrust.storage.V0;
 using FluentAssertions;

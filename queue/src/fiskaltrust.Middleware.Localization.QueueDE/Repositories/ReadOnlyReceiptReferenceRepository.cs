@@ -1,63 +1,125 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Linq;
-using System.Threading.Tasks;
-using fiskaltrust.Exports.Common.Models;
+﻿using fiskaltrust.Exports.Common.Models;
 using fiskaltrust.Exports.Common.Repositories;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0;
 using Newtonsoft.Json;
 using fiskaltrust.ifPOS.v1;
+using fiskaltrust.Exports.Common.Helpers;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using System;
 
 namespace fiskaltrust.Middleware.Localization.QueueDE.Repositories
 {
     public class ReadOnlyReceiptReferenceRepository : IReadOnlyReceiptReferenceRepository
     {
         private readonly IMiddlewareQueueItemRepository _middlewareQueueItemRepository;
-        private readonly IReadOnlyActionJournalRepository _actionJournalRepository;
 
-        public ReadOnlyReceiptReferenceRepository(IMiddlewareQueueItemRepository middlewareQueueItemRepository, IReadOnlyActionJournalRepository actionJournalRepository)
+        public ReadOnlyReceiptReferenceRepository(IMiddlewareQueueItemRepository middlewareQueueItemRepository)
         {
             _middlewareQueueItemRepository = middlewareQueueItemRepository;
-            _actionJournalRepository = actionJournalRepository;
         }
 
-        public async Task<HashSet<ReceiptReferenceData>> GetReceiptReferenceAsync(ftQueueItem queueItem)
+        public async Task<HashSet<ReceiptReferencesGroupedData>> GetReceiptReferenceAsync(long from, long to, List<DailyClosingReceipt> dailyClosings)
         {
-            var previousReceiptReferences = _middlewareQueueItemRepository.GetPreviousReceiptReferencesAsync(queueItem);
-            var receiptReferences = new HashSet<ReceiptReferenceData>();
-            await foreach (var item in previousReceiptReferences)
+            var receiptReferencesGrouped = _middlewareQueueItemRepository.GetGroupedReceiptReferenceAsync(from, to).Where(x => !string.IsNullOrEmpty(x));
+            var receiptReferences = new HashSet<ReceiptReferencesGroupedData>();
+            await foreach (var receiptReference in receiptReferencesGrouped)
             {
-                if (string.IsNullOrEmpty(item.response))
+                var row = 0;
+                var selected = new ftQueueItem();
+                await foreach (var queueItem in _middlewareQueueItemRepository.GetQueueItemsForReceiptReferenceAsync(receiptReference))
                 {
-                    continue;
+                    if (row == 0)
+                    {
+                        selected = queueItem;
+                        row++;
+                        continue;
+                    }
+                    AddReference(receiptReferences, queueItem, selected, dailyClosings);
+                    var source = await _middlewareQueueItemRepository.GetClosestPreviousReceiptReferencesAsync(queueItem);
+                    AddReference(receiptReferences, queueItem, source, dailyClosings);
+
+                    selected = queueItem;
+                    row++;
                 }
-                var response = JsonConvert.DeserializeObject<ReceiptResponse>(item.response);
-                var znumber = await GetLastZNumberForQueueItem(_actionJournalRepository, item).ConfigureAwait(false);
-                _ = receiptReferences.Add(new ReceiptReferenceData()
+                if (row == 1 && !string.IsNullOrEmpty(selected.ftQueueItemId.ToString()))
                 {
-                    RefMoment = item.cbReceiptMoment,
-                    RefReceiptId = response.ftReceiptIdentification,
-                    TargetQueueItemId = item.ftQueueItemId,
-                    ZNumber = znumber
-                });
+                    var source = await _middlewareQueueItemRepository.GetClosestPreviousReceiptReferencesAsync(selected);
+                    AddReference(receiptReferences, selected, source, dailyClosings);
+                }
             }
             return receiptReferences;
         }
 
-        private static async Task<long> GetLastZNumberForQueueItem(IReadOnlyActionJournalRepository actionJournalRepository, ftQueueItem queueItem)
+        public Task<HashSet<ReceiptReferenceData>> GetReceiptReferenceAsync(ftQueueItem queueItem) => throw new NotImplementedException();
+
+        private bool AddReference(HashSet<ReceiptReferencesGroupedData> receiptReferences, ftQueueItem target, ftQueueItem source, List<DailyClosingReceipt> dailyClosings)
         {
-            var actionJournals = (await actionJournalRepository.GetAsync()).Where(x => x.Type == "4445000000000007").OrderBy(x => x.TimeStamp);
-            var actionJournal = actionJournals.Where(x => x.TimeStamp > queueItem.TimeStamp).FirstOrDefault();
-            if (actionJournal == null)
+            if (target == null || string.IsNullOrEmpty(target.response))
             {
-                return -1;
+                return false;
             }
-            var closingNumber = JsonConvert.DeserializeAnonymousType(actionJournal.DataJson, new { closingNumber = -1 }).closingNumber;
-            return closingNumber > -1
-                ? closingNumber
-                : actionJournals.Where(x => x.Type == "4445000000000007" & x.TimeStamp <= queueItem.TimeStamp).Count();
+            var dailyClosingTarget = dailyClosings.Where(x => x.ZTime >= target.cbReceiptMoment).FirstOrDefault();
+
+            //external references
+            if (source == null)
+            {
+                var requestTarget = JsonConvert.DeserializeObject<ReceiptRequest>(target.request);
+                if (string.IsNullOrEmpty(requestTarget.ftReceiptCaseData))
+                {
+                    return false;
+                }
+                var receiptCaseData = SerializationHelper.GetReceiptCaseData(requestTarget);
+                if (receiptCaseData == null || string.IsNullOrEmpty(receiptCaseData.RefReceiptId))
+                {
+                    return false;
+                }
+                var respTarget = JsonConvert.DeserializeObject<ReceiptResponse>(target.response);
+
+                var extReceiptReference = new ReceiptReferencesGroupedData()
+                {
+                    TargetQueueItemId = target.ftQueueItemId,
+                    TargetReceiptCaseData = receiptCaseData,
+                    TargetReceiptIdentification = respTarget.ftReceiptIdentification
+                };
+                if (dailyClosingTarget != null)
+                {
+                    extReceiptReference.TargetZMoment = dailyClosingTarget.ZTime;
+                    extReceiptReference.TargetZNumber = dailyClosingTarget.ZNumber;
+                }
+                return receiptReferences.Add(extReceiptReference);
+            }
+            if (string.IsNullOrEmpty(source.response))
+            {
+                return false;
+            }
+
+            var responseTarget = JsonConvert.DeserializeObject<ReceiptResponse>(target.response);
+            var responseSource = JsonConvert.DeserializeObject<ReceiptResponse>(source.response);
+
+            var dailyClosingSource = dailyClosings.Where(x => x.ZTime >= source.cbReceiptMoment).FirstOrDefault();
+
+            var receiptReference = new ReceiptReferencesGroupedData()
+            {
+                RefReceiptId = responseSource.ftReceiptIdentification,
+                TargetQueueItemId = target.ftQueueItemId,
+                SourceQueueItemId = source.ftQueueItemId,
+                TargetReceiptIdentification = responseTarget.ftReceiptIdentification,
+            };
+            if (dailyClosingSource != null)
+            {
+                receiptReference.SourceZMoment = dailyClosingSource.ZTime;
+                receiptReference.SourceZNumber = dailyClosingSource.ZNumber;
+            }
+            if (dailyClosingTarget != null)
+            {
+                receiptReference.TargetZMoment = dailyClosingTarget.ZTime;
+                receiptReference.TargetZNumber = dailyClosingTarget.ZNumber;
+            }
+
+            return receiptReferences.Add(receiptReference);
         }
     }
 }

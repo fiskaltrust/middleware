@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Constants;
 using fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Helpers;
@@ -43,17 +44,18 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
             }
             try
             {
-                _process = new Process
+                var shellProcess = new Process
                 {
                     StartInfo = GetProcessStartInfo(fccDirectory)
                 };
-                _process.Start();
-                _process.OutputDataReceived += (_, e) => LogFcc(LogLevel.Debug, e?.Data);
-                _process.ErrorDataReceived += (_, e) => LogFcc(LogLevel.Error, e?.Data);
-                _process.BeginOutputReadLine();
-                _process.BeginErrorReadLine();
+                shellProcess.Start();
+                shellProcess.OutputDataReceived += (_, e) => LogFcc(LogLevel.Debug, e?.Data);
+                shellProcess.ErrorDataReceived += (_, e) => LogFcc(LogLevel.Error, e?.Data);
+                shellProcess.BeginOutputReadLine();
+                shellProcess.BeginErrorReadLine();
 
-                await WaitUntilFccIsAvailable(DeutscheFiskalConstants.DefaultProcessTimeoutMs);
+                await WaitUntilFccIsAvailable(_configuration.ProcessTimeoutSec, shellProcess);
+                _process = GetProcessIfRunning(fccDirectory, _logger);
                 _startedProcessInline = true;
             }
             catch (Exception)
@@ -81,26 +83,32 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
             }
         }
 
-        private async Task WaitUntilFccIsAvailable(int timeoutMs)
+        private async Task WaitUntilFccIsAvailable(int timeoutSec, Process shellProcess)
         {
-            var endTime = DateTime.Now.AddMilliseconds(timeoutMs);
+            var endTime = DateTime.Now.AddSeconds(timeoutSec);
             while (DateTime.Now < endTime)
             {
                 if (await HttpHelpers.IsAddressAvailable($"http://localhost:{_configuration.FccPort ?? DeutscheFiskalConstants.DefaultPort}/actuator/health"))
                 {
                     return;
                 }
+                if (shellProcess.HasExited)
+                {
+                    throw new OperationCanceledException("The FCC process has exited.");
+                }
                 await Task.Delay(500);
             }
 
-            throw new TimeoutException($"Starting the FCC service took more than {timeoutMs}ms, hence the process was canceled.");
+            throw new TimeoutException($"Starting the FCC service took more than the configured ProcessTimeoutSec {timeoutSec} seconds, hence the process was canceled.");
         }
 
         public void Dispose()
         {
-            if (_startedProcessInline)
+            if (_startedProcessInline && _process != null)
             {
+                _logger.LogInformation("Stopping FCC with process ID {FccProcessId}...", _process.Id);
                 _process.Kill();
+                _logger.LogInformation("Stopped FCC with process ID {FccProcessId}.", _process.Id);
             }
             _process?.Dispose();
         }

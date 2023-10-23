@@ -12,3 +12,7 @@ Please create an [issue](issues) first to describe the feature and get early fee
 
 ### You have a question about the functionality
 If you have any questions or help requests regarding Launcher or generally want to discuss an idea, please create a new topic in the [discussion section](https://github.com/fiskaltrust/middleware/discussions).
+
+### You have a proposal for a substantial change
+You can create an [RFC](https://github.com/fiskaltrust/middleware/tree/main/rfcs) to propose a substantial change to the middleware.
+Please follow the [RFC process](rfcs/README.md) and use the [RFC template](rfcs/0000-template.md).

@@ -1,28 +1,40 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using fiskaltrust.Middleware.Contracts;
+using fiskaltrust.Middleware.Contracts.Models;
+using fiskaltrust.Middleware.Localization.QueueAT;
 using fiskaltrust.Middleware.Localization.QueueDE;
+using fiskaltrust.Middleware.Localization.QueueDEFAULT;
+using fiskaltrust.Middleware.Localization.QueueES;
+using fiskaltrust.Middleware.Localization.QueueIT;
+using fiskaltrust.Middleware.Localization.QueueFR;
+using fiskaltrust.Middleware.Localization.QueueME;
 using fiskaltrust.storage.V0;
 using Newtonsoft.Json;
+using fiskaltrust.Middleware.Contracts.Interfaces;
 
 namespace fiskaltrust.Middleware.Queue.Bootstrapper
 {
     public static class LocalizedQueueBootStrapperFactory
     {
-        public static ILocalizedQueueBootstrapper GetBootstrapperForLocalizedQueue(Guid queueId, Dictionary<string, object> configuration)
+        public static ILocalizedQueueBootstrapper GetBootstrapperForLocalizedQueue(Guid queueId, MiddlewareConfiguration middlewareConfiguration)
         {
-            var countyCode = GetQueueLocalization(queueId, configuration);
+            var countyCode = GetQueueLocalization(queueId, middlewareConfiguration.Configuration);
             return countyCode switch
             {
-                "AT" => throw new NotImplementedException("AT IS NOT IMPLEMENTED"),
+                "AT" => middlewareConfiguration.PreviewFeatures.TryGetValue("queue-at", out var val) && val ? new QueueATBootstrapper() : throw new NotImplementedException("The Austrian Queue is not yet implemented in this version."),
                 "DE" => new QueueDEBootstrapper(),
-                "FR" => throw new NotImplementedException("FR IS NOT IMPLEMENTED"),
-                _ => throw new ArgumentException($"unkown countryCode: {countyCode}"),
+                "ES" => new QueueESBootstrapper(),
+                "FR" => middlewareConfiguration.PreviewFeatures.TryGetValue("queue-fr", out var val) && val ? new QueueFRBootstrapper() : throw new NotImplementedException("The French Queue is not yet implemented in this version."),
+                "IT" => new QueueITBootstrapper(),
+                "ME" => new QueueMeBootstrapper(),
+                "DEFAULT" => new QueueDEFAULTBootstrapper(middlewareConfiguration),
+                _ => throw new ArgumentException($"Unkown country code: {countyCode}"),
+
             };
         }
 
-        private static string GetQueueLocalization(Guid queueId, Dictionary<string, object> configuration)
+        public static string GetQueueLocalization(Guid queueId, Dictionary<string, object> configuration)
         {
             var key = "init_ftQueue";
             if (configuration.ContainsKey(key))

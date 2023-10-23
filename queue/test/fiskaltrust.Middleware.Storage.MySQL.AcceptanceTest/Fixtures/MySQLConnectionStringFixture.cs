@@ -5,6 +5,7 @@ namespace fiskaltrust.Middleware.Storage.MySQL.AcceptanceTest.Fixtures
     public static class MySQLConnectionStringFixture
     {
         public static Guid QueueId = Guid.NewGuid();
+
         public static readonly string ServerConnectionString = Environment.GetEnvironmentVariable("CONNECTIONSTRING_MYSQL_TESTS");
         public static string DatabaseName { get; } = QueueId.ToString().Replace("-", string.Empty);
         public static string DatabaseConnectionString { get; } = $"{ServerConnectionString}database={DatabaseName}";

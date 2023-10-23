@@ -31,25 +31,26 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
         private readonly ConcurrentDictionary<ulong, DateTime> _startTransactionTimeStampCache;
         private readonly ILogger<DeutscheFiskalSCU> _logger;
         private readonly DeutscheFiskalSCUConfiguration _configuration;
-        private readonly IFccInitializationService _fccInitializer;
+        private readonly IFccInitializationService _fccInitializationService;
         private readonly IFccProcessHost _fccProcessHost;
-        private readonly IFccDownloadService _fccDownloader;
+        private readonly IFccDownloadService _fccDownloadService;
         private readonly FccErsApiProvider _fccErsApiProvider;
         private readonly FccAdminApiProvider _fccAdminApiProvider;
         private string _fccDirectory;
+        private Version _version;
 
         private TseInfo _lastTseInfo;
 
-        public DeutscheFiskalSCU(ILogger<DeutscheFiskalSCU> logger, DeutscheFiskalSCUConfiguration configuration, IFccInitializationService fccInitializer,
-            IFccProcessHost fccProcessHost, IFccDownloadService fccDownloader, FccErsApiProvider fccErsApiProvider, FccAdminApiProvider fccAdminApiProvider)
+        public DeutscheFiskalSCU(ILogger<DeutscheFiskalSCU> logger, DeutscheFiskalSCUConfiguration configuration, IFccInitializationService fccInitializationService,
+            IFccProcessHost fccProcessHost, IFccDownloadService fccDownloadService, FccErsApiProvider fccErsApiProvider, FccAdminApiProvider fccAdminApiProvider)
         {
             _readStreamPointer = new ConcurrentDictionary<string, ExportStateData>();
             _startTransactionTimeStampCache = new ConcurrentDictionary<ulong, DateTime>();
             _logger = logger;
             _configuration = configuration;
-            _fccInitializer = fccInitializer;
+            _fccInitializationService = fccInitializationService;
             _fccProcessHost = fccProcessHost;
-            _fccDownloader = fccDownloader;
+            _fccDownloadService = fccDownloadService;
             _fccErsApiProvider = fccErsApiProvider;
             _fccAdminApiProvider = fccAdminApiProvider;
             _fccDirectory = _configuration.FccDirectory;
@@ -68,16 +69,43 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
                 {
                     _fccDirectory = GetDefaultFccDirectory();
                 }
-                _fccDownloader.DownloadAndSetupIfRequiredAsync(_fccDirectory).Wait();
-                if (!_fccInitializer.IsInitialized(_fccDirectory))
+
+                if (!_fccDownloadService.IsInstalled(_fccDirectory))
                 {
-                    _fccInitializer.Initialize(_fccDirectory);
+                    if (_fccDownloadService.DownloadFccAsync(_fccDirectory).Result)
+                    {
+                        _fccInitializationService.Initialize(_fccDirectory);
+                        _version = new Version(_configuration.FccVersion);
+                    }
+                }
+                else if (!_fccDownloadService.IsLatestVersion(_fccDirectory, new Version(_configuration.FccVersion)))
+                {
+                    if (_fccDownloadService.DownloadFccAsync(_fccDirectory).Result)
+                    {
+                        _fccInitializationService.Update(_fccDirectory);
+                    }
+                }
+                else if (!_fccDownloadService.IsLatestVersionDat(_fccDirectory, new Version(_configuration.FccVersion)))
+                {
+                     _fccInitializationService.Update(_fccDirectory);
+                }
+                else if (!_fccInitializationService.IsInitialized(_fccDirectory))
+                {
+                    _fccInitializationService.Initialize(_fccDirectory);
+                }
+                if (_configuration.FccHeapMemory.HasValue)
+                {
+                    ConfigHelper.SetFccHeapMemoryForRunScript(_fccDirectory, _configuration.FccHeapMemory.Value);
+                }
+                if (_version == null)
+                {
+                    _version = _fccDownloadService.UsedFCCVersion;
                 }
                 StartFccIfNotRunning().Wait();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "An exception occured while initializing the FCC.");
+                _logger.LogError(ex, "An exception occured while initializing the FCC. Please see the logs above for more details.");
             }
         }
 
@@ -222,7 +250,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
                     CurrentNumberOfStartedTransactions = fccInfo.CurrentNumberOfTransactions,
                     SerialNumberOctet = tssDetails.SerialNumberHex,
                     PublicKeyBase64 = tssDetails.PublicKey,
-                    FirmwareIdentification = selfCheckResult.remoteCspVersion,
+                    FirmwareIdentification = JsonConvert.SerializeObject(new Dictionary<string, string> { { "fccVersion", selfCheckResult.fccVersion }, { "localClientVersion", selfCheckResult.localClientVersion }, { "remoteCspVersion", selfCheckResult.remoteCspVersion } }),
                     CertificationIdentification = GetCertificationIdentification(),
                     MaxNumberOfClients = fccInfo.MaxNumberClients,
                     MaxNumberOfStartedTransactions = fccInfo.MaxNumberTransactions,
@@ -235,9 +263,8 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
                     MaxLogMemorySize = long.MaxValue,
                     MaxNumberOfSignatures = long.MaxValue,
                     CurrentStartedTransactionNumbers = startedTransactions.Select(x => (ulong) x.TransactionNumber).ToList(),
-                    CurrentState = activeKey.state.ToTseState()
+                    CurrentState = activeKey.state.ToTseState(),
                 };
-
                 return _lastTseInfo;
             }
             catch (Exception ex)
@@ -311,9 +338,16 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
         {
             try
             {
+                await StartFccIfNotRunning();
+                var existingClients = await _fccAdminApiProvider.GetClientsAsync();
+
+                if (existingClients.Any(x => x.ClientId == request.ClientId))
+                {
+                    await _fccAdminApiProvider.DeregisterClientAsync(request.ClientId);
+                }
+
                 return new UnregisterClientIdResponse
                 {
-                    // Removing is not supported, return existing clients untouched
                     ClientIds = (await _fccAdminApiProvider.GetClientsAsync()).Select(x => x.ClientId)
                 };
             }
@@ -412,7 +446,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
             try
             {
                 var filePath = GetTempPath(exportId.ToString());
-                await _fccAdminApiProvider.RequestExportAsync(filePath, startDate, endDate, clientId);
+                await _fccAdminApiProvider.RequestExportAsync(exportId, filePath, startDate, endDate, clientId);
                 SetExportState(exportId, ExportState.Succeeded);
             }
             catch (Exception ex)
@@ -526,7 +560,6 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
             }
         }
 
-        // TODO validate export and delete from TSE
         public async Task<EndExportSessionResponse> EndExportSessionAsync(EndExportSessionRequest request)
         {
             if (request.TokenId.StartsWith(NO_EXPORT_PREFIX))
@@ -557,13 +590,28 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
 
                             if (request.Erase)
                             {
-                                var exportDetails = GetExportDetails(request.TokenId);
-                                // Necessary because of how the DF handles acknowledging transactions.
-                                // It seems like it's required to go at least one minute back to not return a HTTP 500
-                                var endDate = exportDetails.EndDate.AddMinutes(-1);
-                                await _fccAdminApiProvider.AcknowledgeAllTransactionsAsync(_minExportDateTime, endDate, exportDetails.ClientId);
-                            }
+                                try
+                                {
+                                    var exportDetails = GetExportDetails(request.TokenId);
+                                    if (_fccAdminApiProvider.IsSplitExport(Guid.Parse(request.TokenId)))
+                                    {
+                                        await _fccAdminApiProvider.AcknowledgeSplitTransactionsAsync(Guid.Parse(request.TokenId), exportDetails.ClientId).ConfigureAwait(false);
+                                    }
+                                    else
+                                    {
+                                        // Necessary because of how the DF handles acknowledging transactions.
+                                        // It seems like it's required to go at least one minute back to not return a HTTP 500
+                                        var endDate = exportDetails.EndDate.AddMinutes(-1);
+                                        await _fccAdminApiProvider.AcknowledgeAllTransactionsAsync(_minExportDateTime, endDate, exportDetails.ClientId);
+                                    }
 
+                                    sessionResponse.IsErased = true;
+                                }
+                                catch (Exception e)
+                                {
+                                    _logger.LogError(e, "Failed to delete export data from tse.");
+                                }
+                            }
                             return sessionResponse;
                         }
                     }
@@ -585,6 +633,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
             }
             finally
             {
+                _fccAdminApiProvider.RemoveSplitExportIfExists(request.TokenId);
                 try
                 {
                     if (File.Exists(filePath))

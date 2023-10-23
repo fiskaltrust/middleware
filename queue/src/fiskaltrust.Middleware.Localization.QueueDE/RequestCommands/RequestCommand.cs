@@ -10,7 +10,6 @@ using fiskaltrust.ifPOS.v1.de;
 using fiskaltrust.Middleware.Contracts.Data;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Models.Transactions;
-using fiskaltrust.Middleware.Localization.QueueDE.Constants;
 using fiskaltrust.Middleware.Localization.QueueDE.Extensions;
 using fiskaltrust.Middleware.Localization.QueueDE.Models;
 using fiskaltrust.Middleware.Localization.QueueDE.Services;
@@ -39,16 +38,17 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
         protected readonly IPersistentTransactionRepository<OpenTransaction> _openTransactionRepo;
         private readonly IJournalDERepository _journalDERepository;
         private readonly MiddlewareConfiguration _middlewareConfiguration;
+        private readonly QueueDEConfiguration _queueDEConfiguration;
+        private readonly ITarFileCleanupService _tarFileCleanupService;
 
         protected string _certificationIdentification = null;
-        protected bool _storeTemporaryExportFiles = false;
 
         public abstract string ReceiptName { get; }
 
         public RequestCommand(ILogger<RequestCommand> logger, SignatureFactoryDE signatureFactory, IDESSCDProvider deSSCDProvider,
             ITransactionPayloadFactory transactionPayloadFactory, IReadOnlyQueueItemRepository queueItemRepository, IConfigurationRepository configurationRepository,
             IJournalDERepository journalDERepository, MiddlewareConfiguration middlewareConfiguration, IPersistentTransactionRepository<FailedStartTransaction> failedStartTransactionRepo,
-            IPersistentTransactionRepository<FailedFinishTransaction> failedFinishTransactionRepo, IPersistentTransactionRepository<OpenTransaction> openTransactionRepo)
+            IPersistentTransactionRepository<FailedFinishTransaction> failedFinishTransactionRepo, IPersistentTransactionRepository<OpenTransaction> openTransactionRepo, ITarFileCleanupService tarFileCleanupService, QueueDEConfiguration queueDEConfiguration)
         {
             _logger = logger;
             _signatureFactory = signatureFactory;
@@ -61,16 +61,12 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             _failedStartTransactionRepo = failedStartTransactionRepo;
             _failedFinishTransactionRepo = failedFinishTransactionRepo;
             _openTransactionRepo = openTransactionRepo;
-            _transactionFactory = new TransactionFactory(_deSSCDProvider.Instance);
-
-            if (_middlewareConfiguration.Configuration.ContainsKey(ConfigurationKeys.STORE_TEMPORARY_FILES_KEY))
-            {
-                _storeTemporaryExportFiles = bool.TryParse(_middlewareConfiguration.Configuration[ConfigurationKeys.STORE_TEMPORARY_FILES_KEY].ToString(), out var val) && val;
-            }
-
+            _transactionFactory = new TransactionFactory(_deSSCDProvider);
+            _tarFileCleanupService = tarFileCleanupService;
+            _queueDEConfiguration = queueDEConfiguration;
         }
 
-        public abstract Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueDE queueDE, IDESSCD client, ReceiptRequest request, ftQueueItem queueItem);
+        public abstract Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueDE queueDE, ReceiptRequest request, ftQueueItem queueItem);
 
         protected void ThrowIfImplicitFlow(ReceiptRequest request)
         {
@@ -96,55 +92,52 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             }
         }
 
-        public async Task PerformTarFileExportAsync(ftQueueItem queueItem, ftQueue queue, ftQueueDE queueDE, IDESSCD client, bool erase)
+        public async Task PerformTarFileExportAsync(ftQueueItem queueItem, ftQueue queue, ftQueueDE queueDE, bool erase)
         {
+            if (_queueDEConfiguration.TarFileExportMode == TarFileExportMode.None)
+            { 
+                _logger.LogInformation("Skipped export because {key} is set to {value}", nameof(TarFileExportMode), nameof(TarFileExportMode.None));
+                return;
+            }
+
+            if (_queueDEConfiguration.TarFileExportMode == TarFileExportMode.Erased)
+            {
+                var tseInfo = await _deSSCDProvider.Instance.GetTseInfoAsync().ConfigureAwait(false);
+                if (tseInfo.CurrentNumberOfStartedTransactions > 0)
+                {
+                    _logger.LogInformation("Skipped export because there are open transactions and {key} is set to {value}", nameof(TarFileExportMode), nameof(TarFileExportMode.Erased));
+                    return;
+                }
+            }
+
             try
             {
                 var exportService = new TarFileExportService();
-                (var filePath, var success, var checkSum) = await exportService.ProcessTarFileExportAsync(client, queueDE.ftQueueDEId, queueDE.CashBoxIdentification, erase, _middlewareConfiguration.ServiceFolder, _middlewareConfiguration.TarFileChunkSize).ConfigureAwait(false);
+                (var filePath, var success, var checkSum, var isErased) = await exportService.ProcessTarFileExportAsync(_deSSCDProvider.Instance, queueDE.ftQueueDEId, queueDE.CashBoxIdentification, erase, _middlewareConfiguration.ServiceFolder, _middlewareConfiguration.TarFileChunkSize).ConfigureAwait(false);
                 if (success)
                 {
-                    var journalDE = new ftJournalDE
+                    Guid? ftJournalDEId = null;
+                    if (_queueDEConfiguration.TarFileExportMode == TarFileExportMode.Erased && !isErased)
                     {
-                        ftJournalDEId = Guid.NewGuid(),
-                        FileContentBase64 = Convert.ToBase64String(Compress(filePath)),
-                        FileExtension = ".zip",
-                        FileName = Path.GetFileNameWithoutExtension(filePath),
-                        ftQueueId = queueItem.ftQueueId,
-                        ftQueueItemId = queueItem.ftQueueItemId,
-                        Number = queue.ftReceiptNumerator + 1
-                    };
-                    await _journalDERepository.InsertAsync(journalDE).ConfigureAwait(false);
-
-                    var dbJournalDE = await _journalDERepository.GetAsync(journalDE.ftJournalDEId).ConfigureAwait(false);
-
-                    var uploadSuccess = false;
-
-                    if (journalDE.ftJournalDEId == dbJournalDE.ftJournalDEId)
-                    {
-                        try
-                        {
-                            var dbCheckSum = GetHashFromCompressedBase64(dbJournalDE.FileContentBase64);
-
-                            uploadSuccess = checkSum == dbCheckSum;
-                        }
-                        catch (Exception e)
-                        {
-                            _logger.LogWarning(e, "Failed to check content equality.");
-                        }
-                    }
-
-                    if (uploadSuccess)
-                    {
-                        if (!_storeTemporaryExportFiles && File.Exists(filePath))
-                        {
-                            File.Delete(filePath);
-                        }
+                        _logger.LogInformation("Export not saved to database because it was not erased from the TSE and {key} is set to {value}", nameof(TarFileExportMode), nameof(TarFileExportMode.Erased));
                     }
                     else
                     {
-                        _logger.LogWarning("Failed to insert Tar export into database. Tar export file can be found here {file}", filePath);
+                        var journalDE = new ftJournalDE
+                        {
+                            ftJournalDEId = Guid.NewGuid(),
+                            FileContentBase64 = Convert.ToBase64String(Compress(filePath)),
+                            FileExtension = ".zip",
+                            FileName = Path.GetFileNameWithoutExtension(filePath),
+                            ftQueueId = queueItem.ftQueueId,
+                            ftQueueItemId = queueItem.ftQueueItemId,
+                            Number = queue.ftReceiptNumerator + 1
+                        };
+                        await _journalDERepository.InsertAsync(journalDE).ConfigureAwait(false);
+                        ftJournalDEId = journalDE.ftJournalDEId;
                     }
+
+                    await _tarFileCleanupService.CleanupTarFileAsync(ftJournalDEId, filePath, checkSum);
                 }
                 else
                 {
@@ -157,12 +150,12 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             }
         }
 
-        protected async Task UpdateTseInfoAsync(IDESSCD client, Guid signaturCreationUnitDEID)
+        protected async Task UpdateTseInfoAsync(Guid signaturCreationUnitDEID)
         {
             try
             {
                 var signaturCreationUnitDE = await _configurationRepository.GetSignaturCreationUnitDEAsync(signaturCreationUnitDEID).ConfigureAwait(false);
-                var tseInfo = await client.GetTseInfoAsync().ConfigureAwait(false);
+                var tseInfo = await _deSSCDProvider.Instance.GetTseInfoAsync().ConfigureAwait(false);
                 signaturCreationUnitDE.TseInfoJson = JsonConvert.SerializeObject(tseInfo);
                 await _configurationRepository.InsertOrUpdateSignaturCreationUnitDEAsync(signaturCreationUnitDE).ConfigureAwait(false);
             }
@@ -336,15 +329,15 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             return (updatTransactionResult.TransactionNumber, signatures);
         }
 
-        protected async Task<(ulong transactionNumber, List<SignaturItem> signatures, string clientId, string signatureAlgorithm, string publicKeyBase64, string serialNumberOctet)> ProcessInitialOperationReceiptAsync(IDESSCD client, string transactionIdentifier, string processType, string payload, ftQueueItem queueItem, ftQueueDE queueDE, bool clientIdRegistrationOnly)
+        protected async Task<(ulong transactionNumber, List<SignaturItem> signatures, string clientId, string signatureAlgorithm, string publicKeyBase64, string serialNumberOctet)> ProcessInitialOperationReceiptAsync(string transactionIdentifier, string processType, string payload, ftQueueItem queueItem, ftQueueDE queueDE, bool clientIdRegistrationOnly)
         {
             if (!clientIdRegistrationOnly)
             {
-                await client.SetTseStateAsync(new TseState { CurrentState = TseStates.Initialized }).ConfigureAwait(false);
+                await _deSSCDProvider.Instance.SetTseStateAsync(new TseState { CurrentState = TseStates.Initialized }).ConfigureAwait(false);
                 _logger.LogInformation("Successfully initialized TSE device");
             }
 
-            var tseInfo = await client.GetTseInfoAsync().ConfigureAwait(false);
+            var tseInfo = await _deSSCDProvider.Instance.GetTseInfoAsync().ConfigureAwait(false);
 
             if (tseInfo.CurrentState != TseStates.Initialized)
             {
@@ -353,7 +346,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
             try
             {
-                await client.RegisterClientIdAsync(new RegisterClientIdRequest { ClientId = queueDE.CashBoxIdentification }).ConfigureAwait(false);
+                await _deSSCDProvider.Instance.RegisterClientIdAsync(new RegisterClientIdRequest { ClientId = queueDE.CashBoxIdentification }).ConfigureAwait(false);
                 _logger.LogInformation("Successfully registered TSE client. ClientId: {ClientId}", queueDE.CashBoxIdentification);
             }
             catch (Exception ex)
@@ -366,7 +359,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             return (processReceiptResponse.TransactionNumber, processReceiptResponse.Signatures, processReceiptResponse.ClientId, processReceiptResponse.SignatureAlgorithm, processReceiptResponse.PublicKeyBase64, processReceiptResponse.SerialNumberOctet);
         }
 
-        protected async Task<(ulong transactionNumber, List<SignaturItem> signatures, string clientId, string signatureAlgorithm, string publicKeyBase64, string serialNumberOctet)> ProcessOutOfOperationReceiptAsync(IDESSCD client, string transactionIdentifier, string processType, string payload, ftQueueItem queueItem, ftQueueDE queueDE, bool isClientIdOnlyRequest)
+        protected async Task<(ulong transactionNumber, List<SignaturItem> signatures, string clientId, string signatureAlgorithm, string publicKeyBase64, string serialNumberOctet)> ProcessOutOfOperationReceiptAsync(string transactionIdentifier, string processType, string payload, ftQueueItem queueItem, ftQueueDE queueDE, bool isClientIdOnlyRequest)
         {
             try
             {
@@ -375,10 +368,10 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             }
             finally
             {
-                await client.UnregisterClientIdAsync(new UnregisterClientIdRequest { ClientId = queueDE.CashBoxIdentification }).ConfigureAwait(false);
+                await _deSSCDProvider.Instance.UnregisterClientIdAsync(new UnregisterClientIdRequest { ClientId = queueDE.CashBoxIdentification }).ConfigureAwait(false);
                 if (!isClientIdOnlyRequest)
                 {
-                    await client.SetTseStateAsync(new TseState { CurrentState = TseStates.Terminated }).ConfigureAwait(false);
+                    await _deSSCDProvider.Instance.SetTseStateAsync(new TseState { CurrentState = TseStates.Terminated }).ConfigureAwait(false);
                 }
             }
         }
@@ -397,17 +390,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             }
 
             return ms.ToArray();
-        }
-
-        public static string GetHashFromCompressedBase64(string zippedBase64)
-        {
-            using var ms = new MemoryStream(Convert.FromBase64String(zippedBase64));
-            using var arch = new ZipArchive(ms);
-
-            using var sha256 = SHA256.Create();
-            var dbCheckSum = Convert.ToBase64String(sha256.ComputeHash(arch.Entries.First().Open()));
-
-            return dbCheckSum;
         }
     }
 }

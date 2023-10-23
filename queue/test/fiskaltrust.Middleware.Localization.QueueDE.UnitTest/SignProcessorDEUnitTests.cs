@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.de;
 using fiskaltrust.Middleware.Contracts.Models;
+using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProcessorDETests.Helpers;
 using fiskaltrust.Middleware.Localization.QueueDE.MasterData;
 using fiskaltrust.Middleware.Localization.QueueDE.Services;
@@ -114,13 +115,13 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
 
             transactionPayloadFactory.Setup(x => x.CreateReceiptPayload(It.IsAny<ReceiptRequest>())).Returns(("Kassenbeleg-V1", "payload"));
 
-            var journalRepositoryMock = new Mock<IJournalDERepository>(MockBehavior.Strict);
+            var journalRepositoryMock = new Mock<IMiddlewareJournalDERepository>(MockBehavior.Strict);
             var actionJournalRepositoryMock = new Mock<IActionJournalRepository>(MockBehavior.Strict);
             var config = new MiddlewareConfiguration { Configuration = new Dictionary<string, object>() };
             var sut = RequestCommandFactoryHelper.ConstructSignProcessor(loggerMock.Object, configurationRepository.Object, journalRepositoryMock.Object, actionJournalRepositoryMock.Object, 
                 deSSCDProviderMock.Object, transactionPayloadFactory.Object, new InMemoryFailedFinishTransactionRepository(), new InMemoryFailedStartTransactionRepository(), 
                 new InMemoryOpenTransactionRepository(), Mock.Of<IMasterDataService>(), config, new InMemoryQueueItemRepository(), 
-                new SignatureFactoryDE(config));
+                new SignatureFactoryDE(QueueDEConfiguration.FromMiddlewareConfiguration(Mock.Of<ILogger<QueueDEConfiguration>>(), config)));
 
             var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
 
@@ -195,13 +196,13 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
 
             transactionPayloadFactory.Setup(x => x.CreateReceiptPayload(It.IsAny<ReceiptRequest>())).Returns(("Kassenbeleg-V1", "payload"));
 
-            var journalRepositoryMock = new Mock<IJournalDERepository>(MockBehavior.Strict);
+            var journalRepositoryMock = new Mock<IMiddlewareJournalDERepository>(MockBehavior.Strict);
             var actionJournalRepositoryMock = new Mock<IActionJournalRepository>(MockBehavior.Strict);
             var config = new MiddlewareConfiguration { Configuration = new Dictionary<string, object>() };
             var sut = RequestCommandFactoryHelper.ConstructSignProcessor(loggerMock.Object, configurationRepository.Object, journalRepositoryMock.Object, actionJournalRepositoryMock.Object, 
                 deSSCDProviderMock.Object, transactionPayloadFactory.Object, new InMemoryFailedFinishTransactionRepository(), new InMemoryFailedStartTransactionRepository(), 
                 new InMemoryOpenTransactionRepository(), Mock.Of<IMasterDataService>(), config, new InMemoryQueueItemRepository(),
-                new SignatureFactoryDE(config));
+                new SignatureFactoryDE(QueueDEConfiguration.FromMiddlewareConfiguration(Mock.Of<ILogger<QueueDEConfiguration>>(), config)));
 
             var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
 
@@ -297,13 +298,13 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
 
             transactionPayloadFactory.Setup(x => x.CreateReceiptPayload(It.IsAny<ReceiptRequest>())).Returns(("Kassenbeleg-V1", "payload"));
 
-            var journalRepositoryMock = new Mock<IJournalDERepository>(MockBehavior.Strict);
+            var journalRepositoryMock = new Mock<IMiddlewareJournalDERepository>(MockBehavior.Strict);
             var actionJournalRepositoryMock = new Mock<IActionJournalRepository>(MockBehavior.Strict);
             var config = new MiddlewareConfiguration { Configuration = new Dictionary<string, object>() };
             var sut = RequestCommandFactoryHelper.ConstructSignProcessor(loggerMock.Object, configurationRepository.Object, journalRepositoryMock.Object, actionJournalRepositoryMock.Object, 
                 deSSCDProviderMock.Object, transactionPayloadFactory.Object, new InMemoryFailedFinishTransactionRepository(), new InMemoryFailedStartTransactionRepository(), 
                 new InMemoryOpenTransactionRepository(), Mock.Of<IMasterDataService>(), config, new InMemoryQueueItemRepository(),
-                new SignatureFactoryDE(config));
+                new SignatureFactoryDE(QueueDEConfiguration.FromMiddlewareConfiguration(Mock.Of<ILogger<QueueDEConfiguration>>(), config)));
 
             _ = await sut.ProcessAsync(startTransactionRequest, queue, queueItem);
 
@@ -402,13 +403,13 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
             var deSSCDProviderMock = new Mock<IDESSCDProvider>();
             deSSCDProviderMock.SetupGet(x => x.Instance).Returns(desscdClient.Object);
 
-            var journalRepositoryMock = new Mock<IJournalDERepository>(MockBehavior.Strict);
+            var journalRepositoryMock = new Mock<IMiddlewareJournalDERepository>(MockBehavior.Strict);
             var actionJournalRepositoryMock = new Mock<IActionJournalRepository>(MockBehavior.Strict);
             var config = new MiddlewareConfiguration { Configuration = new Dictionary<string, object>() };
             var sut = RequestCommandFactoryHelper.ConstructSignProcessor(loggerMock.Object, configurationRepository.Object, journalRepositoryMock.Object, actionJournalRepositoryMock.Object, 
                 deSSCDProviderMock.Object, transactionPayloadFactory.Object, new InMemoryFailedFinishTransactionRepository(), new InMemoryFailedStartTransactionRepository(), 
                 new InMemoryOpenTransactionRepository(), Mock.Of<IMasterDataService>(), config, new InMemoryQueueItemRepository(),
-                new SignatureFactoryDE(config));
+                new SignatureFactoryDE(QueueDEConfiguration.FromMiddlewareConfiguration(Mock.Of<ILogger<QueueDEConfiguration>>(), config)));
 
             var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
 

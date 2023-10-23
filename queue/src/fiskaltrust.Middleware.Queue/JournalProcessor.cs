@@ -6,13 +6,16 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.Middleware.Contracts;
 using fiskaltrust.Middleware.Contracts.Constants;
+using fiskaltrust.Middleware.Contracts.Interfaces;
+using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueDE;
+using fiskaltrust.Middleware.Queue.Bootstrapper;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using Org.BouncyCastle.Asn1.Ocsp;
 
 namespace fiskaltrust.Middleware.Queue
 {
@@ -25,8 +28,10 @@ namespace fiskaltrust.Middleware.Queue
         private readonly IMiddlewareRepository<ftJournalAT> _journalATRepository;
         private readonly IMiddlewareRepository<ftJournalDE> _journalDERepository;
         private readonly IMiddlewareRepository<ftJournalFR> _journalFRRepository;
-        private readonly JournalProcessorDE _journalDEProcessor;
+        private readonly IMiddlewareRepository<ftJournalME> _journalMERepository;
+        private readonly IMarketSpecificJournalProcessor _marketSpecificJournalProcessor;
         private readonly ILogger<JournalProcessor> _logger;
+        private readonly MiddlewareConfiguration _middlewareConfiguration;
 
         public JournalProcessor(
             IReadOnlyConfigurationRepository configurationRepository,
@@ -36,8 +41,10 @@ namespace fiskaltrust.Middleware.Queue
             IMiddlewareRepository<ftJournalAT> journalATRepository,
             IMiddlewareRepository<ftJournalDE> journalDERepository,
             IMiddlewareRepository<ftJournalFR> journalFRRepository,
-            JournalProcessorDE journalDEProcessor,
-            ILogger<JournalProcessor> logger)
+            IMiddlewareRepository<ftJournalME> journalMERepository,
+            IMarketSpecificJournalProcessor marketSpecificJournalProcessor,
+            ILogger<JournalProcessor> logger,
+            MiddlewareConfiguration middlewareConfiguration)
         {
             _configurationRepository = configurationRepository;
             _queueItemRepository = queueItemRepository;
@@ -46,17 +53,21 @@ namespace fiskaltrust.Middleware.Queue
             _journalATRepository = journalATRepository;
             _journalDERepository = journalDERepository;
             _journalFRRepository = journalFRRepository;
-            _journalDEProcessor = journalDEProcessor;
+            _journalMERepository = journalMERepository;
+            _marketSpecificJournalProcessor = marketSpecificJournalProcessor;
             _logger = logger;
+            _middlewareConfiguration = middlewareConfiguration;
         }
 
         public IAsyncEnumerable<JournalResponse> ProcessAsync(JournalRequest request)
         {
             try
             {
-                if ((0xFFFF000000000000 & (ulong) request.ftJournalType) == 0x4445000000000000)
+                if ((0xFFFF000000000000 & (ulong) request.ftJournalType) != 0)
                 {
-                    return _journalDEProcessor.ProcessAsync(request);
+                    ThrowIfQueueHasIncorrectCountrySet(request.ftJournalType);
+
+                    return _marketSpecificJournalProcessor.ProcessAsync(request);
                 }
 
                 return request.ftJournalType switch
@@ -67,6 +78,7 @@ namespace fiskaltrust.Middleware.Queue
                     (long) JournalTypes.JournalAT => ToJournalResponseAsync(GetEntitiesAsync(_journalATRepository, request), request.MaxChunkSize),
                     (long) JournalTypes.JournalDE => ToJournalResponseAsync(GetEntitiesAsync(_journalDERepository, request), request.MaxChunkSize),
                     (long) JournalTypes.JournalFR => ToJournalResponseAsync(GetEntitiesAsync(_journalFRRepository, request), request.MaxChunkSize),
+                    (long) JournalTypes.JournalME => ToJournalResponseAsync(GetEntitiesAsync(_journalMERepository, request), request.MaxChunkSize),
                     (long) JournalTypes.Configuration => new List<JournalResponse> {
                     new JournalResponse
                     {
@@ -93,6 +105,16 @@ namespace fiskaltrust.Middleware.Queue
             }
         }
 
+        private void ThrowIfQueueHasIncorrectCountrySet(long journalType)
+        {
+            var bytes = BitConverter.GetBytes(0xFFFF000000000000 & (ulong) journalType).Reverse().Take(2).ToArray();
+            var countryCode = Encoding.UTF8.GetString(bytes);
+            if (countryCode != LocalizedQueueBootStrapperFactory.GetQueueLocalization(_middlewareConfiguration.QueueId, _middlewareConfiguration.Configuration))
+            {
+                throw new Exception($"The given journal type 0x'{journalType:x}' cannot be used with the current Queue, as this export type is not supported in this country.");
+            }
+        }
+
         private async Task<object> GetConfiguration()
         {
             return new
@@ -104,9 +126,11 @@ namespace fiskaltrust.Middleware.Queue
                 QueueATList = await _configurationRepository.GetQueueATListAsync().ConfigureAwait(false),
                 QueueDEList = await _configurationRepository.GetQueueDEListAsync().ConfigureAwait(false),
                 QueueFRList = await _configurationRepository.GetQueueFRListAsync().ConfigureAwait(false),
+                QueueMEList = await _configurationRepository.GetQueueMEListAsync().ConfigureAwait(false),
                 SignaturCreationUnitATList = await _configurationRepository.GetSignaturCreationUnitATListAsync().ConfigureAwait(false),
                 SignaturCreationUnitDEList = await _configurationRepository.GetSignaturCreationUnitDEListAsync().ConfigureAwait(false),
-                SignaturCreationUnitFRList = await _configurationRepository.GetSignaturCreationUnitFRListAsync().ConfigureAwait(false)
+                SignaturCreationUnitFRList = await _configurationRepository.GetSignaturCreationUnitFRListAsync().ConfigureAwait(false),
+                SignaturCreationUnitMEList = await _configurationRepository.GetSignaturCreationUnitMEListAsync().ConfigureAwait(false)
             };
         }
 

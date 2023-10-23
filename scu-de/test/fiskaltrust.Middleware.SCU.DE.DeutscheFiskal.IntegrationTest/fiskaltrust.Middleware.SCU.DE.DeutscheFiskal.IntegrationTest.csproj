@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFrameworks>netcoreapp3.0;net461;net6</TargetFrameworks>
+        <TargetFrameworks>net461;net6</TargetFrameworks>
         <IsPackable>false</IsPackable>
     </PropertyGroup>
     
@@ -16,6 +16,15 @@
         </None>
         <None Update="lib\run_fcc.bat">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="testdata\NoXmx\*">
+          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+        <None Update="testdata\replaceXmx1024\*">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+        <None Update="testdata\replaceXmx512\*">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </None>
     </ItemGroup>
 

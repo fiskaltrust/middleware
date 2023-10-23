@@ -8,9 +8,9 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision.Models.Commands
 {
     public static class AdditionalCommands
     {
-        public static TseCommand CreateDeleteDataUpToTseCommand(byte[] serialNumber, long signatureCounter) => new TseCommand(TseCommandCodeEnum.DeleteDataUpTo, 0x0000, new TseByteArrayParameter(serialNumber), new TseByteArrayParameter(signatureCounter.ToByteArray()));
+        public static TseCommand CreateDeleteDataUpToTseCommand(byte[] serialNumber, uint signatureCounter) => new TseCommand(TseCommandCodeEnum.DeleteDataUpTo, 0x0000, new TseByteArrayParameter(serialNumber), new TseByteArrayParameter(signatureCounter.ToByteArray()));
 
-        public static TseCommand CreateExportMoreDataTseCommand(byte[] serialNumber, long previousSignatureCounter, uint maxNumberOfRecords = 0) => new TseCommand(TseCommandCodeEnum.ExportMoreData, 0x0000, new TseByteArrayParameter(serialNumber), new TseByteArrayParameter(previousSignatureCounter.ToByteArray()), new TseByteArrayParameter(maxNumberOfRecords.ToByteArray()));
+        public static TseCommand CreateExportMoreDataTseCommand(byte[] serialNumber, uint previousSignatureCounter, uint maxNumberOfRecords) => new TseCommand(TseCommandCodeEnum.ExportMoreData, 0x0000, new TseByteArrayParameter(serialNumber), new TseByteArrayParameter(previousSignatureCounter.ToByteArray()), new TseByteArrayParameter(maxNumberOfRecords.ToByteArray()));
 
         public static TseCommand CreateExportPublicKeyTseCommand(byte[] serialNumber) => new TseCommand(TseCommandCodeEnum.GetKeyData, 0x0000, new TseShortParameter(0x0002), new TseByteArrayParameter(serialNumber));
 
@@ -39,6 +39,16 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision.Models.Commands
                 throw new CryptoVisionProxyException(SeResult.ErrorParameterMismatch);
             }
             return new TseCommand(TseCommandCodeEnum.InitializePins, 0x0000, new TseByteArrayParameter(adminPuk), new TseByteArrayParameter(adminPin), new TseByteArrayParameter(timeAdminPuk), new TseByteArrayParameter(timeAdminPin));
+        }
+
+        /// <summary>
+        /// This is the overload of the CreateInitializePin command which is used ONLY with V2 hardware
+        /// </summary>
+        public static TseCommand CreateInitializePinsTseCommand(string userId, byte[] userPuk)
+        {
+            return userPuk.Length != 10
+                ? throw new CryptoVisionProxyException(SeResult.ErrorParameterMismatch)
+                : new TseCommand(TseCommandCodeEnum.InitializePins, 0x0000, new TseStringParameter(userId), new TseByteArrayParameter(userPuk));
         }
     }
 }

@@ -8,7 +8,7 @@ using fiskaltrust.Middleware.Storage.AcceptanceTest;
 using fiskaltrust.Middleware.Storage.SQLite.AcceptanceTest.Helpers;
 using fiskaltrust.Middleware.Storage.SQLite.Connection;
 using fiskaltrust.Middleware.Storage.SQLite.DatabaseInitialization;
-using fiskaltrust.Middleware.Storage.SQLite.Repositories.DE.MasterData;
+using fiskaltrust.Middleware.Storage.SQLite.Repositories.MasterData;
 using fiskaltrust.storage.V0.MasterData;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -25,7 +25,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite.AcceptanceTest
 
         public override async Task<IMasterDataRepository<AgencyMasterData>> CreateRepository(IEnumerable<AgencyMasterData> entries)
         {
-            var databasMigrator = new DatabaseMigrator(_sqliteConnectionFactory, _path, new Dictionary<string, object>(), Mock.Of<ILogger<IMiddlewareBootstrapper>>());
+            var databasMigrator = new DatabaseMigrator(_sqliteConnectionFactory, 30 * 60, _path, new Dictionary<string, object>(), Mock.Of<ILogger<IMiddlewareBootstrapper>>());
             await databasMigrator.MigrateAsync();
 
             _repo = new SQLiteAgencyMasterDataRepository(_sqliteConnectionFactory, _path);

@@ -22,7 +22,7 @@ namespace fiskaltrust.Middleware.Storage.MySQL.AcceptanceTest
 
         public override async Task<IJournalFRRepository> CreateRepository(IEnumerable<ftJournalFR> entries)
         {
-            var databasMigrator = new DatabaseMigrator(MySQLConnectionStringFixture.ServerConnectionString, MySQLConnectionStringFixture.QueueId, Mock.Of<ILogger<IMiddlewareBootstrapper>>());
+            var databasMigrator = new DatabaseMigrator(MySQLConnectionStringFixture.ServerConnectionString, 30 * 60, MySQLConnectionStringFixture.QueueId, Mock.Of<ILogger<IMiddlewareBootstrapper>>());
             await databasMigrator.MigrateAsync();
 
             _repo = new MySQLJournalFRRepository(MySQLConnectionStringFixture.DatabaseConnectionString);
@@ -34,7 +34,7 @@ namespace fiskaltrust.Middleware.Storage.MySQL.AcceptanceTest
         //Clear Database before each test
         public override void DisposeDatabase()
         {
-            using (var mySqlConnetion = new MySqlConnection(MySQLConnectionStringFixture.ServerConnectionString))
+            using (var mySqlConnetion = new MySqlConnection(MySQLConnectionStringFixture.DatabaseConnectionString))
             {
                 mySqlConnetion.Open();
                 using (var command = new MySqlCommand($@"DELETE FROM {TableNames.FtJournalFR}", mySqlConnetion))

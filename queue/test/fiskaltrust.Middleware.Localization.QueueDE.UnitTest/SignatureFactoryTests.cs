@@ -31,7 +31,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
             };
 
 
-            var sut = new SignatureFactoryDE(new MiddlewareConfiguration { Configuration = new Dictionary<string, object>() });
+            var sut = new SignatureFactoryDE(new QueueDEConfiguration { });
 
             var signature = sut.GetSignaturForStartTransaction(startTransactionResponse);
 
@@ -63,7 +63,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
                 TransactionNumber = 2425
             };
 
-            var sut = new SignatureFactoryDE(new MiddlewareConfiguration { Configuration = new Dictionary<string, object>() });
+            var sut = new SignatureFactoryDE(new QueueDEConfiguration { });
 
             var signatures = sut.GetSignaturesForFinishTransaction(finishResultResponse);
             signatures.Should().HaveCount(3);
@@ -120,10 +120,10 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
                 TransactionNumber = 18
             };
 
-            var sut = new SignatureFactoryDE(new MiddlewareConfiguration { Configuration = new Dictionary<string, object>() });
+            var sut = new SignatureFactoryDE(new QueueDEConfiguration { });
 
             var signatures = sut.GetSignaturesForPosReceiptTransaction(startTransactionResponse.SignatureData.SignatureBase64, finishResultResponse, certificationIdentification);
-            signatures.Should().HaveCount(17);
+            signatures.Should().HaveCount(18);
 
             signatures[0].ftSignatureType.Should().Be(0x4445_0000_0000_0001);
             signatures[0].ftSignatureFormat.Should().Be(0x03);
@@ -150,65 +150,70 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
             signatures[4].Caption.Should().Be("<certification-id>");
             signatures[4].Data.Should().Be(certificationIdentification);
 
-            signatures[5].ftSignatureType.Should().Be(0x4445_0000_0000_0013);
+            signatures[5].ftSignatureType.Should().Be(0x4445_0000_0000_0023);
             signatures[5].ftSignatureFormat.Should().Be(0x01 | 0x10000);
-            signatures[5].Caption.Should().Be("<qr-code-version>");
-            signatures[5].Data.Should().Be("V0");
+            signatures[5].Caption.Should().Be("<tse-seriennummer>");
+            signatures[5].Data.Should().Be(finishResultResponse.TseSerialNumberOctet);
 
-            signatures[6].ftSignatureType.Should().Be(0x4445_0000_0000_0014);
+            signatures[6].ftSignatureType.Should().Be(0x4445_0000_0000_0013);
             signatures[6].ftSignatureFormat.Should().Be(0x01 | 0x10000);
-            signatures[6].Caption.Should().Be("<kassen-seriennummer>");
-            signatures[6].Data.Should().Be("955002-00");
+            signatures[6].Caption.Should().Be("<qr-code-version>");
+            signatures[6].Data.Should().Be("V0");
 
-            signatures[7].ftSignatureType.Should().Be(0x4445_0000_0000_0015);
+            signatures[7].ftSignatureType.Should().Be(0x4445_0000_0000_0014);
             signatures[7].ftSignatureFormat.Should().Be(0x01 | 0x10000);
-            signatures[7].Caption.Should().Be("<processType>");
-            signatures[7].Data.Should().Be("Kassenbeleg-V1");
+            signatures[7].Caption.Should().Be("<kassen-seriennummer>");
+            signatures[7].Data.Should().Be("955002-00");
 
-            signatures[8].ftSignatureType.Should().Be(0x4445_0000_0000_0016);
+            signatures[8].ftSignatureType.Should().Be(0x4445_0000_0000_0015);
             signatures[8].ftSignatureFormat.Should().Be(0x01 | 0x10000);
-            signatures[8].Caption.Should().Be("<processData>");
-            signatures[8].Data.Should().Be("Beleg^0.00_2.55_0.00_0.00_0.00^2.55:Bar");
+            signatures[8].Caption.Should().Be("<processType>");
+            signatures[8].Data.Should().Be("Kassenbeleg-V1");
 
-            signatures[9].ftSignatureType.Should().Be(0x4445_0000_0000_0017);
+            signatures[9].ftSignatureType.Should().Be(0x4445_0000_0000_0016);
             signatures[9].ftSignatureFormat.Should().Be(0x01 | 0x10000);
-            signatures[9].Caption.Should().Be("<transaktions-nummer>");
-            signatures[9].Data.Should().Be("18");
+            signatures[9].Caption.Should().Be("<processData>");
+            signatures[9].Data.Should().Be("Beleg^0.00_2.55_0.00_0.00_0.00^2.55:Bar");
 
-            signatures[10].ftSignatureType.Should().Be(0x4445_0000_0000_0018);
+            signatures[10].ftSignatureType.Should().Be(0x4445_0000_0000_0017);
             signatures[10].ftSignatureFormat.Should().Be(0x01 | 0x10000);
-            signatures[10].Caption.Should().Be("<signatur-zaehler>");
-            signatures[10].Data.Should().Be("112");
+            signatures[10].Caption.Should().Be("<transaktions-nummer>");
+            signatures[10].Data.Should().Be("18");
 
-            signatures[11].ftSignatureType.Should().Be(0x4445_0000_0000_0019);
+            signatures[11].ftSignatureType.Should().Be(0x4445_0000_0000_0018);
             signatures[11].ftSignatureFormat.Should().Be(0x01 | 0x10000);
-            signatures[11].Caption.Should().Be("<start-zeit>");
-            signatures[11].Data.Should().Be("2019-07-10T18:41:02.000Z");
+            signatures[11].Caption.Should().Be("<signatur-zaehler>");
+            signatures[11].Data.Should().Be("112");
 
-            signatures[12].ftSignatureType.Should().Be(0x4445_0000_0000_001A);
+            signatures[12].ftSignatureType.Should().Be(0x4445_0000_0000_0019);
             signatures[12].ftSignatureFormat.Should().Be(0x01 | 0x10000);
-            signatures[12].Caption.Should().Be("<log-time>");
-            signatures[12].Data.Should().Be("2019-07-10T18:41:04.000Z");
+            signatures[12].Caption.Should().Be("<start-zeit>");
+            signatures[12].Data.Should().Be("2019-07-10T18:41:02.000Z");
 
-            signatures[13].ftSignatureType.Should().Be(0x4445_0000_0000_001B);
+            signatures[13].ftSignatureType.Should().Be(0x4445_0000_0000_001A);
             signatures[13].ftSignatureFormat.Should().Be(0x01 | 0x10000);
-            signatures[13].Caption.Should().Be("<sig-alg>");
-            signatures[13].Data.Should().Be("ecdsa-plain-SHA256");
+            signatures[13].Caption.Should().Be("<log-time>");
+            signatures[13].Data.Should().Be("2019-07-10T18:41:04.000Z");
 
-            signatures[14].ftSignatureType.Should().Be(0x4445_0000_0000_001C);
+            signatures[14].ftSignatureType.Should().Be(0x4445_0000_0000_001B);
             signatures[14].ftSignatureFormat.Should().Be(0x01 | 0x10000);
-            signatures[14].Caption.Should().Be("<log-time-format>");
-            signatures[14].Data.Should().Be("unixTime");
+            signatures[14].Caption.Should().Be("<sig-alg>");
+            signatures[14].Data.Should().Be("ecdsa-plain-SHA256");
 
-            signatures[15].ftSignatureType.Should().Be(0x4445_0000_0000_001D);
+            signatures[15].ftSignatureType.Should().Be(0x4445_0000_0000_001C);
             signatures[15].ftSignatureFormat.Should().Be(0x01 | 0x10000);
-            signatures[15].Caption.Should().Be("<signatur>");
-            signatures[15].Data.Should().Be("MEQCIAy4P9k+7x9saDO0uRZ4El8QwN+qTgYiv1DIaJIMWRiuAiAt+saFDGjK2Yi5Cxgy7PprXQ5O0seRgx4ltdpW9REvwA==");
+            signatures[15].Caption.Should().Be("<log-time-format>");
+            signatures[15].Data.Should().Be("unixTime");
 
-            signatures[16].ftSignatureType.Should().Be(0x4445_0000_0000_001E);
+            signatures[16].ftSignatureType.Should().Be(0x4445_0000_0000_001D);
             signatures[16].ftSignatureFormat.Should().Be(0x01 | 0x10000);
-            signatures[16].Caption.Should().Be("<public-key>");
-            signatures[16].Data.Should().Be("BHhWOeisRpPBTGQ1W4VUH95TXx2GARf8e2NYZXJoInjtGqnxJ8sZ3CQpYgjI+LYEmW5A37sLWHsyU7nSJUBemyU=");
+            signatures[16].Caption.Should().Be("<signatur>");
+            signatures[16].Data.Should().Be("MEQCIAy4P9k+7x9saDO0uRZ4El8QwN+qTgYiv1DIaJIMWRiuAiAt+saFDGjK2Yi5Cxgy7PprXQ5O0seRgx4ltdpW9REvwA==");
+
+            signatures[17].ftSignatureType.Should().Be(0x4445_0000_0000_001E);
+            signatures[17].ftSignatureFormat.Should().Be(0x01 | 0x10000);
+            signatures[17].Caption.Should().Be("<public-key>");
+            signatures[17].Data.Should().Be("BHhWOeisRpPBTGQ1W4VUH95TXx2GARf8e2NYZXJoInjtGqnxJ8sZ3CQpYgjI+LYEmW5A37sLWHsyU7nSJUBemyU=");
         }
 
         [Fact]
@@ -216,7 +221,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
         {
             var mandatoryCaptions = new[] { "<certification-id>", "www.fiskaltrust.de", "<vorgangsbeginn>" };
 
-            var sut = new SignatureFactoryDE(new MiddlewareConfiguration { Configuration = new Dictionary<string, object>() });
+            var sut = new SignatureFactoryDE(new QueueDEConfiguration { });
             var result = sut.GetSignaturesForTransaction("DoesntMatter", new FinishTransactionResponse { SignatureData = new TseSignatureData(), ProcessDataBase64 = "QQ==" }, "DoesntMatter");
 
             var mandatoryItems = result.Where(x => mandatoryCaptions.Contains(x.Caption));
@@ -231,12 +236,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
         {
             var mandatoryCaptions = new[] { "<certification-id>", "www.fiskaltrust.de", "<vorgangsbeginn>" };
 
-            var sut = new SignatureFactoryDE(new MiddlewareConfiguration
-            {
-                Configuration = new Dictionary<string, object>
-                {
-                    { "FlagOptionalSignatures", false }
-                }
+            var sut = new SignatureFactoryDE(new QueueDEConfiguration {
+                FlagOptionalSignatures = false
             });
             var result = sut.GetSignaturesForTransaction("DoesntMatter", new FinishTransactionResponse { SignatureData = new TseSignatureData(), ProcessDataBase64 = "QQ==" }, "DoesntMatter");
 

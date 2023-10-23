@@ -40,5 +40,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
             // TODO: Extract currency from PayItemCaseData
             return "???";
         }
+
+        public static decimal InverseAmountIfNotVoidReceipt(this PayItem payItem, bool isVoidReceipt) => isVoidReceipt ? payItem.Amount : payItem.Amount * -1;
     }
 }

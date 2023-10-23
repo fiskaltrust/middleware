@@ -1,7 +1,6 @@
 {
-  "version": "1.3.25",
+  "version": "1.3.48",
   "releaseBranches": [
-    "^refs/heads/main$",
     "^refs/tags/scu-de/swissbit-android/v\\d+(?:\\.\\d+)*(?:-.*)?$"
   ]
 }

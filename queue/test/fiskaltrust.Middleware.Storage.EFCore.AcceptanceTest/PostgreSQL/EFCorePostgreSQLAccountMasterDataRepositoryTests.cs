@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Storage.AcceptanceTest;
 using fiskaltrust.Middleware.Storage.EFCore.AcceptanceTest.PostgreSQL.Fixtures;
-using fiskaltrust.Middleware.Storage.EFCore.Repositories.DE.MasterData;
+using fiskaltrust.Middleware.Storage.EFCore.Repositories.MasterData;
 using fiskaltrust.storage.V0.MasterData;
 using Xunit;
 

@@ -15,7 +15,7 @@ using fiskaltrust.Middleware.Queue;
 using fiskaltrust.Middleware.Queue.Helpers;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories.DE;
-using fiskaltrust.Middleware.Storage.InMemory.Repositories.DE.MasterData;
+using fiskaltrust.Middleware.Storage.InMemory.Repositories.MasterData;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 using Microsoft.Extensions.Logging;
@@ -106,11 +106,14 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             bool masterdataUpdate = false, bool openTrans = false, bool sourceIsScuSwitch = false, bool targetIsScuSwitch = false, bool queueDECreationUnitIsNull = false)
         {
             InMemorySCU.OpenTans = openTrans;
-            var journalRepositoryMock = new Mock<IJournalDERepository>(MockBehavior.Strict);
+            var journalRepositoryMock = new Mock<IMiddlewareJournalDERepository>(MockBehavior.Strict);
             var configuration = configs ?? new Dictionary<string, object>();
-            var config = new MiddlewareConfiguration { Configuration = configuration };
-            config.CashBoxId = CASHBOXID;
-            config.QueueId = QUEUEID;
+            var config = new MiddlewareConfiguration
+            {
+                Configuration = configuration,
+                CashBoxId = CASHBOXID,
+                QueueId = QUEUEID
+            };
 
             IMasterDataService masterDataService;
             if (masterdataUpdate)
@@ -126,12 +129,14 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             var signProcessorDE = RequestCommandFactoryHelper.ConstructSignProcessor(Mock.Of<ILogger<SignProcessorDE>>(), configurationRepository, journalRepositoryMock.Object,
                 actionJournalRepository, DeSSCDProvider, new DSFinVKTransactionPayloadFactory(), failedFinishTransactionRepository,
                 failedStartTransactionRepository, openTransactionRepository, masterDataService, config,
-                queueItemRepository, new SignatureFactoryDE(config));
+                queueItemRepository, new SignatureFactoryDE(QueueDEConfiguration.FromMiddlewareConfiguration(Mock.Of<ILogger<QueueDEConfiguration>>(), config)));
             var signProcessor = new SignProcessor(Mock.Of<ILogger<SignProcessor>>(), configurationRepository, queueItemRepository, receiptJournalRepository,
                 actionJournalRepository, new CryptoHelper(), signProcessorDE, config);
             return signProcessor;
         }
         public async Task AddOpenOrders(string receiptReference, int transnr) => await openTransactionRepository.InsertAsync(new OpenTransaction { cbReceiptReference = receiptReference, StartMoment = DateTime.UtcNow.AddHours(-12), StartTransactionSignatureBase64 = "somebase64==", TransactionNumber = transnr });
+
+        public async Task AddFailedStartTransaction(string receiptReference) => await failedStartTransactionRepository.InsertOrUpdateTransactionAsync(new FailedStartTransaction { cbReceiptReference = receiptReference, StartMoment = DateTime.UtcNow.AddHours(-12), CashBoxIdentification = CASHBOXIDENTIFICATION.ToString(), ftQueueItemId = Guid.NewGuid() });
 
         public InitiateSCUSwitch GetInitiateSCUSwitch() => new InitiateSCUSwitch() { SourceSCUId = _signaturCreationUnitDEId, TargetSCUId = _signaturCreationUnitDETargetId };
 

@@ -1,4 +1,5 @@
 ﻿using AutoFixture;
+using Castle.DynamicProxy.Generators.Emitters.SimpleAST;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0;
@@ -9,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
+
 
 namespace fiskaltrust.Middleware.Storage.AcceptanceTest
 {
@@ -88,7 +90,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             var expectedEntries = StorageTestFixtureProvider.GetFixture().CreateMany<ftQueueItem>(10).OrderBy(x => x.TimeStamp).ToList();
 
             var sutIterate = await CreateRepository(expectedEntries);
-            var sutInsert = await CreateRepository(expectedEntries);
+            var sutInsert = await CreateRepository(Array.Empty<ftQueueItem>());
 
             await foreach (var entry in ((IMiddlewareRepository<ftQueueItem>) sutIterate).GetEntriesOnOrAfterTimeStampAsync(0, 2))
             {
@@ -240,50 +242,198 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
         }
 
         [Fact]
-        public async Task GetPreviousReceiptReferencesAsync_TerminalIDEmpty_ShouldReturnExpectedQueueItems()
+        public async Task GetGroupedReceiptReference_NoTimespan_QueryValidGroupAndItems()
         {
-            var expectedEntries = StorageTestFixtureProvider.GetFixture().CreateMany<ftQueueItem>(10).OrderBy(x => x.ftQueueRow).ToList();
-            var expectedReceiptReference = Guid.NewGuid().ToString();
+            var noReference = StorageTestFixtureProvider.GetFixture().CreateMany<ftQueueItem>(1).ToList();
+            var receiptReference = "reference9";
+            var queueItemFixture = StorageTestFixtureProvider.GetFixture();
+            queueItemFixture.Customize<ftQueueItem>(c => c.With(r => r.cbReceiptReference, receiptReference));
+            var expectedEntries = queueItemFixture.CreateMany<ftQueueItem>(10).OrderBy(x => x.ftQueueRow).ToList();
+            expectedEntries.Add(noReference.First());
 
-            var receiptRequest = new ReceiptRequest()
+            var receiptFixture = StorageTestFixtureProvider.GetFixture();
+            receiptFixture.Customize<ReceiptRequest>(c => c.With(r => r.ftReceiptCase, 4919338172267102209));
+
+            var receiptPreviousFixture = StorageTestFixtureProvider.GetFixture();
+            receiptPreviousFixture.Customize<ReceiptRequest>(c => c.With(r => r.ftReceiptCase, 4919338172267102209).With(r => r.cbPreviousReceiptReference, receiptReference));
+
+            for (var i = 0; i < expectedEntries.Count; i++)
             {
-                cbPreviousReceiptReference = expectedReceiptReference
-            };
-
-            var receiptRequestJson = JsonConvert.SerializeObject(receiptRequest);
-
-            expectedEntries[9].request = receiptRequestJson;
-            expectedEntries[9].cbTerminalID = string.Empty;
-            expectedEntries[0].cbReceiptReference = expectedReceiptReference;
-            expectedEntries[1].cbReceiptReference = expectedReceiptReference;
-            expectedEntries[2].cbReceiptReference = expectedReceiptReference;
-
+                if (i < 4)
+                {
+                    expectedEntries[i].request = JsonConvert.SerializeObject(receiptPreviousFixture.Create<ReceiptRequest>());
+                }
+                else
+                {
+                    expectedEntries[i].request = JsonConvert.SerializeObject(receiptFixture.Create<ReceiptRequest>());
+                }
+                
+            }
             var sut = await CreateRepository(expectedEntries);
-            var allEntries = (await sut.GetAsync()).OrderBy(x => x.ftQueueRow).ToList();
 
-            var entries = await sut.GetPreviousReceiptReferencesAsync(expectedEntries[9]).OrderBy(x => x.ftQueueRow).ToListAsync();
+            var groupedReferences = await sut.GetGroupedReceiptReferenceAsync(null, null).ToListAsync();
+            groupedReferences.Count().Should().Be(2);
+            groupedReferences.Contains(noReference[0].cbReceiptReference).Should().BeTrue();
+            groupedReferences.Contains(receiptReference).Should().BeTrue();
 
-            entries.Should().BeEquivalentTo(allEntries.Take(3));
         }
 
         [Fact]
-        public async Task GetPreviousReceiptReferencesAsync_PreviousReceiptReferenceEmpty_ShouldReturnNoQueueItems()
+        public async Task GetGroupedReceiptReference_FromTimespan_QueryValidGroupAndItems()
         {
-            var expectedEntries = StorageTestFixtureProvider.GetFixture().CreateMany<ftQueueItem>(10).OrderBy(x => x.ftQueueRow).ToList();
-            var expectedReceiptReference = Guid.NewGuid().ToString();
 
-            var receiptRequest = new ReceiptRequest()
-            {
-                cbPreviousReceiptReference = string.Empty
-            };
+            var receiptFixture = StorageTestFixtureProvider.GetFixture();
+            receiptFixture.Customize<ReceiptRequest>(c => c.With(r => r.ftReceiptCase, 4919338172267102209));
 
-            var receiptRequestJson = JsonConvert.SerializeObject(receiptRequest);
-            expectedEntries[9].request = receiptRequestJson;
-
+            var queueItemFixture = StorageTestFixtureProvider.GetFixture();
+            queueItemFixture.Customize<ftQueueItem>(c => c.With(r => r.TimeStamp, DateTime.UtcNow.Ticks).With(r => r.request, JsonConvert.SerializeObject(receiptFixture.Create<ReceiptRequest>())));
+            var expectedEntries = queueItemFixture.CreateMany<ftQueueItem>(2).ToList();
             var sut = await CreateRepository(expectedEntries);
-            var allEntries = (await sut.GetAsync()).OrderBy(x => x.TimeStamp).ToList();
-            var entries = await sut.GetPreviousReceiptReferencesAsync(expectedEntries[9]).ToListAsync();
-            entries.Count.Should().Be(0);
+
+            await Task.Delay(1);
+            var fromIncl = DateTime.UtcNow.Ticks;
+            var queueItem = queueItemFixture.Create<ftQueueItem>();
+            await sut.InsertOrUpdateAsync(queueItem);
+            var groupedReferences = await sut.GetGroupedReceiptReferenceAsync(fromIncl, null).ToListAsync();
+            groupedReferences.Count().Should().Be(1);
+        }
+
+        [Fact]
+        public async Task GetGroupedReceiptReference_ToTimespan_QueryValidGroupAndItems()
+        {
+            var receiptFixture = StorageTestFixtureProvider.GetFixture();
+            receiptFixture.Customize<ReceiptRequest>(c => c.With(r => r.ftReceiptCase, 4919338172267102209));
+
+            var queueItemFixture = StorageTestFixtureProvider.GetFixture();
+            queueItemFixture.Customize<ftQueueItem>(c => c.With(r => r.TimeStamp, DateTime.UtcNow.Ticks).With(r => r.request, JsonConvert.SerializeObject(receiptFixture.Create<ReceiptRequest>())));
+            var expectedEntries = queueItemFixture.CreateMany<ftQueueItem>(2).ToList();
+            var sut = await CreateRepository(expectedEntries);
+            var toIncl = DateTime.UtcNow.Ticks;
+            await Task.Delay(1);
+            var queueItem = queueItemFixture.Create<ftQueueItem>();
+            await sut.InsertOrUpdateAsync(queueItem);
+            var groupedReferences = await sut.GetGroupedReceiptReferenceAsync(null, toIncl).ToListAsync();
+            groupedReferences.Count().Should().Be(2);
+        }
+
+        [Fact]
+        public async Task GetGroupedReceiptReference_ToAndFromTimespan_QueryValidGroupAndItems()
+        {
+            var receiptFixture = StorageTestFixtureProvider.GetFixture();
+            receiptFixture.Customize<ReceiptRequest>(c => c.With(r => r.ftReceiptCase, 4919338172267102209));
+
+            var queueItemFixture = StorageTestFixtureProvider.GetFixture();
+            queueItemFixture.Customize<ftQueueItem>(c => c.With(r => r.TimeStamp, DateTime.UtcNow.Ticks).With(r => r.request, JsonConvert.SerializeObject(receiptFixture.Create<ReceiptRequest>())));
+            
+            var expectedEntries = queueItemFixture.CreateMany<ftQueueItem>(2).ToList();
+            var sut = await CreateRepository(expectedEntries);
+            await Task.Delay(1);
+            var fromIncl = DateTime.UtcNow.Ticks;
+            await Task.Delay(1);
+            var queueItem = queueItemFixture.Create<ftQueueItem>();
+            queueItem.cbReceiptReference = "reference9fromTo";
+            await sut.InsertOrUpdateAsync(queueItem);
+            await Task.Delay(1);
+            var toIncl = DateTime.UtcNow.Ticks;
+            await Task.Delay(1);
+            queueItem = queueItemFixture.Create<ftQueueItem>();
+            await sut.InsertOrUpdateAsync(queueItem);
+
+            var groupedReferences = await sut.GetGroupedReceiptReferenceAsync(fromIncl, toIncl).ToListAsync();
+            groupedReferences.Count().Should().Be(1);
+        }
+
+
+        [Fact]
+        public async Task GetQueueItemsForReceiptReferenceAsync_PosAndNonePosReceipts_ValidQueueItems()
+        {
+            var receiptReference = "receiptReference9";
+
+            var receiptFixture = StorageTestFixtureProvider.GetFixture();
+            receiptFixture.Customize<ReceiptRequest>(c => c.With(r => r.ftReceiptCase, 4919338172267102209));
+
+            var queueItemFixture = StorageTestFixtureProvider.GetFixture();
+            queueItemFixture.Customize<ftQueueItem>(c => c.With(r => r.TimeStamp, DateTime.UtcNow.Ticks).
+            With(r => r.request, JsonConvert.SerializeObject(receiptFixture.Create<ReceiptRequest>())).
+            With(r => r.cbReceiptReference, receiptReference));
+
+            var receiptFixtureClosing = StorageTestFixtureProvider.GetFixture();
+            receiptFixtureClosing.Customize<ReceiptRequest>(c => c.With(r => r.ftReceiptCase, 4919338172401319943));
+
+            var queueItemFixtureClosing = StorageTestFixtureProvider.GetFixture();
+            queueItemFixtureClosing.Customize<ftQueueItem>(c => c.With(r => r.TimeStamp, DateTime.UtcNow.Ticks).
+            With(r => r.request, JsonConvert.SerializeObject(receiptFixtureClosing.Create<ReceiptRequest>())).
+            With(r => r.cbReceiptReference, receiptReference));
+
+            var expectedEntriesPos = queueItemFixture.CreateMany<ftQueueItem>(2).ToList();
+            expectedEntriesPos.Add(queueItemFixtureClosing.Create<ftQueueItem>());
+            var difReceiptRef = queueItemFixture.Create<ftQueueItem>();
+            difReceiptRef.cbReceiptReference = "NotIncluded";
+            expectedEntriesPos.Add(difReceiptRef);
+
+            var sut = await CreateRepository(expectedEntriesPos);
+
+            var receiptReferences = await sut.GetQueueItemsForReceiptReferenceAsync(receiptReference).ToListAsync();
+            receiptReferences.Count().Should().Be(2);
+            foreach(var receipt in receiptReferences)
+            {
+                receipt.cbReceiptReference.Should().Be(receiptReference);
+                JsonConvert.DeserializeObject<ReceiptRequest>(receipt.request).ftReceiptCase.Should().Be(4919338172267102209);
+            }
+        }
+
+        [Fact]
+        public async Task GetClosestPreviousReceiptReferencesAsync_PosAndNonePosReceipts_ValidQueueItems()
+        {
+            var receiptReference = "receiptReference9";
+
+            var receiptFixtureClosing = StorageTestFixtureProvider.GetFixture();
+            receiptFixtureClosing.Customize<ReceiptRequest>(c => c.With(r => r.ftReceiptCase, 4919338172401319943));
+
+            var queueItemFixtureClosing = StorageTestFixtureProvider.GetFixture();
+            queueItemFixtureClosing.Customize<ftQueueItem>(c => c.With(r => r.TimeStamp, DateTime.UtcNow.Ticks).
+            With(r => r.request, JsonConvert.SerializeObject(receiptFixtureClosing.Create<ReceiptRequest>())).
+            With(r => r.cbReceiptReference, receiptReference));
+
+            var expectedEntries = queueItemFixtureClosing.CreateMany<ftQueueItem>(2).ToList();
+            var sut = await CreateRepository(expectedEntries);
+            await Task.Delay(1);
+
+            var receiptFixture = StorageTestFixtureProvider.GetFixture();
+            receiptFixture.Customize<ReceiptRequest>(c => c.With(r => r.ftReceiptCase, 4919338172267102209));
+
+            var queueItemFixture = StorageTestFixtureProvider.GetFixture();
+            queueItemFixture.Customize<ftQueueItem>(c => c.With(r => r.TimeStamp, DateTime.UtcNow.Ticks).
+            With(r => r.request, JsonConvert.SerializeObject(receiptFixture.Create<ReceiptRequest>())).
+            With(r => r.cbReceiptReference, receiptReference));
+
+            var queueRow = 0;
+            var firstPos = queueItemFixture.Create<ftQueueItem>();
+            firstPos.ftQueueRow = queueRow;
+            await sut.InsertOrUpdateAsync(firstPos);
+
+            var prevReceiptFixture = StorageTestFixtureProvider.GetFixture();
+            prevReceiptFixture.Customize<ReceiptRequest>(c => c.With(r => r.ftReceiptCase, 4919338172267102209).
+            With(r => r.cbPreviousReceiptReference, receiptReference));
+
+            await Task.Delay(1);
+            var secondPos = queueItemFixture.Create<ftQueueItem>();
+            secondPos.ftQueueRow = queueRow++;
+            secondPos.cbReceiptReference = firstPos.cbReceiptReference;
+            secondPos.request = JsonConvert.SerializeObject(receiptFixture.Create<ReceiptRequest>());
+            await sut.InsertOrUpdateAsync(secondPos);
+
+            await Task.Delay(1);
+            var prevRefPos = queueItemFixture.Create<ftQueueItem>();
+            prevRefPos.ftQueueRow = queueRow++;
+            prevRefPos.cbReceiptReference = "ReceiptReference" + Guid.NewGuid().ToString();
+            prevRefPos.request = JsonConvert.SerializeObject(prevReceiptFixture.Create<ReceiptRequest>());
+            await sut.InsertOrUpdateAsync(prevRefPos);
+
+            var closestQueriedPos = await sut.GetClosestPreviousReceiptReferencesAsync(prevRefPos);
+
+            closestQueriedPos.ftQueueItemId.Should().Be(secondPos.ftQueueItemId);
+
         }
     }
 }

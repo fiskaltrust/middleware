@@ -6,8 +6,6 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Constants
     {
         public const int DefaultPort = 20001;
 
-        public const int DefaultProcessTimeoutMs = 5 * 1000 * 60;
-
         public static class TransactionType
         {
             public const string StartTransaction = "StartTransaction";

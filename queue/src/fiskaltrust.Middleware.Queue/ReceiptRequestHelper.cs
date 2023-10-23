@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using fiskaltrust.ifPOS.v1;
 
 namespace fiskaltrust.Middleware.Queue
@@ -23,8 +24,8 @@ namespace fiskaltrust.Middleware.Queue
                 ftQueueID = data.ftQueueID,
                 ftReceiptCase = data.ftReceiptCase,
                 ftReceiptCaseData = data.ftReceiptCaseData,
-                cbChargeItems = data.cbChargeItems.Select(ConvertToV1).ToArray(),
-                cbPayItems = data.cbPayItems.Select(ConvertToV1).ToArray(),
+                cbChargeItems = data.cbChargeItems?.Select(ConvertToV1).ToArray() ?? Array.Empty<ChargeItem>(),
+                cbPayItems = data.cbPayItems?.Select(ConvertToV1).ToArray() ?? Array.Empty<PayItem>(),
             };
         }
 
@@ -177,6 +178,8 @@ namespace fiskaltrust.Middleware.Queue
             {
                 0x4445000000000000 => "DE",
                 0x4652000000000000 => "FR",
+                0x4D45000000000000 => "ME",
+                0x4954000000000000 => "IT",
                 _ => "AT",
             };
         }

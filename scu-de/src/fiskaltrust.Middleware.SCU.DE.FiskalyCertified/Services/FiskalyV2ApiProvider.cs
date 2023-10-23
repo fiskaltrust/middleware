@@ -9,6 +9,7 @@ using fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Exceptions;
 using fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Models;
 using Newtonsoft.Json;
 using fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers;
+using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
 {
@@ -17,13 +18,13 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
         private const int EXPORT_TIMEOUT_MS = 18000 * 1000;
 
         private readonly FiskalySCUConfiguration _configuration;
-        private readonly HttpClient _httpClient;
+        private readonly HttpClientWrapper _httpClient;
         private readonly JsonSerializerSettings _serializerSettings;
 
-        public FiskalyV2ApiProvider(FiskalySCUConfiguration configuration)
+        public FiskalyV2ApiProvider(FiskalySCUConfiguration configuration, HttpClientWrapper httpClientWrapper)
         {
             _configuration = configuration;
-            _httpClient = GetOAuthHttpClient(configuration);
+            _httpClient = httpClientWrapper;
             _serializerSettings = new JsonSerializerSettings
             {
                 DefaultValueHandling = DefaultValueHandling.Ignore
@@ -141,12 +142,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
                 {"end_transaction_number", toTransactionNumber.ToString() }
             };
             var jsonPayload = JsonConvert.SerializeObject(metadata, new JsonSerializerSettings { DefaultValueHandling = DefaultValueHandling.Ignore });
-            var request = new HttpRequestMessage(new HttpMethod("PATCH"), $"tss/{tssId}/export/{exportId}/metadata")
-            {
-                Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json")
-            };
-
-            var response = await _httpClient.SendAsync(request);
+            var response = await _httpClient.SendAsync(new HttpMethod("PATCH"), $"tss/{tssId}/export/{exportId}/metadata",jsonPayload);
             if (!response.IsSuccessStatusCode)
             {
                 var responseContent = await response.Content.ReadAsStringAsync();
@@ -251,12 +247,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
             return await RunAsAdminAsync(tssId, async () =>
             {
                 var jsonPayload = JsonConvert.SerializeObject(tseState, _serializerSettings);
-
-                var request = new HttpRequestMessage(new HttpMethod("PATCH"), $"tss/{tssId}")
-                {
-                    Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json")
-                };
-                var response = await _httpClient.SendAsync(request);
+                var response = await _httpClient.SendAsync(new HttpMethod("PATCH"), $"tss/{tssId}", jsonPayload);
                 var responseContent = await response.Content.ReadAsStringAsync();
                 if (response.IsSuccessStatusCode)
                 {
@@ -304,13 +295,8 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
             {
                 var clientRequest = new { state = "DEREGISTERED" };
                 var jsonPayload = JsonConvert.SerializeObject(clientRequest, _serializerSettings);
+                var response = await _httpClient.SendAsync(new HttpMethod("PATCH"), $"tss/{tssId}/client/{clientId}", jsonPayload);
 
-                var request = new HttpRequestMessage(new HttpMethod("PATCH"), $"tss/{tssId}/client/{clientId}")
-                {
-                    Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json")
-                };
-
-                var response = await _httpClient.SendAsync(request);
                 if (!response.IsSuccessStatusCode)
                 {
                     var responseContent = await response.Content.ReadAsStringAsync();
@@ -336,12 +322,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
         public async Task PatchTseMetadataAsync(Guid tssId, Dictionary<string, object> metadata)
         {
             var jsonPayload = JsonConvert.SerializeObject(metadata, _serializerSettings);
-            var request = new HttpRequestMessage(new HttpMethod("PATCH"), $"tss/{tssId}/metadata")
-            {
-                Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json")
-            };
-
-            var response = await _httpClient.SendAsync(request);
+            var response = await _httpClient.SendAsync(new HttpMethod("PATCH"), $"tss/{tssId}/metadata", jsonPayload);
             if (!response.IsSuccessStatusCode)
             {
                 var responseContent = await response.Content.ReadAsStringAsync();
@@ -373,16 +354,6 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
                 throw new FiskalyException($"Communication error ({response.StatusCode}) while performing admin logout (POST tss/{tssId}/admin/logout). Response: {responseContent}",
                     (int) response.StatusCode, $"POST tss/{tssId}/admin/logout");
             }
-        }
-
-        private HttpClient GetOAuthHttpClient(FiskalySCUConfiguration configuration)
-        {
-            var url = configuration.ApiEndpoint.EndsWith("/") ? configuration.ApiEndpoint : $"{configuration.ApiEndpoint}/";
-            return new HttpClient(new AuthenticatedHttpClientHandler(configuration) { Proxy = ConfigurationHelper.CreateProxy(configuration) })
-            {
-                BaseAddress = new Uri(url),
-                Timeout = TimeSpan.FromMilliseconds(configuration.FiskalyClientTimeout)
-            };
         }
 
         private async Task<T> RunAsAdminAsync<T>(Guid tssId, Func<Task<T>> method)

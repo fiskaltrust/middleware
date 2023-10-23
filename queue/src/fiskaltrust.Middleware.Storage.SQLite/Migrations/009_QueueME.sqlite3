@@ -1,0 +1,43 @@
+﻿CREATE TABLE IF NOT EXISTS ftJournalME
+(
+    ftJournalMEId         NVARCHAR(36) PRIMARY KEY NOT NULL,
+    Number                BIGINT NOT NULL,
+    cbReference           NVARCHAR(2147483647) NULL,
+    InvoiceNumber         NVARCHAR(2147483647) NULL,
+    YearlyOrdinalNumber   BIGINT NOT NULL,
+    ftQueueItemId         NVARCHAR(36) NOT NULL,
+    ftQueueId             NVARCHAR(36) NOT NULL,
+    FCDC                  NVARCHAR(36) NULL,
+    FIC                   NVARCHAR(36) NULL,
+    IIC                   NVARCHAR(36) NULL,
+    JournalType           BIGINT NOT NULL,
+    TimeStamp             BIGINT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS ftQueueME
+(
+    ftQueueMEId                  NVARCHAR(36) PRIMARY KEY  NOT NULL,
+    ftSignaturCreationUnitMEId   NVARCHAR(36)              NULL,
+    LastHash                     NVARCHAR(2147483647)      NULL,
+    SSCDFailCount                BIGINT                    NOT NULL,            
+    SSCDFailMoment               BIGINT                    NULL,                    
+    SSCDFailQueueItemId          NVARCHAR(36)              NULL, 
+    UsedFailedCount              BIGINT                    NOT NULL,           
+    UsedFailedMomentMin          BIGINT                    NULL,                    
+    UsedFailedMomentMax          BIGINT                    NULL,                    
+    UsedFailedQueueItemId        NVARCHAR(36)              NULL,
+    DailyClosingNumber           BIGINT                    NULL
+);
+CREATE TABLE IF NOT EXISTS ftSignaturCreationUnitME
+(
+    ftSignaturCreationUnitMEId   NVARCHAR(36) PRIMARY KEY  NOT NULL,
+    Url                          NVARCHAR(2147483647)      NULL,    
+    TimeStamp                    BIGINT                    NOT NULL,
+    IssuerTin                    NVARCHAR(2147483647)      NULL,  
+    BusinessUnitCode             NVARCHAR(2147483647)      NULL,
+    TcrIntId                     NVARCHAR(2147483647)      NULL,
+    SoftwareCode                 NVARCHAR(2147483647)      NULL,
+    MaintainerCode               NVARCHAR(2147483647)      NULL,
+    ValidFrom                    BIGINT                    NULL,
+    ValidTo                      BIGINT                    NULL,
+    TcrCode                      NVARCHAR(2147483647)      NULL
+);

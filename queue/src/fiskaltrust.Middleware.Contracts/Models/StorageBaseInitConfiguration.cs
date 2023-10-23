@@ -12,9 +12,13 @@ namespace fiskaltrust.Middleware.Contracts.Models
         public List<ftQueueAT> QueuesAT { get; set; }
         public List<ftQueueDE> QueuesDE { get; set; }
         public List<ftQueueFR> QueuesFR { get; set; }
+        public List<ftQueueME> QueuesME { get; set; }
+        public List<ftQueueIT> QueuesIT { get; set; }
         public List<ftSignaturCreationUnitAT> SignaturCreationUnitsAT { get; set; }
         public List<ftSignaturCreationUnitDE> SignaturCreationUnitsDE { get; set; }
         public List<ftSignaturCreationUnitFR> SignaturCreationUnitsFR { get; set; }
+        public List<ftSignaturCreationUnitME> SignaturCreationUnitsME { get; set; }
+        public List<ftSignaturCreationUnitIT> SignaturCreationUnitsIT { get; set; }
         public MasterDataConfiguration MasterData { get; set; }
     }
 }

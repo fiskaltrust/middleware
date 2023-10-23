@@ -2,14 +2,46 @@
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
-using fiskaltrust.Middleware.Contracts;
+using fiskaltrust.Middleware.Contracts.Interfaces;
+using fiskaltrust.storage.encryption.V0;
 using fiskaltrust.storage.V0;
+using Org.BouncyCastle.Asn1.Sec;
+using Org.BouncyCastle.Asn1.X9;
+using Org.BouncyCastle.Crypto.Digests;
+using Org.BouncyCastle.Crypto.Parameters;
+using Org.BouncyCastle.Security;
 
 namespace fiskaltrust.Middleware.Queue.Helpers
 {
     public class CryptoHelper : ICryptoHelper
     {
-        public string CreateJwsToken(string payload, string privateKeyBase64, byte[] encryptionKey) => throw new NotImplementedException();
+        private const string ES256_JWS_HEADER = "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9";
+        
+        private static readonly X9ECParameters _curve = SecNamedCurves.GetByName("secp256r1");
+        private static readonly ECDomainParameters _domainParameters = new ECDomainParameters(_curve.Curve, _curve.G, _curve.N, _curve.H);
+
+        public (string hashBase64, string jwsData) CreateJwsToken(string payload, string privateKeyBase64, byte[] encryptionKey)
+        {
+            var jwsPayload = StringUtilities.ToBase64UrlString(Encoding.UTF8.GetBytes(payload));
+            var data = Encoding.UTF8.GetBytes($"{ES256_JWS_HEADER}.{jwsPayload}");
+            var sha256 = new Sha256Digest();
+            sha256.Reset();
+            sha256.BlockUpdate(data, 0, data.Length);
+
+            var hash = new byte[sha256.GetDigestSize()];
+            sha256.DoFinal(hash, 0);
+
+            var decrypted = Convert.FromBase64String(Encoding.UTF8.GetString(Encryption.Decrypt(Convert.FromBase64String(privateKeyBase64), encryptionKey)));
+            var privKeyParams = new ECPrivateKeyParameters(new Org.BouncyCastle.Math.BigInteger(decrypted), _domainParameters);
+
+            var signer = SignerUtilities.GetSigner("SHA-256withECDSA");
+            signer.Init(true, privKeyParams);
+            signer.BlockUpdate(data, 0, data.Length);
+            var signature = signer.GenerateSignature();
+            var jwsSignature = StringUtilities.ToBase64UrlString(signature);
+
+            return (Convert.ToBase64String(hash), $"{ES256_JWS_HEADER}.{jwsPayload}.{jwsSignature}");
+        }
 
         public string GenerateBase64ChainHash(string previousReceiptHash, ftReceiptJournal receiptJournal, ftQueueItem queueItem)
         {
@@ -40,7 +72,5 @@ namespace fiskaltrust.Middleware.Queue.Helpers
                 return Convert.ToBase64String(hash);
             }
         }
-
-        public string GenerateJwsBase64Hash(string content) => throw new NotImplementedException();
     }
 }

@@ -1,12 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.de;
+using fiskaltrust.ifPOS.v1.it;
+using fiskaltrust.ifPOS.v1.me;
 using fiskaltrust.Middleware.Abstractions;
-using fiskaltrust.Middleware.Queue.Test.Launcher.Grpc;
 using fiskaltrust.Middleware.Queue.Test.Launcher.Helpers;
 using fiskaltrust.storage.serialization.V0;
+using fiskaltrust.storage.V0;
+using fiskaltrust.storage.V0.MasterData;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -16,57 +21,118 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
 {
     public static class Program
     {
-        private static readonly string _cashBoxId = "779a8865-2985-45e1-b433-cd084797662e";
-        private static readonly string _accessToken = "BK/yYA5X4X42qrCoiI6aGWKxAlThW46+c+AvUpttqQRr9llP9tpQcnuv94/Unf4gJdGG+GxC4ICwBxpZ+d6qTmk=";
+        private static readonly string _cashBoxId = "";
+        private static readonly string _accessToken = "";
+        private static readonly string _localization = "DE";
 
-        public static void Main(string configurationFilePath = "", string serviceFolder = @"C:\ProgramData\fiskaltrust\service")
+        public static async Task Main(string configurationFilePath = "", string serviceFolder = @"C:\ProgramData\fiskaltrust\service")
         {
-            ftCashBoxConfiguration cashBoxConfiguration;
+
+            ftCashBoxConfiguration cashBoxConfiguration = null;
             if (!string.IsNullOrEmpty(configurationFilePath))
             {
                 cashBoxConfiguration = JsonConvert.DeserializeObject<ftCashBoxConfiguration>(configurationFilePath);
             }
             else
             {
-                cashBoxConfiguration = HelipadHelper.GetConfigurationAsync(_cashBoxId, _accessToken).Result;
+                cashBoxConfiguration = await HelipadHelper.GetConfigurationAsync(_cashBoxId, _accessToken);
             }
             if (string.IsNullOrEmpty(serviceFolder))
             {
                 serviceFolder = Directory.GetCurrentDirectory();
             }
+
             var config = cashBoxConfiguration.ftQueues[0];
+
             config.Configuration.Add("cashboxid", cashBoxConfiguration.ftCashBoxId);
-            config.Configuration.Add("accesstoken", "");
+            config.Configuration.Add("accesstoken", _accessToken);
             config.Configuration.Add("useoffline", false);
             config.Configuration.Add("sandbox", true);
             config.Configuration.Add("servicefolder", serviceFolder);
             config.Configuration.Add("configuration", JsonConvert.SerializeObject(cashBoxConfiguration));
             config.Configuration.Add("ClosingTARExportTimeoutMin", 1);
             config.Configuration.Add("ClosingTARExportPollingDurationMs", 6000);
+
             //config.Configuration.Add("DisableClosingTARExport", true);
 
             var serviceCollection = new ServiceCollection();
             serviceCollection.AddStandardLoggers(LogLevel.Debug);
-            serviceCollection.AddScoped<IClientFactory<IDESSCD>, DESSCDClientFactory>();
+
+
+            if (_localization == "DE")
+            {
+                serviceCollection.AddScoped<IClientFactory<IDESSCD>, DESSCDClientFactory>();
+            }
+            else if (_localization == "ME")
+            {
+                serviceCollection.AddScoped<IClientFactory<IMESSCD>, MESSCDClientFactory>();
+                OverrideMasterdata(_localization, config);
+            }
+            else if (_localization == "IT")
+            {
+                serviceCollection.AddScoped<IClientFactory<IITSSCD>, ITSSCDClientFactory>();
+            }
+
 
             if (config.Package == "fiskaltrust.Middleware.Queue.SQLite")
             {
                 ConfigureSQLite(config, serviceCollection);
             }
-            else
+            else if (config.Package == "fiskaltrust.Middleware.Queue.MySQL")
+            {
+                ConfigureMySQL(config, serviceCollection);
+            } else
             {
                 throw new NotSupportedException($"The given package {config.Package} is not supported.");
             }
             var provider = serviceCollection.BuildServiceProvider();
+
             var pos = provider.GetRequiredService<IPOS>();
             HostingHelper.SetupServiceForObject(config, pos, provider.GetRequiredService<ILoggerFactory>());
 
             Console.WriteLine("Press key to end program");
             Console.ReadLine();
         }
+
+        private static void OverrideMasterdata(string localization, PackageConfiguration config)
+        {
+            var key = "init_ftQueue";
+            if (config.Configuration.ContainsKey(key))
+            {
+                var queues = JsonConvert.DeserializeObject<List<ftQueue>>(config.Configuration[key].ToString());
+                queues.FirstOrDefault().CountryCode = localization;
+                config.Configuration[key] = JsonConvert.SerializeObject(queues);
+            }
+            var temp = config.Configuration["init_ftQueueDE"];
+            config.Configuration["init_ftQueue" + localization] = temp.ToString().Replace("DE", localization);
+            temp = config.Configuration["init_ftSignaturCreationUnitDE"];
+            config.Configuration["init_ftSignaturCreationUnit" + localization] = temp.ToString().Replace("DE", localization);
+
+            var masterDataConfiguration = new MasterDataConfiguration
+            {
+                Account = new AccountMasterData { TaxId = "03102955" },
+                Outlet = new OutletMasterData { LocationId = "pg000qi813" },
+                PosSystems = new List<PosSystemMasterData>
+                    {
+                        new() { Brand = "xl522hw351", Model = "wv720nq953" }
+                    }
+            };
+            config.Configuration["init_masterData"] = JsonConvert.SerializeObject(masterDataConfiguration);
+        }
+
         private static void ConfigureSQLite(PackageConfiguration queue, ServiceCollection serviceCollection)
         {
             var bootStrapper = new SQLite.PosBootstrapper
+            {
+                Id = queue.Id,
+                Configuration = queue.Configuration
+            };
+            bootStrapper.ConfigureServices(serviceCollection);
+        }
+        
+        private static void ConfigureMySQL(PackageConfiguration queue, ServiceCollection serviceCollection)
+        {
+            var bootStrapper = new MySQL.PosBootstrapper
             {
                 Id = queue.Id,
                 Configuration = queue.Configuration

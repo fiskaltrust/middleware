@@ -21,7 +21,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloud.IntegrationTest
         public async Task DownloadAsync_Should_DownloadFileDependingOnPlatform()
         {
             var sut = new DeutscheFiskalFccDownloadService(_fixture.Configuration, Mock.Of<ILogger<IFccDownloadService>>());
-            await sut.DownloadAndSetupIfRequiredAsync(_fixture.Configuration.FccDirectory);
+            await sut.DownloadFccAsync(_fixture.Configuration.FccDirectory);
         }
     }
 }

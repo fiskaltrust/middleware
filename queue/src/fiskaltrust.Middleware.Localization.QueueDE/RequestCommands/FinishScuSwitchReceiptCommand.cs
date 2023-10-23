@@ -23,18 +23,18 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
         private readonly IActionJournalRepository _actionJournalRepository;
         public override string ReceiptName => "Finish-SCU-switch receipt";
 
-        public FinishScuSwitchReceiptCommand(IActionJournalRepository actionJournalRepository, ILogger<RequestCommand> logger, 
-            SignatureFactoryDE signatureFactory, IDESSCDProvider deSSCDProvider, ITransactionPayloadFactory transactionPayloadFactory, IReadOnlyQueueItemRepository queueItemRepository, 
+        public FinishScuSwitchReceiptCommand(IActionJournalRepository actionJournalRepository, ILogger<RequestCommand> logger,
+            SignatureFactoryDE signatureFactory, IDESSCDProvider deSSCDProvider, ITransactionPayloadFactory transactionPayloadFactory, IReadOnlyQueueItemRepository queueItemRepository,
             IConfigurationRepository configurationRepository, IJournalDERepository journalDERepository, MiddlewareConfiguration middlewareConfiguration,
-            IPersistentTransactionRepository<FailedStartTransaction> failedStartTransactionRepo,IPersistentTransactionRepository<FailedFinishTransaction> failedFinishTransactionRepo, 
-            IPersistentTransactionRepository<OpenTransaction> openTransactionRepo)
+            IPersistentTransactionRepository<FailedStartTransaction> failedStartTransactionRepo, IPersistentTransactionRepository<FailedFinishTransaction> failedFinishTransactionRepo,
+            IPersistentTransactionRepository<OpenTransaction> openTransactionRepo, ITarFileCleanupService tarFileCleanupService, QueueDEConfiguration queueDEConfiguration)
             : base(logger, signatureFactory, deSSCDProvider, transactionPayloadFactory, queueItemRepository, configurationRepository, journalDERepository,
-                  middlewareConfiguration, failedStartTransactionRepo, failedFinishTransactionRepo, openTransactionRepo)
+                  middlewareConfiguration, failedStartTransactionRepo, failedFinishTransactionRepo, openTransactionRepo, tarFileCleanupService, queueDEConfiguration)
         {
             _actionJournalRepository = actionJournalRepository;
         }
-        
-        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueDE queueDE, IDESSCD client, ReceiptRequest request, ftQueueItem queueItem)
+
+        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueDE queueDE, ReceiptRequest request, ftQueueItem queueItem)
         {
             var (processType, payload) = _transactionPayloadFactory.CreateReceiptPayload(request);
             var receiptResponse = CreateReceiptResponse(request, queueItem, queueDE);
@@ -64,10 +64,9 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             try
             {
                 await _deSSCDProvider.RegisterCurrentScuAsync().ConfigureAwait(false);
-                client = _deSSCDProvider.Instance;
                 _certificationIdentification = null;
 
-                (var transactionNumber, var signatures, var clientId, var signatureAlgorithm, var publicKeyBase64, var serialnumberOctet) = await ProcessInitialOperationReceiptAsync(client, request.cbReceiptReference, processType, payload, queueItem, queueDE, false).ConfigureAwait(false);
+                (var transactionNumber, var signatures, var clientId, var signatureAlgorithm, var publicKeyBase64, var serialnumberOctet) = await ProcessInitialOperationReceiptAsync(request.cbReceiptReference, processType, payload, queueItem, queueDE, false).ConfigureAwait(false);
 
                 var actionJournals = new List<ftActionJournal>();
                 var typeNumber = 0x4445000000000003;
@@ -114,7 +113,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
                 receiptResponse.ftReceiptIdentification = request.GetReceiptIdentification(queue.ftReceiptNumerator, transactionNumber);
                 receiptResponse.ftSignatures = signatures.ToArray();
-                receiptResponse.ftStateData = await StateDataFactory.AppendTseInfoAsync(client, receiptResponse.ftStateData).ConfigureAwait(false);
+                receiptResponse.ftStateData = await StateDataFactory.AppendTseInfoAsync(_deSSCDProvider.Instance, receiptResponse.ftStateData).ConfigureAwait(false);
                 return new RequestCommandResponse()
                 {
                     ActionJournals = actionJournals,
@@ -123,9 +122,17 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                     TransactionNumber = transactionNumber
                 };
             }
-            catch (Exception ex) when (ex.GetType().Name == RETRYPOLICYEXCEPTION_NAME)
+            catch (Exception ex)
             {
-                _logger.LogDebug(ex, "TSE not reachable.");
+                if (ex.GetType().Name == RETRYPOLICYEXCEPTION_NAME)
+                {
+                    _logger.LogDebug(ex, "TSE not reachable.");
+                }
+
+                // Reset the SCU switch so that the receipt is repeatable
+                queueDE.ftSignaturCreationUnitDEId = null;
+                await _configurationRepository.InsertOrUpdateQueueDEAsync(queueDE).ConfigureAwait(false);
+
                 throw;
             }
         }

@@ -6,28 +6,27 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using fiskaltrust.Exports.Common.Helpers;
 using fiskaltrust.Exports.DSFinVK;
 using fiskaltrust.Exports.DSFinVK.Models;
 using fiskaltrust.Exports.TAR;
-using fiskaltrust.Exports.TAR.Services;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.de;
-using fiskaltrust.Middleware.Contracts;
 using fiskaltrust.Middleware.Contracts.Constants;
+using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueDE.Helpers;
 using fiskaltrust.Middleware.Localization.QueueDE.MasterData;
 using fiskaltrust.Middleware.Localization.QueueDE.Repositories;
 using fiskaltrust.Middleware.Localization.QueueDE.Services;
-using fiskaltrust.Middleware.Localization.QueueDE.Constants;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueueDE
 {
-    public class JournalProcessorDE : IJournalProcessor
+    public class JournalProcessorDE : IMarketSpecificJournalProcessor
     {
         private readonly ILogger<JournalProcessorDE> _logger;
         private readonly IReadOnlyConfigurationRepository _configurationRepository;
@@ -41,8 +40,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
         private readonly MiddlewareConfiguration _middlewareConfiguration;
         private readonly IMasterDataService _masterDataService;
         private readonly IMiddlewareQueueItemRepository _middlewareQueueItemRepository;
-
-        private readonly bool _storeTemporaryExportFiles = false;
+        private readonly ITarFileCleanupService _tarFileCleanupService;
+        private readonly QueueDEConfiguration _queueDEConfiguration;
 
         public JournalProcessorDE(
             ILogger<JournalProcessorDE> logger,
@@ -56,7 +55,9 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             IDESSCDProvider deSSCDProvider,
             MiddlewareConfiguration middlewareConfiguration,
             IMasterDataService masterDataService,
-            IMiddlewareQueueItemRepository middlewareQueueItemRepository)
+            IMiddlewareQueueItemRepository middlewareQueueItemRepository,
+            ITarFileCleanupService tarFileCleanupService,
+            QueueDEConfiguration queueDEConfiguration)
         {
             _logger = logger;
             _configurationRepository = configurationRepository;
@@ -70,11 +71,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             _middlewareConfiguration = middlewareConfiguration;
             _masterDataService = masterDataService;
             _middlewareQueueItemRepository = middlewareQueueItemRepository;
-
-            if (_middlewareConfiguration.Configuration.ContainsKey(ConfigurationKeys.STORE_TEMPORARY_FILES_KEY))
-            {
-                _storeTemporaryExportFiles = bool.TryParse(_middlewareConfiguration.Configuration[ConfigurationKeys.STORE_TEMPORARY_FILES_KEY].ToString(), out var val) && val;
-            }
+            _tarFileCleanupService = tarFileCleanupService;
+            _queueDEConfiguration = queueDEConfiguration;
         }
 
         public async IAsyncEnumerable<JournalResponse> ProcessAsync(JournalRequest request)
@@ -117,29 +115,22 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
         private async IAsyncEnumerable<JournalResponse> ProcessTarExportFromDatabaseAsync(JournalRequest request)
         {
             var journalDERepository = new JournalDERepositoryRangeDecorator(_middlewareJournalDERepository, _journalDERepository, request.From, request.To);
-            var archiveRepository = new ArchiveFactory();
 
             var workingDirectory = Path.Combine(_middlewareConfiguration.ServiceFolder, "Exports", _middlewareConfiguration.QueueId.ToString(), "TAR", DateTime.Now.ToString("yyyyMMddhhmmssfff"));
             Directory.CreateDirectory(workingDirectory);
 
             try
             {
-                var exporter = new TarExporter(_logger, journalDERepository, archiveRepository);
-
                 var tarPath = Path.Combine(workingDirectory, "export.tar");
 
-                using (var tarFileStream = await exporter.ExportAsync().ConfigureAwait(false))
-                {
-                    if (tarFileStream == null || tarFileStream.Length == 0)
-                    {
-                        _logger.LogWarning("No TAR export was generated.");
-                        yield break;
-                    }
+                var exporter = new TarExporter(_logger, journalDERepository);
+                await exporter.ExportAsync(tarPath);
 
-                    using (var file = File.Open(tarPath, FileMode.Create))
-                    {
-                        tarFileStream.CopyTo(file);
-                    }
+                var fi = new FileInfo(tarPath);
+                if (!fi.Exists || fi.Length == 0)
+                {
+                    _logger.LogInformation("No TAR export was generated. This may happen if there were no TAR files to export during the specified time range.");
+                    yield break;
                 }
 
                 foreach (var chunk in FileHelpers.ReadFileAsChunks(tarPath, request.MaxChunkSize))
@@ -152,10 +143,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             }
             finally
             {
-                if (!_storeTemporaryExportFiles && Directory.Exists(workingDirectory))
-                {
-                    Directory.Delete(workingDirectory, true);
-                }
+                _tarFileCleanupService.CleanupTarFileDirectory(workingDirectory);
             }
         }
 
@@ -224,10 +212,12 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
                     CashboxIdentification = queueDE.CashBoxIdentification,
                     FirstZNumber = firstZNumber,
                     TargetDirectory = targetDirectory,
-                    TSECertificateBase64 = certificateBase64
+                    TSECertificateBase64 = certificateBase64,
+                    ReferencesLookUpType = _queueDEConfiguration.DisableDsfinvkExportReferences ? ReferencesLookUpType.NoReferences : ReferencesLookUpType.GroupedReferencesMW,
+                    IncludeOrders = _queueDEConfiguration.ExcludeDsfinvkOrders ? false : true
                 };
 
-                var readOnlyReceiptReferenceRepository = new ReadOnlyReceiptReferenceRepository(_middlewareQueueItemRepository, _actionJournalRepository);
+                var readOnlyReceiptReferenceRepository = new ReadOnlyReceiptReferenceRepository(_middlewareQueueItemRepository);
                 var fallbackMasterDataRepo = new ReadOnlyMasterDataConfigurationRepository(_masterDataService.GetFromConfig());
 
                 // No need to wrap the QueueItemRepository, as the DSFinV-K exporter only uses the GetAsync(Guid id) method
@@ -253,10 +243,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             }
             finally
             {
-                if (!_storeTemporaryExportFiles && Directory.Exists(workingDirectory))
-                {
-                    Directory.Delete(workingDirectory, true);
-                }
+                _tarFileCleanupService.CleanupTarFileDirectory(workingDirectory);
             }
         }
 
@@ -268,7 +255,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
                 if (scuDE.TseInfoJson != null)
                 {
                     var tseInfo = JsonConvert.DeserializeObject<TseInfo>(scuDE.TseInfoJson);
-                    return tseInfo.CertificatesBase64.FirstOrDefault() ?? string.Empty;
+                    return tseInfo.CertificatesBase64?.FirstOrDefault() ?? string.Empty;
                 }
             }
 

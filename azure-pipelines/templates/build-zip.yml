@@ -1,0 +1,76 @@
+parameters:
+- name: projects
+  type: object
+
+- name: workingDirectory
+  type: string
+
+steps:
+- task: yavt@1
+  inputs:
+    mode: 'Multi'
+    updateNuspecFiles: true
+    updateBuildNumber: false
+    semverVersion: 'v1'
+    failOnTagVersionMismatch: true
+
+- powershell: |
+    $nugetFeed = if ($Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/release/") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/main") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/tags")) { "release" } else { "dev" }
+    Write-Host "##vso[task.setvariable variable=NuGetFeed;]$nugetFeed"
+  displayName: Set NuGet feed
+
+- task: Cache@2
+  inputs:
+    key: 'nuget | "$(Agent.OS)" |  ${{ parameters.workingDirectory }}/**/*.csproj'
+    restoreKeys: |
+      nuget | "$(Agent.OS)"
+      nuget
+    path: $(UserProfile)/.nuget/packages
+  displayName: Cache NuGet packages
+
+- task: NuGetToolInstaller@1
+
+- task: NuGetCommand@2
+  inputs:
+    command: 'restore'
+    restoreSolution: '${{ parameters.workingDirectory }}/$(Solution)'
+    feedsToUse: 'select'
+    vstsFeed: '$(NuGetFeed)'
+
+- task: VSBuild@1
+  inputs:
+    solution: '${{ parameters.workingDirectory }}/$(Solution)'
+    configuration: '$(BuildConfiguration)'
+
+- task: codesigning@2
+  displayName: 'Code Signing'
+  inputs:
+    secureFileId: 'codesigning.pfx'
+    signCertPassword: '$(Code_Signing_Password)'
+    filePaths: |
+       ${{ parameters.workingDirectory }}/src/**/*fiskaltrust*.dll
+       ${{ parameters.workingDirectory }}/src/**/*fiskaltrust*.exe
+
+- ${{ each project in parameters.projects }}:
+  - pwsh: |
+      mkdir $(Build.ArtifactStagingDirectory)/package-${{ project }}
+    displayName: Create target directory package-${{ project }}
+
+  - pwsh: |
+      $version = (Select-Xml -Path ./Directory.Build.props -XPath 'Project/PropertyGroup/Version').Node.InnerText
+      dotnet publish --configuration $(buildConfiguration) -f net6 --output $(Build.ArtifactStagingDirectory)/raw/${{ project }} --no-build /p:DebugType=None /p:DebugSymbols=false
+      Compress-Archive -Path $(Build.ArtifactStagingDirectory)/raw/${{ project }}/* -DestinationPath $(Build.ArtifactStagingDirectory)/package-${{ project }}/${{ project }}-$version.zip
+
+      $hash = Get-FileHash $(Build.ArtifactStagingDirectory)/package-${{ project }}/${{ project }}-$version.zip -Algorithm SHA256
+      $hashbytes = $hash.Hash -split '([A-F0-9]{2})' | foreach-object { if ($_) {[System.Convert]::ToByte($_,16)}}
+      $hashstring = [System.Convert]::ToBase64String($hashbytes)
+      $hashstring | Set-Content $(Build.ArtifactStagingDirectory)/package-${{ project }}/${{ project }}-$version.zip.hash
+    displayName: 'Publish ${{ project }}'
+    workingDirectory: ' ${{ parameters.workingDirectory }}/src/${{ project }}'
+
+- ${{ each project in parameters.projects }}:
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish Artifact: package-${{ project }}'
+    inputs:
+      pathToPublish: '$(build.artifactstagingdirectory)/package-${{ project }}'
+      artifactName: package-${{ project }}

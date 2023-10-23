@@ -1,0 +1,4 @@
+ALTER TABLE
+    ftQueueItem
+MODIFY
+    cbReceiptReference VARCHAR(450);

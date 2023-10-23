@@ -3,12 +3,14 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.Middleware.Contracts;
+using fiskaltrust.Middleware.Contracts.Extensions;
+using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Queue.Helpers;
 using fiskaltrust.Middleware.QueueSynchronizer;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Queue.Bootstrapper
@@ -32,16 +34,18 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
                 QueueId = _activeQueueId,
                 IsSandbox = _configuration.TryGetValue("sandbox", out var sandbox) && bool.TryParse(sandbox.ToString(), out var sandboxBool) && sandboxBool,
                 ServiceFolder = _configuration.TryGetValue("servicefolder", out var val) ? val.ToString() : GetServiceFolder(),
-                Configuration = _configuration
+                Configuration = _configuration,
+                PreviewFeatures = GetPreviewFeatures(_configuration)
             };
+
             services.AddSingleton(middlewareConfiguration);
             services.AddScoped<ICryptoHelper, CryptoHelper>();
             services.AddScoped<SignProcessor>();
-            services.AddScoped<ISignProcessor>(x => new LocalQueueSynchronizationDecorator(x.GetRequiredService<SignProcessor>()));
+            services.AddScoped<ISignProcessor>(x => new LocalQueueSynchronizationDecorator(x.GetRequiredService<SignProcessor>(), x.GetRequiredService<ILogger<LocalQueueSynchronizationDecorator>>()));
             services.AddScoped<IJournalProcessor, JournalProcessor>();
             services.AddScoped<IPOS, Queue>();
 
-            var businessLogicFactoryBoostrapper = LocalizedQueueBootStrapperFactory.GetBootstrapperForLocalizedQueue(_activeQueueId, _configuration);
+            var businessLogicFactoryBoostrapper = LocalizedQueueBootStrapperFactory.GetBootstrapperForLocalizedQueue(_activeQueueId, middlewareConfiguration);
             businessLogicFactoryBoostrapper.ConfigureServices(services);
         }
 
@@ -56,6 +60,21 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
             else
             {
                 throw new ArgumentException("Configuration must contain 'init_ftQueue' parameter.");
+            }
+        }
+
+        private static Dictionary<string, bool> GetPreviewFeatures(Dictionary<string, object> configuration)
+        {
+            var key = "previewFeatures";
+            try
+            {
+                return configuration.ContainsKey(key)
+                ? JsonConvert.DeserializeObject<Dictionary<string, bool>>(configuration[key].ToString())
+                : new Dictionary<string, bool>();
+            }
+            catch
+            {
+                return new();
             }
         }
 

@@ -13,11 +13,14 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
         public bool DisplayCertificationIdAddition { get; set; } = false;
         public string CertificationIdAddition { get; set; }
         public string ApiEndpoint { get; set; } = "https://kassensichv-middleware.fiskaly.com/api/v2";
-        public int FiskalyClientTimeout { get; set; } = 30000;
+        public int FiskalyClientTimeout { get; set; } = 120000;
         public string ProxyServer { get; set; }
         public int? ProxyPort { get; set; }
         public string ProxyUsername { get; set; }
         public string ProxyPassword { get; set; }
         public int? MaxClientCount { get; set; }
+        public int RetriesOn5xxError { get; set; } = 2;
+        public int RetriesOnTarExportWebException{ get; set; } = 2;
+        public int DelayOnRetriesInMs { get; set; } = 100;
     }
 }

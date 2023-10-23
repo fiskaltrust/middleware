@@ -14,13 +14,12 @@
         <PackageReference Include="fiskaltrust.Middleware.Abstractions" Version="1.3.3" />
         <PackageReference Include="fiskaltrust.storage.encryption" Version="1.3.1" />
         <PackageReference Include="fiskaltrust.storage.serialization" Version="1.3.1" />
-        <PackageReference Include="fiskaltrust.interface" Version="1.3.1" />
-        <PackageReference Include="fiskaltrust.storage" Version="1.3.21" />
-        <PackageReference Include="Dapper" Version="2.0.35" />
-        <PackageReference Include="fiskaltrust.Exports.DSFinVK" Version="1.3.6" />
-        <PackageReference Include="fiskaltrust.Exports.TAR" Version="1.1.0" />
+        <PackageReference Include="Dapper" Version="2.0.123" />
+        <PackageReference Include="fiskaltrust.Exports.DSFinVK" Version="1.5.3" />
+        <PackageReference Include="fiskaltrust.Exports.TAR" Version="1.1.1" />
         <PackageReference Include="System.Linq.Async" Version="4.1.1" />
         <PackageReference Include="SharpCompress" Version="0.28.2" />
+        <PackageReference Include="CsvHelper" Version="15.0.5" />
     </ItemGroup>
 
     <ItemGroup Condition="'$(TargetFramework)' != 'netstandard2.1'">
@@ -30,13 +29,13 @@
 
     <ItemGroup Condition="'$(TargetFramework)' == 'net461'">
         <PackageReference Include="BouncyCastle" version="1.7.0" />
-        <PackageReference Include="System.Data.SQLite" Version="1.0.112.2" />
-        <PackageReference Include="System.Data.SQLite.Core" version="1.0.112.2" />
-        <PackageReference Include="System.Data.SQLite.EF6" version="1.0.112.2" />
-        <PackageReference Include="System.Data.SQLite.Linq" version="1.0.112.2" />
+        <PackageReference Include="System.Data.SQLite" Version="1.0.116" />
+        <PackageReference Include="System.Data.SQLite.Core" version="1.0.116" />
+        <PackageReference Include="System.Data.SQLite.EF6" version="1.0.116" />
+        <PackageReference Include="System.Data.SQLite.Linq" version="1.0.116" />
     </ItemGroup>
 
-    <ItemGroup Condition="'$(TargetFramework)' != 'netst461'">
+    <ItemGroup Condition="'$(TargetFramework)' != 'net461'">
         <PackageReference Include="Portable.BouncyCastle" version="1.8.1.2" />
         <PackageReference Include="Microsoft.Data.Sqlite" Version="3.1.4" />
         <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="2.0.3" GeneratePathProperty="true" />
@@ -61,6 +60,12 @@
         </None>
     </ItemGroup>
 
+    <ItemGroup>
+      <None Update="..\fiskaltrust.Middleware.Storage.SQLite\Migrations\001_Init.sqlite3">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+
     <Target DependsOnTargets="ResolveReferences" Name="CopyProjectReferencesToPackage">
         <ItemGroup>
             <BuildOutputInPackage Include="@(ReferenceCopyLocalPaths-&gt;WithMetadataValue('ReferenceSourceTarget', 'ProjectReference'))" />
@@ -71,12 +76,18 @@
         <ItemGroup>
             <SQLITE_LINUX_X64 Include="$(PkgSQLitePCLRaw_lib_e_sqlite3)\runtimes\linux-x64\**\*.*" />
             <SQLITE_LINUX_X86 Include="$(PkgSQLitePCLRaw_lib_e_sqlite3)\runtimes\linux-x86\**\*.*" />
+            <SQLITE_LINUX_ARM64 Include="$(PkgSQLitePCLRaw_lib_e_sqlite3)\runtimes\linux-arm64\**\*.*" />
+            <SQLITE_LINUX_ARM Include="$(PkgSQLitePCLRaw_lib_e_sqlite3)\runtimes\linux-arm\**\*.*" />
+            <SQLITE_LINUX_ARMEL Include="$(PkgSQLitePCLRaw_lib_e_sqlite3)\runtimes\linux-armel\**\*.*" />
             <SQLITE_WIN_X64 Include="$(PkgSQLitePCLRaw_lib_e_sqlite3)\runtimes\win-x64\**\*.*" />
             <SQLITE_WIN_X86 Include="$(PkgSQLitePCLRaw_lib_e_sqlite3)\runtimes\win-x86\**\*.*" />
             <SQLITE_OSX_X64 Include="$(PkgSQLitePCLRaw_lib_e_sqlite3)\runtimes\osx-x64\**\*.*" />
         </ItemGroup>
         <Copy SourceFiles="@(SQLITE_LINUX_X64)" DestinationFolder="$(TargetDir)\runtimes\linux-x64\%(RecursiveDir)" SkipUnchangedFiles="true" />
         <Copy SourceFiles="@(SQLITE_LINUX_X86)" DestinationFolder="$(TargetDir)\runtimes\linux-x86\%(RecursiveDir)" SkipUnchangedFiles="true" />
+        <Copy SourceFiles="@(SQLITE_LINUX_ARM64)" DestinationFolder="$(TargetDir)\runtimes\linux-arm64\%(RecursiveDir)" SkipUnchangedFiles="true" />
+        <Copy SourceFiles="@(SQLITE_LINUX_ARM)" DestinationFolder="$(TargetDir)\runtimes\linux-arm\%(RecursiveDir)" SkipUnchangedFiles="true" />
+        <Copy SourceFiles="@(SQLITE_LINUX_ARMEL)" DestinationFolder="$(TargetDir)\runtimes\linux-armel\%(RecursiveDir)" SkipUnchangedFiles="true" />
         <Copy SourceFiles="@(SQLITE_WIN_X64)" DestinationFolder="$(TargetDir)\runtimes\win-x64\%(RecursiveDir)" SkipUnchangedFiles="true" />
         <Copy SourceFiles="@(SQLITE_WIN_X86)" DestinationFolder="$(TargetDir)\runtimes\win-x86\%(RecursiveDir)" SkipUnchangedFiles="true" />
         <Copy SourceFiles="@(SQLITE_OSX_X64)" DestinationFolder="$(TargetDir)\runtimes\osx-x64\%(RecursiveDir)" SkipUnchangedFiles="true" />

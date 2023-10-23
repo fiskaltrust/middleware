@@ -1,89 +1,155 @@
 resources:
-- repo: self
+  - repo: self
 
 trigger:
   batch: true
   branches:
     include:
-    - main
-    - refs/tags/queue/*
-  paths:
-    include:
-      - queue
+      - main
+      - refs/tags/queue/*
 
 pr:
   branches:
     include:
-    - main
-    - refs/tags/queue/*
+      - main
+      - refs/tags/queue/*
   paths:
     include:
       - queue
 
 variables:
-- group: 'Code Signing Certificates'
-- group: 'Middleware Tests'
-- name: BuildConfiguration
-  value: release
-- name: Solution
-  value: 'fiskaltrust.Middleware.sln'
-- name: WorkingDirectory
-  value: 'queue'
-- name: vmImageName 
-  value: 'windows-2022'
+  - group: "Code Signing Certificates"
+  - group: "Middleware Tests"
+  - name: BuildConfiguration
+    value: release
+  - name: Solution
+    value: "fiskaltrust.Middleware.sln"
+  - name: WorkingDirectory
+    value: "queue"
+  - name: vmImageName
+    value: "windows-2022"
 
-jobs:  
-- job: Test
-  displayName: Unit and integration tests
-  pool:
-    vmImage: $(vmImageName)
-  steps:
-  - template: templates/queue/test.template.yml
+stages:
+  - stage: Test
+    jobs:
+      - job: Test
+        displayName: Unit and integration tests
+        pool:
+          vmImage: $(vmImageName)
+        steps:
+          - template: templates/queue/test.template.yml
 
-- job: AcceptanceTest
-  dependsOn: Test
-  displayName: Acceptance tests
-  condition: and(succeeded(), or(eq(variables['Build.SourceBranch'], 'refs/heads/main'), startsWith(variables['Build.SourceBranch'], 'refs/tags/queue/')))
-  pool:
-    vmImage: $(vmImageName)
-  strategy:
-    maxParallel: 4
-    matrix: 
-      EFQueue:
-        Project: 'fiskaltrust.Middleware.Storage.EF.AcceptanceTest'
-      EFCoreQueue:
-        Project: 'fiskaltrust.Middleware.Storage.EFCore.AcceptanceTest'
-      SQLiteQueue:
-        Project: 'fiskaltrust.Middleware.Storage.SQLite.AcceptanceTest'
-      MySQLQueue:
-        Project: 'fiskaltrust.Middleware.Storage.MySQL.AcceptanceTest'
-      InMemoryQueue:
-        Project: 'fiskaltrust.Middleware.Storage.InMemory.AcceptanceTest'
-      QueueSynchronizer:
-        Project: 'fiskaltrust.Middleware.QueueSynchronizer.AcceptanceTest'
-      Queue:
-        Project: 'fiskaltrust.Middleware.Queue.AcceptanceTest'
-  steps:
-  - template: templates/queue/acceptance-test.template.yml
+      - job: AcceptanceTest_AzureTableStorageQueue
+        dependsOn: Test
+        displayName: Acceptance tests - AzureTableStorageQueue
+        condition: and(succeeded(), or(eq(variables.runAcceptanceTests, 'true'), eq(variables['Build.SourceBranch'], 'refs/heads/main'), startsWith(variables['Build.SourceBranch'], 'refs/tags/queue/azure-table-storage/')))
+        pool:
+          vmImage: $(vmImageName)
+        steps:
+          - template: templates/queue/acceptance-test.template.yml
+            parameters:
+              project: "fiskaltrust.Middleware.Storage.AzureTableStorage.AcceptanceTest"
 
-- job: BuildNugetPackages
-  displayName: Build v1 NuGet packages
-  dependsOn: 
-  - Test
-  - AcceptanceTest
-  condition: and(eq(dependencies.Test.result, 'Succeeded'), in(dependencies.AcceptanceTest.result, 'Succeeded', 'Skipped'))
-  pool:
-    vmImage: $(vmImageName)
-  steps:
-  - template: templates/queue/build-nuget.template.yml
+      - job: AcceptanceTest_EFQueue
+        dependsOn: Test
+        displayName: Acceptance tests - EFQueue
+        condition: and(succeeded(), or(eq(variables.runAcceptanceTests, 'true'), eq(variables['Build.SourceBranch'], 'refs/heads/main'), startsWith(variables['Build.SourceBranch'], 'refs/tags/queue/ef/')))
+        pool:
+          vmImage: $(vmImageName)
+        steps:
+          - template: templates/queue/acceptance-test.template.yml
+            parameters:
+              project: "fiskaltrust.Middleware.Storage.EF.AcceptanceTest"
 
-- job: BuildZipPackages
-  displayName: Build v2 zip packages
-  dependsOn: 
-  - Test
-  - AcceptanceTest
-  condition: and(eq(dependencies.Test.result, 'Succeeded'), in(dependencies.AcceptanceTest.result, 'Succeeded', 'Skipped'))
-  pool:
-    vmImage: $(vmImageName)
-  steps:
-  - template: templates/queue/build-zip.template.yml
+      - job: AcceptanceTest_EFCoreQueue
+        dependsOn: Test
+        displayName: Acceptance tests - EFCoreQueue
+        condition: and(succeeded(), or(eq(variables.runAcceptanceTests, 'true'), eq(variables['Build.SourceBranch'], 'refs/heads/main'), startsWith(variables['Build.SourceBranch'], 'refs/tags/queue/postgresql/')))
+        pool:
+          vmImage: $(vmImageName)
+        steps:
+          - template: templates/queue/acceptance-test.template.yml
+            parameters:
+              project: "fiskaltrust.Middleware.Storage.EFCore.AcceptanceTest"
+
+      - job: AcceptanceTest_SQLiteQueue
+        dependsOn: Test
+        displayName: Acceptance tests - SQLiteQueue
+        condition: and(succeeded(), or(eq(variables.runAcceptanceTests, 'true'), eq(variables['Build.SourceBranch'], 'refs/heads/main'), startsWith(variables['Build.SourceBranch'], 'refs/tags/queue/sqlite/')))
+        pool:
+          vmImage: $(vmImageName)
+        steps:
+          - template: templates/queue/acceptance-test.template.yml
+            parameters:
+              project: "fiskaltrust.Middleware.Storage.SQLite.AcceptanceTest"
+
+      - job: AcceptanceTest_MySQLQueue
+        dependsOn: Test
+        displayName: Acceptance tests - MySQLQueue
+        condition: and(succeeded(), or(eq(variables.runAcceptanceTests, 'true'), eq(variables['Build.SourceBranch'], 'refs/heads/main'), startsWith(variables['Build.SourceBranch'], 'refs/tags/queue/mysql/')))
+        pool:
+          vmImage: $(vmImageName)
+        steps:
+          - template: templates/queue/acceptance-test.template.yml
+            parameters:
+              project: "fiskaltrust.Middleware.Storage.MySQL.AcceptanceTest"
+
+      - job: AcceptanceTest_InMemoryQueue
+        dependsOn: Test
+        displayName: Acceptance tests - InMemoryQueue
+        condition: and(succeeded(), or(eq(variables.runAcceptanceTests, 'true'), eq(variables['Build.SourceBranch'], 'refs/heads/main'), startsWith(variables['Build.SourceBranch'], 'refs/tags/queue/in-memory/')))
+        pool:
+          vmImage: $(vmImageName)
+        steps:
+          - template: templates/queue/acceptance-test.template.yml
+            parameters:
+              project: "fiskaltrust.Middleware.Storage.InMemory.AcceptanceTest"
+
+      - job: AcceptanceTest_QueueSynchronizer
+        dependsOn: Test
+        displayName: Acceptance tests - QueueSynchronizer
+        condition: and(succeeded(), or(eq(variables.runAcceptanceTests, 'true'), eq(variables['Build.SourceBranch'], 'refs/heads/main'), startsWith(variables['Build.SourceBranch'], 'refs/tags/queue/')))
+        pool:
+          vmImage: $(vmImageName)
+        steps:
+          - template: templates/queue/acceptance-test.template.yml
+            parameters:
+              project: "fiskaltrust.Middleware.QueueSynchronizer.AcceptanceTest"
+
+      - job: AcceptanceTest_Queue
+        dependsOn: Test
+        displayName: Acceptance tests - Queue
+        condition: and(succeeded(), or(eq(variables.runAcceptanceTests, 'true'), eq(variables['Build.SourceBranch'], 'refs/heads/main'), startsWith(variables['Build.SourceBranch'], 'refs/tags/queue/')))
+        pool:
+          vmImage: $(vmImageName)
+        steps:
+          - template: templates/queue/acceptance-test.template.yml
+            parameters:
+              project: "fiskaltrust.Middleware.Queue.AcceptanceTest"
+
+  - stage: Build
+    dependsOn: Test
+    jobs:
+      - job: BuildNugetPackages
+        displayName: Build v1 NuGet packages
+        dependsOn: []
+        pool:
+          vmImage: $(vmImageName)
+        steps:
+          - template: templates/queue/build-nuget.template.yml
+
+      - job: BuildZipPackages
+        displayName: Build v2 zip packages
+        dependsOn: []
+        pool:
+          vmImage: $(vmImageName)
+        steps:
+          - template: templates/build-zip.yml
+            parameters:
+              workingDirectory: queue
+              projects:
+                - fiskaltrust.Middleware.Queue.InMemory
+                - fiskaltrust.Middleware.Queue.SQLite
+                - fiskaltrust.Middleware.Queue.PostgreSQL
+                - fiskaltrust.Middleware.Queue.MySQL
+                - fiskaltrust.Middleware.Queue.EF

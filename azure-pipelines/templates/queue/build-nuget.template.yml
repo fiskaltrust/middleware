@@ -5,8 +5,9 @@ steps:
     updateNuspecFiles: true
     updateBuildNumber: false
     semverVersion: 'v1'
+    failOnTagVersionMismatch: true
 
-- powershell: |   
+- powershell: |
     $nugetFeed = if ($Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/release/") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/main") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/tags")) { "release" } else { "dev" }
     Write-Host "##vso[task.setvariable variable=NuGetFeed;]$nugetFeed"
   displayName: Set NuGet feed
@@ -73,6 +74,10 @@ steps:
 - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
   displayName: 'dotnet pack fiskaltrust.Middleware.Queue.MySQL'
   workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.MySQL'
+
+- script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
+  displayName: 'dotnet pack fiskaltrust.Middleware.Queue.MySQL'
+  workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.AzureTableStorage'
 
 - task: PublishBuildArtifacts@1
   displayName: 'Publish Artifact: drop'

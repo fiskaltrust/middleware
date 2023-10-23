@@ -4,10 +4,11 @@ using System.Threading.Tasks;
 using Dapper;
 using MySqlConnector;
 using fiskaltrust.storage.V0;
+using fiskaltrust.Middleware.Contracts.Repositories;
 
 namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
 {
-    public class MySQLReceiptJournalRepository : AbstractMySQLRepository<Guid, ftReceiptJournal>, IReceiptJournalRepository
+    public class MySQLReceiptJournalRepository : AbstractMySQLRepository<Guid, ftReceiptJournal>, IReceiptJournalRepository, IMiddlewareReceiptJournalRepository
     {
         public MySQLReceiptJournalRepository(string connectionString) : base(connectionString) { }
 
@@ -47,6 +48,33 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
             {
                 await connection.OpenAsync().ConfigureAwait(false);
                 await connection.ExecuteAsync(sql, entity).ConfigureAwait(false);
+            }
+        }
+
+        public async Task<ftReceiptJournal> GetByQueueItemId(Guid ftQueueItemId)
+        {
+            using (var connection = new MySqlConnection(ConnectionString))
+            {
+                await connection.OpenAsync().ConfigureAwait(false);
+                return await connection.QueryFirstOrDefaultAsync<ftReceiptJournal>("Select * from ftReceiptJournal where ftQueueItemId = @ftQueueItemId", new { ftQueueItemId }).ConfigureAwait(false);
+            }
+        }
+
+        public async Task<ftReceiptJournal> GetByReceiptNumber(long ftReceiptNumber)
+        {
+            using (var connection = new MySqlConnection(ConnectionString))
+            {
+                await connection.OpenAsync().ConfigureAwait(false);
+                return await connection.QueryFirstOrDefaultAsync<ftReceiptJournal>("Select * from ftReceiptJournal where ftReceiptNumber = @ftReceiptNumber", new { ftReceiptNumber }).ConfigureAwait(false);
+            }
+        }
+
+        public async Task<ftReceiptJournal> GetWithLastTimestampAsync()
+        {
+            using (var connection = new MySqlConnection(ConnectionString))
+            {                
+                await connection.OpenAsync().ConfigureAwait(false);
+                return await connection.QueryFirstOrDefaultAsync<ftReceiptJournal>("SELECT * FROM ftReceiptJournal ORDER BY TimeStamp DESC LIMIT 1").ConfigureAwait(false);
             }
         }
     }

@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFrameworks>net461;netcoreapp3.1;net6</TargetFrameworks>
+        <TargetFrameworks>net461;net6</TargetFrameworks>
         <IsPackable>false</IsPackable>
     </PropertyGroup>
 
@@ -14,7 +14,7 @@
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="3.1.4" />
         <PackageReference Include="Microsoft.Extensions.Logging" Version="3.1.4" />
         <PackageReference Include="Microsoft.Data.Sqlite" Version="3.1.4" Condition="'$(TargetFramework)' == 'netstandard2.0'" />
-        <PackageReference Include="System.Data.SQLite" Version="1.0.112.2" Condition="'$(TargetFramework)' != 'netstandard2.0'" />
+        <PackageReference Include="System.Data.SQLite" Version="1.0.116" Condition="'$(TargetFramework)' != 'netstandard2.0'" />
     </ItemGroup>
 
     <ItemGroup>
@@ -34,10 +34,6 @@
         <None Update="Data\*">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </None>
-    </ItemGroup>
-
-    <ItemGroup>
-        <PackageReference Update="fiskaltrust.storage" Version="1.3.21" />
     </ItemGroup>
 
 </Project>

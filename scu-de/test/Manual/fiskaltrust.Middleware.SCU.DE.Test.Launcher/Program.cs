@@ -12,7 +12,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Test.Launcher
 {
     public static class Program
     {
-        private static readonly bool useHelipad = true;
+        private static readonly bool useHelipad = false;
         private static readonly string cashBoxId = "";
         private static readonly string accessToken = "";
         private static readonly string fccDirectory = "";
@@ -44,7 +44,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Test.Launcher
             }
             else
             {
-                cashBoxConfiguration = JsonConvert.DeserializeObject<ftCashBoxConfiguration>(configurationFilePath);
+                cashBoxConfiguration = JsonConvert.DeserializeObject<ftCashBoxConfiguration>(File.ReadAllText(configurationFilePath));
             }
 
             var config = cashBoxConfiguration.ftSignaturCreationDevices[0];
@@ -101,17 +101,14 @@ namespace fiskaltrust.Middleware.SCU.DE.Test.Launcher
                     new PackageConfiguration
                     {
                         Url = new string[] {
-                            "grpc://localhost:18004"
+                            "grpc://localhost:1401"
                         },
                         Id = Guid.Parse("1fc3b59f-9566-4d05-bd61-d5e1fdb5bdb8"),
-                        Package = "fiskaltrust.Middleware.SCU.DE.FiskalyCertified",
+                        Package = "fiskaltrust.Middleware.SCU.DE.Swissbit",
                         Version = "1.3.1-rc1",
                         Configuration = new System.Collections.Generic.Dictionary<string, object>
                         {
-                            { "TssId", "" },
-                            { "ApiKey", "" },
-                            { "ApiSecret","" },
-                            { "AdminPin", "" },
+                            { "devicePath", "F:" }
                         }
                     }
                 }

@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using fiskaltrust.ifPOS.v1;
+using fiskaltrust.Middleware.Contracts.Extensions;
 using fiskaltrust.Middleware.Localization.QueueDE.Constants;
+using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
 {
@@ -72,6 +74,10 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
         public static bool IsRemoveOpenTransactionsWhichAreNotOnTse(this ReceiptRequest receiptRequest)
         {
             return ((receiptRequest.ftReceiptCase & 0x0000_0000_2000_0000) > 0x0000);
+        }
+        public static bool IsInitiateScuSwitchReceiptForce(this ReceiptRequest receiptRequest)
+        {
+            return ((receiptRequest.ftReceiptCase & 0x0000_0000_4000_0000) > 0x0000);
         }
 
         public static bool IsInitialOperationReceipt(this ReceiptRequest receiptRequest)
@@ -371,6 +377,11 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
             {
                 switch (item.ftPayItemCase & 0xFFFF)
                 {
+                    case 0x000A:
+                    {
+                        zero += item.InverseAmountIfNotVoidReceipt(request.IsVoid());
+                        break;
+                    }
                     case 0x000D:
                     case 0x000E:
                     case 0x000F:
@@ -413,7 +424,16 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
                 request.cbReceiptMoment
             }).Min();
         }
-
-        public static decimal GetSignForAmount(decimal quantity, decimal amount)  => quantity < 0 && amount >= 0 ? -1 : 1;
+        private static decimal GetSignForAmount(decimal quantity, decimal amount)  => quantity < 0 && amount >= 0 ? -1 : 1;
+        public static void CheckForEqualSumChargePayItems(this ReceiptRequest request, ILogger logger)
+        {
+            var chargeAmount = request.cbChargeItems != null ? request.cbChargeItems.Sum( x => x.Amount != null ? x.Amount * GetSignForAmount(x.Quantity, x.Amount) : 0) : 0;
+            var payAmount = request.cbPayItems != null ? request.cbPayItems.Sum(x => x.Amount != null ? x.Amount * GetSignForAmount(x.Quantity, x.Amount) : 0) : 0;
+            if (chargeAmount != payAmount)
+            {
+                var _differentPayChargeAmount = $"Aggregated sum of ChargeItem amounts ({chargeAmount}) does not match the sum of PayItem amount ({payAmount}). This is usually a hint for an implementation issue. Please see https://docs.fiskaltrust.cloud/docs/poscreators/middleware-doc for more details.";
+                logger.LogWarning(_differentPayChargeAmount);
+            }
+        }
     }
 }

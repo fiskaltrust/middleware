@@ -21,11 +21,12 @@ namespace fiskaltrust.Middleware.Storage.SQLite.AcceptanceTest
         private SQLiteConfigurationRepository _repo;
         private readonly SqliteConnectionFactory _sqliteConnectionFactory = new SqliteConnectionFactory();
 
-        public override async Task<IReadOnlyConfigurationRepository> CreateReadOnlyRepository(IEnumerable<ftCashBox> cashBoxes = null, IEnumerable<ftQueue> queues = null, IEnumerable<ftQueueAT> queuesAT = null, IEnumerable<ftQueueDE> queuesDE = null, IEnumerable<ftQueueFR> queuesFR = null, IEnumerable<ftSignaturCreationUnitAT> signatureCreateUnitsAT = null, IEnumerable<ftSignaturCreationUnitDE> signatureCreateUnitsDE = null, IEnumerable<ftSignaturCreationUnitFR> signatureCreateUnitsFR = null) => await CreateRepository(cashBoxes, queues, queuesAT, queuesDE, queuesFR, signatureCreateUnitsAT, signatureCreateUnitsDE, signatureCreateUnitsFR);
+        public override async Task<IReadOnlyConfigurationRepository> CreateReadOnlyRepository(IEnumerable<ftCashBox> cashBoxes = null, IEnumerable<ftQueue> queues = null, IEnumerable<ftQueueAT> queuesAT = null, IEnumerable<ftQueueDE> queuesDE = null, IEnumerable<ftQueueFR> queuesFR = null, IEnumerable<ftQueueIT> queuesIT = null, IEnumerable<ftQueueME> queuesME = null, IEnumerable<ftSignaturCreationUnitAT> signatureCreateUnitsAT = null, IEnumerable<ftSignaturCreationUnitDE> signatureCreateUnitsDE = null, IEnumerable<ftSignaturCreationUnitFR> signatureCreateUnitsFR = null, IEnumerable<ftSignaturCreationUnitIT> signatureCreateUnitsIT = null, IEnumerable<ftSignaturCreationUnitME> signatureCreateUnitsME = null)
+            => await CreateRepository(cashBoxes, queues, queuesAT, queuesDE, queuesFR, queuesIT, queuesME, signatureCreateUnitsAT, signatureCreateUnitsDE, signatureCreateUnitsFR, signatureCreateUnitsIT, signatureCreateUnitsME);
 
-        public override async Task<IConfigurationRepository> CreateRepository(IEnumerable<ftCashBox> cashBoxes = null, IEnumerable<ftQueue> queues = null, IEnumerable<ftQueueAT> queuesAT = null, IEnumerable<ftQueueDE> queuesDE = null, IEnumerable<ftQueueFR> queuesFR = null, IEnumerable<ftSignaturCreationUnitAT> signatureCreateUnitsAT = null, IEnumerable<ftSignaturCreationUnitDE> signatureCreateUnitsDE = null, IEnumerable<ftSignaturCreationUnitFR> signatureCreateUnitsFR = null)
+        public override async Task<IConfigurationRepository> CreateRepository(IEnumerable<ftCashBox> cashBoxes = null, IEnumerable<ftQueue> queues = null, IEnumerable<ftQueueAT> queuesAT = null, IEnumerable<ftQueueDE> queuesDE = null, IEnumerable<ftQueueFR> queuesFR = null, IEnumerable<ftQueueIT> queuesIT = null, IEnumerable<ftQueueME> queuesME = null, IEnumerable<ftSignaturCreationUnitAT> signatureCreateUnitsAT = null, IEnumerable<ftSignaturCreationUnitDE> signatureCreateUnitsDE = null, IEnumerable<ftSignaturCreationUnitFR> signatureCreateUnitsFR = null, IEnumerable<ftSignaturCreationUnitIT> signatureCreateUnitsIT = null, IEnumerable<ftSignaturCreationUnitME> signatureCreateUnitsME = null)
         {
-            var databasMigrator = new DatabaseMigrator(_sqliteConnectionFactory, _path, new Dictionary<string, object>(), Mock.Of<ILogger<IMiddlewareBootstrapper>>());
+            var databasMigrator = new DatabaseMigrator(_sqliteConnectionFactory, 30 * 60, _path, new Dictionary<string, object>(), Mock.Of<ILogger<IMiddlewareBootstrapper>>());
             await databasMigrator.MigrateAsync();
 
             _repo = new SQLiteConfigurationRepository(_sqliteConnectionFactory, _path);
@@ -59,6 +60,18 @@ namespace fiskaltrust.Middleware.Storage.SQLite.AcceptanceTest
                 { await _repo.InsertOrUpdateQueueFRAsync(queueFR); }
             }
 
+            if (queuesIT != null)
+            {
+                foreach (var queueIT in queuesIT)
+                { await _repo.InsertOrUpdateQueueITAsync(queueIT); }
+            }
+
+            if (queuesME != null)
+            {
+                foreach (var queueME in queuesME)
+                { await _repo.InsertOrUpdateQueueMEAsync(queueME); }
+            }
+
             if (signatureCreateUnitsAT != null)
             {
                 foreach (var scuAT in signatureCreateUnitsAT)
@@ -75,6 +88,18 @@ namespace fiskaltrust.Middleware.Storage.SQLite.AcceptanceTest
             {
                 foreach (var scuFR in signatureCreateUnitsFR)
                 { await _repo.InsertOrUpdateSignaturCreationUnitFRAsync(scuFR); }
+            }
+
+            if (signatureCreateUnitsIT != null)
+            {
+                foreach (var scu in signatureCreateUnitsIT)
+                { await _repo.InsertOrUpdateSignaturCreationUnitITAsync(scu); }
+            }
+
+            if (signatureCreateUnitsME != null)
+            {
+                foreach (var scuME in signatureCreateUnitsME)
+                { await _repo.InsertOrUpdateSignaturCreationUnitMEAsync(scuME); }
             }
 
             return _repo;

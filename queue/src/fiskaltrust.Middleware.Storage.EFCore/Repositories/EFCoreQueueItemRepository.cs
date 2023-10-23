@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Storage.Base.Extensions;
 using fiskaltrust.storage.V0;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
@@ -54,16 +55,60 @@ namespace fiskaltrust.Middleware.Storage.EFCore.Repositories
             }
         }
 
-        public IAsyncEnumerable<ftQueueItem> GetPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem)
+        public IAsyncEnumerable<ftQueueItem> GetQueueItemsAfterQueueItem(ftQueueItem ftQueueItem)
+        {
+            return DbContext.QueueItemList.AsAsyncEnumerable().Where(x => x.ftQueueRow >= ftQueueItem.ftQueueRow);
+        }
+        public async IAsyncEnumerable<string> GetGroupedReceiptReferenceAsync(long? fromIncl, long? toIncl)
+        {
+            var groupByLastNamesQuery =
+                    from queueItem in DbContext.QueueItemList.AsEnumerable()
+                    where
+                    (fromIncl.HasValue ? queueItem.TimeStamp >= fromIncl.Value : true) &&
+                    (toIncl.HasValue ? queueItem.TimeStamp <= toIncl.Value : true) &&
+                    !string.IsNullOrEmpty(queueItem.response)
+                    group queueItem by queueItem.cbReceiptReference into newGroup
+                    orderby newGroup.Key
+                    select newGroup;
+            await foreach (var entry in groupByLastNamesQuery.ToAsyncEnumerable())
+            {
+                yield return entry.Key;
+            }
+        }
+        public async IAsyncEnumerable<ftQueueItem> GetQueueItemsForReceiptReferenceAsync(string receiptReference)
+        {
+            var queueItemsForReceiptReference =
+                from queueItem in DbContext.QueueItemList.AsEnumerable()
+                where 
+                queueItem.cbReceiptReference == receiptReference &&
+                !string.IsNullOrEmpty(queueItem.response)
+                orderby queueItem.TimeStamp
+                select queueItem;
+            await foreach (var entry in queueItemsForReceiptReference.ToAsyncEnumerable())
+            {
+                var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(entry.request);
+                if (receiptRequest.IncludeInReferences())
+                {
+                    yield return entry;
+                }
+            }
+        }
+        public async Task<ftQueueItem> GetClosestPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem)
         {
             var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(ftQueueItem.request);
-            if (string.IsNullOrWhiteSpace(receiptRequest.cbPreviousReceiptReference) && string.IsNullOrWhiteSpace(ftQueueItem.cbReceiptReference))
+            if (string.IsNullOrWhiteSpace(receiptRequest.cbPreviousReceiptReference) || string.IsNullOrWhiteSpace(ftQueueItem.cbReceiptReference) || receiptRequest.cbPreviousReceiptReference == ftQueueItem.cbReceiptReference)
             {
-                return new List<ftQueueItem>().ToAsyncEnumerable();
+                return null;
             }
-
-            return DbContext.QueueItemList.AsAsyncEnumerable().Where(x => x.ftQueueRow < ftQueueItem.ftQueueRow &&
-                (x.cbReceiptReference == receiptRequest.cbPreviousReceiptReference || x.cbReceiptReference == ftQueueItem.cbReceiptReference));
+            var queueItemsForReceiptReference =
+                            (from queueItem in DbContext.QueueItemList.AsEnumerable()
+                             where
+                             queueItem.ftQueueRow < ftQueueItem.ftQueueRow &&
+                             receiptRequest.IncludeInReferences() && queueItem.cbReceiptReference == receiptRequest.cbPreviousReceiptReference &&
+                             !string.IsNullOrEmpty(queueItem.response)
+                             orderby queueItem.TimeStamp descending
+                             select queueItem).ToAsyncEnumerable().Take(1);
+            return await queueItemsForReceiptReference.FirstOrDefaultAsync();
         }
     }
 }

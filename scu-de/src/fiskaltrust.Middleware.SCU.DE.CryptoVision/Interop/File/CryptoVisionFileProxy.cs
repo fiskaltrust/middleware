@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.SCU.DE.CryptoVision.Exceptions;
 using fiskaltrust.Middleware.SCU.DE.CryptoVision.Helpers;
@@ -38,6 +36,11 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision.Interop
             _transportAdapter.ReopenFile();
             (var lastResult, _, _) = await SeStartAsync();
             lastResult.ThrowIfError();
+        }
+
+        public void ReOpen()
+        {
+            _transportAdapter.ReopenFile();
         }
 
         public async Task<SeResult> SeActivateAsync() => await CommandRunner.ExecuteSimpleCommandAsync(_transportAdapter, TseCommandCodeEnum.Activate);
@@ -85,19 +88,7 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision.Interop
             return await CommandRunner.ExecuteAsync(async () =>
             {
                 var command = new ExportCommands.ExportDataTseCommand(clientId, (uint) maximumNumberOfRecords);
-                foreach (var item in await _transportAdapter.ExecuteAsync(command))
-                {
-                    stream.Write(item.DataBytes, 0, item.DataBytes.Length);
-                }
-                return SeResult.ExecutionOk;
-            });
-        }
 
-        public async Task<SeResult> SeExportDateRangeDataAsync(Stream stream, ulong startUnixTime, ulong endUnixTime, string clientId = null, int maximumNumberOfRecords = 0)
-        {
-            return await CommandRunner.ExecuteAsync(async () =>
-            {
-                var command = new ExportCommands.ExportDataTseCommand((long) startUnixTime, (long) endUnixTime, clientId, (uint) maximumNumberOfRecords);
                 foreach (var item in await _transportAdapter.ExecuteAsync(command))
                 {
                     await stream.WriteAsync(item.DataBytes, 0, item.DataBytes.Length);
@@ -106,11 +97,26 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision.Interop
             });
         }
 
-        public async Task<SeResult> SeExportMoreDataAsync(Stream stream, byte[] serialNumber, uint previousSignatureCounter, int maxNumberOfRecords)
+        public async Task<SeResult> SeExportMoreDataAsync(Stream stream, byte[] serialNumber, long previousSignatureCounter, long maxNumberOfRecords)
         {
             return await CommandRunner.ExecuteAsync(async () =>
             {
-                var command = AdditionalCommands.CreateExportMoreDataTseCommand(serialNumber, previousSignatureCounter, (uint) maxNumberOfRecords);
+                var command = AdditionalCommands.CreateExportMoreDataTseCommand(serialNumber, (uint) previousSignatureCounter, (uint) maxNumberOfRecords);
+
+                foreach (var item in await _transportAdapter.ExecuteAsync(command))
+                {
+                    await stream.WriteAsync(item.DataBytes, 0, item.DataBytes.Length);
+                }
+                return SeResult.ExecutionOk;
+            });
+        }
+
+
+        public async Task<SeResult> SeExportDateRangeDataAsync(Stream stream, ulong startUnixTime, ulong endUnixTime, string clientId = null, int maximumNumberOfRecords = 0)
+        {
+            return await CommandRunner.ExecuteAsync(async () =>
+            {
+                var command = new ExportCommands.ExportDataTseCommand((long) startUnixTime, (long) endUnixTime, clientId, (uint) maximumNumberOfRecords);
                 foreach (var item in await _transportAdapter.ExecuteAsync(command))
                 {
                     await stream.WriteAsync(item.DataBytes, 0, item.DataBytes.Length);
@@ -165,11 +171,11 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision.Interop
             });
         }
 
-        public async Task<(SeResult, SeTransactionResult)> SeFinishTransactionAsync(string clientId, uint transactionNumber, byte[] processData, string processType, byte[] additionalData = null)
+        public async Task<(SeResult, SeTransactionResult)> SeFinishTransactionAsync(string clientId, uint transactionNumber, byte[] processData, string processType)
         {
             return await CommandRunner.ExecuteAsync(async () =>
             {
-                var command = InputCommands.CreateFinishTransactionTseCommand(clientId, transactionNumber, processData, processType, additionalData);
+                var command = InputCommands.CreateFinishTransactionTseCommand(clientId, transactionNumber, processData, processType);
                 var response = await _transportAdapter.ExecuteAsync(command);
 
                 var transactionResult = new SeTransactionResult
@@ -295,9 +301,7 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision.Interop
             {
                 var command = ConfigurationAndStatusInformationCommands.GetStatusCommands.CreateGetOpenTransactionsTseCommand();
                 var response = await _transportAdapter.ExecuteAsync(command);
-
                 // destroys transportation layer because of response size missmatch by tse
-
                 return (SeResult.ExecutionOk, ((TseLongArrayParameter) response[0]).DataValue);
             });
         }
@@ -423,6 +427,20 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision.Interop
             });
         }
 
+        /// <summary>
+        /// This is the overload of the InitializePinAsync command which is used ONLY with V2 hardware
+        /// </summary>
+        public async Task<SeResult> SeInitializePinsAsync(string userId, byte[] userPuk)
+        {
+            return await CommandRunner.ExecuteAsync(async () =>
+            {
+                var command = AdditionalCommands.CreateInitializePinsTseCommand(userId, userPuk);
+                var response = await _transportAdapter.ExecuteAsync(command);
+
+                return SeResult.ExecutionOk;
+            });
+        }
+
         public async Task<SeResult> SeLogOutAsync(string userId)
         {
             return await CommandRunner.ExecuteAsync(async () =>
@@ -499,11 +517,11 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision.Interop
             });
         }
 
-        public async Task<(SeResult, SeStartTransactionResult)> SeStartTransactionAsync(string clientId, byte[] processData, string processType, byte[] additionalData = null)
+        public async Task<(SeResult, SeStartTransactionResult)> SeStartTransactionAsync(string clientId, byte[] processData, string processType)
         {
             return await CommandRunner.ExecuteAsync(async () =>
             {
-                var command = InputCommands.CreateStartTransactionTseCommand(clientId, processData, processType, additionalData);
+                var command = InputCommands.CreateStartTransactionTseCommand(clientId, processData, processType);
                 var response = await _transportAdapter.ExecuteAsync(command);
 
                 // documentation doesn't match c-implementation, this implementation doesn't follow implementation by purpose

@@ -26,7 +26,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite.AcceptanceTest
 
         public override async Task<IMiddlewareQueueItemRepository> CreateRepository(string path)
         {
-            var databasMigrator = new DatabaseMigrator(_sqliteConnectionFactory, path, new Dictionary<string, object>(), Mock.Of<ILogger<IMiddlewareBootstrapper>>());
+            var databasMigrator = new DatabaseMigrator(_sqliteConnectionFactory, 30 * 60, path, new Dictionary<string, object>(), Mock.Of<ILogger<IMiddlewareBootstrapper>>());
             await databasMigrator.MigrateAsync();
 
             return new SQLiteQueueItemRepository(_sqliteConnectionFactory, path);
@@ -36,7 +36,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite.AcceptanceTest
 
         public override async Task<IMiddlewareQueueItemRepository> CreateRepository(IEnumerable<ftQueueItem> entries)
         {
-            var databasMigrator = new DatabaseMigrator(_sqliteConnectionFactory, _path, new Dictionary<string, object>(), Mock.Of<ILogger<IMiddlewareBootstrapper>>());
+            var databasMigrator = new DatabaseMigrator(_sqliteConnectionFactory, 30 * 60, _path, new Dictionary<string, object>(), Mock.Of<ILogger<IMiddlewareBootstrapper>>());
             await databasMigrator.MigrateAsync();
 
             _repo = new SQLiteQueueItemRepository(_sqliteConnectionFactory, _path);

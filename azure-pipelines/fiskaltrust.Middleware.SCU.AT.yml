@@ -1,0 +1,60 @@
+resources:
+- repo: self
+
+trigger:
+  batch: true
+  branches:
+    include:
+    - main
+    - refs/tags/scu-at/*
+  paths:
+    include:
+      - scu-at
+
+pr:
+  branches:
+    include:
+    - main
+    - refs/tags/scu-at/*
+  paths:
+    include:
+      - scu-at
+
+variables:
+- group: 'Code Signing Certificates'
+- name: BuildConfiguration
+  value: release
+- name: Solution
+  value: 'fiskaltrust.Middleware.SCU.AT.sln'
+- name: vmImageName 
+  value: 'windows-2022'
+- name: WorkingDirectory
+  value: 'scu-at'
+
+jobs:
+- job: Test
+  displayName: Unit and integration tests
+  pool:
+    vmImage: $(vmImageName)
+  steps:
+  - template: templates/scu-at/test.template.yml
+
+- job: BuildNugetPackages
+  displayName: Build v1 NuGet packages
+  dependsOn: 
+  - Test
+  condition: succeeded()
+  pool:
+    vmImage: $(vmImageName)
+  steps:
+  - template: templates/scu-at/build-nuget.template.yml
+
+- job: BuildZipPackages
+  displayName: Build v2 zip packages
+  dependsOn: 
+  - Test
+  condition: succeeded()
+  pool:
+    vmImage: $(vmImageName)
+  steps:
+  - template: templates/scu-at/build-zip.template.yml

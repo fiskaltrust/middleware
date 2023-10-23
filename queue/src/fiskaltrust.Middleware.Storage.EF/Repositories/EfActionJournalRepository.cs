@@ -2,11 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Storage.EF.Repositories
 {
-    public class EfActionJournalRepository : AbstractEFRepostiory<Guid, ftActionJournal>, IActionJournalRepository
+    public class EfActionJournalRepository : AbstractEFRepostiory<Guid, ftActionJournal>, IActionJournalRepository, IMiddlewareActionJournalRepository
     {
         private long _lastInsertedTimeStamp;
 
@@ -35,5 +36,16 @@ namespace fiskaltrust.Middleware.Storage.EF.Repositories
             }
             return result.ToAsyncEnumerable();
         }
+
+        public IAsyncEnumerable<ftActionJournal> GetByQueueItemId(Guid queueItemId)
+        {
+            var result = DbContext.ActionJournalList.Where(x => x.ftQueueItemId == queueItemId).OrderByDescending(x => x.TimeStamp);
+            return result.ToAsyncEnumerable();
+        }
+
+        public Task<ftActionJournal> GetWithLastTimestampAsync() => Task.FromResult(DbContext.Set<ftActionJournal>().OrderByDescending(x => x.TimeStamp).FirstOrDefault());
+        
+        public IAsyncEnumerable<ftActionJournal> GetByPriorityAfterTimestampAsync(int lowerThanPriority, long fromTimestampInclusive) =>
+            DbContext.ActionJournalList.Where(x => x.TimeStamp >= fromTimestampInclusive && x.Priority < lowerThanPriority).OrderBy(x => x.TimeStamp).ToAsyncEnumerable();
     }
 }

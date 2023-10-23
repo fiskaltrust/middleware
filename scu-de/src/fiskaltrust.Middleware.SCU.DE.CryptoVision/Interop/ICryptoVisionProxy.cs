@@ -19,16 +19,16 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision.Interop
 
         #region Input Functions
 
-        public abstract Task<(SeResult, SeStartTransactionResult)> SeStartTransactionAsync(string clientId, byte[] processData, string processType, byte[] additionalData = null);
+        public abstract Task<(SeResult, SeStartTransactionResult)> SeStartTransactionAsync(string clientId, byte[] processData, string processType);
         public abstract Task<(SeResult, SeTransactionResult)> SeUpdateTransactionAsync(string clientId, UInt32 transactionNumber, byte[] processData, string processType);
-        public abstract Task<(SeResult, SeTransactionResult)> SeFinishTransactionAsync(string clientId, UInt32 transactionNumber, byte[] processData, string processType, byte[] additionalData = null);
+        public abstract Task<(SeResult, SeTransactionResult)> SeFinishTransactionAsync(string clientId, UInt32 transactionNumber, byte[] processData, string processType);
 
         #endregion
 
         #region Export Functions
 
         public abstract Task<SeResult> SeExportDataAsync(Stream stream, string clientId = null, int maximumNumberOfRecords = 0);
-        public abstract Task<SeResult> SeExportTransactionDataAsync(Stream stream, UInt32 transactionNumber, string clientId = null, int maximumNumberOfRecords = 0);
+        public abstract Task<SeResult> SeExportTransactionDataAsync(Stream stream, uint transactionNumber, string clientId = null, int maximumNumberOfRecords = 0);
         public abstract Task<SeResult> SeExportTransactionRangeDataAsync(Stream stream, UInt32 startTransactionNumber, UInt32 endTransactionNumber, string clientId = null, int maximumNumberOfRecords = 0);
         public abstract Task<SeResult> SeExportDateRangeDataAsync(Stream stream, UInt64 startUnixTime, UInt64 endUnixTime, string clientId = null, int maximumNumberOfRecords = 0);
         public abstract Task<(SeResult, byte[])> SeExportCertificatesAsync();
@@ -84,10 +84,11 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision.Interop
         public abstract Task<(SeResult, string deviceVersion, byte[] deviceUniqueId)> SeStartAsync();
         public abstract Task<(SeResult, bool adminPinInTransportState, bool adminPukInTransportState, bool timeAdminPinInTransportState, bool timeAdminPukInTransportState)> SeGetPinStatesAsync();
         public abstract Task<SeResult> SeInitializePinsAsync(byte[] adminPuk, byte[] adminPin, byte[] timeAdminPuk, byte[] timeAdminPin);
+        public abstract Task<SeResult> SeInitializePinsAsync(string userId, byte[] userPuk);
         public abstract Task<SeResult> SeMapERStoKeyAsync(string clientId, byte[] serialNumber);
         public abstract Task<SeResult> SeDeactivateAsync();
         public abstract Task<SeResult> SeActivateAsync();
-        public abstract Task<SeResult> SeExportMoreDataAsync(Stream stream, byte[] serialNumber, UInt32 previousSignatureCounter, Int32 maxNumberOfRecords);
+        public abstract Task<SeResult> SeExportMoreDataAsync(Stream stream, byte[] serialNumber, long previousSignatureCounter, long maxNumberOfRecords);
         public abstract Task<SeResult> SeDeleteDataUpToAsync(byte[] serialNumber, UInt32 signatureCounter);
         public abstract Task<(SeResult, byte[])> SeGetERSMappingsAsync();
 
@@ -110,6 +111,7 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision.Interop
 
         public abstract Task ResetSeConnectionAsync();
         public abstract Task CloseSeConnectionAsync();
+        public abstract void ReOpen();
 
     }
 }

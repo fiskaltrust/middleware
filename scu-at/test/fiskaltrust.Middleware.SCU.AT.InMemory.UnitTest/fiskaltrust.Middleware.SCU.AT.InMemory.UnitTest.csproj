@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.AT.InMemory\fiskaltrust.Middleware.SCU.AT.InMemory.csproj" />
+    </ItemGroup>
+
+</Project>

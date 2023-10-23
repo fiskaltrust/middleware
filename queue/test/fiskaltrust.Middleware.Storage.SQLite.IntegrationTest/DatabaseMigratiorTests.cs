@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
@@ -7,6 +8,8 @@ using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Storage.Base;
 using fiskaltrust.Middleware.Storage.SQLite.Connection;
 using fiskaltrust.Middleware.Storage.SQLite.DatabaseInitialization;
+using fiskaltrust.Middleware.Storage.SQLite.Repositories;
+using fiskaltrust.storage.V0;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -25,7 +28,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite.IntegrationTest
                 File.Delete(path);
             }
 
-            var databaseMigrator = new DatabaseMigrator(new SqliteConnectionFactory(), path, new Dictionary<string, object>(), Mock.Of<ILogger<IMiddlewareBootstrapper>>());
+            var databaseMigrator = new DatabaseMigrator(new SqliteConnectionFactory(), 30 * 60, path, new Dictionary<string, object>(), Mock.Of<ILogger<IMiddlewareBootstrapper>>());
             await databaseMigrator.MigrateAsync();
 
             File.Delete(path);
@@ -37,7 +40,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite.IntegrationTest
             const string path = "Data/001_Init.sqlite";
 
             var connectionFactory = new SqliteConnectionFactory();
-            var databaseMigrator = new DatabaseMigrator(connectionFactory, path, new Dictionary<string, object>(), Mock.Of<ILogger<IMiddlewareBootstrapper>>());
+            var databaseMigrator = new DatabaseMigrator(connectionFactory, 30 * 60, path, new Dictionary<string, object>(), Mock.Of<ILogger<IMiddlewareBootstrapper>>());
             await databaseMigrator.MigrateAsync();
 
             using (var connection = connectionFactory.GetConnection(connectionFactory.BuildConnectionString(path)))
@@ -53,6 +56,80 @@ namespace fiskaltrust.Middleware.Storage.SQLite.IntegrationTest
             }
 
             File.Delete(path);
+        }
+
+        [Fact]
+        public async Task PerformMigrations_SetWALModeON_WALModeON()
+        {
+            const string path = "waldb.sqlite";
+      
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+            var connectionFactory = new SqliteConnectionFactory();
+            var config = new Dictionary<string, object>
+            {
+                { "EnableWAL", true }
+            };
+
+            var databaseMigrator = new DatabaseMigrator(connectionFactory, 30 * 60, path, config, Mock.Of<ILogger<IMiddlewareBootstrapper>>());
+            await databaseMigrator.MigrateAsync();
+            await databaseMigrator.SetWALMode();
+            var queueItemRepo = new SQLiteQueueItemRepository(connectionFactory, path);
+            await queueItemRepo.InsertOrUpdateAsync(new ftQueueItem
+            {
+                ftQueueItemId = Guid.NewGuid(),
+                ftQueueId = Guid.NewGuid(),
+                ftQueueRow = 1,
+                ftQueueTimeout = 5,
+                ftQueueMoment = DateTime.Now,
+                cbReceiptMoment = DateTime.Now,
+                TimeStamp = DateTime.Now.Ticks
+            });
+            File.Exists("waldb.sqlite-wal").Should().BeTrue();
+        }
+
+        [Fact]
+        public async Task PerformMigrations_SetWALModeOFF_WALModeFF()
+        {
+
+            const string path = "walOffdb.sqlite";
+
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+            if (File.Exists("walOffdb.sqlite-shm"))
+            {
+                File.Delete("walOffdb.sqlite-shm");
+            }
+            if (File.Exists("walOffdb.sqlite-wal"))
+            {
+                File.Delete("walOffdb.sqlite-wal");
+            }
+            var connectionFactory = new SqliteConnectionFactory();
+            var config = new Dictionary<string, object>
+            {
+                { "WAL", "OFF" }
+            };
+
+            var databaseMigrator = new DatabaseMigrator(connectionFactory, 30 * 60, path, config, Mock.Of<ILogger<IMiddlewareBootstrapper>>());
+            await databaseMigrator.MigrateAsync();
+            await databaseMigrator.SetWALMode();
+            var queueItemRepo = new SQLiteQueueItemRepository(connectionFactory, path);
+            await queueItemRepo.InsertOrUpdateAsync(new ftQueueItem
+            {
+                ftQueueItemId = Guid.NewGuid(),
+                ftQueueId = Guid.NewGuid(),
+                ftQueueRow = 1,
+                ftQueueTimeout = 5,
+                ftQueueMoment = DateTime.Now,
+                cbReceiptMoment = DateTime.Now,
+                TimeStamp = DateTime.Now.Ticks
+            });
+            File.Exists("walOffdb.sqlite-wal").Should().BeFalse();
+
         }
     }
 }

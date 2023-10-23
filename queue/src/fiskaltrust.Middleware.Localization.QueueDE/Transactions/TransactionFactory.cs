@@ -1,18 +1,18 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1.de;
+using fiskaltrust.Middleware.Localization.QueueDE.Services;
 
 namespace fiskaltrust.Middleware.Localization.QueueDE.Transactions
 {
     public class TransactionFactory : ITransactionFactory
     {
-        private readonly IDESSCD _client;
+        private readonly IDESSCDProvider _deSSCDProvider;
 
-        public TransactionFactory(IDESSCD client)
+        public TransactionFactory(IDESSCDProvider deSSCDProvider)
         {
-            _client = client;
+            _deSSCDProvider = deSSCDProvider;
         }
 
         public async Task<StartTransactionResponse> PerformStartTransactionRequestAsync(Guid ftQueueItemId, string cashBoxIdentification,  bool isRetry = false)
@@ -23,7 +23,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Transactions
                 ClientId = cashBoxIdentification,
                 IsRetry = isRetry
             };
-            return await _client.StartTransactionAsync(startTransaction).ConfigureAwait(false);
+            return await _deSSCDProvider.Instance.StartTransactionAsync(startTransaction).ConfigureAwait(false);
         }
 
         public async Task<FinishTransactionResponse> PerformFinishTransactionRequestAsync(string processType, string payload, Guid ftQueueItemId, string cashBoxIdentification, ulong transactionNumber, bool isRetry = false)
@@ -37,7 +37,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Transactions
                 ProcessDataBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(payload)),
                 IsRetry = isRetry
             };
-            return await _client.FinishTransactionAsync(finishTransaction).ConfigureAwait(false);
+            return await _deSSCDProvider.Instance.FinishTransactionAsync(finishTransaction).ConfigureAwait(false);
         }
 
         public async Task<UpdateTransactionResponse> PerformUpdateTransactionRequestAsync(string processType, string payload, Guid ftQueueItemId, string cashBoxIdentification, ulong transactionNumber, bool isRetry = false)
@@ -51,7 +51,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Transactions
                 ProcessDataBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(payload)),
                 IsRetry = isRetry
             };
-            return await _client.UpdateTransactionAsync(updateTransaction).ConfigureAwait(false);
+            return await _deSSCDProvider.Instance.UpdateTransactionAsync(updateTransaction).ConfigureAwait(false);
         }
     }
 }

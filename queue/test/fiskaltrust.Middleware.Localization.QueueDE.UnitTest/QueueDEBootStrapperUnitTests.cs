@@ -7,7 +7,8 @@ using Xunit;
 using Newtonsoft.Json;
 using Microsoft.Extensions.DependencyInjection;
 using fiskaltrust.Middleware.Localization.QueueDE.Transactions;
-using fiskaltrust.Middleware.Contracts;
+using fiskaltrust.Middleware.Contracts.Models;
+using fiskaltrust.Middleware.Contracts.Interfaces;
 
 namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
 {
@@ -38,7 +39,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
                 { "init_ftQueue", JsonConvert.SerializeObject(queues) }
             };
 
-            var queueDEBootStrapper = LocalizedQueueBootStrapperFactory.GetBootstrapperForLocalizedQueue(queueId, config);
+            var queueDEBootStrapper = LocalizedQueueBootStrapperFactory.GetBootstrapperForLocalizedQueue(queueId, new MiddlewareConfiguration { Configuration = config });
             queueDEBootStrapper.Should().BeOfType(typeof(QueueDEBootstrapper));
             queueDEBootStrapper.GetType().Should().Implement(typeof(ILocalizedQueueBootstrapper));
         }
@@ -51,7 +52,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
             var sut = new QueueDEBootstrapper();
             sut.ConfigureServices(serviceCollection);
 
-            serviceCollection.Should().HaveCount(27);
+            serviceCollection.Should().HaveCount(29);
 
             var tranactionPayloadFactory = new ServiceDescriptor(typeof(ITransactionPayloadFactory), typeof(DSFinVKTransactionPayloadFactory), ServiceLifetime.Scoped);
             var signProcessorDE = new ServiceDescriptor(typeof(IMarketSpecificSignProcessor), typeof(SignProcessorDE), ServiceLifetime.Scoped);

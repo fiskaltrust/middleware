@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1.de;
@@ -147,7 +148,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
                 return new TseInfo
                 {
                     CurrentNumberOfClients = clientDto.Where(x => x.State.Equals("REGISTERED")).ToList().Count,
-                    CurrentNumberOfStartedTransactions = startedTransactions.Count(),
+                    CurrentNumberOfStartedTransactions = tssResult.NumberOfActiveTransactions ?? startedTransactions.Count(),
                     SerialNumberOctet = serial,
                     PublicKeyBase64 = tssResult.PublicKey,
                     FirmwareIdentification = tssResult.Version,
@@ -156,7 +157,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
                     MaxNumberOfStartedTransactions = tssResult.MaxNumberOfActiveTransactions ?? int.MaxValue,
                     CertificatesBase64 = new List<string>
                     {
-                        tssResult.Certificate.AsBase64()
+                        tssResult.Certificate
                     },
                     CurrentClientIds = clientDto.Where(x => x.State.Equals("REGISTERED")).Select(x => x.SerialNumber),
                     SignatureAlgorithm = tssResult.SignatureAlgorithm,
@@ -181,7 +182,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
             try
             {
                 var tssResult = await _fiskalyApiProvider.GetTseByIdAsync(_configuration.TssId);
-                if(tssResult.State == FiskalyTseState.CREATED.ToString())
+                if (tssResult.State == FiskalyTseState.CREATED.ToString())
                 {
                     throw new FiskalyException("The state of the TSS is 'CREATED' and therefore not yet personalized, which is currently not supported.");
                 }
@@ -345,15 +346,26 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
             await _fiskalyApiProvider.PatchTseMetadataAsync(_configuration.TssId, new Dictionary<string, object> { { _lastExportedTransactionNumberKey, lastExportedTransactionNumber } });
         }
 
-        private async Task CacheExportAsync(Guid exportId)
+        private async Task CacheExportAsync(Guid exportId, int currentTry = 0)
         {
             try
             {
                 await _fiskalyApiProvider.StoreDownloadResultAsync(_configuration.TssId, exportId);
                 SetExportState(exportId, ExportState.Succeeded);
             }
+            catch (WebException)
+            {
+                if (_configuration.RetriesOnTarExportWebException > currentTry)
+                {
+                    currentTry++;
+                    _logger.LogWarning($"WebException on Export from Fiskaly retry {currentTry} from {_configuration.RetriesOnTarExportWebException}, DelayOnRetriesInMs: {_configuration.DelayOnRetriesInMs}.");
+                    await Task.Delay(_configuration.DelayOnRetriesInMs * (currentTry + 1)).ConfigureAwait(false);
+                    await CacheExportAsync(exportId, currentTry).ConfigureAwait(false);
+                }
+            }
             catch (Exception ex)
             {
+
                 _logger.LogError(ex, "Failed to execute {Operation} - ExportId: {ExportId}", nameof(CacheExportAsync), exportId);
                 SetExportState(exportId, ExportState.Failed, ex);
             }
@@ -555,12 +567,15 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
                                     var list = string.Join(",", openTransaction.Select(x => x.Number).ToArray());
                                     _logger.LogWarning("Could not delete log files from TSE after successfully exporting them because the following transactions were open: {OpenTransactions}. " +
                                         "If these transactions are not used anymore and could not be closed automatically by a daily closing receipt, please consider sending a fail-transaction-receipt to cancel them.", list);
-                                }else
+                                }
+                                else
                                 {
                                     var metadata = await _fiskalyApiProvider.GetExportMetadataAsync(_configuration.TssId, Guid.Parse(request.TokenId));
                                     if (metadata.ContainsKey("end_transaction_number"))
                                     {
                                         await SetLastExportedTransactionNumber(Convert.ToInt64(metadata["end_transaction_number"], CultureInfo.InvariantCulture));
+
+                                        sessionResponse.IsErased = true;
                                     }
                                 }
                             }
