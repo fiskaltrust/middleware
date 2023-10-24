@@ -28,6 +28,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
     {
         private const string NO_EXPORT = "noexport-";
         private const string TSE_INFO_DAT = "TSE_INFO.DAT";
+        private const string exportFile = "lastExportedTransactionNr.inf";
 
         private readonly SemaphoreSlim _hwLock = new SemaphoreSlim(1, 1);
         private readonly object _proxyLock = new object();
@@ -45,6 +46,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
         private ISwissbitProxy _proxy = null;
         private DateTime _nextSyncTime;
         private ulong _lastTransactionNr = 0;
+        private long _exportIncrementalIteration = 0;
 
         // Never change these values, as all existing installations are depending on them
         private readonly byte[] _adminPuk = Encoding.ASCII.GetBytes("123456");
@@ -750,7 +752,9 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
                         _logger.LogError("Before executing a partial export a daily closing has to be made. See https://link.fiskaltrust.cloud/market-de/swissbit-chunked-tar-export for more details.");
                         throw new Exception("Missing Daily Closing.");
                     };
-                    CacheExportIncrementalAsync(exportId, 0, _configuration.ChunkExportTransactionCount, (long) _lastTransactionNr).FireAndForget();
+                    var startTransactionNr = GetNextExportedTransaction();
+                    _exportIncrementalIteration = 0;
+                    CacheExportIncrementalAsync(exportId, startTransactionNr, _configuration.ChunkExportTransactionCount, (long) _lastTransactionNr).FireAndForget();
                 }
                 else
                 {
@@ -817,7 +821,9 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
                         TarFileHelper.AppendTarStreamToTarFile(exportId.ToString(), stream);
                         _logger.LogInformation($"Export total {currentNumberOfTransactions}. Partial Export from TransactionNr: {startTransactionNr} to TransactionNr: {endTransactionNr}");
                     }
-                    newStartTransactionNr = GetLastExportedTransaction(exportId.ToString()) + 1;
+                    var lastexportedTransactionNr = GetLastExportedTransaction(exportId.ToString());
+                    SaveLastExportedTransactionNumber(lastexportedTransactionNr);
+                    newStartTransactionNr = lastexportedTransactionNr + 1;
                 }
                 catch (Exception ex)
                 {
@@ -828,7 +834,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
                         throw;
                     }
                     _logger.LogInformation($"No Data: Export total {currentNumberOfTransactions}. Partial Export from TransactionNr: {startTransactionNr} to TransactionNr: {endTransactionNr}");
-
+                    SaveLastExportedTransactionNumber(endTransactionNr);
                 }
             });
 
@@ -836,7 +842,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
             {
                 newStartTransactionNr = startTransactionNr + maxNumberOfRecords;
             }
-            if (newStartTransactionNr <= currentNumberOfTransactions)
+            if (newStartTransactionNr <= currentNumberOfTransactions && IsWithinSetIteration())
             {
                 await CacheExportIncrementalAsync(exportId, newStartTransactionNr, maxNumberOfRecords, currentNumberOfTransactions).ConfigureAwait(false);
             }
@@ -848,12 +854,41 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
             }
         }
 
+        private bool IsWithinSetIteration()
+        {
+            if (_configuration.ChunkExportIteration == 0)
+            {
+                return true;
+            }
+            return _exportIncrementalIteration <= _configuration.ChunkExportIteration;
+        }
+
+        private long GetNextExportedTransaction()
+        {
+            try
+            {
+                var read = File.ReadAllText(exportFile);
+                return long.Parse(read)+1;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to execute {Operation} - TempFileName: {TempFileName}", nameof(GetNextExportedTransaction), exportFile);
+                return 0;
+            }
+        }
+
+        private void SaveLastExportedTransactionNumber(long lastExportedTransactionNumber)
+        {
+            File.WriteAllText(exportFile, lastExportedTransactionNumber.ToString());
+            _exportIncrementalIteration++;
+        }
+
         private long GetLastExportedTransaction(string targetFile)
         {
             var lastlog = TarFileHelper.GetLastLogEntryFromTarFile(targetFile);
 
             //Unixt_1687767355_Sig-105945_Log-Tra_No-50549_Finish_Client-6qmZrXEtrkuBhSOA7Oi39g.log
-            var iSigStart = lastlog.IndexOf("Tra_No-")+7;
+            var iSigStart = lastlog.IndexOf("Tra_No-") + 7;
             var iSigEnd = lastlog.IndexOf('_', iSigStart);
             var lastSigCount = lastlog.Substring(iSigStart, iSigEnd - iSigStart);
             return long.Parse(lastSigCount);
@@ -1009,6 +1044,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
                             }
                             sessionResponse.IsValid = request.Sha256ChecksumBase64 == Convert.ToBase64String(sha256);
                         }
+
                         if (exportStateData.EraseEnabled)
                         {
                             if (sessionResponse.IsValid && request.Erase)

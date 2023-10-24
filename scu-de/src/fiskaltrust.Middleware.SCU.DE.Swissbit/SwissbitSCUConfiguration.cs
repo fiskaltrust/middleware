@@ -10,6 +10,7 @@
         public bool EnableFirmwareUpdate { get; set; } = false;
         public string NativeLibArch { get; set; }
         public long ChunkExportTransactionCount { get; set; } = 0;
+        public long ChunkExportIteration { get; set; } = 0;
         public bool StoreTemporaryExportFiles { get; set; } = false;
     }
 }
