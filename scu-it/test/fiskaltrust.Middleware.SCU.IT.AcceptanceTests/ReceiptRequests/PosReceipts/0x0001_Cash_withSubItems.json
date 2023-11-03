@@ -1,0 +1,75 @@
+{
+  "ftCashBoxID": "{{cashbox_id}}",
+  "ftPosSystemId": "{{possystem_id}}",
+  "cbTerminalID": "00010001",
+  "cbReceiptReference": "{{$guid}}",
+  "cbUser": "user1234",
+  "cbReceiptMoment": "{{current_moment}}",
+  "cbChargeItems": [
+    {
+      "Position": 100,
+      "Quantity": 0,
+      "Amount": 0,
+      "UnitPrice": 0,
+      "VATRate": 0,
+      "Description": "TakeAway - Delivery - Item VAT 22%",
+      "ftChargeItemCase": 5283883447186620435,
+      "Moment": "{{current_moment}}"
+    },
+    {
+      "Position": 101,
+      "Quantity": 1,
+      "Amount": 200,
+      "VATRate": 10,
+      "ftChargeItemCase": 5283883447186620433,
+      "Description": "Subitem 1 - TakeAway - Delivery - Item VAT 10%",
+      "Moment": "{{current_moment}}"
+    },
+    {
+      "Position": 102,
+      "Quantity": 1,
+      "Amount": 150,
+      "VATRate": 5,
+      "ftChargeItemCase": 5283883447186620434,
+      "Description": "Subitem 2 - Delivery - Item VAT 5%",
+      "Moment": "{{current_moment}}"
+    },
+    {
+      "Position": 103,
+      "Quantity": 0,
+      "Amount": 0,
+      "VATRate": 0,
+      "ftChargeItemCase": 5283883447186620434,
+      "Description": "SubItem just text 1",
+      "Moment": "{{current_moment}}"
+    },
+    {
+      "Position": 104,
+      "Quantity": 0,
+      "Amount": 0,
+      "VATRate": 0,
+      "ftChargeItemCase": 5283883447186620434,
+      "Description": "SubItem just text 2",
+      "Moment": "{{current_moment}}"
+    },
+    {
+      "Position": 105,
+      "Quantity": 0,
+      "Amount": 0,
+      "VATRate": 0,
+      "ftChargeItemCase": 5283883447186620434,
+      "Description": "SubItem just text 3",
+      "Moment": "{{current_moment}}"
+    }
+  ],
+  "cbPayItems": [
+    {
+      "Quantity": 1,
+      "Description": "Cash",
+      "ftPayItemCase": 5283883447184523265,
+      "Moment": "{{current_moment}}",
+      "Amount": 350
+    }
+  ],
+  "ftReceiptCase": 5283883447318740993 // 4954200008000001
+}

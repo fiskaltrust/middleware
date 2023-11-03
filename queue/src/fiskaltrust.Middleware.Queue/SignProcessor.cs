@@ -169,9 +169,21 @@ namespace fiskaltrust.Middleware.Queue
                 await _queueItemRepository.InsertOrUpdateAsync(queueItem).ConfigureAwait(false);
                 _logger.LogTrace("SignProcessor.InternalSign: Updating Queue in database.");
                 await _configurationRepository.InsertOrUpdateQueueAsync(queue).ConfigureAwait(false);
-                _logger.LogTrace("SignProcessor.InternalSign: Adding ReceiptJournal to database.");
-                receiptJournal = await CreateReceiptJournalAsync(queue, queueItem, data).ConfigureAwait(false);
 
+                if ((receiptResponse.ftState & 0xFFFF_FFFF) == 0xEEEE_EEEE)
+                {
+                    // TODO: This state indicates that something went wrong while processing the receipt request.
+                    //       While we will probably introduce a parameter for this we are right now just returning
+                    //       the receipt response as it is.
+                    //       Another thing that needs to be considered is if and when we put things into the security
+                    //       mechanism. Since there might be cases where we still need to store it though.
+                    return receiptResponse;
+                }
+                else
+                {
+                    _logger.LogTrace("SignProcessor.InternalSign: Adding ReceiptJournal to database.");
+                    receiptJournal = await CreateReceiptJournalAsync(queue, queueItem, data).ConfigureAwait(false);
+                }
                 return receiptResponse;
             }
             finally

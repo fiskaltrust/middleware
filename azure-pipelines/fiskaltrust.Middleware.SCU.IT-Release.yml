@@ -16,7 +16,9 @@ stages:
       type: fiskaltrust.Middleware.SCU.IT
       artifact: build
       projects:
-        - Epson
+        - EpsonRTPrinter
+        - CustomRTPrinter
+        - CustomRTServer
       stages:
         - stage: Release_Sandbox
           dependsOn: []
@@ -25,9 +27,32 @@ stages:
             storage: stdevwesteuropepackages
             serviceConnection: rg-dev-westeurope-packages
 
-        # - stage: Release_Production
-        #   templateContext:
-        #     environment: production
-        #     storage: stprodwesteuropepackages
-        #     serviceConnection: rg-prod-westeurope-packages
-        #     dependsOnPrefix: Release_Sandbox
+        - stage: Release_Production
+          templateContext:
+            environment: production
+            storage: stprodwesteuropepackages
+            serviceConnection: rg-prod-westeurope-packages
+            dependsOnPrefix: Release_Sandbox
+
+  - template: templates/release-legacy.yml
+    parameters:
+      type: fiskaltrust.Middleware.SCU.IT
+      artifact: build
+      projects:
+        - EpsonRTPrinter
+        - CustomRTPrinter
+        - CustomRTServer
+      stages:
+        - stage: Release_Sandbox_Legacy
+          dependsOn: []
+          templateContext:
+            environment: sandbox-legacy
+            storage: fiskaltrustsandbox
+            serviceConnection: sandbox-legacy-packages
+
+        - stage: Release_Production_Legacy
+          templateContext:
+            dependsOnPrefix: Release_Sandbox_Legacy
+            environment: production-legacy
+            storage: fiskaltrustcommonwe1
+            serviceConnection: production-legacy-packages

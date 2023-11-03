@@ -113,7 +113,7 @@ namespace fiskaltrust.Middleware.Storage.Base
             await InitSignaturCreationUnitFRAsync(config.SignaturCreationUnitsFR, configurationRepository).ConfigureAwait(false);
             await InitSignaturCreationUnitDEAsync(config.SignaturCreationUnitsDE, configurationRepository, enforceUpdateUserDefinedConfig).ConfigureAwait(false);
             await InitSignaturCreationUnitMEAsync(config.SignaturCreationUnitsME, configurationRepository).ConfigureAwait(false);
-            await InitSignaturCreationUnitITAsync(config.SignaturCreationUnitsIT, configurationRepository).ConfigureAwait(false);
+            await InitSignaturCreationUnitITAsync(config.SignaturCreationUnitsIT, configurationRepository, enforceUpdateUserDefinedConfig).ConfigureAwait(false);
         }
 
         private T ParseParameter<T>(Dictionary<string, object> config, string key) where T : new()
@@ -405,14 +405,29 @@ namespace fiskaltrust.Middleware.Storage.Base
             }
         }
 
-        private async Task InitSignaturCreationUnitITAsync(List<ftSignaturCreationUnitIT> signaturCreationUnitsIT, IConfigurationRepository configurationRepository)
+        private async Task InitSignaturCreationUnitITAsync(List<ftSignaturCreationUnitIT> signaturCreationUnitsIT, IConfigurationRepository configurationRepository, bool enforceUpdateUserDefinedConfig)
         {
             foreach (var item in signaturCreationUnitsIT)
             {
-                var scu = await configurationRepository.GetSignaturCreationUnitITAsync(item.ftSignaturCreationUnitITId).ConfigureAwait(false);
-                if (scu == null)
+                var db_scu = await configurationRepository.GetSignaturCreationUnitITAsync(item.ftSignaturCreationUnitITId).ConfigureAwait(false);
+                if (db_scu == null)
                 {
                     await configurationRepository.InsertOrUpdateSignaturCreationUnitITAsync(item).ConfigureAwait(false);
+                }
+                else if (db_scu.TimeStamp < item.TimeStamp || enforceUpdateUserDefinedConfig)
+                {
+                    var changed = false;
+                    if (!string.IsNullOrEmpty(item.Url) && db_scu.Url != item.Url)
+                    {
+                        changed = true;
+                        db_scu.Url = item.Url;
+                    }
+ 
+                    if (changed)
+                    {
+                        db_scu.TimeStamp = item.TimeStamp;
+                        await configurationRepository.InsertOrUpdateSignaturCreationUnitITAsync(db_scu).ConfigureAwait(false);
+                    }
                 }
             }
         }

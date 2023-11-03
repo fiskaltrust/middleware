@@ -4,8 +4,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{D3735F43-830E-4992-8663-7182B6970DA2}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.SCU.IT.Epson", "src\fiskaltrust.Middleware.SCU.IT.Epson\fiskaltrust.Middleware.SCU.IT.Epson.csproj", "{612776C5-9C63-4C00-8195-C9ECADD27F11}"
+	ProjectSection(SolutionItems) = preProject
+		Directory.Build.props = Directory.Build.props
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{D46180D0-C3B0-4544-8571-46FCF7783EE0}"
 EndProject
@@ -15,16 +16,26 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Manual", "Manual", "{5B3E82
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.SCU.IT.TestLauncher", "test\TestLauncher\fiskaltrust.Middleware.SCU.IT.TestLauncher.csproj", "{C8B07134-996B-4F14-A661-8327843F8089}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.SCU.IT.CustomRTServer", "src\fiskaltrust.Middleware.SCU.IT.CustomRTServer\fiskaltrust.Middleware.SCU.IT.CustomRTServer.csproj", "{93EDC9D1-2E21-4F2A-B785-4AE81AF92A50}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.SCU.IT.CustomRTPrinter", "src\fiskaltrust.Middleware.SCU.IT.CustomRTPrinter\fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.csproj", "{9F015827-32AD-4C85-B35E-B912C5C04C07}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.SCU.IT.Abstraction", "src\fiskaltrust.Middleware.SCU.IT.Abstraction\fiskaltrust.Middleware.SCU.IT.Abstraction.csproj", "{5198570C-6420-4ACC-A8CD-EC86987810A5}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest", "test\fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest\fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest.csproj", "{77811328-6B61-4F31-BE0E-DD6C4D322F3F}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter", "src\fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter\fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.csproj", "{BB286047-1A66-4CEF-9666-87D5645A1CFD}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest", "test\fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest\fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest.csproj", "{8A91A975-2DE2-4D9D-9A0F-7EEE13034AE6}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.SCU.IT.AcceptanceTests", "test\fiskaltrust.Middleware.SCU.IT.AcceptanceTests\fiskaltrust.Middleware.SCU.IT.AcceptanceTests.csproj", "{B530EACC-2000-45E9-BE23-DFF022FA5883}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{612776C5-9C63-4C00-8195-C9ECADD27F11}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{612776C5-9C63-4C00-8195-C9ECADD27F11}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{612776C5-9C63-4C00-8195-C9ECADD27F11}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{612776C5-9C63-4C00-8195-C9ECADD27F11}.Release|Any CPU.Build.0 = Release|Any CPU
 		{94946668-08ED-4AF7-B331-1774A2E94C99}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{94946668-08ED-4AF7-B331-1774A2E94C99}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{94946668-08ED-4AF7-B331-1774A2E94C99}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -33,15 +44,49 @@ Global
 		{C8B07134-996B-4F14-A661-8327843F8089}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C8B07134-996B-4F14-A661-8327843F8089}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C8B07134-996B-4F14-A661-8327843F8089}.Release|Any CPU.Build.0 = Release|Any CPU
+		{93EDC9D1-2E21-4F2A-B785-4AE81AF92A50}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{93EDC9D1-2E21-4F2A-B785-4AE81AF92A50}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{93EDC9D1-2E21-4F2A-B785-4AE81AF92A50}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{93EDC9D1-2E21-4F2A-B785-4AE81AF92A50}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9F015827-32AD-4C85-B35E-B912C5C04C07}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9F015827-32AD-4C85-B35E-B912C5C04C07}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9F015827-32AD-4C85-B35E-B912C5C04C07}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9F015827-32AD-4C85-B35E-B912C5C04C07}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5198570C-6420-4ACC-A8CD-EC86987810A5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5198570C-6420-4ACC-A8CD-EC86987810A5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5198570C-6420-4ACC-A8CD-EC86987810A5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5198570C-6420-4ACC-A8CD-EC86987810A5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{77811328-6B61-4F31-BE0E-DD6C4D322F3F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{77811328-6B61-4F31-BE0E-DD6C4D322F3F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{77811328-6B61-4F31-BE0E-DD6C4D322F3F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{77811328-6B61-4F31-BE0E-DD6C4D322F3F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BB286047-1A66-4CEF-9666-87D5645A1CFD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BB286047-1A66-4CEF-9666-87D5645A1CFD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BB286047-1A66-4CEF-9666-87D5645A1CFD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BB286047-1A66-4CEF-9666-87D5645A1CFD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8A91A975-2DE2-4D9D-9A0F-7EEE13034AE6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8A91A975-2DE2-4D9D-9A0F-7EEE13034AE6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8A91A975-2DE2-4D9D-9A0F-7EEE13034AE6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8A91A975-2DE2-4D9D-9A0F-7EEE13034AE6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B530EACC-2000-45E9-BE23-DFF022FA5883}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B530EACC-2000-45E9-BE23-DFF022FA5883}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B530EACC-2000-45E9-BE23-DFF022FA5883}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B530EACC-2000-45E9-BE23-DFF022FA5883}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{612776C5-9C63-4C00-8195-C9ECADD27F11} = {D3735F43-830E-4992-8663-7182B6970DA2}
 		{94946668-08ED-4AF7-B331-1774A2E94C99} = {D46180D0-C3B0-4544-8571-46FCF7783EE0}
 		{5B3E8231-CFD7-4E36-A24B-929DE8BB67D8} = {D46180D0-C3B0-4544-8571-46FCF7783EE0}
 		{C8B07134-996B-4F14-A661-8327843F8089} = {5B3E8231-CFD7-4E36-A24B-929DE8BB67D8}
+		{93EDC9D1-2E21-4F2A-B785-4AE81AF92A50} = {D3735F43-830E-4992-8663-7182B6970DA2}
+		{9F015827-32AD-4C85-B35E-B912C5C04C07} = {D3735F43-830E-4992-8663-7182B6970DA2}
+		{5198570C-6420-4ACC-A8CD-EC86987810A5} = {D3735F43-830E-4992-8663-7182B6970DA2}
+		{77811328-6B61-4F31-BE0E-DD6C4D322F3F} = {D46180D0-C3B0-4544-8571-46FCF7783EE0}
+		{BB286047-1A66-4CEF-9666-87D5645A1CFD} = {D3735F43-830E-4992-8663-7182B6970DA2}
+		{8A91A975-2DE2-4D9D-9A0F-7EEE13034AE6} = {D46180D0-C3B0-4544-8571-46FCF7783EE0}
+		{B530EACC-2000-45E9-BE23-DFF022FA5883} = {D46180D0-C3B0-4544-8571-46FCF7783EE0}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {1855DFED-93D8-4A05-B062-5958E4B3114E}

@@ -1,8 +1,8 @@
-﻿using fiskaltrust.Middleware.SCU.IT.Epson.Utilities;
-using Xunit;
+﻿using Xunit;
 using System.IO;
 using FluentAssertions;
-using fiskaltrust.Middleware.SCU.IT.Epson.Models;
+using fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities;
+using fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models;
 
 namespace fiskaltrust.Middleware.SCU.IT.UnitTest
 {
@@ -26,7 +26,7 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
         {
             var file = new StreamReader(Path.Combine("Testdata", "ResponsePrinterStatusBasic.xml"));
             file.BaseStream.Position = 0;
-            var response = EpsonCommandFactory.Deserialize<StatusResponse>(file.BaseStream);
+            var response = SoapSerializer.Deserialize<StatusResponse>(file.BaseStream);
             Assert.NotNull(response);
             response.Printerstatus.CpuRel.Should().Be("07.00");
             response.Printerstatus.MfRel.Should().Be("04.3");
@@ -39,7 +39,7 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
         {
             var file = new StreamReader(Path.Combine("Testdata", "ResponsePrinterStatus.xml"));
             file.BaseStream.Position = 0;
-            var response = EpsonCommandFactory.Deserialize<StatusResponse>(file.BaseStream);
+            var response = SoapSerializer.Deserialize<StatusResponse>(file.BaseStream);
             Assert.NotNull(response);
             response.Printerstatus.RtType.Should().Be("12");
             response.Printerstatus.MainStatus.Should().Be("23");

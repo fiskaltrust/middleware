@@ -1,0 +1,28 @@
+{
+    "ftCashBoxID": "{{cashbox_id}}",
+    "ftPosSystemId": "{{possystem_id}}",
+    "cbTerminalID": "00010001",
+    "cbReceiptReference": "0001-0003",
+    "cbUser": "user1234",
+    "cbReceiptMoment": "{{current_moment}}",
+    "cbChargeItems": [
+        {
+            "Quantity": 1,
+            "Amount": 107,
+            "VATRate": 10,
+            "ftChargeItemCase": 5283883447184523265,
+            "Description": "Food/Beverage - Item VAT 10%",
+            "Moment": "{{current_moment}}"
+        }
+    ],
+    "cbPayItems": [
+        {
+            "Quantity": 1,
+            "Description": "Card",
+            "ftPayItemCase": 5283883447184523269,
+            "Moment": "{{current_moment}}",
+            "Amount": 107
+        }
+    ],
+    "ftReceiptCase": 5283883447184523265
+}

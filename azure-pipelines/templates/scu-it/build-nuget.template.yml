@@ -43,8 +43,16 @@ steps:
       $(WorkingDirectory)/src/**/*fiskaltrust*.exe
 
 - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
-  displayName: 'dotnet pack fiskaltrust.Middleware.SCU.IT.Epson'
-  workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.IT.Epson'
+  displayName: 'dotnet pack fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter'
+  workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter'
+
+- script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
+  displayName: 'dotnet pack fiskaltrust.Middleware.SCU.IT.CustomRTServer'
+  workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.IT.CustomRTServer'
+
+- script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
+  displayName: 'dotnet pack fiskaltrust.Middleware.SCU.IT.CustomRTPrinter'
+  workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.IT.CustomRTPrinter'
 
 - task: PublishBuildArtifacts@1
   displayName: 'Publish Artifact: drop'

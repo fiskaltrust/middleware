@@ -1,0 +1,29 @@
+{
+    "ftCashBoxID": "00000000-0000-0000-0000-000000000000",
+    "ftPosSystemId": "00000000-0000-0000-0000-000000000000",
+    "cbTerminalID": "00010001",
+    "cbReceiptReference": "0001-0004",
+    "cbPreviousReceiptReference": "96SRT900126,00010001;0001-0002;20230830120101",
+    "cbUser": "user1234",
+    "cbReceiptMoment": "{{current_moment}}",
+    "cbChargeItems": [
+        {
+            "Quantity": -1,
+            "Amount": -107,
+            "VATRate": 10,
+            "ftChargeItemCase": 5283883447184654337,
+            "Description": "Return/Refund - Food/Beverage - Item VAT 10%",
+            "Moment": "{{current_moment}}"
+        }
+    ],
+    "cbPayItems": [
+        {
+            "Quantity": 1,
+            "Description": "Return/Refund Cash",
+            "ftPayItemCase": 5283883447184654337,
+            "Moment": "{{current_moment}}",
+            "Amount": -107
+        }
+    ],
+    "ftReceiptCase": 5283883447184523265
+}

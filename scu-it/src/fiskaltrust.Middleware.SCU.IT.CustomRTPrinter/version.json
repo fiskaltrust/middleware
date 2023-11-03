@@ -1,0 +1,6 @@
+{
+  "version": "1.3.48-rc1",
+  "releaseBranches": [
+    "^refs/tags/scu-it/customrtprinter/v\\d+(?:\\.\\d+)*(?:-.*)?$"
+  ]
+}
