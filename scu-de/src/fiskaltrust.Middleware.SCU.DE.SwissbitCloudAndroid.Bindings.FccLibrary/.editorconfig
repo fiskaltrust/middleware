@@ -1,0 +1,21 @@
+[*.cs] 
+# Fix warnings that are caused by generated code
+dotnet_diagnostic.cs0114.severity=suggestion
+
+# IDE0040: Add accessibility modifiers
+dotnet_diagnostic.IDE0040.severity = suggestion
+
+# IDE0001: Simplify Names
+dotnet_diagnostic.IDE0001.severity = suggestion
+
+# IDE0025: Use expression body for property
+dotnet_diagnostic.IDE0025.severity = suggestion
+
+# IDE0007: Use implicit type
+dotnet_diagnostic.IDE0007.severity = suggestion
+
+# IDE0011: Add braces
+dotnet_diagnostic.IDE0011.severity = suggestion
+
+# IDE0003: Remove qualification
+dotnet_diagnostic.IDE0003.severity = suggestion

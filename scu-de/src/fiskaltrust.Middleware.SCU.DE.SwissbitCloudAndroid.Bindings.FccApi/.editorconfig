@@ -1,0 +1,3 @@
+[*.cs] 
+# Fix warnings that are caused by generated code
+dotnet_diagnostic.cs0114.severity=suggestion
