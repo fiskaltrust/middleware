@@ -31,7 +31,7 @@ steps:
   displayName: Build
   inputs:
     projects: '$(WorkingDirectory)/$(Solution)'
-    arguments: '--configuration $(BuildConfiguration)'
+    arguments: '--configuration $(BuildConfiguration) --no-restore'
 
 - task: codesigning@2
   displayName: 'Code Signing'
