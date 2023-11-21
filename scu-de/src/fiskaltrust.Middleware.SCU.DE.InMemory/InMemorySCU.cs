@@ -85,7 +85,7 @@ namespace fiskaltrust.Middleware.SCU.DE.InMemory
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, OperationFailed, nameof(GetTseInfoAsync));
+                _logger.LogError(ex, OperationFailed, nameof(GetTseInfoAsync), "");
                 throw;
             }
         }
