@@ -36,9 +36,9 @@ steps:
     arguments: '--configuration $(BuildConfiguration) --no-restore'
 
 - script: |
-    dotnet publish --configuration $(buildConfiguration) -f net461
-    dotnet publish --configuration $(buildConfiguration) -f netstandard2.0
-    dotnet publish --configuration $(buildConfiguration) -f netstandard2.1
+    dotnet publish --configuration $(buildConfiguration) --no-restore -f net461
+    dotnet publish --configuration $(buildConfiguration) --no-restore -f netstandard2.0
+    dotnet publish --configuration $(buildConfiguration) --no-restore -f netstandard2.1
   displayName: 'dotnet publish fiskaltrust.Middleware.Queue.SQLite'
   workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.SQLite'
 
