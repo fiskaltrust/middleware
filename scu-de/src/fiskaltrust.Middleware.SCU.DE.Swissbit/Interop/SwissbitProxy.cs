@@ -486,7 +486,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
                     var result = _nativeFunctionPointer.func_worm_transaction_update(context, clientIdPtr, transactionNumber, processDataPtr, (UInt64) processData.Length, processTypePtr, transactionResponsePtr);
                     if (result == WormError.WORM_ERROR_TRANSACTION_NOT_STARTED)
                     {
-                        throw new SwissbitException($"The transaction with the number {transactionNumber} is either not started or has been finished already.");
+                        throw new SwissbitException($"The transaction with the number {transactionNumber} is either not started or has been finished already.To fix this issue add the 0x0000000020000000  to the daily-closing.");
                     }
                     else if (result == WormError.WORM_ERROR_CLIENT_NOT_REGISTERED)
                     {
@@ -554,7 +554,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
                     var result = _nativeFunctionPointer.func_worm_transaction_finish(context, clientIdPtr, transactionNumber, processDataPtr, (UInt64) processData.Length, processTypePtr, transactionResponsePtr);
                     if (result == WormError.WORM_ERROR_TRANSACTION_NOT_STARTED)
                     {
-                        throw new SwissbitException($"The transaction with the number {transactionNumber} is either not started or has been finished already.");
+                        throw new SwissbitException($"The transaction with the number {transactionNumber} is either not started or has been finished already.To fix this issue add the 0x0000000020000000  to the daily-closing.");
                     }
                     else if (result == WormError.WORM_ERROR_CLIENT_NOT_REGISTERED)
                     {
