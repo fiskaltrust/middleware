@@ -28,6 +28,12 @@ steps:
     feedsToUse: 'select'
     vstsFeed: '$(NuGetFeed)'
 
+- task: JavaToolInstaller@0
+  inputs:
+    versionSpec: '21'
+    jdkArchitectureOption: 'x64'
+    jdkSourceOption: 'PreInstalled'
+
 - task: VSBuild@1
   inputs:
     solution: '$(WorkingDirectory)/$(Solution)'
