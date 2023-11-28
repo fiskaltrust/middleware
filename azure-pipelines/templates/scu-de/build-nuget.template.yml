@@ -30,7 +30,7 @@ steps:
 
 - task: JavaToolInstaller@0
   inputs:
-    versionSpec: '21'
+    versionSpec: '11'
     jdkArchitectureOption: 'x64'
     jdkSourceOption: 'PreInstalled'
 
