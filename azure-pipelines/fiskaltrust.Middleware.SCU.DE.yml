@@ -54,7 +54,12 @@ stages:
         dependsOn: []
         pool:
           vmImage: $(vmImageName)
-        steps:
+        steps:        
+          - task: JavaToolInstaller@0
+            inputs:
+              versionSpec: '11'
+              jdkArchitectureOption: 'x64'
+              jdkSourceOption: 'PreInstalled'
           - template: templates/build-zip.yml
             parameters:
               workingDirectory: scu-de
