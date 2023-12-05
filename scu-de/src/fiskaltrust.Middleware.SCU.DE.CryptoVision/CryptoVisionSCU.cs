@@ -620,7 +620,7 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision
                     (var result, var updateTransactionResult) = await _proxy.SeUpdateTransactionAsync(request.ClientId, (UInt32) request.TransactionNumber, Convert.FromBase64String(request.ProcessDataBase64 ?? string.Empty), request.ProcessType);
                     if (result == SeResult.ErrorNoTransaction)
                     {
-                        throw new CryptoVisionException($"The transaction with the number {request.TransactionNumber} is either not started or has been finished already.");
+                        throw new CryptoVisionException($"The transaction with the number {request.TransactionNumber} is either not started or has been finished already. To fix this issue add the 0x0000000020000000 flag to the daily-closing.");
                     }
                     result.ThrowIfError();
 
@@ -666,7 +666,7 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision
                     (var result, var finishTransactionResult) = await _proxy.SeFinishTransactionAsync(request.ClientId, (UInt32) request.TransactionNumber, Convert.FromBase64String(request.ProcessDataBase64 ?? string.Empty), request.ProcessType);
                     if (result == SeResult.ErrorNoTransaction)
                     {
-                        throw new CryptoVisionException($"The transaction with the number {request.TransactionNumber} is either not started or has been finished already.");
+                        throw new CryptoVisionException($"The transaction with the number {request.TransactionNumber} is either not started or has been finished already.To fix this issue add the 0x0000000020000000 flag to the daily-closing.");
                     }
                     result.ThrowIfError();
 
