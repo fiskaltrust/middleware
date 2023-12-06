@@ -35,7 +35,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             var receiptResponse = CreateReceiptResponse(request, queueItem, queueDE);
 
             var actionJournals = new List<ftActionJournal>();
-            var openSignatures = new List<SignaturItem>();
 
             try
             {
@@ -76,7 +75,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                     throw new ArgumentException($"The ftReceiptCaseFlag '0x0000000010000000' was set, and {openTransactions.Count()} open transactions exist. If you want these transactions to be closed automatically, omit this flag.");
                 }
 
-
+                var openSignatures = new List<SignaturItem>();
                 foreach (var openTransaction in openTransactions)
                 {
                     (var openProcessType, var openPayload) = _transactionPayloadFactory.CreateAutomaticallyCanceledReceiptPayload();
@@ -100,8 +99,20 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
                 await UpdateTseInfoAsync(queueDE.ftSignaturCreationUnitDEId.GetValueOrDefault()).ConfigureAwait(false);
 
-                (var masterDataChanged, var message, var type) = await UpdateMasterData(request);
+                var masterDataChanged = false;
+                if (request.IsMasterDataUpdate() && await _masterDataService.HasDataChangedAsync().ConfigureAwait(false))
+                {
+                    await _masterDataService.PersistConfigurationAsync().ConfigureAwait(false);
+                    masterDataChanged = true;
+                    _logger.LogInformation("Master data was updated. The changed master data is valid from from now on, all receipts that were processed until now still refer to the old master data.");
+                }
 
+                var message = masterDataChanged
+                    ? "Daily-Closing receipt was processed, and a master data update was performed."
+                    : "Daily-Closing receipt was processed.";
+                var type = masterDataChanged
+                    ? 0x4445_0000_0800_0007
+                    : 0x4445_0000_0000_0007;
                 actionJournals.AddRange(CreateClosingActionJournals(queueItem, queue, processReceiptResponse.TransactionNumber, masterDataChanged, message, type, queueDE.DailyClosingNumber));
 
                 return new RequestCommandResponse()
@@ -115,65 +126,13 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             catch (Exception ex) when (ex.GetType().Name == RETRYPOLICYEXCEPTION_NAME)
             {
                 _logger.LogDebug(ex, "TSE not reachable.");
-
-                queueDE.DailyClosingNumber++;
-                (var masterDataChanged,var message, var type) = await UpdateMasterData(request);
-
-                actionJournals.Add(
-                    new ftActionJournal
-                    {
-                        ftActionJournalId = Guid.NewGuid(),
-                        Message = $"{message} However TSE was not reachable.",
-                        Type = $"{type:X}",
-                        ftQueueId = queue.ftQueueId,
-                        ftQueueItemId = queueItem.ftQueueItemId,
-                        Moment = DateTime.UtcNow,
-                        TimeStamp = DateTime.UtcNow.Ticks,
-                        Priority = -1,
-                        DataJson = JsonConvert.SerializeObject(new
-                        {
-                            ftReceiptNumerator = queue.ftReceiptNumerator + 1,
-                            masterDataChanged = masterDataChanged,
-                            closingNumber = queueDE.DailyClosingNumber
-                        })
-                    });
-                
-                var processFailedReceiptResponse = await ProcessSSCDFailedReceiptRequest(request, queueItem, queue, queueDE).ConfigureAwait(false);
-                processFailedReceiptResponse.ReceiptResponse.ftStateData = await StateDataFactory.AppendMasterDataAsync(_masterDataService, processFailedReceiptResponse.ReceiptResponse.ftStateData).ConfigureAwait(false);
-                processFailedReceiptResponse.ReceiptResponse.ftStateData = StateDataFactory.AppendDailyClosingNumber(queueDE.DailyClosingNumber, processFailedReceiptResponse.ReceiptResponse.ftStateData);
-                processFailedReceiptResponse.ReceiptResponse.ftSignatures = processFailedReceiptResponse.ReceiptResponse.ftSignatures.Concat(openSignatures).ToArray();
-
-                return new RequestCommandResponse()
-                {
-                    ActionJournals = actionJournals,
-                    ReceiptResponse = processFailedReceiptResponse.ReceiptResponse,
-                    Signatures = processFailedReceiptResponse.ReceiptResponse.ftSignatures.ToList()
-                };
+                return await ProcessSSCDFailedReceiptRequest(request, queueItem, queue, queueDE).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
                 _logger.LogCritical(ex, "An exception occured while processing this request.");
                 return await ProcessSSCDFailedReceiptRequest(request, queueItem, queue, queueDE).ConfigureAwait(false);
             }
-        }
-        private async Task<(bool, string, long)> UpdateMasterData(ReceiptRequest request)
-        {
-            var masterDataChanged = false;
-            if (request.IsMasterDataUpdate() && await _masterDataService.HasDataChangedAsync().ConfigureAwait(false))
-            {
-                await _masterDataService.PersistConfigurationAsync().ConfigureAwait(false);
-                masterDataChanged = true;
-                _logger.LogInformation("Master data was updated. The changed master data is valid from from now on, all receipts that were processed until now still refer to the old master data.");
-            }
-
-            var message = masterDataChanged
-                ? "Daily-Closing receipt was processed, and a master data update was performed."
-                : "Daily-Closing receipt was processed.";
-            var type = masterDataChanged
-                ? 0x4445_0000_0800_0007
-                : 0x4445_0000_0000_0007;
-
-            return (masterDataChanged, message, type);
         }
     }
 }
