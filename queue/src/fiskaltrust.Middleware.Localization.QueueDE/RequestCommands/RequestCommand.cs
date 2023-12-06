@@ -11,6 +11,7 @@ using fiskaltrust.Middleware.Contracts.Data;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Models.Transactions;
 using fiskaltrust.Middleware.Localization.QueueDE.Extensions;
+using fiskaltrust.Middleware.Localization.QueueDE.MasterData;
 using fiskaltrust.Middleware.Localization.QueueDE.Models;
 using fiskaltrust.Middleware.Localization.QueueDE.Services;
 using fiskaltrust.Middleware.Localization.QueueDE.Transactions;
@@ -40,6 +41,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
         private readonly MiddlewareConfiguration _middlewareConfiguration;
         private readonly QueueDEConfiguration _queueDEConfiguration;
         private readonly ITarFileCleanupService _tarFileCleanupService;
+        protected readonly IMasterDataService _masterDataService;
 
         protected string _certificationIdentification = null;
 
@@ -48,7 +50,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
         public RequestCommand(ILogger<RequestCommand> logger, SignatureFactoryDE signatureFactory, IDESSCDProvider deSSCDProvider,
             ITransactionPayloadFactory transactionPayloadFactory, IReadOnlyQueueItemRepository queueItemRepository, IConfigurationRepository configurationRepository,
             IJournalDERepository journalDERepository, MiddlewareConfiguration middlewareConfiguration, IPersistentTransactionRepository<FailedStartTransaction> failedStartTransactionRepo,
-            IPersistentTransactionRepository<FailedFinishTransaction> failedFinishTransactionRepo, IPersistentTransactionRepository<OpenTransaction> openTransactionRepo, ITarFileCleanupService tarFileCleanupService, QueueDEConfiguration queueDEConfiguration)
+            IPersistentTransactionRepository<FailedFinishTransaction> failedFinishTransactionRepo, IPersistentTransactionRepository<OpenTransaction> openTransactionRepo, ITarFileCleanupService tarFileCleanupService, QueueDEConfiguration queueDEConfiguration, IMasterDataService masterDataService)
         {
             _logger = logger;
             _signatureFactory = signatureFactory;
@@ -64,6 +66,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             _transactionFactory = new TransactionFactory(_deSSCDProvider);
             _tarFileCleanupService = tarFileCleanupService;
             _queueDEConfiguration = queueDEConfiguration;
+            _masterDataService = masterDataService;
         }
 
         public abstract Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueDE queueDE, ReceiptRequest request, ftQueueItem queueItem);
@@ -304,6 +307,17 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             actionJournals ??= new List<ftActionJournal>();
 
             receiptResponse.ftReceiptIdentification = request.GetReceiptIdentification(queue.ftReceiptNumerator, null);
+            if ((request.ftReceiptCase & 0xFFFF) == 0x0005 || (request.ftReceiptCase & 0xFFFF) == 0x0006 || (request.ftReceiptCase & 0xFFFF) == 0x0007)
+            {
+                (var masterDataChanged, var message, var type) = await UpdateMasterData(request);
+                var dataJson = JsonConvert.SerializeObject(new
+                {
+                    ftReceiptNumerator = queue.ftReceiptNumerator + 1,
+                    masterDataChanged = masterDataChanged,
+                    closingNumber = (request.ftReceiptCase & 0xFFFF) == 0x0007 ? ++queueDE.DailyClosingNumber :-1
+                });
+                actionJournals.Add(CreateActionJournal(queue.ftQueueId, queueItem.ftQueueId, $"{type:X}", $"{message} However TSE was not reachable.", dataJson));
+            }
 
             var signatures = new List<SignaturItem>
             {
@@ -390,6 +404,48 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             }
 
             return ms.ToArray();
+        }
+        protected ftActionJournal CreateActionJournal(Guid queueId, Guid queueItemId, string type, string message, string data, int priority = -1)
+        {
+            return new ftActionJournal
+            {
+                ftActionJournalId = Guid.NewGuid(),
+                ftQueueId = queueId,
+                ftQueueItemId = queueItemId,
+                Type = type,
+                Moment = DateTime.UtcNow,
+                TimeStamp = DateTime.UtcNow.Ticks,
+                Message = message,
+                Priority = priority,
+                DataJson = data
+            };
+        }
+        protected async Task<(bool, string, long)> UpdateMasterData(ReceiptRequest request)
+        {
+            var masterDataChanged = false;
+            if (request.IsMasterDataUpdate() && await _masterDataService.HasDataChangedAsync().ConfigureAwait(false))
+            {
+                await _masterDataService.PersistConfigurationAsync().ConfigureAwait(false);
+                masterDataChanged = true;
+                _logger.LogInformation("Master data was updated. The changed master data is valid from from now on, all receipts that were processed until now still refer to the old master data.");
+            }
+
+            var message = masterDataChanged
+                ? $"{ReceiptName} was processed, and a master data update was performed."
+                : $"{ReceiptName} was processed.";
+
+            var type = (masterDataChanged, request.ftReceiptCase & 0xFFFF) switch
+            {
+                (true, 0x0007) => 0x4445_0000_0800_0007,  //daily-closing
+                (false, 0x0007) => 0x4445_0000_0000_0007, //daily-closing
+                (true, 0x0005) => 0x4445_0000_0800_0007,  //monthly-closing
+                (false,0x0005) => 0x4445_0000_0000_0007,  //monthly-closing
+                (true, 0x0006) => 0x4445_0000_0800_0007,  //yearly-closing
+                (false,0x0006) => 0x4445_0000_0000_0007,  //yearly-closing
+                _ => 0,
+            };
+
+            return (masterDataChanged, message, type);
         }
     }
 }
