@@ -27,7 +27,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             _masterDataService = masterDataService;
         }
 
-        protected static List<ftActionJournal> CreateClosingActionJournals(ftQueueItem queueItem, ftQueue queue, ulong? transactionNumber, bool masterDataChanged, string message, long type, int? closingNumber = null)
+        protected static List<ftActionJournal> CreateClosingActionJournals(ftQueueItem queueItem, ftQueue queue, ulong transactionNumber, bool masterDataChanged, string message, long type, int? closingNumber = null)
         {
             return new List<ftActionJournal>
             {
@@ -47,7 +47,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                         transactionNumber = transactionNumber,
                         masterDataChanged = masterDataChanged,
                         closingNumber = closingNumber ?? -1
-                    },new JsonSerializerSettings{NullValueHandling = NullValueHandling.Ignore})
+                    })
                 }
             };
         }

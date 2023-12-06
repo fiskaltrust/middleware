@@ -117,8 +117,26 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 _logger.LogDebug(ex, "TSE not reachable.");
 
                 queueDE.DailyClosingNumber++;
-                (var masterDataChanged,var message, var type) = await UpdateMasterData(request);            
-                actionJournals.AddRange(CreateClosingActionJournals(queueItem, queue, null, masterDataChanged, $"{message} However TSE was not reachable.", type, queueDE.DailyClosingNumber));
+                (var masterDataChanged,var message, var type) = await UpdateMasterData(request);
+
+                actionJournals.Add(
+                    new ftActionJournal
+                    {
+                        ftActionJournalId = Guid.NewGuid(),
+                        Message = $"{message} However TSE was not reachable.",
+                        Type = $"{type:X}",
+                        ftQueueId = queue.ftQueueId,
+                        ftQueueItemId = queueItem.ftQueueItemId,
+                        Moment = DateTime.UtcNow,
+                        TimeStamp = DateTime.UtcNow.Ticks,
+                        Priority = -1,
+                        DataJson = JsonConvert.SerializeObject(new
+                        {
+                            ftReceiptNumerator = queue.ftReceiptNumerator + 1,
+                            masterDataChanged = masterDataChanged,
+                            closingNumber = queueDE.DailyClosingNumber
+                        })
+                    });
                 
                 var processFailedReceiptResponse = await ProcessSSCDFailedReceiptRequest(request, queueItem, queue, queueDE).ConfigureAwait(false);
                 processFailedReceiptResponse.ReceiptResponse.ftStateData = await StateDataFactory.AppendMasterDataAsync(_masterDataService, processFailedReceiptResponse.ReceiptResponse.ftStateData).ConfigureAwait(false);
