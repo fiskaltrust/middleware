@@ -429,20 +429,15 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 masterDataChanged = true;
                 _logger.LogInformation("Master data was updated. The changed master data is valid from from now on, all receipts that were processed until now still refer to the old master data.");
             }
-
-            var message = masterDataChanged
-                ? $"{ReceiptName} was processed, and a master data update was performed."
-                : $"{ReceiptName} was processed.";
-
-            var type = (masterDataChanged, request.ftReceiptCase & 0xFFFF) switch
+            (var type, var message) = (masterDataChanged, request.ftReceiptCase & 0xFFFF) switch
             {
-                (true, 0x0007) => 0x4445_0000_0800_0007,  //daily-closing
-                (false, 0x0007) => 0x4445_0000_0000_0007, //daily-closing
-                (true, 0x0005) => 0x4445_0000_0800_0007,  //monthly-closing
-                (false,0x0005) => 0x4445_0000_0000_0007,  //monthly-closing
-                (true, 0x0006) => 0x4445_0000_0800_0007,  //yearly-closing
-                (false,0x0006) => 0x4445_0000_0000_0007,  //yearly-closing
-                _ => 0,
+                (true, 0x0007) => (0x4445_0000_0800_0007, "Daily-closing receipt was processed, and a master data update was performed."),  //daily-closing
+                (false, 0x0007) => (0x4445_0000_0000_0007, "Daily-closing receipt was processed."),                                         //daily-closing
+                (true, 0x0005) => (0x4445_0000_0800_0007, "Monthly-closing receipt was processed, and a master data update was performed."),//monthly-closing
+                (false,0x0005) => (0x4445_0000_0000_0007, "Monthly-closing receipt was processed."),                                        //monthly-closing
+                (true, 0x0006) => (0x4445_0000_0800_0007, "Yearly-closing receipt was processed, and a master data update was performed."), //yearly-closing
+                (false,0x0006) => (0x4445_0000_0000_0007, "Yearly-closing receipt was processed."),                                         //yearly-closing
+                _ => (0,""),
             };
 
             return (masterDataChanged, message, type);
