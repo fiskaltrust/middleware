@@ -52,6 +52,8 @@ public static class ReceiptCaseHelper
 
     public static bool IsTip(this ChargeItem chargeItem) => (chargeItem.ftChargeItemCase & 0x0000_0000_0000_00F0) == 0x30;
 
+    public static bool IsSingleUseVoucher(this ChargeItem chargeItem) => (chargeItem.ftChargeItemCase & 0x0000_0000_0000_00F0) == 0x40 && !IsMultiUseVoucher(chargeItem);
+
     public static bool IsMultiUseVoucher(this ChargeItem chargeItem) => (chargeItem.ftChargeItemCase & 0x0000_0000_0000_00FF) == 0x48;
 
     public static bool IsRefund(this PayItem payItem) => (payItem.ftPayItemCase & 0x0000_0000_0002_0000) > 0x0000;

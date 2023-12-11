@@ -61,10 +61,32 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
             return JsonConvert.DeserializeObject<ReceiptRequest>(receipt);
         }
 
+
+        public static ReceiptRequest CashWithSingleUseVoucherRedeem()
+        {
+            var current_moment = DateTime.UtcNow.ToString("o");
+            var receipt = File.ReadAllText(Path.Combine("ReceiptRequests", "PosReceipts", "0x0001_CashWithSingleUseVoucher_Redeem.json")).Replace("{{current_moment}}", current_moment);
+            return JsonConvert.DeserializeObject<ReceiptRequest>(receipt);
+        }
+
+        public static ReceiptRequest CashWithSingleUseVoucherPurchase()
+        {
+            var current_moment = DateTime.UtcNow.ToString("o");
+            var receipt = File.ReadAllText(Path.Combine("ReceiptRequests", "PosReceipts", "0x0001_CashWithSingleUseVoucher_Purchase.json")).Replace("{{current_moment}}", current_moment);
+            return JsonConvert.DeserializeObject<ReceiptRequest>(receipt);
+        }
+
         public static ReceiptRequest CashWithMutliUseVoucherRedeem()
         {
             var current_moment = DateTime.UtcNow.ToString("o");
             var receipt = File.ReadAllText(Path.Combine("ReceiptRequests", "PosReceipts", "0x0001_CashWithMutliUseVoucherRedeem.json")).Replace("{{current_moment}}", current_moment);
+            return JsonConvert.DeserializeObject<ReceiptRequest>(receipt);
+        }
+
+        public static ReceiptRequest CashWithSingleUseVoucher_Redeem_Multi_VatRates()
+        {
+            var current_moment = DateTime.UtcNow.ToString("o");
+            var receipt = File.ReadAllText(Path.Combine("ReceiptRequests", "PosReceipts", "0x0001_CashWithSingleUseVoucher_Redeem_Multi_VatRates.json")).Replace("{{current_moment}}", current_moment);
             return JsonConvert.DeserializeObject<ReceiptRequest>(receipt);
         }
 

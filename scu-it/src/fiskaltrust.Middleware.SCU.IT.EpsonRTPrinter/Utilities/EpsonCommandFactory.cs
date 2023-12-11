@@ -56,7 +56,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                     Message = data
                 });
                 index++;
-            } 
+            }
         }
 
         public static FiscalReceipt CreateRefundRequestContent(EpsonRTPrinterSCUConfiguration configuration, ReceiptRequest receiptRequest, long referenceDocNumber, long referenceZNumber, DateTime referenceDateTime, string serialNr)
@@ -325,6 +325,26 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                     }
                     itemAndMessages.Add(new() { PrintRecItem = printRecItem, PrintRecMessage = printRecMessage });
                 }
+                else if (i.IsSingleUseVoucher() && i.Amount < 0)
+                {
+                    var printRecItemAdjustment = new PrintRecItemAdjustment
+                    {
+                        Description = i.Description,
+                        Amount = Math.Abs(i.Amount),
+                        AdjustmentType = 12,
+                        Department = i.GetVatGroup(),
+                    };
+                    PrintRecMessage? printRecMessage = null;
+                    if (!string.IsNullOrEmpty(i.ftChargeItemCaseData))
+                    {
+                        printRecMessage = new PrintRecMessage()
+                        {
+                            Message = i.ftChargeItemCaseData,
+                            MessageType = 4
+                        };
+                    }
+                    itemAndMessages.Add(new() { PrintRecItemAdjustment = printRecItemAdjustment, PrintRecMessage = printRecMessage });
+                }
                 else if (i.IsMultiUseVoucher())
                 {
                     var printRecItem = new PrintRecItem
@@ -394,6 +414,19 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                 {
                     PrintRecTotal = printRecTotal,
                     PrintRecMessage = printRecMessage
+                });
+            }
+
+            if (totalAndMessages.Count == 0)
+            {
+                totalAndMessages.Add(new()
+                {
+                    PrintRecTotal = new PrintRecTotal
+                    {
+                        PaymentType = 0,
+                        Index = 0,
+                        Payment = 0m
+                    }
                 });
             }
             return totalAndMessages;
