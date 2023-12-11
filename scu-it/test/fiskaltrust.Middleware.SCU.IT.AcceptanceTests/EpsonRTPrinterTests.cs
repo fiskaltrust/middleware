@@ -30,7 +30,27 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
             var data = """
                 {"DeviceUrl":"http://10.1.16.110","AdditionalTrailerLines":"[\\\"T.{cbArea} K.{cbUser}\\\",\\\"\\\"]"}
                 """;
-            var config = JsonConvert.DeserializeObject<EpsonRTPrinterSCUConfiguration>(data);
+            Console.WriteLine(data);
+            var config = JsonConvert.DeserializeObject<EpsonRTPrinterSCUConfiguration>(json);
+            var lines = JsonConvert.DeserializeObject<List<string>>(config.AdditionalTrailerLines ?? "");
+            Console.WriteLine(lines);
+        }
+
+
+        [Fact]
+        public void DeserializeConfig()
+        {
+            var ddd = JsonConvert.SerializeObject(new List<string>
+            {
+                "T.{cbArea} K.{cbUser}",
+                ""
+            });
+
+            var data = File.ReadAllText("Config.json");
+            var configuration = JsonConvert.DeserializeObject<EpsonRTPrinterSCUConfiguration>(data);
+            configuration.AdditionalTrailerLines = ddd;
+            var lines = JsonConvert.DeserializeObject<List<string>>(configuration.AdditionalTrailerLines ?? "");
+            Console.WriteLine(lines);
         }
     }
 }
