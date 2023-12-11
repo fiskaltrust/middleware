@@ -61,6 +61,27 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
             return JsonConvert.DeserializeObject<ReceiptRequest>(receipt);
         }
 
+        public static ReceiptRequest CashWithMutliUseVoucherRedeem()
+        {
+            var current_moment = DateTime.UtcNow.ToString("o");
+            var receipt = File.ReadAllText(Path.Combine("ReceiptRequests", "PosReceipts", "0x0001_CashWithMutliUseVoucherRedeem.json")).Replace("{{current_moment}}", current_moment);
+            return JsonConvert.DeserializeObject<ReceiptRequest>(receipt);
+        }
+
+        public static ReceiptRequest CashWithMutliUseVoucherPurchase()
+        {
+            var current_moment = DateTime.UtcNow.ToString("o");
+            var receipt = File.ReadAllText(Path.Combine("ReceiptRequests", "PosReceipts", "0x0001_CashWithMutliUseVoucherPurchase.json")).Replace("{{current_moment}}", current_moment);
+            return JsonConvert.DeserializeObject<ReceiptRequest>(receipt);
+        }
+
+        public static ReceiptRequest GetTicketExample()
+        {
+            var current_moment = DateTime.UtcNow.ToString("o");
+            var receipt = File.ReadAllText(Path.Combine("ReceiptRequests", "PosReceipts", "0x0001_CashWithTicket.json")).Replace("{{current_moment}}", current_moment);
+            return JsonConvert.DeserializeObject<ReceiptRequest>(receipt);
+        }
+
         public static ReceiptRequest GetReprintReceipt()
         {
             var current_moment = DateTime.UtcNow.ToString("o");

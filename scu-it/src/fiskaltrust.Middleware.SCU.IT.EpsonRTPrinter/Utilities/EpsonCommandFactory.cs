@@ -325,6 +325,26 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                     }
                     itemAndMessages.Add(new() { PrintRecItem = printRecItem, PrintRecMessage = printRecMessage });
                 }
+                else if (i.IsMultiUseVoucher())
+                {
+                    var printRecItem = new PrintRecItem
+                    {
+                        Description = i.Description,
+                        Quantity = i.Quantity,
+                        UnitPrice = i.Quantity == 0 || i.Amount == 0 ? 0 : i.Amount / i.Quantity,
+                        Department = 11,
+                    };
+                    PrintRecMessage? printRecMessage = null;
+                    if (!string.IsNullOrEmpty(i.ftChargeItemCaseData))
+                    {
+                        printRecMessage = new PrintRecMessage()
+                        {
+                            Message = i.ftChargeItemCaseData,
+                            MessageType = 4
+                        };
+                    }
+                    itemAndMessages.Add(new() { PrintRecItem = printRecItem, PrintRecMessage = printRecMessage });
+                }
                 else
                 {
                     var printRecItem = new PrintRecItem
@@ -395,7 +415,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                 0x03 => new EpsonPaymentType() { PaymentType = 1, Index = 0 },
                 0x04 => new EpsonPaymentType() { PaymentType = 2, Index = 1 },
                 0x05 => new EpsonPaymentType() { PaymentType = 2, Index = 1 },
-                0x06 => new EpsonPaymentType() { PaymentType = 3, Index = 1 },
+                0x06 => new EpsonPaymentType() { PaymentType = 6, Index = 1 },
                 0x07 => new EpsonPaymentType() { PaymentType = 5, Index = 0 },
                 0x08 => new EpsonPaymentType() { PaymentType = 5, Index = 0 },
                 0x09 => new EpsonPaymentType() { PaymentType = 5, Index = 0 },
@@ -404,6 +424,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                 0x0C => new EpsonPaymentType() { PaymentType = 0, Index = 0 },
                 0x0D => new EpsonPaymentType() { PaymentType = 5, Index = 0 },
                 0x0E => new EpsonPaymentType() { PaymentType = 5, Index = 0 },
+                0x0F => new EpsonPaymentType() { PaymentType = 3, Index = 1 },
                 _ => throw new NotSupportedException($"The payitemcase {payItem.ftPayItemCase} is not supported")
             };
         }
