@@ -334,16 +334,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                         AdjustmentType = 12,
                         Department = i.GetVatGroup(),
                     };
-                    PrintRecMessage? printRecMessage = null;
-                    if (!string.IsNullOrEmpty(i.ftChargeItemCaseData))
-                    {
-                        printRecMessage = new PrintRecMessage()
-                        {
-                            Message = i.ftChargeItemCaseData,
-                            MessageType = 4
-                        };
-                    }
-                    itemAndMessages.Add(new() { PrintRecItemAdjustment = printRecItemAdjustment, PrintRecMessage = printRecMessage });
+                    itemAndMessages.Add(new() { PrintRecItemAdjustment = printRecItemAdjustment });
                 }
                 else if (i.IsMultiUseVoucher())
                 {
@@ -354,16 +345,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                         UnitPrice = i.Quantity == 0 || i.Amount == 0 ? 0 : i.Amount / i.Quantity,
                         Department = 11,
                     };
-                    PrintRecMessage? printRecMessage = null;
-                    if (!string.IsNullOrEmpty(i.ftChargeItemCaseData))
-                    {
-                        printRecMessage = new PrintRecMessage()
-                        {
-                            Message = i.ftChargeItemCaseData,
-                            MessageType = 4
-                        };
-                    }
-                    itemAndMessages.Add(new() { PrintRecItem = printRecItem, PrintRecMessage = printRecMessage });
+                    itemAndMessages.Add(new() { PrintRecItem = printRecItem });
                 }
                 else
                 {
@@ -402,14 +384,6 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                     Payment = (request.IsRefund() || request.IsVoid() || pay.IsRefund() || pay.IsVoid()) ? Math.Abs(pay.Amount) : pay.Amount,
                 };
                 PrintRecMessage? printRecMessage = null;
-                if (!string.IsNullOrEmpty(pay.ftPayItemCaseData))
-                {
-                    printRecMessage = new PrintRecMessage()
-                    {
-                        Message = pay.ftPayItemCaseData,
-                        MessageType = 4
-                    };
-                }
                 totalAndMessages.Add(new()
                 {
                     PrintRecTotal = printRecTotal,
