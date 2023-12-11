@@ -4,6 +4,7 @@ using fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.SCU.IT.Abstraction;
 using System.Collections.Generic;
+using Newtonsoft.Json;
 
 #pragma warning disable
 
@@ -45,7 +46,11 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
         private static void AddTrailerLines(EpsonRTPrinterSCUConfiguration configuration, ReceiptRequest receiptRequest, FiscalReceipt fiscalReceipt)
         {
             var index = 1;
-            foreach (var trailerLine in configuration.AdditionalTrailerLines)
+            if (string.IsNullOrWhiteSpace(configuration.AdditionalTrailerLines))
+                return;
+
+            var lines = JsonConvert.DeserializeObject<List<string>>(configuration.AdditionalTrailerLines);
+            foreach (var trailerLine in lines)
             {
                 var data = trailerLine.Replace("{cbArea}", receiptRequest.cbArea).Replace("{cbUser}", receiptRequest.cbUser);
                 fiscalReceipt.PrintRecMessageType3?.Add(new PrintRecMessage

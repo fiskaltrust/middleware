@@ -11,10 +11,7 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
         {
             DeviceUrl = _serverUri.ToString(),
             Password = "21719",
-            AdditionalTrailerLines = new List<string> {
-                "T.{cbArea} K.{cbUser}",
-                ""
-            }
+            AdditionalTrailerLines = "[\"T.{cbArea} K.{cbUser}\",\"\"]"
         };
 
         protected override string SerialNumber => "99IEC018305";
