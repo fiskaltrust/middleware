@@ -56,3 +56,26 @@ stages:
             environment: production-legacy
             storage: fiskaltrustcommonwe1
             serviceConnection: production-legacy-packages
+
+  - template: templates/release-legacy-nuget.yml
+    parameters:
+      type: fiskaltrust.Middleware.SCU.IT
+      artifact: build
+      projects:
+        - EpsonRTPrinter
+        - CustomRTPrinter
+        - CustomRTServer
+      stages:
+        - stage: Release_Sandbox_Legacy_Nuget
+          dependsOn: []
+          templateContext:
+            environment: sandbox-legacy-nuget
+            feed: dev
+            serviceConnection: sandbox-legacy-packages
+
+        - stage: Release_Production_Legacy_Nuget
+          templateContext:
+            dependsOnPrefix: Release_Sandbox_Legacy_Nuget
+            environment: production-legacy-nuget
+            feed: middleware
+            serviceConnection: production-legacy-packages
