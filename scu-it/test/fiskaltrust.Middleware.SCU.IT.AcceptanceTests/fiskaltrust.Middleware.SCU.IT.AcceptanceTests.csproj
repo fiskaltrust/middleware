@@ -4,7 +4,7 @@
         <TargetFramework>net6.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-
+        <WarningsAsErrors>false</WarningsAsErrors>
         <IsPackable>false</IsPackable>
     </PropertyGroup>
 
@@ -32,15 +32,18 @@
     </ItemGroup>
 
     <ItemGroup>
-      <None Update="ReceiptRequests\**">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </None>
+        <None Update="ReceiptRequests\**">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
     </ItemGroup>
 
     <ItemGroup>
-      <None Update="ReceiptRequests\PosReceipts\0x0001_Cash_withSubItems.json">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </None>
+        <None Update="Config.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="ReceiptRequests\PosReceipts\0x0001_Cash_withSubItems.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
     </ItemGroup>
 
 </Project>

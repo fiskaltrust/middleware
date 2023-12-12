@@ -21,6 +21,6 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter
 
         public string? Password { get; set; }
 
-        public List<string> AdditionalTrailerLines { get; set;} = new List<string>();
+        public string? AdditionalTrailerLines { get; set;}
     }
 }
