@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.Middleware.SCU.IT.Abstraction;
 using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest

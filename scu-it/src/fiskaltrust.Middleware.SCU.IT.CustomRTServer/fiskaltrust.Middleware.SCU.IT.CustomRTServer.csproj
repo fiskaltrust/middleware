@@ -28,7 +28,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\fiskaltrust.Middleware.SCU.IT.Abstraction\fiskaltrust.Middleware.SCU.IT.Abstraction.csproj" />
+      <ProjectReference Include="..\fiskaltrust.Middleware.SCU.IT.Abstraction\fiskaltrust.Middleware.SCU.IT.Abstraction.csproj"  PrivateAssets="all" />
     </ItemGroup>
-    
+
 </Project>
