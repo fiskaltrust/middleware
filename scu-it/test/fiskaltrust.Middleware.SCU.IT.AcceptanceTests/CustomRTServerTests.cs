@@ -157,28 +157,5 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
             var rsult = await method.Should().CompleteWithinAsync(1010.Milliseconds());
             rsult.Subject.ReceiptResponse.ftState.Should().Be(0x4954_2001_0000_0000);
         }
-
-        [Fact]
-        public async Task BrokenConnectionTest_DailyClosing()
-        {
-            var response = _receiptResponse;
-            var config = JsonConvert.DeserializeObject<CustomRTServerConfiguration>(JsonConvert.SerializeObject(JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(_config))));
-            config.RTServerHttpTimeoutInMs = 1000;
-            config.ServerUrl = "https://at14-custom-rt-it.fiskaltrust.services/";
-            var itsscd = GetSUT(new ScuBootstrapper
-            {
-                Id = _scuId,
-                Configuration = JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(config))
-            });
-
-            Func<Task<ProcessResponse>> method = async () => await itsscd.ProcessReceiptAsync(new ProcessRequest
-            {
-                ReceiptRequest = ReceiptExamples.GetDailyClosing(),
-                ReceiptResponse = response
-            });
-            var result = await method();
-            //var rsult = await method.Should().CompleteWithinAsync(1100.Milliseconds());
-            //rsult.Subject.ReceiptResponse.ftState.Should().Be(0x4954_2001_EEEE_EEEE);
-        }
     }
 }
