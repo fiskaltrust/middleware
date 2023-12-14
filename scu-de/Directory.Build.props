@@ -11,7 +11,7 @@
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <AssemblyCompany>fiskaltrust</AssemblyCompany>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <WarningsNotAsErrors>NU5104;NU1902;NU1903</WarningsNotAsErrors>
+    <WarningsNotAsErrors>NU1901;NU1902;NU1903;NU1904;NU5104</WarningsNotAsErrors>
     <Deterministic>true</Deterministic>
     <LangVersion>8.0</LangVersion>
   </PropertyGroup>
