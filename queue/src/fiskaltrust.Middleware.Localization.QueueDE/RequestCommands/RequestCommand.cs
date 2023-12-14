@@ -63,7 +63,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             _failedStartTransactionRepo = failedStartTransactionRepo;
             _failedFinishTransactionRepo = failedFinishTransactionRepo;
             _openTransactionRepo = openTransactionRepo;
-            _transactionFactory = new TransactionFactory(_deSSCDProvider);
+            _transactionFactory = new TransactionFactory(_deSSCDProvider, _logger);
             _tarFileCleanupService = tarFileCleanupService;
             _queueDEConfiguration = queueDEConfiguration;
             _masterDataService = masterDataService;
@@ -97,6 +97,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
         public async Task PerformTarFileExportAsync(ftQueueItem queueItem, ftQueue queue, ftQueueDE queueDE, bool erase)
         {
+            _logger.LogTrace("RequestCommand.PerformTarFileExportAsync [enter].");
             if (_queueDEConfiguration.TarFileExportMode == TarFileExportMode.None)
             { 
                 _logger.LogInformation("Skipped export because {key} is set to {value}", nameof(TarFileExportMode), nameof(TarFileExportMode.None));
@@ -151,10 +152,15 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             {
                 _logger.LogError(ex, "Failed to export TAR file from SCU.");
             }
+            finally
+            {
+                _logger.LogTrace("RequestCommand.PerformTarFileExportAsync [exit].");
+            }
         }
 
         protected async Task UpdateTseInfoAsync(Guid signaturCreationUnitDEID)
         {
+            _logger.LogTrace("RequestCommand.UpdateTseInfoAsync [enter].");
             try
             {
                 var signaturCreationUnitDE = await _configurationRepository.GetSignaturCreationUnitDEAsync(signaturCreationUnitDEID).ConfigureAwait(false);
@@ -165,6 +171,10 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Failed to updated status of SCU ({signaturcreationunitdeid}). Will try again later...", signaturCreationUnitDEID);
+            }
+            finally
+            {
+                _logger.LogTrace("RequestCommand.UpdateTseInfoAsync [exit].");
             }
         }
 
@@ -188,6 +198,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
         protected async Task<(ulong transactionNumber, List<SignaturItem> signatures)> ProcessReceiptStartTransSignAsync(string transactionIdentifier, string processType, string payload, ftQueueItem queueItem, ftQueueDE queueDE, bool implicitFlow)
         {
+            _logger.LogTrace("RequestCommand.ProcessReceiptStartTransSignAsync [enter].");
             if (implicitFlow)
             {
                 var startTransactionResult = await _transactionFactory.PerformStartTransactionRequestAsync(queueItem.ftQueueItemId, queueDE.CashBoxIdentification).ConfigureAwait(false);
@@ -207,11 +218,13 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
             var signatures = _signatureFactory.GetSignaturesForPosReceiptTransaction(openTransaction.StartTransactionSignatureBase64, finishTransactionResult, await GetCertificationIdentificationAsync().ConfigureAwait(false));
 
+            _logger.LogTrace("RequestCommand.ProcessReceiptStartTransSignAsync [exit].");
             return (finishTransactionResult.TransactionNumber, signatures);
         }
 
         protected async Task<ProcessReceiptResponse> ProcessReceiptAsync(string transactionIdentifier, string processType, string payload, ftQueueItem queueItem, ftQueueDE queueDE)
         {
+            _logger.LogTrace("RequestCommand.ProcessReceiptAsync [enter].");
             var startTransactionResult = await _transactionFactory.PerformStartTransactionRequestAsync(queueItem.ftQueueItemId, queueDE.CashBoxIdentification).ConfigureAwait(false);
             await _openTransactionRepo.InsertOrUpdateTransactionAsync(new OpenTransaction
             {
@@ -225,7 +238,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             await _openTransactionRepo.RemoveAsync(transactionIdentifier).ConfigureAwait(false);
 
             var signatures = _signatureFactory.GetSignaturesForTransaction(startTransactionResult.SignatureData.SignatureBase64, finishTransactionResult, await GetCertificationIdentificationAsync().ConfigureAwait(false));
-
+            _logger.LogTrace("RequestCommand.ProcessReceiptAsync [exit].");
             return new ProcessReceiptResponse
             {
                 ClientId = finishTransactionResult.ClientId,
@@ -239,6 +252,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
         protected async Task<RequestCommandResponse> ProcessSSCDFailedReceiptRequest(ReceiptRequest request, ftQueueItem queueItem, ftQueue queue, ftQueueDE queueDE, List<ftActionJournal> actionJournals = null)
         {
+            _logger.LogTrace("RequestCommand.ProcessSSCDFailedReceiptRequest [enter].");
             if (queueDE.SSCDFailCount == 0)
             {
                 queueDE.SSCDFailMoment = DateTime.UtcNow;
@@ -313,7 +327,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 var dataJson = JsonConvert.SerializeObject(new
                 {
                     ftReceiptNumerator = queue.ftReceiptNumerator + 1,
-                    masterDataChanged = masterDataChanged,
+                    masterDataChanged,
                     closingNumber = (request.ftReceiptCase & 0xFFFF) == 0x0007 ? ++queueDE.DailyClosingNumber :-1
                 });
                 actionJournals.Add(CreateActionJournal(queue.ftQueueId, queueItem.ftQueueId, $"{type:X}", $"{message} However TSE was not reachable.", dataJson));
@@ -326,7 +340,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
             receiptResponse.ftSignatures = signatures.ToArray();
             receiptResponse.ftState += SSCD_FAILED_MODE_FLAG;
-
+            _logger.LogTrace("RequestCommand.ProcessSSCDFailedReceiptRequest [exit].");
             return await Task.FromResult(new RequestCommandResponse()
             {
                 ReceiptResponse = receiptResponse,
@@ -337,14 +351,17 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
         protected async Task<(ulong transactionNumber, List<SignaturItem> signatures)> ProcessUpdateTransactionRequestAsync(string transactionIdentifier, string processType, string payload, ftQueueItem queueItem, ftQueueDE queueDE)
         {
+            _logger.LogTrace("RequestCommand.ProcessUpdateTransactionRequestAsync [enter].");
             var openTransaction = await _openTransactionRepo.GetAsync(transactionIdentifier).ConfigureAwait(false);
             var updatTransactionResult = await _transactionFactory.PerformUpdateTransactionRequestAsync(processType, payload, queueItem.ftQueueItemId, queueDE.CashBoxIdentification, (ulong) openTransaction.TransactionNumber).ConfigureAwait(false);
             var signatures = _signatureFactory.GetSignaturesForUpdateTransaction(updatTransactionResult);
+            _logger.LogTrace("RequestCommand.ProcessUpdateTransactionRequestAsync [exit].");
             return (updatTransactionResult.TransactionNumber, signatures);
         }
 
         protected async Task<(ulong transactionNumber, List<SignaturItem> signatures, string clientId, string signatureAlgorithm, string publicKeyBase64, string serialNumberOctet)> ProcessInitialOperationReceiptAsync(string transactionIdentifier, string processType, string payload, ftQueueItem queueItem, ftQueueDE queueDE, bool clientIdRegistrationOnly)
         {
+            _logger.LogTrace("RequestCommand.ProcessInitialOperationReceiptAsync [enter].");
             if (!clientIdRegistrationOnly)
             {
                 await _deSSCDProvider.Instance.SetTseStateAsync(new TseState { CurrentState = TseStates.Initialized }).ConfigureAwait(false);
@@ -370,11 +387,13 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             }
 
             var processReceiptResponse = await ProcessReceiptAsync(transactionIdentifier, processType, payload, queueItem, queueDE).ConfigureAwait(false);
+            _logger.LogTrace("RequestCommand.ProcessInitialOperationReceiptAsync [exit].");
             return (processReceiptResponse.TransactionNumber, processReceiptResponse.Signatures, processReceiptResponse.ClientId, processReceiptResponse.SignatureAlgorithm, processReceiptResponse.PublicKeyBase64, processReceiptResponse.SerialNumberOctet);
         }
 
         protected async Task<(ulong transactionNumber, List<SignaturItem> signatures, string clientId, string signatureAlgorithm, string publicKeyBase64, string serialNumberOctet)> ProcessOutOfOperationReceiptAsync(string transactionIdentifier, string processType, string payload, ftQueueItem queueItem, ftQueueDE queueDE, bool isClientIdOnlyRequest)
         {
+            _logger.LogTrace("RequestCommand.ProcessOutOfOperationReceiptAsync [enter].");
             try
             {
                 var processReceiptResponse = await ProcessReceiptAsync(transactionIdentifier, processType, payload, queueItem, queueDE);
@@ -387,6 +406,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 {
                     await _deSSCDProvider.Instance.SetTseStateAsync(new TseState { CurrentState = TseStates.Terminated }).ConfigureAwait(false);
                 }
+                _logger.LogTrace("RequestCommand.ProcessOutOfOperationReceiptAsync [exit].");
             }
         }
 
@@ -422,6 +442,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
         }
         protected async Task<(bool, string, long)> UpdateMasterData(ReceiptRequest request)
         {
+            _logger.LogTrace("RequestCommand.UpdateMasterData [enter].");
             var masterDataChanged = false;
             if (request.IsMasterDataUpdate() && await _masterDataService.HasDataChangedAsync().ConfigureAwait(false))
             {
@@ -439,7 +460,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 (false,0x0006) => (0x4445_0000_0000_0007, "Yearly-closing receipt was processed."),                                         //yearly-closing
                 _ => (0,""),
             };
-
+            _logger.LogTrace("RequestCommand.UpdateMasterData [exit].");
             return (masterDataChanged, message, type);
         }
     }

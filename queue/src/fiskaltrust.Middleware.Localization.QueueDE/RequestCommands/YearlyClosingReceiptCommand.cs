@@ -30,6 +30,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
         public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueDE queueDE, ReceiptRequest request, ftQueueItem queueItem)
         {
+            _logger.LogTrace("YearlyClosingReceiptCommand.ExecuteAsync [enter].");
             ThrowIfNoImplicitFlow(request);
             ThrowIfTraining(request);
 
@@ -67,6 +68,10 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             {
                 _logger.LogCritical(ex, "An exception occured while processing this request.");
                 return await ProcessSSCDFailedReceiptRequest(request, queueItem, queue, queueDE).ConfigureAwait(false);
+            }
+            finally
+            {
+                _logger.LogTrace("YearlyClosingReceiptCommand.ExecuteAsync [exit].");
             }
         }
     }

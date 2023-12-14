@@ -37,6 +37,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
         public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueDE queueDE, ReceiptRequest request, ftQueueItem queueItem)
         {
+            _logger.LogTrace("InitiateScuSwitchReceiptCommand.ExecuteAsync [enter].");
             ThrowIfNoImplicitFlow(request);
             ThrowIfTraining(request);
 
@@ -189,6 +190,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             queueDE.ftSignaturCreationUnitDEId = null;
             await _configurationRepository.InsertOrUpdateQueueDEAsync(queueDE).ConfigureAwait(false);
             _logger.LogInformation("Disconnected from SCU with ID '{ScuId}'.", specifiedSourceScuId);
+            _logger.LogTrace("InitiateScuSwitchReceiptCommand.ExecuteAsync [exit].");
             return new RequestCommandResponse()
             {
                 ActionJournals = actionJournals,

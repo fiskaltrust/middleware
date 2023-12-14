@@ -25,6 +25,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
         public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueDE queueDE, ReceiptRequest request, ftQueueItem queueItem)
         {
+            _logger.LogTrace("HandwrittenReceiptCommand.ExecuteAsync [enter].");
             var receiptResponse = CreateReceiptResponse(request, queueItem, queueDE);
 
             var actionJournals = new List<ftActionJournal>();
@@ -42,6 +43,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 }
             };
             receiptResponse.ftSignatures = signatures.ToArray();
+            _logger.LogTrace("HandwrittenReceiptCommand.ExecuteAsync [exit].");
             return await Task.FromResult(new RequestCommandResponse()
             {
                 ReceiptResponse = receiptResponse,

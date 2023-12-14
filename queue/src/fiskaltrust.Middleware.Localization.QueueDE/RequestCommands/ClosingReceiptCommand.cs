@@ -41,8 +41,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                     DataJson = JsonConvert.SerializeObject(new
                     {
                         ftReceiptNumerator = queue.ftReceiptNumerator + 1,
-                        transactionNumber = transactionNumber,
-                        masterDataChanged = masterDataChanged,
+                         transactionNumber,
+                         masterDataChanged,
                         closingNumber = closingNumber ?? -1
                     })
                 }

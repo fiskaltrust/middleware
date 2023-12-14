@@ -32,6 +32,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
         public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueDE queueDE, ReceiptRequest request, ftQueueItem queueItem)
         {
+            _logger.LogTrace("OutOfOperationReceiptCommand.ExecuteAsync [enter].");
             ThrowIfNoImplicitFlow(request);
             ThrowIfTraining(request);
 
@@ -141,6 +142,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             receiptResponse.ftSignatures = signatures.ToArray();
 
             queue.StopMoment = DateTime.UtcNow;
+            _logger.LogTrace("OutOfOperationReceiptCommand.ExecuteAsync [exit].");
             return new RequestCommandResponse()
             {
                 ActionJournals = actionJournals,

@@ -27,6 +27,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
         public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueDE queueDE, ReceiptRequest request, ftQueueItem queueItem)
         {
+            _logger.LogTrace("FailTransactionReceiptCommand.ExecuteAsync [enter].");
             var closeSingleTransaction = !string.IsNullOrEmpty(request.cbReceiptReference);
 
             if (closeSingleTransaction && request.IsImplictFlow())
@@ -62,6 +63,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 }
                 else
                 {
+                    _logger.LogTrace("DailyClosingReceiptCommand.ExecuteAsync Section CloseMultipleTransactions [enter].");
                     var openSignatures = new List<SignaturItem>();
                     var openTransactions = (await _openTransactionRepo.GetAsync().ConfigureAwait(false)).ToList();
                     var transactionsToClose = JsonConvert.DeserializeObject<TseInfo>(request.ftReceiptCaseData);
@@ -79,6 +81,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
                     (transactionNumber, signatures) = await ProcessReceiptStartTransSignAsync(request.cbReceiptReference, processType, payload, queueItem, queueDE, request.IsImplictFlow()).ConfigureAwait(false);
                     signatures.AddRange(openSignatures);
+                    _logger.LogTrace("DailyClosingReceiptCommand.ExecuteAsync Section CloseMultipleTransactions [exit].");
                 }
                 receiptResponse.ftReceiptIdentification = request.GetReceiptIdentification(queue.ftReceiptNumerator, transactionNumber);
 
@@ -104,6 +107,10 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             {
                 _logger.LogCritical(ex, "An exception occured while processing this request.");
                 return await ProcessSSCDFailedReceiptRequest(request, queueItem, queue, queueDE).ConfigureAwait(false);
+            }
+            finally
+            {
+                _logger.LogTrace("FailTransactionReceiptCommand.ExecuteAsync [exit].");
             }
         }
 
