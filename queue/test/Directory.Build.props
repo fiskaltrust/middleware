@@ -2,7 +2,7 @@
     <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
 
     <PropertyGroup>
-        <WarningsNotAsErrors>NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>
+        <WarningsNotAsErrors>NU1901;NU1902;NU1903;NU1904;NU5104</WarningsNotAsErrors>
     </PropertyGroup>
 
     <ItemGroup>

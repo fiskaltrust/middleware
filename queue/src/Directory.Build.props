@@ -3,7 +3,7 @@
 
     <PropertyGroup>
         <TargetFrameworks>netstandard2.0;netstandard2.1;net461;net6</TargetFrameworks>
-        <WarningsNotAsErrors>NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>
+        <WarningsNotAsErrors>NU1901;NU1902;NU1903;NU1904;NU5104</WarningsNotAsErrors>
     </PropertyGroup>
 
     <ItemGroup>
