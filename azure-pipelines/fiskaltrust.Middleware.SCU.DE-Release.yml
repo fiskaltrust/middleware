@@ -92,5 +92,5 @@ stages:
           templateContext:
             dependsOnPrefix: Release_Sandbox_Legacy_Nuget
             environment: production-legacy-nuget
-            feed: middleware
+            feed: Public/middleware
             serviceConnection: production-legacy-packages
