@@ -32,10 +32,12 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             _logger.LogTrace("PosReceiptCommand.ExecuteAsync [enter].");
             if (!request.IsImplictFlow())
             {
+                _logger.LogTrace("PosReceiptCommand.ExecuteAsync Section Expl Query Open Transaction [enter].");
                 if (!await _openTransactionRepo.ExistsAsync(request.cbReceiptReference).ConfigureAwait(false))
                 {
                     throw new ArgumentException($"No transactionnumber found for cbReceiptReference '{request.cbReceiptReference}'.");
                 }
+                _logger.LogTrace("PosReceiptCommand.ExecuteAsync Section Expl Query Open Transaction [exit].");
             }
             request.CheckForEqualSumChargePayItems(_logger);
             var (processType, payload) = _transactionPayloadFactory.CreateReceiptPayload(request);

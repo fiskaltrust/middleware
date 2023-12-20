@@ -30,6 +30,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
 
         public async Task CleanupTarFileAsync(Guid? journalDEId, string filePath, string checkSum, bool useSharpCompress = false)
         {
+            _logger.LogTrace("TarFileCleanupService.CleanupTarFileAsync [enter].");
             if (_queueDEConfiguration.StoreTemporaryExportFiles)
             { return; }
 
@@ -45,6 +46,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
 
                 try
                 {
+                    _logger.LogTrace("TarFileCleanupService.CleanupTarFileAsync Section GetHashFromCompressed [enter].");
                     var dbCheckSum = useSharpCompress
                                         ? GetHashFromCompressedBase64WithSharpCompress(dbJournalDE.FileContentBase64)
                                         : GetHashFromCompressedBase64(dbJournalDE.FileContentBase64);
@@ -60,6 +62,10 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
                 {
                     _logger.LogWarning(e, "Failed to check content equality.");
                 }
+                finally
+                {
+                    _logger.LogTrace("TarFileCleanupService.CleanupTarFileAsync Section GetHashFromCompressed [exit].");
+                }
             }
 
             if (deleteFile)
@@ -69,6 +75,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
                     File.Delete(filePath);
                 }
             }
+            _logger.LogTrace("TarFileCleanupService.CleanupTarFileAsync [exit].");
         }
 
         public void CleanupTarFileDirectory(string workingDirectory)

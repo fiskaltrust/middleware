@@ -106,7 +106,9 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
             if (_queueDEConfiguration.TarFileExportMode == TarFileExportMode.Erased)
             {
+                _logger.LogTrace("RequestCommand.PerformTarFileExportAsync Section GetTseInfoAsync [enter]."); 
                 var tseInfo = await _deSSCDProvider.Instance.GetTseInfoAsync().ConfigureAwait(false);
+                _logger.LogTrace("RequestCommand.PerformTarFileExportAsync Section GetTseInfoAsync [exit].");
                 if (tseInfo.CurrentNumberOfStartedTransactions > 0)
                 {
                     _logger.LogInformation("Skipped export because there are open transactions and {key} is set to {value}", nameof(TarFileExportMode), nameof(TarFileExportMode.Erased));
@@ -117,7 +119,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             try
             {
                 var exportService = new TarFileExportService();
-                (var filePath, var success, var checkSum, var isErased) = await exportService.ProcessTarFileExportAsync(_deSSCDProvider.Instance, queueDE.ftQueueDEId, queueDE.CashBoxIdentification, erase, _middlewareConfiguration.ServiceFolder, _middlewareConfiguration.TarFileChunkSize).ConfigureAwait(false);
+                (var filePath, var success, var checkSum, var isErased) = await exportService.ProcessTarFileExportAsync(_logger,_deSSCDProvider.Instance, queueDE.ftQueueDEId, queueDE.CashBoxIdentification, erase, _middlewareConfiguration.ServiceFolder, _middlewareConfiguration.TarFileChunkSize).ConfigureAwait(false);
                 if (success)
                 {
                     Guid? ftJournalDEId = null;
@@ -127,6 +129,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                     }
                     else
                     {
+                        _logger.LogTrace("RequestCommand.PerformTarFileExportAsync Section insertftJournalDE success [enter].");
                         var journalDE = new ftJournalDE
                         {
                             ftJournalDEId = Guid.NewGuid(),
@@ -139,6 +142,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                         };
                         await _journalDERepository.InsertAsync(journalDE).ConfigureAwait(false);
                         ftJournalDEId = journalDE.ftJournalDEId;
+                        _logger.LogTrace("RequestCommand.PerformTarFileExportAsync Section insertftJournalDE success [exit].");
                     }
 
                     await _tarFileCleanupService.CleanupTarFileAsync(ftJournalDEId, filePath, checkSum);
@@ -164,8 +168,10 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             try
             {
                 var signaturCreationUnitDE = await _configurationRepository.GetSignaturCreationUnitDEAsync(signaturCreationUnitDEID).ConfigureAwait(false);
+                _logger.LogTrace("RequestCommand.UpdateTseInfoAsync Section GetTseInfoAsync.");
                 var tseInfo = await _deSSCDProvider.Instance.GetTseInfoAsync().ConfigureAwait(false);
                 signaturCreationUnitDE.TseInfoJson = JsonConvert.SerializeObject(tseInfo);
+                _logger.LogTrace("RequestCommand.UpdateTseInfoAsync Section InsertOrUpdateSignaturCreationUnitDEAsync.");
                 await _configurationRepository.InsertOrUpdateSignaturCreationUnitDEAsync(signaturCreationUnitDE).ConfigureAwait(false);
             }
             catch (Exception ex)
@@ -226,6 +232,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
         {
             _logger.LogTrace("RequestCommand.ProcessReceiptAsync [enter].");
             var startTransactionResult = await _transactionFactory.PerformStartTransactionRequestAsync(queueItem.ftQueueItemId, queueDE.CashBoxIdentification).ConfigureAwait(false);
+            _logger.LogTrace("RequestCommand.ProcessReceiptAsync Section openTransactionRepo.Insert [enter].");
             await _openTransactionRepo.InsertOrUpdateTransactionAsync(new OpenTransaction
             {
                 cbReceiptReference = transactionIdentifier,
@@ -233,7 +240,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 StartMoment = startTransactionResult.TimeStamp,
                 TransactionNumber = (long) startTransactionResult.TransactionNumber
             }).ConfigureAwait(false);
-
+            _logger.LogTrace("RequestCommand.ProcessReceiptAsync Section openTransactionRepo.Insert [exit].");
             var finishTransactionResult = await _transactionFactory.PerformFinishTransactionRequestAsync(processType, payload, queueItem.ftQueueItemId, queueDE.CashBoxIdentification, startTransactionResult.TransactionNumber).ConfigureAwait(false);
             await _openTransactionRepo.RemoveAsync(transactionIdentifier).ConfigureAwait(false);
 
