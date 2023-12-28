@@ -62,7 +62,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             };
         }
 
-        public SignaturItem GetSignaturForStartTransaction(StartTransactionResponse startTransactionResponse) 
+        public SignaturItem GetSignaturForStartTransaction(StartTransactionResponse startTransactionResponse)
             => CreateBase64Signature(SignatureTypesDE.StartTransactionResult, "start-transaction-signature", startTransactionResponse.SignatureData.SignatureBase64, true);
 
         public List<SignaturItem> GetSignaturesForUpdateTransaction(UpdateTransactionResponse updateTransactionResponse)
@@ -105,6 +105,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             signatures.Add(CreateTextSignature(SignatureTypesDE.SignaturAlgorithm, "<sig-alg>", finishTransactionResponse.SignatureData.SignatureAlgorithm, true));
             signatures.Add(CreateTextSignature(SignatureTypesDE.LogTimeFormat, "<log-time-format>", finishTransactionResponse.TseTimeStampFormat, true));
             signatures.Add(CreateTextSignature(SignatureTypesDE.CertificationId, "<certification-id>", certificationIdentification, false));
+            signatures.Add(CreateTextSignature(SignatureTypesDE.TseSerialNumber, "<tse-seriennummer>", finishTransactionResponse.TseSerialNumberOctet, true));
             signatures.Add(CreateTextSignature(SignatureTypesDE.PublicKey, "<public-key>", finishTransactionResponse.SignatureData.PublicKeyBase64, true));
 
             return signatures;
@@ -179,7 +180,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             Data = data
         };
 
-        private long AddOptionalFlagIfRequired(SignaturItem.Formats format, bool optional) 
+        private long AddOptionalFlagIfRequired(SignaturItem.Formats format, bool optional)
             => _queueDEConfiguration.FlagOptionalSignatures && optional ? (long) format | OPTIONAL_FLAG : (long) format;
     }
 }
