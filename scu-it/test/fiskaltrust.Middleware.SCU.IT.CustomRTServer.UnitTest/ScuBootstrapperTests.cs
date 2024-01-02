@@ -24,7 +24,6 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
             };
             sut.ConfigureServices(serviceCollection);
 
-
             _ = serviceCollection.BuildServiceProvider().GetRequiredService<IITSSCD>();
         }
     }

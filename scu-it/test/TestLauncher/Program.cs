@@ -33,7 +33,6 @@ namespace TestLauncher
 
             Console.WriteLine("Press key to end program");
             Console.ReadLine();
-
         }
     }
 }

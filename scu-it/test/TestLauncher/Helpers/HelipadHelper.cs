@@ -40,6 +40,5 @@ namespace fiskaltrust.Middleware.SCU.IT.Test.Launcher.Helpers
                 }
             }
         }
-
     }
 }

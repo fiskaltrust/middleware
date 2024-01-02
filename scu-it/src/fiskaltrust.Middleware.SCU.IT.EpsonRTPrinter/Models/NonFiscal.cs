@@ -41,7 +41,6 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models
         [XmlElement(ElementName = "printNormal")]
         public List<PrintNormal> PrintNormals { get; set; } = new List<PrintNormal>();
 
-
         [XmlElement(ElementName = "endNonFiscal")]
         public EndNonFiscal EndNonFiscal { get; set; } = new EndNonFiscal();
 

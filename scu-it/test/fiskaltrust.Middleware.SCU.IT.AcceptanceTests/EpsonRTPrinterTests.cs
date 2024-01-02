@@ -36,7 +36,6 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
             Console.WriteLine(lines);
         }
 
-
         [Fact]
         public void DeserializeConfig()
         {

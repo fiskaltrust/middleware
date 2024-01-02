@@ -61,7 +61,6 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
             return JsonConvert.DeserializeObject<ReceiptRequest>(receipt);
         }
 
-
         public static ReceiptRequest CashWithSingleUseVoucherRedeem()
         {
             var current_moment = DateTime.UtcNow.ToString("o");
@@ -698,7 +697,6 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
 """;
             return JsonConvert.DeserializeObject<ReceiptRequest>(receipt);
         }
-
 
         public static ReceiptRequest FoodBeverage_CashAndVoucher_Discount()
         {

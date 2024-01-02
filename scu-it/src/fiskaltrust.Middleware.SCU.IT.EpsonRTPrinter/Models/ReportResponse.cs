@@ -29,6 +29,5 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models
 
         [XmlElement(ElementName = "dailyAmount")]
         public string? DailyAmount { get; set; }
-
     }
 }

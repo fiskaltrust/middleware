@@ -367,7 +367,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
                 RTZNumber = fiscalResponse.ZRepNumber,
                 RTDocNumber = fiscalResponse.ReceiptNumber,
                 RTDocMoment = fiscalResponse.ReceiptDateTime,
-                RTDocType = "Documente Gestionale",
+                RTDocType = "Documento Gestionale",
                 RTCodiceLotteria = "",
                 RTCustomerID = "", // Todo dread customerid from data
                 RTReferenceZNumber = long.Parse(referenceZNumber),
@@ -667,8 +667,6 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         return new SSCDErrorInfo() { Info = errorInf, Type = SSCDErrorType.Device };
     }
 }
-
-
 
 public class FiscalReceiptResponse
 {

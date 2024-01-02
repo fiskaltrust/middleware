@@ -23,7 +23,6 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
             };
             sut.ConfigureServices(serviceCollection);
 
-
             _ = serviceCollection.BuildServiceProvider().GetRequiredService<IITSSCD>();
         }
     }

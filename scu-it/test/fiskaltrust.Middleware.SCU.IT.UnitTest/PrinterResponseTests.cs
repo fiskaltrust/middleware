@@ -20,7 +20,6 @@ namespace fiskaltrust.Middleware.SCU.IT.UnitTest
             deviceStatus.Printer.Should().Be(Printer.Ok);
         }
 
-
         [Fact]
         public void GetPrinterResponse_PrinterStatusBasic_CreateObject()
         {

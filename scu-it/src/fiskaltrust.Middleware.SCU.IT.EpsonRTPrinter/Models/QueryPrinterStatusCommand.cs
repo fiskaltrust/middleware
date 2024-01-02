@@ -7,7 +7,6 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models
     {
         [XmlElement(ElementName = "queryPrinterStatus")]
         public QueryPrinterStatus? QueryPrinterStatus { get; set; }
-
     }
 
     [XmlType("queryPrinterStatus")]

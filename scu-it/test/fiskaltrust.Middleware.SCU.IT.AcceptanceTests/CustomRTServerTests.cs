@@ -39,7 +39,6 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
             Configuration = JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(_config))
         };
 
-
         [Fact]
         public async Task ProcessPosReceipt_0x4954_2000_0000_0001_TakeAway_Delivery_Cash_MultipleResults()
         {
