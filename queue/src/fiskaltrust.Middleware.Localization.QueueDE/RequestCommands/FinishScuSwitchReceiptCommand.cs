@@ -36,6 +36,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
         public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueDE queueDE, ReceiptRequest request, ftQueueItem queueItem)
         {
+            _logger.LogTrace("FinishScuSwitchReceiptCommand.ExecuteAsync [enter].");
             var (processType, payload) = _transactionPayloadFactory.CreateReceiptPayload(request);
             var receiptResponse = CreateReceiptResponse(request, queueItem, queueDE);
 
@@ -134,6 +135,10 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 await _configurationRepository.InsertOrUpdateQueueDEAsync(queueDE).ConfigureAwait(false);
 
                 throw;
+            }
+            finally
+            {
+                _logger.LogTrace("FinishScuSwitchReceiptCommand.ExecuteAsync [exit].");
             }
         }
     }

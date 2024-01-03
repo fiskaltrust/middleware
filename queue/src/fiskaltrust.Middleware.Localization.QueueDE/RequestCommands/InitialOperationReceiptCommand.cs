@@ -27,6 +27,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
         public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueDE queueDE, ReceiptRequest request, ftQueueItem queueItem)
         {
+            _logger.LogTrace("InitialOperationReceiptCommand.ExecuteAsync [enter].");
             ThrowIfNoImplicitFlow(request);
             ThrowIfTraining(request);
 
@@ -128,6 +129,10 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             {
                 _logger.LogDebug(ex, "TSE not reachable.");
                 throw;
+            }
+            finally
+            {
+                _logger.LogTrace("InitialOperationReceiptCommand.ExecuteAsync [exit].");
             }
         }
     }

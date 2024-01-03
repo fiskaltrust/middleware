@@ -30,6 +30,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
         public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueDE queueDE, ReceiptRequest request, ftQueueItem queueItem)
         {
+            _logger.LogTrace("StartTransactionReceiptCommand.ExecuteAsync [enter].");
             ThrowIfImplicitFlow(request);
 
             if (await _openTransactionRepo.ExistsAsync(request.cbReceiptReference).ConfigureAwait(false))
@@ -69,10 +70,15 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 _logger.LogCritical(ex, "An exception occured while processing this request.");
                 return await ProcessSSCDFailedReceiptRequest(request, queueItem, queue, queueDE).ConfigureAwait(false);
             }
+            finally
+            {
+                _logger.LogTrace("StartTransactionReceiptCommand.ExecuteAsync [exit].");
+            }
         }
 
         private async Task<(ulong transactionNumber, List<SignaturItem> signatures)> ProcessStartTransactionRequestAsync(string transactionIdentifier, ftQueueItem queueItem, ftQueueDE queueDE)
         {
+            _logger.LogTrace("StartTransactionReceiptCommand.ProcessStartTransactionRequestAsync [enter].");
             var startTransactionResult = await _transactionFactory.PerformStartTransactionRequestAsync(queueItem.ftQueueItemId, queueDE.CashBoxIdentification).ConfigureAwait(false);
             await _openTransactionRepo.InsertOrUpdateTransactionAsync(new OpenTransaction
             {
@@ -81,6 +87,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 StartMoment = startTransactionResult.TimeStamp,
                 TransactionNumber = (long) startTransactionResult.TransactionNumber
             }).ConfigureAwait(false);
+            _logger.LogTrace("StartTransactionReceiptCommand.ProcessStartTransactionRequestAsync [exit].");
             return (startTransactionResult.TransactionNumber, new List<SignaturItem> { _signatureFactory.GetSignaturForStartTransaction(startTransactionResult) });
         }
     }

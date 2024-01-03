@@ -4,6 +4,8 @@ using System.Globalization;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Localization.QueueDE.Transactions;
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
+using Moq;
 using Newtonsoft.Json;
 using Xunit;
 
@@ -965,7 +967,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest.Transactions
         {
             var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(request);
 
-            var sut = new DSFinVKTransactionPayloadFactory();
+            var sut = new DSFinVKTransactionPayloadFactory(Mock.Of<ILogger<DSFinVKTransactionPayloadFactory>>());
             var (processType, payload) = sut.CreateReceiptPayload(receiptRequest);
 
             processType.Should().Be(expectedProcessType);
@@ -980,7 +982,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest.Transactions
             var vatSum = 0.00M;
 
             var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(request);
-            var sut = new DSFinVKTransactionPayloadFactory();
+            var sut = new DSFinVKTransactionPayloadFactory(Mock.Of<ILogger<DSFinVKTransactionPayloadFactory>>());
             var (processType, payload) = sut.CreateReceiptPayload(receiptRequest);
             if (processType != "Kassenbeleg-V1")
             {

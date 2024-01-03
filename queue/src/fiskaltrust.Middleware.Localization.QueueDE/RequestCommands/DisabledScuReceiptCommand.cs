@@ -26,6 +26,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
         public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueDE queueDE, ReceiptRequest request, ftQueueItem queueItem)
         {
+            _logger.LogTrace("DisabledScuReceiptCommand.ExecuteAsync [enter].");
             var receiptResponse = CreateReceiptResponse(request, queueItem, queueDE);
 
             var actionJournals = new List<ftActionJournal>
@@ -43,6 +44,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             receiptResponse.ftState += SCU_SWITCH_IN_PROGESS_FLAG;
 
             receiptResponse.ftReceiptIdentification = request.GetReceiptIdentification(queue.ftReceiptNumerator, null);
+            _logger.LogTrace("DisabledScuReceiptCommand.ExecuteAsync [exit].");
             return await Task.FromResult(new RequestCommandResponse()
             {
                 ReceiptResponse = receiptResponse,
