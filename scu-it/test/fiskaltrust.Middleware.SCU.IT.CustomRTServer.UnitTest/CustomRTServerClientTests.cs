@@ -16,7 +16,6 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
             _ = await customRTServerClient.InsertCashRegisterAsync("demo", "1010", "1000", "admin", "cf");
         }
 
-
         [Fact(Skip = "Needs device")]
         public async Task GetDailyStatusAsync()
         {
@@ -40,7 +39,6 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
             }
             else
             {
-
                 //await customRTServerClient.InsertFiscalDocumentAsync()
                 //var insertZ2 = await customRTServerClient.InsertZDocumentAsync(result.cashUuid, DateTime.UtcNow, long.Parse(dailyStatus.numberClosure) + 1, dailyStatus.grandTotalDB);
             }

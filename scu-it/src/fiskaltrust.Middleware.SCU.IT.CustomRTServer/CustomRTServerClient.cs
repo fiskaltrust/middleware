@@ -123,9 +123,9 @@ public class CustomRTServerClient
         {
             var message = $"""
 Calling endpoint '{endpoint}' failed with error code {data.responseCode}. 
-Messagio: Reso/annulo: documento non travoto
-Esempio: È stato indicato un documento di refierimento inesistente
-Azione Corretiva: Verificare i dati insertiti e ripetere l'operazione. 
+Messaggio: Reso/annulo: documento non travoto
+Esempio: È stato indicato un documento di riferimento inesistente
+Azione Correttiva: Verificare i dati inseriti e ripetere l'operazione. 
 """;
             throw new CustomRTServerCommunicationException(message, data.responseCode);
         }
@@ -134,9 +134,9 @@ Azione Corretiva: Verificare i dati insertiti e ripetere l'operazione.
         {
             var message = $"""
 Calling endpoint '{endpoint}' failed with error code {data.responseCode}. 
-Messagio: Valore non valido
-Esempio: Il valore del campo "amount" del metodo "insertFiscalDocument" o del metodo "insertFiscalDocument2" è negatiov o non numerico
-Azione Corretiva: Verificare i dati insertiti e ripetere l'operazione.
+Messaggio: Valore non valido
+Esempio: Il valore del campo "amount" del metodo "insertFiscalDocument" o del metodo "insertFiscalDocument2" è negativo o non numerico
+Azione Correttiva: Verificare i dati inseriti e ripetere l'operazione.
 """;
             throw new CustomRTServerCommunicationException(message, data.responseCode);
         }

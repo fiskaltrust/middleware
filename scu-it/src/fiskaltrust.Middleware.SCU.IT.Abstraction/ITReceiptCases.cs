@@ -14,7 +14,7 @@ public enum ITReceiptCases : long
     InvoiceB2B0x1002 = 0x1002,
     InvoiceB2G0x1003 = 0x1003,
 
-    ZeroReceipt0x200 = 0x2000,
+    ZeroReceipt0x2000 = 0x2000,
     OneReceipt0x2001 = 0x2001,
     ShiftClosing0x2010 = 0x2010,
     DailyClosing0x2011 = 0x2011,

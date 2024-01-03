@@ -441,7 +441,6 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.UnitTest
             return JsonConvert.DeserializeObject<ReceiptRequest>(receipt);
         }
 
-
         public static ReceiptRequest GetTakeAway_Delivery_Card()
         {
             var current_moment = DateTime.UtcNow;

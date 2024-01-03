@@ -128,7 +128,6 @@
 //            WriteFile(xml, "FiscalReceiptInvoiceDepositAdjustment");
 //        }
 
-
 //        private static void WriteFile(string xml, string filename)
 //        {
 //            if (File.Exists(filename))

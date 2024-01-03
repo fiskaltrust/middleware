@@ -194,7 +194,6 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models
         public int Justification { get; set; } = 1;
     }
 
-
     [XmlRoot(ElementName = "printRecVoidItem")]
     public class PrintRecVoidItem
     {
@@ -253,7 +252,6 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models
         [XmlAttribute(AttributeName = "justification")]
         public int Justification { get; set; } = 1;
     }
-
 
     [XmlRoot(ElementName = "printRecVoid")]
     public class PrintRecVoid

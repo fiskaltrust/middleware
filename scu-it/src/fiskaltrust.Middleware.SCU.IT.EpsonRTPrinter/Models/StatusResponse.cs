@@ -68,6 +68,5 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models
 
         [XmlElement(ElementName = "rtUpgradeResult")]
         public string? UpgradeResult { get; set; }
-
     }
 }

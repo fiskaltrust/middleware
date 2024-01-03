@@ -118,7 +118,6 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
                 ReceiptResponse = _receiptResponse
             });
 
-
             using var scope = new AssertionScope();
             result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTSerialNumber));
             result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTZNumber));
@@ -138,7 +137,6 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
                 ReceiptRequest = request,
                 ReceiptResponse = _receiptResponse
             });
-
 
             var zNumber = result.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTZNumber)?.Data;
             var rtdocNumber = result.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTDocumentNumber)?.Data;
@@ -209,7 +207,6 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
             refundResult.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentMoment));
         }
 
-
         [Fact]
         public async Task ProcessPosReceipt_0x4954_2000_0000_0001_TakeAway_Delivery_Cash_Void()
         {
@@ -221,7 +218,6 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
                 ReceiptRequest = request,
                 ReceiptResponse = _receiptResponse
             });
-
 
             var zNumber = result.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTZNumber)?.Data;
             var rtdocNumber = result.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTDocumentNumber)?.Data;
@@ -482,7 +478,6 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
             result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentType));
         }
 
-
         [Fact]
         public async Task ProcessPosReceipt_0x4954_2000_0000_0001_SingleUseVoucher_Purchase()
         {
@@ -567,7 +562,6 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
                 ReceiptRequest = request,
                 ReceiptResponse = response
             });
-
 
             var zNumber = result.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTZNumber)?.Data;
             var rtdocNumber = result.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTDocumentNumber)?.Data;

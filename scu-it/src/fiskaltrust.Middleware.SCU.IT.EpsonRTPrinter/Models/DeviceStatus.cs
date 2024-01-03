@@ -27,7 +27,6 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models
         PrinterOffline = 3,
     }
 
-
     /// <summary>
     /// Byte 2: EJ Electronic Journal, from STATUS given by the 5 bytes Alphanumeric
     /// </summary>
@@ -240,6 +239,5 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models
         /// </summary>
         [DataMember]
         public Operative Operative { get; set; }
-
     }
 }

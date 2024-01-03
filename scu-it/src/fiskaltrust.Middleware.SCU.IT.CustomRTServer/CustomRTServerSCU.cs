@@ -37,7 +37,6 @@ public sealed class CustomRTServerSCU : LegacySCU
             _accountMasterData = JsonConvert.DeserializeObject<AccountMasterData>(configuration.AccountMasterData);
         }
 
-
         if (!string.IsNullOrEmpty(configuration.ServiceFolder))
         {
             _scuCacheFolder = configuration.ServiceFolder!;

@@ -55,6 +55,5 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models
 
         [XmlElement(ElementName = "responseData")]
         public string? ResponseData { get; set; }
-
     }
 }
