@@ -45,6 +45,7 @@ stages:
 
         - os: windows10-x86
           target: win-x86
+          skip: true
 
         - os: windows7-x64
           target: win-x64
