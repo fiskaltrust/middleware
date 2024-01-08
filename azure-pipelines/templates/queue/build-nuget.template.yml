@@ -81,8 +81,8 @@ steps:
 
 - pwsh: |
     $fileName=Get-ItemPropertyValue -Path '$(Build.ArtifactStagingDirectory)\fiskaltrust.Middleware.Queue.SQLite*.nupkg' -Name Name    
-    nuget add $(Build.ArtifactStagingDirectory)/$fileName -Source $(WorkingDirectory)/Localfeed    
-    Compress-Archive -Path $(WorkingDirectory)/Localfeed -DestinationPath $(Build.ArtifactStagingDirectory)/Localfeed.zip
+    nuget add $(Build.ArtifactStagingDirectory)/$fileName -Source $(WorkingDirectory)/SQLite-Localfeed    
+    Compress-Archive -Path $(WorkingDirectory)/SQLite-Localfeed -DestinationPath $(Build.ArtifactStagingDirectory)/SQLite-Localfeed.zip
   displayName: create and zip a localfeed'
   workingDirectory: '$(WorkingDirectory)'
 
