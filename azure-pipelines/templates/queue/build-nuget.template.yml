@@ -83,8 +83,8 @@ steps:
     $fileName=Get-ItemPropertyValue -Path '$(Build.ArtifactStagingDirectory)\fiskaltrust.Middleware.Queue.SQLite*.nupkg' -Name Name    
     nuget add $(Build.ArtifactStagingDirectory)/$fileName -Source $(WorkingDirectory)/Localfeed    
     Compress-Archive -Path $(WorkingDirectory)/Localfeed -DestinationPath $(Build.ArtifactStagingDirectory)/Localfeed.zip
-    displayName: 'Create and zip Localfeed'
-    workingDirectory: '$(WorkingDirectory)'
+  displayName: create and zip a localfeed'
+  workingDirectory: '$(WorkingDirectory)'
 
 - task: PublishBuildArtifacts@1
   displayName: 'Publish Artifact: drop'
