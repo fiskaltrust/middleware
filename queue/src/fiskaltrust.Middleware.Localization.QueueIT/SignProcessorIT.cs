@@ -79,5 +79,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
                 return (receiptResponse, new List<ftActionJournal>());
             }
         }
+
+        public async Task<string> GetFtCashBoxIdentificationAsync(ftQueue queue) => (await _configurationRepository.GetQueueITAsync(queue.ftQueueId).ConfigureAwait(false)).CashBoxIdentification;
     }
 }

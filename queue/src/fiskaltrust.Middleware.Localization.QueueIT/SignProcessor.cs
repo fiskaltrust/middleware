@@ -24,7 +24,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
 
         public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ftQueue queue, ftQueueItem queueItem)
         {
-          
+
             var receiptIdentification = $"ft{queue.ftReceiptNumerator:X}#";
             var receiptResponse = new ReceiptResponse
             {
@@ -93,5 +93,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
             receiptResponse.ftReceiptIdentification = $"ft{queue.ftReceiptNumerator:X}#";
             return (receiptResponse, actionJournals);
         }
+
+        public async Task<string> GetFtCashBoxIdentificationAsync(ftQueue queue) => (await _configurationRepository.GetQueueITAsync(queue.ftQueueId).ConfigureAwait(false)).CashBoxIdentification;
     }
 }

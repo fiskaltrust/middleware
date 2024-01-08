@@ -76,5 +76,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             _logger.LogTrace("SignProcessorDE.PerformReceiptRequest: Executing command {CommandName}.", command.ReceiptName);
             return await command.ExecuteAsync(queue, queueDE, request, queueItem);
         }
+
+        public async Task<string> GetFtCashBoxIdentificationAsync(ftQueue queue) => (await _configurationRepository.GetQueueDEAsync(queue.ftQueueId).ConfigureAwait(false)).CashBoxIdentification;
     }
 }

@@ -12,7 +12,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES
     {
         private readonly ILogger<SignProcessorES> _logger;
 
-        public SignProcessorES(            
+        public SignProcessorES(
             ILogger<SignProcessorES> logger)
         {
             _logger = logger;
@@ -22,5 +22,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES
         {
             throw new NotImplementedException();
         }
+
+        public Task<string> GetFtCashBoxIdentificationAsync(ftQueue queue) => throw new NotImplementedException();
     }
 }

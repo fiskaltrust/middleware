@@ -150,7 +150,38 @@ namespace fiskaltrust.Middleware.Queue
             {
                 queueItem.ftWorkMoment = DateTime.UtcNow;
                 _logger.LogTrace("SignProcessor.InternalSign: Calling country specific SignProcessor.");
-                (var receiptResponse, var countrySpecificActionJournals) = await _countrySpecificSignProcessor.ProcessAsync(data, queue, queueItem).ConfigureAwait(false);
+                ReceiptResponse receiptResponse;
+                List<ftActionJournal> countrySpecificActionJournals;
+                Exception exception = null;
+                try
+                {
+                    (receiptResponse, countrySpecificActionJournals) = await _countrySpecificSignProcessor.ProcessAsync(data, queue, queueItem).ConfigureAwait(false);
+                }
+                catch (Exception e)
+                {
+                    exception = e;
+                    countrySpecificActionJournals = new();
+                    receiptResponse = new ReceiptResponse
+                    {
+                        ftCashBoxID = queue.ftCashBoxId.ToString(),
+                        ftQueueID = queue.ftQueueId.ToString(),
+                        ftQueueItemID = queueItem.ftQueueItemId.ToString(),
+                        ftQueueRow = queue.ftCurrentRow,
+                        cbTerminalID = data.cbTerminalID,
+                        cbReceiptReference = data.cbReceiptReference,
+                        ftCashBoxIdentification = await _countrySpecificSignProcessor.GetFtCashBoxIdentificationAsync(queue),
+                        ftReceiptMoment = DateTime.UtcNow,
+                        ftSignatures = new SignaturItem[] {
+                            new SignaturItem() {
+                                ftSignatureFormat = 0x1,
+                                ftSignatureType = (long) (((ulong) data.ftReceiptCase & 0xFFFF_0000_0000_0000) | 0x2000_0000_3000),
+                                Caption = "uncaught-exeption",
+                                Data = e.ToString()
+                            }
+                        },
+                        ftState = (long) (((ulong) data.ftReceiptCase & 0xFFFF_0000_0000_0000) | 0x2000_EEEE_EEEE)
+                    };
+                }
                 _logger.LogTrace("SignProcessor.InternalSign: Country specific SignProcessor finished.");
 
                 actionjournals.AddRange(countrySpecificActionJournals);
@@ -172,6 +203,10 @@ namespace fiskaltrust.Middleware.Queue
 
                 if ((receiptResponse.ftState & 0xFFFF_FFFF) == 0xEEEE_EEEE)
                 {
+                    if (queueItem.country != "IT")
+                    {
+                        throw exception;
+                    }
                     // TODO: This state indicates that something went wrong while processing the receipt request.
                     //       While we will probably introduce a parameter for this we are right now just returning
                     //       the receipt response as it is.
