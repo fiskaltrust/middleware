@@ -76,14 +76,15 @@ steps:
   workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.MySQL'
 
 - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
-  displayName: 'dotnet pack fiskaltrust.Middleware.Queue.MySQL'
+  displayName: 'dotnet pack fiskaltrust.Middleware.Queue.AzureTableStorage'
   workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.AzureTableStorage'
 
-- script: |
+- pwsh: |
     $fileName=Get-ItemPropertyValue -Path '$(Build.ArtifactStagingDirectory)\fiskaltrust.Middleware.Queue.SQLite*.nupkg' -Name Name    
-    nuget add $(Build.ArtifactStagingDirectory)/$fileName -Source $(WorkingDirectory)/Localfeed
-  displayName: 'nuget add Localfeed'
-  workingDirectory: '$(WorkingDirectory)'
+    nuget add $(Build.ArtifactStagingDirectory)/$fileName -Source $(WorkingDirectory)/Localfeed    
+    Compress-Archive -Path $(WorkingDirectory)/Localfeed -DestinationPath $(Build.ArtifactStagingDirectory)/Localfeed.zip
+    displayName: 'Create and zip Localfeed'
+    workingDirectory: '$(WorkingDirectory)'
 
 - task: PublishBuildArtifacts@1
   displayName: 'Publish Artifact: drop'
