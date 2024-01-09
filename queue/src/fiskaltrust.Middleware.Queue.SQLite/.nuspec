@@ -47,7 +47,6 @@
 
     <file src="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Contracts.dll" target="lib\netstandard2.1" />
     <file src="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Localization.QueueDE.dll" target="lib\netstandard2.1" />
-    <file src="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Localization.QueueDEFAULT.dll" target="lib\netstandard2.1" />
     <file src="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Localization.QueueME.dll" target="lib\netstandard2.1" />
     <file src="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Localization.QueueAT.dll" target="lib\netstandard2.1" />
     <file src="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Localization.QueueFR.dll" target="lib\netstandard2.1" />
