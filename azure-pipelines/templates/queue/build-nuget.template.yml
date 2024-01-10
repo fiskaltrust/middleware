@@ -24,7 +24,7 @@ steps:
 - task: DotNetCoreCLI@2
   inputs:
     command: 'restore'
-    projects: '$(WorkingDirectory)/$(Solution)'
+    projects: '$(WorkingDirectory)/$(Solution)!*.AndriodLauncherTest.csproj'
     feedsToUse: 'select'
     vstsFeed: '$(NuGetFeed)'
   displayName: 'Restore'
@@ -32,7 +32,7 @@ steps:
 - task: DotNetCoreCLI@2
   displayName: Build
   inputs:
-    projects: '$(WorkingDirectory)/$(Solution)'
+    projects: '$(WorkingDirectory)/$(Solution)!*.AndriodLauncherTest.csproj'
     arguments: '--configuration $(BuildConfiguration) --no-restore'
 
 - script: |
