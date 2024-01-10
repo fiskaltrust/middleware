@@ -30,9 +30,9 @@ steps:
   displayName: Build
   inputs:
     projects: |
-     $(WorkingDirectory)/$(Solution)
+     **/*.csproj
      !**/*.AndriodLauncherTest.csproj
-    arguments: '--configuration $(BuildConfiguration) --no-restore'
+    arguments: '--configuration $(BuildConfiguration)'
 
 - task: DotNetCoreCLI@2
   inputs:
