@@ -30,7 +30,7 @@ steps:
   displayName: Build
   inputs:
     projects: |
-     **/*.csproj
+     '$(WorkingDirectory)/**/*.csproj'
      !**/*.AndriodLauncherTest.csproj
     arguments: '--configuration $(BuildConfiguration)'
 
