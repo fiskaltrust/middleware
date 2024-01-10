@@ -33,7 +33,7 @@ steps:
   displayName: Build
   inputs:
     projects: |
-     **/*.csproj
+     $(WorkingDirectory)/$(Solution)
      !**/*.AndriodLauncherTest.csproj
     arguments: '--configuration $(BuildConfiguration) --no-restore'
 
