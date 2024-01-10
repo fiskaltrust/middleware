@@ -34,7 +34,7 @@ steps:
   inputs:
     projects: |
      '$(WorkingDirectory)/**/*.csproj'
-     !**/*.AndriodLauncherTest.csproj
+     '!**/*.AndriodLauncherTest.csproj'
     arguments: '--configuration $(BuildConfiguration)'
 
 - script: |
