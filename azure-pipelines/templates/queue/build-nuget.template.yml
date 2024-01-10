@@ -32,9 +32,10 @@ steps:
 - task: DotNetCoreCLI@2
   displayName: Build
   inputs:
-    projects: '$(WorkingDirectory)/$(Solution)'
-    exclude: '$(WorkingDirectory)/**/*.Sqlite.AndriodLauncherTest*'
-    arguments: '--configuration $(BuildConfiguration) --no-restore'
+    projects: |
+     $(WorkingDirectory)/**/*.csproj
+     !$(WorkingDirectory)/**/*.AndriodLauncherTest.csproj
+    arguments: '--configuration $(BuildConfiguration)'
 
 - script: |
     dotnet publish --configuration $(buildConfiguration) --no-restore -f net461
