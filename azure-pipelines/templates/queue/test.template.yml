@@ -29,10 +29,9 @@ steps:
 - task: DotNetCoreCLI@2
   displayName: Build
   inputs:
-    projects: |
-     '$(WorkingDirectory)/**/*.csproj'
-     '!**/*.AndriodLauncherTest.csproj'
-    arguments: '--configuration $(BuildConfiguration)'
+    projects: '$(WorkingDirectory)/$(Solution)'
+    exclude: '$(WorkingDirectory)/**/*.Sqlite.AndriodLauncherTest*'
+    arguments: '--configuration $(BuildConfiguration) --no-restore'
 
 - task: DotNetCoreCLI@2
   inputs:
