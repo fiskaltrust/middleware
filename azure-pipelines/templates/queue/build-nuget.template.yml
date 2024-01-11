@@ -92,6 +92,14 @@ steps:
   displayName: install sqlite from localfeed'
   workingDirectory: '$(WorkingDirectory)'
 
+- task: NuGetCommand@2
+  inputs:
+     command: "restore"
+     restoreSolution: "fiskaltrust.Middleware.sln"
+     feedsToUse: 'select'
+     vstsFeed: '$(NuGetFeed)'
+  displayName: Restore NuGet packages
+
 - task: JavaToolInstaller@0
   inputs:
     versionSpec: "11"
@@ -105,6 +113,13 @@ steps:
     msbuildVersionOption: "latest"
     jdkOption: "JDKVersion"
   displayName: Build AndriodTest Launcher
+
+- pwsh: |
+    dotnet add $(WorkingDirectory)/test/fiskaltrust.Middleware.Queue.Sqlite.AndriodLauncherTest/fiskaltrust.Middleware.Queue.Sqlite.AndriodLauncherTest.csproj package $sqlitePackageName --version $sqlitePackageVersion --source SQLite-Localfeed
+    dotnet restore --source SQLite-Localfeed
+    Compress-Archive -Path $(WorkingDirectory)/test/SQLite-Localfeed -DestinationPath $(Build.ArtifactStagingDirectory)/SQLite-Localfeed.zip
+  displayName: install sqlite from localfeed'
+  workingDirectory: '$(WorkingDirectory)'
 
 - task: PublishBuildArtifacts@1
   displayName: 'Publish Artifact: drop'
