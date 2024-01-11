@@ -128,7 +128,6 @@ stages:
               project: "fiskaltrust.Middleware.Queue.AcceptanceTest"
 
   - stage: Build
-    dependsOn: Test
     jobs:
       - job: BuildNugetPackages
         displayName: Build v1 NuGet packages

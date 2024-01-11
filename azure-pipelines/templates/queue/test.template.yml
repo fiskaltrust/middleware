@@ -31,7 +31,7 @@ steps:
   inputs:
     projects: |
      $(WorkingDirectory)/**/*.csproj
-     !$(WorkingDirectory)/**/*.AndriodLauncherTest.csproj
+     !$(WorkingDirectory)/**/fiskaltrust.Middleware.Queue.Sqlite.AndriodLauncherTest.csproj
     arguments: '--configuration $(BuildConfiguration) --no-restore'
 
 - task: DotNetCoreCLI@2
