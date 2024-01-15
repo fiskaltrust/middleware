@@ -21,14 +21,6 @@ steps:
     path: $(UserProfile)/.nuget/packages
   displayName: Cache NuGet packages
 
-- task: DotNetCoreCLI@2
-  inputs:
-    command: 'restore'
-    projects: '$(WorkingDirectory)/$(Solution)'
-    feedsToUse: 'select'
-    vstsFeed: '$(NuGetFeed)'
-  displayName: 'Restore'
-
 - task: NuGetToolInstaller@1
 
 - task: NuGetCommand@2
@@ -55,6 +47,14 @@ steps:
     jdkOption: "JDKVersion"
   displayName: Build AndriodTest Launcher
 
+- task: DotNetCoreCLI@2
+  inputs:
+    command: 'restore'
+    projects: '$(WorkingDirectory)/$(Solution)'
+    feedsToUse: 'select'
+    vstsFeed: '$(NuGetFeed)'
+  displayName: 'Restore'
+  
 - task: DotNetCoreCLI@2
   displayName: Build
   inputs:
