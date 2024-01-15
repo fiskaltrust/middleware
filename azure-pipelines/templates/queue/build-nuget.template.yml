@@ -37,6 +37,31 @@ steps:
      !$(WorkingDirectory)/**/fiskaltrust.Middleware.Queue.Sqlite.AndriodLauncherTest.csproj
     arguments: '--configuration $(BuildConfiguration) --no-restore'
 
+- task: NuGetToolInstaller@1
+
+- task: NuGetCommand@2
+  inputs:
+     command: "restore"
+     restoreSolution: "fiskaltrust.Middleware.sln"
+     feedsToUse: 'select'
+     vstsFeed: '$(NuGetFeed)'
+  displayName: Restore NuGet packages
+
+- task: JavaToolInstaller@0
+  inputs:
+    versionSpec: "11"
+    jdkArchitectureOption: "x64"
+    jdkSourceOption: "PreInstalled"
+
+- task: XamarinAndroid@1
+  inputs:
+    projectFile: "$(WorkingDirectory)/**/fiskaltrust.Middleware.Queue.Sqlite.AndriodLauncherTest.csproj"
+    outputDirectory: $(build.binariesDirectory)/$(buildConfiguration)
+    configuration: "$(buildConfiguration)"
+    msbuildVersionOption: "latest"
+    jdkOption: "JDKVersion"
+  displayName: Build AndriodTest Launcher
+
 - script: |
     dotnet publish --configuration $(buildConfiguration) --no-restore -f net461
     dotnet publish --configuration $(buildConfiguration) --no-restore -f netstandard2.0
@@ -91,28 +116,6 @@ steps:
     Compress-Archive -Path $(WorkingDirectory)/test/SQLite-Localfeed -DestinationPath $(Build.ArtifactStagingDirectory)/SQLite-Localfeed.zip
   displayName: install sqlite from localfeed'
   workingDirectory: '$(WorkingDirectory)'
-
-- task: NuGetCommand@2
-  inputs:
-     command: "restore"
-     restoreSolution: "fiskaltrust.Middleware.sln"
-     feedsToUse: 'select'
-     vstsFeed: '$(NuGetFeed)'
-  displayName: Restore NuGet packages
-
-- task: JavaToolInstaller@0
-  inputs:
-    versionSpec: "11"
-    jdkArchitectureOption: "x64"
-    jdkSourceOption: "PreInstalled"
-
-- task: XamarinAndroid@1
-  inputs:
-    projectFile: "$(WorkingDirectory)/**/fiskaltrust.Middleware.Queue.Sqlite.AndriodLauncherTest.csproj"
-    configuration: "$(buildConfiguration)"
-    msbuildVersionOption: "latest"
-    jdkOption: "JDKVersion"
-  displayName: Build AndriodTest Launcher
 
 - pwsh: |
     dotnet add $(WorkingDirectory)/test/fiskaltrust.Middleware.Queue.Sqlite.AndriodLauncherTest/fiskaltrust.Middleware.Queue.Sqlite.AndriodLauncherTest.csproj package $sqlitePackageName --version $sqlitePackageVersion --source SQLite-Localfeed
