@@ -21,32 +21,6 @@ steps:
     path: $(UserProfile)/.nuget/packages
   displayName: Cache NuGet packages
 
-- task: NuGetToolInstaller@1
-
-- task: NuGetCommand@2
-  inputs:
-     command: "restore"
-     arguments: "-Verbosity detailed"
-     restoreSolution: '$(WorkingDirectory)/$(Solution)'
-     feedsToUse: 'select'
-     vstsFeed: '$(NuGetFeed)'
-  displayName: Restore NuGet packages
-
-- task: JavaToolInstaller@0
-  inputs:
-    versionSpec: "11"
-    jdkArchitectureOption: "x64"
-    jdkSourceOption: "PreInstalled"
-
-- task: XamarinAndroid@1
-  inputs:
-    projectFile: "$(WorkingDirectory)/**/fiskaltrust.Middleware.Queue.Sqlite.AndriodLauncherTest.csproj"
-    outputDirectory: $(build.binariesDirectory)/$(buildConfiguration)
-    configuration: "$(buildConfiguration)"
-    msbuildVersionOption: "latest"
-    jdkOption: "JDKVersion"
-  displayName: Build AndriodTest Launcher
-
 - task: DotNetCoreCLI@2
   inputs:
     command: 'restore'
@@ -69,15 +43,6 @@ steps:
     dotnet publish --configuration $(buildConfiguration) --no-restore -f netstandard2.1
   displayName: 'dotnet publish fiskaltrust.Middleware.Queue.SQLite'
   workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.SQLite'
-
-- task: codesigning@2
-  displayName: 'Code Signing'
-  inputs:
-    secureFileId: 'codesigning.pfx'
-    signCertPassword: '$(Code_Signing_Password)'
-    filePaths: |
-      $(WorkingDirectory)/src/**/*fiskaltrust*.dll
-      $(WorkingDirectory)/src/**/*fiskaltrust*.exe
 
 - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
   displayName: 'dotnet pack fiskaltrust.Middleware.Queue.InMemory'
@@ -117,6 +82,30 @@ steps:
     Compress-Archive -Path ./test/SQLite-Localfeed -DestinationPath $(Build.ArtifactStagingDirectory)/SQLite-Localfeed.zip
   displayName: install sqlite from localfeed'
   workingDirectory: '$(WorkingDirectory)'
+
+- task: NuGetCommand@2
+  inputs:
+     command: "restore"
+     arguments: "-Verbosity detailed"
+     restoreSolution: '$(WorkingDirectory)/$(Solution)'
+     feedsToUse: 'select'
+     vstsFeed: '$(NuGetFeed)'
+  displayName: Restore NuGet packages
+
+- task: JavaToolInstaller@0
+  inputs:
+    versionSpec: "11"
+    jdkArchitectureOption: "x64"
+    jdkSourceOption: "PreInstalled"
+
+- task: XamarinAndroid@1
+  inputs:
+    projectFile: "$(WorkingDirectory)/**/fiskaltrust.Middleware.Queue.Sqlite.AndriodLauncherTest.csproj"
+    outputDirectory: $(build.binariesDirectory)/$(buildConfiguration)
+    configuration: "$(buildConfiguration)"
+    msbuildVersionOption: "latest"
+    jdkOption: "JDKVersion"
+  displayName: Build AndriodTest Launcher
 
 - pwsh: |
     dotnet add ./test/fiskaltrust.Middleware.Queue.Sqlite.AndriodLauncherTest/fiskaltrust.Middleware.Queue.Sqlite.AndriodLauncherTest.csproj package $sqlitePackageName --version $sqlitePackageVersion --source SQLite-Localfeed
