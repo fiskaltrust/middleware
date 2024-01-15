@@ -39,19 +39,3 @@ stages:
           vmImage: $(vmImageName)
         steps:
           - template: templates/queue/build-nuget.template.yml
-
-      - job: BuildZipPackages
-        displayName: Build v2 zip packages
-        dependsOn: []
-        pool:
-          vmImage: $(vmImageName)
-        steps:
-          - template: templates/build-zip.yml
-            parameters:
-              workingDirectory: queue
-              projects:
-                - fiskaltrust.Middleware.Queue.InMemory
-                - fiskaltrust.Middleware.Queue.SQLite
-                - fiskaltrust.Middleware.Queue.PostgreSQL
-                - fiskaltrust.Middleware.Queue.MySQL
-                - fiskaltrust.Middleware.Queue.EF

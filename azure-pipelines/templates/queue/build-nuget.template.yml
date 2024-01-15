@@ -29,14 +29,6 @@ steps:
     vstsFeed: '$(NuGetFeed)'
   displayName: 'Restore'
 
-- task: DotNetCoreCLI@2
-  displayName: Build
-  inputs:
-    projects: |
-     $(WorkingDirectory)/**/*.csproj
-     !$(WorkingDirectory)/**/fiskaltrust.Middleware.Queue.Sqlite.AndriodLauncherTest.csproj
-    arguments: '--configuration $(BuildConfiguration) --no-restore'
-
 - task: NuGetToolInstaller@1
 
 - task: NuGetCommand@2
