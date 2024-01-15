@@ -109,18 +109,18 @@ steps:
 - pwsh: |
     $sqlitePackageName=Get-ItemPropertyValue -Path '$(Build.ArtifactStagingDirectory)\fiskaltrust.Middleware.Queue.SQLite*.nupkg' -Name Name    
     $sqlitePackageVersion=($sqlitePackageName.remove(0,"fiskaltrust.Middleware.Queue.SQLite.".length)).replace(".nupkg","")
-    nuget add $(Build.ArtifactStagingDirectory)/$sqlitePackageName -Source $(WorkingDirectory)/test/SQLite-Localfeed 
-    nuget sources Add -Name SQLite-Localfeed -Source $(WorkingDirectory)/test/SQLite-Localfeed
-    dotnet add $(WorkingDirectory)/**/fiskaltrust.Middleware.Queue.Sqlite.AndriodLauncherTest.csproj package $sqlitePackageName --version $sqlitePackageVersion --source SQLite-Localfeed
+    nuget add $(Build.ArtifactStagingDirectory)/$sqlitePackageName -Source ./test/SQLite-Localfeed 
+    nuget sources Add -Name SQLite-Localfeed -Source ./test/SQLite-Localfeed
+    dotnet add ./**/fiskaltrust.Middleware.Queue.Sqlite.AndriodLauncherTest.csproj package $sqlitePackageName --version $sqlitePackageVersion --source SQLite-Localfeed
     dotnet restore --source SQLite-Localfeed
-    Compress-Archive -Path $(WorkingDirectory)/test/SQLite-Localfeed -DestinationPath $(Build.ArtifactStagingDirectory)/SQLite-Localfeed.zip
+    Compress-Archive -Path ./test/SQLite-Localfeed -DestinationPath $(Build.ArtifactStagingDirectory)/SQLite-Localfeed.zip
   displayName: install sqlite from localfeed'
   workingDirectory: '$(WorkingDirectory)'
 
 - pwsh: |
-    dotnet add $(WorkingDirectory)/test/fiskaltrust.Middleware.Queue.Sqlite.AndriodLauncherTest/fiskaltrust.Middleware.Queue.Sqlite.AndriodLauncherTest.csproj package $sqlitePackageName --version $sqlitePackageVersion --source SQLite-Localfeed
+    dotnet add ./test/fiskaltrust.Middleware.Queue.Sqlite.AndriodLauncherTest/fiskaltrust.Middleware.Queue.Sqlite.AndriodLauncherTest.csproj package $sqlitePackageName --version $sqlitePackageVersion --source SQLite-Localfeed
     dotnet restore --source SQLite-Localfeed
-    Compress-Archive -Path $(WorkingDirectory)/test/SQLite-Localfeed -DestinationPath $(Build.ArtifactStagingDirectory)/SQLite-Localfeed.zip
+    Compress-Archive -Path ./test/SQLite-Localfeed -DestinationPath $(Build.ArtifactStagingDirectory)/SQLite-Localfeed.zip
   displayName: install sqlite from localfeed'
   workingDirectory: '$(WorkingDirectory)'
 
