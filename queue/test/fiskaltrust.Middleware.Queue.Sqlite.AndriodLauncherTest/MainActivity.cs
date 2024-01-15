@@ -1,6 +1,6 @@
 ﻿using Android.App;
 using Android.OS;
-using AndroidX.AppCompat.App;
+using Android.Support.V7.App;
 
 namespace fiskaltrust.Middleware.Queue.Sqlite.AndriodLauncherTest
 {

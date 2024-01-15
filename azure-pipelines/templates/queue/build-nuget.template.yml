@@ -27,7 +27,7 @@ steps:
   inputs:
      command: "restore"
      arguments: "-Verbosity detailed"
-     restoreSolution: "fiskaltrust.Middleware.sln"
+     restoreSolution: '$(WorkingDirectory)/$(Solution)'
      feedsToUse: 'select'
      vstsFeed: '$(NuGetFeed)'
   displayName: Restore NuGet packages
@@ -54,7 +54,7 @@ steps:
     feedsToUse: 'select'
     vstsFeed: '$(NuGetFeed)'
   displayName: 'Restore'
-  
+
 - task: DotNetCoreCLI@2
   displayName: Build
   inputs:
