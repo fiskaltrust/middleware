@@ -54,6 +54,14 @@ steps:
     jdkOption: "JDKVersion"
   displayName: Build AndriodTest Launcher
 
+- task: DotNetCoreCLI@2
+  displayName: Build
+  inputs:
+    projects: |
+     $(WorkingDirectory)/**/*.csproj
+     !$(WorkingDirectory)/**/fiskaltrust.Middleware.Queue.Sqlite.AndriodLauncherTest.csproj
+    arguments: '--configuration $(BuildConfiguration) --no-restore'
+
 - script: |
     dotnet publish --configuration $(buildConfiguration) --no-restore -f net461
     dotnet publish --configuration $(buildConfiguration) --no-restore -f netstandard2.0
