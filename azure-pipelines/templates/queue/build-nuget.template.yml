@@ -78,16 +78,18 @@ steps:
     Copy-Item $(Build.ArtifactStagingDirectory)/$sqlitePackageName -Destination "./test/$sqlitePackageNewName"   
     nuget add ./test/$sqlitePackageNewName -Source ./test/SQLite-Localfeed 
     Compress-Archive -Path ./test/SQLite-Localfeed -DestinationPath $(Build.ArtifactStagingDirectory)/SQLite-Localfeed.zip
-  displayName: install sqlite from localfeed'
+  displayName: 'create localfeed'
   workingDirectory: '$(WorkingDirectory)'
+
+- task: NuGetToolInstaller@1
 
 - task: NuGetCommand@2
   inputs:
      command: "restore"
      arguments: "-Verbosity detailed"
-     restoreSolution: "fiskaltrust.Middleware.sln"
+     restoreSolution: '$(WorkingDirectory)/$(Solution)'
      feedsToUse: 'config'
-     nugetConfigPath: "nuget.config"
+     nugetConfigPath: "NuGet.config"
   displayName: Restore NuGet packages
 
 - task: JavaToolInstaller@0
