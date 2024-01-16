@@ -74,10 +74,9 @@ steps:
 
 - pwsh: |
     $sqlitePackageName=Get-ItemPropertyValue -Path '$(Build.ArtifactStagingDirectory)\fiskaltrust.Middleware.Queue.SQLite*.nupkg' -Name Name        
-    Copy-Item $(Build.ArtifactStagingDirectory)/$sqlitePackageName -Destination "./test/fiskaltrust.Middleware.Queue.SQLite.1.3.0-local.nupkg"   
-    $sqlitePackageVersion=($sqlitePackageName.remove(0,"fiskaltrust.Middleware.Queue.SQLite.".length)).replace(".nupkg","")
-    nuget add ./test/fiskaltrust.Middleware.Queue.SQLite.1.3.0-local.nupkg -Source ./test/SQLite-Localfeed 
-    nuget sources Add -Name SQLite-Localfeed -Source ./test/SQLite-Localfeed
+    $sqlitePackageNewName=fiskaltrust.Middleware.Queue.SQLite.1.3.0-local.nupkg
+    Copy-Item $(Build.ArtifactStagingDirectory)/$sqlitePackageName -Destination "./test/$sqlitePackageNewName"   
+    nuget add ./test/$sqlitePackageNewName -Source ./test/SQLite-Localfeed 
     Compress-Archive -Path ./test/SQLite-Localfeed -DestinationPath $(Build.ArtifactStagingDirectory)/SQLite-Localfeed.zip
   displayName: install sqlite from localfeed'
   workingDirectory: '$(WorkingDirectory)'
