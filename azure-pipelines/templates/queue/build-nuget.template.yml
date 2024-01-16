@@ -72,14 +72,11 @@ steps:
   displayName: 'dotnet pack fiskaltrust.Middleware.Queue.AzureTableStorage'
   workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.AzureTableStorage'
 
-- script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration) /p:NuspecFile=.nuspec /p:Version=1.3.0-local
-  displayName: 'dotnet pack fiskaltrust.Middleware.Queue.SQLite for SQLite-Localfeed'
-  workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.SQLite'
-
 - pwsh: |
-    $sqlitePackageName=Get-ItemPropertyValue -Path '$(Build.ArtifactStagingDirectory)\fiskaltrust.Middleware.Queue.SQLite*.nupkg' -Name Name    
+    $sqlitePackageName=Get-ItemPropertyValue -Path '$(Build.ArtifactStagingDirectory)\fiskaltrust.Middleware.Queue.SQLite*.nupkg' -Name Name        
+    Copy-Item $(Build.ArtifactStagingDirectory)/$sqlitePackageName -Destination "./test/fiskaltrust.Middleware.Queue.SQLite.1.3.0-local.nupkg"   
     $sqlitePackageVersion=($sqlitePackageName.remove(0,"fiskaltrust.Middleware.Queue.SQLite.".length)).replace(".nupkg","")
-    nuget add $(Build.ArtifactStagingDirectory)/fiskaltrust.Middleware.Queue.SQLite.1.3.0-local.nupkg -Source ./test/SQLite-Localfeed 
+    nuget add ./test/fiskaltrust.Middleware.Queue.SQLite.1.3.0-local.nupkg -Source ./test/SQLite-Localfeed 
     nuget sources Add -Name SQLite-Localfeed -Source ./test/SQLite-Localfeed
     Compress-Archive -Path ./test/SQLite-Localfeed -DestinationPath $(Build.ArtifactStagingDirectory)/SQLite-Localfeed.zip
   displayName: install sqlite from localfeed'
