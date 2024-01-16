@@ -77,7 +77,6 @@ steps:
     $sqlitePackageNewName="fiskaltrust.Middleware.Queue.SQLite.1.3.0-local.nupkg"
     Copy-Item $(Build.ArtifactStagingDirectory)/$sqlitePackageName -Destination "./test/$sqlitePackageNewName"   
     nuget add ./test/$sqlitePackageNewName -Source ./test/SQLite-Localfeed 
-    mkdir $(Agent.BuildDirectory)\Nuget
     mkdir $(Agent.BuildDirectory)\Nuget\LocalNugetPackages
     Copy-Item ./test/SQLite-Localfeed -Destination "$(Agent.BuildDirectory)\Nuget\LocalNugetPackages"
     Compress-Archive -Path ./test/SQLite-Localfeed -DestinationPath $(Build.ArtifactStagingDirectory)/SQLite-Localfeed.zip
