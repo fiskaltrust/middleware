@@ -78,9 +78,15 @@ steps:
     Copy-Item $(Build.ArtifactStagingDirectory)/$sqlitePackageName -Destination "./test/$sqlitePackageNewName"   
     mkdir $(Agent.BuildDirectory)\Nuget\LocalNugetPackages
     nuget add ./test/$sqlitePackageNewName -Source $(WorkingDirectory)\test\localfeed 
-    nuget sources Add -Name localfeed -Source $(Agent.BuildDirectory)\Nuget\LocalNugetPackages
+    nuget sources Add -Name localfeed -Source $(WorkingDirectory)\test\localfeed
     Compress-Archive -Path $(Agent.BuildDirectory)\Nuget\LocalNugetPackages -DestinationPath $(Build.ArtifactStagingDirectory)/SQLite-Localfeed.zip
   displayName: 'create localfeed'
+  continueOnError: true
+  workingDirectory: '$(WorkingDirectory)'
+
+- pwsh: |
+    nuget sources update -Name localfeed -Source $(WorkingDirectory)\test\localfeed
+  displayName: 'update localfeed'
   continueOnError: true
   workingDirectory: '$(WorkingDirectory)'
 
