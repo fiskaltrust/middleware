@@ -79,7 +79,7 @@ steps:
     mkdir $(Agent.BuildDirectory)\Nuget\LocalNugetPackages
     nuget add ./test/$sqlitePackageNewName -Source $(Agent.BuildDirectory)\Nuget\LocalNugetPackages 
     nuget sources Add -Name localfeed -Source $(Agent.BuildDirectory)\Nuget\LocalNugetPackages
-    Compress-Archive -Path ./test/localfeed -DestinationPath $(Build.ArtifactStagingDirectory)/SQLite-Localfeed.zip
+    Compress-Archive -Path $(Agent.BuildDirectory)\Nuget\LocalNugetPackages -DestinationPath $(Build.ArtifactStagingDirectory)/SQLite-Localfeed.zip
   displayName: 'create localfeed'
   continueOnError: true
   workingDirectory: '$(WorkingDirectory)'
