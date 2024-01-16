@@ -72,8 +72,8 @@ steps:
   displayName: 'dotnet pack fiskaltrust.Middleware.Queue.AzureTableStorage'
   workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.AzureTableStorage'
 
-- script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration) /p:NuspecFile=.nuspec -p:PackageVersion=1.3.0-local
-  displayName: 'dotnet pack fiskaltrust.Middleware.Queue.SQLite'
+- script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration) /p:NuspecFile=.nuspec /p:Version=1.3.0-local
+  displayName: 'dotnet pack fiskaltrust.Middleware.Queue.SQLite for SQLite-Localfeed'
   workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.SQLite'
 
 - pwsh: |
