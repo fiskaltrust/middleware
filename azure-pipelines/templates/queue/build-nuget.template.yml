@@ -98,8 +98,8 @@ steps:
      command: "restore"
      arguments: "-Verbosity detailed"
      restoreSolution: '$(WorkingDirectory)/$(Solution)'
-     feedsToUse: 'config'
-     nugetConfigPath: "NuGet.config"
+     feedsToUse: 'select'
+     vstsFeed: '$(NuGetFeed)'
   displayName: Restore NuGet packages
 
 - task: JavaToolInstaller@0
