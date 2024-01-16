@@ -86,9 +86,9 @@ steps:
   inputs:
      command: "restore"
      arguments: "-Verbosity detailed"
-     restoreSolution: '$(WorkingDirectory)/$(Solution)'
-     feedsToUse: 'select'
-     vstsFeed: '$(NuGetFeed)'
+     restoreSolution: "fiskaltrust.Middleware.sln"
+     feedsToUse: 'config'
+     nugetConfigPath: "nuget.config"
   displayName: Restore NuGet packages
 
 - task: JavaToolInstaller@0
