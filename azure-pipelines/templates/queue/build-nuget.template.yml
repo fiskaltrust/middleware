@@ -1,30 +1,13 @@
 steps:
-- task: yavt@1 
-  inputs:
-    mode: 'Multi'
-    updateNuspecFiles: false
-    updateBuildNumber: false
-    semverVersion: 'v1'
-    failOnTagVersionMismatch: true
-
 - powershell: |
     $nugetFeed = if ($Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/release/") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/main") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/tags")) { "release" } else { "dev" }
     Write-Host "##vso[task.setvariable variable=NuGetFeed;]$nugetFeed"
   displayName: Set NuGet feed
   
-- task: Cache@2
-  inputs:
-    key: 'nuget | "$(Agent.OS)" | queue/**/*.csproj'
-    restoreKeys: |
-      nuget | "$(Agent.OS)"
-      nuget
-    path: $(UserProfile)/.nuget/packages
-  displayName: Cache NuGet packages
-
 - task: DotNetCoreCLI@2
   inputs:
     command: 'restore'
-    projects: '$(WorkingDirectory)/$(Solution)'
+    projects: '$(WorkingDirectory)/**/fiskaltrust.Middleware.Queue.SQLite.csproj'
     feedsToUse: 'select'
     vstsFeed: '$(NuGetFeed)'
   displayName: 'Restore'
@@ -32,9 +15,7 @@ steps:
 - task: DotNetCoreCLI@2
   displayName: Build
   inputs:
-    projects: |
-     $(WorkingDirectory)/**/*.csproj
-     !$(WorkingDirectory)/**/fiskaltrust.Middleware.Queue.Sqlite.AndriodLauncherTest.csproj
+    projects: '$(WorkingDirectory)/**/fiskaltrust.Middleware.Queue.SQLite.csproj'
     arguments: '--configuration $(BuildConfiguration) --no-restore'
 
 - script: |
@@ -44,49 +25,9 @@ steps:
   displayName: 'dotnet publish fiskaltrust.Middleware.Queue.SQLite'
   workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.SQLite'
 
-- script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
-  displayName: 'dotnet pack fiskaltrust.Middleware.Queue.InMemory'
-  workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.InMemory'
-
 - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration) /p:NuspecFile=.nuspec
   displayName: 'dotnet pack fiskaltrust.Middleware.Queue.SQLite'
   workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.SQLite'
-
-- script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration) /p:PackageVersion=1.3.5-local /p:NuspecFile=.nuspec
-  displayName: 'dotnet pack fiskaltrust.Middleware.Queue.SQLite'
-  workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.SQLite'
-
-- task: yavt@1 
-  inputs:
-    mode: 'Multi'
-    updateNuspecFiles: true
-    updateBuildNumber: false
-    semverVersion: 'v1'
-    failOnTagVersionMismatch: true
-
-- script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration) /p:NuspecFile=.nuspec
-  displayName: 'dotnet pack fiskaltrust.Middleware.Queue.SQLite'
-  workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.SQLite'
-
-- script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
-  displayName: 'dotnet pack fiskaltrust.Middleware.Queue.EF'
-  workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.EF'
-  
-- script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
-  displayName: 'dotnet pack fiskaltrust.Middleware.Queue.PostgreSQL'
-  workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.PostgreSQL'
-
-- script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
-  displayName: 'dotnet pack fiskaltrust.Middleware.Abstractions'
-  workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Abstractions'
-  
-- script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
-  displayName: 'dotnet pack fiskaltrust.Middleware.Queue.MySQL'
-  workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.MySQL'
-
-- script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
-  displayName: 'dotnet pack fiskaltrust.Middleware.Queue.AzureTableStorage'
-  workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.AzureTableStorage'
 
 - pwsh: |
     $sqlitePackageName="fiskaltrust.Middleware.Queue.SQLite.1.3.0-local.nupkg"
