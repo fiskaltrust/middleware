@@ -29,9 +29,7 @@ steps:
 - task: DotNetCoreCLI@2
   displayName: Build
   inputs:
-    projects: |
-     $(WorkingDirectory)/**/*.csproj
-     !$(WorkingDirectory)/**/fiskaltrust.Middleware.Queue.Sqlite.AndriodLauncherTest.csproj
+    projects: '$(WorkingDirectory)/$(Solution)'
     arguments: '--configuration $(BuildConfiguration) --no-restore'
 
 - task: DotNetCoreCLI@2

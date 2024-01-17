@@ -1,13 +1,30 @@
 steps:
+- task: yavt@1 
+  inputs:
+    mode: 'Multi'
+    updateNuspecFiles: true
+    updateBuildNumber: false
+    semverVersion: 'v1'
+    failOnTagVersionMismatch: true
+
 - powershell: |
     $nugetFeed = if ($Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/release/") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/main") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/tags")) { "release" } else { "dev" }
     Write-Host "##vso[task.setvariable variable=NuGetFeed;]$nugetFeed"
   displayName: Set NuGet feed
   
+- task: Cache@2
+  inputs:
+    key: 'nuget | "$(Agent.OS)" | queue/**/*.csproj'
+    restoreKeys: |
+      nuget | "$(Agent.OS)"
+      nuget
+    path: $(UserProfile)/.nuget/packages
+  displayName: Cache NuGet packages
+
 - task: DotNetCoreCLI@2
   inputs:
     command: 'restore'
-    projects: '$(WorkingDirectory)/**/fiskaltrust.Middleware.Queue.SQLite.csproj'
+    projects: '$(WorkingDirectory)/$(Solution)'
     feedsToUse: 'select'
     vstsFeed: '$(NuGetFeed)'
   displayName: 'Restore'
@@ -15,7 +32,7 @@ steps:
 - task: DotNetCoreCLI@2
   displayName: Build
   inputs:
-    projects: '$(WorkingDirectory)/**/fiskaltrust.Middleware.Queue.SQLite.csproj'
+    projects: '$(WorkingDirectory)/$(Solution)'
     arguments: '--configuration $(BuildConfiguration) --no-restore'
 
 - script: |
@@ -25,40 +42,42 @@ steps:
   displayName: 'dotnet publish fiskaltrust.Middleware.Queue.SQLite'
   workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.SQLite'
 
+- task: codesigning@2
+  displayName: 'Code Signing'
+  inputs:
+    secureFileId: 'codesigning.pfx'
+    signCertPassword: '$(Code_Signing_Password)'
+    filePaths: |
+      $(WorkingDirectory)/src/**/*fiskaltrust*.dll
+      $(WorkingDirectory)/src/**/*fiskaltrust*.exe
+
+- script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
+  displayName: 'dotnet pack fiskaltrust.Middleware.Queue.InMemory'
+  workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.InMemory'
+
 - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration) /p:NuspecFile=.nuspec
   displayName: 'dotnet pack fiskaltrust.Middleware.Queue.SQLite'
   workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.SQLite'
 
-- pwsh: |
-    $sqlitePackageName="fiskaltrust.Middleware.Queue.SQLite.1.3.0-local.nupkg"
-    nuget add $(Build.ArtifactStagingDirectory)/$sqlitePackageName -Source .\test\localfeed     
-  displayName: 'create localfeed'
-  continueOnError: true
-  workingDirectory: '$(WorkingDirectory)'
+- script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
+  displayName: 'dotnet pack fiskaltrust.Middleware.Queue.EF'
+  workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.EF'
+  
+- script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
+  displayName: 'dotnet pack fiskaltrust.Middleware.Queue.PostgreSQL'
+  workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.PostgreSQL'
 
-- task: NuGetCommand@2
-  inputs:
-     command: "restore"
-     arguments: "-Verbosity detailed"
-     restoreSolution: '$(WorkingDirectory)/$(Solution)'
-     feedsToUse: 'config'
-     nugetConfigPath: "NuGet.config"
-  displayName: Restore NuGet packages
+- script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
+  displayName: 'dotnet pack fiskaltrust.Middleware.Abstractions'
+  workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Abstractions'
+  
+- script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
+  displayName: 'dotnet pack fiskaltrust.Middleware.Queue.MySQL'
+  workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.MySQL'
 
-- task: JavaToolInstaller@0
-  inputs:
-    versionSpec: "11"
-    jdkArchitectureOption: "x64"
-    jdkSourceOption: "PreInstalled"
-
-- task: XamarinAndroid@1
-  inputs:
-    projectFile: "$(WorkingDirectory)/**/fiskaltrust.Middleware.Queue.Sqlite.AndriodLauncherTest.csproj"
-    outputDirectory: $(build.binariesDirectory)/$(buildConfiguration)
-    configuration: "$(buildConfiguration)"
-    msbuildVersionOption: "latest"
-    jdkOption: "JDKVersion"
-  displayName: Build AndriodTest Launcher
+- script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
+  displayName: 'dotnet pack fiskaltrust.Middleware.Queue.MySQL'
+  workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.AzureTableStorage'
 
 - task: PublishBuildArtifacts@1
   displayName: 'Publish Artifact: drop'
