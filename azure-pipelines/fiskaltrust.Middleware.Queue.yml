@@ -127,6 +127,8 @@ stages:
             parameters:
               project: "fiskaltrust.Middleware.Queue.AcceptanceTest"
 
+  - stage: AndroidTest
+    jobs:
       - job: Sqlite_AndroidTest
         displayName: Sqlite_AndroidTest
         condition: succeeded()

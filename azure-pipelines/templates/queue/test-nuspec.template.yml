@@ -4,15 +4,6 @@ steps:
     Write-Host "##vso[task.setvariable variable=NuGetFeed;]$nugetFeed"
   displayName: Set NuGet feed
   
-- task: Cache@2
-  inputs:
-    key: 'nuget | "$(Agent.OS)" | queue/**/*.csproj'
-    restoreKeys: |
-      nuget | "$(Agent.OS)"
-      nuget
-    path: $(UserProfile)/.nuget/packages
-  displayName: Cache NuGet packages
-
 - task: DotNetCoreCLI@2
   inputs:
     command: 'restore'
@@ -61,7 +52,7 @@ steps:
 
 - task: XamarinAndroid@1
   inputs:
-    projectFile: "androidtest/src/fiskaltrust.Middleware.Queue.Sqlite.AndriodLauncherTest.csproj"
+    projectFile: "test/**/fiskaltrust.Middleware.Queue.Sqlite.AndriodLauncherTest.csproj"
     outputDirectory: $(build.binariesDirectory)/$(buildConfiguration)
     configuration: "$(buildConfiguration)"
     msbuildVersionOption: "latest"
