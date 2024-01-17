@@ -131,7 +131,6 @@ stages:
     jobs:
       - job: Sqlite_AndroidTest
         displayName: Sqlite_AndroidTest
-        condition: succeeded()
         pool:
           vmImage: $(vmImageName)
         steps:
