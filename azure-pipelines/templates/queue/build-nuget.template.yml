@@ -52,6 +52,10 @@ steps:
   displayName: 'dotnet pack fiskaltrust.Middleware.Queue.SQLite'
   workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.SQLite'
 
+- script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration) /p:PackageVersion=1.3.5-local /p:NuspecFile=.nuspec
+  displayName: 'dotnet pack fiskaltrust.Middleware.Queue.SQLite'
+  workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.SQLite'
+
 - task: yavt@1 
   inputs:
     mode: 'Multi'
@@ -86,22 +90,10 @@ steps:
 
 - pwsh: |
     $sqlitePackageName="fiskaltrust.Middleware.Queue.SQLite.1.3.0-local.nupkg"
-    nuget add $(Build.ArtifactStagingDirectory)/$sqlitePackageName -Source .\test\localfeed 
-    nuget sources Add -Name localfeed -Source $(WorkingDirectory)\test\localfeed
-    Compress-Archive -Path .\test\localfeed -DestinationPath $(Build.ArtifactStagingDirectory)/localfeed.zip
+    nuget add $(Build.ArtifactStagingDirectory)/$sqlitePackageName -Source .\test\localfeed     
   displayName: 'create localfeed'
   continueOnError: true
   workingDirectory: '$(WorkingDirectory)'
-
-- pwsh: |
-    nuget sources update -Name localfeed -Source $(WorkingDirectory)\test\localfeed
-    nuget sources list
-    cd $(WorkingDirectory)\test\localfeed
-  displayName: 'update localfeed'
-  continueOnError: true
-  workingDirectory: '$(WorkingDirectory)'
-
-- task: NuGetToolInstaller@1
 
 - task: NuGetCommand@2
   inputs:
@@ -126,13 +118,6 @@ steps:
     msbuildVersionOption: "latest"
     jdkOption: "JDKVersion"
   displayName: Build AndriodTest Launcher
-
-- pwsh: |
-    dotnet add ./test/fiskaltrust.Middleware.Queue.Sqlite.AndriodLauncherTest/fiskaltrust.Middleware.Queue.Sqlite.AndriodLauncherTest.csproj package $sqlitePackageName --version $sqlitePackageVersion --source SQLite-Localfeed
-    dotnet restore --source SQLite-Localfeed
-    Compress-Archive -Path ./test/SQLite-Localfeed -DestinationPath $(Build.ArtifactStagingDirectory)/SQLite-Localfeed.zip
-  displayName: install sqlite from localfeed'
-  workingDirectory: '$(WorkingDirectory)'
 
 - task: PublishBuildArtifacts@1
   displayName: 'Publish Artifact: drop'
