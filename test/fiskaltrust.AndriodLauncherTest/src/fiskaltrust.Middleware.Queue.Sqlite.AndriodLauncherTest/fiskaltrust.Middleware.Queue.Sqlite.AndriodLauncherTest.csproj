@@ -103,7 +103,7 @@
       <Version>28.0.1</Version>
     </PackageReference>
     <PackageReference Include="fiskaltrust.interface">
-      <Version>2.0.0-alpha6</Version>
+      <Version>1.3.50-rc1</Version>
     </PackageReference>
     <PackageReference Include="fiskaltrust.storage">
       <Version>1.3.46-rc1</Version>
