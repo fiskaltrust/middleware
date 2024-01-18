@@ -129,6 +129,7 @@ stages:
 
   - stage: AndroidTest
     dependsOn: []
+    condition: or(eq(variables['Build.SourceBranch'], 'refs/heads/main'), startsWith(variables['Build.SourceBranch'], 'refs/tags/queue/'))
     jobs:
       - job: Sqlite_AndroidTest
         displayName: Sqlite_AndroidTest
