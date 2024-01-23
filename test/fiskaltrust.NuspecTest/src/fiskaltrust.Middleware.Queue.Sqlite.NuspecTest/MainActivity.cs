@@ -2,7 +2,7 @@
 using Android.OS;
 using Android.Support.V7.App;
 
-namespace fiskaltrust.Middleware.Queue.Sqlite.AndriodLauncherTest
+namespace fiskaltrust.Middleware.Queue.Sqlite.NuspecTest
 {
     [Activity(Label = "@string/app_name", MainLauncher = true)]
     public class MainActivity : AppCompatActivity
@@ -12,5 +12,5 @@ namespace fiskaltrust.Middleware.Queue.Sqlite.AndriodLauncherTest
             base.OnCreate(savedInstanceState);
             Xamarin.Essentials.Platform.Init(this, savedInstanceState);
         }
-	}
+    }
 }

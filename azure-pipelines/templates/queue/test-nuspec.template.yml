@@ -45,14 +45,14 @@ steps:
   inputs:
      command: "restore"
      arguments: "-Verbosity detailed"
-     restoreSolution: 'test/**/fiskaltrust.AndriodLauncherTest.sln'
+     restoreSolution: 'test/**/fiskaltrust.NuspecTest.sln'
      feedsToUse: 'config'
      nugetConfigPath: "test/NuGet.config" 
   displayName: Restore NuGet packages
 
 - task: XamarinAndroid@1
   inputs:
-    projectFile: "test/**/fiskaltrust.Middleware.Queue.Sqlite.AndriodLauncherTest.csproj"
+    projectFile: "test/**/fiskaltrust.Middleware.Queue.Sqlite.NuspecTest.csproj"
     outputDirectory: $(build.binariesDirectory)/$(buildConfiguration)
     configuration: "$(buildConfiguration)"
     msbuildVersionOption: "latest"

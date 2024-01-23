@@ -6,11 +6,11 @@ using Android.App;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("fiskaltrust.Middleware.Queue.Sqlite.AndriodLauncherTest")]
+[assembly: AssemblyTitle("fiskaltrust.Middleware.Queue.Sqlite.NuspecTest")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("fiskaltrust.Middleware.Queue.Sqlite.AndriodLauncherTest")]
+[assembly: AssemblyProduct("fiskaltrust.Middleware.Queue.Sqlite.NuspecTest")]
 [assembly: AssemblyCopyright("Copyright ©  2018")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]

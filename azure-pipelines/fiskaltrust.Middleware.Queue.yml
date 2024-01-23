@@ -127,17 +127,17 @@ stages:
             parameters:
               project: "fiskaltrust.Middleware.Queue.AcceptanceTest"
 
-  - stage: AndroidTest
+  - stage: NuspecTest
     dependsOn: []
     condition: or(eq(variables['Build.SourceBranch'], 'refs/heads/main'), startsWith(variables['Build.SourceBranch'], 'refs/tags/queue/'))
     jobs:
-      - job: Sqlite_AndroidTest
-        displayName: Sqlite_AndroidTest
+      - job: Sqlite_NuspecTest
+        displayName: Sqlite_NuspecTest
         pool:
           vmImage: $(vmImageName)
         steps:
           - template: templates/queue/test-nuspec.template.yml
-            
+
   - stage: Build
     dependsOn: Test
     jobs:

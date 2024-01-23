@@ -1,6 +1,6 @@
-## AndriodLauncherTest project
+## NuspecTest project
 
-this project resembales AndriodLauncher Project
+this project resembles the AndriodLauncher Project
 
 ## Background
 
@@ -16,12 +16,12 @@ When this test fails, it means the nuspec file in fiskaltrust.Middleware.Queue.S
 
 ## Steps
 
-- Added a new project (fiskaltrust.Middleware.Queue.Sqlite.AndriodLauncherTest.csproj) that resembles the Android launcher project
+- Added a new project (fiskaltrust.Middleware.Queue.Sqlite.NuspecTest.csproj) that resembles the Android launcher project
 - Added a template named test-nuspec.template.yaml run on the fiskaltrust.Middleware.Queue pipeline
 
-  - publishes and packs the SQLite queue to a local feed. the localfeed contains a SQLite.1.3.0-local package.`This pack is created with a nuspec configuration file in fiskaltrust.Middleware.Queue.SQLite project and the version 1.3.0-local comes from there which must not be changed because its fixed in AndriodLauncherTest project`
+  - publishes and packs the SQLite queue to a local feed. the localfeed contains a SQLite.1.3.0-local package.`This pack is created with a nuspec configuration file in fiskaltrust.Middleware.Queue.SQLite project and the version 1.3.0-local comes from there which must not be changed because its fixed in NuspecTest project`
 
-  - Added pipeline tasks to build AndriodLauncherTest project and force the project to use the Queue.Sqlite package from local feed by using NuGet.config.
+  - Added pipeline tasks to build NuspecTest project and force the project to use the Queue.Sqlite package from local feed by using NuGet.config.
     Nuget.config have to contain localfeed
 
     ` <add key="localfeed" value=".\localfeed" />`
