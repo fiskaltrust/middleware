@@ -11,7 +11,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.Clients
 {
     public class CustomRTPrinterClient
     {
-        public HttpClient _httpClient { get; init; }
+        private readonly HttpClient _httpClient;
 
         public CustomRTPrinterClient(HttpClient httpClient)
         {
@@ -32,25 +32,24 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.Clients
             };
         }
 
-        private string Serialize<T>(T obj)
+        internal static string Serialize<T>(T obj)
         {
-            var xsSubmit = new XmlSerializer(typeof(T));
+            var serializer = new XmlSerializer(typeof(T));
             var namespaces = new XmlSerializerNamespaces();
             namespaces.Add("", "");
 
-            using var sww = new StringWriter();
-            using var writer = XmlWriter.Create(sww, new XmlWriterSettings
+            using var stringWriter = new StringWriter();
+            using var writer = XmlWriter.Create(stringWriter, new XmlWriterSettings
             {
                 OmitXmlDeclaration = true
             });
 
+            serializer.Serialize(writer, obj, namespaces);
 
-            xsSubmit.Serialize(writer, obj, namespaces);
-
-            return sww.ToString();
+            return stringWriter.ToString();
         }
 
-        private T Deserialize<T>(Stream xml)
+        internal static T Deserialize<T>(Stream xml)
         {
             return (T) (new XmlSerializer(typeof(T)).Deserialize(xml) ?? throw new NullReferenceException("Deserialization failed."));
         }

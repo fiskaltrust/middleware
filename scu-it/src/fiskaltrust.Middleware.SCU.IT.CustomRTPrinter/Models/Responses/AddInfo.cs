@@ -1,17 +1,17 @@
 using System;
+using System.Globalization;
 using System.Xml.Serialization;
 
 namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.Models.Responses
 {
     [XmlRoot("addInfo")]
     public class AddInfo<T>
-        where T : IResponse
     {
         [XmlElement("elementList")]
         public string ElementList { get; set; }
 
         [XmlElement("lastIdCmd")]
-        public string LastIdCmd { get; set; }
+        public LastIdCmd LastIdCmd { get; set; }
 
         [XmlElement("responseBuf")]
         public T ResponseBuf { get; set; }
@@ -20,13 +20,20 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.Models.Responses
         public string LastCommand { get; set; }
 
         [XmlElement("dateTime")]
-        public string DateTime { get; set; }
+        public string DateTimeString { get; set; }
+
+        [XmlIgnore]
+        public DateTime DateTime
+        {
+            get => DateTime.ParseExact(DateTimeString, "dd/MM/yyyy", CultureInfo.InvariantCulture);
+            set => DateTimeString = value.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
+        }
 
         [XmlElement("printerStatus")]
-        public string PrinterStatus { get; set; }
+        public int PrinterStatus { get; set; }
 
         [XmlElement("fpStatus")]
-        public string FpStatus { get; set; }
+        public int FpStatus { get; set; }
 
         [XmlElement("receiptStep")]
         public string ReceiptStep { get; set; }

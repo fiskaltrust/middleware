@@ -6,7 +6,6 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.Models.Responses
 
     [XmlRoot("response")]
     public class Response<T> : IResponse
-        where T : IResponse
     {
         [XmlAttribute("success")]
         public bool Success { get; set; }

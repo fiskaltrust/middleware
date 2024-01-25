@@ -1,3 +1,4 @@
+
 using System;
 using System.Net;
 using System.Net.Http;
@@ -13,11 +14,6 @@ using Xunit;
 
 namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.UnitTest
 {
-    internal interface HttpResponseMessageMembers
-    {
-        Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken);
-    }
-
     public class DeSerialization
     {
         [Fact]
@@ -25,7 +21,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.UnitTest
         {
             var httpMessageHandler = Mock.Of<HttpMessageHandler>(MockBehavior.Strict);
             Mock.Get(httpMessageHandler)
-                        .Protected()
+                .Protected()
                 .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.Is<HttpRequestMessage>(m => m.Content.ReadAsStringAsync().Result.Contains("<getinfo")), ItExpr.IsAny<CancellationToken>())
                 .ReturnsAsync(new HttpResponseMessage
                 {
@@ -73,8 +69,81 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.UnitTest
 
             var response = await client.PostAsync<GetInfo, InfoResp>();
 
+            response.Success.Should().BeTrue();
+            response.Status.Should().Be(0);
             response.SerialNumber.Should().Be("STMTE770207");
             response.DateProg.Should().Be(new DateTime(2024, 12, 21));
+        }
+
+        [Fact]
+        public async void Test2()
+        {
+            var httpMessageHandler = Mock.Of<HttpMessageHandler>(MockBehavior.Strict);
+            Mock.Get(httpMessageHandler)
+                .Protected()
+                .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.Is<HttpRequestMessage>(m => m.Content.ReadAsStringAsync().Result.Contains("<getinfo")), ItExpr.IsAny<CancellationToken>())
+                .ReturnsAsync(new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.OK,
+                    Content = new StringContent(
+                        """
+                        <?xml version="1.0" encoding="utf-8"?>
+                        <response success="true" status= "1">
+                            <addInfo>
+                                <elementList>Tag1 value</elementList>
+                                <lastIdCmd IdCmd=""> Tag2 value </lastIdCmd>
+                                <responseBuf>Tag3 value</responseBuf >
+                                <lastCommand>Tag4 value</lastCommand>
+                                <dateTime>21/12/2112</dateTime>
+                                <printerStatus>0000</printerStatus>
+                                <fpStatus>123</fpStatus>
+                                <receiptStep>Tag8 value </receiptStep>
+                                <nClose>Tag9 value</nClose>
+                                <iscalDoc>Tag10 value</iscalDoc >
+                                <notFiscalDoc>Tag11 value</notFiscalDoc>
+                            </addInfo>
+                        </response>
+                        """)
+                });
+
+            var client = new CustomRTPrinterClient(new HttpClient(httpMessageHandler) { BaseAddress = new("http://localhost") });
+
+            var response = await client.PostAsync<GetInfo, Response<string>>();
+
+            response.Success.Should().BeTrue();
+            response.Status.Should().Be(1);
+
+            response.AddInfo.ResponseBuf.Should().Be("Tag3 value");
+            response.AddInfo.FpStatus.Should().Be(123);
+        }
+
+        [Fact]
+        public void Test3()
+        {
+            var request = new PrinterFiscalReceipt
+            {
+                BeginFiscalReceipt = new(),
+                Records = new Records(new[] {
+                    new PrintRecItem {
+                        Description = "Test",
+                        Quantity = 1,
+                        UnitPrice = 3.3m,
+                        Department = 2,
+                        IdVat = "Test",
+                    }}),
+                EndFiscalReceipt = new(),
+            };
+
+            var serialized = CustomRTPrinterClient.Serialize(request);
+            serialized.Should().Be(
+                """
+                <printerFiscalReceipt>
+                    <beginFiscalReceipt />
+                    <printRecItem description="Test" unitPrice="3.3" department="2" IdVat="Test" quantity="1" />
+                    <endFiscalReceipt />
+                </printerFiscalReceipt>
+                """.Replace("\r", "").Replace("\n", "").Replace("    ", "")
+            );
         }
     }
 }
