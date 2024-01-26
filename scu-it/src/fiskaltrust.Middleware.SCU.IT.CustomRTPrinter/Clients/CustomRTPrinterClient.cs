@@ -48,7 +48,9 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.Clients
 
             serializer.Serialize(writer, obj, namespaces);
 
-            return stringWriter.ToString();
+            var tmp = stringWriter.ToString();
+
+            return tmp;
         }
 
         internal static T Deserialize<T>(Stream xml)

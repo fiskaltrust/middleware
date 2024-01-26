@@ -22,7 +22,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.UnitTest
             var httpMessageHandler = Mock.Of<HttpMessageHandler>(MockBehavior.Strict);
             Mock.Get(httpMessageHandler)
                 .Protected()
-                .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.Is<HttpRequestMessage>(m => m.Content.ReadAsStringAsync().Result.Contains("<pinterCommand><getinfo")), ItExpr.IsAny<CancellationToken>())
+                .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.Is<HttpRequestMessage>(m => m.Content.ReadAsStringAsync().Result.Contains("<printerCommand><getInfo")), ItExpr.IsAny<CancellationToken>())
                 .ReturnsAsync(new HttpResponseMessage
                 {
                     StatusCode = HttpStatusCode.OK,
@@ -81,7 +81,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.UnitTest
             var httpMessageHandler = Mock.Of<HttpMessageHandler>(MockBehavior.Strict);
             Mock.Get(httpMessageHandler)
                 .Protected()
-                .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.Is<HttpRequestMessage>(m => m.Content.ReadAsStringAsync().Result.Contains("<pinterCommand><getinfo")), ItExpr.IsAny<CancellationToken>())
+                .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.Is<HttpRequestMessage>(m => m.Content.ReadAsStringAsync().Result.Contains("<printerCommand><getInfo")), ItExpr.IsAny<CancellationToken>())
                 .ReturnsAsync(new HttpResponseMessage
                 {
                     StatusCode = HttpStatusCode.OK,
