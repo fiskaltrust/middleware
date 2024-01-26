@@ -336,7 +336,7 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
     ],
     "cbPayItems": [
         {
-            "Quantity": 1,
+            "Quantity": -1,
             "Description": "Return/Refund Cash",
             "ftPayItemCase": 5283883447184654337,
             "Moment": "{{current_moment}}",
