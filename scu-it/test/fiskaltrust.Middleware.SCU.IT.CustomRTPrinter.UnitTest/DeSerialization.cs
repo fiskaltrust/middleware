@@ -120,26 +120,46 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.UnitTest
         [Fact]
         public void Test3()
         {
-            var request = new PrinterFiscalReceipt
-            {
-                BeginFiscalReceipt = new(),
-                Records = new Records(new[] {
+            var request = new PrinterFiscalReceipt(
+                new IFiscalRecord[] {
                     new PrintRecItem {
                         Description = "Test",
                         Quantity = 1,
                         UnitPrice = 3.3m,
                         Department = 2,
-                        IdVat = "Test",
-                    }}),
-                EndFiscalReceipt = new(),
-            };
+                        IdVat = 1,
+                    },
+                    new PrintRecItem {
+                        Description = "Test33",
+                        Quantity = 1,
+                        UnitPrice = 3.3m,
+                        Department = 2,
+                        IdVat = 1,
+                    },
+                    new PrintRecItemVoid {
+                        Description = "Test",
+                        Quantity = 1,
+                        UnitPrice = 3.3m,
+                        Department = 2,
+                        IdVat = 1,
+                    },
+                    new PrintRecTotal {
+                        Description = "Testp",
+                        Payment = 3.3m,
+                        PaymentType = 1,
+                    },
+                }
+            );
 
             var serialized = CustomRTPrinterClient.Serialize(request);
             serialized.Should().Be(
                 """
                 <printerFiscalReceipt>
                     <beginFiscalReceipt />
-                    <printRecItem description="Test" unitPrice="3.3" department="2" IdVat="Test" quantity="1" />
+                    <printRecItem description="Test" unitPrice="3.3" department="2" idVat="1" quantity="1" />
+                    <printRecItem description="Test33" unitPrice="3.3" department="2" idVat="1" quantity="1" />
+                    <printRecItemVoid description="Test" unitPrice="3.3" department="2" idVat="1" quantity="1" />
+                    <printRecTotal description="Testp" payment="3.3" paymentType="1" paymentQty="0" />
                     <endFiscalReceipt />
                 </printerFiscalReceipt>
                 """.Replace("\r", "").Replace("\n", "").Replace("    ", "")
