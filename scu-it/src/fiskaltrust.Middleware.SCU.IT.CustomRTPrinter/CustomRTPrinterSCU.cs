@@ -30,8 +30,7 @@ public sealed class CustomRTPrinterSCU : LegacySCU
     public override Task<ScuItEchoResponse> EchoAsync(ScuItEchoRequest request) => Task.FromResult(new ScuItEchoResponse { Message = request.Message });
     public override async Task<RTInfo> GetRTInfoAsync()
     {
-        var info = await _printerClient.PostAsync<GetInfo, InfoResp>();
-        // var info = await _printerClient.PostAsync<QueryPrinterStatus, ?>();
+        var info = await _printerClient.SendCommand<InfoResp>(new GetInfo());
 
         return new RTInfo
         {

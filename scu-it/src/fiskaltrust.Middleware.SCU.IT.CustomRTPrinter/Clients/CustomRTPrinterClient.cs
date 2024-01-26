@@ -6,6 +6,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Serialization;
+using fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.Models.Requests;
+using fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.Models.Responses;
 
 namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.Clients
 {
@@ -54,19 +56,23 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.Clients
             return (T) (new XmlSerializer(typeof(T)).Deserialize(xml) ?? throw new NullReferenceException("Deserialization failed."));
         }
 
-        public async Task<TRes> PostAsync<TReq, TRes>()
-            where TReq : Models.Requests.IRequest, new()
-            where TRes : Models.Responses.IResponse
-        {
-            return await PostAsync<TReq, TRes>(new TReq());
-        }
-
-        public async Task<TRes> PostAsync<TReq, TRes>(TReq request)
-            where TReq : Models.Requests.IRequest
-            where TRes : Models.Responses.IResponse
+        public async Task<TRes> SendAsync<TReq, TRes>(TReq request)
+            where TRes : IResponse
         {
             var response = await _httpClient.PostAsync("/", new StringContent(Serialize(request), System.Text.Encoding.UTF8, MediaTypeNames.Text.Plain), CancellationToken.None);
             return Deserialize<TRes>(await response.Content.ReadAsStreamAsync());
         }
+
+        public Task<TRes> SendFiscalReceipt<TRes>(IFiscalRecord[] records)
+            where TRes : IResponse
+            => SendAsync<PrinterFiscalReceipt, TRes>(new PrinterFiscalReceipt(records));
+
+        public Task<TRes> SendFiscalReport<TRes>(IReport report)
+            where TRes : IResponse
+            => SendAsync<PrinterFiscalReport, TRes>(new PrinterFiscalReport(report));
+
+        public Task<TRes> SendCommand<TRes>(ICommand command)
+            where TRes : IResponse
+            => SendAsync<PrinterCommand, TRes>(new PrinterCommand(command));
     }
 }

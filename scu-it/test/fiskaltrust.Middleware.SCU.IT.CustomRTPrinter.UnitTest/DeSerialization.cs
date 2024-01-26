@@ -22,7 +22,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.UnitTest
             var httpMessageHandler = Mock.Of<HttpMessageHandler>(MockBehavior.Strict);
             Mock.Get(httpMessageHandler)
                 .Protected()
-                .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.Is<HttpRequestMessage>(m => m.Content.ReadAsStringAsync().Result.Contains("<getinfo")), ItExpr.IsAny<CancellationToken>())
+                .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.Is<HttpRequestMessage>(m => m.Content.ReadAsStringAsync().Result.Contains("<pinterCommand><getinfo")), ItExpr.IsAny<CancellationToken>())
                 .ReturnsAsync(new HttpResponseMessage
                 {
                     StatusCode = HttpStatusCode.OK,
@@ -67,7 +67,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.UnitTest
 
             var client = new CustomRTPrinterClient(new HttpClient(httpMessageHandler) { BaseAddress = new("http://localhost") });
 
-            var response = await client.PostAsync<GetInfo, InfoResp>();
+            var response = await client.SendCommand<InfoResp>(new GetInfo());
 
             response.Success.Should().BeTrue();
             response.Status.Should().Be(0);
@@ -81,7 +81,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.UnitTest
             var httpMessageHandler = Mock.Of<HttpMessageHandler>(MockBehavior.Strict);
             Mock.Get(httpMessageHandler)
                 .Protected()
-                .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.Is<HttpRequestMessage>(m => m.Content.ReadAsStringAsync().Result.Contains("<getinfo")), ItExpr.IsAny<CancellationToken>())
+                .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.Is<HttpRequestMessage>(m => m.Content.ReadAsStringAsync().Result.Contains("<pinterCommand><getinfo")), ItExpr.IsAny<CancellationToken>())
                 .ReturnsAsync(new HttpResponseMessage
                 {
                     StatusCode = HttpStatusCode.OK,
@@ -108,7 +108,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.UnitTest
 
             var client = new CustomRTPrinterClient(new HttpClient(httpMessageHandler) { BaseAddress = new("http://localhost") });
 
-            var response = await client.PostAsync<GetInfo, Response<string>>();
+            var response = await client.SendCommand<Response<string>>(new GetInfo());
 
             response.Success.Should().BeTrue();
             response.Status.Should().Be(1);

@@ -9,13 +9,13 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.Models.Requests
     {
         public PrinterFiscalReport() { }
 
-        public PrinterFiscalReport(IReport[] reports)
+        public PrinterFiscalReport(IReport report)
         {
-            Reports = new Records<IReport>(reports);
+            Report = new Records<IReport>(new[] { report });
         }
 
         [XmlAnyElement()]
-        public Records<IReport> Reports { get; set; }
+        public Records<IReport> Report { get; set; }
     }
 
     public interface IReport : IRecord { }
