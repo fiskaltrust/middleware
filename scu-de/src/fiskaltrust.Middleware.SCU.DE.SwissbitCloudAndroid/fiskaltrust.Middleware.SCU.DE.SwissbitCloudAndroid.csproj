@@ -1,5 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="4.0" DefaultTargets="Build"
+  xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
@@ -17,7 +18,7 @@
     <AndroidResgenFile>Resources\Resource.designer.cs</AndroidResgenFile>
     <GenerateSerializationAssemblies>Off</GenerateSerializationAssemblies>
     <AndroidUseLatestPlatformSdk>false</AndroidUseLatestPlatformSdk>
-    <TargetFrameworkVersion>v12.0</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v13.0</TargetFrameworkVersion>
     <AndroidUseAapt2>true</AndroidUseAapt2>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -94,15 +95,18 @@
     <Folder Include="Resources\drawable\" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser\fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser.csproj">
+    <ProjectReference
+      Include="..\fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser\fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser.csproj">
       <Project>{B8B0F806-BB44-4C0E-8327-26119DEA0DAE}</Project>
       <Name>fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser</Name>
     </ProjectReference>
-    <ProjectReference Include="..\fiskaltrust.Middleware.SCU.DE.SwissbitCloudAndroid.Bindings.FccLibrary\fiskaltrust.Middleware.SCU.DE.SwissbitCloudAndroid.Bindings.FccLibrary.csproj">
+    <ProjectReference
+      Include="..\fiskaltrust.Middleware.SCU.DE.SwissbitCloudAndroid.Bindings.FccLibrary\fiskaltrust.Middleware.SCU.DE.SwissbitCloudAndroid.Bindings.FccLibrary.csproj">
       <Project>{737c7190-d5e3-44bb-a049-ed1d36ad7c95}</Project>
       <Name>fiskaltrust.Middleware.SCU.DE.SwissbitCloudAndroid.Bindings.FccLibrary</Name>
     </ProjectReference>
-    <ProjectReference Include="..\fiskaltrust.Middleware.SCU.DE.SwissbitCloudAndroid.Bindings.FccApi\fiskaltrust.Middleware.SCU.DE.SwissbitCloudAndroid.Bindings.FccApi.csproj">
+    <ProjectReference
+      Include="..\fiskaltrust.Middleware.SCU.DE.SwissbitCloudAndroid.Bindings.FccApi\fiskaltrust.Middleware.SCU.DE.SwissbitCloudAndroid.Bindings.FccApi.csproj">
       <Project>{da07a1a6-5301-43ce-a15d-94d32f3b357a}</Project>
       <Name>fiskaltrust.Middleware.SCU.DE.SwissbitCloudAndroid.Bindings.FccApi</Name>
     </ProjectReference>
