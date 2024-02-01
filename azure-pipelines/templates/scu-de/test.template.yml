@@ -16,11 +16,15 @@ steps:
 - pwsh: 'ls C:\Android\android-sdk\cmdline-tools\latest\bin'
   displayName: List files
 
-- pwsh: 'ls ${ANDROID_SDK_ROOT}\cmdline-tools\latest\bin'
+- pwsh: 'ls ${Env:ANDROID_SDK_ROOT}\cmdline-tools\latest\bin'
   displayName: List files
+
+- pwsh: sdkmanager "platforms;android-28"
 
 - pwsh: |
     & ${ANDROID_SDK_ROOT}\cmdline-tools\latest\bin\sdkmanager.exe "platforms;android-28"
+
+- pwsh: sdkmanager "platforms;android-28"
 
 - task: NuGetToolInstaller@1
 
