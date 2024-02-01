@@ -34,6 +34,9 @@ steps:
     jdkArchitectureOption: 'x64'
     jdkSourceOption: 'PreInstalled'
 
+- pwsh: |
+    & ${Env:ANDROID_SDK_ROOT}\cmdline-tools\latest\bin\sdkmanager.bat "platforms;android-28"
+
 - task: VSBuild@1
   inputs:
     solution: '$(WorkingDirectory)/$(Solution)'
