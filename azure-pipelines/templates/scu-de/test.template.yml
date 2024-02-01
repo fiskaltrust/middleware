@@ -13,14 +13,11 @@ steps:
     path: $(UserProfile)/.nuget/packages
   displayName: Cache NuGet packages
 
-- pwsh: 'Get-ChildItem Env: | Write-Host'
-  displayName: List all environment variables
+- pwsh: 'ls C:\Android\android-sdk\cmdline-tools\latest\bin'
+  displayName: List files
 
-- pwsh: 'ls C:\Android\android-sdk\cmdline-tools'
-  displayName: List all files in C:\Android\android-sdk\cmdline-tools
-
-- pwsh: 'ls C:\Android\android-sdk\cmdline-tools\latest'
-  displayName: List all files in C:\Android\android-sdk\cmdline-tools\latest
+- pwsh: 'ls ${ANDROID_SDK_ROOT}\cmdline-tools\latest\bin'
+  displayName: List files
 
 - pwsh: |
     & ${ANDROID_SDK_ROOT}\cmdline-tools\latest\bin\sdkmanager.exe "platforms;android-28"
