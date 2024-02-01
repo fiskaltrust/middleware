@@ -20,9 +20,9 @@ steps:
   displayName: List all files in C:\
 
 - pwsh: 'ls C:\Android'
-  displayName: List all files in C:\Android
+  displayName: List all files in C:\Android\android-sdk
 
-- pwsh: '& $ANDROID_SDK_ROOT\latest\bin\sdkmanager.exe "platforms;android-28"'
+- pwsh: '& ${ANDROID_SDK_ROOT}\latest\bin\sdkmanager.exe "platforms;android-28"'
 
 - task: NuGetToolInstaller@1
 
