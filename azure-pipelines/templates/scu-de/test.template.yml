@@ -1,5 +1,5 @@
 steps:
-- powershell: |   
+- powershell: |
     $nugetFeed = if ($Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/release/") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/main") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/tags/")) { "release" } else { "dev" }
     Write-Host "##vso[task.setvariable variable=NuGetFeed;]$nugetFeed"
   displayName: Set NuGet feed
@@ -12,6 +12,9 @@ steps:
       nuget
     path: $(UserProfile)/.nuget/packages
   displayName: Cache NuGet packages
+
+- pwsh: |
+    & ${Env:ANDROID_SDK_ROOT}\cmdline-tools\latest\bin\sdkmanager.bat "platforms;android-28"
 
 - task: NuGetToolInstaller@1
 
