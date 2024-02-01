@@ -13,6 +13,8 @@ steps:
     path: $(UserProfile)/.nuget/packages
   displayName: Cache NuGet packages
 
+- pwsh: C:\Android\android-sdk\cmdline-tools\latest\bin\sdkmanager.exe "platforms;android-28"
+
 - task: NuGetToolInstaller@1
 
 - task: NuGetCommand@2
