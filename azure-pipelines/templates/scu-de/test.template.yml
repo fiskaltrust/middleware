@@ -13,16 +13,16 @@ steps:
     path: $(UserProfile)/.nuget/packages
   displayName: Cache NuGet packages
 
-- pwsh: 'echo $ANDROID_SDK_ROOT'
+- pwsh: 'echo $Env:ANDROID_SDK_ROOT'
   displayName: List files
 
-- pwsh: 'ls "$ANDROID_SDK_ROOT\cmdline-tools\latest\bin"'
+- pwsh: 'ls "${Env:ANDROID_SDK_ROOT}\cmdline-tools\latest\bin"'
   displayName: List files
 
 - pwsh: sdkmanager "platforms;android-28"
 
 - pwsh: |
-    & ${ANDROID_SDK_ROOT}\cmdline-tools\latest\bin\sdkmanager.exe "platforms;android-28"
+    & ${Env:ANDROID_SDK_ROOT}\cmdline-tools\latest\bin\sdkmanager.exe "platforms;android-28"
 
 - pwsh: sdkmanager "platforms;android-28"
 
