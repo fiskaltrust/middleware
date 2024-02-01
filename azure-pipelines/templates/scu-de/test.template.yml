@@ -14,9 +14,7 @@ steps:
   displayName: Cache NuGet packages
 
 - pwsh: |
-    & ${Env:ANDROID_SDK_ROOT}\cmdline-tools\latest\bin\sdkmanager.exe "platforms;android-28"
-
-- pwsh: sdkmanager "platforms;android-28"
+    & ${Env:ANDROID_SDK_ROOT}\cmdline-tools\latest\bin\sdkmanager.bat "platforms;android-28"
 
 - task: NuGetToolInstaller@1
 
