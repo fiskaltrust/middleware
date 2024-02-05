@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Communication.Helpers;
 using fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Exceptions;
@@ -87,10 +88,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Communication
 
         public async Task<FccInfoResponseDto> GetFccInfoAsync()
         {
-            using var client = new HttpClient
-            {
-                BaseAddress = _baseAddress
-            };
+            using var client = GetBasicAuthAdminClient();
 
             var response = await client.GetAsync("info");
             var responseContent = await response.Content.ReadAsStringAsync();
@@ -268,16 +266,25 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Communication
             }
         }
 
-        private HttpClient GetBasicAuthAdminClient()
+        public HttpClient GetBasicAuthAdminClient()
         {
-            var client = new HttpClient { BaseAddress = _baseAddress };
+            var client = new HttpClient { BaseAddress = _baseAddress, Timeout = TimeSpan.FromSeconds(_configuration.FCCTimeoutSec) };
             var credentials = Encoding.ASCII.GetBytes($"admin:{_configuration.ErsCode}");
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(credentials));
 
             return client;
         }
 
-        private HttpClient GetOAuthAdminClient()
+        public HttpClient GetBasicAuthActuatorClient()
+        {
+            var client = new HttpClient { BaseAddress = _baseAddress, Timeout = TimeSpan.FromSeconds(_configuration.FCCTimeoutSec) };
+            var credentials = Encoding.ASCII.GetBytes($"actuator:{_configuration.ErsCode}");
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(credentials));
+
+            return client;
+        }
+
+        public HttpClient GetOAuthAdminClient()
         {
             var clientConfig = new ClientConfiguration
             {
