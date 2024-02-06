@@ -296,7 +296,8 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Communication
                 {
                     { "username", "admin" },
                     { "password", _configuration.ErsCode },
-                }
+                },
+                Timeout = _configuration.FCCTimeoutSec
             };
             return new HttpClient(new AuthenticatedHttpClientHandler(clientConfig))
             {

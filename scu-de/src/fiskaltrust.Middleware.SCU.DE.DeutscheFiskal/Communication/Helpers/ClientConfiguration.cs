@@ -10,7 +10,6 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Communication
         public string Password { get; set; }
         public string GrantType { get; set; }
         public Dictionary<string, string> AdditionalProperties { get; set; } = new Dictionary<string, string>();
-        public int Timeout { get; set; } = 2;
-
+        public int Timeout { get; set; }
     }
 }

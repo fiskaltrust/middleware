@@ -131,7 +131,8 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Communication
                 BaseAddress = _baseAddress,
                 UserName = clientId,
                 GrantType = "client_credentials",
-                Password = _configuration.ErsCode
+                Password = _configuration.ErsCode,
+                Timeout = _configuration.FCCTimeoutSec
             };
 
             var newClient = new HttpClient(new AuthenticatedHttpClientHandler(clientConfig))
