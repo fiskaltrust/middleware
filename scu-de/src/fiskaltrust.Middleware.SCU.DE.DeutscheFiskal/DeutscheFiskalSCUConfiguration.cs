@@ -18,13 +18,14 @@
         public bool DisplayCertificationIdAddition { get; set; } = true;
         public string CertificationIdAddition { get; set; } = "USK ausgesetzt";
         public string ServiceFolder { get; set; }
-        public string FccVersion { get; set; } = "4.0.5";
+        public string FccVersion { get; set; } = "4.0.8";
         public string ProxyServer { get; set; }
         public int? ProxyPort { get; set; }
         public string ProxyUsername { get; set; }
         public string ProxyPassword { get; set; }
         public int? FccHeapMemory { get; set; }
         public int FccRetry { get; set; } = 8;
+        public int FCCTimeoutSec { get; set; } = 2;
 
     }
 }
