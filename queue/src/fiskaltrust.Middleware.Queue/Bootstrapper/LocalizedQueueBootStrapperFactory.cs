@@ -22,7 +22,7 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
             var countyCode = GetQueueLocalization(queueId, middlewareConfiguration.Configuration);
             return countyCode switch
             {
-                "AT" => middlewareConfiguration.PreviewFeatures.TryGetValue("queue-at", out var val) && val ? new QueueATBootstrapper() : throw new NotImplementedException("The Austrian Queue is not yet implemented in this version."),
+                "AT" => new QueueATBootstrapper(),
                 "DE" => new QueueDEBootstrapper(),
                 "ES" => new QueueESBootstrapper(),
                 "FR" => middlewareConfiguration.PreviewFeatures.TryGetValue("queue-fr", out var val) && val ? new QueueFRBootstrapper() : throw new NotImplementedException("The French Queue is not yet implemented in this version."),
