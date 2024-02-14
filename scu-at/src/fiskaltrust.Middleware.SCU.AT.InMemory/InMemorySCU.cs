@@ -1,4 +1,4 @@
-﻿using fiskaltrust.ifPOS.v2.at;
+﻿using fiskaltrust.ifPOS.v1.at;
 using Org.BouncyCastle.Asn1.X509;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Math;
