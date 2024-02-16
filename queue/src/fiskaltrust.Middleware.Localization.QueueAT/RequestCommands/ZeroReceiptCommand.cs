@@ -28,7 +28,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 
         public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueAT queueAT, ReceiptRequest request, ftQueueItem queueItem)
         {
-            if (request.cbChargeItems?.Count() != 0 || request.cbPayItems?.Count() != 0)
+            if ((request.cbChargeItems != null && request.cbChargeItems?.Count() != 0) || (request.cbPayItems != null && request.cbPayItems?.Count() != 0))
             {
                 throw new ArgumentException("Zero receipts must not contain charge- or payitems.");
             }

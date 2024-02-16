@@ -6,6 +6,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
+using fiskaltrust.ifPOS.v1.at;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Localization.QueueAT.Extensions;
 using fiskaltrust.Middleware.Localization.QueueAT.Helpers;
@@ -250,7 +251,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
             var decisionBit1 = satz_Null_keinUmsatz.HasValue | satz_Normal_keinUmsatz.HasValue | satz_Erm1_keinUmsatz.HasValue | satz_Erm2_keinUmsatz.HasValue | satz_Besonders_keinUmsatz.HasValue;
 
             long[] DecisionBit0_Values = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
-            var decisionBit0 = receiptRequest?.cbPayItems.Count(pi => DecisionBit0_Values.Contains(0xFFFF & pi.ftPayItemCase)) > 0 | satz_Null_Verbindlichkeiten.HasValue;
+            var decisionBit0 = receiptRequest?.cbPayItems?.Count(pi => DecisionBit0_Values.Contains(0xFFFF & pi.ftPayItemCase)) > 0 | satz_Null_Verbindlichkeiten.HasValue;
 
 
             var betrag_Normal = satz_Normal.GetValueOrDefault() + satz_Normal_keinUmsatz.GetValueOrDefault();
@@ -540,8 +541,9 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 
                             try
                             {
-                                var zda = sscd.ZDA();
-                                var cert = new X509CertificateParser().ReadCertificate(sscd.Certificate());
+                                var zda = await sscd.ZdaAsync();
+                                var certResponse = await sscd.CertificateAsync();
+                                var cert = new X509CertificateParser().ReadCertificate(certResponse.Certificate);
                                 var certificateSerialNumber = cert.SerialNumber.ToString(16);
 
                                 var sb2 = new StringBuilder();
@@ -568,19 +570,19 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                                 var jwsDataToSign = Encoding.UTF8.GetBytes($"{journalAT.JWSHeaderBase64url}.{journalAT.JWSPayloadBase64url}");
 
 
-                                var jwsSignature = sscd.Sign(jwsDataToSign);
+                                var jwsSignature = await sscd.SignAsync(new SignRequest() {Data = jwsDataToSign });
 
-                                journalAT.JWSSignatureBase64url = ConversionHelper.ToBase64UrlString(jwsSignature);
+                                journalAT.JWSSignatureBase64url = ConversionHelper.ToBase64UrlString(jwsSignature.SignedData);
                                 journalAT.ftSignaturCreationUnitId = scu.ftSignaturCreationUnitATId;
 
                                 queueAT.ftCashNumerator = cashNumerator;
                                 queueAT.ftCashTotalizer += Math.Round(totalizer, 2);
                                 queueAT.LastSignatureHash = CreateLastReceiptSignature($"{journalAT.JWSHeaderBase64url}.{journalAT.JWSPayloadBase64url}.{journalAT.JWSSignatureBase64url}");
-                                queueAT.LastSignatureZDA = zda;
+                                queueAT.LastSignatureZDA = zda.ZDA;
                                 queueAT.LastSignatureCertificateSerialNumber = certificateSerialNumber;
 
 
-                                signatures.Add(new SignaturItem() { Caption = "www.fiskaltrust.at", Data = $"{jwsPayload}_{Convert.ToBase64String(jwsSignature)}", ftSignatureFormat = (long) SignaturItem.Formats.QR_Code, ftSignatureType = (long) SignaturItem.Types.AT_RKSV });
+                                signatures.Add(new SignaturItem() { Caption = "www.fiskaltrust.at", Data = $"{jwsPayload}_{Convert.ToBase64String(jwsSignature.SignedData)}", ftSignatureFormat = (long) SignaturItem.Formats.QR_Code, ftSignatureType = (long) SignaturItem.Types.AT_RKSV });
 
                                 return (receiptIdentification, ftStateData, isBackupScuUsed, signatures, journalAT);
                             }

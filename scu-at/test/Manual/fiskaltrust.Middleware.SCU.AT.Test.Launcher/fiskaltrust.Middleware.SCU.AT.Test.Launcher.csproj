@@ -1,10 +1,10 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <TargetFrameworks>net461;net6</TargetFrameworks>
         <OutputType>Exe</OutputType>
         <Deterministic>true</Deterministic>
-        <LangVersion>10.0</LangVersion>
+        <LangVersion>10</LangVersion>
         <GenerateProgramFile>false</GenerateProgramFile>
     </PropertyGroup>
 
@@ -31,7 +31,8 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\..\src\fiskaltrust.Middleware.SCU.AT.InMemory\fiskaltrust.Middleware.SCU.AT.InMemory.csproj" />
+        <ProjectReference Include="..\..\..\src\fiskaltrust.Middleware.SCU.AT.InMemory\fiskaltrust.Middleware.SCU.AT.InMemory.csproj" />
     </ItemGroup>
+
 
 </Project>

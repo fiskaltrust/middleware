@@ -34,7 +34,9 @@ namespace fiskaltrust.Middleware.SCU.AT.InMemory
                 {
                     var key = pkcs.GetKey(alias as string).Key;
                     var certChain = pkcs.GetCertificateChain(alias as string);
+#pragma warning disable IDE0056 // Use index operator
                     var cert = certChain[certChain.Length - 1].Certificate;
+#pragma warning restore IDE0056 // Use index operator
 
                     if (cert.SigAlgOid.Equals("1.2.840.10045.4.3.2"))
                     {
