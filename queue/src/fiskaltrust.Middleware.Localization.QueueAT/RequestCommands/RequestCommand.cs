@@ -56,7 +56,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                 cbTerminalID = request.cbTerminalID,
                 cbReceiptReference = request.cbReceiptReference,
                 ftReceiptMoment = DateTime.UtcNow,
-                ftState = 0x4445000000000000,
+                ftState = 0x4154000000000000,
                 ftReceiptIdentification = $"ft{queue.ftReceiptNumerator:X}#",
                 ftSignatures = Array.Empty<SignaturItem>()
             };
