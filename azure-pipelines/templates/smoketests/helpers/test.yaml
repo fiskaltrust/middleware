@@ -67,7 +67,6 @@ jobs:
   
       - publish: logs
         artifact: logs-${{ parameters.os }}-${{ parameters.queue }}-${{ replace(parameters.scu, '.', '-') }}-${{ parameters.test }}-$(System.JobAttempt)
-        ParallelCount: 1
         condition: succeededOrFailed()
 
       - task: PublishTestResults@2
