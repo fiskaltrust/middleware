@@ -197,7 +197,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             var receiptJournalRepository = new ReceiptJournalRepositoryRangeDecorator(_middlewareReceiptJournalRepository, _receiptJournalRepository, request.From, request.To);
 
             var queueDE = await _configurationRepository.GetQueueDEAsync(_middlewareConfiguration.QueueId).ConfigureAwait(false);
-
+            var scu = await _configurationRepository.GetSignaturCreationUnitDEAsync(queueDE.ftSignaturCreationUnitDEId.Value).ConfigureAwait(false);
+            var tseInfo  = JsonConvert.DeserializeObject<TseInfo>(scu.TseInfoJson);
             var workingDirectory = Path.Combine(_middlewareConfiguration.ServiceFolder, "Exports", queueDE.ftQueueDEId.ToString(), "DSFinV-K", DateTime.Now.ToString("yyyyMMddhhmmssfff"));
             Directory.CreateDirectory(workingDirectory);
 
@@ -213,8 +214,11 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
                     FirstZNumber = firstZNumber,
                     TargetDirectory = targetDirectory,
                     TSECertificateBase64 = certificateBase64,
-                    ReferencesLookUpType = _queueDEConfiguration.DisableDsfinvkExportReferences ? ReferencesLookUpType.NoReferences : ReferencesLookUpType.GroupedReferencesMW,
-                    IncludeOrders = _queueDEConfiguration.ExcludeDsfinvkOrders ? false : true
+                    ReferencesLookUpType = _queueDEConfiguration.DisableDsfinvkExportReferences ? ReferencesLookUpType.NoReferences: ReferencesLookUpType.AddReferences,
+                    IncludeOrders = _queueDEConfiguration.ExcludeDsfinvkOrders ? false : true,
+                    PublicKeyBase64 = tseInfo?.PublicKeyBase64,
+                    SignAlgorithm = tseInfo?.SignatureAlgorithm,
+                    TimeFormat = tseInfo?.LogTimeFormat
                 };
 
                 var readOnlyReceiptReferenceRepository = new ReadOnlyReceiptReferenceRepository(_middlewareQueueItemRepository);
