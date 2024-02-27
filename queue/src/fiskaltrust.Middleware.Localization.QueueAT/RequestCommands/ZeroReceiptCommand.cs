@@ -26,13 +26,12 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
             _queueItemRepository = queueItemRepository;
         }
 
-        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueAT queueAT, ReceiptRequest request, ftQueueItem queueItem)
+        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueAT queueAT, ReceiptRequest request, ftQueueItem queueItem, ReceiptResponse response)
         {
             if ((request.cbChargeItems != null && request.cbChargeItems?.Count() != 0) || (request.cbPayItems != null && request.cbPayItems?.Count() != 0))
             {
                 throw new ArgumentException("Zero receipts must not contain charge- or payitems.");
             }
-            var response = CreateReceiptResponse(request, queueItem, queueAT, queue);
 
             var actionJournals = new List<ftActionJournal>
             {

@@ -42,9 +42,9 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 
         public abstract string ReceiptName { get; }
 
-        public abstract Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueAT queueDE, ReceiptRequest request, ftQueueItem queueItem);
+        public abstract Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueAT queueDE, ReceiptRequest request, ftQueueItem queueItem, ReceiptResponse response);
 
-        protected static ReceiptResponse CreateReceiptResponse(ReceiptRequest request, ftQueueItem queueItem, ftQueueAT queueAT, ftQueue queue)
+        public static ReceiptResponse CreateReceiptResponse(ReceiptRequest request, ftQueueItem queueItem, ftQueueAT queueAT, ftQueue queue)
         {
             return new ReceiptResponse
             {
