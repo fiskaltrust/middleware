@@ -10,7 +10,6 @@ resources:
 
     - pipeline: helpers
       source: fiskaltrust.Middleware.Helper
-      project: department-develop-research
       branch: master
 
     - pipeline: launcher-1-3
