@@ -21,7 +21,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Repositories
             _middlewareQueueItemRepository = middlewareQueueItemRepository;
         }
 
-        public async Task<HashSet<ReceiptReferencesGroupedData>> GetReceiptReferenceAsync(long from, long to, List<DailyClosingReceipt> dailyClosings)
+        public async Task<HashSet<ReceiptReferencesGroupedData>> GetReceiptReferenceAsync(long? from, long? to, List<DailyClosingReceipt> dailyClosings)
         {
             var receiptReferencesGrouped = _middlewareQueueItemRepository.GetGroupedReceiptReferenceAsync(from, to).Where(x => !string.IsNullOrEmpty(x));
             var receiptReferences = new HashSet<ReceiptReferencesGroupedData>();
@@ -53,8 +53,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Repositories
             return receiptReferences;
         }
 
-        public Task<HashSet<ReceiptReferenceData>> GetReceiptReferenceAsync(ftQueueItem queueItem) => throw new NotImplementedException();
-
         private bool AddReference(HashSet<ReceiptReferencesGroupedData> receiptReferences, ftQueueItem target, ftQueueItem source, List<DailyClosingReceipt> dailyClosings)
         {
             if (target == null || string.IsNullOrEmpty(target.response))
@@ -81,7 +79,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Repositories
                 var extReceiptReference = new ReceiptReferencesGroupedData()
                 {
                     TargetQueueItemId = target.ftQueueItemId,
-                    TargetReceiptCaseData = receiptCaseData,
+                    TargetReceiptCaseData = requestTarget.ftReceiptCaseData,
                     TargetReceiptIdentification = respTarget.ftReceiptIdentification
                 };
                 if (dailyClosingTarget != null)
@@ -103,7 +101,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Repositories
 
             var receiptReference = new ReceiptReferencesGroupedData()
             {
-                RefReceiptId = responseSource.ftReceiptIdentification,
+                SourceReceiptIdentification = responseSource.ftReceiptIdentification,
                 TargetQueueItemId = target.ftQueueItemId,
                 SourceQueueItemId = source.ftQueueItemId,
                 TargetReceiptIdentification = responseTarget.ftReceiptIdentification,
