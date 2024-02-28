@@ -121,6 +121,15 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
                 }
             }
         }
+        public async Task<string> QueryMetrics()
+        {
+            using (var client = _fccAdminApiProvider.GetBasicAuthActuatorClient())
+            {
+                var result = await client.GetAsync("http://localhost:20001/actuator/metrics/http.server.requests");
+
+                return await result.Content.ReadAsStringAsync();
+            }
+        }
 
         public void Dispose()
         {
