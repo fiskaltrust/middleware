@@ -16,6 +16,7 @@ using fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser.Logs;
 using fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser.Logs.Models;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
 {
@@ -93,10 +94,8 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
                 {
                     _fccInitializationService.Initialize(_fccDirectory);
                 }
-                if (_configuration.FccHeapMemory.HasValue)
-                {
-                    ConfigHelper.SetFccHeapMemoryForRunScript(_fccDirectory, _configuration.FccHeapMemory.Value);
-                }
+                ConfigHelper.SetConfiguration(_configuration, _fccDirectory);
+
                 if (_version == null)
                 {
                     _version = _fccDownloadService.UsedFCCVersion;
@@ -265,6 +264,12 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
                     CurrentStartedTransactionNumbers = startedTransactions.Select(x => (ulong) x.TransactionNumber).ToList(),
                     CurrentState = activeKey.state.ToTseState(),
                 };
+
+                if(_configuration.EnableFccMetrics)
+                {
+                    var metrics = await _fccProcessHost.QueryMetrics();
+                    _logger.LogDebug($"FCC Metrics: {JToken.Parse(metrics).ToString(Formatting.Indented)}");
+                }
                 return _lastTseInfo;
             }
             catch (Exception ex)

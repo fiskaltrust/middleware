@@ -26,6 +26,7 @@
         public int? FccHeapMemory { get; set; }
         public int FccRetry { get; set; } = 8;
         public int FCCTimeoutSec { get; set; } = 2;
+        public bool EnableFccMetrics { get; set; }
 
     }
 }
