@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Extensions;
 using fiskaltrust.Middleware.Contracts.Interfaces;
@@ -12,6 +14,7 @@ using fiskaltrust.storage.V0;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using Org.BouncyCastle.Utilities;
 
 namespace fiskaltrust.Middleware.Queue.Bootstrapper
 {
@@ -37,16 +40,40 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
                 Configuration = _configuration,
                 PreviewFeatures = GetPreviewFeatures(_configuration)
             };
-
-            services.AddSingleton(middlewareConfiguration);
+            services.AddSingleton(sp => SaveConfiguration(middlewareConfiguration, sp.GetRequiredService<IActionJournalRepository>()).Result);
             services.AddScoped<ICryptoHelper, CryptoHelper>();
             services.AddScoped<SignProcessor>();
             services.AddScoped<ISignProcessor>(x => new LocalQueueSynchronizationDecorator(x.GetRequiredService<SignProcessor>(), x.GetRequiredService<ILogger<LocalQueueSynchronizationDecorator>>()));
             services.AddScoped<IJournalProcessor, JournalProcessor>();
             services.AddScoped<IPOS, Queue>();
-
             var businessLogicFactoryBoostrapper = LocalizedQueueBootStrapperFactory.GetBootstrapperForLocalizedQueue(_activeQueueId, middlewareConfiguration);
             businessLogicFactoryBoostrapper.ConfigureServices(services);
+
+        }
+
+        private static async Task<MiddlewareConfiguration> SaveConfiguration(MiddlewareConfiguration middlewareConfiguration, IActionJournalRepository actionJournalRepository)
+        {
+            middlewareConfiguration.Configuration.Add("MachineName", Environment.MachineName);
+            middlewareConfiguration.Configuration.Add("ProcessArchitecture", RuntimeInformation.ProcessArchitecture.ToString());
+            middlewareConfiguration.Configuration.Add("OSArchitecture", RuntimeInformation.OSArchitecture.ToString());
+            middlewareConfiguration.Configuration.Add("OSDescription", RuntimeInformation.OSDescription.ToString());
+
+            var actionJournal = new ftActionJournal()
+            {
+             ftActionJournalId = Guid.NewGuid(),
+                ftQueueId = middlewareConfiguration.QueueId,
+                ftQueueItemId = Guid.NewGuid(),
+                Moment = DateTime.Now,
+                Priority = 0,
+                Type = "Configuration",
+                Message = "Configuration",
+                DataBase64 = "",
+                DataJson = JsonConvert.SerializeObject(middlewareConfiguration),
+                TimeStamp = DateTime.Now.Ticks
+            };
+            await actionJournalRepository.InsertAsync(actionJournal);
+            return middlewareConfiguration;
+
         }
 
         private static Guid GetQueueCashbox(Guid queueId, Dictionary<string, object> configuration)
@@ -79,5 +106,7 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
         }
 
         private static string GetServiceFolder() => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "fiskaltrust", "service");
+
+
     }
 }
