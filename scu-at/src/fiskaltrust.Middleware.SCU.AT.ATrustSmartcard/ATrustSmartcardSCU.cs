@@ -8,7 +8,7 @@ using Org.BouncyCastle.Crypto;
 using PCSC;
 using PCSC.Iso7816;
 
-namespace fiskaltrust.signing
+namespace fiskaltrust.Middleware.SCU.AT.ATrustSmartcard
 {
     public class ATrustSmartcardSCU : IATSSCD, IDisposable
     {
@@ -33,7 +33,7 @@ namespace fiskaltrust.signing
         private string[] _readers;
         private byte[] _certificate;
         private ISigner verifier;
-        private ICardService _card;
+        private CardService _card;
 
         public ATrustSmartcardSCU(ATrustSmartcardSCUConfiguration configuration, LockHelper lockHelper, CardServiceFactory cardServiceFactory, ILogger<ATrustSmartcardSCU> logger)
         {
@@ -74,7 +74,7 @@ namespace fiskaltrust.signing
                     {
                         try
                         {
-                            _card.selectApplication(_cardReader, _isoReader);
+                            _card.selectApplication();
                         }
                         catch (Exception x)
                         {
@@ -259,18 +259,18 @@ namespace fiskaltrust.signing
                     _isoReader = new IsoReader(_cardReader, _readers[readerIndex], SCardShareMode.Exclusive, SCardProtocol.Any, true);
                 }
 
-                _card = _cardServiceFactory.CreateCardService(_cardContext, _readers[readerIndex]);
+                _card = _cardServiceFactory.CreateCardService(_cardReader, _isoReader);
                 _currentReaderIndex = readerIndex;
                 _currentReaderMode = _configuration.Shared ? ReaderMode.SharedOpen : ReaderMode.ExclusiveOpen;
-                if (!_card.checkApplication(_cardReader, _isoReader))
+                if (!_card.checkApplication())
                 {
                     throw new Exception("Applicaton not found.");
                 }
 
-                _certificate = _card.readCertificates(_cardReader, _isoReader);
+                _certificate = _card.readCertificates();
                 _logger.LogTrace("ReadCertificate result: {Certificate}", BitConverter.ToString(_certificate));
 
-                var signature = _card.sign(_cardReader, _isoReader, _card.GetPin(), Guid.Empty.ToByteArray(), true);
+                var signature = _card.sign(Guid.Empty.ToByteArray(), true);
                 _logger.LogTrace("Sign result: {Signature}", BitConverter.ToString(signature));
 
                 if (_configuration.VerifySignature && !Verify(Guid.Empty.ToByteArray(), signature))
@@ -410,7 +410,7 @@ namespace fiskaltrust.signing
 
             return _lockHelper.ExecuteReaderCommandLocked(_currentReaderIndex, () =>
             {
-                var signature = _card.sign(_cardReader, _isoReader, _card.GetPin(), data, _configuration.ApduSelect);
+                var signature = _card.sign(data, _configuration.ApduSelect);
                 return _configuration.VerifySignature && !Verify(data, signature)
                     ? throw new Exception("Signature verficiation failed.")
                     : signature;
