@@ -23,6 +23,12 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             await FluentActions.Invoking(act).Should().ThrowAsync<Exception>().WithMessage(errorMessage);
         }
 
+        public async Task ExpectExceptionReceiptcase(ReceiptRequest receiptRequest, string errorMessage)
+        {
+            Func<Task> act = () => CallSignProcessor_ExpectException(receiptRequest)();
+            await FluentActions.Invoking(act).Should().ThrowAsync<Exception>().WithMessage(string.Format(errorMessage, receiptRequest.ftReceiptCase));
+        }
+
         public async Task ExpectActionJournalEntryForErrorState(ReceiptRequest receiptRequest,
             string expectedErrorMessage)
         {
