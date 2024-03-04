@@ -6,9 +6,9 @@
 
         public LockHelper(ATrustSmartcardSCUConfiguration configuration) => _configuration = configuration;
 
-        public T ExecuteReaderCommandLocked<T>(int readerIndex, Func<T> func)
+        public T ExecuteReaderCommandLocked<T>(int readerIndex, string operation, Func<T> func)
         {
-            using var semaphore = new Semaphore(1, 1, GetLockName(readerIndex));
+            using var semaphore = new Semaphore(1, 1, GetLockName(readerIndex, operation));
 
             var locked = false;
             try
@@ -24,7 +24,7 @@
 
                 if (!locked)
                 {
-                    throw new TimeoutException($"Reader {readerIndex} lock timed out after {_configuration.ReaderTimeoutMs / 1000} seconds.");
+                    throw new TimeoutException(GetTimeoutMessage(readerIndex, operation));
                 }
                 return func();
             }
@@ -37,9 +37,9 @@
             }
         }
 
-        public void ExecuteReaderCommandLocked(int readerIndex, Action action)
+        public void ExecuteReaderCommandLocked(int readerIndex, string operation, Action action)
         {
-            using var semaphore = new Semaphore(1, 1, GetLockName(readerIndex));
+            using var semaphore = new Semaphore(1, 1, GetLockName(readerIndex, operation));
 
             var locked = false;
             try
@@ -55,7 +55,7 @@
 
                 if (!locked)
                 {
-                    throw new TimeoutException($"Reader {readerIndex} lock timed out after {_configuration.ReaderTimeoutMs / 1000} seconds.");
+                    throw new TimeoutException(GetTimeoutMessage(readerIndex, operation));
                 }
                 action();
             }
@@ -67,7 +67,23 @@
                 }
             }
         }
+        private string GetLockName(int readerIndex, string operation)
+        {
+            if (operation == Operation.InitalizeReader || operation == Operation.WaitUntilReaderIsAvailable)
+            {
+                return $"Global\\fiskaltrust.Middleware.SCU.AT.ATrustSmartcard.InitalizeReader";
+            }
+            return $"Global\\fiskaltrust.Middleware.SCU.AT.ATrustSmartcard.Reader{readerIndex}";
+        }
 
-        private string GetLockName(int readerIndex) => $"Global\\fiskaltrust.Middleware.SCU.AT.ATrustSmartcard.Reader{readerIndex}";
+        private string GetTimeoutMessage(int readerIndex, string operation)
+        {
+            if (operation == Operation.InitalizeReader || operation == Operation.InitalizeCard || operation == Operation.WaitUntilReaderIsAvailable)
+            {
+                return $"{operation} lock timed out after {_configuration.ReaderTimeoutMs / 1000} seconds.";
+            }
+            return $"Reader {readerIndex} lock timed out after {_configuration.ReaderTimeoutMs / 1000} seconds.";
+
+        }
     }
 }

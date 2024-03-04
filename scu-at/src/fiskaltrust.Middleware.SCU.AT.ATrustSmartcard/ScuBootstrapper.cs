@@ -2,7 +2,6 @@
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.SCU.AT.ATrustSmartcard.Helpers;
 using fiskaltrust.Middleware.SCU.AT.ATrustSmartcard.Services;
-using fiskaltrust.signing;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 
@@ -15,7 +14,10 @@ namespace fiskaltrust.Middleware.SCU.AT.ATrustSmartcard
 
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddSingleton(JsonConvert.DeserializeObject<ATrustSmartcardSCUConfiguration>(JsonConvert.SerializeObject(Configuration)));
+            services.AddSingleton(JsonConvert.DeserializeObject<ATrustSmartcardSCUConfiguration>(JsonConvert.SerializeObject(Configuration), new JsonSerializerSettings
+            {
+                NullValueHandling = NullValueHandling.Ignore
+            }));
             services.AddScoped<LockHelper>();
             services.AddScoped<CardServiceFactory>();
             services.AddScoped<IATSSCD, ATrustSmartcardSCU>();

@@ -34,7 +34,7 @@ namespace fiskaltrust.Middleware.SCU.AT.ATrustSmartcard
         private byte[] _certificate;
         private ISigner verifier;
         private CardService _card;
-
+        
         public ATrustSmartcardSCU(ATrustSmartcardSCUConfiguration configuration, LockHelper lockHelper, CardServiceFactory cardServiceFactory, ILogger<ATrustSmartcardSCU> logger)
         {
             _configuration = configuration;
@@ -63,14 +63,11 @@ namespace fiskaltrust.Middleware.SCU.AT.ATrustSmartcard
         {
             try
             {
-                if (!WaitUntilReaderIsAvailable())
-                {
-                    throw new Exception($"WaitUntilReaderIsAvailable lock timed out after {_configuration.ReaderTimeoutMs} seconds.");
-                }
-
+                _lockHelper.ExecuteReaderCommandLocked(_currentReaderIndex, Operation.WaitUntilReaderIsAvailable, () => true);
+                
                 if (_configuration.HealthCheck && _currentReaderMode != ReaderMode.DisabledOrUnknown)
                 {
-                    _lockHelper.ExecuteReaderCommandLocked(_currentReaderIndex, () =>
+                    _lockHelper.ExecuteReaderCommandLocked(_currentReaderIndex, Operation.CardHealthCheck, () =>
                     {
                         try
                         {
@@ -98,61 +95,11 @@ namespace fiskaltrust.Middleware.SCU.AT.ATrustSmartcard
                 _watchdogTimer.Start();
             }
         }
-
-
-
-        private bool WaitUntilReaderIsAvailable()
-        {
-            using (var semaphore = new Semaphore(1, 1, $"Global\\fiskaltrust.Middleware.SCU.AT.ATrustSmartcard.WaitUntilReaderIsAvailable"))
-            {
-                var hasHandle = false;
-                try
-                {
-                    try
-                    {
-                        hasHandle = semaphore.WaitOne(_configuration.ReaderTimeoutMs);
-                    }
-                    catch (AbandonedMutexException)
-                    {
-                        hasHandle = true;
-                    }
-
-                    return hasHandle;
-                }
-                catch
-                {
-                    return false;
-                }
-                finally
-                {
-                    if (hasHandle)
-                    {
-                        semaphore.Release();
-                    }
-                }
-            }
-        }
-
+      
         private void InitalizeReader()
         {
-            var semaphore = new Semaphore(1, 1, $"Global\\fiskaltrust.Middleware.SCU.AT.ATrustSmartcard.InitalizeReader");
-            var locked = false;
-            try
+            _lockHelper.ExecuteReaderCommandLocked(_currentReaderIndex, Operation.InitalizeReader, () =>
             {
-                try
-                {
-                    locked = semaphore.WaitOne(_configuration.ReaderTimeoutMs);
-                }
-                catch (AbandonedMutexException)
-                {
-                    locked = true;
-                }
-
-                if (!locked)
-                {
-                    throw new TimeoutException($"InitalizeReader lock timed out after {_configuration.ReaderTimeoutMs / 1000} seconds.");
-                }
-
                 _currentReaderMode = ReaderMode.DisabledOrUnknown;
 
                 if (_cardContext == null)
@@ -203,14 +150,7 @@ namespace fiskaltrust.Middleware.SCU.AT.ATrustSmartcard
                     throw new ArgumentException("No reader number and no certificate serial provided, initialization failed. Please either set the SerialNumber or Reader property of the SCU.");
                 }
 
-            }
-            finally
-            {
-                if (locked)
-                {
-                    semaphore.Release();
-                }
-            }
+            });           
         }
 
         private bool InitalizeCard(int readerIndex, string? serialnumber = null)
@@ -230,77 +170,56 @@ namespace fiskaltrust.Middleware.SCU.AT.ATrustSmartcard
             {
                 _logger.LogTrace("Searching card with serialnumber {Serialnumber} on reader with index {ReaderIndex}", serialnumber, readerIndex);
             }
-
-            var semaphore = new Semaphore(1, 1, $"Global\\fiskaltrust.Middleware.SCU.AT.ATrustSmartcard.Reader{readerIndex}");
-            var locked = false;
-            try
+            return _lockHelper.ExecuteReaderCommandLocked(_currentReaderIndex, Operation.InitalizeCard, () =>
             {
                 try
                 {
-                    locked = semaphore.WaitOne(_configuration.ReaderTimeoutMs);
-                }
-                catch (AbandonedMutexException)
-                {
-                    locked = true;
-                }
+                    _cardReader = new SCardReader(_cardContext);
+                    if (_configuration.Shared)
+                    {
+                        _isoReader = new IsoReader(_cardReader, _readers[readerIndex], SCardShareMode.Shared, SCardProtocol.Any, true);
+                    }
+                    else
+                    {
+                        _isoReader = new IsoReader(_cardReader, _readers[readerIndex], SCardShareMode.Exclusive, SCardProtocol.Any, true);
+                    }
 
-                if (!locked)
-                {
-                    throw new TimeoutException($"InitalizeCard lock timed out after {_configuration.ReaderTimeoutMs / 1000} seconds (reader index: {readerIndex}).");
-                }
+                    _card = _cardServiceFactory.CreateCardService(_cardReader, _isoReader);
+                    _currentReaderIndex = readerIndex;
+                    _currentReaderMode = _configuration.Shared ? ReaderMode.SharedOpen : ReaderMode.ExclusiveOpen;
+                    if (!_card.checkApplication())
+                    {
+                        throw new Exception("Applicaton not found.");
+                    }
 
-                _cardReader = new SCardReader(_cardContext);
-                if (_configuration.Shared)
-                {
-                    _isoReader = new IsoReader(_cardReader, _readers[readerIndex], SCardShareMode.Shared, SCardProtocol.Any, true);
-                }
-                else
-                {
-                    _isoReader = new IsoReader(_cardReader, _readers[readerIndex], SCardShareMode.Exclusive, SCardProtocol.Any, true);
-                }
+                    _certificate = _card.readCertificates();
+                    _logger.LogTrace("ReadCertificate result: {Certificate}", BitConverter.ToString(_certificate));
 
-                _card = _cardServiceFactory.CreateCardService(_cardReader, _isoReader);
-                _currentReaderIndex = readerIndex;
-                _currentReaderMode = _configuration.Shared ? ReaderMode.SharedOpen : ReaderMode.ExclusiveOpen;
-                if (!_card.checkApplication())
-                {
-                    throw new Exception("Applicaton not found.");
-                }
+                    var signature = _card.sign(Guid.Empty.ToByteArray(), true);
+                    _logger.LogTrace("Sign result: {Signature}", BitConverter.ToString(signature));
 
-                _certificate = _card.readCertificates();
-                _logger.LogTrace("ReadCertificate result: {Certificate}", BitConverter.ToString(_certificate));
+                    if (_configuration.VerifySignature && !Verify(Guid.Empty.ToByteArray(), signature))
+                    {
+                        throw new Exception("Signature verification failed.");
+                    }
 
-                var signature = _card.sign(Guid.Empty.ToByteArray(), true);
-                _logger.LogTrace("Sign result: {Signature}", BitConverter.ToString(signature));
+                    if (string.IsNullOrWhiteSpace(serialnumber) || CertificateHelpers.CompareSerialNumbers(_certificate, serialnumber))
+                    {
+                        _logger.LogInformation("Using reader {ReaderName} at index {ReaderIndex}.", _readers[_currentReaderIndex], _currentReaderIndex);
+                        return true;
+                    }
+                    else if (!string.IsNullOrWhiteSpace(serialnumber) && !CertificateHelpers.CompareSerialNumbers(_certificate, serialnumber))
+                    {
+                        _logger.LogDebug("Serial number of reader {ReaderName} at index {ReaderIndex} did not match the specified serial '{SerialNumber}'.", _readers[_currentReaderIndex], _currentReaderIndex, serialnumber);
+                    }
+                }
+                catch (Exception x)
+                {
+                    _logger.LogError(x, "An error occurred while trying to initialize the card (index: {ReaderIndex}, serial number: {Seruial}", readerIndex, serialnumber);
+                }
+                return false;
 
-                if (_configuration.VerifySignature && !Verify(Guid.Empty.ToByteArray(), signature))
-                {
-                    throw new Exception("Signature verification failed.");
-                }
-
-                if (string.IsNullOrWhiteSpace(serialnumber) || CertificateHelpers.CompareSerialNumbers(_certificate, serialnumber))
-                {
-                    _logger.LogInformation("Using reader {ReaderName} at index {ReaderIndex}.", _readers[_currentReaderIndex], _currentReaderIndex);
-                    return true;
-                }
-                else if (!string.IsNullOrWhiteSpace(serialnumber) && !CertificateHelpers.CompareSerialNumbers(_certificate, serialnumber))
-                {
-                    _logger.LogDebug("Serial number of reader {ReaderName} at index {ReaderIndex} did not match the specified serial '{SerialNumber}'.", _readers[_currentReaderIndex], _currentReaderIndex, serialnumber);
-                }
-            }
-            catch (Exception x)
-            {
-                _logger.LogError(x, "An error occurred while trying to initialize the card (index: {ReaderIndex}, serial number: {Seruial}", readerIndex, serialnumber);
-            }
-            finally
-            {
-                if (locked)
-                {
-                    semaphore.Release();
-                }
-            }
-
-            return false;
+            });
         }
 
         private bool Verify(byte[] data, byte[] signature)
@@ -398,17 +317,20 @@ namespace fiskaltrust.Middleware.SCU.AT.ATrustSmartcard
 
         public byte[] Sign(byte[] data)
         {
-            if (!WaitUntilReaderIsAvailable())
+            try
+            {
+                _lockHelper.ExecuteReaderCommandLocked(_currentReaderIndex, Operation.WaitUntilReaderIsAvailable, () => true);
+            }
+            catch (Exception)
             {
                 return null;
             }
-
+            
             if (_currentReaderMode == ReaderMode.DisabledOrUnknown)
             {
                 return null;
             }
-
-            return _lockHelper.ExecuteReaderCommandLocked(_currentReaderIndex, () =>
+            return _lockHelper.ExecuteReaderCommandLocked(_currentReaderIndex,Operation.Sign, () =>
             {
                 var signature = _card.sign(data, _configuration.ApduSelect);
                 return _configuration.VerifySignature && !Verify(data, signature)
