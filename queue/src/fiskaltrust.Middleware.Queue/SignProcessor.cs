@@ -205,7 +205,12 @@ namespace fiskaltrust.Middleware.Queue
                 {
                     if (queueItem.country != "IT")
                     {
-                        throw exception;
+
+                        var errorMessage = "An error occurred during receipt processing with ftState = 0xEEEE_EEEE for a country other than Italy.";
+
+                        await CreateActionJournalAsync(errorMessage, "ReceiptProcessError", queueItem.ftQueueItemId);
+
+                        _logger.LogError(errorMessage);
                     }
                     // TODO: This state indicates that something went wrong while processing the receipt request.
                     //       While we will probably introduce a parameter for this we are right now just returning
