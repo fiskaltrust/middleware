@@ -50,6 +50,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
 
         public InMemorySCU InMemorySCU { get; }
         public IDESSCDProvider DeSSCDProvider { get; }
+        
+        public Mock<IActionJournalRepository> ActionJournalRepositoryMock { get; }
 
         public SignProcessorDependenciesFixture()
         {
@@ -58,8 +60,13 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             var deSSCDProviderMock = new Mock<IDESSCDProvider>();
             deSSCDProviderMock.SetupGet(x => x.Instance).Returns(InMemorySCU);
             DeSSCDProvider = deSSCDProviderMock.Object;
-        }
+            
+            ActionJournalRepositoryMock = new Mock<IActionJournalRepository>();
 
+            ActionJournalRepositoryMock.Setup(x => x.InsertAsync(It.IsAny<ftActionJournal>()))
+                .Returns(Task.CompletedTask);
+        }
+        
         public IConfigurationRepository CreateConfigurationRepository(bool inFailedMode = false, DateTime? startMoment = null, DateTime? stopMoment = null, bool sourceIsScuSwitch = false, bool targetIsScuSwitch = false, bool queueDECreationUnitIsNull = false)
         {
             return Task.Run(async () =>
@@ -131,7 +138,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                 failedStartTransactionRepository, openTransactionRepository, masterDataService, config,
                 queueItemRepository, new SignatureFactoryDE(QueueDEConfiguration.FromMiddlewareConfiguration(Mock.Of<ILogger<QueueDEConfiguration>>(), config)));
             var signProcessor = new SignProcessor(Mock.Of<ILogger<SignProcessor>>(), configurationRepository, queueItemRepository, receiptJournalRepository,
-                actionJournalRepository, new CryptoHelper(), signProcessorDE, config);
+                ActionJournalRepositoryMock.Object, new CryptoHelper(), signProcessorDE, config);
             return signProcessor;
         }
         public async Task AddOpenOrders(string receiptReference, int transnr) => await openTransactionRepository.InsertAsync(new OpenTransaction { cbReceiptReference = receiptReference, StartMoment = DateTime.UtcNow.AddHours(-12), StartTransactionSignatureBase64 = "somebase64==", TransactionNumber = transnr });
