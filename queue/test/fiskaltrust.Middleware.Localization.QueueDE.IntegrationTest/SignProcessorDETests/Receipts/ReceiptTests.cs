@@ -32,6 +32,18 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             Times.Once, "Expected ActionJournal entry with specific error message was not created.");
         }
 
+        public async Task ExpectArgumentExceptionReceiptcase(ReceiptRequest receiptRequest, string errorMessage)
+        {
+            Func<Task> act = () => CallSignProcessor_ExpectException(receiptRequest)();
+            await FluentActions.Invoking(act).Should().ThrowAsync<ArgumentException>().WithMessage(string.Format(errorMessage, receiptRequest.ftReceiptCase));
+        }
+
+        public async Task ExpectArgumentExceptionReceiptReference(ReceiptRequest receiptRequest, string errorMessage)
+        {
+            Func<Task> act = () => CallSignProcessor_ExpectException(receiptRequest)();
+            await FluentActions.Invoking(act).Should().ThrowAsync<ArgumentException>().WithMessage(string.Format(errorMessage, receiptRequest.cbReceiptReference));
+        }
+
         public ReceiptRequest GetReceipt(string basefolder, string receiptReference, long? receiptCase)
         {
             var receiptRequest = TestObjectFactory.GetReceipt(Path.Combine("Data", basefolder));
