@@ -15,45 +15,51 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
 
         public ReceiptTests(SignProcessorDependenciesFixture fixture) => _fixture = fixture;
 
-        public async Task ExpectException(ReceiptRequest receiptRequest, string errorMessage, bool sourceIsScuSwitch = false, bool targetIsScuSwitch = false)
+        public async Task ExpectException(ReceiptRequest receiptRequest, string errorMessage,
+            bool sourceIsScuSwitch = false, bool targetIsScuSwitch = false)
         {
-            Func<Task> act = () => CallSignProcessor_ExpectException(receiptRequest, sourceIsScuSwitch, targetIsScuSwitch)();
+            Func<Task> act = () =>
+                CallSignProcessor_ExpectException(receiptRequest, sourceIsScuSwitch, targetIsScuSwitch)();
             await FluentActions.Invoking(act).Should().ThrowAsync<Exception>().WithMessage(errorMessage);
         }
 
-        public async Task ExpectActionJournalEntryForErrorState(ReceiptRequest receiptRequest, string expectedErrorMessage)
+        public async Task ExpectActionJournalEntryForErrorState(ReceiptRequest receiptRequest,
+            string expectedErrorMessage)
         {
             Func<Task> act = () => CallSignProcessor_ExpectException(receiptRequest)();
             await FluentActions.Invoking(act).Invoke();
 
             _fixture.ActionJournalRepositoryMock.Verify(
-                aj => aj.InsertAsync(It.Is<ftActionJournal>(journal => 
+                aj => aj.InsertAsync(It.Is<ftActionJournal>(journal =>
                     journal.Message.Contains(expectedErrorMessage) && journal.Type == "ReceiptProcessError")),
                 Times.Once,
                 "Expected ActionJournal entry with specific error message was not created."
             );
         }
-        
-        public async Task Transaction_WithOpenTransactionRepo_ExpectArgumentException(string transactionFolder, int transNo, string expectedErrorMessage)
+
+        public async Task Transaction_WithOpenTransactionRepo_ExpectArgumentException(string transactionFolder,
+            int transNo, string expectedErrorMessage)
         {
             var receiptRequest = GetReceipt(transactionFolder, "test-reference", null);
             await _fixture.AddOpenOrders(receiptRequest.cbReceiptReference, transNo);
 
             Func<Task> act = () => CallSignProcessor_ExpectException(receiptRequest)();
-            await FluentActions.Invoking(act).Should().ThrowAsync<ArgumentException>().WithMessage(expectedErrorMessage);
+            await FluentActions.Invoking(act).Should().ThrowAsync<ArgumentException>()
+                .WithMessage(expectedErrorMessage);
         }
-
 
         public async Task ExpectArgumentExceptionReceiptcase(ReceiptRequest receiptRequest, string errorMessage)
         {
             Func<Task> act = () => CallSignProcessor_ExpectException(receiptRequest)();
-            await FluentActions.Invoking(act).Should().ThrowAsync<ArgumentException>().WithMessage(string.Format(errorMessage, receiptRequest.ftReceiptCase));
+            await FluentActions.Invoking(act).Should().ThrowAsync<ArgumentException>()
+                .WithMessage(string.Format(errorMessage, receiptRequest.ftReceiptCase));
         }
 
         public async Task ExpectArgumentExceptionReceiptReference(ReceiptRequest receiptRequest, string errorMessage)
         {
             Func<Task> act = () => CallSignProcessor_ExpectException(receiptRequest)();
-            await FluentActions.Invoking(act).Should().ThrowAsync<ArgumentException>().WithMessage(string.Format(errorMessage, receiptRequest.cbReceiptReference));
+            await FluentActions.Invoking(act).Should().ThrowAsync<ArgumentException>()
+                .WithMessage(string.Format(errorMessage, receiptRequest.cbReceiptReference));
         }
 
         public ReceiptRequest GetReceipt(string basefolder, string receiptReference, long? receiptCase)
@@ -64,9 +70,11 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             return receiptRequest;
         }
 
-        private Func<Task> CallSignProcessor_ExpectException(ReceiptRequest receiptRequest, bool sourceIsScuSwitch = false, bool targetIsScuSwitch = false)
+        private Func<Task> CallSignProcessor_ExpectException(ReceiptRequest receiptRequest,
+            bool sourceIsScuSwitch = false, bool targetIsScuSwitch = false)
         {
-            var signProcessor = _fixture.CreateSignProcessorForSignProcessorDE(false, DateTime.Now.AddHours(-1), null, null, false, false, sourceIsScuSwitch, targetIsScuSwitch);
+            var signProcessor = _fixture.CreateSignProcessorForSignProcessorDE(false, DateTime.Now.AddHours(-1), null,
+                null, false, false, sourceIsScuSwitch, targetIsScuSwitch);
             return async () => await signProcessor.ProcessAsync(receiptRequest);
         }
     }
