@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Interfaces;
@@ -155,6 +156,67 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
 
             process.Should().Throw<Exception>().WithMessage("MyException");
             queueItemRepository.Verify();
+        }
+        
+        [Fact]
+        public async Task ProcessAsync_WithErrorStateAndNonItalyCountry_Should_CreateActionJournal()
+        {
+            // Arrange
+            var loggerMock = new Mock<ILogger<SignProcessor>>();
+            var configRepositoryMock = new Mock<IConfigurationRepository>();
+            var queueItemRepositoryMock = new Mock<IMiddlewareQueueItemRepository>();
+            var receiptJournalRepositoryMock = new Mock<IReceiptJournalRepository>();
+            var actionJournalRepositoryMock = new Mock<IActionJournalRepository>();
+            var cryptoHelperMock = new Mock<ICryptoHelper>();
+            var marketSpecificSignProcessorMock = new Mock<IMarketSpecificSignProcessor>();
+
+            Guid queueId = Guid.NewGuid();
+            Guid cashboxId = Guid.NewGuid();
+            var configuration = new MiddlewareConfiguration
+            {
+                QueueId = queueId,
+                CashBoxId = cashboxId,
+                ReceiptRequestMode = 0
+            };
+
+            var queue = new ftQueue
+            {
+                ftCashBoxId = cashboxId,
+                ftQueueId = queueId,
+                Timeout = 15000
+            };
+
+            var request = new ReceiptRequest
+            {
+                cbReceiptAmount = 100
+            };
+
+            var queueItem = new ftQueueItem
+            {
+                ftQueueItemId = Guid.NewGuid(),
+                country = "DE", // Non-Italy country
+                request = JsonConvert.SerializeObject(request)
+            };
+
+            var receiptResponse = new ReceiptResponse
+            {
+                ftState = 0xEEEE_EEEE // Error state
+            };
+
+            marketSpecificSignProcessorMock.Setup(x => x.ProcessAsync(It.IsAny<ReceiptRequest>(), It.IsAny<ftQueue>(), It.IsAny<ftQueueItem>()))
+                .ReturnsAsync((receiptResponse, new List<ftActionJournal>()));
+
+            actionJournalRepositoryMock.Setup(x => x.InsertAsync(It.IsAny<ftActionJournal>()))
+                .Returns(Task.CompletedTask)
+                .Verifiable("ActionJournal entry was not created for error state.");
+
+            var sut = new SignProcessor(loggerMock.Object, configRepositoryMock.Object, queueItemRepositoryMock.Object, receiptJournalRepositoryMock.Object, actionJournalRepositoryMock.Object, cryptoHelperMock.Object, marketSpecificSignProcessorMock.Object, configuration);
+
+            // Act
+            await sut.ProcessAsync(request);
+
+            // Assert
+            actionJournalRepositoryMock.Verify(); // Verifies that InsertAsync was called for ActionJournalRepository
         }
     }
 }
