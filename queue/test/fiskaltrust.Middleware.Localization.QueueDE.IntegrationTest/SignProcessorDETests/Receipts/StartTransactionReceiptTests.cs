@@ -22,7 +22,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
         [Fact]
         public async Task StartTransaction_IsNoImplicitFlow_ExpectArgumentException() => await _receiptTests.ExpectArgumentExceptionReceiptcase(_receiptTests.GetReceipt("StartTransactionReceipt", "StartTransNoImplFlow", 0x4445000100000008), "ReceiptCase {0:X} (Start-transaction receipt) can not use implicit-flow flag.").ConfigureAwait(false);
         [Fact]
-        public async Task StartTransaction_WithOpenTransactionRepo_ExpectArgumentException() => await _receiptTests.Transaction_WithOpenTransactionRepo_ExpectArgumentException("StartTransactionReceipt", 4).ConfigureAwait(false);
+        public async Task StartTransaction_WithOpenTransactionRepo_ExpectArgumentException() => await _receiptTests.Transaction_WithOpenTransactionRepo_ExpectArgumentException("StartTransactionReceipt", 4, "An open transaction already exists with the provided receipt reference").ConfigureAwait(false);
         [Fact]
         public async Task StartTransaction_ValidRequest_ExpectOpenTransaction()
         {
@@ -45,6 +45,14 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             receiptResponse.ftSignatures.Count().Should().Be(2);
             receiptResponse.ftSignatures[1].ftSignatureType.Should().Be(4096);
             receiptResponse.ftSignatures[1].Caption.Should().Be("Trainingsbuchung");
+        }
+        [Fact]
+        public async Task StartTransaction_WithErrorState_ExpectActionJournalEntry()
+        {
+            var receiptRequest = _receiptTests.GetReceipt("StartTransactionReceipt", "StartTransactionReceiptWithError", null);
+            var expectedErrorMessage = "Transaction failed due to invalid receipt format.";
+
+            await _receiptTests.ExpectActionJournalEntryForErrorState(receiptRequest, expectedErrorMessage);
         }
     }
 }

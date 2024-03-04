@@ -7,7 +7,7 @@ using fiskaltrust.storage.V0;
 using FluentAssertions;
 using Moq;
 
-namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProcessorDETests
+namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProcessorDETests.Receipts
 {
     public class ReceiptTests
     {
@@ -26,11 +26,23 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             Func<Task> act = () => CallSignProcessor_ExpectException(receiptRequest)();
             await FluentActions.Invoking(act).Invoke();
 
-            _fixture.ActionJournalRepositoryMock.Verify(x => x.InsertAsync(It.Is<ftActionJournal>(aj =>
-                aj.Message.Contains(expectedErrorMessage) && 
-                aj.Type == "ReceiptProcessError")), 
-            Times.Once, "Expected ActionJournal entry with specific error message was not created.");
+            _fixture.ActionJournalRepositoryMock.Verify(
+                aj => aj.InsertAsync(It.Is<ftActionJournal>(journal => 
+                    journal.Message.Contains(expectedErrorMessage) && journal.Type == "ReceiptProcessError")),
+                Times.Once,
+                "Expected ActionJournal entry with specific error message was not created."
+            );
         }
+        
+        public async Task Transaction_WithOpenTransactionRepo_ExpectArgumentException(string transactionFolder, int transNo, string expectedErrorMessage)
+        {
+            var receiptRequest = GetReceipt(transactionFolder, "test-reference", null);
+            await _fixture.AddOpenOrders(receiptRequest.cbReceiptReference, transNo);
+
+            Func<Task> act = () => CallSignProcessor_ExpectException(receiptRequest)();
+            await FluentActions.Invoking(act).Should().ThrowAsync<ArgumentException>().WithMessage(expectedErrorMessage);
+        }
+
 
         public async Task ExpectArgumentExceptionReceiptcase(ReceiptRequest receiptRequest, string errorMessage)
         {
