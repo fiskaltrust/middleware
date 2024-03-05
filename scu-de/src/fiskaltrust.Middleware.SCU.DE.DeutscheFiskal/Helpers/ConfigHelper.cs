@@ -7,25 +7,64 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Helpers
 {
     public static class ConfigHelper
     {
+        public static void SetConfiguration(DeutscheFiskalSCUConfiguration configuration, string fccDirectory)
+        {
+            if (configuration.FccHeapMemory.HasValue)
+            {
+                SetFccHeapMemoryForRunScript(fccDirectory, configuration.FccHeapMemory.Value);
+            }
+            SetFccMetrics(configuration, fccDirectory);
+        }
 
-        public static void SetFccHeapMemoryForRunScript(string fccDirectory, int fccHeapMemory)
+        private static void SetFccMetrics(DeutscheFiskalSCUConfiguration configuration, string fccDirectory)
+        {
+            var runScript = GetRunscript(fccDirectory);
+            var runCommand = File.ReadAllText(Path.Combine(fccDirectory, runScript));
+            var metricsCommand = "-Dspring.profiles.active=metrics ";
+            var posOfX = runCommand.IndexOf(metricsCommand);
+            if (posOfX >= 0)
+            {
+                if (configuration.EnableFccMetrics)
+                {
+                    return;
+                }
+                runCommand = runCommand.Replace(metricsCommand, "");
+            }
+            else
+            {
+                if (!configuration.EnableFccMetrics)
+                {
+                    return;
+                }
+                var posJar = runCommand.IndexOf(Paths.FccServiceJar);
+                runCommand = runCommand.Insert(posJar + Paths.FccServiceJar.Length + 1, metricsCommand);
+            }
+            File.WriteAllText(Path.Combine(fccDirectory, runScript), runCommand);
+
+        }
+
+        private static void SetFccHeapMemoryForRunScript(string fccDirectory, int fccHeapMemory)
         {
             ValidateHeapMemory(fccHeapMemory);
-            string runScript;
+            var runScript = GetRunscript(fccDirectory);
+            var runCommand = File.ReadAllText(Path.Combine(fccDirectory, runScript));
+            SetHeapMemory(fccDirectory, fccHeapMemory, runScript, runCommand);
+        }
+
+        private static string GetRunscript(string fccDirectory)
+        {
             if (EnvironmentHelpers.IsWindows)
             {
-                runScript = Path.Combine(fccDirectory, Paths.RunFccScriptWindows);
+                return Path.Combine(fccDirectory, Paths.RunFccScriptWindows);
             }
             else if (EnvironmentHelpers.IsLinux)
             {
-                runScript = Path.Combine(fccDirectory, Paths.RunFccScriptLinux);
+                return Path.Combine(fccDirectory, Paths.RunFccScriptLinux);
             }
             else
             {
                 throw new NotSupportedException("The current OS is not supported by this SCU.");
             }
-            var runCommand = File.ReadAllText(Path.Combine(fccDirectory, runScript));
-            SetHeapMemory(fccDirectory, fccHeapMemory, runScript, runCommand);
         }
 
         private static void SetHeapMemory(string fccDirectory, int fccHeapMemory, string script, string command)
