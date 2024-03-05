@@ -62,7 +62,28 @@ namespace fiskaltrust.Middleware.SCU.AT.ATrustSmartcard.Services
             return true;
         }
 
-        public override byte[] readCertificates(bool onlyFirst = false, bool verify = false, byte[]? dfsig = null) => base.readCertificates(onlyFirst, verify, new byte[] { 0xdf, 0x70 });
+        public override byte[] readCertificates(bool onlyFirst = false, bool verify = false)
+        {
+            try
+            {
+                if (_cardReader.BeginTransaction() != SCardError.Success)
+                {
+                    throw new Exception($"Reader {_isoReader.ReaderName}  BeginTransaction failed");
+                }
+
+                var DF_SIG = new byte[] { 0xdf, 0x70 };
+                FID(DF_SIG);
+                
+                var EF_C_CH_DS = new byte[] { 0xc0, 0x00 };
+                FID(EF_C_CH_DS);
+
+                return GetCertificates(onlyFirst, verify);
+            }
+            finally
+            {
+                _cardReader.EndTransaction(SCardReaderDisposition.Leave);
+            }
+        }
         public override byte[]? readCIN()
         {
             try

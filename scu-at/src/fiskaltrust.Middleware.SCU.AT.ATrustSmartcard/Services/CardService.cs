@@ -9,7 +9,7 @@ namespace fiskaltrust.Middleware.SCU.AT.ATrustSmartcard.Services
     {
         protected SCardReader _cardReader;
         protected IsoReader _isoReader;
-        
+
         public CardService(SCardReader cardReader, IsoReader isoReader)
         {
             _cardReader = cardReader;
@@ -52,7 +52,7 @@ namespace fiskaltrust.Middleware.SCU.AT.ATrustSmartcard.Services
             return true;
         }
 
-        public virtual byte[] readCertificates(bool onlyFirst = false, bool verify = false, byte[]? dfsig = null)
+        public virtual byte[] readCertificates(bool onlyFirst = false, bool verify = false)
         {
             try
             {
@@ -62,51 +62,20 @@ namespace fiskaltrust.Middleware.SCU.AT.ATrustSmartcard.Services
                 }
 
                 var DF_SIG = new byte[] { 0xDF, 0x01 };
-                FID(DF_SIG);
+                var apdu = new CommandApdu(IsoCase.Case3Short, _isoReader.ActiveProtocol)
+                {
+                    CLA = 0x0,
+                    INS = 0xa4,
+                    P1 = 0x0,
+                    P2 = 0x0c,
+                    Data = DF_SIG,
+                };
+                _isoReader.Transmit(apdu);
+
                 var EF_C_CH_DS = new byte[] { 0xc0, 0x00 };
                 FID(EF_C_CH_DS);
 
-                using (var ms = new MemoryStream())
-                {
-                    var offset = 0;
-                    while (true)
-                    {
-                        var apdu = new CommandApdu(IsoCase.Case2Short, _isoReader.ActiveProtocol)
-                        {
-                            CLA = 0x0,
-                            INS = 0xb0,
-                            P1 = (byte) (offset >> 8),
-                            P2 = (byte) offset,
-                            Le = 0x00
-                        };
-                        var response = _isoReader.Transmit(apdu);
-                        if (response.SW1 != 0x90 || response.SW2 != 0x00)
-                        {
-                            break;
-                        }
-
-                        var data = response.GetData();
-                        ms.Write(data, 0, data.Length);
-                        if (onlyFirst)
-                        {
-                            break;
-                        }
-                        offset += 256;
-                    }
-
-
-                    if (verify)
-                    {
-                        ms.Position = 0;
-                        var certificates = new Org.BouncyCastle.X509.X509CertificateParser().ReadCertificates(ms);
-                        foreach (Org.BouncyCastle.X509.X509Certificate certificate in certificates)
-                        {
-                            certificate.CheckValidity();
-                        }
-                    }
-
-                    return ms.ToArray();
-                }
+                return GetCertificates(onlyFirst, verify);
             }
             finally
             {
@@ -215,7 +184,7 @@ namespace fiskaltrust.Middleware.SCU.AT.ATrustSmartcard.Services
 
             return true;
         }
-  
+
         public abstract byte[] sign(byte[] data, bool selectCard = true);
 
         protected void FID(byte[] data)
@@ -298,8 +267,53 @@ namespace fiskaltrust.Middleware.SCU.AT.ATrustSmartcard.Services
                 throw new Exception("APDU-Fehler bei COMPUTE DIGITAL SIGNATURE: keine Daten empfangen");
             }
 
-            return response.GetData();            
+            return response.GetData();
+        }
+
+        protected byte[] GetCertificates(bool onlyFirst = false, bool verify = false)
+        {
+            using (var ms = new MemoryStream())
+            {
+                var offset = 0;
+                while (true)
+                {
+                    var apdu = new CommandApdu(IsoCase.Case2Short, _isoReader.ActiveProtocol)
+                    {
+                        CLA = 0x0,
+                        INS = 0xb0,
+                        P1 = (byte) (offset >> 8),
+                        P2 = (byte) offset,
+                        Le = 0x00
+                    };
+                    var response = _isoReader.Transmit(apdu);
+                    if (response.SW1 != 0x90 || response.SW2 != 0x00)
+                    {
+                        break;
+                    }
+
+                    var data = response.GetData();
+                    ms.Write(data, 0, data.Length);
+                    if (onlyFirst)
+                    {
+                        break;
+                    }
+                    offset += 256;
+                }
+
+
+                if (verify)
+                {
+                    ms.Position = 0;
+                    var certificates = new Org.BouncyCastle.X509.X509CertificateParser().ReadCertificates(ms);
+                    foreach (Org.BouncyCastle.X509.X509Certificate certificate in certificates)
+                    {
+                        certificate.CheckValidity();
+                    }
+                }
+
+                return ms.ToArray();
+            }
         }
     }
-   
+
 }
