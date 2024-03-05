@@ -1,5 +1,5 @@
 ﻿using System;
-using fiskaltrust.Middleware.Contracts;
+using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Localization.QueueAT.RequestCommands;
 using fiskaltrust.Middleware.Localization.QueueAT.RequestCommands.Factories;
@@ -17,7 +17,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT
             services.AddScoped<IATSSCDProvider, ATSSCDProvider>();
             services.AddScoped<IRequestCommandFactory, RequestCommandFactory>();
             services.AddScoped<ExportService>();
-            services.AddScoped<RequestCommandFactory>();
+            services.AddScoped<IRequestCommandFactory, RequestCommandFactory>();
 
             services.AddScoped<IMarketSpecificJournalProcessor, JournalProcessorAT>();
             services.AddScoped<IMarketSpecificSignProcessor, SignProcessorAT>();

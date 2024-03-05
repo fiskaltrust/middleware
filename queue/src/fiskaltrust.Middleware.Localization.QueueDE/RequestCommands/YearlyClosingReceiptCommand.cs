@@ -19,17 +19,18 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
     internal class YearlyClosingReceiptCommand : ClosingReceiptCommand
     {
         public override string ReceiptName => "Yearly-closing receipt";
-        public YearlyClosingReceiptCommand(IMasterDataService masterDataService, ILogger<RequestCommand> logger, SignatureFactoryDE signatureFactory,
+        public YearlyClosingReceiptCommand(ILogger<RequestCommand> logger, SignatureFactoryDE signatureFactory,
             IDESSCDProvider deSSCDProvider, ITransactionPayloadFactory transactionPayloadFactory, IReadOnlyQueueItemRepository queueItemRepository,
             IConfigurationRepository configurationRepository, IJournalDERepository journalDERepository, MiddlewareConfiguration middlewareConfiguration,
             IPersistentTransactionRepository<FailedStartTransaction> failedStartTransactionRepo, IPersistentTransactionRepository<FailedFinishTransaction> failedFinishTransactionRepo,
-            IPersistentTransactionRepository<OpenTransaction> openTransactionRepo, ITarFileCleanupService tarFileCleanupService, QueueDEConfiguration queueDEConfiguration)
-            : base(masterDataService, logger, signatureFactory, deSSCDProvider, transactionPayloadFactory, queueItemRepository, configurationRepository,
-                  journalDERepository, middlewareConfiguration, failedStartTransactionRepo, failedFinishTransactionRepo, openTransactionRepo, tarFileCleanupService, queueDEConfiguration)
+            IPersistentTransactionRepository<OpenTransaction> openTransactionRepo, ITarFileCleanupService tarFileCleanupService, QueueDEConfiguration queueDEConfiguration, IMasterDataService masterDataService)
+            : base(logger, signatureFactory, deSSCDProvider, transactionPayloadFactory, queueItemRepository, configurationRepository,
+                  journalDERepository, middlewareConfiguration, failedStartTransactionRepo, failedFinishTransactionRepo, openTransactionRepo, tarFileCleanupService, queueDEConfiguration, masterDataService)
         { }
 
         public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueDE queueDE, ReceiptRequest request, ftQueueItem queueItem)
         {
+            _logger.LogTrace("YearlyClosingReceiptCommand.ExecuteAsync [enter].");
             ThrowIfNoImplicitFlow(request);
             ThrowIfTraining(request);
 
@@ -47,21 +48,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 {
                     await PerformTarFileExportAsync(queueItem, queue, queueDE, erase: true).ConfigureAwait(false);
                 }
-
-                var masterDataChanged = false;
-                if (request.IsMasterDataUpdate() && await _masterDataService.HasDataChangedAsync().ConfigureAwait(false))
-                {
-                    await _masterDataService.PersistConfigurationAsync().ConfigureAwait(false);
-                    masterDataChanged = true;
-                    _logger.LogInformation("Master data was updated. The changed master data is valid from from now on, all receipts that were processed until now still refer to the old master data.");
-                }
-
-                var message = masterDataChanged
-                    ? "Yearly-Closing receipt was processed, and a master data update was performed."
-                    : "Yearly-Closing receipt was processed.";
-                var type = masterDataChanged
-                    ? 0x4445_0000_0800_0006
-                    : 0x4445_0000_0000_0006;
+                (var masterDataChanged, var message, var type) = await UpdateMasterData(request);
+                
                 var actionJournals = CreateClosingActionJournals(queueItem, queue, processReceiptResponse.TransactionNumber, masterDataChanged, message, type);
                 return new RequestCommandResponse()
                 {
@@ -80,6 +68,10 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             {
                 _logger.LogCritical(ex, "An exception occured while processing this request.");
                 return await ProcessSSCDFailedReceiptRequest(request, queueItem, queue, queueDE).ConfigureAwait(false);
+            }
+            finally
+            {
+                _logger.LogTrace("YearlyClosingReceiptCommand.ExecuteAsync [exit].");
             }
         }
     }

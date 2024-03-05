@@ -23,7 +23,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.IntegrationTest
         public string TestClientId { get; } = "";
 
         public DeutscheFiskalSCU GetSut() => _instance ?? (_instance = new DeutscheFiskalSCU(Mock.Of<ILogger<DeutscheFiskalSCU>>(), _configuration,
-            new DeutscheFiskalFccInitializationService(_configuration, Mock.Of<ILogger<DeutscheFiskalFccInitializationService>>(), new FirewallHelper()), new DeutscheFiskalFccProcessHost(_configuration, Mock.Of<ILogger<DeutscheFiskalFccProcessHost>>()),
+            new DeutscheFiskalFccInitializationService(_configuration, Mock.Of<ILogger<DeutscheFiskalFccInitializationService>>(), new FirewallHelper()), new DeutscheFiskalFccProcessHost( new FccAdminApiProvider(_configuration, Mock.Of<ILogger<FccAdminApiProvider>>()), _configuration, Mock.Of<ILogger<DeutscheFiskalFccProcessHost>>()),
             new DeutscheFiskalFccDownloadService(_configuration, Mock.Of<ILogger<DeutscheFiskalFccDownloadService>>()), new FccErsApiProvider(_configuration), new FccAdminApiProvider(_configuration, Mock.Of<ILogger<FccAdminApiProvider>>())));
 
         public void Dispose() => _instance?.Dispose();

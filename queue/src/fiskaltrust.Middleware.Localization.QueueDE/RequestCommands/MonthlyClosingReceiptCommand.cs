@@ -19,17 +19,18 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
     {
         public override string ReceiptName => "Monthly-closing receipt";
 
-        public MonthlyClosingReceiptCommand(IMasterDataService masterDataService, ILogger<RequestCommand> logger, SignatureFactoryDE signatureFactory,
+        public MonthlyClosingReceiptCommand(ILogger<RequestCommand> logger, SignatureFactoryDE signatureFactory,
             IDESSCDProvider deSSCDProvider, ITransactionPayloadFactory transactionPayloadFactory, IReadOnlyQueueItemRepository queueItemRepository,
             IConfigurationRepository configurationRepository, IJournalDERepository journalDERepository, MiddlewareConfiguration middlewareConfiguration,
             IPersistentTransactionRepository<FailedStartTransaction> failedStartTransactionRepo, IPersistentTransactionRepository<FailedFinishTransaction> failedFinishTransactionRepo,
-            IPersistentTransactionRepository<OpenTransaction> openTransactionRepo, ITarFileCleanupService tarFileCleanupService, QueueDEConfiguration queueDEConfiguration)
-            : base(masterDataService, logger, signatureFactory, deSSCDProvider, transactionPayloadFactory, queueItemRepository, configurationRepository,
-                  journalDERepository, middlewareConfiguration, failedStartTransactionRepo, failedFinishTransactionRepo, openTransactionRepo, tarFileCleanupService, queueDEConfiguration)
+            IPersistentTransactionRepository<OpenTransaction> openTransactionRepo, ITarFileCleanupService tarFileCleanupService, QueueDEConfiguration queueDEConfiguration, IMasterDataService masterDataService)
+            : base(logger, signatureFactory, deSSCDProvider, transactionPayloadFactory, queueItemRepository, configurationRepository,
+                  journalDERepository, middlewareConfiguration, failedStartTransactionRepo, failedFinishTransactionRepo, openTransactionRepo, tarFileCleanupService, queueDEConfiguration, masterDataService)
         { }
 
         public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueDE queueDE, ReceiptRequest request, ftQueueItem queueItem)
         {
+            _logger.LogTrace("MonthlyClosingReceiptCommand.ExecuteAsync [enter].");
             ThrowIfNoImplicitFlow(request);
             ThrowIfTraining(request);
 
@@ -43,25 +44,12 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 receiptResponse.ftReceiptIdentification = request.GetReceiptIdentification(queue.ftReceiptNumerator, processReceiptResponse.TransactionNumber);
                 receiptResponse.ftSignatures = processReceiptResponse.Signatures.ToArray();
 
-                var masterDataChanged = false;
-                if (request.IsMasterDataUpdate() && await _masterDataService.HasDataChangedAsync().ConfigureAwait(false))
-                {
-                    await _masterDataService.PersistConfigurationAsync().ConfigureAwait(false);
-                    masterDataChanged = true;
-                    _logger.LogInformation("Master data was updated. The changed master data is valid from from now on, all receipts that were processed until now still refer to the old master data.");
-                }
-
                 if (!request.IsTseTarDownloadBypass())
                 {
                     await PerformTarFileExportAsync(queueItem, queue, queueDE, erase: true).ConfigureAwait(false);
                 }
 
-                var message = masterDataChanged
-                    ? "Monthly-Closing receipt was processed, and a master data update was performed."
-                    : "Monthly-Closing receipt was processed.";
-                var type = masterDataChanged
-                    ? 0x4445_0000_0800_0005
-                    : 0x4445_0000_0000_0005;
+                (var masterDataChanged, var message, var type) = await UpdateMasterData(request);
                 var actionJournals = CreateClosingActionJournals(queueItem, queue, processReceiptResponse.TransactionNumber, masterDataChanged, message, type);
                 return new RequestCommandResponse()
                 {
@@ -80,6 +68,9 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             {
                 _logger.LogCritical(ex, "An exception occured while processing this request.");
                 return await ProcessSSCDFailedReceiptRequest(request, queueItem, queue, queueDE).ConfigureAwait(false);
+            }
+            finally{
+                _logger.LogTrace("MonthlyClosingReceiptCommand.ExecuteAsync [exit].");
             }
         }
     }

@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using fiskaltrust.ifPOS.v1;
+using fiskaltrust.ifPOS.v1.at;
 using fiskaltrust.ifPOS.v1.de;
+using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.ifPOS.v1.me;
-using fiskaltrust.ifPOS.v2.at;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Queue.Test.Launcher.Helpers;
 using fiskaltrust.storage.serialization.V0;
@@ -44,7 +44,7 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
 
             config.Configuration.Add("cashboxid", cashBoxConfiguration.ftCashBoxId);
             config.Configuration.Add("accesstoken", _accessToken);
-            config.Configuration.Add("useoffline", false);
+            config.Configuration.Add("useoffline", true);
             config.Configuration.Add("sandbox", true);
             config.Configuration.Add("servicefolder", serviceFolder);
             config.Configuration.Add("configuration", JsonConvert.SerializeObject(cashBoxConfiguration));
@@ -62,53 +62,48 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
                 if (_localization == "ME")
                 {
                     serviceCollection.AddScoped<IClientFactory<IMESSCD>, MESSCDClientFactory>();
+                    OverrideMasterdata(_localization, config);
                 }
-                else if (_localization == "DE")
+                else if (_localization == "IT")
                 {
-                    serviceCollection.AddScoped<IClientFactory<IDESSCD>, DESSCDClientFactory>();
-                    OverrideGermanLocalization(_localization, config);
+                    serviceCollection.AddScoped<IClientFactory<IITSSCD>, ITSSCDClientFactory>();
                 }
                 else if (_localization == "AT")
                 {
-                    AddFeatureFlag(config, "queue-at", true);
-                    config.Package = config.Package.Replace("fiskaltrust.service.sqlite", "fiskaltrust.Middleware.Queue.SQLite");
                     serviceCollection.AddScoped<IClientFactory<IATSSCD>, ATSSCDClientFactory>();
                 }
-
             }
             else
             {
                 serviceCollection.AddScoped<IClientFactory<IDESSCD>, DESSCDClientFactory>();
             }
 
-            if (config.Package == "fiskaltrust.Middleware.Queue.SQLite")
+            if (config.Package == "fiskaltrust.Middleware.Queue.SQLite" || config.Package == "fiskaltrust.service.sqlite")
             {
                 ConfigureSQLite(config, serviceCollection);
+            }
+            else if (config.Package == "fiskaltrust.Middleware.Queue.EF")
+            {
+                ConfigureEF(config, serviceCollection);
+            }
+            else if (config.Package == "fiskaltrust.Middleware.Queue.MySQL")
+            {
+                ConfigureMySQL(config, serviceCollection);
             }
             else
             {
                 throw new NotSupportedException($"The given package {config.Package} is not supported.");
             }
             var provider = serviceCollection.BuildServiceProvider();
-            var pos = provider.GetRequiredService<IPOS>();
+
+            var pos = provider.GetRequiredService<ifPOS.v1.IPOS>();
             HostingHelper.SetupServiceForObject(config, pos, provider.GetRequiredService<ILoggerFactory>());
 
             Console.WriteLine("Press key to end program");
             Console.ReadLine();
         }
 
-        private static void AddFeatureFlag(PackageConfiguration config, string featureFlagKey, bool value)
-        {
-            var key = "previewFeatures";
-            var previewFeatures = config.Configuration.ContainsKey(key)
-                ? JsonConvert.DeserializeObject<Dictionary<string, bool>>(config.Configuration[key].ToString())
-                : new Dictionary<string, bool>();
-            previewFeatures[featureFlagKey] = value;
-
-            config.Configuration[key] = JsonConvert.SerializeObject(previewFeatures);
-        }
-
-        private static void OverrideGermanLocalization(string localization, PackageConfiguration config)
+        private static void OverrideMasterdata(string localization, PackageConfiguration config)
         {
             var key = "init_ftQueue";
             if (config.Configuration.ContainsKey(key))
@@ -137,6 +132,26 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
         private static void ConfigureSQLite(PackageConfiguration queue, ServiceCollection serviceCollection)
         {
             var bootStrapper = new SQLite.PosBootstrapper
+            {
+                Id = queue.Id,
+                Configuration = queue.Configuration
+            };
+            bootStrapper.ConfigureServices(serviceCollection);
+        }
+
+        private static void ConfigureMySQL(PackageConfiguration queue, ServiceCollection serviceCollection)
+        {
+            var bootStrapper = new MySQL.PosBootstrapper
+            {
+                Id = queue.Id,
+                Configuration = queue.Configuration
+            };
+            bootStrapper.ConfigureServices(serviceCollection);
+        }
+
+        private static void ConfigureEF(PackageConfiguration queue, ServiceCollection serviceCollection)
+        {
+            var bootStrapper = new EF.PosBootstrapper
             {
                 Id = queue.Id,
                 Configuration = queue.Configuration

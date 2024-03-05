@@ -23,24 +23,11 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
         public InitialOperationReceiptCommand(IATSSCDProvider sscdProvider, MiddlewareConfiguration middlewareConfiguration, QueueATConfiguration queueATConfiguration, ILogger<RequestCommand> logger)
             : base(sscdProvider, middlewareConfiguration, queueATConfiguration, logger) { }
 
-        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueAT queueAT, ReceiptRequest request, ftQueueItem queueItem)
+        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueAT queueAT, ReceiptRequest request, ftQueueItem queueItem, ReceiptResponse response)
         {
             ThrowIfTraining(request);
-            var response = CreateReceiptResponse(request, queueItem, queueAT, queue);
 
-            if (queue.StartMoment.HasValue)
-            {
-                var alreadyActiveActionJournal = CreateActionJournal(queue, queueItem, $"Queue {queue.ftQueueId} is already activated, initial-operations-receipt cannot be executed.");
-                _logger.LogInformation(alreadyActiveActionJournal.Message);
-
-                return new RequestCommandResponse
-                {
-                    ReceiptResponse = response,
-                    ActionJournals = new() { alreadyActiveActionJournal }
-                };
-            }
-
-            if (request.cbChargeItems?.Count() != 0 || request.cbPayItems?.Count() != 0)
+            if ((request.cbChargeItems != null && request.cbChargeItems?.Count() != 0) || (request.cbPayItems != null && request.cbPayItems?.Count() != 0))
             {
                 var notZeroReceiptActionJournal = CreateActionJournal(queue, queueItem, $"Tried to activate {queue.ftQueueId}, but the incoming receipt is not a zero receipt.");
                 _logger.LogInformation(notZeroReceiptActionJournal.Message);
@@ -104,16 +91,6 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                 }
             }
 
-            queueAT.LastSignatureHash = CreateLastReceiptSignature(queueAT.CashBoxIdentification);
-            queueAT.LastSettlementMoment = new DateTime(request.cbReceiptMoment.Year, request.cbReceiptMoment.Month, 1);
-            queueAT.LastSettlementMonth = request.cbReceiptMoment.Month;
-
-            var aj = CreateActionJournal(queue, queueItem, $"Initial operation receipt: Set LastSignature to \"{queueAT.LastSignatureHash}\" and LastSettlementMoment to \"{queueAT.LastSettlementMoment}\".",
-                JsonConvert.SerializeObject(new { queueAT.LastSignatureHash, queueAT.LastSettlementMoment }));
-            _logger.LogInformation(aj.Message);
-            actionJournals.Add(aj);
-
-
             var (receiptIdentification, ftStateData, isBackupScuUsed, signatureItems, journalAT) = await SignReceiptAsync(queueAT, request, response.ftReceiptIdentification, response.ftReceiptMoment, queueItem.ftQueueItemId);
             response.ftSignatures = response.ftSignatures.Concat(signatureItems).ToArray();
             response.ftReceiptIdentification = receiptIdentification;
@@ -122,6 +99,22 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
             {
                 response.ftState |= 0x80;
             }
+            if (queue.StartMoment.HasValue)
+            {
+                var alreadyActiveActionJournal = CreateActionJournal(queue, queueItem, $"Queue {queue.ftQueueId} is already activated, initial-operations-receipt cannot be executed.");
+                _logger.LogInformation(alreadyActiveActionJournal.Message);
+                actionJournals.Add(alreadyActiveActionJournal);
+                return (actionJournals, null);
+            }
+
+            queueAT.LastSignatureHash = CreateLastReceiptSignature(queueAT.CashBoxIdentification);
+            queueAT.LastSettlementMoment = new DateTime(request.cbReceiptMoment.Year, request.cbReceiptMoment.Month, 1);
+            queueAT.LastSettlementMonth = request.cbReceiptMoment.Month;
+
+            var aj = CreateActionJournal(queue, queueItem, $"Initial operation receipt: Set LastSignature to \"{queueAT.LastSignatureHash}\" and LastSettlementMoment to \"{queueAT.LastSettlementMoment}\".",
+                JsonConvert.SerializeObject(new { queueAT.LastSignatureHash, queueAT.LastSettlementMoment }));
+            _logger.LogInformation(aj.Message);
+            actionJournals.Add(aj);
 
             if (journalAT != null)
             {

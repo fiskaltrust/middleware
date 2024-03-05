@@ -1,5 +1,5 @@
 steps:
-- powershell: |   
+- powershell: |
     $nugetFeed = if ($Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/release/") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/main") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/tags/")) { "release" } else { "dev" }
     Write-Host "##vso[task.setvariable variable=NuGetFeed;]$nugetFeed"
   displayName: Set NuGet feed
@@ -13,6 +13,9 @@ steps:
     path: $(UserProfile)/.nuget/packages
   displayName: Cache NuGet packages
 
+- pwsh: |
+    & ${Env:ANDROID_SDK_ROOT}\cmdline-tools\latest\bin\sdkmanager.bat "platforms;android-28"
+
 - task: NuGetToolInstaller@1
 
 - task: NuGetCommand@2
@@ -21,6 +24,12 @@ steps:
     restoreSolution: '$(WorkingDirectory)/$(Solution)'
     feedsToUse: 'select'
     vstsFeed: '$(NuGetFeed)'
+
+- task: JavaToolInstaller@0
+  inputs:
+    versionSpec: '11'
+    jdkArchitectureOption: 'x64'
+    jdkSourceOption: 'PreInstalled'
 
 - task: VSBuild@1
   inputs:

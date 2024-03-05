@@ -25,14 +25,15 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             ITransactionPayloadFactory transactionPayloadFactory, IReadOnlyQueueItemRepository queueItemRepository,
             IConfigurationRepository configurationRepository, IJournalDERepository journalDERepository, MiddlewareConfiguration middlewareConfiguration,
             IPersistentTransactionRepository<FailedStartTransaction> failedStartTransactionRepo, IPersistentTransactionRepository<FailedFinishTransaction> failedFinishTransactionRepo,
-            IPersistentTransactionRepository<OpenTransaction> openTransactionRepo, ITarFileCleanupService tarFileCleanupService, QueueDEConfiguration queueDEConfiguration)
+            IPersistentTransactionRepository<OpenTransaction> openTransactionRepo, ITarFileCleanupService tarFileCleanupService, QueueDEConfiguration queueDEConfiguration, IMasterDataService masterDataService)
             : base(logger, signatureFactory, deSSCDProvider, transactionPayloadFactory, queueItemRepository, configurationRepository, journalDERepository,
-                  middlewareConfiguration, failedStartTransactionRepo, failedFinishTransactionRepo, openTransactionRepo, tarFileCleanupService, queueDEConfiguration)
+                  middlewareConfiguration, failedStartTransactionRepo, failedFinishTransactionRepo, openTransactionRepo, tarFileCleanupService, queueDEConfiguration, masterDataService)
         {
         }
 
         public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueDE queueDE, ReceiptRequest request, ftQueueItem queueItem)
         {
+            _logger.LogTrace("ZeroReceiptCommand.ExecuteAsync [enter].");
             ThrowIfNoImplicitFlow(request);
 
             var (processType, payload) = _transactionPayloadFactory.CreateReceiptPayload(request);
@@ -47,11 +48,13 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
                 if (queueDE.SSCDFailCount > 0)
                 {
+                    _logger.LogTrace("ZeroReceiptCommand.ExecuteAsync Section (queueDE.SSCDFailCount > 0) [enter].");
                     _logger.LogDebug($"Closing SSCDFail-Mode");
                     var failedFinishTransactions = (await _failedFinishTransactionRepo.GetAsync().ConfigureAwait(false)).ToList();
 
                     if (request.IsRemoveOpenTransactionsWhichAreNotOnTse())
                     {
+                        _logger.LogTrace("ZeroReceiptCommand.ExecuteAsync Section (IsRemoveOpenTransactionsWhichAreNotOnTse) [enter].");
                         var tseInfo = await _deSSCDProvider.Instance.GetTseInfoAsync().ConfigureAwait(false);
                         var failedFinishTransactionsNotExistingOnTse = tseInfo.CurrentStartedTransactionNumbers != null
                             ? failedFinishTransactions.Where(ft => ft != null && !tseInfo.CurrentStartedTransactionNumbers.Contains((ulong) ((FailedFinishTransaction) ft).TransactionNumber))
@@ -76,6 +79,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                                 }
                             );
                         }
+                        _logger.LogTrace("ZeroReceiptCommand.ExecuteAsync Section (IsRemoveOpenTransactionsWhichAreNotOnTse) [exit].");
                     }
 
                     await ProcessFailedFinishTransactionAsync(processReceiptResponse.Signatures).ConfigureAwait(false);
@@ -116,10 +120,12 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                     queueDE.SSCDFailCount = 0;
                     queueDE.SSCDFailMoment = null;
                     queueDE.SSCDFailQueueItemId = null;
+                    _logger.LogTrace("ZeroReceiptCommand.ExecuteAsync Section (queueDE.SSCDFailCount > 0) [exit].");
                 }
 
                 if (queueDE.UsedFailedCount > 0)
                 {
+                    _logger.LogTrace("ZeroReceiptCommand.ExecuteAsync Section (queueDE.UsedFailedCount > 0) [enter].");
                     var caption = $"Ausfallsnacherfassung abgeschlossen am {DateTime.UtcNow:G}.";
                     var data = $"{queueDE.UsedFailedCount} Aktionen im Zeitraum von {queueDE.UsedFailedMomentMin:G} bis {queueDE.UsedFailedMomentMax:G}";
 
@@ -152,6 +158,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                     queueDE.UsedFailedMomentMin = null;
                     queueDE.UsedFailedMomentMax = null;
                     queueDE.UsedFailedQueueItemId = null;
+                    _logger.LogTrace("ZeroReceiptCommand.ExecuteAsync Section (queueDE.UsedFailedCount > 0) [exit].");
                 }
 
                 if (request.IsTseInfoRequest())
@@ -163,7 +170,9 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
                 if (request.IsTseSelftestRequest())
                 {
+                    _logger.LogTrace("ZeroReceiptCommand.ExecuteAsync Section (IsTseSelftestRequest [enter].");
                     await _deSSCDProvider.Instance.ExecuteSelfTestAsync().ConfigureAwait(false);
+                    _logger.LogTrace("ZeroReceiptCommand.ExecuteAsync Section (IsTseSelftestRequest [exit].");
                 }
 
                 if (request.IsTseTarDownloadRequest())
@@ -195,10 +204,15 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 _logger.LogCritical(ex, "An exception occured while processing this request.");
                 return await ProcessSSCDFailedReceiptRequest(request, queueItem, queue, queueDE).ConfigureAwait(false);
             }
+            finally
+            {
+                _logger.LogTrace("ZeroReceiptCommand.ExecuteAsync [exit].");
+            }
         }
 
         protected async Task ProcessFailedFinishTransactionAsync(List<SignaturItem> signatures)
         {
+            _logger.LogTrace("ZeroReceiptCommand.ProcessFailedFinishTransactionAsync [enter].");
             foreach (var failedFinishTransaction in (await _failedFinishTransactionRepo.GetAsync().ConfigureAwait(false)).ToList())
             {
                 _logger.LogDebug($"Finishing SSCDFail-FinishTransaction: {failedFinishTransaction.cbReceiptReference}");
@@ -227,10 +241,12 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 }
                 await _failedFinishTransactionRepo.RemoveAsync(failedFinishTransaction.cbReceiptReference).ConfigureAwait(false);
             }
+            _logger.LogTrace("ZeroReceiptCommand.ProcessFailedFinishTransactionAsync [exit].");
         }
 
         protected async Task ProcessFailedStartTransactionsAsync(List<SignaturItem> signatures)
         {
+            _logger.LogTrace("ZeroReceiptCommand.ProcessFailedStartTransactionsAsync [enter].");
             foreach (var failedStartTransaction in (await _failedStartTransactionRepo.GetAsync().ConfigureAwait(false)).ToList())
             {
                 _logger.LogDebug($"Starting SSCDFail-StartTransaction: {failedStartTransaction.cbReceiptReference}");
@@ -256,6 +272,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
                 await _failedStartTransactionRepo.RemoveAsync(failedStartTransaction.cbReceiptReference).ConfigureAwait(false);
             }
+            _logger.LogTrace("ZeroReceiptCommand.ProcessFailedStartTransactionsAsync [exit].");
         }
     }
 }

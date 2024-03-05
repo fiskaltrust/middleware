@@ -100,9 +100,9 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.Factories
             return JsonConvert.SerializeObject(payload);
         }
 
-        public static string GetCopyPayload(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, ftSignaturCreationUnitFR signaturCreationUnitFR, string lastHash)
+        public static CopyPayload GetCopyPayload(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, ftSignaturCreationUnitFR signaturCreationUnitFR, string lastHash)
         {
-            var payload = new CopyPayload()
+            return new CopyPayload()
             {
                 QueueId = Guid.Parse(receiptResponse.ftQueueID),
                 CashBoxIdentification = receiptResponse.ftCashBoxIdentification,
@@ -115,8 +115,6 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.Factories
                 LastHash = lastHash,
                 CertificateSerialNumber = signaturCreationUnitFR.CertificateSerialNumber
             };
-
-            return JsonConvert.SerializeObject(payload);
         }
 
         public static string GetArchivePayload(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, ftQueueFR queueFr, ftSignaturCreationUnitFR signaturCreationUnitFR,

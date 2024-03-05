@@ -10,6 +10,7 @@ using fiskaltrust.Middleware.Storage.InMemory.Repositories;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories.AT;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories.DE;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories.FR;
+using fiskaltrust.Middleware.Storage.InMemory.Repositories.IT;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories.MasterData;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories.ME;
 using fiskaltrust.storage.V0;
@@ -66,7 +67,6 @@ namespace fiskaltrust.Middleware.Storage.InMemory
             services.AddSingleton<IMiddlewareJournalDERepository, InMemoryJournalDERepository>();
             services.AddSingleton<IJournalDERepository, InMemoryJournalDERepository>();
             services.AddSingleton<IReadOnlyJournalDERepository, InMemoryJournalDERepository>();
-            services.AddSingleton<IJournalDERepository, InMemoryJournalDERepository>();
             services.AddSingleton<IMiddlewareRepository<ftJournalDE>, InMemoryJournalDERepository>();
 
             services.AddSingleton<IJournalFRRepository, InMemoryJournalFRRepository>();
@@ -78,6 +78,10 @@ namespace fiskaltrust.Middleware.Storage.InMemory
             services.AddSingleton<IJournalMERepository, InMemoryJournalMERepository>();
             services.AddSingleton<IReadOnlyJournalMERepository, InMemoryJournalMERepository>();
             services.AddSingleton<IMiddlewareRepository<ftJournalME>, InMemoryJournalMERepository>();
+
+            services.AddSingleton<IJournalITRepository, InMemoryJournalITRepository>();
+            services.AddSingleton<IReadOnlyJournalITRepository, InMemoryJournalITRepository>();
+            services.AddSingleton<IMiddlewareJournalITRepository, InMemoryJournalITRepository>();
 
             services.AddSingleton<IReceiptJournalRepository, InMemoryReceiptJournalRepository>();
             services.AddSingleton<IReadOnlyReceiptJournalRepository, InMemoryReceiptJournalRepository>();

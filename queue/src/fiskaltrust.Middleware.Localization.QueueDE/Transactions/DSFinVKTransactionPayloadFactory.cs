@@ -7,14 +7,23 @@ using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Localization.QueueDE.Constants;
 using fiskaltrust.Middleware.Localization.QueueDE.Extensions;
 using fiskaltrust.Middleware.Localization.QueueDE.Helpers;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 
 namespace fiskaltrust.Middleware.Localization.QueueDE.Transactions
 {
     public class DSFinVKTransactionPayloadFactory : ITransactionPayloadFactory
     {
+        private readonly ILogger<DSFinVKTransactionPayloadFactory> _logger;
+
+        public DSFinVKTransactionPayloadFactory(ILogger<DSFinVKTransactionPayloadFactory> logger)
+        {
+            _logger = logger;
+        }
+
         public (string processType, string payload) CreateReceiptPayload(ReceiptRequest receiptRequest)
         {
+            _logger.LogTrace("DSFinVKTransactionPayloadFactory.CreateReceiptPayload [enter].");
             var processType = receiptRequest.GetTseProcessType();
             string payload;
             if (processType == DSFinVKConstants.PROCESS_TYPE_EMPTY)
@@ -63,11 +72,13 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Transactions
             {
                 throw new NotImplementedException($"The given processType {processType} is not yet supported.");
             }
+            _logger.LogTrace("DSFinVKTransactionPayloadFactory.CreateReceiptPayload [exit].");
             return (processType, payload);
         }
 
         public (string processType, string payload) CreateAutomaticallyCanceledReceiptPayload()
         {
+            _logger.LogTrace("DSFinVKTransactionPayloadFactory.CreateAutomaticallyCanceledReceiptPayload [enter].");
             // Create an empty request to re-use the logic for constructing taxes and payments
             var emptyReceiptRequest = new ReceiptRequest { cbChargeItems = Array.Empty<ChargeItem>(), cbPayItems = Array.Empty<PayItem>() };
 
@@ -75,6 +86,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Transactions
             var payments = GetReceiptPayments(emptyReceiptRequest);
             var payload = $"{DSFinVKConstants.BON_TYP_OTHERACTION_FAILED}^{taxes}^{payments}";
 
+            _logger.LogTrace("DSFinVKTransactionPayloadFactory.CreateAutomaticallyCanceledReceiptPayload [exit].");
             return (DSFinVKConstants.PROCESS_TYPE_KASSENBELEG_V1, payload);
         }
 

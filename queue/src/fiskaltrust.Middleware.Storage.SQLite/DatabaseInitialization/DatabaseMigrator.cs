@@ -42,8 +42,10 @@ namespace fiskaltrust.Middleware.Storage.SQLite.DatabaseInitialization
             SqlMapper.AddTypeHandler(typeof(DateTime?), new SQLiteNullableDateTimeTypeHandler());
         }
 
-        public async Task MigrateAsync()
+        public async Task<IEnumerable<BaseStorageBootStrapper.Migrations>> MigrateAsync()
         {
+            var newlyAppliedMigrations = new List<BaseStorageBootStrapper.Migrations>();
+
             var migrationDir = _configuration.TryGetValue(MIGRATIONS_CONFIG_KEY, out var value)
                 ? value.ToString()
                 : Path.Combine(typeof(DatabaseMigrator).Assembly.GetDirectoryPath(), MIGRATION_DIR);
@@ -73,9 +75,15 @@ namespace fiskaltrust.Middleware.Storage.SQLite.DatabaseInitialization
                 await connection.ExecuteAsync(File.ReadAllText(migrationScript), commandTimeout: _timeoutSec).ConfigureAwait(false);
                 await SetCurrentVersionAsync(connection, Path.GetFileNameWithoutExtension(migrationScript)).ConfigureAwait(false);
                 _logger.LogDebug($"Applying the migration script was successful. Set current version to {Path.GetFileNameWithoutExtension(migrationScript)}.");
-            }
-        }
 
+                if (Path.GetFileName(migrationScript) == "012_ftJournalFRCopyPayload.sqlite")
+                {
+                    newlyAppliedMigrations.Add(BaseStorageBootStrapper.Migrations.JournalFRCopyPayload);
+                }
+            }
+
+            return newlyAppliedMigrations;
+        }
         private async Task<bool> IsLegacyDatabaseAsync(IDbConnection connection)
         {
             var legacyVersionHistoryTable = await connection.ExecuteScalarAsync<string>("SELECT name FROM sqlite_master WHERE type='table' AND name='__VersionHistory'").ConfigureAwait(false);

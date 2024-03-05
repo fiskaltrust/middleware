@@ -1,0 +1,122 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build"
+  xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{F9A0B22D-31F7-4323-BF69-4C74333EEA29}</ProjectGuid>
+    <ProjectTypeGuids>{EFBA0AD7-5A72-4C68-AF49-83D382785DCF};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
+    <TemplateGuid>{9ef11e43-1701-4396-8835-8392d57abb70}</TemplateGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>fiskaltrust.Middleware.SCU.DE.SwissbitCloudAndroid</RootNamespace>
+    <AssemblyName>fiskaltrust.Middleware.SCU.DE.SwissbitCloudAndroid</AssemblyName>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>True</Deterministic>
+    <AndroidResgenFile>Resources\Resource.designer.cs</AndroidResgenFile>
+    <GenerateSerializationAssemblies>Off</GenerateSerializationAssemblies>
+    <AndroidUseLatestPlatformSdk>false</AndroidUseLatestPlatformSdk>
+    <TargetFrameworkVersion>v12.0</TargetFrameworkVersion>
+    <AndroidUseAapt2>true</AndroidUseAapt2>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>portable</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>portable</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="Mono.Android" />
+    <Reference Include="mscorlib" />
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Constants\SwissbitCloudAndroidConstants.cs" />
+    <Compile Include="Exceptions\WrappedFailureException.cs" />
+    <Compile Include="Callbacks\FccClientStartCallback.cs" />
+    <Compile Include="Callbacks\ResultCallback.cs" />
+    <Compile Include="Helpers\DateTimeUtil.cs" />
+    <Compile Include="Management\ISwissbitCloudManagementClient.cs" />
+    <Compile Include="Management\SwissbitCloudManagementClient.cs" />
+    <Compile Include="SwissbitCloudAndroidSCU.cs" />
+    <Compile Include="Exceptions\WrappedClientException.cs" />
+    <Compile Include="Resources\Resource.designer.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SwissbitCloudAndroidSCUConfiguration.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\AboutResources.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="fiskaltrust.interface">
+      <Version>1.3.1</Version>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions">
+      <Version>3.1.4</Version>
+    </PackageReference>
+    <PackageReference Include="Newtonsoft.Json">
+      <Version>13.0.1</Version>
+    </PackageReference>
+    <PackageReference Include="org.jetbrains.kotlin.kotlin.parcelize.runtime">
+      <Version>1.5.20.1</Version>
+    </PackageReference>
+    <PackageReference Include="System.Net.Http">
+      <Version>4.3.4</Version>
+    </PackageReference>
+    <PackageReference Include="Xamarin.AndroidX.AppCompat" Version="1.2.0.5" />
+    <PackageReference Include="Xamarin.Kotlin.Reflect">
+      <Version>1.6.0.1</Version>
+    </PackageReference>
+    <PackageReference Include="Xamarin.Kotlin.StdLib">
+      <Version>1.6.0.1</Version>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <AndroidResource Include="Resources\values\strings.xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Resources\drawable\" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference
+      Include="..\fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser\fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser.csproj">
+      <Project>{B8B0F806-BB44-4C0E-8327-26119DEA0DAE}</Project>
+      <Name>fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser</Name>
+    </ProjectReference>
+    <ProjectReference
+      Include="..\fiskaltrust.Middleware.SCU.DE.SwissbitCloudAndroid.Bindings.FccLibrary\fiskaltrust.Middleware.SCU.DE.SwissbitCloudAndroid.Bindings.FccLibrary.csproj">
+      <Project>{737c7190-d5e3-44bb-a049-ed1d36ad7c95}</Project>
+      <Name>fiskaltrust.Middleware.SCU.DE.SwissbitCloudAndroid.Bindings.FccLibrary</Name>
+    </ProjectReference>
+    <ProjectReference
+      Include="..\fiskaltrust.Middleware.SCU.DE.SwissbitCloudAndroid.Bindings.FccApi\fiskaltrust.Middleware.SCU.DE.SwissbitCloudAndroid.Bindings.FccApi.csproj">
+      <Project>{da07a1a6-5301-43ce-a15d-94d32f3b357a}</Project>
+      <Name>fiskaltrust.Middleware.SCU.DE.SwissbitCloudAndroid.Bindings.FccApi</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath)\Xamarin\Android\Xamarin.Android.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

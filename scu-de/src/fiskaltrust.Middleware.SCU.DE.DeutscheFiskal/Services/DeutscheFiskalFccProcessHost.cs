@@ -2,7 +2,10 @@
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
+using fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Communication;
 using fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Constants;
 using fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Helpers;
 using fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services.Interfaces;
@@ -14,15 +17,17 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
     {
         private readonly DeutscheFiskalSCUConfiguration _configuration;
         private readonly ILogger<DeutscheFiskalFccProcessHost> _logger;
+        private readonly FccAdminApiProvider _fccAdminApiProvider;
 
         private Process _process;
         private bool _startedProcessInline;
 
-        public DeutscheFiskalFccProcessHost(DeutscheFiskalSCUConfiguration configuration, ILogger<DeutscheFiskalFccProcessHost> logger)
+        public DeutscheFiskalFccProcessHost(FccAdminApiProvider fccAdminApiProvider, DeutscheFiskalSCUConfiguration configuration, ILogger<DeutscheFiskalFccProcessHost> logger)
         {
             _configuration = configuration;
             _logger = logger;
             IsExtern = string.IsNullOrEmpty(configuration.FccUri) ? false : true;
+            _fccAdminApiProvider = fccAdminApiProvider;
         }
         public bool IsRunning => !_process?.HasExited ?? false;
         public bool IsExtern { get; private set; }
@@ -53,7 +58,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
                 shellProcess.BeginOutputReadLine();
                 shellProcess.BeginErrorReadLine();
 
-                await WaitUntilFccIsAvailable(DeutscheFiskalConstants.DefaultProcessTimeoutMs);
+                await WaitUntilFccIsAvailable(_configuration.ProcessTimeoutSec, shellProcess);
                 _process = GetProcessIfRunning(fccDirectory, _logger);
                 _startedProcessInline = true;
             }
@@ -82,19 +87,48 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
             }
         }
 
-        private async Task WaitUntilFccIsAvailable(int timeoutMs)
+        private async Task WaitUntilFccIsAvailable(int timeoutSec, Process shellProcess)
         {
-            var endTime = DateTime.Now.AddMilliseconds(timeoutMs);
+            var endTime = DateTime.Now.AddSeconds(timeoutSec);
             while (DateTime.Now < endTime)
             {
-                if (await HttpHelpers.IsAddressAvailable($"http://localhost:{_configuration.FccPort ?? DeutscheFiskalConstants.DefaultPort}/actuator/health"))
+                if (await IsAddressAvailable($"http://localhost:{_configuration.FccPort ?? DeutscheFiskalConstants.DefaultPort}/actuator/health"))
                 {
                     return;
+                }
+                if (shellProcess.HasExited)
+                {
+                    throw new OperationCanceledException("The FCC process has exited.");
                 }
                 await Task.Delay(500);
             }
 
-            throw new TimeoutException($"Starting the FCC service took more than {timeoutMs}ms, hence the process was canceled.");
+            throw new TimeoutException($"Starting the FCC service took more than the configured ProcessTimeoutSec {timeoutSec} seconds, hence the process was canceled.");
+        }
+
+        private async Task<bool> IsAddressAvailable(string address)
+        {
+            using (var client = _fccAdminApiProvider.GetBasicAuthActuatorClient())
+            {
+                try
+                {
+                    var result = await client.GetAsync(address);
+                    return result.IsSuccessStatusCode;
+                }
+                catch (Exception)
+                {
+                    return false;
+                }
+            }
+        }
+        public async Task<string> QueryMetrics()
+        {
+            using (var client = _fccAdminApiProvider.GetBasicAuthActuatorClient())
+            {
+                var result = await client.GetAsync("http://localhost:20001/actuator/metrics/http.server.requests");
+
+                return await result.Content.ReadAsStringAsync();
+            }
         }
 
         public void Dispose()

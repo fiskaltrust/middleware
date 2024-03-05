@@ -15,10 +15,10 @@ namespace fiskaltrust.Middleware.Storage.EFCore.AcceptanceTest.PostgreSQL
 
         public EFCorePostgreSQLConfigurationRepositoryTests(EFCorePostgreSQLStorageCollectionFixture fixture) => _fixture = fixture;
 
-        public override async Task<IReadOnlyConfigurationRepository> CreateReadOnlyRepository(IEnumerable<ftCashBox> cashBoxes = null, IEnumerable<ftQueue> queues = null, IEnumerable<ftQueueAT> queuesAT = null, IEnumerable<ftQueueDE> queuesDE = null, IEnumerable<ftQueueFR> queuesFR = null, IEnumerable<ftQueueME> queuesME = null, IEnumerable<ftSignaturCreationUnitAT> signatureCreateUnitsAT = null, IEnumerable<ftSignaturCreationUnitDE> signatureCreateUnitsDE = null, IEnumerable<ftSignaturCreationUnitFR> signatureCreateUnitsFR = null, IEnumerable<ftSignaturCreationUnitME> signatureCreateUnitsME = null)
-            => await CreateRepository(cashBoxes, queues, queuesAT, queuesDE, queuesFR, queuesME, signatureCreateUnitsAT, signatureCreateUnitsDE, signatureCreateUnitsFR, signatureCreateUnitsME);
+        public override async Task<IReadOnlyConfigurationRepository> CreateReadOnlyRepository(IEnumerable<ftCashBox> cashBoxes = null, IEnumerable<ftQueue> queues = null, IEnumerable<ftQueueAT> queuesAT = null, IEnumerable<ftQueueDE> queuesDE = null, IEnumerable<ftQueueFR> queuesFR = null, IEnumerable<ftQueueIT> queuesIT = null, IEnumerable<ftQueueME> queuesME = null, IEnumerable<ftSignaturCreationUnitAT> signatureCreateUnitsAT = null, IEnumerable<ftSignaturCreationUnitDE> signatureCreateUnitsDE = null, IEnumerable<ftSignaturCreationUnitFR> signatureCreateUnitsFR = null, IEnumerable<ftSignaturCreationUnitIT> signatureCreateUnitsIT = null, IEnumerable<ftSignaturCreationUnitME> signatureCreateUnitsME = null)
+            => await CreateRepository(cashBoxes, queues, queuesAT, queuesDE, queuesFR, queuesIT, queuesME, signatureCreateUnitsAT, signatureCreateUnitsDE, signatureCreateUnitsFR, signatureCreateUnitsIT, signatureCreateUnitsME);
 
-        public override async Task<IConfigurationRepository> CreateRepository(IEnumerable<ftCashBox> cashBoxes = null, IEnumerable<ftQueue> queues = null, IEnumerable<ftQueueAT> queuesAT = null, IEnumerable<ftQueueDE> queuesDE = null, IEnumerable<ftQueueFR> queuesFR = null, IEnumerable<ftQueueME> queuesME = null, IEnumerable<ftSignaturCreationUnitAT> signatureCreateUnitsAT = null, IEnumerable<ftSignaturCreationUnitDE> signatureCreateUnitsDE = null, IEnumerable<ftSignaturCreationUnitFR> signatureCreateUnitsFR = null, IEnumerable<ftSignaturCreationUnitME> signatureCreateUnitsME = null)
+        public override async Task<IConfigurationRepository> CreateRepository(IEnumerable<ftCashBox> cashBoxes = null, IEnumerable<ftQueue> queues = null, IEnumerable<ftQueueAT> queuesAT = null, IEnumerable<ftQueueDE> queuesDE = null, IEnumerable<ftQueueFR> queuesFR = null, IEnumerable<ftQueueIT> queuesIT = null, IEnumerable<ftQueueME> queuesME = null, IEnumerable<ftSignaturCreationUnitAT> signatureCreateUnitsAT = null, IEnumerable<ftSignaturCreationUnitDE> signatureCreateUnitsDE = null, IEnumerable<ftSignaturCreationUnitFR> signatureCreateUnitsFR = null, IEnumerable<ftSignaturCreationUnitIT> signatureCreateUnitsIT = null, IEnumerable<ftSignaturCreationUnitME> signatureCreateUnitsME = null)
         {
             var repository = new EFCoreConfigurationRepository(_fixture.Context);
             foreach (var item in cashBoxes ?? new List<ftCashBox>())
@@ -46,6 +46,11 @@ namespace fiskaltrust.Middleware.Storage.EFCore.AcceptanceTest.PostgreSQL
                 await repository.InsertOrUpdateQueueFRAsync(item);
             }
 
+            foreach (var item in queuesIT ?? new List<ftQueueIT>())
+            {
+                await repository.InsertOrUpdateQueueITAsync(item);
+            }
+
             foreach (var item in queuesME ?? new List<ftQueueME>())
             {
                 await repository.InsertOrUpdateQueueMEAsync(item);
@@ -66,22 +71,29 @@ namespace fiskaltrust.Middleware.Storage.EFCore.AcceptanceTest.PostgreSQL
                 await repository.InsertOrUpdateSignaturCreationUnitMEAsync(item);
             }
 
+            foreach (var item in signatureCreateUnitsIT ?? new List<ftSignaturCreationUnitIT>())
+            {
+                await repository.InsertOrUpdateSignaturCreationUnitITAsync(item);
+            }
+
             foreach (var item in signatureCreateUnitsFR ?? new List<ftSignaturCreationUnitFR>())
             {
                 await repository.InsertOrUpdateSignaturCreationUnitFRAsync(item);
             }
             return repository;
         }
-        public override void DisposeDatabase() 
+        public override void DisposeDatabase()
         {
             _ = EFCorePostgreSQLStorageCollectionFixture.TruncateTableAsync("ftQueue");
             _ = EFCorePostgreSQLStorageCollectionFixture.TruncateTableAsync("ftQueueAT");
             _ = EFCorePostgreSQLStorageCollectionFixture.TruncateTableAsync("ftQueueDE");
             _ = EFCorePostgreSQLStorageCollectionFixture.TruncateTableAsync("ftQueueFR");
+            _ = EFCorePostgreSQLStorageCollectionFixture.TruncateTableAsync("ftQueueIT");
             _ = EFCorePostgreSQLStorageCollectionFixture.TruncateTableAsync("ftQueueME");
             _ = EFCorePostgreSQLStorageCollectionFixture.TruncateTableAsync("ftSignaturCreationUnitAT");
             _ = EFCorePostgreSQLStorageCollectionFixture.TruncateTableAsync("ftSignaturCreationUnitDE");
             _ = EFCorePostgreSQLStorageCollectionFixture.TruncateTableAsync("ftSignaturCreationUnitFR");
+            _ = EFCorePostgreSQLStorageCollectionFixture.TruncateTableAsync("ftSignaturCreationUnitIT");
             _ = EFCorePostgreSQLStorageCollectionFixture.TruncateTableAsync("ftSignaturCreationUnitME");
             _ = EFCorePostgreSQLStorageCollectionFixture.TruncateTableAsync("ftCashBox");
         }

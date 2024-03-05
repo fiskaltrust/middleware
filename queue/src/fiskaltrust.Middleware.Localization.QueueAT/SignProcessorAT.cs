@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.Middleware.Contracts;
 using fiskaltrust.Middleware.Localization.QueueAT.Models;
 using fiskaltrust.Middleware.Localization.QueueAT.RequestCommands;
 using fiskaltrust.Middleware.Localization.QueueAT.RequestCommands.Factories;
 using fiskaltrust.storage.V0;
 using fiskaltrust.Middleware.Localization.QueueAT.Extensions;
 using fiskaltrust.Middleware.Localization.QueueAT.Helpers;
+using fiskaltrust.Middleware.Contracts.Interfaces;
 
 namespace fiskaltrust.Middleware.Localization.QueueAT
 {
@@ -37,14 +37,16 @@ namespace fiskaltrust.Middleware.Localization.QueueAT
                 throw new NotImplementedException("ClosedSystemKind is currently not supported.");
             }
 
-            var requestCommandResponse = await PerformReceiptRequest(request, queueItem, queue, queueAT).ConfigureAwait(false);
 
             var additionalActionJournals = new List<ftActionJournal>();
-            additionalActionJournals.AddRange(ProcessSSCDFailedReceipt(queueItem, requestCommandResponse.ReceiptResponse, requestCommandResponse.JournalAT, queue, queueAT));
-            additionalActionJournals.AddRange(ProcessFailedReceipt(queueItem, request, requestCommandResponse.ReceiptResponse, queueAT));
-            additionalActionJournals.AddRange(ProcessHandwrittenReceipt(queueItem, request, requestCommandResponse.ReceiptResponse, queueAT));
+            var response = RequestCommand.CreateReceiptResponse(request, queueItem, queueAT, queue);
 
-            AddStateFlagIfNewMonthOrYearStarted(request, requestCommandResponse.ReceiptResponse, queueAT);
+            additionalActionJournals.AddRange(ProcessSSCDFailedReceipt(queueItem, response, null, queue, queueAT));
+            additionalActionJournals.AddRange(ProcessFailedReceipt(queueItem, request, response, queueAT));
+            additionalActionJournals.AddRange(ProcessHandwrittenReceipt(queueItem, request, response, queueAT));
+
+            AddStateFlagIfNewMonthOrYearStarted(request, response, queueAT);
+            var requestCommandResponse = await PerformReceiptRequest(request, queueItem, queue, queueAT, response).ConfigureAwait(false);
 
             if (requestCommandResponse.JournalAT != null)
             {
@@ -69,8 +71,8 @@ namespace fiskaltrust.Middleware.Localization.QueueAT
             var lastSettlementYear = lastSettlementMoment.Year;
             if (lastSettlementMoment.Day < 15)
             {
-                lastSettlementMonth = lastSettlementMoment.AddMonths(-1).Month;
-                lastSettlementYear = lastSettlementMoment.AddMonths(-1).Year;
+                lastSettlementMonth = lastSettlementMoment.AddDays(-(lastSettlementMoment.Day + 1)).Month;
+                lastSettlementYear = lastSettlementMoment.AddDays(-(lastSettlementMoment.Day + 1)).Year;
             }
 
             var nextSettlement = new DateTime(lastSettlementYear, lastSettlementMonth, 1).AddMonths(2);
@@ -188,7 +190,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT
             return actionJournals;
         }
 
-        private async Task<RequestCommandResponse> PerformReceiptRequest(ReceiptRequest request, ftQueueItem queueItem, ftQueue queue, ftQueueAT queueAT)
+        private async Task<RequestCommandResponse> PerformReceiptRequest(ReceiptRequest request, ftQueueItem queueItem, ftQueue queue, ftQueueAT queueAT, ReceiptResponse response)
         {
             RequestCommand command;
             try
@@ -200,7 +202,10 @@ namespace fiskaltrust.Middleware.Localization.QueueAT
                 throw new ArgumentException($"ReceiptCase {request.ftReceiptCase:X} unknown.");
             }
 
-            return await command.ExecuteAsync(queue, queueAT, request, queueItem);
+            return await command.ExecuteAsync(queue, queueAT, request, queueItem, response);
         }
+
+        public async Task<string> GetFtCashBoxIdentificationAsync(ftQueue queue) => (await _configurationRepository.GetQueueATAsync(queue.ftQueueId).ConfigureAwait(false)).CashBoxIdentification;
+
     }
 }

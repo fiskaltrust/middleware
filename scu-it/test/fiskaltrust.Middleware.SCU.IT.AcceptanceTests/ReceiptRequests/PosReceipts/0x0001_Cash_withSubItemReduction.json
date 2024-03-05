@@ -1,0 +1,38 @@
+{
+  "ftCashBoxID": "{{cashbox_id}}",
+  "ftPosSystemId": "{{possystem_id}}",
+  "cbTerminalID": "00010001",
+  "cbReceiptReference": "{{$guid}}",
+  "cbUser": "user1234",
+  "cbReceiptMoment": "{{current_moment}}",
+  "cbChargeItems": [
+    {
+      "Position": 100,
+      "Quantity": 1,
+      "Amount": 20,
+      "VATRate": 10,
+      "ftChargeItemCase": 5283883447186620433,
+      "Description": "Subitem 1 - TakeAway - Delivery - Item VAT 10%",
+      "Moment": "{{current_moment}}"
+    },
+    {
+      "Position": 101,
+      "Quantity": 1,
+      "Amount": -2,
+      "VATRate": 10,
+      "ftChargeItemCase": 5283883447186620433,
+      "Description": "Kleine Portion 10%",
+      "Moment": "{{current_moment}}"
+    }
+  ],
+  "cbPayItems": [
+    {
+      "Quantity": 1,
+      "Description": "Cash",
+      "ftPayItemCase": 5283883447184523265,
+      "Moment": "{{current_moment}}",
+      "Amount": 18
+    }
+  ],
+  "ftReceiptCase": 5283883447318740993 // 4954200008000001
+}

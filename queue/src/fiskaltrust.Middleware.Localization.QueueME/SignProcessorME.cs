@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.me;
-using fiskaltrust.Middleware.Contracts;
+using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Localization.QueueME.RequestCommands;
 using fiskaltrust.Middleware.Localization.QueueME.RequestCommands.Factories;
 using fiskaltrust.Middleware.Localization.QueueME.Services;
@@ -33,7 +33,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME
             var queueME = await _configurationRepository.GetQueueMEAsync(queue.ftQueueId).ConfigureAwait(false);
             var requestCommand = _requestCommandFactory.Create(request);
 
-            if (queueME.SSCDFailCount > 0 && requestCommand is not ZeroReceiptCommand )
+            if (queueME.SSCDFailCount > 0 && requestCommand is not ZeroReceiptCommand)
             {
                 var requestCommandResponse = await requestCommand.ProcessFailedReceiptRequest(queue, queueItem, request, queueME).ConfigureAwait(false);
                 return (requestCommandResponse.ReceiptResponse, requestCommandResponse.ActionJournals.ToList());
@@ -41,5 +41,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME
             var response = await requestCommand.ExecuteAsync(_client, queue, request, queueItem, queueME).ConfigureAwait(false);
             return (response.ReceiptResponse, response.ActionJournals.ToList());
         }
+
+        public Task<string> GetFtCashBoxIdentificationAsync(ftQueue queue) => Task.FromResult<string>(null);
     }
 }

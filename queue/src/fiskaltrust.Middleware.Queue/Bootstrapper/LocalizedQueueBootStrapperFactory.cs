@@ -1,16 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using fiskaltrust.Middleware.Contracts;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Localization.QueueAT;
 using fiskaltrust.Middleware.Localization.QueueDE;
+using fiskaltrust.Middleware.Localization.QueueDEFAULT;
 using fiskaltrust.Middleware.Localization.QueueES;
 using fiskaltrust.Middleware.Localization.QueueIT;
 using fiskaltrust.Middleware.Localization.QueueFR;
 using fiskaltrust.Middleware.Localization.QueueME;
 using fiskaltrust.storage.V0;
 using Newtonsoft.Json;
+using fiskaltrust.Middleware.Contracts.Interfaces;
 
 namespace fiskaltrust.Middleware.Queue.Bootstrapper
 {
@@ -21,13 +22,15 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
             var countyCode = GetQueueLocalization(queueId, middlewareConfiguration.Configuration);
             return countyCode switch
             {
-                "AT" => middlewareConfiguration.PreviewFeatures.TryGetValue("queue-at", out var val) && val ? new QueueATBootstrapper() : throw new NotImplementedException("The Austrian Queue is not yet implemented in this version."),
+                "AT" => new QueueATBootstrapper(),
                 "DE" => new QueueDEBootstrapper(),
                 "ES" => new QueueESBootstrapper(),
                 "FR" => middlewareConfiguration.PreviewFeatures.TryGetValue("queue-fr", out var val) && val ? new QueueFRBootstrapper() : throw new NotImplementedException("The French Queue is not yet implemented in this version."),
                 "IT" => new QueueITBootstrapper(),
                 "ME" => new QueueMeBootstrapper(),
+                "DEFAULT" => new QueueDEFAULTBootstrapper(middlewareConfiguration),
                 _ => throw new ArgumentException($"Unkown country code: {countyCode}"),
+
             };
         }
 

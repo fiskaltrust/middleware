@@ -26,12 +26,11 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
             _exportService = exportService;
         }
 
-        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueAT queueAT, ReceiptRequest request, ftQueueItem queueItem)
+        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueAT queueAT, ReceiptRequest request, ftQueueItem queueItem, ReceiptResponse response)
         {
             ThrowIfTraining(request);
-            var response = CreateReceiptResponse(request, queueItem, queueAT, queue);
 
-            if (request.cbChargeItems?.Count() != 0 || request.cbPayItems?.Count() != 0)
+            if ((request.cbChargeItems != null && request.cbChargeItems?.Count() != 0) || (request.cbPayItems != null && request.cbPayItems?.Count() != 0))
             {
                 var notZeroReceiptActionJournal = CreateActionJournal(queue, queueItem, $"Tried to create a monthly receipt for {queue.ftQueueId}, but the incoming receipt is not a zero receipt.");
                 _logger.LogInformation(notZeroReceiptActionJournal.Message);
@@ -71,7 +70,6 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
             if (journalAT != null)
             {
                 // Receipt successfully signed, process monthly receipt
-                queue.StopMoment = DateTime.UtcNow;
                 response.ftSignatures = response.ftSignatures.Extend(new SignaturItem
                 {
                     Caption = $"Monatsbeleg #{queueAT.LastSettlementMonth}",

@@ -3,7 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.Middleware.Contracts;
+using fiskaltrust.Middleware.Contracts.Extensions;
+using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Queue.Extensions;
@@ -96,7 +97,7 @@ namespace fiskaltrust.Middleware.Queue
                     {
                         var message = $"Queue {_queueId} found cbReceiptReference \"{foundQueueItem.cbReceiptReference}\"";
                         _logger.LogWarning(message);
-                        await CreateActionJournalAsync(message, "", foundQueueItem.ftQueueItemId).ConfigureAwait(false);                        
+                        await CreateActionJournalAsync(message, "", foundQueueItem.ftQueueItemId).ConfigureAwait(false);
                         return JsonConvert.DeserializeObject<ReceiptResponse>(foundQueueItem.response);
                     }
                 }
@@ -149,7 +150,38 @@ namespace fiskaltrust.Middleware.Queue
             {
                 queueItem.ftWorkMoment = DateTime.UtcNow;
                 _logger.LogTrace("SignProcessor.InternalSign: Calling country specific SignProcessor.");
-                (var receiptResponse, var countrySpecificActionJournals) = await _countrySpecificSignProcessor.ProcessAsync(data, queue, queueItem).ConfigureAwait(false);
+                ReceiptResponse receiptResponse;
+                List<ftActionJournal> countrySpecificActionJournals;
+                Exception exception = null;
+                try
+                {
+                    (receiptResponse, countrySpecificActionJournals) = await _countrySpecificSignProcessor.ProcessAsync(data, queue, queueItem).ConfigureAwait(false);
+                }
+                catch (Exception e)
+                {
+                    exception = e;
+                    countrySpecificActionJournals = new();
+                    receiptResponse = new ReceiptResponse
+                    {
+                        ftCashBoxID = queue.ftCashBoxId.ToString(),
+                        ftQueueID = queue.ftQueueId.ToString(),
+                        ftQueueItemID = queueItem.ftQueueItemId.ToString(),
+                        ftQueueRow = queue.ftCurrentRow,
+                        cbTerminalID = data.cbTerminalID,
+                        cbReceiptReference = data.cbReceiptReference,
+                        ftCashBoxIdentification = await _countrySpecificSignProcessor.GetFtCashBoxIdentificationAsync(queue),
+                        ftReceiptMoment = DateTime.UtcNow,
+                        ftSignatures = new SignaturItem[] {
+                            new SignaturItem() {
+                                ftSignatureFormat = 0x1,
+                                ftSignatureType = (long) (((ulong) data.ftReceiptCase & 0xFFFF_0000_0000_0000) | 0x2000_0000_3000),
+                                Caption = "uncaught-exeption",
+                                Data = e.ToString()
+                            }
+                        },
+                        ftState = (long) (((ulong) data.ftReceiptCase & 0xFFFF_0000_0000_0000) | 0x2000_EEEE_EEEE)
+                    };
+                }
                 _logger.LogTrace("SignProcessor.InternalSign: Country specific SignProcessor finished.");
 
                 actionjournals.AddRange(countrySpecificActionJournals);
@@ -168,9 +200,25 @@ namespace fiskaltrust.Middleware.Queue
                 await _queueItemRepository.InsertOrUpdateAsync(queueItem).ConfigureAwait(false);
                 _logger.LogTrace("SignProcessor.InternalSign: Updating Queue in database.");
                 await _configurationRepository.InsertOrUpdateQueueAsync(queue).ConfigureAwait(false);
-                _logger.LogTrace("SignProcessor.InternalSign: Adding ReceiptJournal to database.");
-                receiptJournal = await CreateReceiptJournalAsync(queue, queueItem, data).ConfigureAwait(false);
-                
+
+                if ((receiptResponse.ftState & 0xFFFF_FFFF) == 0xEEEE_EEEE)
+                {
+                    if (queueItem.country != "IT")
+                    {
+                        throw exception;
+                    }
+                    // TODO: This state indicates that something went wrong while processing the receipt request.
+                    //       While we will probably introduce a parameter for this we are right now just returning
+                    //       the receipt response as it is.
+                    //       Another thing that needs to be considered is if and when we put things into the security
+                    //       mechanism. Since there might be cases where we still need to store it though.
+                    return receiptResponse;
+                }
+                else
+                {
+                    _logger.LogTrace("SignProcessor.InternalSign: Adding ReceiptJournal to database.");
+                    receiptJournal = await CreateReceiptJournalAsync(queue, queueItem, data).ConfigureAwait(false);
+                }
                 return receiptResponse;
             }
             finally

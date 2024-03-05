@@ -1,0 +1,7 @@
+{
+  "version": "1.3.42",
+  "releaseBranches": [
+    "^refs/heads/main$",
+    "^refs/tags/scu-es/tbai/v\\d+(?:\\.\\d+)*(?:-.*)?$"
+  ]
+}

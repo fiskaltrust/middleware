@@ -25,7 +25,7 @@ steps:
   displayName: Build
   inputs:
     projects: '$(WorkingDirectory)/$(Solution)'
-    arguments: '--configuration $(BuildConfiguration)'
+    arguments: '--configuration $(BuildConfiguration) --no-restore'
 
 - task: DotNetCoreCLI@2
   inputs:

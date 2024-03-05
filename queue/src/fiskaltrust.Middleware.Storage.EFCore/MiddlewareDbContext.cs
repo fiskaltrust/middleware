@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using fiskaltrust.Middleware.Contracts.Models.FR;
+using Microsoft.EntityFrameworkCore;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 using fiskaltrust.Middleware.Contracts.Models.Transactions;
@@ -32,7 +33,11 @@ namespace fiskaltrust.Middleware.Storage.EFCore
 
         public DbSet<ftJournalFR> JournalFRList { get; set; }
 
+        public DbSet<ftJournalFRCopyPayload> FtJournalFRCopyPayloads { get; set; }
+
         public DbSet<ftJournalME> JournalMEList { get; set; }
+
+        public DbSet<ftJournalIT> JournalITList { get; set; }
 
         public DbSet<ftQueueItem> QueueItemList { get; set; }
 

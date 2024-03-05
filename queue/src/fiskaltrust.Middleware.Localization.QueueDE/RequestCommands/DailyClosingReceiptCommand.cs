@@ -22,12 +22,13 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
     {
         public override string ReceiptName => "Daily-closing receipt";
 
-        public DailyClosingReceiptCommand(IMasterDataService masterDataService, ILogger<RequestCommand> logger, SignatureFactoryDE signatureFactory, IDESSCDProvider deSSCDProvider, ITransactionPayloadFactory transactionPayloadFactory, IReadOnlyQueueItemRepository queueItemRepository, IConfigurationRepository configurationRepository, IJournalDERepository journalDERepository, MiddlewareConfiguration middlewareConfiguration, IPersistentTransactionRepository<FailedStartTransaction> failedStartTransactionRepo, IPersistentTransactionRepository<FailedFinishTransaction> failedFinishTransactionRepo, IPersistentTransactionRepository<OpenTransaction> openTransactionRepo, ITarFileCleanupService tarFileCleanupService, QueueDEConfiguration queueDEConfiguration) : base(masterDataService, logger, signatureFactory, deSSCDProvider, transactionPayloadFactory, queueItemRepository, configurationRepository, journalDERepository, middlewareConfiguration, failedStartTransactionRepo, failedFinishTransactionRepo, openTransactionRepo, tarFileCleanupService, queueDEConfiguration)
+        public DailyClosingReceiptCommand(ILogger<RequestCommand> logger, SignatureFactoryDE signatureFactory, IDESSCDProvider deSSCDProvider, ITransactionPayloadFactory transactionPayloadFactory, IReadOnlyQueueItemRepository queueItemRepository, IConfigurationRepository configurationRepository, IJournalDERepository journalDERepository, MiddlewareConfiguration middlewareConfiguration, IPersistentTransactionRepository<FailedStartTransaction> failedStartTransactionRepo, IPersistentTransactionRepository<FailedFinishTransaction> failedFinishTransactionRepo, IPersistentTransactionRepository<OpenTransaction> openTransactionRepo, ITarFileCleanupService tarFileCleanupService, QueueDEConfiguration queueDEConfiguration, IMasterDataService masterDataService) : base(logger, signatureFactory, deSSCDProvider, transactionPayloadFactory, queueItemRepository, configurationRepository, journalDERepository, middlewareConfiguration, failedStartTransactionRepo, failedFinishTransactionRepo, openTransactionRepo, tarFileCleanupService, queueDEConfiguration, masterDataService)
         {
         }
 
         public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueDE queueDE, ReceiptRequest request, ftQueueItem queueItem)
         {
+            _logger.LogTrace("DailyClosingReceiptCommand.ExecuteAsync [enter].");
             ThrowIfNoImplicitFlow(request);
             ThrowIfTraining(request);
 
@@ -42,6 +43,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
                 if (request.IsRemoveOpenTransactionsWhichAreNotOnTse())
                 {
+                    _logger.LogTrace("DailyClosingReceiptCommand.ExecuteAsync Section RemoveOpenTransactionsWhichAreNotOnTse [enter].");
                     var tseInfo = await _deSSCDProvider.Instance.GetTseInfoAsync().ConfigureAwait(false);
                     var openTransactionsNotExistingOnTse = tseInfo.CurrentStartedTransactionNumbers != null
                         ? openTransactions.Where(ot => ot != null && !tseInfo.CurrentStartedTransactionNumbers.Contains((ulong) ((OpenTransaction) ot).TransactionNumber))
@@ -68,6 +70,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                     }
 
                     openTransactions = (await _openTransactionRepo.GetAsync().ConfigureAwait(false)).ToList();
+                    _logger.LogTrace("DailyClosingReceiptCommand.ExecuteAsync Section RemoveOpenTransactionsWhichAreNotOnTse [exit].");
                 }
 
                 if (request.HasFailOnOpenTransactionsFlag() && openTransactions.Any())
@@ -75,6 +78,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                     throw new ArgumentException($"The ftReceiptCaseFlag '0x0000000010000000' was set, and {openTransactions.Count()} open transactions exist. If you want these transactions to be closed automatically, omit this flag.");
                 }
 
+                _logger.LogTrace("DailyClosingReceiptCommand.ExecuteAsync Section openTransactions [enter].");
                 var openSignatures = new List<SignaturItem>();
                 foreach (var openTransaction in openTransactions)
                 {
@@ -83,6 +87,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                     openSignatures.AddRange(_signatureFactory.GetSignaturesForFinishTransaction(finishResult));
                     await _openTransactionRepo.RemoveAsync(openTransaction.cbReceiptReference).ConfigureAwait(false);
                 }
+                _logger.LogTrace("DailyClosingReceiptCommand.ExecuteAsync Section openTransactions [exit].");
 
                 var processReceiptResponse = await ProcessReceiptAsync(request.cbReceiptReference, processType, payload, queueItem, queueDE).ConfigureAwait(false);
                 queueDE.DailyClosingNumber++;
@@ -98,21 +103,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 }
 
                 await UpdateTseInfoAsync(queueDE.ftSignaturCreationUnitDEId.GetValueOrDefault()).ConfigureAwait(false);
-
-                var masterDataChanged = false;
-                if (request.IsMasterDataUpdate() && await _masterDataService.HasDataChangedAsync().ConfigureAwait(false))
-                {
-                    await _masterDataService.PersistConfigurationAsync().ConfigureAwait(false);
-                    masterDataChanged = true;
-                    _logger.LogInformation("Master data was updated. The changed master data is valid from from now on, all receipts that were processed until now still refer to the old master data.");
-                }
-
-                var message = masterDataChanged
-                    ? "Daily-Closing receipt was processed, and a master data update was performed."
-                    : "Daily-Closing receipt was processed.";
-                var type = masterDataChanged
-                    ? 0x4445_0000_0800_0007
-                    : 0x4445_0000_0000_0007;
+                (var masterDataChanged, var message, var type) = await UpdateMasterData(request);
                 actionJournals.AddRange(CreateClosingActionJournals(queueItem, queue, processReceiptResponse.TransactionNumber, masterDataChanged, message, type, queueDE.DailyClosingNumber));
 
                 return new RequestCommandResponse()
@@ -126,12 +117,16 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             catch (Exception ex) when (ex.GetType().Name == RETRYPOLICYEXCEPTION_NAME)
             {
                 _logger.LogDebug(ex, "TSE not reachable.");
-                return await ProcessSSCDFailedReceiptRequest(request, queueItem, queue, queueDE).ConfigureAwait(false);
+                return await ProcessSSCDFailedReceiptRequest(request, queueItem, queue, queueDE,actionJournals).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
                 _logger.LogCritical(ex, "An exception occured while processing this request.");
-                return await ProcessSSCDFailedReceiptRequest(request, queueItem, queue, queueDE).ConfigureAwait(false);
+                return await ProcessSSCDFailedReceiptRequest(request, queueItem, queue, queueDE,actionJournals).ConfigureAwait(false);
+            }
+            finally
+            {
+                _logger.LogTrace("DailyClosingReceiptCommand.ExecuteAsync [exit].");
             }
         }
     }

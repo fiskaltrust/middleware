@@ -13,6 +13,7 @@ using fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.AT;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.FR;
+using fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.IT;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.MasterData;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.ME;
 using fiskaltrust.Middleware.Storage.Base;
@@ -87,7 +88,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage
 
             services.AddSingleton<IJournalDERepository, AzureTableStorageJournalDERepository>();
             services.AddSingleton<IMiddlewareJournalDERepository, AzureTableStorageJournalDERepository>();
-            services.AddSingleton<IJournalDERepository, AzureTableStorageJournalDERepository>();
+            services.AddSingleton<IReadOnlyJournalDERepository, AzureTableStorageJournalDERepository>();
             services.AddSingleton<IMiddlewareRepository<ftJournalDE>, AzureTableStorageJournalDERepository>();
 
             services.AddSingleton<IJournalFRRepository, AzureTableStorageJournalFRRepository>();
@@ -99,6 +100,10 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage
             services.AddSingleton<IReadOnlyJournalMERepository, AzureTableStorageJournalMERepository>();
             services.AddSingleton<IMiddlewareRepository<ftJournalME>, AzureTableStorageJournalMERepository>();
 
+            services.AddSingleton<IJournalITRepository, AzureTableStorageJournalITRepository>();
+            services.AddSingleton<IReadOnlyJournalITRepository, AzureTableStorageJournalITRepository>();
+            services.AddSingleton<IMiddlewareJournalITRepository, AzureTableStorageJournalITRepository>();
+            
             services.AddSingleton<IReceiptJournalRepository, AzureTableStorageReceiptJournalRepository>();
             services.AddSingleton<IReadOnlyReceiptJournalRepository, AzureTableStorageReceiptJournalRepository>();
             services.AddSingleton<IMiddlewareRepository<ftReceiptJournal>, AzureTableStorageReceiptJournalRepository>();

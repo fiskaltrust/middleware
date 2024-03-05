@@ -23,6 +23,7 @@
         VorgangsBeginn = 0x1F,
         UpdateTransactionPayload = 0x20,
         UpdateTransactionResult = 0x21,
-        CertificationId = 0x22
+        CertificationId = 0x22,
+        TseSerialNumber = 0x23
     }
 }

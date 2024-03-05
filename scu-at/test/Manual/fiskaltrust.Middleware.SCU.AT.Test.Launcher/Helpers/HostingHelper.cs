@@ -59,17 +59,13 @@ namespace fiskaltrust.Middleware.SCU.AT.Test.Launcher.Helpers
             {
                 return serviceInstance.GetType().GetInterfaces().First(x => x.FullName == typeof(ifPOS.v1.IPOS).FullName);
             }
-            else if (config.Package.Contains("signing"))
+            else if (config.Package.Contains("SCU.AT"))
             {
-                return serviceInstance.GetType().GetInterfaces().First(x => x.FullName == typeof(ifPOS.v0.IATSSCD).FullName);
+                return serviceInstance.GetType().GetInterfaces().First(x => x.FullName == typeof(ifPOS.v1.at.IATSSCD).FullName);
             }
             else if (config.Package.Contains("SCU.DE"))
             {
                 return serviceInstance.GetType().GetInterfaces().First(x => x.FullName == typeof(ifPOS.v1.de.IDESSCD).FullName);
-            }
-            else if (config.Package.Contains("SCU.AT"))
-            {
-                return serviceInstance.GetType().GetInterfaces().First(x => x.FullName == typeof(ifPOS.v2.at.IATSSCD).FullName);
             }
             throw new NotSupportedException($"The package {config.Package} is currently not supported.");
         }

@@ -4,7 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.de;
-using fiskaltrust.Middleware.Contracts;
+using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Localization.QueueDE.Extensions;
 using fiskaltrust.Middleware.Localization.QueueDE.Models;
 using fiskaltrust.Middleware.Localization.QueueDE.RequestCommands;
@@ -23,7 +23,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
         private readonly IRequestCommandFactory _requestCommandFactory;
         private readonly ILogger<SignProcessorDE> _logger;
 
-        public SignProcessorDE(            
+        public SignProcessorDE(
             IConfigurationRepository configurationRepository,
             ITransactionPayloadFactory transactionPayloadFactory,
             IRequestCommandFactory requestCommandFactory,
@@ -38,7 +38,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
         public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ftQueue queue, ftQueueItem queueItem)
         {
             _logger.LogTrace("SignProcessorDE.ProcessAsync called.");
-            if (string.IsNullOrEmpty(request.cbReceiptReference) && !request.IsFailTransactionReceipt() && !string.IsNullOrEmpty(request.ftReceiptCaseData) && !request.ftReceiptCaseData.Contains("CurrentStartedTransactionNumbers"))
+            if (string.IsNullOrEmpty(request.cbReceiptReference) && request.IsFailTransactionReceipt() && !string.IsNullOrEmpty(request.ftReceiptCaseData) && !request.ftReceiptCaseData.Contains("CurrentStartedTransactionNumbers"))
             {
                 throw new ArgumentException($"CbReceiptReference must be set for one transaction! If you want to close multiple transactions, pass an array value for 'CurrentStartedTransactionNumbers' via ftReceiptCaseData.");
             }
@@ -68,13 +68,15 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             {
                 command = _requestCommandFactory.Create(queue, queueDE, request);
             }
-            catch
+            catch (NotImplementedException ex)
             {
-                throw new ArgumentException($"ReceiptCase {request.ftReceiptCase:X} unknown. ProcessType {processType}, ProcessData {payload}");
+                throw new ArgumentException($"ReceiptCase {request.ftReceiptCase:X} unknown. ProcessType {processType}, ProcessData {payload}", ex);
             }
 
             _logger.LogTrace("SignProcessorDE.PerformReceiptRequest: Executing command {CommandName}.", command.ReceiptName);
             return await command.ExecuteAsync(queue, queueDE, request, queueItem);
         }
+
+        public async Task<string> GetFtCashBoxIdentificationAsync(ftQueue queue) => (await _configurationRepository.GetQueueDEAsync(queue.ftQueueId).ConfigureAwait(false)).CashBoxIdentification;
     }
 }

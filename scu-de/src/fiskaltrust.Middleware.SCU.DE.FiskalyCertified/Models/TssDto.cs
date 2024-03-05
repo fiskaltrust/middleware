@@ -53,6 +53,8 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Models
         [JsonProperty("max_number_registered_clients")]
         public int? MaxNumberOfRegisteredClients { get; set; }
 
+        [JsonProperty("number_active_transactions")]
+        public int? NumberOfActiveTransactions { get; set; }
     }
 
     public class TssCreationDto : TssDto

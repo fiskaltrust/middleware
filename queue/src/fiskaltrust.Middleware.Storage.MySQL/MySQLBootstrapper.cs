@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts.Data;
 using fiskaltrust.Middleware.Contracts.Models.Transactions;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Contracts.Repositories.FR;
 using fiskaltrust.Middleware.Storage.Base;
 using fiskaltrust.Middleware.Storage.MySQL.DatabaseInitialization;
 using fiskaltrust.Middleware.Storage.MySQL.Repositories;
@@ -14,7 +16,9 @@ using fiskaltrust.Middleware.Storage.MySQL.Repositories.AT;
 using fiskaltrust.Middleware.Storage.MySQL.Repositories.DE;
 using fiskaltrust.Middleware.Storage.MySQL.Repositories.DE.MasterData;
 using fiskaltrust.Middleware.Storage.MySQL.Repositories.FR;
+using fiskaltrust.Middleware.Storage.MySQL.Repositories.IT;
 using fiskaltrust.Middleware.Storage.MySQL.Repositories.MasterData;
+using fiskaltrust.Middleware.Storage.MySQL.Repositories.ME;
 using fiskaltrust.storage.encryption.V0;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
@@ -55,7 +59,7 @@ namespace fiskaltrust.Middleware.Storage.MySQL
 
             if (_mySQLStorageConfiguration.ConnectionString.StartsWith("raw:"))
             {
-                _connectionString = _mySQLStorageConfiguration.ConnectionString.Substring("raw:".Length - 1);
+                _connectionString = _mySQLStorageConfiguration.ConnectionString.Substring("raw:".Length);
             }
             else
             {
@@ -63,9 +67,9 @@ namespace fiskaltrust.Middleware.Storage.MySQL
             }
 
             var databaseMigrator = new DatabaseMigrator(_connectionString, _mySQLStorageConfiguration.MigrationsTimeoutSec, queueId, logger);
-            var dbName = await databaseMigrator.MigrateAsync().ConfigureAwait(false);
+            var (dbName, newlyAppliedMigrations) = await databaseMigrator.MigrateAsync().ConfigureAwait(false);
 
-            _connectionString += $"database={dbName};";
+            _connectionString += $"database={dbName};Maximum Pool Size={_mySQLStorageConfiguration.MaxPoolSize};";
 
             _configurationRepository = new MySQLConfigurationRepository(_connectionString);
 
@@ -75,6 +79,21 @@ namespace fiskaltrust.Middleware.Storage.MySQL
                     new MySQLAccountMasterDataRepository(_connectionString), new MySQLOutletMasterDataRepository(_connectionString),
                     new MySQLAgencyMasterDataRepository(_connectionString), new MySQLPosSystemMasterDataRepository(_connectionString)).ConfigureAwait(false);
             await PersistConfigurationAsync(baseStorageConfig, _configurationRepository, logger).ConfigureAwait(false);
+
+            var journalFRCopyPayloadRepository = new MySQLJournalFRCopyPayloadRepository(_connectionString);
+            var journalFRRepository = new MySQLJournalFRRepository(_connectionString);
+
+            var baseMigrations = newlyAppliedMigrations.Select(x =>
+            {
+                if (x == "JournalFRCopyPayload")
+                {
+                    return Migrations.JournalFRCopyPayload;
+                }
+
+                return (Migrations) (-1);
+            }).Where(x => x != (Migrations) (-1)).ToList();
+
+            await PerformMigrationInitialization(baseMigrations, journalFRCopyPayloadRepository, journalFRRepository).ConfigureAwait(false);
         }
 
         private void AddRepositories(IServiceCollection services)
@@ -99,12 +118,17 @@ namespace fiskaltrust.Middleware.Storage.MySQL
             services.AddSingleton<IJournalFRRepository>(x => new MySQLJournalFRRepository(_connectionString));
             services.AddSingleton<IReadOnlyJournalFRRepository>(x => new MySQLJournalFRRepository(_connectionString));
             services.AddSingleton<IMiddlewareJournalFRRepository>(x => new MySQLJournalFRRepository(_connectionString));
+            services.AddSingleton<IJournalFRCopyPayloadRepository>(x => new MySQLJournalFRCopyPayloadRepository(_connectionString));
             services.AddSingleton<IMiddlewareRepository<ftJournalFR>>(x => new MySQLJournalFRRepository(_connectionString));
 
             services.AddSingleton<IMiddlewareJournalMERepository>(x => new MySQLJournalMERepository(_connectionString));
             services.AddSingleton<IJournalMERepository>(x => new MySQLJournalMERepository(_connectionString));
             services.AddSingleton<IReadOnlyJournalMERepository>(x => new MySQLJournalMERepository(_connectionString));
             services.AddSingleton<IMiddlewareRepository<ftJournalME>>(x => new MySQLJournalMERepository(_connectionString));
+
+            services.AddSingleton<IJournalITRepository>(x => new MySQLJournalITRepository(_connectionString));
+            services.AddSingleton<IReadOnlyJournalITRepository>(x => new MySQLJournalITRepository(_connectionString));
+            services.AddSingleton<IMiddlewareJournalITRepository>(x => new MySQLJournalITRepository(_connectionString));
 
             services.AddSingleton<IReceiptJournalRepository>(x => new MySQLReceiptJournalRepository(_connectionString));
             services.AddSingleton<IReadOnlyReceiptJournalRepository>(x => new MySQLReceiptJournalRepository(_connectionString));

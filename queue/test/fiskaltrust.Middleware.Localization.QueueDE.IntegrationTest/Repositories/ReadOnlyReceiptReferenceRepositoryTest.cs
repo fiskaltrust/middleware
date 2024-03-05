@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using AutoFixture;
 using fiskaltrust.Exports.Common.Helpers;
@@ -11,9 +10,7 @@ using fiskaltrust.Middleware.Localization.QueueDE.Repositories;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
-using Moq;
 using Newtonsoft.Json;
-using Org.BouncyCastle.Asn1.X509;
 using Xunit;
 
 namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.Repositories
@@ -52,8 +49,14 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.Repositori
                 await queueItemRepo.InsertOrUpdateAsync(item);
             }
 
-            var readonlyRepo = new ReadOnlyReceiptReferenceRepository(queueItemRepo, new Mock<IReadOnlyActionJournalRepository>().Object);
-            var receiptRef = await readonlyRepo.GetReceiptReferenceAsync(DateTime.UtcNow.AddDays(-1).Ticks, DateTime.UtcNow.AddDays(1).Ticks);
+            var dailyclosings = new List<DailyClosingReceipt>(){
+                new DailyClosingReceipt(){ 
+                    ZNumber = 1,
+                    ZTime =  DateTime.UtcNow},
+            };
+
+            var readonlyRepo = new ReadOnlyReceiptReferenceRepository(queueItemRepo);
+            var receiptRef = await readonlyRepo.GetReceiptReferenceAsync(DateTime.UtcNow.AddDays(-1).Ticks, DateTime.UtcNow.AddDays(1).Ticks, dailyclosings);
             var resultlist = await receiptRef.ToAsyncEnumerable().ToListAsync();
             var sorted = expectedEntries.OrderBy(x => x.TimeStamp).ToList();
 
@@ -61,9 +64,9 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.Repositori
             {
                 var responseSource = JsonConvert.DeserializeObject<ReceiptResponse>(sorted[i-1].response);
                 var responseTarget = JsonConvert.DeserializeObject<ReceiptResponse>(sorted[i].response);
-                resultlist[i-1].RefReceiptId.Should().Be(responseSource.ftReceiptIdentification);
-                resultlist[i-1].RefMoment.Should().Be(sorted[i - 1].cbReceiptMoment);
-                resultlist[i-1].RefReceiptId = responseSource.ftReceiptIdentification;
+                resultlist[i-1].SourceReceiptIdentification.Should().Be(responseSource.ftReceiptIdentification);
+                resultlist[i-1].SourceZMoment.Should().Be(dailyclosings.First().ZTime);
+                resultlist[i-1].SourceReceiptIdentification = responseSource.ftReceiptIdentification;
                 resultlist[i - 1].TargetQueueItemId = sorted[i].ftQueueItemId;
                 resultlist[i - 1].SourceQueueItemId = sorted[i - 1].ftQueueItemId;
                 resultlist[i - 1].TargetReceiptIdentification = responseTarget.ftReceiptIdentification;
@@ -108,14 +111,20 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.Repositori
                 await queueItemRepo.InsertOrUpdateAsync(item);
             }
 
-            var readonlyRepo = new ReadOnlyReceiptReferenceRepository(queueItemRepo, new Mock<IReadOnlyActionJournalRepository>().Object);
-            var receiptRef = await readonlyRepo.GetReceiptReferenceAsync(DateTime.UtcNow.AddDays(-1).Ticks, DateTime.UtcNow.AddDays(1).Ticks);
+            var dailyclosings = new List<DailyClosingReceipt>(){
+                new DailyClosingReceipt(){
+                    ZNumber = 1,
+                    ZTime =  DateTime.UtcNow},
+            };
+
+            var readonlyRepo = new ReadOnlyReceiptReferenceRepository(queueItemRepo);
+            var receiptRef = await readonlyRepo.GetReceiptReferenceAsync(DateTime.UtcNow.AddDays(-1).Ticks, DateTime.UtcNow.AddDays(1).Ticks, dailyclosings);
             receiptRef.Should().HaveCount(1);
             var responseSource = JsonConvert.DeserializeObject<ReceiptResponse>(ref1.response);
             var responseTarget = JsonConvert.DeserializeObject<ReceiptResponse>(ref2.response);
-            receiptRef.First().RefReceiptId.Should().Be(responseSource.ftReceiptIdentification);
-            receiptRef.First().RefMoment.Should().Be(ref1.cbReceiptMoment);
-            receiptRef.First().RefReceiptId = responseSource.ftReceiptIdentification;
+            receiptRef.First().SourceReceiptIdentification.Should().Be(responseSource.ftReceiptIdentification);
+            receiptRef.First().SourceZMoment.Should().Be(dailyclosings.First().ZTime);
+            receiptRef.First().SourceReceiptIdentification = responseSource.ftReceiptIdentification;
             receiptRef.First().TargetQueueItemId = ref2.ftQueueItemId;
             receiptRef.First().SourceQueueItemId = ref1.ftQueueItemId;
             receiptRef.First().TargetReceiptIdentification = responseTarget.ftReceiptIdentification;
@@ -168,8 +177,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.Repositori
                 await queueItemRepo.InsertOrUpdateAsync(item);
             }
 
-            var readonlyRepo = new ReadOnlyReceiptReferenceRepository(queueItemRepo, new Mock<IReadOnlyActionJournalRepository>().Object);
-            var receiptRef = await readonlyRepo.GetReceiptReferenceAsync(DateTime.UtcNow.AddDays(-1).Ticks, DateTime.UtcNow.AddDays(1).Ticks);
+            var readonlyRepo = new ReadOnlyReceiptReferenceRepository(queueItemRepo);
+            var receiptRef = await readonlyRepo.GetReceiptReferenceAsync(DateTime.UtcNow.AddDays(-1).Ticks, DateTime.UtcNow.AddDays(1).Ticks, new List<DailyClosingReceipt>());
             receiptRef.Should().HaveCount(2);
 
             var responseref1 = JsonConvert.DeserializeObject<ReceiptResponse>(ref1.response);
@@ -178,14 +187,14 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.Repositori
 
             var resultlist = await receiptRef.ToAsyncEnumerable().ToListAsync();
 
-            resultlist[0].RefMoment = ref3.cbReceiptMoment;
-            resultlist[0].RefReceiptId = responseref3.ftReceiptIdentification;
+            resultlist[0].SourceZMoment = ref3.cbReceiptMoment;
+            resultlist[0].SourceReceiptIdentification = responseref3.ftReceiptIdentification;
             resultlist[0].TargetQueueItemId = ref1.ftQueueItemId;
             resultlist[0].SourceQueueItemId = ref3.ftQueueItemId;
             resultlist[0].TargetReceiptIdentification = responseref1.ftReceiptIdentification;
 
-            resultlist[1].RefMoment = ref1.cbReceiptMoment;
-            resultlist[1].RefReceiptId = responseref1.ftReceiptIdentification;
+            resultlist[1].SourceZMoment = ref1.cbReceiptMoment;
+            resultlist[1].SourceReceiptIdentification  = responseref1.ftReceiptIdentification;
             resultlist[1].TargetQueueItemId = ref2.ftQueueItemId;
             resultlist[1].SourceQueueItemId = ref1.ftQueueItemId;
             resultlist[1].TargetReceiptIdentification = responseref2.ftReceiptIdentification;
@@ -247,8 +256,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.Repositori
                 await queueItemRepo.InsertOrUpdateAsync(item);
             }
 
-            var readonlyRepo = new ReadOnlyReceiptReferenceRepository(queueItemRepo, new Mock<IReadOnlyActionJournalRepository>().Object);
-            var receiptRef = await readonlyRepo.GetReceiptReferenceAsync(DateTime.UtcNow.AddDays(-1).Ticks, DateTime.UtcNow.AddDays(1).Ticks);
+            var readonlyRepo = new ReadOnlyReceiptReferenceRepository(queueItemRepo);
+            var receiptRef = await readonlyRepo.GetReceiptReferenceAsync(DateTime.UtcNow.AddDays(-1).Ticks, DateTime.UtcNow.AddDays(1).Ticks, new List<DailyClosingReceipt>());
             receiptRef.Should().HaveCount(3);
 
             var responseref1 = JsonConvert.DeserializeObject<ReceiptResponse>(ref1.response);
@@ -258,20 +267,20 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.Repositori
 
             var resultlist = await receiptRef.ToAsyncEnumerable().ToListAsync();
 
-            resultlist[0].RefMoment = ref1.cbReceiptMoment;
-            resultlist[0].RefReceiptId = responseref1.ftReceiptIdentification;
+            resultlist[0].SourceZMoment = ref1.cbReceiptMoment;
+            resultlist[0].SourceReceiptIdentification = responseref1.ftReceiptIdentification;
             resultlist[0].TargetQueueItemId = ref2.ftQueueItemId;
             resultlist[0].SourceQueueItemId = ref1.ftQueueItemId;
             resultlist[0].TargetReceiptIdentification = responseref2.ftReceiptIdentification;
 
-            resultlist[1].RefMoment = ref3.cbReceiptMoment;
-            resultlist[1].RefReceiptId = responseref3.ftReceiptIdentification;
+            resultlist[1].SourceZMoment = ref3.cbReceiptMoment;
+            resultlist[1].SourceReceiptIdentification = responseref3.ftReceiptIdentification;
             resultlist[1].TargetQueueItemId = ref4.ftQueueItemId;
             resultlist[1].SourceQueueItemId = ref3.ftQueueItemId;
             resultlist[1].TargetReceiptIdentification = responseref4.ftReceiptIdentification;
 
-            resultlist[2].RefMoment = ref2.cbReceiptMoment;
-            resultlist[2].RefReceiptId = responseref2.ftReceiptIdentification;
+            resultlist[2].SourceZMoment = ref2.cbReceiptMoment;
+            resultlist[2].SourceReceiptIdentification = responseref2.ftReceiptIdentification;
             resultlist[2].TargetQueueItemId = ref3.ftQueueItemId;
             resultlist[2].SourceQueueItemId = ref2.ftQueueItemId;
             resultlist[2].TargetReceiptIdentification = responseref3.ftReceiptIdentification;
@@ -306,15 +315,14 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.Repositori
                 await queueItemRepo.InsertOrUpdateAsync(item);
             }
 
-            var readonlyRepo = new ReadOnlyReceiptReferenceRepository(queueItemRepo, new Mock<IReadOnlyActionJournalRepository>().Object);
-            var receiptRef = await readonlyRepo.GetReceiptReferenceAsync(DateTime.UtcNow.AddDays(-1).Ticks, DateTime.UtcNow.AddDays(1).Ticks);
+            var readonlyRepo = new ReadOnlyReceiptReferenceRepository(queueItemRepo);
+            var receiptRef = await readonlyRepo.GetReceiptReferenceAsync(DateTime.UtcNow.AddDays(-1).Ticks, DateTime.UtcNow.AddDays(1).Ticks, new List<DailyClosingReceipt>());
             receiptRef.Should().HaveCount(1);
             var respTarget = JsonConvert.DeserializeObject<ReceiptResponse>(ref1.response);
             var requestTarget = JsonConvert.DeserializeObject<ReceiptRequest>(ref1.request);
 
-            var receiptCaseData = SerializationHelper.GetReceiptCaseData(requestTarget);
             receiptRef.First().TargetReceiptIdentification = respTarget.ftReceiptIdentification;
-            receiptRef.First().TargetReceiptCaseData = receiptCaseData;
+            receiptRef.First().TargetReceiptCaseData = requestTarget.ftReceiptCaseData;
             receiptRef.First().TargetQueueItemId = ref1.ftQueueItemId;
         }
 

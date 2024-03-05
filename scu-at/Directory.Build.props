@@ -12,10 +12,6 @@
         <AssemblyCompany>fiskaltrust</AssemblyCompany>
         <Deterministic>true</Deterministic>
         <LangVersion>11.0</LangVersion>
+        <WarningsNotAsErrors>NU1901;NU1902;NU1903;NU1904;NU5104</WarningsNotAsErrors>
     </PropertyGroup>
-
-    <ItemGroup Condition="'$(Configuration)' != 'Debug'">
-        <PackageReference Include="Microsoft.CodeAnalysis.FxCopAnalyzers" Version="2.9.8" PrivateAssets="All" />
-    </ItemGroup>
-
 </Project>

@@ -1,0 +1,29 @@
+{
+  "ftCashBoxID": "{{cashbox_id}}",
+  "ftPosSystemId": "{{possystem_id}}",
+  "cbTerminalID": "00010001",
+  "cbReceiptReference": "0001-0002",
+  "cbUser": "user1234",
+  "cbReceiptMoment": "{{current_moment}}",
+  "cbChargeItems": [
+    {
+      "Quantity": 1,
+      "Amount": 20,
+      "VATRate": 0,
+      "VATAmount": 0,
+      "ftChargeItemCase": 5283883447184523336,
+      "Description": "GutscheinV3-14",
+      "Moment": "{{current_moment}}"
+    }
+  ],
+  "cbPayItems": [
+    {
+      "Quantity": 1,
+      "Description": "Cash",
+      "ftPayItemCase": 5283883447184523265,
+      "Moment": "{{current_moment}}",
+      "Amount": 20
+    }
+  ],
+  "ftReceiptCase": 5283883447184523265
+}

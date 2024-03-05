@@ -40,5 +40,15 @@ namespace fiskaltrust.Middleware.SCU.DE.CryptoVision.Models.Commands
             }
             return new TseCommand(TseCommandCodeEnum.InitializePins, 0x0000, new TseByteArrayParameter(adminPuk), new TseByteArrayParameter(adminPin), new TseByteArrayParameter(timeAdminPuk), new TseByteArrayParameter(timeAdminPin));
         }
+
+        /// <summary>
+        /// This is the overload of the CreateInitializePin command which is used ONLY with V2 hardware
+        /// </summary>
+        public static TseCommand CreateInitializePinsTseCommand(string userId, byte[] userPuk)
+        {
+            return userPuk.Length != 10
+                ? throw new CryptoVisionProxyException(SeResult.ErrorParameterMismatch)
+                : new TseCommand(TseCommandCodeEnum.InitializePins, 0x0000, new TseStringParameter(userId), new TseByteArrayParameter(userPuk));
+        }
     }
 }

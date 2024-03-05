@@ -12,9 +12,9 @@ using Newtonsoft.Json;
 using fiskaltrust.Middleware.Localization.QueueDE.Services;
 using fiskaltrust.Middleware.Localization.QueueDE.Transactions;
 using fiskaltrust.Middleware.Contracts.Models;
-using fiskaltrust.Middleware.Localization.QueueDE.MasterData;
 using fiskaltrust.Middleware.Contracts.Data;
 using fiskaltrust.Middleware.Contracts.Models.Transactions;
+using fiskaltrust.Middleware.Localization.QueueDE.MasterData;
 
 namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 {
@@ -28,15 +28,16 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             IDESSCDProvider deSSCDProvider, ITransactionPayloadFactory transactionPayloadFactory, IReadOnlyQueueItemRepository queueItemRepository,
             IConfigurationRepository configurationRepository, IJournalDERepository journalDERepository, MiddlewareConfiguration middlewareConfiguration,
             IPersistentTransactionRepository<FailedStartTransaction> failedStartTransactionRepo, IPersistentTransactionRepository<FailedFinishTransaction> failedFinishTransactionRepo,
-            IPersistentTransactionRepository<OpenTransaction> openTransactionRepo, ITarFileCleanupService tarFileCleanupService, QueueDEConfiguration queueDEConfiguration)
+            IPersistentTransactionRepository<OpenTransaction> openTransactionRepo, ITarFileCleanupService tarFileCleanupService, QueueDEConfiguration queueDEConfiguration, IMasterDataService masterDataService)
             : base(logger, signatureFactory, deSSCDProvider, transactionPayloadFactory, queueItemRepository, configurationRepository, journalDERepository,
-                  middlewareConfiguration, failedStartTransactionRepo, failedFinishTransactionRepo, openTransactionRepo, tarFileCleanupService, queueDEConfiguration)
+                  middlewareConfiguration, failedStartTransactionRepo, failedFinishTransactionRepo, openTransactionRepo, tarFileCleanupService, queueDEConfiguration, masterDataService)
         {
             _actionJournalRepository = actionJournalRepository;
         }
 
         public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueDE queueDE, ReceiptRequest request, ftQueueItem queueItem)
         {
+            _logger.LogTrace("InitiateScuSwitchReceiptCommand.ExecuteAsync [enter].");
             ThrowIfNoImplicitFlow(request);
             ThrowIfTraining(request);
 
@@ -49,7 +50,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 ? JsonConvert.DeserializeAnonymousType(lastDailyClosingJournal.DataJson, new { ftReceiptNumerator = 0L }).ftReceiptNumerator
                 : -1;
 
-            if (lastDailyClosingJournal == null || lastDailyClosingNumerator != queue.ftReceiptNumerator)
+            if (!request.IsInitiateScuSwitchReceiptForce() && ( lastDailyClosingJournal == null || lastDailyClosingNumerator != queue.ftReceiptNumerator))
             {
                 var reachable = false;
                 try
@@ -61,7 +62,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
                 if (reachable)
                 {
-                    throw new Exception($"ReceiptCase {request.ftReceiptCase:X} (initiate-scu-switch-receipt) can only be called right after a daily-closing receipt.");
+                    throw new Exception($"ReceiptCase {request.ftReceiptCase:X} (initiate-scu-switch-receipt) can only be called right after a daily-closing receipt." +
+                        $"If no daily-closing receipt can be done or the tse is not reachable use the Initiate-ScuSwitch-Force-Flag. See https://link.fiskaltrust.cloud/market-de/force-scu-switch-flag for more details.");
                 }
             }
 
@@ -122,7 +124,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 );
 
                 receiptResponse.ftStateData = await StateDataFactory.AppendTseInfoAsync(_deSSCDProvider.Instance, receiptResponse.ftStateData).ConfigureAwait(false);
-
             }
             catch (Exception ex)
             {
@@ -163,7 +164,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 transactionNumber = null;
             }
 
-
             actionJournals.Add(
                 new ftActionJournal()
                 {
@@ -190,6 +190,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             queueDE.ftSignaturCreationUnitDEId = null;
             await _configurationRepository.InsertOrUpdateQueueDEAsync(queueDE).ConfigureAwait(false);
             _logger.LogInformation("Disconnected from SCU with ID '{ScuId}'.", specifiedSourceScuId);
+            _logger.LogTrace("InitiateScuSwitchReceiptCommand.ExecuteAsync [exit].");
             return new RequestCommandResponse()
             {
                 ActionJournals = actionJournals,

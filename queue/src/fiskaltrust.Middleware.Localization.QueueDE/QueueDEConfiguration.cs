@@ -18,9 +18,13 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
 
         public bool StoreTemporaryExportFiles { get; set; } = false;
 
+        public bool DisableDsfinvkExportReferences { get; set; } = false;
+
         private bool EnableTarFileExport { get; set; } = true;
 
         public TarFileExportMode TarFileExportMode { get; set; } = TarFileExportMode.All;
+
+        public bool ExcludeDsfinvkOrders { get; set; } = false;
 
         public static QueueDEConfiguration FromMiddlewareConfiguration(ILogger<QueueDEConfiguration> logger, MiddlewareConfiguration middlewareConfiguration)
         {

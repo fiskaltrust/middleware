@@ -41,6 +41,12 @@
     },
     {
       "ftSignatureFormat": 1,
+      "ftSignatureType": 4919338167972134947,
+      "Caption": "<tse-seriennummer>",
+      "Data": "dc19faf6e7ab21690772be6f0ffc586eccdfeb299c17985c06b59029409a7613"
+    },
+    {
+      "ftSignatureFormat": 1,
       "ftSignatureType": 4919338167972134931,
       "Caption": "<qr-code-version>",
       "Data": "V0"

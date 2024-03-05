@@ -4,7 +4,9 @@
     {
         public static string FtJournalAT = "ftJournalAT";
         public static string FtJournalFR = "ftJournalFR";
+        public static string FtJournalFRCopyPayload = "ftJournalFRCopyPayload";
         public static string FtJournalDE = "ftJournalDE";
+        public static string FtJournalIT = "ftJournalIT";
         public static string FActionJournal = "ftActionJournal";
         public static string FtQueueItem = "ftQueueItem";
         public static string FtReceiptJournal = "ftReceiptJournal";
@@ -13,10 +15,12 @@
         public static string FtQueueAT = "ftQueueAT";
         public static string FtQueueDE = "ftQueueDE";
         public static string FtQueueFR = "ftQueueFR";
+        public static string FtQueueIT = "ftQueueIT";
         public static string FtQueueME = "ftQueueME";
         public static string FtSignaturCreationUnitAT = "ftSignaturCreationUnitAT";
         public static string FtSignaturCreationUnitDE = "ftSignaturCreationUnitDE";
         public static string FtSignaturCreationUnitFR = "ftSignaturCreationUnitFR";
+        public static string FtSignaturCreationUnitIT = "ftSignaturCreationUnitIT";
         public static string FtSignaturCreationUnitME = "ftSignaturCreationUnitME";
         public static string FailedFinishTransaction = "FailedFinishTransaction";
         public static string FailedStartTransaction = "FailedStartTransaction";

@@ -4,13 +4,15 @@ using System.Security.Cryptography;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1.de;
 using fiskaltrust.Middleware.Localization.QueueDE.Extensions;
+using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.QueueDE.Services
 {
     public class TarFileExportService
     {
-        public async Task<(string filePath, bool success, string checkSum, bool isErased)> ProcessTarFileExportAsync(IDESSCD client, Guid queueId, string cashboxIdentification, bool erase, string serviceFolder, int tarFileChunkSize)
+        public async Task<(string filePath, bool success, string checkSum, bool isErased)> ProcessTarFileExportAsync(ILogger logger, IDESSCD client, Guid queueId, string cashboxIdentification, bool erase, string serviceFolder, int tarFileChunkSize)
         {
+            logger.LogTrace("TarFileExportService.ProcessTarFileExportAsync [enter].");
             var exportSession = await client.StartExportSessionAsync(new StartExportSessionRequest
             {
                 Erase = erase
@@ -20,6 +22,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
             Directory.CreateDirectory(targetDirectory);
             var filePath = Path.Combine(targetDirectory, $"{DateTime.Now:yyyyMMddhhmmssfff}_{cashboxIdentification.RemoveInvalidFilenameChars()}.tar");
 
+
+            logger.LogTrace("TarFileExportService.ProcessTarFileExportAsync Section ExportDataAsync [enter].");
             using (var fileStream = File.Create(filePath))
             {
                 ExportDataResponse export;
@@ -36,14 +40,19 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
                     }
                     else
                     {
+                        logger.LogTrace("TarFileExportService.ProcessTarFileExportAsync Section Convert.FromBase64String [enter].");
                         var chunk = Convert.FromBase64String(export.TarFileByteChunkBase64);
                         fileStream.Write(chunk, 0, chunk.Length);
+                        logger.LogTrace("TarFileExportService.ProcessTarFileExportAsync Section Convert.FromBase64String [exit].");
                     }
                 } while (!export.TarFileEndOfFile);
             }
+            logger.LogTrace("TarFileExportService.ProcessTarFileExportAsync Section ExportDataAsync [exit].");
 
+            logger.LogTrace("TarFileExportService.ProcessTarFileExportAsync Section Sha256ChecksumBase64 [enter].");
             using var sha256 = SHA256.Create();
             var sha256CheckSum = Convert.ToBase64String(sha256.ComputeHash(File.ReadAllBytes(filePath)));
+            logger.LogTrace("TarFileExportService.ProcessTarFileExportAsync Section Sha256ChecksumBase64 [exit].");
             var endSessionRequest = new EndExportSessionRequest
             {
                 TokenId = exportSession.TokenId,
@@ -55,6 +64,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
             {
                 return (null, false, null, false);
             }
+            logger.LogTrace("TarFileExportService.ProcessTarFileExportAsync [exit].");
             return (filePath, true, sha256CheckSum, endExportSessionResult.IsErased);
         }
     }

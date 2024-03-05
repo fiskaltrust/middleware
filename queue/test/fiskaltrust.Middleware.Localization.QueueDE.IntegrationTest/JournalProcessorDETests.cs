@@ -51,7 +51,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest
             };
 
             var tarFileCleanupService = Mock.Of<ITarFileCleanupService>();
-            var sut = new JournalProcessorDE(Mock.Of<ILogger<JournalProcessorDE>>(), configurationRepositoryMock.Object, null, null, null, null, null, null, deSSCDProviderMock.Object, mwConfiguration, Mock.Of<IMasterDataService>(), null, tarFileCleanupService);
+            var sut = new JournalProcessorDE(Mock.Of<ILogger<JournalProcessorDE>>(), configurationRepositoryMock.Object, null, null, null, null, null, null, deSSCDProviderMock.Object, mwConfiguration, Mock.Of<IMasterDataService>(), null, tarFileCleanupService, new QueueDEConfiguration());
 
             var chunks = await sut.ProcessAsync(new JournalRequest
             {
