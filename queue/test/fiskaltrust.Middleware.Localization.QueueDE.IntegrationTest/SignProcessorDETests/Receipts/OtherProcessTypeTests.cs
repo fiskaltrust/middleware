@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProcessorDETests.Fixtures;
+using fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProcessorDETests.Helpers;
 using Xunit;
 using FluentAssertions;
 
@@ -14,13 +15,23 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
     {
         private readonly ReceiptTests _receiptTests;
         private readonly SignProcessorDependenciesFixture _fixture;
+        private readonly ReceiptProcessorHelper _receiptProcessorHelper;
+        
         public OtherProcessTypeTests(SignProcessorDependenciesFixture fixture)
         {
             _receiptTests = new ReceiptTests(fixture);
             _fixture = fixture;
+            _receiptProcessorHelper = new ReceiptProcessorHelper(_fixture.SignProcessor);
         }
+        
         [Fact]
-        public async Task OtherProcessType_IsNoImplicitFlowAndOpenTrans_ExpectArgumentException() => await _receiptTests.ExpectArgumentExceptionReceiptReference(_receiptTests.GetReceipt("OrderProcessType", "OrderTypeNoImplNoOpen", 0x4445000000000014), "No transactionnumber found for cbReceiptReference '{0}'.").ConfigureAwait(false);
+        public async Task OtherProcessType_IsNoImplicitFlowAndOpenTrans_ExpectErrorState()
+        {
+            var receiptRequest = _receiptTests.GetReceipt("OrderProcessType", "OrderTypeNoImplNoOpen", 0x4445000000000014);
+            var response = await _receiptProcessorHelper.ProcessReceiptRequestAsync(receiptRequest);
+
+            response.ftState.Should().Be(0xEEEE_EEEE);
+        }
 
         [Fact]
         public async Task OtherProcessType_ValidRequestTraining_ExpectValidResponse()
