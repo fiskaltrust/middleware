@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using fiskaltrust.Middleware.Contracts.Models.Transactions;
 using fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProcessorDETests.Fixtures;
+using fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProcessorDETests.Helpers;
 using Xunit;
 using FluentAssertions;
 
@@ -13,28 +15,65 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
     {
         private readonly ReceiptTests _receiptTests;
         private readonly SignProcessorDependenciesFixture _fixture;
+        private readonly ReceiptProcessorHelper _receiptProcessorHelper;
+
         public FailTransactionReceiptTest(SignProcessorDependenciesFixture fixture)
         {
             _receiptTests = new ReceiptTests(fixture);
-            _fixture = fixture;
+            _fixture = fixture; 
+            _receiptProcessorHelper = new ReceiptProcessorHelper(_fixture.SignProcessor);
         }
+        
         [Fact]
-        public async Task FailTransaction_IsImplicitFlowOnSingle_ExpectArgumentException() => await _receiptTests.ExpectArgumentExceptionReceiptcase(_receiptTests.GetReceipt("StartTransactionReceipt", "FailTransNoImplFlow", 0x444500010000000b), "ReceiptCase {0:X} (fail-transaction-receipt) cannot use implicit-flow flag when a single transaction should be failed.").ConfigureAwait(false);
+        public async Task FailTransaction_IsImplicitFlowOnSingle_ExpectErrorState()
+        {
+            var receiptRequest = _receiptTests.GetReceipt("StartTransactionReceipt", "FailTransNoImplFlow", 0x444500010000000b);
+            var response = await _receiptProcessorHelper.ProcessReceiptRequestAsync(receiptRequest);
+
+            response.ftState.Should().Be(0xEEEE_EEEE);
+        }
 
         [Fact]
-        public async Task FailTransaction_IsNoImplicitFlowOnMulti_ExpectArgumentException()
+        public async Task FailTransaction_IsNoImplicitFlowOnMulti_ExpectErrorState()
         {
             var receiptRequest = _receiptTests.GetReceipt("StartTransactionReceipt", "", 0x44450000000000b);
             receiptRequest.ftReceiptCaseData = "{\"CurrentStartedTransactionNumbers\": [8, 9]}";
-            await _receiptTests.ExpectArgumentExceptionReceiptcase(receiptRequest, "ReceiptCase {0:X} (fail-transaction-receipt) must use implicit-flow flag when multiple transactions should be failed.").ConfigureAwait(false);
+            var response = await _receiptProcessorHelper.ProcessReceiptRequestAsync(receiptRequest);
+
+            response.ftState.Should().Be(0xEEEE_EEEE);
         }
         
         [Fact]
-        public async Task FailTransaction_NoOpenTransOnSingle_ExpectArgumentException() => await _receiptTests.ExpectArgumentExceptionReceiptReference(_receiptTests.GetReceipt("StartTransactionReceipt", "FailTransNoOpenTransSingle", 0x444500000000000b), "No open transaction found for cbReceiptReference '{0:X}'. If you want to close multiple transactions, pass an array value for 'CurrentStartedTransactionNumbers' via ftReceiptCaseData.").ConfigureAwait(false);
-        
-        [Fact]
-        public async Task FailTransaction_SingleTrans_ExpectArgumentException() => await _receiptTests.ExpectArgumentExceptionReceiptcase(_receiptTests.GetReceipt("StartTransactionReceipt", "FailTransNoImplFlow", 0x444500010000000b), "ReceiptCase {0:X} (fail-transaction-receipt) cannot use implicit-flow flag when a single transaction should be failed.").ConfigureAwait(false);
+        public async Task StartTransaction_WithOpenTransactionRepo_ExpectErrorState()
+        {
+            var existingOpenTransactionRef = "TestRef";
+            var openTransaction = new OpenTransaction
+            {
+                TransactionNumber = 4,
+                StartTransactionSignatureBase64 = "exampleSignature",
+                StartMoment = DateTime.UtcNow.AddHours(-1),
+                cbReceiptReference = existingOpenTransactionRef
+            };
+            await _fixture.openTransactionRepository.InsertOrUpdateTransactionAsync(openTransaction);
 
+            await _fixture.openTransactionRepository.RemoveAsync(existingOpenTransactionRef);
+
+            var receiptRequest = _receiptTests.GetReceipt("StartTransactionReceipt", existingOpenTransactionRef, null);
+            var response = await _receiptProcessorHelper.ProcessReceiptRequestAsync(receiptRequest);
+
+
+            Assert.Equal(0xEEEE_EEEE, response.ftState);
+        }
+
+        [Fact]
+        public async Task FailTransaction_SingleTrans_ExpectErrorState()
+        {
+            var receiptRequest = _receiptTests.GetReceipt("StartTransactionReceipt", "FailTransNoImplFlow", 0x444500010000000b);
+            var response = await _receiptProcessorHelper.ProcessReceiptRequestAsync(receiptRequest);
+
+            response.ftState.Should().Be(0xEEEE_EEEE);
+        }
+        
         [Fact]
         public async Task FailTransaction_ValidSingleTransTraining_ExpectValid()
         {
