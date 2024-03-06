@@ -3,6 +3,7 @@ using System.Text;
 using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProcessorDETests.Fixtures;
+using fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProcessorDETests.Helpers;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
 using Newtonsoft.Json;
@@ -15,22 +16,36 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
     {
         private readonly SignProcessorDependenciesFixture _fixture;
         private readonly ReceiptTests _receiptTests;
+        private readonly ReceiptProcessorHelper _receiptProcessorHelper;
+
 
         public FinishScuSwitchTests(SignProcessorDependenciesFixture fixture)
         {
             _receiptTests = new ReceiptTests(fixture);
             _fixture = fixture;
+            _receiptProcessorHelper = new ReceiptProcessorHelper(_fixture.SignProcessor);
         }
 
         [Fact]
-        public async Task FinishScuSwitchReceipt_IsNoImplicitFlow_ExpectArgumentException() => await _receiptTests.ExpectArgumentExceptionReceiptcase(
-            _receiptTests.GetReceipt("InitiateScuSwitchReceipt", "InitiateScuSwitchNoImplFlow", 0x4445000000000018), "ReceiptCase {0:X} (Finish-SCU-switch receipt) must use implicit-flow flag.").ConfigureAwait(false);
-        [Fact]
-        public async Task FinishSwitchReceipt_IsTraining_ExpectArgumentException() => await _receiptTests.ExpectArgumentExceptionReceiptcase(
-            _receiptTests.GetReceipt("InitiateScuSwitchReceipt", "InitiateScuSwitchNoImplFlow", 0x4445000100020018), "ReceiptCase {0:X} can not use 'TrainingMode' flag.").ConfigureAwait(false);
+        public async Task FinishScuSwitchReceipt_IsNoImplicitFlow_ExpectErrorState()
+        {
+            var receiptRequest = _receiptTests.GetReceipt("InitiateScuSwitchReceipt", "InitiateScuSwitchNoImplFlow", 0x4445000000000018);
+            var response = await _receiptProcessorHelper.ProcessReceiptRequestAsync(receiptRequest);
+
+            response.ftState.Should().Be(0xEEEE_EEEE);
+        }
 
         [Fact]
-        public async Task InitScuSwitchReceipt_QueueDESignaturCreationUnitDEIdIsNotNull_ExpectException()
+        public async Task FinishSwitchReceipt_IsTraining_ExpectErrorState()
+        {
+            var receiptRequest = _receiptTests.GetReceipt("InitiateScuSwitchReceipt", "InitiateScuSwitchNoImplFlow", 0x4445000100020018);
+            var response = await _receiptProcessorHelper.ProcessReceiptRequestAsync(receiptRequest);
+
+            response.ftState.Should().Be(0xEEEE_EEEE);
+        }
+        
+        [Fact]
+        public async Task InitScuSwitchReceipt_QueueDESignaturCreationUnitDEIdIsNotNull_ExpectErrorState()
         {
             var queueItem = new ftQueueItem
             {
@@ -45,8 +60,10 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                 requestHash = "test request hash"
             };
             await _fixture.queueItemRepository.InsertOrUpdateAsync(queueItem);
-            await _receiptTests.ExpectException(
-                _receiptTests.GetReceipt("InitiateScuSwitchReceipt", "InitiateScuSwitchNoImplFlow", 0x4445000100000018), $"The SCU switch must be initiated with a initiate-scu-switch receipt. See https://link.fiskaltrust.cloud/market-de/scu-switch for more details.").ConfigureAwait(false);
+
+            var receiptRequest = _receiptTests.GetReceipt("InitiateScuSwitchReceipt", "InitiateScuSwitchNoImplFlow", 0x4445000100000018);
+            var response = await _receiptProcessorHelper.ProcessReceiptRequestAsync(receiptRequest);
+            response.ftState.Should().Be(0xEEEE_EEEE);
         }
 
         [Fact]
@@ -65,9 +82,11 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                 requestHash = "test request hash"
             };
             await _fixture.queueItemRepository.InsertOrUpdateAsync(queueItem);
-            await _fixture.actionJournalRepository.InsertAsync(CreateftActionJournal($"{0x4445000000000003:X}-{nameof(InitiateSCUSwitch)}", _fixture.QUEUEID, queueItem.ftQueueItemId, string.Empty));
-            await _receiptTests.ExpectException(
-                _receiptTests.GetReceipt("InitiateScuSwitchReceipt", "InitiateScuSwitchNoImplFlow", 0x4445000100000018), $"The SCU switch must be initiated with a initiate-scu-switch receipt. See https://link.fiskaltrust.cloud/market-de/scu-switch for more details.", true, true).ConfigureAwait(false);
+            await _fixture.actionJournalRepository.InsertAsync(CreateftActionJournal(
+                $"{0x4445000000000003:X}-{nameof(InitiateSCUSwitch)}", _fixture.QUEUEID, queueItem.ftQueueItemId, string.Empty));
+            var receiptRequest = _receiptTests.GetReceipt("InitiateScuSwitchReceipt", "InitiateScuSwitchNoImplFlow", 0x4445000100000018);
+            var response = await _receiptProcessorHelper.ProcessReceiptRequestAsync(receiptRequest);
+            response.ftState.Should().Be(0xEEEE_EEEE);
         }
 
         [Fact]
