@@ -4,9 +4,13 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using fiskaltrust.Middleware.Contracts.Models.Transactions;
 using fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProcessorDETests.Fixtures;
+using fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProcessorDETests.Helpers;
+using fiskaltrust.storage.V0;
 using Xunit;
 using FluentAssertions;
+using Moq;
 
 namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProcessorDETests.Receipts
 {
@@ -14,15 +18,42 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
     {
         private readonly ReceiptTests _receiptTests;
         private readonly SignProcessorDependenciesFixture _fixture;
+        private readonly ReceiptProcessorHelper _receiptProcessorHelper;
+
         public StartTransactionReceiptTests(SignProcessorDependenciesFixture fixture)
         {
             _receiptTests = new ReceiptTests(fixture);
             _fixture = fixture;
+            _receiptProcessorHelper = new ReceiptProcessorHelper(_fixture.SignProcessor);
         }
+        
         [Fact]
-        public async Task StartTransaction_IsNoImplicitFlow_ExpectArgumentException() => await _receiptTests.ExpectArgumentExceptionReceiptcase(_receiptTests.GetReceipt("StartTransactionReceipt", "StartTransNoImplFlow", 0x4445000100000008), "ReceiptCase {0:X} (Start-transaction receipt) can not use implicit-flow flag.").ConfigureAwait(false);
+        public async Task StartTransaction_IsNoImplicitFlow_ExpectErrorState()
+        {
+            var receiptRequest = _receiptTests.GetReceipt("StartTransactionReceipt", "StartTransNoImplFlow", 0x4445000100000008);
+            var response = await _receiptProcessorHelper.ProcessReceiptRequestAsync(receiptRequest);
+
+            response.ftState.Should().Be(0xEEEE_EEEE);
+        }
+
         [Fact]
-        public async Task StartTransaction_WithOpenTransactionRepo_ExpectArgumentException() => await _receiptTests.Transaction_WithOpenTransactionRepo_ExpectArgumentException("StartTransactionReceipt", 4, "An open transaction already exists with the provided receipt reference").ConfigureAwait(false);
+        public async Task StartTransaction_WithOpenTransactionRepo_ExpectErrorState()
+        {
+            var openTransaction = new OpenTransaction
+            {
+                TransactionNumber = 4,
+                StartTransactionSignatureBase64 = "TestSignature",
+                StartMoment = DateTime.UtcNow.AddHours(-1),
+                cbReceiptReference = "TestRef"
+            };
+            await _fixture.openTransactionRepository.InsertAsync(openTransaction);
+
+            var receiptRequest = _receiptTests.GetReceipt("StartTransactionReceipt", openTransaction.cbReceiptReference, null);
+            var response = await _receiptProcessorHelper.ProcessReceiptRequestAsync(receiptRequest);
+
+            Assert.Equal(0xEEEE_EEEE, response.ftState);
+        }
+
         [Fact]
         public async Task StartTransaction_ValidRequest_ExpectOpenTransaction()
         {
@@ -34,6 +65,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             opentranses.Should().NotBeNull();
             opentranses.cbReceiptReference.Should().Be(receiptRequest.cbReceiptReference);
         }
+        
         [Fact]
         public async Task StartTransaction_TrainingRequest_ExpectTrainingSign()
         {
@@ -52,7 +84,15 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             var receiptRequest = _receiptTests.GetReceipt("StartTransactionReceipt", "StartTransactionReceiptWithError", null);
             var expectedErrorMessage = "Transaction failed due to invalid receipt format.";
 
-            await _receiptTests.ExpectActionJournalEntryForErrorState(receiptRequest, expectedErrorMessage);
+            _fixture.ActionJournalRepositoryMock.Setup(x => x.InsertAsync(It.IsAny<ftActionJournal>()))
+                .Callback((ftActionJournal journal) =>
+                {
+                    Assert.Contains(expectedErrorMessage, journal.Message);
+                });
+
+            var response = await _receiptProcessorHelper.ProcessReceiptRequestAsync(receiptRequest);
+
+            _fixture.ActionJournalRepositoryMock.Verify(x => x.InsertAsync(It.IsAny<ftActionJournal>()), Times.Once);
         }
     }
 }
