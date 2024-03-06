@@ -30,11 +30,13 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
     {
         private readonly SignProcessorDependenciesFixture _fixture;
         private readonly ReceiptTests _receiptTests;
+        private readonly ReceiptProcessorHelper _receiptProcessorHelper;
 
         public ZeroReceiptTests(SignProcessorDependenciesFixture fixture)
         {
             _fixture = fixture;
             _receiptTests = new ReceiptTests(fixture);
+            _receiptProcessorHelper = new ReceiptProcessorHelper(_fixture.SignProcessor);
         }
 
         [Fact]
@@ -96,12 +98,15 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
 
         }
         [Fact]
-        public async Task SignProcessorZeroReceipt_NoImplictFlow_Exception()
+        public async Task SignProcessorZeroReceipt_NoImplicitFlow_ExpectErrorState()
         {
             var receiptRequest = TestObjectFactory.GetReceipt(Path.Combine("Data", "ZeroReceipt", "SelfTest"));
-            receiptRequest.cbReceiptReference = "ZeroReceiptNoImplictFlow";
+            receiptRequest.cbReceiptReference = "ZeroReceiptNoImplicitFlow";
             receiptRequest.ftReceiptCase = 0x4445000000000002;
-            await _receiptTests.ExpectArgumentExceptionReceiptcase(receiptRequest, "ReceiptCase 4445000000000002 (Zero receipt) must use implicit-flow flag.").ConfigureAwait(false);
+
+            var response = await _receiptProcessorHelper.ProcessReceiptRequestAsync(receiptRequest);
+
+            response.ftState.Should().Be(0xEEEE_EEEE);
         }
 
         [Fact]
