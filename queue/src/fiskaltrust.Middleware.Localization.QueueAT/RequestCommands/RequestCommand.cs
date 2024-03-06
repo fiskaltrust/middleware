@@ -541,7 +541,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 
                             try
                             {
-                                var zda = await sscd.ZdaAsync();
+                                var zda = (await sscd.ZdaAsync()).ZDA;
                                 var certResponse = await sscd.CertificateAsync();
                                 var cert = new X509CertificateParser().ReadCertificate(certResponse.Certificate);
                                 var certificateSerialNumber = cert.SerialNumber.ToString(16);
@@ -578,7 +578,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                                 queueAT.ftCashNumerator = cashNumerator;
                                 queueAT.ftCashTotalizer += Math.Round(totalizer, 2);
                                 queueAT.LastSignatureHash = CreateLastReceiptSignature($"{journalAT.JWSHeaderBase64url}.{journalAT.JWSPayloadBase64url}.{journalAT.JWSSignatureBase64url}");
-                                queueAT.LastSignatureZDA = zda.ZDA;
+                                queueAT.LastSignatureZDA = zda;
                                 queueAT.LastSignatureCertificateSerialNumber = certificateSerialNumber;
 
 
