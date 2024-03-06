@@ -32,7 +32,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
         protected readonly QueueATConfiguration _queueATConfiguration;
         protected readonly ILogger<RequestCommand> _logger;
 
-        public RequestCommand(IATSSCDProvider sscdProvider, MiddlewareConfiguration middlewareConfiguration, QueueATConfiguration queueATConfiguration, ILogger<RequestCommand> logger)
+        public RequestCommand(IATSSCDProvider sscdProvider, MiddlewareConfiguration middlewareConfiguration, QueueATConfiguration queueATConfiguration, ILogger<RequestCommand> logger )
         {
             _sscdProvider = sscdProvider;
             _middlewareConfiguration = middlewareConfiguration;
@@ -107,7 +107,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
         }
 #pragma warning restore IDE0060
 
-        protected async Task<(string receiptIdentification, string ftStateData, bool isBackupScuUsed, List<SignaturItem> signatureItems, ftJournalAT journalAT)> SignReceiptAsync(ftQueueAT queueAT, ReceiptRequest receiptRequest, string ftReceiptIdentification, DateTime ftReceiptMoment, Guid ftQueueItemId)
+        protected async Task<(string receiptIdentification, string ftStateData, bool isBackupScuUsed, List<SignaturItem> signatureItems, ftJournalAT journalAT)> SignReceiptAsync(ftQueueAT queueAT, ReceiptRequest receiptRequest, string ftReceiptIdentification, DateTime ftReceiptMoment, Guid ftQueueItemId, bool requiresSigning = false)
         {
             var signatures = new List<SignaturItem>();
             string ftStateData = null;
@@ -262,7 +262,6 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 
 
             var requiresCounting = false;
-            var requiresSigning = false;
 
             if (receiptRequest.IsZeroReceipt() || queueAT.SignAll)
             {
@@ -541,7 +540,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 
                             try
                             {
-                                var zda = await sscd.ZdaAsync();
+                                var zda = (await sscd.ZdaAsync()).ZDA;
                                 var certResponse = await sscd.CertificateAsync();
                                 var cert = new X509CertificateParser().ReadCertificate(certResponse.Certificate);
                                 var certificateSerialNumber = cert.SerialNumber.ToString(16);
@@ -578,7 +577,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                                 queueAT.ftCashNumerator = cashNumerator;
                                 queueAT.ftCashTotalizer += Math.Round(totalizer, 2);
                                 queueAT.LastSignatureHash = CreateLastReceiptSignature($"{journalAT.JWSHeaderBase64url}.{journalAT.JWSPayloadBase64url}.{journalAT.JWSSignatureBase64url}");
-                                queueAT.LastSignatureZDA = zda.ZDA;
+                                queueAT.LastSignatureZDA = zda;
                                 queueAT.LastSignatureCertificateSerialNumber = certificateSerialNumber;
 
 
