@@ -18,7 +18,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
         private readonly ReceiptTests _receiptTests;
         private readonly ReceiptProcessorHelper _receiptProcessorHelper;
 
-
         public FinishScuSwitchTests(SignProcessorDependenciesFixture fixture)
         {
             _receiptTests = new ReceiptTests(fixture);

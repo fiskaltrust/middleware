@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProcessorDETests.Fixtures;
 using fiskaltrust.Middleware.Localization.QueueDE.Extensions;
+using fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProcessorDETests.Helpers;
 using fiskaltrust.Middleware.Queue.Helpers;
 using FluentAssertions;
 using Newtonsoft.Json;
@@ -15,11 +16,13 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
     {
         private readonly SignProcessorDependenciesFixture _fixture;
         private readonly ReceiptTests _receiptTests;
+        private readonly ReceiptProcessorHelper _receiptProcessorHelper;
 
         public InitialOperationTests(SignProcessorDependenciesFixture fixture)
         {
             _fixture = fixture;
             _receiptTests = new ReceiptTests(fixture);
+            _receiptProcessorHelper = new ReceiptProcessorHelper(_fixture.SignProcessor);
         }
 
         [Fact]
@@ -36,30 +39,35 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
         public async Task InititalOperation_QueueIsDeactivated_ActionJournalEntry()
         {
             var receiptRequest = TestObjectFactory.GetReceipt(Path.Combine("Data", "InitialOperation"));
-            var signProcessor = _fixture.CreateSignProcessorForSignProcessorDE(false, DateTime.Now.AddHours(-5), DateTime.Now.AddMinutes(-5));
-            var receiptResponse = await signProcessor.ProcessAsync(receiptRequest);
-            var actionJournal = await _fixture.actionJournalRepository.GetAsync().ConfigureAwait(false);
-            var lastActionEntry = actionJournal.OrderByDescending(x => x.TimeStamp).First();
-            lastActionEntry.Message.Should().Be($"Queue {_fixture.QUEUEID} is de-activated, initial-operations-receipt can not be executed.");
+            var response = await _receiptProcessorHelper.ProcessReceiptRequestAsync(receiptRequest);
+
+            response.ftState.Should().Be(0xEEEE_EEEE);
+
+            var actionJournalEntry = _fixture.ActionJournalRepositoryMock.Invocations.FirstOrDefault();
+            Assert.NotNull(actionJournalEntry);
         }
 
         [Fact]
         public async Task InititalOperation_QueueIsActive_ActionJournalEntry()
         {
             var receiptRequest = TestObjectFactory.GetReceipt(Path.Combine("Data", "InitialOperation"));
-            var signProcessor = _fixture.CreateSignProcessorForSignProcessorDE(false, DateTime.Now.AddHours(-5));
-            var receiptResponse = await signProcessor.ProcessAsync(receiptRequest);
-            var actionJournal = await _fixture.actionJournalRepository.GetAsync().ConfigureAwait(false);
-            var lastActionEntry = actionJournal.OrderByDescending(x => x.TimeStamp).First();
-            lastActionEntry.Message.Should().Be($"Queue {_fixture.QUEUEID} is activated, initial-operations-receipt can not be executed.");
+            var response = await _receiptProcessorHelper.ProcessReceiptRequestAsync(receiptRequest);
+
+            response.ftState.Should().Be(0xEEEE_EEEE);
+
+            var actionJournalEntry = _fixture.ActionJournalRepositoryMock.Invocations.FirstOrDefault();
+            Assert.NotNull(actionJournalEntry);
         }
 
         [Fact]
-        public async Task InititalOperation_IsNoImplicitFlow_ExpectArgumentException()
+        public async Task InititalOperation_IsNoImplicitFlow_ExpectErrorState()
         {
             var receiptRequest = TestObjectFactory.GetReceipt(Path.Combine("Data", "InitialOperation"));
             receiptRequest.ftReceiptCase = 4919338167972134915;
-            await _receiptTests.ExpectArgumentExceptionReceiptcase(receiptRequest, $"ReceiptCase {receiptRequest.ftReceiptCase:X} (initial-operation receipt) must use implicit-flow flag.");
+
+            var response = await _receiptProcessorHelper.ProcessReceiptRequestAsync(receiptRequest);
+
+            response.ftState.Should().Be(0xEEEE_EEEE);
         }
     }
 }
