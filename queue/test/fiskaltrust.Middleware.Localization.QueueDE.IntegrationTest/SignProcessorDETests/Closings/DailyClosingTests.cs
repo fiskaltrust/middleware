@@ -95,10 +95,30 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
         }
         [Fact]
         public async Task DailyClosing_MasterDataChange_CheckAccountOutlet() => await _closingTests.ClosingTests_MasterDataChange_CheckAccountOutlet("DailyClosingReceipt", $"Daily-Closing receipt was processed, and a master data update was performed.", 0x4445000108000007).ConfigureAwait(false);
+        
         [Fact]
-        public async Task Closing_IsNoImplicitFlow_ExpectArgumentException() => await DailyClosing_ExpectArgumentException(0x4445000000000007, "ReceiptCase {0:x} (Daily-closing receipt) must use implicit-flow flag.").ConfigureAwait(false);
+        public async Task Closing_IsNoImplicitFlow_ExpectArgumentException()
+        {
+            var receiptRequest = TestObjectFactory.GetReceipt(Path.Combine("Data", "DailyClosingReceipt"));
+            receiptRequest.ftReceiptCase = 0x4445000000000007; 
+
+            var response = await _fixture.CreateSignProcessorForSignProcessorDE(false, DateTime.Now.AddHours(-1)).ProcessAsync(receiptRequest);
+
+            response.ftState.Should().Be(0xEEEE_EEEE);
+        }
+
         [Fact]
-        public async Task DailyClosing_IsTraining_ExpectArgumentException() => await DailyClosing_ExpectArgumentException(0x4445000100020007, "ReceiptCase {0:x} can not use 'TrainingMode' flag.").ConfigureAwait(false);
+        public async Task DailyClosing_IsTraining_ExpectArgumentException()
+        {
+
+            var receiptRequest = TestObjectFactory.GetReceipt(Path.Combine("Data", "DailyClosingReceipt"));
+            receiptRequest.ftReceiptCase = 0x4445000100020007; 
+
+            var response = await _fixture.CreateSignProcessorForSignProcessorDE(false, DateTime.Now.AddHours(-1)).ProcessAsync(receiptRequest);
+
+            response.ftState.Should().Be(0xEEEE_EEEE); 
+        }
+        
         [Fact]
         public async Task DailyClosing_HasFailOnOpenTransaction_ExpectFailedMode()
         {
