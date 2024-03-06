@@ -27,6 +27,18 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
         {
             ThrowIfTraining(request);
 
+            if (queue.StartMoment.HasValue)
+            {
+                var alreadyActiveActionJournal = CreateActionJournal(queue, queueItem, $"Queue {queue.ftQueueId} is already activated, initial-operations-receipt cannot be executed.");
+                _logger.LogInformation(alreadyActiveActionJournal.Message);
+
+                return new RequestCommandResponse
+                {
+                    ReceiptResponse = response,
+                    ActionJournals = new() { alreadyActiveActionJournal }
+                };
+            }
+
             if ((request.cbChargeItems != null && request.cbChargeItems?.Count() != 0) || (request.cbPayItems != null && request.cbPayItems?.Count() != 0))
             {
                 var notZeroReceiptActionJournal = CreateActionJournal(queue, queueItem, $"Tried to activate {queue.ftQueueId}, but the incoming receipt is not a zero receipt.");
