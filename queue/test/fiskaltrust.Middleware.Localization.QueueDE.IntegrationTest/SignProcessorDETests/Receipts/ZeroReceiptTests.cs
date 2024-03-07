@@ -106,7 +106,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
 
             var response = await _receiptProcessorHelper.ProcessReceiptRequestAsync(receiptRequest);
 
-            response.ftState.Should().Be(0xEEEE_EEEE);
+            Assert.Equal(0xEEEE_EEEE, response.ftState);
         }
 
         [Fact]
