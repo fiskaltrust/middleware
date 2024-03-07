@@ -107,7 +107,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
         }
 #pragma warning restore IDE0060
 
-        protected async Task<(string receiptIdentification, string ftStateData, bool isBackupScuUsed, List<SignaturItem> signatureItems, ftJournalAT journalAT)> SignReceiptAsync(ftQueueAT queueAT, ReceiptRequest receiptRequest, string ftReceiptIdentification, DateTime ftReceiptMoment, Guid ftQueueItemId, bool requiresSigning = false)
+        protected async Task<(string receiptIdentification, string ftStateData, bool isBackupScuUsed, List<SignaturItem> signatureItems, ftJournalAT journalAT)> SignReceiptAsync(ftQueueAT queueAT, ReceiptRequest receiptRequest, string ftReceiptIdentification, DateTime ftReceiptMoment, Guid ftQueueItemId, bool isZeroReceipt = false)
         {
             var signatures = new List<SignaturItem>();
             string ftStateData = null;
@@ -127,7 +127,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                 Exception = string.Empty,
                 Signing = false,
                 Counting = false,
-                ZeroReceipt = receiptRequest.IsZeroReceipt()
+                ZeroReceipt = isZeroReceipt
             };
 
             decimal? satz_Normal = null;
@@ -263,9 +263,8 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 
             var requiresCounting = false;
 
-            if (receiptRequest.IsZeroReceipt() || queueAT.SignAll)
+            if (isZeroReceipt || queueAT.SignAll)
             {
-                requiresSigning = true;
                 //Add everything to Counter except in Training-Mode
                 if (!rc_Training)
                 {
@@ -274,12 +273,12 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 
                 if (_middlewareConfiguration.IsSandbox && queueAT.SignAll)
                 {
-                    signatures.Add(new SignaturItem() { Caption = "Sign-All-Mode", Data = $"Sign: {requiresSigning} Counter:{requiresCounting}", ftSignatureFormat = (long) SignaturItem.Formats.Text, ftSignatureType = (long) SignaturItem.Types.AT_Unknown });
+                    signatures.Add(new SignaturItem() { Caption = "Sign-All-Mode", Data = $"Sign: {isZeroReceipt} Counter:{requiresCounting}", ftSignatureFormat = (long) SignaturItem.Formats.Text, ftSignatureType = (long) SignaturItem.Types.AT_Unknown });
                 }
 
-                if (_middlewareConfiguration.IsSandbox && receiptRequest.IsZeroReceipt())
+                if (_middlewareConfiguration.IsSandbox && isZeroReceipt)
                 {
-                    signatures.Add(new SignaturItem() { Caption = "Zero-Receipt", Data = $"Sign: {requiresSigning} Counter:{requiresCounting}", ftSignatureFormat = (long) SignaturItem.Formats.Text, ftSignatureType = (long) SignaturItem.Types.AT_Unknown });
+                    signatures.Add(new SignaturItem() { Caption = "Zero-Receipt", Data = $"Sign: {isZeroReceipt} Counter:{requiresCounting}", ftSignatureFormat = (long) SignaturItem.Formats.Text, ftSignatureType = (long) SignaturItem.Types.AT_Unknown });
                 }
             }
             else
@@ -322,7 +321,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 
                 if (signingValues.Contains(decisionNumerical))
                 {
-                    requiresSigning = true;
+                    isZeroReceipt = true;
                 }
 
                 if (countingValues.Contains(decisionNumerical))
@@ -332,7 +331,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 
                 if (_middlewareConfiguration.IsSandbox)
                 {
-                    signatures.Add(new SignaturItem() { Caption = $"Decision {decisionNumerical}", Data = $"Sign: {requiresSigning} Counter:{requiresCounting}", ftSignatureFormat = (long) SignaturItem.Formats.Text, ftSignatureType = (long) SignaturItem.Types.AT_Unknown });
+                    signatures.Add(new SignaturItem() { Caption = $"Decision {decisionNumerical}", Data = $"Sign: {isZeroReceipt} Counter:{requiresCounting}", ftSignatureFormat = (long) SignaturItem.Formats.Text, ftSignatureType = (long) SignaturItem.Types.AT_Unknown });
                 }
 
                 decision.Number = decisionNumerical;
@@ -372,7 +371,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                             );
                         if (Query.Sum(ci => ci.Amount) != 0m || (Query.Where(ci => ci.VATAmount.HasValue).Sum(ci => ci.VATAmount) + Query.Where(ci => !ci.VATAmount.HasValue).Sum(ci => ci.VATRate / 100m * ci.Amount)) != 0m)
                         {
-                            requiresSigning = true;
+                            isZeroReceipt = true;
                             if (!rc_Training)
                             {
                                 requiresCounting = true;
@@ -380,7 +379,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 
                             if (_middlewareConfiguration.IsSandbox)
                             {
-                                signatures.Add(new SignaturItem() { Caption = $"Exception A1", Data = $"Sign: {requiresSigning} Counter:{requiresCounting}", ftSignatureFormat = (long) SignaturItem.Formats.Text, ftSignatureType = (long) SignaturItem.Types.AT_Unknown });
+                                signatures.Add(new SignaturItem() { Caption = $"Exception A1", Data = $"Sign: {isZeroReceipt} Counter:{requiresCounting}", ftSignatureFormat = (long) SignaturItem.Formats.Text, ftSignatureType = (long) SignaturItem.Types.AT_Unknown });
                             }
                         }
                     }
@@ -392,7 +391,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                 {
                     decision.Exception += "A2";
 
-                    requiresSigning = true;
+                    isZeroReceipt = true;
                     if (!rc_Training)
                     {
                         requiresCounting = true;
@@ -400,7 +399,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 
                     if (_middlewareConfiguration.IsSandbox)
                     {
-                        signatures.Add(new SignaturItem() { Caption = $"Exception A2", Data = $"Sign: {requiresSigning} Counter:{requiresCounting}", ftSignatureFormat = (long) SignaturItem.Formats.Text, ftSignatureType = (long) SignaturItem.Types.AT_Unknown });
+                        signatures.Add(new SignaturItem() { Caption = $"Exception A2", Data = $"Sign: {isZeroReceipt} Counter:{requiresCounting}", ftSignatureFormat = (long) SignaturItem.Formats.Text, ftSignatureType = (long) SignaturItem.Types.AT_Unknown });
                     }
                 }
 
@@ -411,7 +410,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                 {
                     decision.Exception += "A3";
 
-                    requiresSigning = true;
+                    isZeroReceipt = true;
                     if (!rc_Training)
                     {
                         requiresCounting = true;
@@ -419,7 +418,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 
                     if (_middlewareConfiguration.IsSandbox)
                     {
-                        signatures.Add(new SignaturItem() { Caption = $"Exception A3", Data = $"Sign: {requiresSigning} Counter:{requiresCounting}", ftSignatureFormat = (long) SignaturItem.Formats.Text, ftSignatureType = (long) SignaturItem.Types.AT_Unknown });
+                        signatures.Add(new SignaturItem() { Caption = $"Exception A3", Data = $"Sign: {isZeroReceipt} Counter:{requiresCounting}", ftSignatureFormat = (long) SignaturItem.Formats.Text, ftSignatureType = (long) SignaturItem.Types.AT_Unknown });
                     }
                 }
 
@@ -430,7 +429,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                 {
                     decision.Exception += "A4";
 
-                    requiresSigning = true;
+                    isZeroReceipt = true;
                     if (!rc_Training)
                     {
                         requiresCounting = true;
@@ -438,7 +437,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 
                     if (_middlewareConfiguration.IsSandbox)
                     {
-                        signatures.Add(new SignaturItem() { Caption = $"Exception A4", Data = $"Sign: {requiresSigning} Counter:{requiresCounting}", ftSignatureFormat = (long) SignaturItem.Formats.Text, ftSignatureType = (long) SignaturItem.Types.AT_Unknown });
+                        signatures.Add(new SignaturItem() { Caption = $"Exception A4", Data = $"Sign: {isZeroReceipt} Counter:{requiresCounting}", ftSignatureFormat = (long) SignaturItem.Formats.Text, ftSignatureType = (long) SignaturItem.Types.AT_Unknown });
                     }
                 }
 
@@ -465,7 +464,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 
             if (_middlewareConfiguration.IsSandbox)
             {
-                decision.Signing = requiresSigning;
+                decision.Signing = isZeroReceipt;
                 decision.Counting = requiresCounting;
                 ftStateData = JsonConvert.SerializeObject(decision);
             }
@@ -482,7 +481,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                 }
             }
 
-            if (requiresSigning || receiptRequest.IsZeroReceipt())
+            if (isZeroReceipt || isZeroReceipt)
             {
                 var cashNumerator = queueAT.ftCashNumerator + 1;
                 var receiptIdentification = $"{ftReceiptIdentification}{cashNumerator}";
@@ -506,14 +505,14 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                     Number = cashNumerator
                 };
 
-                if (receiptRequest.IsZeroReceipt() || queueAT.SSCDFailCount == 0)
+                if (isZeroReceipt || queueAT.SSCDFailCount == 0)
                 {
                     if(!(await _sscdProvider.GetAllInstances()).Any())
                     {
                         throw new Exception("No SCU is connected to this Queue.");
                     }
 
-                    if (receiptRequest.IsZeroReceipt())
+                    if (isZeroReceipt)
                     {
                         _sscdProvider.SwitchToFirstScu();
                     }
