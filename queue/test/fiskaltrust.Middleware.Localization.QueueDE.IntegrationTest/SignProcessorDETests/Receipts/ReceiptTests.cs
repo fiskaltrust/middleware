@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProcessorDETests.Fixtures;
@@ -82,6 +84,28 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             var signProcessor = _fixture.CreateSignProcessorForSignProcessorDE(false, DateTime.Now.AddHours(-1), null,
                 null, false, false, sourceIsScuSwitch, targetIsScuSwitch);
             return async () => await signProcessor.ProcessAsync(receiptRequest);
+        }
+
+        public async Task VerifyReceiptResponseAndActionJournalEntry(ReceiptRequest receiptRequest, long expectedState,
+            string expectedErrorMessage = null)
+        {
+            var expectedJournalEntry = new ftActionJournal { Message = expectedErrorMessage };
+            _fixture.ActionJournalRepositoryMock.Setup(x => x.GetAsync())
+                .ReturnsAsync(new List<ftActionJournal> { expectedJournalEntry });
+
+            var response = await _fixture.SignProcessor.ProcessAsync(receiptRequest);
+
+            response.ftState.Should().Be(expectedState, "The response status should be as expected");
+
+            if (!string.IsNullOrEmpty(expectedErrorMessage))
+            {
+                var allEntries = await _fixture.ActionJournalRepositoryMock.Object.GetAsync();
+                var latestEntry = allEntries.LastOrDefault();
+
+                latestEntry.Should().NotBeNull("There should be an entry in the action log");
+                latestEntry.Message.Should().Contain(expectedErrorMessage,
+                    "The action log message should contain the expected error message\"");
+            }
         }
     }
 }

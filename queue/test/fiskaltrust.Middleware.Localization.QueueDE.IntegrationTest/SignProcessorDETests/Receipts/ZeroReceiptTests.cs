@@ -97,6 +97,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             journals.First().ftQueueId.Should().Be(queueItem.ftQueueId);
 
         }
+        
         [Fact]
         public async Task SignProcessorZeroReceipt_NoImplicitFlow_ExpectErrorState()
         {
@@ -104,10 +105,12 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             receiptRequest.cbReceiptReference = "ZeroReceiptNoImplicitFlow";
             receiptRequest.ftReceiptCase = 0x4445000000000002;
 
-            var response = await _receiptProcessorHelper.ProcessReceiptRequestAsync(receiptRequest);
+            long expectedState = 0xEEEE_EEEE; 
+            string expectedErrorMessage = "Expected error message"; 
 
-            Assert.Equal(0xEEEE_EEEE, response.ftState);
+            await _receiptTests.VerifyReceiptResponseAndActionJournalEntry(receiptRequest, expectedState, expectedErrorMessage);
         }
+
 
         [Fact]
         public async Task SignProcessorZeroReceipt_IsTseInfoRequest_RespondeStates()
