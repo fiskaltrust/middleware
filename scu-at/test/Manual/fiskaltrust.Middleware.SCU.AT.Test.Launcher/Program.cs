@@ -1,5 +1,5 @@
 ﻿using System;
-//using fiskaltrust.ifPOS.v1.at;
+using fiskaltrust.ifPOS.v1.at;
 using fiskaltrust.Middleware.Queue.Test.Launcher.Helpers;
 using fiskaltrust.Middleware.SCU.AT.Test.Launcher.Helpers;
 using fiskaltrust.storage.serialization.V0;
@@ -8,8 +8,6 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using ScuInMemoryBootstrapper = fiskaltrust.Middleware.SCU.AT.InMemory.ScuBootstrapper;
 using ScuATrustSmartcardBootstrapper = fiskaltrust.Middleware.SCU.AT.ATrustSmartcard.ScuBootstrapper;
-using fiskaltrust.ifPOS.v2.at;
-
 
 var _useHelipad = false;
 var _cashBoxId = "";

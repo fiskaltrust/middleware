@@ -61,7 +61,7 @@ namespace fiskaltrust.Middleware.SCU.AT.Test.Launcher.Helpers
             }
             else if (config.Package.Contains("SCU.AT"))
             {
-                return serviceInstance.GetType().GetInterfaces().First(x => x.FullName == typeof(ifPOS.v2.at.IATSSCD).FullName);
+                return serviceInstance.GetType().GetInterfaces().First(x => x.FullName == typeof(ifPOS.v1.at.IATSSCD).FullName);
             }
             else if (config.Package.Contains("SCU.DE"))
             {

@@ -1,4 +1,4 @@
-﻿using fiskaltrust.ifPOS.v2.at;
+﻿using fiskaltrust.ifPOS.v1.at;
 using fiskaltrust.Middleware.SCU.AT.ATrustSmartcard;
 using fiskaltrust.Middleware.SCU.AT.ATrustSmartcard.Enums;
 using fiskaltrust.Middleware.SCU.AT.ATrustSmartcard.Helpers;
