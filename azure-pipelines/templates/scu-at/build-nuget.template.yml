@@ -46,6 +46,10 @@ steps:
   displayName: 'dotnet pack fiskaltrust.Middleware.SCU.AT.InMemory'
   workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.AT.InMemory'
 
+- script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
+  displayName: 'dotnet pack fiskaltrust.Middleware.SCU.AT.ATrustSmartcard'
+  workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.AT.ATrustSmartcard'
+
 - task: PublishBuildArtifacts@1
   displayName: 'Publish Artifact: drop'
   inputs:
