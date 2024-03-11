@@ -32,7 +32,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
         protected readonly QueueATConfiguration _queueATConfiguration;
         protected readonly ILogger<RequestCommand> _logger;
 
-        public RequestCommand(IATSSCDProvider sscdProvider, MiddlewareConfiguration middlewareConfiguration, QueueATConfiguration queueATConfiguration, ILogger<RequestCommand> logger)
+        public RequestCommand(IATSSCDProvider sscdProvider, MiddlewareConfiguration middlewareConfiguration, QueueATConfiguration queueATConfiguration, ILogger<RequestCommand> logger )
         {
             _sscdProvider = sscdProvider;
             _middlewareConfiguration = middlewareConfiguration;
@@ -107,7 +107,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
         }
 #pragma warning restore IDE0060
 
-        protected async Task<(string receiptIdentification, string ftStateData, bool isBackupScuUsed, List<SignaturItem> signatureItems, ftJournalAT journalAT)> SignReceiptAsync(ftQueueAT queueAT, ReceiptRequest receiptRequest, string ftReceiptIdentification, DateTime ftReceiptMoment, Guid ftQueueItemId)
+        protected async Task<(string receiptIdentification, string ftStateData, bool isBackupScuUsed, List<SignaturItem> signatureItems, ftJournalAT journalAT)> SignReceiptAsync(ftQueueAT queueAT, ReceiptRequest receiptRequest, string ftReceiptIdentification, DateTime ftReceiptMoment, Guid ftQueueItemId, bool isZeroReceipt = false)
         {
             var signatures = new List<SignaturItem>();
             string ftStateData = null;
@@ -127,7 +127,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                 Exception = string.Empty,
                 Signing = false,
                 Counting = false,
-                ZeroReceipt = receiptRequest.IsZeroReceipt()
+                ZeroReceipt = isZeroReceipt
             };
 
             decimal? satz_Normal = null;
@@ -264,7 +264,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
             var requiresCounting = false;
             var requiresSigning = false;
 
-            if (receiptRequest.IsZeroReceipt() || queueAT.SignAll)
+            if (isZeroReceipt || queueAT.SignAll)
             {
                 requiresSigning = true;
                 //Add everything to Counter except in Training-Mode
@@ -278,7 +278,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                     signatures.Add(new SignaturItem() { Caption = "Sign-All-Mode", Data = $"Sign: {requiresSigning} Counter:{requiresCounting}", ftSignatureFormat = (long) SignaturItem.Formats.Text, ftSignatureType = (long) SignaturItem.Types.AT_Unknown });
                 }
 
-                if (_middlewareConfiguration.IsSandbox && receiptRequest.IsZeroReceipt())
+                if (_middlewareConfiguration.IsSandbox && isZeroReceipt)
                 {
                     signatures.Add(new SignaturItem() { Caption = "Zero-Receipt", Data = $"Sign: {requiresSigning} Counter:{requiresCounting}", ftSignatureFormat = (long) SignaturItem.Formats.Text, ftSignatureType = (long) SignaturItem.Types.AT_Unknown });
                 }
@@ -364,7 +364,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 
                     if (receiptRequest.cbChargeItems != null)
                     {
-                        var Query = receiptRequest.cbChargeItems.Where(ci =>
+                        var Query = receiptRequest.cbChargeItems?.Where(ci =>
                              satz_Normal_Values.Contains(ci.ftChargeItemCase & 0xFFFF) ||
                              satz_Erm1_Values.Contains(ci.ftChargeItemCase & 0xFFFF) ||
                              satz_Erm2_Values.Contains(ci.ftChargeItemCase & 0xFFFF) ||
@@ -388,7 +388,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                 }
                 //A2 Zahlung einer Ausgangsrechnung -> RKSV-Barzahlung und Negativer Debitor (ftPayItemCase==11)
                 if (decisionBit0 &&
-                    receiptRequest.cbPayItems.Count(pi => ((0xFFFF & pi.ftPayItemCase) == 11) &&
+                    receiptRequest.cbPayItems?.Count(pi => ((0xFFFF & pi.ftPayItemCase) == 11) &&
                     (pi.Amount < 0m)) > 0)
                 {
                     decision.Exception += "A2";
@@ -407,7 +407,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 
                 //A3 Zahlung einer Ausgangsrechnung -> RKSV-Barzahlung und RKSV-Pflichtige Verbindlichkeit bei 
                 if (decisionBit0 &&
-                    receiptRequest.cbChargeItems.Count(ci => ((0xFFFF & ci.ftChargeItemCase) == 34) && (ci.Amount > 0m)) > 0 &&
+                    receiptRequest.cbChargeItems?.Count(ci => ((0xFFFF & ci.ftChargeItemCase) == 34) && (ci.Amount > 0m)) > 0 &&
                     ((0xFFFF & receiptRequest.ftReceiptCase) == 8 || (0xFFFF & receiptRequest.ftReceiptCase) == 10))
                 {
                     decision.Exception += "A3";
@@ -427,7 +427,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                 //A4 Zahlung einer Ausgangsrechnung -> 
                 if (decisionBit0 &&
                     (0xFFFF & receiptRequest.ftReceiptCase) == 8 &&
-                    receiptRequest?.cbPayItems.Count(pi => DecisionBit0_Values.Contains(0xFFFF & pi.ftPayItemCase) && pi.Amount > 0) > 0)
+                    receiptRequest?.cbPayItems?.Count(pi => DecisionBit0_Values.Contains(0xFFFF & pi.ftPayItemCase) && pi.Amount > 0) > 0)
                 {
                     decision.Exception += "A4";
 
@@ -483,7 +483,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                 }
             }
 
-            if (requiresSigning || receiptRequest.IsZeroReceipt())
+            if (isZeroReceipt || requiresSigning)
             {
                 var cashNumerator = queueAT.ftCashNumerator + 1;
                 var receiptIdentification = $"{ftReceiptIdentification}{cashNumerator}";
@@ -507,14 +507,14 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                     Number = cashNumerator
                 };
 
-                if (receiptRequest.IsZeroReceipt() || queueAT.SSCDFailCount == 0)
+                if (isZeroReceipt || queueAT.SSCDFailCount == 0)
                 {
                     if(!(await _sscdProvider.GetAllInstances()).Any())
                     {
                         throw new Exception("No SCU is connected to this Queue.");
                     }
 
-                    if (receiptRequest.IsZeroReceipt())
+                    if (isZeroReceipt)
                     {
                         _sscdProvider.SwitchToFirstScu();
                     }
@@ -637,7 +637,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
             }
             else
             {
-                return (null, ftStateData, isBackupScuUsed, signatures, null);
+                return (ftReceiptIdentification, ftStateData, isBackupScuUsed, signatures, null);
             }
         }
 
