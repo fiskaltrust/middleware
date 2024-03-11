@@ -31,12 +31,23 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
             {
                 var alreadyActiveActionJournal = CreateActionJournal(queue, queueItem, $"Queue {queue.ftQueueId} is already activated, initial-operations-receipt cannot be executed.");
                 _logger.LogInformation(alreadyActiveActionJournal.Message);
+                var actionJournal = new List<ftActionJournal> { alreadyActiveActionJournal };
+                var (receiptIdentification, ftStateData, isBackupScuUsed, signatureItems, _) = await SignReceiptAsync(queueAT, request, response.ftReceiptIdentification, response.ftReceiptMoment, queueItem.ftQueueItemId);
+                response.ftSignatures = response.ftSignatures.Concat(signatureItems).ToArray();
+                response.ftReceiptIdentification = receiptIdentification;
+                response.ftStateData = ftStateData;
+                if (isBackupScuUsed)
+                {
+                    response.ftState |= 0x80;
+                }
+                response.ftSignatures = signatureItems.ToArray();
 
                 return new RequestCommandResponse
                 {
                     ReceiptResponse = response,
-                    ActionJournals = new() { alreadyActiveActionJournal }
+                    ActionJournals = actionJournal,
                 };
+
             }
 
             if ((request.cbChargeItems != null && request.cbChargeItems?.Count() != 0) || (request.cbPayItems != null && request.cbPayItems?.Count() != 0))
