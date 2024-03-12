@@ -179,7 +179,7 @@ namespace fiskaltrust.Middleware.Queue
                                 Data = e.ToString()
                             }
                         },
-                        ftState = (long) (((ulong) data.ftReceiptCase & 0xFFFF_0000_0000_0000) | 0x2000_EEEE_EEEE)
+                        ftState = (long)(((ulong)data.ftReceiptCase & 0xFFFF_0000_0000_0000) | 0x2000_EEEE_EEEE)
                     };
                 }
                 _logger.LogTrace("SignProcessor.InternalSign: Country specific SignProcessor finished.");
@@ -205,7 +205,7 @@ namespace fiskaltrust.Middleware.Queue
                 {
                     var errorMessage = "An error occurred during receipt processing, resulting in ftState = 0xEEEE_EEEE.";
                     await CreateActionJournalAsync(errorMessage, "ReceiptProcessError", queueItem.ftQueueItemId);
-                    
+
                     if (queueItem.country != "IT")
                     {
                         throw exception;
