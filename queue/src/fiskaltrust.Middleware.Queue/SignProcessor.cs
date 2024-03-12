@@ -203,11 +203,8 @@ namespace fiskaltrust.Middleware.Queue
 
                 if ((receiptResponse.ftState & 0xFFFF_FFFF) == 0xEEEE_EEEE)
                 {
-                    var minimalQueueItem = new { ftQueueItemId = queueItem.ftQueueItemId };
-                    var jsonData = JsonConvert.SerializeObject(minimalQueueItem);
-                    var errorType = $"{queueItem.country}2000EEEEEEEE-ftQueueItem";
-                    
-                    await CreateActionJournalAsync(jsonData, errorType, queueItem.ftQueueItemId).ConfigureAwait(false);
+                    var errorMessage = "An error occurred during receipt processing, resulting in ftState = 0xEEEE_EEEE.";
+                    await CreateActionJournalAsync(errorMessage, "ReceiptProcessError", queueItem.ftQueueItemId);
                     
                     if (queueItem.country != "IT")
                     {
@@ -276,20 +273,19 @@ namespace fiskaltrust.Middleware.Queue
             return null;
         }
 
-        public async Task CreateActionJournalAsync(string jsonData, string type, Guid? queueItemId)
+        public async Task CreateActionJournalAsync(string message, string type, Guid? queueItemid)
         {
-            var actionJournal = new ftActionJournal
-            {
-                ftActionJournalId = Guid.NewGuid(),
-                ftQueueId = _queueId,
-                ftQueueItemId = queueItemId.GetValueOrDefault(),
-                Message = jsonData,
-                Priority = 0,
-                Type = type,
-                Moment = DateTime.UtcNow
-            };
-
-            await _actionJournalRepository.InsertAsync(actionJournal).ConfigureAwait(false);
+            await _actionJournalRepository.InsertAsync(
+                new ftActionJournal
+                {
+                    ftActionJournalId = Guid.NewGuid(),
+                    ftQueueId = _queueId,
+                    ftQueueItemId = queueItemid.GetValueOrDefault(),
+                    Message = message,
+                    Priority = 0,
+                    Type = type,
+                    Moment = DateTime.UtcNow
+                }).ConfigureAwait(false);
         }
 
         private static bool IsContentOfQueueItemEqualWithGivenRequest(ReceiptRequest data, ftQueueItem item)
