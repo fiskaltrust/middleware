@@ -7,17 +7,17 @@ namespace fiskaltrust.Middleware.SCU.AT.ATrustSmartcard.Services
 {
     public abstract class CardService
     {
-        protected SCardReader _cardReader;
-        protected IsoReader _isoReader;
+        protected ISCardReader _cardReader;
+        protected IIsoReader _isoReader;
 
-        public CardService(SCardReader cardReader, IsoReader isoReader)
+        public CardService(ISCardReader cardReader, IIsoReader isoReader)
         {
             _cardReader = cardReader;
             _isoReader = isoReader;
         }
         protected byte[] GetPin() => Encoding.ASCII.GetBytes("123456");
 
-        public virtual bool checkApplication()
+        public virtual bool CheckApplication()
         {
             try
             {
@@ -52,7 +52,7 @@ namespace fiskaltrust.Middleware.SCU.AT.ATrustSmartcard.Services
             return true;
         }
 
-        public virtual byte[] readCertificates(bool onlyFirst = false, bool verify = false)
+        public virtual byte[] ReadCertificates(bool onlyFirst = false, bool verify = false)
         {
             try
             {
@@ -83,7 +83,7 @@ namespace fiskaltrust.Middleware.SCU.AT.ATrustSmartcard.Services
             }
         }
 
-        public virtual byte[]? readCIN()
+        public virtual byte[]? ReadCIN()
         {
             try
             {
@@ -150,7 +150,7 @@ namespace fiskaltrust.Middleware.SCU.AT.ATrustSmartcard.Services
             return null;
         }
 
-        public virtual bool selectApplication()
+        public virtual bool SelectApplication()
         {
             try
             {
@@ -185,7 +185,7 @@ namespace fiskaltrust.Middleware.SCU.AT.ATrustSmartcard.Services
             return true;
         }
 
-        public abstract byte[] sign(byte[] data, bool selectCard = true);
+        public abstract byte[] Sign(byte[] data, bool selectCard = true);
 
         protected void FID(byte[] data)
         {

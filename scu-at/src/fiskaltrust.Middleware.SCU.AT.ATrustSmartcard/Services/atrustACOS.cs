@@ -1,15 +1,15 @@
 ﻿using PCSC;
 using PCSC.Iso7816;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
-
 namespace fiskaltrust.Middleware.SCU.AT.ATrustSmartcard.Services
 {
-    internal class atrustACOS : CardService
+    internal class AtrustACOS : CardService
     {
-        public atrustACOS(SCardReader cardReader, IsoReader isoReader) : base(cardReader, isoReader) { }
+        public AtrustACOS(ISCardReader cardReader, IIsoReader isoReader) : base(cardReader, isoReader) { }
 
-        public override bool checkApplication()
+        public override bool CheckApplication()
         {
            try
             {
@@ -62,7 +62,7 @@ namespace fiskaltrust.Middleware.SCU.AT.ATrustSmartcard.Services
             return true;
         }
 
-        public override byte[] readCertificates(bool onlyFirst = false, bool verify = false)
+        public override byte[] ReadCertificates(bool onlyFirst = false, bool verify = false)
         {
             try
             {
@@ -84,7 +84,7 @@ namespace fiskaltrust.Middleware.SCU.AT.ATrustSmartcard.Services
                 _cardReader.EndTransaction(SCardReaderDisposition.Leave);
             }
         }
-        public override byte[]? readCIN()
+        public override byte[]? ReadCIN()
         {
             try
             {
@@ -135,7 +135,7 @@ namespace fiskaltrust.Middleware.SCU.AT.ATrustSmartcard.Services
 
             return null;
         }
-        public override bool selectApplication()
+        public override bool SelectApplication()
         {
             try
             {
@@ -162,7 +162,7 @@ namespace fiskaltrust.Middleware.SCU.AT.ATrustSmartcard.Services
             return true;
         }
 
-        public override byte[] sign(byte[] data, bool selectCard = true)
+        public override byte[] Sign(byte[] data, bool selectCard = true)
         {
             using var sha256 = SHA256.Create();
             var sha256hash = sha256.ComputeHash(data);

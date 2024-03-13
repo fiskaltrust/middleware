@@ -27,4 +27,10 @@
     <ItemGroup Condition="'$(TargetFramework)' != 'net461'">
         <PackageReference Include="Portable.BouncyCastle" version="1.8.1.2" />
     </ItemGroup>
+
+    <ItemGroup>
+        <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+            <_Parameter1>fiskaltrust.Middleware.SCU.AT.ATrustSmartcard.UnitTest</_Parameter1>
+        </AssemblyAttribute>
+    </ItemGroup>
 </Project>

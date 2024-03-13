@@ -5,11 +5,11 @@ using System.Text;
 
 namespace fiskaltrust.Middleware.SCU.AT.ATrustSmartcard.Services
 {
-    internal class atrustAcosID : CardService
+    internal class AtrustAcosID : CardService
     {
-        public atrustAcosID(SCardReader cardReader, IsoReader isoReader):base(cardReader, isoReader) { }
+        public AtrustAcosID(ISCardReader cardReader, IIsoReader isoReader):base(cardReader, isoReader) { }
        
-        public override byte[] sign(byte[] data, bool selectCard = true)
+        public override byte[] Sign(byte[] data, bool selectCard = true)
         {
             using var sha256 = SHA256.Create();
             var sha256hash = sha256.ComputeHash(data);

@@ -71,7 +71,7 @@ namespace fiskaltrust.Middleware.SCU.AT.ATrustSmartcard
                     {
                         try
                         {
-                            _card.selectApplication();
+                            _card.SelectApplication();
                         }
                         catch (Exception x)
                         {
@@ -187,15 +187,15 @@ namespace fiskaltrust.Middleware.SCU.AT.ATrustSmartcard
                     _card = _cardServiceFactory.CreateCardService(_cardReader, _isoReader);
                     _currentReaderIndex = readerIndex;
                     _currentReaderMode = _configuration.Shared ? ReaderMode.SharedOpen : ReaderMode.ExclusiveOpen;
-                    if (!_card.checkApplication())
+                    if (!_card.CheckApplication())
                     {
                         throw new Exception("Applicaton not found.");
                     }
 
-                    _certificate = _card.readCertificates();
+                    _certificate = _card.ReadCertificates();
                     _logger.LogTrace("ReadCertificate result: {Certificate}", BitConverter.ToString(_certificate));
 
-                    var signature = _card.sign(Guid.Empty.ToByteArray(), true);
+                    var signature = _card.Sign(Guid.Empty.ToByteArray(), true);
                     _logger.LogTrace("Sign result: {Signature}", BitConverter.ToString(signature));
 
                     if (_configuration.VerifySignature && !Verify(Guid.Empty.ToByteArray(), signature))
@@ -332,7 +332,7 @@ namespace fiskaltrust.Middleware.SCU.AT.ATrustSmartcard
             }
             return _lockHelper.ExecuteReaderCommandLocked(_currentReaderIndex,Operation.Sign, () =>
             {
-                var signature = _card.sign(data, _configuration.ApduSelect);
+                var signature = _card.Sign(data, _configuration.ApduSelect);
                 return _configuration.VerifySignature && !Verify(data, signature)
                     ? throw new Exception("Signature verficiation failed.")
                     : signature;

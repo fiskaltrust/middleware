@@ -24,6 +24,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.SCU.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.SCU.AT.PrimeSignHSM", "src\fiskaltrust.Middleware.SCU.AT.PrimeSignHSM\fiskaltrust.Middleware.SCU.AT.PrimeSignHSM.csproj", "{347FECA5-6CDB-4D04-AC44-852465511BFF}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fiskaltrust.Middleware.SCU.AT.ATrustSmartcard.UnitTest", "test\fiskaltrust.Middleware.SCU.AT.ATrustSmartcard.UnitTest\fiskaltrust.Middleware.SCU.AT.ATrustSmartcard.UnitTest.csproj", "{FE86366F-3D55-4401-A243-EC35A90EFC5C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -50,6 +52,10 @@ Global
 		{347FECA5-6CDB-4D04-AC44-852465511BFF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{347FECA5-6CDB-4D04-AC44-852465511BFF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{347FECA5-6CDB-4D04-AC44-852465511BFF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FE86366F-3D55-4401-A243-EC35A90EFC5C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FE86366F-3D55-4401-A243-EC35A90EFC5C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FE86366F-3D55-4401-A243-EC35A90EFC5C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FE86366F-3D55-4401-A243-EC35A90EFC5C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -61,6 +67,7 @@ Global
 		{D5BCF769-F686-4F3D-AE36-8375B54EAD7D} = {AF097855-C2F0-4C55-AB2C-8B82CB6C0063}
 		{5A56A5C7-363A-4A9B-BB1D-6ABDE501F132} = {52D01EFD-9401-48BA-BC1C-67961E9A246B}
 		{347FECA5-6CDB-4D04-AC44-852465511BFF} = {52D01EFD-9401-48BA-BC1C-67961E9A246B}
+		{FE86366F-3D55-4401-A243-EC35A90EFC5C} = {EC648F3D-71FD-4478-A51B-CB3C0336E74D}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {DEF9159B-5743-4166-B31D-A9824A9B24EF}
