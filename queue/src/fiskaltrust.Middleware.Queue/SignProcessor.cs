@@ -203,6 +203,9 @@ namespace fiskaltrust.Middleware.Queue
 
                 if ((receiptResponse.ftState & 0xFFFF_FFFF) == 0xEEEE_EEEE)
                 {
+                    var errorMessage = "An error occurred during receipt processing, resulting in ftState = 0xEEEE_EEEE.";
+                    await CreateActionJournalAsync(errorMessage, $"{receiptResponse.ftState:X}", queueItem.ftQueueItemId).ConfigureAwait(false);
+
                     if (queueItem.country != "IT")
                     {
                         throw exception;
@@ -270,19 +273,20 @@ namespace fiskaltrust.Middleware.Queue
             return null;
         }
 
-        public async Task CreateActionJournalAsync(string message, string type, Guid? queueItemid)
+        public async Task CreateActionJournalAsync(string message, string type, Guid? queueItemId)
         {
-            await _actionJournalRepository.InsertAsync(
-                new ftActionJournal
-                {
-                    ftActionJournalId = Guid.NewGuid(),
-                    ftQueueId = _queueId,
-                    ftQueueItemId = queueItemid.GetValueOrDefault(),
-                    Message = message,
-                    Priority = 0,
-                    Type = type,
-                    Moment = DateTime.UtcNow
-                }).ConfigureAwait(false);
+            var actionJournal = new ftActionJournal
+            {
+                ftActionJournalId = Guid.NewGuid(),
+                ftQueueId = _queueId,
+                ftQueueItemId = queueItemId.GetValueOrDefault(),
+                Message = message,
+                Priority = 0,
+                Type = type,
+                Moment = DateTime.UtcNow
+            };
+
+            await _actionJournalRepository.InsertAsync(actionJournal).ConfigureAwait(false);
         }
 
         private static bool IsContentOfQueueItemEqualWithGivenRequest(ReceiptRequest data, ftQueueItem item)
