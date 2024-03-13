@@ -203,12 +203,10 @@ namespace fiskaltrust.Middleware.Queue
 
                 if ((receiptResponse.ftState & 0xFFFF_FFFF) == 0xEEEE_EEEE)
                 {
-                    var minimalQueueItem = new { ftQueueItemId = queueItem.ftQueueItemId };
-                    var jsonData = JsonConvert.SerializeObject(minimalQueueItem);
-                    var errorType = $"{queueItem.country}2000EEEEEEEE-ftQueueItem";
-                    
-                    await CreateActionJournalAsync(jsonData, errorType, queueItem.ftQueueItemId).ConfigureAwait(false);
-                    
+                    var errorMessage = "An error occurred during receipt processing, resulting in ftState = 0xEEEE_EEEE.";
+                    var errorType = $"{queueItem.country}2000EEEEEEEE";
+                    await CreateActionJournalAsync(errorMessage, "errorType", queueItem.ftQueueItemId).ConfigureAwait(false);
+
                     if (queueItem.country != "IT")
                     {
                         throw exception;
@@ -276,14 +274,14 @@ namespace fiskaltrust.Middleware.Queue
             return null;
         }
 
-        public async Task CreateActionJournalAsync(string jsonData, string type, Guid? queueItemId)
+        public async Task CreateActionJournalAsync(string message, string type, Guid? queueItemId)
         {
             var actionJournal = new ftActionJournal
             {
                 ftActionJournalId = Guid.NewGuid(),
                 ftQueueId = _queueId,
                 ftQueueItemId = queueItemId.GetValueOrDefault(),
-                Message = jsonData,
+                Message = message,
                 Priority = 0,
                 Type = type,
                 Moment = DateTime.UtcNow
