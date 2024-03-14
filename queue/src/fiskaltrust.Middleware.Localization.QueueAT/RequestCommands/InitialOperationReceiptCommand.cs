@@ -27,12 +27,25 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
         {
             ThrowIfTraining(request);
 
+            if ((request.cbChargeItems != null && request.cbChargeItems?.Count() != 0) || (request.cbPayItems != null && request.cbPayItems?.Count() != 0))
+            {
+                var notZeroReceiptActionJournal = CreateActionJournal(queue, queueItem, $"Tried to activate {queue.ftQueueId}, but the incoming receipt is not a zero receipt.");
+                _logger.LogInformation(notZeroReceiptActionJournal.Message);
+
+                return new RequestCommandResponse
+                {
+                    ReceiptResponse = response,
+                    ActionJournals = new() { notZeroReceiptActionJournal }
+                };
+            }
+
             if (queue.StartMoment.HasValue)
             {
-                var alreadyActiveActionJournal = CreateActionJournal(queue, queueItem, $"Queue {queue.ftQueueId} is already activated, initial-operations-receipt cannot be executed.");
+                var alreadyActiveActionJournal = CreateActionJournal(queue, queueItem, $"Queue {queue.ftQueueId} is already activated.");
                 _logger.LogInformation(alreadyActiveActionJournal.Message);
                 var actionJournal = new List<ftActionJournal> { alreadyActiveActionJournal };
-                var (receiptIdentification, ftStateData, isBackupScuUsed, signatureItems, _) = await SignReceiptAsync(queueAT, request, response.ftReceiptIdentification, response.ftReceiptMoment, queueItem.ftQueueItemId);
+
+                var (receiptIdentification, ftStateData, isBackupScuUsed, signatureItems, journalAt) = await SignReceiptAsync(queueAT, request, response.ftReceiptIdentification, response.ftReceiptMoment, queueItem.ftQueueItemId);
                 response.ftSignatures = response.ftSignatures.Concat(signatureItems).ToArray();
                 response.ftReceiptIdentification = receiptIdentification;
                 response.ftStateData = ftStateData;
@@ -46,19 +59,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                 {
                     ReceiptResponse = response,
                     ActionJournals = actionJournal,
-                };
-
-            }
-
-            if ((request.cbChargeItems != null && request.cbChargeItems?.Count() != 0) || (request.cbPayItems != null && request.cbPayItems?.Count() != 0))
-            {
-                var notZeroReceiptActionJournal = CreateActionJournal(queue, queueItem, $"Tried to activate {queue.ftQueueId}, but the incoming receipt is not a zero receipt.");
-                _logger.LogInformation(notZeroReceiptActionJournal.Message);
-
-                return new RequestCommandResponse
-                {
-                    ReceiptResponse = response,
-                    ActionJournals = new() { notZeroReceiptActionJournal }
+                    JournalAT = journalAt
                 };
             }
 
