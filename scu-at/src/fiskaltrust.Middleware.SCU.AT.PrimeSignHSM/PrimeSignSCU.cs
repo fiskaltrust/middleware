@@ -1,5 +1,6 @@
-﻿using System.Security.Cryptography;
-using fiskaltrust.ifPOS.v2.at;
+﻿using System.Net.Http;
+using System.Security.Cryptography;
+using fiskaltrust.ifPOS.v1.at;
 using fiskaltrust.Middleware.SCU.AT.PrimeSignHSM.Models;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
