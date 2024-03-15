@@ -337,7 +337,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                     masterDataChanged,
                     closingNumber = (request.ftReceiptCase & 0xFFFF) == 0x0007 ? ++queueDE.DailyClosingNumber :-1
                 });
-                actionJournals.Add(CreateActionJournal(queue.ftQueueId, queueItem.ftQueueId, $"{type:X}", $"{message} However TSE was not reachable.", dataJson));
+                actionJournals.Add(CreateActionJournal(queue.ftQueueId, queueItem.ftQueueItemId, $"{type:X}", $"{message} However TSE was not reachable.", dataJson));
             }
 
             var signatures = new List<SignaturItem>
