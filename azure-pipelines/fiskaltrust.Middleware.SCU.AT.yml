@@ -31,30 +31,36 @@ variables:
 - name: WorkingDirectory
   value: 'scu-at'
 
-jobs:
-- job: Test
-  displayName: Unit and integration tests
-  pool:
-    vmImage: $(vmImageName)
-  steps:
-  - template: templates/scu-at/test.template.yml
+stages:
+  - stage: Test
+    jobs:
+    - job: Test
+      displayName: Unit and integration tests
+      pool:
+        vmImage: $(vmImageName)
+      steps:
+      - template: templates/scu-at/test.template.yml
 
-- job: BuildNugetPackages
-  displayName: Build v1 NuGet packages
-  dependsOn: 
-  - Test
-  condition: succeeded()
-  pool:
-    vmImage: $(vmImageName)
-  steps:
-  - template: templates/scu-at/build-nuget.template.yml
+  - stage: Build
+    dependsOn: Test
+    jobs:
+    - job: BuildNugetPackages
+      displayName: Build v1 NuGet packages
+      condition: succeeded()
+      pool:
+        vmImage: $(vmImageName)
+      steps:
+      - template: templates/scu-at/build-nuget.template.yml
 
-- job: BuildZipPackages
-  displayName: Build v2 zip packages
-  dependsOn: 
-  - Test
-  condition: succeeded()
-  pool:
-    vmImage: $(vmImageName)
-  steps:
-  - template: templates/scu-at/build-zip.template.yml
+    - job: BuildZipPackages
+      displayName: Build v2 zip packages
+      condition: succeeded()
+      pool:
+        vmImage: $(vmImageName)
+      steps:
+      - template: templates/build-zip.yml
+        parameters:
+          workingDirectory: scu-at
+          projects:
+            - fiskaltrust.Middleware.SCU.AT.ATrustSmartcard
+            - fiskaltrust.Middleware.SCU.AT.InMemory

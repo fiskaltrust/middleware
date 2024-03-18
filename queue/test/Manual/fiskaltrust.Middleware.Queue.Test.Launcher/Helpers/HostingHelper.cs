@@ -30,7 +30,7 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher.Helpers
                         host.StartService(config, serviceUrl, serviceType, serviceInstance, loggerFactory);
                         nutShells.Add(host);
                         break;
-                    case "rest":
+                    case "rest" or "http":
                         var restService = new RestService(loggerFactory.CreateLogger<RestService>());
                         restService.ConfigureService(config, serviceType, serviceInstance, serviceUrl);
                         nutShells.Add(restService);
@@ -47,12 +47,8 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher.Helpers
 
         private static Type GetMiddlewareComponentTypeForPackage(PackageConfiguration config, object serviceInstance)
         {
-            if (config.Package.Contains("service"))
-            {
-                return serviceInstance.GetType().GetInterfaces().First(x => x.FullName == typeof(ifPOS.v0.IPOS).FullName);
-            }
-            else if (config.Package.Contains("Queue"))
-            {
+            if (config.Package.Contains("service")|| config.Package.Contains("Queue"))
+            { 
                 return serviceInstance.GetType().GetInterfaces().First(x => x.FullName == typeof(ifPOS.v1.IPOS).FullName);
             }
             else if (config.Package.Contains("signing"))
