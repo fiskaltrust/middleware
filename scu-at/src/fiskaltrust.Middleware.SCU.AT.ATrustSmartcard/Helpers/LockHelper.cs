@@ -8,14 +8,14 @@
 
         public T ExecuteReaderCommandLocked<T>(int readerIndex, string operation, Func<T> func)
         {
-            using var semaphore = new Semaphore(1, 1, GetLockName(readerIndex, operation));
+            using var mutex = new Mutex(false, GetLockName(readerIndex, operation));
 
             var locked = false;
             try
             {
                 try
                 {
-                    locked = semaphore.WaitOne(_configuration.ReaderTimeoutMs);
+                    locked = mutex.WaitOne(_configuration.ReaderTimeoutMs);
                 }
                 catch (AbandonedMutexException)
                 {
@@ -32,21 +32,21 @@
             {
                 if (locked)
                 {
-                    semaphore.Release();
+                    mutex.ReleaseMutex();
                 }
             }
         }
 
         public void ExecuteReaderCommandLocked(int readerIndex, string operation, Action action)
         {
-            using var semaphore = new Semaphore(1, 1, GetLockName(readerIndex, operation));
+            using var mutex = new Mutex(false, GetLockName(readerIndex, operation));
 
             var locked = false;
             try
             {
                 try
                 {
-                    locked = semaphore.WaitOne(_configuration.ReaderTimeoutMs);
+                    locked = mutex.WaitOne(_configuration.ReaderTimeoutMs);
                 }
                 catch (AbandonedMutexException)
                 {
@@ -63,7 +63,7 @@
             {
                 if (locked)
                 {
-                    semaphore.Release();
+                    mutex.ReleaseMutex();
                 }
             }
         }
