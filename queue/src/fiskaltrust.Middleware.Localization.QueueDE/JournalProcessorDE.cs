@@ -208,6 +208,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
                 var firstZNumber = await GetFirstZNumber(_actionJournalRepository, receiptJournalRepository, request).ConfigureAwait(false);
 
                 var targetDirectory = $"{Path.Combine(workingDirectory, "raw")}{Path.DirectorySeparatorChar}";
+                var to = request.To == 0 ? long.MaxValue : request.To;
                 var parameters = new DSFinVKParameters
                 {
                     CashboxIdentification = queueDE.CashBoxIdentification,
@@ -218,14 +219,17 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
                     IncludeOrders = _queueDEConfiguration.ExcludeDsfinvkOrders ? false : true,
                     PublicKeyBase64 = tseInfo?.PublicKeyBase64,
                     SignAlgorithm = tseInfo?.SignatureAlgorithm,
-                    TimeFormat = tseInfo?.LogTimeFormat
+                    TimeFormat = tseInfo?.LogTimeFormat,
+                    ReceiptNumberFrom = request.From,
+                    ReceiptNumberTo = to
                 };
 
                 var readOnlyReceiptReferenceRepository = new ReadOnlyReceiptReferenceRepository(_middlewareQueueItemRepository);
                 var fallbackMasterDataRepo = new ReadOnlyMasterDataConfigurationRepository(_masterDataService.GetFromConfig());
+                var dailyClosingRepository = new DailyClosingRepository(_actionJournalRepository, _middlewareQueueItemRepository);
 
                 // No need to wrap the QueueItemRepository, as the DSFinV-K exporter only uses the GetAsync(Guid id) method
-                var exporter = new DSFinVKExporter(_logger, receiptJournalRepository, _queueItemRepository, readOnlyReceiptReferenceRepository, fallbackMasterDataRepo);
+                var exporter = new DSFinVKExporter(_logger, receiptJournalRepository, _queueItemRepository, readOnlyReceiptReferenceRepository, dailyClosingRepository, fallbackMasterDataRepo);
 
                 await exporter.ExportAsync(parameters).ConfigureAwait(false);
 
@@ -272,8 +276,15 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             var actionJournals = (await actionJournalRepository.GetAsync().ConfigureAwait(false)).OrderBy(x => x.TimeStamp);
             var receiptJournals = (await receiptJournalRepository.GetAsync().ConfigureAwait(false)).ToList();
 
-            foreach (var actionJournal in actionJournals.Where(x => x.Type == "4445000000000007" || x.Type == "0x4445000000000007"))
+            foreach (var actionJournal in actionJournals.Where(x => x.Type != null && x.Type.EndsWith("7") && (x.Type.StartsWith("4445") || x.Type.StartsWith("0x4445"))))
             {
+                //bug fix
+                if(actionJournal.ftQueueItemId == actionJournal.ftQueueId)
+                {
+                    var queueItem = await DailyClosingRepository.GetQueueItemOfMissingIdAsync(actionJournal, _middlewareQueueItemRepository).ConfigureAwait(false);
+                    actionJournal.ftQueueItemId = queueItem.ftQueueItemId;
+                }
+
                 var receiptJournal = receiptJournals.FirstOrDefault(x => x.ftQueueItemId == actionJournal.ftQueueItemId);
                 if (receiptJournal != null)
                 {
