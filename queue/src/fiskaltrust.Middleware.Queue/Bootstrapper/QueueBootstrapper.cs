@@ -14,7 +14,6 @@ using fiskaltrust.storage.V0;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using Org.BouncyCastle.Utilities;
 
 namespace fiskaltrust.Middleware.Queue.Bootstrapper
 {
@@ -40,7 +39,13 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
                 Configuration = _configuration,
                 PreviewFeatures = GetPreviewFeatures(_configuration)
             };
-            services.AddSingleton(sp => SaveConfiguration(middlewareConfiguration, sp.GetRequiredService<IActionJournalRepository>()).Result);
+
+            services.AddSingleton(sp =>
+            {
+                CreateConfigurationActionJournalAsync(middlewareConfiguration, sp.GetRequiredService<IActionJournalRepository>()).Wait();
+                return middlewareConfiguration;
+            });
+
             services.AddScoped<ICryptoHelper, CryptoHelper>();
             services.AddScoped<SignProcessor>();
             services.AddScoped<ISignProcessor>(x => new LocalQueueSynchronizationDecorator(x.GetRequiredService<SignProcessor>(), x.GetRequiredService<ILogger<LocalQueueSynchronizationDecorator>>()));
@@ -48,32 +53,48 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
             services.AddScoped<IPOS, Queue>();
             var businessLogicFactoryBoostrapper = LocalizedQueueBootStrapperFactory.GetBootstrapperForLocalizedQueue(_activeQueueId, middlewareConfiguration);
             businessLogicFactoryBoostrapper.ConfigureServices(services);
-
         }
 
-        private static async Task<MiddlewareConfiguration> SaveConfiguration(MiddlewareConfiguration middlewareConfiguration, IActionJournalRepository actionJournalRepository)
+        private static async Task CreateConfigurationActionJournalAsync(MiddlewareConfiguration middlewareConfiguration, IActionJournalRepository actionJournalRepository)
         {
-            middlewareConfiguration.Configuration.Add("MachineName", Environment.MachineName);
-            middlewareConfiguration.Configuration.Add("ProcessArchitecture", RuntimeInformation.ProcessArchitecture.ToString());
-            middlewareConfiguration.Configuration.Add("OSArchitecture", RuntimeInformation.OSArchitecture.ToString());
-            middlewareConfiguration.Configuration.Add("OSDescription", RuntimeInformation.OSDescription.ToString());
-
-            var actionJournal = new ftActionJournal()
+            var configurationCopy = new Dictionary<string, object>(middlewareConfiguration.Configuration)
             {
-             ftActionJournalId = Guid.NewGuid(),
-                ftQueueId = middlewareConfiguration.QueueId,
-                ftQueueItemId = Guid.NewGuid(),
-                Moment = DateTime.Now,
-                Priority = 0,
-                Type = "Configuration",
-                Message = "Configuration",
-                DataBase64 = "",
-                DataJson = JsonConvert.SerializeObject(middlewareConfiguration),
-                TimeStamp = DateTime.Now.Ticks
+                { "MachineName", Environment.MachineName },
+                { "ProcessArchitecture", RuntimeInformation.ProcessArchitecture.ToString() },
+                { "OSArchitecture", RuntimeInformation.OSArchitecture.ToString() },
+                { "OSDescription", RuntimeInformation.OSDescription.ToString() }
             };
-            await actionJournalRepository.InsertAsync(actionJournal);
-            return middlewareConfiguration;
+            configurationCopy.Remove("configuration");
+            foreach (var key in configurationCopy.Keys.ToArray())
+            {
+                if (key.ToLowerInvariant().Contains("connectionstring") || key.ToLowerInvariant().EndsWith("_encrypted"))
+                {
+                    configurationCopy[key] = "********";
+                }
+            }
 
+            var actionJournal = new ftActionJournal
+            {
+                ftActionJournalId = Guid.NewGuid(),
+                ftQueueId = middlewareConfiguration.QueueId,
+                ftQueueItemId = Guid.Empty,
+                Moment = DateTime.UtcNow,
+                Priority = 0,
+                Type = nameof(MiddlewareConfiguration),
+                Message = "Queue started",
+                DataJson = JsonConvert.SerializeObject(new MiddlewareConfiguration
+                {
+                    CashBoxId = middlewareConfiguration.CashBoxId,
+                    QueueId = middlewareConfiguration.QueueId,
+                    IsSandbox = middlewareConfiguration.IsSandbox,
+                    ServiceFolder = middlewareConfiguration.ServiceFolder,
+                    Configuration = configurationCopy,
+                    PreviewFeatures = middlewareConfiguration.PreviewFeatures
+                }),
+                TimeStamp = DateTime.UtcNow.Ticks
+            };
+
+            await actionJournalRepository.InsertAsync(actionJournal);
         }
 
         private static Guid GetQueueCashbox(Guid queueId, Dictionary<string, object> configuration)
@@ -106,7 +127,5 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
         }
 
         private static string GetServiceFolder() => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "fiskaltrust", "service");
-
-
     }
 }
