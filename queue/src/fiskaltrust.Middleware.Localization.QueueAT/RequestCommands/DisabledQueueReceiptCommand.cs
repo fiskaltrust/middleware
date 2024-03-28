@@ -21,9 +21,8 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
         public DisabledQueueReceiptCommand(IATSSCDProvider sscdProvider, MiddlewareConfiguration middlewareConfiguration, QueueATConfiguration queueATConfiguration, ILogger<RequestCommand> logger)
             : base(sscdProvider, middlewareConfiguration, queueATConfiguration, logger) { }
 
-        public override Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueAT queueAT, ReceiptRequest request, ftQueueItem queueItem)
+        public override Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueAT queueAT, ReceiptRequest request, ftQueueItem queueItem, ReceiptResponse response)
         {
-            var response = CreateReceiptResponse(request, queueItem, queueAT, queue);
             var actionJournals = new List<ftActionJournal>();
 
             if (!_loggedDisabledQueueReceiptRequest)

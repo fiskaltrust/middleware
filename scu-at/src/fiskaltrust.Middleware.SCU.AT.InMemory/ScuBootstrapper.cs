@@ -1,4 +1,4 @@
-﻿using fiskaltrust.ifPOS.v0;
+﻿using fiskaltrust.ifPOS.v1.at;
 using fiskaltrust.Middleware.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 

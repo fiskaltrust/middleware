@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using fiskaltrust.Middleware.Queue.Test.Launcher.Grpc;
-using fiskaltrust.Middleware.Queue.Test.Launcher.Wcf;
+using fiskaltrust.Middleware.SCU.AT.Test.Launcher.Grpc;
+using fiskaltrust.Middleware.SCU.AT.Test.Launcher.Wcf;
 using fiskaltrust.storage.serialization.V0;
 using Microsoft.Extensions.Logging;
 
-namespace fiskaltrust.Middleware.Queue.Test.Launcher.Helpers
+namespace fiskaltrust.Middleware.SCU.AT.Test.Launcher.Helpers
 {
     public static class HostingHelper
     {
@@ -16,9 +16,11 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher.Helpers
             var serviceType = GetMiddlewareComponentTypeForPackage(config, serviceInstance);
             if (config.Url.Length == 0)
             {
+#if NET461
                 var service = new WCFService(loggerFactory.CreateLogger<WCFService>());
                 service.ConfigureService(config, serviceType, serviceInstance, "");
                 nutShells.Add(service);
+#endif
             }
             foreach (var serviceUrl in config.Url)
             {
@@ -30,7 +32,8 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher.Helpers
                         host.StartService(config, serviceUrl, serviceType, serviceInstance, loggerFactory);
                         nutShells.Add(host);
                         break;
-                    case "rest" or "http":
+#if NET461
+                    case "rest":
                         var restService = new RestService(loggerFactory.CreateLogger<RestService>());
                         restService.ConfigureService(config, serviceType, serviceInstance, serviceUrl);
                         nutShells.Add(restService);
@@ -40,6 +43,7 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher.Helpers
                         service.ConfigureService(config, serviceType, serviceInstance, serviceUrl);
                         nutShells.Add(service);
                         break;
+#endif
                 }
             }
             return nutShells;
@@ -47,13 +51,17 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher.Helpers
 
         private static Type GetMiddlewareComponentTypeForPackage(PackageConfiguration config, object serviceInstance)
         {
-            if (config.Package.Contains("service")|| config.Package.Contains("Queue"))
-            { 
+            if (config.Package.Contains("service"))
+            {
+                return serviceInstance.GetType().GetInterfaces().First(x => x.FullName == typeof(ifPOS.v0.IPOS).FullName);
+            }
+            else if (config.Package.Contains("Queue"))
+            {
                 return serviceInstance.GetType().GetInterfaces().First(x => x.FullName == typeof(ifPOS.v1.IPOS).FullName);
             }
-            else if (config.Package.Contains("signing"))
+            else if (config.Package.Contains("SCU.AT"))
             {
-                return serviceInstance.GetType().GetInterfaces().First(x => x.FullName == typeof(ifPOS.v0.IATSSCD).FullName);
+                return serviceInstance.GetType().GetInterfaces().First(x => x.FullName == typeof(ifPOS.v1.at.IATSSCD).FullName);
             }
             else if (config.Package.Contains("SCU.DE"))
             {

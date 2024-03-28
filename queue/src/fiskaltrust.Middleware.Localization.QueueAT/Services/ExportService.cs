@@ -8,16 +8,17 @@ using System.Linq;
 using System.IO;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using fiskaltrust.Middleware.Contracts.Repositories;
 
 namespace fiskaltrust.Middleware.Localization.QueueAT.Services
 {
     public class ExportService
     {
         private readonly IReadOnlyConfigurationRepository _configurationRepository;
-        private readonly IReadOnlyJournalATRepository _journalATRepository;
+        private readonly IMiddlewareRepository<ftJournalAT> _journalATRepository;
         private readonly ILogger<ExportService> _logger;
 
-        public ExportService(IReadOnlyConfigurationRepository configurationRepository, IReadOnlyJournalATRepository readOnlyJournalATRepository, ILogger<ExportService> logger)
+        public ExportService(IReadOnlyConfigurationRepository configurationRepository, IMiddlewareRepository<ftJournalAT> readOnlyJournalATRepository, ILogger<ExportService> logger)
         {
             _configurationRepository = configurationRepository;
             _journalATRepository = readOnlyJournalATRepository;
@@ -37,8 +38,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.Services
                 foreach (var queue in await _configurationRepository.GetQueueATListAsync())
                 {
                     // TODO: Implement DB calls to increase performance
-                    var journals = (await _journalATRepository.GetAsync())
-                        .Where(x => x.TimeStamp >= fromTimestamp && x.TimeStamp <= toTimestamp);
+                    var journals = _journalATRepository.GetByTimeStampRangeAsync(fromTimestamp, toTimestamp).ToListAsync().Result;
                     var sscdIds = journals
                         .Select(j => j.ftSignaturCreationUnitId)
                         .Distinct()
@@ -51,7 +51,6 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.Services
                     if (sscdIds.Count == 1)
                     {
                         var scu = await _configurationRepository.GetSignaturCreationUnitATAsync(sscdIds[0]);
-                                                
                         receiptGroups.ReceiptGroups.Add(new RksvDepReceiptGroup
                         {
                             CashboxIdentification = queue.CashBoxIdentification,
