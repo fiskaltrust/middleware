@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.Exports.Common.Models;
 using fiskaltrust.Exports.Common.Repositories;
+using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0;
 using Newtonsoft.Json;
@@ -23,7 +25,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Repositories
             _queueItemRepository = queueItemRepository;
         }
 
-        public async Task<List<DailyClosingReceipt>> GetAsync() 
+        public async Task<List<DailyClosingReceipt>> GetAsync()
         {
             var dailyClosingReceipts = new List<DailyClosingReceipt>();
             var ajs = await _actionJournalRepository.GetAsync().ConfigureAwait(false);
@@ -32,8 +34,11 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Repositories
             foreach (var aj in dailyClosings)
             {
                 var closingNumber = JsonConvert.DeserializeAnonymousType(aj.DataJson, new { closingNumber = 0L }).closingNumber;
-                var queueItem = await _queueItemRepository.GetAsync(aj.ftQueueItemId).ConfigureAwait(false);
-                queueItem = queueItem ?? await GetQueueItemOfMissingIdAsync(aj, _queueItemRepository);
+
+                var queueItem = aj.ftQueueItemId == aj.ftQueueId
+                    ? await GetQueueItemOfMissingIdAsync(aj).ConfigureAwait(false)
+                    : await _queueItemRepository.GetAsync(aj.ftQueueItemId).ConfigureAwait(false);
+
                 var dailyClosingReceipt = new DailyClosingReceipt
                 {
                     ZNumber = closingNumber,
@@ -48,14 +53,35 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Repositories
             return dailyClosingReceipts;
         }
 
-        public static async Task<ftQueueItem> GetQueueItemOfMissingIdAsync(ftActionJournal actionJournal, IMiddlewareQueueItemRepository queueItemRepository)
+        // In the MW 1.3.53, an issue was introduced that lead to the ftQueueItemId being set to the ftQueueId in some cases.
+        // This only happened when the Queue was in failed mode during processing the daily closing, and is hence relatively rare.
+        public async Task<ftQueueItem> GetQueueItemOfMissingIdAsync(ftActionJournal actionJournal)
         {
-            var from = actionJournal.Moment.AddMinutes(-5).Ticks;
-            var to = actionJournal.Moment.AddMinutes(5).Ticks;
-            var closequeueItems = queueItemRepository.GetByTimeStampRangeAsync(from, to);
-            var ordered = closequeueItems.OrderByDescending(x => x.ftQueueMoment.Ticks).ToListAsync();
-            var queueItemOfMissingId = await closequeueItems.OrderByDescending(x => x.ftQueueMoment.Ticks).Where(x => x.ftQueueMoment.Ticks < actionJournal.Moment.Ticks).FirstOrDefaultAsync();
-            return queueItemOfMissingId;
+            var receiptNumerator = JsonConvert.DeserializeAnonymousType(actionJournal.DataJson, new { ftReceiptNumerator = 0L }).ftReceiptNumerator;
+
+            // QueueItems are stored before the ActionJournals, so we need to look for the QueueItem with the closest timestamp before the respective ActionJournal
+            var from = new DateTime(actionJournal.TimeStamp).AddSeconds(-10).Ticks;
+            var queueItemsInRange = _queueItemRepository.GetByTimeStampRangeAsync(from, actionJournal.TimeStamp);
+
+            await foreach (var queueItem in queueItemsInRange)
+            {
+                if (queueItem.response != null)
+                {
+                    var response = JsonConvert.DeserializeObject<ReceiptResponse>(queueItem.response);
+                    if (GetReceiptNumerator(response.ftReceiptIdentification) == receiptNumerator)
+                    {
+                        return queueItem;
+                    }
+                }
+            }
+            return null;
+        }
+
+        private long GetReceiptNumerator(string ftReceiptIdentification)
+        {
+            var endIndex = ftReceiptIdentification.IndexOf("#");
+            var numeratorString = ftReceiptIdentification.Substring(2, endIndex - 2);
+            return long.Parse(numeratorString, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
         }
     }
 }

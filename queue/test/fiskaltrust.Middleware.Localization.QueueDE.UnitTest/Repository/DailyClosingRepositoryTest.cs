@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using fiskaltrust.Middleware.Localization.QueueDE.Repositories;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0;
@@ -9,6 +8,8 @@ using Moq;
 using Xunit;
 using System.Threading.Tasks;
 using FluentAssertions;
+using fiskaltrust.ifPOS.v0;
+using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest.Repository
 {
@@ -17,7 +18,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest.Repository
         [Fact]
         public async Task DailyClosingRepositoryTest_IncludeActionjWithNoQueueItemId_ValidDailyClosingsAsync()
         {
-            var(ajs, queueItems) = GetDailyClosingData();
+            var (ajs, queueItems) = GetDailyClosingData();
             var actionjounalRepo = new Mock<IReadOnlyActionJournalRepository>();
             actionjounalRepo.Setup(x => x.GetAsync()).Returns(Task.FromResult(ajs));
             var queueItemRepository = new Mock<IMiddlewareQueueItemRepository>();
@@ -43,112 +44,95 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest.Repository
             var queueId = Guid.NewGuid();
             var queueItemId2 = Guid.NewGuid();
 
-            var queueMoment1 = DateTime.Now;
+            var queueItem1_timestamp = DateTime.Now.Ticks;
+            var actionJournal1_timestamp = DateTime.Now.Ticks;
             Task.Delay(1).Wait();
-            var actionJournal1_mom = DateTime.Now;
+
+            var queueItem2_timestamp = DateTime.Now.Ticks;
+            var actionJournal2_mom = DateTime.Now.Ticks;
             Task.Delay(1).Wait();
-            var queueItemt1_tstp = DateTime.Now.Ticks;
+
+            var queueItem3_timestamp = DateTime.Now.Ticks;
             Task.Delay(1).Wait();
-            var queueMoment2 = DateTime.Now;
+
+            var queueItem4_timestamp = DateTime.Now.Ticks;
+            var actionJournal4_timestamp = DateTime.Now.Ticks;
             Task.Delay(1).Wait();
-            var actionJournal2_mom = DateTime.Now;
-            Task.Delay(1).Wait();
-            var queueItemt2_tstp = DateTime.Now.Ticks;
-            Task.Delay(1).Wait();
-            var queueMoment2_1 = DateTime.Now;
-            Task.Delay(1).Wait();
-            var queueItemt2_1_tstp = DateTime.Now.Ticks;
-            Task.Delay(1).Wait();
-            var queueMoment3 = DateTime.Now;
-            var actionJournal3_mom = DateTime.Now;
-            Task.Delay(1).Wait();
-            var queueItemt3_tstp = DateTime.Now.Ticks;
-            Task.Delay(1).Wait();
-            var queueMoment4 = DateTime.Now;
-            Task.Delay(1).Wait();
-            var actionJournal4_mom = DateTime.Now;
-            var queueItemt4_tstp = DateTime.Now.Ticks;
+
+            var queueItem5_timestamp = DateTime.Now.Ticks;
+            var actionJournal5_timestamp = DateTime.Now.Ticks;
 
             var actionJournals = new List<ftActionJournal>() {
-                new ftActionJournal
-                {
+                new() {
                     ftQueueId = queueId,
                     ftActionJournalId = Guid.NewGuid(),
                     ftQueueItemId = queueId,
-                    Moment = actionJournal1_mom,
+                    TimeStamp = actionJournal1_timestamp,
                     Type = "4445000100000007",
-                    DataJson = "{\"closingNumber\": 1}"
+                    DataJson = "{\"closingNumber\": 1, \"ftReceiptNumerator\": 1}"
                 },
-                new ftActionJournal
-                {
+                new() {
                     ftQueueId = queueId,
                     ftActionJournalId = Guid.NewGuid(),
                     ftQueueItemId = queueId,
-                    Moment = actionJournal2_mom,
+                    TimeStamp = actionJournal2_mom,
                     Type = "4445000800000007",
-                    DataJson = "{\"closingNumber\": 2}"
+                    DataJson = "{\"closingNumber\": 2, \"ftReceiptNumerator\": 2}"
                 },
-                new ftActionJournal
-                {
+                new() {
                     ftQueueId = queueId,
                     ftActionJournalId = Guid.NewGuid(),
                     ftQueueItemId = queueId,
-                    Moment = actionJournal3_mom,
+                    TimeStamp = actionJournal4_timestamp,
                     Type = "4445000800000007",
-                    DataJson = "{\"closingNumber\": 3}"
+                    DataJson = "{\"closingNumber\": 3, \"ftReceiptNumerator\": 4}"
                 },
-                new ftActionJournal
-                {
+                new() {
                     ftQueueId = queueId,
                     ftActionJournalId = Guid.NewGuid(),
                     ftQueueItemId = queueId,
-                    Moment = actionJournal4_mom,
+                    TimeStamp = actionJournal5_timestamp,
                     Type = "4445000800000007",
-                    DataJson = "{\"closingNumber\": 4}"
+                    DataJson = "{\"closingNumber\": 4, \"ftReceiptNumerator\": 5}"
                 },
             };
 
             var queueItems = new List<ftQueueItem>()
             {
-                new ftQueueItem
-                {
+                new() {
                     ftQueueItemId = Guid.NewGuid(),
-                    ftQueueMoment = queueMoment1,
                     ftQueueRow = 1,
                     ftQueueId = queueId,
-                    TimeStamp = queueItemt1_tstp
+                    TimeStamp = queueItem1_timestamp,
+                    response = JsonConvert.SerializeObject(new ReceiptResponse{ ftReceiptIdentification = "ft1#" })
                 },
-                new ftQueueItem
-                {
+                new() {
                     ftQueueItemId = queueItemId2,
-                    ftQueueMoment = queueMoment2,
                     ftQueueRow = 2,
                     ftQueueId = queueId,
-                    TimeStamp = queueItemt2_tstp
+                    TimeStamp = queueItem2_timestamp,
+                    response = JsonConvert.SerializeObject(new ReceiptResponse{ ftReceiptIdentification = "ft2#" })
                 },
-                new ftQueueItem
-                {
+                new() {
                     ftQueueItemId = Guid.NewGuid(),
-                    ftQueueMoment = queueMoment2_1,
                     ftQueueRow = 3,
                     ftQueueId = queueId,
-                    TimeStamp = queueItemt2_1_tstp
+                    TimeStamp = queueItem3_timestamp,
+                    response = JsonConvert.SerializeObject(new ReceiptResponse{ ftReceiptIdentification = "ft3#" })
                 },
-                new ftQueueItem
-                {
+                new() {
                     ftQueueItemId = Guid.NewGuid(),
-                    ftQueueMoment = queueMoment3,
                     ftQueueRow = 4,
                     ftQueueId = queueId,
-                    TimeStamp = queueItemt3_tstp
+                    TimeStamp = queueItem4_timestamp,
+                    response = JsonConvert.SerializeObject(new ReceiptResponse{ ftReceiptIdentification = "ft4#" })
                 },
-                new ftQueueItem
-                {
+                new() {
                     ftQueueItemId = Guid.NewGuid(),
-                    ftQueueMoment = queueMoment4,
                     ftQueueRow = 5,
                     ftQueueId = queueId,
-                    TimeStamp = queueItemt4_tstp
+                    TimeStamp = queueItem5_timestamp,
+                    response = JsonConvert.SerializeObject(new ReceiptResponse{ ftReceiptIdentification = "ft5#" })
                 },
             };
 
