@@ -21,8 +21,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Helpers
             var receiptNumerator = JsonConvert.DeserializeAnonymousType(actionJournal.DataJson, new { ftReceiptNumerator = 0L }).ftReceiptNumerator;
 
             // QueueItems are stored before the ActionJournals, so we need to look for the QueueItem with the closest timestamp before the respective ActionJournal
-            var from = new DateTime(actionJournal.TimeStamp).AddSeconds(-10).Ticks;
-            var queueItemsInRange = _queueItemRepository.GetByTimeStampRangeAsync(from, actionJournal.TimeStamp);
+            var to = new DateTime(actionJournal.TimeStamp).AddMinutes(1).Ticks;
+            var queueItemsInRange = _queueItemRepository.GetByTimeStampRangeAsync(actionJournal.TimeStamp, to);
 
             await foreach (var queueItem in queueItemsInRange)
             {
