@@ -25,7 +25,7 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
                 "AT" => new QueueATBootstrapper(),
                 "DE" => new QueueDEBootstrapper(),
                 "ES" => new QueueESBootstrapper(),
-                "FR" => middlewareConfiguration.PreviewFeatures.TryGetValue("queue-fr", out var val) && val ? new QueueFRBootstrapper() : throw new NotImplementedException("The French Queue is not yet implemented in this version."),
+                "FR" => new QueueFRBootstrapper(),
                 "IT" => new QueueITBootstrapper(),
                 "ME" => new QueueMeBootstrapper(),
                 "DEFAULT" => new QueueDEFAULTBootstrapper(middlewareConfiguration),
