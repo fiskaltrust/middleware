@@ -268,12 +268,19 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
 
         private async Task<int> GetFirstZNumber(IReadOnlyActionJournalRepository actionJournalRepository, IReadOnlyReceiptJournalRepository receiptJournalRepository, JournalRequest request)
         {
+            var dailyClosingRepository = new DailyClosingActionJournalHelper(_middlewareQueueItemRepository);
+
             var firstZNumber = 1;
             var actionJournals = (await actionJournalRepository.GetAsync().ConfigureAwait(false)).OrderBy(x => x.TimeStamp);
             var receiptJournals = (await receiptJournalRepository.GetAsync().ConfigureAwait(false)).ToList();
 
-            foreach (var actionJournal in actionJournals.Where(x => x.Type == "4445000000000007" || x.Type == "0x4445000000000007"))
+            foreach (var actionJournal in actionJournals.Where(x => x.Type != null && x.Type.EndsWith("0007") && (x.Type.StartsWith("4445") || x.Type.StartsWith("0x4445"))))
             {
+                if (actionJournal.ftQueueItemId == actionJournal.ftQueueId)
+                {
+                    var queueItem = await dailyClosingRepository.GetQueueItemOfMissingIdAsync(actionJournal).ConfigureAwait(false);
+                    actionJournal.ftQueueItemId = queueItem.ftQueueItemId;
+                }
                 var receiptJournal = receiptJournals.FirstOrDefault(x => x.ftQueueItemId == actionJournal.ftQueueItemId);
                 if (receiptJournal != null)
                 {
