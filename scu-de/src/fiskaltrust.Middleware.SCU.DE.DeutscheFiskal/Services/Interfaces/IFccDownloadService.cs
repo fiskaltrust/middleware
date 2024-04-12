@@ -6,7 +6,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services.Interfaces
     public interface IFccDownloadService
     {
         Version UsedFCCVersion { get; }
-        Task<bool> DownloadFccAsync(string fccDirectory);
+        Task<bool> DownloadFccAsync(string fccDirectory, Version currentlyInstalledVersion);
         bool IsInstalled(string fccDirectory);
         bool IsLatestVersion(string fccDirectory, Version latestVersion);
         bool IsLatestVersionDat(string fccDirectory, Version latestVersion);
