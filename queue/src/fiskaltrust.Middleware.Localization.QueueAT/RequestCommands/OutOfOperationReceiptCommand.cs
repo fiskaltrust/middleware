@@ -13,7 +13,7 @@ using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 {
-    internal class OutOfOperationReceiptCommand : RequestCommand
+    public class OutOfOperationReceiptCommand : RequestCommand
     {
         public override string ReceiptName => "Out-of-operation receipt";
 
