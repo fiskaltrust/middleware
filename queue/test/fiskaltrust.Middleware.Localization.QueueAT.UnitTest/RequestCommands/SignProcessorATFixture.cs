@@ -21,6 +21,8 @@ using Org.BouncyCastle.Math;
 using Org.BouncyCastle.Pkcs;
 using Org.BouncyCastle.Security;
 using Org.BouncyCastle.X509;
+using System.Linq;
+using FluentAssertions;
 
 namespace fiskaltrust.Middleware.Localization.QueueAT.UnitTest.RequestCommands
 {
@@ -188,6 +190,28 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.UnitTest.RequestCommands
             store.Save(ms, CERT_PASSWORD.ToCharArray(), random);
 
             return ms.ToArray();
+        }
+
+        public static void TestAllSignSignatures(Models.RequestCommandResponse result)
+        {
+            var signAllSig = result.ReceiptResponse.ftSignatures.ToList().Where(x => x.Caption == "Sign-All-Mode").FirstOrDefault();
+            signAllSig.Should().NotBeNull();
+            signAllSig.Data.Should().Be("Sign: True Counter:True");
+            signAllSig.ftSignatureType.Should().Be(4707387510509010944);
+            var signZero = result.ReceiptResponse.ftSignatures.ToList().Where(x => x.Caption == "Zero-Receipt").FirstOrDefault();
+            signZero.Should().NotBeNull();
+            signZero.Data.Should().Be("Sign: True Counter:True");
+            signZero.ftSignatureType.Should().Be(4707387510509010944);
+            var signCounter = result.ReceiptResponse.ftSignatures.ToList().Where(x => x.Caption == "Counter Add").FirstOrDefault();
+            signCounter.Should().NotBeNull();
+            signCounter.Data.Should().Be("0");
+            signCounter.ftSignatureType.Should().Be(4707387510509010944);
+            var signFT = result.ReceiptResponse.ftSignatures.ToList().Where(x => x.Caption == "www.fiskaltrust.at").FirstOrDefault();
+            signFT.Should().NotBeNull();
+            signFT.ftSignatureType.Should().Be(4707387510509010945);
+            var signPr = result.ReceiptResponse.ftSignatures.ToList().Where(x => x.Caption.Contains("Prüfen")).FirstOrDefault();
+            signPr.Should().NotBeNull();
+            signPr.Data.Should().Contain("ActionJournalId");
         }
     }
 }
