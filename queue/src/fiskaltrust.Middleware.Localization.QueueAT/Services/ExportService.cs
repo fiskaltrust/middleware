@@ -12,7 +12,7 @@ using fiskaltrust.Middleware.Contracts.Repositories;
 
 namespace fiskaltrust.Middleware.Localization.QueueAT.Services
 {
-    public class ExportService
+    public class ExportService : IExportService
     {
         private readonly IReadOnlyConfigurationRepository _configurationRepository;
         private readonly IMiddlewareRepository<ftJournalAT> _journalATRepository;

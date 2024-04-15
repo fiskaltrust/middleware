@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Xunit;
 using fiskaltrust.Middleware.Localization.QueueAT.RequestCommands;
 using FluentAssertions;
@@ -7,11 +6,11 @@ using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueueAT.UnitTest.RequestCommands
 {
-    public class InitialOperationReceiptCommandTest : IClassFixture<SignProcessorATFixture>
+    public class PosReceiptCommandTest : IClassFixture<SignProcessorATFixture>
     {
 
         private readonly SignProcessorATFixture _fixture;
-        public InitialOperationReceiptCommandTest(SignProcessorATFixture fixture)
+        public PosReceiptCommandTest(SignProcessorATFixture fixture)
         {
             _fixture = fixture;
         }
@@ -20,9 +19,9 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.UnitTest.RequestCommands
         public async Task ExecuteAsync_ShouldReturnExpectedResult()
         {
             await _fixture.CreateConfigurationRepository();
-            var _initialOperationReceiptCommand = new InitialOperationReceiptCommand(_fixture.GetIATSSCDProvider("34"), _fixture.middlewareConfiguration, _fixture.queueATConfiguration, _fixture.logger);
+            var _initialOperationReceiptCommand = new PosReceiptCommand(_fixture.GetIATSSCDProvider("35"), _fixture.middlewareConfiguration, _fixture.queueATConfiguration, _fixture.logger);
 
-            var request = _fixture.CreateReceiptRequest("InitialOperation.json");
+            var request = _fixture.CreateReceiptRequest("CashSale.json");
             var queueItem = _fixture.CreateQueueItem(request);
             var response = RequestCommand.CreateReceiptResponse(request, queueItem, _fixture.queueAT, _fixture.queue);
 
@@ -34,15 +33,10 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.UnitTest.RequestCommands
             result.ReceiptResponse.cbTerminalID.Should().Be(request.cbTerminalID);
             result.ReceiptResponse.cbReceiptReference.Should().Be(request.cbReceiptReference);
             result.ReceiptResponse.ftCashBoxIdentification.Should().Be(request.ftCashBoxID);
-            SignProcessorATFixture.TestAllSignSignatures(result);
-            var signStopp = result.ReceiptResponse.ftSignatures.ToList().Where(x => x.Caption == "Startbeleg").FirstOrDefault();
-            signStopp.Should().NotBeNull();
-            signStopp.Data.Should().Be("Startbeleg");
-            signStopp.ftSignatureType.Should().Be(4707387510509010946);
-            var signDA = result.ReceiptResponse.ftSignatures.ToList().Where(x => x.Caption.Contains("Aktivierung (Inbetriebnahme)")).FirstOrDefault();
-            signDA.Should().NotBeNull();
-            signDA.Data.Should().Contain("ActionJournalId");
-            signDA.ftSignatureType.Should().Be(4707387510509010947);
+
+
+            SignProcessorATFixture.TestAllSignSignatures(result, false, "38,75", false);
+
             var ftStateData = JsonConvert.DeserializeAnonymousType(result.ReceiptResponse.ftStateData,
                 new
                 {
@@ -54,7 +48,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.UnitTest.RequestCommands
             ftStateData.Exception.Should().BeEmpty();
             ftStateData.Signing.Should().BeTrue();
             ftStateData.Counting.Should().BeTrue();
-            ftStateData.ZeroReceipt.Should().BeTrue();
+            ftStateData.ZeroReceipt.Should().BeFalse();
 
         }
     }

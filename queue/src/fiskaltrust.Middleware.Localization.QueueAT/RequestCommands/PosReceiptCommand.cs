@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 {
-    internal class PosReceiptCommand : RequestCommand
+    public class PosReceiptCommand : RequestCommand
     {
         public override string ReceiptName => "POS receipt";
 

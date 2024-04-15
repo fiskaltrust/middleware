@@ -50,6 +50,10 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.UnitTest.RequestCommands
                 CashBoxId = cashBoxId,
                 QueueId = queueId,
                 IsSandbox = true,
+                Configuration = new Dictionary<string, object>()
+                {
+                    { "EnableMonthlyExport", false }
+                }
             };
             queueATConfiguration = QueueATConfiguration.FromMiddlewareConfiguration(middlewareConfiguration);
             logger = new Mock<ILogger<RequestCommand>>().Object;
@@ -81,7 +85,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.UnitTest.RequestCommands
         public IATSSCDProvider GetIATSSCDProvider(string zda)
         {
             var sscd = new Mock<IATSSCD>();
-            sscd.Setup(x => x.ZdaAsync()).ReturnsAsync(new ZdaResponse() { ZDA = zda});
+            sscd.Setup(x => x.ZdaAsync()).ReturnsAsync(new ZdaResponse() { ZDA = zda });
             sscd.Setup(x => x.SignAsync(It.IsAny<SignRequest>())).ReturnsAsync(new SignResponse() { SignedData = new byte[] { 0x01, 0x02, 0x03 } });
             sscd.Setup(x => x.CertificateAsync()).ReturnsAsync(new CertificateResponse { Certificate = _certificate });
             var sscdProvider = new Mock<IATSSCDProvider>();
@@ -126,7 +130,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.UnitTest.RequestCommands
                 ftSignaturCreationUnitATId = Guid.NewGuid()
             };
             await configurationRepository.InsertOrUpdateSignaturCreationUnitATAsync(_signaturCreationUnitAT);
-            
+
             queue = new ftQueue
             {
                 ftCashBoxId = cashBoxId,
@@ -192,26 +196,39 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.UnitTest.RequestCommands
             return ms.ToArray();
         }
 
-        public static void TestAllSignSignatures(Models.RequestCommandResponse result)
+        public static void TestAllSignSignatures(Models.RequestCommandResponse result, bool iszero = true, string counterAdd = "", bool check = true)
         {
             var signAllSig = result.ReceiptResponse.ftSignatures.ToList().Where(x => x.Caption == "Sign-All-Mode").FirstOrDefault();
             signAllSig.Should().NotBeNull();
             signAllSig.Data.Should().Be("Sign: True Counter:True");
             signAllSig.ftSignatureType.Should().Be(4707387510509010944);
-            var signZero = result.ReceiptResponse.ftSignatures.ToList().Where(x => x.Caption == "Zero-Receipt").FirstOrDefault();
-            signZero.Should().NotBeNull();
-            signZero.Data.Should().Be("Sign: True Counter:True");
-            signZero.ftSignatureType.Should().Be(4707387510509010944);
+            if (iszero)
+            {
+                var signZero = result.ReceiptResponse.ftSignatures.ToList().Where(x => x.Caption == "Zero-Receipt").FirstOrDefault();
+                signZero.Should().NotBeNull();
+                signZero.Data.Should().Be("Sign: True Counter:True");
+                signZero.ftSignatureType.Should().Be(4707387510509010944);
+            }
             var signCounter = result.ReceiptResponse.ftSignatures.ToList().Where(x => x.Caption == "Counter Add").FirstOrDefault();
             signCounter.Should().NotBeNull();
-            signCounter.Data.Should().Be("0");
+            if (counterAdd != string.Empty)
+            {
+                signCounter.Data.Should().Be(counterAdd);
+            }
+            else
+            {
+                signCounter.Data.Should().Be("0");
+            }
             signCounter.ftSignatureType.Should().Be(4707387510509010944);
             var signFT = result.ReceiptResponse.ftSignatures.ToList().Where(x => x.Caption == "www.fiskaltrust.at").FirstOrDefault();
             signFT.Should().NotBeNull();
             signFT.ftSignatureType.Should().Be(4707387510509010945);
-            var signPr = result.ReceiptResponse.ftSignatures.ToList().Where(x => x.Caption.Contains("Prüfen")).FirstOrDefault();
-            signPr.Should().NotBeNull();
-            signPr.Data.Should().Contain("ActionJournalId");
+            if (check)
+            {
+                var signPr = result.ReceiptResponse.ftSignatures.ToList().Where(x => x.Caption.Contains("Prüfen")).FirstOrDefault();
+                signPr.Should().NotBeNull();
+                signPr.Data.Should().Contain("ActionJournalId");
+            }
         }
     }
 }

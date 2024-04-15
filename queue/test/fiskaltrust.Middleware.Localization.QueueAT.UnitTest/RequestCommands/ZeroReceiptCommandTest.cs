@@ -7,11 +7,11 @@ using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueueAT.UnitTest.RequestCommands
 {
-    public class InitialOperationReceiptCommandTest : IClassFixture<SignProcessorATFixture>
+    public class ZeroReceiptCommandTest : IClassFixture<SignProcessorATFixture>
     {
 
         private readonly SignProcessorATFixture _fixture;
-        public InitialOperationReceiptCommandTest(SignProcessorATFixture fixture)
+        public ZeroReceiptCommandTest(SignProcessorATFixture fixture)
         {
             _fixture = fixture;
         }
@@ -22,7 +22,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.UnitTest.RequestCommands
             await _fixture.CreateConfigurationRepository();
             var _initialOperationReceiptCommand = new InitialOperationReceiptCommand(_fixture.GetIATSSCDProvider("34"), _fixture.middlewareConfiguration, _fixture.queueATConfiguration, _fixture.logger);
 
-            var request = _fixture.CreateReceiptRequest("InitialOperation.json");
+            var request = _fixture.CreateReceiptRequest("ZeroReceipt.json");
             var queueItem = _fixture.CreateQueueItem(request);
             var response = RequestCommand.CreateReceiptResponse(request, queueItem, _fixture.queueAT, _fixture.queue);
 
@@ -35,14 +35,6 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.UnitTest.RequestCommands
             result.ReceiptResponse.cbReceiptReference.Should().Be(request.cbReceiptReference);
             result.ReceiptResponse.ftCashBoxIdentification.Should().Be(request.ftCashBoxID);
             SignProcessorATFixture.TestAllSignSignatures(result);
-            var signStopp = result.ReceiptResponse.ftSignatures.ToList().Where(x => x.Caption == "Startbeleg").FirstOrDefault();
-            signStopp.Should().NotBeNull();
-            signStopp.Data.Should().Be("Startbeleg");
-            signStopp.ftSignatureType.Should().Be(4707387510509010946);
-            var signDA = result.ReceiptResponse.ftSignatures.ToList().Where(x => x.Caption.Contains("Aktivierung (Inbetriebnahme)")).FirstOrDefault();
-            signDA.Should().NotBeNull();
-            signDA.Data.Should().Contain("ActionJournalId");
-            signDA.ftSignatureType.Should().Be(4707387510509010947);
             var ftStateData = JsonConvert.DeserializeAnonymousType(result.ReceiptResponse.ftStateData,
                 new
                 {

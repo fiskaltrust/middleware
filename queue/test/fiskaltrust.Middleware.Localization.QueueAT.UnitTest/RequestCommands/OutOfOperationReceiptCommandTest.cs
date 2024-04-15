@@ -43,16 +43,14 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.UnitTest.RequestCommands
             signDA.Should().NotBeNull();
             signDA.Data.Should().Contain("ActionJournalId");
             signDA.ftSignatureType.Should().Be(4707387510509010947);
-            //"Caption": "De-Aktivierung (Ausserbetriebnahme) einer Sicherheitseinrichtung ef9764af-1102-41e8-b901-eb89d45cde1b nach RKSV. (Queue)",
-            //"Data": "{\"ActionJournalId\":\"5d181535-4334-4dd3-a0e6-0719dea76e78\",\"Type\":\"0x4154000000000003-FonDeactivateQueue\",\"Data\":{\"CashBoxId\":\"6caa852c-4230-4496-83c0-1597eee7084e\",\"QueueId\":\"ef9764af-1102-41e8-b901-eb89d45cde1b\",\"Moment\":\"2024-04-11T10:55:54.2934742Z\",\"CashBoxIdentification\":\"O3yXy0sjA9DLse4AEuhM85M8v92u1+WwuTwJi3Ltl64=\",\"DEPValue\":\"\",\"IsStopReceipt\":true}}"
             var ftStateData = JsonConvert.DeserializeAnonymousType(result.ReceiptResponse.ftStateData,
-                 new
-                 {
-                     Exception = string.Empty,
-                     Signing = false,
-                     Counting = false,
-                     ZeroReceipt = false
-                 });
+                  new
+                  {
+                      Exception = string.Empty,
+                      Signing = false,
+                      Counting = false,
+                      ZeroReceipt = false
+                  });
             ftStateData.Exception.Should().BeEmpty();
             ftStateData.Signing.Should().BeTrue();
             ftStateData.Counting.Should().BeTrue();
