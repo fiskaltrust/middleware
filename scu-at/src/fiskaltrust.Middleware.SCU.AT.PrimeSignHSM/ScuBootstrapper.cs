@@ -12,7 +12,10 @@ namespace fiskaltrust.Middleware.SCU.AT.PrimeSignHSM
 
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddSingleton(JsonConvert.DeserializeObject<PrimeSignSCUConfiguration>(JsonConvert.SerializeObject(Configuration)));
+            services.AddSingleton(JsonConvert.DeserializeObject<PrimeSignSCUConfiguration>(JsonConvert.SerializeObject(Configuration), new JsonSerializerSettings
+            {
+                NullValueHandling = NullValueHandling.Ignore
+            }));
             services.AddScoped<IATSSCD, PrimeSignSCU>();
         }
     }

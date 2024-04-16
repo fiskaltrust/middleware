@@ -18,6 +18,7 @@ stages:
       projects:
         - ATrustSmartcard
         - InMemory
+        - PrimeSignHSM
       stages:
         - stage: Release_Sandbox
           dependsOn: []
@@ -40,6 +41,7 @@ stages:
       projects:
         - ATrustSmartcard
         - InMemory
+        - PrimeSignHSM
       stages:
         - stage: Release_Sandbox_Legacy
           dependsOn: []
@@ -62,6 +64,7 @@ stages:
       projects:
         - ATrustSmartcard
         - InMemory
+        - PrimeSignHSM
       stages:
         - stage: Release_Sandbox_Legacy_Nuget
           dependsOn: []

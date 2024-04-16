@@ -8,11 +8,12 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using ScuInMemoryBootstrapper = fiskaltrust.Middleware.SCU.AT.InMemory.ScuBootstrapper;
 using ScuATrustSmartcardBootstrapper = fiskaltrust.Middleware.SCU.AT.ATrustSmartcard.ScuBootstrapper;
+using ScuPrimeSignHSMBootstrapper = fiskaltrust.Middleware.SCU.AT.PrimeSignHSM.ScuBootstrapper;
 
 var _useHelipad = false;
 var _cashBoxId = "";
 var _accessToken = "";
-var _configurationFilePath = "C:\\Temp\\ATLauncher\\configuration.json";
+var _configurationFilePath = "C:\\Temp\\ATLauncher\\HSMConfiguration.json";
 var serviceFolder = "";
 
 
@@ -47,7 +48,11 @@ if (config.Package == "fiskaltrust.Middleware.SCU.AT.InMemory")
 }
 else if (config.Package == "fiskaltrust.Middleware.SCU.AT.ATrustSmartcard")
 {
-    ConfigureATrustSmartcard(config,serviceCollection);
+    ConfigureATrustSmartcard(config, serviceCollection);
+}
+else if (config.Package == "fiskaltrust.Middleware.SCU.AT.PrimeSignHSM")
+{
+    ConfigurePrimeSignHSM(config, serviceCollection);
 }
 else
 {
@@ -74,6 +79,16 @@ static void ConfigureIMemory(PackageConfiguration scu, ServiceCollection service
 static void ConfigureATrustSmartcard(PackageConfiguration scu, ServiceCollection serviceCollection)
 {
     var bootStrapper = new ScuATrustSmartcardBootstrapper
+    {
+        Id = scu.Id,
+        Configuration = scu.Configuration
+    };
+    bootStrapper.ConfigureServices(serviceCollection);
+}
+
+static void ConfigurePrimeSignHSM(PackageConfiguration scu, ServiceCollection serviceCollection)
+{
+    var bootStrapper = new ScuPrimeSignHSMBootstrapper
     {
         Id = scu.Id,
         Configuration = scu.Configuration

@@ -64,3 +64,4 @@ stages:
           projects:
             - fiskaltrust.Middleware.SCU.AT.ATrustSmartcard
             - fiskaltrust.Middleware.SCU.AT.InMemory
+            - fiskaltrust.Middleware.SCU.AT.PrimeSignHSM
