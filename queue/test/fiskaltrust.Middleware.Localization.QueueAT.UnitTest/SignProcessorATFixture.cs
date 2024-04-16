@@ -24,13 +24,13 @@ using Org.BouncyCastle.X509;
 using System.Linq;
 using FluentAssertions;
 
-namespace fiskaltrust.Middleware.Localization.QueueAT.UnitTest.RequestCommands
+namespace fiskaltrust.Middleware.Localization.QueueAT.UnitTest
 {
     public class SignProcessorATFixture
     {
         private const string CERT_PASSWORD = "password";
-        public Guid cashBoxId { get; private set; }
-        public Guid queueId { get; private set; }
+        public Guid cashBoxId { get;} = Guid.Parse("6caa852c-4230-4496-83c0-1597eee7084e");
+        public Guid queueId { get;} = Guid.Parse("ef9764af-1102-41e8-b901-eb89d45cde1c");
         public ftQueue queue { get; private set; }
         public ftQueueAT queueAT { get; private set; }
         public MiddlewareConfiguration middlewareConfiguration;
@@ -43,8 +43,6 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.UnitTest.RequestCommands
 
         public SignProcessorATFixture()
         {
-            cashBoxId = Guid.Parse("6caa852c-4230-4496-83c0-1597eee7084e");
-            queueId = Guid.Parse("ef9764af-1102-41e8-b901-eb89d45cde1c");
             middlewareConfiguration = new MiddlewareConfiguration()
             {
                 CashBoxId = cashBoxId,
