@@ -87,7 +87,7 @@ namespace fiskaltrust.Middleware.SCU.AT.ATrustSmartcard.UnitTest.Services
         }
 
         [Fact]
-        public void Sign_ShouldThrowError_IfResponceIsCorrect()
+        public void Sign_ShouldReturnAnswer_IfResponceIsCorrect()
         {
 
             var response = new Response(new List<ResponseApdu>() { new ResponseApdu(new byte[] { 10, 144, 0 }, IsoCase.Case4Short, SCardProtocol.Any) }, null);
