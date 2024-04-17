@@ -8,12 +8,8 @@ using PCSC.Iso7816;
 
 namespace fiskaltrust.Middleware.SCU.AT.ATrustSmartcard.UnitTest.Services
 {
-    public class AtrustACOSCardTests
+    public class AtrustACOSCardTests: IAtrustCardTests
     {
-        private readonly Mock<ISCardReader> _scardReader;
-        private readonly Mock<IIsoReader> _isoReader;
-        private readonly CardService _sut;
-        private readonly string _readerName = "Reader 0";
         public AtrustACOSCardTests()
         {
             _scardReader = new Mock<ISCardReader>();
@@ -24,50 +20,9 @@ namespace fiskaltrust.Middleware.SCU.AT.ATrustSmartcard.UnitTest.Services
             _sut = new AtrustACOS(_scardReader.Object, _isoReader.Object);
 
         }
+      
         [Fact]
-        public void checkApplication_ShouldThrowError_IfCardReaderIsNOTSuccess()
-        {
-
-            _scardReader.Setup(x => x.BeginTransaction()).Returns(SCardError.Shutdown);
-
-            Assert.Throws<Exception>(() => _sut.CheckApplication()).Message.Contains($"Reader {_readerName}  BeginTransaction failed");
-
-        }
-        [Fact]
-        public void checkApplication_ShouldReturnTrue_IfResponceIsCorrect()
-        {
-            var response = new Response(new List<ResponseApdu>() { new ResponseApdu(new byte[] { 144, 0 }, IsoCase.Case4Short, SCardProtocol.Any) }, null);
-            _isoReader.Setup(x => x.Transmit(It.IsAny<CommandApdu>())).Returns(response);
-
-            _sut.CheckApplication().Should().Be(true);
-        }
-
-        [Fact]
-        public void Readcertificate_ShouldThrowError_IfResponceIsNotCorrect()
-        {
-            var response = new Response(new List<ResponseApdu>() { new ResponseApdu(new byte[] { 0, 0 }, IsoCase.Case3Short, SCardProtocol.Any) }, null);
-            _isoReader.Setup(x => x.Transmit(It.IsAny<CommandApdu>())).Returns(response);
-            Assert.Throws<Exception>(() => _sut.ReadCertificates());
-        }
-        [Fact]
-        public void Readcertificate_ShouldReturnbytes_IfResponceIsCorrect()
-        {
-            var data = File.ReadAllText("testdata/Certificate.txt");
-            var stringbytes = data.Split(',');
-            var bytes = stringbytes.Select(byte.Parse).ToArray();
-            var responseData = new byte[bytes.Length + 2];
-            bytes.CopyTo(responseData, 0);
-            responseData[^2] = 144;
-            responseData[^1] = 0;
-
-            var response = new Response(new List<ResponseApdu>() { new ResponseApdu(responseData, IsoCase.Case3Short, SCardProtocol.Any) }, null);
-            _isoReader.Setup(x => x.Transmit(It.IsAny<CommandApdu>())).Returns(response);
-
-            _sut.ReadCertificates(true, true).Should().BeEquivalentTo(bytes);
-        }
-
-        [Fact]
-        public void ReadCIN_ShouldReturnnull_IfResponceIsNotCorrect()
+        public override void ReadCIN_ShouldReturnnull_IfResponceIsNotCorrect()
         {
             var response = new Response(new List<ResponseApdu>() { new ResponseApdu(new byte[] { 0, 0 }, IsoCase.Case4Short, SCardProtocol.Any) }, null);
             _isoReader.Setup(x => x.Transmit(It.Is<CommandApdu>(x => x.Case == IsoCase.Case4Short))).Returns(response);
@@ -76,7 +31,7 @@ namespace fiskaltrust.Middleware.SCU.AT.ATrustSmartcard.UnitTest.Services
         }
 
         [Fact]
-        public void ReadCIN_ShouldReturndata_IfResponceIsCorrect()
+        public override void ReadCIN_ShouldReturndata_IfResponceIsCorrect()
         {
             var response4 = new Response(new List<ResponseApdu>() { new ResponseApdu(new byte[] { 10, 144, 0 }, IsoCase.Case4Short, SCardProtocol.Any) }, null);
             var response2 = new Response(new List<ResponseApdu>() { new ResponseApdu(new byte[] { 10, 0, 0 }, IsoCase.Case2Short, SCardProtocol.Any) }, null);
@@ -103,23 +58,6 @@ namespace fiskaltrust.Middleware.SCU.AT.ATrustSmartcard.UnitTest.Services
             _isoReader.Setup(x => x.Transmit(It.IsAny<CommandApdu>())).Returns(response);
             _sut.SelectApplication().Should().BeTrue();
         }
-
-        [Fact]
-        public void Sign_ShouldThrowError_IfResponceIsNotCorrect()
-        {
-
-            var response = new Response(new List<ResponseApdu>() { new ResponseApdu(new byte[] { 0, 0 }, IsoCase.Case4Short, SCardProtocol.Any) }, null);
-            _isoReader.Setup(x => x.Transmit(It.IsAny<CommandApdu>())).Returns(response);
-            Assert.Throws<Exception>(() => _sut.Sign(new byte[] { 10 }));
-        }
-
-        [Fact]
-        public void Sign_ShouldThrowError_IfResponceIsCorrect()
-        {
-
-            var response = new Response(new List<ResponseApdu>() { new ResponseApdu(new byte[] { 10, 144, 0 }, IsoCase.Case4Short, SCardProtocol.Any) }, null);
-            _isoReader.Setup(x => x.Transmit(It.IsAny<CommandApdu>())).Returns(response);
-            _sut.Sign(new byte[] { }).Should().BeEquivalentTo(new byte[] { 10 });
-        }
+      
     }
 }

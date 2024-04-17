@@ -170,7 +170,7 @@ namespace fiskaltrust.Middleware.SCU.AT.ATrustSmartcard.Services
                         P2 = 0x0c,
                         Data = DF_SIG
                     };
-                    var resse = _isoReader.Transmit(apdu);
+                    var response = _isoReader.Transmit(apdu);
                 }
             }
             catch (Exception x)
