@@ -27,6 +27,7 @@
         public int FccRetry { get; set; } = 8;
         public int FCCTimeoutSec { get; set; } = 2;
         public bool EnableFccMetrics { get; set; }
+        public string TypeOfSystem { get; set; } = "PC_POS";
 
     }
 }
