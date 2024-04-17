@@ -16,7 +16,7 @@ using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 {
-    internal class InitialOperationReceiptCommand : RequestCommand
+    public class InitialOperationReceiptCommand : RequestCommand
     {
         public override string ReceiptName => "Initial-operation receipt";
 

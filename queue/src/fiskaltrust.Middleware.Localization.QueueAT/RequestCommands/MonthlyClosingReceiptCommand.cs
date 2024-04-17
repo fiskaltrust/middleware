@@ -13,14 +13,14 @@ using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 {
-    internal class MonthlyClosingReceiptCommand : RequestCommand
+    public class MonthlyClosingReceiptCommand : RequestCommand
     {
-        private readonly ExportService _exportService;
+        private readonly IExportService _exportService;
 
         public override string ReceiptName => "Monthly-closing receipt";
 
         public MonthlyClosingReceiptCommand(IATSSCDProvider sscdProvider, MiddlewareConfiguration middlewareConfiguration, QueueATConfiguration queueATConfiguration,
-            ExportService exportService, ILogger<RequestCommand> logger)
+            IExportService exportService, ILogger<RequestCommand> logger)
             : base(sscdProvider, middlewareConfiguration, queueATConfiguration, logger)
         {
             _exportService = exportService;

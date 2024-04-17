@@ -100,7 +100,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
             return string.Equals(path, pathInFile, StringComparison.OrdinalIgnoreCase);
         }
 
-        public async Task<bool> DownloadFccAsync(string fccDirectory)
+        public async Task<bool> DownloadFccAsync(string fccDirectory, Version currentlyInstalledVersion)
         {
             _logger.LogWarning("Downloading and extracting FCC - this will take some time, depending on your internet connection.");
             var tempZipPath = Path.GetTempFileName();
@@ -108,20 +108,20 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
             {
                 try
                 {
-                    await DownloadAndExtractAsync(tempZipPath, fccDirectory).ConfigureAwait(false);
+                    await DownloadAndExtractAsync(tempZipPath, fccDirectory, currentlyInstalledVersion).ConfigureAwait(false);
                     return true;
                 }
                 catch (Exception ex)
                 {
-                    if(_configuration.FccRetry > _fccRetry)
+                    if (_configuration.FccRetry > _fccRetry)
                     {
                         await Task.Delay(1000);
                         _fccRetry++;
                         _logger.LogWarning($"An error occured while downloading ({ex.InnerException?.Message ?? ex.Message}), retry {_fccRetry} from {_configuration.FccRetry}");
-                        return await DownloadFccAsync(fccDirectory).ConfigureAwait(false);
+                        return await DownloadFccAsync(fccDirectory, currentlyInstalledVersion).ConfigureAwait(false);
                     }
                     _logger.LogWarning($"An error occured while downloading ({ex.InnerException?.Message ?? ex.Message}), download aborted");
-                    return false; 
+                    return false;
                 }
             }
             finally
@@ -137,10 +137,10 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
                 }
             }
         }
-        
+
         private string GetCloudConnectorPath(string fccDirectory) => Path.Combine(fccDirectory, "lib", "fiskal-cloud-connector-service.jar");
 
-        private async Task DownloadAndExtractAsync(string tempZipPath, string fccDirectory)
+        private async Task DownloadAndExtractAsync(string tempZipPath, string fccDirectory, Version currentlyInstalledVersion)
         {
             var downloadUri = string.IsNullOrEmpty(_configuration.FccDownloadUri) ? GetDownloadUriByCurrentPlatform() : _configuration.FccDownloadUri;
             _logger.LogDebug("Downloading FCC from {FccDownloadUrl}...", downloadUri);
@@ -159,6 +159,14 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
             var baseDir = new DirectoryInfo(fccDirectory);
             if (fccdataDir.Exists)
             {
+                // FCC version 4.1.1 requires to delete the existing Java files prior to extracting the new ones
+                var versionRequiresJavaUpdate = new Version(4, 1, 1);
+                if (currentlyInstalledVersion != null && currentlyInstalledVersion < versionRequiresJavaUpdate && new Version(_configuration.FccVersion) >= versionRequiresJavaUpdate)
+                {
+                    CleanExistingJavaFiles(fccDirectory);
+                    _logger.LogInformation("Cleaned up previous Java installation from /bin folder, as required when updating to FCC >= 4.1.1.");
+                }
+
                 UpdateFCCFiles(tempZipPath, fccDirectory, baseDir);
             }
             else
@@ -175,6 +183,15 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
             {
                 _logger.LogDebug("Linux detected, make FCC files executable...");
                 MakeFilesExecutable(fccDirectory);
+            }
+        }
+
+        private void CleanExistingJavaFiles(string fccDirectory)
+        {
+            var binDirectory = Path.Combine(fccDirectory, "bin");
+            if (Directory.Exists(binDirectory))
+            {
+                Directory.Delete(binDirectory, true);
             }
         }
 
@@ -210,6 +227,11 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
 
         protected virtual string GetDownloadUriByCurrentPlatform()
         {
+            if (RuntimeInformation.OSArchitecture == Architecture.X86)
+            {
+                throw new Exception("Starting from version 4.1.1, the FCC does not support x86 Operating Systems anymore. Only x64, arm32 and arm64 are supported.");
+            }
+
             var operatingSystem = RuntimeInformation.OSArchitecture switch
             {
                 Architecture.X64 => "x64",

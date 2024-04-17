@@ -14,7 +14,7 @@ using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 {
-    internal class YearlyClosingReceiptCommand : RequestCommand
+    public class YearlyClosingReceiptCommand : RequestCommand
     {
         public override string ReceiptName => "Yearly-closing receipt";
 

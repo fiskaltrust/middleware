@@ -2,7 +2,7 @@
 
 namespace fiskaltrust.Middleware.Localization.QueueAT.Helpers
 {
-    internal static class ConversionHelper
+    public static class ConversionHelper
     {
         public static string ToBase64UrlString(byte[] bytes)
         {

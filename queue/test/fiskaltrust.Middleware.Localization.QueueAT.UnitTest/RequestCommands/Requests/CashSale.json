@@ -1,0 +1,51 @@
+{
+  "ftCashBoxID": "{{cashbox_id}}",
+  "ftPosSystemID": "{{possystem_id}}",
+  "cbTerminalID": "1",
+  "cbReceiptReference": "1",
+  "cbReceiptMoment": "{{current_moment}}",
+  "cbChargeItems": [
+    {
+      "Quantity": 1.0,
+      "Description": "Artikel 1",
+      "Amount": 33.06,
+      "VATRate": 20.0,
+      "ftChargeItemCase": 4707387510509010944,
+      "ftChargeItemCaseData": "",
+      "AccountNumber": "",
+      "CostCenter": "",
+      "ProductGroup": "",
+      "ProductNumber": "1",
+      "ProductBarcode": "",
+      "Unit": ""
+    },
+    {
+      "Quantity": 1.0,
+      "Description": "Artikel 2",
+      "Amount": 5.69,
+      "VATRate": 20.0,
+      "ftChargeItemCase": 4707387510509010944,
+      "ftChargeItemCaseData": "",
+      "AccountNumber": "",
+      "CostCenter": "",
+      "ProductGroup": "",
+      "ProductNumber": "2",
+      "ProductBarcode": "",
+      "Unit": ""
+    }
+  ],
+  "cbPayItems": [
+    {
+      "Quantity": 1.0,
+      "Description": "Bar",
+      "Amount": 38.75,
+      "ftPayItemCase": 4707387510509010944,
+      "ftPayItemCaseData": "",
+      "AccountNumber": "",
+      "CostCenter": "",
+      "MoneyGroup": "",
+      "MoneyNumber": ""
+    }
+  ],
+  "ftReceiptCase": 4707387510509010945
+}
