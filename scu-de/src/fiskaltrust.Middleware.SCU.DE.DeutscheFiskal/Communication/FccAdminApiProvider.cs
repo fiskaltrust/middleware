@@ -54,7 +54,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Communication
                 ErsIdentifier = clientId,
                 RegistrationToken = _configuration.ActivationToken,
                 BriefDescription = clientId,
-                TypeOfSystem = "Default"
+                TypeOfSystem = _configuration.TypeOfSystem
             };
 
             using var client = GetBasicAuthAdminClient();
