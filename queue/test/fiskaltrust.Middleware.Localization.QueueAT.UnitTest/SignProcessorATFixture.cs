@@ -194,6 +194,16 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.UnitTest
             return ms.ToArray();
         }
 
+        public void TestCommandResult(ReceiptRequest request, ftQueueItem queueItem, Models.RequestCommandResponse result)
+        {
+            result.ReceiptResponse.ftCashBoxID.Should().Be(cashBoxId.ToString());
+            result.ReceiptResponse.ftQueueID.Should().Be(queueId.ToString());
+            result.ReceiptResponse.ftQueueItemID.Should().Be(queueItem.ftQueueItemId.ToString());
+            result.ReceiptResponse.cbTerminalID.Should().Be(request.cbTerminalID);
+            result.ReceiptResponse.cbReceiptReference.Should().Be(request.cbReceiptReference);
+            result.ReceiptResponse.ftCashBoxIdentification.Should().Be(request.ftCashBoxID);
+        }
+
         public static void TestAllSignSignatures(Models.RequestCommandResponse result, bool iszero = true, string counterAdd = "", bool check = true)
         {
             var signAllSig = result.ReceiptResponse.ftSignatures.ToList().Where(x => x.Caption == "Sign-All-Mode").FirstOrDefault();

@@ -28,12 +28,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.UnitTest.RequestCommands
 
             var result = await _initialOperationReceiptCommand.ExecuteAsync(_fixture.queue, _fixture.queueAT, request, queueItem, response);
 
-            result.ReceiptResponse.ftCashBoxID.Should().Be(_fixture.cashBoxId.ToString());
-            result.ReceiptResponse.ftQueueID.Should().Be(_fixture.queueId.ToString());
-            result.ReceiptResponse.ftQueueItemID.Should().Be(queueItem.ftQueueItemId.ToString());
-            result.ReceiptResponse.cbTerminalID.Should().Be(request.cbTerminalID);
-            result.ReceiptResponse.cbReceiptReference.Should().Be(request.cbReceiptReference);
-            result.ReceiptResponse.ftCashBoxIdentification.Should().Be(request.ftCashBoxID);
+            _fixture.TestCommandResult(request, queueItem, result);
             SignProcessorATFixture.TestAllSignSignatures(result);
             var signStopp = result.ReceiptResponse.ftSignatures.ToList().Where(x => x.Caption == "Startbeleg").FirstOrDefault();
             signStopp.Should().NotBeNull();
