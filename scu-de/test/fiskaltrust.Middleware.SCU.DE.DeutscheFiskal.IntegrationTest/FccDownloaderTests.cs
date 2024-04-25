@@ -23,7 +23,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.IntegrationTest
             };
             DeleteNotExistingFolder(notExistingPath);
             var sut = new DeutscheFiskalFccDownloadService(config, Mock.Of<ILogger<DeutscheFiskalFccDownloadService>>());
-            await sut.DownloadFccAsync(config.FccDirectory);
+            await sut.DownloadFccAsync(config.FccDirectory, null);
         }
 
         [Fact]

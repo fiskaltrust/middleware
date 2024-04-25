@@ -73,7 +73,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
 
                 if (!_fccDownloadService.IsInstalled(_fccDirectory))
                 {
-                    if (_fccDownloadService.DownloadFccAsync(_fccDirectory).Result)
+                    if (_fccDownloadService.DownloadFccAsync(_fccDirectory, null).Result)
                     {
                         _fccInitializationService.Initialize(_fccDirectory);
                         _version = new Version(_configuration.FccVersion);
@@ -81,7 +81,8 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
                 }
                 else if (!_fccDownloadService.IsLatestVersion(_fccDirectory, new Version(_configuration.FccVersion)))
                 {
-                    if (_fccDownloadService.DownloadFccAsync(_fccDirectory).Result)
+                    var currentlyInstalledVersion = _fccDownloadService.UsedFCCVersion;
+                    if (_fccDownloadService.DownloadFccAsync(_fccDirectory, currentlyInstalledVersion).Result)
                     {
                         _fccInitializationService.Update(_fccDirectory);
                     }
