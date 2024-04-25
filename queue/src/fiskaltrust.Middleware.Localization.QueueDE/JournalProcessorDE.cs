@@ -213,10 +213,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
                 {
                     receiptNumberTo = long.MaxValue;
                 }
-                else if (request.To < 0)
-                {
-                    receiptNumberTo = request.From + Math.Abs(request.To);
-                }
 
                 var parameters = new DSFinVKParameters
                 {
