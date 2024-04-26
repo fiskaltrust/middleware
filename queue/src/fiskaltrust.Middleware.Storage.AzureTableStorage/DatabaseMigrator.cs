@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Azure.Data.Tables;
+using Azure.Storage.Blobs;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.Migrations;
 using Microsoft.Extensions.Logging;
@@ -18,7 +19,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage
 
         private readonly IAzureTableStorageMigration[] _migrations;
 
-        public DatabaseMigrator(ILogger<IMiddlewareBootstrapper> logger, TableServiceClient tableServiceClient, QueueConfiguration queueConfiguration)
+        public DatabaseMigrator(ILogger<IMiddlewareBootstrapper> logger, TableServiceClient tableServiceClient, BlobServiceClient blobServiceClient, QueueConfiguration queueConfiguration)
         {
             _logger = logger;
             _tableServiceClient = tableServiceClient;
@@ -26,7 +27,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage
 
             _migrations = new[]
             {
-                new Migration_000_Initial(_tableServiceClient, queueConfiguration)
+                new Migration_000_Initial(_tableServiceClient, blobServiceClient, queueConfiguration)
             };
         }
 
@@ -65,7 +66,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage
         private async Task SetCurrentMigrationAsync(int version)
         {
             var tableClient = _tableServiceClient.GetTableClient(GetMigrationTableName());
-            await tableClient.UpsertEntityAsync(new TableEntity(_queueConfiguration.QueueId.ToString(), "Current") { { "CurentVersion", version } });
+            await tableClient.UpsertEntityAsync(new TableEntity(_queueConfiguration.QueueId.ToString(), "Current") { { "CurrentVersion", version } });
         }
 
         private async Task<bool> MigrationTableExists() => await _tableServiceClient.QueryAsync(t => t.Name == GetMigrationTableName()).AnyAsync();
