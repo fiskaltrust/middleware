@@ -198,7 +198,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
 
             var queueDE = await _configurationRepository.GetQueueDEAsync(_middlewareConfiguration.QueueId).ConfigureAwait(false);
             var scu = await _configurationRepository.GetSignaturCreationUnitDEAsync(queueDE.ftSignaturCreationUnitDEId.Value).ConfigureAwait(false);
-            var tseInfo  = JsonConvert.DeserializeObject<TseInfo>(scu.TseInfoJson);
+            var tseInfo = JsonConvert.DeserializeObject<TseInfo>(scu.TseInfoJson);
             var workingDirectory = Path.Combine(_middlewareConfiguration.ServiceFolder, "Exports", queueDE.ftQueueDEId.ToString(), "DSFinV-K", DateTime.Now.ToString("yyyyMMddhhmmssfff"));
             Directory.CreateDirectory(workingDirectory);
 
@@ -208,24 +208,33 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
                 var firstZNumber = await GetFirstZNumber(_actionJournalRepository, receiptJournalRepository, request).ConfigureAwait(false);
 
                 var targetDirectory = $"{Path.Combine(workingDirectory, "raw")}{Path.DirectorySeparatorChar}";
+                var to = request.To;
+                if (request.To == 0)
+                {
+                    to = long.MaxValue;
+                }
+
                 var parameters = new DSFinVKParameters
                 {
                     CashboxIdentification = queueDE.CashBoxIdentification,
                     FirstZNumber = firstZNumber,
                     TargetDirectory = targetDirectory,
                     TSECertificateBase64 = certificateBase64,
-                    ReferencesLookUpType = _queueDEConfiguration.DisableDsfinvkExportReferences ? ReferencesLookUpType.NoReferences: ReferencesLookUpType.AddReferences,
+                    ReferencesLookUpType = _queueDEConfiguration.DisableDsfinvkExportReferences ? ReferencesLookUpType.NoReferences : ReferencesLookUpType.AddReferences,
                     IncludeOrders = _queueDEConfiguration.ExcludeDsfinvkOrders ? false : true,
                     PublicKeyBase64 = tseInfo?.PublicKeyBase64,
                     SignAlgorithm = tseInfo?.SignatureAlgorithm,
-                    TimeFormat = tseInfo?.LogTimeFormat
+                    TimeFormat = tseInfo?.LogTimeFormat,
+                    From = request.From,
+                    To = to
                 };
 
                 var readOnlyReceiptReferenceRepository = new ReadOnlyReceiptReferenceRepository(_middlewareQueueItemRepository);
                 var fallbackMasterDataRepo = new ReadOnlyMasterDataConfigurationRepository(_masterDataService.GetFromConfig());
+                var dailyClosingRepository = new DailyClosingRepository(_actionJournalRepository, _middlewareQueueItemRepository);
 
                 // No need to wrap the QueueItemRepository, as the DSFinV-K exporter only uses the GetAsync(Guid id) method
-                var exporter = new DSFinVKExporter(_logger, receiptJournalRepository, _queueItemRepository, readOnlyReceiptReferenceRepository, fallbackMasterDataRepo);
+                var exporter = new DSFinVKExporter(_logger, receiptJournalRepository, _queueItemRepository, readOnlyReceiptReferenceRepository, dailyClosingRepository, fallbackMasterDataRepo);
 
                 await exporter.ExportAsync(parameters).ConfigureAwait(false);
 
@@ -268,7 +277,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
 
         private async Task<int> GetFirstZNumber(IReadOnlyActionJournalRepository actionJournalRepository, IReadOnlyReceiptJournalRepository receiptJournalRepository, JournalRequest request)
         {
-            var dailyClosingRepository = new DailyClosingActionJournalHelper(_middlewareQueueItemRepository);
+            var dailyClosingRepository = new DailyClosingRepository(_actionJournalRepository, _middlewareQueueItemRepository);
 
             var firstZNumber = 1;
             var actionJournals = (await actionJournalRepository.GetAsync().ConfigureAwait(false)).OrderBy(x => x.TimeStamp);
@@ -281,6 +290,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
                     var queueItem = await dailyClosingRepository.GetQueueItemOfMissingIdAsync(actionJournal).ConfigureAwait(false);
                     actionJournal.ftQueueItemId = queueItem.ftQueueItemId;
                 }
+
                 var receiptJournal = receiptJournals.FirstOrDefault(x => x.ftQueueItemId == actionJournal.ftQueueItemId);
                 if (receiptJournal != null)
                 {
