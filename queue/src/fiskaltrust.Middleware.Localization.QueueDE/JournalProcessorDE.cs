@@ -225,8 +225,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
                     PublicKeyBase64 = tseInfo?.PublicKeyBase64,
                     SignAlgorithm = tseInfo?.SignatureAlgorithm,
                     TimeFormat = tseInfo?.LogTimeFormat,
-                    ReceiptNumberFrom = request.From,
-                    ReceiptNumberTo = receiptNumberTo
+                    From = request.From,
+                    To = receiptNumberTo
                 };
 
                 var readOnlyReceiptReferenceRepository = new ReadOnlyReceiptReferenceRepository(_middlewareQueueItemRepository);
