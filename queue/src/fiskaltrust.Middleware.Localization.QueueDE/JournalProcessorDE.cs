@@ -208,10 +208,10 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
                 var firstZNumber = await GetFirstZNumber(_actionJournalRepository, receiptJournalRepository, request).ConfigureAwait(false);
 
                 var targetDirectory = $"{Path.Combine(workingDirectory, "raw")}{Path.DirectorySeparatorChar}";
-                var receiptNumberTo = request.To;
+                var to = request.To;
                 if (request.To == 0)
                 {
-                    receiptNumberTo = long.MaxValue;
+                    to = long.MaxValue;
                 }
 
                 var parameters = new DSFinVKParameters
@@ -226,7 +226,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
                     SignAlgorithm = tseInfo?.SignatureAlgorithm,
                     TimeFormat = tseInfo?.LogTimeFormat,
                     From = request.From,
-                    To = receiptNumberTo
+                    To = to
                 };
 
                 var readOnlyReceiptReferenceRepository = new ReadOnlyReceiptReferenceRepository(_middlewareQueueItemRepository);
