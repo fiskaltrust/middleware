@@ -1,4 +1,5 @@
-﻿using fiskaltrust.ifPOS.v1;
+﻿using System.Linq;
+using fiskaltrust.ifPOS.v1;
 
 namespace fiskaltrust.Middleware.Localization.QueueAT.Extensions
 {
@@ -38,6 +39,11 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.Extensions
         public static bool IsOutOfOperationReceipt(this ReceiptRequest receiptRequest)
         {
             return ((receiptRequest.ftReceiptCase & 0x0000_0000_0000_FFFF) == 0x0000_0000_0000_0004);
+        }
+
+        public static bool HasChargeAndPayItems(this ReceiptRequest receiptRequest)
+        {
+            return ((receiptRequest.cbChargeItems != null && receiptRequest.cbChargeItems?.Count() != 0) || (receiptRequest.cbPayItems != null && receiptRequest.cbPayItems?.Count() != 0));
         }
     }
 }

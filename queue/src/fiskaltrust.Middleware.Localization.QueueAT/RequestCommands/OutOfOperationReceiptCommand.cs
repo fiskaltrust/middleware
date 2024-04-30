@@ -24,7 +24,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
         {
             ThrowIfTraining(request);
 
-            if ((request.cbChargeItems != null && request.cbChargeItems?.Count() != 0) || (request.cbPayItems != null && request.cbPayItems?.Count() != 0))
+            if (request.HasChargeAndPayItems())
             {
                 var notZeroReceiptActionJournal = CreateActionJournal(queue, queueItem, $"Tried to deactivate {queue.ftQueueId}, but the incoming receipt is not a zero receipt.");
                 _logger.LogInformation(notZeroReceiptActionJournal.Message);
