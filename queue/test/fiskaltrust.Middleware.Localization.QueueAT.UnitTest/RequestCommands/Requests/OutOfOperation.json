@@ -1,0 +1,10 @@
+﻿{
+  "ftCashBoxID": "{{cashbox_id}}",
+  "ftPosSystemID": "{{possystem_id}}",
+  "cbTerminalID": "1",
+  "cbReceiptReference": "OutOfOperation",
+  "cbReceiptMoment": "{{current_moment}}",
+  "cbChargeItems": [],
+  "cbPayItems": [],
+  "ftReceiptCase": 4707387510509010948
+}

@@ -13,19 +13,18 @@ using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 {
-    internal class OutOfOperationReceiptCommand : RequestCommand
+    public class OutOfOperationReceiptCommand : RequestCommand
     {
         public override string ReceiptName => "Out-of-operation receipt";
 
         public OutOfOperationReceiptCommand(IATSSCDProvider sscdProvider, MiddlewareConfiguration middlewareConfiguration, QueueATConfiguration queueATConfiguration, ILogger<RequestCommand> logger)
             : base(sscdProvider, middlewareConfiguration, queueATConfiguration, logger) { }
 
-        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueAT queueAT, ReceiptRequest request, ftQueueItem queueItem)
+        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueAT queueAT, ReceiptRequest request, ftQueueItem queueItem, ReceiptResponse response)
         {
             ThrowIfTraining(request);
-            var response = CreateReceiptResponse(request, queueItem, queueAT, queue);
 
-            if (request.cbChargeItems?.Count() != 0 || request.cbPayItems?.Count() != 0)
+            if (request.HasChargeAndPayItems())
             {
                 var notZeroReceiptActionJournal = CreateActionJournal(queue, queueItem, $"Tried to deactivate {queue.ftQueueId}, but the incoming receipt is not a zero receipt.");
                 _logger.LogInformation(notZeroReceiptActionJournal.Message);
@@ -57,7 +56,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
         {
             var actionJournals = new List<ftActionJournal>();
 
-            var (receiptIdentification, ftStateData, _, signatureItems, journalAT) = await SignReceiptAsync(queueAT, request, response.ftReceiptIdentification, response.ftReceiptMoment, queueItem.ftQueueItemId);
+            var (receiptIdentification, ftStateData, _, signatureItems, journalAT) = await SignReceiptAsync(queueAT, request, response.ftReceiptIdentification, response.ftReceiptMoment, queueItem.ftQueueItemId, isZeroReceipt: true);
             response.ftSignatures = response.ftSignatures.Concat(signatureItems).ToArray();
             response.ftReceiptIdentification = receiptIdentification;
             response.ftStateData = ftStateData;

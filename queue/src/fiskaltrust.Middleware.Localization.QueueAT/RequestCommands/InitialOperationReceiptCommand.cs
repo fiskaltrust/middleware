@@ -16,31 +16,18 @@ using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 {
-    internal class InitialOperationReceiptCommand : RequestCommand
+    public class InitialOperationReceiptCommand : RequestCommand
     {
         public override string ReceiptName => "Initial-operation receipt";
 
         public InitialOperationReceiptCommand(IATSSCDProvider sscdProvider, MiddlewareConfiguration middlewareConfiguration, QueueATConfiguration queueATConfiguration, ILogger<RequestCommand> logger)
             : base(sscdProvider, middlewareConfiguration, queueATConfiguration, logger) { }
 
-        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueAT queueAT, ReceiptRequest request, ftQueueItem queueItem)
+        public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueAT queueAT, ReceiptRequest request, ftQueueItem queueItem, ReceiptResponse response)
         {
             ThrowIfTraining(request);
-            var response = CreateReceiptResponse(request, queueItem, queueAT, queue);
 
-            if (queue.StartMoment.HasValue)
-            {
-                var alreadyActiveActionJournal = CreateActionJournal(queue, queueItem, $"Queue {queue.ftQueueId} is already activated, initial-operations-receipt cannot be executed.");
-                _logger.LogInformation(alreadyActiveActionJournal.Message);
-
-                return new RequestCommandResponse
-                {
-                    ReceiptResponse = response,
-                    ActionJournals = new() { alreadyActiveActionJournal }
-                };
-            }
-
-            if (request.cbChargeItems?.Count() != 0 || request.cbPayItems?.Count() != 0)
+            if(request.HasChargeAndPayItems())
             {
                 var notZeroReceiptActionJournal = CreateActionJournal(queue, queueItem, $"Tried to activate {queue.ftQueueId}, but the incoming receipt is not a zero receipt.");
                 _logger.LogInformation(notZeroReceiptActionJournal.Message);
@@ -49,6 +36,30 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                 {
                     ReceiptResponse = response,
                     ActionJournals = new() { notZeroReceiptActionJournal }
+                };
+            }
+
+            if (queue.StartMoment.HasValue)
+            {
+                var alreadyActiveActionJournal = CreateActionJournal(queue, queueItem, $"Queue {queue.ftQueueId} is already activated.");
+                _logger.LogInformation(alreadyActiveActionJournal.Message);
+                var actionJournal = new List<ftActionJournal> { alreadyActiveActionJournal };
+
+                var (receiptIdentification, ftStateData, isBackupScuUsed, signatureItems, journalAt) = await SignReceiptAsync(queueAT, request, response.ftReceiptIdentification, response.ftReceiptMoment, queueItem.ftQueueItemId, isZeroReceipt: true);
+                response.ftSignatures = response.ftSignatures.Concat(signatureItems).ToArray();
+                response.ftReceiptIdentification = receiptIdentification;
+                response.ftStateData = ftStateData;
+                if (isBackupScuUsed)
+                {
+                    response.ftState |= 0x80;
+                }
+                response.ftSignatures = signatureItems.ToArray();
+
+                return new RequestCommandResponse
+                {
+                    ReceiptResponse = response,
+                    ActionJournals = actionJournal,
+                    JournalAT = journalAt
                 };
             }
 
@@ -114,7 +125,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
             actionJournals.Add(aj);
 
 
-            var (receiptIdentification, ftStateData, isBackupScuUsed, signatureItems, journalAT) = await SignReceiptAsync(queueAT, request, response.ftReceiptIdentification, response.ftReceiptMoment, queueItem.ftQueueItemId);
+            var (receiptIdentification, ftStateData, isBackupScuUsed, signatureItems, journalAT) = await SignReceiptAsync(queueAT, request, response.ftReceiptIdentification, response.ftReceiptMoment, queueItem.ftQueueItemId, isZeroReceipt: true);
             response.ftSignatures = response.ftSignatures.Concat(signatureItems).ToArray();
             response.ftReceiptIdentification = receiptIdentification;
             response.ftStateData = ftStateData;
