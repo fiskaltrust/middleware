@@ -38,7 +38,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                 CreateActionJournal(queue, queueItem, $"QueueItem {queueItem.ftQueueItemId} requests zero receipt of Queue {queueAT.ftQueueATId}")
             };
 
-            var (receiptIdentification, ftStateData, _, signatureItems, journalAT) = await SignReceiptAsync(queueAT, request, response.ftReceiptIdentification, response.ftReceiptMoment, queueItem.ftQueueItemId, true);
+            var (receiptIdentification, ftStateData, _, signatureItems, journalAT) = await SignReceiptAsync(queueAT, request, response.ftReceiptIdentification, response.ftReceiptMoment, queueItem.ftQueueItemId, isZeroReceipt: true);
             response.ftReceiptIdentification = receiptIdentification;
             response.ftStateData = ftStateData;
 
