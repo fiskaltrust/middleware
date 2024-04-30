@@ -45,7 +45,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                 _logger.LogInformation(alreadyActiveActionJournal.Message);
                 var actionJournal = new List<ftActionJournal> { alreadyActiveActionJournal };
 
-                var (receiptIdentification, ftStateData, isBackupScuUsed, signatureItems, journalAt) = await SignReceiptAsync(queueAT, request, response.ftReceiptIdentification, response.ftReceiptMoment, queueItem.ftQueueItemId);
+                var (receiptIdentification, ftStateData, isBackupScuUsed, signatureItems, journalAt) = await SignReceiptAsync(queueAT, request, response.ftReceiptIdentification, response.ftReceiptMoment, queueItem.ftQueueItemId, isZeroReceipt: true);
                 response.ftSignatures = response.ftSignatures.Concat(signatureItems).ToArray();
                 response.ftReceiptIdentification = receiptIdentification;
                 response.ftStateData = ftStateData;
