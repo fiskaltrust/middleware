@@ -19,10 +19,10 @@ namespace fiskaltrust.Middleware.Localization.QueueAT
     {
         private readonly ILogger<JournalProcessorAT> _logger;
         private readonly MiddlewareConfiguration _middlewareConfiguration;
-        private readonly ExportService _exportService;
+        private readonly IExportService _exportService;
         private readonly IReadOnlyConfigurationRepository _configurationRepository;
 
-        public JournalProcessorAT(ILogger<JournalProcessorAT> logger, MiddlewareConfiguration middlewareConfiguration, ExportService exportService,
+        public JournalProcessorAT(ILogger<JournalProcessorAT> logger, MiddlewareConfiguration middlewareConfiguration, IExportService exportService,
             IReadOnlyConfigurationRepository configurationRepository)
         {
             _logger = logger;

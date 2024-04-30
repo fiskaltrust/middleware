@@ -16,7 +16,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT
             
             services.AddScoped<IATSSCDProvider, ATSSCDProvider>();
             services.AddScoped<IRequestCommandFactory, RequestCommandFactory>();
-            services.AddScoped<ExportService>();
+            services.AddScoped<IExportService, ExportService>();
             services.AddScoped<IRequestCommandFactory, RequestCommandFactory>();
 
             services.AddScoped<IMarketSpecificJournalProcessor, JournalProcessorAT>();

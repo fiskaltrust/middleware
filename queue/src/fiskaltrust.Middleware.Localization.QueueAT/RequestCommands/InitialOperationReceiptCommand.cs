@@ -16,7 +16,7 @@ using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 {
-    internal class InitialOperationReceiptCommand : RequestCommand
+    public class InitialOperationReceiptCommand : RequestCommand
     {
         public override string ReceiptName => "Initial-operation receipt";
 
@@ -27,7 +27,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
         {
             ThrowIfTraining(request);
 
-            if ((request.cbChargeItems != null && request.cbChargeItems?.Count() != 0) || (request.cbPayItems != null && request.cbPayItems?.Count() != 0))
+            if(request.HasChargeAndPayItems())
             {
                 var notZeroReceiptActionJournal = CreateActionJournal(queue, queueItem, $"Tried to activate {queue.ftQueueId}, but the incoming receipt is not a zero receipt.");
                 _logger.LogInformation(notZeroReceiptActionJournal.Message);
@@ -45,7 +45,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                 _logger.LogInformation(alreadyActiveActionJournal.Message);
                 var actionJournal = new List<ftActionJournal> { alreadyActiveActionJournal };
 
-                var (receiptIdentification, ftStateData, isBackupScuUsed, signatureItems, journalAt) = await SignReceiptAsync(queueAT, request, response.ftReceiptIdentification, response.ftReceiptMoment, queueItem.ftQueueItemId);
+                var (receiptIdentification, ftStateData, isBackupScuUsed, signatureItems, journalAt) = await SignReceiptAsync(queueAT, request, response.ftReceiptIdentification, response.ftReceiptMoment, queueItem.ftQueueItemId, isZeroReceipt: true);
                 response.ftSignatures = response.ftSignatures.Concat(signatureItems).ToArray();
                 response.ftReceiptIdentification = receiptIdentification;
                 response.ftStateData = ftStateData;
@@ -125,7 +125,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
             actionJournals.Add(aj);
 
 
-            var (receiptIdentification, ftStateData, isBackupScuUsed, signatureItems, journalAT) = await SignReceiptAsync(queueAT, request, response.ftReceiptIdentification, response.ftReceiptMoment, queueItem.ftQueueItemId, true);
+            var (receiptIdentification, ftStateData, isBackupScuUsed, signatureItems, journalAT) = await SignReceiptAsync(queueAT, request, response.ftReceiptIdentification, response.ftReceiptMoment, queueItem.ftQueueItemId, isZeroReceipt: true);
             response.ftSignatures = response.ftSignatures.Concat(signatureItems).ToArray();
             response.ftReceiptIdentification = receiptIdentification;
             response.ftStateData = ftStateData;

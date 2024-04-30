@@ -23,12 +23,12 @@ namespace fiskaltrust.Middleware.Localization.QueueFR
     {
         private readonly ILogger<JournalProcessorFR> _logger;
         private readonly MiddlewareConfiguration _middlewareConfiguration;
-        private readonly ArchiveProcessor _archiveProcessor;
+        private readonly IArchiveProcessor _archiveProcessor;
         private readonly IReadOnlyConfigurationRepository _configurationRepository;
         private readonly IMiddlewareJournalFRRepository _journalFRRepository;
         private readonly IMiddlewareQueueItemRepository _queueItemRepository;
 
-        public JournalProcessorFR(ILogger<JournalProcessorFR> logger, MiddlewareConfiguration middlewareConfiguration, ArchiveProcessor archiveProcessor,
+        public JournalProcessorFR(ILogger<JournalProcessorFR> logger, MiddlewareConfiguration middlewareConfiguration, IArchiveProcessor archiveProcessor,
             IReadOnlyConfigurationRepository configurationRepository, IMiddlewareJournalFRRepository journalFRRepository, IMiddlewareQueueItemRepository queueItemRepository)
         {
             _logger = logger;

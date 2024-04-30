@@ -28,7 +28,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 
         public override async Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueAT queueAT, ReceiptRequest request, ftQueueItem queueItem, ReceiptResponse response)
         {
-            if ((request.cbChargeItems != null && request.cbChargeItems?.Count() != 0) || (request.cbPayItems != null && request.cbPayItems?.Count() != 0))
+            if (request.HasChargeAndPayItems())
             {
                 throw new ArgumentException("Zero receipts must not contain charge- or payitems.");
             }
@@ -38,7 +38,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                 CreateActionJournal(queue, queueItem, $"QueueItem {queueItem.ftQueueItemId} requests zero receipt of Queue {queueAT.ftQueueATId}")
             };
 
-            var (receiptIdentification, ftStateData, _, signatureItems, journalAT) = await SignReceiptAsync(queueAT, request, response.ftReceiptIdentification, response.ftReceiptMoment, queueItem.ftQueueItemId, true);
+            var (receiptIdentification, ftStateData, _, signatureItems, journalAT) = await SignReceiptAsync(queueAT, request, response.ftReceiptIdentification, response.ftReceiptMoment, queueItem.ftQueueItemId, isZeroReceipt: true);
             response.ftReceiptIdentification = receiptIdentification;
             response.ftStateData = ftStateData;
 
