@@ -95,15 +95,38 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
 
         public async Task<ExportStateInformationDto> GetExportStateInformationByIdAsync(Guid tssId, Guid exportId)
         {
-            var response = await _httpClient.GetAsync($"tss/{tssId}/export/{exportId}");
-            var responseContent = await response.Content.ReadAsStringAsync();
-            if (response.IsSuccessStatusCode)
+            if (SplitExports.ContainsKey(exportId))
             {
-                return JsonConvert.DeserializeObject<ExportStateInformationDto>(responseContent);
+                return await GetSplitExportStateInformationAsync(tssId, exportId);
             }
-
-            throw new FiskalyException($"Communication error ({response.StatusCode}) while getting export state information (GET tss/{tssId}/export/{exportId}). Response: {responseContent}",
+            else
+            {
+                var response = await _httpClient.GetAsync($"tss/{tssId}/export/{exportId}");
+                var responseContent = await response.Content.ReadAsStringAsync();
+                if (response.IsSuccessStatusCode)
+                {
+                    return JsonConvert.DeserializeObject<ExportStateInformationDto>(responseContent);
+                }
+                throw new FiskalyException($"Communication error ({response.StatusCode}) while getting export state information (GET tss/{tssId}/export/{exportId}). Response: {responseContent}",
                 (int) response.StatusCode, $"GET tss/{tssId}/export/{exportId}");
+            }
+        }
+
+        private async Task<ExportStateInformationDto> GetSplitExportStateInformationAsync(Guid tssId, Guid exportId)
+        {
+            HttpResponseMessage response = null;
+            foreach (var splitExport in SplitExports[exportId])
+            {
+                response = await _httpClient.GetAsync($"tss/{tssId}/export/{splitExport.ExportId}");
+                if (!response.IsSuccessStatusCode)
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+                    throw new FiskalyException($"Communication error ({response.StatusCode}) while getting export state information (GET tss/{tssId}/export/{splitExport.ExportId}). Response: {content}",
+                                               (int) response.StatusCode, $"GET tss/{tssId}/export/{splitExport.ExportId}");
+                }
+            }
+            var responseContent = await response.Content.ReadAsStringAsync();
+            return JsonConvert.DeserializeObject<ExportStateInformationDto>(responseContent);
         }
 
         public async Task<Dictionary<string, object>> GetExportMetadataAsync(Guid tssId, Guid exportId)
@@ -205,9 +228,16 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
         {
             var exportStateInformation = await WaitUntilExportFinished(tssId, splitExportStateData.ExportId);
             var result = await GetExportByExportStateAsync(exportStateInformation);
-            using var contentStream = new CryptoStream(result, new FromBase64Transform(), CryptoStreamMode.Read);
 
-            TarFileHelper.AppendTarStreamToTarFile(splitExportStateData.ParentExportId.ToString(), contentStream);
+            if (exportStateInformation.State == "COMPLETED")
+            {
+                TarFileHelper.AppendTarStreamToTarFile(splitExportStateData.ParentExportId.ToString(), result);
+                splitExportStateData.ExportStateData.State = ExportState.Succeeded;
+            }
+            else
+            {
+                splitExportStateData.ExportStateData.State = ExportState.Failed ;
+            }
         }
 
         private async Task<ExportStateInformationDto> WaitUntilExportFinished(Guid tssId, Guid exportId)
