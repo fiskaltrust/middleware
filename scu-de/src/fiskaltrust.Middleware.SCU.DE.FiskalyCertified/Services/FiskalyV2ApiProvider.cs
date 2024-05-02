@@ -10,16 +10,22 @@ using fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Models;
 using Newtonsoft.Json;
 using fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers;
 using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
+using System.Security.Cryptography;
+using fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser.Tar;
 
 namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
 {
     public sealed class FiskalyV2ApiProvider : IFiskalyApiProvider, IDisposable
     {
+        public ConcurrentDictionary<Guid, List<SplitExportStateData>> SplitExports { get; set; } = new ConcurrentDictionary<Guid, List<SplitExportStateData>>();
+
         private const int EXPORT_TIMEOUT_MS = 18000 * 1000;
 
         private readonly FiskalySCUConfiguration _configuration;
         private readonly HttpClientWrapper _httpClient;
         private readonly JsonSerializerSettings _serializerSettings;
+
 
         public FiskalyV2ApiProvider(FiskalySCUConfiguration configuration, HttpClientWrapper httpClientWrapper)
         {
@@ -189,8 +195,19 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
         public async Task StoreDownloadResultAsync(Guid tssId, Guid exportId)
         {
             var exportStateInformation = await WaitUntilExportFinished(tssId, exportId);
+            var contentStream = await GetExportByExportStateAsync(exportStateInformation);
+
+            using var fileStream = File.Create(exportId.ToString());
+            contentStream.CopyTo(fileStream);
+        }
+
+        public async Task StoreDownloadSplitResultAsync(Guid tssId, SplitExportStateData splitExportStateData)
+        {
+            var exportStateInformation = await WaitUntilExportFinished(tssId, splitExportStateData.ExportId);
             var result = await GetExportByExportStateAsync(exportStateInformation);
-            File.WriteAllBytes(exportId.ToString(), result);
+            using var contentStream = new CryptoStream(result, new FromBase64Transform(), CryptoStreamMode.Read);
+
+            TarFileHelper.AppendTarStreamToTarFile(splitExportStateData.ParentExportId.ToString(), contentStream);
         }
 
         private async Task<ExportStateInformationDto> WaitUntilExportFinished(Guid tssId, Guid exportId)
@@ -230,12 +247,12 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
                 (int) response.StatusCode, $"GET tss/{tssId}");
         }
 
-        public async Task<byte[]> GetExportByExportStateAsync(ExportStateInformationDto exportStateInformation)
+        public async Task<Stream> GetExportByExportStateAsync(ExportStateInformationDto exportStateInformation)
         {
             var response = await _httpClient.GetAsync($"tss/{exportStateInformation.TssId}/export/{exportStateInformation.Id}/file");
             if (response.IsSuccessStatusCode)
             {
-                return await response.Content.ReadAsByteArrayAsync();
+                return await response.Content.ReadAsStreamAsync();
             }
 
             throw new FiskalyException($"Communication error ({response.StatusCode}) while downloading TAR export (GET tss/{exportStateInformation.TssId}/export/{exportStateInformation.Id}/file).",
