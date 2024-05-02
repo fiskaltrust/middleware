@@ -22,6 +22,6 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
         public int RetriesOn5xxError { get; set; } = 2;
         public int RetriesOnTarExportWebException{ get; set; } = 2;
         public int DelayOnRetriesInMs { get; set; } = 1000;
-        public long MaxExportTransaction { get; set; } = 10;
+        public long MaxExportTransaction { get; set; } = 800000;
     }
 }
