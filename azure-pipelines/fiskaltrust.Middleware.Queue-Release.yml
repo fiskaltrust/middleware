@@ -41,6 +41,7 @@ stages:
       type: fiskaltrust.Middleware.Queue
       artifact: build
       projects:
+        - AzureTableStorage
         - InMemory
         - SQLite
         - EF
@@ -66,6 +67,7 @@ stages:
       type: fiskaltrust.Middleware.Queue
       artifact: build
       projects:
+        - AzureTableStorage
         - InMemory
         - SQLite
         - EF
