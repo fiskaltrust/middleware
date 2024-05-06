@@ -27,45 +27,55 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage
     public class AzureTableStorageBootstrapper : BaseStorageBootStrapper
     {
         private readonly Dictionary<string, object> _configuration;
+        private readonly AzureTableStorageConfiguration _tableStorageConfiguration;
         private readonly ILogger<IMiddlewareBootstrapper> _logger;
         private readonly QueueConfiguration _queueConfiguration;
+
         private TableServiceClient _tableServiceClient;
         private BlobServiceClient _blobServiceClient;
         private AzureTableStorageConfigurationRepository _configurationRepository;
 
-        public AzureTableStorageBootstrapper(Guid queueId, Dictionary<string, object> configuration, ILogger<IMiddlewareBootstrapper> logger)
+        public AzureTableStorageBootstrapper(Guid queueId, Dictionary<string, object> configuration, AzureTableStorageConfiguration tableStorageConfiguration, ILogger<IMiddlewareBootstrapper> logger)
         {
-            _configuration = configuration.ConvertToCaseInSensitive();
+            _configuration = configuration;
+            _tableStorageConfiguration = tableStorageConfiguration;
             _logger = logger;
             _queueConfiguration = new QueueConfiguration { QueueId = queueId };
         }
 
         public void ConfigureStorageServices(IServiceCollection serviceCollection)
         {
-            InitAsync(_configuration, _logger).Wait();
+            InitAsync().Wait();
             AddRepositories(serviceCollection);
         }
 
-        private async Task InitAsync(Dictionary<string, object> configuration, ILogger<IMiddlewareBootstrapper> logger)
+        private async Task InitAsync()
         {
-            if (string.IsNullOrEmpty(configuration["storageaccountname"]?.ToString()))
+            if (!string.IsNullOrEmpty(_tableStorageConfiguration.StorageAccountName))
             {
-                throw new Exception("The parameter 'storageaccountname' needs to be defined.");
+                _tableServiceClient = new TableServiceClient(new Uri($"https://{_tableStorageConfiguration.StorageAccountName}.table.core.windows.net/"), new DefaultAzureCredential());
+                _blobServiceClient = new BlobServiceClient(new Uri($"https://{_tableStorageConfiguration.StorageAccountName}.blob.core.windows.net/"), new DefaultAzureCredential());
             }
-            var accountName = configuration["storageaccountname"]?.ToString();
-            _tableServiceClient = new TableServiceClient(new Uri($"https://{accountName}.table.core.windows.net/"), new DefaultAzureCredential());
-            _blobServiceClient = new BlobServiceClient(new Uri($"https://{accountName}.blob.core.windows.net/"), new DefaultAzureCredential());
+            else if (!string.IsNullOrEmpty(_tableStorageConfiguration.StorageConnectionString))
+            {
+                _tableServiceClient = new TableServiceClient(_tableStorageConfiguration.StorageConnectionString);
+                _blobServiceClient = new BlobServiceClient(_tableStorageConfiguration.StorageConnectionString);
+            }
+            else
+            {
+                throw new Exception("Either the parameter 'storageaccountname' or 'storageconnectionstring' needs to be defined.");
+            }
 
-            var databaseMigrator = new DatabaseMigrator(logger, _tableServiceClient, _blobServiceClient, _queueConfiguration);
+            var databaseMigrator = new DatabaseMigrator(_logger, _tableServiceClient, _blobServiceClient, _queueConfiguration);
             await databaseMigrator.MigrateAsync().ConfigureAwait(false);
 
             _configurationRepository = new AzureTableStorageConfigurationRepository(_queueConfiguration, _tableServiceClient);
-            var baseStorageConfig = ParseStorageConfiguration(configuration);
+            var baseStorageConfig = ParseStorageConfiguration(_configuration);
 
             await PersistMasterDataAsync(baseStorageConfig, _configurationRepository,
                 new AzureTableStorageAccountMasterDataRepository(_queueConfiguration, _tableServiceClient), new AzureTableStorageOutletMasterDataRepository(_queueConfiguration, _tableServiceClient),
                 new AzureTableStorageAgencyMasterDataRepository(_queueConfiguration, _tableServiceClient), new AzureTableStoragePosSystemMasterDataRepository(_queueConfiguration, _tableServiceClient)).ConfigureAwait(false);
-            await PersistConfigurationAsync(baseStorageConfig, _configurationRepository, logger).ConfigureAwait(false);
+            await PersistConfigurationAsync(baseStorageConfig, _configurationRepository, _logger).ConfigureAwait(false);
         }
 
         private void AddRepositories(IServiceCollection services)
@@ -103,7 +113,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage
             services.AddSingleton<IJournalITRepository, AzureTableStorageJournalITRepository>();
             services.AddSingleton<IReadOnlyJournalITRepository, AzureTableStorageJournalITRepository>();
             services.AddSingleton<IMiddlewareJournalITRepository, AzureTableStorageJournalITRepository>();
-            
+
             services.AddSingleton<IReceiptJournalRepository, AzureTableStorageReceiptJournalRepository>();
             services.AddSingleton<IReadOnlyReceiptJournalRepository, AzureTableStorageReceiptJournalRepository>();
             services.AddSingleton<IMiddlewareRepository<ftReceiptJournal>, AzureTableStorageReceiptJournalRepository>();
