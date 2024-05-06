@@ -8,16 +8,17 @@ using System.Linq;
 using System.IO;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using fiskaltrust.Middleware.Contracts.Repositories;
 
 namespace fiskaltrust.Middleware.Localization.QueueAT.Services
 {
-    public class ExportService
+    public class ExportService : IExportService
     {
         private readonly IReadOnlyConfigurationRepository _configurationRepository;
-        private readonly IReadOnlyJournalATRepository _journalATRepository;
+        private readonly IMiddlewareRepository<ftJournalAT> _journalATRepository;
         private readonly ILogger<ExportService> _logger;
 
-        public ExportService(IReadOnlyConfigurationRepository configurationRepository, IReadOnlyJournalATRepository readOnlyJournalATRepository, ILogger<ExportService> logger)
+        public ExportService(IReadOnlyConfigurationRepository configurationRepository, IMiddlewareRepository<ftJournalAT> readOnlyJournalATRepository, ILogger<ExportService> logger)
         {
             _configurationRepository = configurationRepository;
             _journalATRepository = readOnlyJournalATRepository;
@@ -32,26 +33,23 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.Services
                 {
                     ReceiptGroups = new List<RksvDepReceiptGroup>()
                 };
+                var sscdIds = new HashSet<Guid>();
+                var receipts = new List<string>();
 
-                // TODO: Clarify why we're not just adding the receipts to the respective SCUs
+                var journals = _journalATRepository.GetByTimeStampRangeAsync(fromTimestamp, toTimestamp);
+                await foreach (var journal in journals.OrderBy(x => x.Number))
+                {
+                    if (journal.ftSignaturCreationUnitId != Guid.Empty)
+                    {
+                        sscdIds.Add(journal.ftSignaturCreationUnitId);
+                    }
+                    receipts.Add($"{journal.JWSHeaderBase64url}.{journal.JWSPayloadBase64url}.{journal.JWSSignatureBase64url}");
+                }
                 foreach (var queue in await _configurationRepository.GetQueueATListAsync())
                 {
-                    // TODO: Implement DB calls to increase performance
-                    var journals = (await _journalATRepository.GetAsync())
-                        .Where(x => x.TimeStamp >= fromTimestamp && x.TimeStamp <= toTimestamp);
-                    var sscdIds = journals
-                        .Select(j => j.ftSignaturCreationUnitId)
-                        .Distinct()
-                        .Where(x => x != Guid.Empty)
-                        .ToList();
-                    var receipts = journals
-                        .OrderBy(x => x.Number)
-                        .Select(x => $"{x.JWSHeaderBase64url}.{x.JWSPayloadBase64url}.{x.JWSSignatureBase64url}");
-
                     if (sscdIds.Count == 1)
                     {
-                        var scu = await _configurationRepository.GetSignaturCreationUnitATAsync(sscdIds[0]);
-                                                
+                        var scu = await _configurationRepository.GetSignaturCreationUnitATAsync(sscdIds.First());
                         receiptGroups.ReceiptGroups.Add(new RksvDepReceiptGroup
                         {
                             CashboxIdentification = queue.CashBoxIdentification,

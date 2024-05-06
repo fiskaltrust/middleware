@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using fiskaltrust.ifPOS.v0;
+using fiskaltrust.ifPOS.v1.at;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
@@ -19,18 +19,18 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.Services
         private readonly ILogger<ATSSCDProvider> _logger;
         private readonly IClientFactory<IATSSCD> _clientFactory;
         private readonly IConfigurationRepository _configurationRepository;
-        private readonly QueueATConfiguration _queueDEConfiguration;
+        private readonly QueueATConfiguration _queueATConfiguration;
 
         private readonly SemaphoreSlim _semaphoreInstance = new SemaphoreSlim(1, 1);
         private List<(ftSignaturCreationUnitAT scu, IATSSCD client)> _instances;
         private int _currentlyActiveInstance = 0;
 
-        public ATSSCDProvider(ILogger<ATSSCDProvider> logger, IClientFactory<IATSSCD> clientFactory, IConfigurationRepository configurationRepository, QueueATConfiguration queueDEConfiguration)
+        public ATSSCDProvider(ILogger<ATSSCDProvider> logger, IClientFactory<IATSSCD> clientFactory, IConfigurationRepository configurationRepository, QueueATConfiguration queueATConfiguration)
         {
             _logger = logger;
             _clientFactory = clientFactory;
             _configurationRepository = configurationRepository;
-            _queueDEConfiguration = queueDEConfiguration;
+            _queueATConfiguration = queueATConfiguration;
         }
 
         public async Task<(ftSignaturCreationUnitAT scu, IATSSCD sscd, int currentIndex)> GetCurrentlyActiveInstanceAsync()
@@ -113,7 +113,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.Services
                 var client = _clientFactory.CreateClient(new ClientConfiguration
                 {
                     Timeout = TimeSpan.FromSeconds(timeoutSec),
-                    RetryCount = _queueDEConfiguration.ScuMaxRetries,
+                    RetryCount = _queueATConfiguration.ScuMaxRetries,
                     Url = uri.ToString(),
                     UrlType = uri.Scheme
                 });
@@ -128,10 +128,12 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.Services
         {
             try
             {
-                var certificate = new X509CertificateParser().ReadCertificate(client.Certificate());
+                var certResponse = await client.CertificateAsync();
+                var certificate = new X509CertificateParser().ReadCertificate(certResponse.Certificate);
                 var certificateSerial = certificate?.SerialNumber?.ToString(16);
 
-                scu.ZDA = client.ZDA();
+                var zdaResponse = await client.ZdaAsync();
+                scu.ZDA = zdaResponse.ZDA;
                 scu.SN = certificateSerial != null ? $"0x{certificateSerial}" : null;
                 scu.CertificateBase64 = Convert.ToBase64String(certificate.GetEncoded());
 

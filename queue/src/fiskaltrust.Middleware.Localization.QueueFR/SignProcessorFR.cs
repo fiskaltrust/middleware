@@ -17,10 +17,10 @@ namespace fiskaltrust.Middleware.Localization.QueueFR
         private readonly IConfigurationRepository _configurationRepository;
         private readonly IActionJournalRepository _actionJournalRepository;
         private readonly RequestCommandFactory _requestCommandFactory;
-        private readonly SignatureFactoryFR _signatureFactoryFR;
+        private readonly ISignatureFactoryFR _signatureFactoryFR;
 
         public SignProcessorFR(IConfigurationRepository configurationRepository, IActionJournalRepository actionJournalRepository,
-            RequestCommandFactory requestCommandFactory, SignatureFactoryFR signatureFactoryFR)
+            RequestCommandFactory requestCommandFactory, ISignatureFactoryFR signatureFactoryFR)
         {
             _configurationRepository = configurationRepository;
             _actionJournalRepository = actionJournalRepository;

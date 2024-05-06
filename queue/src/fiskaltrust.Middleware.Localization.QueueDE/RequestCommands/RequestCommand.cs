@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
-using System.Security.Cryptography;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.de;
@@ -99,14 +97,14 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
         {
             _logger.LogTrace("RequestCommand.PerformTarFileExportAsync [enter].");
             if (_queueDEConfiguration.TarFileExportMode == TarFileExportMode.None)
-            { 
+            {
                 _logger.LogInformation("Skipped export because {key} is set to {value}", nameof(TarFileExportMode), nameof(TarFileExportMode.None));
                 return;
             }
 
             if (_queueDEConfiguration.TarFileExportMode == TarFileExportMode.Erased)
             {
-                _logger.LogTrace("RequestCommand.PerformTarFileExportAsync Section GetTseInfoAsync [enter]."); 
+                _logger.LogTrace("RequestCommand.PerformTarFileExportAsync Section GetTseInfoAsync [enter].");
                 var tseInfo = await _deSSCDProvider.Instance.GetTseInfoAsync().ConfigureAwait(false);
                 _logger.LogTrace("RequestCommand.PerformTarFileExportAsync Section GetTseInfoAsync [exit].");
                 if (tseInfo.CurrentNumberOfStartedTransactions > 0)
@@ -119,7 +117,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             try
             {
                 var exportService = new TarFileExportService();
-                (var filePath, var success, var checkSum, var isErased) = await exportService.ProcessTarFileExportAsync(_logger,_deSSCDProvider.Instance, queueDE.ftQueueDEId, queueDE.CashBoxIdentification, erase, _middlewareConfiguration.ServiceFolder, _middlewareConfiguration.TarFileChunkSize).ConfigureAwait(false);
+                (var filePath, var success, var checkSum, var isErased) = await exportService.ProcessTarFileExportAsync(_logger, _deSSCDProvider.Instance, queueDE.ftQueueDEId, queueDE.CashBoxIdentification, erase, _middlewareConfiguration.ServiceFolder, _middlewareConfiguration.TarFileChunkSize).ConfigureAwait(false);
                 if (success)
                 {
                     Guid? ftJournalDEId = null;
@@ -335,7 +333,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 {
                     ftReceiptNumerator = queue.ftReceiptNumerator + 1,
                     masterDataChanged,
-                    closingNumber = (request.ftReceiptCase & 0xFFFF) == 0x0007 ? ++queueDE.DailyClosingNumber :-1
+                    closingNumber = (request.ftReceiptCase & 0xFFFF) == 0x0007 ? ++queueDE.DailyClosingNumber : -1
                 });
                 actionJournals.Add(CreateActionJournal(queue.ftQueueId, queueItem.ftQueueItemId, $"{type:X}", $"{message} However TSE was not reachable.", dataJson));
             }
@@ -462,10 +460,10 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 (true, 0x0007) => (0x4445_0000_0800_0007, "Daily-closing receipt was processed, and a master data update was performed."),  //daily-closing
                 (false, 0x0007) => (0x4445_0000_0000_0007, "Daily-closing receipt was processed."),                                         //daily-closing
                 (true, 0x0005) => (0x4445_0000_0800_0007, "Monthly-closing receipt was processed, and a master data update was performed."),//monthly-closing
-                (false,0x0005) => (0x4445_0000_0000_0007, "Monthly-closing receipt was processed."),                                        //monthly-closing
+                (false, 0x0005) => (0x4445_0000_0000_0007, "Monthly-closing receipt was processed."),                                        //monthly-closing
                 (true, 0x0006) => (0x4445_0000_0800_0007, "Yearly-closing receipt was processed, and a master data update was performed."), //yearly-closing
-                (false,0x0006) => (0x4445_0000_0000_0007, "Yearly-closing receipt was processed."),                                         //yearly-closing
-                _ => (0,""),
+                (false, 0x0006) => (0x4445_0000_0000_0007, "Yearly-closing receipt was processed."),                                         //yearly-closing
+                _ => (0, ""),
             };
             _logger.LogTrace("RequestCommand.UpdateMasterData [exit].");
             return (masterDataChanged, message, type);
