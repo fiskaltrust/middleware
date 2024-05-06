@@ -353,7 +353,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
                     ParentExportId = exportId,
                     ExportId = Guid.NewGuid(),
                     From = (long) from,
-                    To = (long) (from + _configuration.MaxExportTransaction - 1),
+                    To = range > (_configuration.MaxExportTransaction * i) - 1 ? (long) (from + _configuration.MaxExportTransaction - 1) : range,
                     ExportStateData = new ExportStateData
                     {
                         ReadPointer = 0,
@@ -546,7 +546,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
             }
         }
 
-        public async Task<ExportDataResponse> ExportDataAsync(ExportDataRequest request)
+        public async Task<ExportDataResponse>   ExportDataAsync(ExportDataRequest request)
         {
             if (request.TokenId.StartsWith(_noExport))
             {
@@ -687,6 +687,8 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
             }
             finally
             {
+
+                _fiskalyApiProvider.SplitExports.TryRemove(Guid.Parse(request.TokenId), out _);
                 try
                 {
                     if (File.Exists(tempFileName))
