@@ -80,6 +80,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             _logger.LogDebug($"Processing JournalRequest for DE (Type: {request.ftJournalType:X}");
             if (request.ftJournalType == (long) JournalTypes.TarExportFromTSE)
             {
+                request.MaxChunkSize = _middlewareConfiguration.TarFileChunkSize;
                 await foreach (var value in ProcessTarExportFromTSEAsync(request).ConfigureAwait(false))
                 {
                     yield return value;
