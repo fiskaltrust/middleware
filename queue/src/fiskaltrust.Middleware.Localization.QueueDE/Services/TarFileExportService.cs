@@ -22,7 +22,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
             Directory.CreateDirectory(targetDirectory);
             var filePath = Path.Combine(targetDirectory, $"{DateTime.Now:yyyyMMddhhmmssfff}_{cashboxIdentification.RemoveInvalidFilenameChars()}.tar");
 
-
+            var sha256CheckSum = string.Empty;
             logger.LogTrace("TarFileExportService.ProcessTarFileExportAsync Section ExportDataAsync [enter].");
             using (var fileStream = File.Create(filePath))
             {
@@ -46,13 +46,15 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
                         logger.LogTrace("TarFileExportService.ProcessTarFileExportAsync Section Convert.FromBase64String [exit].");
                     }
                 } while (!export.TarFileEndOfFile);
+
+                logger.LogTrace("TarFileExportService.ProcessTarFileExportAsync Section Sha256ChecksumBase64 [enter].");
+                using var sha256 = SHA256.Create();
+                fileStream.Position = 0;
+                sha256CheckSum = Convert.ToBase64String(sha256.ComputeHash(fileStream));
+                logger.LogTrace("TarFileExportService.ProcessTarFileExportAsync Section Sha256ChecksumBase64 [exit].");
             }
             logger.LogTrace("TarFileExportService.ProcessTarFileExportAsync Section ExportDataAsync [exit].");
 
-            logger.LogTrace("TarFileExportService.ProcessTarFileExportAsync Section Sha256ChecksumBase64 [enter].");
-            using var sha256 = SHA256.Create();
-            var sha256CheckSum = Convert.ToBase64String(sha256.ComputeHash(File.ReadAllBytes(filePath)));
-            logger.LogTrace("TarFileExportService.ProcessTarFileExportAsync Section Sha256ChecksumBase64 [exit].");
             var endSessionRequest = new EndExportSessionRequest
             {
                 TokenId = exportSession.TokenId,
@@ -64,6 +66,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
             {
                 return (null, false, null, false);
             }
+            
             logger.LogTrace("TarFileExportService.ProcessTarFileExportAsync [exit].");
             return (filePath, true, sha256CheckSum, endExportSessionResult.IsErased);
         }

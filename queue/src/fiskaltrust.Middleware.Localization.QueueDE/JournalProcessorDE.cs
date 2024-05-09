@@ -152,7 +152,11 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
         {
             var exportSession = await _deSSCDProvider.Instance.StartExportSessionAsync(new StartExportSessionRequest()).ConfigureAwait(false);
             var sha256CheckSum = "";
-            using (var memoryStream = new MemoryStream())
+
+            byte[] chunk;
+            List<byte> chunkList;
+            var response = new JournalResponse();
+            using (var stream = new FileStream(exportSession.TokenId, FileMode.Create, FileAccess.ReadWrite))
             {
                 ExportDataResponse export;
                 do
@@ -168,15 +172,16 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
                     }
                     else
                     {
-                        var chunk = Convert.FromBase64String(export.TarFileByteChunkBase64);
-                        memoryStream.Write(chunk, 0, chunk.Length);
-                        yield return new JournalResponse
-                        {
-                            Chunk = chunk.ToList()
-                        };
+                        chunk = Convert.FromBase64String(export.TarFileByteChunkBase64);
+                        stream.Write(chunk, 0, chunk.Length);
+                        chunkList = chunk.ToList();
+                        response.Chunk = chunkList;
+                        yield return response;
                     }
                 } while (!export.TarFileEndOfFile);
-                sha256CheckSum = Convert.ToBase64String(SHA256.Create().ComputeHash(memoryStream.ToArray()));
+                using var sha256 = SHA256.Create();
+                stream.Position = 0;
+                sha256CheckSum = Convert.ToBase64String(sha256.ComputeHash(stream));
             }
 
             var endSessionRequest = new EndExportSessionRequest
@@ -188,6 +193,10 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             if (!endExportSessionResult.IsValid)
             {
                 throw new Exception("The TAR file export was not successful.");
+            }
+            if (File.Exists(exportSession.TokenId))
+            {
+                File.Delete(exportSession.TokenId);
             }
             yield break;
         }
