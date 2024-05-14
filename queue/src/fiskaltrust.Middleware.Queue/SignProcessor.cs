@@ -351,7 +351,7 @@ namespace fiskaltrust.Middleware.Queue
             }
             else
             {
-                receiptjournal.ftReceiptTotal = (receiptrequest?.cbChargeItems?.Sum(ci => ci.Amount)).GetValueOrDefault();
+               receiptjournal.ftReceiptTotal = (receiptrequest?.cbChargeItems?.Sum(ci =>Math.Sign(ci.Quantity)*ci.Amount)).GetValueOrDefault();
             }
             receiptjournal.ftReceiptHash = _cryptoHelper.GenerateBase64ChainHash(queue.ftReceiptHash, receiptjournal, queueItem);
             await _receiptJournalRepository.InsertAsync(receiptjournal).ConfigureAwait(false);
