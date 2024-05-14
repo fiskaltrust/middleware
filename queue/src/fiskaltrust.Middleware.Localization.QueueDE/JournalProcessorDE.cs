@@ -158,7 +158,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
 
             byte[] chunk;
             var response = new JournalResponse();
-            using (var stream = new FileStream(exportSession.TokenId, FileMode.Create, FileAccess.ReadWrite))
+            using (var stream = new FileStream($"{exportSession.TokenId}.temp", FileMode.Create, FileAccess.ReadWrite))
             {
                 ExportDataResponse export;
                 do
