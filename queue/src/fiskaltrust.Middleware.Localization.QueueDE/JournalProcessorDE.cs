@@ -80,7 +80,10 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             _logger.LogDebug($"Processing JournalRequest for DE (Type: {request.ftJournalType:X}");
             if (request.ftJournalType == (long) JournalTypes.TarExportFromTSE)
             {
-                request.MaxChunkSize = _middlewareConfiguration.TarFileChunkSize;
+                if (request.MaxChunkSize == 0)
+                {
+                    request.MaxChunkSize = _middlewareConfiguration.TarFileChunkSize;
+                }
                 await foreach (var value in ProcessTarExportFromTSEAsync(request).ConfigureAwait(false))
                 {
                     yield return value;
@@ -154,7 +157,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             var sha256CheckSum = "";
 
             byte[] chunk;
-            List<byte> chunkList;
             var response = new JournalResponse();
             using (var stream = new FileStream(exportSession.TokenId, FileMode.Create, FileAccess.ReadWrite))
             {
@@ -174,8 +176,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
                     {
                         chunk = Convert.FromBase64String(export.TarFileByteChunkBase64);
                         stream.Write(chunk, 0, chunk.Length);
-                        chunkList = chunk.ToList();
-                        response.Chunk = chunkList;
+                        response.Chunk = chunk.ToList();
                         yield return response;
                     }
                 } while (!export.TarFileEndOfFile);
