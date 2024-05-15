@@ -9,16 +9,12 @@ using fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Exceptions;
 using fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Models;
 using Newtonsoft.Json;
 using fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers;
-using System.Collections.Concurrent;
 using fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser.Tar;
-using System.Linq;
 
 namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
 {
     public sealed class FiskalyV2ApiProvider : IFiskalyApiProvider, IDisposable
     {
-        public ConcurrentDictionary<Guid, List<SplitExportStateData>> SplitExports { get; set; } = new ConcurrentDictionary<Guid, List<SplitExportStateData>>();
-
         private const int EXPORT_TIMEOUT_MS = 18000 * 1000;
 
         private readonly FiskalySCUConfiguration _configuration;
@@ -94,73 +90,20 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
 
         public async Task<ExportStateInformationDto> GetExportStateInformationByIdAsync(Guid tssId, Guid exportId)
         {
-            if (SplitExports.ContainsKey(exportId))
+            var response = await _httpClient.GetAsync($"tss/{tssId}/export/{exportId}");
+            var responseContent = await response.Content.ReadAsStringAsync();
+            if (response.IsSuccessStatusCode)
             {
-                return await GetSplitExportStateInformationAsync(tssId, exportId);
+                return JsonConvert.DeserializeObject<ExportStateInformationDto>(responseContent);
             }
-            else
-            {
-                var response = await _httpClient.GetAsync($"tss/{tssId}/export/{exportId}");
-                var responseContent = await response.Content.ReadAsStringAsync();
-                if (response.IsSuccessStatusCode)
-                {
-                    return JsonConvert.DeserializeObject<ExportStateInformationDto>(responseContent);
-                }
-                throw new FiskalyException($"Communication error ({response.StatusCode}) while getting export state information (GET tss/{tssId}/export/{exportId}). Response: {responseContent}",
-                (int) response.StatusCode, $"GET tss/{tssId}/export/{exportId}");
-            }
+            throw new FiskalyException($"Communication error ({response.StatusCode}) while getting export state information (GET tss/{tssId}/export/{exportId}). Response: {responseContent}",
+            (int) response.StatusCode, $"GET tss/{tssId}/export/{exportId}");
         }
 
-        private async Task<ExportStateInformationDto> GetSplitExportStateInformationAsync(Guid tssId, Guid exportId)
-        {
-            ExportStateInformationDto exportStateInformationDto = null;
-            foreach (var splitExport in SplitExports[exportId])
-            {
-                if (splitExport.ExportStateData.State != ExportState.Unkown)
-                {
-                    var response = await _httpClient.GetAsync($"tss/{tssId}/export/{splitExport.ExportId}");
-                    var responseContent = await response.Content.ReadAsStringAsync();
-                    if (!response.IsSuccessStatusCode)
-                    {
-                        throw new FiskalyException($"Communication error ({response.StatusCode}) while getting export state information (GET tss/{tssId}/export/{splitExport.ExportId}). Response: {responseContent}",
-                                                   (int) response.StatusCode, $"GET tss/{tssId}/export/{splitExport.ExportId}");
-                    }
-                    exportStateInformationDto = JsonConvert.DeserializeObject<ExportStateInformationDto>(responseContent);
-                    if (exportStateInformationDto.State == "ERROR")
-                    {
-                        return exportStateInformationDto;
-                    }
-                }
-            }
-            return exportStateInformationDto;
-        }
 
         public async Task<Dictionary<string, object>> GetExportMetadataAsync(Guid tssId, Guid exportId)
         {
-            if (SplitExports.ContainsKey(exportId))
-            {
-                return await GetSplitExportLastMetadataAsync(tssId, exportId);
-            }
-            else
-            {
-                var response = await _httpClient.GetAsync($"tss/{tssId}/export/{exportId}/metadata");
-                var responseContent = await response.Content.ReadAsStringAsync();
-                if (response.IsSuccessStatusCode)
-                {
-                    return JsonConvert.DeserializeObject<Dictionary<string, object>>(responseContent);
-                }
-
-                throw new FiskalyException($"Communication error ({response.StatusCode}) while getting export metadata (GET tss/{tssId}/export/{exportId}/metadata). Response: {responseContent}",
-                    (int) response.StatusCode, $"GET tss/{tssId}/export/{exportId}/metadata");
-            }
-        }
-
-
-        public async Task<Dictionary<string, object>> GetSplitExportLastMetadataAsync(Guid tssId, Guid exportId)
-        {
-            var lastExport = SplitExports.FirstOrDefault(x => x.Key == exportId).Value.LastOrDefault();
-
-            var response = await _httpClient.GetAsync($"tss/{tssId}/export/{lastExport.ExportId}/metadata");
+            var response = await _httpClient.GetAsync($"tss/{tssId}/export/{exportId}/metadata");
             var responseContent = await response.Content.ReadAsStringAsync();
             if (response.IsSuccessStatusCode)
             {

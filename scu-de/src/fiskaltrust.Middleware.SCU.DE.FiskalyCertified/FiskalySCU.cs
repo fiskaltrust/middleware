@@ -21,6 +21,8 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
     {
         private readonly ConcurrentDictionary<ulong, long> _transactionsStates;
         private readonly ConcurrentDictionary<string, ExportStateData> _readStreamPointer = new ConcurrentDictionary<string, ExportStateData>();
+        private readonly ConcurrentDictionary<Guid, List<SplitExportStateData>> _splitExports = new ConcurrentDictionary<Guid, List<SplitExportStateData>>();
+
         private readonly ILogger<FiskalySCU> _logger;
         private readonly FiskalySCUConfiguration _configuration;
         private readonly ClientCache _clientCache;
@@ -317,7 +319,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
                 var range = (to - from) ?? 0;
                 if (range > _configuration.MaxExportTransaction)
                 {
-                    await StartSplitExportSessionAsync(exportRequest, from, exportId, to);
+                    await StartSplitExportSessionAsync(exportRequest, from ?? 1, exportId, to);
 
                 }
                 else
@@ -341,9 +343,9 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
             }
         }
 
-        public async Task StartSplitExportSessionAsync(ExportTransactions exportRequest, long? from, Guid exportId, long to)
+        public async Task StartSplitExportSessionAsync(ExportTransactions exportRequest, long from, Guid exportId, long to)
         {
-            decimal temp = to / _configuration.MaxExportTransaction;
+            decimal temp = (to - from) / _configuration.MaxExportTransaction;
             var exportCount = Math.Floor(temp) + 1;
 
             for (var i = 1; i <= exportCount; i++)
@@ -353,21 +355,21 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
                     ParentExportId = exportId,
                     ExportId = Guid.NewGuid(),
                     From = (long) from,
-                    To = to > (_configuration.MaxExportTransaction * i) - 1 ? (long) (from + _configuration.MaxExportTransaction - 1) : to,
+                    To = to > (_configuration.MaxExportTransaction * i) - 1 ? from + _configuration.MaxExportTransaction - 1 : to,
                     ExportStateData = new ExportStateData
                     {
                         ReadPointer = 0,
                         State = ExportState.Unkown
                     }
                 };
-                _fiskalyApiProvider.SplitExports.AddOrUpdate(exportId, new List<SplitExportStateData> { splitExport }, (key, value) =>
+                _splitExports.AddOrUpdate(exportId, new List<SplitExportStateData> { splitExport }, (key, value) =>
                 {
                     value.Add(splitExport);
                     return value;
                 });
                 from = (int) (splitExport.To + 1);
             }
-            var firstExport = _fiskalyApiProvider.SplitExports[exportId].First();
+            var firstExport = _splitExports[exportId].First();
             await _fiskalyApiProvider.RequestExportAsync(_configuration.TssId, exportRequest, firstExport.ExportId, firstExport.From, firstExport.To);
             await _fiskalyApiProvider.SetExportMetadataAsync(_configuration.TssId, firstExport.ExportId, firstExport.From, firstExport.To);
             firstExport.ExportStateData.State = ExportState.Running;
@@ -422,20 +424,9 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
             try
             {
                 await _fiskalyApiProvider.StoreDownloadSplitResultAsync(_configuration.TssId, splitExportStateData);
-                var export = _fiskalyApiProvider.SplitExports.FirstOrDefault(x => x.Key== splitExportStateData.ParentExportId);
+                var export = _splitExports.FirstOrDefault(x => x.Key== splitExportStateData.ParentExportId);
                 if (export.Value != null)
                 {
-                    if (export.Value.All(x => x.ExportStateData.State == ExportState.Succeeded))
-                    {
-                        SetExportState(export.Key, ExportState.Succeeded);
-                        return;
-                    }
-                    else if (export.Value.Any(x => x.ExportStateData.State == ExportState.Failed))
-                    {
-                        SetExportState(export.Key, ExportState.Failed);
-                        return;
-                    }
-
                     nextSplitExport = export.Value.Where(x => x.ExportStateData.State == ExportState.Unkown).FirstOrDefault();
                     if (nextSplitExport != null)
                     {
@@ -443,7 +434,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
                         await _fiskalyApiProvider.SetExportMetadataAsync(_configuration.TssId, nextSplitExport.ExportId, nextSplitExport.From, nextSplitExport.To);
                         nextSplitExport.ExportStateData.State = ExportState.Running;
 
-                        CacheSplitExportAsync(nextSplitExport, exportRequest, 0).ExecuteInBackgroundThread();
+                        await CacheSplitExportAsync(nextSplitExport, exportRequest, 0);
                     }
                 }
             }
@@ -461,7 +452,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
             {
 
                 _logger.LogError(ex, "Failed to execute {Operation} - ExportId: {ExportId}", nameof(CacheExportAsync), nextSplitExport.ExportId);
-                SetExportState(nextSplitExport.ExportId, ExportState.Failed, ex);
+                SetExportState(nextSplitExport.ParentExportId, ExportState.Failed, ex);
             }
         }
 
@@ -546,7 +537,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
             }
         }
 
-        public async Task<ExportDataResponse>   ExportDataAsync(ExportDataRequest request)
+        public async Task<ExportDataResponse> ExportDataAsync(ExportDataRequest request)
         {
             if (request.TokenId.StartsWith(_noExport))
             {
@@ -565,26 +556,51 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
                     throw new FiskalyException("The export failed to start. It needs to be retriggered");
                 }
                 var tempFileName = request.TokenId;
-                var exportStateInformation = await _fiskalyApiProvider.GetExportStateInformationByIdAsync(_configuration.TssId, Guid.Parse(request.TokenId));
-                if (exportStateInformation.State == "ERROR")
+                var exportId = Guid.Parse(request.TokenId);
+                if (_splitExports.ContainsKey(exportId))
                 {
-                    throw new FiskalyException($"The export failed with a fiskaly internal error: {exportStateInformation.Exception}");
-                }
-                if (_readStreamPointer.TryGetValue(request.TokenId, out var exportStateData) && exportStateData.State == ExportState.Failed)
-                {
-                    throw exportStateData.Error;
-                }
-
-                if (exportStateInformation.State != "COMPLETED" || !File.Exists(tempFileName))
-                {
-                    return new ExportDataResponse
+                    _readStreamPointer.TryGetValue(request.TokenId, out var exportState);
+                    if (exportState.State != ExportState.Succeeded && exportState.State != ExportState.Failed)
                     {
-                        TokenId = request.TokenId,
-                        TotalTarFileSize = -1,
-                        TarFileEndOfFile = false,
-                        TotalTarFileSizeAvailable = false
-                    };
+                        var export = _splitExports.FirstOrDefault(x => x.Key == exportId);
+                        if (export.Value != null)
+                        {
+                            if (export.Value.All(x => x.ExportStateData.State == ExportState.Succeeded))
+                            {
+                                SetExportState(export.Key, ExportState.Succeeded);
+                            }
+                            else if (export.Value.Any(x => x.ExportStateData.State == ExportState.Failed))
+                            {
+                                SetExportState(export.Key, ExportState.Failed);
+                            }
+                        }
+                    }
                 }
+                else
+                {
+
+                    var exportStateInformation = await _fiskalyApiProvider.GetExportStateInformationByIdAsync(_configuration.TssId, Guid.Parse(request.TokenId));
+                    if (exportStateInformation.State == "ERROR")
+                    {
+                        throw new FiskalyException($"The export failed with a fiskaly internal error: {exportStateInformation.Exception}");
+                    }
+                    if (_readStreamPointer.TryGetValue(request.TokenId, out var exportStateDat) && exportStateDat.State == ExportState.Failed)
+                    {
+                        throw exportStateDat.Error;
+                    }
+
+                    if (exportStateInformation.State != "COMPLETED" || !File.Exists(tempFileName))
+                    {
+                        return new ExportDataResponse
+                        {
+                            TokenId = request.TokenId,
+                            TotalTarFileSize = -1,
+                            TarFileEndOfFile = false,
+                            TotalTarFileSizeAvailable = false
+                        };
+                    }
+                }
+                _readStreamPointer.TryGetValue(request.TokenId, out var exportStateData);
                 if (exportStateData.State != ExportState.Succeeded || !File.Exists(tempFileName))
                 {
                     return new ExportDataResponse
@@ -664,11 +680,21 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
                                 }
                                 else
                                 {
-                                    var metadata = await _fiskalyApiProvider.GetExportMetadataAsync(_configuration.TssId, Guid.Parse(request.TokenId));
+                                    Dictionary<string, object> metadata;
+                                    if (_splitExports.ContainsKey(Guid.Parse(request.TokenId)))
+                                    {
+                                        var export = _splitExports.FirstOrDefault(x => x.Key == Guid.Parse(request.TokenId));
+                                        var lastExport = export.Value.Last();
+                                        metadata = await _fiskalyApiProvider.GetExportMetadataAsync(_configuration.TssId, lastExport.ExportId);
+                                    }
+                                    else
+                                    {
+                                        metadata = await _fiskalyApiProvider.GetExportMetadataAsync(_configuration.TssId, Guid.Parse(request.TokenId));
+  
+                                    }
                                     if (metadata.ContainsKey("end_transaction_number"))
                                     {
                                         await SetLastExportedTransactionNumber(Convert.ToInt64(metadata["end_transaction_number"], CultureInfo.InvariantCulture));
-
                                         sessionResponse.IsErased = true;
                                     }
                                 }
@@ -688,7 +714,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
             finally
             {
 
-                _fiskalyApiProvider.SplitExports.TryRemove(Guid.Parse(request.TokenId), out _);
+                _splitExports.TryRemove(Guid.Parse(request.TokenId), out _);
                 try
                 {
                     if (File.Exists(tempFileName))

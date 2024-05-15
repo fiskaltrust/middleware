@@ -9,7 +9,6 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
 {
     public interface IFiskalyApiProvider
     {
-        public ConcurrentDictionary<Guid, List<SplitExportStateData>> SplitExports { get; set; }
         Task CreateClientAsync(Guid tssId, string serialNumber, Guid clientId);
         Task<List<ClientDto>> GetClientsAsync(Guid tssId);
         Task<Stream> GetExportByExportStateAsync(ExportStateInformationDto exportStateInformation);
