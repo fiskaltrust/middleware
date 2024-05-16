@@ -158,8 +158,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
 
             byte[] chunk;
             var response = new JournalResponse();
-            var tempFilePath = Path.Combine(Path.GetTempPath(), "fiskaltrust", $"{exportSession.TokenId}.temp");
-            using (var stream = new FileStream(tempFilePath, FileMode.Create, FileAccess.ReadWrite))
+            using (var stream = new FileStream(exportSession.TokenId, FileMode.Create, FileAccess.ReadWrite))
             {
                 ExportDataResponse export;
                 do
@@ -196,9 +195,9 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             {
                 throw new Exception("The TAR file export was not successful.");
             }
-            if (File.Exists(tempFilePath))
+            if (File.Exists(exportSession.TokenId))
             {
-                File.Delete(tempFilePath);
+                File.Delete(exportSession.TokenId);
             }
             yield break;
         }
