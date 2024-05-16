@@ -439,19 +439,19 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
             }
             catch (WebException)
             {
-                if (_configuration.RetriesOnTarExportWebException > currentTry && nextSplitExport != null)
+                if (_configuration.RetriesOnTarExportWebException > currentTry)
                 {
                     currentTry++;
                     _logger.LogWarning($"WebException on Export from Fiskaly retry {currentTry} from {_configuration.RetriesOnTarExportWebException}, DelayOnRetriesInMs: {_configuration.DelayOnRetriesInMs}.");
                     await Task.Delay(_configuration.DelayOnRetriesInMs * (currentTry + 1)).ConfigureAwait(false);
-                    CacheSplitExportAsync(nextSplitExport, exportRequest, currentTry).ExecuteInBackgroundThread();
+                    await CacheSplitExportAsync(splitExportStateData, exportRequest, currentTry);
                 }
             }
             catch (Exception ex)
             {
 
                 _logger.LogError(ex, "Failed to execute {Operation} - ExportId: {ExportId}", nameof(CacheExportAsync), nextSplitExport.ExportId);
-                SetExportState(nextSplitExport.ParentExportId, ExportState.Failed, ex);
+                SetExportState(splitExportStateData.ParentExportId, ExportState.Failed, ex);
             }
         }
 
