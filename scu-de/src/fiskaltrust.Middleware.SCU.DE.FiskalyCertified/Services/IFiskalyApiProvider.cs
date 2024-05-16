@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Models;
 
@@ -9,7 +11,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
     {
         Task CreateClientAsync(Guid tssId, string serialNumber, Guid clientId);
         Task<List<ClientDto>> GetClientsAsync(Guid tssId);
-        Task<byte[]> GetExportByExportStateAsync(ExportStateInformationDto exportStateInformation);
+        Task<Stream> GetExportByExportStateAsync(ExportStateInformationDto exportStateInformation);
         Task<Dictionary<string, object>> GetExportMetadataAsync(Guid tssId, Guid exportId);
         Task<ExportStateInformationDto> GetExportStateInformationByIdAsync(Guid tssId, Guid exportId);
         Task<IEnumerable<TransactionDto>> GetStartedTransactionsAsync(Guid tssId);
@@ -24,6 +26,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
         Task RequestExportAsync(Guid tssId, ExportTransactionsWithDatesDto exportRequest, Guid exportId);
         Task SetExportMetadataAsync(Guid tssId, Guid exportId, long? fromTransactionNumber, long toTransactionNumber);
         Task StoreDownloadResultAsync(Guid tssId, Guid exportId);
+        Task StoreDownloadSplitResultAsync(Guid tssId, SplitExportStateData splitExportStateData);
         Task PatchTseMetadataAsync(Guid tssId, Dictionary<string, object> metadata);
         Task DisableClientAsync(Guid tssId, string serialNumber, Guid clientId);
     }
