@@ -158,46 +158,52 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
 
             byte[] chunk;
             var response = new JournalResponse();
-            using (var stream = new FileStream(exportSession.TokenId, FileMode.Create, FileAccess.ReadWrite))
+            try
             {
-                ExportDataResponse export;
-                do
+                using (var stream = new FileStream(exportSession.TokenId, FileMode.Create, FileAccess.ReadWrite))
                 {
-                    export = await _deSSCDProvider.Instance.ExportDataAsync(new ExportDataRequest
+                    ExportDataResponse export;
+                    do
                     {
-                        TokenId = exportSession.TokenId,
-                        MaxChunkSize = request.MaxChunkSize
-                    }).ConfigureAwait(false);
-                    if (!export.TotalTarFileSizeAvailable)
-                    {
-                        await Task.Delay(TimeSpan.FromMilliseconds(100)).ConfigureAwait(false);
-                    }
-                    else
-                    {
-                        chunk = Convert.FromBase64String(export.TarFileByteChunkBase64);
-                        stream.Write(chunk, 0, chunk.Length);
-                        response.Chunk = chunk.ToList();
-                        yield return response;
-                    }
-                } while (!export.TarFileEndOfFile);
-                using var sha256 = SHA256.Create();
-                stream.Position = 0;
-                sha256CheckSum = Convert.ToBase64String(sha256.ComputeHash(stream));
-            }
+                        export = await _deSSCDProvider.Instance.ExportDataAsync(new ExportDataRequest
+                        {
+                            TokenId = exportSession.TokenId,
+                            MaxChunkSize = request.MaxChunkSize
+                        }).ConfigureAwait(false);
+                        if (!export.TotalTarFileSizeAvailable)
+                        {
+                            await Task.Delay(TimeSpan.FromMilliseconds(100)).ConfigureAwait(false);
+                        }
+                        else
+                        {
+                            chunk = Convert.FromBase64String(export.TarFileByteChunkBase64);
+                            stream.Write(chunk, 0, chunk.Length);
+                            response.Chunk = chunk.ToList();
+                            yield return response;
+                        }
+                    } while (!export.TarFileEndOfFile);
+                    using var sha256 = SHA256.Create();
+                    stream.Position = 0;
+                    sha256CheckSum = Convert.ToBase64String(sha256.ComputeHash(stream));
+                }
 
-            var endSessionRequest = new EndExportSessionRequest
-            {
-                TokenId = exportSession.TokenId,
-                Sha256ChecksumBase64 = sha256CheckSum
-            };
-            var endExportSessionResult = await _deSSCDProvider.Instance.EndExportSessionAsync(endSessionRequest).ConfigureAwait(false);
-            if (!endExportSessionResult.IsValid)
-            {
-                throw new Exception("The TAR file export was not successful.");
+                var endSessionRequest = new EndExportSessionRequest
+                {
+                    TokenId = exportSession.TokenId,
+                    Sha256ChecksumBase64 = sha256CheckSum
+                };
+                var endExportSessionResult = await _deSSCDProvider.Instance.EndExportSessionAsync(endSessionRequest).ConfigureAwait(false);
+                if (!endExportSessionResult.IsValid)
+                {
+                    throw new Exception("The TAR file export was not successful.");
+                }
             }
-            if (File.Exists(exportSession.TokenId))
+            finally
             {
-                File.Delete(exportSession.TokenId);
+                if (File.Exists(exportSession.TokenId))
+                {
+                    File.Delete(exportSession.TokenId);
+                }
             }
             yield break;
         }
