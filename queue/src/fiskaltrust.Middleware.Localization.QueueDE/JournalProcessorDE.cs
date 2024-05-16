@@ -80,6 +80,10 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             _logger.LogDebug($"Processing JournalRequest for DE (Type: {request.ftJournalType:X}");
             if (request.ftJournalType == (long) JournalTypes.TarExportFromTSE)
             {
+                if (request.MaxChunkSize == 0)
+                {
+                    request.MaxChunkSize = _middlewareConfiguration.TarFileChunkSize;
+                }
                 await foreach (var value in ProcessTarExportFromTSEAsync(request).ConfigureAwait(false))
                 {
                     yield return value;
@@ -151,42 +155,55 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
         {
             var exportSession = await _deSSCDProvider.Instance.StartExportSessionAsync(new StartExportSessionRequest()).ConfigureAwait(false);
             var sha256CheckSum = "";
-            using (var memoryStream = new MemoryStream())
-            {
-                ExportDataResponse export;
-                do
-                {
-                    export = await _deSSCDProvider.Instance.ExportDataAsync(new ExportDataRequest
-                    {
-                        TokenId = exportSession.TokenId,
-                        MaxChunkSize = request.MaxChunkSize
-                    }).ConfigureAwait(false);
-                    if (!export.TotalTarFileSizeAvailable)
-                    {
-                        await Task.Delay(TimeSpan.FromMilliseconds(100)).ConfigureAwait(false);
-                    }
-                    else
-                    {
-                        var chunk = Convert.FromBase64String(export.TarFileByteChunkBase64);
-                        memoryStream.Write(chunk, 0, chunk.Length);
-                        yield return new JournalResponse
-                        {
-                            Chunk = chunk.ToList()
-                        };
-                    }
-                } while (!export.TarFileEndOfFile);
-                sha256CheckSum = Convert.ToBase64String(SHA256.Create().ComputeHash(memoryStream.ToArray()));
-            }
 
-            var endSessionRequest = new EndExportSessionRequest
+            byte[] chunk;
+            var response = new JournalResponse();
+            try
             {
-                TokenId = exportSession.TokenId,
-                Sha256ChecksumBase64 = sha256CheckSum
-            };
-            var endExportSessionResult = await _deSSCDProvider.Instance.EndExportSessionAsync(endSessionRequest).ConfigureAwait(false);
-            if (!endExportSessionResult.IsValid)
+                using (var stream = new FileStream(exportSession.TokenId, FileMode.Create, FileAccess.ReadWrite))
+                {
+                    ExportDataResponse export;
+                    do
+                    {
+                        export = await _deSSCDProvider.Instance.ExportDataAsync(new ExportDataRequest
+                        {
+                            TokenId = exportSession.TokenId,
+                            MaxChunkSize = request.MaxChunkSize
+                        }).ConfigureAwait(false);
+                        if (!export.TotalTarFileSizeAvailable)
+                        {
+                            await Task.Delay(TimeSpan.FromMilliseconds(100)).ConfigureAwait(false);
+                        }
+                        else
+                        {
+                            chunk = Convert.FromBase64String(export.TarFileByteChunkBase64);
+                            stream.Write(chunk, 0, chunk.Length);
+                            response.Chunk = chunk.ToList();
+                            yield return response;
+                        }
+                    } while (!export.TarFileEndOfFile);
+                    using var sha256 = SHA256.Create();
+                    stream.Position = 0;
+                    sha256CheckSum = Convert.ToBase64String(sha256.ComputeHash(stream));
+                }
+
+                var endSessionRequest = new EndExportSessionRequest
+                {
+                    TokenId = exportSession.TokenId,
+                    Sha256ChecksumBase64 = sha256CheckSum
+                };
+                var endExportSessionResult = await _deSSCDProvider.Instance.EndExportSessionAsync(endSessionRequest).ConfigureAwait(false);
+                if (!endExportSessionResult.IsValid)
+                {
+                    throw new Exception("The TAR file export was not successful.");
+                }
+            }
+            finally
             {
-                throw new Exception("The TAR file export was not successful.");
+                if (File.Exists(exportSession.TokenId))
+                {
+                    File.Delete(exportSession.TokenId);
+                }
             }
             yield break;
         }

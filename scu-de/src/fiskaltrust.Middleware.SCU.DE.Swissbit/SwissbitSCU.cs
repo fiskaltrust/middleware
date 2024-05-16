@@ -44,7 +44,6 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
         private uint _hwSelftestIntervalSeconds = 0;
         private ISwissbitProxy _proxy = null;
         private DateTime _nextSyncTime;
-        private ulong _lastTransactionNr = 0;
 
         // Never change these values, as all existing installations are depending on them
         private readonly byte[] _adminPuk = Encoding.ASCII.GetBytes("123456");
@@ -601,7 +600,6 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
                                 SignatureCounter = tseResponse.SignatureCounter
                             }
                         };
-                        _lastTransactionNr = tseResponse.TransactionNumber;
 
                         return response;
                     }
@@ -743,19 +741,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
                 await UpdateTimeAsync(GetProxy());
                 SetExportState(exportId, ExportState.Running);
 
-                if (_configuration.ChunkExportTransactionCount > 0)
-                {
-                    if (_lastTransactionNr == 0)
-                    {
-                        _logger.LogError("Before executing a partial export a daily closing has to be made. See https://link.fiskaltrust.cloud/market-de/swissbit-chunked-tar-export for more details.");
-                        throw new Exception("Missing Daily Closing.");
-                    };
-                    CacheExportIncrementalAsync(exportId, 0, _configuration.ChunkExportTransactionCount, (long) _lastTransactionNr).FireAndForget();
-                }
-                else
-                {
-                    CacheExportAsync(exportId, request.ClientId, request.Erase).FireAndForget();
-                }
+                CacheExportAsync(exportId, request.ClientId, request.Erase).FireAndForget();
 
                 return new StartExportSessionResponse()
                 {
@@ -801,52 +787,6 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
             });
         }
 
-        private async Task CacheExportIncrementalAsync(Guid exportId, long startTransactionNr, long maxNumberOfRecords, long currentNumberOfTransactions)
-        {
-            var endTransactionNr = LastNumberOfRecords(startTransactionNr, maxNumberOfRecords, currentNumberOfTransactions);
-            long newStartTransactionNr = -1;
-
-            await _lockingHelper.PerformWithLock(_hwLock, async () =>
-            {
-                try
-                {
-                    using (var stream = new MemoryStream())
-                    {
-                        await GetProxy().ExportTarFilteredTransactionAsync(stream, (ulong) startTransactionNr, (ulong) endTransactionNr, null);
-                        stream.Position = 0;
-                        TarFileHelper.AppendTarStreamToTarFile(exportId.ToString(), stream);
-                        _logger.LogInformation($"Export total {currentNumberOfTransactions}. Partial Export from TransactionNr: {startTransactionNr} to TransactionNr: {endTransactionNr}");
-                    }
-                    newStartTransactionNr = GetLastExportedTransaction(exportId.ToString()) + 1;
-                }
-                catch (Exception ex)
-                {
-                    if (!ex.Message.Equals("Filtered Export: no matching entries, export would be empty. "))
-                    {
-                        _logger.LogError(ex, "Failed to execute {Operation} - TempFileName: {TempFileName}", nameof(CacheExportIncrementalAsync), exportId.ToString());
-                        SetExportState(exportId, ExportState.Failed, ex);
-                        throw;
-                    }
-                    _logger.LogInformation($"No Data: Export total {currentNumberOfTransactions}. Partial Export from TransactionNr: {startTransactionNr} to TransactionNr: {endTransactionNr}");
-
-                }
-            });
-
-            if (newStartTransactionNr == -1)
-            {
-                newStartTransactionNr = startTransactionNr + maxNumberOfRecords;
-            }
-            if (newStartTransactionNr <= currentNumberOfTransactions)
-            {
-                await CacheExportIncrementalAsync(exportId, newStartTransactionNr, maxNumberOfRecords, currentNumberOfTransactions).ConfigureAwait(false);
-            }
-            else
-            {
-                TarFileHelper.FinalizeTarFile(exportId.ToString());
-                _logger.LogDebug("Finalized merged TAR file {fileName}.", exportId.ToString());
-                SetExportState(exportId, ExportState.Succeeded);
-            }
-        }
 
         private long GetLastExportedTransaction(string targetFile)
         {

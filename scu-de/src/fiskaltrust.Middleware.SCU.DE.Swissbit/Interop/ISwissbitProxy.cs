@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1.de;
 using fiskaltrust.Middleware.SCU.DE.Swissbit.Models;
@@ -34,9 +35,9 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Interop
         public Task<TransactionResponse> TransactionUpdateAsync(string clientId, UInt64 transactionNumber, byte[] processData, string processType);
         public Task<TransactionResponse> TransactionFinishAsync(string clientId, UInt64 transactionNumber, byte[] processData, string processType);
         public Task<List<ulong>> GetStartedTransactionsAsync(string clientId);
-        public Task ExportTarAsync(System.IO.Stream stream);
-        public Task ExportTarFilteredTimeAsync(System.IO.Stream stream, UInt64 startDateUnixTime, UInt64 endDateUnixTime, string clientId);
-        public Task ExportTarFilteredTransactionAsync(System.IO.Stream stream, UInt64 startTransactionNumber, UInt64 endTransactionNumber, string clientId);
+        public Task ExportTarAsync(Stream stream);
+        public Task ExportTarFilteredTimeAsync(Stream stream, UInt64 startDateUnixTime, UInt64 endDateUnixTime, string clientId);
+        public Task ExportTarFilteredTransactionAsync(Stream stream, UInt64 startTransactionNumber, UInt64 endTransactionNumber, string clientId);
         public Task<byte[]> GetLogMessageCertificateAsync();
         public Task DeleteStoredDataAsync();
     }
