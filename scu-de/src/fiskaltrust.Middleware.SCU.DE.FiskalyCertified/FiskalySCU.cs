@@ -319,8 +319,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
                 var range = (to - from) ?? 0;
                 if (range > _configuration.MaxExportTransaction)
                 {
-                    await StartSplitExportSessionAsync(exportRequest, from ?? 1, exportId, to);
-
+                    await StartSplitExportSessionAsync(exportRequest, exportId, from ?? 1, to);
                 }
                 else
                 {
@@ -343,7 +342,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
             }
         }
 
-        public async Task StartSplitExportSessionAsync(ExportTransactions exportRequest, long from, Guid exportId, long to)
+        private async Task StartSplitExportSessionAsync(ExportTransactions exportRequest, Guid exportId, long from, long to)
         {
             decimal temp = (to - from) / _configuration.MaxExportTransaction;
             var exportCount = Math.Floor(temp) + 1;
@@ -354,8 +353,8 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
                 {
                     ParentExportId = exportId,
                     ExportId = Guid.NewGuid(),
-                    From = (long) from,
-                    To = to > (_configuration.MaxExportTransaction * i) - 1 ? from + _configuration.MaxExportTransaction - 1 : to,
+                    From = from,
+                    To = from + _configuration.MaxExportTransaction - 1 < to ? from + _configuration.MaxExportTransaction - 1 : to,
                     ExportStateData = new ExportStateData
                     {
                         ReadPointer = 0,
