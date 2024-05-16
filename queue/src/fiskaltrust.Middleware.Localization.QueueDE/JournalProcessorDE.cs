@@ -196,9 +196,9 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             {
                 throw new Exception("The TAR file export was not successful.");
             }
-            if (File.Exists(exportSession.TokenId))
+            if (File.Exists(tempFilePath))
             {
-                File.Delete(exportSession.TokenId);
+                File.Delete(tempFilePath);
             }
             yield break;
         }
