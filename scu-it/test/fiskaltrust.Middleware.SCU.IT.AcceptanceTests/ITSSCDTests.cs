@@ -82,6 +82,18 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
         }
 
         [Fact]
+        public async Task ProcessPosReceipt_LargeReceipt()
+        {
+            var itsscd = GetSUT();
+            var result = await itsscd.ProcessReceiptAsync(new ProcessRequest
+            {
+                ReceiptRequest = ReceiptExamples.GetTest(),
+                ReceiptResponse = _receiptResponse
+            });
+            result.ReceiptResponse.ftSignatures.Should().BeEmpty();
+        }
+
+        [Fact]
         public async Task ProcessPosReceipt_Daily_Closing0x4954_2000_0000_2011()
         {
 
