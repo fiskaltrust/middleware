@@ -39,6 +39,9 @@ stages:
 
           environment: ${{ stage.templateContext.serviceConnection }}
 
+        variables:
+          - group: PackageCache
+
           strategy:
             runOnce:
               deploy:
@@ -55,3 +58,15 @@ stages:
                       scriptLocation: inlineScript
                       inlineScript: |
                         az storage blob upload-batch --account-name ${{ stage.templateContext.storage }} -d "packages" -s "$(Pipeline.Workspace)/${{ parameters.artifact }}/packages-v1/" --pattern "${{ parameters.type }}.${{ project }}.*.nupkg"
+                  
+                  - pwsh: |
+                      if("${{ stage.templateContext.environment }}" -ne "production-legacy") {
+                        $sandbox = "-sandbox"
+                      } else {
+                        
+                      }
+                      for($i = 0;$i -lt 10;$i++) {
+                        Invoke-WebRequest -Method POST -Headers @{"fiskaltrust" = $env:PACKAGE_CACHE_SECRET} "https://packages$sandbox.fiskaltrust.cloud/refreshcache"
+                      }
+                    env:
+                      PACKAGE_CACHE_SECRET: $(PackageCacheSecret)
