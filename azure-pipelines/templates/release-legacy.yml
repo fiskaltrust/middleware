@@ -68,3 +68,5 @@ stages:
                       }
                     env:
                       PACKAGE_CACHE_SECRET: $(PackageCacheSecret)
+                    displayName: Refresh package cache
+                    continueOnError: true
