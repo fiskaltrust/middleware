@@ -39,8 +39,8 @@ stages:
 
           environment: ${{ stage.templateContext.serviceConnection }}
 
-        variables:
-          - group: PackageCache
+          variables:
+            - group: PackageCache
 
           strategy:
             runOnce:
@@ -62,8 +62,6 @@ stages:
                   - pwsh: |
                       if("${{ stage.templateContext.environment }}" -ne "production-legacy") {
                         $sandbox = "-sandbox"
-                      } else {
-                        
                       }
                       for($i = 0;$i -lt 10;$i++) {
                         Invoke-WebRequest -Method POST -Headers @{"fiskaltrust" = $env:PACKAGE_CACHE_SECRET} "https://packages$sandbox.fiskaltrust.cloud/refreshcache"
