@@ -378,15 +378,20 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
             {
                 try
                 {
-                    await _fiskalyApiProvider.StoreDownloadSplitResultAsync(_configuration.TssId, firstExport);
+                   await _fiskalyApiProvider.StoreDownloadSplitResultAsync(_configuration.TssId, firstExport);
                 }
-                catch (WebException)
+                catch (WebException ex)
                 {
-                    if (_configuration.RetriesOnTarExportWebException > currentTry)
+                    if (currentTry < _configuration.RetriesOnTarExportWebException)
                     {
                         currentTry++;
                         _logger.LogWarning($"WebException on Export from Fiskaly retry {currentTry} from {_configuration.RetriesOnTarExportWebException}, DelayOnRetriesInMs: {_configuration.DelayOnRetriesInMs}.");
                         await Task.Delay(_configuration.DelayOnRetriesInMs * (currentTry + 1)).ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        _logger.LogError(ex, "Failed to execute {Operation} - ExportId: {ExportId}", nameof(CacheExportAsync), firstExport.ExportId);
+                        SetExportState(firstExport.ParentExportId, ExportState.Failed, ex);
                     }
                 }
                 catch (Exception ex)
@@ -394,10 +399,12 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
 
                     _logger.LogError(ex, "Failed to execute {Operation} - ExportId: {ExportId}", nameof(CacheExportAsync), firstExport.ExportId);
                     SetExportState(firstExport.ParentExportId, ExportState.Failed, ex);
-                    return;
                 }
             }
-            CacheSplitExportAsync(firstExport, exportRequest, 0).ExecuteInBackgroundThread();
+            if (firstExport.ExportStateData.State == ExportState.Succeeded)
+            {
+                CacheSplitExportAsync(firstExport.ParentExportId, exportRequest, 0).ExecuteInBackgroundThread();
+            }
         }
 
 
@@ -440,13 +447,12 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
             }
         }
 
-        private async Task CacheSplitExportAsync(SplitExportStateData splitExportStateData, ExportTransactions exportRequest, int currentTry = 0)
+        private async Task CacheSplitExportAsync(Guid parentExportId, ExportTransactions exportRequest, int currentTry = 0)
         {
             SplitExportStateData nextSplitExport = null;
             try
             {
-                
-                var export = _splitExports.FirstOrDefault(x => x.Key== splitExportStateData.ParentExportId);
+               var export = _splitExports.FirstOrDefault(x => x.Key== parentExportId);
                 if (export.Value != null)
                 {
                     nextSplitExport = export.Value.Where(x => x.ExportStateData.State == ExportState.Unkown).FirstOrDefault();
@@ -457,25 +463,30 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
                         nextSplitExport.ExportStateData.State = ExportState.Running;
                         await _fiskalyApiProvider.StoreDownloadSplitResultAsync(_configuration.TssId, nextSplitExport);
 
-                        await CacheSplitExportAsync(nextSplitExport, exportRequest, 0);
+                        await CacheSplitExportAsync(nextSplitExport.ParentExportId, exportRequest, 0);
                     }
                 }
             }
-            catch (WebException)
+            catch (WebException ex)
             {
                 if (_configuration.RetriesOnTarExportWebException > currentTry)
                 {
                     currentTry++;
                     _logger.LogWarning($"WebException on Export from Fiskaly retry {currentTry} from {_configuration.RetriesOnTarExportWebException}, DelayOnRetriesInMs: {_configuration.DelayOnRetriesInMs}.");
                     await Task.Delay(_configuration.DelayOnRetriesInMs * (currentTry + 1)).ConfigureAwait(false);
-                    await CacheSplitExportAsync(nextSplitExport, exportRequest, currentTry);
+                    await CacheSplitExportAsync(nextSplitExport.ParentExportId, exportRequest, currentTry);
+                }
+                else
+                {
+                    _logger.LogError(ex, "Failed to execute {Operation} - ExportId: {ExportId}", nameof(CacheExportAsync), nextSplitExport?.ExportId);
+                    SetExportState(parentExportId, ExportState.Failed, ex);
                 }
             }
             catch (Exception ex)
             {
 
                 _logger.LogError(ex, "Failed to execute {Operation} - ExportId: {ExportId}", nameof(CacheExportAsync), nextSplitExport?.ExportId);
-                SetExportState(splitExportStateData.ParentExportId, ExportState.Failed, ex);
+                SetExportState(parentExportId, ExportState.Failed, ex);
             }
         }
 
