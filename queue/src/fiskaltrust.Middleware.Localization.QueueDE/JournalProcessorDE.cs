@@ -160,7 +160,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             var response = new JournalResponse();
             try
             {
-                using (var stream = new FileStream(exportSession.TokenId, FileMode.Create, FileAccess.ReadWrite))
+                using (var stream = new FileStream(exportSession.TokenId + ".temp", FileMode.Create, FileAccess.ReadWrite))
                 {
                     ExportDataResponse export;
                     do
@@ -200,9 +200,9 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             }
             finally
             {
-                if (File.Exists(exportSession.TokenId))
+                if (File.Exists(exportSession.TokenId + ".temp"))
                 {
-                    File.Delete(exportSession.TokenId);
+                    File.Delete(exportSession.TokenId + ".temp");
                 }
             }
             yield break;
