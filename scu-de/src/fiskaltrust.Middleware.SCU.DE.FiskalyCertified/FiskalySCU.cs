@@ -455,7 +455,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
                         await _fiskalyApiProvider.RequestExportAsync(_configuration.TssId, exportRequest, nextSplitExport.ExportId, nextSplitExport.From, nextSplitExport.To);
                         await _fiskalyApiProvider.SetExportMetadataAsync(_configuration.TssId, nextSplitExport.ExportId, nextSplitExport.From, nextSplitExport.To);
                         nextSplitExport.ExportStateData.State = ExportState.Running;
-                        await _fiskalyApiProvider.StoreDownloadSplitResultAsync(_configuration.TssId, splitExportStateData);
+                        await _fiskalyApiProvider.StoreDownloadSplitResultAsync(_configuration.TssId, nextSplitExport);
 
                         await CacheSplitExportAsync(nextSplitExport, exportRequest, 0);
                     }
@@ -468,13 +468,13 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
                     currentTry++;
                     _logger.LogWarning($"WebException on Export from Fiskaly retry {currentTry} from {_configuration.RetriesOnTarExportWebException}, DelayOnRetriesInMs: {_configuration.DelayOnRetriesInMs}.");
                     await Task.Delay(_configuration.DelayOnRetriesInMs * (currentTry + 1)).ConfigureAwait(false);
-                    await CacheSplitExportAsync(splitExportStateData, exportRequest, currentTry);
+                    await CacheSplitExportAsync(nextSplitExport, exportRequest, currentTry);
                 }
             }
             catch (Exception ex)
             {
 
-                _logger.LogError(ex, "Failed to execute {Operation} - ExportId: {ExportId}", nameof(CacheExportAsync), nextSplitExport.ExportId);
+                _logger.LogError(ex, "Failed to execute {Operation} - ExportId: {ExportId}", nameof(CacheExportAsync), nextSplitExport?.ExportId);
                 SetExportState(splitExportStateData.ParentExportId, ExportState.Failed, ex);
             }
         }
