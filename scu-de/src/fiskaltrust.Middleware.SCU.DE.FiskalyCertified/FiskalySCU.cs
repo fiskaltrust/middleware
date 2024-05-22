@@ -422,7 +422,10 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
             SplitExportStateData nextSplitExport = null;
             try
             {
-                await _fiskalyApiProvider.StoreDownloadSplitResultAsync(_configuration.TssId, splitExportStateData);
+                if (splitExportStateData.ExportStateData.State != ExportState.Succeeded)
+                {
+                    await _fiskalyApiProvider.StoreDownloadSplitResultAsync(_configuration.TssId, splitExportStateData);
+                }
                 var export = _splitExports.FirstOrDefault(x => x.Key== splitExportStateData.ParentExportId);
                 if (export.Value != null)
                 {
