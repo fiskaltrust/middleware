@@ -1,0 +1,10 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+      <PackageDescription>Convert Interface.tagging V2 to V1 and viceversa</PackageDescription>
+      <TargetFrameworks>netstandard2.0;net461;net8</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>
