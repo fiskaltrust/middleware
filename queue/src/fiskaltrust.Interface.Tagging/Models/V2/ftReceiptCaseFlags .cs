@@ -6,7 +6,7 @@ namespace fiskaltrust.Interface.Tagging.Models.V2
     [FlagExtensions(OnType = typeof(ReceiptRequest), OnField = nameof(ReceiptRequest.ftReceiptCase))]
     public enum ftReceiptCaseFlags : long
     {
-        LateSigning = 0x0000_0000_0001_000,
+        LateSigning = 0x0000_0000_0001_0000,
         Training = 0x0000_0000_0002_0000,
         Void = 0x0000_0000_0004_0000,
         HandWritten = 0x0000_0000_0008_0000,

@@ -1,17 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using fiskaltrust.ifPOS.v1;
 
 namespace fiskaltrust.Interface.Tagging.Interfaces
 {
     public interface ICaseConverter
     {
-        long ConvertftReceiptCaseToV1(long ftReceiptCase); // throws if the coutrycode is incorrect
-        long ConvertftPayItemCaseToV1(long ftPayItemCase); // throws if the coutrycode is incorrect
-        long ConvertftChargeItemCaseToV1(long ftChargeItemCase); // throws if the coutrycode is incorrect
-        long ConvertftStateToV2(long ftstate); // throws if the coutrycode is incorrect
-        long ConvertftSignatureFormatToV2(long ftSignatureFormat); // throws if the coutrycode is incorrect
-        long ConvertftSignatureTypeToV2(long ftSignatureType); // throws if the coutrycode is incorrect
-        long ConvertftJournalTypeToV1(long ftJournalType); // throws if the coutrycode is incorrect
+        void ConvertftReceiptCaseToV1(ReceiptRequest receiptRequest); // throws if the coutrycode is incorrect
+        void ConvertftPayItemCaseToV1(PayItem payItem); // throws if the coutrycode is incorrect
+        void ConvertftChargeItemCaseToV1(ChargeItem chargeItem); // throws if the coutrycode is incorrect
+        void ConvertftStateToV2(ReceiptResponse receiptResponse); // throws if the coutrycode is incorrect
+        void ConvertftSignatureFormatToV2(SignaturItem signaturItem); // throws if the coutrycode is incorrect
+        void ConvertftSignatureTypeToV2(SignaturItem signaturItem); // throws if the coutrycode is incorrect
+        void ConvertftJournalTypeToV1(JournalRequest journalRequest); // throws if the coutrycode is incorrect
     }
 }

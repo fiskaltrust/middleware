@@ -1,18 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Interface.Tagging.Interfaces;
 
 namespace fiskaltrust.Interface.Tagging.FR
 {
     public class CaseConverterFR : ICaseConverter
     {
-        long ICaseConverter.ConvertftChargeItemCaseToV1(long ftChargeItemCase) => throw new NotImplementedException();
-        long ICaseConverter.ConvertftJournalTypeToV1(long ftJournalType) => throw new NotImplementedException();
-        long ICaseConverter.ConvertftPayItemCaseToV1(long ftPayItemCase) => throw new NotImplementedException();
-        long ICaseConverter.ConvertftReceiptCaseToV1(long ftReceiptCase) => throw new NotImplementedException();
-        long ICaseConverter.ConvertftSignatureFormatToV2(long ftSignatureFormat) => throw new NotImplementedException();
-        long ICaseConverter.ConvertftSignatureTypeToV2(long ftSignatureType) => throw new NotImplementedException();
-        long ICaseConverter.ConvertftStateToV2(long ftstate) => throw new NotImplementedException();
+        public void ConvertftChargeItemCaseToV1(ChargeItem chargeItem) => throw new NotImplementedException();
+        public void ConvertftJournalTypeToV1(JournalRequest journalRequest) => throw new NotImplementedException();
+        public void ConvertftPayItemCaseToV1(PayItem payItem) => throw new NotImplementedException();
+        public void ConvertftReceiptCaseToV1(ReceiptRequest receiptRequest) => throw new NotImplementedException();
+        public void ConvertftSignatureFormatToV2(SignaturItem signaturItem) => throw new NotImplementedException();
+        public void ConvertftSignatureTypeToV2(SignaturItem signaturItem) => throw new NotImplementedException();
+        public void ConvertftStateToV2(ReceiptResponse receiptResponse) => throw new NotImplementedException();
     }
 }

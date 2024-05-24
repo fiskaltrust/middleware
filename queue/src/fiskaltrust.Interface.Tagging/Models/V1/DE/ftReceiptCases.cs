@@ -2,9 +2,8 @@
 {
     public enum ftReceiptCases : long
     {
-        UnknownReceipt0x0000 = 0x0000,
-        PointOfSaleReceipt0x0001 = 0x0001,
-        PaymentTransfer0x0002 = 0x0011,
-        
+        UnknownReceipt = 0x0000,
+        PointOfSaleReceipt = 0x0001,
+        PaymentTransfer = 0x0011,
     }
 }

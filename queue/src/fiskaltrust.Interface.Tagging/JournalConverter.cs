@@ -15,7 +15,7 @@ namespace fiskaltrust.Interface.Tagging
         public JournalRequest ConvertRequestToV1(JournalRequest request)
         {
             var converter = _caseConverterFactory.CreateInstance(request.ftJournalType);
-            request.ftJournalType = converter.ConvertftJournalTypeToV1(request.ftJournalType);
+            converter.ConvertftJournalTypeToV1(request);
             return request;
 
         }

@@ -15,9 +15,15 @@ namespace fiskaltrust.Interface.Tagging
         public ReceiptRequest ConvertRequestToV1(ReceiptRequest request)
         {
             var converter = _caseConverterFactory.CreateInstance(request.ftReceiptCase);
-            converter.ConvertftReceiptCaseToV1(request.ftReceiptCase);
-            request.cbChargeItems.Select(x => x.ftChargeItemCase = converter.ConvertftChargeItemCaseToV1(x.ftChargeItemCase));
-            request.cbPayItems.Select(x => x.ftPayItemCase = converter.ConvertftPayItemCaseToV1(x.ftPayItemCase));
+            converter.ConvertftReceiptCaseToV1(request);
+            foreach (var chargeItem in request.cbChargeItems)
+            {
+                converter.ConvertftChargeItemCaseToV1(chargeItem);
+            }
+            foreach (var payItem in request.cbPayItems)
+            {
+                converter.ConvertftPayItemCaseToV1(payItem);
+            }
             return request;
 
         }
@@ -25,9 +31,12 @@ namespace fiskaltrust.Interface.Tagging
         {
 
             var converter = _caseConverterFactory.CreateInstance(response.ftState);
-            response.ftState = converter.ConvertftStateToV2(response.ftState);
-            response.ftSignatures.Select(x => x.ftSignatureFormat = converter.ConvertftSignatureFormatToV2(x.ftSignatureFormat));
-            response.ftSignatures.Select(x => x.ftSignatureType = converter.ConvertftSignatureFormatToV2(x.ftSignatureType));
+            converter.ConvertftStateToV2(response);
+            foreach (var signature in response.ftSignatures)
+            {
+                converter.ConvertftSignatureFormatToV2(signature);
+                converter.ConvertftSignatureTypeToV2(signature);
+            }
             return response;
 
         }

@@ -2,6 +2,7 @@
 using fiskaltrust.Interface.Tagging.DE;
 using fiskaltrust.Interface.Tagging.Interfaces;
 using FluentAssertions;
+using fiskaltrust.ifPOS.v1;
 namespace fiskaltrust.Interface.Tagging.UnitTests.DE
 {
     public class CaseConverterDETests
@@ -14,10 +15,10 @@ namespace fiskaltrust.Interface.Tagging.UnitTests.DE
         [Fact]
         public void ConvertftReceiptCaseToV1_ShouldreturnCorrect()
         {
-            var ftReceiptCaseV2 = 4919338167972200450;
-            var result = _caseConverterDE.ConvertftReceiptCaseToV1(ftReceiptCaseV2);
+            var request = new ReceiptRequest { ftReceiptCase = 0x4445200000010002 };
+            _caseConverterDE.ConvertftReceiptCaseToV1(request);
 
-            result.Should().Be(4919338167972200465);
+            request.ftReceiptCase.Should().Be(0x4445000000010011);
         }
     }
 }

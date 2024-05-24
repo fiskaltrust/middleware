@@ -157,9 +157,9 @@ namespace fiskaltrust.Interface.Tagging.Generator
                                 """))}}
                     }
 
-                    public void class {{enumToGenerate.OnType.Name}}SetExt {
-                        {{string.Join("\n        ", enumToGenerate.Members.Select(member => $"""
-                                public static bool Set{member.name}(this {enumToGenerate.OnType.ContainingNamespace}.{enumToGenerate.OnType.Name} value) => (value.{enumToGenerate.OnField} | 0x{member.mask:X16});
+                    public static class {{enumToGenerate.OnType.Name}}SetExt {
+                        {{string.Join("\n        ", enumToGenerate.Members.Select(member => $$"""
+                                public static void Set{{member.name}}(this {{enumToGenerate.OnType.ContainingNamespace}}.{{enumToGenerate.OnType.Name}} value) { value.{{enumToGenerate.OnField}} = (value.{{enumToGenerate.OnField}} | 0x{{member.mask:X16}}); }
                                 """))}}
                     }
                 }
