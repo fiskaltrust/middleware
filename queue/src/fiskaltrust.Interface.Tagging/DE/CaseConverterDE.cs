@@ -9,7 +9,7 @@ namespace fiskaltrust.Interface.Tagging.DE
     public class CaseConverterDE : ICaseConverter
     {
         public void ConvertftChargeItemCaseToV1(ChargeItem ftChargeItemCase) => throw new NotImplementedException();
-        public void ConvertftJournalTypeToV1(JournalRequest ftJournalType) => throw new NotImplementedException()
+        public void ConvertftJournalTypeToV1(JournalRequest ftJournalType) => throw new NotImplementedException();
         public void ConvertftPayItemCaseToV1(PayItem ftPayItemCase) => throw new NotImplementedException();
         public void ConvertftReceiptCaseToV1(ReceiptRequest receiptRequest)
         {
@@ -19,7 +19,7 @@ namespace fiskaltrust.Interface.Tagging.DE
             }
             // TODO: create NotV2CaseException
 
-            if (((ulong) receiptRequest.ftReceiptCase & 0xFFFF_0000_0000_0000) != 0x4445_0000_0000_0000)
+            if (!receiptRequest.IsDE())
             {
                 // TODO: create NotDECaseException
                 throw new Exception("Not a DE receipt case.");

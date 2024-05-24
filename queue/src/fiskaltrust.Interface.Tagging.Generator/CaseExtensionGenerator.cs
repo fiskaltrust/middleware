@@ -81,7 +81,7 @@ namespace fiskaltrust.Interface.Tagging.Generator
         private static void Execute(in CasesToGenerate enumToGenerate, SourceProductionContext context)
         {
             var result = GenerateExtensionClass(enumToGenerate);
-            context.AddSource($"{enumToGenerate.Namespace}.{enumToGenerate.OnType}.{enumToGenerate.OnField}Ext.g.cs", SourceText.From(result, Encoding.UTF8));
+            context.AddSource($"{enumToGenerate.Namespace}.{enumToGenerate.OnType}{enumToGenerate.OnField}{enumToGenerate.CaseName}Ext.g.cs", SourceText.From(result, Encoding.UTF8));
         }
 
         public static CasesToGenerate? GetTypeToGenerate(GeneratorAttributeSyntaxContext context, CancellationToken ct)
@@ -182,7 +182,7 @@ namespace fiskaltrust.Interface.Tagging.Generator
             return $$"""
                 namespace {{enumToGenerate.Namespace}}.Extensions
                 {
-                    public static class {{enumToGenerate.OnType.Name}}{{enumToGenerate.OnField}}CaseExt {
+                    public static class {{enumToGenerate.OnType.Name}}{{enumToGenerate.OnField}}{{enumToGenerate.CaseName}}Ext {
                         public static long Get{{enumToGenerate.CaseName}}(this {{enumToGenerate.OnType.ContainingNamespace}}.{{enumToGenerate.OnType.Name}} value) => (value.{{enumToGenerate.OnField}} & 0x{{enumToGenerate.Mask:X}}L) >> (4 * {{enumToGenerate.Shift}});
 
                         {{string.Join("\n        ", enumToGenerate.Members.Select(member => $"""
