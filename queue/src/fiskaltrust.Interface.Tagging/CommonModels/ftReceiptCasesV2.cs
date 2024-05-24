@@ -1,4 +1,4 @@
-﻿namespace fiskaltrust.Interface.Tagging.CommonModels.V2
+﻿namespace fiskaltrust.Interface.Tagging.CommonModels
 {
     public enum ftReceiptCasesV2 : long
     {
