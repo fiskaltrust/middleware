@@ -2,21 +2,22 @@
 using fiskaltrust.ifPOS.v1;
 using V1 = fiskaltrust.Interface.Tagging.Models.V1;
 using V2 = fiskaltrust.Interface.Tagging.Models.V2;
+using fiskaltrust.Interface.Tagging.Models.Extensions;
 
 namespace fiskaltrust.Interface.Tagging.DE
 {
     public class CaseConverterDE : ICaseConverter
     {
         public void ConvertftChargeItemCaseToV1(ChargeItem ftChargeItemCase) => throw new NotImplementedException();
-        public void ConvertftJournalTypeToV1(JournalRequest ftJournalType) => throw new NotImplementedException();
+        public void ConvertftJournalTypeToV1(JournalRequest ftJournalType) => throw new NotImplementedException()
         public void ConvertftPayItemCaseToV1(PayItem ftPayItemCase) => throw new NotImplementedException();
         public void ConvertftReceiptCaseToV1(ReceiptRequest receiptRequest)
         {
-            if ((receiptRequest.ftReceiptCase & 0x0000_F000_0000_0000) != 0x0000_2000_0000_0000)
+            if (!receiptRequest.IsV2())
             {
-                // TODO: create NotV2CaseException
-                throw new Exception("Not a V2 receipt case.");
+                throw new Exception($"Not a V2 receipt case. Found V{receiptRequest.GetVersion()}.");
             }
+            // TODO: create NotV2CaseException
 
             if (((ulong) receiptRequest.ftReceiptCase & 0xFFFF_0000_0000_0000) != 0x4445_0000_0000_0000)
             {

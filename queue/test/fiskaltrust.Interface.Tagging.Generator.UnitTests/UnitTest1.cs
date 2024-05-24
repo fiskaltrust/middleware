@@ -28,6 +28,12 @@ public class Tests
                 {
                     Lel = 0x0000_0000_0004_0000,
                 }
+
+                [CaseExtensions(OnType = typeof(TestClass), OnField = nameof(TestClass.TestField)), Mask = 0x0000_0000_FFFF_0000, Shift = 4, CaseName = "TestCases"]
+                public enum TestCases : long
+                {
+                    Lel = 0x0000_0000_1234_0000,
+                }
             }
             """;
         var inputCompilation = CreateCompilation(source);

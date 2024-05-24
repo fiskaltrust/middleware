@@ -71,7 +71,7 @@ namespace fiskaltrust.Interface.Tagging.Generator
         private static void Execute(in FlagsToGenerate enumToGenerate, SourceProductionContext context)
         {
             var result = GenerateExtensionClass(enumToGenerate);
-            context.AddSource($"{enumToGenerate.Namespace}.{enumToGenerate.OnType}Ext.g.cs", SourceText.From(result, Encoding.UTF8));
+            context.AddSource($"{enumToGenerate.Namespace}.{enumToGenerate.OnType}.{enumToGenerate.OnField}Ext.g.cs", SourceText.From(result, Encoding.UTF8));
         }
 
         public static FlagsToGenerate? GetTypeToGenerate(GeneratorAttributeSyntaxContext context, CancellationToken ct)
