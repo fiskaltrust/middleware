@@ -1,0 +1,86 @@
+name: Middleware CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        solution: [ "queue", "scu-at", "scu-de", "scu-it", "scu-es" ]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: '8.x'
+
+    - name: Install .NET Framework 4.6.1
+      run: choco install netfx-4.6.1-devpack -y
+
+    - name: Install NuGet
+      run: choco install nuget.commandline -y
+
+    - name: Restore dependencies
+      run: dotnet restore ${{ matrix.solution }}/*.sln
+
+    - name: Build
+      run: dotnet build ${{ matrix.solution }}/*.sln --configuration Release --no-restore
+
+    - name: Find Unit Test Projects
+      id: unit_test_projects
+      run: echo "##[set-output name=projects::$(Get-ChildItem -Path .\\${{ matrix.solution }} -Recurse -Filter '*.UnitTest.csproj' | % { $_.FullName } -join ';')"
+
+    - name: Find Integration Test Projects
+      id: integration_test_projects
+      run: echo "##[set-output name=projects::$(Get-ChildItem -Path .\\${{ matrix.solution }} -Recurse -Filter '*.IntegrationTest.csproj' | % { $_.FullName } -join ';')"
+
+    - name: Find Acceptance Test Projects
+      id: acceptance_test_projects
+      run: echo "##[set-output name=projects::$(Get-ChildItem -Path .\\${{ matrix.solution }} -Recurse -Filter '*.AcceptanceTest.csproj' | % { $_.FullName } -join ';')"
+
+    - name: Run Unit Tests
+      if: steps.unit_test_projects.outputs.projects != ''
+      run: |
+        $projects = "${{ steps.unit_test_projects.outputs.projects }}".Split(";")
+        foreach ($project in $projects) {
+          dotnet test $project --no-build --verbosity normal
+        }
+
+    - name: Run Integration Tests
+      if: steps.integration_test_projects.outputs.projects != ''
+      run: |
+        $projects = "${{ steps.integration_test_projects.outputs.projects }}".Split(";")
+        foreach ($project in $projects) {
+          dotnet test $project --no-build --verbosity normal
+        }
+
+    - name: Run Acceptance Tests
+      if: steps.acceptance_test_projects.outputs.projects != ''
+      run: |
+        $projects = "${{ steps.acceptance_test_projects.outputs.projects }}".Split(";")
+        foreach ($project in $projects) {
+          dotnet test $project --no-build --verbosity normal
+        }
+        
+    - name: Code Signing
+      run: |
+        $dlls = Get-ChildItem -Path .\\${{ matrix.solution }} -Recurse -Filter '*.dll'
+        foreach ($dll in $dlls) {
+          & "C:\\Program Files (x86)\\Windows Kits\\10\\bin\\x64\\signtool.exe" sign /f $env:SIGNING_CERTIFICATE /p $env:SIGNING_CERT_PASSWORD /tr http://timestamp.digicert.com /td sha256 /fd sha256 $dll.FullName
+        }
+
+    - name: Publish artifacts
+      run: dotnet publish ${{ matrix.solution }}/*.sln -c Release -o ./publish
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: ${{ matrix.solution }}-build-artifacts
+        path: ./publish
