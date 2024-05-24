@@ -15,9 +15,9 @@ namespace fiskaltrust.Interface.Tagging.DE
         {
             if (!receiptRequest.IsV2())
             {
+                // TODO: create NotV2CaseException
                 throw new Exception($"Not a V2 receipt case. Found V{receiptRequest.GetVersion()}.");
             }
-            // TODO: create NotV2CaseException
 
             if (!receiptRequest.IsDE())
             {
