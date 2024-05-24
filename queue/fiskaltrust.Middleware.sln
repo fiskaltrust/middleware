@@ -139,6 +139,12 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Interface.Taggi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fiskaltrust.Interface.Tagging.UnitTests", "test\fiskaltrust.Interface.Tagging.UnitTests\fiskaltrust.Interface.Tagging.UnitTests.csproj", "{9E42B570-AEEC-498E-AC81-0AB70264229B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fiskaltrust.Interface.Tagging.Generator", "src\fiskaltrust.Interface.Tagging.Generator\fiskaltrust.Interface.Tagging.Generator.csproj", "{930A9188-4273-45C5-9506-922CE7B1E712}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fiskaltrust.Interface.Tagging.Generator.UnitTests", "test\fiskaltrust.Interface.Tagging.Generator.UnitTests\fiskaltrust.Interface.Tagging.Generator.UnitTests.csproj", "{855013AC-6255-4A3C-80C7-5140F5BD20B9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fiskaltrust.Interface.Tagging.Generator.IntegrationTests", "test\fiskaltrust.Interface.Tagging.Generator.IntegrationTests\fiskaltrust.Interface.Tagging.Generator.IntegrationTests.csproj", "{34229319-E3C0-4B57-A2D9-F1812CBF5311}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -349,6 +355,18 @@ Global
 		{9E42B570-AEEC-498E-AC81-0AB70264229B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9E42B570-AEEC-498E-AC81-0AB70264229B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9E42B570-AEEC-498E-AC81-0AB70264229B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{930A9188-4273-45C5-9506-922CE7B1E712}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{930A9188-4273-45C5-9506-922CE7B1E712}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{930A9188-4273-45C5-9506-922CE7B1E712}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{930A9188-4273-45C5-9506-922CE7B1E712}.Release|Any CPU.Build.0 = Release|Any CPU
+		{855013AC-6255-4A3C-80C7-5140F5BD20B9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{855013AC-6255-4A3C-80C7-5140F5BD20B9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{855013AC-6255-4A3C-80C7-5140F5BD20B9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{855013AC-6255-4A3C-80C7-5140F5BD20B9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{34229319-E3C0-4B57-A2D9-F1812CBF5311}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{34229319-E3C0-4B57-A2D9-F1812CBF5311}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{34229319-E3C0-4B57-A2D9-F1812CBF5311}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{34229319-E3C0-4B57-A2D9-F1812CBF5311}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -412,6 +430,9 @@ Global
 		{7F52D143-9179-4FCF-9DC7-B5F1681BD22A} = {16BF88B4-3302-49F5-A5FA-5DA96DD03F0E}
 		{FD564EEA-CEAD-47E0-BB0A-113C07F57CAA} = {08381205-3409-4468-92EB-ACA65F8D82FB}
 		{9E42B570-AEEC-498E-AC81-0AB70264229B} = {EAEEF28B-F372-48C1-8F9B-45CEB95159A2}
+		{930A9188-4273-45C5-9506-922CE7B1E712} = {08381205-3409-4468-92EB-ACA65F8D82FB}
+		{855013AC-6255-4A3C-80C7-5140F5BD20B9} = {EAEEF28B-F372-48C1-8F9B-45CEB95159A2}
+		{34229319-E3C0-4B57-A2D9-F1812CBF5311} = {EAEEF28B-F372-48C1-8F9B-45CEB95159A2}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {E8BEA609-BD83-4165-A14A-D010D2CC87AD}
