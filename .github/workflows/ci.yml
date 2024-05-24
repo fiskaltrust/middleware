@@ -9,6 +9,7 @@ on:
 jobs:
   build-and-test:
     runs-on: windows-latest
+    timeout-minutes: 60
     strategy:
       matrix:
         solution: [ "queue", "scu-at", "scu-de", "scu-it", "scu-es" ]
