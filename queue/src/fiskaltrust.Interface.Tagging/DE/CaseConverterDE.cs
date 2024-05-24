@@ -17,11 +17,11 @@ namespace fiskaltrust.Interface.Tagging.DE
         {
             //sample 
             
-            var v2Key = Enum.GetName(typeof(V2.ftReceiptCases), 0xFFFF & ftReceiptCase);
-            var v1Value = (V1.DE.ftReceiptCases) Enum.Parse(typeof(V1.DE.ftReceiptCases), v2Key);
+            var v2Key = Enum.GetName(typeof(V2.ftReceiptCases), 0xFFFF & ftReceiptCase) ?? throw new Exception("There is no matching from V2");
+            var v1Value = (V1.DE.ftReceiptCases?) Enum.Parse(typeof(V1.DE.ftReceiptCases), v2Key) ?? throw new Exception("There is no matching from V1");
 
-            var result = ((ulong)ftReceiptCase & 0xFFFFFFFFFFFF0000) | (ulong) v1Value;
-
+            var result = ((ulong) ftReceiptCase & 0xFFFFFFFFFFFF0000) | (ulong) v1Value;
+            
             //do the same for ftReceiptCaseflag
 
             return (long)result;

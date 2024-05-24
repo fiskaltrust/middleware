@@ -14,17 +14,10 @@ namespace fiskaltrust.Interface.Tagging
         }
         public JournalRequest ConvertRequestToV1(JournalRequest request)
         {
-            try
-            {
-                var converter = _caseConverterFactory.CreateInstance(request.ftJournalType);
-                request.ftJournalType = converter.ConvertftJournalTypeToV1(request.ftJournalType);
-                return request;
-            }
-            catch (Exception ex)
-            {
-                throw ex;
-            }
-            
-        } 
+            var converter = _caseConverterFactory.CreateInstance(request.ftJournalType);
+            request.ftJournalType = converter.ConvertftJournalTypeToV1(request.ftJournalType);
+            return request;
+
+        }
     }
 }
