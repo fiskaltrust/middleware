@@ -135,9 +135,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.Loca
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.Localization.QueueFR.IntegrationTest", "test\fiskaltrust.Middleware.Localization.QueueFR.IntegrationTest\fiskaltrust.Middleware.Localization.QueueFR.IntegrationTest.csproj", "{7F52D143-9179-4FCF-9DC7-B5F1681BD22A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fiskaltrust.Interface.Tagging", "src\fiskaltrust.Interface.Tagging\fiskaltrust.Interface.Tagging.csproj", "{FD564EEA-CEAD-47E0-BB0A-113C07F57CAA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Interface.Tagging", "src\fiskaltrust.Interface.Tagging\fiskaltrust.Interface.Tagging.csproj", "{FD564EEA-CEAD-47E0-BB0A-113C07F57CAA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fiskaltrust.Interface.Tagging.UnitTests", "fiskaltrust.Interface.Tagging.UnitTests\fiskaltrust.Interface.Tagging.UnitTests.csproj", "{AF297D51-2BB8-4A51-BFA7-9B3A2C8432EE}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fiskaltrust.Interface.Tagging.UnitTests", "test\fiskaltrust.Interface.Tagging.UnitTests\fiskaltrust.Interface.Tagging.UnitTests.csproj", "{9E42B570-AEEC-498E-AC81-0AB70264229B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -345,10 +345,10 @@ Global
 		{FD564EEA-CEAD-47E0-BB0A-113C07F57CAA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FD564EEA-CEAD-47E0-BB0A-113C07F57CAA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FD564EEA-CEAD-47E0-BB0A-113C07F57CAA}.Release|Any CPU.Build.0 = Release|Any CPU
-		{AF297D51-2BB8-4A51-BFA7-9B3A2C8432EE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{AF297D51-2BB8-4A51-BFA7-9B3A2C8432EE}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{AF297D51-2BB8-4A51-BFA7-9B3A2C8432EE}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{AF297D51-2BB8-4A51-BFA7-9B3A2C8432EE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9E42B570-AEEC-498E-AC81-0AB70264229B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9E42B570-AEEC-498E-AC81-0AB70264229B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9E42B570-AEEC-498E-AC81-0AB70264229B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9E42B570-AEEC-498E-AC81-0AB70264229B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -411,7 +411,7 @@ Global
 		{04B32BB6-2E1D-400F-B7B2-2638483B0825} = {16BF88B4-3302-49F5-A5FA-5DA96DD03F0E}
 		{7F52D143-9179-4FCF-9DC7-B5F1681BD22A} = {16BF88B4-3302-49F5-A5FA-5DA96DD03F0E}
 		{FD564EEA-CEAD-47E0-BB0A-113C07F57CAA} = {08381205-3409-4468-92EB-ACA65F8D82FB}
-		{AF297D51-2BB8-4A51-BFA7-9B3A2C8432EE} = {EAEEF28B-F372-48C1-8F9B-45CEB95159A2}
+		{9E42B570-AEEC-498E-AC81-0AB70264229B} = {EAEEF28B-F372-48C1-8F9B-45CEB95159A2}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {E8BEA609-BD83-4165-A14A-D010D2CC87AD}

@@ -13,7 +13,7 @@ namespace fiskaltrust.Interface.Tagging.UnitTests.DE
         }
         [Fact]
         public void ConvertftReceiptCaseToV1_ShouldreturnCorrect()
-         {
+        {
             var ftReceiptCaseV2 = 4919338167972200450;
             var result = _caseConverterDE.ConvertftReceiptCaseToV1(ftReceiptCaseV2);
 
