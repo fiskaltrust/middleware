@@ -16,9 +16,11 @@ namespace fiskaltrust.Interface.Tagging.DE
         long ICaseConverter.ConvertftReceiptCaseToV1(long ftReceiptCase)
         {
             //sample 
-            var name = Enum.GetName(typeof(V2.ftReceiptCases), 0xFFFF & ftReceiptCase);
-            var ms = (V1.DE.ftReceiptCases) Enum.Parse(typeof(V1.DE.ftReceiptCases), name);
-            var result = ((ulong)ftReceiptCase & 0xFFFFFFFFFFFF0000) | (ulong)ms;
+            
+            var v2Key = Enum.GetName(typeof(V2.ftReceiptCases), 0xFFFF & ftReceiptCase);
+            var v1Value = (V1.DE.ftReceiptCases) Enum.Parse(typeof(V1.DE.ftReceiptCases), v2Key);
+
+            var result = ((ulong)ftReceiptCase & 0xFFFFFFFFFFFF0000) | (ulong) v1Value;
 
             //do the same for ftReceiptCaseflag
 

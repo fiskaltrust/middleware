@@ -18,7 +18,7 @@ namespace fiskaltrust.Interface.Tagging
             {
                 var converter = _caseConverterFactory.CreateInstance(request.ftReceiptCase);
                 converter.ConvertftReceiptCaseToV1(request.ftReceiptCase);
-                request.cbChargeItems.Select(x => x.ftChargeItemCase=converter.ConvertftChargeItemCaseToV1(x.ftChargeItemCase));
+                request.cbChargeItems.Select(x => x.ftChargeItemCase = converter.ConvertftChargeItemCaseToV1(x.ftChargeItemCase));
                 request.cbPayItems.Select(x => x.ftPayItemCase = converter.ConvertftPayItemCaseToV1(x.ftPayItemCase));
                 return request;
             }
@@ -32,8 +32,8 @@ namespace fiskaltrust.Interface.Tagging
             try
             {
                 var converter = _caseConverterFactory.CreateInstance(response.ftState);
-                response.ftState=converter.ConvertftStateToV2(response.ftState);
-                response.ftSignatures.Select(x => x.ftSignatureFormat=converter.ConvertftSignatureFormatToV2(x.ftSignatureFormat));
+                response.ftState = converter.ConvertftStateToV2(response.ftState);
+                response.ftSignatures.Select(x => x.ftSignatureFormat = converter.ConvertftSignatureFormatToV2(x.ftSignatureFormat));
                 response.ftSignatures.Select(x => x.ftSignatureType = converter.ConvertftSignatureFormatToV2(x.ftSignatureType));
                 return response;
             }
