@@ -71,7 +71,7 @@ namespace fiskaltrust.Interface.Tagging.Generator
         private static void Execute(in EnumToGenerate enumToGenerate, SourceProductionContext context)
         {
             var result = GenerateExtensionClass(enumToGenerate);
-            context.AddSource(enumToGenerate.OnType + "Ext.g.cs", SourceText.From(result, Encoding.UTF8));
+            context.AddSource($"{enumToGenerate.Namespace}.{enumToGenerate.OnType}Ext.g.cs", SourceText.From(result, Encoding.UTF8));
         }
 
         public static EnumToGenerate? GetTypeToGenerate(GeneratorAttributeSyntaxContext context, CancellationToken ct)
@@ -130,7 +130,7 @@ namespace fiskaltrust.Interface.Tagging.Generator
         {
             var enumMembers = enumSymbol.GetMembers();
             var members = new List<(string, long)>(enumMembers.Length);
-            var nameSpace = enumSymbol.ContainingNamespace.IsGlobalNamespace ? string.Empty : enumSymbol.ContainingNamespace.ToString();
+            var nameSpace = enumSymbol.ContainingNamespace.IsGlobalNamespace ? string.Empty : enumSymbol.ContainingNamespace.ToString() ?? string.Empty;
 
             foreach (var member in enumMembers)
             {
@@ -151,9 +151,15 @@ namespace fiskaltrust.Interface.Tagging.Generator
             return $$"""
                 namespace {{enumToGenerate.Namespace}}.Extensions
                 {
-                    public static class {{enumToGenerate.OnType.Name}}Ext {
-                        {{string.Join("\n", enumToGenerate.Members.Select(member => $"""
-                                public static bool Is{member.name}(this {enumToGenerate.OnType.ContainingNamespace}.{enumToGenerate.OnType.Name} self) => (self.{enumToGenerate.OnField} & 0x{member.mask:X16}) > 0;
+                    public static class {{enumToGenerate.OnType.Name}}IsExt {
+                        {{string.Join("\n        ", enumToGenerate.Members.Select(member => $"""
+                                public static bool Is{member.name}(this {enumToGenerate.OnType.ContainingNamespace}.{enumToGenerate.OnType.Name} value) => (value.{enumToGenerate.OnField} & 0x{member.mask:X16}) > 0;
+                                """))}}
+                    }
+
+                    public void class {{enumToGenerate.OnType.Name}}SetExt {
+                        {{string.Join("\n        ", enumToGenerate.Members.Select(member => $"""
+                                public static bool Set{member.name}(this {enumToGenerate.OnType.ContainingNamespace}.{enumToGenerate.OnType.Name} value) => (value.{enumToGenerate.OnField} | 0x{member.mask:X16});
                                 """))}}
                     }
                 }
