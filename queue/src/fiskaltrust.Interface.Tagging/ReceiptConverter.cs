@@ -26,7 +26,6 @@ namespace fiskaltrust.Interface.Tagging
             {
                 throw ex;
             }
-            
         }
         public ReceiptResponse ConvertResponseToV2(ReceiptResponse response)
         {
