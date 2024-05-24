@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -12,26 +13,28 @@ using Microsoft.CodeAnalysis.Text;
 
 namespace fiskaltrust.Interface.Tagging.Generator
 {
-    public readonly record struct FlagsToGenerate
+    public readonly record struct CasesToGenerate
     {
         public readonly INamedTypeSymbol OnType;
         public readonly string OnField;
         public readonly string Namespace;
+        public readonly long? Mask;
         public readonly List<(string name, long mask)> Members;
 
-        public FlagsToGenerate(string nameSpace, INamedTypeSymbol onType, string onField, List<(string name, long mask)> members)
+        public CasesToGenerate(string nameSpace, INamedTypeSymbol onType, string onField, List<(string name, long mask)> members, long? mask)
         {
             OnType = onType;
             OnField = onField;
             Members = members;
             Namespace = nameSpace;
+            Mask = mask;
         }
     }
 
     [Generator]
-    public class FlagExtensionGenerator : IIncrementalGenerator
+    public class CaseExtensionGenerator : IIncrementalGenerator
     {
-        private const string ATTRIBUTE_NAME = "FlagExtensionsAttribute";
+        private const string ATTRIBUTE_NAME = "CaseExtensionsAttribute";
         private const string ATTRIBUTE_NAMESPACE = "fiskaltrust.Interface.Tagging.Generator";
         private const string ATTRIBUTE_FULL_NAME = $"{ATTRIBUTE_NAMESPACE}.{ATTRIBUTE_NAME}";
 
@@ -48,6 +51,7 @@ namespace fiskaltrust.Interface.Tagging.Generator
                     }
                     public global::System.Type OnType { get; set; }
                     public string OnField { get; set; }
+                    public long Mask { get; set; }
                 }
             }
             """;
@@ -68,13 +72,13 @@ namespace fiskaltrust.Interface.Tagging.Generator
             context.RegisterSourceOutput(enumsToGenerate, static (spc, enumToGenerate) => Execute(in enumToGenerate, spc));
         }
 
-        private static void Execute(in FlagsToGenerate enumToGenerate, SourceProductionContext context)
+        private static void Execute(in CasesToGenerate enumToGenerate, SourceProductionContext context)
         {
             var result = GenerateExtensionClass(enumToGenerate);
             context.AddSource($"{enumToGenerate.Namespace}.{enumToGenerate.OnType}Ext.g.cs", SourceText.From(result, Encoding.UTF8));
         }
 
-        public static FlagsToGenerate? GetTypeToGenerate(GeneratorAttributeSyntaxContext context, CancellationToken ct)
+        public static CasesToGenerate? GetTypeToGenerate(GeneratorAttributeSyntaxContext context, CancellationToken ct)
         {
             if (context.TargetSymbol is not INamedTypeSymbol enumSymbol)
             {
@@ -86,6 +90,7 @@ namespace fiskaltrust.Interface.Tagging.Generator
 
             INamedTypeSymbol? onType = null;
             string? onField = null;
+            long? mask = null;
 
             foreach (var attributeData in enumSymbol.GetAttributes())
             {
@@ -102,6 +107,12 @@ namespace fiskaltrust.Interface.Tagging.Generator
                     {
                         onType = ot;
                         continue;
+                    }
+
+                    if (namedArgument.Key == "Mask"
+                        && (long?) namedArgument.Value.Value is { } m)
+                    {
+                        mask = m;
                     }
 
                     if (namedArgument.Key == "OnField"
@@ -122,11 +133,11 @@ namespace fiskaltrust.Interface.Tagging.Generator
                 throw new InvalidOperationException($"Missing required arguments OnField on {enumSymbol.Name}");
             }
 
-            return TryExtractEnumSymbol(enumSymbol, onType, onField);
+            return TryExtractEnumSymbol(enumSymbol, onType, onField, mask);
         }
 
 
-        private static FlagsToGenerate? TryExtractEnumSymbol(INamedTypeSymbol enumSymbol, INamedTypeSymbol onType, string onField)
+        private static CasesToGenerate? TryExtractEnumSymbol(INamedTypeSymbol enumSymbol, INamedTypeSymbol onType, string onField, long? mask)
         {
             var enumMembers = enumSymbol.GetMembers();
             var members = new List<(string, long)>(enumMembers.Length);
@@ -143,21 +154,21 @@ namespace fiskaltrust.Interface.Tagging.Generator
                 members.Add((member.Name, (long) field.ConstantValue));
             }
 
-            return new FlagsToGenerate(nameSpace, onType, onField, members);
+            return new CasesToGenerate(nameSpace, onType, onField, members, mask);
         }
 
-        public static string GenerateExtensionClass(FlagsToGenerate enumToGenerate)
+        public static string GenerateExtensionClass(CasesToGenerate enumToGenerate)
         {
             return $$"""
                 namespace {{enumToGenerate.Namespace}}.Extensions
                 {
-                    public static class {{enumToGenerate.OnType.Name}}FlagExt {
+                    public static class {{enumToGenerate.OnType.Name}}CaseExt {
                         {{string.Join("\n        ", enumToGenerate.Members.Select(member => $"""
-                                public static bool Is{member.name}(this {enumToGenerate.OnType.ContainingNamespace}.{enumToGenerate.OnType.Name} value) => (value.{enumToGenerate.OnField} & 0x{member.mask:X16}) > 0;
+                                public static bool Is{member.name}(this {enumToGenerate.OnType.ContainingNamespace}.{enumToGenerate.OnType.Name} value) => (value.{enumToGenerate.OnField} & {enumToGenerate.Mask}) == 0x{member.mask:X16};
                                 """))}}
 
                         {{string.Join("\n        ", enumToGenerate.Members.Select(member => $$"""
-                                public static void Set{{member.name}}(this {{enumToGenerate.OnType.ContainingNamespace}}.{{enumToGenerate.OnType.Name}} value) { value.{{enumToGenerate.OnField}} = (value.{{enumToGenerate.OnField}} | 0x{{member.mask:X16}}); }
+                                public static void Set{{member.name}}(this {{enumToGenerate.OnType.ContainingNamespace}}.{{enumToGenerate.OnType.Name}} value) { value.{{enumToGenerate.OnField}} = ((~{{enumToGenerate.Mask}} & value.{{enumToGenerate.OnField}}) | 0x{{member.mask:X16}}); }
                                 """))}}
                     }
                 }
