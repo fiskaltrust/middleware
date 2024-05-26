@@ -72,18 +72,19 @@ jobs:
           dotnet test $project --no-build --verbosity normal
         }
         
-    - name: Filter files with prefix
+    - name: Filter files for codesigning
+      id: filter_files_for_codesigning
       run: |
         $files = Get-ChildItem -Path .\\${{ matrix.solution }} -Filter "fiskaltrust.*.dll" -Recurse | Select-Object -ExpandProperty FullName
         $filesList = $files -join ";"
-        Write-Output "::set-env name=FILTERED_FILES::$filesList"
+        Write-Output "::set-output name=filtered_files::$filesList"
                   
     - name: Sign binaries
       uses: dlemstra/code-sign-action@v1
       with:
         certificate: '${{ secrets.SIGNING_CERTIFICATE }}'
         password: '${{ secrets.SIGNING_CERT_PASSWORD }}'
-        files: ${{ env.FILTERED_FILES }}
+        files: ${{ steps.filter_files_for_codesigning.outputs.filtered_files }}
 
     - name: Publish artifacts
       run: dotnet publish ${{ matrix.solution }}/*.sln -c Release -o ./publish
