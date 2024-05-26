@@ -79,6 +79,19 @@ jobs:
           & "C:\\Program Files (x86)\\Windows Kits\\10\\bin\\x64\\signtool.exe" sign /f $env:SIGNING_CERTIFICATE /p $env:SIGNING_CERT_PASSWORD /tr http://timestamp.digicert.com /td sha256 /fd sha256 $dll.FullName
         }
 
+    - name: Filter files with prefix
+      run: |
+        $files = Get-ChildItem -Path .\\${{ matrix.solution }} -Filter "fiskaltrust.*.dll" -Recurse | Select-Object -ExpandProperty FullName
+        $filesList = $files -join ";"
+        Write-Output "::set-env name=FILTERED_FILES::$filesList"
+                  
+    - name: Sign binaries
+      uses: dlemstra/code-sign-action@v1
+      with:
+        certificate: '${{ secrets.SIGNING_CERTIFICATE }}'
+        password: '${{ secrets.SIGNING_CERT_PASSWORD }}'
+        files: ${{ env.FILTERED_FILES }}
+
     - name: Publish artifacts
       run: dotnet publish ${{ matrix.solution }}/*.sln -c Release -o ./publish
     - name: Upload build artifacts
