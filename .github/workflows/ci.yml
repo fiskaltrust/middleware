@@ -37,15 +37,16 @@ jobs:
 
     - name: Find Unit Test Projects
       id: unit_test_projects
-      run: echo "##[set-output name=projects::$(Get-ChildItem -Path .\\${{ matrix.solution }} -Recurse -Filter '*.UnitTest.csproj' | % { $_.FullName } -join ';')"
+      run: echo "##[set-output name=projects::$((Get-ChildItem -Path .\${{ matrix.solution }} -Recurse -Filter '*.UnitTest.csproj' | % { $_.FullName }) -join ';')"
 
     - name: Find Integration Test Projects
       id: integration_test_projects
-      run: echo "##[set-output name=projects::$(Get-ChildItem -Path .\\${{ matrix.solution }} -Recurse -Filter '*.IntegrationTest.csproj' | % { $_.FullName } -join ';')"
+      run: echo "##[set-output name=projects::$((Get-ChildItem -Path .\${{ matrix.solution }} -Recurse -Filter '*.IntegrationTest.csproj' | % { $_.FullName }) -join ';')"
 
     - name: Find Acceptance Test Projects
       id: acceptance_test_projects
-      run: echo "##[set-output name=projects::$(Get-ChildItem -Path .\\${{ matrix.solution }} -Recurse -Filter '*.AcceptanceTest.csproj' | % { $_.FullName } -join ';')"
+      
+      run: echo "##[set-output name=projects::$((Get-ChildItem -Path .\${{ matrix.solution }} -Recurse -Filter '*.AcceptanceTest.csproj' | % { $_.FullName }) -join ';')"
 
     - name: Run Unit Tests
       if: steps.unit_test_projects.outputs.projects != ''
