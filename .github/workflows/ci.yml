@@ -76,7 +76,7 @@ jobs:
       id: filter_files_for_codesigning
       run: |
         $files = Get-ChildItem -Path .\\${{ matrix.solution }} -Filter "fiskaltrust.*.dll" -Recurse | Select-Object -ExpandProperty FullName
-        $filesList = $files -join ";"
+        $filesList = $files -join "`n"
         Write-Output "::set-output name=filtered_files::$filesList"
                   
     - name: Sign binaries
