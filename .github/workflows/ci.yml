@@ -30,10 +30,10 @@ jobs:
       run: choco install nuget.commandline -y
 
     - name: Restore dependencies
-      run: dotnet restore ${{ matrix.solution }}/*.sln
+      run: dotnet restore (Get-ChildItem -Path ${{ matrix.solution }} -Filter *.sln).FullName
 
     - name: Build
-      run: dotnet build ${{ matrix.solution }}/*.sln --configuration Release --no-restore
+      run: dotnet build (Get-ChildItem -Path ${{ matrix.solution }} -Filter *.sln).FullName --configuration Release --no-restore
 
     - name: Find Unit Test Projects
       id: unit_test_projects
