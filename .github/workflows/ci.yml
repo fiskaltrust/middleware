@@ -72,13 +72,6 @@ jobs:
           dotnet test $project --no-build --verbosity normal
         }
         
-    - name: Code Signing
-      run: |
-        $dlls = Get-ChildItem -Path .\\${{ matrix.solution }} -Recurse -Filter '*.dll'
-        foreach ($dll in $dlls) {
-          & "C:\\Program Files (x86)\\Windows Kits\\10\\bin\\x64\\signtool.exe" sign /f $env:SIGNING_CERTIFICATE /p $env:SIGNING_CERT_PASSWORD /tr http://timestamp.digicert.com /td sha256 /fd sha256 $dll.FullName
-        }
-
     - name: Filter files with prefix
       run: |
         $files = Get-ChildItem -Path .\\${{ matrix.solution }} -Filter "fiskaltrust.*.dll" -Recurse | Select-Object -ExpandProperty FullName
