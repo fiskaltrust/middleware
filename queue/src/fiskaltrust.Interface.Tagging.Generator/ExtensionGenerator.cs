@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -68,28 +69,32 @@ public abstract class ExtensionGenerator<F, T> : IIncrementalGenerator where F :
             factory.AddProperties(attributeData.NamedArguments);
         }
 
-        var (nameSpace, members) = TryExtractEnumSymbol(enumSymbol);
-        return factory.Create(nameSpace, members);
+        var (nameSpace, name, members) = TryExtractEnumSymbol(enumSymbol);
+        return factory.Create(nameSpace, name, members);
     }
 
-    private static (string, List<(string, long)>) TryExtractEnumSymbol(INamedTypeSymbol enumSymbol)
+    private static (string, string, List<string>) TryExtractEnumSymbol(INamedTypeSymbol enumSymbol)
     {
         var enumMembers = enumSymbol.GetMembers();
-        var members = new List<(string, long)>(enumMembers.Length);
+        var members = new List<string>(enumMembers.Length);
         var nameSpace = enumSymbol.ContainingNamespace.IsGlobalNamespace ? string.Empty : enumSymbol.ContainingNamespace.ToString() ?? string.Empty;
-
+        var name = enumSymbol.Name;
         foreach (var member in enumMembers)
         {
             if (member is not IFieldSymbol field
                 || field.ConstantValue is null)
             {
+                if (member.Kind == SymbolKind.Field)
+                {
+                    throw new InvalidOperationException($"Enum member {member.Name} must have a constant value");
+                }
                 continue;
             }
 
-            members.Add((member.Name, (long) field.ConstantValue));
+            members.Add(member.Name);
         }
 
-        return new(nameSpace, members);
+        return new(nameSpace, name, members);
     }
 
     internal abstract string GenerateExtensionClass(T enumToGenerate);

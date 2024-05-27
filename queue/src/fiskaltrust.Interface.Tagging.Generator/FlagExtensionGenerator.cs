@@ -11,14 +11,16 @@ public readonly record struct FlagsToGenerate : IToGenerate
     public readonly INamedTypeSymbol OnType;
     public readonly string OnField;
     public readonly string Namespace;
-    public readonly List<(string name, long mask)> Members;
+    public readonly string Name;
+    public readonly List<string> Members;
 
-    public FlagsToGenerate(string nameSpace, INamedTypeSymbol onType, string onField, List<(string name, long mask)> members)
+    public FlagsToGenerate(string nameSpace, string name, INamedTypeSymbol onType, string onField, List<string> members)
     {
         OnType = onType;
         OnField = onField;
         Members = members;
         Namespace = nameSpace;
+        Name = name;
     }
 
     public string GetSourceFileName() => $"{Namespace}.{OnType}.{OnField}FlagExt.g.cs";
@@ -47,11 +49,11 @@ public class FlagsToGenerateFactory : IToGenerateFactory<FlagsToGenerate>
         }
     }
 
-    public FlagsToGenerate Create(string nameSpace, List<(string, long)> members)
+    public FlagsToGenerate Create(string nameSpace, string name, List<string> members)
     {
         var onType = (INamedTypeSymbol) Properties["OnType"];
         var onField = (string) Properties["OnField"];
-        return new FlagsToGenerate(nameSpace, onType, onField, members);
+        return new FlagsToGenerate(nameSpace, name, onType, onField, members);
     }
 }
 
@@ -88,11 +90,11 @@ public class FlagExtensionGenerator : ExtensionGenerator<FlagsToGenerateFactory,
                 {
                     public static class {{enumToGenerate.OnType.Name}}FlagExt {
                         {{string.Join("\n        ", enumToGenerate.Members.Select(member => $"""
-                                public static bool Is{member.name}(this {enumToGenerate.OnType.ContainingNamespace}.{enumToGenerate.OnType.Name} value) => (value.{enumToGenerate.OnField} & 0x{member.mask:X16}) > 0;
+                                public static bool Is{member}(this {enumToGenerate.OnType.ContainingNamespace}.{enumToGenerate.OnType.Name} value) => (value.{enumToGenerate.OnField} & ((long)global::{enumToGenerate.Namespace}.{enumToGenerate.Name}.{member})) > 0;
                                 """))}}
 
                         {{string.Join("\n        ", enumToGenerate.Members.Select(member => $$"""
-                                public static void Set{{member.name}}(this {{enumToGenerate.OnType.ContainingNamespace}}.{{enumToGenerate.OnType.Name}} value) { value.{{enumToGenerate.OnField}} = (value.{{enumToGenerate.OnField}} | 0x{{member.mask:X16}}); }
+                                public static void Set{{member}}(this {{enumToGenerate.OnType.ContainingNamespace}}.{{enumToGenerate.OnType.Name}} value) { value.{{enumToGenerate.OnField}} = (value.{{enumToGenerate.OnField}} | ((long)global::{{enumToGenerate.Namespace}}.{{enumToGenerate.Name}}.{{member}})); }
                                 """))}}
                     }
                 }

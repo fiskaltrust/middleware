@@ -12,7 +12,7 @@ namespace fiskaltrust.Interface.Tagging.Generator
 
     public interface IToGenerateFactory<T> where T : IToGenerate
     {
-        public T Create(string nameSpace, List<(string, long)> members);
+        public T Create(string nameSpace, string name, List<string> members);
         public void AddProperties(System.Collections.Immutable.ImmutableArray<KeyValuePair<string, TypedConstant>> namedArguments);
     }
 }
