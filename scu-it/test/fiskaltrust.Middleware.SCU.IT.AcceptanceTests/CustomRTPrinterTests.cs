@@ -6,7 +6,7 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
 {
     public class CustomRTPrinterTests : ITSSCDTests
     {
-        private static readonly Uri _serverUri = new Uri("http://10.3.16.11");
+        private static readonly Uri _serverUri = new Uri("http://10.3.16.11/xml/printer.htm");
         private readonly CustomRTPrinterConfiguration _config = new CustomRTPrinterConfiguration
         {
             DeviceUrl = _serverUri.ToString(),
