@@ -96,8 +96,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
 
             if (request.ReceiptRequest.IsZeroReceipt())
             {
-                (var signatures, var stateData) = await PerformZeroReceiptOperationAsync();
-                return ProcessResponseHelpers.CreateResponse(request.ReceiptResponse, stateData, signatures);
+                return await PerformZeroReceiptOperationAsync(request.ReceiptRequest, request.ReceiptResponse);
             }
 
             if (request.ReceiptRequest.IsVoid())
@@ -594,16 +593,32 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         }
     }
 
-    private async Task<(List<SignaturItem> signaturItems, string ftStateData)> PerformZeroReceiptOperationAsync()
+    private async Task<ProcessResponse> PerformZeroReceiptOperationAsync(ReceiptRequest request, ReceiptResponse receiptResponse)
     {
         await ResetPrinter();
         var result = await QueryPrinterStatusAsync();
         var signatures = SignatureFactory.CreateZeroReceiptSignatures().ToList();
+        if (request.IsXReportZeroReceipt())
+        {
+            var fiscalReport = new FiscalReport
+            {
+                XReport = new XReport()
+            };
+            var response = await SendRequestAsync(SoapSerializer.Serialize(fiscalReport));
+            using var responseContent = await response.Content.ReadAsStreamAsync();
+            var reportResponse = SoapSerializer.DeserializeToSoapEnvelope<ReportResponse>(responseContent);
+            if (!result?.Success ?? false)
+            {
+                var errorInfo = GetErrorInfo(result?.Code, result?.Status, null);
+                await ResetPrinter();
+                receiptResponse.SetReceiptResponseErrored(errorInfo.Info);
+            }
+        }
         var stateData = JsonConvert.SerializeObject(new
         {
             PrinterStatus = result
         });
-        return (signatures, stateData);
+        return ProcessResponseHelpers.CreateResponse(receiptResponse, stateData, signatures);
     }
 
     private async Task<HttpResponseMessage> LoginAsync()

@@ -22,7 +22,14 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
         public static ReceiptRequest GetZeroReceipt()
         {
             var current_moment = DateTime.UtcNow.ToString("o");
-            var receipt = File.ReadAllText(Path.Combine("ReceiptRequests", "0x2011_ZeroReceipt.json")).Replace("{{current_moment}}", current_moment);
+            var receipt = File.ReadAllText(Path.Combine("ReceiptRequests", "0x2000_ZeroReceipt.json")).Replace("{{current_moment}}", current_moment);
+            return JsonConvert.DeserializeObject<ReceiptRequest>(receipt);
+        }
+
+        public static ReceiptRequest GetZeroReceipt_LocalXReportFlag()
+        {
+            var current_moment = DateTime.UtcNow.ToString("o");
+            var receipt = File.ReadAllText(Path.Combine("ReceiptRequests", "0x2000_ZeroReceipt_XReportFlag.json")).Replace("{{current_moment}}", current_moment);
             return JsonConvert.DeserializeObject<ReceiptRequest>(receipt);
         }
 
