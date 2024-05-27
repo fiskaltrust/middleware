@@ -2,41 +2,66 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Text;
-using System.Threading;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Text;
 
+namespace fiskaltrust.Interface.Tagging.Generator;
 
-
-namespace fiskaltrust.Interface.Tagging.Generator
+public readonly record struct FlagsToGenerate : IToGenerate
 {
-    public readonly record struct FlagsToGenerate
-    {
-        public readonly INamedTypeSymbol OnType;
-        public readonly string OnField;
-        public readonly string Namespace;
-        public readonly List<(string name, long mask)> Members;
+    public readonly INamedTypeSymbol OnType;
+    public readonly string OnField;
+    public readonly string Namespace;
+    public readonly List<(string name, long mask)> Members;
 
-        public FlagsToGenerate(string nameSpace, INamedTypeSymbol onType, string onField, List<(string name, long mask)> members)
+    public FlagsToGenerate(string nameSpace, INamedTypeSymbol onType, string onField, List<(string name, long mask)> members)
+    {
+        OnType = onType;
+        OnField = onField;
+        Members = members;
+        Namespace = nameSpace;
+    }
+
+    public string GetSourceFileName() => $"{Namespace}.{OnType}.{OnField}FlagExt.g.cs";
+}
+
+public class FlagsToGenerateFactory : IToGenerateFactory<FlagsToGenerate>
+{
+    private Dictionary<string, object> Properties { get; set; } = new();
+
+    public void AddProperties(ImmutableArray<KeyValuePair<string, TypedConstant>> namedArguments)
+    {
+        foreach (var namedArgument in namedArguments)
         {
-            OnType = onType;
-            OnField = onField;
-            Members = members;
-            Namespace = nameSpace;
+            if (namedArgument.Key == "OnType"
+                                && ((INamedTypeSymbol?) namedArgument.Value.Value) is { } ot)
+            {
+                Properties.Add("OnType", ot);
+                continue;
+            }
+
+            if (namedArgument.Key == "OnField"
+                && namedArgument.Value.Value?.ToString() is { } of)
+            {
+                Properties.Add("OnField", of);
+            }
         }
     }
 
-    [Generator]
-    public class FlagExtensionGenerator : IIncrementalGenerator
+    public FlagsToGenerate Create(string nameSpace, List<(string, long)> members)
     {
-        private const string ATTRIBUTE_NAME = "FlagExtensionsAttribute";
-        private const string ATTRIBUTE_NAMESPACE = "fiskaltrust.Interface.Tagging.Generator";
-        private const string ATTRIBUTE_FULL_NAME = $"{ATTRIBUTE_NAMESPACE}.{ATTRIBUTE_NAME}";
+        var onType = (INamedTypeSymbol) Properties["OnType"];
+        var onField = (string) Properties["OnField"];
+        return new FlagsToGenerate(nameSpace, onType, onField, members);
+    }
+}
 
+[Generator]
+public class FlagExtensionGenerator : ExtensionGenerator<FlagsToGenerateFactory, FlagsToGenerate>
+{
+    private const string ATTRIBUTE_NAME = "FlagExtensionsAttribute";
+    private const string ATTRIBUTE_NAMESPACE = "fiskaltrust.Interface.Tagging.Generator";
 
-        private const string _ATTRIBUTE_TEXT = $$"""
+    private const string _ATTRIBUTE_TEXT = $$"""
             namespace {{ATTRIBUTE_NAMESPACE}}
             {
                 [global::System.AttributeUsage(global::System.AttributeTargets.Enum, Inherited = false, AllowMultiple = false)]
@@ -52,103 +77,13 @@ namespace fiskaltrust.Interface.Tagging.Generator
             }
             """;
 
+    public FlagExtensionGenerator() : base(ATTRIBUTE_NAME, ATTRIBUTE_NAMESPACE, _ATTRIBUTE_TEXT)
+    {
+    }
 
-        public void Initialize(IncrementalGeneratorInitializationContext context)
-        {
-            context.RegisterPostInitializationOutput((ctx) => ctx.AddSource("FlagExtensionsAttribute.g.cs", _ATTRIBUTE_TEXT));
-
-            var enumsToGenerate = context.SyntaxProvider
-                .ForAttributeWithMetadataName(
-                    ATTRIBUTE_FULL_NAME,
-                    predicate: (node, _) => node is EnumDeclarationSyntax,
-                    transform: GetTypeToGenerate)
-                .Where(static m => m is not null)
-                .Select(static (m, _) => m!.Value);
-
-            context.RegisterSourceOutput(enumsToGenerate, static (spc, enumToGenerate) => Execute(in enumToGenerate, spc));
-        }
-
-        private static void Execute(in FlagsToGenerate enumToGenerate, SourceProductionContext context)
-        {
-            var result = GenerateExtensionClass(enumToGenerate);
-            context.AddSource($"{enumToGenerate.Namespace}.{enumToGenerate.OnType}.{enumToGenerate.OnField}Ext.g.cs", SourceText.From(result, Encoding.UTF8));
-        }
-
-        public static FlagsToGenerate? GetTypeToGenerate(GeneratorAttributeSyntaxContext context, CancellationToken ct)
-        {
-            if (context.TargetSymbol is not INamedTypeSymbol enumSymbol)
-            {
-                // nothing to do if this type isn't available
-                return null;
-            }
-
-            ct.ThrowIfCancellationRequested();
-
-            INamedTypeSymbol? onType = null;
-            string? onField = null;
-
-            foreach (var attributeData in enumSymbol.GetAttributes())
-            {
-                if (attributeData.AttributeClass?.Name != ATTRIBUTE_NAME ||
-                    attributeData.AttributeClass.ToDisplayString() != ATTRIBUTE_FULL_NAME)
-                {
-                    continue;
-                }
-
-                foreach (var namedArgument in attributeData.NamedArguments)
-                {
-                    if (namedArgument.Key == "OnType"
-                        && ((INamedTypeSymbol?) namedArgument.Value.Value) is { } ot)
-                    {
-                        onType = ot;
-                        continue;
-                    }
-
-                    if (namedArgument.Key == "OnField"
-                        && namedArgument.Value.Value?.ToString() is { } of)
-                    {
-                        onField = of;
-                    }
-                }
-            }
-
-            if (onType is null)
-            {
-                throw new InvalidOperationException($"Missing required arguments OnType on {enumSymbol.Name}");
-            }
-
-            if (onField is null)
-            {
-                throw new InvalidOperationException($"Missing required arguments OnField on {enumSymbol.Name}");
-            }
-
-            return TryExtractEnumSymbol(enumSymbol, onType, onField);
-        }
-
-
-        private static FlagsToGenerate? TryExtractEnumSymbol(INamedTypeSymbol enumSymbol, INamedTypeSymbol onType, string onField)
-        {
-            var enumMembers = enumSymbol.GetMembers();
-            var members = new List<(string, long)>(enumMembers.Length);
-            var nameSpace = enumSymbol.ContainingNamespace.IsGlobalNamespace ? string.Empty : enumSymbol.ContainingNamespace.ToString() ?? string.Empty;
-
-            foreach (var member in enumMembers)
-            {
-                if (member is not IFieldSymbol field
-                    || field.ConstantValue is null)
-                {
-                    continue;
-                }
-
-                members.Add((member.Name, (long) field.ConstantValue));
-            }
-
-            return new FlagsToGenerate(nameSpace, onType, onField, members);
-        }
-
-        public static string GenerateExtensionClass(FlagsToGenerate enumToGenerate)
-        {
-            return $$"""
+    internal override string GenerateExtensionClass(FlagsToGenerate enumToGenerate)
+    {
+        return $$"""
                 namespace {{enumToGenerate.Namespace}}.Extensions
                 {
                     public static class {{enumToGenerate.OnType.Name}}FlagExt {
@@ -162,7 +97,6 @@ namespace fiskaltrust.Interface.Tagging.Generator
                     }
                 }
                 """;
-        }
-
     }
+
 }
