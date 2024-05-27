@@ -473,6 +473,42 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
         }
 
         [Fact]
+        public async Task ProcessPosReceipt_0x4954_2000_0000_0001_Cash_WithNegativeAmount()
+        {
+            var itsscd = GetSUT();
+            var result = await itsscd.ProcessReceiptAsync(new ProcessRequest
+            {
+                ReceiptRequest = ReceiptExamples.Cash_WithNegativeAmount(),
+                ReceiptResponse = _receiptResponse
+            });
+
+            using var scope = new AssertionScope();
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTSerialNumber));
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTZNumber));
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentNumber));
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentMoment));
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentType));
+        }
+
+        [Fact]
+        public async Task ProcessPosReceipt_0x4954_2000_0000_0001_Cash_WithNegativeAmount_Void()
+        {
+            var itsscd = GetSUT();
+            var result = await itsscd.ProcessReceiptAsync(new ProcessRequest
+            {
+                ReceiptRequest = ReceiptExamples.Cash_WithNegativeAmount_Void(),
+                ReceiptResponse = _receiptResponse
+            });
+
+            using var scope = new AssertionScope();
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTSerialNumber));
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTZNumber));
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentNumber));
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentMoment));
+            result.ReceiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (ITConstants.BASE_STATE | (long) SignatureTypesIT.RTDocumentType));
+        }
+
+        [Fact]
         public async Task ProcessPosReceipt_0x4954_2000_0000_0001_SingleUseVoucher_Redeem_MultipleVatRates()
         {
             var itsscd = GetSUT();
