@@ -46,13 +46,13 @@ namespace fiskaltrust.Interface.Tagging.Models.V2
 
         TipNotTaxable0x0038 = 0x0038,
 
-        CouponNormalVATRate0x0043 = 0x0043,
-        CouponDiscountedVATRate10x0041 = 0x0041,
-        CouponDiscountedVATRate20x0042 = 0x0042,
-        CouponSpecialVATRate10x0044 = 0x0044,
-        CouponSpecialVATRate20x0045 = 0x0045,
-        CouponZeroVAT0x0047 = 0x0047,
-        CouponUnknownVAT0x0040 = 0x0040,
+        VoucherNormalVATRate0x0043 = 0x0043,
+        VoucherDiscountedVATRate10x0041 = 0x0041,
+        VoucherDiscountedVATRate20x0042 = 0x0042,
+        VoucherSpecialVATRate10x0044 = 0x0044,
+        VoucherSpecialVATRate20x0045 = 0x0045,
+        VoucherZeroVAT0x0047 = 0x0047,
+        VoucherUnknownVAT0x0040 = 0x0040,
 
         VoucherNotTaxable0x0048 = 0x0048,
 
