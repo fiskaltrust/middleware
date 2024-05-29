@@ -1,6 +1,5 @@
 ﻿using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Interface.Tagging.Generator;
-using fiskaltrust.Interface.Tagging.Models.V2.Extensions;
 
 namespace fiskaltrust.Interface.Tagging.Models.V2
 {
