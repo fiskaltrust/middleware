@@ -20,6 +20,5 @@ namespace fiskaltrust.Interface.Tagging.Models.V2
         UPCA0x000B = 0x000B,
         Code390x000C = 0x000C,
         Base640x000D = 0x000D,
-
     }
 }
