@@ -39,7 +39,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
             await _tableClient.UpsertEntityAsync(entity, TableUpdateMode.Replace);
         }
 
-        public async Task InsertOrUpdateAsync(TStorageEntity storageEntity)
+        public virtual async Task InsertOrUpdateAsync(TStorageEntity storageEntity)
         {
             EntityUpdated(storageEntity);
             var entity = MapToAzureEntity(storageEntity);

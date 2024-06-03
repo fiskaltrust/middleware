@@ -11,6 +11,7 @@ using fiskaltrust.Middleware.Storage.AzureTableStorage.Extensions;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.TableEntities;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.TableEntities.Configuration;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.TableEntities.MasterData;
+using fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories;
 
 namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
 {
@@ -266,7 +267,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
                 PartitionKey = GetHashString(src.TimeStamp),
                 RowKey = src.ftJournalITId.ToString(),
                 ftJournalITId = src.ftJournalITId,
-                ftQueueItemId = src.ftQueueItemId,                
+                ftQueueItemId = src.ftQueueItemId,
                 ftQueueId = src.ftQueueId,
                 ftSignaturCreationUnitITId = src.ftSignaturCreationUnitITId,
                 cbReceiptReference = src.cbReceiptReference,
@@ -1227,7 +1228,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
                 FinishMoment = src.FinishMoment,
                 ftQueueItemId = src.ftQueueItemId,
                 Request = src.Request,
-                TransactionNumber = src.TransactionNumber == null ?  null : Convert.ToInt64(src.TransactionNumber)
+                TransactionNumber = src.TransactionNumber == null ? null : Convert.ToInt64(src.TransactionNumber)
             };
         }
 

@@ -2,6 +2,7 @@
 using Azure.Data.Tables;
 using Azure.Storage.Blobs;
 using fiskaltrust.Middleware.Contracts.Models.Transactions;
+using fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 
@@ -52,6 +53,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Migrations
             await _tableServiceClient.CreateTableIfNotExistsAsync(GetTableName(nameof(ftQueueItem)));
             await _tableServiceClient.CreateTableIfNotExistsAsync(GetTableName(nameof(ftReceiptJournal)));
             await _tableServiceClient.CreateTableIfNotExistsAsync(GetTableName("ftJournalFRCopyPayload"));
+            await _tableServiceClient.CreateTableIfNotExistsAsync(GetTableName(nameof(ReceiptReferenceIndex)));
 
             if (!await _blobServiceClient.GetBlobContainerClient("ftjournalde").ExistsAsync())
             {

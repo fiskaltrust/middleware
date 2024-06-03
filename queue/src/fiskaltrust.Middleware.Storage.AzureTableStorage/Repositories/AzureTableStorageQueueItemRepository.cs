@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Azure.Data.Tables;
 using fiskaltrust.ifPOS.v1;
@@ -14,8 +15,12 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
 {
     public class AzureTableStorageQueueItemRepository : BaseAzureTableStorageRepository<Guid, TableEntity, ftQueueItem>, IMiddlewareQueueItemRepository, IMiddlewareRepository<ftQueueItem>
     {
-        public AzureTableStorageQueueItemRepository(QueueConfiguration queueConfig, TableServiceClient tableServiceClient)
-            : base(queueConfig, tableServiceClient, nameof(ftQueueItem)) { }
+        private readonly AzureTableStorageReceiptReferenceIndexRepository _receiptReferenceIndexRepository;
+        public AzureTableStorageQueueItemRepository(QueueConfiguration queueConfig, TableServiceClient tableServiceClient, AzureTableStorageReceiptReferenceIndexRepository receiptReferenceIndexRepository)
+            : base(queueConfig, tableServiceClient, nameof(ftQueueItem))
+        {
+            _receiptReferenceIndexRepository = receiptReferenceIndexRepository;
+        }
 
         protected override void EntityUpdated(ftQueueItem entity) => entity.TimeStamp = DateTime.UtcNow.Ticks;
 
@@ -25,34 +30,39 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
 
         protected override TableEntity MapToAzureEntity(ftQueueItem entity) => Mapper.Map(entity);
 
+        public override async Task InsertAsync(ftQueueItem storageEntity)
+        {
+            await base.InsertAsync(storageEntity);
+            await _receiptReferenceIndexRepository.InsertAsync(new ReceiptReferenceIndex { cbReceiptReference = storageEntity.cbReceiptReference, ftQueueItemId = storageEntity.ftQueueItemId });
+        }
+
+        public override async Task InsertOrUpdateAsync(ftQueueItem storageEntity)
+        {
+            await base.InsertAsync(storageEntity);
+            await _receiptReferenceIndexRepository.InsertOrUpdateAsync(new ReceiptReferenceIndex { cbReceiptReference = storageEntity.cbReceiptReference, ftQueueItemId = storageEntity.ftQueueItemId });
+        }
+
         public IAsyncEnumerable<ftQueueItem> GetEntriesOnOrAfterTimeStampAsync(long fromInclusive, int? take = null)
         {
             var result = base.GetEntriesOnOrAfterTimeStampAsync(fromInclusive).OrderBy(x => x.TimeStamp);
             return take.HasValue ? result.Take(take.Value) : result;
         }
 
-        public IAsyncEnumerable<ftQueueItem> GetByReceiptReferenceAsync(string cbReceiptReference, string cbTerminalId)
+        private async IAsyncEnumerable<ftQueueItem> GetByReceiptReferenceAsync(string cbReceiptReference, Func<ftQueueItem, bool> predicate = null)
         {
-            var filter = string.IsNullOrWhiteSpace(cbTerminalId)
-                ? TableClient.CreateQueryFilter($"cbReceiptReference eq {cbReceiptReference}")
-                : TableClient.CreateQueryFilter($"cbReceiptReference eq {cbReceiptReference} and cbTerminalID eq {cbTerminalId}");
-
-            var result = _tableClient.QueryAsync<TableEntity>(filter: filter);
-            return result.Select(MapToStorageEntity);
-        }
-
-        public IAsyncEnumerable<ftQueueItem> GetPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem)
-        {
-            // TODO: Add separate tables for this call
-            var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(ftQueueItem.request);
-            if (!receiptRequest.IncludeInReferences() || (string.IsNullOrWhiteSpace(receiptRequest.cbPreviousReceiptReference) && string.IsNullOrWhiteSpace(ftQueueItem.cbReceiptReference)))
+            await foreach (var ftQueueItemId in _receiptReferenceIndexRepository.GetByReceiptReferenceAsync(cbReceiptReference))
             {
-                return AsyncEnumerable.Empty<ftQueueItem>();
+                var result = await GetAsync(ftQueueItemId);
+                if (predicate is not null && !predicate(result))
+                {
+                    continue;
+                }
+                yield return result;
             }
-
-            var result = _tableClient.QueryAsync<TableEntity>(filter: TableClient.CreateQueryFilter($"ftQueueRow lt {ftQueueItem.ftQueueRow} and (cbReceiptReference eq {receiptRequest.cbPreviousReceiptReference} or cbReceiptReference eq {ftQueueItem.cbReceiptReference})"));
-            return result.Select(MapToStorageEntity).Where(x => JsonConvert.DeserializeObject<ReceiptRequest>(x.request).IncludeInReferences());
         }
+
+        public IAsyncEnumerable<ftQueueItem> GetByReceiptReferenceAsync(string cbReceiptReference, string cbTerminalId)
+            => GetByReceiptReferenceAsync(cbReceiptReference, string.IsNullOrWhiteSpace(cbTerminalId) ? x => true : x => x.cbTerminalID == cbTerminalId);
 
         public IAsyncEnumerable<ftQueueItem> GetQueueItemsAfterQueueItem(ftQueueItem ftQueueItem)
         {
@@ -82,8 +92,8 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
         public async IAsyncEnumerable<ftQueueItem> GetQueueItemsForReceiptReferenceAsync(string receiptReference)
         {
             var queueItemsForReceiptReference =
-                from queueItem in await GetAsync()
-                where JsonConvert.DeserializeObject<ReceiptRequest>(queueItem.request).IncludeInReferences() && queueItem.cbReceiptReference == receiptReference &&
+                from queueItem in GetByReceiptReferenceAsync(receiptReference).ToEnumerable()
+                where JsonConvert.DeserializeObject<ReceiptRequest>(queueItem.request).IncludeInReferences() &&
                 !string.IsNullOrEmpty(queueItem.response)
                 orderby queueItem.TimeStamp
                 select queueItem;
@@ -96,9 +106,10 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
         public async Task<ftQueueItem> GetClosestPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem)
         {
             var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(ftQueueItem.request);
+
             var queueItemsForReceiptReference =
-                            (from queueItem in await GetAsync()
-                             where receiptRequest.IncludeInReferences() && queueItem.cbReceiptReference == receiptRequest.cbPreviousReceiptReference &&
+                            (from queueItem in GetByReceiptReferenceAsync(receiptRequest.cbPreviousReceiptReference).ToEnumerable()
+                             where receiptRequest.IncludeInReferences() &&
                              !string.IsNullOrEmpty(queueItem.response)
                              orderby queueItem.TimeStamp descending
                              select queueItem).ToAsyncEnumerable().Take(1);
