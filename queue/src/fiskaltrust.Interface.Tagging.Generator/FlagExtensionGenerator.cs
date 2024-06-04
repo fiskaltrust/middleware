@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -88,7 +88,7 @@ public class FlagExtensionGenerator : ExtensionGenerator<FlagsToGenerateFactory,
         return $$"""
                 namespace {{enumToGenerate.Namespace}}.Extensions
                 {
-                    public static class {{enumToGenerate.OnType.Name}}FlagExt {
+                    public static class {{enumToGenerate.OnType.Name}}{{enumToGenerate.OnField}}FlagExt {
                         {{string.Join("\n        ", enumToGenerate.Members.Select(member => $"""
                                 public static bool Is{member}(this {enumToGenerate.OnType.ContainingNamespace}.{enumToGenerate.OnType.Name} value) => (value.{enumToGenerate.OnField} & ((long)global::{enumToGenerate.Namespace}.{enumToGenerate.Name}.{member})) > 0;
                                 """))}}
