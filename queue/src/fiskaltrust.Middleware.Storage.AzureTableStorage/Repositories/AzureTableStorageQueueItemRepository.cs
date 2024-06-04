@@ -106,7 +106,10 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
         public async Task<ftQueueItem> GetClosestPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem)
         {
             var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(ftQueueItem.request);
-
+            if(receiptRequest.cbPreviousReceiptReference is null)
+            {
+                return null;
+            }
             var queueItemsForReceiptReference =
                             (from queueItem in GetByReceiptReferenceAsync(receiptRequest.cbPreviousReceiptReference).ToEnumerable()
                              where receiptRequest.IncludeInReferences() &&

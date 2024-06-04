@@ -91,6 +91,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage
             services.AddScoped<IMiddlewareQueueItemRepository, AzureTableStorageQueueItemRepository>();
             services.AddSingleton<IReadOnlyQueueItemRepository, AzureTableStorageQueueItemRepository>();
             services.AddSingleton<IMiddlewareRepository<ftQueueItem>, AzureTableStorageQueueItemRepository>();
+            services.AddSingleton<AzureTableStorageReceiptReferenceIndexRepository>();
 
             services.AddSingleton<IJournalATRepository, AzureTableStorageJournalATRepository>();
             services.AddSingleton<IReadOnlyJournalATRepository, AzureTableStorageJournalATRepository>();

@@ -31,7 +31,7 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
             ftCashBoxConfiguration cashBoxConfiguration = null;
             if (!string.IsNullOrEmpty(configurationFilePath))
             {
-                cashBoxConfiguration = JsonConvert.DeserializeObject<ftCashBoxConfiguration>(configurationFilePath);
+                cashBoxConfiguration = JsonConvert.DeserializeObject<ftCashBoxConfiguration>(File.ReadAllText(configurationFilePath));
             }
             else
             {
@@ -81,7 +81,12 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
             else if (config.Package == "fiskaltrust.Middleware.Queue.MySQL")
             {
                 ConfigureMySQL(config, serviceCollection);
-            } else
+            }
+            else if (config.Package == "fiskaltrust.Middleware.Queue.AzureTableStorage")
+            {
+                ConfigureAzureTableStorage(config, serviceCollection);
+            }
+            else
             {
                 throw new NotSupportedException($"The given package {config.Package} is not supported.");
             }
@@ -133,6 +138,16 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
         private static void ConfigureMySQL(PackageConfiguration queue, ServiceCollection serviceCollection)
         {
             var bootStrapper = new MySQL.PosBootstrapper
+            {
+                Id = queue.Id,
+                Configuration = queue.Configuration
+            };
+            bootStrapper.ConfigureServices(serviceCollection);
+        }
+
+        private static void ConfigureAzureTableStorage(PackageConfiguration queue, ServiceCollection serviceCollection)
+        {
+            var bootStrapper = new AzureTableStorage.PosBootstrapper
             {
                 Id = queue.Id,
                 Configuration = queue.Configuration
