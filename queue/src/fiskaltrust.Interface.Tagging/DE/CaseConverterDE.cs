@@ -38,13 +38,13 @@ namespace fiskaltrust.Interface.Tagging.DE
                 _ => throw new NotImplementedException()
             });
 
-            if (V2.Extensions.ReceiptRequestFlagExt.IsLateSigning(v2ReceiptRequest))
+            if (V2.Extensions.ReceiptRequestftReceiptCaseFlagExt.IsLateSigning(v2ReceiptRequest))
             {
-                V1.DE.Extensions.ReceiptRequestFlagExt.SetFailed(receiptRequest);
+                V1.DE.Extensions.ReceiptRequestftReceiptCaseFlagExt.SetFailed(receiptRequest);
             }
-            if (V2.Extensions.ReceiptRequestFlagExt.IsVoid(v2ReceiptRequest))
+            if (V2.Extensions.ReceiptRequestftReceiptCaseFlagExt.IsVoid(v2ReceiptRequest))
             {
-                V1.DE.Extensions.ReceiptRequestFlagExt.SetVoid(receiptRequest);
+                V1.DE.Extensions.ReceiptRequestftReceiptCaseFlagExt.SetVoid(receiptRequest);
             }
             // TODO fill out other flags
         }
