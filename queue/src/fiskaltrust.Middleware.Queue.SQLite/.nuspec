@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<package >
+<package>
   <metadata>
     <id>fiskaltrust.Middleware.Queue.SQLite</id>
     <version>1.3.0-local</version>
@@ -19,15 +19,15 @@
         <dependency id="fiskaltrust.Middleware.Abstractions" version="1.3.3" />
         <dependency id="fiskaltrust.storage.encryption" version="1.3.1" />
         <dependency id="fiskaltrust.storage.serialization" version="1.3.1" />
-        <dependency id="fiskaltrust.interface" version="1.3.50-rc1" />
+        <dependency id="fiskaltrust.interface" version="1.3.55-rc2" />
         <dependency id="fiskaltrust.storage" version="1.3.46-rc1" />
         <dependency id="Dapper" version="2.0.123" />
-        <dependency id="fiskaltrust.Exports.DSFinVK" version="1.6.1" />
-        <dependency id="fiskaltrust.Exports.TAR" version="1.1.1" />
+        <dependency id="fiskaltrust.Exports.DSFinVK" version="1.6.4" />
+        <dependency id="fiskaltrust.Exports.TAR" version="1.1.2" />
         <dependency id="Microsoft.Data.Sqlite" version="3.1.4" />
         <dependency id="System.Linq.Async" version="4.1.1" />
-        <dependency id="SharpCompress" version="0.28.2"/>
-        <dependency id="CsvHelper" version="28.0.1"/>
+        <dependency id="SharpCompress" version="0.28.2" />
+        <dependency id="CsvHelper" version="28.0.1" />
       </group>
     </dependencies>
   </metadata>
@@ -42,28 +42,45 @@
     <file src="bin\Release\netstandard2.0\publish\**\*.config" target="lib\netstandard2.0" />
     <file src="bin\Release\netstandard2.0\publish\**\*.exe" target="lib\netstandard2.0" />
     <file src="bin\Release\netstandard2.0\publish\**\*.dll" target="lib\netstandard2.0" />
-    <file src="bin\Release\netstandard2.0\publish\Migrations\*.*" target="lib\netstandard2.0\Migrations" />
+    <file src="bin\Release\netstandard2.0\publish\Migrations\*.*"
+      target="lib\netstandard2.0\Migrations" />
 
 
-    <file src="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Contracts.dll" target="lib\netstandard2.1" />
-    <file src="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Localization.QueueDE.dll" target="lib\netstandard2.1" />
-    <file src="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Localization.QueueDEFAULT.dll" target="lib\netstandard2.1" />
-    <file src="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Localization.QueueME.dll" target="lib\netstandard2.1" />
-    <file src="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Localization.QueueAT.dll" target="lib\netstandard2.1" />
-    <file src="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Localization.QueueFR.dll" target="lib\netstandard2.1" />
-    <file src="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Localization.QueueIT.dll" target="lib\netstandard2.1" />
-    <file src="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Localization.QueueES.dll" target="lib\netstandard2.1" />
-    <file src="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Queue.dll" target="lib\netstandard2.1" />
-    <file src="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Queue.SQLite.dll" target="lib\netstandard2.1" />
-    <file src="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.QueueSynchronizer.dll" target="lib\netstandard2.1" />
-    <file src="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Storage.Base.dll" target="lib\netstandard2.1" />
-    <file src="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Storage.SQLite.dll" target="lib\netstandard2.1" />
-    
-    <file src="bin\Release\netstandard2.1\publish\Migrations\*.*" target="lib\netstandard2.1\Migrations" />
+    <file src="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Contracts.dll"
+      target="lib\netstandard2.1" />
+    <file src="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Localization.QueueDE.dll"
+      target="lib\netstandard2.1" />
+    <file
+      src="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Localization.QueueDEFAULT.dll"
+      target="lib\netstandard2.1" />
+    <file src="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Localization.QueueME.dll"
+      target="lib\netstandard2.1" />
+    <file src="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Localization.QueueAT.dll"
+      target="lib\netstandard2.1" />
+    <file src="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Localization.QueueFR.dll"
+      target="lib\netstandard2.1" />
+    <file src="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Localization.QueueIT.dll"
+      target="lib\netstandard2.1" />
+    <file src="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Localization.QueueES.dll"
+      target="lib\netstandard2.1" />
+    <file src="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Queue.dll"
+      target="lib\netstandard2.1" />
+    <file src="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Queue.SQLite.dll"
+      target="lib\netstandard2.1" />
+    <file src="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.QueueSynchronizer.dll"
+      target="lib\netstandard2.1" />
+    <file src="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Storage.Base.dll"
+      target="lib\netstandard2.1" />
+    <file src="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Storage.SQLite.dll"
+      target="lib\netstandard2.1" />
+
+    <file src="bin\Release\netstandard2.1\publish\Migrations\*.*"
+      target="lib\netstandard2.1\Migrations" />
 
     <file src="bin\Release\netstandard2.0\runtimes\**\*.*" target="runtimes" />
 
-    <file src="fiskaltrust.Middleware.Queue.SQLite.targets" target="build\fiskaltrust.Middleware.Queue.SQLite.targets" />
+    <file src="fiskaltrust.Middleware.Queue.SQLite.targets"
+      target="build\fiskaltrust.Middleware.Queue.SQLite.targets" />
     <file src="bin\Release\netstandard2.0\publish\Migrations\*.*" target="contentFiles\Migrations" />
     <file src="bin\Release\netstandard2.0\publish\LICENSES\**" target="LICENSES" />
   </files>

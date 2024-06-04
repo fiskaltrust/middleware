@@ -8,9 +8,6 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.SCU.AT.InMemory", "src\fiskaltrust.Middleware.SCU.AT.InMemory\fiskaltrust.Middleware.SCU.AT.InMemory.csproj", "{AA41A6D6-8C74-4E3D-8E62-2095B0FC1576}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{EC648F3D-71FD-4478-A51B-CB3C0336E74D}"
-	ProjectSection(SolutionItems) = preProject
-		test\Directory.Build.props = test\Directory.Build.props
-	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.SCU.AT.InMemory.UnitTest", "test\fiskaltrust.Middleware.SCU.AT.InMemory.UnitTest\fiskaltrust.Middleware.SCU.AT.InMemory.UnitTest.csproj", "{93A2FCAF-105F-488A-8910-AE5D0ACE90F7}"
 EndProject
@@ -18,6 +15,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 	ProjectSection(SolutionItems) = preProject
 		Directory.Build.props = Directory.Build.props
 	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Manual", "Manual", "{AF097855-C2F0-4C55-AB2C-8B82CB6C0063}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.SCU.AT.Test.Launcher", "test\Manual\fiskaltrust.Middleware.SCU.AT.Test.Launcher\fiskaltrust.Middleware.SCU.AT.Test.Launcher.csproj", "{D5BCF769-F686-4F3D-AE36-8375B54EAD7D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -33,6 +34,10 @@ Global
 		{93A2FCAF-105F-488A-8910-AE5D0ACE90F7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{93A2FCAF-105F-488A-8910-AE5D0ACE90F7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{93A2FCAF-105F-488A-8910-AE5D0ACE90F7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D5BCF769-F686-4F3D-AE36-8375B54EAD7D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D5BCF769-F686-4F3D-AE36-8375B54EAD7D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D5BCF769-F686-4F3D-AE36-8375B54EAD7D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D5BCF769-F686-4F3D-AE36-8375B54EAD7D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -40,6 +45,8 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{AA41A6D6-8C74-4E3D-8E62-2095B0FC1576} = {52D01EFD-9401-48BA-BC1C-67961E9A246B}
 		{93A2FCAF-105F-488A-8910-AE5D0ACE90F7} = {EC648F3D-71FD-4478-A51B-CB3C0336E74D}
+		{AF097855-C2F0-4C55-AB2C-8B82CB6C0063} = {EC648F3D-71FD-4478-A51B-CB3C0336E74D}
+		{D5BCF769-F686-4F3D-AE36-8375B54EAD7D} = {AF097855-C2F0-4C55-AB2C-8B82CB6C0063}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {DEF9159B-5743-4166-B31D-A9824A9B24EF}

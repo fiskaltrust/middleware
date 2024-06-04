@@ -80,6 +80,10 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             _logger.LogDebug($"Processing JournalRequest for DE (Type: {request.ftJournalType:X}");
             if (request.ftJournalType == (long) JournalTypes.TarExportFromTSE)
             {
+                if (request.MaxChunkSize == 0)
+                {
+                    request.MaxChunkSize = _middlewareConfiguration.TarFileChunkSize;
+                }
                 await foreach (var value in ProcessTarExportFromTSEAsync(request).ConfigureAwait(false))
                 {
                     yield return value;
@@ -151,42 +155,55 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
         {
             var exportSession = await _deSSCDProvider.Instance.StartExportSessionAsync(new StartExportSessionRequest()).ConfigureAwait(false);
             var sha256CheckSum = "";
-            using (var memoryStream = new MemoryStream())
-            {
-                ExportDataResponse export;
-                do
-                {
-                    export = await _deSSCDProvider.Instance.ExportDataAsync(new ExportDataRequest
-                    {
-                        TokenId = exportSession.TokenId,
-                        MaxChunkSize = request.MaxChunkSize
-                    }).ConfigureAwait(false);
-                    if (!export.TotalTarFileSizeAvailable)
-                    {
-                        await Task.Delay(TimeSpan.FromMilliseconds(100)).ConfigureAwait(false);
-                    }
-                    else
-                    {
-                        var chunk = Convert.FromBase64String(export.TarFileByteChunkBase64);
-                        memoryStream.Write(chunk, 0, chunk.Length);
-                        yield return new JournalResponse
-                        {
-                            Chunk = chunk.ToList()
-                        };
-                    }
-                } while (!export.TarFileEndOfFile);
-                sha256CheckSum = Convert.ToBase64String(SHA256.Create().ComputeHash(memoryStream.ToArray()));
-            }
 
-            var endSessionRequest = new EndExportSessionRequest
+            byte[] chunk;
+            var response = new JournalResponse();
+            try
             {
-                TokenId = exportSession.TokenId,
-                Sha256ChecksumBase64 = sha256CheckSum
-            };
-            var endExportSessionResult = await _deSSCDProvider.Instance.EndExportSessionAsync(endSessionRequest).ConfigureAwait(false);
-            if (!endExportSessionResult.IsValid)
+                using (var stream = new FileStream(exportSession.TokenId + "mw.temp", FileMode.Create, FileAccess.ReadWrite))
+                {
+                    ExportDataResponse export;
+                    do
+                    {
+                        export = await _deSSCDProvider.Instance.ExportDataAsync(new ExportDataRequest
+                        {
+                            TokenId = exportSession.TokenId,
+                            MaxChunkSize = request.MaxChunkSize
+                        }).ConfigureAwait(false);
+                        if (!export.TotalTarFileSizeAvailable)
+                        {
+                            await Task.Delay(TimeSpan.FromMilliseconds(100)).ConfigureAwait(false);
+                        }
+                        else
+                        {
+                            chunk = Convert.FromBase64String(export.TarFileByteChunkBase64);
+                            stream.Write(chunk, 0, chunk.Length);
+                            response.Chunk = chunk.ToList();
+                            yield return response;
+                        }
+                    } while (!export.TarFileEndOfFile);
+                    using var sha256 = SHA256.Create();
+                    stream.Position = 0;
+                    sha256CheckSum = Convert.ToBase64String(sha256.ComputeHash(stream));
+                }
+
+                var endSessionRequest = new EndExportSessionRequest
+                {
+                    TokenId = exportSession.TokenId,
+                    Sha256ChecksumBase64 = sha256CheckSum
+                };
+                var endExportSessionResult = await _deSSCDProvider.Instance.EndExportSessionAsync(endSessionRequest).ConfigureAwait(false);
+                if (!endExportSessionResult.IsValid)
+                {
+                    throw new Exception("The TAR file export was not successful.");
+                }
+            }
+            finally
             {
-                throw new Exception("The TAR file export was not successful.");
+                if (File.Exists(exportSession.TokenId + "mw.temp"))
+                {
+                    File.Delete(exportSession.TokenId + "mw.temp");
+                }
             }
             yield break;
         }
@@ -198,7 +215,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
 
             var queueDE = await _configurationRepository.GetQueueDEAsync(_middlewareConfiguration.QueueId).ConfigureAwait(false);
             var scu = await _configurationRepository.GetSignaturCreationUnitDEAsync(queueDE.ftSignaturCreationUnitDEId.Value).ConfigureAwait(false);
-            var tseInfo  = JsonConvert.DeserializeObject<TseInfo>(scu.TseInfoJson);
+            var tseInfo = JsonConvert.DeserializeObject<TseInfo>(scu.TseInfoJson);
             var workingDirectory = Path.Combine(_middlewareConfiguration.ServiceFolder, "Exports", queueDE.ftQueueDEId.ToString(), "DSFinV-K", DateTime.Now.ToString("yyyyMMddhhmmssfff"));
             Directory.CreateDirectory(workingDirectory);
 
@@ -208,24 +225,33 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
                 var firstZNumber = await GetFirstZNumber(_actionJournalRepository, receiptJournalRepository, request).ConfigureAwait(false);
 
                 var targetDirectory = $"{Path.Combine(workingDirectory, "raw")}{Path.DirectorySeparatorChar}";
+                var to = request.To;
+                if (request.To == 0)
+                {
+                    to = long.MaxValue;
+                }
+
                 var parameters = new DSFinVKParameters
                 {
                     CashboxIdentification = queueDE.CashBoxIdentification,
                     FirstZNumber = firstZNumber,
                     TargetDirectory = targetDirectory,
                     TSECertificateBase64 = certificateBase64,
-                    ReferencesLookUpType = _queueDEConfiguration.DisableDsfinvkExportReferences ? ReferencesLookUpType.NoReferences: ReferencesLookUpType.AddReferences,
+                    ReferencesLookUpType = _queueDEConfiguration.DisableDsfinvkExportReferences ? ReferencesLookUpType.NoReferences : ReferencesLookUpType.AddReferences,
                     IncludeOrders = _queueDEConfiguration.ExcludeDsfinvkOrders ? false : true,
                     PublicKeyBase64 = tseInfo?.PublicKeyBase64,
                     SignAlgorithm = tseInfo?.SignatureAlgorithm,
-                    TimeFormat = tseInfo?.LogTimeFormat
+                    TimeFormat = tseInfo?.LogTimeFormat,
+                    From = request.From,
+                    To = to
                 };
 
                 var readOnlyReceiptReferenceRepository = new ReadOnlyReceiptReferenceRepository(_middlewareQueueItemRepository);
                 var fallbackMasterDataRepo = new ReadOnlyMasterDataConfigurationRepository(_masterDataService.GetFromConfig());
+                var dailyClosingRepository = new DailyClosingRepository(_actionJournalRepository, _middlewareQueueItemRepository);
 
                 // No need to wrap the QueueItemRepository, as the DSFinV-K exporter only uses the GetAsync(Guid id) method
-                var exporter = new DSFinVKExporter(_logger, receiptJournalRepository, _queueItemRepository, readOnlyReceiptReferenceRepository, fallbackMasterDataRepo);
+                var exporter = new DSFinVKExporter(_logger, receiptJournalRepository, _queueItemRepository, readOnlyReceiptReferenceRepository, dailyClosingRepository, fallbackMasterDataRepo);
 
                 await exporter.ExportAsync(parameters).ConfigureAwait(false);
 
@@ -268,7 +294,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
 
         private async Task<int> GetFirstZNumber(IReadOnlyActionJournalRepository actionJournalRepository, IReadOnlyReceiptJournalRepository receiptJournalRepository, JournalRequest request)
         {
-            var dailyClosingRepository = new DailyClosingActionJournalHelper(_middlewareQueueItemRepository);
+            var dailyClosingRepository = new DailyClosingRepository(_actionJournalRepository, _middlewareQueueItemRepository);
 
             var firstZNumber = 1;
             var actionJournals = (await actionJournalRepository.GetAsync().ConfigureAwait(false)).OrderBy(x => x.TimeStamp);
@@ -281,6 +307,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
                     var queueItem = await dailyClosingRepository.GetQueueItemOfMissingIdAsync(actionJournal).ConfigureAwait(false);
                     actionJournal.ftQueueItemId = queueItem.ftQueueItemId;
                 }
+
                 var receiptJournal = receiptJournals.FirstOrDefault(x => x.ftQueueItemId == actionJournal.ftQueueItemId);
                 if (receiptJournal != null)
                 {

@@ -17,5 +17,9 @@
     <PackageReference Update="Moq" Version="4.20.69" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="RequestCommands\" />
+  </ItemGroup>
+
 
 </Project>
