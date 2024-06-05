@@ -76,7 +76,7 @@ steps:
   workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.MySQL'
 
 - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
-  displayName: 'dotnet pack fiskaltrust.Middleware.Queue.MySQL'
+  displayName: 'dotnet pack fiskaltrust.Middleware.Queue.AzureTableStorage'
   workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.Queue.AzureTableStorage'
 
 - task: PublishBuildArtifacts@1
