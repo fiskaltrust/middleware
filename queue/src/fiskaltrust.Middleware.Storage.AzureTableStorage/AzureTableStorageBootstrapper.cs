@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text;
 using System.Threading.Tasks;
 using Azure.Data.Tables;
 using Azure.Identity;
@@ -8,7 +9,6 @@ using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts.Data;
 using fiskaltrust.Middleware.Contracts.Models.Transactions;
 using fiskaltrust.Middleware.Contracts.Repositories;
-using fiskaltrust.Middleware.Storage.AzureTableStorage.Extensions;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.AT;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE;
@@ -21,6 +21,7 @@ using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using fiskaltrust.storage.encryption.V0;
 
 namespace fiskaltrust.Middleware.Storage.AzureTableStorage
 {
@@ -56,8 +57,23 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage
                 _tableServiceClient = new TableServiceClient(new Uri($"https://{_tableStorageConfiguration.StorageAccountName}.table.core.windows.net/"), new DefaultAzureCredential());
                 _blobServiceClient = new BlobServiceClient(new Uri($"https://{_tableStorageConfiguration.StorageAccountName}.blob.core.windows.net/"), new DefaultAzureCredential());
             }
+            else if (!string.IsNullOrEmpty(_tableStorageConfiguration.ConnectionString))
+            {
+                string connectionString;
+                if (_tableStorageConfiguration.ConnectionString.StartsWith("raw:"))
+                {
+                    connectionString = _tableStorageConfiguration.ConnectionString.Substring("raw:".Length);
+                }
+                else
+                {
+                    connectionString = Encoding.UTF8.GetString(Encryption.Decrypt(Convert.FromBase64String(_tableStorageConfiguration.ConnectionString), _queueConfiguration.QueueId.ToByteArray()));
+                }
+                _tableServiceClient = new TableServiceClient(connectionString);
+                _blobServiceClient = new BlobServiceClient(connectionString);
+            }
             else if (!string.IsNullOrEmpty(_tableStorageConfiguration.StorageConnectionString))
             {
+                _logger.LogWarning("The queue parameter 'storageconnectionstring' is deprecated. Please use 'storageaccountname' or 'connectionstring' instead.");
                 _tableServiceClient = new TableServiceClient(_tableStorageConfiguration.StorageConnectionString);
                 _blobServiceClient = new BlobServiceClient(_tableStorageConfiguration.StorageConnectionString);
             }

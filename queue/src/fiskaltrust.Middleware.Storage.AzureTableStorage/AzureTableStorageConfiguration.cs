@@ -5,6 +5,9 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage
 {
     public class AzureTableStorageConfiguration
     {
+        [JsonProperty("connectionstring")]
+        public string ConnectionString { get; set; }
+
         [JsonProperty("storageconnectionstring")]
         public string StorageConnectionString { get; set; }
 
