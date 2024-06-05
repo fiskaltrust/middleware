@@ -164,3 +164,4 @@ stages:
                 - fiskaltrust.Middleware.Queue.PostgreSQL
                 - fiskaltrust.Middleware.Queue.MySQL
                 - fiskaltrust.Middleware.Queue.EF
+                - fiskaltrust.Middleware.Queue.AzureTableStorage

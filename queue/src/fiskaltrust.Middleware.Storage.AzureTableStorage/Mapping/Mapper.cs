@@ -11,6 +11,7 @@ using fiskaltrust.Middleware.Storage.AzureTableStorage.Extensions;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.TableEntities;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.TableEntities.Configuration;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.TableEntities.MasterData;
+using fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories;
 
 namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
 {
@@ -33,7 +34,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
                 ftActionJournalId = src.ftActionJournalId,
                 ftQueueId = src.ftQueueId,
                 ftQueueItemId = src.ftQueueItemId,
-                Moment = src.Moment,
+                Moment = src.Moment.ToUniversalTime(),
                 Priority = src.Priority,
                 Type = src.Type,
                 Message = src.Message,
@@ -80,7 +81,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
                 ftQueueId = src.ftQueueId,
                 ftQueueItemId = src.ftQueueItemId,
                 ftReceiptHash = src.ftReceiptHash,
-                ftReceiptMoment = src.ftReceiptMoment,
+                ftReceiptMoment = src.ftReceiptMoment.ToUniversalTime(),
                 ftReceiptNumber = src.ftReceiptNumber,
                 ftReceiptTotal = Convert.ToDouble(src.ftReceiptTotal),
                 TimeStamp = src.TimeStamp
@@ -266,12 +267,12 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
                 PartitionKey = GetHashString(src.TimeStamp),
                 RowKey = src.ftJournalITId.ToString(),
                 ftJournalITId = src.ftJournalITId,
-                ftQueueItemId = src.ftQueueItemId,                
+                ftQueueItemId = src.ftQueueItemId,
                 ftQueueId = src.ftQueueId,
                 ftSignaturCreationUnitITId = src.ftSignaturCreationUnitITId,
                 cbReceiptReference = src.cbReceiptReference,
                 JournalType = src.JournalType,
-                ReceiptDateTime = src.ReceiptDateTime,
+                ReceiptDateTime = src.ReceiptDateTime.ToUniversalTime(),
                 ReceiptNumber = src.ReceiptNumber,
                 DataJson = src.DataJson,
                 ZRepNumber = src.ZRepNumber,
@@ -371,18 +372,18 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
                 MessageMoment = src.MessageMoment,
                 MessageCount = src.MessageCount,
                 UsedMobileQueueItemId = src.UsedMobileQueueItemId,
-                UsedMobileMoment = src.UsedMobileMoment,
+                UsedMobileMoment = src.UsedMobileMoment?.ToUniversalTime(),
                 UsedMobileCount = src.UsedMobileCount,
                 UsedFailedQueueItemId = src.UsedFailedQueueItemId,
-                UsedFailedMomentMax = src.UsedFailedMomentMax,
-                UsedFailedMomentMin = src.UsedFailedMomentMin,
+                UsedFailedMomentMax = src.UsedFailedMomentMax?.ToUniversalTime(),
+                UsedFailedMomentMin = src.UsedFailedMomentMin?.ToUniversalTime(),
                 UsedFailedCount = src.UsedFailedCount,
                 ftCashNumerator = src.ftCashNumerator,
                 SSCDFailMessageSent = src.SSCDFailMessageSent,
-                SSCDFailMoment = src.SSCDFailMoment,
+                SSCDFailMoment = src.SSCDFailMoment?.ToUniversalTime(),
                 SSCDFailCount = src.SSCDFailCount,
                 LastSettlementQueueItemId = src.LastSettlementQueueItemId,
-                LastSettlementMoment = src.LastSettlementMoment,
+                LastSettlementMoment = src.LastSettlementMoment?.ToUniversalTime(),
                 LastSettlementMonth = src.LastSettlementMonth,
                 ClosedSystemNote = src.ClosedSystemNote,
                 ClosedSystemValue = src.ClosedSystemValue,
@@ -453,11 +454,11 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
                 LastHash = src.LastHash,
                 CashBoxIdentification = src.CashBoxIdentification,
                 SSCDFailCount = src.SSCDFailCount,
-                SSCDFailMoment = src.SSCDFailMoment,
+                SSCDFailMoment = src.SSCDFailMoment?.ToUniversalTime(),
                 SSCDFailQueueItemId = src.SSCDFailQueueItemId,
                 UsedFailedCount = src.UsedFailedCount,
-                UsedFailedMomentMin = src.UsedFailedMomentMin,
-                UsedFailedMomentMax = src.UsedFailedMomentMax,
+                UsedFailedMomentMin = src.UsedFailedMomentMin?.ToUniversalTime(),
+                UsedFailedMomentMax = src.UsedFailedMomentMax?.ToUniversalTime(),
                 UsedFailedQueueItemId = src.UsedFailedQueueItemId,
                 TimeStamp = src.TimeStamp,
                 DailyClosingNumber = src.DailyClosingNumber
@@ -503,11 +504,11 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
                 ftSignaturCreationUnitITId = src.ftSignaturCreationUnitITId,
                 LastHash = src.LastHash,
                 SSCDFailCount = src.SSCDFailCount,
-                SSCDFailMoment = src.SSCDFailMoment,
+                SSCDFailMoment = src.SSCDFailMoment?.ToUniversalTime(),
                 SSCDFailQueueItemId = src.SSCDFailQueueItemId,
                 UsedFailedCount = src.UsedFailedCount,
-                UsedFailedMomentMin = src.UsedFailedMomentMin,
-                UsedFailedMomentMax = src.UsedFailedMomentMax,
+                UsedFailedMomentMin = src.UsedFailedMomentMin?.ToUniversalTime(),
+                UsedFailedMomentMax = src.UsedFailedMomentMax?.ToUniversalTime(),
                 UsedFailedQueueItemId = src.UsedFailedQueueItemId,
                 TimeStamp = src.TimeStamp,
                 CashBoxIdentification = src.CashBoxIdentification,
@@ -553,14 +554,14 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
                 ftSignaturCreationUnitMEId = src.ftSignaturCreationUnitMEId,
                 LastHash = src.LastHash,
                 SSCDFailCount = src.SSCDFailCount,
-                SSCDFailMoment = src.SSCDFailMoment,
+                SSCDFailMoment = src.SSCDFailMoment?.ToUniversalTime(),
                 SSCDFailQueueItemId = src.SSCDFailQueueItemId,
                 UsedFailedCount = src.UsedFailedCount,
-                UsedFailedMomentMin = src.UsedFailedMomentMin,
-                UsedFailedMomentMax = src.UsedFailedMomentMax,
+                UsedFailedMomentMin = src.UsedFailedMomentMin?.ToUniversalTime(),
+                UsedFailedMomentMax = src.UsedFailedMomentMax?.ToUniversalTime(),
                 UsedFailedQueueItemId = src.UsedFailedQueueItemId,
                 TimeStamp = src.TimeStamp,
-                DailyClosingNumber = src.DailyClosingNumber,
+                DailyClosingNumber = src.DailyClosingNumber
             };
         }
 
@@ -608,7 +609,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
                 BTotalizer = Convert.ToDouble(src.BTotalizer),
                 BNumerator = src.BNumerator,
                 GLastYearQueueItemId = src.GLastYearQueueItemId,
-                GLastYearMoment = src.GLastYearMoment,
+                GLastYearMoment = src.GLastYearMoment?.ToUniversalTime(),
                 GYearPITotalUnknown = Convert.ToDouble(src.GYearPITotalUnknown),
                 GYearPITotalInternal = Convert.ToDouble(src.GYearPITotalInternal),
                 GYearPITotalNonCash = Convert.ToDouble(src.GYearPITotalNonCash),
@@ -621,7 +622,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
                 GYearCITotalNormal = Convert.ToDouble(src.GYearCITotalNormal),
                 GYearTotalizer = Convert.ToDouble(src.GYearTotalizer),
                 GLastMonthQueueItemId = src.GLastMonthQueueItemId,
-                GLastMonthMoment = src.GLastMonthMoment,
+                GLastMonthMoment = src.GLastMonthMoment?.ToUniversalTime(),
                 GMonthPITotalUnknown = Convert.ToDouble(src.GMonthPITotalUnknown),
                 GMonthPITotalInternal = Convert.ToDouble(src.GMonthPITotalInternal),
                 GMonthPITotalNonCash = Convert.ToDouble(src.GMonthPITotalNonCash),
@@ -635,8 +636,8 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
                 BPITotalCash = Convert.ToDouble(src.BPITotalCash),
                 BPITotalNonCash = Convert.ToDouble(src.BPITotalNonCash),
                 UsedFailedQueueItemId = src.UsedFailedQueueItemId,
-                UsedFailedMomentMax = src.UsedFailedMomentMax,
-                UsedFailedMomentMin = src.UsedFailedMomentMin,
+                UsedFailedMomentMax = src.UsedFailedMomentMax?.ToUniversalTime(),
+                UsedFailedMomentMin = src.UsedFailedMomentMin?.ToUniversalTime(),
                 UsedFailedCount = src.UsedFailedCount,
                 CLastHash = src.CLastHash,
                 CTotalizer = Convert.ToDouble(src.CTotalizer),
@@ -645,7 +646,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
                 XTotalizer = Convert.ToDouble(src.XTotalizer),
                 XNumerator = src.XNumerator,
                 ALastQueueItemId = src.ALastQueueItemId,
-                ALastMoment = src.ALastMoment,
+                ALastMoment = src.ALastMoment?.ToUniversalTime(),
                 APITotalUnknown = Convert.ToDouble(src.APITotalUnknown),
                 APITotalInternal = Convert.ToDouble(src.APITotalInternal),
                 GMonthCITotalReduced1 = Convert.ToDouble(src.GMonthCITotalReduced1),
@@ -700,7 +701,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
                 MessageCount = src.MessageCount,
                 ICITotalUnknown = Convert.ToDouble(src.ICITotalUnknown),
                 IPITotalNonCash = Convert.ToDouble(src.IPITotalNonCash),
-                GLastDayMoment = src.GLastDayMoment,
+                GLastDayMoment = src.GLastDayMoment?.ToUniversalTime(),
                 GDayPITotalUnknown = Convert.ToDouble(src.GDayPITotalUnknown),
                 GDayPITotalInternal = Convert.ToDouble(src.GDayPITotalInternal),
                 GDayPITotalNonCash = Convert.ToDouble(src.GDayPITotalNonCash),
@@ -713,7 +714,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
                 GDayCITotalNormal = Convert.ToDouble(src.GDayCITotalNormal),
                 GDayTotalizer = Convert.ToDouble(src.GDayTotalizer),
                 GLastShiftQueueItemId = src.GLastShiftQueueItemId,
-                GLastShiftMoment = src.GLastShiftMoment,
+                GLastShiftMoment = src.GLastShiftMoment?.ToUniversalTime(),
                 IPITotalCash = Convert.ToDouble(src.IPITotalCash),
                 GShiftPITotalNonCash = Convert.ToDouble(src.GShiftPITotalNonCash),
                 GShiftPITotalUnknown = Convert.ToDouble(src.GShiftPITotalUnknown),
@@ -731,7 +732,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
                 IPITotalUnknown = Convert.ToDouble(src.IPITotalUnknown),
                 IPITotalInternal = Convert.ToDouble(src.IPITotalInternal),
                 GShiftPITotalInternal = Convert.ToDouble(src.GShiftPITotalInternal),
-                MessageMoment = src.MessageMoment,
+                MessageMoment = src.MessageMoment?.ToUniversalTime(),
                 TimeStamp = src.TimeStamp
             };
         }
@@ -900,8 +901,8 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
                 ftReceiptNumerator = src.ftReceiptNumerator,
                 ftReceiptTotalizer = Convert.ToDouble(src.ftReceiptTotalizer),
                 ftReceiptHash = src.ftReceiptHash,
-                StartMoment = src.StartMoment,
-                StopMoment = src.StopMoment,
+                StartMoment = src.StartMoment?.ToUniversalTime(),
+                StopMoment = src.StopMoment?.ToUniversalTime(),
                 CountryCode = src.CountryCode,
                 Timeout = src.Timeout,
                 TimeStamp = src.TimeStamp
@@ -1061,8 +1062,8 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
                 TcrIntId = src.TcrIntId,
                 SoftwareCode = src.SoftwareCode,
                 MaintainerCode = src.MaintainerCode,
-                ValidFrom = src.ValidFrom,
-                ValidTo = src.ValidTo,
+                ValidFrom = src.ValidFrom?.ToUniversalTime(),
+                ValidTo = src.ValidTo?.ToUniversalTime(),
                 TcrCode = src.TcrCode
             };
         }
@@ -1227,7 +1228,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
                 FinishMoment = src.FinishMoment,
                 ftQueueItemId = src.ftQueueItemId,
                 Request = src.Request,
-                TransactionNumber = src.TransactionNumber == null ?  null : Convert.ToInt64(src.TransactionNumber)
+                TransactionNumber = src.TransactionNumber == null ? null : Convert.ToInt64(src.TransactionNumber)
             };
         }
 
@@ -1244,7 +1245,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
                 RowKey = src.cbReceiptReference,
                 cbReceiptReference = src.cbReceiptReference,
                 CashBoxIdentification = src.CashBoxIdentification,
-                FinishMoment = src.FinishMoment,
+                FinishMoment = src.FinishMoment.ToUniversalTime(),
                 ftQueueItemId = src.ftQueueItemId,
                 Request = src.Request,
                 TransactionNumber = src.TransactionNumber?.ToString()
@@ -1315,7 +1316,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
                 PartitionKey = GetHashString(src.StartMoment.Ticks),
                 RowKey = src.cbReceiptReference,
                 cbReceiptReference = src.cbReceiptReference,
-                StartMoment = src.StartMoment,
+                StartMoment = src.StartMoment.ToUniversalTime(),
                 StartTransactionSignatureBase64 = src.StartTransactionSignatureBase64,
                 TransactionNumber = src.TransactionNumber.ToString()
             };

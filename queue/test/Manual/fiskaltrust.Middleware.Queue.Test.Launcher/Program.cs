@@ -90,6 +90,10 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
             {
                 ConfigureMySQL(config, serviceCollection);
             }
+            else if (config.Package == "fiskaltrust.Middleware.Queue.AzureTableStorage")
+            {
+                ConfigureAzureTableStorage(config, serviceCollection);
+            }
             else
             {
                 throw new NotSupportedException($"The given package {config.Package} is not supported.");
@@ -149,9 +153,20 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
             bootStrapper.ConfigureServices(serviceCollection);
         }
 
+        private static void ConfigureAzureTableStorage(PackageConfiguration queue, ServiceCollection serviceCollection)
+        {
+            var bootStrapper = new AzureTableStorage.PosBootstrapper
+            {
+                Id = queue.Id,
+                Configuration = queue.Configuration
+            };
+            bootStrapper.ConfigureServices(serviceCollection);
+        }
+
         private static void ConfigureEF(PackageConfiguration queue, ServiceCollection serviceCollection)
         {
             var bootStrapper = new EF.PosBootstrapper
+
             {
                 Id = queue.Id,
                 Configuration = queue.Configuration
