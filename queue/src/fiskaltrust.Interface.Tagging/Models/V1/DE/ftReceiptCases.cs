@@ -12,8 +12,8 @@ namespace fiskaltrust.Interface.Tagging.Models.V1.DE
 
         Protocol0x000F = 0x000F,
 
-        InvoiceB2C0x100D = 0x100D,
-        InvoiceB2B0x100C = 0x100C,
+        InvoiceB2C0x000D = 0x000D,
+        InvoiceB2B0x000C = 0x000C,
 
         ZeroReceipt0x0002 = 0x0002,
         DailyClosing0x0007 = 0x0007,
@@ -27,9 +27,16 @@ namespace fiskaltrust.Interface.Tagging.Models.V1.DE
 
         InitialOperationReceipt0x0003 = 0x0003,
         OutOfOperationReceipt0x0004 = 0x0004,
+
         InitSCUSwitch0x0017 = 0x0017,
         FinishSCUSwitch0x0018 = 0x0018,
 
         SaleInForeignCountries0x0015 = 0x0015,
+
+        //not mapped
+        InvoiceInfo0x000E = 0x000E,
+        InfoInternal0x0013 = 0x0013,
+        VoidReceipt0x0016 = 0x0016,
+
     }
 }
