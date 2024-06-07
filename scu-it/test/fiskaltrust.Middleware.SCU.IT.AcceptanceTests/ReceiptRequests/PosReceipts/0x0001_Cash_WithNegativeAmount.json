@@ -1,10 +1,10 @@
 {
-  "ftCashBoxID": "4038ca6d-fe63-46d0-95d6-a1fce0f98258",
-  "ftQueueID": "910347dc-a5fc-44bf-9ef0-2ec5fda824ca",
-  "ftPosSystemId": "e0c014d5-44de-4eec-886f-02dde5ec2d3a",
+  "ftCashBoxID": "bb734f2c-24fa-4ec8-9346-b2893cb7a98e",
+  "ftQueueID": "497981fb-e60c-4e6c-b058-b6cb46a7e144",
+  "ftPosSystemId": "497981fb-e60c-4e6c-b058-b6cb46a7e144",
   "cbTerminalID": "1",
-  "cbReceiptReference": "926804fa-f185-4d48-809c-b73c6b3297e1",
-  "cbReceiptMoment": "2024-05-09T10:03:22.7Z",
+  "cbReceiptReference": "497981fb-e60c-4e6c-b058-b6cb46a7e144",
+  "cbReceiptMoment": "2024-01-09T10:03:22.7Z",
   "cbChargeItems": [
     {
       "Position": 100,
@@ -55,5 +55,5 @@
   "ftReceiptCase": 5283883447318740993,
   "cbReceiptAmount": 2.80,
   "cbUser": "Chef",
-  "cbArea": "53"
+  "cbArea": "1"
 }
