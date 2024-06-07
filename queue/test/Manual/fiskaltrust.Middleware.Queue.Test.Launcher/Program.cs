@@ -24,7 +24,7 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
         private static readonly string _accessToken = "";
         private static readonly string _localization = "";
 
-        public static void Main(string configurationFilePath = "", string serviceFolder = @"C:\ProgramData\fiskaltrust\service")
+        public static void Main(string configurationFilePath = "C:\\Temp\\ATLauncher\\configuration.json", string serviceFolder = @"C:\ProgramData\fiskaltrust\service")
         {
             ftCashBoxConfiguration cashBoxConfiguration = null;
             if (!string.IsNullOrEmpty(configurationFilePath))
