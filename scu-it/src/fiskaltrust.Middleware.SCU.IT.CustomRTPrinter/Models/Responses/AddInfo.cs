@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Globalization;
 using System.Xml.Serialization;
 
@@ -41,8 +41,8 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.Models.Responses
         [XmlElement("nClose")]
         public string NClose { get; set; }
 
-        [XmlElement("iscalDoc")]
-        public string IscalDoc { get; set; }
+        [XmlElement("fiscalDoc")]
+        public string FiscalDoc { get; set; }
 
         [XmlElement("notFiscalDoc")]
         public string NotFiscalDoc { get; set; }
