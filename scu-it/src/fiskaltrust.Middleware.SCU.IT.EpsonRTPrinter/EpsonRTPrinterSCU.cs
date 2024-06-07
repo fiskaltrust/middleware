@@ -607,7 +607,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
             var response = await SendRequestAsync(SoapSerializer.Serialize(fiscalReport));
             using var responseContent = await response.Content.ReadAsStreamAsync();
             var reportResponse = SoapSerializer.DeserializeToSoapEnvelope<ReportResponse>(responseContent);
-            if (!result?.Success ?? false)
+            if (!(result?.Success ?? false))
             {
                 var errorInfo = GetErrorInfo(result?.Code, result?.Status, null);
                 await ResetPrinter();
