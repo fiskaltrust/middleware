@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Globalization;
 using System.Xml;
 using System.Xml.Serialization;
@@ -13,7 +13,6 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.Models.Responses
 
         [XmlAttribute("status")]
         public int Status { get; set; }
-
 
         [XmlElement("serialNumber")]
         public string SerialNumber { get; set; }
@@ -99,22 +98,8 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.Models.Responses
         [XmlElement("certValidFrom")]
         public string CertValidFromString { get; set; }
 
-        [XmlIgnore]
-        public DateTime CertValidFrom
-        {
-            get => DateTime.ParseExact(CertValidFromString, "dd/MM/yyyy", CultureInfo.InvariantCulture);
-            set => CertValidFromString = value.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
-        }
-
         [XmlElement("certValidTo")]
         public string CertValidToString { get; set; }
-
-        [XmlIgnore]
-        public DateTime CertValidTo
-        {
-            get => DateTime.ParseExact(CertValidToString, "dd/MM/yyyy", CultureInfo.InvariantCulture);
-            set => CertValidToString = value.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
-        }
 
         [XmlElement("certExpired")]
         public Booleano CertExpiredBooleano { get; set; }
@@ -124,13 +109,6 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.Models.Responses
 
         [XmlElement("dateProg")]
         public string DateProgString { get; set; }
-
-        [XmlIgnore]
-        public DateTime DateProg
-        {
-            get => DateTime.ParseExact(DateProgString, "dd/MM/yyyy", CultureInfo.InvariantCulture);
-            set => DateProgString = value.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
-        }
 
         [XmlElement("minWaste")]
         public int? MinWaste { get; set; } // optional
@@ -154,7 +132,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.Models.Responses
         public string VatNumberDealer { get; set; }
 
         [XmlElement("pointOfSaleNum")]
-        public int PointOfSaleNum { get; set; }
+        public string PointOfSaleNum { get; set; }
 
         [XmlElement("vatNumberRetailer")]
         public string VatNumberRetailer { get; set; }
