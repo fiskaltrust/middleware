@@ -6,7 +6,7 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
 {
     public class EpsonRTPrinterTests : ITSSCDTests
     {
-        private static readonly Uri _serverUri = new Uri("http://194.93.177.143:9000");
+        private static readonly Uri _serverUri = new Uri("http://192.168.0.14/");
         private readonly EpsonRTPrinterSCUConfiguration _config = new EpsonRTPrinterSCUConfiguration
         {
             DeviceUrl = _serverUri.ToString(),
