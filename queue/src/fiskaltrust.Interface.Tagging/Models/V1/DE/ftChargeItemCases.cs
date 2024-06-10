@@ -113,11 +113,11 @@ namespace fiskaltrust.Interface.Tagging.Models.V1.DE
 
         ReceivableReductionNormalVat0x0079 = 0x0079,
         ReceivableReductionDiscounted1Vat0x007A = 0x007A,
-        ReceivablereductionSpecial1Vat0x007B = 0x007B,
-        ReceivablereductionSpecial2Vat0x007C = 0x007C,
-        ReceivablereductionNotTaxable0x007D = 0x007D,
-        ReceivablereductionZeroVat0x007E = 0x007E,
-        ReceivablereductionUnknownVat0x007F = 0x0007F,
+        ReceivableReductionSpecial1Vat0x007B = 0x007B,
+        ReceivableReductionSpecial2Vat0x007C = 0x007C,
+        ReceivableReductionNotTaxable0x007D = 0x007D,
+        ReceivableReductionZeroVat0x007E = 0x007E,
+        ReceivableReductionUnknownVat0x007F = 0x0007F,
 
         DownPaymentCreationNormalVat0x0081 = 0x0081,
         DownPaymentCreationDiscounted1Vat0x0082 = 0x0082,
@@ -125,7 +125,7 @@ namespace fiskaltrust.Interface.Tagging.Models.V1.DE
         DownPaymentCreationSpecial2Vat0x0084 = 0x0084,
         DownPaymentCreationNotTaxable0x0085 = 0x0085,
         DownPaymentCreationZeroVat0x0086 = 0x0086,
-        DownPaymentCreationUnknownVat0x007 = 0x00087,
+        DownPaymentCreationUnknownVat0x0087 = 0x0087,
 
         DownPaymentReductionNormalVat0x0089 = 0x0089,
         DownPaymentReductionDiscounted1Vat0x008A = 0x008A,
