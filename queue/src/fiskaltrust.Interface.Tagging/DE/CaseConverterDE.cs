@@ -4,6 +4,7 @@ using V1 = fiskaltrust.Interface.Tagging.Models.V1;
 using V2 = fiskaltrust.Interface.Tagging.Models.V2;
 using fiskaltrust.Interface.Tagging.Models.Extensions;
 using fiskaltrust.Interface.Tagging.Models.V2.Extensions;
+using fiskaltrust.Interface.Tagging.Models.V1.DE.Extensions;
 
 namespace fiskaltrust.Interface.Tagging.DE
 {
@@ -168,7 +169,7 @@ namespace fiskaltrust.Interface.Tagging.DE
                 {
                     chargeItem.ftChargeItemCase |= (long) V1.DE.ftChargeItemCases.ReceivableCreationUnknownVat0x0077;
                 }
-            }else if (ChargeItemftChargeItemCaseFlagExt.IsDownPayment(v2ChargeItem))
+            }else if (V2.Extensions.ChargeItemftChargeItemCaseFlagExt.IsDownPayment(v2ChargeItem))
             {
                 if (chargeItem.Amount <= 0)
                 {
@@ -232,7 +233,7 @@ namespace fiskaltrust.Interface.Tagging.DE
                         chargeItem.ftChargeItemCase |= (long) V1.DE.ftChargeItemCases.DownPaymentCreationUnknownVat0x0087;
                     }
                 }
-            }else if (ChargeItemftChargeItemCaseFlagExt.IsReturnable(v2ChargeItem))
+            }else if (V2.Extensions.ChargeItemftChargeItemCaseFlagExt.IsReturnable(v2ChargeItem))
             {
                 if (chargeItem.Amount <= 0)
                 {
@@ -296,7 +297,7 @@ namespace fiskaltrust.Interface.Tagging.DE
                         chargeItem.ftChargeItemCase |= (long) V1.DE.ftChargeItemCases.ReturnableReverseUnknownVat0x002F;
                     }
                 }
-            }else if (ChargeItemftChargeItemCaseFlagExt.IsDiscountOrExtraCharge(v2ChargeItem))
+            }else if (V2.Extensions.ChargeItemftChargeItemCaseFlagExt.IsDiscountOrExtraCharge(v2ChargeItem))
             {
                 if (chargeItem.Amount <= 0)
                 {
@@ -435,6 +436,7 @@ namespace fiskaltrust.Interface.Tagging.DE
                 V2.ftReceiptCases.PointOfSaleReceipt0x0001 => V1.DE.ftReceiptCases.PointOfSaleReceipt0x0001,
                 V2.ftReceiptCases.PaymentTransfer0x0002 => V1.DE.ftReceiptCases.PaymentTransfer0x0011,
                 V2.ftReceiptCases.Protocol0x0005 => V1.DE.ftReceiptCases.Protocol0x000F,
+                V2.ftReceiptCases.InvoiceB2B0x1002 => V1.DE.ftReceiptCases.InvoiceB2B0x000C,
                 V2.ftReceiptCases.InvoiceB2C0x1001 => V1.DE.ftReceiptCases.InvoiceB2C0x000D,
                 V2.ftReceiptCases.ZeroReceipt0x2000 => V1.DE.ftReceiptCases.ZeroReceipt0x0002,
                 V2.ftReceiptCases.DailyClosing0x2011 => V1.DE.ftReceiptCases.DailyClosing0x0007,
@@ -483,6 +485,7 @@ namespace fiskaltrust.Interface.Tagging.DE
                 V1.DE.Extensions.ReceiptRequestftReceiptCaseFlagExt.SetReceiptRequested(receiptRequest);
             }
 
+            receiptRequest.SetImplicitTransaction();
         }
         public void ConvertftSignatureFormatToV2(SignaturItem ftSignatureFormat) => throw new NotImplementedException();
         public void ConvertftSignatureTypeToV2(SignaturItem ftSignatureType) => throw new NotImplementedException();

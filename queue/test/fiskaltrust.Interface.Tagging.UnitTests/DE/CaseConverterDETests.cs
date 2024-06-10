@@ -2,6 +2,7 @@
 using fiskaltrust.Interface.Tagging.Interfaces;
 using FluentAssertions;
 using fiskaltrust.ifPOS.v1;
+
 namespace fiskaltrust.Interface.Tagging.UnitTests.DE
 {
     public class CaseConverterDETests
@@ -16,8 +17,58 @@ namespace fiskaltrust.Interface.Tagging.UnitTests.DE
         {
             var request = new ReceiptRequest { ftReceiptCase = 0x4445200000010002 };
             _caseConverterDE.ConvertftReceiptCaseToV1(request);
-
-            request.ftReceiptCase.Should().Be(0x4445000000010011);
+            request.ftReceiptCase.Should().Be(0x4445000100010011);
+            request.ftReceiptCase = 0x4445200000000000;
+            _caseConverterDE.ConvertftReceiptCaseToV1(request);
+            request.ftReceiptCase.Should().Be(0x4445000100000000);
+            request.ftReceiptCase = 0x4445200000000001;
+            _caseConverterDE.ConvertftReceiptCaseToV1(request);
+            request.ftReceiptCase.Should().Be(0x4445000100000001);
+            request.ftReceiptCase = 0x4445200000000002;
+            _caseConverterDE.ConvertftReceiptCaseToV1(request);
+            request.ftReceiptCase.Should().Be(0x4445000100000011);
+            request.ftReceiptCase = 0x4445200000000005;
+            _caseConverterDE.ConvertftReceiptCaseToV1(request);
+            request.ftReceiptCase.Should().Be(0x444500010000000F);
+            request.ftReceiptCase = 0x4445200000001002;
+            _caseConverterDE.ConvertftReceiptCaseToV1(request);
+            request.ftReceiptCase.Should().Be(0x444500010000000C);
+            request.ftReceiptCase = 0x4445200000001001;
+            _caseConverterDE.ConvertftReceiptCaseToV1(request);
+            request.ftReceiptCase.Should().Be(0x444500010000000D);
+            request.ftReceiptCase = 0x4445200000002000;
+            _caseConverterDE.ConvertftReceiptCaseToV1(request);
+            request.ftReceiptCase.Should().Be(0x4445000100000002);
+            request.ftReceiptCase = 0x4445200000002011;
+            _caseConverterDE.ConvertftReceiptCaseToV1(request);
+            request.ftReceiptCase.Should().Be(0x4445000100000007);
+            request.ftReceiptCase = 0x4445200000002012;
+            _caseConverterDE.ConvertftReceiptCaseToV1(request);
+            request.ftReceiptCase.Should().Be(0x4445000100000005);
+            request.ftReceiptCase = 0x4445200000002013;
+            _caseConverterDE.ConvertftReceiptCaseToV1(request);
+            request.ftReceiptCase.Should().Be(0x4445000100000006);
+            request.ftReceiptCase = 0x4445200000003000;
+            _caseConverterDE.ConvertftReceiptCaseToV1(request);
+            request.ftReceiptCase.Should().Be(0x4445000100000014);
+            request.ftReceiptCase = 0x4445200000003003;
+            _caseConverterDE.ConvertftReceiptCaseToV1(request);
+            request.ftReceiptCase.Should().Be(0x4445000100000012);
+            request.ftReceiptCase = 0x4445200000003004;
+            _caseConverterDE.ConvertftReceiptCaseToV1(request);
+            request.ftReceiptCase.Should().Be(0x4445000100000010);
+            request.ftReceiptCase = 0x4445200000004001;
+            _caseConverterDE.ConvertftReceiptCaseToV1(request);
+            request.ftReceiptCase.Should().Be(0x4445000100000003);
+            request.ftReceiptCase = 0x4445200000004002;
+            _caseConverterDE.ConvertftReceiptCaseToV1(request);
+            request.ftReceiptCase.Should().Be(0x4445000100000004);
+            request.ftReceiptCase = 0x4445200000004011;
+            _caseConverterDE.ConvertftReceiptCaseToV1(request);
+            request.ftReceiptCase.Should().Be(0x4445000100000017);
+            request.ftReceiptCase = 0x4445200000004012;
+            _caseConverterDE.ConvertftReceiptCaseToV1(request);
+            request.ftReceiptCase.Should().Be(0x4445000100000018);
         }
 
         [Fact]
