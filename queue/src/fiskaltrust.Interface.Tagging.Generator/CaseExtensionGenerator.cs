@@ -83,7 +83,7 @@ public class CasesToGenerateFactory : IToGenerateFactory<CasesToGenerate>
     {
         var onType = (INamedTypeSymbol) Properties["OnType"];
         var onField = (string) Properties["OnField"];
-        long? mask = Properties.TryGetValue("Mask", out var m) ? (long) m : null;
+        long? mask = Properties.TryGetValue("Mask", out var m) ? (long) m : throw new ArgumentException("Mask is required");
         var shift = Properties.TryGetValue("Shift", out var s) ? (int) s : 0;
         var caseName = Properties.TryGetValue("CaseName", out var c) ? (string) c : "Case";
 
@@ -102,7 +102,7 @@ public class CaseExtensionGenerator : ExtensionGenerator<CasesToGenerateFactory,
             namespace {{ATTRIBUTE_NAMESPACE}}
             {
                 [global::System.AttributeUsage(global::System.AttributeTargets.Enum, Inherited = false, AllowMultiple = false)]
-                [System.Diagnostics.Conditional("FlagExtensionGenerator_DEBUG")]
+                [System.Diagnostics.Conditional("CaseExtensionGenerator_DEBUG")]
                 public sealed class {{ATTRIBUTE_NAME}} : global::System.Attribute
                 {
                     public {{ATTRIBUTE_NAME}}()
