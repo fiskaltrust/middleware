@@ -42,7 +42,7 @@ stages:
       - job: AcceptanceTest_AzureTableStorageQueue
         dependsOn: Test
         displayName: Acceptance tests - AzureTableStorageQueue
-        condition: and(succeeded(), or(eq(variables.runAcceptanceTests, 'true'), eq(variables['Build.SourceBranch'], 'refs/heads/main'), startsWith(variables['Build.SourceBranch'], 'refs/tags/queue/azure-table-storage/')))
+        condition: and(succeeded(), or(eq(variables.runAcceptanceTests, 'true'), eq(variables['Build.SourceBranch'], 'refs/heads/main'), startsWith(variables['Build.SourceBranch'], 'refs/tags/queue/azuretablestorage/')))
         pool:
           vmImage: $(vmImageName)
         steps:
@@ -97,7 +97,7 @@ stages:
       - job: AcceptanceTest_InMemoryQueue
         dependsOn: Test
         displayName: Acceptance tests - InMemoryQueue
-        condition: and(succeeded(), or(eq(variables.runAcceptanceTests, 'true'), eq(variables['Build.SourceBranch'], 'refs/heads/main'), startsWith(variables['Build.SourceBranch'], 'refs/tags/queue/in-memory/')))
+        condition: and(succeeded(), or(eq(variables.runAcceptanceTests, 'true'), eq(variables['Build.SourceBranch'], 'refs/heads/main'), startsWith(variables['Build.SourceBranch'], 'refs/tags/queue/inmemory/')))
         pool:
           vmImage: $(vmImageName)
         steps:
