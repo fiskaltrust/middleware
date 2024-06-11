@@ -1,4 +1,4 @@
-
+﻿
 using Xunit;
 using fiskaltrust.Interface.Tagging.Generator;
 using fiskaltrust.Interface.Tagging.Generator.IntegrationTests.Extensions;
@@ -28,7 +28,7 @@ public class Tests
     [Fact]
     public void TestRun()
     {
-        var test = new TestClass { TestField = 0 };
+        var test = new TestClass { TestField = 0x1234_0000_0000_0000 };
         test.IsLel().Should().BeFalse();
         test.SetLel();
         test.IsLel().Should().BeTrue();

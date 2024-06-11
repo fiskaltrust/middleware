@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using FluentAssertions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -28,26 +28,32 @@ public class Tests
                 {
                     Lel = 0x0000_0000_0004_0000,
                 }
-
-                [CaseExtensions(OnType = typeof(TestClass), OnField = nameof(TestClass.TestField)), Mask = 0x0000_0000_FFFF_0000, Shift = 4, CaseName = "TestCases"]
+                            
+                [CaseExtensions(OnType = typeof(TestClass), OnField = nameof(TestClass.TestField), Mask = 0x0000_0000_FFFF_0000, Shift = 4, CaseName = "TestCases")]
                 public enum TestCases : long
                 {
                     Lel = 0x0000_0000_1234_0000,
                 }
             }
             """;
-        var inputCompilation = CreateCompilation(source);
-        var generator = new FlagExtensionGenerator();
+        var flagInputCompilation = CreateCompilation(source);
+        var caseInputCompilation = CreateCompilation(source);
+        var flagGenerator = new FlagExtensionGenerator();
+        var caseGenerator = new CaseExtensionGenerator();
 
-        GeneratorDriver driver = CSharpGeneratorDriver.Create(generator);
-
-
-        driver = driver.RunGeneratorsAndUpdateCompilation(inputCompilation, out var outputCompilation, out var diagnostics);
-        diagnostics.Should().BeEmpty();
-
-        var runResult = driver.GetRunResult();
+        GeneratorDriver flagDriver = CSharpGeneratorDriver.Create(flagGenerator);
+        GeneratorDriver caseDriver = CSharpGeneratorDriver.Create(caseGenerator);
 
 
+        flagDriver = flagDriver.RunGeneratorsAndUpdateCompilation(flagInputCompilation, out var flagOutputCompilation, out var flagDiagnostics);
+        flagDiagnostics.Should().BeEmpty();
+        caseDriver = caseDriver.RunGeneratorsAndUpdateCompilation(caseInputCompilation, out var caseOutputCompilation, out var caseDiagnostics);
+        caseDiagnostics.Should().BeEmpty();
+
+        var flagRunResult = flagDriver.GetRunResult();
+        flagRunResult.GeneratedTrees.Should().HaveCount(2);
+        var caseRunResult = caseDriver.GetRunResult();
+        caseRunResult.GeneratedTrees.Should().HaveCount(2);
     }
 
     private static Compilation CreateCompilation(string source)

@@ -11,8 +11,8 @@ namespace fiskaltrust.Interface.Tagging.Generator;
 
 public abstract class ExtensionGenerator<F, T> : IIncrementalGenerator where F : IToGenerateFactory<T>, new() where T : IToGenerate
 {
-    private readonly string _attributeName = "CaseExtensionsAttribute";
-    private readonly string _attributeNamespace = "fiskaltrust.Interface.Tagging.Generator";
+    private readonly string _attributeName;
+    private readonly string _attributeNamespace;
     private string _attributeFullName => $"{_attributeNamespace}.{_attributeName}";
 
     private readonly string _attributeText;
