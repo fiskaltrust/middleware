@@ -18,7 +18,7 @@ namespace fiskaltrust.Interface.Tagging.UnitTests.DE
             var request = new ReceiptRequest { ftReceiptCase = 0x4652200000010002 };
             _caseConverterFR.ConvertftReceiptCaseToV1(request);
 
-            request.ftReceiptCase.Should().Be(0x4445000000010011);
+            request.ftReceiptCase.Should().Be(0x465220000001000C);
         }
     }
 }
