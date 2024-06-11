@@ -6,6 +6,6 @@ namespace fiskaltrust.Interface.Tagging.Models.V1.DE
     [FlagExtensions(OnType = typeof(ChargeItem), OnField = nameof(ChargeItem.ftChargeItemCase))]
     public enum ftChargeItemCaseFlags : long
     {
-        TakeAway = 0x0000000000010000,
+        TakeAway0x0001 = 0x0000_0000_0001_0000,
     }
 }
