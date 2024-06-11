@@ -404,13 +404,63 @@ namespace fiskaltrust.Interface.Tagging.DE
                     V2.ftChargeItemCases.TipToOwnerZeroVAT0x0037 => V1.DE.ftChargeItemCases.TipToOwnerZeroVat0x0056,
                     V2.ftChargeItemCases.TipToOwnerUnknownVAT0x0030 => V1.DE.ftChargeItemCases.TipToOwnerUnknownVat0x0057,
                     V2.ftChargeItemCases.CashTransferNotTaxable0x00A8 => V1.DE.ftChargeItemCases.CashAmountDifferenceFromToTillNotTaxable0x0097,
-                    _ => V1.DE.ftChargeItemCases.UnknownTypeOfService0x0000,
+                    _ => throw new NotImplementedException(),
                 });
             }
         }
 
         public void ConvertftJournalTypeToV1(JournalRequest ftJournalType) => throw new NotImplementedException();
-        public void ConvertftPayItemCaseToV1(PayItem ftPayItemCase) => throw new NotImplementedException();
+
+        public void ConvertftPayItemCaseToV1(PayItem ftPayItem)
+        {
+            var v2ftPayItem = new PayItem() { ftPayItemCase = ftPayItem.ftPayItemCase };
+
+            ftPayItem.ftPayItemCase = (long) ((ulong) v2ftPayItem.ftPayItemCase & 0xFFFF_0000_0000_0000);
+
+            if (v2ftPayItem.IsTip() && (V2.ftPayItemCases) (v2ftPayItem.ftPayItemCase & 0xFFFF) == V2.ftPayItemCases.Cash0x0001)
+            {
+                ftPayItem.ftPayItemCase |= (long) V1.DE.ftPayItemCases.TipToEmployee0x0010;
+            }
+            else if (v2ftPayItem.IsChange() && (V2.ftPayItemCases) (v2ftPayItem.ftPayItemCase & 0xFFFF) == V2.ftPayItemCases.Cash0x0001)
+            {
+                ftPayItem.ftPayItemCase |= (long) V1.DE.ftPayItemCases.Change0x000B;
+            }
+            else if (v2ftPayItem.IsForeignCurrency() && (V2.ftPayItemCases) (v2ftPayItem.ftPayItemCase & 0xFFFF) == V2.ftPayItemCases.Cash0x0001)
+            {
+                ftPayItem.ftPayItemCase |= (long) V1.DE.ftPayItemCases.CashForeignCurrency0x0002;
+            }
+            else if (v2ftPayItem.IsDigital())
+            {
+                ftPayItem.ftPayItemCase |= (long) ((V2.ftPayItemCases) (v2ftPayItem.ftPayItemCase & 0xFFFF) switch
+                {
+                    V2.ftPayItemCases.DebitCard0x0004 => V1.DE.ftPayItemCases.DebitCard0x0004,
+                    V2.ftPayItemCases.CreditCard0x0005 => V1.DE.ftPayItemCases.CreditCard0x0005,
+                    V2.ftPayItemCases.Online0x0007 => V1.DE.ftPayItemCases.Online0x0006,
+                    V2.ftPayItemCases.CustomerCard0x0008 => V1.DE.ftPayItemCases.CustomerCard0x0007,
+                    V2.ftPayItemCases.SEPATransfer0x000A => V1.DE.ftPayItemCases.SEPATransfer0x0008,
+                    V2.ftPayItemCases.OtherBankTransfer0x000B => V1.DE.ftPayItemCases.OtherBankTransfer0x0009,
+                    V2.ftPayItemCases.AccountsReceivable0x0009 => V1.DE.ftPayItemCases.DownPayment0x000F,
+                    _ => throw new NotImplementedException()
+                });
+            }
+            else 
+            {
+                ftPayItem.ftPayItemCase |= (long) ((V2.ftPayItemCases) (v2ftPayItem.ftPayItemCase & 0xFFFF) switch
+                {
+                    V2.ftPayItemCases.UnknownPaymentType0x0000 => V1.DE.ftPayItemCases.UnknownPaymentType0x0000,
+                    V2.ftPayItemCases.Cash0x0001 => V1.DE.ftPayItemCases.Cash0x0001,
+                    V2.ftPayItemCases.CrossedCheque0x0003 => V1.DE.ftPayItemCases.CrossedCheque0x0003,
+                    V2.ftPayItemCases.Voucher0x0006 => V1.DE.ftPayItemCases.Voucher0x000D,
+                    V2.ftPayItemCases.AccountsReceivable0x0009 => V1.DE.ftPayItemCases.AccountsReceivable0x000E,
+                    V2.ftPayItemCases.InternalConsumption0x000D => V1.DE.ftPayItemCases.InternalConsumption0x000A,
+                    V2.ftPayItemCases.Grant0x000E => V1.DE.ftPayItemCases.Grant0x0011,
+                    V2.ftPayItemCases.TransferTo0x000C => V1.DE.ftPayItemCases.CashTransferFromToTill0x0014,
+                    _ => throw new NotImplementedException()
+                });
+            }
+
+
+        }
         public void ConvertftReceiptCaseToV1(ReceiptRequest receiptRequest)
         {
  

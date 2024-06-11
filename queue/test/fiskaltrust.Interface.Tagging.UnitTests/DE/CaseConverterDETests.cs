@@ -401,5 +401,65 @@ namespace fiskaltrust.Interface.Tagging.UnitTests.DE
             chargeItem.ftChargeItemCase.Should().Be(0x4445000000000097);
 
         }
+
+
+        [Fact]
+        public void Payitem_ShouldreturnCorrect()
+        {
+            var payItem = new PayItem { ftPayItemCase = 0x4445200000000000 };
+            _caseConverterDE.ConvertftPayItemCaseToV1(payItem);
+            payItem.ftPayItemCase.Should().Be(0x4445000000000000);
+            payItem.ftPayItemCase = 0x4445200000000001;
+            _caseConverterDE.ConvertftPayItemCaseToV1(payItem);
+            payItem.ftPayItemCase.Should().Be(0x4445000000000001);
+            payItem.ftPayItemCase = 0x4445200000100001;
+            _caseConverterDE.ConvertftPayItemCaseToV1(payItem);
+            payItem.ftPayItemCase.Should().Be(0x4445000000000002);
+            payItem.ftPayItemCase = 0x4445200000000003;
+            _caseConverterDE.ConvertftPayItemCaseToV1(payItem);
+            payItem.ftPayItemCase.Should().Be(0x4445000000000003);
+            payItem.ftPayItemCase = 0x4445200000800004;
+            _caseConverterDE.ConvertftPayItemCaseToV1(payItem);
+            payItem.ftPayItemCase.Should().Be(0x4445000000000004);
+            payItem.ftPayItemCase = 0x4445200000800005;
+            _caseConverterDE.ConvertftPayItemCaseToV1(payItem);
+            payItem.ftPayItemCase.Should().Be(0x4445000000000005);
+            payItem.ftPayItemCase = 0x4445200000000006;
+            _caseConverterDE.ConvertftPayItemCaseToV1(payItem);
+            payItem.ftPayItemCase.Should().Be(0x444500000000000D);
+            payItem.ftPayItemCase = 0x4445200000800007;
+            _caseConverterDE.ConvertftPayItemCaseToV1(payItem);
+            payItem.ftPayItemCase.Should().Be(0x4445000000000006);
+            payItem.ftPayItemCase = 0x4445200000800008;
+            _caseConverterDE.ConvertftPayItemCaseToV1(payItem);
+            payItem.ftPayItemCase.Should().Be(0x4445000000000007);
+            payItem.ftPayItemCase = 0x4445200000000009;
+            _caseConverterDE.ConvertftPayItemCaseToV1(payItem);
+            payItem.ftPayItemCase.Should().Be(0x444500000000000E);
+            payItem.ftPayItemCase = 0x444520000080000A;
+            _caseConverterDE.ConvertftPayItemCaseToV1(payItem);
+            payItem.ftPayItemCase.Should().Be(0x4445000000000008);
+            payItem.ftPayItemCase = 0x444520000080000B;
+            _caseConverterDE.ConvertftPayItemCaseToV1(payItem);
+            payItem.ftPayItemCase.Should().Be(0x4445000000000009);
+            payItem.ftPayItemCase = 0x4445200000800009;
+            _caseConverterDE.ConvertftPayItemCaseToV1(payItem);
+            payItem.ftPayItemCase.Should().Be(0x444500000000000F);
+            payItem.ftPayItemCase = 0x444520000000000D;
+            _caseConverterDE.ConvertftPayItemCaseToV1(payItem);
+            payItem.ftPayItemCase.Should().Be(0x444500000000000A);
+            payItem.ftPayItemCase = 0x4445200000400001;
+            _caseConverterDE.ConvertftPayItemCaseToV1(payItem);
+            payItem.ftPayItemCase.Should().Be(0x4445000000000010);
+            payItem.ftPayItemCase = 0x4445200000200001;
+            _caseConverterDE.ConvertftPayItemCaseToV1(payItem);
+            payItem.ftPayItemCase.Should().Be(0x444500000000000B);
+            payItem.ftPayItemCase = 0x444520000000000E;
+            _caseConverterDE.ConvertftPayItemCaseToV1(payItem);
+            payItem.ftPayItemCase.Should().Be(0x4445000000000011);
+            payItem.ftPayItemCase = 0x444520000000000C;
+            _caseConverterDE.ConvertftPayItemCaseToV1(payItem);
+            payItem.ftPayItemCase.Should().Be(0x4445000000000014);
+        }
     }
 }
