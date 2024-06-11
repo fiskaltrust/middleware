@@ -133,7 +133,7 @@ public class CaseExtensionGenerator : ExtensionGenerator<CasesToGenerateFactory,
                         public static bool Is{member}(this {enumToGenerate.OnType.ContainingNamespace}.{enumToGenerate.OnType.Name} value) => ((value.{enumToGenerate.OnField} & 0x{enumToGenerate.Mask:X}) >> (4 * {enumToGenerate.Shift})) == ((long)global::{enumToGenerate.Namespace}.{enumToGenerate.Name}.{member});
                         """))}}
 
-                       public static void Set{{enumToGenerate.CaseName}}(this {{enumToGenerate.OnType.ContainingNamespace}}.{{enumToGenerate.OnType.Name}} value, long data) { (value.{{enumToGenerate.OnField}} = (value.{{enumToGenerate.OnField}} & ~0x{{enumToGenerate.Mask:X}}L) | ((ulong) data << (4 * {{enumToGenerate.Shift}}))  };
+                         public static void Set{{enumToGenerate.CaseName}}(this {{enumToGenerate.OnType.ContainingNamespace}}.{{enumToGenerate.OnType.Name}} value, long data) { value.{{enumToGenerate.OnField}} = (value.{{enumToGenerate.OnField}} & ~0x{{enumToGenerate.Mask:X}}L) | (data << (4 * {{enumToGenerate.Shift}})); }
                     }
                 }
                 """;
