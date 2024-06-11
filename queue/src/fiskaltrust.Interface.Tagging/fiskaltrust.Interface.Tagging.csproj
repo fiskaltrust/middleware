@@ -8,8 +8,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\fiskaltrust.Interface.Tagging.Generator\fiskaltrust.Interface.Tagging.Generator.csproj" 
-      OutputItemType="Analyzer"
-      ReferenceOutputAssembly="false" />
+      <ProjectReference Include="..\fiskaltrust.Interface.Tagging.Generator\fiskaltrust.Interface.Tagging.Generator.csproj"
+        OutputItemType="Analyzer"
+        ReferenceOutputAssembly="false" />
   </ItemGroup>
 </Project>
