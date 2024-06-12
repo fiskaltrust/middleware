@@ -27,7 +27,7 @@ namespace fiskaltrust.Interface.Tagging.FR
                 // TODO: create NotFRCaseException
                 throw new Exception("Not a FR receipt case.");
             }
-            var v2ftReceiptCase = (V2.ftReceiptCases) (receiptRequest.GetV2ftReceiptCase() & 0xFFFF);
+            var v2ftReceiptCase = (V2.ftReceiptCases) (receiptRequest.GetV2Case() & 0xFFFF);
             var v1ftReceiptCase = v2ftReceiptCase switch
             {
                 V2.ftReceiptCases.UnknownReceipt0x0000 => V1.FR.ftReceiptCases.UnknownReceipt0x0000,
