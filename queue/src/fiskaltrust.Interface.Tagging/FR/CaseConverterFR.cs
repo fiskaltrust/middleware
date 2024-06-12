@@ -5,7 +5,6 @@ using V2 = fiskaltrust.Interface.Tagging.Models.V2;
 using fiskaltrust.Interface.Tagging.Models.Extensions;
 using fiskaltrust.Interface.Tagging.Models.V2.Extensions;
 using fiskaltrust.Interface.Tagging.Models.V1.FR.Extensions;
-using fiskaltrust.ifPOS.v0;
 
 
 namespace fiskaltrust.Interface.Tagging.FR
@@ -27,7 +26,7 @@ namespace fiskaltrust.Interface.Tagging.FR
             }
             var v2ftChargeItemCase = (V2.ftChargeItemCases) (chargeItem.GetV2ChargeItemCase() & 0xFFFF);
             V1.FR.ftChargeItemCases v1ftChargeItemCase;
-            if (chargeItem.IsV2Downpayment0x0008())
+            if (chargeItem.IsV2DownPayment0x0008())
             {
                 var v2ftChargeItemVat = (V2.Vat) (chargeItem.GetV2Vat() & 0xF);
                 v1ftChargeItemCase = v2ftChargeItemVat switch
@@ -105,7 +104,7 @@ namespace fiskaltrust.Interface.Tagging.FR
                 V2.ftPayItemCases.Voucher0x0006 => V1.FR.ftPayItemCases.Voucher0x0006,
                 V2.ftPayItemCases.Online0x0007 => V1.FR.ftPayItemCases.Online0x0007,
                 V2.ftPayItemCases.CustomerCard0x0008 => V1.FR.ftPayItemCases.CustomerCard0x0008,
-                V2.ftPayItemCases.AccountsReceivable0x0009 => payItem.IsV2Downpayment0x0008() ? V1.FR.ftPayItemCases.DownPayment0x0010 : V1.FR.ftPayItemCases.AccountsReceivable0x000B,
+                V2.ftPayItemCases.AccountsReceivable0x0009 => payItem.IsV2DownPayment0x0008() ? V1.FR.ftPayItemCases.DownPayment0x0010 : V1.FR.ftPayItemCases.AccountsReceivable0x000B,
                 V2.ftPayItemCases.SEPATransfer0x000A => V1.FR.ftPayItemCases.SEPATransfer0x000C,
                 V2.ftPayItemCases.OtherBankTransfer0x000B => V1.FR.ftPayItemCases.OtherBankTransfer0x000D,
                 V2.ftPayItemCases.InternalConsumption0x000D => V1.FR.ftPayItemCases.InternalConsumption0x0011,
