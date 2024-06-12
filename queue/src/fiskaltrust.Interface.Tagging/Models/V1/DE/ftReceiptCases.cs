@@ -3,7 +3,7 @@ using fiskaltrust.Interface.Tagging.Generator;
 
 namespace fiskaltrust.Interface.Tagging.Models.V1.DE
 {
-    [CaseExtensions(OnType = typeof(ReceiptRequest), OnField = nameof(ReceiptRequest.ftReceiptCase), Mask = 0xFFFF, Prefix = "V1")]
+    [CaseExtensions(OnType = typeof(ReceiptRequest), OnField = nameof(ReceiptRequest.ftReceiptCase), Mask = 0xFFFF, Prefix = "V1", CaseName = "ReceiptCase")]
     public enum ftReceiptCases : long
     {
         UnknownReceipt0x0000 = 0x0000,

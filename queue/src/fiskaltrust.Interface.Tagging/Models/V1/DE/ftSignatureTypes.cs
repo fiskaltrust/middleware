@@ -3,7 +3,7 @@ using fiskaltrust.Interface.Tagging.Generator;
 
 namespace fiskaltrust.Interface.Tagging.Models.V1.DE
 {
-    [CaseExtensions(OnType = typeof(SignaturItem), OnField = nameof(SignaturItem.ftSignatureType), Mask = 0xFFFF)]
+    [CaseExtensions(OnType = typeof(SignaturItem), OnField = nameof(SignaturItem.ftSignatureType), Mask = 0xFFFF, Prefix = "V1", CaseName = "SignatureType")]
     public enum ftSignatureTypes : long
     {
         Signature0x0001 = 0x0001,
