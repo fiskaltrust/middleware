@@ -20,9 +20,10 @@ public readonly record struct CasesToGenerate : IToGenerate
     public readonly long? Mask;
     public readonly int? Shift;
     public readonly string? CaseName;
+    public readonly string? Prefix;
     public readonly List<string> Members;
 
-    public CasesToGenerate(string nameSpace, string name, INamedTypeSymbol onType, string onField, List<string> members, long? mask, int shift, string? caseName)
+    public CasesToGenerate(string nameSpace, string name, INamedTypeSymbol onType, string onField, List<string> members, long? mask, int shift, string? caseName, string? prefix)
     {
         OnType = onType;
         OnField = onField;
@@ -32,9 +33,10 @@ public readonly record struct CasesToGenerate : IToGenerate
         Mask = mask;
         Shift = shift;
         CaseName = caseName;
+        Prefix = prefix;
     }
 
-    public string GetSourceFileName() => $"{Namespace}.{OnType}{OnField}{CaseName}Ext.g.c";
+    public string GetSourceFileName() => $"{Namespace}.{Prefix}{OnType}{OnField}{CaseName}Ext.g.c";
 }
 
 
@@ -76,6 +78,12 @@ public class CasesToGenerateFactory : IToGenerateFactory<CasesToGenerate>
             {
                 Properties.Add("CaseName", c);
             }
+
+            if (namedArgument.Key == "Prefix"
+                && namedArgument.Value.Value?.ToString() is { } p)
+            {
+                Properties.Add("Prefix", p);
+            }
         }
     }
 
@@ -86,8 +94,9 @@ public class CasesToGenerateFactory : IToGenerateFactory<CasesToGenerate>
         long? mask = Properties.TryGetValue("Mask", out var m) ? (long) m : throw new ArgumentException("Mask is required");
         var shift = Properties.TryGetValue("Shift", out var s) ? (int) s : 0;
         var caseName = Properties.TryGetValue("CaseName", out var c) ? (string) c : "Case";
+        var prefix = Properties.TryGetValue("Prefix", out var p) ? (string) p : "";
 
-        return new CasesToGenerate(nameSpace, name, onType, onField, members, mask, shift, caseName);
+        return new CasesToGenerate(nameSpace, name, onType, onField, members, mask, shift, caseName, prefix);
     }
 }
 
@@ -113,6 +122,7 @@ public class CaseExtensionGenerator : ExtensionGenerator<CasesToGenerateFactory,
                     public long Mask { get; set; }
                     public int Shift { get; set; }
                     public string CaseName { get; set; }
+                    public string Prefix { get; set; }
                 }
             }
             """;
@@ -127,13 +137,13 @@ public class CaseExtensionGenerator : ExtensionGenerator<CasesToGenerateFactory,
                 namespace {{enumToGenerate.Namespace}}.Extensions
                 {
                     public static class {{enumToGenerate.OnType.Name}}{{enumToGenerate.OnField}}{{enumToGenerate.CaseName}}Ext {
-                        public static long Get{{enumToGenerate.CaseName}}(this {{enumToGenerate.OnType.ContainingNamespace}}.{{enumToGenerate.OnType.Name}} value) => (value.{{enumToGenerate.OnField}} & 0x{{enumToGenerate.Mask:X}}L) >> (4 * {{enumToGenerate.Shift}});
+                        public static long Get{{enumToGenerate.Prefix}}{{enumToGenerate.CaseName}}(this {{enumToGenerate.OnType.ContainingNamespace}}.{{enumToGenerate.OnType.Name}} value) => (value.{{enumToGenerate.OnField}} & 0x{{enumToGenerate.Mask:X}}L) >> (4 * {{enumToGenerate.Shift}});
 
                         {{string.Join("\n        ", enumToGenerate.Members.Select(member => $"""
-                        public static bool Is{member}(this {enumToGenerate.OnType.ContainingNamespace}.{enumToGenerate.OnType.Name} value) => ((value.{enumToGenerate.OnField} & 0x{enumToGenerate.Mask:X}) >> (4 * {enumToGenerate.Shift})) == ((long)global::{enumToGenerate.Namespace}.{enumToGenerate.Name}.{member});
+                        public static bool Is{enumToGenerate.Prefix}{member}(this {enumToGenerate.OnType.ContainingNamespace}.{enumToGenerate.OnType.Name} value) => ((value.{enumToGenerate.OnField} & 0x{enumToGenerate.Mask:X}) >> (4 * {enumToGenerate.Shift})) == ((long)global::{enumToGenerate.Namespace}.{enumToGenerate.Name}.{member});
                         """))}}
 
-                         public static void Set{{enumToGenerate.CaseName}}(this {{enumToGenerate.OnType.ContainingNamespace}}.{{enumToGenerate.OnType.Name}} value, long data) { value.{{enumToGenerate.OnField}} = (value.{{enumToGenerate.OnField}} & ~0x{{enumToGenerate.Mask:X}}L) | (data << (4 * {{enumToGenerate.Shift}})); }
+                         public static void Set{{enumToGenerate.Prefix}}{{enumToGenerate.CaseName}}(this {{enumToGenerate.OnType.ContainingNamespace}}.{{enumToGenerate.OnType.Name}} value, long data) { value.{{enumToGenerate.OnField}} = (value.{{enumToGenerate.OnField}} & ~0x{{enumToGenerate.Mask:X}}L) | (data << (4 * {{enumToGenerate.Shift}})); }
                     }
                 }
                 """;
