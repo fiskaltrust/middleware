@@ -34,7 +34,7 @@ public class Tests
         test.IsLel().Should().BeTrue();
 
         test.IsLelCase().Should().BeFalse();
-        test.SetLelCase();
+        test.SetTestCases((long)TestCases.LelCase);
         test.IsLelCase().Should().BeTrue();
 
         test.GetTestCases().Should().Be(0x0004);

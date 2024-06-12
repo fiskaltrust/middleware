@@ -1,5 +1,8 @@
-﻿namespace fiskaltrust.Interface.Tagging.Models.V1.FR
+﻿using fiskaltrust.ifPOS.v1;
+using fiskaltrust.Interface.Tagging.Generator;
+namespace fiskaltrust.Interface.Tagging.Models.V1.FR
 {
+    [CaseExtensions(OnType = typeof(ReceiptRequest), OnField = nameof(ReceiptRequest.ftReceiptCase), Mask = 0xFFFF, CaseName = "V1ftReceiptCase")]
     public enum ftReceiptCases : long
     {
         UnknownReceipt0x0000 = 0x0000,

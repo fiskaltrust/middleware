@@ -4,6 +4,8 @@ using V1 = fiskaltrust.Interface.Tagging.Models.V1;
 using V2 = fiskaltrust.Interface.Tagging.Models.V2;
 using fiskaltrust.Interface.Tagging.Models.Extensions;
 using fiskaltrust.Interface.Tagging.Models.V2.Extensions;
+using fiskaltrust.Interface.Tagging.Models.V1.FR.Extensions;
+
 
 namespace fiskaltrust.Interface.Tagging.FR
 {
@@ -25,10 +27,18 @@ namespace fiskaltrust.Interface.Tagging.FR
                 // TODO: create NotFRCaseException
                 throw new Exception("Not a FR receipt case.");
             }
+            var v2ftReceiptCase = (V2.ftReceiptCases) (receiptRequest.GetV2ftReceiptCase() & 0xFFFF);
+            var v1ftReceiptCase = v2ftReceiptCase switch
+            {
+                V2.ftReceiptCases.UnknownReceipt0x0000 => V1.FR.ftReceiptCases.UnknownReceipt0x0000,
+                V2.ftReceiptCases.PointOfSaleReceipt0x0001 => V1.FR.ftReceiptCases.PointOfSaleReceipt0x0001,
+                V2.ftReceiptCases.PaymentTransfer0x0002 => V1.FR.ftReceiptCases.PaymentTransfer0x000C,
+                _ => throw new NotImplementedException()
+            };
+            receiptRequest.SetV1ftReceiptCase((long)v1ftReceiptCase);
 
-            
-            
-           
+
+
         }
         public void ConvertftSignatureFormatToV2(SignaturItem signaturItem) => throw new NotImplementedException();
         public void ConvertftSignatureTypeToV2(SignaturItem signaturItem) => throw new NotImplementedException();
