@@ -7,6 +7,8 @@ namespace fiskaltrust.Interface.Tagging.Models.V1.FR
     {
         UnknownReceipt0x0000 = 0x0000,
         PointOfSaleReceipt0x0001 = 0x0001,
+        CashPayIn0x000A = 0x000A,
+        CashPayOut0x000B = 0x000B,
         PaymentTransfer0x000C = 0x000C,
         Protocol0x0009 = 0x0009,
 
