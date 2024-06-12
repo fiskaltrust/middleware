@@ -136,7 +136,7 @@ public class CaseExtensionGenerator : ExtensionGenerator<CasesToGenerateFactory,
         return $$"""
                 namespace {{enumToGenerate.Namespace}}.Extensions
                 {
-                    public static class {{enumToGenerate.OnType.Name}}{{enumToGenerate.OnField}}{{enumToGenerate.CaseName}}Ext {
+                    public static class {{enumToGenerate.Prefix}}{{enumToGenerate.OnType.Name}}{{enumToGenerate.OnField}}{{enumToGenerate.CaseName}}Ext {
                         public static long Get{{enumToGenerate.Prefix}}{{enumToGenerate.CaseName}}(this {{enumToGenerate.OnType.ContainingNamespace}}.{{enumToGenerate.OnType.Name}} value) => (value.{{enumToGenerate.OnField}} & 0x{{enumToGenerate.Mask:X}}L) >> (4 * {{enumToGenerate.Shift}});
 
                         {{string.Join("\n        ", enumToGenerate.Members.Select(member => $"""

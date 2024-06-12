@@ -98,7 +98,7 @@ public class FlagExtensionGenerator : ExtensionGenerator<FlagsToGenerateFactory,
         return $$"""
                 namespace {{enumToGenerate.Namespace}}.Extensions
                 {
-                    public static class {{enumToGenerate.OnType.Name}}{{enumToGenerate.OnField}}FlagExt {
+                    public static class {{enumToGenerate.Prefix}}{{enumToGenerate.OnType.Name}}{{enumToGenerate.OnField}}FlagExt {
                         {{string.Join("\n        ", enumToGenerate.Members.Select(member => $"""
                                 public static bool Is{enumToGenerate.Prefix}{member}(this {enumToGenerate.OnType.ContainingNamespace}.{enumToGenerate.OnType.Name} value) => (value.{enumToGenerate.OnField} & ((long)global::{enumToGenerate.Namespace}.{enumToGenerate.Name}.{member})) > 0;
                                 """))}}
