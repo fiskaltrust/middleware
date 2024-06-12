@@ -93,7 +93,7 @@ namespace fiskaltrust.Interface.Tagging.FR
                 // TODO: create NotFRCaseException
                 throw new Exception("Not a FR receipt case.");
             }
-            var v2ftPayItemCase = (V2.ftPayItemCases) (payItem.GetV2PayItemCase() & 0xFFFF);
+            var v2ftPayItemCase = (V2.ftPayItemCases) payItem.GetV2PayItemCase();
             var v1ftPayItemCase = v2ftPayItemCase switch
             {
                 V2.ftPayItemCases.UnknownPaymentType0x0000 => V1.FR.ftPayItemCases.UnknownPaymentType0x0000,
@@ -112,6 +112,7 @@ namespace fiskaltrust.Interface.Tagging.FR
                 _ => throw new NotImplementedException()
             };
             payItem.SetV1PayItemCase((long) v1ftPayItemCase);
+           
         }
         public void ConvertftReceiptCaseToV1(ReceiptRequest receiptRequest)
         {
@@ -150,6 +151,22 @@ namespace fiskaltrust.Interface.Tagging.FR
             };
             receiptRequest.SetV1ReceiptCase((long)v1ftReceiptCase);
 
+            if (receiptRequest.IsV2LateSigning0x0001())
+            {
+                receiptRequest.SetV1Failed0x0001();
+            }
+            if (receiptRequest.IsV2Void0x0004())
+            {
+                receiptRequest.SetV1Void0x0004();
+            }
+            if (receiptRequest.IsV2Training0x0002())
+            {
+                receiptRequest.SetV1Training0x0002();
+            }           
+            if (receiptRequest.IsV2ReceiptRequested0x8000())
+            {
+                receiptRequest.SetV1ReceiptRequested0x8000_0000();
+            }
         }
         public void ConvertftSignatureFormatToV2(SignaturItem signaturItem) => throw new NotImplementedException();
         public void ConvertftSignatureTypeToV2(SignaturItem signaturItem) => throw new NotImplementedException();
