@@ -2,7 +2,7 @@
 using fiskaltrust.Interface.Tagging.Generator;
 namespace fiskaltrust.Interface.Tagging.Models.V1.FR
 {
-    [CaseExtensions(OnType = typeof(PayItem), OnField = nameof(PayItem.ftPayItemCase), Mask = 0xFFFF, Prefix = "V2", CaseName = "PayItemCase")]
+    [CaseExtensions(OnType = typeof(PayItem), OnField = nameof(PayItem.ftPayItemCase), Mask = 0xFFFF, Prefix = "V1", CaseName = "PayItemCase")]
     public enum ftPayItemCases : long
     {
         UnknownPaymentType0x0000 = 0x0000,
