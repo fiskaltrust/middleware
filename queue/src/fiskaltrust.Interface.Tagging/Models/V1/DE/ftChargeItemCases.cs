@@ -134,7 +134,7 @@ namespace fiskaltrust.Interface.Tagging.Models.V1.DE
         DownPaymentReductionNotTaxable0x008D = 0x008D,
         DownPaymentReductionZeroVat0x008E = 0x008E,
         DownPaymentReductionUnknownVat0x008F = 0x0008F,
-
+       
         CashTransferToEmptyTillNotTaxable0x0090 = 0x0090,
         CashTransferFromTillToOwnerNotTaxable0x0091 = 0x0091,
         CashTransferFromOwnerToTillNotTaxable0x0092 = 0x0092,
