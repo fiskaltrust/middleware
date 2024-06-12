@@ -416,20 +416,19 @@ namespace fiskaltrust.Interface.Tagging.DE
 
             ftPayItem.ftPayItemCase = (long) ((ulong) v2ftPayItem.ftPayItemCase & 0xFFFF_0000_0000_0000);
 
-
-            if (v2ftPayItem.IsTip0x0040() && (V2.ftPayItemCases) (v2ftPayItem.ftPayItemCase & 0xFFFF) == V2.ftPayItemCases.Cash0x0001)
+            if (v2ftPayItem.IsV2Tip0x0040() && v2ftPayItem.IsV2Cash0x0001())
             {
-                ftPayItem.ftPayItemCase |= (long) V1.DE.ftPayItemCases.TipToEmployee0x0010;
+                ftPayItem.SetV1Case((long) V1.DE.ftPayItemCases.TipToEmployee0x0010);
             }
-            else if (v2ftPayItem.IsChange0x0020() && (V2.ftPayItemCases) (v2ftPayItem.ftPayItemCase & 0xFFFF) == V2.ftPayItemCases.Cash0x0001)
+            else if (v2ftPayItem.IsV2Change0x0020() && v2ftPayItem.IsV2Cash0x0001())
             {
-                ftPayItem.ftPayItemCase |= (long) V1.DE.ftPayItemCases.Change0x000B;
+                ftPayItem.SetV1Case((long) V1.DE.ftPayItemCases.Change0x000B);
             }
-            else if (v2ftPayItem.IsForeignCurrency0x0010() && (V2.ftPayItemCases) (v2ftPayItem.ftPayItemCase & 0xFFFF) == V2.ftPayItemCases.Cash0x0001)
+            else if (v2ftPayItem.IsV2ForeignCurrency0x0010() && v2ftPayItem.IsV2Cash0x0001())
             {
-                ftPayItem.ftPayItemCase |= (long) V1.DE.ftPayItemCases.CashForeignCurrency0x0002;
+                ftPayItem.SetV1Case((long)V1.DE.ftPayItemCases.CashForeignCurrency0x0002);
             }
-            else if (v2ftPayItem.IsDigital0x0080())
+            else if (v2ftPayItem.IsV2Digital0x0080())
             {
                 ftPayItem.ftPayItemCase |= (long) ((V2.ftPayItemCases) (v2ftPayItem.ftPayItemCase & 0xFFFF) switch
                 {
