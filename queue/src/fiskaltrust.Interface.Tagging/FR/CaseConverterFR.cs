@@ -26,7 +26,7 @@ namespace fiskaltrust.Interface.Tagging.FR
                 // TODO: create NotFRCaseException
                 throw new Exception("Not a FR receipt case.");
             }
-            var v2ftPayItemCase = (V2.ftPayItemCases) (payItem.GetV2ftPayItemCase() & 0xFFFF);
+            var v2ftPayItemCase = (V2.ftPayItemCases) (payItem.GetV2() & 0xFFFF);
             var v1ftPayItemCase = v2ftPayItemCase switch
             {
                 V2.ftPayItemCases.UnknownPaymentType0x0000 => V1.FR.ftPayItemCases.UnknownPaymentType0x0000,
@@ -44,7 +44,7 @@ namespace fiskaltrust.Interface.Tagging.FR
                 V2.ftPayItemCases.TransferTo0x000C => V1.FR.ftPayItemCases.CashBookExpense0x000E,  
                 _ => throw new NotImplementedException()
             };
-            payItem.SetV1ftPayItemCase((long) v1ftPayItemCase);
+            payItem.SetV1((long) v1ftPayItemCase);
         }
         public void ConvertftReceiptCaseToV1(ReceiptRequest receiptRequest)
         {
@@ -59,7 +59,7 @@ namespace fiskaltrust.Interface.Tagging.FR
                 // TODO: create NotFRCaseException
                 throw new Exception("Not a FR receipt case.");
             }
-            var v2ftReceiptCase = (V2.ftReceiptCases) (receiptRequest.GetV2ftReceiptCase() & 0xFFFF);
+            var v2ftReceiptCase = (V2.ftReceiptCases) (receiptRequest.GetV2Case() & 0xFFFF);
             var v1ftReceiptCase = v2ftReceiptCase switch
             {
                 V2.ftReceiptCases.UnknownReceipt0x0000 => V1.FR.ftReceiptCases.UnknownReceipt0x0000,
