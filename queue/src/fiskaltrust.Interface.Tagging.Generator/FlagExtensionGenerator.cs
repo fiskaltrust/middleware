@@ -12,15 +12,17 @@ public readonly record struct FlagsToGenerate : IToGenerate
     public readonly string OnField;
     public readonly string Namespace;
     public readonly string Name;
+    public readonly string? Prefix;
     public readonly List<string> Members;
 
-    public FlagsToGenerate(string nameSpace, string name, INamedTypeSymbol onType, string onField, List<string> members)
+    public FlagsToGenerate(string nameSpace, string name, INamedTypeSymbol onType, string onField, List<string> members, string? prefix)
     {
         OnType = onType;
         OnField = onField;
         Members = members;
         Namespace = nameSpace;
         Name = name;
+        Prefix = prefix;
     }
 
     public string GetSourceFileName() => $"{Namespace}.{OnType}.{OnField}FlagExt.g.cs";
@@ -46,6 +48,12 @@ public class FlagsToGenerateFactory : IToGenerateFactory<FlagsToGenerate>
             {
                 Properties.Add("OnField", of);
             }
+
+            if (namedArgument.Key == "Prefix"
+                    && namedArgument.Value.Value?.ToString() is { } p)
+            {
+                Properties.Add("Prefix", p);
+            }
         }
     }
 
@@ -53,7 +61,8 @@ public class FlagsToGenerateFactory : IToGenerateFactory<FlagsToGenerate>
     {
         var onType = (INamedTypeSymbol) Properties["OnType"];
         var onField = (string) Properties["OnField"];
-        return new FlagsToGenerate(nameSpace, name, onType, onField, members);
+        var prefix = Properties.TryGetValue("Prefix", out var p) ? (string) p : "";
+        return new FlagsToGenerate(nameSpace, name, onType, onField, members, prefix);
     }
 }
 
@@ -75,6 +84,7 @@ public class FlagExtensionGenerator : ExtensionGenerator<FlagsToGenerateFactory,
                     }
                     public global::System.Type OnType { get; set; }
                     public string OnField { get; set; }
+                    public string Prefix { get; set; }
                 }
             }
             """;
@@ -90,11 +100,11 @@ public class FlagExtensionGenerator : ExtensionGenerator<FlagsToGenerateFactory,
                 {
                     public static class {{enumToGenerate.OnType.Name}}{{enumToGenerate.OnField}}FlagExt {
                         {{string.Join("\n        ", enumToGenerate.Members.Select(member => $"""
-                                public static bool Is{member}(this {enumToGenerate.OnType.ContainingNamespace}.{enumToGenerate.OnType.Name} value) => (value.{enumToGenerate.OnField} & ((long)global::{enumToGenerate.Namespace}.{enumToGenerate.Name}.{member})) > 0;
+                                public static bool Is{enumToGenerate.Prefix}{member}(this {enumToGenerate.OnType.ContainingNamespace}.{enumToGenerate.OnType.Name} value) => (value.{enumToGenerate.OnField} & ((long)global::{enumToGenerate.Namespace}.{enumToGenerate.Name}.{member})) > 0;
                                 """))}}
 
                         {{string.Join("\n        ", enumToGenerate.Members.Select(member => $$"""
-                                public static void Set{{member}}(this {{enumToGenerate.OnType.ContainingNamespace}}.{{enumToGenerate.OnType.Name}} value) { value.{{enumToGenerate.OnField}} = (value.{{enumToGenerate.OnField}} | ((long)global::{{enumToGenerate.Namespace}}.{{enumToGenerate.Name}}.{{member}})); }
+                                public static void Set{{enumToGenerate.Prefix}}{{member}}(this {{enumToGenerate.OnType.ContainingNamespace}}.{{enumToGenerate.OnType.Name}} value) { value.{{enumToGenerate.OnField}} = (value.{{enumToGenerate.OnField}} | ((long)global::{{enumToGenerate.Namespace}}.{{enumToGenerate.Name}}.{{member}})); }
                                 """))}}
                     }
                 }
