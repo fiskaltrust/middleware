@@ -3,7 +3,7 @@ using fiskaltrust.Interface.Tagging.Generator;
 
 namespace fiskaltrust.Interface.Tagging.Models.V2
 {
-    [CaseExtensions(OnType = typeof(JournalRequest), OnField = nameof(JournalRequest.ftJournalType), Mask = 0xFFFF)]
+    [CaseExtensions(OnType = typeof(JournalRequest), OnField = nameof(JournalRequest.ftJournalType), Mask = 0xFFFF, Prefix = "V2", CaseName = "JournalType")]
     public enum ftJournalTypes : long
     {
         VersionInformation0x0000 = 0x0000,
