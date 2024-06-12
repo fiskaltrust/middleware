@@ -416,7 +416,6 @@ namespace fiskaltrust.Interface.Tagging.DE
 
             ftPayItem.ftPayItemCase = (long) ((ulong) v2ftPayItem.ftPayItemCase & 0xFFFF_0000_0000_0000);
 
-            V2.Extensions.PayItemftPayItemCaseCaseExt.SetCash0x0001(v2ftPayItem);
 
             if (v2ftPayItem.IsTip0x0040() && (V2.ftPayItemCases) (v2ftPayItem.ftPayItemCase & 0xFFFF) == V2.ftPayItemCases.Cash0x0001)
             {
