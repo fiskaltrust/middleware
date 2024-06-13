@@ -3,7 +3,7 @@ using fiskaltrust.Interface.Tagging.Generator;
 
 namespace fiskaltrust.Interface.Tagging.Models.V2
 {
-    [FlagExtensions(OnType = typeof(ReceiptResponse), OnField = nameof(ReceiptResponse.ftState))]
+    [CaseExtensions(OnType = typeof(ReceiptResponse), OnField = nameof(ReceiptResponse.ftState), Mask = 0xFFFF, Prefix = "V2", CaseName = "ftState")]
     public enum ftStates : long
     {
         SecurityMechanismOutOfOperation0x0001 = 0x0001,

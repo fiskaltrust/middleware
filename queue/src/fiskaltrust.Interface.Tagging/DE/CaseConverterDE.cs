@@ -520,34 +520,34 @@ namespace fiskaltrust.Interface.Tagging.DE
 
             if (v2ReceiptRequest.IsV2LateSigning0x0001())
             {
-                receiptRequest.SetV1Failed0x0001();
+                receiptRequest.SetV1ReceiptCaseFlagFailed0x0001();
             }
             if (v2ReceiptRequest.IsV2Void0x0004())
             {
-                receiptRequest.SetV1Void0x0004();
+                receiptRequest.SetV1ReceiptCaseFlagVoid0x0004();
             }
             if (v2ReceiptRequest.IsV2Training0x0002())
             {
-                receiptRequest.SetV1Training0x0002();
+                receiptRequest.SetV1ReceiptCaseFlagTraining0x0002();
             }
             if (v2ReceiptRequest.IsV2HandWritten0x0008())
             {
-                receiptRequest.SetV1HandWritten0x0008();
+                receiptRequest.SetV1ReceiptCaseFlagHandWritten0x0008();
             }
             if (v2ReceiptRequest.IsV2IssuerIsSmallBusiness0x0010())
             {
-                receiptRequest.SetV1SmallBusiness0x0010();
+                receiptRequest.SetV1ReceiptCaseFlagSmallBusiness0x0010();
             }
             if (v2ReceiptRequest.IsV2ReceiverIsBusiness0x0020())
             {
-                receiptRequest.SetV1ReceiverIsCompany0x00020();
+                receiptRequest.SetV1ReceiptCaseFlagReceiverIsCompany0x00020();
             }
             if (v2ReceiptRequest.IsV2ReceiptRequested0x8000())
             {
-                receiptRequest.SetV1ReceiptRequested0x8000_0000();
+                receiptRequest.SetV1ReceiptCaseFlagReceiptRequested0x8000_0000();
             }
 
-            receiptRequest.SetV1ImplicitTransaction0x0001_0000();
+            receiptRequest.SetV1ReceiptCaseFlagImplicitTransaction0x0001_0000();
         }
         public void ConvertftSignatureFormatToV2(SignaturItem ftSignatureFormat) => throw new NotImplementedException();
         public void ConvertftSignatureTypeToV2(SignaturItem ftSignatureType) => throw new NotImplementedException();

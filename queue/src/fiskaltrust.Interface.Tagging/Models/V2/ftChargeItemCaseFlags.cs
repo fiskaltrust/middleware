@@ -3,7 +3,7 @@ using fiskaltrust.Interface.Tagging.Generator;
 
 namespace fiskaltrust.Interface.Tagging.Models.V2
 {
-    [FlagExtensions(OnType = typeof(ChargeItem), OnField = nameof(ChargeItem.ftChargeItemCase), Prefix = "V2")]
+    [FlagExtensions(OnType = typeof(ChargeItem), OnField = nameof(ChargeItem.ftChargeItemCase), Prefix = "V2", CaseName = "ChargeItemCaseFlag")]
     public enum ftChargeItemCaseFlags : long
     {
         Void0x0001 = 0x0000_0000_0001_0000,
