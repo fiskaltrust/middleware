@@ -12,20 +12,22 @@ public readonly record struct FlagsToGenerate : IToGenerate
     public readonly string OnField;
     public readonly string Namespace;
     public readonly string Name;
+    public readonly string? CaseName;
     public readonly string? Prefix;
     public readonly List<string> Members;
 
-    public FlagsToGenerate(string nameSpace, string name, INamedTypeSymbol onType, string onField, List<string> members, string? prefix)
+    public FlagsToGenerate(string nameSpace, string name, INamedTypeSymbol onType, string onField, List<string> members, string? caseName, string? prefix)
     {
         OnType = onType;
         OnField = onField;
         Members = members;
         Namespace = nameSpace;
         Name = name;
+        CaseName = caseName;
         Prefix = prefix;
     }
 
-    public string GetSourceFileName() => $"{Namespace}.{OnType}.{OnField}FlagExt.g.cs";
+    public string GetSourceFileName() => $"{Namespace}.{Prefix}{OnType}{OnField}{CaseName}FlagExt.g.cs";
 }
 
 public class FlagsToGenerateFactory : IToGenerateFactory<FlagsToGenerate>
@@ -49,6 +51,12 @@ public class FlagsToGenerateFactory : IToGenerateFactory<FlagsToGenerate>
                 Properties.Add("OnField", of);
             }
 
+            if (namedArgument.Key == "CaseName"
+                && namedArgument.Value.Value?.ToString() is { } c)
+            {
+                Properties.Add("CaseName", c);
+            }
+
             if (namedArgument.Key == "Prefix"
                     && namedArgument.Value.Value?.ToString() is { } p)
             {
@@ -61,8 +69,9 @@ public class FlagsToGenerateFactory : IToGenerateFactory<FlagsToGenerate>
     {
         var onType = (INamedTypeSymbol) Properties["OnType"];
         var onField = (string) Properties["OnField"];
+        var caseName = Properties.TryGetValue("CaseName", out var c) ? (string) c : "Case";
         var prefix = Properties.TryGetValue("Prefix", out var p) ? (string) p : "";
-        return new FlagsToGenerate(nameSpace, name, onType, onField, members, prefix);
+        return new FlagsToGenerate(nameSpace, name, onType, onField, members, caseName, prefix);
     }
 }
 
@@ -84,6 +93,7 @@ public class FlagExtensionGenerator : ExtensionGenerator<FlagsToGenerateFactory,
                     }
                     public global::System.Type OnType { get; set; }
                     public string OnField { get; set; }
+                    public string CaseName { get; set; }
                     public string Prefix { get; set; }
                 }
             }
@@ -98,13 +108,13 @@ public class FlagExtensionGenerator : ExtensionGenerator<FlagsToGenerateFactory,
         return $$"""
                 namespace {{enumToGenerate.Namespace}}.Extensions
                 {
-                    public static class {{enumToGenerate.Prefix}}{{enumToGenerate.OnType.Name}}{{enumToGenerate.OnField}}FlagExt {
+                    public static class {{enumToGenerate.Prefix}}{{enumToGenerate.OnType.Name}}{{enumToGenerate.OnField}}{{enumToGenerate.CaseName}}FlagExt {
                         {{string.Join("\n        ", enumToGenerate.Members.Select(member => $"""
                                 public static bool Is{enumToGenerate.Prefix}{member}(this {enumToGenerate.OnType.ContainingNamespace}.{enumToGenerate.OnType.Name} value) => (value.{enumToGenerate.OnField} & ((long)global::{enumToGenerate.Namespace}.{enumToGenerate.Name}.{member})) > 0;
                                 """))}}
 
                         {{string.Join("\n        ", enumToGenerate.Members.Select(member => $$"""
-                                public static void Set{{enumToGenerate.Prefix}}{{member}}(this {{enumToGenerate.OnType.ContainingNamespace}}.{{enumToGenerate.OnType.Name}} value) { value.{{enumToGenerate.OnField}} = (value.{{enumToGenerate.OnField}} | ((long)global::{{enumToGenerate.Namespace}}.{{enumToGenerate.Name}}.{{member}})); }
+                                public static void Set{{enumToGenerate.Prefix}}{{enumToGenerate.CaseName}}{{member}}(this {{enumToGenerate.OnType.ContainingNamespace}}.{{enumToGenerate.OnType.Name}} value) { value.{{enumToGenerate.OnField}} = (value.{{enumToGenerate.OnField}} | ((long)global::{{enumToGenerate.Namespace}}.{{enumToGenerate.Name}}.{{member}})); }
                                 """))}}
                     }
                 }
