@@ -18,7 +18,7 @@ namespace fiskaltrust.Interface.Tagging.DE
 
             chargeItem.ftChargeItemCase = (long) ((ulong) v2ChargeItem.ftChargeItemCase & 0xFFFF_0000_0000_0000);
 
-            if (v2ChargeItem.IsV2VoucherNotTaxable0x0048())
+            if (v2ChargeItem.IsV2ChargeItemCaseVoucherNotTaxable0x0048())
             {
                 if (chargeItem.Amount > 0)
                 {
@@ -28,7 +28,7 @@ namespace fiskaltrust.Interface.Tagging.DE
                 {
                     chargeItem.SetV1ChargeItemCase((long) V1.DE.ftChargeItemCases.VoucherRedeemNotTaxable0x0068);
                 }
-            }else if (v2ChargeItem.IsV2VoucherNormalVATRate0x0043())
+            }else if (v2ChargeItem.IsV2ChargeItemCaseVoucherNormalVATRate0x0043())
             {
                 if (chargeItem.Amount > 0)
                 {
@@ -39,7 +39,7 @@ namespace fiskaltrust.Interface.Tagging.DE
                     chargeItem.SetV1ChargeItemCase((long) V1.DE.ftChargeItemCases.CouponRedeemNormalVat0x0069);
                 }
             }
-            else if (v2ChargeItem.IsV2VoucherDiscountedVATRate10x0041())
+            else if (v2ChargeItem.IsV2ChargeItemCaseVoucherDiscountedVATRate10x0041())
             {
                 if (chargeItem.Amount > 0)
                 {
@@ -50,7 +50,7 @@ namespace fiskaltrust.Interface.Tagging.DE
                     chargeItem.SetV1ChargeItemCase((long) V1.DE.ftChargeItemCases.CouponRedeemDiscounted1Vat0x006A);
                 }
             }
-            else if (v2ChargeItem.IsV2VoucherSpecialVATRate10x0044())
+            else if (v2ChargeItem.IsV2ChargeItemCaseVoucherSpecialVATRate10x0044())
             {
                 if (chargeItem.Amount > 0)
                 {
@@ -61,7 +61,7 @@ namespace fiskaltrust.Interface.Tagging.DE
                     chargeItem.SetV1ChargeItemCase((long)V1.DE.ftChargeItemCases.CouponRedeemSpecial1Vat0x006B);
                 }
             }
-            else if (v2ChargeItem.IsV2VoucherSpecialVATRate20x0045())
+            else if (v2ChargeItem.IsV2ChargeItemCaseVoucherSpecialVATRate20x0045())
             {
                 if (chargeItem.Amount > 0)
                 {
@@ -72,7 +72,7 @@ namespace fiskaltrust.Interface.Tagging.DE
                     chargeItem.SetV1ChargeItemCase((long)V1.DE.ftChargeItemCases.CouponRedeemSpecial2Vat0x006C);
                 }
             }
-            else if (v2ChargeItem.IsV2VoucherZeroVAT0x0047())
+            else if (v2ChargeItem.IsV2ChargeItemCaseVoucherZeroVAT0x0047())
             {
                 if (chargeItem.Amount > 0)
                 {
@@ -83,7 +83,7 @@ namespace fiskaltrust.Interface.Tagging.DE
                     chargeItem.SetV1ChargeItemCase((long)V1.DE.ftChargeItemCases.CouponRedeemZeroVat0x006E);
                 }
             }
-            else if (v2ChargeItem.IsV2VoucherUnknownVAT0x0040())
+            else if (v2ChargeItem.IsV2ChargeItemCaseVoucherUnknownVAT0x0040())
             {
                 if (chargeItem.Amount > 0)
                 {
@@ -94,7 +94,7 @@ namespace fiskaltrust.Interface.Tagging.DE
                     chargeItem.SetV1ChargeItemCase((long)V1.DE.ftChargeItemCases.CouponRedeemUnknownVat0x006F);
                 }
             }
-            else if (v2ChargeItem.IsV2ReceivableNormalVATRate0x0093())
+            else if (v2ChargeItem.IsV2ChargeItemCaseReceivableNormalVATRate0x0093())
             {
                 if (chargeItem.Amount > 0)
                 {
@@ -105,7 +105,7 @@ namespace fiskaltrust.Interface.Tagging.DE
                     chargeItem.SetV1ChargeItemCase((long)V1.DE.ftChargeItemCases.ReceivableCreationNormalVat0x0071);
                 }
             }
-            else if (v2ChargeItem.IsV2ReceivableDiscountedVATRate10x0091())
+            else if (v2ChargeItem.IsV2ChargeItemCaseReceivableDiscountedVATRate10x0091())
             {
                 if (chargeItem.Amount > 0)
                 {
@@ -116,7 +116,7 @@ namespace fiskaltrust.Interface.Tagging.DE
                     chargeItem.SetV1ChargeItemCase((long)V1.DE.ftChargeItemCases.ReceivableCreationDiscounted1Vat0x0072);
                 }
             }
-            else if (v2ChargeItem.IsV2ReceivableSpecialVATRate10x0094())
+            else if (v2ChargeItem.IsV2ChargeItemCaseReceivableSpecialVATRate10x0094())
             {
                 if (chargeItem.Amount > 0)
                 {
@@ -127,7 +127,7 @@ namespace fiskaltrust.Interface.Tagging.DE
                     chargeItem.SetV1ChargeItemCase((long)V1.DE.ftChargeItemCases.ReceivableCreationSpecial1Vat0x0073);
                 }
             }
-            else if (v2ChargeItem.IsV2ReceivableSpecialVATRate20x0095())
+            else if (v2ChargeItem.IsV2ChargeItemCaseReceivableSpecialVATRate20x0095())
             {
                 if (chargeItem.Amount > 0)
                 {
@@ -138,7 +138,7 @@ namespace fiskaltrust.Interface.Tagging.DE
                     chargeItem.SetV1ChargeItemCase((long)V1.DE.ftChargeItemCases.ReceivableCreationSpecial2Vat0x0074);
                 }
             }
-            else if (v2ChargeItem.IsV2ReceivableNotTaxable0x0098())
+            else if (v2ChargeItem.IsV2ChargeItemCaseReceivableNotTaxable0x0098())
             {
                 if (chargeItem.Amount > 0)
                 {
@@ -149,7 +149,7 @@ namespace fiskaltrust.Interface.Tagging.DE
                     chargeItem.SetV1ChargeItemCase((long)V1.DE.ftChargeItemCases.ReceivableCreationNotTaxable0x0075);
                 }
             }
-            else if (v2ChargeItem.IsV2ReceivableZeroVAT0x0097())
+            else if (v2ChargeItem.IsV2ChargeItemCaseReceivableZeroVAT0x0097())
             {
                 if (chargeItem.Amount > 0)
                 {
@@ -160,7 +160,7 @@ namespace fiskaltrust.Interface.Tagging.DE
                     chargeItem.SetV1ChargeItemCase((long)V1.DE.ftChargeItemCases.ReceivableCreationZeroVat0x0076);
                 }
             }
-            else if (v2ChargeItem.IsV2ReceivableUnknownVAT0x0090())
+            else if (v2ChargeItem.IsV2ChargeItemCaseReceivableUnknownVAT0x0090())
             {
                 if (chargeItem.Amount > 0)
                 {
@@ -170,194 +170,194 @@ namespace fiskaltrust.Interface.Tagging.DE
                 {
                     chargeItem.SetV1ChargeItemCase((long) V1.DE.ftChargeItemCases.ReceivableCreationUnknownVat0x0077);
                 }
-            }else if (v2ChargeItem.IsV2DownPayment0x0008())
+            }else if (v2ChargeItem.IsV2ChargeItemCaseFlagDownPayment0x0008())
             {
                 if (chargeItem.Amount <= 0)
                 {
-                    if (v2ChargeItem.IsV2VatNormal0x3())
+                    if (v2ChargeItem.IsV2ChargeItemCase1VatNormal0x3())
                     {
                         chargeItem.SetV1ChargeItemCase((long) V1.DE.ftChargeItemCases.DownPaymentReductionNormalVat0x0089);
                     }
-                    else if (v2ChargeItem.IsV2VatDiscounted10x1())
+                    else if (v2ChargeItem.IsV2ChargeItemCase1VatDiscounted10x1())
                     {
                         chargeItem.SetV1ChargeItemCase((long)V1.DE.ftChargeItemCases.DownPaymentReductionDiscounted1Vat0x008A);
                     }
-                    else if (v2ChargeItem.IsV2VatSpecial10x4())
+                    else if (v2ChargeItem.IsV2ChargeItemCase1VatSpecial10x4())
                     {
                         chargeItem.SetV1ChargeItemCase((long)V1.DE.ftChargeItemCases.DownPaymentReductionSpecial1Vat0x008B);
                     }
-                    else if (v2ChargeItem.IsV2VatSpecial20x5())
+                    else if (v2ChargeItem.IsV2ChargeItemCase1VatSpecial20x5())
                     {
                         chargeItem.SetV1ChargeItemCase((long) V1.DE.ftChargeItemCases.DownPaymentReductionSpecial2Vat0x008C);
                     }
-                    else if (v2ChargeItem.IsV2VatNotTaxable0x8())
+                    else if (v2ChargeItem.IsV2ChargeItemCase1VatNotTaxable0x8())
                     {
                         chargeItem.SetV1ChargeItemCase((long)V1.DE.ftChargeItemCases.DownPaymentReductionNotTaxable0x008D);
                     }
-                    else if (v2ChargeItem.IsV2VatZero0x7())
+                    else if (v2ChargeItem.IsV2ChargeItemCase1VatZero0x7())
                     {
                         chargeItem.SetV1ChargeItemCase((long)V1.DE.ftChargeItemCases.DownPaymentReductionZeroVat0x008E);
                     }
-                    else if (v2ChargeItem.IsV2VatUnknown0x0())
+                    else if (v2ChargeItem.IsV2ChargeItemCase1VatUnknown0x0())
                     {
                         chargeItem.SetV1ChargeItemCase((long)V1.DE.ftChargeItemCases.DownPaymentReductionUnknownVat0x008F);
                     }
                 }
                 else
                 {
-                    if (v2ChargeItem.IsV2VatNormal0x3())
+                    if (v2ChargeItem.IsV2ChargeItemCase1VatNormal0x3())
                     {
                         chargeItem.SetV1ChargeItemCase((long)V1.DE.ftChargeItemCases.DownPaymentCreationNormalVat0x0081);
                     }
-                    else if (v2ChargeItem.IsV2VatDiscounted10x1())
+                    else if (v2ChargeItem.IsV2ChargeItemCase1VatDiscounted10x1())
                     {
                         chargeItem.SetV1ChargeItemCase((long)V1.DE.ftChargeItemCases.DownPaymentCreationDiscounted1Vat0x0082);
                     }
-                    else if (v2ChargeItem.IsV2VatSpecial10x4())
+                    else if (v2ChargeItem.IsV2ChargeItemCase1VatSpecial10x4())
                     {
                         chargeItem.SetV1ChargeItemCase((long)V1.DE.ftChargeItemCases.DownPaymentCreationSpecial1Vat0x0083);
                     }
-                    else if (v2ChargeItem.IsV2VatSpecial20x5())
+                    else if (v2ChargeItem.IsV2ChargeItemCase1VatSpecial20x5())
                     {
                         chargeItem.SetV1ChargeItemCase((long)V1.DE.ftChargeItemCases.DownPaymentCreationSpecial2Vat0x0084);
                     }
-                    else if (v2ChargeItem.IsV2VatNotTaxable0x8())
+                    else if (v2ChargeItem.IsV2ChargeItemCase1VatNotTaxable0x8())
                     {
                         chargeItem.SetV1ChargeItemCase((long)V1.DE.ftChargeItemCases.DownPaymentCreationNotTaxable0x0085);
                     }
-                    else if (v2ChargeItem.IsV2VatZero0x7())
+                    else if (v2ChargeItem.IsV2ChargeItemCase1VatZero0x7())
                     {
                         chargeItem.SetV1ChargeItemCase((long)V1.DE.ftChargeItemCases.DownPaymentCreationZeroVat0x0086);
                     }
-                    else if (v2ChargeItem.IsV2VatUnknown0x0())
+                    else if (v2ChargeItem.IsV2ChargeItemCase1VatUnknown0x0())
                     {
                         chargeItem.SetV1ChargeItemCase((long)V1.DE.ftChargeItemCases.DownPaymentCreationUnknownVat0x0087);
                     }
                 }
-            }else if (v2ChargeItem.IsV2Returnable0x0010())
+            }else if (v2ChargeItem.IsV2ChargeItemCaseFlagReturnable0x0010())
             {
                 if (chargeItem.Amount <= 0)
                 {
-                    if (v2ChargeItem.IsV2VatNormal0x3())
+                    if (v2ChargeItem.IsV2ChargeItemCase1VatNormal0x3())
                     {
                         chargeItem.SetV1ChargeItemCase((long)V1.DE.ftChargeItemCases.ReturnableNormalVat0x0021);
                     }
-                    else if (v2ChargeItem.IsV2VatDiscounted10x1())
+                    else if (v2ChargeItem.IsV2ChargeItemCase1VatDiscounted10x1())
                     {
                         chargeItem.SetV1ChargeItemCase((long)V1.DE.ftChargeItemCases.ReturnableDiscounted1Vat0x0022);
                     }
-                    else if (v2ChargeItem.IsV2VatSpecial10x4())
+                    else if (v2ChargeItem.IsV2ChargeItemCase1VatSpecial10x4())
                     {
                         chargeItem.SetV1ChargeItemCase((long)V1.DE.ftChargeItemCases.ReturnableSpecial1Vat0x0023);
                     }
-                    else if (v2ChargeItem.IsV2VatSpecial20x5())
+                    else if (v2ChargeItem.IsV2ChargeItemCase1VatSpecial20x5())
                     {
                         chargeItem.SetV1ChargeItemCase((long)V1.DE.ftChargeItemCases.ReturnableSpecial2Vat0x0024);
                     }
-                    else if (v2ChargeItem.IsV2VatNotTaxable0x8())
+                    else if (v2ChargeItem.IsV2ChargeItemCase1VatNotTaxable0x8())
                     {
                         chargeItem.SetV1ChargeItemCase((long)V1.DE.ftChargeItemCases.ReturnableNotTaxable0x0025);
                     }
-                    else if (v2ChargeItem.IsV2VatZero0x7())
+                    else if (v2ChargeItem.IsV2ChargeItemCase1VatZero0x7())
                     {
                         chargeItem.SetV1ChargeItemCase((long)V1.DE.ftChargeItemCases.ReturnableZeroVat0x0026);
                     }
-                    else if (v2ChargeItem.IsV2VatUnknown0x0())
+                    else if (v2ChargeItem.IsV2ChargeItemCase1VatUnknown0x0())
                     {
                         chargeItem.SetV1ChargeItemCase((long)V1.DE.ftChargeItemCases.ReturnableUnknownVat0x0027);
                     }
                 }
                 else
                 {
-                    if (v2ChargeItem.IsV2VatNormal0x3())
+                    if (v2ChargeItem.IsV2ChargeItemCase1VatNormal0x3())
                     {
                         chargeItem.SetV1ChargeItemCase((long)V1.DE.ftChargeItemCases.ReturnableReverseNormalVat0x0029);
                     }
-                    else if (v2ChargeItem.IsV2VatDiscounted10x1())
+                    else if (v2ChargeItem.IsV2ChargeItemCase1VatDiscounted10x1())
                     {
                         chargeItem.SetV1ChargeItemCase((long)V1.DE.ftChargeItemCases.ReturnableReverseDiscounted1Vat0x002A);
                     }
-                    else if (v2ChargeItem.IsV2VatSpecial10x4())
+                    else if (v2ChargeItem.IsV2ChargeItemCase1VatSpecial10x4())
                     {
                         chargeItem.SetV1ChargeItemCase((long)V1.DE.ftChargeItemCases.ReturnableReverseSpecial1Vat0x002B);
                     }
-                    else if (v2ChargeItem.IsV2VatSpecial20x5())
+                    else if (v2ChargeItem.IsV2ChargeItemCase1VatSpecial20x5())
                     {
                         chargeItem.SetV1ChargeItemCase((long)V1.DE.ftChargeItemCases.ReturnableReverseSpecial2Vat0x002C);
                     }
-                    else if (v2ChargeItem.IsV2VatNotTaxable0x8())
+                    else if (v2ChargeItem.IsV2ChargeItemCase1VatNotTaxable0x8())
                     {
                         chargeItem.SetV1ChargeItemCase((long)V1.DE.ftChargeItemCases.ReturnableReverseNotTaxable0x002D);
                     }
-                    else if (v2ChargeItem.IsV2VatZero0x7())
+                    else if (v2ChargeItem.IsV2ChargeItemCase1VatZero0x7())
                     {
                         chargeItem.SetV1ChargeItemCase((long)V1.DE.ftChargeItemCases.ReturnableReverseZeroVat0x002E);
                     }
-                    else if (v2ChargeItem.IsV2VatUnknown0x0())
+                    else if (v2ChargeItem.IsV2ChargeItemCase1VatUnknown0x0())
                     {
                         chargeItem.SetV1ChargeItemCase((long)V1.DE.ftChargeItemCases.ReturnableReverseUnknownVat0x002F);
                     }
                 }
-            }else if (v2ChargeItem.IsV2DiscountOrExtraCharge0x0004())
+            }else if (v2ChargeItem.IsV2ChargeItemCaseFlagDiscountOrExtraCharge0x0004())
             {
                 if (chargeItem.Amount <= 0)
                 {
-                    if (v2ChargeItem.IsV2VatNormal0x3())
+                    if (v2ChargeItem.IsV2ChargeItemCase1VatNormal0x3())
                     {
                         chargeItem.SetV1ChargeItemCase((long) V1.DE.ftChargeItemCases.DiscountNormalVat0x0031);
                     }
-                    else if (v2ChargeItem.IsV2VatDiscounted10x1())
+                    else if (v2ChargeItem.IsV2ChargeItemCase1VatDiscounted10x1())
                     {
                         chargeItem.SetV1ChargeItemCase((long) V1.DE.ftChargeItemCases.DiscountDiscounted1Vat0x0032);
                     }
-                    else if (v2ChargeItem.IsV2VatSpecial10x4())
+                    else if (v2ChargeItem.IsV2ChargeItemCase1VatSpecial10x4())
                     {
                         chargeItem.SetV1ChargeItemCase((long)V1.DE.ftChargeItemCases.DiscountSpecial1Vat0x0033);
                     }
-                    else if (v2ChargeItem.IsV2VatSpecial20x5())
+                    else if (v2ChargeItem.IsV2ChargeItemCase1VatSpecial20x5())
                     {
                         chargeItem.SetV1ChargeItemCase((long)V1.DE.ftChargeItemCases.DiscountSpecial2Vat0x0034);
                     }
-                    else if (v2ChargeItem.IsV2VatNotTaxable0x8())
+                    else if (v2ChargeItem.IsV2ChargeItemCase1VatNotTaxable0x8())
                     {
                         chargeItem.SetV1ChargeItemCase((long)V1.DE.ftChargeItemCases.DiscountNotTaxable0x0035);
                     }
-                    else if (v2ChargeItem.IsV2VatZero0x7())
+                    else if (v2ChargeItem.IsV2ChargeItemCase1VatZero0x7())
                     {
                         chargeItem.SetV1ChargeItemCase((long)V1.DE.ftChargeItemCases.DiscountZeroVat0x0036);
                     }
-                    else if (v2ChargeItem.IsV2VatUnknown0x0())
+                    else if (v2ChargeItem.IsV2ChargeItemCase1VatUnknown0x0())
                     {
                         chargeItem.SetV1ChargeItemCase((long)V1.DE.ftChargeItemCases.DiscountUnknownVat0x0037);
                     }
                 }
                 else
                 {
-                    if (v2ChargeItem.IsV2VatNormal0x3())
+                    if (v2ChargeItem.IsV2ChargeItemCase1VatNormal0x3())
                     {
                         chargeItem.SetV1ChargeItemCase((long)V1.DE.ftChargeItemCases.ExtraChargeNormalVat0x0039);
                     }
-                    else if (v2ChargeItem.IsV2VatDiscounted10x1())
+                    else if (v2ChargeItem.IsV2ChargeItemCase1VatDiscounted10x1())
                     {
                         chargeItem.SetV1ChargeItemCase((long) V1.DE.ftChargeItemCases.ExtraChargeDiscounted1Vat0x003A);
                     }
-                    else if (v2ChargeItem.IsV2VatSpecial10x4())
+                    else if (v2ChargeItem.IsV2ChargeItemCase1VatSpecial10x4())
                     {
                         chargeItem.SetV1ChargeItemCase((long)V1.DE.ftChargeItemCases.ExtraChargeSpecial1Vat0x003B);
                     }
-                    else if (v2ChargeItem.IsV2VatSpecial20x5())
+                    else if (v2ChargeItem.IsV2ChargeItemCase1VatSpecial20x5())
                     {
                         chargeItem.SetV1ChargeItemCase((long)V1.DE.ftChargeItemCases.ExtraChargeSpecial2Vat0x003C);
                     }
-                    else if (v2ChargeItem.IsV2VatNotTaxable0x8())
+                    else if (v2ChargeItem.IsV2ChargeItemCase1VatNotTaxable0x8())
                     {
                         chargeItem.SetV1ChargeItemCase((long) V1.DE.ftChargeItemCases.ExtraChargeNotTaxable0x003D);
                     }
-                    else if (v2ChargeItem.IsV2VatZero0x7())
+                    else if (v2ChargeItem.IsV2ChargeItemCase1VatZero0x7())
                     {
                         chargeItem.ftChargeItemCase |= (long) V1.DE.ftChargeItemCases.ExtraChargeZeroVat0x003E;
                     }
-                    else if (v2ChargeItem.IsV2VatUnknown0x0())
+                    else if (v2ChargeItem.IsV2ChargeItemCase1VatUnknown0x0())
                     {
                         chargeItem.SetV1ChargeItemCase((long) V1.DE.ftChargeItemCases.ExtraChargeUnknownVat0x003F);
                     }
@@ -433,19 +433,19 @@ namespace fiskaltrust.Interface.Tagging.DE
 
             ftPayItem.ftPayItemCase = (long) ((ulong) v2ftPayItem.ftPayItemCase & 0xFFFF_0000_0000_0000);
 
-            if (v2ftPayItem.IsV2Tip0x0040() && v2ftPayItem.IsV2Cash0x0001())
+            if (v2ftPayItem.IsV2PayItemCaseFlagTip0x0040() && v2ftPayItem.IsV2PayItemCaseCash0x0001())
             {
                 ftPayItem.SetV1PayItemCase((long) V1.DE.ftPayItemCases.TipToEmployee0x0010);
             }
-            else if (v2ftPayItem.IsV2Change0x0020() && v2ftPayItem.IsV2Cash0x0001())
+            else if (v2ftPayItem.IsV2PayItemCaseFlagChange0x0020() && v2ftPayItem.IsV2PayItemCaseCash0x0001())
             {
                 ftPayItem.SetV1PayItemCase((long) V1.DE.ftPayItemCases.Change0x000B);
             }
-            else if (v2ftPayItem.IsV2ForeignCurrency0x0010() && v2ftPayItem.IsV2Cash0x0001())
+            else if (v2ftPayItem.IsV2PayItemCaseFlagForeignCurrency0x0010() && v2ftPayItem.IsV2PayItemCaseCash0x0001())
             {
                 ftPayItem.SetV1PayItemCase((long)V1.DE.ftPayItemCases.CashForeignCurrency0x0002);
             }
-            else if (v2ftPayItem.IsV2Digital0x0080())
+            else if (v2ftPayItem.IsV2PayItemCaseFlagDigital0x0080())
             {
                 ftPayItem.ftPayItemCase |= (long) ((V2.ftPayItemCases) (v2ftPayItem.ftPayItemCase & 0xFFFF) switch
                 {
@@ -480,13 +480,13 @@ namespace fiskaltrust.Interface.Tagging.DE
         public void ConvertftReceiptCaseToV1(ReceiptRequest receiptRequest)
         {
  
-            if (!receiptRequest.IsV2())
+            if (!receiptRequest.IsVersionV2())
             {
                 // TODO: create NotV2CaseException
                 throw new Exception($"Not a V2 receipt case. Found V{receiptRequest.GetVersion()}.");
             }
 
-            if (!receiptRequest.IsDE())
+            if (!receiptRequest.IsCountryDE())
             {
                 // TODO: create NotDECaseException
                 throw new Exception("Not a DE receipt case.");
@@ -518,31 +518,31 @@ namespace fiskaltrust.Interface.Tagging.DE
                 _ => throw new NotImplementedException()
             });
 
-            if (v2ReceiptRequest.IsV2LateSigning0x0001())
+            if (v2ReceiptRequest.IsV2ReceiptCaseFlagLateSigning0x0001())
             {
                 receiptRequest.SetV1ReceiptCaseFlagFailed0x0001();
             }
-            if (v2ReceiptRequest.IsV2Void0x0004())
+            if (v2ReceiptRequest.IsV2ReceiptCaseFlagVoid0x0004())
             {
                 receiptRequest.SetV1ReceiptCaseFlagVoid0x0004();
             }
-            if (v2ReceiptRequest.IsV2Training0x0002())
+            if (v2ReceiptRequest.IsV2ReceiptCaseFlagTraining0x0002())
             {
                 receiptRequest.SetV1ReceiptCaseFlagTraining0x0002();
             }
-            if (v2ReceiptRequest.IsV2HandWritten0x0008())
+            if (v2ReceiptRequest.IsV2ReceiptCaseFlagHandWritten0x0008())
             {
                 receiptRequest.SetV1ReceiptCaseFlagHandWritten0x0008();
             }
-            if (v2ReceiptRequest.IsV2IssuerIsSmallBusiness0x0010())
+            if (v2ReceiptRequest.IsV2ReceiptCaseFlagIssuerIsSmallBusiness0x0010())
             {
                 receiptRequest.SetV1ReceiptCaseFlagSmallBusiness0x0010();
             }
-            if (v2ReceiptRequest.IsV2ReceiverIsBusiness0x0020())
+            if (v2ReceiptRequest.IsV2ReceiptCaseFlagReceiverIsBusiness0x0020())
             {
                 receiptRequest.SetV1ReceiptCaseFlagReceiverIsCompany0x00020();
             }
-            if (v2ReceiptRequest.IsV2ReceiptRequested0x8000())
+            if (v2ReceiptRequest.IsV2ReceiptCaseFlagReceiptRequested0x8000())
             {
                 receiptRequest.SetV1ReceiptCaseFlagReceiptRequested0x8000_0000();
             }
