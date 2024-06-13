@@ -23,7 +23,7 @@ public class Tests
                     public long TestField { get; set; }
                 }
 
-                [FlagExtensions(OnType = typeof(TestClass), OnField = nameof(TestClass.TestField))]
+                [FlagExtensions(OnType = typeof(TestClass), OnField = nameof(TestClass.TestField), CaseName = "TestCases")]
                 public enum TestFlags : long
                 {
                     Lel = 0x0000_0000_0004_0000,

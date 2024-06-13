@@ -13,20 +13,20 @@ namespace fiskaltrust.Interface.Tagging.FR
     {
         public void ConvertftChargeItemCaseToV1(ChargeItem chargeItem)
         {
-            if (!chargeItem.IsV2())
+            if (!chargeItem.IsVersionV2())
             {
                 // TODO: create NotV2CaseException
                 throw new Exception($"Not a V2 receipt case. Found V{chargeItem.GetVersion()}.");
             }
 
-            if (!chargeItem.IsFR())
+            if (!chargeItem.IsCountryFR())
             {
                 // TODO: create NotFRCaseException
                 throw new Exception("Not a FR receipt case.");
             }
             var v2ftChargeItemCase = (V2.ftChargeItemCases) (chargeItem.GetV2ChargeItemCase() & 0xFFFF);
             V1.FR.ftChargeItemCases v1ftChargeItemCase;
-            if (chargeItem.IsV2DownPayment0x0008())
+            if (chargeItem.IsV2ChargeItemCaseFlagDownPayment0x0008())
             {
                 var v2ftChargeItemVat = (V2.Vat) (chargeItem.GetV2Vat() & 0xF);
                 v1ftChargeItemCase = v2ftChargeItemVat switch
@@ -82,13 +82,13 @@ namespace fiskaltrust.Interface.Tagging.FR
         public void ConvertftJournalTypeToV1(JournalRequest journalRequest) => throw new NotImplementedException();
         public void ConvertftPayItemCaseToV1(PayItem payItem)
         {
-            if (!payItem.IsV2())
+            if (!payItem.IsVersionV2())
             {
                 // TODO: create NotV2CaseException
                 throw new Exception($"Not a V2 receipt case. Found V{payItem.GetVersion()}.");
             }
 
-            if (!payItem.IsFR())
+            if (!payItem.IsCountryFR())
             {
                 // TODO: create NotFRCaseException
                 throw new Exception("Not a FR receipt case.");
@@ -97,37 +97,37 @@ namespace fiskaltrust.Interface.Tagging.FR
             var v1ftPayItemCase = v2ftPayItemCase switch
             {
                 V2.ftPayItemCases.UnknownPaymentType0x0000 => V1.FR.ftPayItemCases.UnknownPaymentType0x0000,
-                V2.ftPayItemCases.Cash0x0001 => payItem.IsV2Tip0x0040() ? V1.FR.ftPayItemCases.TipToEmployee0x0012 : (payItem.IsV2ForeignCurrency0x0010() ? V1.FR.ftPayItemCases.CashForeignCurrency0x0002 : V1.FR.ftPayItemCases.Cash0x0001),
+                V2.ftPayItemCases.Cash0x0001 => payItem.IsV2PayItemCaseFlagTip0x0040() ? V1.FR.ftPayItemCases.TipToEmployee0x0012 : (payItem.IsV2PayItemCaseFlagForeignCurrency0x0010() ? V1.FR.ftPayItemCases.CashForeignCurrency0x0002 : V1.FR.ftPayItemCases.Cash0x0001),
                 V2.ftPayItemCases.CrossedCheque0x0003 => V1.FR.ftPayItemCases.CrossedCheque0x0003,
                 V2.ftPayItemCases.DebitCard0x0004 => V1.FR.ftPayItemCases.DebitCard0x0004,
                 V2.ftPayItemCases.CreditCard0x0005 => V1.FR.ftPayItemCases.CreditCard0x0005,
                 V2.ftPayItemCases.Voucher0x0006 => V1.FR.ftPayItemCases.Voucher0x0006,
                 V2.ftPayItemCases.Online0x0007 => V1.FR.ftPayItemCases.Online0x0007,
                 V2.ftPayItemCases.CustomerCard0x0008 => V1.FR.ftPayItemCases.CustomerCard0x0008,
-                V2.ftPayItemCases.AccountsReceivable0x0009 => payItem.IsV2DownPayment0x0008() ? V1.FR.ftPayItemCases.DownPayment0x0010 : V1.FR.ftPayItemCases.AccountsReceivable0x000B,
+                V2.ftPayItemCases.AccountsReceivable0x0009 => payItem.IsV2PayItemCaseFlagDownPayment0x0008() ? V1.FR.ftPayItemCases.DownPayment0x0010 : V1.FR.ftPayItemCases.AccountsReceivable0x000B,
                 V2.ftPayItemCases.SEPATransfer0x000A => V1.FR.ftPayItemCases.SEPATransfer0x000C,
                 V2.ftPayItemCases.OtherBankTransfer0x000B => V1.FR.ftPayItemCases.OtherBankTransfer0x000D,
                 V2.ftPayItemCases.InternalConsumption0x000D => V1.FR.ftPayItemCases.InternalConsumption0x0011,
-                V2.ftPayItemCases.TransferTo0x000C => V1.FR.ftPayItemCases.CashBookExpense0x000E,  
+                V2.ftPayItemCases.TransferTo0x000C => V1.FR.ftPayItemCases.CashBookExpense0x000E,
                 _ => throw new NotImplementedException()
             };
             payItem.SetV1PayItemCase((long) v1ftPayItemCase);
-           
+
         }
         public void ConvertftReceiptCaseToV1(ReceiptRequest receiptRequest)
         {
-            if (!receiptRequest.IsV2())
+            if (!receiptRequest.IsVersionV2())
             {
                 // TODO: create NotV2CaseException
                 throw new Exception($"Not a V2 receipt case. Found V{receiptRequest.GetVersion()}.");
             }
 
-            if (!receiptRequest.IsFR())
+            if (!receiptRequest.IsCountryFR())
             {
                 // TODO: create NotFRCaseException
                 throw new Exception("Not a FR receipt case.");
             }
-            var v2ftReceiptCase = (V2.ftReceiptCases) (receiptRequest.GetV2ReceiptCase() & 0xFFFF);
+            var v2ftReceiptCase = (V2.ftReceiptCases) receiptRequest.GetV2ReceiptCase();
             var v1ftReceiptCase = v2ftReceiptCase switch
             {
                 V2.ftReceiptCases.UnknownReceipt0x0000 => V1.FR.ftReceiptCases.UnknownReceipt0x0000,
@@ -146,26 +146,26 @@ namespace fiskaltrust.Interface.Tagging.FR
                 V2.ftReceiptCases.ProtocolAccountingEvent0x3002 => V1.FR.ftReceiptCases.ProtocolAccountingEvent0x0013,
                 V2.ftReceiptCases.InternalUsageMaterialConsumption0x3003 => V1.FR.ftReceiptCases.InternalUsageMaterialConsumption0x000D,
                 V2.ftReceiptCases.InitialOperationReceipt0x4001 => V1.FR.ftReceiptCases.InitialOperationReceipt0x0010,
-                V2.ftReceiptCases.OutOfOperationReceipt0x4002 => V1.FR.ftReceiptCases.OutOfOperationReceipt0x0011,  
+                V2.ftReceiptCases.OutOfOperationReceipt0x4002 => V1.FR.ftReceiptCases.OutOfOperationReceipt0x0011,
                 _ => throw new NotImplementedException()
             };
-            receiptRequest.SetV1ReceiptCase((long)v1ftReceiptCase);
+            receiptRequest.SetV1ReceiptCase((long) v1ftReceiptCase);
 
-            if (receiptRequest.IsV2LateSigning0x0001())
+            if (receiptRequest.IsV2ReceiptCaseFlagLateSigning0x0001())
             {
-                receiptRequest.SetV1Failed0x0001();
+                receiptRequest.SetV1ReceiptCaseFlagFailed0x0001();
             }
-            if (receiptRequest.IsV2Void0x0004())
+            if (receiptRequest.IsV2ReceiptCaseFlagVoid0x0004())
             {
-                receiptRequest.SetV1Void0x0004();
+                receiptRequest.SetV1ReceiptCaseFlagVoid0x0004();
             }
-            if (receiptRequest.IsV2Training0x0002())
+            if (receiptRequest.IsV2ReceiptCaseFlagTraining0x0002())
             {
-                receiptRequest.SetV1Training0x0002();
-            }           
-            if (receiptRequest.IsV2ReceiptRequested0x8000())
+                receiptRequest.SetV1ReceiptCaseFlagTraining0x0002();
+            }
+            if (receiptRequest.IsV2ReceiptCaseFlagReceiptRequested0x8000())
             {
-                receiptRequest.SetV1ReceiptRequested0x8000_0000();
+                receiptRequest.SetV1ReceiptCaseFlagReceiptRequested0x8000_0000();
             }
         }
         public void ConvertftSignatureFormatToV2(SignaturItem signaturItem) => throw new NotImplementedException();

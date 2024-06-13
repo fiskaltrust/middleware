@@ -11,7 +11,7 @@ public class TestClass
     public long TestField { get; set; }
 }
 
-[FlagExtensions(OnType = typeof(TestClass), OnField = nameof(TestClass.TestField))]
+[FlagExtensions(OnType = typeof(TestClass), OnField = nameof(TestClass.TestField), CaseName = "TestCases")]
 public enum TestFlags : long
 {
     Lel = 0x0000_0004_0000_0000,
@@ -29,13 +29,13 @@ public class Tests
     public void TestRun()
     {
         var test = new TestClass { TestField = 0x1234_0000_0000_0000 };
-        test.IsLel().Should().BeFalse();
-        test.SetLel();
-        test.IsLel().Should().BeTrue();
+        test.IsTestCasesLel().Should().BeFalse();
+        test.SetTestCasesLel();
+        test.IsTestCasesLel().Should().BeTrue();
 
-        test.IsLelCase().Should().BeFalse();
+        test.IsTestCasesLelCase().Should().BeFalse();
         test.SetTestCases((long)TestCases.LelCase);
-        test.IsLelCase().Should().BeTrue();
+        test.IsTestCasesLelCase().Should().BeTrue();
 
         test.GetTestCases().Should().Be(0x0004);
     }

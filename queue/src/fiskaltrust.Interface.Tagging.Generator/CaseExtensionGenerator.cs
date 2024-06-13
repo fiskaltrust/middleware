@@ -140,7 +140,7 @@ public class CaseExtensionGenerator : ExtensionGenerator<CasesToGenerateFactory,
                         public static long Get{{enumToGenerate.Prefix}}{{enumToGenerate.CaseName}}(this {{enumToGenerate.OnType.ContainingNamespace}}.{{enumToGenerate.OnType.Name}} value) => (value.{{enumToGenerate.OnField}} & 0x{{enumToGenerate.Mask:X}}L) >> (4 * {{enumToGenerate.Shift}});
 
                         {{string.Join("\n        ", enumToGenerate.Members.Select(member => $"""
-                        public static bool Is{enumToGenerate.Prefix}{member}(this {enumToGenerate.OnType.ContainingNamespace}.{enumToGenerate.OnType.Name} value) => ((value.{enumToGenerate.OnField} & 0x{enumToGenerate.Mask:X}) >> (4 * {enumToGenerate.Shift})) == ((long)global::{enumToGenerate.Namespace}.{enumToGenerate.Name}.{member});
+                        public static bool Is{enumToGenerate.Prefix}{enumToGenerate.CaseName}{member}(this {enumToGenerate.OnType.ContainingNamespace}.{enumToGenerate.OnType.Name} value) => ((value.{enumToGenerate.OnField} & 0x{enumToGenerate.Mask:X}) >> (4 * {enumToGenerate.Shift})) == ((long)global::{enumToGenerate.Namespace}.{enumToGenerate.Name}.{member});
                         """))}}
 
                          public static void Set{{enumToGenerate.Prefix}}{{enumToGenerate.CaseName}}(this {{enumToGenerate.OnType.ContainingNamespace}}.{{enumToGenerate.OnType.Name}} value, long data) { value.{{enumToGenerate.OnField}} = (value.{{enumToGenerate.OnField}} & ~0x{{enumToGenerate.Mask:X}}L) | (data << (4 * {{enumToGenerate.Shift}})); }
