@@ -2,6 +2,7 @@
 using fiskaltrust.Interface.Tagging.Interfaces;
 using FluentAssertions;
 using fiskaltrust.ifPOS.v1;
+using fiskaltrust.Interface.Tagging.Models.V2;
 
 namespace fiskaltrust.Interface.Tagging.UnitTests.DE
 {
@@ -460,6 +461,23 @@ namespace fiskaltrust.Interface.Tagging.UnitTests.DE
             payItem.ftPayItemCase = 0x444520000000000C;
             _caseConverterDE.ConvertftPayItemCaseToV1(payItem);
             payItem.ftPayItemCase.Should().Be(0x4445000000000014);
+        }
+
+        [Fact]
+        public void JournalTypes_ShouldreturnCorrect()
+        {
+            var journal = new JournalRequest { ftJournalType = 0x4445200000001000 };
+            _caseConverterDE.ConvertftJournalTypeToV1(journal);
+            journal.ftJournalType.Should().Be(0x4445000000000000);
+            journal.ftJournalType = 0x4445200000001001;
+            _caseConverterDE.ConvertftJournalTypeToV1(journal);
+            journal.ftJournalType.Should().Be(0x4445000000000001);
+            journal.ftJournalType = 0x4445200000001002;
+            _caseConverterDE.ConvertftJournalTypeToV1(journal);
+            journal.ftJournalType.Should().Be(0x4445000000000002);
+            journal.ftJournalType = 0x4445200000001003;
+            _caseConverterDE.ConvertftJournalTypeToV1(journal);
+            journal.ftJournalType.Should().Be(0x4445000000000003);
         }
     }
 }
