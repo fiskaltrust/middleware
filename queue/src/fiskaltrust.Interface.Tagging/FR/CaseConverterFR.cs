@@ -28,14 +28,14 @@ namespace fiskaltrust.Interface.Tagging.FR
             V1.FR.ftChargeItemCases v1ftChargeItemCase;
             if (chargeItem.IsV2ChargeItemCaseFlagDownPayment0x0008())
             {
-                var v2ftChargeItemVat = (V2.Vat) (chargeItem.GetV2Vat() & 0xF);
+                var v2ftChargeItemVat = (V2.Vat) chargeItem.GetV2ChargeItemCaseVat();
                 v1ftChargeItemCase = v2ftChargeItemVat switch
                 {
-                    V2.Vat.VatNormal0x3 => V1.FR.ftChargeItemCases.DownPaymentNormalVATRate0x001E,
-                    V2.Vat.VatDiscounted10x1 => V1.FR.ftChargeItemCases.DownPaymentDiscountedVATRate10x001C,
-                    V2.Vat.VatDiscounted20x2 => V1.FR.ftChargeItemCases.DownPaymentDiscountedVATRate20x001D,
-                    V2.Vat.VatSpecial10x4 => V1.FR.ftChargeItemCases.DownPaymentSpecialVATRate10x001F,
-                    V2.Vat.VatZero0x7 => V1.FR.ftChargeItemCases.DownPaymentZeroVAT0x0020,
+                    V2.Vat.Normal0x3 => V1.FR.ftChargeItemCases.DownPaymentNormalVATRate0x001E,
+                    V2.Vat.Discounted10x1 => V1.FR.ftChargeItemCases.DownPaymentDiscountedVATRate10x001C,
+                    V2.Vat.Discounted20x2 => V1.FR.ftChargeItemCases.DownPaymentDiscountedVATRate20x001D,
+                    V2.Vat.Special10x4 => V1.FR.ftChargeItemCases.DownPaymentSpecialVATRate10x001F,
+                    V2.Vat.Zero0x7 => V1.FR.ftChargeItemCases.DownPaymentZeroVAT0x0020,
                     _ => throw new NotImplementedException()
                 };
             }
