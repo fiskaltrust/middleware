@@ -167,6 +167,20 @@ namespace fiskaltrust.Interface.Tagging.FR
             {
                 receiptRequest.SetV1ReceiptCaseFlagReceiptRequested0x8000_0000();
             }
+            if (receiptRequest.IsV2ReceiptCaseFlagHandWritten0x0008() || 
+                receiptRequest.IsV2ReceiptCaseFlagIssuerIsSmallBusiness0x0010() || 
+                receiptRequest.IsV2ReceiptCaseFlagReceiverIsBusiness0x0020() || 
+                receiptRequest.IsV2ReceiptCaseFlagSaleInForeignCountry0x0080() || 
+                receiptRequest.IsV2ReceiptCaseFlagReturn0x0100() ||                 
+                receiptRequest.IsV2ReceiptCaseFlagAdditionalInformationRequested0x0200() || 
+                receiptRequest.IsV2ReceiptCaseFlagSCUDataDownloadRequested0x0400() || 
+                receiptRequest.IsV2ReceiptCaseFlagEnforceServiceOperations0x0800() || 
+                receiptRequest.IsV2ReceiptCaseFlagCleanupOpenTransactions0x1000() ||
+                receiptRequest.IsV2ReceiptCaseFlagPreventEnablingOrDisablingSigningDevices0x2000())
+            {
+                throw new NotImplementedException();
+            }
+         
         }
         public void ConvertftSignatureFormatToV2(SignaturItem signaturItem) => throw new NotImplementedException();
         public void ConvertftSignatureTypeToV2(SignaturItem signaturItem) => throw new NotImplementedException();
