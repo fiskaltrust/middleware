@@ -110,7 +110,7 @@ public class FlagExtensionGenerator : ExtensionGenerator<FlagsToGenerateFactory,
                 {
                     public static class {{enumToGenerate.Prefix}}{{enumToGenerate.OnType.Name}}{{enumToGenerate.OnField}}{{enumToGenerate.CaseName}}FlagExt {
                         {{string.Join("\n        ", enumToGenerate.Members.Select(member => $"""
-                                public static bool Is{enumToGenerate.Prefix}{member}(this {enumToGenerate.OnType.ContainingNamespace}.{enumToGenerate.OnType.Name} value) => (value.{enumToGenerate.OnField} & ((long)global::{enumToGenerate.Namespace}.{enumToGenerate.Name}.{member})) > 0;
+                                public static bool Is{enumToGenerate.Prefix}{enumToGenerate.CaseName}{member}(this {enumToGenerate.OnType.ContainingNamespace}.{enumToGenerate.OnType.Name} value) => (value.{enumToGenerate.OnField} & ((long)global::{enumToGenerate.Namespace}.{enumToGenerate.Name}.{member})) > 0;
                                 """))}}
 
                         {{string.Join("\n        ", enumToGenerate.Members.Select(member => $$"""
