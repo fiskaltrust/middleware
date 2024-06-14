@@ -1,4 +1,4 @@
-using fiskaltrust.ifPOS.v1;
+﻿using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Interface.Tagging.Generator;
 
 namespace fiskaltrust.Interface.Tagging.Models
@@ -21,12 +21,12 @@ namespace fiskaltrust.Interface.Tagging.Models
         V2 = 0x2,
     }
 
-    [CaseExtensions(OnType = typeof(SignaturItem), OnField = nameof(SignaturItem.ftSignatureFormat), Mask = 0xF000_0000_0000, Shift = 11, CaseName = "Version")]
+    [CaseExtensions(OnType = typeof(SignaturItem), OnField = nameof(SignaturItem.ftSignatureFormat), Mask = 0xF000_0000_0000, Shift = 11, CaseName = "VersionFormat")]
     public enum SignaturItemFormatVersions : long
     {
         V2 = 0x2,
     }
-    [CaseExtensions(OnType = typeof(SignaturItem), OnField = nameof(SignaturItem.ftSignatureType), Mask = 0xF000_0000_0000, Shift = 11, CaseName = "Version")]
+    [CaseExtensions(OnType = typeof(SignaturItem), OnField = nameof(SignaturItem.ftSignatureType), Mask = 0xF000_0000_0000, Shift = 11, CaseName = "VersionType")]
     public enum SignaturItemTypeVersions : long
     {
         V2 = 0x2,

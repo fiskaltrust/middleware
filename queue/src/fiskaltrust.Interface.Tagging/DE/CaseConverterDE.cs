@@ -548,10 +548,95 @@ namespace fiskaltrust.Interface.Tagging.DE
 
             receiptRequest.SetV1ReceiptCaseFlagImplicitTransaction0x0001_0000();
         }
-        public void ConvertftSignatureFormatToV2(SignaturItem ftSignatureFormat) {
+        public void ConvertftSignatureFormatToV2(SignaturItem ftSignatureFormat) 
+        {
+            var v1SignaturItem = new SignaturItem() { ftSignatureFormat = ftSignatureFormat.ftSignatureFormat };
+
+            ftSignatureFormat.ftSignatureFormat = (long) ((ulong) v1SignaturItem.ftSignatureFormat & 0xFFFF_2000_0000_0000);
+
+            ftSignatureFormat.ftSignatureFormat |= (long) ((V1.DE.ftSignatureFormats) (v1SignaturItem.ftSignatureFormat & 0xFFFF) switch
+            {
+                V1.DE.ftSignatureFormats.Unknown0x0000 => V2.ftSignatureFormats.Unknown0x0000,
+              _ => throw new NotImplementedException(),
+            });
+            //ToDo: Implement the rest of the Formats
 
         }
-        public void ConvertftSignatureTypeToV2(SignaturItem ftSignatureType) => throw new NotImplementedException();
+        public void ConvertftSignatureTypeToV2(SignaturItem ftSignatureType)
+        {
+            var v1SignaturItem = new SignaturItem() { ftSignatureType = ftSignatureType.ftSignatureType };
+
+            ftSignatureType.ftSignatureType = (long) ((ulong) v1SignaturItem.ftSignatureType & 0xFFFF_0000_0000_0000);
+
+            ftSignatureType.SetVersionType(2);
+            ftSignatureType.SetV2CategorySignatureType((long) V2.SignatureTypesCategory.Normal0x0);
+
+            switch (v1SignaturItem.ftSignatureType & 0xFFF)
+            {
+                case (long) V1.DE.ftSignatureTypes.StartTransactionResult0x0010:
+                    ftSignatureType.SetV2SignatureType((long) V2DE.ftSignatureTypes.StartTransactionResult0x010);
+                    break;
+                case (long) V1.DE.ftSignatureTypes.FinishTransactionPayload0x0011:
+                    ftSignatureType.SetV2SignatureType((long) V2DE.ftSignatureTypes.FinishTransactionPayload0x011);
+                    break;
+                case (long) V1.DE.ftSignatureTypes.FinishTransactionResult0x0012:
+                    ftSignatureType.SetV2SignatureType((long) V2DE.ftSignatureTypes.FinishTransactionResult0x012);
+                    break;
+                case (long) V1.DE.ftSignatureTypes.ReceiptQrVersion0x0013:
+                    ftSignatureType.SetV2SignatureType((long) V2DE.ftSignatureTypes.ReceiptQrVersion0x013);
+                    break;
+                case (long) V1.DE.ftSignatureTypes.ReceiptPOSSerialNumber0x0014:
+                    ftSignatureType.SetV2SignatureType((long) V2DE.ftSignatureTypes.ReceiptPOSSerialNumber0x014);
+                    break;
+                case (long) V1.DE.ftSignatureTypes.ReceiptProcessType0x0015:
+                    ftSignatureType.SetV2SignatureType((long) V2DE.ftSignatureTypes.ReceiptProcessType0x015);
+                    break;
+                case (long) V1.DE.ftSignatureTypes.ReceiptProcessData0x0016:
+                    ftSignatureType.SetV2SignatureType((long) V2DE.ftSignatureTypes.ReceiptProcessData0x016);
+                    break;
+                case (long) V1.DE.ftSignatureTypes.ReceiptTransactionNumber0x0017:
+                    ftSignatureType.SetV2SignatureType((long) V2DE.ftSignatureTypes.ReceiptTransactionNumber0x017);
+                    break;
+                case (long) V1.DE.ftSignatureTypes.ReceiptSignatureCounter0x0018:
+                    ftSignatureType.SetV2SignatureType((long) V2DE.ftSignatureTypes.ReceiptSignatureCounter0x018);
+                    break;
+                case (long) V1.DE.ftSignatureTypes.ReceiptStartTime0x0019:
+                    ftSignatureType.SetV2SignatureType((long) V2DE.ftSignatureTypes.ReceiptStartTime0x019);
+                    break;
+                case (long) V1.DE.ftSignatureTypes.ReceiptLogTime0x001A:
+                    ftSignatureType.SetV2SignatureType((long) V2DE.ftSignatureTypes.ReceiptLogTime0x01A);
+                    break;
+                case (long) V1.DE.ftSignatureTypes.ReceiptSignatureAlgorithm0x001B:
+                    ftSignatureType.SetV2SignatureType((long) V2DE.ftSignatureTypes.ReceiptSignatureAlgorithm0x01B);
+                    break;
+                case (long) V1.DE.ftSignatureTypes.ReceiptLogTimeFormat0x001C:
+                    ftSignatureType.SetV2SignatureType((long) V2DE.ftSignatureTypes.ReceiptLogTimeFormat0x01C);
+                    break;
+                case (long) V1.DE.ftSignatureTypes.ReceiptSignature0x001D:
+                    ftSignatureType.SetV2SignatureType((long) V2DE.ftSignatureTypes.ReceiptSignature0x01D);
+                    break;
+                case (long) V1.DE.ftSignatureTypes.ReceiptPublicKey0x001E:
+                    ftSignatureType.SetV2SignatureType((long) V2DE.ftSignatureTypes.ReceiptPublicKey0x01E);
+                    break;
+                case (long) V1.DE.ftSignatureTypes.ReceiptProcessStart0x001F:
+                    ftSignatureType.SetV2SignatureType((long) V2DE.ftSignatureTypes.ReceiptProcessStart0x01F);
+                    break;
+                case (long) V1.DE.ftSignatureTypes.UpdateTransactionPayload0x0020:
+                    ftSignatureType.SetV2SignatureType((long) V2DE.ftSignatureTypes.UpdateTransactionPayload0x020);
+                    break;
+                case (long) V1.DE.ftSignatureTypes.UpdateTransactionResult0x0021:
+                    ftSignatureType.SetV2SignatureType((long) V2DE.ftSignatureTypes.UpdateTransactionResult0x021);
+                    break;
+                case (long) V1.DE.ftSignatureTypes.CertificationIdentification0x0022:
+                    ftSignatureType.SetV2SignatureType((long) V2DE.ftSignatureTypes.CertificationIdentification0x022);
+                    break;
+                case (long) V1.DE.ftSignatureTypes.TSESerialNumber0x0023:
+                    ftSignatureType.SetV2SignatureType((long) V2DE.ftSignatureTypes.TSESerialNumber0x023);
+                    break;
+                default:
+                    throw new NotImplementedException();
+            }
+        }
         public void ConvertftStateToV2(ReceiptResponse ftstate) => throw new NotImplementedException();
     }
 }

@@ -2,7 +2,10 @@
 using fiskaltrust.Interface.Tagging.Interfaces;
 using FluentAssertions;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.Interface.Tagging.Models.V2;
+using fiskaltrust.Interface.Tagging.Models.V2.Extensions;
+using V2 = fiskaltrust.Interface.Tagging.Models.V2;
+using V2DE = fiskaltrust.Interface.Tagging.Models.V2.DE;
+using fiskaltrust.Interface.Tagging.Models.Extensions;
 
 namespace fiskaltrust.Interface.Tagging.UnitTests.DE
 {
@@ -478,6 +481,76 @@ namespace fiskaltrust.Interface.Tagging.UnitTests.DE
             journal.ftJournalType = 0x4445200000001003;
             _caseConverterDE.ConvertftJournalTypeToV1(journal);
             journal.ftJournalType.Should().Be(0x4445000000000003);
+        }
+
+        [Fact]
+        public void SignatureTypes_ShouldreturnCorrect()
+        {
+            var signature = new SignaturItem { ftSignatureType = 0x4445_0000_0000_0000 };
+            signature.SetVersionType(2);
+            signature.SetV2CategorySignatureType((long) V2.SignatureTypesCategory.Failure0x3);
+            signature.SetV2SignatureType((long) V2DE.ftSignatureTypes.ReceiptLogTimeFormat0x01C);
+            signature.ftSignatureType.Should().Be(0x444520000000301C);
+            signature.ftSignatureType = 0x4445_0000_0000_0010;
+            _caseConverterDE.ConvertftSignatureTypeToV2(signature);
+            signature.ftSignatureType.Should().Be(0x4445_2000_0000_0010);
+            signature.ftSignatureType = 0x4445_0000_0000_0011;
+            _caseConverterDE.ConvertftSignatureTypeToV2(signature);
+            signature.ftSignatureType.Should().Be(0x4445_2000_0000_0011);
+            signature.ftSignatureType = 0x4445_0000_0000_0012;
+            _caseConverterDE.ConvertftSignatureTypeToV2(signature);
+            signature.ftSignatureType.Should().Be(0x4445_2000_0000_0012);
+            signature.ftSignatureType = 0x4445_0000_0000_0013;
+            _caseConverterDE.ConvertftSignatureTypeToV2(signature);
+            signature.ftSignatureType.Should().Be(0x4445_2000_0000_0013);
+            signature.ftSignatureType = 0x4445_0000_0000_0014;
+            _caseConverterDE.ConvertftSignatureTypeToV2(signature);
+            signature.ftSignatureType.Should().Be(0x4445_2000_0000_0014);
+            signature.ftSignatureType = 0x4445_0000_0000_0015;
+            _caseConverterDE.ConvertftSignatureTypeToV2(signature);
+            signature.ftSignatureType.Should().Be(0x4445_2000_0000_0015);
+            signature.ftSignatureType = 0x4445_0000_0000_0016;
+            _caseConverterDE.ConvertftSignatureTypeToV2(signature);
+            signature.ftSignatureType.Should().Be(0x4445_2000_0000_0016);
+            signature.ftSignatureType = 0x4445_0000_0000_0017;
+            _caseConverterDE.ConvertftSignatureTypeToV2(signature);
+            signature.ftSignatureType.Should().Be(0x4445_2000_0000_0017);
+            signature.ftSignatureType = 0x4445_0000_0000_0018;
+            _caseConverterDE.ConvertftSignatureTypeToV2(signature);
+            signature.ftSignatureType.Should().Be(0x4445_2000_0000_0018);
+            signature.ftSignatureType = 0x4445_0000_0000_0019;
+            _caseConverterDE.ConvertftSignatureTypeToV2(signature);
+            signature.ftSignatureType.Should().Be(0x4445_2000_0000_0019);
+            signature.ftSignatureType = 0x4445_0000_0000_001A;
+            _caseConverterDE.ConvertftSignatureTypeToV2(signature);
+            signature.ftSignatureType.Should().Be(0x4445_2000_0000_001A);
+            signature.ftSignatureType = 0x4445_0000_0000_001B;
+            _caseConverterDE.ConvertftSignatureTypeToV2(signature);
+            signature.ftSignatureType.Should().Be(0x4445_2000_0000_001B);
+            signature.ftSignatureType = 0x4445_0000_0000_001C;
+            _caseConverterDE.ConvertftSignatureTypeToV2(signature);
+            signature.ftSignatureType.Should().Be(0x4445_2000_0000_001C);
+            signature.ftSignatureType = 0x4445_0000_0000_001D;
+            _caseConverterDE.ConvertftSignatureTypeToV2(signature);
+            signature.ftSignatureType.Should().Be(0x4445_2000_0000_001D);
+            signature.ftSignatureType = 0x4445_0000_0000_001E;
+            _caseConverterDE.ConvertftSignatureTypeToV2(signature);
+            signature.ftSignatureType.Should().Be(0x4445_2000_0000_001E);
+            signature.ftSignatureType = 0x4445_0000_0000_001F;
+            _caseConverterDE.ConvertftSignatureTypeToV2(signature);
+            signature.ftSignatureType.Should().Be(0x4445_2000_0000_001F);
+            signature.ftSignatureType = 0x4445_0000_0000_0020;
+            _caseConverterDE.ConvertftSignatureTypeToV2(signature);
+            signature.ftSignatureType.Should().Be(0x4445_2000_0000_0020);
+            signature.ftSignatureType = 0x4445_0000_0000_0021;
+            _caseConverterDE.ConvertftSignatureTypeToV2(signature);
+            signature.ftSignatureType.Should().Be(0x4445_2000_0000_0021);
+            signature.ftSignatureType = 0x4445_0000_0000_0022;
+            _caseConverterDE.ConvertftSignatureTypeToV2(signature);
+            signature.ftSignatureType.Should().Be(0x4445_2000_0000_0022);
+            signature.ftSignatureType = 0x4445_0000_0000_0023;
+            _caseConverterDE.ConvertftSignatureTypeToV2(signature);
+            signature.ftSignatureType.Should().Be(0x4445_2000_0000_0023);
         }
     }
 }
