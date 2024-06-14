@@ -36,5 +36,9 @@ namespace fiskaltrust.Interface.Tagging.Models.V2
         OutOfOperationReceipt0x4002 = 0x4002,
         InitSCUSwitch0x4011 = 0x4011,
         FinishSCUSwitch0x4012 = 0x4012,
+        CashDepositCashPayIn0x000A,
+        CashPayOut0x000B,
+        POSReceiptWithoutCashRegisterObligation0x0007,
+        SaleInForeignCountries0x4010
     }
 }

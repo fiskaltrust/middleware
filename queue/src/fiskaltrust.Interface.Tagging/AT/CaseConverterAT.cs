@@ -4,7 +4,6 @@ using V1 = fiskaltrust.Interface.Tagging.Models.V1;
 using V2 = fiskaltrust.Interface.Tagging.Models.V2;
 using fiskaltrust.Interface.Tagging.Models.Extensions;
 using fiskaltrust.Interface.Tagging.Models.V2.Extensions;
-using V2AT = fiskaltrust.Interface.Tagging.Models.V2.AT;
 
 namespace fiskaltrust.Interface.Tagging.AT
 {
@@ -187,8 +186,6 @@ namespace fiskaltrust.Interface.Tagging.AT
             {
                 receiptRequest.SetV1ReceiptCaseFlagReceiptRequested0x8000_0000();
             }
-
-            receiptRequest.SetV1ReceiptCaseFlagImplicitTransaction0x0001_0000();
         }
 
         public void ConvertftSignatureFormatToV2(SignaturItem ftSignatureFormat) => throw new NotImplementedException();

@@ -97,5 +97,11 @@ namespace fiskaltrust.Interface.Tagging.Models.V2
         CashTransferNotTaxable0x00A8 = 0x00A8,
 
         ObligationSigned0x0090 = 0x0090,
+        ObligationNotSigned0x0091,
+        DownPaymentNormalVATRate0x001E,
+        DownPaymentDiscountedVATRate10x001C,
+        DownPaymentDiscountedVATRate20x001D,
+        DownPaymentSpecialVATRate10x001F,
+        DownPaymentZeroVAT0x0020
     }
 }

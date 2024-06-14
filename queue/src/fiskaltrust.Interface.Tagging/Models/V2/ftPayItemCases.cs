@@ -22,5 +22,10 @@ namespace fiskaltrust.Interface.Tagging.Models.V2
         InternalConsumption0x000D = 0x000D,
         Grant0x000E = 0x000E,
         Ticket0x000F = 0x000F,
+        CashForeignCurrency0x0002,
+        OtherDebitCard0x0009,
+        OtherCreditCard0x000A,
+        TransferToCashbookVaultOwnerEmployee0x000C,
+        DownPayment0x000F
     }
 }
