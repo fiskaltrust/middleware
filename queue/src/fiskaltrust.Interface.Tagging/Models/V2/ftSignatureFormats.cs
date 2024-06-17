@@ -20,5 +20,10 @@ namespace fiskaltrust.Interface.Tagging.Models.V2
         UPCA0x000B = 0x000B,
         Code390x000C = 0x000C,
         Base640x000D = 0x000D,
+        QRCode0x0003,
+        OCRA0x0005,
+        PDF4170x0006,
+        EAN80x0009,
+        EAN130x000A
     }
 }
