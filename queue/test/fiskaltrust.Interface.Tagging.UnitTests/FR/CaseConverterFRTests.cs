@@ -99,16 +99,16 @@ namespace fiskaltrust.Interface.Tagging.UnitTests.FR
         [InlineData(0x4652200000080008, null)]
         public void ConvertftChargeItemCaseToV1_ShouldreturnCorrect(long v2FtChargeItemCase, long? v1FtChargeItemCase)
         {
-            var request = new ChargeItem { ftChargeItemCase = v2FtChargeItemCase };
+            var chargeItem = new ChargeItem { ftChargeItemCase = v2FtChargeItemCase };
 
             if (v1FtChargeItemCase == null)
             {
-                Assert.Throws<NotImplementedException>(() => _caseConverterFR.ConvertftChargeItemCaseToV1(request));
+                Assert.Throws<NotImplementedException>(() => _caseConverterFR.ConvertftChargeItemCaseToV1(chargeItem));
             }
             else
             {
-                _caseConverterFR.ConvertftChargeItemCaseToV1(request);
-                request.ftChargeItemCase.Should().Be(v1FtChargeItemCase);
+                _caseConverterFR.ConvertftChargeItemCaseToV1(chargeItem);
+                chargeItem.ftChargeItemCase.Should().Be(v1FtChargeItemCase);
             }
         }
 
@@ -134,16 +134,16 @@ namespace fiskaltrust.Interface.Tagging.UnitTests.FR
         [InlineData(0x465220000000000F, null)]
         public void ConvertftPayItemCaseToV1_ShouldreturnCorrect(long v2FtPayItemCase, long? v1FtPayItemCase)
         {
-            var request = new PayItem { ftPayItemCase = v2FtPayItemCase };
+            var payItem = new PayItem { ftPayItemCase = v2FtPayItemCase };
            
             if(v1FtPayItemCase == null)
             {
-                Assert.Throws<NotImplementedException>(() => _caseConverterFR.ConvertftPayItemCaseToV1(request));
+                Assert.Throws<NotImplementedException>(() => _caseConverterFR.ConvertftPayItemCaseToV1(payItem));
             }
             else
             {
-                _caseConverterFR.ConvertftPayItemCaseToV1(request);
-                request.ftPayItemCase.Should().Be(v1FtPayItemCase);
+                _caseConverterFR.ConvertftPayItemCaseToV1(payItem);
+                payItem.ftPayItemCase.Should().Be(v1FtPayItemCase);
             }            
         }
 
@@ -187,6 +187,78 @@ namespace fiskaltrust.Interface.Tagging.UnitTests.FR
             {
                 _caseConverterFR.ConvertftReceiptCaseToV1(request);
                 request.ftReceiptCase.Should().Be(v1FtReceiptCase);
+            }
+        }
+
+        [Theory]
+        [InlineData(0x4652000000000040, 0x4652200000000040)]
+        public void ConvertftStateToV2_ShouldreturnCorrect(long v1FtState, long? v2FtState)
+        {
+            var response = new ReceiptResponse { ftState = v1FtState };
+
+            if (v2FtState == null)
+            {
+                Assert.Throws<NotImplementedException>(() => _caseConverterFR.ConvertftStateToV2(response));
+            }
+            else
+            {
+                _caseConverterFR.ConvertftStateToV2(response);
+                response.ftState.Should().Be(v2FtState);
+            }
+        }
+
+        [Theory]
+        [InlineData(0x4652000000000000, null)]
+        [InlineData(0x4652000000000001, 0x4652200000000001)]
+        [InlineData(0x4652000000000002, 0x4652200000000010)]
+        [InlineData(0x4652000000000003, 0x4652200000000011)]
+        [InlineData(0x4652000000000004, 0x4652200000000012)]
+        [InlineData(0x4652000000000005, 0x4652200000000013)]
+        [InlineData(0x4652000000000006, 0x4652200000000014)]
+        [InlineData(0x4652000000000007, 0x4652200000000015)]
+        public void ConvertftSignatureTypeToV2_ShouldreturnCorrect(long v1FtSignaturType, long? v2FtSignaturType)
+        {
+            var signaturItem = new SignaturItem { ftSignatureType = v1FtSignaturType };
+
+            if (v2FtSignaturType == null)
+            {
+                Assert.Throws<NotImplementedException>(() => _caseConverterFR.ConvertftSignatureTypeToV2(signaturItem));
+            }
+            else
+            {
+                _caseConverterFR.ConvertftSignatureTypeToV2(signaturItem);
+                signaturItem.ftSignatureType.Should().Be(v2FtSignaturType);
+            }
+        }
+
+        [Theory]
+        [InlineData(0x4652200000000000, null)]
+        [InlineData(0x4652200000000001, null)]
+        [InlineData(0x4652200000000002, null)]
+        [InlineData(0x4652200000000003, null)]
+        [InlineData(0x4652200000001000, 0x4652000000000000)]
+        [InlineData(0x4652200000011001, 0x4652000000010001)]
+        [InlineData(0x4652200000001002, 0x4652000000000002)]
+        [InlineData(0x4652200000001003, 0x4652000000000003)]
+        [InlineData(0x4652200000001004, 0x4652000000000004)]
+        [InlineData(0x4652200000011007, 0x4652000000010007)]
+        [InlineData(0x4652200000001008, 0x4652000000000008)]
+        [InlineData(0x4652200000001009, 0x4652000000000009)]
+        [InlineData(0x465220000000100A, 0x465200000000000A)]
+        [InlineData(0x465220000000100B, 0x465200000000000B)]
+        [InlineData(0x4652200000001010, 0x4652000000000010)]
+        public void ConvertftJournalTypeToV1_ShouldreturnCorrect(long v2FtJournalType, long? v1FtJournalType)
+        {
+            var journalRequest = new JournalRequest { ftJournalType = v2FtJournalType };
+
+            if (v1FtJournalType == null)
+            {
+                Assert.Throws<NotImplementedException>(() => _caseConverterFR.ConvertftJournalTypeToV1(journalRequest));
+            }
+            else
+            {
+                _caseConverterFR.ConvertftJournalTypeToV1(journalRequest);
+                journalRequest.ftJournalType.Should().Be(v1FtJournalType);
             }
         }
     }

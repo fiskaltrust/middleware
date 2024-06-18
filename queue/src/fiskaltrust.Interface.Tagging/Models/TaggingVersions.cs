@@ -29,12 +29,14 @@ namespace fiskaltrust.Interface.Tagging.Models
     [CaseExtensions(OnType = typeof(SignaturItem), OnField = nameof(SignaturItem.ftSignatureType), Mask = 0xF000_0000_0000, Shift = 11, CaseName = "VersionType")]
     public enum SignaturItemTypeVersions : long
     {
+        V1 = 0x0,
         V2 = 0x2,
     }
 
     [CaseExtensions(OnType = typeof(ReceiptResponse), OnField = nameof(ReceiptResponse.ftState), Mask = 0xF000_0000_0000, Shift = 11, CaseName = "Version")]
     public enum FtStateVersions : long
     {
+        V1 = 0x0,
         V2 = 0x2,
     }
 
