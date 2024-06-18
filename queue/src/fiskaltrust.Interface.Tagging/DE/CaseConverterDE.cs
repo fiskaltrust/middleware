@@ -567,7 +567,7 @@ namespace fiskaltrust.Interface.Tagging.DE
 
             ftSignatureType.ftSignatureType = (long) ((ulong) v1SignaturItem.ftSignatureType & 0xFFFF_0000_0000_0000);
 
-            ftSignatureType.SetVersionType(2);
+            ftSignatureType.SetTypeVersion(2);
             ftSignatureType.SetV2CategorySignatureType((long) V2.SignatureTypesCategory.Normal0x0);
 
             switch (v1SignaturItem.ftSignatureType & 0xFFF)

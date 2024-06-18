@@ -6,6 +6,7 @@ using fiskaltrust.Interface.Tagging.Models.Extensions;
 using fiskaltrust.Interface.Tagging.Models.V2.Extensions;
 //using fiskaltrust.Interface.Tagging.Models.V2.FR.Extensions;
 using fiskaltrust.Interface.Tagging.Models.V1.FR.Extensions;
+using fiskaltrust.Interface.Tagging.ErrorHandling;
 
 namespace fiskaltrust.Interface.Tagging.FR
 {
@@ -13,17 +14,11 @@ namespace fiskaltrust.Interface.Tagging.FR
     {
         public void ConvertftChargeItemCaseToV1(ChargeItem chargeItem)
         {
-            if (!chargeItem.IsVersionV2())
-            {
-                // TODO: create NotV2CaseException
-                throw new Exception($"Not a V2 receipt case. Found V{chargeItem.GetVersion()}.");
-            }
-
             if (!chargeItem.IsCountryFR())
             {
-                // TODO: create NotFRCaseException
-                throw new Exception("Not a FR receipt case.");
+               throw new ChargeItemCountryException("It's NOT a FR charge Item.");
             }
+
             var v2ChargeItem = new ChargeItem() { ftChargeItemCase = chargeItem.ftChargeItemCase };
             chargeItem.ftChargeItemCase = (long) ((ulong) chargeItem.ftChargeItemCase & 0xFFFF_0000_0000_0000);
 
@@ -84,16 +79,10 @@ namespace fiskaltrust.Interface.Tagging.FR
         }
         public void ConvertftJournalTypeToV1(JournalRequest journalRequest)
         {
-            if (!journalRequest.IsVersionV2())
-            {
-                // TODO: create NotV2CaseException
-                throw new Exception($"Not a V2 receipt case. Found V{journalRequest.GetVersion()}.");
-            }
-
             if (!journalRequest.IsCountryFR())
             {
                 // TODO: create NotFRCaseException
-                throw new Exception("Not a FR receipt case.");
+                throw new JournalTypeCountryException("It's NOT a FR journal type.");
             }
 
             var v2JournalRequest = new JournalRequest() { ftJournalType = journalRequest.ftJournalType };
@@ -125,17 +114,10 @@ namespace fiskaltrust.Interface.Tagging.FR
             }
         }
         public void ConvertftPayItemCaseToV1(PayItem payItem)
-        {
-            if (!payItem.IsVersionV2())
-            {
-                // TODO: create NotV2CaseException
-                throw new Exception($"Not a V2 receipt case. Found V{payItem.GetVersion()}.");
-            }
-
+        {            
             if (!payItem.IsCountryFR())
             {
-                // TODO: create NotFRCaseException
-                throw new Exception("Not a FR receipt case.");
+               throw new PayItemCountryException("It's NOT a FR pay Item.");
             }
             var v2PayItem = new PayItem() { ftPayItemCase = payItem.ftPayItemCase };
             payItem.ftPayItemCase = (long) ((ulong) payItem.ftPayItemCase & 0xFFFF_0000_0000_0000);
@@ -163,16 +145,9 @@ namespace fiskaltrust.Interface.Tagging.FR
         }
         public void ConvertftReceiptCaseToV1(ReceiptRequest receiptRequest)
         {
-            if (!receiptRequest.IsVersionV2())
-            {
-                // TODO: create NotV2CaseException
-                throw new Exception($"Not a V2 receipt case. Found V{receiptRequest.GetVersion()}.");
-            }
-
             if (!receiptRequest.IsCountryFR())
             {
-                // TODO: create NotFRCaseException
-                throw new Exception("Not a FR receipt case.");
+                throw new ReceiptCaseCountryException("It's NOT a FR receipt case.");
             }
 
             var v2ReceiptRequest = new ReceiptRequest() { ftReceiptCase = receiptRequest.ftReceiptCase };
@@ -233,24 +208,24 @@ namespace fiskaltrust.Interface.Tagging.FR
             }
          
         }
-        public void ConvertftSignatureFormatToV2(SignaturItem signaturItem) => throw new NotImplementedException();
-        public void ConvertftSignatureTypeToV2(SignaturItem signaturItem) 
+        public void ConvertftSignatureFormatToV2(SignaturItem signaturItem)
         {
-            if (!signaturItem.IsVersionTypeV1())
+            if (!signaturItem.IsFormatCountryFR())
             {
-                // TODO: create NotV2CaseException
-                throw new Exception($"Not a V1 receipt case. Found V{signaturItem.GetVersionType()}.");
+                throw new SignatureFormatCountryException("It's NOT a FR signature format.");
             }
 
-            if (!signaturItem.IsCountryFR())
+        }
+        public void ConvertftSignatureTypeToV2(SignaturItem signaturItem) 
+        {
+            if (!signaturItem.IsTypeCountryFR() )
             {
-                // TODO: create NotFRCaseException
-                throw new Exception("Not a FR receipt case.");
+               throw new SignatureTypeCountryException("It's NOT a FR signature type.");
             }
 
             var v1SignaturItem = new SignaturItem() { ftSignatureType = signaturItem.ftSignatureType };
             signaturItem.ftSignatureType = (long) ((ulong) signaturItem.ftSignatureType & 0xFFFF_2000_0000_0000);
-            signaturItem.SetVersionType(2);
+            signaturItem.SetTypeVersion(2);
             signaturItem.SetV2CategorySignatureType((long) V2.SignatureTypesCategory.Normal0x0);
 
             var v1ftSignaturItem = (V1.FR.ftSignatureTypes) v1SignaturItem.GetV2SignatureType();
@@ -271,21 +246,13 @@ namespace fiskaltrust.Interface.Tagging.FR
         }
 
         public void ConvertftStateToV2(ReceiptResponse receiptResponse)
-        {
-            if (!receiptResponse.IsVersionV1())
-            {
-                // TODO: create NotV2CaseException
-                throw new Exception($"Not a V1 receipt case. Found V{receiptResponse.GetVersion()}.");
-            }
-
+        {            
             if (!receiptResponse.IsCountryFR())
             {
-                // TODO: create NotFRCaseException
-                throw new Exception("Not a FR receipt case.");
+                throw new StateCountryException("It's NOT a FR state.");
             }
-            var m2 = receiptResponse.GetV1State();
+            
             receiptResponse.SetVersion(2);
-            var m = receiptResponse.GetV1State();
             if (receiptResponse.GetV1State() == (long) V1.FR.ftStates.MessagePending0x0040)
             {
                 receiptResponse.SetV2State((long) V2.ftStates.MessagePending0x0040);
@@ -295,5 +262,6 @@ namespace fiskaltrust.Interface.Tagging.FR
                 throw new NotImplementedException();
             }
         }
+
     }
 }

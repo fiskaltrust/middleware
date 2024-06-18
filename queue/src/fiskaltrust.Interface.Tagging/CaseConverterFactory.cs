@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
-using fiskaltrust.ifPOS.v0;
 using fiskaltrust.Interface.Tagging.AT;
 using fiskaltrust.Interface.Tagging.DE;
 using fiskaltrust.Interface.Tagging.FR;
