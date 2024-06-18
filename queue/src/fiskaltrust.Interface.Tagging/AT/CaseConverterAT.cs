@@ -3,6 +3,7 @@ using fiskaltrust.ifPOS.v1;
 using V1 = fiskaltrust.Interface.Tagging.Models.V1;
 using V2 = fiskaltrust.Interface.Tagging.Models.V2;
 using fiskaltrust.Interface.Tagging.Models.Extensions;
+using fiskaltrust.Interface.Tagging.Models.V1.AT.Extensions;
 using fiskaltrust.Interface.Tagging.Models.V2.Extensions;
 using V2AT = fiskaltrust.Interface.Tagging.Models.V2;
 
@@ -101,19 +102,22 @@ namespace fiskaltrust.Interface.Tagging.AT
                 _ => throw new NotImplementedException()
             });
 
-            if (v2ftPayItem.IsV2PayItemCaseFlagTip0x0040() && v2ftPayItem.IsV2PayItemCaseCash0x0001())
+            if (v2ftPayItem.IsV2PayItemCaseFlagTip0x0040() && v2ftPayItem.IsV2PayItemCaseCash0x0001()) // IsV2PayItemCaseFlagTip0x0040() is not implemented in V2
             {
                 ftPayItem.SetV1PayItemCase((long)V1.AT.ftPayItemCases.TipToEmployee0x0012);
             }
-            if (v2ftPayItem.IsV2PayItemCaseFlagChange0x0020() && v2ftPayItem.IsV2PayItemCaseCash0x0001())
+            if (v2ftPayItem.IsV2PayItemCaseFlagChange0x0020() && v2ftPayItem.IsV2PayItemCaseCash0x0001()) // IsV2PayItemCaseFlagChange0x0020() is not implemented in V2
+            {
+                ftPayItem.SetV1PayItemCase((long)V1.AT.ftPayItemCases.Change0x0013);
+            }
             {
                 ftPayItem.SetV1PayItemCase((long)V1.AT.ftPayItemCases.CashForeignCurrency0x0002);
             }
-            if (v2ftPayItem.IsV2PayItemCaseFlagForeignCurrency0x0010() && v2ftPayItem.IsV2PayItemCaseCash0x0001())
+            if (v2ftPayItem.IsV2PayItemCaseFlagForeignCurrency0x0010() && v2ftPayItem.IsV2PayItemCaseCash0x0001()) // IsV2PayItemCaseFlagForeignCurrency0x0010() is not implemented in V2
             {
                 ftPayItem.SetV1PayItemCase((long)V1.AT.ftPayItemCases.CashForeignCurrency0x0002);
             }
-            if (v2ftPayItem.IsV2PayItemCaseFlagDigital0x0080())
+            if (v2ftPayItem.IsV2PayItemCaseFlagDigital0x0080()) // IsV2PayItemCaseFlagDigital0x0080() is not implemented in V2
             {
                 ftPayItem.SetV1PayItemCase((long)V1.AT.ftPayItemCases.OnlinePayment0x0007);
             }
@@ -159,9 +163,9 @@ namespace fiskaltrust.Interface.Tagging.AT
                 _ => throw new NotImplementedException()
             });
 
-            if (v2ReceiptRequest.IsV2ReceiptCaseFlagLateSigning0x0001())
+            if (v2ReceiptRequest.IsV2ReceiptCaseFlagLateSigning0x0001()) // IsV2ReceiptCaseFlagLateSigning0x0001() is not implemented in V2
             {
-                receiptRequest.SetV1ReceiptCaseFlagFailed0x0001();
+                receiptRequest.SetV1ReceiptCaseFlagFailed0x0001(); // SetV1ReceiptCaseFlagFailed0x0001() is not implemented in V2
             }
             if (v2ReceiptRequest.IsV2ReceiptCaseFlagVoid0x0004())
             {

@@ -25,5 +25,6 @@ namespace fiskaltrust.Interface.Tagging.Models.V1.AT
         DownPayment0x0010 = 0x0010,
         InternalMaterialConsumption0x0011 = 0x0011,
         TipToEmployee0x0012 = 0x0012,
+        Change0x0013 = 0x0013,
     }
 }
