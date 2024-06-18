@@ -16,26 +16,34 @@ namespace fiskaltrust.Interface.Tagging
         {
             var converter = _caseConverterFactory.CreateInstance(request.ftReceiptCase);
             converter.ConvertftReceiptCaseToV1(request);
-            foreach (var chargeItem in request.cbChargeItems)
+            if (request.cbChargeItems != null)
             {
-                converter.ConvertftChargeItemCaseToV1(chargeItem);
+                foreach (var chargeItem in request.cbChargeItems)
+                {
+                    converter.ConvertftChargeItemCaseToV1(chargeItem);
+                }
             }
-            foreach (var payItem in request.cbPayItems)
+            if (request.cbPayItems != null)
             {
-                converter.ConvertftPayItemCaseToV1(payItem);
+                foreach (var payItem in request.cbPayItems)
+                {
+                    converter.ConvertftPayItemCaseToV1(payItem);
+                }
             }
             return request;
 
         }
         public ReceiptResponse ConvertResponseToV2(ReceiptResponse response)
         {
-
             var converter = _caseConverterFactory.CreateInstance(response.ftState);
             converter.ConvertftStateToV2(response);
-            foreach (var signature in response.ftSignatures)
+            if (response.ftSignatures != null)
             {
-                converter.ConvertftSignatureFormatToV2(signature);
-                converter.ConvertftSignatureTypeToV2(signature);
+                foreach (var signature in response.ftSignatures)
+                {
+                    converter.ConvertftSignatureFormatToV2(signature);
+                    converter.ConvertftSignatureTypeToV2(signature);
+                }
             }
             return response;
 

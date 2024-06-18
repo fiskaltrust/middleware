@@ -3,15 +3,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.Middleware.Contracts.Extensions;
+using fiskaltrust.Interface.Tagging;
+using fiskaltrust.Interface.Tagging.Models.Extensions;
 using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Queue.Extensions;
-using fiskaltrust.Middleware.Queue.Models;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+
 
 namespace fiskaltrust.Middleware.Queue
 {
@@ -29,6 +30,7 @@ namespace fiskaltrust.Middleware.Queue
         private readonly bool _isSandbox;
         private readonly int _receiptRequestMode = 0;
         private readonly SignatureFactory _signatureFactory;
+        private readonly ReceiptConverter _receiptConverter;
         //private readonly Action<string> _onMessage;
 
         public SignProcessor(
@@ -39,7 +41,8 @@ namespace fiskaltrust.Middleware.Queue
             IActionJournalRepository actionJournalRepository,
             ICryptoHelper cryptoHelper,
             IMarketSpecificSignProcessor countrySpecificSignProcessor,
-            MiddlewareConfiguration configuration)
+            MiddlewareConfiguration configuration,
+            ReceiptConverter receiptConverter)
         {
             _logger = logger;
             _configurationRepository = configurationRepository ?? throw new ArgumentNullException(nameof(configurationRepository));
@@ -54,6 +57,7 @@ namespace fiskaltrust.Middleware.Queue
             _receiptRequestMode = configuration.ReceiptRequestMode;
             //_onMessage = configuration.OnMessage;
             _signatureFactory = new SignatureFactory();
+            _receiptConverter = receiptConverter;
         }
 
         public async Task<ReceiptResponse> ProcessAsync(ReceiptRequest request)
@@ -155,7 +159,16 @@ namespace fiskaltrust.Middleware.Queue
                 Exception exception = null;
                 try
                 {
+                    var version = data.GetVersion();
+                    if (!data.IsCountryIT() && data.IsVersionV2())
+                    {
+                        _receiptConverter.ConvertRequestToV1(data);
+                    }
                     (receiptResponse, countrySpecificActionJournals) = await _countrySpecificSignProcessor.ProcessAsync(data, queue, queueItem).ConfigureAwait(false);
+                    if (!data.IsCountryIT() && version == 2)
+                    {
+                        _receiptConverter.ConvertResponseToV2(receiptResponse);
+                    }
                 }
                 catch (Exception e)
                 {

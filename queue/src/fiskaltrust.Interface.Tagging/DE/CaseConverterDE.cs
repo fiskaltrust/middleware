@@ -553,14 +553,12 @@ namespace fiskaltrust.Interface.Tagging.DE
         {
             var v1SignaturItem = new SignaturItem() { ftSignatureFormat = ftSignatureFormat.ftSignatureFormat };
 
-            ftSignatureFormat.ftSignatureFormat = (long) ((ulong) v1SignaturItem.ftSignatureFormat & 0xFFFF_2000_0000_0000);
+            ftSignatureFormat.ftSignatureFormat = (long) ((ulong) v1SignaturItem.ftSignatureFormat & 0xFFFF_2000_0000_FFFF);
 
-            ftSignatureFormat.ftSignatureFormat |= (long) ((V1.DE.ftSignatureFormats) (v1SignaturItem.ftSignatureFormat & 0xFFFF) switch
+            if (v1SignaturItem.IsV1SignatureFormatFlagPrintingOptional0x0001())
             {
-                V1.DE.ftSignatureFormats.Unknown0x0000 => V2.ftSignatureFormats.Unknown0x0000,
-              _ => throw new NotImplementedException(),
-            });
-            //ToDo: Implement the rest of the Formats
+                ftSignatureFormat.SetV2SignatureTypeFlagPrintingOptional();
+            }
 
         }
         public void ConvertftSignatureTypeToV2(SignaturItem ftSignatureType)

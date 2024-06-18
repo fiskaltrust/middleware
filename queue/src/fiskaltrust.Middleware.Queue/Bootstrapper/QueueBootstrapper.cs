@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
+using fiskaltrust.Interface.Tagging;
 using fiskaltrust.Middleware.Contracts.Extensions;
 using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Contracts.Models;
@@ -51,6 +52,7 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
             services.AddScoped<ISignProcessor>(x => new LocalQueueSynchronizationDecorator(x.GetRequiredService<SignProcessor>(), x.GetRequiredService<ILogger<LocalQueueSynchronizationDecorator>>()));
             services.AddScoped<IJournalProcessor, JournalProcessor>();
             services.AddScoped<IPOS, Queue>();
+            services.AddScoped<ReceiptConverter>();
             var businessLogicFactoryBoostrapper = LocalizedQueueBootStrapperFactory.GetBootstrapperForLocalizedQueue(_activeQueueId, middlewareConfiguration);
             businessLogicFactoryBoostrapper.ConfigureServices(services);
         }
