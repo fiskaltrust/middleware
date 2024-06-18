@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using Azure.Data.Tables;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.TableEntities;
+using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
 {
@@ -46,7 +47,9 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
     public class AzureTableStorageReceiptReferenceIndexRepository : BaseAzureTableStorageRepository<string, ReceiptReferenceIndexTable, ReceiptReferenceIndex>
     {
         public AzureTableStorageReceiptReferenceIndexRepository(QueueConfiguration queueConfig, TableServiceClient tableServiceClient)
-            : base(queueConfig, tableServiceClient, nameof(ReceiptReferenceIndex)) { }
+            : base(queueConfig, tableServiceClient, TABLE_NAME) { }
+
+        public const string TABLE_NAME = nameof(ReceiptReferenceIndex);
 
         protected override void EntityUpdated(ReceiptReferenceIndex entity) { }
 
@@ -72,7 +75,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
         public IAsyncEnumerable<Guid> GetByReceiptReferenceAsync(string cbReceiptReference)
         {
             var partitionKey = GetIdForEntity(new ReceiptReferenceIndex { cbReceiptReference = cbReceiptReference });
-            var result = _tableClient.QueryAsync<ReceiptReferenceIndexTable>(x => x.PartitionKey == partitionKey, select: new[] { "ftQueueItemId" });
+            var result = _tableClient.QueryAsync<ReceiptReferenceIndexTable>(x => x.PartitionKey == partitionKey, select: new[] { nameof(ftQueueItem.ftQueueItemId) });
             return result.Select(x => x.ftQueueItemId);
         }
     }

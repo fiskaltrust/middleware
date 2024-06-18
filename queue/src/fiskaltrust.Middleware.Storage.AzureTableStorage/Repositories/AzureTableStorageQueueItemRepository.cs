@@ -17,10 +17,12 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
     {
         private readonly AzureTableStorageReceiptReferenceIndexRepository _receiptReferenceIndexRepository;
         public AzureTableStorageQueueItemRepository(QueueConfiguration queueConfig, TableServiceClient tableServiceClient, AzureTableStorageReceiptReferenceIndexRepository receiptReferenceIndexRepository)
-            : base(queueConfig, tableServiceClient, nameof(ftQueueItem))
+            : base(queueConfig, tableServiceClient, TABLE_NAME)
         {
             _receiptReferenceIndexRepository = receiptReferenceIndexRepository;
         }
+
+        public const string TABLE_NAME = "QueueItem";
 
         protected override void EntityUpdated(ftQueueItem entity) => entity.TimeStamp = DateTime.UtcNow.Ticks;
 
@@ -106,7 +108,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
         public async Task<ftQueueItem> GetClosestPreviousReceiptReferencesAsync(ftQueueItem ftQueueItem)
         {
             var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(ftQueueItem.request);
-            if(receiptRequest.cbPreviousReceiptReference is null)
+            if (receiptRequest.cbPreviousReceiptReference is null)
             {
                 return null;
             }
