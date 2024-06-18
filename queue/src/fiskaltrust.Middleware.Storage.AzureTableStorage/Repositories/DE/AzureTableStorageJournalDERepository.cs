@@ -14,15 +14,16 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
 {
     public class AzureTableStorageJournalDERepository : BaseAzureTableStorageRepository<Guid, AzureTableStorageFtJournalDE, ftJournalDE>, IJournalDERepository, IMiddlewareRepository<ftJournalDE>, IMiddlewareJournalDERepository
     {
-        private const string JOURNALDE_BLOB_CONTAINER = "ftjournalde";
+        public const string BLOB_CONTAINER_NAME = "ftjournalde";
+        public const string TABLE_NAME = "JournalDE";
         private readonly QueueConfiguration _queueConfig;
         private readonly BlobContainerClient _blobContainerClient;
 
         public AzureTableStorageJournalDERepository(QueueConfiguration queueConfig, TableServiceClient tableServiceClient, BlobServiceClient blobServiceClient)
-            : base(queueConfig, tableServiceClient, nameof(ftJournalDE))
+            : base(queueConfig, tableServiceClient, TABLE_NAME)
         {
             _queueConfig = queueConfig;
-            _blobContainerClient = blobServiceClient.GetBlobContainerClient(JOURNALDE_BLOB_CONTAINER);
+            _blobContainerClient = blobServiceClient.GetBlobContainerClient(BLOB_CONTAINER_NAME);
         }
 
         protected override void EntityUpdated(ftJournalDE entity) => entity.TimeStamp = DateTime.UtcNow.Ticks;

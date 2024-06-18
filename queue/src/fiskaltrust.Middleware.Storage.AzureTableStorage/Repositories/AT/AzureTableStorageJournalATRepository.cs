@@ -12,7 +12,9 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.AT
     public class AzureTableStorageJournalATRepository : BaseAzureTableStorageRepository<Guid, AzureTableStorageFtJournalAT, ftJournalAT>, IJournalATRepository, IMiddlewareRepository<ftJournalAT>
     {
         public AzureTableStorageJournalATRepository(QueueConfiguration queueConfig, TableServiceClient tableServiceClient)
-            : base(queueConfig, tableServiceClient, nameof(ftJournalAT)) { }
+            : base(queueConfig, tableServiceClient, TABLE_NAME) { }
+
+        public const string TABLE_NAME = "JournalAT";
 
         protected override void EntityUpdated(ftJournalAT entity) => entity.TimeStamp = DateTime.UtcNow.Ticks;
 

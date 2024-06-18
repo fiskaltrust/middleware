@@ -12,7 +12,9 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
     public class AzureTableStorageOpenTransactionRepository : BaseAzureTableStorageRepository<string, AzureTableStorageOpenTransaction, OpenTransaction>, IPersistentTransactionRepository<OpenTransaction>
     {
         public AzureTableStorageOpenTransactionRepository(QueueConfiguration queueConfig, TableServiceClient tableServiceClient)
-            : base(queueConfig, tableServiceClient, nameof(OpenTransaction)) { }
+            : base(queueConfig, tableServiceClient, TABLE_NAME) { }
+
+        public const string TABLE_NAME = nameof(OpenTransaction);
 
         public async Task InsertOrUpdateTransactionAsync(OpenTransaction transaction) => await InsertOrUpdateAsync(transaction).ConfigureAwait(false);
 

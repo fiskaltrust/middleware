@@ -1197,20 +1197,34 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
                 TimeStamp = src.GetInt64(nameof(ftQueueItem.TimeStamp)).GetValueOrDefault()
             };
 
-            var reqSb = new StringBuilder();
-            foreach (var key in src.Keys.Where(x => x.StartsWith($"{nameof(ftQueueItem.request)}_")))
+            var request = src.GetString(nameof(ftQueueItem.request));
+            if (!string.IsNullOrEmpty(request))
             {
-                reqSb.Append(src[key]);
+                queueItem.request = request;
             }
-            queueItem.request = reqSb.ToString();
-
-            var resSb = new StringBuilder();
-            foreach (var key in src.Keys.Where(x => x.StartsWith($"{nameof(ftQueueItem.response)}_")))
+            else
             {
-                resSb.Append(src[key]);
+                var reqSb = new StringBuilder();
+                foreach (var key in src.Keys.Where(x => x.StartsWith($"{nameof(ftQueueItem.request)}_")))
+                {
+                    reqSb.Append(src[key]);
+                }
+                queueItem.request = reqSb.ToString();
             }
-            queueItem.response = resSb.ToString();
-
+            var response = src.GetString(nameof(ftQueueItem.response));
+            if (!string.IsNullOrEmpty(response))
+            {
+                queueItem.response = response;
+            }
+            else
+            {
+                var resSb = new StringBuilder();
+                foreach (var key in src.Keys.Where(x => x.StartsWith($"{nameof(ftQueueItem.response)}_")))
+                {
+                    resSb.Append(src[key]);
+                }
+                queueItem.response = resSb.ToString();
+            }
             return queueItem;
         }
 
