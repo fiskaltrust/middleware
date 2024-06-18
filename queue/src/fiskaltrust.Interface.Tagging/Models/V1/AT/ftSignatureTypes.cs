@@ -1,5 +1,9 @@
-﻿namespace fiskaltrust.Interface.Tagging.Models.V1.AT
+﻿using fiskaltrust.ifPOS.v1;
+using fiskaltrust.Interface.Tagging.Generator;
+
+namespace fiskaltrust.Interface.Tagging.Models.V1.AT
 {
+    [CaseExtensions(OnType = typeof(SignaturItem), OnField = nameof(SignaturItem.ftSignatureType), Mask = 0xFFFF, Prefix = "V1", CaseName = "SignatureType")]
     public enum ftSignatureTypes : long
     {
         Unknown0x0000 = 0x0000,
