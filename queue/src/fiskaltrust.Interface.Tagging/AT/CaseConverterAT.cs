@@ -4,6 +4,7 @@ using V1 = fiskaltrust.Interface.Tagging.Models.V1;
 using V2 = fiskaltrust.Interface.Tagging.Models.V2;
 using fiskaltrust.Interface.Tagging.Models.Extensions;
 using fiskaltrust.Interface.Tagging.Models.V2.Extensions;
+using V2AT = fiskaltrust.Interface.Tagging.Models.V2;
 
 namespace fiskaltrust.Interface.Tagging.AT
 {
@@ -63,10 +64,10 @@ namespace fiskaltrust.Interface.Tagging.AT
 
             journalRequest.ftJournalType = (long)((ulong)v2JournalRequest.ftJournalType & 0xFFFF_0000_0000_0000);
 
-            journalRequest.ftJournalType |= (long)((V2AT.ftJournalTypesAT)(v2JournalRequest.ftJournalType & 0xFFFF) switch
+            journalRequest.ftJournalType |= (long)((V2.ftJournalTypes)(v2JournalRequest.ftJournalType & 0xFFFF) switch
             {
-                V2AT.ftJournalTypesAT.StatusInformationQueueAT0x1000 => V1.AT.ftJournalTypes.StatusInformationQueueAT0x0000,
-                V2AT.ftJournalTypesAT.RKSVDEPExport0x1001 => V1.AT.ftJournalTypes.RKSVDEPExport0x0001,
+                V2.ftJournalTypes.StatusInformationQueueAT0x1000 => V1.AT.ftJournalTypes.StatusInformationQueueAT0x0000,
+                V2.ftJournalTypes.RKSVDEPExport0x1001 => V1.AT.ftJournalTypes.RKSVDEPExport0x0001,
                 _ => throw new NotImplementedException()
             });
         }
@@ -188,8 +189,77 @@ namespace fiskaltrust.Interface.Tagging.AT
             }
         }
 
-        public void ConvertftSignatureFormatToV2(SignaturItem ftSignatureFormat) => throw new NotImplementedException();
-        public void ConvertftSignatureTypeToV2(SignaturItem ftSignatureType) => throw new NotImplementedException();
-        public void ConvertftStateToV2(ReceiptResponse ftstate) => throw new NotImplementedException();
+        public void ConvertftSignatureFormatToV2(SignaturItem ftSignatureFormat)
+        {
+            var v1SignatureFormat = new SignaturItem() { ftSignatureFormat = ftSignatureFormat.ftSignatureFormat };
+
+            ftSignatureFormat.ftSignatureFormat = (long)((ulong)v1SignatureFormat.ftSignatureFormat & 0xFFFF_2000_0000_0000);
+
+            ftSignatureFormat.ftSignatureFormat |= (long)((V1.AT.ftSignatureFormats)(v1SignatureFormat.ftSignatureFormat & 0xFFFF) switch
+            {
+                V1.AT.ftSignatureFormats.Unknown0x0000 => V2.ftSignatureFormats.Unknown0x0000,
+                V1.AT.ftSignatureFormats.Text0x0001 => V2.ftSignatureFormats.Text0x0001,
+                V1.AT.ftSignatureFormats.Link0x0002 => V2.ftSignatureFormats.Link0x0002,
+                V1.AT.ftSignatureFormats.QRCode0x0003 => V2.ftSignatureFormats.QRCode0x0003,
+                V1.AT.ftSignatureFormats.Code1280x0004 => V2.ftSignatureFormats.Code1280x0004,
+                V1.AT.ftSignatureFormats.OCRA0x0005 => V2.ftSignatureFormats.OCRA0x0005,
+                V1.AT.ftSignatureFormats.PDF4170x0006 => V2.ftSignatureFormats.PDF4170x0006,
+                V1.AT.ftSignatureFormats.DataMatrix0x0007 => V2.ftSignatureFormats.DataMatrix0x0007,
+                V1.AT.ftSignatureFormats.Aztec0x0008 => V2.ftSignatureFormats.Aztec0x0008,
+                V1.AT.ftSignatureFormats.EAN80x0009 => V2.ftSignatureFormats.EAN80x0009,
+                V1.AT.ftSignatureFormats.EAN130x000A => V2.ftSignatureFormats.EAN130x000A,
+                V1.AT.ftSignatureFormats.UPCA0x000B => V2.ftSignatureFormats.UPCA0x000B,
+                V1.AT.ftSignatureFormats.Code390x000C => V2.ftSignatureFormats.Code390x000C,
+                _ => throw new NotImplementedException(),
+            });
+        }
+
+        public void ConvertftSignatureTypeToV2(SignaturItem ftSignatureType)
+        {
+            var v1SignatureType = new SignaturItem() { ftSignatureType = ftSignatureType.ftSignatureType };
+
+            ftSignatureType.ftSignatureType = (long)((ulong)v1SignatureType.ftSignatureType & 0xFFFF_0000_0000_0000);
+
+            ftSignatureType.SetVersionType(2);
+            ftSignatureType.SetV2CategorySignatureType((long)V2.SignatureTypesCategory.Normal0x0);
+
+            switch (v1SignatureType.ftSignatureType & 0xFFF)
+            {
+                case (long)V1.AT.ftSignatureTypes.Unknown0x0000:
+                    ftSignatureType.SetV2SignatureType((long)V2.ftSignatureTypes.Unknown0x0000);
+                    break;
+                case (long)V1.AT.ftSignatureTypes.SignatureAccordingToRKSV0x0001:
+                    ftSignatureType.SetV2SignatureType((long)V2.ftSignatureTypes.SignatureAccordingToRKSV0x0001);
+                    break;
+                case (long)V1.AT.ftSignatureTypes.ArchivingRequired0x0002:
+                    ftSignatureType.SetV2SignatureType((long)V2.ftSignatureTypes.ArchivingRequired0x0002);
+                    break;
+                case (long)V1.AT.ftSignatureTypes.FinanzOnlineNotification0x0003:
+                    ftSignatureType.SetV2SignatureType((long)V2.ftSignatureTypes.FinanzOnlineNotification0x0003);
+                    break;
+                default:
+                    throw new NotImplementedException();
+            }
+        }
+
+        public void ConvertftStateToV2(ReceiptResponse ftState)
+        {
+            var v1State = new ReceiptResponse() { ftState = ftState.ftState };
+
+            ftState.ftState = (long)((ulong)v1State.ftState & 0xFFFF_0000_0000_0000);
+
+            ftState.ftState |= (long)((V1.AT.ftStates)(v1State.ftState & 0xFFFF) switch
+            {
+                V1.AT.ftStates.OutOfService0x0001 => V2.ftStates.OutOfService0x0001,
+                V1.AT.ftStates.SSCDTemporaryOutOfService0x0002 => V2.ftStates.SSCDTemporaryOutOfService0x0002,
+                V1.AT.ftStates.SSCDPermanentlyOutOfService0x0004 => V2.ftStates.SSCDPermanentlyOutOfService0x0004,
+                V1.AT.ftStates.SubsequentEntryActivated0x0008 => V2.ftStates.SubsequentEntryActivated0x0008,
+                V1.AT.ftStates.MonthlyReportDue0x0010 => V2.ftStates.MonthlyReportDue0x0010,
+                V1.AT.ftStates.AnnualReportDue0x0020 => V2.ftStates.AnnualReportDue0x0020,
+                V1.AT.ftStates.MessageNotificationPending0x0040 => V2.ftStates.MessageNotificationPending0x0040,
+                V1.AT.ftStates.BackupSSCDInUse0x0080 => V2.ftStates.BackupSSCDInUse0x0080,
+                _ => throw new NotImplementedException(),
+            });
+        }
     }
 }

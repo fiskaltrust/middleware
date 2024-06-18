@@ -5,6 +5,7 @@ using V2 = fiskaltrust.Interface.Tagging.Models.V2;
 using fiskaltrust.Interface.Tagging.Models.Extensions;
 using fiskaltrust.Interface.Tagging.Models.V2.Extensions;
 using fiskaltrust.Interface.Tagging.Models.V1.DE.Extensions;
+using fiskaltrust.Interface.Tagging.Models.V2.DE.Extensions;
 using V2DE = fiskaltrust.Interface.Tagging.Models.V2.DE;
 
 
@@ -637,6 +638,16 @@ namespace fiskaltrust.Interface.Tagging.DE
                     throw new NotImplementedException();
             }
         }
-        public void ConvertftStateToV2(ReceiptResponse ftstate) => throw new NotImplementedException();
+        public void ConvertftStateToV2(ReceiptResponse ftstate)
+        {
+            var v1ReceiptResponse = new ReceiptResponse() { ftState = ftstate.ftState };
+
+            ftstate.ftState = (long) ((ulong) v1ReceiptResponse.ftState & 0xFFFF_0000_0000_0000);
+
+            if (v1ReceiptResponse.IsV1StateScuSwitch0x0100())
+            {
+                ftstate.SetV2ftStateFlagScuInSwitchingState();
+            }
+        }
     }
 }

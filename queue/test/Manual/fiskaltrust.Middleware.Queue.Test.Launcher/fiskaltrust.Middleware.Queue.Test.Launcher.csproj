@@ -47,6 +47,7 @@
     <ProjectReference Include="..\..\..\src\fiskaltrust.Middleware.Queue.EF\fiskaltrust.Middleware.Queue.EF.csproj" />
     <ProjectReference Include="..\..\..\src\fiskaltrust.Middleware.Queue.InMemory\fiskaltrust.Middleware.Queue.InMemory.csproj" />
     <ProjectReference Include="..\..\..\src\fiskaltrust.Middleware.Queue.MySQL\fiskaltrust.Middleware.Queue.MySQL.csproj" />
+    <ProjectReference Include="..\..\..\src\fiskaltrust.Middleware.Queue.AzureTableStorage\fiskaltrust.Middleware.Queue.AzureTableStorage.csproj" />
     <ProjectReference Include="..\..\..\src\fiskaltrust.Middleware.Queue.SQLite\fiskaltrust.Middleware.Queue.SQLite.csproj" />
   </ItemGroup>
 
