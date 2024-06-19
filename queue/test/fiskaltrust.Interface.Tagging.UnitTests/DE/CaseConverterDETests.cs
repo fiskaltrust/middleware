@@ -563,6 +563,14 @@ namespace fiskaltrust.Interface.Tagging.UnitTests.DE
             signature.ftSignatureFormat.Should().Be(0x000D);
             signature.SetV2SignatureFormatFlagAfterHeader0x1();
             signature.ftSignatureFormat.Should().Be(0x1_000D);
+
+            signature = new SignaturItem { ftSignatureFormat = 0x1_000D, ftSignatureType = 0x4445_0000_0000_0010 };
+            _caseConverterDE.ConvertftSignatureTypeToV2(signature);
+            _caseConverterDE.ConvertftSignatureFormatToV2(signature);
+            signature.ftSignatureFormat.Should().Be(0x0_000D);
+            signature.ftSignatureType.Should().Be(0x4445_2000_0010_0010);
+
+
         }
     }
 }
