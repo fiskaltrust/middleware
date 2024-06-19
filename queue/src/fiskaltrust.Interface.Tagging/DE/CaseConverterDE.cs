@@ -642,9 +642,31 @@ namespace fiskaltrust.Interface.Tagging.DE
 
             ftstate.ftState = (long) ((ulong) v1ReceiptResponse.ftState & 0xFFFF_0000_0000_0000);
 
+            ftstate.SetVersion(2);
             if (v1ReceiptResponse.IsV1StateScuSwitch0x0100())
             {
                 ftstate.SetV2ftStateFlagScuInSwitchingState();
+            }
+
+            switch (v1ReceiptResponse.ftState & 0xFFF)
+            {
+                case (long) V1.DE.ftStates.Ready0x0000:
+                    ftstate.SetV2State((long) V2.ftStates.Ready0x0000);
+                    break;
+                case (long) V1.DE.ftStates.SecurityMechanismOutOfService0x0001:
+                    ftstate.SetV2State((long) V2.ftStates.SecurityMechanismOutOfOperation0x0001);
+                    break;
+                case (long) V1.DE.ftStates.ScuTemporaryOutOfService0x0002:
+                    ftstate.SetV2State((long) V2.ftStates.ScuTemporaryOutOfService0x0002);
+                    break;
+                case (long) V1.DE.ftStates.LateSigningMode0x0008:
+                    ftstate.SetV2State((long) V2.ftStates.LateSigningModeIsActive0x0008);
+                    break;
+                case (long) V1.DE.ftStates.ScuSwitch0x0100:
+                    ftstate.SetV2State((long) V2.ftStates.Ready0x0000);
+                    break;
+                default:
+                    throw new NotImplementedException();
             }
         }
     }
