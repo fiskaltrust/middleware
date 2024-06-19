@@ -11,7 +11,9 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.MasterDa
     public class AzureTableStoragePosSystemMasterDataRepository : BaseAzureTableStorageRepository<Guid, AzureTableStoragePosSystemMasterData, PosSystemMasterData>, IMasterDataRepository<PosSystemMasterData>
     {
         public AzureTableStoragePosSystemMasterDataRepository(QueueConfiguration queueConfig, TableServiceClient tableServiceClient)
-            : base(queueConfig, tableServiceClient, nameof(PosSystemMasterData)) { }
+            : base(queueConfig, tableServiceClient, TABLE_NAME) { }
+
+        public const string TABLE_NAME = nameof(PosSystemMasterData);
 
         public async Task ClearAsync() => await ClearTableAsync().ConfigureAwait(false);
 

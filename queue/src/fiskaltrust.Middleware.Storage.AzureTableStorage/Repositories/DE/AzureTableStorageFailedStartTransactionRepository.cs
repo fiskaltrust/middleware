@@ -12,7 +12,9 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
     public class AzureTableStorageFailedStartTransactionRepository : BaseAzureTableStorageRepository<string, AzureTableStorageFailedStartTransaction, FailedStartTransaction>, IPersistentTransactionRepository<FailedStartTransaction>
     {
         public AzureTableStorageFailedStartTransactionRepository(QueueConfiguration queueConfig, TableServiceClient tableServiceClient)
-            : base(queueConfig, tableServiceClient, nameof(FailedStartTransaction)) { }
+            : base(queueConfig, tableServiceClient, TABLE_NAME) { }
+            
+        public const string TABLE_NAME = nameof(FailedStartTransaction);
 
         public async Task InsertOrUpdateTransactionAsync(FailedStartTransaction transaction) => await InsertOrUpdateAsync(transaction).ConfigureAwait(false);
 

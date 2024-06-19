@@ -13,7 +13,9 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
     public class AzureTableStorageReceiptJournalRepository : BaseAzureTableStorageRepository<Guid, AzureTableStorageFtReceiptJournal, ftReceiptJournal>, IReceiptJournalRepository, IMiddlewareRepository<ftReceiptJournal>
     {
         public AzureTableStorageReceiptJournalRepository(QueueConfiguration queueConfig, TableServiceClient tableServiceClient)
-            : base(queueConfig, tableServiceClient, nameof(ftReceiptJournal)) { }
+            : base(queueConfig, tableServiceClient, TABLE_NAME) { }
+
+        public const string TABLE_NAME = "ReceiptJournal";
 
         protected override void EntityUpdated(ftReceiptJournal entity) => entity.TimeStamp = DateTime.UtcNow.Ticks;
 

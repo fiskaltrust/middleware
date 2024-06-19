@@ -13,7 +13,10 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.IT
     public class AzureTableStorageJournalITRepository : BaseAzureTableStorageRepository<Guid, AzureTableStorageFtJournalIT, ftJournalIT>, IMiddlewareJournalITRepository
     {
         public AzureTableStorageJournalITRepository(QueueConfiguration queueConfig, TableServiceClient tableServiceClient)
-            : base(queueConfig, tableServiceClient, nameof(ftJournalIT)) { }
+            : base(queueConfig, tableServiceClient, TABLE_NAME) { }
+
+        public const string TABLE_NAME = "JournalIT";
+
         protected override void EntityUpdated(ftJournalIT entity) => entity.TimeStamp = DateTime.UtcNow.Ticks;
 
         protected override Guid GetIdForEntity(ftJournalIT entity) => entity.ftJournalITId;
@@ -22,7 +25,8 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.IT
 
         protected override ftJournalIT MapToStorageEntity(AzureTableStorageFtJournalIT entity) => Mapper.Map(entity);
 
-        async Task<ftJournalIT> IMiddlewareJournalITRepository.GetByQueueItemId(Guid queueItemId) { 
+        async Task<ftJournalIT> IMiddlewareJournalITRepository.GetByQueueItemId(Guid queueItemId)
+        {
             var items = await GetAsync().ConfigureAwait(false);
             return items.Where(x => x.ftQueueItemId == queueItemId).FirstOrDefault();
         }

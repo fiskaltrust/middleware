@@ -11,6 +11,8 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.Configur
         public AzureTableStorageSignaturCreationUnitMERepository(QueueConfiguration queueConfig, TableServiceClient tableServiceClient)
             : base(queueConfig, tableServiceClient, nameof(ftSignaturCreationUnitME)) { }
 
+        public const string TABLE_NAME = "SignaturCreationUnitME";
+
         protected override void EntityUpdated(ftSignaturCreationUnitME entity) => entity.TimeStamp = DateTime.UtcNow.Ticks;
 
         protected override Guid GetIdForEntity(ftSignaturCreationUnitME entity) => entity.ftSignaturCreationUnitMEId;
