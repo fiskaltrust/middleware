@@ -214,7 +214,30 @@ namespace fiskaltrust.Interface.Tagging.FR
             {
                 throw new SignatureFormatCountryException("It's NOT a FR signature format.");
             }
-
+            var v1SignaturItem = new SignaturItem() { ftSignatureFormat = signaturItem.ftSignatureFormat };
+            signaturItem.ftSignatureFormat = (long) ((ulong) signaturItem.ftSignatureFormat & 0xFFFF_0000_0000_0000);
+            signaturItem.SetFormatVersion(2);
+            
+            var v1ftSignaturFormat = (V1.FR.ftSignatureFormats) v1SignaturItem.GetV1SignatureFormat();
+            var v2ftSignaturFormat = v1ftSignaturFormat switch
+            {
+                V1.FR.ftSignatureFormats.Unknown0x0000 => V2.ftSignatureFormats.Unknown0x0000,
+                V1.FR.ftSignatureFormats.Text0x0001 => V2.ftSignatureFormats.Text0x0001,
+                V1.FR.ftSignatureFormats.Link0x0002 => V2.ftSignatureFormats.Link0x0002,
+                V1.FR.ftSignatureFormats.QrCode0x0003 => V2.ftSignatureFormats.QrCode0x0003,
+                V1.FR.ftSignatureFormats.Code1280x0004 => V2.ftSignatureFormats.Code1280x0004,
+                V1.FR.ftSignatureFormats.OcrA0x0005 => V2.ftSignatureFormats.OcrA0x0005,
+                V1.FR.ftSignatureFormats.Pdf4170x0006 => V2.ftSignatureFormats.Pdf4170x0006,
+                V1.FR.ftSignatureFormats.DataMatrix0x0007 => V2.ftSignatureFormats.DataMatrix0x0007,
+                V1.FR.ftSignatureFormats.Aztec0x0008 => V2.ftSignatureFormats.Aztec0x0008,
+                V1.FR.ftSignatureFormats.Ean8Barcode0x0009 => V2.ftSignatureFormats.Ean8Barcode0x0009,
+                V1.FR.ftSignatureFormats.Ean130x000A => V2.ftSignatureFormats.Ean130x000A,
+                V1.FR.ftSignatureFormats.UPCA0x000B => V2.ftSignatureFormats.UPCA0x000B,
+                V1.FR.ftSignatureFormats.Code390x000C => V2.ftSignatureFormats.Code390x000C,
+                V1.FR.ftSignatureFormats.Base640x000D => V2.ftSignatureFormats.Base640x000D,
+                _ => throw new NotImplementedException()
+            };
+            signaturItem.SetV2SignatureFormat((long) v2ftSignaturFormat);
         }
         public void ConvertftSignatureTypeToV2(SignaturItem signaturItem) 
         {
@@ -224,12 +247,13 @@ namespace fiskaltrust.Interface.Tagging.FR
             }
 
             var v1SignaturItem = new SignaturItem() { ftSignatureType = signaturItem.ftSignatureType };
-            signaturItem.ftSignatureType = (long) ((ulong) signaturItem.ftSignatureType & 0xFFFF_2000_0000_0000);
+            signaturItem.ftSignatureType = (long) ((ulong) signaturItem.ftSignatureType & 0xFFFF_0000_0000_0000);
+
             signaturItem.SetTypeVersion(2);
             signaturItem.SetV2CategorySignatureType((long) V2.SignatureTypesCategory.Normal0x0);
 
-            var v1ftSignaturItem = (V1.FR.ftSignatureTypes) v1SignaturItem.GetV2SignatureType();
-            var v2ftSignaturItem = v1ftSignaturItem switch
+            var v1ftSignaturType= (V1.FR.ftSignatureTypes) v1SignaturItem.GetV1SignatureType();
+            var v2ftSignaturType = v1ftSignaturType switch
             {
                 //V1.FR.ftSignatureTypes.Unknown0x000 => V2.ftSignatureTypes.Notification0x000,????
                 V1.FR.ftSignatureTypes.JWT0x001 => V2.FR.ftSignatureTypes.JWT0x001,
@@ -241,7 +265,7 @@ namespace fiskaltrust.Interface.Tagging.FR
                 V1.FR.ftSignatureTypes.PerpetualTotalsSum0x007 => V2.FR.ftSignatureTypes.PerpetualTotalsSum0x015,
                 _ => throw new NotImplementedException()
             };
-            signaturItem.SetV2SignatureType((long) v2ftSignaturItem);
+            signaturItem.SetV2SignatureType((long) v2ftSignaturType);
 
         }
 

@@ -232,6 +232,36 @@ namespace fiskaltrust.Interface.Tagging.UnitTests.FR
         }
 
         [Theory]
+        [InlineData(0x4652000000000000, 0x4652200000000000)]
+        [InlineData(0x4652000000000001, 0x4652200000000001)]
+        [InlineData(0x4652000000000002, 0x4652200000000002)]
+        [InlineData(0x4652000000000003, 0x4652200000000003)]
+        [InlineData(0x4652000000000004, 0x4652200000000004)]
+        [InlineData(0x4652000000000005, 0x4652200000000005)]
+        [InlineData(0x4652000000000006, 0x4652200000000006)]
+        [InlineData(0x4652000000000007, 0x4652200000000007)]
+        [InlineData(0x4652000000000008, 0x4652200000000008)]
+        [InlineData(0x4652000000000009, 0x4652200000000009)]
+        [InlineData(0x465200000000000A, 0x465220000000000A)]
+        [InlineData(0x465200000000000B, 0x465220000000000B)]
+        [InlineData(0x465200000000000C, 0x465220000000000C)]
+        [InlineData(0x465200000000000D, 0x465220000000000D)]
+        public void ConvertftSignatureFormatToV2_ShouldreturnCorrect(long v1FtSignatureFormat, long? v2FtSignatureFormat)
+        {
+            var signatureItem = new SignaturItem { ftSignatureFormat = v1FtSignatureFormat };
+
+            if (v2FtSignatureFormat == null)
+            {
+                Assert.Throws<NotImplementedException>(() => _caseConverterFR.ConvertftSignatureFormatToV2(signatureItem));
+            }
+            else
+            {
+                _caseConverterFR.ConvertftSignatureFormatToV2(signatureItem);
+                signatureItem.ftSignatureFormat.Should().Be(v2FtSignatureFormat);
+            }
+        }
+
+        [Theory]
         [InlineData(0x4652200000000000, null)]
         [InlineData(0x4652200000000001, null)]
         [InlineData(0x4652200000000002, null)]
