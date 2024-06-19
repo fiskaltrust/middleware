@@ -6,6 +6,7 @@ using fiskaltrust.Interface.Tagging.Models.V2.Extensions;
 using V2 = fiskaltrust.Interface.Tagging.Models.V2;
 using V2DE = fiskaltrust.Interface.Tagging.Models.V2.DE;
 using fiskaltrust.Interface.Tagging.Models.Extensions;
+using fiskaltrust.Interface.Tagging.Models.V2;
 
 namespace fiskaltrust.Interface.Tagging.UnitTests.DE
 {
@@ -487,7 +488,7 @@ namespace fiskaltrust.Interface.Tagging.UnitTests.DE
         public void SignatureTypes_ShouldreturnCorrect()
         {
             var signature = new SignaturItem { ftSignatureType = 0x4445_0000_0000_0000 };
-            signature.SetVersionType(2);
+            signature.SetTypeVersion(2);
             signature.SetV2CategorySignatureType((long) V2.SignatureTypesCategory.Failure0x3);
             signature.SetV2SignatureType((long) V2DE.ftSignatureTypes.ReceiptLogTimeFormat0x01C);
             signature.ftSignatureType.Should().Be(0x444520000000301C);
@@ -551,6 +552,17 @@ namespace fiskaltrust.Interface.Tagging.UnitTests.DE
             signature.ftSignatureType = 0x4445_0000_0000_0023;
             _caseConverterDE.ConvertftSignatureTypeToV2(signature);
             signature.ftSignatureType.Should().Be(0x4445_2000_0000_0023);
+        }
+
+        [Fact]
+        public void SignatureFormat_ShouldreturnCorrect()
+        {
+            var signature = new SignaturItem { ftSignatureFormat = 0x0_0000 };
+            signature.SetV2SignatureFormat((long)ftSignatureFormats.Base640x000D);
+            signature.IsV2SignatureFormatText0x0001();
+            signature.ftSignatureFormat.Should().Be(0x000D);
+            signature.SetV2SignatureFormatFlagAfterHeader0x1();
+            signature.ftSignatureFormat.Should().Be(0x1_000D);
         }
     }
 }
