@@ -68,8 +68,9 @@ namespace fiskaltrust.Interface.Tagging
                     {
                         throw new SignatureFormatVersionException($"It's NOT a V1 signature Format.");
                     }
-                    converter.ConvertftSignatureFormatToV2(signature);
                     converter.ConvertftSignatureTypeToV2(signature);
+                    converter.ConvertftSignatureFormatToV2(signature);
+
                 }
             }
             return response;
