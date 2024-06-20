@@ -369,7 +369,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
                 LastSignatureCertificateSerialNumber = src.LastSignatureCertificateSerialNumber,
                 LastSignatureZDA = src.LastSignatureZDA,
                 LastSignatureHash = src.LastSignatureHash,
-                MessageMoment = src.MessageMoment,
+                MessageMoment = src.MessageMoment?.ToUniversalTime(),
                 MessageCount = src.MessageCount,
                 UsedMobileQueueItemId = src.UsedMobileQueueItemId,
                 UsedMobileMoment = src.UsedMobileMoment?.ToUniversalTime(),
@@ -379,7 +379,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
                 UsedFailedMomentMin = src.UsedFailedMomentMin?.ToUniversalTime(),
                 UsedFailedCount = src.UsedFailedCount,
                 ftCashNumerator = src.ftCashNumerator,
-                SSCDFailMessageSent = src.SSCDFailMessageSent,
+                SSCDFailMessageSent = src.SSCDFailMessageSent?.ToUniversalTime(),
                 SSCDFailMoment = src.SSCDFailMoment?.ToUniversalTime(),
                 SSCDFailCount = src.SSCDFailCount,
                 LastSettlementQueueItemId = src.LastSettlementQueueItemId,
@@ -1145,10 +1145,10 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
                 { nameof(ftQueueItem.cbReceiptReference), src.cbReceiptReference },
                 { nameof(ftQueueItem.cbTerminalID), src.cbTerminalID },
                 { nameof(ftQueueItem.cbReceiptMoment), src.cbReceiptMoment },
-                { nameof(ftQueueItem.ftDoneMoment), src.ftDoneMoment },
-                { nameof(ftQueueItem.ftWorkMoment), src.ftWorkMoment },
+                { nameof(ftQueueItem.ftDoneMoment), src.ftDoneMoment?.ToUniversalTime() },
+                { nameof(ftQueueItem.ftWorkMoment), src.ftWorkMoment?.ToUniversalTime() },
                 { nameof(ftQueueItem.ftQueueTimeout), src.ftQueueTimeout },
-                { nameof(ftQueueItem.ftQueueMoment), src.ftQueueMoment },
+                { nameof(ftQueueItem.ftQueueMoment), src.ftQueueMoment.ToUniversalTime() },
                 { nameof(ftQueueItem.ftQueueRow), src.ftQueueRow },
                 { nameof(ftQueueItem.ftQueueId), src.ftQueueId },
                 { nameof(ftQueueItem.TimeStamp), src.TimeStamp }
@@ -1298,7 +1298,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
                 CashBoxIdentification = src.CashBoxIdentification,
                 ftQueueItemId = src.ftQueueItemId,
                 Request = src.Request,
-                StartMoment = src.StartMoment
+                StartMoment = src.StartMoment.ToUniversalTime()
             };
         }
 
