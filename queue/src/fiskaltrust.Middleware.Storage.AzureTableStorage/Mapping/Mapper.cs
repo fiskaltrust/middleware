@@ -1144,7 +1144,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
                 { nameof(ftQueueItem.country), src.country },
                 { nameof(ftQueueItem.cbReceiptReference), src.cbReceiptReference },
                 { nameof(ftQueueItem.cbTerminalID), src.cbTerminalID },
-                { nameof(ftQueueItem.cbReceiptMoment), src.cbReceiptMoment },
+                { nameof(ftQueueItem.cbReceiptMoment), src.cbReceiptMoment.ToUniversalTime() },
                 { nameof(ftQueueItem.ftDoneMoment), src.ftDoneMoment?.ToUniversalTime() },
                 { nameof(ftQueueItem.ftWorkMoment), src.ftWorkMoment?.ToUniversalTime() },
                 { nameof(ftQueueItem.ftQueueTimeout), src.ftQueueTimeout },

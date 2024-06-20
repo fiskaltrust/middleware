@@ -193,6 +193,23 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
         }
 
         [Fact]
+        public async Task InsertOrUpdateAsync_ShouldAddEntryWithNonUtcDateTime_ToTheDatabase()
+        {
+            var entries = StorageTestFixtureProvider.GetFixture().CreateMany<ftQueueItem>(10).ToList();
+            var entryToInsert = StorageTestFixtureProvider.GetFixture().Create<ftQueueItem>();
+            entryToInsert.ftQueueMoment = DateTime.Parse("2024-06-19T15:30:21+02:00");
+            entryToInsert.cbReceiptMoment = DateTime.Parse("2024-06-19T15:30:21+02:00");
+            entryToInsert.ftDoneMoment = DateTime.Parse("2024-06-19T15:30:21+02:00");
+            entryToInsert.ftWorkMoment = DateTime.Parse("2024-06-19T15:30:21+02:00");
+
+            var sut = await CreateRepository(entries);
+            await sut.InsertOrUpdateAsync(entryToInsert);
+
+            var insertedEntry = await sut.GetAsync(entryToInsert.ftQueueItemId);
+            insertedEntry.Should().BeEquivalentTo(entryToInsert);
+        }
+
+        [Fact]
         public async Task InsertOrUpdateAsync_ShouldUpdateEntry_IfEntryAlreadyExists()
         {
             var entries = StorageTestFixtureProvider.GetFixture().CreateMany<ftQueueItem>(10).ToList();
@@ -267,7 +284,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
                 {
                     expectedEntries[i].request = JsonConvert.SerializeObject(receiptFixture.Create<ReceiptRequest>());
                 }
-                
+
             }
             var sut = await CreateRepository(expectedEntries);
 
@@ -324,7 +341,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
 
             var queueItemFixture = StorageTestFixtureProvider.GetFixture();
             queueItemFixture.Customize<ftQueueItem>(c => c.With(r => r.TimeStamp, DateTime.UtcNow.Ticks).With(r => r.request, JsonConvert.SerializeObject(receiptFixture.Create<ReceiptRequest>())));
-            
+
             var expectedEntries = queueItemFixture.CreateMany<ftQueueItem>(2).ToList();
             var sut = await CreateRepository(expectedEntries);
             await Task.Delay(1);
@@ -375,7 +392,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
 
             var receiptReferences = await sut.GetQueueItemsForReceiptReferenceAsync(receiptReference).ToListAsync();
             receiptReferences.Count().Should().Be(2);
-            foreach(var receipt in receiptReferences)
+            foreach (var receipt in receiptReferences)
             {
                 receipt.cbReceiptReference.Should().Be(receiptReference);
                 JsonConvert.DeserializeObject<ReceiptRequest>(receipt.request).ftReceiptCase.Should().Be(4919338172267102209);
