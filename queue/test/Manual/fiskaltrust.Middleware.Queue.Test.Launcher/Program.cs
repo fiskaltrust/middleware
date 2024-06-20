@@ -20,11 +20,9 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
 {
     public static class Program
     {
-        private static readonly string _cashBoxId = "";
-        private static readonly string _accessToken = "";
-        private static readonly string _localization = "";
+        private static readonly string _localization = "DE";
 
-        public static void Main(string configurationFilePath = "C:\\Temp\\ATLauncher\\configuration.json", string serviceFolder = @"C:\ProgramData\fiskaltrust\service")
+        public static void Main(string configurationFilePath = "", string serviceFolder = @"C:\ProgramData\fiskaltrust\service")
         {
             ftCashBoxConfiguration cashBoxConfiguration = null;
             if (!string.IsNullOrEmpty(configurationFilePath))
@@ -57,23 +55,21 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
             serviceCollection.AddStandardLoggers(LogLevel.Debug);
 
 
-            if (!string.IsNullOrEmpty(_localization))
+
+            if (_localization == "ME")
             {
-                if (_localization == "ME")
-                {
-                    serviceCollection.AddScoped<IClientFactory<IMESSCD>, MESSCDClientFactory>();
-                    OverrideMasterdata(_localization, config);
-                }
-                else if (_localization == "IT")
-                {
-                    serviceCollection.AddScoped<IClientFactory<IITSSCD>, ITSSCDClientFactory>();
-                }
-                else if (_localization == "AT")
-                {
-                    serviceCollection.AddScoped<IClientFactory<IATSSCD>, ATSSCDClientFactory>();
-                }
+                serviceCollection.AddScoped<IClientFactory<IMESSCD>, MESSCDClientFactory>();
+                OverrideMasterdata(_localization, config);
             }
-            else
+            else if (_localization == "IT")
+            {
+                serviceCollection.AddScoped<IClientFactory<IITSSCD>, ITSSCDClientFactory>();
+            }
+            else if (_localization == "AT")
+            {
+                serviceCollection.AddScoped<IClientFactory<IATSSCD>, ATSSCDClientFactory>();
+            }
+            else if(_localization == "DE")
             {
                 serviceCollection.AddScoped<IClientFactory<IDESSCD>, DESSCDClientFactory>();
             }
@@ -155,6 +151,7 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
 
         private static void ConfigureAzureTableStorage(PackageConfiguration queue, ServiceCollection serviceCollection)
         {
+            queue.Url = new string[] { "rest://localhost:5000" };
             var bootStrapper = new AzureTableStorage.PosBootstrapper
             {
                 Id = queue.Id,

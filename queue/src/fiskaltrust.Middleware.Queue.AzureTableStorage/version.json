@@ -1,5 +1,5 @@
 {
-  "version": "1.3.59-rc4",
+  "version": "1.3.59-rc5",
   "releaseBranches": [
     "^refs/tags/queue/azuretablestorage/v\\d+(?:\\.\\d+)*(?:-.*)?$"
   ]

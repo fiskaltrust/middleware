@@ -9,7 +9,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.Configur
     public class AzureTableStorageSignaturCreationUnitMERepository : BaseAzureTableStorageRepository<Guid, AzureTableStorageFtSignaturCreationUnitME, ftSignaturCreationUnitME>
     {
         public AzureTableStorageSignaturCreationUnitMERepository(QueueConfiguration queueConfig, TableServiceClient tableServiceClient)
-            : base(queueConfig, tableServiceClient, nameof(ftSignaturCreationUnitME)) { }
+            : base(queueConfig, tableServiceClient, TABLE_NAME) { }
 
         public const string TABLE_NAME = "SignaturCreationUnitME";
 
