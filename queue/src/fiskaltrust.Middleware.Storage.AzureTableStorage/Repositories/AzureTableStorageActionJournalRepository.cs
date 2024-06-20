@@ -14,7 +14,9 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
     public class AzureTableStorageActionJournalRepository : BaseAzureTableStorageRepository<Guid, AzureTableStorageFtActionJournal, ftActionJournal>, IActionJournalRepository, IMiddlewareRepository<ftActionJournal>, IMiddlewareActionJournalRepository
     {
         public AzureTableStorageActionJournalRepository(QueueConfiguration queueConfig, TableServiceClient tableServiceClient)
-            : base(queueConfig, tableServiceClient, nameof(ftActionJournal)) { }
+            : base(queueConfig, tableServiceClient, TABLE_NAME) { }
+
+        public const string TABLE_NAME = "ActionJournal";
 
         protected override void EntityUpdated(ftActionJournal entity) => entity.TimeStamp = DateTime.UtcNow.Ticks;
 

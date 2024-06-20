@@ -11,7 +11,9 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.MasterDa
     public class AzureTableStorageAccountMasterDataRepository : BaseAzureTableStorageRepository<Guid, AzureTableStorageAccountMasterData, AccountMasterData>, IMasterDataRepository<AccountMasterData>
     {
         public AzureTableStorageAccountMasterDataRepository(QueueConfiguration queueConfig, TableServiceClient tableServiceClient)
-            : base(queueConfig, tableServiceClient, nameof(AccountMasterData)) { }
+            : base(queueConfig, tableServiceClient, TABLE_NAME) { }
+
+        public const string TABLE_NAME = nameof(AccountMasterData);
 
         public async Task ClearAsync() => await ClearTableAsync().ConfigureAwait(false);
 

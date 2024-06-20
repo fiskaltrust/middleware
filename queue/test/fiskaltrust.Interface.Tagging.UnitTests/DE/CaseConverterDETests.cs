@@ -46,13 +46,13 @@ namespace fiskaltrust.Interface.Tagging.UnitTests.DE
             request.ftReceiptCase.Should().Be(0x4445000100000002);
             request.ftReceiptCase = 0x4445200000002011;
             _caseConverterDE.ConvertftReceiptCaseToV1(request);
-            request.ftReceiptCase.Should().Be(0x4445000100000007);
+            request.ftReceiptCase.Should().Be(0x4445_0001_2800_0007);
             request.ftReceiptCase = 0x4445200000002012;
             _caseConverterDE.ConvertftReceiptCaseToV1(request);
-            request.ftReceiptCase.Should().Be(0x4445000100000005);
+            request.ftReceiptCase.Should().Be(0x4445_0001_0800_0005);
             request.ftReceiptCase = 0x4445200000002013;
             _caseConverterDE.ConvertftReceiptCaseToV1(request);
-            request.ftReceiptCase.Should().Be(0x4445000100000006);
+            request.ftReceiptCase.Should().Be(0x4445_0001_0800_0006);
             request.ftReceiptCase = 0x4445200000003000;
             _caseConverterDE.ConvertftReceiptCaseToV1(request);
             request.ftReceiptCase.Should().Be(0x4445000100000014);
@@ -74,6 +74,9 @@ namespace fiskaltrust.Interface.Tagging.UnitTests.DE
             request.ftReceiptCase = 0x4445200000004012;
             _caseConverterDE.ConvertftReceiptCaseToV1(request);
             request.ftReceiptCase.Should().Be(0x4445000100000018);
+
+
+
         }
 
         [Fact]
@@ -82,7 +85,7 @@ namespace fiskaltrust.Interface.Tagging.UnitTests.DE
             var chargeItem = new ChargeItem { ftChargeItemCase = 0x4445200000000003 };
             _caseConverterDE.ConvertftChargeItemCaseToV1(chargeItem);
             chargeItem.ftChargeItemCase.Should().Be(0x4445000000000001);
-            chargeItem.ftChargeItemCase=0x4445200000000001;
+            chargeItem.ftChargeItemCase = 0x4445200000000001;
             _caseConverterDE.ConvertftChargeItemCaseToV1(chargeItem);
             chargeItem.ftChargeItemCase.Should().Be(0x4445000000000002);
             chargeItem.ftChargeItemCase = 0x4445200000000004;
@@ -558,7 +561,7 @@ namespace fiskaltrust.Interface.Tagging.UnitTests.DE
         public void SignatureFormat_ShouldreturnCorrect()
         {
             var signature = new SignaturItem { ftSignatureFormat = 0x0_0000 };
-            signature.SetV2SignatureFormat((long)ftSignatureFormats.Base640x000D);
+            signature.SetV2SignatureFormat((long) ftSignatureFormats.Base640x000D);
             signature.IsV2SignatureFormatText0x0001();
             signature.ftSignatureFormat.Should().Be(0x000D);
             signature.SetV2SignatureFormatFlagAfterHeader0x1();
@@ -569,8 +572,15 @@ namespace fiskaltrust.Interface.Tagging.UnitTests.DE
             _caseConverterDE.ConvertftSignatureFormatToV2(signature);
             signature.ftSignatureFormat.Should().Be(0x0_000D);
             signature.ftSignatureType.Should().Be(0x4445_2000_0010_0010);
+        }
 
+        [Fact]
+        public void ConvertftReceiptState_ShouldreturnCorrect()
+        {
+            var request = new ReceiptResponse { ftState = 0x4445_0000_0000_0100 };
+            _caseConverterDE.ConvertftStateToV2(request);
 
+            request.ftState.Should().Be(0x4445_2001_0000_0000);
         }
     }
 }

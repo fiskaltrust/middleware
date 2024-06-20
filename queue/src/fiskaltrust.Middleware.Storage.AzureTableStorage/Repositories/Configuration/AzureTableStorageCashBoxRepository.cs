@@ -9,8 +9,9 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.Configur
     public class AzureTableStorageCashBoxRepository : BaseAzureTableStorageRepository<Guid, AzureTableStorageFtCashBox, ftCashBox>
     {
         public AzureTableStorageCashBoxRepository(QueueConfiguration queueConfig, TableServiceClient tableServiceClient)
-            : base(queueConfig, tableServiceClient, nameof(ftCashBox)) { }
+            : base(queueConfig, tableServiceClient, TABLE_NAME) { }
 
+        public const string TABLE_NAME = "CashBox";
         protected override void EntityUpdated(ftCashBox entity) => entity.TimeStamp = DateTime.UtcNow.Ticks;
 
         protected override Guid GetIdForEntity(ftCashBox entity) => entity.ftCashBoxId;

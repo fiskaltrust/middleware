@@ -9,7 +9,9 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.Configur
     public class AzureTableStorageQueueATRepository : BaseAzureTableStorageRepository<Guid, AzureTableStorageFtQueueAT, ftQueueAT>
     {
         public AzureTableStorageQueueATRepository(QueueConfiguration queueConfig, TableServiceClient tableServiceClient)
-            : base(queueConfig, tableServiceClient, nameof(ftQueueAT)) { }
+            : base(queueConfig, tableServiceClient, TABLE_NAME) { }
+
+        public const string TABLE_NAME = "QueueAT";
 
         protected override void EntityUpdated(ftQueueAT entity) => entity.TimeStamp = DateTime.UtcNow.Ticks;
 

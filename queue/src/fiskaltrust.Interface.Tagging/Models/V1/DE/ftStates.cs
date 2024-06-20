@@ -7,7 +7,9 @@ namespace fiskaltrust.Interface.Tagging.Models.V1.DE
     public enum ftStates : long
     {
         Ready0x0000 = 0x0000,
-        SecurityMechanismOutOfOperation0x0002 = 0x0002,
+        SecurityMechanismOutOfService0x0001 = 0x0001,
+        ScuTemporaryOutOfService0x0002 = 0x0002,
+        LateSigningMode0x0008 = 0x0008,
         ScuSwitch0x0100 = 0x0100,
     }
 }

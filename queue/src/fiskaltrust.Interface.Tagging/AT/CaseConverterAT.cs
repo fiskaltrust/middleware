@@ -102,22 +102,22 @@ namespace fiskaltrust.Interface.Tagging.AT
                 _ => throw new NotImplementedException()
             });
 
-            if (v2ftPayItem.IsV2PayItemCaseFlagTip0x0040() && v2ftPayItem.IsV2PayItemCaseCash0x0001()) // IsV2PayItemCaseFlagTip0x0040() is not implemented in V2
+            if (v2ftPayItem.IsV2PayItemCaseFlagTip0x0040() && v2ftPayItem.IsV2PayItemCaseCash0x0001()) 
             {
                 ftPayItem.SetV1PayItemCase((long)V1.AT.ftPayItemCases.TipToEmployee0x0012);
             }
-            if (v2ftPayItem.IsV2PayItemCaseFlagChange0x0020() && v2ftPayItem.IsV2PayItemCaseCash0x0001()) // IsV2PayItemCaseFlagChange0x0020() is not implemented in V2
+            if (v2ftPayItem.IsV2PayItemCaseFlagChange0x0020() && v2ftPayItem.IsV2PayItemCaseCash0x0001()) 
             {
                 ftPayItem.SetV1PayItemCase((long)V1.AT.ftPayItemCases.Change0x0013);
             }
             {
                 ftPayItem.SetV1PayItemCase((long)V1.AT.ftPayItemCases.CashForeignCurrency0x0002);
             }
-            if (v2ftPayItem.IsV2PayItemCaseFlagForeignCurrency0x0010() && v2ftPayItem.IsV2PayItemCaseCash0x0001()) // IsV2PayItemCaseFlagForeignCurrency0x0010() is not implemented in V2
+            if (v2ftPayItem.IsV2PayItemCaseFlagForeignCurrency0x0010() && v2ftPayItem.IsV2PayItemCaseCash0x0001()) 
             {
                 ftPayItem.SetV1PayItemCase((long)V1.AT.ftPayItemCases.CashForeignCurrency0x0002);
             }
-            if (v2ftPayItem.IsV2PayItemCaseFlagDigital0x0080()) // IsV2PayItemCaseFlagDigital0x0080() is not implemented in V2
+            if (v2ftPayItem.IsV2PayItemCaseFlagDigital0x0080()) 
             {
                 ftPayItem.SetV1PayItemCase((long)V1.AT.ftPayItemCases.OnlinePayment0x0007);
             }
@@ -163,9 +163,9 @@ namespace fiskaltrust.Interface.Tagging.AT
                 _ => throw new NotImplementedException()
             });
 
-            if (v2ReceiptRequest.IsV2ReceiptCaseFlagLateSigning0x0001()) // IsV2ReceiptCaseFlagLateSigning0x0001() is not implemented in V2
+            if (v2ReceiptRequest.IsV2ReceiptCaseFlagLateSigning0x0001())
             {
-                receiptRequest.SetV1ReceiptCaseFlagFailed0x0001(); // SetV1ReceiptCaseFlagFailed0x0001() is not implemented in V2
+                receiptRequest.SetV1ReceiptCaseFlagFailed0x0001();
             }
             if (v2ReceiptRequest.IsV2ReceiptCaseFlagVoid0x0004())
             {
@@ -204,14 +204,14 @@ namespace fiskaltrust.Interface.Tagging.AT
                 V1.AT.ftSignatureFormats.Unknown0x0000 => V2.ftSignatureFormats.Unknown0x0000,
                 V1.AT.ftSignatureFormats.Text0x0001 => V2.ftSignatureFormats.Text0x0001,
                 V1.AT.ftSignatureFormats.Link0x0002 => V2.ftSignatureFormats.Link0x0002,
-                V1.AT.ftSignatureFormats.QRCode0x0003 => V2.ftSignatureFormats.QRCode0x0003,
+                V1.AT.ftSignatureFormats.QRCode0x0003 => V2.ftSignatureFormats.QrCode0x0003,
                 V1.AT.ftSignatureFormats.Code1280x0004 => V2.ftSignatureFormats.Code1280x0004,
-                V1.AT.ftSignatureFormats.OCRA0x0005 => V2.ftSignatureFormats.OCRA0x0005,
-                V1.AT.ftSignatureFormats.PDF4170x0006 => V2.ftSignatureFormats.PDF4170x0006,
+                V1.AT.ftSignatureFormats.OcrA0x0005 => V2.ftSignatureFormats.OcrA0x0005,
+                V1.AT.ftSignatureFormats.Pdf4170x0006 => V2.ftSignatureFormats.Pdf4170x0006,
                 V1.AT.ftSignatureFormats.DataMatrix0x0007 => V2.ftSignatureFormats.DataMatrix0x0007,
                 V1.AT.ftSignatureFormats.Aztec0x0008 => V2.ftSignatureFormats.Aztec0x0008,
-                V1.AT.ftSignatureFormats.EAN80x0009 => V2.ftSignatureFormats.EAN80x0009,
-                V1.AT.ftSignatureFormats.EAN130x000A => V2.ftSignatureFormats.EAN130x000A,
+                V1.AT.ftSignatureFormats.Ean8Barcode0x0009 => V2.ftSignatureFormats.Ean8Barcode0x0009,
+                V1.AT.ftSignatureFormats.Ean130x000A => V2.ftSignatureFormats.Ean130x000A,
                 V1.AT.ftSignatureFormats.UPCA0x000B => V2.ftSignatureFormats.UPCA0x000B,
                 V1.AT.ftSignatureFormats.Code390x000C => V2.ftSignatureFormats.Code390x000C,
                 _ => throw new NotImplementedException(),

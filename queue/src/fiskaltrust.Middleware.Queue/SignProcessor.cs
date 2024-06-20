@@ -159,13 +159,13 @@ namespace fiskaltrust.Middleware.Queue
                 Exception exception = null;
                 try
                 {
-                    var version = data.GetVersion();
+                    var dataToV1ExceptItaly = data;
                     if (!data.IsCountryIT() && data.IsVersionV2())
                     {
-                        _receiptConverter.ConvertRequestToV1(data);
+                        _receiptConverter.ConvertRequestToV1(dataToV1ExceptItaly);
                     }
-                    (receiptResponse, countrySpecificActionJournals) = await _countrySpecificSignProcessor.ProcessAsync(data, queue, queueItem).ConfigureAwait(false);
-                    if (!data.IsCountryIT() && version == 2)
+                    (receiptResponse, countrySpecificActionJournals) = await _countrySpecificSignProcessor.ProcessAsync(dataToV1ExceptItaly, queue, queueItem).ConfigureAwait(false);
+                    if (!data.IsCountryIT() && data.IsVersionV2())
                     {
                         _receiptConverter.ConvertResponseToV2(receiptResponse);
                     }
