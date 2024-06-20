@@ -210,7 +210,11 @@ namespace fiskaltrust.Interface.Tagging.FR
         }
         public void ConvertftSignatureFormatToV2(SignaturItem signaturItem)
         {
-            if (!signaturItem.IsFormatCountryFR())
+            if (signaturItem.GetFormatCountry() == 0x0000)
+            {
+                signaturItem.SetFormatCountry (0x4652);
+            }
+            else if (!signaturItem.IsFormatCountryFR())
             {
                 throw new SignatureFormatCountryException("It's NOT a FR signature format.");
             }
@@ -239,11 +243,15 @@ namespace fiskaltrust.Interface.Tagging.FR
             };
             signaturItem.SetV2SignatureFormat((long) v2ftSignaturFormat);
         }
-        public void ConvertftSignatureTypeToV2(SignaturItem signaturItem) 
+        public void ConvertftSignatureTypeToV2(SignaturItem signaturItem)
         {
-            if (!signaturItem.IsTypeCountryFR() )
+            if (signaturItem.GetTypeCountry() == 0x0000)
             {
-               throw new SignatureTypeCountryException("It's NOT a FR signature type.");
+                signaturItem.SetTypeCountry(0x4652);
+            }
+            else if (!signaturItem.IsTypeCountryFR())
+            {
+                throw new SignatureTypeCountryException("It's NOT a FR signature type.");
             }
 
             var v1SignaturItem = new SignaturItem() { ftSignatureType = signaturItem.ftSignatureType };
@@ -252,20 +260,27 @@ namespace fiskaltrust.Interface.Tagging.FR
             signaturItem.SetTypeVersion(2);
             signaturItem.SetV2CategorySignatureType((long) V2.SignatureTypesCategory.Normal0x0);
 
-            var v1ftSignaturType= (V1.FR.ftSignatureTypes) v1SignaturItem.GetV1SignatureType();
-            var v2ftSignaturType = v1ftSignaturType switch
+            var v1ftSignaturType = (V1.FR.ftSignatureTypes) v1SignaturItem.GetV1SignatureType();
+            if (v1ftSignaturType == V1.FR.ftSignatureTypes.Unknown0x000)
             {
-                //V1.FR.ftSignatureTypes.Unknown0x000 => V2.ftSignatureTypes.Notification0x000,????
-                V1.FR.ftSignatureTypes.JWT0x001 => V2.FR.ftSignatureTypes.JWT0x001,
-                V1.FR.ftSignatureTypes.ShiftClosingSum0x002 => V2.FR.ftSignatureTypes.ShiftClosingSum0x010,
-                V1.FR.ftSignatureTypes.DayClosingSum0x003 => V2.FR.ftSignatureTypes.DayClosingSum0x011,
-                V1.FR.ftSignatureTypes.MonthClosingSum0x004 => V2.FR.ftSignatureTypes.MonthClosingSum0x012,
-                V1.FR.ftSignatureTypes.YearClosingSum0x005 => V2.FR.ftSignatureTypes.YearClosingSum0x013,
-                V1.FR.ftSignatureTypes.ArchiveTotalsSum0x006 => V2.FR.ftSignatureTypes.ArchiveTotalsSum0x014,
-                V1.FR.ftSignatureTypes.PerpetualTotalsSum0x007 => V2.FR.ftSignatureTypes.PerpetualTotalsSum0x015,
-                _ => throw new NotImplementedException()
-            };
-            signaturItem.SetV2SignatureType((long) v2ftSignaturType);
+                signaturItem.SetV2SignatureType((long) V2.ftSignatureTypes.Unknown0x0000);
+            }
+            else
+            {
+                var v2ftSignaturType = v1ftSignaturType switch
+                {
+                    V1.FR.ftSignatureTypes.JWT0x001 => V2.FR.ftSignatureTypes.JWT0x001,
+                    V1.FR.ftSignatureTypes.ShiftClosingSum0x002 => V2.FR.ftSignatureTypes.ShiftClosingSum0x010,
+                    V1.FR.ftSignatureTypes.DayClosingSum0x003 => V2.FR.ftSignatureTypes.DayClosingSum0x011,
+                    V1.FR.ftSignatureTypes.MonthClosingSum0x004 => V2.FR.ftSignatureTypes.MonthClosingSum0x012,
+                    V1.FR.ftSignatureTypes.YearClosingSum0x005 => V2.FR.ftSignatureTypes.YearClosingSum0x013,
+                    V1.FR.ftSignatureTypes.ArchiveTotalsSum0x006 => V2.FR.ftSignatureTypes.ArchiveTotalsSum0x014,
+                    V1.FR.ftSignatureTypes.PerpetualTotalsSum0x007 => V2.FR.ftSignatureTypes.PerpetualTotalsSum0x015,
+                    _ => throw new NotImplementedException()
+                };
+                signaturItem.SetV2SignatureType((long) v2ftSignaturType);
+            }
+            
 
         }
 
@@ -275,16 +290,22 @@ namespace fiskaltrust.Interface.Tagging.FR
             {
                 throw new StateCountryException("It's NOT a FR state.");
             }
-            
+
+            var v1ReceiptResponse = new ReceiptResponse() { ftState = receiptResponse.ftState };
+            receiptResponse.ftState = (long) ((ulong) receiptResponse.ftState & 0xFFFF_0000_0000_0000);
+
             receiptResponse.SetVersion(2);
-            if (receiptResponse.GetV1State() == (long) V1.FR.ftStates.MessagePending0x0040)
+           
+            var v1ftReceiptResponse = (V1.FR.ftStates) v1ReceiptResponse.GetV1State();
+            var v2ftReceiptResponse = v1ftReceiptResponse switch
             {
-                receiptResponse.SetV2State((long) V2.ftStates.MessagePending0x0040);
-            }
-            else
-            {
-                throw new NotImplementedException();
-            }
+                V1.FR.ftStates.Ready0x0000 => V2.ftStates.Ready0x0000,                
+                V1.FR.ftStates.SecurityMechanismOutOfOperation0x0001 => V2.ftStates.SecurityMechanismOutOfOperation0x0001,                
+                V1.FR.ftStates.MessagePending0x0040 => V2.ftStates.MessageNotificationPending0x0040,                
+                V1.FR.ftStates.LateSigningModeIsActive0x0008 => V2.ftStates.LateSigningModeIsActive0x0008,                
+                _ => throw new NotImplementedException()
+            };
+            receiptResponse.SetV2State((long) v2ftReceiptResponse);            
         }
 
     }

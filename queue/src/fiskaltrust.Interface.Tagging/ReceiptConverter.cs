@@ -60,7 +60,7 @@ namespace fiskaltrust.Interface.Tagging
             {
                 foreach (var signature in response.ftSignatures)
                 {
-                    if (!signature.IsTypeVersionV1() )
+                    if (!signature.IsTypeVersionV1())
                     {
                         throw new SignatureTypeVersionException($"It's NOT a V1 signature Item.");
                     }

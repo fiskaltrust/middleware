@@ -191,7 +191,10 @@ namespace fiskaltrust.Interface.Tagging.UnitTests.FR
         }
 
         [Theory]
+        [InlineData(0x4652000000000000, 0x4652200000000000)]
+        [InlineData(0x4652000000000001, 0x4652200000000001)]
         [InlineData(0x4652000000000040, 0x4652200000000040)]
+        [InlineData(0x4652000000000008, 0x4652200000000008)]
         public void ConvertftStateToV2_ShouldreturnCorrect(long v1FtState, long? v2FtState)
         {
             var response = new ReceiptResponse { ftState = v1FtState };
@@ -208,7 +211,7 @@ namespace fiskaltrust.Interface.Tagging.UnitTests.FR
         }
 
         [Theory]
-        [InlineData(0x4652000000000000, null)]
+        [InlineData(0x4652000000000000, 0x4652200000000000)]
         [InlineData(0x4652000000000001, 0x4652200000000001)]
         [InlineData(0x4652000000000002, 0x4652200000000010)]
         [InlineData(0x4652000000000003, 0x4652200000000011)]
