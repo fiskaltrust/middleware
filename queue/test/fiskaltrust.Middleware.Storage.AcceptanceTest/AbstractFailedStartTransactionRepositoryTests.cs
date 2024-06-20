@@ -74,10 +74,13 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             entryToInsert.cbReceiptReference = entries[0].cbReceiptReference;
 
             var sut = await CreateRepository(entries);
+            var count = (await sut.GetAsync()).Count();
+
             await sut.InsertOrUpdateTransactionAsync(entryToInsert);
 
             var insertedEntry = await sut.GetAsync(entryToInsert.cbReceiptReference);
             insertedEntry.Should().BeEquivalentTo(entryToInsert);
+            (await sut.GetAsync()).Count().Should().Be(count);
         }
 
         [Fact]

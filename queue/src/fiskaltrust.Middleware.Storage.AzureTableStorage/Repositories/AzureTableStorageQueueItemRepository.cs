@@ -40,7 +40,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
 
         public override async Task InsertOrUpdateAsync(ftQueueItem storageEntity)
         {
-            await base.InsertAsync(storageEntity);
+            await base.InsertOrUpdateAsync(storageEntity);
             await _receiptReferenceIndexRepository.InsertOrUpdateAsync(new ReceiptReferenceIndex { cbReceiptReference = storageEntity.cbReceiptReference, ftQueueItemId = storageEntity.ftQueueItemId });
         }
 

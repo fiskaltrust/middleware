@@ -215,7 +215,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             var entries = StorageTestFixtureProvider.GetFixture().CreateMany<ftQueueItem>(10).ToList();
 
             var sut = await CreateRepository(entries);
-
+            var count = (await sut.GetAsync()).Count();
             var entryToUpdate = await sut.GetAsync(entries[0].ftQueueItemId);
             entryToUpdate.ftQueueRow = long.MaxValue;
 
@@ -224,6 +224,8 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             var updatedEntry = await sut.GetAsync(entries[0].ftQueueItemId);
 
             updatedEntry.ftQueueRow.Should().Be(long.MaxValue);
+            (await sut.GetAsync()).Count().Should().Be(count);
+
         }
 
         [Fact]
