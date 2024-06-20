@@ -20,6 +20,8 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
 {
     public static class Program
     {
+        private static readonly string _cashBoxId = "";
+        private static readonly string _accessToken = "";
         private static readonly string _localization = "DE";
 
         public static void Main(string configurationFilePath = "", string serviceFolder = @"C:\ProgramData\fiskaltrust\service")
@@ -69,7 +71,7 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
             {
                 serviceCollection.AddScoped<IClientFactory<IATSSCD>, ATSSCDClientFactory>();
             }
-            else if(_localization == "DE")
+            else if (_localization == "DE")
             {
                 serviceCollection.AddScoped<IClientFactory<IDESSCD>, DESSCDClientFactory>();
             }
