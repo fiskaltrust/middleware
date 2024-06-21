@@ -56,19 +56,8 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
                 { nameof(ftQueueItem.TimeStamp), src.TimeStamp }
             };
 
-            var currentRequestChunk = 0;
-            foreach (var chunk in src.request.Chunk(Mapper.MAX_STRING_CHARS))
-            {
-                entity.Add($"{nameof(ftQueueItem.request)}_{currentRequestChunk}", chunk);
-                currentRequestChunk++;
-            }
-
-            var currentResponseChunk = 0;
-            foreach (var chunk in src.response.Chunk(Mapper.MAX_STRING_CHARS))
-            {
-                entity.Add($"{nameof(ftQueueItem.response)}_{currentResponseChunk}", chunk);
-                currentResponseChunk++;
-            }
+            entity.SetOversized(nameof(ftQueueItem.request), src.request);
+            entity.SetOversized(nameof(ftQueueItem.response), src.response);
 
             return entity;
         }
@@ -80,7 +69,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
                 return null;
             }
 
-            var queueItem = new ftQueueItem
+            return new ftQueueItem
             {
                 ftQueueItemId = src.GetGuid(nameof(ftQueueItem.ftQueueItemId)).GetValueOrDefault(),
                 requestHash = src.GetString(nameof(ftQueueItem.requestHash)),
@@ -96,38 +85,10 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
                 ftQueueMoment = src.GetDateTime(nameof(ftQueueItem.ftQueueMoment)).GetValueOrDefault(),
                 ftQueueRow = src.GetInt64(nameof(ftQueueItem.ftQueueRow)).GetValueOrDefault(),
                 ftQueueId = src.GetGuid(nameof(ftQueueItem.ftQueueId)).GetValueOrDefault(),
-                TimeStamp = src.GetInt64(nameof(ftQueueItem.TimeStamp)).GetValueOrDefault()
+                TimeStamp = src.GetInt64(nameof(ftQueueItem.TimeStamp)).GetValueOrDefault(),
+                request = src.GetOversized(nameof(ftQueueItem.request)),
+                response = src.GetOversized(nameof(ftQueueItem.response))
             };
-
-            var request = src.GetString(nameof(ftQueueItem.request));
-            if (!string.IsNullOrEmpty(request))
-            {
-                queueItem.request = request;
-            }
-            else
-            {
-                var reqSb = new StringBuilder();
-                foreach (var key in src.Keys.Where(x => x.StartsWith($"{nameof(ftQueueItem.request)}_")))
-                {
-                    reqSb.Append(src[key]);
-                }
-                queueItem.request = reqSb.ToString();
-            }
-            var response = src.GetString(nameof(ftQueueItem.response));
-            if (!string.IsNullOrEmpty(response))
-            {
-                queueItem.response = response;
-            }
-            else
-            {
-                var resSb = new StringBuilder();
-                foreach (var key in src.Keys.Where(x => x.StartsWith($"{nameof(ftQueueItem.response)}_")))
-                {
-                    resSb.Append(src[key]);
-                }
-                queueItem.response = resSb.ToString();
-            }
-            return queueItem;
         }
 
         public override async Task InsertAsync(ftQueueItem storageEntity)

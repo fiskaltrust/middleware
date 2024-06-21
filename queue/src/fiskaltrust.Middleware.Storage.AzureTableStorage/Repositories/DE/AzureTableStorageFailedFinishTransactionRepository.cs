@@ -9,7 +9,7 @@ using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
 {
-    public class AzureTableStorageFailedFinishTransactionRepository : BaseAzureTableStorageRepository<string, AzureTableStorageFailedFinishTransaction, FailedFinishTransaction>, IPersistentTransactionRepository<FailedFinishTransaction>
+    public class AzureTableStorageFailedFinishTransactionRepository : BaseAzureTableStorageRepository<string, TableEntity, FailedFinishTransaction>, IPersistentTransactionRepository<FailedFinishTransaction>
     {
         public AzureTableStorageFailedFinishTransactionRepository(QueueConfiguration queueConfig, TableServiceClient tableServiceClient)
             : base(queueConfig, tableServiceClient, TABLE_NAME) { }
@@ -24,27 +24,28 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
 
         protected override string GetIdForEntity(FailedFinishTransaction entity) => entity.cbReceiptReference;
 
-        protected override AzureTableStorageFailedFinishTransaction MapToAzureEntity(FailedFinishTransaction src)
+        protected override TableEntity MapToAzureEntity(FailedFinishTransaction src)
         {
             if (src == null)
             {
                 return null;
             }
 
-            return new AzureTableStorageFailedFinishTransaction
+            var entity = new TableEntity(Mapper.GetHashString(src.FinishMoment.Ticks), src.cbReceiptReference)
             {
-                PartitionKey = Mapper.GetHashString(src.FinishMoment.Ticks),
-                RowKey = src.cbReceiptReference,
-                cbReceiptReference = src.cbReceiptReference,
-                CashBoxIdentification = src.CashBoxIdentification,
-                FinishMoment = src.FinishMoment.ToUniversalTime(),
-                ftQueueItemId = src.ftQueueItemId,
-                Request = src.Request,
-                TransactionNumber = src.TransactionNumber?.ToString()
+                { nameof(FailedFinishTransaction.cbReceiptReference), src.cbReceiptReference },
+                { nameof(FailedFinishTransaction.CashBoxIdentification), src.CashBoxIdentification },
+                { nameof(FailedFinishTransaction.FinishMoment), src.FinishMoment.ToUniversalTime() },
+                { nameof(FailedFinishTransaction.ftQueueItemId), src.ftQueueItemId },
+                { nameof(FailedFinishTransaction.TransactionNumber), src.TransactionNumber?.ToString() },
             };
+
+            entity.SetOversized(nameof(FailedFinishTransaction.Request), src.Request);
+
+            return entity;
         }
 
-        protected override FailedFinishTransaction MapToStorageEntity(AzureTableStorageFailedFinishTransaction src)
+        protected override FailedFinishTransaction MapToStorageEntity(TableEntity src)
         {
             if (src == null)
             {
@@ -53,12 +54,12 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
 
             return new FailedFinishTransaction
             {
-                cbReceiptReference = src.cbReceiptReference,
-                CashBoxIdentification = src.CashBoxIdentification,
-                FinishMoment = src.FinishMoment,
-                ftQueueItemId = src.ftQueueItemId,
-                Request = src.Request,
-                TransactionNumber = src.TransactionNumber == null ? null : Convert.ToInt64(src.TransactionNumber)
+                cbReceiptReference = src.GetString(nameof(FailedFinishTransaction.cbReceiptReference)),
+                CashBoxIdentification = src.GetString(nameof(FailedFinishTransaction.CashBoxIdentification)),
+                FinishMoment = src.GetDateTime(nameof(FailedFinishTransaction.FinishMoment)).GetValueOrDefault(),
+                ftQueueItemId = src.GetGuid(nameof(FailedFinishTransaction.ftQueueItemId)).GetValueOrDefault(),
+                Request = src.GetOversized(nameof(FailedFinishTransaction.Request)),
+                TransactionNumber = src.GetInt64(nameof(FailedFinishTransaction.TransactionNumber))
             };
         }
     }

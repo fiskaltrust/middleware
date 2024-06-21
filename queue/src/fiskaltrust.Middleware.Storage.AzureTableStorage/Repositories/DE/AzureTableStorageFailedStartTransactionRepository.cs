@@ -9,7 +9,7 @@ using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
 {
-    public class AzureTableStorageFailedStartTransactionRepository : BaseAzureTableStorageRepository<string, AzureTableStorageFailedStartTransaction, FailedStartTransaction>, IPersistentTransactionRepository<FailedStartTransaction>
+    public class AzureTableStorageFailedStartTransactionRepository : BaseAzureTableStorageRepository<string, TableEntity, FailedStartTransaction>, IPersistentTransactionRepository<FailedStartTransaction>
     {
         public AzureTableStorageFailedStartTransactionRepository(QueueConfiguration queueConfig, TableServiceClient tableServiceClient)
             : base(queueConfig, tableServiceClient, TABLE_NAME) { }
@@ -24,26 +24,27 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
 
         protected override string GetIdForEntity(FailedStartTransaction entity) => entity.cbReceiptReference;
 
-        protected override AzureTableStorageFailedStartTransaction MapToAzureEntity(FailedStartTransaction src)
+        protected override TableEntity MapToAzureEntity(FailedStartTransaction src)
         {
             if (src == null)
             {
                 return null;
             }
 
-            return new AzureTableStorageFailedStartTransaction
+            var entity = new TableEntity(Mapper.GetHashString(src.StartMoment.Ticks), src.cbReceiptReference)
             {
-                PartitionKey = Mapper.GetHashString(src.StartMoment.Ticks),
-                RowKey = src.cbReceiptReference,
-                cbReceiptReference = src.cbReceiptReference,
-                CashBoxIdentification = src.CashBoxIdentification,
-                ftQueueItemId = src.ftQueueItemId,
-                Request = src.Request,
-                StartMoment = src.StartMoment.ToUniversalTime()
+                { nameof(FailedStartTransaction.cbReceiptReference), src.cbReceiptReference },
+                { nameof(FailedStartTransaction.CashBoxIdentification), src.CashBoxIdentification },
+                { nameof(FailedStartTransaction.StartMoment), src.StartMoment.ToUniversalTime() },
+                { nameof(FailedStartTransaction.ftQueueItemId), src.ftQueueItemId },
             };
+
+            entity.SetOversized(nameof(FailedStartTransaction.Request), src.Request);
+
+            return entity;
         }
 
-        protected override FailedStartTransaction MapToStorageEntity(AzureTableStorageFailedStartTransaction src)
+        protected override FailedStartTransaction MapToStorageEntity(TableEntity src)
         {
             if (src == null)
             {
@@ -52,11 +53,11 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
 
             return new FailedStartTransaction
             {
-                cbReceiptReference = src.cbReceiptReference,
-                CashBoxIdentification = src.CashBoxIdentification,
-                ftQueueItemId = src.ftQueueItemId,
-                Request = src.Request,
-                StartMoment = src.StartMoment
+                cbReceiptReference = src.GetString(nameof(FailedStartTransaction.cbReceiptReference)),
+                CashBoxIdentification = src.GetString(nameof(FailedStartTransaction.CashBoxIdentification)),
+                StartMoment = src.GetDateTime(nameof(FailedStartTransaction.StartMoment)).GetValueOrDefault(),
+                ftQueueItemId = src.GetGuid(nameof(FailedStartTransaction.ftQueueItemId)).GetValueOrDefault(),
+                Request = src.GetOversized(nameof(FailedStartTransaction.Request)),
             };
         }
     }
