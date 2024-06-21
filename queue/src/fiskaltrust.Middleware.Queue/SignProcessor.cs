@@ -163,11 +163,12 @@ namespace fiskaltrust.Middleware.Queue
                     if (!data.IsCountryIT() && data.IsVersionV2())
                     {
                         _receiptConverter.ConvertRequestToV1(dataToV1ExceptItaly);
-                    }
-                    (receiptResponse, countrySpecificActionJournals) = await _countrySpecificSignProcessor.ProcessAsync(dataToV1ExceptItaly, queue, queueItem).ConfigureAwait(false);
-                    if (!data.IsCountryIT() && data.IsVersionV2())
-                    {
+                        (receiptResponse, countrySpecificActionJournals) = await _countrySpecificSignProcessor.ProcessAsync(dataToV1ExceptItaly, queue, queueItem).ConfigureAwait(false);
                         _receiptConverter.ConvertResponseToV2(receiptResponse);
+                    }
+                    else
+                    {
+                        (receiptResponse, countrySpecificActionJournals) = await _countrySpecificSignProcessor.ProcessAsync(dataToV1ExceptItaly, queue, queueItem).ConfigureAwait(false);
                     }
                 }
                 catch (Exception e)
