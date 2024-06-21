@@ -57,21 +57,17 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
 
         private static async Task CreateConfigurationActionJournalAsync(MiddlewareConfiguration middlewareConfiguration, IActionJournalRepository actionJournalRepository)
         {
-            var configurationCopy = new Dictionary<string, object>(middlewareConfiguration.Configuration)
+            var configuration = new Dictionary<string, object>
             {
                 { "MachineName", Environment.MachineName },
                 { "ProcessArchitecture", RuntimeInformation.ProcessArchitecture.ToString() },
                 { "OSArchitecture", RuntimeInformation.OSArchitecture.ToString() },
-                { "OSDescription", RuntimeInformation.OSDescription.ToString() }
+                { "OSDescription", RuntimeInformation.OSDescription.ToString() },
+                { "Assembly", typeof(JournalProcessor).Assembly.GetName().FullName},
+                { "Version", typeof(JournalProcessor).Assembly.GetName().Version},
+                { "...", "redacted"}
             };
-            configurationCopy.Remove("configuration");
-            foreach (var key in configurationCopy.Keys.ToArray())
-            {
-                if (key.ToLowerInvariant().Contains("connectionstring") || key.ToLowerInvariant().EndsWith("_encrypted"))
-                {
-                    configurationCopy[key] = "********";
-                }
-            }
+
 
             var actionJournal = new ftActionJournal
             {
@@ -88,8 +84,8 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
                     QueueId = middlewareConfiguration.QueueId,
                     IsSandbox = middlewareConfiguration.IsSandbox,
                     ServiceFolder = middlewareConfiguration.ServiceFolder,
-                    Configuration = configurationCopy,
-                    PreviewFeatures = middlewareConfiguration.PreviewFeatures
+                    Configuration = configuration,
+                    PreviewFeatures = middlewareConfiguration.PreviewFeatures,
                 }),
                 TimeStamp = DateTime.UtcNow.Ticks
             };
