@@ -24,9 +24,43 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
 
         protected override string GetIdForEntity(FailedFinishTransaction entity) => entity.cbReceiptReference;
 
-        protected override AzureTableStorageFailedFinishTransaction MapToAzureEntity(FailedFinishTransaction entity) => Mapper.Map(entity);
+        protected override AzureTableStorageFailedFinishTransaction MapToAzureEntity(FailedFinishTransaction src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
 
-        protected override FailedFinishTransaction MapToStorageEntity(AzureTableStorageFailedFinishTransaction entity) => Mapper.Map(entity);
+            return new AzureTableStorageFailedFinishTransaction
+            {
+                PartitionKey = Mapper.GetHashString(src.FinishMoment.Ticks),
+                RowKey = src.cbReceiptReference,
+                cbReceiptReference = src.cbReceiptReference,
+                CashBoxIdentification = src.CashBoxIdentification,
+                FinishMoment = src.FinishMoment.ToUniversalTime(),
+                ftQueueItemId = src.ftQueueItemId,
+                Request = src.Request,
+                TransactionNumber = src.TransactionNumber?.ToString()
+            };
+        }
+
+        protected override FailedFinishTransaction MapToStorageEntity(AzureTableStorageFailedFinishTransaction src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+
+            return new FailedFinishTransaction
+            {
+                cbReceiptReference = src.cbReceiptReference,
+                CashBoxIdentification = src.CashBoxIdentification,
+                FinishMoment = src.FinishMoment,
+                ftQueueItemId = src.ftQueueItemId,
+                Request = src.Request,
+                TransactionNumber = src.TransactionNumber == null ? null : Convert.ToInt64(src.TransactionNumber)
+            };
+        }
     }
 }
 

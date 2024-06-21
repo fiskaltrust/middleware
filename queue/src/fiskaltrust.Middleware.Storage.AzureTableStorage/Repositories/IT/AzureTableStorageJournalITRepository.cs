@@ -21,9 +21,54 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.IT
 
         protected override Guid GetIdForEntity(ftJournalIT entity) => entity.ftJournalITId;
 
-        protected override AzureTableStorageFtJournalIT MapToAzureEntity(ftJournalIT entity) => Mapper.Map(entity);
+        protected override AzureTableStorageFtJournalIT MapToAzureEntity(ftJournalIT src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
 
-        protected override ftJournalIT MapToStorageEntity(AzureTableStorageFtJournalIT entity) => Mapper.Map(entity);
+            return new AzureTableStorageFtJournalIT
+            {
+                PartitionKey = Mapper.GetHashString(src.TimeStamp),
+                RowKey = src.ftJournalITId.ToString(),
+                ftJournalITId = src.ftJournalITId,
+                ftQueueItemId = src.ftQueueItemId,
+                ftQueueId = src.ftQueueId,
+                ftSignaturCreationUnitITId = src.ftSignaturCreationUnitITId,
+                cbReceiptReference = src.cbReceiptReference,
+                JournalType = src.JournalType,
+                ReceiptDateTime = src.ReceiptDateTime.ToUniversalTime(),
+                ReceiptNumber = src.ReceiptNumber,
+                DataJson = src.DataJson,
+                ZRepNumber = src.ZRepNumber,
+                TimeStamp = src.TimeStamp
+            };
+        }
+
+        protected override ftJournalIT MapToStorageEntity(AzureTableStorageFtJournalIT src)
+        {
+            if (src == null)
+
+            {
+                return null;
+            }
+
+            return new ftJournalIT
+            {
+                ftJournalITId = src.ftJournalITId,
+                ftQueueItemId = src.ftQueueItemId,
+                ftQueueId = src.ftQueueId,
+                ftSignaturCreationUnitITId = src.ftSignaturCreationUnitITId,
+                cbReceiptReference = src.cbReceiptReference,
+                JournalType = src.JournalType,
+                ReceiptDateTime = src.ReceiptDateTime,
+                ReceiptNumber = src.ReceiptNumber,
+                DataJson = src.DataJson,
+                ZRepNumber = src.ZRepNumber,
+                TimeStamp = src.TimeStamp
+            };
+        }
 
         async Task<ftJournalIT> IMiddlewareJournalITRepository.GetByQueueItemId(Guid queueItemId)
         {

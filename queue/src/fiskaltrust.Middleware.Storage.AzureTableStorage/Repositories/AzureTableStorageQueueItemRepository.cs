@@ -2,10 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading.Tasks;
 using Azure.Data.Tables;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Storage.AzureTableStorage.Extensions;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping;
 using fiskaltrust.Middleware.Storage.Base.Extensions;
 using fiskaltrust.storage.V0;
@@ -28,9 +30,105 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
 
         protected override Guid GetIdForEntity(ftQueueItem entity) => entity.ftQueueItemId;
 
-        protected override ftQueueItem MapToStorageEntity(TableEntity entity) => Mapper.Map(entity);
+        protected override TableEntity MapToAzureEntity(ftQueueItem src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
 
-        protected override TableEntity MapToAzureEntity(ftQueueItem entity) => Mapper.Map(entity);
+            var entity = new TableEntity(Mapper.GetHashString(src.TimeStamp), src.ftQueueItemId.ToString())
+            {
+                { nameof(ftQueueItem.ftQueueItemId), src.ftQueueItemId },
+                { nameof(ftQueueItem.requestHash), src.requestHash },
+                { nameof(ftQueueItem.responseHash), src.responseHash },
+                { nameof(ftQueueItem.version), src.version },
+                { nameof(ftQueueItem.country), src.country },
+                { nameof(ftQueueItem.cbReceiptReference), src.cbReceiptReference },
+                { nameof(ftQueueItem.cbTerminalID), src.cbTerminalID },
+                { nameof(ftQueueItem.cbReceiptMoment), src.cbReceiptMoment.ToUniversalTime() },
+                { nameof(ftQueueItem.ftDoneMoment), src.ftDoneMoment?.ToUniversalTime() },
+                { nameof(ftQueueItem.ftWorkMoment), src.ftWorkMoment?.ToUniversalTime() },
+                { nameof(ftQueueItem.ftQueueTimeout), src.ftQueueTimeout },
+                { nameof(ftQueueItem.ftQueueMoment), src.ftQueueMoment.ToUniversalTime() },
+                { nameof(ftQueueItem.ftQueueRow), src.ftQueueRow },
+                { nameof(ftQueueItem.ftQueueId), src.ftQueueId },
+                { nameof(ftQueueItem.TimeStamp), src.TimeStamp }
+            };
+
+            var currentRequestChunk = 0;
+            foreach (var chunk in src.request.Chunk(Mapper.MAX_STRING_CHARS))
+            {
+                entity.Add($"{nameof(ftQueueItem.request)}_{currentRequestChunk}", chunk);
+                currentRequestChunk++;
+            }
+
+            var currentResponseChunk = 0;
+            foreach (var chunk in src.response.Chunk(Mapper.MAX_STRING_CHARS))
+            {
+                entity.Add($"{nameof(ftQueueItem.response)}_{currentResponseChunk}", chunk);
+                currentResponseChunk++;
+            }
+
+            return entity;
+        }
+
+        protected override ftQueueItem MapToStorageEntity(TableEntity src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+
+            var queueItem = new ftQueueItem
+            {
+                ftQueueItemId = src.GetGuid(nameof(ftQueueItem.ftQueueItemId)).GetValueOrDefault(),
+                requestHash = src.GetString(nameof(ftQueueItem.requestHash)),
+                responseHash = src.GetString(nameof(ftQueueItem.responseHash)),
+                version = src.GetString(nameof(ftQueueItem.version)),
+                country = src.GetString(nameof(ftQueueItem.country)),
+                cbReceiptReference = src.GetString(nameof(ftQueueItem.cbReceiptReference)),
+                cbTerminalID = src.GetString(nameof(ftQueueItem.cbTerminalID)),
+                cbReceiptMoment = src.GetDateTime(nameof(ftQueueItem.cbReceiptMoment)).GetValueOrDefault(),
+                ftDoneMoment = src.GetDateTime(nameof(ftQueueItem.ftDoneMoment)),
+                ftWorkMoment = src.GetDateTime(nameof(ftQueueItem.ftWorkMoment)),
+                ftQueueTimeout = src.GetInt32(nameof(ftQueueItem.ftQueueTimeout)).GetValueOrDefault(),
+                ftQueueMoment = src.GetDateTime(nameof(ftQueueItem.ftQueueMoment)).GetValueOrDefault(),
+                ftQueueRow = src.GetInt64(nameof(ftQueueItem.ftQueueRow)).GetValueOrDefault(),
+                ftQueueId = src.GetGuid(nameof(ftQueueItem.ftQueueId)).GetValueOrDefault(),
+                TimeStamp = src.GetInt64(nameof(ftQueueItem.TimeStamp)).GetValueOrDefault()
+            };
+
+            var request = src.GetString(nameof(ftQueueItem.request));
+            if (!string.IsNullOrEmpty(request))
+            {
+                queueItem.request = request;
+            }
+            else
+            {
+                var reqSb = new StringBuilder();
+                foreach (var key in src.Keys.Where(x => x.StartsWith($"{nameof(ftQueueItem.request)}_")))
+                {
+                    reqSb.Append(src[key]);
+                }
+                queueItem.request = reqSb.ToString();
+            }
+            var response = src.GetString(nameof(ftQueueItem.response));
+            if (!string.IsNullOrEmpty(response))
+            {
+                queueItem.response = response;
+            }
+            else
+            {
+                var resSb = new StringBuilder();
+                foreach (var key in src.Keys.Where(x => x.StartsWith($"{nameof(ftQueueItem.response)}_")))
+                {
+                    resSb.Append(src[key]);
+                }
+                queueItem.response = resSb.ToString();
+            }
+            return queueItem;
+        }
 
         public override async Task InsertAsync(ftQueueItem storageEntity)
         {

@@ -13,7 +13,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
     {
         public AzureTableStorageFailedStartTransactionRepository(QueueConfiguration queueConfig, TableServiceClient tableServiceClient)
             : base(queueConfig, tableServiceClient, TABLE_NAME) { }
-            
+
         public const string TABLE_NAME = nameof(FailedStartTransaction);
 
         public async Task InsertOrUpdateTransactionAsync(FailedStartTransaction transaction) => await InsertOrUpdateAsync(transaction).ConfigureAwait(false);
@@ -24,9 +24,41 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
 
         protected override string GetIdForEntity(FailedStartTransaction entity) => entity.cbReceiptReference;
 
-        protected override AzureTableStorageFailedStartTransaction MapToAzureEntity(FailedStartTransaction entity) => Mapper.Map(entity);
+        protected override AzureTableStorageFailedStartTransaction MapToAzureEntity(FailedStartTransaction src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
 
-        protected override FailedStartTransaction MapToStorageEntity(AzureTableStorageFailedStartTransaction entity) => Mapper.Map(entity);
+            return new AzureTableStorageFailedStartTransaction
+            {
+                PartitionKey = Mapper.GetHashString(src.StartMoment.Ticks),
+                RowKey = src.cbReceiptReference,
+                cbReceiptReference = src.cbReceiptReference,
+                CashBoxIdentification = src.CashBoxIdentification,
+                ftQueueItemId = src.ftQueueItemId,
+                Request = src.Request,
+                StartMoment = src.StartMoment.ToUniversalTime()
+            };
+        }
+
+        protected override FailedStartTransaction MapToStorageEntity(AzureTableStorageFailedStartTransaction src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+
+            return new FailedStartTransaction
+            {
+                cbReceiptReference = src.cbReceiptReference,
+                CashBoxIdentification = src.CashBoxIdentification,
+                ftQueueItemId = src.ftQueueItemId,
+                Request = src.Request,
+                StartMoment = src.StartMoment
+            };
+        }
     }
 }
 

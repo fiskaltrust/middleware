@@ -17,9 +17,50 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.Configur
 
         protected override Guid GetIdForEntity(ftSignaturCreationUnitME entity) => entity.ftSignaturCreationUnitMEId;
 
-        protected override AzureTableStorageFtSignaturCreationUnitME MapToAzureEntity(ftSignaturCreationUnitME entity) => Mapper.Map(entity);
+        protected override AzureTableStorageFtSignaturCreationUnitME MapToAzureEntity(ftSignaturCreationUnitME src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+            return new AzureTableStorageFtSignaturCreationUnitME
+            {
+                PartitionKey = src.ftSignaturCreationUnitMEId.ToString(),
+                RowKey = src.ftSignaturCreationUnitMEId.ToString(),
+                ftSignaturCreationUnitMEId = src.ftSignaturCreationUnitMEId,
+                TimeStamp = src.TimeStamp,
+                IssuerTin = src.IssuerTin,
+                BusinessUnitCode = src.BusinessUnitCode,
+                TcrIntId = src.TcrIntId,
+                SoftwareCode = src.SoftwareCode,
+                MaintainerCode = src.MaintainerCode,
+                ValidFrom = src.ValidFrom?.ToUniversalTime(),
+                ValidTo = src.ValidTo?.ToUniversalTime(),
+                TcrCode = src.TcrCode
+            };
+        }
 
-        protected override ftSignaturCreationUnitME MapToStorageEntity(AzureTableStorageFtSignaturCreationUnitME entity) => Mapper.Map(entity);
+        protected override ftSignaturCreationUnitME MapToStorageEntity(AzureTableStorageFtSignaturCreationUnitME src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+
+            return new ftSignaturCreationUnitME
+            {
+                ftSignaturCreationUnitMEId = src.ftSignaturCreationUnitMEId,
+                TimeStamp = src.TimeStamp,
+                IssuerTin = src.IssuerTin,
+                BusinessUnitCode = src.BusinessUnitCode,
+                TcrIntId = src.TcrIntId,
+                SoftwareCode = src.SoftwareCode,
+                MaintainerCode = src.MaintainerCode,
+                ValidFrom = src.ValidFrom,
+                ValidTo = src.ValidTo,
+                TcrCode = src.TcrCode
+            };
+        }
     }
 }
 

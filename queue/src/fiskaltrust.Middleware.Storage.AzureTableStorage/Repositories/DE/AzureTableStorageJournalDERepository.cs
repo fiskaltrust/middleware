@@ -30,9 +30,47 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
 
         protected override Guid GetIdForEntity(ftJournalDE entity) => entity.ftJournalDEId;
 
-        protected override AzureTableStorageFtJournalDE MapToAzureEntity(ftJournalDE entity) => Mapper.Map(entity);
+        protected override AzureTableStorageFtJournalDE MapToAzureEntity(ftJournalDE src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
 
-        protected override ftJournalDE MapToStorageEntity(AzureTableStorageFtJournalDE entity) => Mapper.Map(entity);
+            return new AzureTableStorageFtJournalDE
+            {
+                PartitionKey = Mapper.GetHashString(src.TimeStamp),
+                RowKey = src.ftJournalDEId.ToString(),
+                ftJournalDEId = src.ftJournalDEId,
+                ftQueueId = src.ftQueueId,
+                Number = src.Number,
+                ftQueueItemId = src.ftQueueItemId,
+                FileContentBase64 = src.FileContentBase64,
+                FileExtension = src.FileExtension,
+                FileName = src.FileName,
+                TimeStamp = src.TimeStamp
+            };
+        }
+
+        protected override ftJournalDE MapToStorageEntity(AzureTableStorageFtJournalDE src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+
+            return new ftJournalDE
+            {
+                ftJournalDEId = src.ftJournalDEId,
+                ftQueueId = src.ftQueueId,
+                ftQueueItemId = src.ftQueueItemId,
+                FileContentBase64 = src.FileContentBase64,
+                FileExtension = src.FileExtension,
+                FileName = src.FileName,
+                Number = src.Number,
+                TimeStamp = src.TimeStamp,
+            };
+        }
 
         public IAsyncEnumerable<ftJournalDE> GetEntriesOnOrAfterTimeStampAsync(long fromInclusive, int? take = null)
         {

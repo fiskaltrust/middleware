@@ -17,9 +17,55 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.Configur
 
         protected override Guid GetIdForEntity(ftQueue entity) => entity.ftQueueId;
 
-        protected override AzureTableStorageFtQueue MapToAzureEntity(ftQueue entity) => Mapper.Map(entity);
+        protected override AzureTableStorageFtQueue MapToAzureEntity(ftQueue src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
 
-        protected override ftQueue MapToStorageEntity(AzureTableStorageFtQueue entity) => Mapper.Map(entity);
+            return new AzureTableStorageFtQueue
+            {
+                PartitionKey = src.ftQueueId.ToString(),
+                RowKey = src.ftQueueId.ToString(),
+                ftQueueId = src.ftQueueId,
+                ftCashBoxId = src.ftCashBoxId,
+                ftCurrentRow = src.ftCurrentRow,
+                ftQueuedRow = src.ftQueuedRow,
+                ftReceiptNumerator = src.ftReceiptNumerator,
+                ftReceiptTotalizer = Convert.ToDouble(src.ftReceiptTotalizer),
+                ftReceiptHash = src.ftReceiptHash,
+                StartMoment = src.StartMoment?.ToUniversalTime(),
+                StopMoment = src.StopMoment?.ToUniversalTime(),
+                CountryCode = src.CountryCode,
+                Timeout = src.Timeout,
+                TimeStamp = src.TimeStamp
+            };
+        }
+
+        protected override ftQueue MapToStorageEntity(AzureTableStorageFtQueue src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+
+            return new ftQueue
+            {
+                ftQueueId = src.ftQueueId,
+                ftCashBoxId = src.ftCashBoxId,
+                ftCurrentRow = src.ftCurrentRow,
+                ftQueuedRow = src.ftQueuedRow,
+                ftReceiptNumerator = src.ftReceiptNumerator,
+                ftReceiptTotalizer = Convert.ToDecimal(src.ftReceiptTotalizer),
+                ftReceiptHash = src.ftReceiptHash,
+                StartMoment = src.StartMoment,
+                StopMoment = src.StopMoment,
+                CountryCode = src.CountryCode,
+                Timeout = src.Timeout,
+                TimeStamp = src.TimeStamp
+            };
+        }
     }
 }
 

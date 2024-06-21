@@ -22,9 +22,51 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
 
         protected override Guid GetIdForEntity(ftActionJournal entity) => entity.ftActionJournalId;
 
-        protected override AzureTableStorageFtActionJournal MapToAzureEntity(ftActionJournal entity) => Mapper.Map(entity);
+        protected override AzureTableStorageFtActionJournal MapToAzureEntity(ftActionJournal src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
 
-        protected override ftActionJournal MapToStorageEntity(AzureTableStorageFtActionJournal entity) => Mapper.Map(entity);
+            return new AzureTableStorageFtActionJournal
+            {
+                PartitionKey = Mapper.GetHashString(src.TimeStamp),
+                RowKey = src.ftActionJournalId.ToString(),
+                ftActionJournalId = src.ftActionJournalId,
+                ftQueueId = src.ftQueueId,
+                ftQueueItemId = src.ftQueueItemId,
+                Moment = src.Moment.ToUniversalTime(),
+                Priority = src.Priority,
+                Type = src.Type,
+                Message = src.Message,
+                DataBase64 = src.DataBase64,
+                DataJson = src.DataJson,
+                TimeStamp = src.TimeStamp
+            };
+        }
+
+        protected override ftActionJournal MapToStorageEntity(AzureTableStorageFtActionJournal src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+
+            return new ftActionJournal
+            {
+                ftActionJournalId = src.ftActionJournalId,
+                ftQueueId = src.ftQueueId,
+                ftQueueItemId = src.ftQueueItemId,
+                Moment = src.Moment,
+                Priority = src.Priority,
+                Type = src.Type,
+                Message = src.Message,
+                DataBase64 = src.DataBase64,
+                DataJson = src.DataJson,
+                TimeStamp = src.TimeStamp
+            };
+        }
 
         public IAsyncEnumerable<ftActionJournal> GetEntriesOnOrAfterTimeStampAsync(long fromInclusive, int? take = null)
         {

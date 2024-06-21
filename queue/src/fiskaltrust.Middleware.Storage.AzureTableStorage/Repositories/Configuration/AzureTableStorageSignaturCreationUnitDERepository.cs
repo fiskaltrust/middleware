@@ -17,8 +17,42 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.Configur
 
         protected override Guid GetIdForEntity(ftSignaturCreationUnitDE entity) => entity.ftSignaturCreationUnitDEId;
 
-        protected override AzureTableStorageFtSignaturCreationUnitDE MapToAzureEntity(ftSignaturCreationUnitDE entity) => Mapper.Map(entity);
+        protected override AzureTableStorageFtSignaturCreationUnitDE MapToAzureEntity(ftSignaturCreationUnitDE src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
 
-        protected override ftSignaturCreationUnitDE MapToStorageEntity(AzureTableStorageFtSignaturCreationUnitDE entity) => Mapper.Map(entity);
+            return new AzureTableStorageFtSignaturCreationUnitDE
+            {
+                PartitionKey = src.ftSignaturCreationUnitDEId.ToString(),
+                RowKey = src.ftSignaturCreationUnitDEId.ToString(),
+                ftSignaturCreationUnitDEId = src.ftSignaturCreationUnitDEId,
+                Url = src.Url,
+                TseInfoJson = src.TseInfoJson,
+                TimeStamp = src.TimeStamp,
+                Mode = src.Mode,
+                ModeConfigurationJson = src.ModeConfigurationJson
+            };
+        }
+
+        protected override ftSignaturCreationUnitDE MapToStorageEntity(AzureTableStorageFtSignaturCreationUnitDE src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+
+            return new ftSignaturCreationUnitDE
+            {
+                ftSignaturCreationUnitDEId = src.ftSignaturCreationUnitDEId,
+                TseInfoJson = src.TseInfoJson,
+                TimeStamp = src.TimeStamp,
+                Mode = src.Mode,
+                ModeConfigurationJson = src.ModeConfigurationJson,
+                Url = src.Url
+            };
+        }
     }
 }
