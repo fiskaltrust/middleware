@@ -249,6 +249,7 @@ namespace fiskaltrust.Interface.Tagging.UnitTests.FR
         [InlineData(0x465200000000000B, 0x465220000000000B)]
         [InlineData(0x465200000000000C, 0x465220000000000C)]
         [InlineData(0x465200000000000D, 0x465220000000000D)]
+        [InlineData(0x465200000000000E, null)]
         public void ConvertftSignatureFormatToV2_ShouldreturnCorrect(long v1FtSignatureFormat, long? v2FtSignatureFormat)
         {
             var signatureItem = new SignaturItem { ftSignatureFormat = v1FtSignatureFormat };
