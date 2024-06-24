@@ -6,6 +6,7 @@ using Azure.Storage.Blobs;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.Migrations;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories;
+using fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Storage.AzureTableStorage
@@ -49,13 +50,12 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage
                 _logger.LogInformation("Database tables were not yet created, executing all {MigrationCount} migrations.", _migrations.Length);
                 await _tableServiceClient.CreateTableIfNotExistsAsync(GetMigrationTableName());
 
-                if (await _tableServiceClient.QueryAsync(t => t.Name == AzureTableStorageQueueItemRepository.TABLE_NAME).AnyAsync())
+                if (await _tableServiceClient.QueryAsync(t => t.Name == AzureTableStorageCashBoxRepository.TABLE_NAME).AnyAsync())
                 {
-                    var queueItemTableClient = _tableServiceClient.GetTableClient(AzureTableStorageQueueItemRepository.TABLE_NAME);
-                    var queueItems = await queueItemTableClient.QueryAsync<TableEntity>().FirstOrDefaultAsync();
-                    if (queueItems is not null)
+                    var cashBoxTableClient = _tableServiceClient.GetTableClient(AzureTableStorageCashBoxRepository.TABLE_NAME);
+                    var cashBoxes = await cashBoxTableClient.QueryAsync<TableEntity>().FirstOrDefaultAsync();
+                    if (cashBoxes is not null)
                     {
-                        var databaseSchemaTableClient = _tableServiceClient.GetTableClient(GetMigrationTableName());
                         MigratedFrom1_2 = true;
                     }
                 }
@@ -84,13 +84,13 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage
         {
             var tableClient = _tableServiceClient.GetTableClient(GetMigrationTableName());
             var migration = await tableClient.QueryAsync<TableEntity>().FirstOrDefaultAsync();
-            return migration?.GetBoolean("MigratedFrom1_2") ?? false;
+            return migration?.GetBoolean(nameof(MigratedFrom1_2)) ?? false;
         }
 
         private async Task SetCurrentMigrationAsync(int version)
         {
             var tableClient = _tableServiceClient.GetTableClient(GetMigrationTableName());
-            await tableClient.UpsertEntityAsync(new TableEntity(_queueConfiguration.QueueId.ToString(), "Current") { { "CurrentVersion", version }, { "MigratedFrom1_2", MigratedFrom1_2 } });
+            await tableClient.UpsertEntityAsync(new TableEntity(_queueConfiguration.QueueId.ToString(), "Current") { { "CurrentVersion", version }, { nameof(MigratedFrom1_2), MigratedFrom1_2 } });
         }
 
         private async Task<bool> MigrationTableExists() => await _tableServiceClient.QueryAsync(t => t.Name == GetMigrationTableName()).AnyAsync();

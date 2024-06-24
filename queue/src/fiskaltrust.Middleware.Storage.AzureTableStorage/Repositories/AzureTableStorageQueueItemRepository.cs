@@ -37,7 +37,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
                 return null;
             }
 
-            var entity = new TableEntity(Mapper.GetHashString(src.TimeStamp), src.ftQueueItemId.ToString())
+            var entity = new TableEntity(src.ftQueueRow.ToString(), src.ftQueueItemId.ToString())
             {
                 { nameof(ftQueueItem.ftQueueItemId), src.ftQueueItemId },
                 { nameof(ftQueueItem.requestHash), src.requestHash },
