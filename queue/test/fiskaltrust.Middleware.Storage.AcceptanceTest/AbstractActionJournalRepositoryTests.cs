@@ -114,6 +114,21 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
         }
 
         [Fact]
+        public async Task InsertAsync_ShouldAddHugeEntry_ToTheDatabase()
+        {
+            var entries = StorageTestFixtureProvider.GetFixture().CreateMany<ftActionJournal>(10).ToList();
+            var entryToInsert = StorageTestFixtureProvider.GetFixture().Create<ftActionJournal>();
+            entryToInsert.DataBase64 = string.Join(string.Empty, StorageTestFixtureProvider.GetFixture().CreateMany<char>(40_000));
+            entryToInsert.DataJson = string.Join(string.Empty, StorageTestFixtureProvider.GetFixture().CreateMany<char>(40_000));
+
+            var sut = await CreateRepository(entries);
+            await sut.InsertAsync(entryToInsert);
+
+            var insertedEntry = await sut.GetAsync(entryToInsert.ftActionJournalId);
+            insertedEntry.Should().BeEquivalentTo(entryToInsert);
+        }
+
+        [Fact]
         public virtual async Task InsertAsync_ShouldThrowException_IfEntryAlreadyExists()
         {
             var entries = StorageTestFixtureProvider.GetFixture().CreateMany<ftActionJournal>(10).ToList();
