@@ -50,9 +50,10 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage
                 _logger.LogInformation("Database tables were not yet created, executing all {MigrationCount} migrations.", _migrations.Length);
                 await _tableServiceClient.CreateTableIfNotExistsAsync(GetMigrationTableName());
 
-                if (await _tableServiceClient.QueryAsync(t => t.Name == AzureTableStorageCashBoxRepository.TABLE_NAME).AnyAsync())
+                var cashboxTableName = $"x{_queueConfiguration.QueueId.ToString().Replace("-", "")}{AzureTableStorageCashBoxRepository.TABLE_NAME}";
+                if (await _tableServiceClient.QueryAsync(t => t.Name == cashboxTableName).AnyAsync())
                 {
-                    var cashBoxTableClient = _tableServiceClient.GetTableClient(AzureTableStorageCashBoxRepository.TABLE_NAME);
+                    var cashBoxTableClient = _tableServiceClient.GetTableClient(cashboxTableName);
                     var cashBoxes = await cashBoxTableClient.QueryAsync<TableEntity>().FirstOrDefaultAsync();
                     if (cashBoxes is not null)
                     {
