@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -63,11 +64,8 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
                 { "ProcessArchitecture", RuntimeInformation.ProcessArchitecture.ToString() },
                 { "OSArchitecture", RuntimeInformation.OSArchitecture.ToString() },
                 { "OSDescription", RuntimeInformation.OSDescription.ToString() },
-                { "Assembly", typeof(JournalProcessor).Assembly.GetName().FullName},
-                { "Version", typeof(JournalProcessor).Assembly.GetName().Version},
                 { "...", "redacted"}
             };
-
 
             var actionJournal = new ftActionJournal
             {
