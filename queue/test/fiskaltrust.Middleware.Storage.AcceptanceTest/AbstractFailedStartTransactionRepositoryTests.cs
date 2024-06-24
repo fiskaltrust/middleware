@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AutoFixture;
+using fiskaltrust.ifPOS.v0;
 using fiskaltrust.Middleware.Contracts.Data;
 using fiskaltrust.Middleware.Contracts.Models.Transactions;
 using FluentAssertions;
+using Newtonsoft.Json;
 using Xunit;
 
 namespace fiskaltrust.Middleware.Storage.AcceptanceTest
@@ -58,6 +60,23 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
         {
             var entries = StorageTestFixtureProvider.GetFixture().CreateMany<FailedStartTransaction>(10).ToList();
             var entryToInsert = StorageTestFixtureProvider.GetFixture().Create<FailedStartTransaction>();
+
+            var sut = await CreateRepository(entries);
+            await sut.InsertOrUpdateTransactionAsync(entryToInsert);
+
+            var insertedEntry = await sut.GetAsync(entryToInsert.cbReceiptReference);
+            insertedEntry.Should().BeEquivalentTo(entryToInsert);
+        }
+
+        [Fact]
+        public async Task InsertOrUpdateAsync_ShouldAddEntryWithHugeRequestAndRequest_ToTheDatabase()
+        {
+            var entries = StorageTestFixtureProvider.GetFixture().CreateMany<FailedStartTransaction>(10).ToList();
+            var entryToInsert = StorageTestFixtureProvider.GetFixture().Create<FailedStartTransaction>();
+
+            var request = JsonConvert.DeserializeObject<ReceiptRequest>(entryToInsert.Request);
+            request.cbReceiptReference = string.Join(string.Empty, StorageTestFixtureProvider.GetFixture().CreateMany<char>(40_000));
+            entryToInsert.Request = JsonConvert.SerializeObject(request);
 
             var sut = await CreateRepository(entries);
             await sut.InsertOrUpdateTransactionAsync(entryToInsert);

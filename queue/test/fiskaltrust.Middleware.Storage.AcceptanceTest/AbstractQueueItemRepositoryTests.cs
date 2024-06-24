@@ -193,6 +193,27 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
         }
 
         [Fact]
+        public async Task InsertOrUpdateAsync_ShouldAddEntryWithHugeRequestAndResponse_ToTheDatabase()
+        {
+            var entries = StorageTestFixtureProvider.GetFixture().CreateMany<ftQueueItem>(10).ToList();
+            var entryToInsert = StorageTestFixtureProvider.GetFixture().Create<ftQueueItem>();
+
+            var request = JsonConvert.DeserializeObject<ReceiptRequest>(entryToInsert.request);
+            request.cbReceiptReference = string.Join(string.Empty, StorageTestFixtureProvider.GetFixture().CreateMany<char>(40_000));
+            entryToInsert.request = JsonConvert.SerializeObject(request);
+
+            var response = JsonConvert.DeserializeObject<ReceiptRequest>(entryToInsert.response);
+            response.cbReceiptReference = string.Join(string.Empty, StorageTestFixtureProvider.GetFixture().CreateMany<char>(40_000));
+            entryToInsert.response = JsonConvert.SerializeObject(response);
+
+            var sut = await CreateRepository(entries);
+            await sut.InsertOrUpdateAsync(entryToInsert);
+
+            var insertedEntry = await sut.GetAsync(entryToInsert.ftQueueItemId);
+            insertedEntry.Should().BeEquivalentTo(entryToInsert);
+        }
+
+        [Fact]
         public async Task InsertOrUpdateAsync_ShouldAddEntryWithNonUtcDateTime_ToTheDatabase()
         {
             var entries = StorageTestFixtureProvider.GetFixture().CreateMany<ftQueueItem>(10).ToList();
