@@ -1,0 +1,160 @@
+{
+  "helpers": [
+    {
+      "Id": "c32204ee-63d9-48c2-b548-acfb389fa713",
+      "Package": "fiskaltrust.Middleware.Helper.Helipad",
+      "Version": "1.3.49",
+      "Configuration": {},
+      "Url": []
+    }
+  ],
+  "ftCashBoxId": "504bece4-50fc-4e6d-97eb-0ae43389183a",
+  "ftSignaturCreationDevices": [
+    {
+      "Id": "490422b1-ff2f-475a-8ed4-8a65bbc2cad6",
+      "Package": "fiskaltrust.Middleware.SCU.DE.FiskalyCertified",
+      "Version": "1.3.48",
+      "Configuration": {
+        "ApiSecret": "tm3HoSGrmHY4QjrNKkUrXUOabPbg36eLgJ4bkyrrpPJ",
+        "ApiKey": "test_6ashcq3iqhkxucnpdxz2jt9qf_apikey-20240603123611",
+        "TssId": "ccd28aaf-98ad-4f45-a0df-2d269df8190c",
+        "AdminPin": "1326816938",
+        "Counter": 3,
+        "OrderNumber": "ORD-07488-C5N6T2"
+      },
+      "Url": [
+        "grpc://localhost:18004"
+      ]
+    }
+  ],
+  "ftQueues": [
+    {
+      "Id": "f05f0f42-6069-4418-885c-434afc7ed2eb",
+      "Package": "fiskaltrust.Middleware.Queue.AzureTableStorage",
+      "Version": "1.3.53",
+      "Configuration": {
+        "storageconnectionstring": "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://localhost:10000/devstoreaccount1;QueueEndpoint=http://localhost:10001/devstoreaccount1;TableEndpoint=http://localhost:10002/devstoreaccount1;",
+        "init_ftQueue": [
+          {
+            "ftQueueId": "f05f0f42-6069-4418-885c-434afc7ed2eb",
+            "ftCashBoxId": "504bece4-50fc-4e6d-97eb-0ae43389183a",
+            "ftCurrentRow": 0,
+            "ftQueuedRow": 0,
+            "ftReceiptNumerator": 0,
+            "ftReceiptTotalizer": 0.0,
+            "ftReceiptHash": null,
+            "StartMoment": null,
+            "StopMoment": null,
+            "CountryCode": "DE",
+            "Timeout": 1500,
+            "TimeStamp": 638448980040895672
+          }
+        ],
+        "init_ftQueueDE": [
+          {
+            "ftQueueDEId": "f05f0f42-6069-4418-885c-434afc7ed2eb",
+            "ftSignaturCreationUnitDEId": "490422b1-ff2f-475a-8ed4-8a65bbc2cad6",
+            "LastHash": null,
+            "CashBoxIdentification": "Qg9f8GlgGESIXENKH7S6w",
+            "SSCDFailCount": 0,
+            "SSCDFailMoment": null,
+            "SSCDFailQueueItemId": null,
+            "UsedFailedCount": 0,
+            "UsedFailedMomentMin": null,
+            "UsedFailedMomentMax": null,
+            "UsedFailedQueueItemId": null,
+            "DailyClosingNumber": 0,
+            "TimeStamp": 638448953267051028
+          }
+        ],
+        "init_masterData": {
+          "Account": {
+            "AccountId": "ad1b2cc2-47e1-e911-a839-000d3a28933a",
+            "AccountName": "_dev_poscreator_company",
+            "Street": "street address1",
+            "Zip": "50201",
+            "City": "salzburg",
+            "Country": "DE",
+            "TaxId": "dev-TAXposcreator",
+            "VatId": "DE123456789"
+          },
+          "Outlet": {
+            "OutletId": "a9258686-742a-4bba-99bd-31c938590bfe",
+            "OutletName": "BYODC_TEST_230412_4",
+            "Street": "asdf",
+            "Zip": "1234",
+            "City": "asdf",
+            "Country": "AT",
+            "VatId": "DE123456789",
+            "LocationId": null
+          },
+          "Agencies": [],
+          "PosSystems": [
+            {
+              "PosSystemId": "94ba36cf-47e1-e911-a842-000d3a289911",
+              "Brand": "_dev_possystem1_brand",
+              "Model": "_dev_possystem1_model",
+              "SoftwareVersion": null,
+              "BaseCurrency": "EUR",
+              "Type": null
+            },
+            {
+              "PosSystemId": "dfa6ef25-ecdd-4a1f-8e49-26e387480ba6",
+              "Brand": "test",
+              "Model": "test",
+              "SoftwareVersion": "1",
+              "BaseCurrency": "EUR",
+              "Type": null
+            },
+            {
+              "PosSystemId": "32818186-21a4-4006-b7e2-51727f7a8526",
+              "Brand": "test",
+              "Model": "test",
+              "SoftwareVersion": "1",
+              "BaseCurrency": "EUR",
+              "Type": null
+            },
+            {
+              "PosSystemId": "6347f2f1-418b-433c-9929-6a1e85c164c0",
+              "Brand": "TSC Systems",
+              "Model": "3000",
+              "SoftwareVersion": "1",
+              "BaseCurrency": "EUR",
+              "Type": null
+            },
+            {
+              "PosSystemId": "b174250d-3033-426a-9af9-722a2b69060b",
+              "Brand": "test",
+              "Model": "test",
+              "SoftwareVersion": "1",
+              "BaseCurrency": "EUR",
+              "Type": null
+            }
+          ]
+        },
+        "init_ftSignaturCreationUnitAT": [],
+        "init_ftSignaturCreationUnitDE": [
+          {
+            "ftSignaturCreationUnitDEId": "490422b1-ff2f-475a-8ed4-8a65bbc2cad6",
+            "Url": "[\"grpc://localhost:18004\"]",
+            "TimeStamp": 638448939163179641,
+            "TseInfoJson": null,
+            "Mode": 0,
+            "ModeConfigurationJson": null
+          }
+        ],
+        "init_ftSignaturCreationUnitIT": [],
+        "init_ftSignaturCreationUnitES": [],
+        "init_ftSignaturCreationUnitFR": [],
+        "init_ftCashBox": {
+          "ftCashBoxId": "504bece4-50fc-4e6d-97eb-0ae43389183a",
+          "TimeStamp": 638448954655340395
+        }
+      },
+      "Url": [
+        "rest://localhost:1500/f05f0f42-6069-4418-885c-434afc7ed2eb"
+      ]
+    }
+  ],
+  "TimeStamp": 638530128761781244
+}
