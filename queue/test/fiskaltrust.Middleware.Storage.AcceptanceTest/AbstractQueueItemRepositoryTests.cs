@@ -213,21 +213,29 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             insertedEntry.Should().BeEquivalentTo(entryToInsert);
         }
 
-        [Fact]
-        public async Task InsertOrUpdateAsync_ShouldAddEntryWithNonUtcDateTime_ToTheDatabase()
+        [Theory]
+        [InlineData("2024-06-19T15:30:21+02:00")]
+        [InlineData("2024-06-19T15:30:21+0200")]
+        [InlineData("2024-06-19T15:30:21Z")]
+        [InlineData("2024-06-19T15:30:21")]
+        public async Task InsertOrUpdateAsync_ShouldAddEntryWithNonUtcDateTime_ToTheDatabase(string dateTime)
         {
             var entries = StorageTestFixtureProvider.GetFixture().CreateMany<ftQueueItem>(10).ToList();
             var entryToInsert = StorageTestFixtureProvider.GetFixture().Create<ftQueueItem>();
-            entryToInsert.ftQueueMoment = DateTime.Parse("2024-06-19T15:30:21+02:00");
-            entryToInsert.cbReceiptMoment = DateTime.Parse("2024-06-19T15:30:21+02:00");
-            entryToInsert.ftDoneMoment = DateTime.Parse("2024-06-19T15:30:21+02:00");
-            entryToInsert.ftWorkMoment = DateTime.Parse("2024-06-19T15:30:21+02:00");
+            entryToInsert.ftQueueMoment = DateTime.Parse(dateTime);
+            entryToInsert.cbReceiptMoment = DateTime.Parse(dateTime);
+            entryToInsert.ftDoneMoment = DateTime.Parse(dateTime);
+            entryToInsert.ftWorkMoment = DateTime.Parse(dateTime);
 
             var sut = await CreateRepository(entries);
             await sut.InsertOrUpdateAsync(entryToInsert);
 
             var insertedEntry = await sut.GetAsync(entryToInsert.ftQueueItemId);
             insertedEntry.Should().BeEquivalentTo(entryToInsert);
+            // insertedEntry.ftQueueMoment.Should().Be(entryToInsert.ftQueueMoment);
+            // insertedEntry.cbReceiptMoment.Should().Be(entryToInsert.cbReceiptMoment);
+            // insertedEntry.ftDoneMoment.Should().Be(entryToInsert.ftDoneMoment);
+            // insertedEntry.ftWorkMoment.Should().Be(entryToInsert.ftWorkMoment);
         }
 
         [Fact]
