@@ -22,9 +22,46 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.ME
 
         protected override Guid GetIdForEntity(ftJournalME entity) => entity.ftJournalMEId;
 
-        protected override AzureTableStorageFtJournalME MapToAzureEntity(ftJournalME entity) => Mapper.Map(entity);
+        protected override AzureTableStorageFtJournalME MapToAzureEntity(ftJournalME src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
 
-        protected override ftJournalME MapToStorageEntity(AzureTableStorageFtJournalME entity) => Mapper.Map(entity);
+            return new AzureTableStorageFtJournalME
+            {
+                PartitionKey = Mapper.GetHashString(src.TimeStamp),
+                RowKey = src.ftJournalMEId.ToString(),
+                ftJournalMEId = src.ftJournalMEId,
+                ftQueueItemId = src.ftQueueItemId,
+                cbReference = src.cbReference,
+                InvoiceNumber = src.InvoiceNumber,
+                YearlyOrdinalNumber = src.YearlyOrdinalNumber,
+                ftQueueId = src.ftQueueId,
+                TimeStamp = src.TimeStamp
+            };
+        }
+
+        protected override ftJournalME MapToStorageEntity(AzureTableStorageFtJournalME src)
+        {
+            if (src == null)
+
+            {
+                return null;
+            }
+
+            return new ftJournalME
+            {
+                ftJournalMEId = src.ftJournalMEId,
+                ftQueueItemId = src.ftQueueItemId,
+                cbReference = src.cbReference,
+                InvoiceNumber = src.InvoiceNumber,
+                YearlyOrdinalNumber = src.YearlyOrdinalNumber,
+                ftQueueId = src.ftQueueId,
+                TimeStamp = src.TimeStamp
+            };
+        }
 
         public IAsyncEnumerable<ftJournalME> GetEntriesOnOrAfterTimeStampAsync(long fromInclusive, int? take = null)
         {

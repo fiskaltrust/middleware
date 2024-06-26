@@ -9,11 +9,11 @@ using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
 {
-    public class AzureTableStorageFailedStartTransactionRepository : BaseAzureTableStorageRepository<string, AzureTableStorageFailedStartTransaction, FailedStartTransaction>, IPersistentTransactionRepository<FailedStartTransaction>
+    public class AzureTableStorageFailedStartTransactionRepository : BaseAzureTableStorageRepository<string, TableEntity, FailedStartTransaction>, IPersistentTransactionRepository<FailedStartTransaction>
     {
         public AzureTableStorageFailedStartTransactionRepository(QueueConfiguration queueConfig, TableServiceClient tableServiceClient)
             : base(queueConfig, tableServiceClient, TABLE_NAME) { }
-            
+
         public const string TABLE_NAME = nameof(FailedStartTransaction);
 
         public async Task InsertOrUpdateTransactionAsync(FailedStartTransaction transaction) => await InsertOrUpdateAsync(transaction).ConfigureAwait(false);
@@ -24,9 +24,42 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
 
         protected override string GetIdForEntity(FailedStartTransaction entity) => entity.cbReceiptReference;
 
-        protected override AzureTableStorageFailedStartTransaction MapToAzureEntity(FailedStartTransaction entity) => Mapper.Map(entity);
+        protected override TableEntity MapToAzureEntity(FailedStartTransaction src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
 
-        protected override FailedStartTransaction MapToStorageEntity(AzureTableStorageFailedStartTransaction entity) => Mapper.Map(entity);
+            var entity = new TableEntity(Mapper.GetHashString(src.StartMoment.Ticks), src.cbReceiptReference)
+            {
+                { nameof(FailedStartTransaction.cbReceiptReference), src.cbReceiptReference },
+                { nameof(FailedStartTransaction.CashBoxIdentification), src.CashBoxIdentification },
+                { nameof(FailedStartTransaction.StartMoment), src.StartMoment },
+                { nameof(FailedStartTransaction.ftQueueItemId), src.ftQueueItemId },
+            };
+
+            entity.SetOversized(nameof(FailedStartTransaction.Request), src.Request);
+
+            return entity;
+        }
+
+        protected override FailedStartTransaction MapToStorageEntity(TableEntity src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+
+            return new FailedStartTransaction
+            {
+                cbReceiptReference = src.GetString(nameof(FailedStartTransaction.cbReceiptReference)),
+                CashBoxIdentification = src.GetString(nameof(FailedStartTransaction.CashBoxIdentification)),
+                StartMoment = src.GetDateTime(nameof(FailedStartTransaction.StartMoment)).GetValueOrDefault(),
+                ftQueueItemId = src.GetGuid(nameof(FailedStartTransaction.ftQueueItemId)).GetValueOrDefault(),
+                Request = src.GetOversized(nameof(FailedStartTransaction.Request)),
+            };
+        }
     }
 }
 

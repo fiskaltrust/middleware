@@ -5,6 +5,8 @@ using Azure.Data.Tables;
 using Azure.Storage.Blobs;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.Migrations;
+using fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories;
+using fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Storage.AzureTableStorage
@@ -17,6 +19,8 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage
         private readonly TableServiceClient _tableServiceClient;
         private readonly QueueConfiguration _queueConfiguration;
 
+        public bool? MigratedFrom1_2 { get; set; }
+
         private readonly IAzureTableStorageMigration[] _migrations;
 
         public DatabaseMigrator(ILogger<IMiddlewareBootstrapper> logger, TableServiceClient tableServiceClient, BlobServiceClient blobServiceClient, QueueConfiguration queueConfiguration)
@@ -24,6 +28,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage
             _logger = logger;
             _tableServiceClient = tableServiceClient;
             _queueConfiguration = queueConfiguration;
+            MigratedFrom1_2 = null;
 
             _migrations = new IAzureTableStorageMigration[]
             {
@@ -37,12 +42,24 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage
             if (await MigrationTableExists())
             {
                 var currentMigration = await GetCurrentMigrationAsync();
+                MigratedFrom1_2 = await GetMigratedFrom1_2Async();
                 await ExecuteMigrationsAsync(_migrations.Where(x => x.Version > currentMigration));
             }
             else
             {
                 _logger.LogInformation("Database tables were not yet created, executing all {MigrationCount} migrations.", _migrations.Length);
                 await _tableServiceClient.CreateTableIfNotExistsAsync(GetMigrationTableName());
+
+                var cashboxTableName = $"x{_queueConfiguration.QueueId.ToString().Replace("-", "")}{AzureTableStorageCashBoxRepository.TABLE_NAME}";
+                if (await _tableServiceClient.QueryAsync(t => t.Name == cashboxTableName).AnyAsync())
+                {
+                    var cashBoxTableClient = _tableServiceClient.GetTableClient(cashboxTableName);
+                    var cashBoxes = await cashBoxTableClient.QueryAsync<TableEntity>().FirstOrDefaultAsync();
+                    if (cashBoxes is not null)
+                    {
+                        MigratedFrom1_2 = true;
+                    }
+                }
                 await ExecuteMigrationsAsync(_migrations);
             }
         }
@@ -64,10 +81,17 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage
             return migration?.GetInt32("CurrentVersion") ?? -1;
         }
 
+        private async Task<bool> GetMigratedFrom1_2Async()
+        {
+            var tableClient = _tableServiceClient.GetTableClient(GetMigrationTableName());
+            var migration = await tableClient.QueryAsync<TableEntity>().FirstOrDefaultAsync();
+            return migration?.GetBoolean(nameof(MigratedFrom1_2)) ?? false;
+        }
+
         private async Task SetCurrentMigrationAsync(int version)
         {
             var tableClient = _tableServiceClient.GetTableClient(GetMigrationTableName());
-            await tableClient.UpsertEntityAsync(new TableEntity(_queueConfiguration.QueueId.ToString(), "Current") { { "CurrentVersion", version } });
+            await tableClient.UpsertEntityAsync(new TableEntity(_queueConfiguration.QueueId.ToString(), "Current") { { "CurrentVersion", version }, { nameof(MigratedFrom1_2), MigratedFrom1_2 } });
         }
 
         private async Task<bool> MigrationTableExists() => await _tableServiceClient.QueryAsync(t => t.Name == GetMigrationTableName()).AnyAsync();

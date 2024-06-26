@@ -24,9 +24,39 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
 
         protected override string GetIdForEntity(OpenTransaction entity) => entity.cbReceiptReference;
 
-        protected override AzureTableStorageOpenTransaction MapToAzureEntity(OpenTransaction entity) => Mapper.Map(entity);
+        protected override AzureTableStorageOpenTransaction MapToAzureEntity(OpenTransaction src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
 
-        protected override OpenTransaction MapToStorageEntity(AzureTableStorageOpenTransaction entity) => Mapper.Map(entity);
+            return new AzureTableStorageOpenTransaction
+            {
+                PartitionKey = Mapper.GetHashString(src.StartMoment.Ticks),
+                RowKey = src.cbReceiptReference,
+                cbReceiptReference = src.cbReceiptReference,
+                StartMoment = src.StartMoment,
+                StartTransactionSignatureBase64 = src.StartTransactionSignatureBase64,
+                TransactionNumber = src.TransactionNumber.ToString()
+            };
+        }
+
+        protected override OpenTransaction MapToStorageEntity(AzureTableStorageOpenTransaction src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+
+            return new OpenTransaction
+            {
+                cbReceiptReference = src.cbReceiptReference,
+                StartMoment = src.StartMoment,
+                StartTransactionSignatureBase64 = src.StartTransactionSignatureBase64,
+                TransactionNumber = Convert.ToInt64(src.TransactionNumber)
+            };
+        }
     }
 }
 

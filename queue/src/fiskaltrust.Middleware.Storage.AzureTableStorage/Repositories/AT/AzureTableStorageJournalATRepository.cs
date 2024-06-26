@@ -20,9 +20,47 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.AT
 
         protected override Guid GetIdForEntity(ftJournalAT entity) => entity.ftJournalATId;
 
-        protected override AzureTableStorageFtJournalAT MapToAzureEntity(ftJournalAT entity) => Mapper.Map(entity);
+        protected override AzureTableStorageFtJournalAT MapToAzureEntity(ftJournalAT src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
 
-        protected override ftJournalAT MapToStorageEntity(AzureTableStorageFtJournalAT entity) => Mapper.Map(entity);
+            return new AzureTableStorageFtJournalAT
+            {
+                PartitionKey = Mapper.GetHashString(src.TimeStamp),
+                RowKey = src.ftJournalATId.ToString(),
+                ftJournalATId = src.ftJournalATId,
+                ftQueueId = src.ftQueueId,
+                ftSignaturCreationUnitId = src.ftSignaturCreationUnitId,
+                Number = src.Number,
+                JWSHeaderBase64url = src.JWSHeaderBase64url,
+                JWSPayloadBase64url = src.JWSPayloadBase64url,
+                JWSSignatureBase64url = src.JWSSignatureBase64url,
+                TimeStamp = src.TimeStamp
+            };
+        }
+
+        protected override ftJournalAT MapToStorageEntity(AzureTableStorageFtJournalAT src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+
+            return new ftJournalAT
+            {
+                ftJournalATId = src.ftJournalATId,
+                ftQueueId = src.ftQueueId,
+                ftSignaturCreationUnitId = src.ftSignaturCreationUnitId,
+                Number = src.Number,
+                JWSHeaderBase64url = src.JWSHeaderBase64url,
+                JWSPayloadBase64url = src.JWSPayloadBase64url,
+                JWSSignatureBase64url = src.JWSSignatureBase64url,
+                TimeStamp = src.TimeStamp
+            };
+        }
 
         public IAsyncEnumerable<ftJournalAT> GetEntriesOnOrAfterTimeStampAsync(long fromInclusive, int? take = null)
         {

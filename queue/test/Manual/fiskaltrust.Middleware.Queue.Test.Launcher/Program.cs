@@ -88,7 +88,7 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
             {
                 ConfigureMySQL(config, serviceCollection);
             }
-            else if (config.Package == "fiskaltrust.Middleware.Queue.AzureTableStorage")
+            else if (config.Package == "fiskaltrust.Middleware.Queue.AzureTableStorage" || config.Package == "fiskaltrust.service.azure")
             {
                 ConfigureAzureTableStorage(config, serviceCollection);
             }

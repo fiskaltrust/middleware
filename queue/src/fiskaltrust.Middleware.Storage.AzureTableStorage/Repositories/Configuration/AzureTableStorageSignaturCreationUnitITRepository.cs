@@ -17,8 +17,38 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.Configur
 
         protected override Guid GetIdForEntity(ftSignaturCreationUnitIT entity) => entity.ftSignaturCreationUnitITId;
 
-        protected override AzureTableStorageFtSignaturCreationUnitIT MapToAzureEntity(ftSignaturCreationUnitIT entity) => Mapper.Map(entity);
+        protected override AzureTableStorageFtSignaturCreationUnitIT MapToAzureEntity(ftSignaturCreationUnitIT src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
 
-        protected override ftSignaturCreationUnitIT MapToStorageEntity(AzureTableStorageFtSignaturCreationUnitIT entity) => Mapper.Map(entity);
+            return new AzureTableStorageFtSignaturCreationUnitIT
+            {
+                PartitionKey = src.ftSignaturCreationUnitITId.ToString(),
+                RowKey = src.ftSignaturCreationUnitITId.ToString(),
+                ftSignaturCreationUnitITId = src.ftSignaturCreationUnitITId,
+                Url = src.Url,
+                TimeStamp = src.TimeStamp,
+                InfoJson = src.InfoJson
+            };
+        }
+
+        protected override ftSignaturCreationUnitIT MapToStorageEntity(AzureTableStorageFtSignaturCreationUnitIT src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+
+            return new ftSignaturCreationUnitIT
+            {
+                ftSignaturCreationUnitITId = src.ftSignaturCreationUnitITId,
+                TimeStamp = src.TimeStamp,
+                Url = src.Url,
+                InfoJson = src.InfoJson
+            };
+        }
     }
 }

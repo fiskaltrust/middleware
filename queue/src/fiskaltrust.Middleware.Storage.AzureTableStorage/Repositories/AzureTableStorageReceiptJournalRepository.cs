@@ -21,9 +21,47 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
 
         protected override Guid GetIdForEntity(ftReceiptJournal entity) => entity.ftReceiptJournalId;
 
-        protected override AzureTableStorageFtReceiptJournal MapToAzureEntity(ftReceiptJournal entity) => Mapper.Map(entity);
+        protected override AzureTableStorageFtReceiptJournal MapToAzureEntity(ftReceiptJournal src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
 
-        protected override ftReceiptJournal MapToStorageEntity(AzureTableStorageFtReceiptJournal entity) => Mapper.Map(entity);
+            return new AzureTableStorageFtReceiptJournal
+            {
+                PartitionKey = Mapper.GetHashString(src.TimeStamp),
+                RowKey = src.ftReceiptJournalId.ToString(),
+                ftReceiptJournalId = src.ftReceiptJournalId,
+                ftQueueId = src.ftQueueId,
+                ftQueueItemId = src.ftQueueItemId,
+                ftReceiptHash = src.ftReceiptHash,
+                ftReceiptMoment = src.ftReceiptMoment,
+                ftReceiptNumber = src.ftReceiptNumber,
+                ftReceiptTotal = Convert.ToDouble(src.ftReceiptTotal),
+                TimeStamp = src.TimeStamp
+            };
+        }
+
+        protected override ftReceiptJournal MapToStorageEntity(AzureTableStorageFtReceiptJournal src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+
+            return new ftReceiptJournal
+            {
+                ftReceiptJournalId = src.ftReceiptJournalId,
+                ftQueueId = src.ftQueueId,
+                ftQueueItemId = src.ftQueueItemId,
+                ftReceiptHash = src.ftReceiptHash,
+                ftReceiptMoment = src.ftReceiptMoment,
+                ftReceiptNumber = src.ftReceiptNumber,
+                ftReceiptTotal = Convert.ToDecimal(src.ftReceiptTotal),
+                TimeStamp = src.TimeStamp
+            };
+        }
 
         public IAsyncEnumerable<ftReceiptJournal> GetEntriesOnOrAfterTimeStampAsync(long fromInclusive, int? take = null)
         {

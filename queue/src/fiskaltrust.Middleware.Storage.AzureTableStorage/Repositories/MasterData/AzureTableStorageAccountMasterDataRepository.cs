@@ -23,9 +23,47 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.MasterDa
 
         protected override Guid GetIdForEntity(AccountMasterData entity) => entity.AccountId;
 
-        protected override AzureTableStorageAccountMasterData MapToAzureEntity(AccountMasterData entity) => Mapper.Map(entity);
+        protected override AzureTableStorageAccountMasterData MapToAzureEntity(AccountMasterData src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
 
-        protected override AccountMasterData MapToStorageEntity(AzureTableStorageAccountMasterData entity) => Mapper.Map(entity);
+            return new AzureTableStorageAccountMasterData
+            {
+                PartitionKey = src.AccountId.ToString(),
+                RowKey = src.AccountId.ToString(),
+                AccountId = src.AccountId,
+                AccountName = src.AccountName,
+                Street = src.Street,
+                Zip = src.Zip,
+                City = src.City,
+                Country = src.Country,
+                TaxId = src.TaxId,
+                VatId = src.VatId
+            };
+        }
+
+        protected override AccountMasterData MapToStorageEntity(AzureTableStorageAccountMasterData src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+
+            return new AccountMasterData
+            {
+                AccountId = src.AccountId,
+                AccountName = src.AccountName,
+                Street = src.Street,
+                Zip = src.Zip,
+                City = src.City,
+                Country = src.Country,
+                TaxId = src.TaxId,
+                VatId = src.VatId
+            };
+        }
     }
 }
 
