@@ -36,7 +36,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
                 PartitionKey = Mapper.GetHashString(src.StartMoment.Ticks),
                 RowKey = src.cbReceiptReference,
                 cbReceiptReference = src.cbReceiptReference,
-                StartMoment = src.StartMoment.ToUniversalTime(),
+                StartMoment = src.StartMoment,
                 StartTransactionSignatureBase64 = src.StartTransactionSignatureBase64,
                 TransactionNumber = src.TransactionNumber.ToString()
             };

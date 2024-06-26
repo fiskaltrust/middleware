@@ -38,7 +38,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.IT
                 ftSignaturCreationUnitITId = src.ftSignaturCreationUnitITId,
                 cbReceiptReference = src.cbReceiptReference,
                 JournalType = src.JournalType,
-                ReceiptDateTime = src.ReceiptDateTime.ToUniversalTime(),
+                ReceiptDateTime = src.ReceiptDateTime,
                 ReceiptNumber = src.ReceiptNumber,
                 DataJson = src.DataJson,
                 ZRepNumber = src.ZRepNumber,

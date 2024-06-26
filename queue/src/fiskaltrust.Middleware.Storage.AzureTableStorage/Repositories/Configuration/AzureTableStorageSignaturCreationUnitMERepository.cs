@@ -34,8 +34,8 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.Configur
                 TcrIntId = src.TcrIntId,
                 SoftwareCode = src.SoftwareCode,
                 MaintainerCode = src.MaintainerCode,
-                ValidFrom = src.ValidFrom?.ToUniversalTime(),
-                ValidTo = src.ValidTo?.ToUniversalTime(),
+                ValidFrom = src.ValidFrom,
+                ValidTo = src.ValidTo,
                 TcrCode = src.TcrCode
             };
         }

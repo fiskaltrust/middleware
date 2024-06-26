@@ -35,8 +35,8 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.Configur
                 ftReceiptNumerator = src.ftReceiptNumerator,
                 ftReceiptTotalizer = Convert.ToDouble(src.ftReceiptTotalizer),
                 ftReceiptHash = src.ftReceiptHash,
-                StartMoment = src.StartMoment?.ToUniversalTime(),
-                StopMoment = src.StopMoment?.ToUniversalTime(),
+                StartMoment = src.StartMoment,
+                StopMoment = src.StopMoment,
                 CountryCode = src.CountryCode,
                 Timeout = src.Timeout,
                 TimeStamp = src.TimeStamp
