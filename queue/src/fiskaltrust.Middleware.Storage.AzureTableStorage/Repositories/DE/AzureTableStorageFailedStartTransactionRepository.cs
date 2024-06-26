@@ -35,7 +35,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
             {
                 { nameof(FailedStartTransaction.cbReceiptReference), src.cbReceiptReference },
                 { nameof(FailedStartTransaction.CashBoxIdentification), src.CashBoxIdentification },
-                { nameof(FailedStartTransaction.StartMoment), src.StartMoment },
+                { nameof(FailedStartTransaction.StartMoment), src.StartMoment.ToUniversalTime() },
                 { nameof(FailedStartTransaction.ftQueueItemId), src.ftQueueItemId },
             };
 

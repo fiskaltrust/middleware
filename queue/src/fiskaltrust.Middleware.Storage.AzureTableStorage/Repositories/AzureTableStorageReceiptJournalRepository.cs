@@ -36,7 +36,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
                 ftQueueId = src.ftQueueId,
                 ftQueueItemId = src.ftQueueItemId,
                 ftReceiptHash = src.ftReceiptHash,
-                ftReceiptMoment = src.ftReceiptMoment,
+                ftReceiptMoment = src.ftReceiptMoment.ToUniversalTime(),
                 ftReceiptNumber = src.ftReceiptNumber,
                 ftReceiptTotal = Convert.ToDouble(src.ftReceiptTotal),
                 TimeStamp = src.TimeStamp

@@ -33,7 +33,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
                 {nameof(ftActionJournal.ftActionJournalId), src.ftActionJournalId},
                 {nameof(ftActionJournal.ftQueueId), src.ftQueueId},
                 {nameof(ftActionJournal.ftQueueItemId), src.ftQueueItemId},
-                {nameof(ftActionJournal.Moment), src.Moment},
+                {nameof(ftActionJournal.Moment), src.Moment.ToUniversalTime()},
                 {nameof(ftActionJournal.Priority), src.Priority},
                 {nameof(ftActionJournal.Type), src.Type},
                 {nameof(ftActionJournal.Message), src.Message},
