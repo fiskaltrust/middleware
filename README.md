@@ -9,7 +9,7 @@ National fiscalization laws highly differ between most countries, and are often 
 The Middleware itself is free, and part of a bigger ecosystem and platform that includes features for automated rollouts and maintenance, user onboarding, and much more. On top of this, the Middleware can be used with fiskaltrust's optional add-on products for revision-safe storage and 3rd party integrations.
 
 ### Features
-- Currently available in Austria, Germany and France (with more to come!)
+- Currently available in Austria, Germany, France and Italy (with more to come!)
 - International interface - implement once, use everywhere
 - Detailed documentation of national requirements (in English)
 - Free to use in all supported countries
