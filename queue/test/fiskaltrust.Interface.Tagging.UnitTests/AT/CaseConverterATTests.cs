@@ -490,7 +490,6 @@ namespace fiskaltrust.Interface.Tagging.UnitTests.AT
             var signature = new SignaturItem { ftSignatureType = 0x4154_0000_0000_0000 };
             signature.SetTypeVersion(2);
             signature.SetV2CategorySignatureType((long) V2.SignatureTypesCategory.Failure0x3);
-            signature.SetV2SignatureType((long) V2AT.ftSignatureTypes.ReceiptLogTimeFormat0x01C);
             signature.ftSignatureType.Should().Be(0x415420000000301C);
             signature.ftSignatureType = 0x4154_0000_0000_0010;
             _caseConverterAT.ConvertftSignatureTypeToV2(signature);
