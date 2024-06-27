@@ -12,8 +12,4 @@
         OutputItemType="Analyzer"
         ReferenceOutputAssembly="false" />
   </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Models\V2\AT\" />
-  </ItemGroup>
 </Project>
