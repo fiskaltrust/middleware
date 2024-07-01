@@ -31,6 +31,6 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.AcceptanceTest
             return repository;
         }
 
-        public override void DisposeDatabase() => _fixture.CleanTable(nameof(OutletMasterData));
+        public override void DisposeDatabase() => _fixture.CleanTable(AzureTableStorageOutletMasterDataRepository.TABLE_NAME);
     }
 }

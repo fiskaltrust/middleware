@@ -33,7 +33,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.AcceptanceTest
             return azureJournalITRepository;
         }
 
-        public override void DisposeDatabase() => _fixture.CleanTable(nameof(ftJournalIT));
+        public override void DisposeDatabase() => _fixture.CleanTable(AzureTableStorageJournalITRepository.TABLE_NAME);
 
         public override async Task InsertAsync_ShouldUpdateEntry_IfEntryAlreadyExists()
         {

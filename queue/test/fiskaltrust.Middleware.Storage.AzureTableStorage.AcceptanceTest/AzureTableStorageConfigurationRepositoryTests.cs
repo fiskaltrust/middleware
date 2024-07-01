@@ -5,6 +5,7 @@ using fiskaltrust.Middleware.Storage.AcceptanceTest;
 using fiskaltrust.Middleware.Storage.AzureTableStorage;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.AcceptanceTest.Fixtures;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories;
+using fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.Configuration;
 using fiskaltrust.storage.V0;
 using Xunit;
 
@@ -89,18 +90,18 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.AcceptanceTest
 
         public override void DisposeDatabase()
         {
-            _fixture.CleanTable(nameof(ftCashBox));
-            _fixture.CleanTable(nameof(ftQueue));
-            _fixture.CleanTable(nameof(ftQueueAT));
-            _fixture.CleanTable(nameof(ftQueueDE));
-            _fixture.CleanTable(nameof(ftQueueFR));
-            _fixture.CleanTable(nameof(ftQueueIT));
-            _fixture.CleanTable(nameof(ftQueueME));
-            _fixture.CleanTable(nameof(ftSignaturCreationUnitAT));
-            _fixture.CleanTable(nameof(ftSignaturCreationUnitDE));
-            _fixture.CleanTable(nameof(ftSignaturCreationUnitFR));
-            _fixture.CleanTable(nameof(ftSignaturCreationUnitIT));
-            _fixture.CleanTable(nameof(ftSignaturCreationUnitME));
+            _fixture.CleanTable(AzureTableStorageCashBoxRepository.TABLE_NAME);
+            _fixture.CleanTable(AzureTableStorageQueueRepository.TABLE_NAME);
+            _fixture.CleanTable(AzureTableStorageQueueATRepository.TABLE_NAME);
+            _fixture.CleanTable(AzureTableStorageQueueDERepository.TABLE_NAME);
+            _fixture.CleanTable(AzureTableStorageQueueFRRepository.TABLE_NAME);
+            _fixture.CleanTable(AzureTableStorageQueueITRepository.TABLE_NAME);
+            _fixture.CleanTable(AzureTableStorageQueueMERepository.TABLE_NAME);
+            _fixture.CleanTable(AzureTableStorageSignaturCreationUnitATRepository.TABLE_NAME);
+            _fixture.CleanTable(AzureTableStorageSignaturCreationUnitDERepository.TABLE_NAME);
+            _fixture.CleanTable(AzureTableStorageSignaturCreationUnitFRRepository.TABLE_NAME);
+            _fixture.CleanTable(AzureTableStorageSignaturCreationUnitITRepository.TABLE_NAME);
+            _fixture.CleanTable(AzureTableStorageSignaturCreationUnitMERepository.TABLE_NAME);
         }
     }
 }

@@ -202,7 +202,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             request.cbReceiptReference = string.Join(string.Empty, StorageTestFixtureProvider.GetFixture().CreateMany<char>(40_000));
             entryToInsert.request = JsonConvert.SerializeObject(request);
 
-            var response = JsonConvert.DeserializeObject<ReceiptRequest>(entryToInsert.response);
+            var response = JsonConvert.DeserializeObject<ReceiptResponse>(entryToInsert.response);
             response.cbReceiptReference = string.Join(string.Empty, StorageTestFixtureProvider.GetFixture().CreateMany<char>(40_000));
             entryToInsert.response = JsonConvert.SerializeObject(response);
 
@@ -237,7 +237,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
         }
 
         [Fact]
-        public async Task InsertOrUpdateAsync_ShouldUpdateEntry_IfEntryAlreadyExists()
+        public virtual async Task InsertOrUpdateAsync_ShouldUpdateEntry_IfEntryAlreadyExists()
         {
             var entries = StorageTestFixtureProvider.GetFixture().CreateMany<ftQueueItem>(10).ToList();
 
@@ -252,7 +252,6 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
 
             updatedEntry.ftQueueRow.Should().Be(long.MaxValue);
             (await sut.GetAsync()).Count().Should().Be(count);
-
         }
 
         [Fact]
@@ -391,7 +390,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
 
 
         [Fact]
-        public async Task GetQueueItemsForReceiptReferenceAsync_PosAndNonePosReceipts_ValidQueueItems()
+        public virtual async Task GetQueueItemsForReceiptReferenceAsync_PosAndNonePosReceipts_ValidQueueItems()
         {
             var receiptReference = "receiptReference9";
 

@@ -59,6 +59,8 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
                 return null;
             }
 
+            var transactionNumber = src.GetString(nameof(FailedFinishTransaction.TransactionNumber));
+
             return new FailedFinishTransaction
             {
                 cbReceiptReference = src.GetString(nameof(FailedFinishTransaction.cbReceiptReference)),
@@ -66,7 +68,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
                 FinishMoment = src.GetDateTime(nameof(FailedFinishTransaction.FinishMoment)).GetValueOrDefault(),
                 ftQueueItemId = src.GetGuid(nameof(FailedFinishTransaction.ftQueueItemId)).GetValueOrDefault(),
                 Request = src.GetOversized(nameof(FailedFinishTransaction.Request)),
-                TransactionNumber = src.GetInt64(nameof(FailedFinishTransaction.TransactionNumber))
+                TransactionNumber = transactionNumber == null ? null : Convert.ToInt64(transactionNumber)
             };
         }
     }

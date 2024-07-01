@@ -143,9 +143,12 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
             }).ToEnumerable());
         }
 
+
+
         public async IAsyncEnumerable<ftJournalDE> GetByTimeStampRangeAsync(long fromInclusive, long toInclusive)
         {
-            var journals = GetByTimeStampRangeAsync(fromInclusive, toInclusive);
+            var result = _tableClient.QueryAsync<AzureTableStorageFtJournalDE>(filter: TableClient.CreateQueryFilter($"PartitionKey le {Mapper.GetHashString(fromInclusive)} and PartitionKey ge {Mapper.GetHashString(toInclusive)}"));
+            var journals = result.Select(MapToStorageEntity);
             await foreach (var journal in journals)
             {
                 journal.FileContentBase64 = await DownloadJournalDEFromBlobAsync(journal);

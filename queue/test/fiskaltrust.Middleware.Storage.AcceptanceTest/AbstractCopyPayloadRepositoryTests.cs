@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Threading.Tasks;
+using AutoFixture;
 using fiskaltrust.Middleware.Contracts.Models.FR;
 using fiskaltrust.Middleware.Contracts.Repositories.FR;
+using FluentAssertions;
 using Xunit;
 
 namespace fiskaltrust.Middleware.Storage.AcceptanceTest
@@ -16,22 +18,11 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
         {
             var repo = await CreateRepository();
 
-            var payload = new ftJournalFRCopyPayload
-            {
-                QueueId = Guid.NewGuid(),
-                CashBoxIdentification = "test",
-                Siret = "12345",
-                ReceiptId = "receipt1",
-                ReceiptMoment = DateTime.UtcNow,
-                QueueItemId = Guid.NewGuid(),
-                CopiedReceiptReference = "ref1",
-                CertificateSerialNumber = "cert123",
-                TimeStamp = DateTime.UtcNow.Ticks
-            };
+            var payload = StorageTestFixtureProvider.GetFixture().Create<ftJournalFRCopyPayload>();
 
             await repo.InsertAsync(payload);
 
-            Assert.Equal(payload, await repo.GetAsync(payload.QueueItemId));
+            payload.Should().BeEquivalentTo(await repo.GetAsync(payload.QueueItemId));
         }
     }
 }

@@ -154,8 +154,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
                     where
                     (fromIncl.HasValue ? queueItem.TimeStamp >= fromIncl.Value : true) &&
                     (toIncl.HasValue ? queueItem.TimeStamp <= toIncl.Value : true) &&
-                    JsonConvert.DeserializeObject<ReceiptRequest>(queueItem.request).IncludeInReferences() &&
-                    !string.IsNullOrEmpty(queueItem.response)
+                    (!string.IsNullOrEmpty(queueItem.response)) && JsonConvert.DeserializeObject<ReceiptRequest>(queueItem.request).IncludeInReferences()
                     group queueItem by queueItem.cbReceiptReference into newGroup
                     orderby newGroup.Key
                     select newGroup.Key;
@@ -169,8 +168,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
         {
             var queueItemsForReceiptReference =
                 from queueItem in GetByReceiptReferenceAsync(receiptReference).ToEnumerable()
-                where JsonConvert.DeserializeObject<ReceiptRequest>(queueItem.request).IncludeInReferences() &&
-                !string.IsNullOrEmpty(queueItem.response)
+                where (!string.IsNullOrEmpty(queueItem.response)) && JsonConvert.DeserializeObject<ReceiptRequest>(queueItem.request).IncludeInReferences()
                 orderby queueItem.TimeStamp
                 select queueItem;
             await foreach (var entry in queueItemsForReceiptReference.ToAsyncEnumerable())
