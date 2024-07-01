@@ -103,9 +103,21 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
             await _receiptReferenceIndexRepository.InsertOrUpdateAsync(new ReceiptReferenceIndex { cbReceiptReference = storageEntity.cbReceiptReference, ftQueueItemId = storageEntity.ftQueueItemId });
         }
 
+        public IAsyncEnumerable<ftQueueItem> GetByTimeStampRangeAsync(long fromInclusive, long toInclusive)
+        {
+            var result = _tableClient.QueryAsync<TableEntity>(filter: TableClient.CreateQueryFilter($"TimeStamp ge {fromInclusive} and TimeStamp le {toInclusive}"));
+            return result.Select(MapToStorageEntity);
+        }
+
+        public IAsyncEnumerable<ftQueueItem> GetEntriesOnOrAfterTimeStampAsync(long fromInclusive)
+        {
+            var result = _tableClient.QueryAsync<TableEntity>(filter: TableClient.CreateQueryFilter($"TimeStamp ge {fromInclusive}"));
+            return result.Select(MapToStorageEntity);
+        }
+
         public IAsyncEnumerable<ftQueueItem> GetEntriesOnOrAfterTimeStampAsync(long fromInclusive, int? take = null)
         {
-            var result = base.GetEntriesOnOrAfterTimeStampAsync(fromInclusive).OrderBy(x => x.TimeStamp);
+            var result = GetEntriesOnOrAfterTimeStampAsync(fromInclusive).OrderBy(x => x.TimeStamp);
             return take.HasValue ? result.Take(take.Value) : result;
         }
 

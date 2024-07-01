@@ -143,9 +143,9 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
             }).ToEnumerable());
         }
 
-        public override async IAsyncEnumerable<ftJournalDE> GetByTimeStampRangeAsync(long fromInclusive, long toInclusive)
+        public async IAsyncEnumerable<ftJournalDE> GetByTimeStampRangeAsync(long fromInclusive, long toInclusive)
         {
-            var journals = base.GetByTimeStampRangeAsync(fromInclusive, toInclusive);
+            var journals = GetByTimeStampRangeAsync(fromInclusive, toInclusive);
             await foreach (var journal in journals)
             {
                 journal.FileContentBase64 = await DownloadJournalDEFromBlobAsync(journal);

@@ -63,9 +63,21 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.ME
             };
         }
 
+        public IAsyncEnumerable<ftJournalME> GetByTimeStampRangeAsync(long fromInclusive, long toInclusive)
+        {
+            var result = _tableClient.QueryAsync<AzureTableStorageFtJournalME>(filter: TableClient.CreateQueryFilter($"PartitionKey le {Mapper.GetHashString(fromInclusive)} and PartitionKey ge {Mapper.GetHashString(toInclusive)}"));
+            return result.Select(MapToStorageEntity);
+        }
+
+        public IAsyncEnumerable<ftJournalME> GetEntriesOnOrAfterTimeStampAsync(long fromInclusive)
+        {
+            var result = _tableClient.QueryAsync<AzureTableStorageFtJournalME>(filter: TableClient.CreateQueryFilter($"PartitionKey le {Mapper.GetHashString(fromInclusive)}"));
+            return result.Select(MapToStorageEntity);
+        }
+
         public IAsyncEnumerable<ftJournalME> GetEntriesOnOrAfterTimeStampAsync(long fromInclusive, int? take = null)
         {
-            var result = base.GetEntriesOnOrAfterTimeStampAsync(fromInclusive).OrderBy(x => x.TimeStamp);
+            var result = GetEntriesOnOrAfterTimeStampAsync(fromInclusive).OrderBy(x => x.TimeStamp);
             return take.HasValue ? result.Take(take.Value) : result;
         }
         public async Task<ftJournalME> GetLastEntryAsync()

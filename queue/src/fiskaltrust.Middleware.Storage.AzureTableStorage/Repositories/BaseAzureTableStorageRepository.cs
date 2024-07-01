@@ -57,18 +57,6 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
             return MapToStorageEntity(entity);
         }
 
-        public virtual IAsyncEnumerable<TStorageEntity> GetByTimeStampRangeAsync(long fromInclusive, long toInclusive)
-        {
-            var result = _tableClient.QueryAsync<TAzureEntity>(filter: TableClient.CreateQueryFilter($"PartitionKey le {Mapper.GetHashString(fromInclusive)} and PartitionKey ge {Mapper.GetHashString(toInclusive)}"));
-            return result.Select(MapToStorageEntity);
-        }
-
-        public IAsyncEnumerable<TStorageEntity> GetEntriesOnOrAfterTimeStampAsync(long fromInclusive)
-        {
-            var result = _tableClient.QueryAsync<TAzureEntity>(filter: TableClient.CreateQueryFilter($"PartitionKey le {Mapper.GetHashString(fromInclusive)}"));
-            return result.Select(MapToStorageEntity);
-        }
-
         protected abstract TKey GetIdForEntity(TStorageEntity entity);
 
         protected abstract void EntityUpdated(TStorageEntity entity);
