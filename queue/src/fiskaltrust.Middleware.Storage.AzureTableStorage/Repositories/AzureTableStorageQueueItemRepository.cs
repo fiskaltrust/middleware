@@ -97,9 +97,12 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
             await _receiptReferenceIndexRepository.InsertAsync(new ReceiptReferenceIndex { cbReceiptReference = storageEntity.cbReceiptReference, ftQueueItemId = storageEntity.ftQueueItemId });
         }
 
-        public override async Task InsertOrUpdateAsync(ftQueueItem storageEntity)
+
+        public async Task InsertOrUpdateAsync(ftQueueItem storageEntity)
         {
-            await base.InsertOrUpdateAsync(storageEntity);
+            EntityUpdated(storageEntity);
+            var entity = MapToAzureEntity(storageEntity);
+            await _tableClient.UpsertEntityAsync(entity, TableUpdateMode.Replace);
             await _receiptReferenceIndexRepository.InsertOrUpdateAsync(new ReceiptReferenceIndex { cbReceiptReference = storageEntity.cbReceiptReference, ftQueueItemId = storageEntity.ftQueueItemId });
         }
 

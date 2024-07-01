@@ -24,6 +24,13 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
 
         protected override string GetIdForEntity(FailedFinishTransaction entity) => entity.cbReceiptReference;
 
+        public async Task InsertOrUpdateAsync(FailedFinishTransaction storageEntity)
+        {
+            EntityUpdated(storageEntity);
+            var entity = MapToAzureEntity(storageEntity);
+            await _tableClient.UpsertEntityAsync(entity, TableUpdateMode.Replace);
+        }
+
         protected override TableEntity MapToAzureEntity(FailedFinishTransaction src)
         {
             if (src == null)
