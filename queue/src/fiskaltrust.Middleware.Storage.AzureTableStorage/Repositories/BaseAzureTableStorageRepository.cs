@@ -57,15 +57,6 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
 
         protected abstract TAzureEntity MapToAzureEntity(TStorageEntity entity);
 
-        protected async Task ClearTableAsync()
-        {
-            var result = _tableClient.QueryAsync<TableEntity>(select: new List<string>() { "PartitionKey", "RowKey" });
-            await foreach (var item in result)
-            {
-                await _tableClient.DeleteEntityAsync(item.PartitionKey, item.RowKey);
-            }
-        }
-
         private async Task<TAzureEntity> RetrieveAsync(TKey id)
         {
             var result = _tableClient.QueryAsync<TAzureEntity>(x => x.RowKey == id.ToString());
