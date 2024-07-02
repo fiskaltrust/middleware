@@ -24,58 +24,58 @@ namespace fiskaltrust.Interface.Tagging.UnitTests.AT
         {
             var request = new ReceiptRequest { ftReceiptCase = 0x4154200000010002 };
             _caseConverterAT.ConvertftReceiptCaseToV1(request);
-            request.ftReceiptCase.Should().Be(0x4154000100010011);
+            request.ftReceiptCase.Should().Be(0x4154000100000002);
             request.ftReceiptCase = 0x4154200000000000;
             _caseConverterAT.ConvertftReceiptCaseToV1(request);
-            request.ftReceiptCase.Should().Be(0x4154000100000000);
+            request.ftReceiptCase.Should().Be(0x4154000000000000);
             request.ftReceiptCase = 0x4154200000000001;
             _caseConverterAT.ConvertftReceiptCaseToV1(request);
-            request.ftReceiptCase.Should().Be(0x4154000100000001);
+            request.ftReceiptCase.Should().Be(0x4154000000000001);
             request.ftReceiptCase = 0x4154200000000002;
             _caseConverterAT.ConvertftReceiptCaseToV1(request);
-            request.ftReceiptCase.Should().Be(0x4154000100000011);
+            request.ftReceiptCase.Should().Be(0x4154000000000002);
             request.ftReceiptCase = 0x4154200000000005;
             _caseConverterAT.ConvertftReceiptCaseToV1(request);
-            request.ftReceiptCase.Should().Be(0x415400010000000F);
+            request.ftReceiptCase.Should().Be(0x4154000000000005);
             request.ftReceiptCase = 0x4154200000001002;
             _caseConverterAT.ConvertftReceiptCaseToV1(request);
-            request.ftReceiptCase.Should().Be(0x415400010000000C);
+            request.ftReceiptCase.Should().Be(0x4154000000000010);
             request.ftReceiptCase = 0x4154200000001001;
             _caseConverterAT.ConvertftReceiptCaseToV1(request);
-            request.ftReceiptCase.Should().Be(0x415400010000000D);
+            request.ftReceiptCase.Should().Be(0x4154000000000006);
             request.ftReceiptCase = 0x4154200000002000;
             _caseConverterAT.ConvertftReceiptCaseToV1(request);
-            request.ftReceiptCase.Should().Be(0x4154000100000002);
+            request.ftReceiptCase.Should().Be(0x4154000000000007);
             request.ftReceiptCase = 0x4154200000002011;
             _caseConverterAT.ConvertftReceiptCaseToV1(request);
-            request.ftReceiptCase.Should().Be(0x4154_0001_2800_0007);
+            request.ftReceiptCase.Should().Be(0x4154000000000011);
             request.ftReceiptCase = 0x4154200000002012;
             _caseConverterAT.ConvertftReceiptCaseToV1(request);
-            request.ftReceiptCase.Should().Be(0x4154_0001_0800_0005);
+            request.ftReceiptCase.Should().Be(0x4154000000000012);
             request.ftReceiptCase = 0x4154200000002013;
             _caseConverterAT.ConvertftReceiptCaseToV1(request);
-            request.ftReceiptCase.Should().Be(0x4154_0001_0800_0006);
+            request.ftReceiptCase.Should().Be(0x4154000000000013);
             request.ftReceiptCase = 0x4154200000003000;
             _caseConverterAT.ConvertftReceiptCaseToV1(request);
-            request.ftReceiptCase.Should().Be(0x4154000100000014);
+            request.ftReceiptCase.Should().Be(0x4154000000000003);
             request.ftReceiptCase = 0x4154200000003003;
             _caseConverterAT.ConvertftReceiptCaseToV1(request);
-            request.ftReceiptCase.Should().Be(0x4154000100000012);
+            request.ftReceiptCase.Should().Be(0x4154000000000008);
             request.ftReceiptCase = 0x4154200000003004;
             _caseConverterAT.ConvertftReceiptCaseToV1(request);
-            request.ftReceiptCase.Should().Be(0x4154000100000010);
+            request.ftReceiptCase.Should().Be(0x4154000000000009);
             request.ftReceiptCase = 0x4154200000004001;
             _caseConverterAT.ConvertftReceiptCaseToV1(request);
-            request.ftReceiptCase.Should().Be(0x4154000100000003);
+            request.ftReceiptCase.Should().Be(0x415400000000000A);
             request.ftReceiptCase = 0x4154200000004002;
             _caseConverterAT.ConvertftReceiptCaseToV1(request);
-            request.ftReceiptCase.Should().Be(0x4154000100000004);
+            request.ftReceiptCase.Should().Be(0x415400000000000B);
             request.ftReceiptCase = 0x4154200000004011;
             _caseConverterAT.ConvertftReceiptCaseToV1(request);
-            request.ftReceiptCase.Should().Be(0x4154000100000017);
+            request.ftReceiptCase.Should().Be(0x415400000000000C);
             request.ftReceiptCase = 0x4154200000004012;
             _caseConverterAT.ConvertftReceiptCaseToV1(request);
-            request.ftReceiptCase.Should().Be(0x4154000100000018);
+            request.ftReceiptCase.Should().Be(0x415400000000000D);
         }
 
         [Fact]
@@ -83,22 +83,22 @@ namespace fiskaltrust.Interface.Tagging.UnitTests.AT
         {
             var chargeItem = new ChargeItem { ftChargeItemCase = 0x4154200000000003 };
             _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000001);
+            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000003);
             chargeItem.ftChargeItemCase = 0x4154200000000001;
             _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000002);
+            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000001);
             chargeItem.ftChargeItemCase = 0x4154200000000004;
             _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000003);
+            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000004);
             chargeItem.ftChargeItemCase = 0x4154200000000005;
             _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000004);
+            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000005);
             chargeItem.ftChargeItemCase = 0x4154200000000008;
             _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000005);
+            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000008);
             chargeItem.ftChargeItemCase = 0x4154200000000007;
             _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000006);
+            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000007);
             chargeItem.ftChargeItemCase = 0x4154200000005000;
             _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
             chargeItem.ftChargeItemCase.Should().Be(0x41540000000000A1);
@@ -107,49 +107,49 @@ namespace fiskaltrust.Interface.Tagging.UnitTests.AT
             chargeItem.ftChargeItemCase.Should().Be(0x41540000000000A2);
             chargeItem.ftChargeItemCase = 0x4154200000000013;
             _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000011);
+            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000013);
             chargeItem.ftChargeItemCase = 0x4154200000000011;
             _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000012);
+            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000011);
             chargeItem.ftChargeItemCase = 0x4154200000000014;
             _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000013);
+            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000014);
             chargeItem.ftChargeItemCase = 0x4154200000000015;
             _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000014);
+            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000015);
             chargeItem.ftChargeItemCase = 0x4154200000000018;
             _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000015);
+            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000018);
             chargeItem.ftChargeItemCase = 0x4154200000000017;
             _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000016);
+            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000017);
             chargeItem.ftChargeItemCase = 0x4154200000000010;
             _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000017);
+            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000010);
             chargeItem.ftChargeItemCase = 0x4154200000000023;
             _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000019);
+            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000023);
             chargeItem.ftChargeItemCase = 0x4154200000000021;
             _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(            0x415400000000001A);
-            chargeItem.ftChargeItemCase = 0x4154200000000024;
+            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000021);
+                    chargeItem.ftChargeItemCase = 0x4154200000000024;
             _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x415400000000001B);
+            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000024);
             chargeItem.ftChargeItemCase = 0x4154200000000025;
             _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x415400000000001C);
+            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000025);
             chargeItem.ftChargeItemCase = 0x4154200000000028;
             _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x415400000000001D);
+            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000028);
             chargeItem.ftChargeItemCase = 0x4154200000000027;
             _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x415400000000001E);
+            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000027);
             chargeItem.ftChargeItemCase = 0x4154200000000020;
             _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x415400000000001F);
+            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000020);
             chargeItem.ftChargeItemCase = 0x4154200000000025;
             _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x415400000000001C);
+            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000025);
             chargeItem.ftChargeItemCase = 0x4154200000100003;
             chargeItem.Amount = -5;
             _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
@@ -431,40 +431,40 @@ namespace fiskaltrust.Interface.Tagging.UnitTests.AT
             payItem.ftPayItemCase.Should().Be(0x4154000000000005);
             payItem.ftPayItemCase = 0x4154200000000006;
             _caseConverterAT.ConvertftPayItemCaseToV1(payItem);
-            payItem.ftPayItemCase.Should().Be(0x415400000000000D);
+            payItem.ftPayItemCase.Should().Be(0x4154000000000006);
             payItem.ftPayItemCase = 0x4154200000800007;
             _caseConverterAT.ConvertftPayItemCaseToV1(payItem);
-            payItem.ftPayItemCase.Should().Be(0x4154000000000006);
+            payItem.ftPayItemCase.Should().Be(0x4154000000000007);
             payItem.ftPayItemCase = 0x4154200000800008;
             _caseConverterAT.ConvertftPayItemCaseToV1(payItem);
-            payItem.ftPayItemCase.Should().Be(0x4154000000000007);
+            payItem.ftPayItemCase.Should().Be(0x4154000000000008);
             payItem.ftPayItemCase = 0x4154200000000009;
             _caseConverterAT.ConvertftPayItemCaseToV1(payItem);
-            payItem.ftPayItemCase.Should().Be(0x415400000000000E);
+            payItem.ftPayItemCase.Should().Be(0x4154000000000009);
             payItem.ftPayItemCase = 0x415420000080000A;
             _caseConverterAT.ConvertftPayItemCaseToV1(payItem);
-            payItem.ftPayItemCase.Should().Be(0x4154000000000008);
+            payItem.ftPayItemCase.Should().Be(0x415400000000000A);
             payItem.ftPayItemCase = 0x415420000080000B;
             _caseConverterAT.ConvertftPayItemCaseToV1(payItem);
-            payItem.ftPayItemCase.Should().Be(0x4154000000000009);
+            payItem.ftPayItemCase.Should().Be(0x415400000000000B);
             payItem.ftPayItemCase = 0x4154200000800009;
             _caseConverterAT.ConvertftPayItemCaseToV1(payItem);
-            payItem.ftPayItemCase.Should().Be(0x415400000000000F);
+            payItem.ftPayItemCase.Should().Be(0x415400000000000C);
             payItem.ftPayItemCase = 0x415420000000000D;
             _caseConverterAT.ConvertftPayItemCaseToV1(payItem);
-            payItem.ftPayItemCase.Should().Be(0x415400000000000A);
+            payItem.ftPayItemCase.Should().Be(0x415400000000000D);
             payItem.ftPayItemCase = 0x4154200000400001;
             _caseConverterAT.ConvertftPayItemCaseToV1(payItem);
-            payItem.ftPayItemCase.Should().Be(0x4154000000000010);
+            payItem.ftPayItemCase.Should().Be(0x415400000000000E);
             payItem.ftPayItemCase = 0x4154200000200001;
             _caseConverterAT.ConvertftPayItemCaseToV1(payItem);
-            payItem.ftPayItemCase.Should().Be(0x415400000000000B);
+            payItem.ftPayItemCase.Should().Be(0x415400000000000F);
             payItem.ftPayItemCase = 0x415420000000000E;
             _caseConverterAT.ConvertftPayItemCaseToV1(payItem);
-            payItem.ftPayItemCase.Should().Be(0x4154000000000011);
+            payItem.ftPayItemCase.Should().Be(0x4154000000000010);
             payItem.ftPayItemCase = 0x415420000000000C;
             _caseConverterAT.ConvertftPayItemCaseToV1(payItem);
-            payItem.ftPayItemCase.Should().Be(0x4154000000000014);
+            payItem.ftPayItemCase.Should().Be(0x4154000000000011);
         }
 
         [Fact]
@@ -479,7 +479,7 @@ namespace fiskaltrust.Interface.Tagging.UnitTests.AT
             journal.ftJournalType = 0x4154200000001002;
             _caseConverterAT.ConvertftJournalTypeToV1(journal);
             journal.ftJournalType.Should().Be(0x4154000000000002);
-                    journal.ftJournalType = 0x4154200000001003;
+            journal.ftJournalType = 0x4154200000001003;
             _caseConverterAT.ConvertftJournalTypeToV1(journal);
             journal.ftJournalType.Should().Be(0x4154000000000003);
         }
@@ -487,68 +487,68 @@ namespace fiskaltrust.Interface.Tagging.UnitTests.AT
         [Fact]
         public void SignatureTypes_ShouldreturnCorrect()
         {
-            var signature = new SignaturItem { ftSignatureType = 0x4154_0000_0000_0000 };
+            var signature = new SignaturItem { ftSignatureType = 0x4154000000000000 };
             signature.SetTypeVersion(2);
-            signature.SetV2CategorySignatureType((long) V2.SignatureTypesCategory.Failure0x3);
-            signature.ftSignatureType.Should().Be(0x415420000000301C);
-            signature.ftSignatureType = 0x4154_0000_0000_0010;
+            signature.SetV2CategorySignatureType((long)V2.SignatureTypesCategory.Failure0x3);
+            signature.ftSignatureType.Should().Be(0x415420000000300C);
+            signature.ftSignatureType = 0x4154000000000010;
             _caseConverterAT.ConvertftSignatureTypeToV2(signature);
             signature.ftSignatureType.Should().Be(0x4154200000000010);
-            signature.ftSignatureType = 0x4154_0000_0000_0011;
+            signature.ftSignatureType = 0x4154000000000011;
             _caseConverterAT.ConvertftSignatureTypeToV2(signature);
             signature.ftSignatureType.Should().Be(0x4154200000000011);
-            signature.ftSignatureType = 0x4154_0000_0000_0012;
+            signature.ftSignatureType = 0x4154000000000012;
             _caseConverterAT.ConvertftSignatureTypeToV2(signature);
             signature.ftSignatureType.Should().Be(0x4154200000000012);
-            signature.ftSignatureType = 0x4154_0000_0000_0013;
+            signature.ftSignatureType = 0x4154000000000013;
             _caseConverterAT.ConvertftSignatureTypeToV2(signature);
             signature.ftSignatureType.Should().Be(0x4154200000000013);
-            signature.ftSignatureType = 0x4154_0000_0000_0014;
+            signature.ftSignatureType = 0x4154000000000014;
             _caseConverterAT.ConvertftSignatureTypeToV2(signature);
             signature.ftSignatureType.Should().Be(0x4154200000000014);
-            signature.ftSignatureType = 0x4154_0000_0000_0015;
+            signature.ftSignatureType = 0x4154000000000015;
             _caseConverterAT.ConvertftSignatureTypeToV2(signature);
             signature.ftSignatureType.Should().Be(0x4154200000000015);
-            signature.ftSignatureType = 0x4154_0000_0000_0016;
+            signature.ftSignatureType = 0x4154000000000016;
             _caseConverterAT.ConvertftSignatureTypeToV2(signature);
             signature.ftSignatureType.Should().Be(0x4154200000000016);
-            signature.ftSignatureType = 0x4154_0000_0000_0017;
+            signature.ftSignatureType = 0x4154000000000017;
             _caseConverterAT.ConvertftSignatureTypeToV2(signature);
             signature.ftSignatureType.Should().Be(0x4154200000000017);
-            signature.ftSignatureType = 0x4154_0000_0000_0018;
+            signature.ftSignatureType = 0x4154000000000018;
             _caseConverterAT.ConvertftSignatureTypeToV2(signature);
             signature.ftSignatureType.Should().Be(0x4154200000000018);
-            signature.ftSignatureType = 0x4154_0000_0000_0019;
+            signature.ftSignatureType = 0x4154000000000019;
             _caseConverterAT.ConvertftSignatureTypeToV2(signature);
             signature.ftSignatureType.Should().Be(0x4154200000000019);
-            signature.ftSignatureType = 0x4154_0000_0000_001A;
+            signature.ftSignatureType = 0x415400000000001A;
             _caseConverterAT.ConvertftSignatureTypeToV2(signature);
             signature.ftSignatureType.Should().Be(0x415420000000001A);
-            signature.ftSignatureType = 0x4154_0000_0000_001B;
+            signature.ftSignatureType = 0x415400000000001B;
             _caseConverterAT.ConvertftSignatureTypeToV2(signature);
             signature.ftSignatureType.Should().Be(0x415420000000001B);
-            signature.ftSignatureType = 0x4154_0000_0000_001C;
+            signature.ftSignatureType = 0x415400000000001C;
             _caseConverterAT.ConvertftSignatureTypeToV2(signature);
             signature.ftSignatureType.Should().Be(0x415420000000001C);
-            signature.ftSignatureType = 0x4154_0000_0000_001D;
+            signature.ftSignatureType = 0x415400000000001D;
             _caseConverterAT.ConvertftSignatureTypeToV2(signature);
             signature.ftSignatureType.Should().Be(0x415420000000001D);
-            signature.ftSignatureType = 0x4154_0000_0000_001E;
+            signature.ftSignatureType = 0x415400000000001E;
             _caseConverterAT.ConvertftSignatureTypeToV2(signature);
             signature.ftSignatureType.Should().Be(0x415420000000001E);
-            signature.ftSignatureType = 0x4154_0000_0000_001F;
+            signature.ftSignatureType = 0x415400000000001F;
             _caseConverterAT.ConvertftSignatureTypeToV2(signature);
             signature.ftSignatureType.Should().Be(0x415420000000001F);
-            signature.ftSignatureType = 0x4154_0000_0000_0020;
+            signature.ftSignatureType = 0x4154000000000020;
             _caseConverterAT.ConvertftSignatureTypeToV2(signature);
             signature.ftSignatureType.Should().Be(0x4154200000000020);
-            signature.ftSignatureType = 0x4154_0000_0000_0021;
+            signature.ftSignatureType = 0x4154000000000021;
             _caseConverterAT.ConvertftSignatureTypeToV2(signature);
             signature.ftSignatureType.Should().Be(0x4154200000000021);
-            signature.ftSignatureType = 0x4154_0000_0000_0022;
+            signature.ftSignatureType = 0x4154000000000022;
             _caseConverterAT.ConvertftSignatureTypeToV2(signature);
             signature.ftSignatureType.Should().Be(0x4154200000000022);
-            signature.ftSignatureType = 0x4154_0000_0000_0023;
+            signature.ftSignatureType = 0x4154000000000023;
             _caseConverterAT.ConvertftSignatureTypeToV2(signature);
             signature.ftSignatureType.Should().Be(0x4154200000000023);
         }
@@ -557,32 +557,25 @@ namespace fiskaltrust.Interface.Tagging.UnitTests.AT
         public void SignatureFormat_ShouldreturnCorrect()
         {
             var signature = new SignaturItem { ftSignatureFormat = 0x0_0000 };
-            signature.SetV2SignatureFormat((long) ftSignatureFormats.Base640x000D);
+            signature.SetV2SignatureFormat((long)ftSignatureFormats.Base640x000D);
             signature.IsV2SignatureFormatText0x0001();
             signature.ftSignatureFormat.Should().Be(0x000D);
             signature.SetV2SignatureFormatFlagAfterHeader0x1();
             signature.ftSignatureFormat.Should().Be(0x1_000D);
 
-            signature = new SignaturItem { ftSignatureFormat = 0x1_000D, ftSignatureType = 0x4154_0000_0000_0010 };
+            signature = new SignaturItem { ftSignatureFormat = 0x1_000D, ftSignatureType = 0x4154000000000010 };
             _caseConverterAT.ConvertftSignatureTypeToV2(signature);
             _caseConverterAT.ConvertftSignatureFormatToV2(signature);
             signature.ftSignatureFormat.Should().Be(0x0_000D);
-            signature.ftSignatureType.Should().Be(0x415420000010_0010);
+            signature.ftSignatureType.Should().Be(0x4154200000000010);
         }
 
         [Fact]
         public void ConvertftReceiptState_ShouldreturnCorrect()
         {
-            var request = new ReceiptResponse { ftState = 0x4154_0000_0000_0100 };
+            var request = new ReceiptResponse { ftState = 0x4154000000000100 };
             _caseConverterAT.ConvertftStateToV2(request);
-
-            request.ftState.Should().Be(0x4154200100000000);
+            request.ftState.Should().Be(0x4154200000010000);
         }
     }
 }
-
-           
-
-
-
-
