@@ -75,7 +75,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
         public IAsyncEnumerable<ftJournalDE> GetEntriesOnOrAfterTimeStampAsync(long fromInclusive, int? take = null)
         {
             var result = _tableClient
-                .QueryAsync<AzureTableStorageFtJournalDE>(filter: TableClient.CreateQueryFilter($"PartitionKey le {Mapper.GetHashString(fromInclusive)}"))
+                .QueryAsync<AzureTableStorageFtJournalDE>(filter: TableClient.CreateQueryFilter<AzureTableStorageFtJournalDE>(x => x.PartitionKey.CompareTo(Mapper.GetHashString(fromInclusive)) <= 0))
                 .SelectAwait(async x =>
                 {
                     var entity = MapToStorageEntity(x);
@@ -147,7 +147,8 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
 
         public async IAsyncEnumerable<ftJournalDE> GetByTimeStampRangeAsync(long fromInclusive, long toInclusive)
         {
-            var result = _tableClient.QueryAsync<AzureTableStorageFtJournalDE>(filter: TableClient.CreateQueryFilter($"PartitionKey le {Mapper.GetHashString(fromInclusive)} and PartitionKey ge {Mapper.GetHashString(toInclusive)}"));
+            var result = _tableClient.QueryAsync<AzureTableStorageFtJournalDE>(filter: 
+                TableClient.CreateQueryFilter<AzureTableStorageFtJournalDE>(x => x.PartitionKey.CompareTo(Mapper.GetHashString(fromInclusive)) <= 0 && x.PartitionKey.CompareTo(Mapper.GetHashString(toInclusive)) >= 0));
             var journals = result.Select(MapToStorageEntity);
             await foreach (var journal in journals)
             {

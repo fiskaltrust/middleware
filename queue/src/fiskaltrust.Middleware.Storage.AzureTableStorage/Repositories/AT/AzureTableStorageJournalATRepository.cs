@@ -64,13 +64,16 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.AT
 
         public IAsyncEnumerable<ftJournalAT> GetByTimeStampRangeAsync(long fromInclusive, long toInclusive)
         {
-            var result = _tableClient.QueryAsync<AzureTableStorageFtJournalAT>(filter: TableClient.CreateQueryFilter($"PartitionKey le {Mapper.GetHashString(fromInclusive)} and PartitionKey ge {Mapper.GetHashString(toInclusive)}"));
+            var result = _tableClient.QueryAsync<AzureTableStorageFtJournalAT>(filter:
+                TableClient.CreateQueryFilter<AzureTableStorageFtJournalAT>(x => x.PartitionKey.CompareTo(Mapper.GetHashString(fromInclusive)) <= 0 && x.PartitionKey.CompareTo(Mapper.GetHashString(toInclusive)) >= 0));
             return result.Select(MapToStorageEntity);
         }
 
         public IAsyncEnumerable<ftJournalAT> GetEntriesOnOrAfterTimeStampAsync(long fromInclusive)
         {
-            var result = _tableClient.QueryAsync<AzureTableStorageFtJournalAT>(filter: TableClient.CreateQueryFilter($"PartitionKey le {Mapper.GetHashString(fromInclusive)}"));
+            var result = _tableClient.QueryAsync<AzureTableStorageFtJournalAT>(filter:
+                TableClient.CreateQueryFilter<AzureTableStorageFtJournalAT>(x => x.PartitionKey.CompareTo(Mapper.GetHashString(fromInclusive)) <= 0));
+
             return result.Select(MapToStorageEntity);
         }
 

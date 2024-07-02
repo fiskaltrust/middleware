@@ -108,13 +108,13 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
 
         public IAsyncEnumerable<ftQueueItem> GetByTimeStampRangeAsync(long fromInclusive, long toInclusive)
         {
-            var result = _tableClient.QueryAsync<TableEntity>(filter: TableClient.CreateQueryFilter($"TimeStamp ge {fromInclusive} and TimeStamp le {toInclusive}"));
+            var result = _tableClient.QueryAsync<TableEntity>(filter: TableClient.CreateQueryFilter<ftQueueItem>(x => x.TimeStamp >= fromInclusive && x.TimeStamp <= toInclusive));
             return result.Select(MapToStorageEntity);
         }
 
         public IAsyncEnumerable<ftQueueItem> GetEntriesOnOrAfterTimeStampAsync(long fromInclusive)
         {
-            var result = _tableClient.QueryAsync<TableEntity>(filter: TableClient.CreateQueryFilter($"TimeStamp ge {fromInclusive}"));
+            var result = _tableClient.QueryAsync<TableEntity>(filter: TableClient.CreateQueryFilter<ftQueueItem>(x => x.TimeStamp >= fromInclusive));
             return result.Select(MapToStorageEntity);
         }
 
@@ -143,7 +143,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
         public IAsyncEnumerable<ftQueueItem> GetQueueItemsAfterQueueItem(ftQueueItem ftQueueItem)
         {
             // TODO: Add a separate table for this call
-            var result = _tableClient.QueryAsync<TableEntity>(filter: TableClient.CreateQueryFilter($"ftQueueRow ge {ftQueueItem.ftQueueRow}"));
+            var result = _tableClient.QueryAsync<TableEntity>(filter: TableClient.CreateQueryFilter<ftQueueItem>(x => x.ftQueueRow >= ftQueueItem.ftQueueRow));
             return result.Select(MapToStorageEntity);
         }
 
@@ -195,7 +195,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
 
         public async Task<ftQueueItem> GetByQueueRowAsync(long queueRow)
         {
-            var result = _tableClient.QueryAsync<TableEntity>(filter: TableClient.CreateQueryFilter($"ftQueueRow eq {queueRow}"));
+            var result = _tableClient.QueryAsync<TableEntity>(filter: TableClient.CreateQueryFilter<ftQueueItem>(x => x.ftQueueRow == queueRow));
             return MapToStorageEntity(await result.FirstOrDefaultAsync());
         }
     }
