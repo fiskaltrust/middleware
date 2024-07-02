@@ -18,7 +18,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter
 
             _ = serviceCollection
                 .AddSingleton(configuration)
-                .AddScoped<IITSSCD, CustomRTPrinter>();
+                .AddScoped<IITSSCD, CustomRTPrinterSCU>();
         }
     }
 }
