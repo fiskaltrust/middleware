@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Azure.Data.Tables;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.TableEntities.Configuration;
@@ -16,6 +17,13 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.Configur
         protected override void EntityUpdated(ftSignaturCreationUnitIT entity) => entity.TimeStamp = DateTime.UtcNow.Ticks;
 
         protected override Guid GetIdForEntity(ftSignaturCreationUnitIT entity) => entity.ftSignaturCreationUnitITId;
+
+        public async Task InsertOrUpdateAsync(ftSignaturCreationUnitIT storageEntity)
+        {
+            EntityUpdated(storageEntity);
+            var entity = MapToAzureEntity(storageEntity);
+            await _tableClient.UpsertEntityAsync(entity, TableUpdateMode.Replace);
+        }
 
         protected override AzureTableStorageFtSignaturCreationUnitIT MapToAzureEntity(ftSignaturCreationUnitIT src)
         {

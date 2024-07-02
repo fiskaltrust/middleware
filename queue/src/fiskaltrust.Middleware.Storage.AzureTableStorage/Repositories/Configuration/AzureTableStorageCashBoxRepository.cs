@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Azure.Data.Tables;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.TableEntities.Configuration;
@@ -15,6 +16,13 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.Configur
         protected override void EntityUpdated(ftCashBox entity) => entity.TimeStamp = DateTime.UtcNow.Ticks;
 
         protected override Guid GetIdForEntity(ftCashBox entity) => entity.ftCashBoxId;
+
+        public async Task InsertOrUpdateAsync(ftCashBox storageEntity)
+        {
+            EntityUpdated(storageEntity);
+            var entity = MapToAzureEntity(storageEntity);
+            await _tableClient.UpsertEntityAsync(entity, TableUpdateMode.Replace);
+        }
 
         protected override AzureTableStorageFtCashBox MapToAzureEntity(ftCashBox src)
         {

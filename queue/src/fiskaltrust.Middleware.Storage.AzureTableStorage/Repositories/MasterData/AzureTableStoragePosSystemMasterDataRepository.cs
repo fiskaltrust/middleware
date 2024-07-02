@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Azure.Data.Tables;
 using fiskaltrust.Middleware.Contracts.Repositories;
@@ -15,7 +16,14 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.MasterDa
 
         public const string TABLE_NAME = nameof(PosSystemMasterData);
 
-        public async Task ClearAsync() => await ClearTableAsync().ConfigureAwait(false);
+        public async Task ClearAsync()
+        {
+            var result = _tableClient.QueryAsync<TableEntity>(select: new List<string>() { "PartitionKey", "RowKey" });
+            await foreach (var item in result)
+            {
+                await _tableClient.DeleteEntityAsync(item.PartitionKey, item.RowKey);
+            }
+        }
 
         public async Task CreateAsync(PosSystemMasterData entity) => await InsertAsync(entity).ConfigureAwait(false);
 

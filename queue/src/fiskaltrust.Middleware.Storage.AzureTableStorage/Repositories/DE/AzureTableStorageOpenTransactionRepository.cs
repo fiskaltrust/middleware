@@ -24,6 +24,13 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
 
         protected override string GetIdForEntity(OpenTransaction entity) => entity.cbReceiptReference;
 
+        public async Task InsertOrUpdateAsync(OpenTransaction storageEntity)
+        {
+            EntityUpdated(storageEntity);
+            var entity = MapToAzureEntity(storageEntity);
+            await _tableClient.UpsertEntityAsync(entity, TableUpdateMode.Replace);
+        }
+
         protected override AzureTableStorageOpenTransaction MapToAzureEntity(OpenTransaction src)
         {
             if (src == null)

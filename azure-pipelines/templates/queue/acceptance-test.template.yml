@@ -1,3 +1,7 @@
+parameters:
+- name: project
+  type: string
+
 steps:
 - script: |
     dotnet tool install --tool-path tools dotnet-reportgenerator-globaltool
@@ -34,8 +38,7 @@ steps:
 - task: DotNetCoreCLI@2
   inputs:
     command: 'test'
-    projects: |
-      $(WorkingDirectory)/**/$(Project).csproj
+    projects: '$(WorkingDirectory)/**/${{ parameters.project }}.csproj'
     arguments: '--configuration $(BuildConfiguration) --no-restore --collect "Code coverage"'
     nobuild: true
   displayName: 'Run acceptance tests'
