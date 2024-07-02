@@ -1,0 +1,95 @@
+name: Middleware CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    strategy:
+      matrix:
+        solution: [ "queue", "scu-at", "scu-de", "scu-it", "scu-es" ]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: '8.x'
+
+    - name: Install .NET Framework 4.6.1
+      run: choco install netfx-4.6.1-devpack -y
+
+    - name: Install NuGet
+      run: choco install nuget.commandline -y
+
+    - name: Restore dependencies
+      run: dotnet restore (Get-ChildItem -Path ${{ matrix.solution }} -Filter *.sln).FullName
+
+    - name: Build
+      run: dotnet build (Get-ChildItem -Path ${{ matrix.solution }} -Filter *.sln).FullName --configuration Release --no-restore
+
+    - name: Find Unit Test Projects
+      id: unit_test_projects
+      run: echo "##[set-output name=projects::$((Get-ChildItem -Path .\${{ matrix.solution }} -Recurse -Filter '*.UnitTest.csproj' | % { $_.FullName }) -join ';')"
+
+    - name: Find Integration Test Projects
+      id: integration_test_projects
+      run: echo "##[set-output name=projects::$((Get-ChildItem -Path .\${{ matrix.solution }} -Recurse -Filter '*.IntegrationTest.csproj' | % { $_.FullName }) -join ';')"
+
+    - name: Find Acceptance Test Projects
+      id: acceptance_test_projects
+      
+      run: echo "##[set-output name=projects::$((Get-ChildItem -Path .\${{ matrix.solution }} -Recurse -Filter '*.AcceptanceTest.csproj' | % { $_.FullName }) -join ';')"
+
+    - name: Run Unit Tests
+      if: steps.unit_test_projects.outputs.projects != ''
+      run: |
+        $projects = "${{ steps.unit_test_projects.outputs.projects }}".Split(";")
+        foreach ($project in $projects) {
+          dotnet test $project --no-build --verbosity normal
+        }
+
+    - name: Run Integration Tests
+      if: steps.integration_test_projects.outputs.projects != ''
+      run: |
+        $projects = "${{ steps.integration_test_projects.outputs.projects }}".Split(";")
+        foreach ($project in $projects) {
+          dotnet test $project --no-build --verbosity normal
+        }
+
+    - name: Run Acceptance Tests
+      if: steps.acceptance_test_projects.outputs.projects != ''
+      run: |
+        $projects = "${{ steps.acceptance_test_projects.outputs.projects }}".Split(";")
+        foreach ($project in $projects) {
+          dotnet test $project --no-build --verbosity normal
+        }
+        
+    - name: Filter files for codesigning
+      id: filter_files_for_codesigning
+      run: |
+        $files = Get-ChildItem -Path .\\${{ matrix.solution }} -Filter "fiskaltrust.*.dll" -Recurse | Select-Object -ExpandProperty FullName
+        $filesList = $files -join "`n"
+        Write-Output "::set-output name=filtered_files::$filesList"
+                  
+    - name: Sign binaries
+      uses: dlemstra/code-sign-action@v1
+      with:
+        certificate: '${{ secrets.SIGNING_CERTIFICATE }}'
+        password: '${{ secrets.SIGNING_CERT_PASSWORD }}'
+        files: ${{ steps.filter_files_for_codesigning.outputs.filtered_files }}
+
+    - name: Publish artifacts
+      run: dotnet publish ${{ matrix.solution }}/*.sln -c Release -o ./publish
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: ${{ matrix.solution }}-build-artifacts
+        path: ./publish
