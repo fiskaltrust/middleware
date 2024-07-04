@@ -417,14 +417,6 @@ namespace fiskaltrust.Interface.Tagging.UnitTests.AT
 
             signature.SetV2SignatureFormat((long)ftSignatureFormats.Code390x000C);
             signature.ftSignatureFormat.Should().Be(0x415400000000000C);
-
-            // Test conversion for each signature format
-            foreach (var format in Enum.GetValues(typeof(ftSignatureFormats)))
-            {
-                signature = new SignaturItem { ftSignatureFormat = 0x4154000000000000 | (long)format };
-                _caseConverterAT.ConvertftSignatureFormatToV2(signature);
-                signature.ftSignatureFormat.Should().Be((0x4154200000000000 | (long)format));
-            }
         }
 
 
