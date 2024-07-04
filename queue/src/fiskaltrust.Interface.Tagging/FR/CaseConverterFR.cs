@@ -69,7 +69,7 @@ namespace fiskaltrust.Interface.Tagging.FR
                     V2.ftChargeItemCases.OwnConsumptionZeroVAT0x0077 => V1.FR.ftChargeItemCases.OwnConsumptionZeroVAT0x001B,
 
                     V2.ftChargeItemCases.AccountOfAThirdParty0x0068 => V1.FR.ftChargeItemCases.AccountOfAThirdParty0x0021,
-                    V2.ftChargeItemCases.ObligationSigned0x0090 => V1.FR.ftChargeItemCases.ObligationSigned0x0090,
+                    V2.ftChargeItemCases.ObligationSigned0x0090 => V1.FR.ftChargeItemCases.ObligationSigned0x0022,
                     _ => throw new NotImplementedException(),
                 };
             }
@@ -160,7 +160,6 @@ namespace fiskaltrust.Interface.Tagging.FR
                 V2.ftReceiptCases.Protocol0x0005 => V1.FR.ftReceiptCases.Protocol0x0009,
                 V2.ftReceiptCases.InvoiceUnknown0x1000 => V1.FR.ftReceiptCases.InvoiceUnknown0x0003,
                 V2.ftReceiptCases.ZeroReceipt0x2000 => V1.FR.ftReceiptCases.ZeroReceipt0x000F,
-                V2.ftReceiptCases.OneReceipt0x2001 => V1.FR.ftReceiptCases.OneReceipt0x2001,
                 V2.ftReceiptCases.ShiftClosing0x2010 => V1.FR.ftReceiptCases.ShiftClosing0x0004,
                 V2.ftReceiptCases.DailyClosing0x2011 => V1.FR.ftReceiptCases.DailyClosing0x0005,
                 V2.ftReceiptCases.MonthlyClosing0x2012 => V1.FR.ftReceiptCases.MonthlyClosing0x0006,
@@ -208,22 +207,12 @@ namespace fiskaltrust.Interface.Tagging.FR
         }
         public void ConvertftSignatureFormatToV2(SignaturItem signaturItem)
         {
-            if (signaturItem.GetFormatCountry() == 0x0000)
-            {
-                signaturItem.SetFormatCountry (0x4652);
-            }
-            else if (!signaturItem.IsFormatCountryFR())
-            {
-                throw new SignatureFormatCountryException("It's NOT a FR signature format.");
-            }
-
             if (!Enum.IsDefined(typeof(V1.FR.ftSignatureFormats), signaturItem.GetV1SignatureFormat()))
             {
                 throw new NotImplementedException();
             }
 
-            signaturItem.ftSignatureFormat = (long) ((ulong) signaturItem.ftSignatureFormat & 0xFFFF_0000_0000_FFFF);
-            signaturItem.SetFormatVersion(2);
+            signaturItem.ftSignatureFormat = (long) ((ulong) signaturItem.ftSignatureFormat & 0xFFFF);
             
         }
         public void ConvertftSignatureTypeToV2(SignaturItem signaturItem)

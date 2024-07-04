@@ -15,7 +15,6 @@ namespace fiskaltrust.Interface.Tagging.Models.V1.FR
         InvoiceUnknown0x0003 = 0x0003,
 
         ZeroReceipt0x000F = 0x000F,
-        OneReceipt0x2001 = 0x2001,
         ShiftClosing0x0004 = 0x0004,
         DailyClosing0x0005 = 0x0005,
         MonthlyClosing0x0006 = 0x0006,

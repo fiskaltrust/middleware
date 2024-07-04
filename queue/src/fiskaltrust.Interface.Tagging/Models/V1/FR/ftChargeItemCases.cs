@@ -46,7 +46,7 @@ namespace fiskaltrust.Interface.Tagging.Models.V1.FR
         DownPaymentZeroVAT0x0020 = 0x0020,
 
         AccountOfAThirdParty0x0021 = 0x0021,
-        ObligationSigned0x0090 = 0x0090,
+        ObligationSigned0x0022 = 0x0022,
 
     }
 }
