@@ -9,7 +9,7 @@ using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
 {
-    public class AzureTableStorageFailedFinishTransactionRepository : BaseAzureTableStorageRepository<string, AzureTableStorageFailedFinishTransaction, FailedFinishTransaction>, IPersistentTransactionRepository<FailedFinishTransaction>
+    public class AzureTableStorageFailedFinishTransactionRepository : BaseAzureTableStorageRepository<string, TableEntity, FailedFinishTransaction>, IPersistentTransactionRepository<FailedFinishTransaction>
     {
         public AzureTableStorageFailedFinishTransactionRepository(QueueConfiguration queueConfig, TableServiceClient tableServiceClient)
             : base(queueConfig, tableServiceClient, TABLE_NAME) { }
@@ -24,9 +24,44 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
 
         protected override string GetIdForEntity(FailedFinishTransaction entity) => entity.cbReceiptReference;
 
-        protected override AzureTableStorageFailedFinishTransaction MapToAzureEntity(FailedFinishTransaction entity) => Mapper.Map(entity);
+        protected override TableEntity MapToAzureEntity(FailedFinishTransaction src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
 
-        protected override FailedFinishTransaction MapToStorageEntity(AzureTableStorageFailedFinishTransaction entity) => Mapper.Map(entity);
+            var entity = new TableEntity(Mapper.GetHashString(src.FinishMoment.Ticks), src.cbReceiptReference)
+            {
+                { nameof(FailedFinishTransaction.cbReceiptReference), src.cbReceiptReference },
+                { nameof(FailedFinishTransaction.CashBoxIdentification), src.CashBoxIdentification },
+                { nameof(FailedFinishTransaction.FinishMoment), src.FinishMoment.ToUniversalTime() },
+                { nameof(FailedFinishTransaction.ftQueueItemId), src.ftQueueItemId },
+                { nameof(FailedFinishTransaction.TransactionNumber), src.TransactionNumber?.ToString() },
+            };
+
+            entity.SetOversized(nameof(FailedFinishTransaction.Request), src.Request);
+
+            return entity;
+        }
+
+        protected override FailedFinishTransaction MapToStorageEntity(TableEntity src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+
+            return new FailedFinishTransaction
+            {
+                cbReceiptReference = src.GetString(nameof(FailedFinishTransaction.cbReceiptReference)),
+                CashBoxIdentification = src.GetString(nameof(FailedFinishTransaction.CashBoxIdentification)),
+                FinishMoment = src.GetDateTime(nameof(FailedFinishTransaction.FinishMoment)).GetValueOrDefault(),
+                ftQueueItemId = src.GetGuid(nameof(FailedFinishTransaction.ftQueueItemId)).GetValueOrDefault(),
+                Request = src.GetOversized(nameof(FailedFinishTransaction.Request)),
+                TransactionNumber = src.GetInt64(nameof(FailedFinishTransaction.TransactionNumber))
+            };
+        }
     }
 }
 

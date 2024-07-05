@@ -23,8 +23,42 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.MasterDa
 
         protected override Guid GetIdForEntity(PosSystemMasterData entity) => entity.PosSystemId;
 
-        protected override AzureTableStoragePosSystemMasterData MapToAzureEntity(PosSystemMasterData entity) => Mapper.Map(entity);
+        protected override AzureTableStoragePosSystemMasterData MapToAzureEntity(PosSystemMasterData src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
 
-        protected override PosSystemMasterData MapToStorageEntity(AzureTableStoragePosSystemMasterData entity) => Mapper.Map(entity);
+            return new AzureTableStoragePosSystemMasterData
+            {
+                PartitionKey = src.PosSystemId.ToString(),
+                RowKey = src.PosSystemId.ToString(),
+                BaseCurrency = src.BaseCurrency,
+                Brand = src.Brand,
+                Model = src.Model,
+                PosSystemId = src.PosSystemId,
+                SoftwareVersion = src.SoftwareVersion,
+                Type = src.Type
+            };
+        }
+
+        protected override PosSystemMasterData MapToStorageEntity(AzureTableStoragePosSystemMasterData src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+
+            return new PosSystemMasterData
+            {
+                BaseCurrency = src.BaseCurrency,
+                Brand = src.Brand,
+                Model = src.Model,
+                PosSystemId = src.PosSystemId,
+                SoftwareVersion = src.SoftwareVersion,
+                Type = src.Type
+            };
+        }
     }
 }

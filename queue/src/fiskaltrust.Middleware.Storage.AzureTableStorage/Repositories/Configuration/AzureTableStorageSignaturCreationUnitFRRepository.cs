@@ -17,8 +17,42 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.Configur
 
         protected override Guid GetIdForEntity(ftSignaturCreationUnitFR entity) => entity.ftSignaturCreationUnitFRId;
 
-        protected override AzureTableStorageFtSignaturCreationUnitFR MapToAzureEntity(ftSignaturCreationUnitFR entity) => Mapper.Map(entity);
+        protected override AzureTableStorageFtSignaturCreationUnitFR MapToAzureEntity(ftSignaturCreationUnitFR src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
 
-        protected override ftSignaturCreationUnitFR MapToStorageEntity(AzureTableStorageFtSignaturCreationUnitFR entity) => Mapper.Map(entity);
+            return new AzureTableStorageFtSignaturCreationUnitFR
+            {
+                PartitionKey = src.ftSignaturCreationUnitFRId.ToString(),
+                RowKey = src.ftSignaturCreationUnitFRId.ToString(),
+                ftSignaturCreationUnitFRId = src.ftSignaturCreationUnitFRId,
+                Siret = src.Siret,
+                PrivateKey = src.PrivateKey,
+                CertificateBase64 = src.CertificateBase64,
+                CertificateSerialNumber = src.CertificateSerialNumber,
+                TimeStamp = src.TimeStamp
+            };
+        }
+
+        protected override ftSignaturCreationUnitFR MapToStorageEntity(AzureTableStorageFtSignaturCreationUnitFR src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+
+            return new ftSignaturCreationUnitFR
+            {
+                ftSignaturCreationUnitFRId = src.ftSignaturCreationUnitFRId,
+                Siret = src.Siret,
+                PrivateKey = src.PrivateKey,
+                CertificateBase64 = src.CertificateBase64,
+                CertificateSerialNumber = src.CertificateSerialNumber,
+                TimeStamp = src.TimeStamp
+            };
+        }
     }
 }

@@ -16,8 +16,34 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.Configur
 
         protected override Guid GetIdForEntity(ftCashBox entity) => entity.ftCashBoxId;
 
-        protected override AzureTableStorageFtCashBox MapToAzureEntity(ftCashBox entity) => Mapper.Map(entity);
+        protected override AzureTableStorageFtCashBox MapToAzureEntity(ftCashBox src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
 
-        protected override ftCashBox MapToStorageEntity(AzureTableStorageFtCashBox entity) => Mapper.Map(entity);
+            return new AzureTableStorageFtCashBox
+            {
+                PartitionKey = src.ftCashBoxId.ToString(),
+                RowKey = src.ftCashBoxId.ToString(),
+                ftCashBoxId = src.ftCashBoxId,
+                TimeStamp = src.TimeStamp
+            };
+        }
+
+        protected override ftCashBox MapToStorageEntity(AzureTableStorageFtCashBox src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+
+            return new ftCashBox
+            {
+                ftCashBoxId = src.ftCashBoxId,
+                TimeStamp = src.TimeStamp
+            };
+        }
     }
 }
