@@ -21,11 +21,11 @@ namespace fiskaltrust.Interface.Tagging.AT
             {
                 chargeItem.ftChargeItemCase |= (long) ((V2.Vat) (v2ChargeItem.ftChargeItemCase & 0xFFFF) switch
                 {
-                    V2.Vat.Normal0x3 => V1.FR.ftChargeItemCases.DownPaymentNormalVATRate0x001E,
-                    V2.Vat.Discounted10x1 => V1.FR.ftChargeItemCases.DownPaymentDiscountedVATRate10x001C,
-                    V2.Vat.Discounted20x2 => V1.FR.ftChargeItemCases.DownPaymentDiscountedVATRate20x001D,
-                    V2.Vat.Special10x4 => V1.FR.ftChargeItemCases.DownPaymentSpecialVATRate10x001F,
-                    V2.Vat.Zero0x7 => V1.FR.ftChargeItemCases.DownPaymentZeroVAT0x0020,
+                    V2.Vat.Normal0x3 => V1.AT.ftChargeItemCases.DownPaymentNormalVATRate0x001E,
+                    V2.Vat.Discounted10x1 => V1.AT.ftChargeItemCases.DownPaymentDiscountedVATRate10x001C,
+                    V2.Vat.Discounted20x2 => V1.AT.ftChargeItemCases.DownPaymentDiscountedVATRate20x001D,
+                    V2.Vat.Special10x4 => V1.AT.ftChargeItemCases.DownPaymentSpecialVATRate10x001F,
+                    V2.Vat.Zero0x7 => V1.AT.ftChargeItemCases.DownPaymentZeroVAT0x0020,
                     _ => throw new NotImplementedException()
                 });
             }

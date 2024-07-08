@@ -39,11 +39,11 @@ namespace fiskaltrust.Interface.Tagging.Models.V1.AT
         OwnConsumptionSpecial1Vat0x001A = 0x001A,
         OwnConsumptionZeroVat0x001B = 0x001B,
 
-        DownPaymentNormalVat0x001E = 0x001E,
-        DownPaymentDiscounted1Vat0x001C = 0x001C,
-        DownPaymentDiscounted2Vat0x001D = 0x001D,
-        DownPaymentSpecial1Vat0x001F = 0x001F,
-        DownPaymentZeroVat0x0020 = 0x0020,
+        DownPaymentNormalVATRate0x001E = 0x001E,
+        DownPaymentDiscountedVATRate10x001C = 0x001C,
+        DownPaymentDiscountedVATRate20x001D = 0x001D,
+        DownPaymentSpecialVATRate10x001F = 0x001F,
+        DownPaymentZeroVAT0x0020 = 0x0020,
 
         AccountOfThirdParty0x0021 = 0x0021,
         ObligationSigned0x0022 = 0x0022,
