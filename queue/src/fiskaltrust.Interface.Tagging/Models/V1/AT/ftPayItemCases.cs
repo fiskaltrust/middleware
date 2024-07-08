@@ -12,7 +12,7 @@ namespace fiskaltrust.Interface.Tagging.Models.V1.AT
         CrossedCheque0x0003 = 0x0003,
         DebitCard0x0004 = 0x0004,
         CreditCard0x0005 = 0x0005,
-        MultipurposeVoucher0x0006 = 0x0006,
+        Voucher0x0006 = 0x0006,
         OnlinePayment0x0007 = 0x0007,
         CustomerCardPayment0x0008 = 0x0008,
         OtherDebitCard0x0009 = 0x0009,
@@ -23,8 +23,8 @@ namespace fiskaltrust.Interface.Tagging.Models.V1.AT
         CashBookExpense0x000E = 0x000E,
         CashBookContribution0x000F = 0x000F,
         DownPayment0x0010 = 0x0010,
-        InternalMaterialConsumption0x0011 = 0x0011,
+        InternalConsumption0x0011 = 0x0011,
         TipToEmployee0x0012 = 0x0012,
-        Change0x0013 = 0x0013,
+
     }
 }
