@@ -17,218 +17,56 @@ namespace fiskaltrust.Interface.Tagging.AT
 
         chargeItem.ftChargeItemCase = (long)((ulong)v2ChargeItem.ftChargeItemCase & 0xFFFF_0000_0000_0000);
 
-        chargeItem.ftChargeItemCase |= (long)((V2.ftChargeItemCases)(v2ChargeItem.ftChargeItemCase & 0xFFFF) switch
-        {
-            V2.ftChargeItemCases.UnknownTypeOfService0x0000 => V1.AT.ftChargeItemCases.UnknownTypeOfService0x0000,
-            V2.ftChargeItemCases.UndefinedTypeOfServiceNormalVATRate0x0003 => V1.AT.ftChargeItemCases.UndefinedTypeOfServiceNormalVat0x0003,
-            V2.ftChargeItemCases.UndefinedTypeOfServiceDiscountedVATRate10x0001 => V1.AT.ftChargeItemCases.UndefinedTypeOfServiceDiscounted1Vat0x0001,
-            V2.ftChargeItemCases.UndefinedTypeOfServiceDiscountedVATRate20x0002 => V1.AT.ftChargeItemCases.UndefinedTypeOfServiceDiscounted2Vat0x0002,
-            V2.ftChargeItemCases.UndefinedTypeOfServiceSpecialVATRate10x0004 => V1.AT.ftChargeItemCases.UndefinedTypeOfServiceSpecial1Vat0x0004,
-            V2.ftChargeItemCases.UndefinedTypeOfServiceZeroVAT0x0007 => V1.AT.ftChargeItemCases.UndefinedTypeOfServiceZeroVat0x0005,
-            V2.ftChargeItemCases.ReverseChargeReversalOfTaxLiability0x5000 => V1.AT.ftChargeItemCases.ReverseCharge0x0006,
-            V2.ftChargeItemCases.NotOwnSales0x0060 => V1.AT.ftChargeItemCases.NotOwnSales0x0007,
-            V2.ftChargeItemCases.DeliveryNormalVATRate0x0013 => V1.AT.ftChargeItemCases.DeliveryNormalVat0x000A,
-            V2.ftChargeItemCases.DeliveryDiscountedVATRate10x0011 => V1.AT.ftChargeItemCases.DeliveryDiscounted1Vat0x0008,
-            V2.ftChargeItemCases.DeliveryDiscountedVATRate20x0012 => V1.AT.ftChargeItemCases.DeliveryDiscounted2Vat0x0009,
-            V2.ftChargeItemCases.DeliverySpecialVATRate10x0014 => V1.AT.ftChargeItemCases.DeliverySpecial1Vat0x000B,
-            V2.ftChargeItemCases.DeliveryZeroVAT0x0017 => V1.AT.ftChargeItemCases.DeliveryZeroVat0x000C,
-            V2.ftChargeItemCases.OtherServicesNormalVATRate0x0023 => V1.AT.ftChargeItemCases.OtherServicesNormalVat0x000F,
-            V2.ftChargeItemCases.OtherServicesDiscountedVATRate10x0021 => V1.AT.ftChargeItemCases.OtherServicesDiscounted1Vat0x000D,
-            V2.ftChargeItemCases.OtherServicesDiscountedVATRate20x0022 => V1.AT.ftChargeItemCases.OtherServicesDiscounted2Vat0x000E,
-            V2.ftChargeItemCases.OtherServicesSpecialVATRate10x0024 => V1.AT.ftChargeItemCases.OtherServicesSpecial1Vat0x0010,
-            V2.ftChargeItemCases.OtherServicesZeroVAT0x0027 => V1.AT.ftChargeItemCases.OtherServicesZeroVat0x0011,
-            V2.ftChargeItemCases.CatalogueServicesNormalVATRate0x0053 => V1.AT.ftChargeItemCases.CatalogueServicesNormalVat0x0014,
-            V2.ftChargeItemCases.CatalogueServicesDiscountedVATRate10x0051 => V1.AT.ftChargeItemCases.CatalogueServicesDiscounted1Vat0x0012,
-            V2.ftChargeItemCases.CatalogueServicesDiscountedVATRate20x0052 => V1.AT.ftChargeItemCases.CatalogueServicesDiscounted2Vat0x0013,
-            V2.ftChargeItemCases.CatalogueServicesSpecialVATRate10x0054 => V1.AT.ftChargeItemCases.CatalogueServicesSpecial1Vat0x0015,
-            V2.ftChargeItemCases.CatalogueServicesZeroVAT0x0057 => V1.AT.ftChargeItemCases.CatalogueServicesZeroVat0x0016,
-            V2.ftChargeItemCases.OwnConsumptionNormalVATRate0x0073 => V1.AT.ftChargeItemCases.OwnConsumptionNormalVat0x0019,
-            V2.ftChargeItemCases.OwnConsumptionDiscountedVATRate10x0071 => V1.AT.ftChargeItemCases.OwnConsumptionDiscounted1Vat0x0017,
-            V2.ftChargeItemCases.OwnConsumptionDiscountedVATRate20x0072 => V1.AT.ftChargeItemCases.OwnConsumptionDiscounted2Vat0x0018,
-            V2.ftChargeItemCases.OwnConsumptionSpecialVATRate10x0074 => V1.AT.ftChargeItemCases.OwnConsumptionSpecial1Vat0x001A,
-            V2.ftChargeItemCases.OwnConsumptionZeroVAT0x0077 => V1.AT.ftChargeItemCases.OwnConsumptionZeroVat0x001B,
-            V2.ftChargeItemCases.DownPaymentNormalVATRate0x001E => V1.AT.ftChargeItemCases.DownPaymentNormalVat0x001E,
-            V2.ftChargeItemCases.DownPaymentDiscountedVATRate10x001C => V1.AT.ftChargeItemCases.DownPaymentDiscounted1Vat0x001C,
-            V2.ftChargeItemCases.DownPaymentDiscountedVATRate20x001D => V1.AT.ftChargeItemCases.DownPaymentDiscounted2Vat0x001D,
-            V2.ftChargeItemCases.DownPaymentSpecialVATRate10x001F => V1.AT.ftChargeItemCases.DownPaymentSpecial1Vat0x001F,
-            V2.ftChargeItemCases.DownPaymentZeroVAT0x0020 => V1.AT.ftChargeItemCases.DownPaymentZeroVat0x0020,
-            V2.ftChargeItemCases.AccountOfAThirdParty0x0068 => V1.AT.ftChargeItemCases.AccountOfThirdParty0x0021,
-            V2.ftChargeItemCases.ObligationSigned0x0090 => V1.AT.ftChargeItemCases.ObligationSigned0x0022,
-            V2.ftChargeItemCases.ObligationNotSigned0x0091 => V1.AT.ftChargeItemCases.ObligationNotSigned0x0023,
-            _ => throw new NotImplementedException(),
-        });
+            if (v2ChargeItem.IsV2ChargeItemCaseFlagDownPayment0x0008())
+            {
+                chargeItem.ftChargeItemCase |= (long) ((V2.Vat) (v2ChargeItem.ftChargeItemCase & 0xFFFF) switch
+                {
+                    V2.Vat.Normal0x3 => V1.FR.ftChargeItemCases.DownPaymentNormalVATRate0x001E,
+                    V2.Vat.Discounted10x1 => V1.FR.ftChargeItemCases.DownPaymentDiscountedVATRate10x001C,
+                    V2.Vat.Discounted20x2 => V1.FR.ftChargeItemCases.DownPaymentDiscountedVATRate20x001D,
+                    V2.Vat.Special10x4 => V1.FR.ftChargeItemCases.DownPaymentSpecialVATRate10x001F,
+                    V2.Vat.Zero0x7 => V1.FR.ftChargeItemCases.DownPaymentZeroVAT0x0020,
+                    _ => throw new NotImplementedException()
+                });
+            }
+            else
+            {
 
-        if (v2ChargeItem.IsV2ChargeItemCaseFlagDownPayment0x0008())
-        {
-            if (chargeItem.Amount <= 0)
-            {
-                if (v2ChargeItem.IsV2ChargeItemCaseVatNormal0x3())
+                chargeItem.ftChargeItemCase |= (long) ((V2.ftChargeItemCases) (v2ChargeItem.ftChargeItemCase & 0xFFFF) switch
                 {
-                    chargeItem.SetV1ChargeItemCase((long)V1.AT.ftChargeItemCases.DownPaymentNormalVat0x001E);
-                }
-                else if (v2ChargeItem.IsV2ChargeItemCaseVatDiscounted10x1())
-                {
-                    chargeItem.SetV1ChargeItemCase((long)V1.AT.ftChargeItemCases.DownPaymentDiscounted1Vat0x001C);
-                }
-                else if (v2ChargeItem.IsV2ChargeItemCaseVatDiscounted20x2())
-                {
-                    chargeItem.SetV1ChargeItemCase((long)V1.AT.ftChargeItemCases.DownPaymentDiscounted2Vat0x001D);
-                }
-                else if (v2ChargeItem.IsV2ChargeItemCaseVatSpecial10x4())
-                {
-                    chargeItem.SetV1ChargeItemCase((long)V1.AT.ftChargeItemCases.DownPaymentSpecial1Vat0x001F);
-                }
-                else if (v2ChargeItem.IsV2ChargeItemCaseVatZero0x7())
-                {
-                    chargeItem.SetV1ChargeItemCase((long)V1.AT.ftChargeItemCases.DownPaymentZeroVat0x0020);
-                }
-                else if (v2ChargeItem.IsV2ChargeItemCaseVatUnknown0x0())
-                {
-                    chargeItem.SetV1ChargeItemCase((long)V1.AT.ftChargeItemCases.UnknownTypeOfService0x0000);
-                }
-            }
-            else
-            {
-                if (v2ChargeItem.IsV2ChargeItemCaseVatNormal0x3())
-                {
-                    chargeItem.SetV1ChargeItemCase((long)V1.AT.ftChargeItemCases.DownPaymentNormalVat0x001E);
-                }
-                else if (v2ChargeItem.IsV2ChargeItemCaseVatDiscounted10x1())
-                {
-                    chargeItem.SetV1ChargeItemCase((long)V1.AT.ftChargeItemCases.DownPaymentDiscounted1Vat0x001C);
-                }
-                else if (v2ChargeItem.IsV2ChargeItemCaseVatDiscounted20x2())
-                {
-                    chargeItem.SetV1ChargeItemCase((long)V1.AT.ftChargeItemCases.DownPaymentDiscounted2Vat0x001D);
-                }
-                else if (v2ChargeItem.IsV2ChargeItemCaseVatSpecial10x4())
-                {
-                    chargeItem.SetV1ChargeItemCase((long)V1.AT.ftChargeItemCases.DownPaymentSpecial1Vat0x001F);
-                }
-                else if (v2ChargeItem.IsV2ChargeItemCaseVatZero0x7())
-                {
-                    chargeItem.SetV1ChargeItemCase((long)V1.AT.ftChargeItemCases.DownPaymentZeroVat0x0020);
-                }
-                else if (v2ChargeItem.IsV2ChargeItemCaseVatUnknown0x0())
-                {
-                    chargeItem.SetV1ChargeItemCase((long)V1.AT.ftChargeItemCases.UnknownTypeOfService0x0000);
-                }
-            }
-        }
-        else if (v2ChargeItem.IsV2ChargeItemCaseFlagReturnable0x0010())
-        {
-            if (chargeItem.Amount <= 0)
-            {
-                if (v2ChargeItem.IsV2ChargeItemCaseVatNormal0x3())
-                {
-                    chargeItem.SetV1ChargeItemCase((long)V1.AT.ftChargeItemCases.OtherServicesNormalVat0x000F);
-                }
-                else if (v2ChargeItem.IsV2ChargeItemCaseVatDiscounted10x1())
-                {
-                    chargeItem.SetV1ChargeItemCase((long)V1.AT.ftChargeItemCases.OtherServicesDiscounted1Vat0x000D);
-                }
-                else if (v2ChargeItem.IsV2ChargeItemCaseVatDiscounted20x2())
-                {
-                    chargeItem.SetV1ChargeItemCase((long)V1.AT.ftChargeItemCases.OtherServicesDiscounted2Vat0x000E);
-                }
-                else if (v2ChargeItem.IsV2ChargeItemCaseVatSpecial10x4())
-                {
-                    chargeItem.SetV1ChargeItemCase((long)V1.AT.ftChargeItemCases.OtherServicesSpecial1Vat0x0010);
-                }
-                else if (v2ChargeItem.IsV2ChargeItemCaseVatZero0x7())
-                {
-                    chargeItem.SetV1ChargeItemCase((long)V1.AT.ftChargeItemCases.OtherServicesZeroVat0x0011);
-                }
-                else if (v2ChargeItem.IsV2ChargeItemCaseVatUnknown0x0())
-                {
-                    chargeItem.SetV1ChargeItemCase((long)V1.AT.ftChargeItemCases.UnknownTypeOfService0x0000);
-                }
-            }
-            else
-            {
-                if (v2ChargeItem.IsV2ChargeItemCaseVatNormal0x3())
-                {
-                    chargeItem.SetV1ChargeItemCase((long)V1.AT.ftChargeItemCases.OtherServicesNormalVat0x000F);
-                }
-                else if (v2ChargeItem.IsV2ChargeItemCaseVatDiscounted10x1())
-                {
-                    chargeItem.SetV1ChargeItemCase((long)V1.AT.ftChargeItemCases.OtherServicesDiscounted1Vat0x000D);
-                }
-                else if (v2ChargeItem.IsV2ChargeItemCaseVatDiscounted20x2())
-                {
-                    chargeItem.SetV1ChargeItemCase((long)V1.AT.ftChargeItemCases.OtherServicesDiscounted2Vat0x000E);
-                }
-                else if (v2ChargeItem.IsV2ChargeItemCaseVatSpecial10x4())
-                {
-                    chargeItem.SetV1ChargeItemCase((long)V1.AT.ftChargeItemCases.OtherServicesSpecial1Vat0x0010);
-                }
-                else if (v2ChargeItem.IsV2ChargeItemCaseVatZero0x7())
-                {
-                    chargeItem.SetV1ChargeItemCase((long)V1.AT.ftChargeItemCases.OtherServicesZeroVat0x0011);
-                }
-                else if (v2ChargeItem.IsV2ChargeItemCaseVatUnknown0x0())
-                {
-                    chargeItem.SetV1ChargeItemCase((long)V1.AT.ftChargeItemCases.UnknownTypeOfService0x0000);
-                }
-            }
-        }
-        else if (v2ChargeItem.IsV2ChargeItemCaseFlagDiscountOrExtraCharge0x0004())
-        {
-            if (chargeItem.Amount <= 0)
-            {
-                if (v2ChargeItem.IsV2ChargeItemCaseVatNormal0x3())
-                {
-                    chargeItem.SetV1ChargeItemCase((long)V1.AT.ftChargeItemCases.OtherServicesNormalVat0x000F);
-                }
-                else if (v2ChargeItem.IsV2ChargeItemCaseVatDiscounted10x1())
-                {
-                    chargeItem.SetV1ChargeItemCase((long)V1.AT.ftChargeItemCases.OtherServicesDiscounted1Vat0x000D);
-                }
-                else if (v2ChargeItem.IsV2ChargeItemCaseVatDiscounted20x2())
-                {
-                    chargeItem.SetV1ChargeItemCase((long)V1.AT.ftChargeItemCases.OtherServicesDiscounted2Vat0x000E);
-                }
-                else if (v2ChargeItem.IsV2ChargeItemCaseVatSpecial10x4())
-                {
-                    chargeItem.SetV1ChargeItemCase((long)V1.AT.ftChargeItemCases.OtherServicesSpecial1Vat0x0010);
-                }
-                else if (v2ChargeItem.IsV2ChargeItemCaseVatZero0x7())
-                {
-                    chargeItem.SetV1ChargeItemCase((long)V1.AT.ftChargeItemCases.OtherServicesZeroVat0x0011);
-                }
-                else if (v2ChargeItem.IsV2ChargeItemCaseVatUnknown0x0())
-                {
-                    chargeItem.SetV1ChargeItemCase((long)V1.AT.ftChargeItemCases.UnknownTypeOfService0x0000);
-                }
-            }
-            else
-            {
-                if (v2ChargeItem.IsV2ChargeItemCaseVatNormal0x3())
-                {
-                    chargeItem.SetV1ChargeItemCase((long)V1.AT.ftChargeItemCases.OtherServicesNormalVat0x000F);
-                }
-                else if (v2ChargeItem.IsV2ChargeItemCaseVatDiscounted10x1())
-                {
-                    chargeItem.SetV1ChargeItemCase((long)V1.AT.ftChargeItemCases.OtherServicesDiscounted1Vat0x000D);
-                }
-                else if (v2ChargeItem.IsV2ChargeItemCaseVatDiscounted20x2())
-                {
-                    chargeItem.SetV1ChargeItemCase((long)V1.AT.ftChargeItemCases.OtherServicesDiscounted2Vat0x000E);
-                }
-                else if (v2ChargeItem.IsV2ChargeItemCaseVatSpecial10x4())
-                {
-                    chargeItem.SetV1ChargeItemCase((long)V1.AT.ftChargeItemCases.OtherServicesSpecial1Vat0x0010);
-                }
-                else if (v2ChargeItem.IsV2ChargeItemCaseVatZero0x7())
-                {
-                    chargeItem.SetV1ChargeItemCase((long)V1.AT.ftChargeItemCases.OtherServicesZeroVat0x0011);
-                }
-                else if (v2ChargeItem.IsV2ChargeItemCaseVatUnknown0x0())
-                {
-                    chargeItem.SetV1ChargeItemCase((long)V1.AT.ftChargeItemCases.UnknownTypeOfService0x0000);
-                }
-            }
-        }
+                    V2.ftChargeItemCases.UnknownTypeOfService0x0000 => V1.AT.ftChargeItemCases.UnknownTypeOfService0x0000,
+                    V2.ftChargeItemCases.UndefinedTypeOfServiceNormalVATRate0x0003 => V1.AT.ftChargeItemCases.UndefinedTypeOfServiceNormalVat0x0003,
+                    V2.ftChargeItemCases.UndefinedTypeOfServiceDiscountedVATRate10x0001 => V1.AT.ftChargeItemCases.UndefinedTypeOfServiceDiscounted1Vat0x0001,
+                    V2.ftChargeItemCases.UndefinedTypeOfServiceDiscountedVATRate20x0002 => V1.AT.ftChargeItemCases.UndefinedTypeOfServiceDiscounted2Vat0x0002,
+                    V2.ftChargeItemCases.UndefinedTypeOfServiceSpecialVATRate10x0004 => V1.AT.ftChargeItemCases.UndefinedTypeOfServiceSpecial1Vat0x0004,
+                    V2.ftChargeItemCases.UndefinedTypeOfServiceZeroVAT0x0007 => V1.AT.ftChargeItemCases.UndefinedTypeOfServiceZeroVat0x0005,
+                    V2.ftChargeItemCases.ReverseChargeReversalOfTaxLiability0x5000 => V1.AT.ftChargeItemCases.ReverseCharge0x0006,
+                    V2.ftChargeItemCases.NotOwnSales0x0060 => V1.AT.ftChargeItemCases.NotOwnSales0x0007,
+                    V2.ftChargeItemCases.DeliveryNormalVATRate0x0013 => V1.AT.ftChargeItemCases.DeliveryNormalVat0x000A,
+                    V2.ftChargeItemCases.DeliveryDiscountedVATRate10x0011 => V1.AT.ftChargeItemCases.DeliveryDiscounted1Vat0x0008,
+                    V2.ftChargeItemCases.DeliveryDiscountedVATRate20x0012 => V1.AT.ftChargeItemCases.DeliveryDiscounted2Vat0x0009,
+                    V2.ftChargeItemCases.DeliverySpecialVATRate10x0014 => V1.AT.ftChargeItemCases.DeliverySpecial1Vat0x000B,
+                    V2.ftChargeItemCases.DeliveryZeroVAT0x0017 => V1.AT.ftChargeItemCases.DeliveryZeroVat0x000C,
+                    V2.ftChargeItemCases.OtherServicesNormalVATRate0x0023 => V1.AT.ftChargeItemCases.OtherServicesNormalVat0x000F,
+                    V2.ftChargeItemCases.OtherServicesDiscountedVATRate10x0021 => V1.AT.ftChargeItemCases.OtherServicesDiscounted1Vat0x000D,
+                    V2.ftChargeItemCases.OtherServicesDiscountedVATRate20x0022 => V1.AT.ftChargeItemCases.OtherServicesDiscounted2Vat0x000E,
+                    V2.ftChargeItemCases.OtherServicesSpecialVATRate10x0024 => V1.AT.ftChargeItemCases.OtherServicesSpecial1Vat0x0010,
+                    V2.ftChargeItemCases.OtherServicesZeroVAT0x0027 => V1.AT.ftChargeItemCases.OtherServicesZeroVat0x0011,
+                    V2.ftChargeItemCases.CatalogueServicesNormalVATRate0x0053 => V1.AT.ftChargeItemCases.CatalogueServicesNormalVat0x0014,
+                    V2.ftChargeItemCases.CatalogueServicesDiscountedVATRate10x0051 => V1.AT.ftChargeItemCases.CatalogueServicesDiscounted1Vat0x0012,
+                    V2.ftChargeItemCases.CatalogueServicesDiscountedVATRate20x0052 => V1.AT.ftChargeItemCases.CatalogueServicesDiscounted2Vat0x0013,
+                    V2.ftChargeItemCases.CatalogueServicesSpecialVATRate10x0054 => V1.AT.ftChargeItemCases.CatalogueServicesSpecial1Vat0x0015,
+                    V2.ftChargeItemCases.CatalogueServicesZeroVAT0x0057 => V1.AT.ftChargeItemCases.CatalogueServicesZeroVat0x0016,
+                    V2.ftChargeItemCases.OwnConsumptionNormalVATRate0x0073 => V1.AT.ftChargeItemCases.OwnConsumptionNormalVat0x0019,
+                    V2.ftChargeItemCases.OwnConsumptionDiscountedVATRate10x0071 => V1.AT.ftChargeItemCases.OwnConsumptionDiscounted1Vat0x0017,
+                    V2.ftChargeItemCases.OwnConsumptionDiscountedVATRate20x0072 => V1.AT.ftChargeItemCases.OwnConsumptionDiscounted2Vat0x0018,
+                    V2.ftChargeItemCases.OwnConsumptionSpecialVATRate10x0074 => V1.AT.ftChargeItemCases.OwnConsumptionSpecial1Vat0x001A,
+                    V2.ftChargeItemCases.OwnConsumptionZeroVAT0x0077 => V1.AT.ftChargeItemCases.OwnConsumptionZeroVat0x001B,
+                    V2.ftChargeItemCases.AccountOfAThirdParty0x0068 => V1.AT.ftChargeItemCases.AccountOfThirdParty0x0021,
+                    V2.ftChargeItemCases.ObligationSigned0x0090 => V1.AT.ftChargeItemCases.ObligationSigned0x0022,
+                    _ => throw new NotImplementedException(),
+                });
+            }      
     }
 
         public void ConvertftJournalTypeToV1(JournalRequest journalRequest)

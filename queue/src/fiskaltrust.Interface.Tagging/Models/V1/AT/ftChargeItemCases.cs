@@ -47,6 +47,5 @@ namespace fiskaltrust.Interface.Tagging.Models.V1.AT
 
         AccountOfThirdParty0x0021 = 0x0021,
         ObligationSigned0x0022 = 0x0022,
-        ObligationNotSigned0x0023 = 0x0023,
     }
 }
