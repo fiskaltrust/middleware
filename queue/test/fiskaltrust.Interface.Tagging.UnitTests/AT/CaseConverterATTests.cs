@@ -111,154 +111,52 @@ namespace fiskaltrust.Interface.Tagging.UnitTests.AT
             _caseConverterAT.ConvertftReceiptCaseToV1(request);
             request.ftReceiptCase.Should().Be(0x4154000000004012);
         }
-
-        [Fact]
-        public void Chargeitem_ShouldReturnCorrect()
+        
+        [Theory]
+        [InlineData(0x4154200000000000, 0x4154000000000000)]
+        [InlineData(0x4154200000000003, 0x4154000000000003)]
+        [InlineData(0x4154200000000001, 0x4154000000000001)]
+        [InlineData(0x4154200000000002, 0x4154000000000002)]
+        [InlineData(0x4154200000000004, 0x4154000000000004)]
+        [InlineData(0x4154200000000007, 0x4154000000000005)]
+        [InlineData(0x4154200000500000, 0x4154000000000006)]
+        [InlineData(0x4154200000060000, 0x4154000000000007)]
+        [InlineData(0x4154200000013000, 0x415400000000000A)]
+        [InlineData(0x4154200000011000, 0x4154000000000008)]
+        [InlineData(0x4154200000012000, 0x4154000000000009)]
+        [InlineData(0x4154200000014000, 0x415400000000000B)]
+        [InlineData(0x4154200000017000, 0x415400000000000C)]
+        [InlineData(0x4154200000023000, 0x415400000000000F)]
+        [InlineData(0x4154200000021000, 0x415400000000000D)]
+        [InlineData(0x4154200000022000, 0x415400000000000E)]
+        [InlineData(0x4154200000024000, 0x4154000000000010)]
+        [InlineData(0x4154200000027000, 0x4154000000000011)]
+        [InlineData(0x4154200000053000, 0x4154000000000014)]
+        [InlineData(0x4154200000051000, 0x4154000000000012)]
+        [InlineData(0x4154200000052000, 0x4154000000000013)]
+        [InlineData(0x4154200000054000, 0x4154000000000015)]
+        [InlineData(0x4154200000057000, 0x4154000000000016)]
+        [InlineData(0x4154200000073000, 0x4154000000000019)]
+        [InlineData(0x4154200000071000, 0x4154000000000017)]
+        [InlineData(0x4154200000072000, 0x4154000000000018)]
+        [InlineData(0x4154200000074000, 0x415400000000001A)]
+        [InlineData(0x4154200000077000, 0x415400000000001B)]
+        [InlineData(0x4154200008000003, 0x415400000000001E)]
+        [InlineData(0x4154200008000001, 0x415400000000001C)]
+        [InlineData(0x4154200008000002, 0x415400000000001D)]
+        [InlineData(0x4154200008000004, 0x415400000000001F)]
+        [InlineData(0x4154200008000007, 0x4154000000000020)]
+        [InlineData(0x4154200000000068, 0x4154000000000021)]
+        [InlineData(0x4154200000000090, 0x4154000000000022)]
+        [InlineData(0x4154200000000091, 0x4154000000000023)]
+        public void ConvertftChargeItemCaseToV1_ShouldReturnCorrect(long v2FtChargeItemCase, long v1FtChargeItemCase)
         {
-            var chargeItem = new ChargeItem { ftChargeItemCase = 0x4154200000000000 };
-            _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000000);
+            var chargeItem = new ChargeItem { ftChargeItemCase = v2FtChargeItemCase };
 
-            chargeItem.ftChargeItemCase = 0x4154200000000003;
             _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000003);
-
-            chargeItem.ftChargeItemCase = 0x4154200000000001;
-            _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000001);
-
-            chargeItem.ftChargeItemCase = 0x4154200000000002;
-            _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000002);
-
-            chargeItem.ftChargeItemCase = 0x4154200000000004;
-            _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000004);
-
-            chargeItem.ftChargeItemCase = 0x4154200000000007;
-            _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000005);
-
-            chargeItem.ftChargeItemCase = 0x4154200000500000;
-            _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000006);
-
-            chargeItem.ftChargeItemCase = 0x4154200000060000;
-            _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000007);
-
-            chargeItem.ftChargeItemCase = 0x4154200000013000;
-            _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x415400000000000A);
-
-            chargeItem.ftChargeItemCase = 0x4154200000011000;
-            _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000008);
-
-            chargeItem.ftChargeItemCase = 0x4154200000012000;
-            _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000009);
-
-            chargeItem.ftChargeItemCase = 0x4154200000014000;
-            _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x415400000000000B);
-
-            chargeItem.ftChargeItemCase = 0x4154200000017000;
-            _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x415400000000000C);
-
-            chargeItem.ftChargeItemCase = 0x4154200000023000;
-            _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x415400000000000F);
-
-            chargeItem.ftChargeItemCase = 0x4154200000021000;
-            _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x415400000000000D);
-
-            chargeItem.ftChargeItemCase = 0x4154200000022000;
-            _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x415400000000000E);
-
-            chargeItem.ftChargeItemCase = 0x4154200000024000;
-            _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000010);
-
-            chargeItem.ftChargeItemCase = 0x4154200000027000;
-            _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000011);
-
-            chargeItem.ftChargeItemCase = 0x4154200000053000;
-            _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000014);
-
-            chargeItem.ftChargeItemCase = 0x4154200000051000;
-            _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000012);
-
-            chargeItem.ftChargeItemCase = 0x4154200000052000;
-            _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000013);
-
-            chargeItem.ftChargeItemCase = 0x4154200000054000;
-            _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000015);
-
-            chargeItem.ftChargeItemCase = 0x4154200000057000;
-            _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000016);
-
-            chargeItem.ftChargeItemCase = 0x4154200000073000;
-            _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000019);
-
-            chargeItem.ftChargeItemCase = 0x4154200000071000;
-            _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000017);
-
-            chargeItem.ftChargeItemCase = 0x4154200000072000;
-            _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000018);
-
-            chargeItem.ftChargeItemCase = 0x4154200000074000;
-            _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x415400000000001A);
-
-            chargeItem.ftChargeItemCase = 0x4154200000077000;
-            _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x415400000000001B);
-
-            chargeItem.ftChargeItemCase = 0x4154200008000003;
-            _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x415400000000001E);
-
-            chargeItem.ftChargeItemCase = 0x4154200008000001;
-            _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x415400000000001C);
-
-            chargeItem.ftChargeItemCase = 0x4154200008000002;
-            _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x415400000000001D);
-
-            chargeItem.ftChargeItemCase = 0x4154200008000004;
-            _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x415400000000001F);
-
-            chargeItem.ftChargeItemCase = 0x4154200008000007;
-            _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000020);
-
-            chargeItem.ftChargeItemCase = 0x4154200000000068;
-            _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000021);
-
-            chargeItem.ftChargeItemCase = 0x4154200000000090;
-            _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000022);
-
-            chargeItem.ftChargeItemCase = 0x4154200000000098;
-            _caseConverterAT.ConvertftChargeItemCaseToV1(chargeItem);
-            chargeItem.ftChargeItemCase.Should().Be(0x4154000000000023);
+            chargeItem.ftChargeItemCase.Should().Be(v1FtChargeItemCase);
         }
+
 
         [Fact]
         public void Payitem_ShouldReturnCorrect()
