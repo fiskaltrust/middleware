@@ -226,24 +226,15 @@ namespace fiskaltrust.Interface.Tagging.AT
             }
         }
 
-        public void ConvertftStateToV2(ReceiptResponse ftState)
+        public void ConvertftStateToV2(ReceiptResponse receiptResponse)
         {
-            var v1State = new ReceiptResponse() { ftState = ftState.ftState };
-
-            ftState.ftState = (long)((ulong)v1State.ftState & 0xFFFF_0000_0000_0000);
-
-            ftState.ftState |= (long)((V1.AT.ftStates)(v1State.ftState & 0xFFFF) switch
+            if (!Enum.IsDefined(typeof(V1.AT.ftStates), receiptResponse.GetV1State()))
             {
-                V1.AT.ftStates.OutOfService0x0001 => V2.ftStates.OutOfService0x0001,
-                V1.AT.ftStates.SSCDTemporaryOutOfService0x0002 => V2.ftStates.SSCDTemporaryOutOfService0x0002,
-                V1.AT.ftStates.SSCDPermanentlyOutOfService0x0004 => V2.ftStates.SSCDPermanentlyOutOfService0x0004,
-                V1.AT.ftStates.SubsequentEntryActivated0x0008 => V2.ftStates.SubsequentEntryActivated0x0008,
-                V1.AT.ftStates.MonthlyReportDue0x0010 => V2.ftStates.MonthlyReportDue0x0010,
-                V1.AT.ftStates.AnnualReportDue0x0020 => V2.ftStates.AnnualReportDue0x0020,
-                V1.AT.ftStates.MessageNotificationPending0x0040 => V2.ftStates.MessageNotificationPending0x0040,
-                V1.AT.ftStates.BackupSSCDInUse0x0080 => V2.ftStates.BackupSSCDInUse0x0080,
-                _ => throw new NotImplementedException(),
-            });
+                throw new NotImplementedException();
+            }
+
+            receiptResponse.ftState = (long) ((ulong) receiptResponse.ftState & 0xFFFF_0000_0000_FFFF);
+            receiptResponse.SetVersion(2);
         }
     }
 }

@@ -214,24 +214,28 @@ namespace fiskaltrust.Interface.Tagging.UnitTests.AT
         }
 
 
-        [Fact]
-        public void ConvertftReceiptState_ShouldreturnCorrect()
+        [Theory]
+        [InlineData(0x4154000000000001, 0x4154200000000001)]
+        [InlineData(0x4154000000000002, 0x4154200000000002)]
+        [InlineData(0x4154000000000004, 0x4154200000000004)]
+        [InlineData(0x4154000000000008, 0x4154200000000008)]
+        [InlineData(0x4154000000000010, 0x4154200000000010)]
+        [InlineData(0x4154000000000020, 0x4154200000000020)]
+        [InlineData(0x4154000000000040, 0x4154200000000040)]
+        [InlineData(0x4154000000000080, 0x4154200000000080)]
+        public void ConvertftStateToV2_ShouldreturnCorrect(long v1FtState, long? v2FtState)
         {
-            var request = new ReceiptResponse { ftState = 0x4154000000000001 };
-            _caseConverterAT.ConvertftStateToV2(request);
-            request.ftState.Should().Be(0x4154200000010000);  // ScuPermamentOutofService -> OutOfService0x0001
+            var response = new ReceiptResponse { ftState = v1FtState };
 
-            request.ftState = 0x4154000000000080;
-            _caseConverterAT.ConvertftStateToV2(request);
-            request.ftState.Should().Be(0x4154200000020000);  // ScuBackup -> BackupSSCDInUse0x0080
-
-            request.ftState = 0x4154000000000010;
-            _caseConverterAT.ConvertftStateToV2(request);
-            request.ftState.Should().Be(0x4154200010000000);  // MonthlyClosing -> MonthlyReportDue0x0010
-
-            request.ftState = 0x4154000000000020;
-            _caseConverterAT.ConvertftStateToV2(request);
-            request.ftState.Should().Be(0x4154200020000000);  // YearlyClosing -> AnnualReportDue0x0020
+            if (v2FtState == null)
+            {
+                Assert.Throws<NotImplementedException>(() => _caseConverterAT.ConvertftStateToV2(response));
+            }
+            else
+            {
+                _caseConverterAT.ConvertftStateToV2(response);
+                response.ftState.Should().Be(v2FtState);
+            }
         }
     }
 }
