@@ -31,7 +31,6 @@ namespace fiskaltrust.Interface.Tagging.AT
             }
             else
             {
-
                 chargeItem.ftChargeItemCase |= (long) ((V2.ftChargeItemCases) (v2ChargeItem.ftChargeItemCase & 0xFFFF) switch
                 {
                     V2.ftChargeItemCases.UnknownTypeOfService0x0000 => V1.AT.ftChargeItemCases.UnknownTypeOfService0x0000,
@@ -109,74 +108,68 @@ namespace fiskaltrust.Interface.Tagging.AT
             payItem.SetV1PayItemCase((long) v1ftPayItemCase);
 
         }
-         
+
         public void ConvertftReceiptCaseToV1(ReceiptRequest receiptRequest)
         {
-            if (!receiptRequest.IsVersionV2())
-            {
-                throw new Exception($"Not a V2 receipt case. Found V{receiptRequest.GetVersion()}.");
-            }
-
-            if (!receiptRequest.IsCountryAT())
-            {
-                throw new Exception("Not an AT receipt case.");
-            }
-
             var v2ReceiptRequest = new ReceiptRequest() { ftReceiptCase = receiptRequest.ftReceiptCase };
+            receiptRequest.ftReceiptCase = (long)((ulong)receiptRequest.ftReceiptCase & 0xFFFF_0000_0000_0000);
 
-            receiptRequest.ftReceiptCase = (long)((ulong)v2ReceiptRequest.ftReceiptCase & 0xFFFF_0000_0000_0000);
-
-            receiptRequest.ftReceiptCase |= (long)((V2.ftReceiptCases)(v2ReceiptRequest.ftReceiptCase & 0xFFFF) switch
+            var v2ftReceiptCase = (V2.ftReceiptCases)v2ReceiptRequest.GetV2ReceiptCase();
+            var v1ftReceiptCase = v2ftReceiptCase switch
             {
                 V2.ftReceiptCases.UnknownReceipt0x0000 => V1.AT.ftReceiptCases.UnknownReceiptType0x0000,
                 V2.ftReceiptCases.PointOfSaleReceipt0x0001 => V1.AT.ftReceiptCases.POSReceipt0x0001,
                 V2.ftReceiptCases.CashDepositCashPayIn0x000A => V1.AT.ftReceiptCases.CashDepositCashPayIn0x000A,
                 V2.ftReceiptCases.CashPayOut0x000B => V1.AT.ftReceiptCases.CashPayOut0x000B,
                 V2.ftReceiptCases.PaymentTransfer0x0002 => V1.AT.ftReceiptCases.PaymentTransfer0x000C,
-                V2.ftReceiptCases.POSReceiptWithoutCashRegisterObligation0x0007 => V1.AT.ftReceiptCases.POSReceiptWithoutCashRegisterObligation0x0007,
+                V2.ftReceiptCases.PointOfSaleReceiptWithoutObligation0x0003 => V1.AT.ftReceiptCases.POSReceiptWithoutCashRegisterObligation0x0007,
                 V2.ftReceiptCases.ECommerce0x0004 => V1.AT.ftReceiptCases.ECommerce0x000F,
                 V2.ftReceiptCases.Protocol0x0005 => V1.AT.ftReceiptCases.ProtocolArtefactHandedOutToConsumer0x0009,
-                V2.ftReceiptCases.InvoiceB2B0x1002 => V1.AT.ftReceiptCases.InvoiceUnspecifiedType0x0008,
+                V2.ftReceiptCases.InvoiceUnknown0x1000 => V1.AT.ftReceiptCases.InvoiceUnspecifiedType0x0008,
                 V2.ftReceiptCases.ZeroReceipt0x2000 => V1.AT.ftReceiptCases.ZeroReceipt0x0002,
                 V2.ftReceiptCases.MonthlyClosing0x2012 => V1.AT.ftReceiptCases.MonthlyClosing0x0005,
                 V2.ftReceiptCases.YearlyClosing0x2013 => V1.AT.ftReceiptCases.YearlyClosing0x0006,
                 V2.ftReceiptCases.ProtocolUnspecified0x3000 => V1.AT.ftReceiptCases.ProtocolUnspecifiedType0x000D,
                 V2.ftReceiptCases.InternalUsageMaterialConsumption0x3003 => V1.AT.ftReceiptCases.InternalUsageMaterialConsumption0x000E,
-                V2.ftReceiptCases.Order0x3004 => V1.AT.ftReceiptCases.InitialOperationReceipt0x0003,
-                V2.ftReceiptCases.CopyReceiptPrintExistingReceipt0x3010 => V1.AT.ftReceiptCases.OutOfOperationReceipt0x0004,
                 V2.ftReceiptCases.InitialOperationReceipt0x4001 => V1.AT.ftReceiptCases.InitialOperationReceipt0x0003,
                 V2.ftReceiptCases.OutOfOperationReceipt0x4002 => V1.AT.ftReceiptCases.OutOfOperationReceipt0x0004,
                 V2.ftReceiptCases.SaleInForeignCountries0x4010 => V1.AT.ftReceiptCases.SaleInForeignCountries0x0010,
                 _ => throw new NotImplementedException()
-            });
+            };
+            receiptRequest.SetV1ReceiptCase((long)v1ftReceiptCase);
 
             if (v2ReceiptRequest.IsV2ReceiptCaseFlagLateSigning0x0001())
             {
                 receiptRequest.SetV1ReceiptCaseFlagFailed0x0001();
             }
+
             if (v2ReceiptRequest.IsV2ReceiptCaseFlagVoid0x0004())
             {
                 receiptRequest.SetV1ReceiptCaseFlagVoid0x0004();
             }
+
             if (v2ReceiptRequest.IsV2ReceiptCaseFlagTraining0x0002())
             {
                 receiptRequest.SetV1ReceiptCaseFlagTraining0x0002();
             }
-            if (v2ReceiptRequest.IsV2ReceiptCaseFlagHandWritten0x0008())
-            {
-                receiptRequest.SetV1ReceiptCaseFlagHandWritten0x0008();
-            }
-            if (v2ReceiptRequest.IsV2ReceiptCaseFlagIssuerIsSmallBusiness0x0010())
-            {
-                receiptRequest.SetV1ReceiptCaseFlagSmallBusiness0x0010();
-            }
-            if (v2ReceiptRequest.IsV2ReceiptCaseFlagReceiverIsBusiness0x0020())
-            {
-                receiptRequest.SetV1ReceiptCaseFlagReceiverIsCompany0x00020();
-            }
+
             if (v2ReceiptRequest.IsV2ReceiptCaseFlagReceiptRequested0x8000())
             {
                 receiptRequest.SetV1ReceiptCaseFlagReceiptRequested0x8000_0000();
+            }
+
+            if (v2ReceiptRequest.IsV2ReceiptCaseFlagHandWritten0x0008() ||
+                v2ReceiptRequest.IsV2ReceiptCaseFlagIssuerIsSmallBusiness0x0010() ||
+                v2ReceiptRequest.IsV2ReceiptCaseFlagReceiverIsBusiness0x0020() ||
+                v2ReceiptRequest.IsV2ReceiptCaseFlagSaleInForeignCountry0x0080() ||
+                v2ReceiptRequest.IsV2ReceiptCaseFlagReturn0x0100() ||
+                v2ReceiptRequest.IsV2ReceiptCaseFlagAdditionalInformationRequested0x0200() ||
+                v2ReceiptRequest.IsV2ReceiptCaseFlagSCUDataDownloadRequested0x0400() ||
+                v2ReceiptRequest.IsV2ReceiptCaseFlagEnforceServiceOperations0x0800() ||
+                v2ReceiptRequest.IsV2ReceiptCaseFlagCleanupOpenTransactions0x1000() ||
+                v2ReceiptRequest.IsV2ReceiptCaseFlagPreventEnablingOrDisablingSigningDevices0x2000())
+            {
+                throw new NotImplementedException();
             }
         }
 
