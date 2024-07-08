@@ -118,9 +118,7 @@ namespace fiskaltrust.Interface.Tagging.AT
             var v1ftReceiptCase = v2ftReceiptCase switch
             {
                 V2.ftReceiptCases.UnknownReceipt0x0000 => V1.AT.ftReceiptCases.UnknownReceiptType0x0000,
-                V2.ftReceiptCases.PointOfSaleReceipt0x0001 => V1.AT.ftReceiptCases.POSReceipt0x0001,
-                V2.ftReceiptCases.CashDepositCashPayIn0x000A => V1.AT.ftReceiptCases.CashDepositCashPayIn0x000A,
-                V2.ftReceiptCases.CashPayOut0x000B => V1.AT.ftReceiptCases.CashPayOut0x000B,
+                V2.ftReceiptCases.PointOfSaleReceipt0x0001 => V1.AT.ftReceiptCases.POSReceipt0x0001,                
                 V2.ftReceiptCases.PaymentTransfer0x0002 => V1.AT.ftReceiptCases.PaymentTransfer0x000C,
                 V2.ftReceiptCases.PointOfSaleReceiptWithoutObligation0x0003 => V1.AT.ftReceiptCases.POSReceiptWithoutCashRegisterObligation0x0007,
                 V2.ftReceiptCases.ECommerce0x0004 => V1.AT.ftReceiptCases.ECommerce0x000F,
@@ -133,7 +131,6 @@ namespace fiskaltrust.Interface.Tagging.AT
                 V2.ftReceiptCases.InternalUsageMaterialConsumption0x3003 => V1.AT.ftReceiptCases.InternalUsageMaterialConsumption0x000E,
                 V2.ftReceiptCases.InitialOperationReceipt0x4001 => V1.AT.ftReceiptCases.InitialOperationReceipt0x0003,
                 V2.ftReceiptCases.OutOfOperationReceipt0x4002 => V1.AT.ftReceiptCases.OutOfOperationReceipt0x0004,
-                V2.ftReceiptCases.SaleInForeignCountries0x4010 => V1.AT.ftReceiptCases.SaleInForeignCountries0x0010,
                 _ => throw new NotImplementedException()
             };
             receiptRequest.SetV1ReceiptCase((long)v1ftReceiptCase);
@@ -157,11 +154,27 @@ namespace fiskaltrust.Interface.Tagging.AT
             {
                 receiptRequest.SetV1ReceiptCaseFlagReceiptRequested0x8000_0000();
             }
+            if (v2ReceiptRequest.IsV2ReceiptCaseFlagHandWritten0x0008())
+            {
+                receiptRequest.SetV1ReceiptCaseFlagHandWritten0x0008();
+            }
 
-            if (v2ReceiptRequest.IsV2ReceiptCaseFlagHandWritten0x0008() ||
-                v2ReceiptRequest.IsV2ReceiptCaseFlagIssuerIsSmallBusiness0x0010() ||
-                v2ReceiptRequest.IsV2ReceiptCaseFlagReceiverIsBusiness0x0020() ||
-                v2ReceiptRequest.IsV2ReceiptCaseFlagSaleInForeignCountry0x0080() ||
+            if (v2ReceiptRequest.IsV2ReceiptCaseFlagIssuerIsSmallBusiness0x0010())
+            {
+                receiptRequest.SetV1ReceiptCaseFlagIssuerIsSmallBusiness0x0010();
+            }
+
+            if (v2ReceiptRequest.IsV2ReceiptCaseFlagReceiverIsBusiness0x0020())
+            {
+                receiptRequest.SetV1ReceiptCaseFlagReceiverIsBusiness0x0020();
+            }
+
+            if (v2ReceiptRequest.IsV2ReceiptCaseFlagReceiverIsKnown0x0040())
+            {
+                receiptRequest.SetV1ReceiptCaseFlagReceiverIsKnown0x0040();
+            }
+
+            if (v2ReceiptRequest.IsV2ReceiptCaseFlagSaleInForeignCountry0x0080() ||
                 v2ReceiptRequest.IsV2ReceiptCaseFlagReturn0x0100() ||
                 v2ReceiptRequest.IsV2ReceiptCaseFlagAdditionalInformationRequested0x0200() ||
                 v2ReceiptRequest.IsV2ReceiptCaseFlagSCUDataDownloadRequested0x0400() ||
