@@ -121,24 +121,37 @@ namespace fiskaltrust.Interface.Tagging.FR
             payItem.ftPayItemCase = (long) ((ulong) payItem.ftPayItemCase & 0xFFFF_0000_0000_0000);
 
             var v2ftPayItemCase = (V2.ftPayItemCases) v2PayItem.GetV2PayItemCase();
-            var v1ftPayItemCase = v2ftPayItemCase switch
+            if (v2PayItem.IsV2PayItemCaseFlagDigital0x0080())
             {
-                V2.ftPayItemCases.UnknownPaymentType0x0000 => V1.FR.ftPayItemCases.UnknownPaymentType0x0000,
-                V2.ftPayItemCases.Cash0x0001 => v2PayItem.IsV2PayItemCaseFlagTip0x0040() ? V1.FR.ftPayItemCases.TipToEmployee0x0012 : (v2PayItem.IsV2PayItemCaseFlagForeignCurrency0x0010() ? V1.FR.ftPayItemCases.CashForeignCurrency0x0002 : V1.FR.ftPayItemCases.Cash0x0001),
-                V2.ftPayItemCases.CrossedCheque0x0003 => V1.FR.ftPayItemCases.CrossedCheque0x0003,
-                V2.ftPayItemCases.DebitCard0x0004 => V1.FR.ftPayItemCases.DebitCard0x0004,
-                V2.ftPayItemCases.CreditCard0x0005 => V1.FR.ftPayItemCases.CreditCard0x0005,
-                V2.ftPayItemCases.Voucher0x0006 => V1.FR.ftPayItemCases.Voucher0x0006,
-                V2.ftPayItemCases.Online0x0007 => V1.FR.ftPayItemCases.Online0x0007,
-                V2.ftPayItemCases.CustomerCard0x0008 => V1.FR.ftPayItemCases.CustomerCard0x0008,
-                V2.ftPayItemCases.AccountsReceivable0x0009 => v2PayItem.IsV2PayItemCaseFlagDownPayment0x0008() ? V1.FR.ftPayItemCases.DownPayment0x0010 : V1.FR.ftPayItemCases.AccountsReceivable0x000B,
-                V2.ftPayItemCases.SEPATransfer0x000A => V1.FR.ftPayItemCases.SEPATransfer0x000C,
-                V2.ftPayItemCases.OtherBankTransfer0x000B => V1.FR.ftPayItemCases.OtherBankTransfer0x000D,
-                V2.ftPayItemCases.InternalConsumption0x000D => V1.FR.ftPayItemCases.InternalConsumption0x0011,
-                V2.ftPayItemCases.TransferTo0x000C => V1.FR.ftPayItemCases.CashBookExpense0x000E,
-                _ => throw new NotImplementedException()
-            };
-            payItem.SetV1PayItemCase((long) v1ftPayItemCase);
+                var v1ftPayItemCase = v2ftPayItemCase switch
+                {
+                    V2.ftPayItemCases.DebitCard0x0004 => V1.FR.ftPayItemCases.DebitCard0x0004,
+                    V2.ftPayItemCases.CreditCard0x0005 => V1.FR.ftPayItemCases.CreditCard0x0005,
+                    V2.ftPayItemCases.Online0x0007 => V1.FR.ftPayItemCases.Online0x0007,
+                    V2.ftPayItemCases.CustomerCard0x0008 => V1.FR.ftPayItemCases.CustomerCard0x0008,
+                    V2.ftPayItemCases.AccountsReceivable0x0009 => V1.FR.ftPayItemCases.DownPayment0x0010,
+                    V2.ftPayItemCases.SEPATransfer0x000A => V1.FR.ftPayItemCases.SEPATransfer0x000C,
+                    V2.ftPayItemCases.OtherBankTransfer0x000B => V1.FR.ftPayItemCases.OtherBankTransfer0x000D,
+                    _ => throw new NotImplementedException()
+                };
+                payItem.SetV1PayItemCase((long) v1ftPayItemCase);
+            }
+            else
+            {
+                var v1ftPayItemCase = v2ftPayItemCase switch
+                {
+                    V2.ftPayItemCases.UnknownPaymentType0x0000 => V1.FR.ftPayItemCases.UnknownPaymentType0x0000,
+                    V2.ftPayItemCases.Cash0x0001 => v2PayItem.IsV2PayItemCaseFlagTip0x0040() ? V1.FR.ftPayItemCases.TipToEmployee0x0012 : (v2PayItem.IsV2PayItemCaseFlagForeignCurrency0x0010() ? V1.FR.ftPayItemCases.CashForeignCurrency0x0002 : V1.FR.ftPayItemCases.Cash0x0001),
+                    V2.ftPayItemCases.CrossedCheque0x0003 => V1.FR.ftPayItemCases.CrossedCheque0x0003,
+                    V2.ftPayItemCases.Voucher0x0006 => V1.FR.ftPayItemCases.Voucher0x0006,
+                    V2.ftPayItemCases.AccountsReceivable0x0009 =>  V1.FR.ftPayItemCases.AccountsReceivable0x000B,
+                    V2.ftPayItemCases.InternalConsumption0x000D => V1.FR.ftPayItemCases.InternalConsumption0x0011,
+                    V2.ftPayItemCases.TransferTo0x000C => V1.FR.ftPayItemCases.CashBookExpense0x000E,
+                    _ => throw new NotImplementedException()
+                };
+                payItem.SetV1PayItemCase((long) v1ftPayItemCase);
+            }
+            
 
         }
         public void ConvertftReceiptCaseToV1(ReceiptRequest receiptRequest)

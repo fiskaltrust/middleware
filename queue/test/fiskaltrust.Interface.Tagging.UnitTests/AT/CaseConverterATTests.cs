@@ -107,25 +107,25 @@ namespace fiskaltrust.Interface.Tagging.UnitTests.AT
 
 
         [Theory]
-        [InlineData(0x4154200000000000, 0x4154000000000000)]
-        [InlineData(0x4154200000400001, 0x4154000000000012)]
-        [InlineData(0x4154200000100001, 0x4154000000000002)]
-        [InlineData(0x4154200000000001, 0x4154000000000001)]
-        [InlineData(0x4154200000000002, null)]
-        [InlineData(0x4154200000000003, 0x4154000000000003)]
-        [InlineData(0x4154200000000004, 0x4154000000000004)]
-        [InlineData(0x4154200000000005, 0x4154000000000005)]
-        [InlineData(0x4154200000000006, 0x4154000000000006)]
-        [InlineData(0x4154200000000007, 0x4154000000000007)]
-        [InlineData(0x4154200000000008, 0x4154000000000008)]
-        [InlineData(0x4154200000080009, 0x4154000000000010)]
-        [InlineData(0x4154200000000009, 0x415400000000000B)]
-        [InlineData(0x415420000000000A, 0x415400000000000C)]
-        [InlineData(0x415420000000000B, 0x415400000000000D)]
-        [InlineData(0x415420000000000C, 0x415400000000000E)]
-        [InlineData(0x415420000000000D, 0x4154000000000011)]
-        [InlineData(0x415420000000000E, null)]
-        [InlineData(0x415420000000000F, null)]
+        [InlineData(0x4652200000000000, 0x4652000000000000)]
+        [InlineData(0x4652200000400001, 0x4652000000000012)]
+        [InlineData(0x4652200000100001, 0x4652000000000002)]
+        [InlineData(0x4652200000000001, 0x4652000000000001)]
+        [InlineData(0x4652200000000002, null)]
+        [InlineData(0x4652200000000003, 0x4652000000000003)]
+        [InlineData(0x4652200000800004, 0x4652000000000004)]
+        [InlineData(0x4652200000800005, 0x4652000000000005)]
+        [InlineData(0x4652200000000006, 0x4652000000000006)]
+        [InlineData(0x4652200000800007, 0x4652000000000007)]
+        [InlineData(0x4652200000800008, 0x4652000000000008)]
+        [InlineData(0x4652200000800009, 0x4652000000000010)]
+        [InlineData(0x4652200000000009, 0x465200000000000B)]
+        [InlineData(0x465220000080000A, 0x465200000000000C)]
+        [InlineData(0x465220000080000B, 0x465200000000000D)]
+        [InlineData(0x465220000000000C, 0x465200000000000E)]
+        [InlineData(0x465220000000000D, 0x4652000000000011)]
+        [InlineData(0x465220000000000E, null)]
+        [InlineData(0x465220000000000F, null)]
         public void ConvertftPayItemCaseToV1_ShouldreturnCorrect(long v2FtPayItemCase, long? v1FtPayItemCase)
         {
             var payItem = new PayItem { ftPayItemCase = v2FtPayItemCase };
@@ -178,46 +178,46 @@ namespace fiskaltrust.Interface.Tagging.UnitTests.AT
         [Fact]
         public void SignatureFormat_ShouldreturnCorrect()
         {
-            var signature = new SignaturItem { ftSignatureFormat = 0x4154000000000000 };
+            var signature = new SignaturItem { ftSignatureFormat = 0x00000 };
 
             signature.SetV2SignatureFormat((long)ftSignatureFormats.Unknown0x0000);
-            signature.ftSignatureFormat.Should().Be(0x4154000000000000);
+            signature.ftSignatureFormat.Should().Be(0x00000);
 
             signature.SetV2SignatureFormat((long)ftSignatureFormats.Text0x0001);
-            signature.ftSignatureFormat.Should().Be(0x4154000000000001);
+            signature.ftSignatureFormat.Should().Be(0x00001);
 
             signature.SetV2SignatureFormat((long)ftSignatureFormats.Link0x0002);
-            signature.ftSignatureFormat.Should().Be(0x4154000000000002);
+            signature.ftSignatureFormat.Should().Be(0x00002);
 
             signature.SetV2SignatureFormat((long)ftSignatureFormats.QrCode0x0003);
-            signature.ftSignatureFormat.Should().Be(0x4154000000000003);
+            signature.ftSignatureFormat.Should().Be(0x00003);
 
             signature.SetV2SignatureFormat((long)ftSignatureFormats.Code1280x0004);
-            signature.ftSignatureFormat.Should().Be(0x4154000000000004);
+            signature.ftSignatureFormat.Should().Be(0x00004);
 
             signature.SetV2SignatureFormat((long)ftSignatureFormats.OcrA0x0005);
-            signature.ftSignatureFormat.Should().Be(0x4154000000000005);
+            signature.ftSignatureFormat.Should().Be(0x00005);
 
             signature.SetV2SignatureFormat((long)ftSignatureFormats.Pdf4170x0006);
-            signature.ftSignatureFormat.Should().Be(0x4154000000000006);
+            signature.ftSignatureFormat.Should().Be(0x00006);
 
             signature.SetV2SignatureFormat((long)ftSignatureFormats.DataMatrix0x0007);
-            signature.ftSignatureFormat.Should().Be(0x4154000000000007);
+            signature.ftSignatureFormat.Should().Be(0x00007);
 
             signature.SetV2SignatureFormat((long)ftSignatureFormats.Aztec0x0008);
-            signature.ftSignatureFormat.Should().Be(0x4154000000000008);
+            signature.ftSignatureFormat.Should().Be(0x00008);
 
             signature.SetV2SignatureFormat((long)ftSignatureFormats.Ean8Barcode0x0009);
-            signature.ftSignatureFormat.Should().Be(0x4154000000000009);
+            signature.ftSignatureFormat.Should().Be(0x00009);
 
             signature.SetV2SignatureFormat((long)ftSignatureFormats.Ean130x000A);
-            signature.ftSignatureFormat.Should().Be(0x415400000000000A);
+            signature.ftSignatureFormat.Should().Be(0x0000A);
 
             signature.SetV2SignatureFormat((long)ftSignatureFormats.UPCA0x000B);
-            signature.ftSignatureFormat.Should().Be(0x415400000000000B);
+            signature.ftSignatureFormat.Should().Be(0x0000B);
 
             signature.SetV2SignatureFormat((long)ftSignatureFormats.Code390x000C);
-            signature.ftSignatureFormat.Should().Be(0x415400000000000C);
+            signature.ftSignatureFormat.Should().Be(0x0000C);
         }
 
 
