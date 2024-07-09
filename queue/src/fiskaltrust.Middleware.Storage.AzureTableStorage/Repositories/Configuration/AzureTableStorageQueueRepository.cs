@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Azure.Data.Tables;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.TableEntities.Configuration;
@@ -16,6 +17,13 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.Configur
         protected override void EntityUpdated(ftQueue entity) => entity.TimeStamp = DateTime.UtcNow.Ticks;
 
         protected override Guid GetIdForEntity(ftQueue entity) => entity.ftQueueId;
+
+        public async Task InsertOrUpdateAsync(ftQueue storageEntity)
+        {
+            EntityUpdated(storageEntity);
+            var entity = MapToAzureEntity(storageEntity);
+            await _tableClient.UpsertEntityAsync(entity, TableUpdateMode.Replace);
+        }
 
         protected override AzureTableStorageFtQueue MapToAzureEntity(ftQueue src)
         {

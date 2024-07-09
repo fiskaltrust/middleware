@@ -62,7 +62,7 @@ stages:
               project: "fiskaltrust.Middleware.Storage.EF.AcceptanceTest"
 
       - job: AcceptanceTest_EFCoreQueue
-        dependsOn: Test
+        dependsOn: [Test]
         displayName: Acceptance tests - EFCoreQueue
         condition: and(succeeded(), or(eq(variables.runAcceptanceTests, 'true'), eq(variables['Build.SourceBranch'], 'refs/heads/main'), startsWith(variables['Build.SourceBranch'], 'refs/tags/queue/postgresql/')))
         pool:
@@ -126,6 +126,44 @@ stages:
           - template: templates/queue/acceptance-test.template.yml
             parameters:
               project: "fiskaltrust.Middleware.Queue.AcceptanceTest"
+
+      - job: CheckCodeCoverage
+        displayName: Check Code Coverage
+        dependsOn:
+          - Test
+          - AcceptanceTest_AzureTableStorageQueue
+          - AcceptanceTest_EFQueue
+          - AcceptanceTest_EFCoreQueue
+          - AcceptanceTest_SQLiteQueue
+          - AcceptanceTest_InMemoryQueue
+          - AcceptanceTest_MySQLQueue
+          - AcceptanceTest_Queue
+          - AcceptanceTest_QueueSynchronizer
+        condition: |
+          and
+          (
+            eq(dependencies.Test.result, 'Succeeded'),
+            in(dependencies.AcceptanceTest_AzureTableStorageQueue.result, 'Succeeded', 'Skipped'),
+            in(dependencies.AcceptanceTest_EFQueue.result, 'Succeeded', 'Skipped'),
+            in(dependencies.AcceptanceTest_EFCoreQueue.result, 'Succeeded', 'Skipped'),
+            in(dependencies.AcceptanceTest_SQLiteQueue.result, 'Succeeded', 'Skipped'),
+            in(dependencies.AcceptanceTest_InMemoryQueue.result, 'Succeeded', 'Skipped'),
+            in(dependencies.AcceptanceTest_MySQLQueue.result, 'Succeeded', 'Skipped'),
+            in(dependencies.AcceptanceTest_Queue.result, 'Succeeded', 'Skipped'),
+            in(dependencies.AcceptanceTest_QueueSynchronizer.result, 'Succeeded', 'Skipped')
+          )
+        pool:
+          vmImage: $(vmImageName)
+        steps:
+          - download: current
+            patterns: "**/Cobertura.xml"
+
+          - task: reportgenerator@5
+            inputs:
+              reports: "$(Pipeline.Workspace)/**/Cobertura.xml"
+              targetdir: "$(Build.SourcesDirectory)/CoverageResults"
+              customSettings: "minimumCoverageThresholds:lineCoverage=60"
+              publishCodeCoverageResults: true
 
   - stage: NuspecTest
     dependsOn: []

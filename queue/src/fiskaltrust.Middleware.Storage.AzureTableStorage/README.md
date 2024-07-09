@@ -1,3 +1,12 @@
+## PrimaryKeys and RowKeys
+
+In the configuration tables (`CashBox`, `Queue`, etc.) the PK and RK are both the entity id.
+
+In the other tables (except the `QueueItem` Table) the `TimeStamp` is the PK.
+
+In the `QueueItem` table the PK is the `queueRow` because we need to update the queueItem and when updating
+it we also update the `TimeStamp` which would change the PK if it was the `TimeStamp`.
+
 ## Migrations
 
 The following steps are needed to create migrations for the Middleware's database layers, e.g. when new fields are added:

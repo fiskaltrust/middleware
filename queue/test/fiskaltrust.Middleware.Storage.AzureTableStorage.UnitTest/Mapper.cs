@@ -1,4 +1,4 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.Extensions;
 using System;

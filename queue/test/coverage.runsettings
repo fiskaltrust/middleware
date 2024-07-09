@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat code coverage">
+        <Configuration>
+          <Include>[fiskaltrust.Middleware.Localization.*]*,[fiskaltrust.Middleware.Queue*.*]*</Include>
+          <Exclude>[fiskaltrust.*Test]*,[fiskaltrust.*Tests]*</Exclude>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>
