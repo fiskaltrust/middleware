@@ -145,6 +145,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fiskaltrust.Interface.Taggi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fiskaltrust.Interface.Tagging.Generator.IntegrationTests", "test\fiskaltrust.Interface.Tagging.Generator.IntegrationTests\fiskaltrust.Interface.Tagging.Generator.IntegrationTests.csproj", "{34229319-E3C0-4B57-A2D9-F1812CBF5311}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fiskaltrust.Middleware.Storage.AzureTableStorage.UnitTest", "test\fiskaltrust.Middleware.Storage.AzureTableStorage.UnitTest\fiskaltrust.Middleware.Storage.AzureTableStorage.UnitTest.csproj", "{EEDA285C-82F8-4E6D-AAFA-9E42D3C4F0E6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -367,6 +369,10 @@ Global
 		{34229319-E3C0-4B57-A2D9-F1812CBF5311}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{34229319-E3C0-4B57-A2D9-F1812CBF5311}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{34229319-E3C0-4B57-A2D9-F1812CBF5311}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EEDA285C-82F8-4E6D-AAFA-9E42D3C4F0E6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EEDA285C-82F8-4E6D-AAFA-9E42D3C4F0E6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EEDA285C-82F8-4E6D-AAFA-9E42D3C4F0E6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EEDA285C-82F8-4E6D-AAFA-9E42D3C4F0E6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -433,6 +439,7 @@ Global
 		{930A9188-4273-45C5-9506-922CE7B1E712} = {08381205-3409-4468-92EB-ACA65F8D82FB}
 		{855013AC-6255-4A3C-80C7-5140F5BD20B9} = {EAEEF28B-F372-48C1-8F9B-45CEB95159A2}
 		{34229319-E3C0-4B57-A2D9-F1812CBF5311} = {EAEEF28B-F372-48C1-8F9B-45CEB95159A2}
+		{EEDA285C-82F8-4E6D-AAFA-9E42D3C4F0E6} = {EAEEF28B-F372-48C1-8F9B-45CEB95159A2}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {E8BEA609-BD83-4165-A14A-D010D2CC87AD}

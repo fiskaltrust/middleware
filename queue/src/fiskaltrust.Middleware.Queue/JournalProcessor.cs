@@ -127,10 +127,12 @@ namespace fiskaltrust.Middleware.Queue
                 QueueDEList = await _configurationRepository.GetQueueDEListAsync().ConfigureAwait(false),
                 QueueFRList = await _configurationRepository.GetQueueFRListAsync().ConfigureAwait(false),
                 QueueMEList = await _configurationRepository.GetQueueMEListAsync().ConfigureAwait(false),
+                QueueITList = await _configurationRepository.GetQueueITListAsync().ConfigureAwait(false),
                 SignaturCreationUnitATList = await _configurationRepository.GetSignaturCreationUnitATListAsync().ConfigureAwait(false),
                 SignaturCreationUnitDEList = await _configurationRepository.GetSignaturCreationUnitDEListAsync().ConfigureAwait(false),
                 SignaturCreationUnitFRList = await _configurationRepository.GetSignaturCreationUnitFRListAsync().ConfigureAwait(false),
-                SignaturCreationUnitMEList = await _configurationRepository.GetSignaturCreationUnitMEListAsync().ConfigureAwait(false)
+                SignaturCreationUnitMEList = await _configurationRepository.GetSignaturCreationUnitMEListAsync().ConfigureAwait(false),
+                SignaturCreationUnitITList = await _configurationRepository.GetSignaturCreationUnitITListAsync().ConfigureAwait(false),
             };
         }
 
