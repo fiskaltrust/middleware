@@ -1,4 +1,4 @@
-﻿using System.Runtime.InteropServices;
+﻿
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Interface.Tagging.Generator;
 
@@ -7,6 +7,7 @@ namespace fiskaltrust.Interface.Tagging.Models.V2.DE
     [CaseExtensions(OnType = typeof(SignaturItem), OnField = nameof(SignaturItem.ftSignatureType), Mask = 0x0FFF, Prefix = "V2", CaseName = "SignatureTypeDE")]
     public enum ftSignatureTypes : long
     {
+        Signature0x001 = 0x001,
         StartTransactionResult0x010 = 0x010,
         FinishTransactionPayload0x011 = 0x011,
         FinishTransactionResult0x012 = 0x012,

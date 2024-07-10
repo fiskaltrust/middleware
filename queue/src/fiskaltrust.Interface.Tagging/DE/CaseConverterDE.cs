@@ -19,6 +19,11 @@ namespace fiskaltrust.Interface.Tagging.DE
 
             chargeItem.ftChargeItemCase = (long) ((ulong) v2ChargeItem.ftChargeItemCase & 0xFFFF_0000_0000_0000);
 
+            if (v2ChargeItem.IsV2ChargeItemCaseFlagTakeAway0x0020())
+            {
+                chargeItem.SetV1ChargeItemCaseFlagTakeAway0x0001();
+            }
+
             if (v2ChargeItem.IsV2ChargeItemCaseVoucherNotTaxable0x0048())
             {
                 if (chargeItem.Amount > 0)
@@ -589,6 +594,9 @@ namespace fiskaltrust.Interface.Tagging.DE
 
             switch (v1SignaturItem.ftSignatureType & 0xFFF)
             {
+                case (long) V1.DE.ftSignatureTypes.Signature0x0001:
+                    ftSignatureType.SetV2SignatureType((long) V2DE.ftSignatureTypes.Signature0x001);
+                    break;
                 case (long) V1.DE.ftSignatureTypes.StartTransactionResult0x0010:
                     ftSignatureType.SetV2SignatureType((long) V2DE.ftSignatureTypes.StartTransactionResult0x010);
                     break;
