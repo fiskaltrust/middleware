@@ -673,7 +673,7 @@ namespace fiskaltrust.Interface.Tagging.DE
                 ftstate.SetV2ftStateFlagScuInSwitchingState();
             }
 
-            switch (v1ReceiptResponse.ftState & 0xFFF)
+            switch (v1ReceiptResponse.ftState & 0xFFFF)
             {
                 case (long) V1.DE.ftStates.Ready0x0000:
                     ftstate.SetV2State((long) V2.ftStates.Ready0x0000);

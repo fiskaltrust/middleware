@@ -6,6 +6,7 @@ namespace fiskaltrust.Interface.Tagging.Models.V1.AT
     [CaseExtensions(OnType = typeof(ReceiptResponse), OnField = nameof(ReceiptResponse.ftState), Mask = 0xFFFF, Prefix = "V1", CaseName = "State")]
     public enum ftStates : long
     {
+        Ready0x0000 = 0x0000,
         OutOfService0x0001 = 0x0001,
         SSCDTemporaryOutOfService0x0002 = 0x0002,
         SSCDPermanentlyOutOfService0x0004 = 0x0004,

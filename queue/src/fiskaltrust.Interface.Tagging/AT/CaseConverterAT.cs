@@ -305,7 +305,7 @@ namespace fiskaltrust.Interface.Tagging.AT
                 ftstate.SetV2ftStateFlagScuPermamentOutofService();
             }
 
-            if (v1ReceiptResponse.IsV1StateSSCDTemporaryOutOfService0x0002())
+            if (v1ReceiptResponse.IsV1StateBackupSSCDInUse0x0080())
             {
                 ftstate.SetV2ftStateFlagScuBackup();
             }
@@ -320,32 +320,26 @@ namespace fiskaltrust.Interface.Tagging.AT
                 ftstate.SetV2ftStateFlagYearlyClosing();
             }
 
-            switch (v1ReceiptResponse.ftState & 0xFFF)
+            switch (v1ReceiptResponse.ftState & 0xFFFF)
             {
-                case (long)V1.AT.ftStates.OutOfService0x0001:
-                    ftstate.SetV2State((long)V2.ftStates.OutOfService0x0001);
+                case (long) V1.AT.ftStates.Ready0x0000:
+                    ftstate.SetV2State((long) V2.ftStates.Ready0x0000);
                     break;
-                case (long)V1.AT.ftStates.SSCDTemporaryOutOfService0x0002:
-                    ftstate.SetV2State((long)V2.ftStates.SSCDTemporaryOutOfService0x0002);
+                case (long) V1.AT.ftStates.OutOfService0x0001:
+                    ftstate.SetV2State((long) V2.ftStates.SecurityMechanismOutOfOperation0x0001);
                     break;
-                case (long)V1.AT.ftStates.SSCDPermanentlyOutOfService0x0004:
-                    ftstate.SetV2State((long) V2.ftStates.SSCDPermanentlyOutOfService0x0004);
+                case (long) V1.AT.ftStates.SSCDTemporaryOutOfService0x0002:
+                    ftstate.SetV2State((long) V2.ftStates.ScuTemporaryOutOfService0x0002);
                     break;
-                case (long)V1.AT.ftStates.SubsequentEntryActivated0x0008:
-                    ftstate.SetV2State((long)V2.ftStates.SubsequentEntryActivated0x0008);
+   
+                case (long) V1.AT.ftStates.SubsequentEntryActivated0x0008:
+                    ftstate.SetV2State((long) V2.ftStates.LateSigningModeIsActive0x0008);
                     break;
-                case (long)V1.AT.ftStates.MonthlyReportDue0x0010:
-                    ftstate.SetV2State((long)V2.ftStates.MonthlyReportDue0x0010);
+   
+                case (long) V1.AT.ftStates.MessageNotificationPending0x0040:
+                    ftstate.SetV2State((long) V2.ftStates.MessagePending0x0040);
                     break;
-                case (long)V1.AT.ftStates.AnnualReportDue0x0020:
-                    ftstate.SetV2State((long)V2.ftStates.AnnualReportDue0x0020);
-                    break;
-                case (long)V1.AT.ftStates.MessageNotificationPending0x0040:
-                    ftstate.SetV2State((long)V2.ftStates.MessageNotificationPending0x0040);
-                    break;
-                case (long)V1.AT.ftStates.BackupSSCDInUse0x0080:
-                    ftstate.SetV2State((long)V2.ftStates.BackupSSCDInUse0x0080);
-                    break;
+    
                 default:
                     throw new NotImplementedException();
             }
