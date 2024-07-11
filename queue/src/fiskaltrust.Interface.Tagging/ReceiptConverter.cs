@@ -40,7 +40,7 @@ namespace fiskaltrust.Interface.Tagging
                 {
                     if (!payItem.IsVersionV2())
                     {
-                        throw new PayItemVersionException($"It's NOT a V2 pay Item. Found V{payItem.GetVersion()}.");
+                        throw new PayItemVersionException($"Using the v2 tagging in ftReceiptCases requires the usage of v2 PayItems (mixing versions within requests is not possible). Found v{payItem.GetVersion()} instead of v2.");
                     }
                     converter.ConvertftPayItemCaseToV1(payItem);
                 }
