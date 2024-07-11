@@ -28,7 +28,7 @@ namespace fiskaltrust.Interface.Tagging
                 {
                     if (!chargeItem.IsVersionV2())
                     {
-                        throw new ChargeItemVersionException($"It's NOT a V2 charge Item. Found V{chargeItem.GetVersion()}.");
+                        throw new ChargeItemVersionException($"Using the v2 tagging in ftReceiptCases requires the usage of v2 ChargeItems (mixing versions within requests is not possible). Found v{chargeItem.GetVersion()} instead of v2.");
                     }
                     converter.ConvertftChargeItemCaseToV1(chargeItem);
                 }
