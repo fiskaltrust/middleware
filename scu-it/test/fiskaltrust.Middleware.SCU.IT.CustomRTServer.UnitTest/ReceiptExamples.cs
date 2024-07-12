@@ -136,7 +136,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
             "Amount": 10,
             "VATRate": 0,
             "VATAmount": 0,
-            "ftChargeItemCase": 5283883447186624532,
+            "ftChargeItemCase": 5283883447186624536,
             "Description": "TakeAway - Delivery - Item VAT NI",
             "Moment": "{{current_moment}}"
         },
@@ -145,7 +145,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
             "Amount": 10,
             "VATRate": 0,
             "VATAmount": 0,
-            "ftChargeItemCase": 5283883447186628628,
+            "ftChargeItemCase": 5283883447186628632,
             "Description": "TakeAway - Delivery - Item VAT NS",
             "Moment": "{{current_moment}}"
         },
@@ -154,7 +154,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
             "Amount": 10,
             "VATRate": 0,
             "VATAmount": 0,
-            "ftChargeItemCase": 5283883447186632724,
+            "ftChargeItemCase": 5283883447186632728,
             "Description": "TakeAway - Delivery - Item VAT ES",
             "Moment": "{{current_moment}}"
         },
@@ -163,7 +163,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
             "Amount": 10,
             "VATRate": 0,
             "VATAmount": 0,
-            "ftChargeItemCase": 5283883447186636820,
+            "ftChargeItemCase": 5283883447186636824,
             "Description": "TakeAway - Delivery - Item VAT RM",
             "Moment": "{{current_moment}}"
         },
@@ -172,7 +172,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
             "Amount": 10,
             "VATRate": 0,
             "VATAmount": 0,
-            "ftChargeItemCase": 5283883447186640916,
+            "ftChargeItemCase": 5283883447186640920,
             "Description": "TakeAway - Delivery - Item VAT AL",
             "Moment": "{{current_moment}}"
         },
@@ -181,7 +181,7 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTServer.UnitTest
             "Amount": 10,
             "VATRate": 0,
             "VATAmount": 0,
-            "ftChargeItemCase": 5283883447186653204,
+            "ftChargeItemCase": 5283883447186653208,
             "Description": "TakeAway - Delivery - Item VAT EE",
             "Moment": "{{current_moment}}"
         }
