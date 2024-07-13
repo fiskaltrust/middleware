@@ -1,9 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
+    
     <PropertyGroup>
         <Description>The fiskaltrust Middleware Queue with an Entity Framework storage provider for SQL Server databases.</Description>
         <TargetFrameworks>net461;net6</TargetFrameworks>
         <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);CopyProjectReferencesToPackage</TargetsForTfmSpecificBuildOutput>
+        <IsPackable>true</IsPackable>
     </PropertyGroup>
 
     <ItemGroup>

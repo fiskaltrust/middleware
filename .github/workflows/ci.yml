@@ -12,11 +12,15 @@ jobs:
     timeout-minutes: 60
     strategy:
       matrix:
-        solution: [ "queue", "scu-at", "scu-de", "scu-it", "scu-es" ]
+        solution: [ "queue" ]
+        # solution: [ "queue", "scu-at", "scu-de", "scu-it", "scu-es" ]
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+        filter: tree:0
 
     - name: Setup .NET
       uses: actions/setup-dotnet@v1
@@ -28,6 +32,9 @@ jobs:
 
     - name: Install NuGet
       run: choco install nuget.commandline -y
+
+    - name: Install MinVer
+      run: dotnet tool install --global minver-cli --version 5.0.0
 
     - name: Restore dependencies
       run: dotnet restore (Get-ChildItem -Path ${{ matrix.solution }} -Filter *.sln).FullName
@@ -86,8 +93,35 @@ jobs:
         password: '${{ secrets.SIGNING_CERT_PASSWORD }}'
         files: ${{ steps.filter_files_for_codesigning.outputs.filtered_files }}
 
-    - name: Publish artifacts
-      run: dotnet publish ${{ matrix.solution }}/*.sln -c Release -o ./publish
+    - name: Publish v1 Nuget packages
+      run: dotnet pack (Get-ChildItem -Path ${{ matrix.solution }} -Filter *.sln).FullName --no-restore --configuration Release --output ./publish/packages-v1 
+
+    - name: Publish v2 zip packages
+      run: |
+        $version = minver --verbosity error
+
+        New-Item -ItemType Directory -Force -Path ./publish/packages-v2
+
+        # We're filtering the files to publish here based on the IsPackable attribute that's also used for v1 packages
+        $projectFiles = Get-ChildItem -Path ${{ matrix.solution }} -Recurse -Filter *.csproj
+        foreach ($file in $projectFiles) {
+          [xml]$xmlContent = Get-Content -Path $file.FullName
+          foreach ($propertyGroup in $xmlContent.Project.PropertyGroup) {
+            if ($propertyGroup.IsPackable -eq "true") {
+              $packageName = $file.BaseName
+              dotnet publish $file.FullName --configuration Release -f net6 --output ./publish/raw/packages-v2/$packageName --no-build /p:DebugType=None /p:DebugSymbols=false
+              Compress-Archive -Path ./publish/raw/packages-v2/$packageName/* -DestinationPath ./publish/packages-v2/$packageName.$version.zip
+
+              $hash = Get-FileHash ./publish/packages-v2/$packageName.$version.zip -Algorithm SHA256
+              $hashbytes = $hash.Hash -split '([A-F0-9]{2})' | foreach-object { if ($_) {[System.Convert]::ToByte($_,16)}}
+              $hashstring = [System.Convert]::ToBase64String($hashbytes)
+              $hashstring | Set-Content ./publish/packages-v2/$packageName.$version.zip.hash
+
+              break
+            }
+          }
+        }        
+
     - name: Upload build artifacts
       uses: actions/upload-artifact@v2
       with:

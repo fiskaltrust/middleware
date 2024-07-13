@@ -1,9 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
+      
     <PropertyGroup>
         <Description>The fiskaltrust Middleware Queue with an Azure Table Storage based storage provider.</Description>
-        <TargetFrameworks>netstandard2.0;net461</TargetFrameworks>
+        <TargetFrameworks>net6;net461</TargetFrameworks>
         <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);CopyProjectReferencesToPackage</TargetsForTfmSpecificBuildOutput>
+        <IsPackable>true</IsPackable>
     </PropertyGroup>
 
     <ItemGroup>
