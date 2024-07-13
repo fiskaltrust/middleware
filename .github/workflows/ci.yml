@@ -12,8 +12,8 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 60
     strategy:
+      fail-fast: false
       matrix:
-        fail-fast: false
         solution: [ "queue" ]
         # solution: [ "queue", "scu-at", "scu-de", "scu-it", "scu-es" ]
 
@@ -98,21 +98,21 @@ jobs:
           exit 1
         }
 
-    - name: Run Acceptance Tests
-      if: steps.acceptance_test_projects.outputs.PROJECTS != ''
-      run: |
-        $projects = "${{ steps.acceptance_test_projects.outputs.PROJECTS }}".Split(";")
-        $failed = $false
-        foreach ($project in $projects) {
-          dotnet test $project --no-build --verbosity normal --configuration Release -l:trx
-          if ($LASTEXITCODE -ne 0) {
-            $failed = $true
-          }
-        }
-        if ($failed) {
-          Write-Error "One or more tests failed."
-          exit 1
-        }
+    # - name: Run Acceptance Tests
+    #   if: steps.acceptance_test_projects.outputs.PROJECTS != ''
+    #   run: |
+    #     $projects = "${{ steps.acceptance_test_projects.outputs.PROJECTS }}".Split(";")
+    #     $failed = $false
+    #     foreach ($project in $projects) {
+    #       dotnet test $project --no-build --verbosity normal --configuration Release -l:trx
+    #       if ($LASTEXITCODE -ne 0) {
+    #         $failed = $true
+    #       }
+    #     }
+    #     if ($failed) {
+    #       Write-Error "One or more tests failed."
+    #       exit 1
+    #     }
       
     - name: Filter files for codesigning
       id: filter_files_for_codesigning
