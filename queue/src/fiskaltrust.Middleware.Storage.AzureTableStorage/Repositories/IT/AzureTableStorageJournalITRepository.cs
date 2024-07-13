@@ -13,16 +13,65 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.IT
     public class AzureTableStorageJournalITRepository : BaseAzureTableStorageRepository<Guid, AzureTableStorageFtJournalIT, ftJournalIT>, IMiddlewareJournalITRepository
     {
         public AzureTableStorageJournalITRepository(QueueConfiguration queueConfig, TableServiceClient tableServiceClient)
-            : base(queueConfig, tableServiceClient, nameof(ftJournalIT)) { }
+            : base(queueConfig, tableServiceClient, TABLE_NAME) { }
+
+        public const string TABLE_NAME = "JournalIT";
+
         protected override void EntityUpdated(ftJournalIT entity) => entity.TimeStamp = DateTime.UtcNow.Ticks;
 
         protected override Guid GetIdForEntity(ftJournalIT entity) => entity.ftJournalITId;
 
-        protected override AzureTableStorageFtJournalIT MapToAzureEntity(ftJournalIT entity) => Mapper.Map(entity);
+        protected override AzureTableStorageFtJournalIT MapToAzureEntity(ftJournalIT src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
 
-        protected override ftJournalIT MapToStorageEntity(AzureTableStorageFtJournalIT entity) => Mapper.Map(entity);
+            return new AzureTableStorageFtJournalIT
+            {
+                PartitionKey = Mapper.GetHashString(src.TimeStamp),
+                RowKey = src.ftJournalITId.ToString(),
+                ftJournalITId = src.ftJournalITId,
+                ftQueueItemId = src.ftQueueItemId,
+                ftQueueId = src.ftQueueId,
+                ftSignaturCreationUnitITId = src.ftSignaturCreationUnitITId,
+                cbReceiptReference = src.cbReceiptReference,
+                JournalType = src.JournalType,
+                ReceiptDateTime = src.ReceiptDateTime.ToUniversalTime(),
+                ReceiptNumber = src.ReceiptNumber,
+                DataJson = src.DataJson,
+                ZRepNumber = src.ZRepNumber,
+                TimeStamp = src.TimeStamp
+            };
+        }
 
-        async Task<ftJournalIT> IMiddlewareJournalITRepository.GetByQueueItemId(Guid queueItemId) { 
+        protected override ftJournalIT MapToStorageEntity(AzureTableStorageFtJournalIT src)
+        {
+            if (src == null)
+
+            {
+                return null;
+            }
+
+            return new ftJournalIT
+            {
+                ftJournalITId = src.ftJournalITId,
+                ftQueueItemId = src.ftQueueItemId,
+                ftQueueId = src.ftQueueId,
+                ftSignaturCreationUnitITId = src.ftSignaturCreationUnitITId,
+                cbReceiptReference = src.cbReceiptReference,
+                JournalType = src.JournalType,
+                ReceiptDateTime = src.ReceiptDateTime,
+                ReceiptNumber = src.ReceiptNumber,
+                DataJson = src.DataJson,
+                ZRepNumber = src.ZRepNumber,
+                TimeStamp = src.TimeStamp
+            };
+        }
+
+        async Task<ftJournalIT> IMiddlewareJournalITRepository.GetByQueueItemId(Guid queueItemId)
+        {
             var items = await GetAsync().ConfigureAwait(false);
             return items.Where(x => x.ftQueueItemId == queueItemId).FirstOrDefault();
         }

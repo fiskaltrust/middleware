@@ -22,7 +22,8 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.AcceptanceTest
 
         public override async Task<IMiddlewareQueueItemRepository> CreateRepository(IEnumerable<ftQueueItem> entries)
         {
-            var azureQueueItemRepository = new AzureTableStorageQueueItemRepository(new QueueConfiguration { QueueId = _fixture.QueueId }, new TableServiceClient(Constants.AzureStorageConnectionString));
+            var receiptReferenceIndexRepository = new AzureTableStorageReceiptReferenceIndexRepository(new QueueConfiguration { QueueId = _fixture.QueueId }, new TableServiceClient(Constants.AzureStorageConnectionString));
+            var azureQueueItemRepository = new AzureTableStorageQueueItemRepository(new QueueConfiguration { QueueId = _fixture.QueueId }, new TableServiceClient(Constants.AzureStorageConnectionString), receiptReferenceIndexRepository);
             foreach (var entry in entries)
             {
                 await azureQueueItemRepository.InsertAsync(entry);

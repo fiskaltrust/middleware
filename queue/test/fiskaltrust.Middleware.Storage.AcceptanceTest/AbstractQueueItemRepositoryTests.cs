@@ -49,7 +49,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             var firstSearchedEntryTimeStamp = allEntries[5].TimeStamp;
             var lastSearchedEntryTimeStamp = allEntries[1].TimeStamp;
 
-            var actualEntries = await ((IMiddlewareRepository<ftQueueItem>) sut).GetByTimeStampRangeAsync(firstSearchedEntryTimeStamp, lastSearchedEntryTimeStamp).ToListAsync();
+            var actualEntries = await ((IMiddlewareRepository<ftQueueItem>)sut).GetByTimeStampRangeAsync(firstSearchedEntryTimeStamp, lastSearchedEntryTimeStamp).ToListAsync();
 
             actualEntries.Should().BeEquivalentTo(allEntries.Skip(1).Take(5));
         }
@@ -64,7 +64,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             var allEntries = (await sut.GetAsync()).OrderBy(x => x.TimeStamp).ToList();
             var firstSearchedEntryTimeStamp = allEntries[1].TimeStamp;
 
-            var actualEntries = await ((IMiddlewareRepository<ftQueueItem>) sut).GetEntriesOnOrAfterTimeStampAsync(firstSearchedEntryTimeStamp).ToListAsync();
+            var actualEntries = await ((IMiddlewareRepository<ftQueueItem>)sut).GetEntriesOnOrAfterTimeStampAsync(firstSearchedEntryTimeStamp).ToListAsync();
 
             actualEntries.Should().BeEquivalentTo(allEntries.Skip(1));
         }
@@ -79,7 +79,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             var allEntries = (await sut.GetAsync()).OrderBy(x => x.TimeStamp).ToList();
             var firstSearchedEntryTimeStamp = allEntries[1].TimeStamp;
 
-            var actualEntries = await ((IMiddlewareRepository<ftQueueItem>) sut).GetEntriesOnOrAfterTimeStampAsync(firstSearchedEntryTimeStamp, 2).ToListAsync();
+            var actualEntries = await ((IMiddlewareRepository<ftQueueItem>)sut).GetEntriesOnOrAfterTimeStampAsync(firstSearchedEntryTimeStamp, 2).ToListAsync();
 
             actualEntries.Should().BeEquivalentTo(allEntries.Skip(1).Take(2));
         }
@@ -92,7 +92,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             var sutIterate = await CreateRepository(expectedEntries);
             var sutInsert = await CreateRepository(Array.Empty<ftQueueItem>());
 
-            await foreach (var entry in ((IMiddlewareRepository<ftQueueItem>) sutIterate).GetEntriesOnOrAfterTimeStampAsync(0, 2))
+            await foreach (var entry in ((IMiddlewareRepository<ftQueueItem>)sutIterate).GetEntriesOnOrAfterTimeStampAsync(0, 2))
             {
                 await sutInsert.InsertOrUpdateAsync(StorageTestFixtureProvider.GetFixture().Create<ftQueueItem>());
             }
@@ -193,12 +193,56 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
         }
 
         [Fact]
+        public async Task InsertOrUpdateAsync_ShouldAddEntryWithHugeRequestAndResponse_ToTheDatabase()
+        {
+            var entries = StorageTestFixtureProvider.GetFixture().CreateMany<ftQueueItem>(10).ToList();
+            var entryToInsert = StorageTestFixtureProvider.GetFixture().Create<ftQueueItem>();
+
+            var request = JsonConvert.DeserializeObject<ReceiptRequest>(entryToInsert.request);
+            request.cbReceiptReference = string.Join(string.Empty, StorageTestFixtureProvider.GetFixture().CreateMany<char>(40_000));
+            entryToInsert.request = JsonConvert.SerializeObject(request);
+
+            var response = JsonConvert.DeserializeObject<ReceiptRequest>(entryToInsert.response);
+            response.cbReceiptReference = string.Join(string.Empty, StorageTestFixtureProvider.GetFixture().CreateMany<char>(40_000));
+            entryToInsert.response = JsonConvert.SerializeObject(response);
+
+            var sut = await CreateRepository(entries);
+            await sut.InsertOrUpdateAsync(entryToInsert);
+
+            var insertedEntry = await sut.GetAsync(entryToInsert.ftQueueItemId);
+            insertedEntry.Should().BeEquivalentTo(entryToInsert);
+        }
+
+        private class Test
+        {
+            public DateTime DateTime { get; set; }
+        }
+
+        [Theory]
+        [InlineData("2024-06-19T15:30:21Z", System.Globalization.DateTimeStyles.AdjustToUniversal)]
+        public async Task InsertOrUpdateAsync_ShouldAddEntryWithNonUtcDateTime_ToTheDatabase(string dateTime, System.Globalization.DateTimeStyles flags)
+        {
+            var entries = StorageTestFixtureProvider.GetFixture().CreateMany<ftQueueItem>(10).ToList();
+            var entryToInsert = StorageTestFixtureProvider.GetFixture().Create<ftQueueItem>();
+            entryToInsert.ftQueueMoment = DateTime.Parse(dateTime, null, flags);
+            entryToInsert.cbReceiptMoment = DateTime.Parse(dateTime, null, flags);
+            entryToInsert.ftDoneMoment = DateTime.Parse(dateTime, null, flags);
+            entryToInsert.ftWorkMoment = DateTime.Parse(dateTime, null, flags);
+
+            var sut = await CreateRepository(entries);
+            await sut.InsertOrUpdateAsync(entryToInsert);
+
+            var insertedEntry = await sut.GetAsync(entryToInsert.ftQueueItemId);
+            insertedEntry.Should().BeEquivalentTo(entryToInsert);
+        }
+
+        [Fact]
         public async Task InsertOrUpdateAsync_ShouldUpdateEntry_IfEntryAlreadyExists()
         {
             var entries = StorageTestFixtureProvider.GetFixture().CreateMany<ftQueueItem>(10).ToList();
 
             var sut = await CreateRepository(entries);
-
+            var count = (await sut.GetAsync()).Count();
             var entryToUpdate = await sut.GetAsync(entries[0].ftQueueItemId);
             entryToUpdate.ftQueueRow = long.MaxValue;
 
@@ -207,6 +251,8 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             var updatedEntry = await sut.GetAsync(entries[0].ftQueueItemId);
 
             updatedEntry.ftQueueRow.Should().Be(long.MaxValue);
+            (await sut.GetAsync()).Count().Should().Be(count);
+
         }
 
         [Fact]
@@ -267,7 +313,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
                 {
                     expectedEntries[i].request = JsonConvert.SerializeObject(receiptFixture.Create<ReceiptRequest>());
                 }
-                
+
             }
             var sut = await CreateRepository(expectedEntries);
 
@@ -324,7 +370,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
 
             var queueItemFixture = StorageTestFixtureProvider.GetFixture();
             queueItemFixture.Customize<ftQueueItem>(c => c.With(r => r.TimeStamp, DateTime.UtcNow.Ticks).With(r => r.request, JsonConvert.SerializeObject(receiptFixture.Create<ReceiptRequest>())));
-            
+
             var expectedEntries = queueItemFixture.CreateMany<ftQueueItem>(2).ToList();
             var sut = await CreateRepository(expectedEntries);
             await Task.Delay(1);
@@ -375,7 +421,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
 
             var receiptReferences = await sut.GetQueueItemsForReceiptReferenceAsync(receiptReference).ToListAsync();
             receiptReferences.Count().Should().Be(2);
-            foreach(var receipt in receiptReferences)
+            foreach (var receipt in receiptReferences)
             {
                 receipt.cbReceiptReference.Should().Be(receiptReference);
                 JsonConvert.DeserializeObject<ReceiptRequest>(receipt.request).ftReceiptCase.Should().Be(4919338172267102209);

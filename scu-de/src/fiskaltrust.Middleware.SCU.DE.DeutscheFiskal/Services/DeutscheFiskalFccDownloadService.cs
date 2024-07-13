@@ -227,11 +227,6 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
 
         protected virtual string GetDownloadUriByCurrentPlatform()
         {
-            if (RuntimeInformation.OSArchitecture == Architecture.X86)
-            {
-                throw new Exception("Starting from version 4.1.1, the FCC does not support x86 Operating Systems anymore. Only x64, arm32 and arm64 are supported.");
-            }
-
             var operatingSystem = RuntimeInformation.OSArchitecture switch
             {
                 Architecture.X64 => "x64",

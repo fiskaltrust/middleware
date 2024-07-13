@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Azure.Data.Tables;
+using Azure.Storage.Blobs;
 using fiskaltrust.Middleware.Abstractions;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -14,7 +15,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.AcceptanceTest.Fixtur
 
         public AzureTableStorageFixture()
         {
-            var dbMigrator = new DatabaseMigrator(Mock.Of<ILogger<IMiddlewareBootstrapper>>(), new TableServiceClient(Constants.AzureStorageConnectionString), new QueueConfiguration { QueueId = QueueId });
+            var dbMigrator = new DatabaseMigrator(Mock.Of<ILogger<IMiddlewareBootstrapper>>(), new TableServiceClient(Constants.AzureStorageConnectionString), new BlobServiceClient(Constants.AzureStorageConnectionString), new QueueConfiguration { QueueId = QueueId });
             dbMigrator.MigrateAsync().Wait();
         }
 

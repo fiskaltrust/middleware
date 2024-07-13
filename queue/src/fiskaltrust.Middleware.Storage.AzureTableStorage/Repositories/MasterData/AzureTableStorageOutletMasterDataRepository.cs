@@ -11,7 +11,9 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.MasterDa
     public class AzureTableStorageOutletMasterDataRepository : BaseAzureTableStorageRepository<Guid, AzureTableStorageOutletMasterData, OutletMasterData>, IMasterDataRepository<OutletMasterData>
     {
         public AzureTableStorageOutletMasterDataRepository(QueueConfiguration queueConfig, TableServiceClient tableServiceClient)
-            : base(queueConfig, tableServiceClient, nameof(OutletMasterData)) { }
+            : base(queueConfig, tableServiceClient, TABLE_NAME) { }
+
+        public const string TABLE_NAME = nameof(OutletMasterData);
 
         public async Task ClearAsync() => await ClearTableAsync().ConfigureAwait(false);
 
@@ -21,8 +23,47 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.MasterDa
 
         protected override Guid GetIdForEntity(OutletMasterData entity) => entity.OutletId;
 
-        protected override AzureTableStorageOutletMasterData MapToAzureEntity(OutletMasterData entity) => Mapper.Map(entity);
+        protected override AzureTableStorageOutletMasterData MapToAzureEntity(OutletMasterData src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
 
-        protected override OutletMasterData MapToStorageEntity(AzureTableStorageOutletMasterData entity) => Mapper.Map(entity);
+            return new AzureTableStorageOutletMasterData
+            {
+                PartitionKey = src.OutletId.ToString(),
+                RowKey = src.OutletId.ToString(),
+                OutletId = src.OutletId,
+                OutletName = src.OutletName,
+                Street = src.Street,
+                Zip = src.Zip,
+                City = src.City,
+                Country = src.Country,
+                VatId = src.VatId,
+                LocationId = src.LocationId
+            };
+        }
+
+
+        protected override OutletMasterData MapToStorageEntity(AzureTableStorageOutletMasterData src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+
+            return new OutletMasterData
+            {
+                OutletId = src.OutletId,
+                OutletName = src.OutletName,
+                Street = src.Street,
+                Zip = src.Zip,
+                City = src.City,
+                Country = src.Country,
+                VatId = src.VatId,
+                LocationId = src.LocationId
+            };
+        }
     }
 }

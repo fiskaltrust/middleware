@@ -12,15 +12,55 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.FR
     public class AzureTableStorageJournalFRRepository : BaseAzureTableStorageRepository<Guid, AzureTableStorageFtJournalFR, ftJournalFR>, IJournalFRRepository, IMiddlewareRepository<ftJournalFR>
     {
         public AzureTableStorageJournalFRRepository(QueueConfiguration queueConfig, TableServiceClient tableServiceClient)
-            : base(queueConfig, tableServiceClient, nameof(ftJournalFR)) { }
+            : base(queueConfig, tableServiceClient, TABLE_NAME) { }
+
+        public const string TABLE_NAME = "JournalFR";
 
         protected override void EntityUpdated(ftJournalFR entity) => entity.TimeStamp = DateTime.UtcNow.Ticks;
 
         protected override Guid GetIdForEntity(ftJournalFR entity) => entity.ftJournalFRId;
 
-        protected override AzureTableStorageFtJournalFR MapToAzureEntity(ftJournalFR entity) => Mapper.Map(entity);
+        protected override AzureTableStorageFtJournalFR MapToAzureEntity(ftJournalFR src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
 
-        protected override ftJournalFR MapToStorageEntity(AzureTableStorageFtJournalFR entity) => Mapper.Map(entity);
+            return new AzureTableStorageFtJournalFR
+            {
+                PartitionKey = Mapper.GetHashString(src.TimeStamp),
+                RowKey = src.ftJournalFRId.ToString(),
+                ftJournalFRId = src.ftJournalFRId,
+                ftQueueId = src.ftQueueId,
+                ftQueueItemId = src.ftQueueItemId,
+                Number = src.Number,
+                JWT = src.JWT,
+                JsonData = src.JsonData,
+                ReceiptType = src.ReceiptType,
+                TimeStamp = src.TimeStamp
+            };
+        }
+
+        protected override ftJournalFR MapToStorageEntity(AzureTableStorageFtJournalFR src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+
+            return new ftJournalFR
+            {
+                ftJournalFRId = src.ftJournalFRId,
+                ftQueueId = src.ftQueueId,
+                ftQueueItemId = src.ftQueueItemId,
+                Number = src.Number,
+                JWT = src.JWT,
+                JsonData = src.JsonData,
+                ReceiptType = src.ReceiptType,
+                TimeStamp = src.TimeStamp
+            };
+        }
 
         public IAsyncEnumerable<ftJournalFR> GetEntriesOnOrAfterTimeStampAsync(long fromInclusive, int? take = null)
         {

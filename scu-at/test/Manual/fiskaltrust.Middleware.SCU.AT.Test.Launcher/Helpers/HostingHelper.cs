@@ -33,7 +33,7 @@ namespace fiskaltrust.Middleware.SCU.AT.Test.Launcher.Helpers
                         nutShells.Add(host);
                         break;
 #if NET461
-                    case "rest":
+                    case "rest" or "http":
                         var restService = new RestService(loggerFactory.CreateLogger<RestService>());
                         restService.ConfigureService(config, serviceType, serviceInstance, serviceUrl);
                         nutShells.Add(restService);

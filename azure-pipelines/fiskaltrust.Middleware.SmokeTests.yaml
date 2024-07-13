@@ -27,13 +27,13 @@ variables:
 trigger: none
 pr: none
 
-schedules:
-  - cron: 0 0 * * *
-    displayName: Nightly Run
-    branches:
-      include:
-        - main
-    always: true
+#schedules:
+#  - cron: 0 0 * * *
+#    displayName: Nightly Run
+#    branches:
+#      include:
+#        - main
+#    always: true
 
 stages:
   - template: templates/smoketests/harness.yaml

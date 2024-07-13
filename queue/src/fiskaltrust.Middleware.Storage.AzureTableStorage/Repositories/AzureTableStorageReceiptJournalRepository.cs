@@ -13,15 +13,55 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
     public class AzureTableStorageReceiptJournalRepository : BaseAzureTableStorageRepository<Guid, AzureTableStorageFtReceiptJournal, ftReceiptJournal>, IReceiptJournalRepository, IMiddlewareRepository<ftReceiptJournal>
     {
         public AzureTableStorageReceiptJournalRepository(QueueConfiguration queueConfig, TableServiceClient tableServiceClient)
-            : base(queueConfig, tableServiceClient, nameof(ftReceiptJournal)) { }
+            : base(queueConfig, tableServiceClient, TABLE_NAME) { }
+
+        public const string TABLE_NAME = "ReceiptJournal";
 
         protected override void EntityUpdated(ftReceiptJournal entity) => entity.TimeStamp = DateTime.UtcNow.Ticks;
 
         protected override Guid GetIdForEntity(ftReceiptJournal entity) => entity.ftReceiptJournalId;
 
-        protected override AzureTableStorageFtReceiptJournal MapToAzureEntity(ftReceiptJournal entity) => Mapper.Map(entity);
+        protected override AzureTableStorageFtReceiptJournal MapToAzureEntity(ftReceiptJournal src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
 
-        protected override ftReceiptJournal MapToStorageEntity(AzureTableStorageFtReceiptJournal entity) => Mapper.Map(entity);
+            return new AzureTableStorageFtReceiptJournal
+            {
+                PartitionKey = Mapper.GetHashString(src.TimeStamp),
+                RowKey = src.ftReceiptJournalId.ToString(),
+                ftReceiptJournalId = src.ftReceiptJournalId,
+                ftQueueId = src.ftQueueId,
+                ftQueueItemId = src.ftQueueItemId,
+                ftReceiptHash = src.ftReceiptHash,
+                ftReceiptMoment = src.ftReceiptMoment.ToUniversalTime(),
+                ftReceiptNumber = src.ftReceiptNumber,
+                ftReceiptTotal = Convert.ToDouble(src.ftReceiptTotal),
+                TimeStamp = src.TimeStamp
+            };
+        }
+
+        protected override ftReceiptJournal MapToStorageEntity(AzureTableStorageFtReceiptJournal src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+
+            return new ftReceiptJournal
+            {
+                ftReceiptJournalId = src.ftReceiptJournalId,
+                ftQueueId = src.ftQueueId,
+                ftQueueItemId = src.ftQueueItemId,
+                ftReceiptHash = src.ftReceiptHash,
+                ftReceiptMoment = src.ftReceiptMoment,
+                ftReceiptNumber = src.ftReceiptNumber,
+                ftReceiptTotal = Convert.ToDecimal(src.ftReceiptTotal),
+                TimeStamp = src.TimeStamp
+            };
+        }
 
         public IAsyncEnumerable<ftReceiptJournal> GetEntriesOnOrAfterTimeStampAsync(long fromInclusive, int? take = null)
         {

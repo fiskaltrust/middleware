@@ -1,18 +1,19 @@
 ﻿using System;
 using fiskaltrust.ifPOS.v1.at;
 using fiskaltrust.Middleware.Queue.Test.Launcher.Helpers;
-using fiskaltrust.Middleware.SCU.AT.InMemory;
 using fiskaltrust.Middleware.SCU.AT.Test.Launcher.Helpers;
 using fiskaltrust.storage.serialization.V0;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-
+using ScuInMemoryBootstrapper = fiskaltrust.Middleware.SCU.AT.InMemory.ScuBootstrapper;
+using ScuATrustSmartcardBootstrapper = fiskaltrust.Middleware.SCU.AT.ATrustSmartcard.ScuBootstrapper;
+using ScuPrimeSignHSMBootstrapper = fiskaltrust.Middleware.SCU.AT.PrimeSignHSM.ScuBootstrapper;
 
 var _useHelipad = false;
 var _cashBoxId = "";
 var _accessToken = "";
-var _configurationFilePath = "C:\\Temp\\ATLauncher\\configuration.json";
+var _configurationFilePath = "C:\\Temp\\ATLauncher\\HSMConfiguration.json";
 var serviceFolder = "";
 
 
@@ -45,6 +46,14 @@ if (config.Package == "fiskaltrust.Middleware.SCU.AT.InMemory")
 {
     ConfigureIMemory(config, serviceCollection);
 }
+else if (config.Package == "fiskaltrust.Middleware.SCU.AT.ATrustSmartcard")
+{
+    ConfigureATrustSmartcard(config, serviceCollection);
+}
+else if (config.Package == "fiskaltrust.Middleware.SCU.AT.PrimeSignHSM")
+{
+    ConfigurePrimeSignHSM(config, serviceCollection);
+}
 else
 {
     throw new NotSupportedException($"The given package {config.Package} is not supported.");
@@ -58,12 +67,31 @@ Console.WriteLine("Press key to end program");
 Console.ReadLine();
 
 
-static void ConfigureIMemory(PackageConfiguration queue, ServiceCollection serviceCollection)
+static void ConfigureIMemory(PackageConfiguration scu, ServiceCollection serviceCollection)
 {
-    var bootStrapper = new ScuBootstrapper
+    var bootStrapper = new ScuInMemoryBootstrapper
     {
-        Id = queue.Id,
-        Configuration = queue.Configuration
+        Id = scu.Id,
+        Configuration = scu.Configuration
+    };
+    bootStrapper.ConfigureServices(serviceCollection);
+}
+static void ConfigureATrustSmartcard(PackageConfiguration scu, ServiceCollection serviceCollection)
+{
+    var bootStrapper = new ScuATrustSmartcardBootstrapper
+    {
+        Id = scu.Id,
+        Configuration = scu.Configuration
+    };
+    bootStrapper.ConfigureServices(serviceCollection);
+}
+
+static void ConfigurePrimeSignHSM(PackageConfiguration scu, ServiceCollection serviceCollection)
+{
+    var bootStrapper = new ScuPrimeSignHSMBootstrapper
+    {
+        Id = scu.Id,
+        Configuration = scu.Configuration
     };
     bootStrapper.ConfigureServices(serviceCollection);
 }
