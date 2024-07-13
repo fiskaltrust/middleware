@@ -172,7 +172,7 @@ jobs:
   publish-test-results:
     name: "Publish Tests Results"
     needs: build-and-test
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     permissions:
       checks: write
       pull-requests: write
