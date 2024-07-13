@@ -64,7 +64,7 @@ jobs:
       run: |
         $projects = "${{ steps.unit_test_projects.outputs.PROJECTS }}".Split(";")
         foreach ($project in $projects) {
-          dotnet test $project --no-build --verbosity normal
+          dotnet test $project --no-build --verbosity normal --configuration Release
         }
 
     - name: Run Integration Tests
@@ -72,7 +72,7 @@ jobs:
       run: |
         $projects = "${{ steps.integration_test_projects.outputs.PROJECTS }}".Split(";")
         foreach ($project in $projects) {
-          dotnet test $project --no-build --verbosity normal
+          dotnet test $project --no-build --verbosity normal --configuration Release
         }
 
     - name: Run Acceptance Tests
@@ -80,7 +80,7 @@ jobs:
       run: |
         $projects = "${{ steps.acceptance_test_projects.outputs.PROJECTS }}".Split(";")
         foreach ($project in $projects) {
-          dotnet test $project --no-build --verbosity normal
+          dotnet test $project --no-build --verbosity normal --configuration Release
         }
         
     - name: Filter files for codesigning
