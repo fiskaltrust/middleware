@@ -124,14 +124,14 @@ jobs:
       id: filter_files_for_codesigning
       run: |
         $files = Get-ChildItem -Path .\\${{ matrix.solution }} -Filter "fiskaltrust.*.dll" -Recurse | Select-Object -ExpandProperty FullName
-        $filesList = $files -join "`n"
         
         # Multiline outputs required a unique delimiter
         $EOF = -join (1..15 | ForEach {[char]((48..57)+(65..90)+(97..122) | Get-Random)})
-        "FILES<<$EOF" | Out-File -FilePath $env:GITHUB_ENV -Append
-        $filesList | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-        "$EOF" | Out-File -FilePath $env:GITHUB_ENV -Append
-        Write-Output "::set-output name=filtered_files::$filesList"
+        "FILES<<$EOF" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+        foreach ($file in $filesList) {
+          $file | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+        }
+        "$EOF" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
                   
     - name: Sign binaries
       uses: dlemstra/code-sign-action@v1
