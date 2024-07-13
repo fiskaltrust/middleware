@@ -164,10 +164,16 @@ jobs:
         }        
 
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.solution }}-build-artifacts
         path: ./publish
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.solution }}-test-artifacts
+        path: '${{ matrix.solution }}/**/*.trx'
 
   publish-test-results:
     name: "Publish Tests Results"
@@ -187,4 +193,4 @@ jobs:
       - name: Publish Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2
         with:
-          files: "artifacts/**/*.xml"
+          files: "artifacts/**/*.trx"
