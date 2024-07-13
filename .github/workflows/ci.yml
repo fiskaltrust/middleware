@@ -138,7 +138,8 @@ jobs:
       with:
         certificate: '${{ secrets.SIGNING_CERTIFICATE }}'
         password: '${{ secrets.SIGNING_CERT_PASSWORD }}'
-        files: ${{ steps.filter_files_for_codesigning.outputs.FILES }}
+        files: |-
+          ${{ steps.filter_files_for_codesigning.outputs.FILES }}
 
     - name: Publish v1 Nuget packages
       run: dotnet pack (Get-ChildItem -Path ${{ matrix.solution }} -Filter *.sln).FullName --no-restore --configuration Release --output ./publish/packages-v1 
