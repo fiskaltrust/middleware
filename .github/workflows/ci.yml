@@ -65,8 +65,6 @@ jobs:
          "PROJECTS=$((Get-ChildItem -Path ./${{ matrix.solution }} -Recurse -Filter '*.AcceptanceTest.csproj' | % { $_.FullName }) -join ';')"  | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
     - name: Run Unit Tests
-      env:
-        PROJECTS: ${{ steps.unit_test_projects.outputs.PROJECTS }}
       if: steps.unit_test_projects.outputs.PROJECTS != ''
       run: |
         $projects = "${{ steps.unit_test_projects.outputs.PROJECTS }}".Split(";")
@@ -83,6 +81,10 @@ jobs:
         }
 
     - name: Run Integration Tests
+      env:
+        CONNECTIONSTRING_AZURE_STORAGE_TESTS: ${{ secrets.CONNECTIONSTRING_AZURE_STORAGE_TESTS }}
+        CONNECTIONSTRING_POSTGRESQL_TESTS: ${{ secrets.CONNECTIONSTRING_POSTGRESQL_TESTS }}
+        CONNECTIONSTRING_MYSQL_TESTS: ${{ secrets.CONNECTIONSTRING_MYSQL_TESTS }}
       if: steps.integration_test_projects.outputs.PROJECTS != ''
       run: |
         $projects = "${{ steps.integration_test_projects.outputs.PROJECTS }}".Split(";")
@@ -99,6 +101,10 @@ jobs:
         }
 
     # - name: Run Acceptance Tests
+    #   env:
+    #     CONNECTIONSTRING_AZURE_STORAGE_TESTS: ${{ secrets.CONNECTIONSTRING_AZURE_STORAGE_TESTS }}
+    #     CONNECTIONSTRING_POSTGRESQL_TESTS: ${{ secrets.CONNECTIONSTRING_POSTGRESQL_TESTS }}
+    #     CONNECTIONSTRING_MYSQL_TESTS: ${{ secrets.CONNECTIONSTRING_MYSQL_TESTS }}
     #   if: steps.acceptance_test_projects.outputs.PROJECTS != ''
     #   run: |
     #     $projects = "${{ steps.acceptance_test_projects.outputs.PROJECTS }}".Split(";")
