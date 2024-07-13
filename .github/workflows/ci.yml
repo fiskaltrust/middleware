@@ -44,37 +44,41 @@ jobs:
 
     - name: Find Unit Test Projects
       id: unit_test_projects
-      run: echo "##[set-output name=projects::$((Get-ChildItem -Path .\${{ matrix.solution }} -Recurse -Filter '*.UnitTest.csproj' | % { $_.FullName }) -join ';')"
+      run: |
+         "PROJECTS=$((Get-ChildItem -Path ./${{ matrix.solution }} -Recurse -Filter '*.UnitTest.csproj' | % { $_.FullName }) -join ';')"  | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
     - name: Find Integration Test Projects
       id: integration_test_projects
-      run: echo "##[set-output name=projects::$((Get-ChildItem -Path .\${{ matrix.solution }} -Recurse -Filter '*.IntegrationTest.csproj' | % { $_.FullName }) -join ';')"
+      run: |
+         "PROJECTS=$((Get-ChildItem -Path ./${{ matrix.solution }} -Recurse -Filter '*.IntegrationTest.csproj' | % { $_.FullName }) -join ';')"  | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
     - name: Find Acceptance Test Projects
       id: acceptance_test_projects
-      
-      run: echo "##[set-output name=projects::$((Get-ChildItem -Path .\${{ matrix.solution }} -Recurse -Filter '*.AcceptanceTest.csproj' | % { $_.FullName }) -join ';')"
+      run: |
+         "PROJECTS=$((Get-ChildItem -Path ./${{ matrix.solution }} -Recurse -Filter '*.AcceptanceTest.csproj' | % { $_.FullName }) -join ';')"  | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
     - name: Run Unit Tests
-      if: steps.unit_test_projects.outputs.projects != ''
+      env:
+        PROJECTS: ${{ steps.unit_test_projects.outputs.PROJECTS }}
+      if: steps.unit_test_projects.outputs.PROJECTS != ''
       run: |
-        $projects = "${{ steps.unit_test_projects.outputs.projects }}".Split(";")
+        $projects = "${{ steps.unit_test_projects.outputs.PROJECTS }}".Split(";")
         foreach ($project in $projects) {
           dotnet test $project --no-build --verbosity normal
         }
 
     - name: Run Integration Tests
-      if: steps.integration_test_projects.outputs.projects != ''
+      if: steps.integration_test_projects.outputs.PROJECTS != ''
       run: |
-        $projects = "${{ steps.integration_test_projects.outputs.projects }}".Split(";")
+        $projects = "${{ steps.integration_test_projects.outputs.PROJECTS }}".Split(";")
         foreach ($project in $projects) {
           dotnet test $project --no-build --verbosity normal
         }
 
     - name: Run Acceptance Tests
-      if: steps.acceptance_test_projects.outputs.projects != ''
+      if: steps.acceptance_test_projects.outputs.PROJECTS != ''
       run: |
-        $projects = "${{ steps.acceptance_test_projects.outputs.projects }}".Split(";")
+        $projects = "${{ steps.acceptance_test_projects.outputs.PROJECTS }}".Split(";")
         foreach ($project in $projects) {
           dotnet test $project --no-build --verbosity normal
         }
@@ -84,6 +88,12 @@ jobs:
       run: |
         $files = Get-ChildItem -Path .\\${{ matrix.solution }} -Filter "fiskaltrust.*.dll" -Recurse | Select-Object -ExpandProperty FullName
         $filesList = $files -join "`n"
+        
+        # Multiline outputs required a unique delimiter
+        $EOF = -join (1..15 | ForEach {[char]((48..57)+(65..90)+(97..122) | Get-Random)})
+        "FILES<<$EOF" | Out-File -FilePath $env:GITHUB_ENV -Append
+        $filesList | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+        "$EOF" | Out-File -FilePath $env:GITHUB_ENV -Append
         Write-Output "::set-output name=filtered_files::$filesList"
                   
     - name: Sign binaries
