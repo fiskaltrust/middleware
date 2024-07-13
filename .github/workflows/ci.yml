@@ -22,10 +22,15 @@ jobs:
         fetch-depth: 0
         filter: tree:0
 
-    - name: Setup .NET
+    - name: Setup .NET 8
       uses: actions/setup-dotnet@v1
       with:
         dotnet-version: '8.x'
+
+    - name: Setup .NET 6
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: '6.0'
 
     - name: Install .NET Framework 4.6.1
       run: choco install netfx-4.6.1-devpack -y
