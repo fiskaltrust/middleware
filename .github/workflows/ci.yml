@@ -8,10 +8,12 @@ on:
 
 jobs:
   build-and-test:
+    name: "Build and test"
     runs-on: windows-latest
     timeout-minutes: 60
     strategy:
       matrix:
+        fail-fast: false
         solution: [ "queue" ]
         # solution: [ "queue", "scu-at", "scu-de", "scu-it", "scu-es" ]
 
@@ -68,26 +70,50 @@ jobs:
       if: steps.unit_test_projects.outputs.PROJECTS != ''
       run: |
         $projects = "${{ steps.unit_test_projects.outputs.PROJECTS }}".Split(";")
+        $failed = $false
         foreach ($project in $projects) {
-          dotnet test $project --no-build --verbosity normal --configuration Release
+          dotnet test $project --no-build --verbosity normal --configuration Release -l:trx
+          if ($LASTEXITCODE -ne 0) {
+            $failed = $true
+          }
+        }
+        if ($failed) {
+          Write-Error "One or more tests failed."
+          exit 1
         }
 
     - name: Run Integration Tests
       if: steps.integration_test_projects.outputs.PROJECTS != ''
       run: |
         $projects = "${{ steps.integration_test_projects.outputs.PROJECTS }}".Split(";")
+        $failed = $false
         foreach ($project in $projects) {
-          dotnet test $project --no-build --verbosity normal --configuration Release
+          dotnet test $project --no-build --verbosity normal --configuration Release -l:trx
+          if ($LASTEXITCODE -ne 0) {
+            $failed = $true
+          }
+        }
+        if ($failed) {
+          Write-Error "One or more tests failed."
+          exit 1
         }
 
     - name: Run Acceptance Tests
       if: steps.acceptance_test_projects.outputs.PROJECTS != ''
       run: |
         $projects = "${{ steps.acceptance_test_projects.outputs.PROJECTS }}".Split(";")
+        $failed = $false
         foreach ($project in $projects) {
-          dotnet test $project --no-build --verbosity normal --configuration Release
+          dotnet test $project --no-build --verbosity normal --configuration Release -l:trx
+          if ($LASTEXITCODE -ne 0) {
+            $failed = $true
+          }
         }
-        
+        if ($failed) {
+          Write-Error "One or more tests failed."
+          exit 1
+        }
+      
     - name: Filter files for codesigning
       id: filter_files_for_codesigning
       run: |
@@ -142,3 +168,23 @@ jobs:
       with:
         name: ${{ matrix.solution }}-build-artifacts
         path: ./publish
+
+  publish-test-results:
+    name: "Publish Tests Results"
+    needs: build-and-test
+    runs-on: windows-latest
+    permissions:
+      checks: write
+      pull-requests: write
+    if: always()
+
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          files: "artifacts/**/*.xml"
