@@ -49,6 +49,14 @@ jobs:
     - name: Build
       run: dotnet build (Get-ChildItem -Path ${{ matrix.solution }} -Filter *.sln).FullName --configuration Release --no-restore
 
+    - name: Publish SQLite binaries for manual NuGet packing
+      if: matrix.solution == 'queue'
+      working-directory: '${{ matrix.solution }}/src/fiskaltrust.Middleware.Queue.SQLite'
+      run: |
+        dotnet publish --configuration $(buildConfiguration) --no-restore -f net461
+        dotnet publish --configuration $(buildConfiguration) --no-restore -f netstandard2.0
+        dotnet publish --configuration $(buildConfiguration) --no-restore -f netstandard2.1
+
     - name: Find Unit Test Projects
       id: unit_test_projects
       run: |
