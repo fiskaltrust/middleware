@@ -14,8 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        solution: [ "queue" ]
-        # solution: [ "queue", "scu-at", "scu-de", "scu-it", "scu-es" ]
+        solution: [ "queue", "scu-at", "scu-de", "scu-it", "scu-es" ]
 
     steps:
     - name: Checkout code
