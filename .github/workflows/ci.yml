@@ -45,12 +45,6 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore (Get-ChildItem -Path ${{ matrix.solution }} -Filter *.sln).FullName
 
-    - name: Setup Java
-      uses: actions/setup-java@v2
-      with:
-        distribution: 'microsoft'
-        java-version: '21'
-
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
   
