@@ -45,8 +45,19 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore (Get-ChildItem -Path ${{ matrix.solution }} -Filter *.sln).FullName
 
+    - name: Setup Java
+      uses: actions/setup-java@v2
+      with:
+        distribution: 'microsoft'
+        java-version: '11'
+
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+  
+    # We have to use msbuild as long as we're building Xamarin projects
     - name: Build
-      run: dotnet build (Get-ChildItem -Path ${{ matrix.solution }} -Filter *.sln).FullName --configuration Release --no-restore
+      run: msbuild (Get-ChildItem -Path ${{ matrix.solution }} -Filter *.sln).FullName /p:Configuration=Release /p:Platform="Any CPU" /p:BuildProjectReferences=true
+      # run: dotnet build (Get-ChildItem -Path ${{ matrix.solution }} -Filter *.sln).FullName --configuration Release --no-restore
 
     - name: Publish SQLite binaries for manual NuGet packing
       if: matrix.solution == 'queue'
