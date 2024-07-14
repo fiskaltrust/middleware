@@ -2,15 +2,10 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.de;
-using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts.Models;
-using fiskaltrust.Middleware.Contracts.Repositories;
-using fiskaltrust.Middleware.Localization.QueueDE.Helpers;
 using fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProcessorDETests.Fixtures;
 using fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProcessorDETests.Helpers;
 using fiskaltrust.Middleware.Localization.QueueDE.MasterData;
@@ -20,7 +15,6 @@ using fiskaltrust.Middleware.Storage.InMemory.Repositories;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories.DE;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Newtonsoft.Json;
@@ -90,7 +84,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                     { nameof(QueueDEConfiguration.TarFileExportMode), TarFileExportMode.Erased },
                 },
                 QueueId = queue.ftQueueId,
-                ServiceFolder = Path.Combine(Directory.GetCurrentDirectory(), "Test", Guid.NewGuid().ToString())
+                ServiceFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString())
             };
             var configurationRepository = _fixture.CreateConfigurationRepository();
 

@@ -14,5 +14,7 @@
     <WarningsNotAsErrors>NU1901;NU1902;NU1903;NU1904;NU5104</WarningsNotAsErrors>
     <Deterministic>true</Deterministic>
     <LangVersion>8.0</LangVersion>
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
+  
 </Project>

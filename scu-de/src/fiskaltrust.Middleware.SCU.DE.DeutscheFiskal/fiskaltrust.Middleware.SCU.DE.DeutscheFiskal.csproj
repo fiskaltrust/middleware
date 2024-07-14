@@ -4,6 +4,7 @@
         <Description>The fiskaltrust Middleware implementation for the Deutsche Fiskal cloud TSE.</Description>
         <TargetFrameworks>netstandard2.0;net461;net6</TargetFrameworks>
         <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);CopyProjectReferencesToPackage</TargetsForTfmSpecificBuildOutput>
+        <IsPackable>true</IsPackable>
     </PropertyGroup>
 
     <ItemGroup>

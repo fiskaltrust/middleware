@@ -1,0 +1,225 @@
+name: Middleware CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    name: "Build and test"
+    runs-on: windows-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        solution: [ "queue", "scu-at", "scu-de", "scu-it", "scu-es" ]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+        filter: tree:0
+
+    - name: Setup .NET 8
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: '8.x'
+
+    - name: Setup .NET 6
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: '6.0'
+
+    - name: Install .NET Framework 4.6.1
+      run: choco install netfx-4.6.1-devpack -y
+
+    - name: Install NuGet
+      run: choco install nuget.commandline -y
+
+    - name: Install MinVer
+      run: dotnet tool install --global minver-cli --version 5.0.0
+
+    - name: Restore dependencies
+      run: dotnet restore (Get-ChildItem -Path ${{ matrix.solution }} -Filter *.sln).FullName
+    
+    - name: Set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+  
+    - name: Add msbuild to PATH
+      uses: microsoft/setup-msbuild@v2
+  
+    # We have to use msbuild as long as we're building Xamarin projects
+    - name: Build
+      run: msbuild (Get-ChildItem -Path ${{ matrix.solution }} -Filter *.sln).FullName /p:Configuration=Release /p:Platform="Any CPU" /p:BuildProjectReferences=true
+      # run: dotnet build (Get-ChildItem -Path ${{ matrix.solution }} -Filter *.sln).FullName --configuration Release --no-restore
+
+    - name: Publish SQLite binaries for manual NuGet packing
+      if: matrix.solution == 'queue'
+      working-directory: '${{ matrix.solution }}/src/fiskaltrust.Middleware.Queue.SQLite'
+      run: |
+        dotnet publish --configuration Release --no-restore -f net461
+        dotnet publish --configuration Release --no-restore -f netstandard2.0
+        dotnet publish --configuration Release --no-restore -f netstandard2.1
+
+    - name: Find Unit Test Projects
+      id: unit_test_projects
+      run: |
+         "PROJECTS=$((Get-ChildItem -Path ./${{ matrix.solution }} -Recurse -Filter '*.UnitTest.csproj' | % { $_.FullName }) -join ';')"  | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+    - name: Find Integration Test Projects
+      id: integration_test_projects
+      run: |
+         "PROJECTS=$((Get-ChildItem -Path ./${{ matrix.solution }} -Recurse -Filter '*.IntegrationTest.csproj' | % { $_.FullName }) -join ';')"  | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+    - name: Find Acceptance Test Projects
+      id: acceptance_test_projects
+      run: |
+         "PROJECTS=$((Get-ChildItem -Path ./${{ matrix.solution }} -Recurse -Filter '*.AcceptanceTest.csproj' | % { $_.FullName }) -join ';')"  | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+    - name: Run Unit Tests
+      if: steps.unit_test_projects.outputs.PROJECTS != ''
+      run: |
+        $projects = "${{ steps.unit_test_projects.outputs.PROJECTS }}".Split(";")
+        $failed = $false
+        foreach ($project in $projects) {
+          dotnet test $project --no-build --verbosity normal --configuration Release -l:trx
+          if ($LASTEXITCODE -ne 0) {
+            $failed = $true
+          }
+        }
+        if ($failed) {
+          Write-Error "One or more tests failed."
+          exit 1
+        }
+
+    - name: Run Integration Tests
+      env:
+        CONNECTIONSTRING_AZURE_STORAGE_TESTS: ${{ secrets.CONNECTIONSTRING_AZURE_STORAGE_TESTS }}
+        CONNECTIONSTRING_POSTGRESQL_TESTS: ${{ secrets.CONNECTIONSTRING_POSTGRESQL_TESTS }}
+        CONNECTIONSTRING_MYSQL_TESTS: ${{ secrets.CONNECTIONSTRING_MYSQL_TESTS }}
+      if: steps.integration_test_projects.outputs.PROJECTS != ''
+      run: |
+        $projects = "${{ steps.integration_test_projects.outputs.PROJECTS }}".Split(";")
+        $failed = $false
+        foreach ($project in $projects) {
+          dotnet test $project --no-build --verbosity normal --configuration Release -l:trx
+          if ($LASTEXITCODE -ne 0) {
+            $failed = $true
+          }
+        }
+        if ($failed) {
+          Write-Error "One or more tests failed."
+          exit 1
+        }
+
+    # - name: Run Acceptance Tests
+    #   env:
+    #     CONNECTIONSTRING_AZURE_STORAGE_TESTS: ${{ secrets.CONNECTIONSTRING_AZURE_STORAGE_TESTS }}
+    #     CONNECTIONSTRING_POSTGRESQL_TESTS: ${{ secrets.CONNECTIONSTRING_POSTGRESQL_TESTS }}
+    #     CONNECTIONSTRING_MYSQL_TESTS: ${{ secrets.CONNECTIONSTRING_MYSQL_TESTS }}
+    #   if: steps.acceptance_test_projects.outputs.PROJECTS != ''
+    #   run: |
+    #     $projects = "${{ steps.acceptance_test_projects.outputs.PROJECTS }}".Split(";")
+    #     $failed = $false
+    #     foreach ($project in $projects) {
+    #       dotnet test $project --no-build --verbosity normal --configuration Release -l:trx
+    #       if ($LASTEXITCODE -ne 0) {
+    #         $failed = $true
+    #       }
+    #     }
+    #     if ($failed) {
+    #       Write-Error "One or more tests failed."
+    #       exit 1
+    #     }
+      
+    - name: Filter files for codesigning
+      id: filter_files_for_codesigning
+      run: |
+        $files = Get-ChildItem -Path .\\${{ matrix.solution }} -Filter "fiskaltrust.*.dll" -Recurse | Select-Object -ExpandProperty FullName
+        
+        # Multiline outputs required a unique delimiter
+        $EOF = -join (1..15 | ForEach {[char]((48..57)+(65..90)+(97..122) | Get-Random)})
+        "FILTERED_FILES<<$EOF" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+        foreach ($file in $files) {
+          $file | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+        }
+        "$EOF" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+   
+    - name: Sign binaries
+      uses: dlemstra/code-sign-action@v1
+      with:
+        certificate: '${{ secrets.SIGNING_CERTIFICATE }}'
+        password: '${{ secrets.SIGNING_CERT_PASSWORD }}'
+        files: |-
+          ${{ steps.filter_files_for_codesigning.outputs.FILTERED_FILES }}
+
+    - name: Publish v1 Nuget packages
+      run: dotnet pack (Get-ChildItem -Path ${{ matrix.solution }} -Filter *.sln).FullName --no-restore --configuration Release --output ./publish/packages-v1 
+
+    - name: Publish v2 zip packages
+      run: |
+        $version = minver --verbosity error
+
+        New-Item -ItemType Directory -Force -Path ./publish/packages-v2
+
+        # We're filtering the files to publish here based on the IsPackable attribute that's also used for v1 packages
+        $projectFiles = Get-ChildItem -Path ${{ matrix.solution }} -Recurse -Filter *.csproj
+        foreach ($file in $projectFiles) {
+          [xml]$xmlContent = Get-Content -Path $file.FullName
+          foreach ($propertyGroup in $xmlContent.Project.PropertyGroup) {
+            if ($propertyGroup.IsPackable -eq "true") {
+              $packageName = $file.BaseName
+              dotnet publish $file.FullName --configuration Release -f net6 --output ./publish/raw/packages-v2/$packageName --no-build /p:DebugType=None /p:DebugSymbols=false
+              Compress-Archive -Path ./publish/raw/packages-v2/$packageName/* -DestinationPath ./publish/packages-v2/$packageName.$version.zip
+
+              $hash = Get-FileHash ./publish/packages-v2/$packageName.$version.zip -Algorithm SHA256
+              $hashbytes = $hash.Hash -split '([A-F0-9]{2})' | foreach-object { if ($_) {[System.Convert]::ToByte($_,16)}}
+              $hashstring = [System.Convert]::ToBase64String($hashbytes)
+              $hashstring | Set-Content ./publish/packages-v2/$packageName.$version.zip.hash
+
+              break
+            }
+          }
+        }        
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.solution }}-build-artifacts
+        path: ./publish
+
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.solution }}-test-artifacts
+        path: '${{ matrix.solution }}/**/*.trx'
+
+  publish-test-results:
+    name: "Publish Tests Results"
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    permissions:
+      checks: write
+      pull-requests: write
+    if: always()
+
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          files: "artifacts/**/*.trx"
