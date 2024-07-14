@@ -54,6 +54,9 @@ jobs:
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
   
+    - name: Add msbuild to PATH
+      uses: microsoft/setup-msbuild@v2
+  
     # We have to use msbuild as long as we're building Xamarin projects
     - name: Build
       run: msbuild (Get-ChildItem -Path ${{ matrix.solution }} -Filter *.sln).FullName /p:Configuration=Release /p:Platform="Any CPU" /p:BuildProjectReferences=true
