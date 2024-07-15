@@ -582,5 +582,23 @@ namespace fiskaltrust.Interface.Tagging.UnitTests.DE
 
             request.ftState.Should().Be(0x4445_2001_0000_0000);
         }
+
+        [Fact]
+        public void ConvertJournalRequest_ShouldreturnCorrect()
+        {
+            var request = new JournalRequest { ftJournalType = 0x4445_2000_0000_1000 };
+            _caseConverterDE.ConvertftJournalTypeToV1(request);
+            request.ftJournalType.Should().Be(0x4445_0000_0000_0000);
+            request.ftJournalType = 0x4445_2000_0000_1001;
+            _caseConverterDE.ConvertftJournalTypeToV1(request);
+            request.ftJournalType.Should().Be(0x4445_0000_0000_0001);
+            request.ftJournalType = 0x4445_2000_0000_1002;
+            _caseConverterDE.ConvertftJournalTypeToV1(request);
+            request.ftJournalType.Should().Be(0x4445_0000_0000_0002);
+            request.ftJournalType = 0x4445_2000_0000_1003;
+            _caseConverterDE.ConvertftJournalTypeToV1(request);
+            request.ftJournalType.Should().Be(0x4445_0000_0000_0003);
+
+        }
     }
 }

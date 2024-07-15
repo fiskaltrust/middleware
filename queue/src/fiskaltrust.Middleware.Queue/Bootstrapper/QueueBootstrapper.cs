@@ -55,6 +55,7 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
             services.AddScoped<IJournalProcessor, JournalProcessor>();
             services.AddScoped<IPOS, Queue>();
             services.AddScoped<ReceiptConverter>();
+            services.AddScoped<JournalConverter>();
             var businessLogicFactoryBoostrapper = LocalizedQueueBootStrapperFactory.GetBootstrapperForLocalizedQueue(_activeQueueId, middlewareConfiguration);
             businessLogicFactoryBoostrapper.ConfigureServices(services);
         }

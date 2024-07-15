@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
@@ -10,12 +9,12 @@ using fiskaltrust.Middleware.Contracts.Constants;
 using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Repositories;
-using fiskaltrust.Middleware.Localization.QueueDE;
 using fiskaltrust.Middleware.Queue.Bootstrapper;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using Org.BouncyCastle.Asn1.Ocsp;
+using fiskaltrust.Interface.Tagging;
+using fiskaltrust.Interface.Tagging.Models.Extensions;
 
 namespace fiskaltrust.Middleware.Queue
 {
@@ -32,6 +31,7 @@ namespace fiskaltrust.Middleware.Queue
         private readonly IMarketSpecificJournalProcessor _marketSpecificJournalProcessor;
         private readonly ILogger<JournalProcessor> _logger;
         private readonly MiddlewareConfiguration _middlewareConfiguration;
+        private readonly JournalConverter _journalConverter;
 
         public JournalProcessor(
             IReadOnlyConfigurationRepository configurationRepository,
@@ -44,7 +44,8 @@ namespace fiskaltrust.Middleware.Queue
             IMiddlewareRepository<ftJournalME> journalMERepository,
             IMarketSpecificJournalProcessor marketSpecificJournalProcessor,
             ILogger<JournalProcessor> logger,
-            MiddlewareConfiguration middlewareConfiguration)
+            MiddlewareConfiguration middlewareConfiguration,
+            JournalConverter journalConverter)
         {
             _configurationRepository = configurationRepository;
             _queueItemRepository = queueItemRepository;
@@ -57,6 +58,7 @@ namespace fiskaltrust.Middleware.Queue
             _marketSpecificJournalProcessor = marketSpecificJournalProcessor;
             _logger = logger;
             _middlewareConfiguration = middlewareConfiguration;
+            _journalConverter = journalConverter;
         }
 
         public IAsyncEnumerable<JournalResponse> ProcessAsync(JournalRequest request)
@@ -66,7 +68,10 @@ namespace fiskaltrust.Middleware.Queue
                 if ((0xFFFF000000000000 & (ulong) request.ftJournalType) != 0)
                 {
                     ThrowIfQueueHasIncorrectCountrySet(request.ftJournalType);
-
+                    if (!request.IsCountryIT() && request.IsVersionV2())
+                    {
+                        request = _journalConverter.ConvertRequestToV1(request);
+                    }
                     return _marketSpecificJournalProcessor.ProcessAsync(request);
                 }
 

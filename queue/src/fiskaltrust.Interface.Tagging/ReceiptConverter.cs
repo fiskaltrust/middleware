@@ -9,10 +9,19 @@ namespace fiskaltrust.Interface.Tagging
         private readonly ICaseConverterFactory _caseConverterFactory;
         public ReceiptConverter()
         {
-
             _caseConverterFactory = new CaseConverterFactory();
-
         }
+
+        public void ConvertJournalRequestToV1(JournalRequest request)
+        {
+            var converter = _caseConverterFactory.CreateInstance(request.ftJournalType);
+            if (!request.IsVersionV2())
+            {
+                throw new ReceiptCaseVersionException($"It's NOT a V2 receipt case. Found V{request.GetVersion()}.");
+            }
+            converter.ConvertftJournalTypeToV1(request);
+        }
+
         public ReceiptRequest ConvertRequestToV1(ReceiptRequest request)
         {
             var converter = _caseConverterFactory.CreateInstance(request.ftReceiptCase);
