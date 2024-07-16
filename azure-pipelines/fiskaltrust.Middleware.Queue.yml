@@ -139,7 +139,13 @@ stages:
           - template: templates/queue/test-nuspec.template.yml
 
   - stage: Build
-    dependsOn: Test
+    dependsOn: [Test, NuspecTest]
+    condition: |
+      and
+      (
+        eq(dependencies.Test.result, 'Succeeded'),
+        in(dependencies.NuspecTest.result, 'Succeeded', 'Skipped')
+      )
     jobs:
       - job: BuildNugetPackages
         displayName: Build v1 NuGet packages
