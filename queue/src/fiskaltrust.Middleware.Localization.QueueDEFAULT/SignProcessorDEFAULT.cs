@@ -28,13 +28,14 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT
             _countrySpecificQueueRepository = countrySpecificQueueRepository;
         }
 
-        public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ftQueue queue, ftQueueItem queueItem)
+        public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals, bool isMigration)> ProcessAsync(ReceiptRequest request, ftQueue queue, ftQueueItem queueItem)
         {
             var requestCommand = _requestCommandFactory.Create(request);
             var response = await requestCommand.ExecuteAsync(queue, request, queueItem).ConfigureAwait(false);
-            return (response.ReceiptResponse, response.ActionJournals.ToList());
+            return (response.ReceiptResponse, response.ActionJournals.ToList(), false);
         }
 
         public async Task<string> GetFtCashBoxIdentificationAsync(ftQueue queue) => (await _countrySpecificQueueRepository.GetQueueAsync(queue.ftQueueId)).CashBoxIdentification;
+        public Task FinishMigration(ftQueue queue, ftQueueItem queueItem) => throw new System.NotImplementedException();
     }
 }

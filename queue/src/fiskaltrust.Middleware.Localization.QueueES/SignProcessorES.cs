@@ -18,11 +18,12 @@ namespace fiskaltrust.Middleware.Localization.QueueES
             _logger = logger;
         }
 
-        public Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ftQueue queue, ftQueueItem queueItem)
+        public Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals, bool isMigration)> ProcessAsync(ReceiptRequest request, ftQueue queue, ftQueueItem queueItem)
         {
             throw new NotImplementedException();
         }
 
         public Task<string> GetFtCashBoxIdentificationAsync(ftQueue queue) => throw new NotImplementedException();
+        public Task FinishMigration(ftQueue queue, ftQueueItem queueItem) => throw new NotImplementedException();
     }
 }

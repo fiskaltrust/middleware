@@ -27,7 +27,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT
             _requestCommandFactory = requestCommandFactory;
         }
 
-        public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ftQueue queue, ftQueueItem queueItem)
+        public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals, bool isMigration)> ProcessAsync(ReceiptRequest request, ftQueue queue, ftQueueItem queueItem)
         {
             var queueAT = await _configurationRepository.GetQueueATAsync(queueItem.ftQueueId).ConfigureAwait(false);
 
@@ -54,7 +54,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT
             }
             await _configurationRepository.InsertOrUpdateQueueATAsync(queueAT).ConfigureAwait(false);
 
-            return (requestCommandResponse.ReceiptResponse, requestCommandResponse.ActionJournals.Concat(additionalActionJournals).ToList());
+            return (requestCommandResponse.ReceiptResponse, requestCommandResponse.ActionJournals.Concat(additionalActionJournals).ToList(), false);
         }
 
         private void AddStateFlagIfNewMonthOrYearStarted(ReceiptRequest request, ReceiptResponse response, ftQueueAT queueAT)
@@ -206,6 +206,6 @@ namespace fiskaltrust.Middleware.Localization.QueueAT
         }
 
         public async Task<string> GetFtCashBoxIdentificationAsync(ftQueue queue) => (await _configurationRepository.GetQueueATAsync(queue.ftQueueId).ConfigureAwait(false)).CashBoxIdentification;
-
+        public Task FinishMigration(ftQueue queue, ftQueueItem queueItem) => throw new NotImplementedException();
     }
 }

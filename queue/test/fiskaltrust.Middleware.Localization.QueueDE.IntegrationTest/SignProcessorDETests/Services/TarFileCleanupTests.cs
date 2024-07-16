@@ -81,7 +81,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
 
             try
             {
-                var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
+                var (receiptResponse, actionJournals, isMigration) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
 
                 Directory.GetFiles(Path.Combine(config.ServiceFolder, "Exports", config.QueueId.ToString(), "TAR")).Should().HaveCount(0);
                 Directory.GetDirectories(Path.Combine(config.ServiceFolder, "Exports", config.QueueId.ToString(), "TAR")).Should().HaveCount(0);
@@ -142,7 +142,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
 
             try
             { 
-                var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
+                var (receiptResponse, actionJournals, isMigration) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
 
                 config.Configuration[nameof(QueueDEConfiguration.StoreTemporaryExportFiles)] = false;
 
@@ -226,7 +226,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
 
             try
             { 
-                var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
+                var (receiptResponse, actionJournals, isMigration) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
 
                 config.Configuration[nameof(QueueDEConfiguration.StoreTemporaryExportFiles)] = false;
 

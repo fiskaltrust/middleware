@@ -28,7 +28,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME
             _configurationRepository = configurationRepository;
         }
 
-        public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ftQueue queue, ftQueueItem queueItem)
+        public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals, bool isMigration)> ProcessAsync(ReceiptRequest request, ftQueue queue, ftQueueItem queueItem)
         {
             var queueME = await _configurationRepository.GetQueueMEAsync(queue.ftQueueId).ConfigureAwait(false);
             var requestCommand = _requestCommandFactory.Create(request);
@@ -36,12 +36,13 @@ namespace fiskaltrust.Middleware.Localization.QueueME
             if (queueME.SSCDFailCount > 0 && requestCommand is not ZeroReceiptCommand)
             {
                 var requestCommandResponse = await requestCommand.ProcessFailedReceiptRequest(queue, queueItem, request, queueME).ConfigureAwait(false);
-                return (requestCommandResponse.ReceiptResponse, requestCommandResponse.ActionJournals.ToList());
+                return (requestCommandResponse.ReceiptResponse, requestCommandResponse.ActionJournals.ToList(), false);
             }
             var response = await requestCommand.ExecuteAsync(_client, queue, request, queueItem, queueME).ConfigureAwait(false);
-            return (response.ReceiptResponse, response.ActionJournals.ToList());
+            return (response.ReceiptResponse, response.ActionJournals.ToList(), false);
         }
 
         public Task<string> GetFtCashBoxIdentificationAsync(ftQueue queue) => Task.FromResult<string>(null);
+        public Task FinishMigration(ftQueue queue, ftQueueItem queueItem) => throw new NotImplementedException();
     }
 }

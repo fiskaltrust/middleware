@@ -1,15 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.ifPOS.v1.de;
 using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Localization.QueueDE.Extensions;
 using fiskaltrust.Middleware.Localization.QueueDE.Models;
 using fiskaltrust.Middleware.Localization.QueueDE.RequestCommands;
 using fiskaltrust.Middleware.Localization.QueueDE.RequestCommands.Factories;
-using fiskaltrust.Middleware.Localization.QueueDE.Services;
 using fiskaltrust.Middleware.Localization.QueueDE.Transactions;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
@@ -35,7 +32,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             _logger = logger;
         }
 
-        public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ftQueue queue, ftQueueItem queueItem)
+        public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals, bool isMigration)> ProcessAsync(ReceiptRequest request, ftQueue queue, ftQueueItem queueItem)
         {
             _logger.LogTrace("SignProcessorDE.ProcessAsync called.");
             if (string.IsNullOrEmpty(request.cbReceiptReference) && request.IsFailTransactionReceipt() && !string.IsNullOrEmpty(request.ftReceiptCaseData) && !request.ftReceiptCaseData.Contains("CurrentStartedTransactionNumbers"))
@@ -55,7 +52,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
 
             await _configurationRepository.InsertOrUpdateQueueDEAsync(queueDE).ConfigureAwait(false);
 
-            return (requestCommandResponse.ReceiptResponse, requestCommandResponse.ActionJournals);
+            return (requestCommandResponse.ReceiptResponse, requestCommandResponse.ActionJournals, requestCommandResponse.isMigration);
         }
 
         private async Task<RequestCommandResponse> PerformReceiptRequest(ReceiptRequest request, ftQueueItem queueItem, ftQueue queue, ftQueueDE queueDE)
@@ -78,5 +75,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
         }
 
         public async Task<string> GetFtCashBoxIdentificationAsync(ftQueue queue) => (await _configurationRepository.GetQueueDEAsync(queue.ftQueueId).ConfigureAwait(false)).CashBoxIdentification;
+        public Task FinishMigration(ftQueue queue, ftQueueItem queueItem) => MigrationReceiptCommand.FinishMigration();
     }
 }

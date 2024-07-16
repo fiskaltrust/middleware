@@ -10,5 +10,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Models
         public List<SignaturItem> Signatures { get; set; }= new List<SignaturItem>();
         public List<ftActionJournal> ActionJournals { get; set; } = new List<ftActionJournal>();
         public ulong? TransactionNumber { get; set; } = null;
+        public bool isMigration { get; set; } = false;
     }
 }

@@ -63,6 +63,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands.Factories
                 0x000b => _serviceProvider.GetRequiredService<FailTransactionReceiptCommand>(),
                 0x0017 => _serviceProvider.GetRequiredService<InitiateScuSwitchReceiptCommand>(),
                 0x0018 => _serviceProvider.GetRequiredService<FinishScuSwitchReceiptCommand>(),
+                0x0019 => _serviceProvider.GetRequiredService<MigrationReceiptCommand>(),
                 _ => null
             };
 

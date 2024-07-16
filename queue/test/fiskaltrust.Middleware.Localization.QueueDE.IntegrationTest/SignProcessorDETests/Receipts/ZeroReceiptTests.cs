@@ -44,7 +44,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             var queue = new ftQueue { ftQueueId = Guid.Parse(receiptRequest.ftQueueID), StartMoment = DateTime.UtcNow };
             var sut = GetSUT();
 
-            var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
+            var (receiptResponse, actionJournals, isMigration) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
 
             receiptResponse.Should().BeEquivalentTo(expectedResponse, x => x
                 .Excluding(x => x.ftReceiptMoment)

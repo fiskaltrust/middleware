@@ -150,6 +150,7 @@ namespace fiskaltrust.Middleware.Queue
 
             var actionjournals = new List<ftActionJournal>();
             ftReceiptJournal receiptJournal = null;
+            var isMigration = false;
             try
             {
                 queueItem.ftWorkMoment = DateTime.UtcNow;
@@ -163,12 +164,12 @@ namespace fiskaltrust.Middleware.Queue
                     if (!data.IsCountryIT() && data.IsVersionV2())
                     {
                         _receiptConverter.ConvertRequestToV1(dataToV1ExceptItaly);
-                        (receiptResponse, countrySpecificActionJournals) = await _countrySpecificSignProcessor.ProcessAsync(dataToV1ExceptItaly, queue, queueItem).ConfigureAwait(false);
+                        (receiptResponse, countrySpecificActionJournals, isMigration) = await _countrySpecificSignProcessor.ProcessAsync(dataToV1ExceptItaly, queue, queueItem).ConfigureAwait(false);
                         _receiptConverter.ConvertResponseToV2(receiptResponse);
                     }
                     else
                     {
-                        (receiptResponse, countrySpecificActionJournals) = await _countrySpecificSignProcessor.ProcessAsync(dataToV1ExceptItaly, queue, queueItem).ConfigureAwait(false);
+                        (receiptResponse, countrySpecificActionJournals, isMigration) = await _countrySpecificSignProcessor.ProcessAsync(dataToV1ExceptItaly, queue, queueItem).ConfigureAwait(false);
                     }
                 }
                 catch (Exception e)
@@ -244,6 +245,11 @@ namespace fiskaltrust.Middleware.Queue
                 foreach (var actionJournal in actionjournals)
                 {
                     await _actionJournalRepository.InsertAsync(actionJournal).ConfigureAwait(false);
+                }
+
+                if (isMigration)
+                {
+                    await _countrySpecificSignProcessor.FinishMigration(queue, queueItem);
                 }
             }
         }
