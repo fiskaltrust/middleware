@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using fiskaltrust.Exports.Common.Models;
 using fiskaltrust.Exports.Common.Repositories;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0;
 using Newtonsoft.Json;
