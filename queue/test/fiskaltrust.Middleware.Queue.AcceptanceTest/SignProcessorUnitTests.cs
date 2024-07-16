@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
+using fiskaltrust.Interface.Tagging;
 using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Repositories;
@@ -66,7 +67,7 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
             receiptJournalRepositoryMock.Setup(x => x.InsertAsync(It.IsAny<ftReceiptJournal>())).Returns(Task.CompletedTask);
             configMock.Setup(x => x.InsertOrUpdateQueueAsync(queue)).Returns(Task.CompletedTask);
 
-            var sut = new SignProcessor(loggergMock.Object, configMock.Object, queueItemRepositoryMock.Object, receiptJournalRepositoryMock.Object, actionJournalRepositoryMock.Object, cryptoHelperMock.Object, marketSpecificSignProcessorMock.Object, configuration);
+            var sut = new SignProcessor(loggergMock.Object, configMock.Object, queueItemRepositoryMock.Object, receiptJournalRepositoryMock.Object, actionJournalRepositoryMock.Object, cryptoHelperMock.Object, marketSpecificSignProcessorMock.Object, configuration, new Mock<ReceiptConverter>().Object);
 
             await sut.CreateReceiptJournalAsync(queue, queueItem, request);
             receiptJournalRepositoryMock.Verify(x => x.InsertAsync(It.Is<ftReceiptJournal>(rj =>
@@ -149,7 +150,7 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
             queueItemRepository.Setup(x => x.InsertOrUpdateAsync(It.Is<ftQueueItem>(qi => qi.ftQueueId == queueId && qi.response == null))).Returns(Task.CompletedTask).Verifiable();
             queueItemRepository.Setup(x => x.InsertOrUpdateAsync(It.Is<ftQueueItem>(qi => qi.ftQueueId == queueId && qi.response != null && matchResponse(qi, JsonConvert.DeserializeObject<ReceiptResponse>(qi.response))))).Returns(Task.CompletedTask).Verifiable();
 
-            var sut = new SignProcessor(logger.Object, configurationRepository.Object, queueItemRepository.Object, receiptJournalRepository.Object, actionJournalRepository.Object, cryptoHelper.Object, marketSpecificSignProcessor.Object, configuration);
+            var sut = new SignProcessor(logger.Object, configurationRepository.Object, queueItemRepository.Object, receiptJournalRepository.Object, actionJournalRepository.Object, cryptoHelper.Object, marketSpecificSignProcessor.Object, configuration, new Mock<ReceiptConverter>().Object);
 
             var process = async () => await sut.ProcessAsync(request);
 
