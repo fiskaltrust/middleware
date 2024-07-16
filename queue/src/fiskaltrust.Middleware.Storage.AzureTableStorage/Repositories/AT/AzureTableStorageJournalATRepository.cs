@@ -66,7 +66,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.AT
         {
             var result = _tableClient.QueryAsync<AzureTableStorageFtJournalAT>(filter:
                 TableClient.CreateQueryFilter<AzureTableStorageFtJournalAT>(x => x.PartitionKey.CompareTo(Mapper.GetHashString(fromInclusive)) <= 0 && x.PartitionKey.CompareTo(Mapper.GetHashString(toInclusive)) >= 0));
-            return result.Select(MapToStorageEntity);
+            return result.Select(MapToStorageEntity).OrderBy(x => x.TimeStamp);
         }
 
         public IAsyncEnumerable<ftJournalAT> GetEntriesOnOrAfterTimeStampAsync(long fromInclusive)
@@ -74,12 +74,12 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.AT
             var result = _tableClient.QueryAsync<AzureTableStorageFtJournalAT>(filter:
                 TableClient.CreateQueryFilter<AzureTableStorageFtJournalAT>(x => x.PartitionKey.CompareTo(Mapper.GetHashString(fromInclusive)) <= 0));
 
-            return result.Select(MapToStorageEntity);
+            return result.Select(MapToStorageEntity).OrderBy(x => x.TimeStamp);
         }
 
         public IAsyncEnumerable<ftJournalAT> GetEntriesOnOrAfterTimeStampAsync(long fromInclusive, int? take = null)
         {
-            var result = GetEntriesOnOrAfterTimeStampAsync(fromInclusive).OrderBy(x => x.TimeStamp);
+            var result = GetEntriesOnOrAfterTimeStampAsync(fromInclusive);
             return take.HasValue ? result.Take(take.Value) : result;
         }
     }

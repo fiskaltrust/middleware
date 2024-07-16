@@ -66,18 +66,18 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.ME
         public IAsyncEnumerable<ftJournalME> GetByTimeStampRangeAsync(long fromInclusive, long toInclusive)
         {
             var result = _tableClient.QueryAsync<AzureTableStorageFtJournalME>(filter: TableClient.CreateQueryFilter<AzureTableStorageFtJournalME>(x => x.PartitionKey.CompareTo(Mapper.GetHashString(fromInclusive)) <= 0 && x.PartitionKey.CompareTo(Mapper.GetHashString(toInclusive)) >= 0));
-            return result.Select(MapToStorageEntity);
+            return result.Select(MapToStorageEntity).OrderBy(x => x.TimeStamp);
         }
 
         public IAsyncEnumerable<ftJournalME> GetEntriesOnOrAfterTimeStampAsync(long fromInclusive)
         {
             var result = _tableClient.QueryAsync<AzureTableStorageFtJournalME>(filter: TableClient.CreateQueryFilter<AzureTableStorageFtJournalME>(x => x.PartitionKey.CompareTo(Mapper.GetHashString(fromInclusive)) <= 0));
-            return result.Select(MapToStorageEntity);
+            return result.Select(MapToStorageEntity).OrderBy(x => x.TimeStamp);
         }
 
         public IAsyncEnumerable<ftJournalME> GetEntriesOnOrAfterTimeStampAsync(long fromInclusive, int? take = null)
         {
-            var result = GetEntriesOnOrAfterTimeStampAsync(fromInclusive).OrderBy(x => x.TimeStamp);
+            var result = GetEntriesOnOrAfterTimeStampAsync(fromInclusive);
             return take.HasValue ? result.Take(take.Value) : result;
         }
         public async Task<ftJournalME> GetLastEntryAsync()

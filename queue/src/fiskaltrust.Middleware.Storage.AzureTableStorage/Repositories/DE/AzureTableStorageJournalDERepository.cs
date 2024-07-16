@@ -74,17 +74,16 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
 
         public IAsyncEnumerable<ftJournalDE> GetEntriesOnOrAfterTimeStampAsync(long fromInclusive, int? take = null)
         {
-            var result = _tableClient
-                .QueryAsync<AzureTableStorageFtJournalDE>(filter: TableClient.CreateQueryFilter<AzureTableStorageFtJournalDE>(x => x.PartitionKey.CompareTo(Mapper.GetHashString(fromInclusive)) <= 0))
-                .SelectAwait(async x =>
+            var result = _tableClient.QueryAsync<AzureTableStorageFtJournalDE>(filter: TableClient.CreateQueryFilter<AzureTableStorageFtJournalDE>(x => x.PartitionKey.CompareTo(Mapper.GetHashString(fromInclusive)) <= 0))
+                .Select(MapToStorageEntity)
+                .OrderBy(x => x.TimeStamp)
+                .SelectAwait(async (journal) =>
                 {
-                    var entity = MapToStorageEntity(x);
-                    entity.FileContentBase64 = await DownloadJournalDEFromBlobAsync(entity);
-                    return entity;
+                    journal.FileContentBase64 = await DownloadJournalDEFromBlobAsync(journal);
+                    return journal;
                 });
 
-
-            return take.HasValue ? result.TakeLast(take.Value).OrderBy(x => x.TimeStamp) : result.OrderBy(x => x.TimeStamp);
+            return take.HasValue ? result.Take(take.Value) : result;
         }
 
         public IAsyncEnumerable<ftJournalDE> GetByFileName(string fileName)
@@ -149,7 +148,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
         {
             var result = _tableClient.QueryAsync<AzureTableStorageFtJournalDE>(filter: 
                 TableClient.CreateQueryFilter<AzureTableStorageFtJournalDE>(x => x.PartitionKey.CompareTo(Mapper.GetHashString(fromInclusive)) <= 0 && x.PartitionKey.CompareTo(Mapper.GetHashString(toInclusive)) >= 0));
-            var journals = result.Select(MapToStorageEntity);
+            var journals = result.Select(MapToStorageEntity).OrderBy(x => x.TimeStamp);
             await foreach (var journal in journals)
             {
                 journal.FileContentBase64 = await DownloadJournalDEFromBlobAsync(journal);
