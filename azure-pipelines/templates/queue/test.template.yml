@@ -1,6 +1,5 @@
 steps:
-  - script: |
-      dotnet tool install --tool-path tools dotnet-reportgenerator-globaltool
+  - script: dotnet tool install --tool-path tools dotnet-reportgenerator-globaltool
     displayName: Install report generator
     workingDirectory: "/"
 
