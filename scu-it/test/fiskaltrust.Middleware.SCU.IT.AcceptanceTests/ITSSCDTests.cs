@@ -81,6 +81,7 @@ namespace fiskaltrust.Middleware.SCU.IT.AcceptanceTests
             result.ReceiptResponse.ftSignatures.Should().BeEmpty();
         }
 
+
         [Fact]
         public async Task ProcessZeroReceipt_LocalXReportFlag_0x4954_2001_0000_2000()
         {

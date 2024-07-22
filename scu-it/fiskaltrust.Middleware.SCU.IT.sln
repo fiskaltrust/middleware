@@ -30,6 +30,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.SCU.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.SCU.IT.AcceptanceTests", "test\fiskaltrust.Middleware.SCU.IT.AcceptanceTests\fiskaltrust.Middleware.SCU.IT.AcceptanceTests.csproj", "{B530EACC-2000-45E9-BE23-DFF022FA5883}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.UnitTest", "test\fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.UnitTest\fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.UnitTest.csproj", "{083C9138-E9CD-42D8-81A5-439841E8CE11}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -72,6 +74,10 @@ Global
 		{B530EACC-2000-45E9-BE23-DFF022FA5883}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B530EACC-2000-45E9-BE23-DFF022FA5883}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B530EACC-2000-45E9-BE23-DFF022FA5883}.Release|Any CPU.Build.0 = Release|Any CPU
+		{083C9138-E9CD-42D8-81A5-439841E8CE11}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{083C9138-E9CD-42D8-81A5-439841E8CE11}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{083C9138-E9CD-42D8-81A5-439841E8CE11}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{083C9138-E9CD-42D8-81A5-439841E8CE11}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -87,6 +93,7 @@ Global
 		{BB286047-1A66-4CEF-9666-87D5645A1CFD} = {D3735F43-830E-4992-8663-7182B6970DA2}
 		{8A91A975-2DE2-4D9D-9A0F-7EEE13034AE6} = {D46180D0-C3B0-4544-8571-46FCF7783EE0}
 		{B530EACC-2000-45E9-BE23-DFF022FA5883} = {D46180D0-C3B0-4544-8571-46FCF7783EE0}
+		{083C9138-E9CD-42D8-81A5-439841E8CE11} = {D46180D0-C3B0-4544-8571-46FCF7783EE0}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {1855DFED-93D8-4A05-B062-5958E4B3114E}
