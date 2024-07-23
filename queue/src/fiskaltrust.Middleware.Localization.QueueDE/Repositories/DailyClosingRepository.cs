@@ -9,6 +9,7 @@ using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 
 namespace fiskaltrust.Middleware.Localization.QueueDE.Repositories
@@ -33,15 +34,26 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Repositories
 
             foreach (var aj in dailyClosings)
             {
-                var closingNumber = JsonConvert.DeserializeAnonymousType(aj.DataJson, new { closingNumber = 0L }).closingNumber;
-
                 var queueItem = aj.ftQueueItemId == aj.ftQueueId
                     ? await GetQueueItemOfMissingIdAsync(aj).ConfigureAwait(false)
                     : await _queueItemRepository.GetAsync(aj.ftQueueItemId).ConfigureAwait(false);
 
+                var closingNumber = JsonConvert.DeserializeAnonymousType(aj.DataJson, new JObject()).Property("closingNumber")?.Value.Value<long?>();
+                if(closingNumber == null)
+                {
+                    var response = JsonConvert.DeserializeObject<ReceiptResponse>(queueItem.response);
+                    var currentStateData = new JObject();
+                    if (!string.IsNullOrEmpty(response.ftStateData))
+                    {
+                        currentStateData = (JObject) JsonConvert.DeserializeObject(response.ftStateData);
+                    }
+                        
+                    closingNumber = currentStateData.Property("DailyClosingNumber")?.Value.Value<long>() ?? 0L;
+                }
+
                 var dailyClosingReceipt = new DailyClosingReceipt
                 {
-                    ZNumber = closingNumber,
+                    ZNumber = (long)closingNumber,
                 };
                 if (queueItem != null)
                 {
