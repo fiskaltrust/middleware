@@ -44,6 +44,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME
         }
 
         public Task<string> GetFtCashBoxIdentificationAsync(ftQueue queue) => Task.FromResult<string>(null);
-        public Task FinalTask(ftQueue queue, ftQueueItem queueItem, IMiddlewareActionJournalRepository actionJournalRepository, IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareReceiptJournalRepository receiptJournalRepositor) { return null; }
+        public Task FinalTask(ftQueue queue, ftQueueItem queueItem, IMiddlewareActionJournalRepository actionJournalRepository, IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareReceiptJournalRepository receiptJournalRepositor) { return Task.CompletedTask; }
+        public Task FirstTask() { return Task.CompletedTask; }
     }
 }

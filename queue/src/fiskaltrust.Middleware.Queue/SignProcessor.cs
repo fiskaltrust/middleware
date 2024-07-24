@@ -123,6 +123,9 @@ namespace fiskaltrust.Middleware.Queue
                     return null;
                 }
             }
+
+            await _countrySpecificSignProcessor.FirstTask().ConfigureAwait(false);
+
             var queueItem = new ftQueueItem
             {
                 ftQueueItemId = Guid.NewGuid(),

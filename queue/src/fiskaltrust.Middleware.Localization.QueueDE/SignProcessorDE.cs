@@ -42,11 +42,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
 
         public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ftQueue queue, ftQueueItem queueItem)
         {
-            if(_migrationDone)
-            {
-                throw new InvalidOperationException("Migration was done, no further Receipts can be sent to the local middleware.");
-            }
-
             _logger.LogTrace("SignProcessorDE.ProcessAsync called.");
             if (string.IsNullOrEmpty(request.cbReceiptReference) && request.IsFailTransactionReceipt() && !string.IsNullOrEmpty(request.ftReceiptCaseData) && !request.ftReceiptCaseData.Contains("CurrentStartedTransactionNumbers"))
             {
@@ -93,11 +88,19 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
 
         public async Task FinalTask(ftQueue queue, ftQueueItem queueItem, IMiddlewareActionJournalRepository actionJournalRepository, IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareReceiptJournalRepository receiptJournalRepository)
         {
-            if (_isMigration)
+            if (_isMigration && !_migrationDone)
             {
                 await MigrationReceiptCommand.FinishMigration(queue, queueItem, actionJournalRepository, queueItemRepository, receiptJournalRepository, _journalDERepository);
                 _migrationDone = true;
             }
+        }
+        public Task FirstTask() 
+        {
+            if (_migrationDone)
+            {
+                throw new InvalidOperationException("Migration was done, no further Receipts can be sent to the local middleware.");
+            }
+            return Task.CompletedTask;
         }
     }
 }

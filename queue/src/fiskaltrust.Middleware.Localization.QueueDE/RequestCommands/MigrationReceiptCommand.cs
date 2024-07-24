@@ -72,7 +72,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 return false;
             }
             var request = JsonConvert.DeserializeObject<ReceiptRequest>(queueItem.request);
-            if (request.ftReceiptCase == 0x4445000000000019)
+            if ((request.ftReceiptCase & 0xFFFF) == 0x0019)
             {
                 return true;
             }

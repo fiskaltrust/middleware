@@ -4,14 +4,12 @@ using System.IO;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Models;
-using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProcessorDETests.Fixtures;
 using fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProcessorDETests.Helpers;
 using fiskaltrust.Middleware.Localization.QueueDE.MasterData;
 using fiskaltrust.Middleware.Localization.QueueDE.Transactions;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories.DE;
-using fiskaltrust.storage.V0;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -81,6 +79,25 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             var jdCount = await journalRepository.CountAsync().ConfigureAwait(false);
             migrationState.JournalDECount = jdCount;
             migrationState.QueueRow.Should().Be(queue.ftQueuedRow);
+
+            request = new ReceiptRequest
+            {
+                ftQueueID = queue.ftQueueId.ToString(),
+                cbReceiptMoment = DateTime.UtcNow,
+                cbTerminalID = "test terminal",
+                cbReceiptReference = "pos",
+                ftReceiptCase = 0x4445000100000000,
+                ftCashBoxID = _fixture.CASHBOXID.ToString()
+            };
+
+            var sutMethod = CallSignProcessor_ExpectException(signProcessor, request);
+            await sutMethod.Should().ThrowAsync<InvalidOperationException>().WithMessage("Migration was done, no further Receipts can be sent to the local middleware.").ConfigureAwait(false);
+
+        }
+
+        private Func<Task> CallSignProcessor_ExpectException(SignProcessor signProcessor, ReceiptRequest receiptRequest)
+        {
+              return async () => { var receiptResponse = await signProcessor.ProcessAsync(receiptRequest); };
         }
     }
 }
