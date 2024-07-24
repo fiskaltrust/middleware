@@ -116,14 +116,14 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
             transactionPayloadFactory.Setup(x => x.CreateReceiptPayload(It.IsAny<ReceiptRequest>())).Returns(("Kassenbeleg-V1", "payload"));
 
             var journalRepositoryMock = new Mock<IMiddlewareJournalDERepository>(MockBehavior.Strict);
-            var actionJournalRepositoryMock = new Mock<IActionJournalRepository>(MockBehavior.Strict);
+            var actionJournalRepositoryMock = new Mock<IMiddlewareActionJournalRepository>(MockBehavior.Strict);
             var config = new MiddlewareConfiguration { Configuration = new Dictionary<string, object>() };
             var sut = RequestCommandFactoryHelper.ConstructSignProcessor(loggerMock.Object, configurationRepository.Object, journalRepositoryMock.Object, actionJournalRepositoryMock.Object, 
                 deSSCDProviderMock.Object, transactionPayloadFactory.Object, new InMemoryFailedFinishTransactionRepository(), new InMemoryFailedStartTransactionRepository(), 
                 new InMemoryOpenTransactionRepository(), Mock.Of<IMasterDataService>(), config, new InMemoryQueueItemRepository(), 
                 new SignatureFactoryDE(QueueDEConfiguration.FromMiddlewareConfiguration(Mock.Of<ILogger<QueueDEConfiguration>>(), config)));
 
-            var (receiptResponse, actionJournals, isMigration) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
+            var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
 
             receiptResponse.Should().BeEquivalentTo(expectedResponse, x => x.Excluding(x => x.ftReceiptMoment));
         }
@@ -197,14 +197,14 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
             transactionPayloadFactory.Setup(x => x.CreateReceiptPayload(It.IsAny<ReceiptRequest>())).Returns(("Kassenbeleg-V1", "payload"));
 
             var journalRepositoryMock = new Mock<IMiddlewareJournalDERepository>(MockBehavior.Strict);
-            var actionJournalRepositoryMock = new Mock<IActionJournalRepository>(MockBehavior.Strict);
+            var actionJournalRepositoryMock = new Mock<IMiddlewareActionJournalRepository>(MockBehavior.Strict);
             var config = new MiddlewareConfiguration { Configuration = new Dictionary<string, object>() };
             var sut = RequestCommandFactoryHelper.ConstructSignProcessor(loggerMock.Object, configurationRepository.Object, journalRepositoryMock.Object, actionJournalRepositoryMock.Object, 
                 deSSCDProviderMock.Object, transactionPayloadFactory.Object, new InMemoryFailedFinishTransactionRepository(), new InMemoryFailedStartTransactionRepository(), 
                 new InMemoryOpenTransactionRepository(), Mock.Of<IMasterDataService>(), config, new InMemoryQueueItemRepository(),
                 new SignatureFactoryDE(QueueDEConfiguration.FromMiddlewareConfiguration(Mock.Of<ILogger<QueueDEConfiguration>>(), config)));
 
-            var (receiptResponse, actionJournals, isMigration) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
+            var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
 
             receiptResponse.Should().BeEquivalentTo(expectedResponse, x => x.Excluding(x => x.ftReceiptMoment));
         }
@@ -299,7 +299,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
             transactionPayloadFactory.Setup(x => x.CreateReceiptPayload(It.IsAny<ReceiptRequest>())).Returns(("Kassenbeleg-V1", "payload"));
 
             var journalRepositoryMock = new Mock<IMiddlewareJournalDERepository>(MockBehavior.Strict);
-            var actionJournalRepositoryMock = new Mock<IActionJournalRepository>(MockBehavior.Strict);
+            var actionJournalRepositoryMock = new Mock<IMiddlewareActionJournalRepository>(MockBehavior.Strict);
             var config = new MiddlewareConfiguration { Configuration = new Dictionary<string, object>() };
             var sut = RequestCommandFactoryHelper.ConstructSignProcessor(loggerMock.Object, configurationRepository.Object, journalRepositoryMock.Object, actionJournalRepositoryMock.Object, 
                 deSSCDProviderMock.Object, transactionPayloadFactory.Object, new InMemoryFailedFinishTransactionRepository(), new InMemoryFailedStartTransactionRepository(), 
@@ -308,7 +308,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
 
             _ = await sut.ProcessAsync(startTransactionRequest, queue, queueItem);
 
-            var (receiptResponse, actionJournals, isMigration) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
+            var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
 
             receiptResponse.Should().BeEquivalentTo(expectedResponse, x => x.Excluding(x => x.ftReceiptMoment));
         }
@@ -404,14 +404,14 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
             deSSCDProviderMock.SetupGet(x => x.Instance).Returns(desscdClient.Object);
 
             var journalRepositoryMock = new Mock<IMiddlewareJournalDERepository>(MockBehavior.Strict);
-            var actionJournalRepositoryMock = new Mock<IActionJournalRepository>(MockBehavior.Strict);
+            var actionJournalRepositoryMock = new Mock<IMiddlewareActionJournalRepository>(MockBehavior.Strict);
             var config = new MiddlewareConfiguration { Configuration = new Dictionary<string, object>() };
             var sut = RequestCommandFactoryHelper.ConstructSignProcessor(loggerMock.Object, configurationRepository.Object, journalRepositoryMock.Object, actionJournalRepositoryMock.Object, 
                 deSSCDProviderMock.Object, transactionPayloadFactory.Object, new InMemoryFailedFinishTransactionRepository(), new InMemoryFailedStartTransactionRepository(), 
                 new InMemoryOpenTransactionRepository(), Mock.Of<IMasterDataService>(), config, new InMemoryQueueItemRepository(),
                 new SignatureFactoryDE(QueueDEConfiguration.FromMiddlewareConfiguration(Mock.Of<ILogger<QueueDEConfiguration>>(), config)));
 
-            var (receiptResponse, actionJournals, isMigration) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
+            var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
 
             receiptResponse.Should().BeEquivalentTo(expectedResponse, x => x.Excluding(x => x.ftReceiptMoment));
         }

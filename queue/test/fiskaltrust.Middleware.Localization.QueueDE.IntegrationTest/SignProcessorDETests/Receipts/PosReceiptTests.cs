@@ -48,14 +48,14 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             };
 
             var journalRepositoryMock = new Mock<IMiddlewareJournalDERepository>(MockBehavior.Strict);
-            var actionJournalRepositoryMock = new Mock<IActionJournalRepository>(MockBehavior.Strict);
+            var actionJournalRepositoryMock = new Mock<IMiddlewareActionJournalRepository>(MockBehavior.Strict);
             var config = new MiddlewareConfiguration { Configuration = new Dictionary<string, object>() };
             var sut = RequestCommandFactoryHelper.ConstructSignProcessor(Mock.Of<ILogger<SignProcessorDE>>(), _fixture.CreateConfigurationRepository(), journalRepositoryMock.Object,
                 actionJournalRepositoryMock.Object, _fixture.DeSSCDProvider, new DSFinVKTransactionPayloadFactory(Mock.Of<ILogger<DSFinVKTransactionPayloadFactory>>()), new InMemoryFailedFinishTransactionRepository(),
                 new InMemoryFailedStartTransactionRepository(), new InMemoryOpenTransactionRepository(), Mock.Of<IMasterDataService>(), config,
                 new InMemoryQueueItemRepository(), new SignatureFactoryDE(QueueDEConfiguration.FromMiddlewareConfiguration(Mock.Of<ILogger<QueueDEConfiguration>>(), config)));
 
-            var (receiptResponse, actionJournals, isMigration) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
+            var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
 
             receiptResponse.Should().BeEquivalentTo(expectedResponse, x => x
                 .Excluding(x => x.ftReceiptMoment)
@@ -88,14 +88,14 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             };
 
             var journalRepositoryMock = new Mock<IMiddlewareJournalDERepository>(MockBehavior.Strict);
-            var actionJournalRepositoryMock = new Mock<IActionJournalRepository>(MockBehavior.Strict);
+            var actionJournalRepositoryMock = new Mock<IMiddlewareActionJournalRepository>(MockBehavior.Strict);
             var config = new MiddlewareConfiguration { Configuration = new Dictionary<string, object>() };
             var sut = RequestCommandFactoryHelper.ConstructSignProcessor(Mock.Of<ILogger<SignProcessorDE>>(), _fixture.CreateConfigurationRepository(), journalRepositoryMock.Object,
                 actionJournalRepositoryMock.Object, _fixture.DeSSCDProvider, new DSFinVKTransactionPayloadFactory(Mock.Of<ILogger<DSFinVKTransactionPayloadFactory>>()), new InMemoryFailedFinishTransactionRepository(),
                 new InMemoryFailedStartTransactionRepository(), new InMemoryOpenTransactionRepository(), Mock.Of<IMasterDataService>(), config,
                 new InMemoryQueueItemRepository(), new SignatureFactoryDE(QueueDEConfiguration.FromMiddlewareConfiguration(Mock.Of<ILogger<QueueDEConfiguration>>(), config)));
 
-            var (receiptResponse, actionJournals, isMigration) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
+            var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
 
             receiptResponse.Should().BeEquivalentTo(expectedResponse, x => x
                 .Excluding(x => x.ftReceiptMoment)
@@ -129,7 +129,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             };
 
             var journalRepositoryMock = new Mock<IMiddlewareJournalDERepository>(MockBehavior.Strict);
-            var actionJournalRepositoryMock = new Mock<IActionJournalRepository>(MockBehavior.Strict);
+            var actionJournalRepositoryMock = new Mock<IMiddlewareActionJournalRepository>(MockBehavior.Strict);
             var config = new MiddlewareConfiguration { Configuration = new Dictionary<string, object>() };
             var sut = RequestCommandFactoryHelper.ConstructSignProcessor(Mock.Of<ILogger<SignProcessorDE>>(), _fixture.CreateConfigurationRepository(), journalRepositoryMock.Object,
                 actionJournalRepositoryMock.Object, _fixture.DeSSCDProvider, new DSFinVKTransactionPayloadFactory(Mock.Of<ILogger<DSFinVKTransactionPayloadFactory>>()), new InMemoryFailedFinishTransactionRepository(),
@@ -138,7 +138,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
 
             _ = await sut.ProcessAsync(startTransactionRequest, queue, queueItem);
 
-            var (receiptResponse, actionJournals, isMigration) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
+            var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
 
             receiptResponse.Should().BeEquivalentTo(expectedResponse, x => x
                 .Excluding(x => x.ftReceiptMoment)

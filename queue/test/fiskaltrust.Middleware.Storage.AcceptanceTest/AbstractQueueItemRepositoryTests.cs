@@ -27,6 +27,32 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
         public void Dispose() => DisposeDatabase();
 
         [Fact]
+        public async Task CountAsync_ShouldReturnValidCount()
+        {
+            var entries = StorageTestFixtureProvider.GetFixture().CreateMany<ftQueueItem>(9).ToList();
+            var sut = await CreateRepository(entries);
+
+            var count = await sut.CountAsync();
+            count.Should().Be(9);
+        }
+
+        [Fact]
+        public async Task GetLastQueueItem_ShouldReturnLastQueueItem()
+        {
+            var entries = StorageTestFixtureProvider.GetFixture().CreateMany<ftQueueItem>(5).ToList();
+
+            foreach (var entry in entries)
+            {
+                entry.TimeStamp = DateTime.UtcNow.Ticks;
+                await Task.Delay(1);
+            }
+            var sut = await CreateRepository(entries);
+
+            var last = await sut.GetLastQueueItem();
+            last.ftQueueItemId.Should().Be(entries.Last().ftQueueItemId);
+        }
+
+        [Fact]
         public async Task GetAsync_ShouldReturnAllEntriesThatExistInRepository()
         {
             var expectedEntries = StorageTestFixtureProvider.GetFixture().CreateMany<ftQueueItem>(10);
@@ -202,7 +228,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             request.cbReceiptReference = string.Join(string.Empty, StorageTestFixtureProvider.GetFixture().CreateMany<char>(40_000));
             entryToInsert.request = JsonConvert.SerializeObject(request);
 
-            var response = JsonConvert.DeserializeObject<ReceiptRequest>(entryToInsert.response);
+            var response = new ReceiptResponse() { cbReceiptReference = request.cbReceiptReference , ftQueueItemID = entryToInsert.ftQueueItemId.ToString()};
             response.cbReceiptReference = string.Join(string.Empty, StorageTestFixtureProvider.GetFixture().CreateMany<char>(40_000));
             entryToInsert.response = JsonConvert.SerializeObject(response);
 

@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
+using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Storage.AcceptanceTest;
 using fiskaltrust.Middleware.Storage.EFCore.AcceptanceTest.PostgreSQL.Fixtures;
 using fiskaltrust.Middleware.Storage.EFCore.Repositories;
@@ -17,7 +18,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.AcceptanceTest.PostgreSQL
 
         public override async Task<IReadOnlyActionJournalRepository> CreateReadOnlyRepository(IEnumerable<ftActionJournal> entries) => await CreateRepository(entries);
 
-        public override async Task<IActionJournalRepository> CreateRepository(IEnumerable<ftActionJournal> entries)
+        public override async Task<IMiddlewareActionJournalRepository> CreateRepository(IEnumerable<ftActionJournal> entries)
         {
             var repository = new EFCoreActionJournalRepository(_fixture.Context);
             foreach (var item in entries ?? new List<ftActionJournal>())

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using AutoFixture;
 using Azure.Data.Tables;
+using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Storage.AcceptanceTest;
 using fiskaltrust.Middleware.Storage.AzureTableStorage;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.AcceptanceTest.Fixtures;
@@ -24,7 +25,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.AcceptanceTest
 
         public override async Task<IReadOnlyActionJournalRepository> CreateReadOnlyRepository(IEnumerable<ftActionJournal> entries) => await CreateRepository(entries);
 
-        public override async Task<IActionJournalRepository> CreateRepository(IEnumerable<ftActionJournal> entries)
+        public override async Task<IMiddlewareActionJournalRepository> CreateRepository(IEnumerable<ftActionJournal> entries)
         {
             var azureActionJournal = new AzureTableStorageActionJournalRepository(new QueueConfiguration { QueueId = _fixture.QueueId }, new TableServiceClient(Constants.AzureStorageConnectionString));
             foreach (var entry in entries)

@@ -28,7 +28,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             ILogger<SignProcessorDE> logger,
             IConfigurationRepository configurationRepository,
             IMiddlewareJournalDERepository journalDERepository,
-            IActionJournalRepository actionJournalRepository,
+            IMiddlewareActionJournalRepository actionJournalRepository,
             IDESSCDProvider dESSCDProvider,
             ITransactionPayloadFactory transactionPayloadFactory,
             IPersistentTransactionRepository<FailedFinishTransaction> failedFinishTransactionRepo,
@@ -36,7 +36,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             IPersistentTransactionRepository<OpenTransaction> openTransactionRepo,
             IMasterDataService masterDataService,
             MiddlewareConfiguration middlewareConfiguration,
-            IReadOnlyQueueItemRepository queueItemRepository,
+            IMiddlewareQueueItemRepository queueItemRepository,
             SignatureFactoryDE signatureFactory,
             ITarFileCleanupService tarFileCleanupService = null)
         {
@@ -68,6 +68,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
 
             var signProcessor =  new SignProcessorDE(
                 configurationRepository,
+                journalDERepository,
                 transactionPayloadFactory,
                 new RequestCommandFactory(services.BuildServiceProvider()),
                 logger

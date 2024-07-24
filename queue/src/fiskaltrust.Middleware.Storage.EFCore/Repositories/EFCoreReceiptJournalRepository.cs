@@ -41,5 +41,6 @@ namespace fiskaltrust.Middleware.Storage.EFCore.Repositories
         public async Task<ftReceiptJournal> GetWithLastTimestampAsync() => await DbContext.ReceiptJournalList.AsQueryable().OrderByDescending(x => x.TimeStamp).FirstOrDefaultAsync().ConfigureAwait(false);
         public async Task<ftReceiptJournal> GetByQueueItemId(Guid ftQueueItemId) => await DbContext.ReceiptJournalList.AsQueryable().FirstOrDefaultAsync(x => x.ftQueueItemId == ftQueueItemId).ConfigureAwait(false);
         public async Task<ftReceiptJournal> GetByReceiptNumber(long ftReceiptNumber) => await DbContext.ReceiptJournalList.AsQueryable().FirstOrDefaultAsync(x => x.ftReceiptNumber == ftReceiptNumber).ConfigureAwait(false);
+        public async Task<int> CountAsync() => await EntityFrameworkQueryableExtensions.CountAsync(DbContext.ReceiptJournalList);
     }
 }

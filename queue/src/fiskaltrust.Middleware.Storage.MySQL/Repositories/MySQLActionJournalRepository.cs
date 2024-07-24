@@ -81,5 +81,17 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
                 return connection.Query<ftActionJournal>($"SELECT * FROM ftActionJournal WHERE TimeStamp >= @from AND Priority < @prio ORDER BY TimeStamp", new { from = fromTimestampInclusive, prio = lowerThanPriority }, buffered: false).ToAsyncEnumerable();
             }
         }
+
+        public async Task<int> CountAsync()
+        {
+            using (var connection = new MySqlConnection(ConnectionString))
+            {
+                await connection.OpenAsync().ConfigureAwait(false);
+                using (var cmd = new MySqlCommand("SELECT COUNT(*) FROM ftActionJournal", connection))
+                {
+                    return Convert.ToInt32(cmd.ExecuteScalar());
+                }
+            }
+        }
     }
 }

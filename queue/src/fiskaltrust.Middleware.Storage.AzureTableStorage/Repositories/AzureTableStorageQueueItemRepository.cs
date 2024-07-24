@@ -185,6 +185,21 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
             var result = _tableClient.QueryAsync<TableEntity>(filter: TableClient.CreateQueryFilter($"ftQueueRow eq {queueRow}"));
             return MapToStorageEntity(await result.FirstOrDefaultAsync());
         }
+
+        public async Task<int> CountAsync()
+        {
+            var response = await _tableClient.GetEntityAsync<TableEntity>("", "");
+            return response.Value.Count();
+        }
+
+        public async Task<ftQueueItem> GetLastQueueItem() 
+        {
+            var lastqueueItem =
+                (from queueItem in await GetAsync()
+                 orderby queueItem.TimeStamp descending
+                 select queueItem).ToAsyncEnumerable().Take(1);
+            return await lastqueueItem.FirstOrDefaultAsync();
+        }
     }
 }
 

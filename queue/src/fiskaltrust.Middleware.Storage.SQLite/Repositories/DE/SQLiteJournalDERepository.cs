@@ -42,5 +42,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Repositories.DE
         }
 
         protected override Guid GetIdForEntity(ftJournalDE entity) => entity.ftJournalDEId;
+
+        public async Task<int> CountAsync() => await DbConnection.QueryFirstOrDefaultAsync<int>("SELECT COUNT(*) FROM ftJournalDE").ConfigureAwait(false);
     }
 }

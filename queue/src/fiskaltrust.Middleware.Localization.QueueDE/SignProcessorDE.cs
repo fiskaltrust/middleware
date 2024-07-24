@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Interfaces;
+using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueDE.Extensions;
 using fiskaltrust.Middleware.Localization.QueueDE.Models;
 using fiskaltrust.Middleware.Localization.QueueDE.RequestCommands;
@@ -16,24 +17,36 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
     public class SignProcessorDE : IMarketSpecificSignProcessor
     {
         private readonly IConfigurationRepository _configurationRepository;
+        private readonly IMiddlewareJournalDERepository _journalDERepository;
         private readonly ITransactionPayloadFactory _transactionPayloadFactory;
         private readonly IRequestCommandFactory _requestCommandFactory;
         private readonly ILogger<SignProcessorDE> _logger;
+        private bool _migrationDone = false;
+        private bool _isMigration = false;
 
         public SignProcessorDE(
             IConfigurationRepository configurationRepository,
+            IMiddlewareJournalDERepository journalDERepository,
+            IMiddlewareQueueItemRepository queueItemRepository,
             ITransactionPayloadFactory transactionPayloadFactory,
             IRequestCommandFactory requestCommandFactory,
             ILogger<SignProcessorDE> logger)
         {
             _configurationRepository = configurationRepository;
+            _journalDERepository = journalDERepository;
             _transactionPayloadFactory = transactionPayloadFactory;
             _requestCommandFactory = requestCommandFactory;
             _logger = logger;
+            _migrationDone = MigrationReceiptCommand.IsMigrationDone(queueItemRepository);
         }
 
-        public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals, bool isMigration)> ProcessAsync(ReceiptRequest request, ftQueue queue, ftQueueItem queueItem)
+        public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ftQueue queue, ftQueueItem queueItem)
         {
+            if(_migrationDone)
+            {
+                throw new InvalidOperationException("Migration was done, no further Receipts can be sent to the local middleware.");
+            }
+
             _logger.LogTrace("SignProcessorDE.ProcessAsync called.");
             if (string.IsNullOrEmpty(request.cbReceiptReference) && request.IsFailTransactionReceipt() && !string.IsNullOrEmpty(request.ftReceiptCaseData) && !request.ftReceiptCaseData.Contains("CurrentStartedTransactionNumbers"))
             {
@@ -52,7 +65,9 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
 
             await _configurationRepository.InsertOrUpdateQueueDEAsync(queueDE).ConfigureAwait(false);
 
-            return (requestCommandResponse.ReceiptResponse, requestCommandResponse.ActionJournals, requestCommandResponse.isMigration);
+            _isMigration = requestCommandResponse.isMigration;
+
+            return (requestCommandResponse.ReceiptResponse, requestCommandResponse.ActionJournals);
         }
 
         private async Task<RequestCommandResponse> PerformReceiptRequest(ReceiptRequest request, ftQueueItem queueItem, ftQueue queue, ftQueueDE queueDE)
@@ -75,6 +90,14 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
         }
 
         public async Task<string> GetFtCashBoxIdentificationAsync(ftQueue queue) => (await _configurationRepository.GetQueueDEAsync(queue.ftQueueId).ConfigureAwait(false)).CashBoxIdentification;
-        public Task FinishMigration(ftQueue queue, ftQueueItem queueItem) => MigrationReceiptCommand.FinishMigration();
+
+        public async Task FinalTask(ftQueue queue, ftQueueItem queueItem, IMiddlewareActionJournalRepository actionJournalRepository, IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareReceiptJournalRepository receiptJournalRepository)
+        {
+            if (_isMigration)
+            {
+                await MigrationReceiptCommand.FinishMigration(queue, queueItem, actionJournalRepository, queueItemRepository, receiptJournalRepository, _journalDERepository);
+                _migrationDone = true;
+            }
+        }
     }
 }

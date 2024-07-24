@@ -1,4 +1,5 @@
-﻿using fiskaltrust.Middleware.Storage.AcceptanceTest;
+﻿using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Storage.AcceptanceTest;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories.DE;
 using fiskaltrust.storage.V0;
 using System.Collections.Generic;
@@ -10,6 +11,6 @@ namespace fiskaltrust.Middleware.Storage.InMemory.AcceptanceTest
     {
         public override Task<IReadOnlyJournalDERepository> CreateReadOnlyRepository(IEnumerable<ftJournalDE> entries) => Task.FromResult<IReadOnlyJournalDERepository>(new InMemoryJournalDERepository(entries));
 
-        public override Task<IJournalDERepository> CreateRepository(IEnumerable<ftJournalDE> entries) => Task.FromResult<IJournalDERepository>(new InMemoryJournalDERepository(entries));
+        public override Task<IMiddlewareJournalDERepository> CreateRepository(IEnumerable<ftJournalDE> entries) => Task.FromResult<IMiddlewareJournalDERepository>(new InMemoryJournalDERepository(entries));
     }
 }

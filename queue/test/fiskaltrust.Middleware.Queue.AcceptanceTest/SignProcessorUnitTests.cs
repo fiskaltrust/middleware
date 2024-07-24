@@ -23,8 +23,8 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
             var loggergMock = new Mock<ILogger<SignProcessor>>(MockBehavior.Strict);
             var configMock = new Mock<IConfigurationRepository>(MockBehavior.Strict);
             var queueItemRepositoryMock = new Mock<IMiddlewareQueueItemRepository>(MockBehavior.Strict);
-            var receiptJournalRepositoryMock = new Mock<IReceiptJournalRepository>(MockBehavior.Strict);
-            var actionJournalRepositoryMock = new Mock<IActionJournalRepository>(MockBehavior.Strict);
+            var receiptJournalRepositoryMock = new Mock<IMiddlewareReceiptJournalRepository>(MockBehavior.Strict);
+            var actionJournalRepositoryMock = new Mock<IMiddlewareActionJournalRepository>(MockBehavior.Strict);
             var cryptoHelperMock = new Mock<ICryptoHelper>(MockBehavior.Strict);
             var marketSpecificSignProcessorMock = new Mock<IMarketSpecificSignProcessor>(MockBehavior.Strict);
             var queueId = Guid.NewGuid();
@@ -83,8 +83,8 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
         {
             var logger = new Mock<ILogger<SignProcessor>>(MockBehavior.Loose);
 
-            var receiptJournalRepository = new Mock<IReceiptJournalRepository>(MockBehavior.Strict);
-            var actionJournalRepository = new Mock<IActionJournalRepository>(MockBehavior.Strict);
+            var receiptJournalRepository = new Mock<IMiddlewareReceiptJournalRepository>(MockBehavior.Strict);
+            var actionJournalRepository = new Mock<IMiddlewareActionJournalRepository>(MockBehavior.Strict);
 
             var cryptoHelper = new Mock<ICryptoHelper>(MockBehavior.Strict);
             cryptoHelper.Setup(x => x.GenerateBase64Hash(It.IsAny<string>())).Returns("MyHash");

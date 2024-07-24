@@ -83,7 +83,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                 CallBase = true
             };
             journalRepositoryMock.Setup(x => x.InsertAsync(It.IsAny<ftJournalDE>())).CallBase();
-            var actionJournalRepositoryMock = new Mock<IActionJournalRepository>(MockBehavior.Strict);
+            var actionJournalRepositoryMock = new Mock<IMiddlewareActionJournalRepository>(MockBehavior.Strict);
             var config = new MiddlewareConfiguration {
                 Configuration = new Dictionary<string, object>() {
                     { nameof(QueueDEConfiguration.StoreTemporaryExportFiles), false },
@@ -120,7 +120,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                 new SignatureFactoryDE(QueueDEConfiguration.FromMiddlewareConfiguration(Mock.Of<ILogger<QueueDEConfiguration>>(), config)), tarFileCleanupService);
 
 
-            var (receiptResponse, actionJournals, isMigration) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
+            var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
 
             try
             {
@@ -170,7 +170,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                 CallBase = true
             };
             journalRepositoryMock.Setup(x => x.InsertAsync(It.IsAny<ftJournalDE>())).CallBase();
-            var actionJournalRepositoryMock = new Mock<IActionJournalRepository>(MockBehavior.Strict);
+            var actionJournalRepositoryMock = new Mock<IMiddlewareActionJournalRepository>(MockBehavior.Strict);
             var config = new MiddlewareConfiguration
             {
                 Configuration = new Dictionary<string, object>() {
@@ -210,7 +210,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
 
             try
             {
-                var (receiptResponse, actionJournals, isMigration) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
+                var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
 
                 var journals = await journalRepositoryMock.Object.GetAsync();
 

@@ -65,5 +65,17 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories.DE
         }
 
         protected override Guid GetIdForEntity(ftJournalDE entity) => entity.ftJournalDEId;
+
+        public async Task<int> CountAsync()
+        {
+            using (var connection = new MySqlConnection(ConnectionString))
+            {
+                await connection.OpenAsync().ConfigureAwait(false);
+                using (var cmd = new MySqlCommand("SELECT COUNT(*) FROM ftJournalDE", connection))
+                {
+                    return Convert.ToInt32(cmd.ExecuteScalar());
+                }
+            }
+        }
     }
 }

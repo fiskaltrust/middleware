@@ -12,12 +12,22 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
 {
     public abstract class AbstractReceiptJournalRepositoryTests : IDisposable
     {
-        public abstract Task<IReceiptJournalRepository> CreateRepository(IEnumerable<ftReceiptJournal> entries);
+        public abstract Task<IMiddlewareReceiptJournalRepository> CreateRepository(IEnumerable<ftReceiptJournal> entries);
         public abstract Task<IReadOnlyReceiptJournalRepository> CreateReadOnlyRepository(IEnumerable<ftReceiptJournal> entries);
 
         public virtual void DisposeDatabase() { return; }
 
         public void Dispose() => DisposeDatabase();
+
+
+        [Fact]
+        public async Task CountAsync_ShouldReturnValidCount()
+        {
+            var entries = StorageTestFixtureProvider.GetFixture().CreateMany<ftReceiptJournal>(10).ToList();
+            var sut = await CreateRepository(entries);
+            var count = await sut.CountAsync();
+            count.Should().Be(10);
+        }
 
         [Fact]
         public async Task GetAsync_ShouldReturnAllReceiptJournalsThatExistInRepository()

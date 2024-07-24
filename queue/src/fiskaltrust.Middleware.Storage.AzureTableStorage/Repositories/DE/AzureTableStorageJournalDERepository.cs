@@ -166,6 +166,12 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
 
             return null;
         }
+
+        public async Task<int> CountAsync()
+        {
+            var response = await _tableClient.GetEntityAsync<TableEntity>("", "");
+            return response.Value.Count();
+        }
     }
 }
 

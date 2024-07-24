@@ -7,7 +7,6 @@ using fiskaltrust.ifPOS.v1.de;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Repositories;
-using fiskaltrust.Middleware.Localization.QueueDE.Helpers;
 using fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProcessorDETests.Fixtures;
 using fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProcessorDETests.Helpers;
 using fiskaltrust.Middleware.Localization.QueueDE.MasterData;
@@ -64,7 +63,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                 CallBase = true
             };
             journalRepositoryMock.Setup(x => x.InsertAsync(It.IsAny<ftJournalDE>())).CallBase();
-            var actionJournalRepositoryMock = new Mock<IActionJournalRepository>(MockBehavior.Strict);
+            var actionJournalRepositoryMock = new Mock<IMiddlewareActionJournalRepository>(MockBehavior.Strict);
             var config = new MiddlewareConfiguration { 
                 Configuration = new Dictionary<string, object>() { 
                     { nameof(QueueDEConfiguration.StoreTemporaryExportFiles), false }
@@ -81,7 +80,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
 
             try
             {
-                var (receiptResponse, actionJournals, isMigration) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
+                var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
 
                 Directory.GetFiles(Path.Combine(config.ServiceFolder, "Exports", config.QueueId.ToString(), "TAR")).Should().HaveCount(0);
                 Directory.GetDirectories(Path.Combine(config.ServiceFolder, "Exports", config.QueueId.ToString(), "TAR")).Should().HaveCount(0);
@@ -125,7 +124,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                 CallBase = true
             };
             journalRepositoryMock.Setup(x => x.InsertAsync(It.IsAny<ftJournalDE>())).CallBase();
-            var actionJournalRepositoryMock = new Mock<IActionJournalRepository>(MockBehavior.Strict);
+            var actionJournalRepositoryMock = new Mock<IMiddlewareActionJournalRepository>(MockBehavior.Strict);
             var config = new MiddlewareConfiguration {
                 Configuration = new Dictionary<string, object>() {
                     { nameof(QueueDEConfiguration.StoreTemporaryExportFiles), true }
@@ -142,7 +141,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
 
             try
             { 
-                var (receiptResponse, actionJournals, isMigration) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
+                var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
 
                 config.Configuration[nameof(QueueDEConfiguration.StoreTemporaryExportFiles)] = false;
 
@@ -209,7 +208,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                 CallBase = true
             };
             journalRepositoryMock.Setup(x => x.InsertAsync(It.IsAny<ftJournalDE>())).CallBase();
-            var actionJournalRepositoryMock = new Mock<IActionJournalRepository>(MockBehavior.Strict);
+            var actionJournalRepositoryMock = new Mock<IMiddlewareActionJournalRepository>(MockBehavior.Strict);
             var config = new MiddlewareConfiguration {
                 Configuration = new Dictionary<string, object>() {
                     { nameof(QueueDEConfiguration.StoreTemporaryExportFiles), true },
@@ -226,7 +225,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
 
             try
             { 
-                var (receiptResponse, actionJournals, isMigration) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
+                var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
 
                 config.Configuration[nameof(QueueDEConfiguration.StoreTemporaryExportFiles)] = false;
 

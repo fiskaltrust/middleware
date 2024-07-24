@@ -10,6 +10,7 @@ using fiskaltrust.storage.V0;
 using fiskaltrust.Middleware.Localization.QueueAT.Extensions;
 using fiskaltrust.Middleware.Localization.QueueAT.Helpers;
 using fiskaltrust.Middleware.Contracts.Interfaces;
+using fiskaltrust.Middleware.Contracts.Repositories;
 
 namespace fiskaltrust.Middleware.Localization.QueueAT
 {
@@ -27,7 +28,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT
             _requestCommandFactory = requestCommandFactory;
         }
 
-        public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals, bool isMigration)> ProcessAsync(ReceiptRequest request, ftQueue queue, ftQueueItem queueItem)
+        public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ftQueue queue, ftQueueItem queueItem)
         {
             var queueAT = await _configurationRepository.GetQueueATAsync(queueItem.ftQueueId).ConfigureAwait(false);
 
@@ -54,7 +55,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT
             }
             await _configurationRepository.InsertOrUpdateQueueATAsync(queueAT).ConfigureAwait(false);
 
-            return (requestCommandResponse.ReceiptResponse, requestCommandResponse.ActionJournals.Concat(additionalActionJournals).ToList(), false);
+            return (requestCommandResponse.ReceiptResponse, requestCommandResponse.ActionJournals.Concat(additionalActionJournals).ToList());
         }
 
         private void AddStateFlagIfNewMonthOrYearStarted(ReceiptRequest request, ReceiptResponse response, ftQueueAT queueAT)
@@ -206,6 +207,6 @@ namespace fiskaltrust.Middleware.Localization.QueueAT
         }
 
         public async Task<string> GetFtCashBoxIdentificationAsync(ftQueue queue) => (await _configurationRepository.GetQueueATAsync(queue.ftQueueId).ConfigureAwait(false)).CashBoxIdentification;
-        public Task FinishMigration(ftQueue queue, ftQueueItem queueItem) => throw new NotImplementedException();
+        public Task FinalTask(ftQueue queue, ftQueueItem queueItem, IMiddlewareActionJournalRepository actionJournalRepository, IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareReceiptJournalRepository receiptJournalRepositor){ return null;}
     }
 }

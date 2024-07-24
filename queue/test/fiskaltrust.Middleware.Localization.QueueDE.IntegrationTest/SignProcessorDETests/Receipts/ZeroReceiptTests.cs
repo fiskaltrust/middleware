@@ -44,7 +44,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             var queue = new ftQueue { ftQueueId = Guid.Parse(receiptRequest.ftQueueID), StartMoment = DateTime.UtcNow };
             var sut = GetSUT();
 
-            var (receiptResponse, actionJournals, isMigration) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
+            var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
 
             receiptResponse.Should().BeEquivalentTo(expectedResponse, x => x
                 .Excluding(x => x.ftReceiptMoment)
@@ -72,7 +72,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             var (receiptRequest, _, queueItem) = GetReceipt(Path.Combine("Data", "ZeroReceipt", "TarExport"), "ZeroReceiptWithExportFlag");
             var queue = new ftQueue { ftQueueId = Guid.Parse(receiptRequest.ftQueueID), StartMoment = DateTime.UtcNow };
 
-            var actionJournalRepositoryMock = new Mock<IActionJournalRepository>(MockBehavior.Strict);
+            var actionJournalRepositoryMock = new Mock<IMiddlewareActionJournalRepository>(MockBehavior.Strict);
             var journalRepository = new InMemoryJournalDERepository();
             var config = new MiddlewareConfiguration { Configuration = new Dictionary<string, object>(), ServiceFolder = Path.GetTempPath() };
 
@@ -215,7 +215,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
         {
             var journalRepositoryMock = new Mock<IMiddlewareJournalDERepository>(MockBehavior.Strict);
             _fixture.InMemorySCU.OpenTans = false;
-            var actionJournalRepositoryMock = new Mock<IActionJournalRepository>(MockBehavior.Strict);
+            var actionJournalRepositoryMock = new Mock<IMiddlewareActionJournalRepository>(MockBehavior.Strict);
             var config = new MiddlewareConfiguration { Configuration = new Dictionary<string, object>() };
 
             var sut = RequestCommandFactoryHelper.ConstructSignProcessor(Mock.Of<ILogger<SignProcessorDE>>(), _fixture.CreateConfigurationRepository(), journalRepositoryMock.Object,
