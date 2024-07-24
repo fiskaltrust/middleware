@@ -85,6 +85,7 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
 
             var receiptJournalRepository = new Mock<IMiddlewareReceiptJournalRepository>(MockBehavior.Strict);
             var actionJournalRepository = new Mock<IMiddlewareActionJournalRepository>(MockBehavior.Strict);
+            actionJournalRepository.Setup(x => x.InsertAsync(It.IsAny<ftActionJournal>())).Returns(Task.CompletedTask);
 
             var cryptoHelper = new Mock<ICryptoHelper>(MockBehavior.Strict);
             cryptoHelper.Setup(x => x.GenerateBase64Hash(It.IsAny<string>())).Returns("MyHash");

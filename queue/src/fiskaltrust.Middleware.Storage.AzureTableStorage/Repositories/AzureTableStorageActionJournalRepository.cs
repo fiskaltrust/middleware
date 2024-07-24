@@ -68,15 +68,27 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
             };
         }
 
+        public IAsyncEnumerable<ftActionJournal> GetByTimeStampRangeAsync(long fromInclusive, long toInclusive)
+        {
+            var result = _tableClient.QueryAsync<TableEntity>(filter: TableClient.CreateQueryFilter<TableEntity>(x => x.PartitionKey.CompareTo(Mapper.GetHashString(fromInclusive)) <= 0 && x.PartitionKey.CompareTo(Mapper.GetHashString(toInclusive)) >= 0));
+            return result.Select(MapToStorageEntity).OrderBy(x => x.TimeStamp);
+        }
+
+        public IAsyncEnumerable<ftActionJournal> GetEntriesOnOrAfterTimeStampAsync(long fromInclusive)
+        {
+            var result = _tableClient.QueryAsync<TableEntity>(filter: TableClient.CreateQueryFilter<TableEntity>(x => x.PartitionKey.CompareTo(Mapper.GetHashString(fromInclusive)) <= 0));
+            return result.Select(MapToStorageEntity).OrderBy(x => x.TimeStamp);
+        }
+
         public IAsyncEnumerable<ftActionJournal> GetEntriesOnOrAfterTimeStampAsync(long fromInclusive, int? take = null)
         {
-            var result = base.GetEntriesOnOrAfterTimeStampAsync(fromInclusive).OrderBy(x => x.TimeStamp);
+            var result = GetEntriesOnOrAfterTimeStampAsync(fromInclusive);
             return take.HasValue ? result.Take(take.Value) : result;
         }
 
         public IAsyncEnumerable<ftActionJournal> GetByQueueItemId(Guid queueItemId)
         {
-            var result = _tableClient.QueryAsync<TableEntity>(filter: TableClient.CreateQueryFilter($"ftQueueItemId eq {queueItemId}"));
+            var result = _tableClient.QueryAsync<TableEntity>(filter: TableClient.CreateQueryFilter<ftActionJournal>(x => x.ftQueueItemId == queueItemId));
             return result.Select(MapToStorageEntity);
         }
 
@@ -88,7 +100,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
 
         public IAsyncEnumerable<ftActionJournal> GetByPriorityAfterTimestampAsync(int lowerThanPriority, long fromTimestampInclusive)
         {
-            var result = _tableClient.QueryAsync<TableEntity>(filter: TableClient.CreateQueryFilter($"PartitionKey le {Mapper.GetHashString(fromTimestampInclusive)} and Priority lt {lowerThanPriority}"));
+            var result = _tableClient.QueryAsync<TableEntity>(filter: TableClient.CreateQueryFilter<TableEntity>(x => x.PartitionKey.CompareTo(Mapper.GetHashString(fromTimestampInclusive)) <= 0 && x.GetInt32(nameof(ftActionJournal.Priority)) < lowerThanPriority));
             return result.Select(MapToStorageEntity);
         }
 

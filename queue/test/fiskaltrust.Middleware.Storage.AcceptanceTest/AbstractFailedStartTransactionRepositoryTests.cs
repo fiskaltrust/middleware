@@ -89,12 +89,10 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
         public async Task InsertAsync_ShouldUpdateEntry_IfEntryAlreadyExists()
         {
             var entries = StorageTestFixtureProvider.GetFixture().CreateMany<FailedStartTransaction>(10).ToList();
-            var entryToInsert = StorageTestFixtureProvider.GetFixture().Create<FailedStartTransaction>();
-            entryToInsert.cbReceiptReference = entries[0].cbReceiptReference;
+            var entryToInsert = entries[1];
 
             var sut = await CreateRepository(entries);
             var count = (await sut.GetAsync()).Count();
-
             await sut.InsertOrUpdateTransactionAsync(entryToInsert);
 
             var insertedEntry = await sut.GetAsync(entryToInsert.cbReceiptReference);

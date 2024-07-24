@@ -1,3 +1,7 @@
+parameters:
+- name: project
+  type: string
+
 steps:
 - script: |
     dotnet tool install --tool-path tools dotnet-reportgenerator-globaltool
@@ -34,12 +38,21 @@ steps:
 - task: DotNetCoreCLI@2
   inputs:
     command: 'test'
-    projects: |
-      $(WorkingDirectory)/**/$(Project).csproj
-    arguments: '--configuration $(BuildConfiguration) --no-restore --collect "Code coverage"'
+    projects: '$(WorkingDirectory)/**/${{ parameters.project }}.csproj'
+    arguments: '--configuration $(BuildConfiguration) --no-restore --collect "XPlat Code coverage" --settings $(WorkingDirectory)/test/${{ parameters.project }}/coverage.runsettings'
+    publishTestResults: true
     nobuild: true
   displayName: 'Run acceptance tests'
   env:
     CONNECTIONSTRING_AZURE_STORAGE_TESTS: $(CONNECTIONSTRING_AZURE_STORAGE_TESTS)
     CONNECTIONSTRING_POSTGRESQL_TESTS: $(CONNECTIONSTRING_POSTGRESQL_TESTS)
     CONNECTIONSTRING_MYSQL_TESTS: $(CONNECTIONSTRING_MYSQL_TESTS)
+
+- task: reportgenerator@4
+  inputs:
+    reports: "$(Agent.TempDirectory)/**/coverage.cobertura.xml"
+    targetdir: "$(Build.SourcesDirectory)/CoverageResults"
+    publishCodeCoverageResults: true
+
+- publish: $(Build.SourcesDirectory)/CoverageResults/
+  artifact: Coverage-${{ parameters.project }}

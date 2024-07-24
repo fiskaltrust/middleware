@@ -10,18 +10,18 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
 {
     public class AzureTableStorageConfigurationRepository : IConfigurationRepository
     {
-        private readonly BaseAzureTableStorageRepository<Guid, AzureTableStorageFtCashBox, ftCashBox> _cashBoxRepository;
-        private readonly BaseAzureTableStorageRepository<Guid, AzureTableStorageFtQueue, ftQueue> _queueRepository;
-        private readonly BaseAzureTableStorageRepository<Guid, AzureTableStorageFtQueueAT, ftQueueAT> _queueATRepository;
-        private readonly BaseAzureTableStorageRepository<Guid, AzureTableStorageFtQueueDE, ftQueueDE> _queueDERepository;
-        private readonly BaseAzureTableStorageRepository<Guid, AzureTableStorageFtQueueFR, ftQueueFR> _queueFRRepository;
-        private readonly BaseAzureTableStorageRepository<Guid, AzureTableStorageFtQueueIT, ftQueueIT> _queueITRepository;
-        private readonly BaseAzureTableStorageRepository<Guid, AzureTableStorageFtQueueME, ftQueueME> _queueMERepository;
-        private readonly BaseAzureTableStorageRepository<Guid, AzureTableStorageFtSignaturCreationUnitAT, ftSignaturCreationUnitAT> _signaturCreationUnitATRepository;
-        private readonly BaseAzureTableStorageRepository<Guid, AzureTableStorageFtSignaturCreationUnitDE, ftSignaturCreationUnitDE> _signaturCreationUnitDERepository;
-        private readonly BaseAzureTableStorageRepository<Guid, AzureTableStorageFtSignaturCreationUnitFR, ftSignaturCreationUnitFR> _signaturCreationUnitFRRepository;
-        private readonly BaseAzureTableStorageRepository<Guid, AzureTableStorageFtSignaturCreationUnitIT, ftSignaturCreationUnitIT> _signaturCreationUnitITRepository;
-        private readonly BaseAzureTableStorageRepository<Guid, AzureTableStorageFtSignaturCreationUnitME, ftSignaturCreationUnitME> _signaturCreationUnitMERepository;
+        private readonly AzureTableStorageCashBoxRepository _cashBoxRepository;
+        private readonly AzureTableStorageQueueRepository _queueRepository;
+        private readonly AzureTableStorageQueueATRepository _queueATRepository;
+        private readonly AzureTableStorageQueueDERepository _queueDERepository;
+        private readonly AzureTableStorageQueueFRRepository _queueFRRepository;
+        private readonly AzureTableStorageQueueITRepository _queueITRepository;
+        private readonly AzureTableStorageQueueMERepository _queueMERepository;
+        private readonly AzureTableStorageSignaturCreationUnitATRepository _signaturCreationUnitATRepository;
+        private readonly AzureTableStorageSignaturCreationUnitDERepository _signaturCreationUnitDERepository;
+        private readonly AzureTableStorageSignaturCreationUnitFRRepository _signaturCreationUnitFRRepository;
+        private readonly AzureTableStorageSignaturCreationUnitITRepository _signaturCreationUnitITRepository;
+        private readonly AzureTableStorageSignaturCreationUnitMERepository _signaturCreationUnitMERepository;
 
         public AzureTableStorageConfigurationRepository() { }
 
@@ -68,7 +68,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
         public async Task<ftQueueME> GetQueueMEAsync(Guid queueMEId) => await _queueMERepository.GetAsync(queueMEId).ConfigureAwait(false);
         public async Task<IEnumerable<ftQueueME>> GetQueueMEListAsync() => await _queueMERepository.GetAsync().ConfigureAwait(false);
         public async Task InsertOrUpdateQueueMEAsync(ftQueueME queue) => await _queueMERepository.InsertOrUpdateAsync(queue).ConfigureAwait(false);
-        
+
         public async Task<ftSignaturCreationUnitAT> GetSignaturCreationUnitATAsync(Guid id) => await _signaturCreationUnitATRepository.GetAsync(id).ConfigureAwait(false);
         public async Task<IEnumerable<ftSignaturCreationUnitAT>> GetSignaturCreationUnitATListAsync() => await _signaturCreationUnitATRepository.GetAsync().ConfigureAwait(false);
         public async Task InsertOrUpdateSignaturCreationUnitATAsync(ftSignaturCreationUnitAT scu) => await _signaturCreationUnitATRepository.InsertOrUpdateAsync(scu).ConfigureAwait(false);
@@ -85,7 +85,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
         public async Task<IEnumerable<ftSignaturCreationUnitIT>> GetSignaturCreationUnitITListAsync() => await _signaturCreationUnitITRepository.GetAsync().ConfigureAwait(false);
         public async Task InsertOrUpdateSignaturCreationUnitITAsync(ftSignaturCreationUnitIT scu) => await _signaturCreationUnitITRepository.InsertOrUpdateAsync(scu).ConfigureAwait(false);
 
-        public async Task InsertOrUpdateSignaturCreationUnitMEAsync(ftSignaturCreationUnitME scu) => await _signaturCreationUnitMERepository.InsertOrUpdateAsync(scu).ConfigureAwait(false);  
+        public async Task InsertOrUpdateSignaturCreationUnitMEAsync(ftSignaturCreationUnitME scu) => await _signaturCreationUnitMERepository.InsertOrUpdateAsync(scu).ConfigureAwait(false);
         public async Task<IEnumerable<ftSignaturCreationUnitME>> GetSignaturCreationUnitMEListAsync() => await _signaturCreationUnitMERepository.GetAsync().ConfigureAwait(false);
         public async Task<ftSignaturCreationUnitME> GetSignaturCreationUnitMEAsync(Guid signaturCreationUnitDEId) => await _signaturCreationUnitMERepository.GetAsync(signaturCreationUnitDEId).ConfigureAwait(false);
     }

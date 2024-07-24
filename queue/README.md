@@ -89,3 +89,23 @@
 | DE     | `4445000000000007`                           | `Monthly-closing receipt was processed. However TSE was not reachable.`                                                                                                                                                                   |
 | DE     | `4445000008000007`                           | `Yearly-closing receipt was processed, and a master data update was performed. However TSE was not reachable.`                                                                                                                            |
 | DE     | `4445000000000007`                           | `Yearly-closing receipt was processed. However TSE was not reachable.`                                                                                                                                                                    |
+
+## Run Acceptance Tests locally
+
+### MySQL
+
+`docker run --env=MYSQL_ROOT_PASSWORD=my-secret-pw -p 3306:3306 -d mysql:latest`
+
+`Server=localhost;Port=3306;Uid=root;Pwd=my-secret-pw;`
+
+### AzureTableStorage
+
+`docker run -p 10002:10002 -p 10000:10000 -p 10001:10001 -d mcr.microsoft.com/azure-storage/azurite azurite --tableHost 0.0.0.0 --blobHost 0.0.0.0 --queueHost 0.0.0.0`
+
+`DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://localhost:10000/devstoreaccount1;QueueEndpoint=http://localhost:10001/devstoreaccount1;TableEndpoint=http://localhost:10002/devstoreaccount1;`
+
+### EF
+
+`docker run --user=mssql --env=ACCEPT_EULA=Y --env=MSSQL_SA_PASSWORD=my-secret-PW-01 -p 1433:1433 -d mcr.microsoft.com/mssql/server:2022-latest`
+
+`Server=localhost,1433;MultipleActiveResultSets=true;User ID=sa;Password=my-secret-PW-01`

@@ -24,6 +24,13 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
 
         protected override string GetIdForEntity(FailedFinishTransaction entity) => entity.cbReceiptReference;
 
+        public async Task InsertOrUpdateAsync(FailedFinishTransaction storageEntity)
+        {
+            EntityUpdated(storageEntity);
+            var entity = MapToAzureEntity(storageEntity);
+            await _tableClient.UpsertEntityAsync(entity, TableUpdateMode.Replace);
+        }
+
         protected override TableEntity MapToAzureEntity(FailedFinishTransaction src)
         {
             if (src == null)
@@ -52,6 +59,8 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
                 return null;
             }
 
+            var transactionNumber = src.GetString(nameof(FailedFinishTransaction.TransactionNumber));
+
             return new FailedFinishTransaction
             {
                 cbReceiptReference = src.GetString(nameof(FailedFinishTransaction.cbReceiptReference)),
@@ -59,7 +68,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
                 FinishMoment = src.GetDateTime(nameof(FailedFinishTransaction.FinishMoment)).GetValueOrDefault(),
                 ftQueueItemId = src.GetGuid(nameof(FailedFinishTransaction.ftQueueItemId)).GetValueOrDefault(),
                 Request = src.GetOversized(nameof(FailedFinishTransaction.Request)),
-                TransactionNumber = src.GetInt64(nameof(FailedFinishTransaction.TransactionNumber))
+                TransactionNumber = transactionNumber == null ? null : Convert.ToInt64(transactionNumber)
             };
         }
     }

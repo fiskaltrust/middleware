@@ -23,10 +23,23 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.AcceptanceTest.Fixtur
         {
             var tableServiceClient = new TableServiceClient(Constants.AzureStorageConnectionString);
             var tableClient = tableServiceClient.GetTableClient($"x{QueueId.ToString().Replace("-", "")}{entityName}");
+
             var result = tableClient.Query<TableEntity>(select: new List<string>() { "PartitionKey", "RowKey" });
             foreach (var item in result)
             {
                 tableClient.DeleteEntity(item.PartitionKey, item.RowKey);
+            }
+        }
+
+        public void CleanBlobStorage(string entityName)
+        {
+            var blobServiceClient = new BlobServiceClient(Constants.AzureStorageConnectionString);
+            var blobClient = blobServiceClient.GetBlobContainerClient(entityName);
+
+            var result = blobClient.GetBlobs();
+            foreach (var item in result)
+            {
+                blobClient.DeleteBlob(item.Name);
             }
         }
 
