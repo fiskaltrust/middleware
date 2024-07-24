@@ -150,7 +150,6 @@ namespace fiskaltrust.Middleware.Queue
 
             var actionjournals = new List<ftActionJournal>();
             ftReceiptJournal receiptJournal = null;
-            var isMigration = false;
             try
             {
                 queueItem.ftWorkMoment = DateTime.UtcNow;
@@ -246,11 +245,7 @@ namespace fiskaltrust.Middleware.Queue
                 {
                     await _actionJournalRepository.InsertAsync(actionJournal).ConfigureAwait(false);
                 }
-
-                if (isMigration)
-                {
-                    await _countrySpecificSignProcessor.FinalTask(queue, queueItem, _actionJournalRepository, _queueItemRepository, _receiptJournalRepository);
-                }
+                await _countrySpecificSignProcessor.FinalTask(queue, queueItem, _actionJournalRepository, _queueItemRepository, _receiptJournalRepository).ConfigureAwait(false);
             }
         }
 
