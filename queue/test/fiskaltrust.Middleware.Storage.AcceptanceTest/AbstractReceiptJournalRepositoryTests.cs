@@ -67,6 +67,8 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             var actualEntries = await ((IMiddlewareRepository<ftReceiptJournal>) sut).GetByTimeStampRangeAsync(firstSearchedEntryTimeStamp, lastSearchedEntryTimeStamp).ToListAsync();
 
             actualEntries.Should().BeEquivalentTo(allEntries.Skip(1).Take(5));
+            actualEntries.Should().BeInAscendingOrder(x => x.TimeStamp);
+            actualEntries.First().TimeStamp.Should().Be(firstSearchedEntryTimeStamp);
         }
 
         [Fact]
@@ -82,6 +84,8 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             var actualEntries = await ((IMiddlewareRepository<ftReceiptJournal>) sut).GetEntriesOnOrAfterTimeStampAsync(firstSearchedEntryTimeStamp).ToListAsync();
 
             actualEntries.Should().BeEquivalentTo(allEntries.Skip(1));
+            actualEntries.Should().BeInAscendingOrder(x => x.TimeStamp);
+            actualEntries.First().TimeStamp.Should().Be(firstSearchedEntryTimeStamp);
         }
 
         [Fact]

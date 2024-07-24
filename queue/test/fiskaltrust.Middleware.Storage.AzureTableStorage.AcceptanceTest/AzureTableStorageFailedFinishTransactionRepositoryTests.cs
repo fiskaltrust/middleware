@@ -31,6 +31,6 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.AcceptanceTest
             return azureReceiptJournalRepository;
         }
 
-        public override void DisposeDatabase() => _fixture.CleanTable(nameof(FailedFinishTransaction));
+        public override void DisposeDatabase() => _fixture.CleanTable(AzureTableStorageFailedFinishTransactionRepository.TABLE_NAME);
     }
 }
