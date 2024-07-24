@@ -33,6 +33,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.UnitTest
         public Guid queueId { get;} = Guid.Parse("ef9764af-1102-41e8-b901-eb89d45cde1c");
         public ftQueue queue { get; private set; }
         public ftQueueAT queueAT { get; private set; }
+        public ftQueueAT queueATNotSignAll { get; private set; }
         public MiddlewareConfiguration middlewareConfiguration;
         public QueueATConfiguration queueATConfiguration;
         public ILogger<RequestCommand> logger;
@@ -145,6 +146,12 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.UnitTest
                 SSCDFailCount = inFailedMode ? 1 : 0,
                 CashBoxIdentification = cashBoxId.ToString(),
                 SignAll = true
+            };
+            queueATNotSignAll = new ftQueueAT
+            {
+                ftQueueATId = queueId,
+                SSCDFailCount = inFailedMode ? 1 : 0,
+                CashBoxIdentification = cashBoxId.ToString(),
             };
             using (var sha256 = SHA256.Create())
             {
