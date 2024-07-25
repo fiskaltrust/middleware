@@ -59,6 +59,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             services.AddSingleton(_ => QueueDEConfiguration.FromMiddlewareConfiguration(Mock.Of<ILogger<QueueDEConfiguration>>(), middlewareConfiguration));
             services.AddSingleton(_ => masterDataService);
             services.AddSingleton(_ => journalDERepository);
+            services.AddSingleton(_ => queueItemRepository as IReadOnlyQueueItemRepository);
+            services.AddSingleton(_ => actionJournalRepository as IActionJournalRepository);
           
 
             if(tarFileCleanupService == null)

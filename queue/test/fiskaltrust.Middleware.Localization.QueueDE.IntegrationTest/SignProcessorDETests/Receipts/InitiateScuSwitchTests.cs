@@ -149,6 +149,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
         [Fact]
         public async Task InitScuSwitchReceipt_SourceScuIsNoSwitchSource_ExpectException()
         {
+            var request = new ReceiptRequest() { ftReceiptCase = 0x4445000100000017 };
             var queueItem = new ftQueueItem
             {
                 cbReceiptMoment = DateTime.Now,
@@ -158,7 +159,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                 ftQueueId = _fixture.QUEUEID,
                 ftQueueItemId = Guid.NewGuid(),
                 ftQueueRow = 10,
-                request = "",
+                request = JsonConvert.SerializeObject(request),
                 requestHash = "test request hash"
             };
             await _fixture.queueItemRepository.InsertOrUpdateAsync(queueItem);
@@ -174,6 +175,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
         [Fact]
         public async Task InitScuSwitchReceipt_TargetScuIsNoSwitchSource_ExpectException()
         {
+            var request = new ReceiptRequest() { ftReceiptCase = 0x4445000100000017 };
             var queueItem = new ftQueueItem
             {
                 cbReceiptMoment = DateTime.Now,
@@ -183,7 +185,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                 ftQueueId = _fixture.QUEUEID,
                 ftQueueItemId = Guid.NewGuid(),
                 ftQueueRow = 10,
-                request = "",
+                request = JsonConvert.SerializeObject(request),
                 requestHash = "test request hash"
             };
             await _fixture.queueItemRepository.InsertOrUpdateAsync(queueItem);
