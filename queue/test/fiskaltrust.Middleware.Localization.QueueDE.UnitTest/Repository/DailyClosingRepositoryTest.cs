@@ -36,9 +36,11 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest.Repository
             closings[2].QueueRow.Should().Be(4);
             closings[3].ZNumber.Should().Be(4);
             closings[3].QueueRow.Should().Be(5);
+            closings[4].QueueRow.Should().Be(6);
+            closings[4].ZNumber.Should().Be(5);
 
         }
-
+        
         private (IEnumerable<ftActionJournal>, IEnumerable<ftQueueItem>) GetDailyClosingData()
         {
             var queueId = Guid.NewGuid();
@@ -61,6 +63,10 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest.Repository
 
             var queueItem5_timestamp = DateTime.Now.Ticks;
             var actionJournal5_timestamp = DateTime.Now.Ticks;
+            Task.Delay(1).Wait();
+
+            var queueItem6_timestamp = DateTime.Now.Ticks;
+            var actionJournal6_timestamp = DateTime.Now.Ticks;
 
             var actionJournals = new List<ftActionJournal>() {
                 new() {
@@ -94,6 +100,14 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest.Repository
                     TimeStamp = actionJournal5_timestamp,
                     Type = "4445000800000007",
                     DataJson = "{\"closingNumber\": 4, \"ftReceiptNumerator\": 5}"
+                },
+                new() {
+                    ftQueueId = queueId,
+                    ftActionJournalId = Guid.NewGuid(),
+                    ftQueueItemId = queueId,
+                    TimeStamp = actionJournal6_timestamp,
+                    Type = "4445000800000007",
+                    DataJson = "{\"ftReceiptNumerator\": 6}"
                 },
             };
 
@@ -133,6 +147,13 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest.Repository
                     ftQueueId = queueId,
                     TimeStamp = queueItem5_timestamp,
                     response = JsonConvert.SerializeObject(new ReceiptResponse{ ftReceiptIdentification = "ft5#" })
+                },
+                new() {
+                    ftQueueItemId = Guid.NewGuid(),
+                    ftQueueRow = 6,
+                    ftQueueId = queueId,
+                    TimeStamp = queueItem6_timestamp,
+                    response = JsonConvert.SerializeObject(new ReceiptResponse{ ftReceiptIdentification = "ft6#", ftStateData="{\"DailyClosingNumber\":5}" })
                 },
             };
 

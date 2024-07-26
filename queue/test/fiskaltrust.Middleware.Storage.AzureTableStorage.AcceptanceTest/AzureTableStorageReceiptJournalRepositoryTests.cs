@@ -34,7 +34,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.AcceptanceTest
             return azureReceiptJournalRepository;
         }
 
-        public override void DisposeDatabase() => _fixture.CleanTable(nameof(ftReceiptJournal));
+        public override void DisposeDatabase() => _fixture.CleanTable(AzureTableStorageReceiptJournalRepository.TABLE_NAME);
 
         public override async Task InsertAsync_ShouldThrowException_IfEntryAlreadyExists()
         {

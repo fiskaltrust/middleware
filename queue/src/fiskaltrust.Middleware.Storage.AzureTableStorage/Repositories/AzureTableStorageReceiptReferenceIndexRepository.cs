@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Azure.Data.Tables;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.TableEntities;
 using fiskaltrust.storage.V0;
@@ -77,6 +78,13 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
             var partitionKey = GetIdForEntity(new ReceiptReferenceIndex { cbReceiptReference = cbReceiptReference });
             var result = _tableClient.QueryAsync<ReceiptReferenceIndexTable>(x => x.PartitionKey == partitionKey, select: new[] { nameof(ftQueueItem.ftQueueItemId) });
             return result.Select(x => x.ftQueueItemId);
+        }
+
+        public async Task InsertOrUpdateAsync(ReceiptReferenceIndex storageEntity)
+        {
+            EntityUpdated(storageEntity);
+            var entity = MapToAzureEntity(storageEntity);
+            await _tableClient.UpsertEntityAsync(entity, TableUpdateMode.Replace);
         }
     }
 }
