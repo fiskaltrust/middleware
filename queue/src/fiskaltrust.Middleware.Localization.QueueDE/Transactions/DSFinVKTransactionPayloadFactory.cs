@@ -50,12 +50,13 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Transactions
                     var amountPerItem = item.Quantity != 0
                         ? item.Amount / item.Quantity
                         : 0;
-
-                    payloadStringBuilder.AppendFormat(CultureInfo.InvariantCulture, "{0:0.##########}", item.Quantity);
+                    
+                    var itemquantity = item.Amount <= 0  && item.Quantity >= 0 ? item.Quantity * -1 : item.Quantity;
+                    payloadStringBuilder.AppendFormat(CultureInfo.InvariantCulture, "{0:0.##########}", itemquantity);
                     payloadStringBuilder.Append(";\"");
                     payloadStringBuilder.Append(item.Description.Replace("\"", "\"\""));
                     payloadStringBuilder.Append("\";");
-                    payloadStringBuilder.AppendFormat(CultureInfo.InvariantCulture, "{0:0.00}", amountPerItem);
+                    payloadStringBuilder.AppendFormat(CultureInfo.InvariantCulture, "{0:0.00}", Math.Abs(amountPerItem));
 
                     if (item != receiptRequest.cbChargeItems.Last())
                     {
