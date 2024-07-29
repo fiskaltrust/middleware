@@ -39,12 +39,9 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
                 ftState = Cases.BASE_STATE,
                 ftReceiptIdentification = receiptIdentification
             };
-
-            List<ftActionJournal> actionJournals;
             if (queue.IsDeactivated())
             {
-                (receiptResponse, actionJournals) = ReturnWithQueueIsDisabled(queue, receiptResponse, queueItem);
-                return (receiptResponse, actionJournals);
+                return ReturnWithQueueIsDisabled(queue, receiptResponse, queueItem);
             }
              
             if (request.IsInitialOperation() && !queue.IsNew())
@@ -55,11 +52,9 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
             
             if (!request.IsInitialOperation() && queue.IsNew())
             {
-                (receiptResponse, actionJournals) = ReturnWithQueueIsNotActive(queue, receiptResponse, queueItem);
-                return (receiptResponse, actionJournals);
+                return ReturnWithQueueIsNotActive(queue, receiptResponse, queueItem);
             }
-            (receiptResponse, actionJournals) = await _signProcessorIT.ProcessAsync(request, receiptResponse, queue, queueItem).ConfigureAwait(false);
-            return (receiptResponse, actionJournals);
+            return await _signProcessorIT.ProcessAsync(request, receiptResponse, queue, queueItem).ConfigureAwait(false);
         }
 
         public (ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals) ReturnWithQueueIsNotActive(ftQueue queue, ReceiptResponse receiptResponse, ftQueueItem queueItem)
@@ -99,7 +94,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
         }
 
         public async Task<string> GetFtCashBoxIdentificationAsync(ftQueue queue) => (await _configurationRepository.GetQueueITAsync(queue.ftQueueId).ConfigureAwait(false)).CashBoxIdentification;
-        public Task FinalTask(ftQueue queue, ftQueueItem queueItem, IMiddlewareActionJournalRepository actionJournalRepository, IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareReceiptJournalRepository receiptJournalRepositor) { return Task.CompletedTask; }
-        public Task FirstTask() { return Task.CompletedTask; }
+        public Task FinalTaskAsync(ftQueue queue, ftQueueItem queueItem, ReceiptRequest request, IMiddlewareActionJournalRepository actionJournalRepository, IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareReceiptJournalRepository receiptJournalRepositor) { return Task.CompletedTask; }
+        public Task FirstTaskAsync() { return Task.CompletedTask; }
     }
 }

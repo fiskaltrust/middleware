@@ -113,11 +113,11 @@ namespace fiskaltrust.Middleware.Storage.EFCore.Repositories
 
         public async Task<int> CountAsync() => await EntityFrameworkQueryableExtensions.CountAsync(DbContext.QueueItemList);
 
-        public async Task<ftQueueItem> GetLastQueueItem()
+        public async Task<ftQueueItem> GetLastQueueItemAsync()
         {
             var lastqueueItem =
                 (from queueItem in DbContext.QueueItemList.AsQueryable()
-                 orderby queueItem.TimeStamp descending
+                 orderby queueItem.ftQueueRow descending
                  select queueItem).ToAsyncEnumerable().Take(1);
             return await lastqueueItem.FirstOrDefaultAsync();
         }

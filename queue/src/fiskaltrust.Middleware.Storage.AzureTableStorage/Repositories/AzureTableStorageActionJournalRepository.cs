@@ -105,8 +105,8 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
         }
 
         public async Task<int> CountAsync() {
-            var response =  await _tableClient.GetEntityAsync<TableEntity>("", "");
-            return response.Value.Count();
+            var results = _tableClient.QueryAsync<TableEntity>(select: new string[] { });
+            return await results.CountAsync().ConfigureAwait(false);
         }
     }
 }

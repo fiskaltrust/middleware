@@ -176,23 +176,18 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
             using (var connection = new MySqlConnection(ConnectionString))
             {
                 await connection.OpenAsync().ConfigureAwait(false);
-                using (var cmd = new MySqlCommand("SELECT COUNT(*) FROM ftQueueItem", connection))
-                {
-                    return Convert.ToInt32(cmd.ExecuteScalar());
-                }
+                return await connection.QueryFirstOrDefaultAsync<int>("SELECT COUNT(*) FROM ftQueueItem").ConfigureAwait(false);
             }
         }
 
-        public async Task<ftQueueItem> GetLastQueueItem()
+        public async Task<ftQueueItem> GetLastQueueItemAsync()
         {
             var query = "SELECT * FROM ftQueueItem " +
-                            "ORDER BY timestamp DESC LIMIT 1;";
+                            "ORDER BY ftQueueRow DESC LIMIT 1;";
             using (var connection = new MySqlConnection(ConnectionString))
             {
                 await connection.OpenAsync().ConfigureAwait(false);
-                var entry = await connection.QueryFirstOrDefaultAsync<ftQueueItem>(query).ConfigureAwait(false);
-
-                return entry;
+                return await connection.QueryFirstOrDefaultAsync<ftQueueItem>(query).ConfigureAwait(false);
             }
         }
     }

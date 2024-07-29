@@ -63,7 +63,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
 
             var receiptResponse = await signProcessor.ProcessAsync(request);
 
-            var queueItem = await queueItemRepository.GetLastQueueItem().ConfigureAwait(false);
+            var queueItem = await queueItemRepository.GetLastQueueItemAsync().ConfigureAwait(false);
             receiptResponse.ftQueueItemID.Should().Be(queueItem.ftQueueItemId.ToString());
 
             var actionjournala = await actionJournalRepository.GetAsync().ConfigureAwait(false);

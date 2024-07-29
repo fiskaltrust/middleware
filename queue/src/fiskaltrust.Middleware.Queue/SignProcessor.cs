@@ -124,7 +124,7 @@ namespace fiskaltrust.Middleware.Queue
                 }
             }
 
-            await _countrySpecificSignProcessor.FirstTask().ConfigureAwait(false);
+            await _countrySpecificSignProcessor.FirstTaskAsync().ConfigureAwait(false);
 
             var queueItem = new ftQueueItem
             {
@@ -248,7 +248,7 @@ namespace fiskaltrust.Middleware.Queue
                 {
                     await _actionJournalRepository.InsertAsync(actionJournal).ConfigureAwait(false);
                 }
-                await _countrySpecificSignProcessor.FinalTask(queue, queueItem, _actionJournalRepository, _queueItemRepository, _receiptJournalRepository).ConfigureAwait(false);
+                await _countrySpecificSignProcessor.FinalTaskAsync(queue, queueItem, data, _actionJournalRepository, _queueItemRepository, _receiptJournalRepository).ConfigureAwait(false);
             }
         }
 

@@ -47,9 +47,10 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Repositories
         public async Task<ftActionJournal> GetWithLastTimestampAsync() 
             => await DbConnection.QueryFirstOrDefaultAsync<ftActionJournal>("Select * from ftActionJournal ORDER BY TimeStamp DESC LIMIT 1").ConfigureAwait(false);
 
-        public IAsyncEnumerable<ftActionJournal> GetByPriorityAfterTimestampAsync(int lowerThanPriority, long fromTimestampInclusive) 
-            => DbConnection.Query<ftActionJournal>($"SELECT * FROM ftActionJournal WHERE TimeStamp >= @from AND Priority <= @prio ORDER BY TimeStamp", new { from = fromTimestampInclusive, prio = lowerThanPriority }, buffered: false).ToAsyncEnumerable();
+        public IAsyncEnumerable<ftActionJournal> GetByPriorityAfterTimestampAsync(int lowerThanPriority, long fromTimestampInclusive)
+            => DbConnection.Query<ftActionJournal>($"SELECT * FROM ftActionJournal WHERE TimeStamp >= @from AND Priority < @prio ORDER BY TimeStamp", new { from = fromTimestampInclusive, prio = lowerThanPriority }, buffered: false).ToAsyncEnumerable();
 
-        public async Task<int> CountAsync() => await DbConnection.QueryFirstOrDefaultAsync<int>("SELECT COUNT(*) FROM ftActionJournal").ConfigureAwait(false);
+        public async Task<int> CountAsync() 
+            => await DbConnection.QueryFirstOrDefaultAsync<int>("SELECT COUNT(*) FROM ftActionJournal").ConfigureAwait(false);
     }
 }

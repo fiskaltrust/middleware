@@ -8,9 +8,9 @@ namespace fiskaltrust.Middleware.Contracts.Interfaces
 {
     public interface IMarketSpecificSignProcessor
     {
-        Task FirstTask();
+        Task FirstTaskAsync();
         Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ftQueue queue, ftQueueItem queueItem);
         Task<string> GetFtCashBoxIdentificationAsync(ftQueue queue);
-        Task FinalTask(ftQueue queue, ftQueueItem queueItem, IMiddlewareActionJournalRepository actionJournalRepository, IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareReceiptJournalRepository receiptJournalRepositor);
+        Task FinalTaskAsync(ftQueue queue, ftQueueItem queueItem, ReceiptRequest request, IMiddlewareActionJournalRepository actionJournalRepository, IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareReceiptJournalRepository receiptJournalRepositor);
     }
 }

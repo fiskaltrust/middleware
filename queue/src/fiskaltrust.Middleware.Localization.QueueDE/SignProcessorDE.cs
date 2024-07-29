@@ -5,6 +5,7 @@ using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueDE.Extensions;
+using fiskaltrust.Middleware.Localization.QueueDE.Helpers;
 using fiskaltrust.Middleware.Localization.QueueDE.Models;
 using fiskaltrust.Middleware.Localization.QueueDE.RequestCommands;
 using fiskaltrust.Middleware.Localization.QueueDE.RequestCommands.Factories;
@@ -22,7 +23,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
         private readonly IRequestCommandFactory _requestCommandFactory;
         private readonly ILogger<SignProcessorDE> _logger;
         private bool _migrationDone = false;
-        private bool _isMigration = false;
 
         public SignProcessorDE(
             IConfigurationRepository configurationRepository,
@@ -37,7 +37,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             _transactionPayloadFactory = transactionPayloadFactory;
             _requestCommandFactory = requestCommandFactory;
             _logger = logger;
-            _migrationDone = MigrationReceiptCommand.IsMigrationDone(queueItemRepository);
+            _migrationDone = MigrationHelper.IsMigrationInProgress(queueItemRepository);
         }
 
         public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ftQueue queue, ftQueueItem queueItem)
@@ -59,8 +59,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             var requestCommandResponse = await PerformReceiptRequest(request, queueItem, queue, queueDE).ConfigureAwait(false);
 
             await _configurationRepository.InsertOrUpdateQueueDEAsync(queueDE).ConfigureAwait(false);
-
-            _isMigration = requestCommandResponse.isMigration;
 
             return (requestCommandResponse.ReceiptResponse, requestCommandResponse.ActionJournals);
         }
@@ -86,19 +84,19 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
 
         public async Task<string> GetFtCashBoxIdentificationAsync(ftQueue queue) => (await _configurationRepository.GetQueueDEAsync(queue.ftQueueId).ConfigureAwait(false)).CashBoxIdentification;
 
-        public async Task FinalTask(ftQueue queue, ftQueueItem queueItem, IMiddlewareActionJournalRepository actionJournalRepository, IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareReceiptJournalRepository receiptJournalRepository)
+        public async Task FinalTaskAsync(ftQueue queue, ftQueueItem queueItem, ReceiptRequest request, IMiddlewareActionJournalRepository actionJournalRepository, IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareReceiptJournalRepository receiptJournalRepository)
         {
-            if (_isMigration && !_migrationDone)
+            if (request.IsMigrationReceipt() && !_migrationDone)
             {
-                await MigrationReceiptCommand.FinishMigration(queue, queueItem, actionJournalRepository, queueItemRepository, receiptJournalRepository, _journalDERepository);
+                await MigrationHelper.FinishMigrationAync(queue, queueItem, actionJournalRepository, queueItemRepository, receiptJournalRepository, _journalDERepository);
                 _migrationDone = true;
             }
         }
-        public Task FirstTask() 
+        public Task FirstTaskAsync() 
         {
             if (_migrationDone)
             {
-                throw new InvalidOperationException("Migration was done, no further Receipts can be sent to the local middleware.");
+                throw new InvalidOperationException(MigrationHelper.ExceptionMessage);
             }
             return Task.CompletedTask;
         }

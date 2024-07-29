@@ -48,7 +48,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             }
             var sut = await CreateRepository(entries);
 
-            var last = await sut.GetLastQueueItem();
+            var last = await sut.GetLastQueueItemAsync();
             last.ftQueueItemId.Should().Be(entries.Last().ftQueueItemId);
         }
 

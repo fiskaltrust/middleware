@@ -29,7 +29,7 @@ namespace fiskaltrust.Middleware.Contracts.Repositories
 
         Task<int> CountAsync();
 
-        Task<ftQueueItem> GetLastQueueItem();
+        Task<ftQueueItem> GetLastQueueItemAsync();
     }
 
     public interface IMiddlewareReceiptJournalRepository : IReceiptJournalRepository, IMiddlewareRepository<ftReceiptJournal>
