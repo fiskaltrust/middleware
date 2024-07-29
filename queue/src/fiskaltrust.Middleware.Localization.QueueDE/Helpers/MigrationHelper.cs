@@ -8,7 +8,7 @@ using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueueDE.Helpers
 {
-    internal class MigrationHelper
+    public class MigrationHelper
     {
         public static readonly string Meassage = "Migration to another machine or the CloudCashbox started, no further receipts can be sent to this installation of the Middleware.";
         public static readonly string ExceptionMessage = "The Middleware is currently in migration mode after a 'start migration' receipt was processed. Please continue the migration process in the Portal and use the migrated instance of the Middleware to continue signing, either on another machine or in the CloudCashbox.";

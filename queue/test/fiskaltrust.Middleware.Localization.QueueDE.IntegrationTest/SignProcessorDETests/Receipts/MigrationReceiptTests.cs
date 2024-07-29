@@ -10,6 +10,7 @@ using fiskaltrust.Middleware.Localization.QueueDE.MasterData;
 using fiskaltrust.Middleware.Localization.QueueDE.Transactions;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories;
 using fiskaltrust.Middleware.Storage.InMemory.Repositories.DE;
+using fiskaltrust.Middleware.Localization.QueueDE.Helpers;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -91,7 +92,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             };
 
             var sutMethod = CallSignProcessor_ExpectException(signProcessor, request);
-            await sutMethod.Should().ThrowAsync<InvalidOperationException>().WithMessage("Migration was done, no further Receipts can be sent to the local middleware.").ConfigureAwait(false);
+            await sutMethod.Should().ThrowAsync<InvalidOperationException>().WithMessage(MigrationHelper.ExceptionMessage).ConfigureAwait(false);
 
         }
 
