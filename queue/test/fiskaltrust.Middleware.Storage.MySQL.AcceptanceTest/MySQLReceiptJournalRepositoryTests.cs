@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.Abstractions;
+using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Storage.AcceptanceTest;
 using fiskaltrust.Middleware.Storage.MySQL.AcceptanceTest.Fixtures;
 using fiskaltrust.Middleware.Storage.MySQL.DatabaseInitialization;
@@ -21,7 +22,7 @@ namespace fiskaltrust.Middleware.Storage.MySQL.AcceptanceTest
 
         public override async Task<IReadOnlyReceiptJournalRepository> CreateReadOnlyRepository(IEnumerable<ftReceiptJournal> entries) => await CreateRepository(entries);
 
-        public override async Task<IReceiptJournalRepository> CreateRepository(IEnumerable<ftReceiptJournal> entries)
+        public override async Task<IMiddlewareReceiptJournalRepository> CreateRepository(IEnumerable<ftReceiptJournal> entries)
         {
             var databasMigrator = new DatabaseMigrator(MySQLConnectionStringFixture.ServerConnectionString, 30 * 60, MySQLConnectionStringFixture.QueueId, Mock.Of<ILogger<IMiddlewareBootstrapper>>());
             await databasMigrator.MigrateAsync();

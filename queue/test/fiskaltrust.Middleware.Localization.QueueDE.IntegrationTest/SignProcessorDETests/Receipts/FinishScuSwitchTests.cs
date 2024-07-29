@@ -8,6 +8,7 @@ using FluentAssertions;
 using Newtonsoft.Json;
 using Xunit;
 using fiskaltrust.Middleware.Localization.QueueDE.Models;
+using fiskaltrust.ifPOS.v1;
 
 namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProcessorDETests.Receipts
 {
@@ -32,6 +33,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
         [Fact]
         public async Task InitScuSwitchReceipt_QueueDESignaturCreationUnitDEIdIsNotNull_ExpectException()
         {
+            var request = new ReceiptRequest() { ftReceiptCase = 0x4445000100000018 };
             var queueItem = new ftQueueItem
             {
                 cbReceiptMoment = DateTime.Now,
@@ -41,7 +43,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                 ftQueueId = _fixture.QUEUEID,
                 ftQueueItemId = Guid.NewGuid(),
                 ftQueueRow = 10,
-                request = "",
+                request = JsonConvert.SerializeObject(request),
                 requestHash = "test request hash"
             };
             await _fixture.queueItemRepository.InsertOrUpdateAsync(queueItem);
@@ -52,6 +54,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
         [Fact]
         public async Task InitScuSwitchReceipt_LastActionJournalDataJsonIsNull_ExpectException()
         {
+            var request = new ReceiptRequest() { ftReceiptCase = 0x4445000100000018 };
             var queueItem = new ftQueueItem
             {
                 cbReceiptMoment = DateTime.Now,
@@ -61,7 +64,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                 ftQueueId = _fixture.QUEUEID,
                 ftQueueItemId = Guid.NewGuid(),
                 ftQueueRow = 10,
-                request = "",
+                request = JsonConvert.SerializeObject(request),
                 requestHash = "test request hash"
             };
             await _fixture.queueItemRepository.InsertOrUpdateAsync(queueItem);
@@ -73,6 +76,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
         [Fact]
         public async Task InitScuSwitchReceipt_ValidRewuest_ValidResult()
         {
+            var request = new ReceiptRequest() { ftReceiptCase = 0x4445000100000018 };
             var queueItem = new ftQueueItem
             {
                 cbReceiptMoment = DateTime.Now,
@@ -82,7 +86,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                 ftQueueId = _fixture.QUEUEID,
                 ftQueueItemId = Guid.NewGuid(),
                 ftQueueRow = 10,
-                request = "",
+                request = JsonConvert.SerializeObject(request),
                 requestHash = "test request hash"
             };
             await _fixture.queueItemRepository.InsertOrUpdateAsync(queueItem);

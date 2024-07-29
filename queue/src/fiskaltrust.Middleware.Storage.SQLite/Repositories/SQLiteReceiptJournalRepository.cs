@@ -63,5 +63,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Repositories
         public async Task<ftReceiptJournal> GetByReceiptNumber(long ftReceiptNumber) => await DbConnection.QueryFirstOrDefaultAsync<ftReceiptJournal>("Select ftReceiptJournalId, ftReceiptMoment, ftReceiptNumber, CAST(ftReceiptTotal AS FLOAT) AS ftReceiptTotal, ftQueueId, ftQueueItemId, ftReceiptHash, TimeStamp from ftReceiptJournal where ftReceiptNumber = @ftReceiptNumber", new { ftReceiptNumber }).ConfigureAwait(false);
 
         public async Task<ftReceiptJournal> GetWithLastTimestampAsync() => await DbConnection.QueryFirstOrDefaultAsync<ftReceiptJournal>("Select ftReceiptJournalId, ftReceiptMoment, ftReceiptNumber, CAST(ftReceiptTotal AS FLOAT) AS ftReceiptTotal, ftQueueId, ftQueueItemId, ftReceiptHash, TimeStamp from ftReceiptJournal ORDER BY TimeStamp DESC LIMIT 1").ConfigureAwait(false);
+
+        public async Task<int> CountAsync() => await DbConnection.QueryFirstOrDefaultAsync<int>("SELECT COUNT(*) FROM ftReceiptJournal").ConfigureAwait(false);
     }
 }

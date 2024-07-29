@@ -36,5 +36,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDEFAULT
         }
 
         public async Task<string> GetFtCashBoxIdentificationAsync(ftQueue queue) => (await _countrySpecificQueueRepository.GetQueueAsync(queue.ftQueueId)).CashBoxIdentification;
+        public Task FinalTaskAsync(ftQueue queue, ftQueueItem queueItem, ReceiptRequest request, IMiddlewareActionJournalRepository actionJournalRepository, IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareReceiptJournalRepository receiptJournalRepositor) { return Task.CompletedTask; }
+        public Task FirstTaskAsync() { return Task.CompletedTask; }
     }
 }

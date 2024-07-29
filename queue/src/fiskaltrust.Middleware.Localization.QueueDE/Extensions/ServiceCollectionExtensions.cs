@@ -27,6 +27,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
             services.AddSingleton<ZeroReceiptCommand>();
             services.AddSingleton<HandwrittenReceiptCommand>();
             services.AddSingleton<SSCDFailedReceiptCommand>();
+            services.AddSingleton<MigrationReceiptCommand>();
             
             return services;
         }

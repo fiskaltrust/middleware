@@ -12,7 +12,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
 {
     public abstract class AbstractActionJournalRepositoryTests : IDisposable
     {
-        public abstract Task<IActionJournalRepository> CreateRepository(IEnumerable<ftActionJournal> entries);
+        public abstract Task<IMiddlewareActionJournalRepository> CreateRepository(IEnumerable<ftActionJournal> entries);
         public abstract Task<IReadOnlyActionJournalRepository> CreateReadOnlyRepository(IEnumerable<ftActionJournal> entries);
 
         public virtual void DisposeDatabase() { return; }
@@ -178,6 +178,16 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
 
             var insertedEntry = await sut.GetAsync(entryToInsert.ftActionJournalId);
             insertedEntry.TimeStamp.Should().BeGreaterThan(initialTimeStamp);
+        }
+
+        [Fact]
+        public async Task CountAsync_ShouldReturnValidCount()
+        {
+            var entries = StorageTestFixtureProvider.GetFixture().CreateMany<ftActionJournal>(8).ToList();
+            var sut = await CreateRepository(entries);
+
+            var count = await sut.CountAsync();
+            count.Should().Be(8);
         }
 
         private static async Task UpdateTimestamp(List<ftActionJournal> expectedEntries)

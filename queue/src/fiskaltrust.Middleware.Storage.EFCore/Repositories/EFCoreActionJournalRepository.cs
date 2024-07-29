@@ -49,5 +49,6 @@ namespace fiskaltrust.Middleware.Storage.EFCore.Repositories
         public IAsyncEnumerable<ftActionJournal> GetByPriorityAfterTimestampAsync(int lowerThanPriority, long fromTimestampInclusive) =>
             DbContext.ActionJournalList.AsQueryable().Where(x => x.TimeStamp >= fromTimestampInclusive && x.Priority < lowerThanPriority).OrderBy(x => x.TimeStamp).ToAsyncEnumerable();
 
+        public async Task<int> CountAsync() => await EntityFrameworkQueryableExtensions.CountAsync(DbContext.ActionJournalList);
     }
 }

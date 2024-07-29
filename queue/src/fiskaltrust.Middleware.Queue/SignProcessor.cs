@@ -22,8 +22,8 @@ namespace fiskaltrust.Middleware.Queue
         private readonly ILogger<SignProcessor> _logger;
         private readonly IConfigurationRepository _configurationRepository;
         private readonly IMiddlewareQueueItemRepository _queueItemRepository;
-        private readonly IReceiptJournalRepository _receiptJournalRepository;
-        private readonly IActionJournalRepository _actionJournalRepository;
+        private readonly IMiddlewareReceiptJournalRepository _receiptJournalRepository;
+        private readonly IMiddlewareActionJournalRepository _actionJournalRepository;
         private readonly ICryptoHelper _cryptoHelper;
         private readonly Guid _queueId = Guid.Empty;
         private readonly Guid _cashBoxId = Guid.Empty;
@@ -37,8 +37,8 @@ namespace fiskaltrust.Middleware.Queue
             ILogger<SignProcessor> logger,
             IConfigurationRepository configurationRepository,
             IMiddlewareQueueItemRepository queueItemRepository,
-            IReceiptJournalRepository receiptJournalRepository,
-            IActionJournalRepository actionJournalRepository,
+            IMiddlewareReceiptJournalRepository receiptJournalRepository,
+            IMiddlewareActionJournalRepository actionJournalRepository,
             ICryptoHelper cryptoHelper,
             IMarketSpecificSignProcessor countrySpecificSignProcessor,
             MiddlewareConfiguration configuration,
@@ -123,6 +123,9 @@ namespace fiskaltrust.Middleware.Queue
                     return null;
                 }
             }
+
+            await _countrySpecificSignProcessor.FirstTaskAsync().ConfigureAwait(false);
+
             var queueItem = new ftQueueItem
             {
                 ftQueueItemId = Guid.NewGuid(),
@@ -245,6 +248,7 @@ namespace fiskaltrust.Middleware.Queue
                 {
                     await _actionJournalRepository.InsertAsync(actionJournal).ConfigureAwait(false);
                 }
+                await _countrySpecificSignProcessor.FinalTaskAsync(queue, queueItem, data, _actionJournalRepository, _queueItemRepository, _receiptJournalRepository).ConfigureAwait(false);
             }
         }
 

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.Entity;
 using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.Contracts.Repositories;
@@ -43,5 +44,7 @@ namespace fiskaltrust.Middleware.Storage.EF.Repositories.DE
             var result = DbContext.JournalDEList.Where(x => x.FileName == fileName).OrderBy(x => x.TimeStamp);
             return result.ToAsyncEnumerable();
         }
+
+        public async Task<int> CountAsync() => await DbContext.JournalDEList.CountAsync();
     }
 }

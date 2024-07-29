@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Interfaces;
+using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 
@@ -24,5 +25,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES
         }
 
         public Task<string> GetFtCashBoxIdentificationAsync(ftQueue queue) => throw new NotImplementedException();
+        public Task FinalTaskAsync(ftQueue queue, ftQueueItem queueItem, ReceiptRequest request, IMiddlewareActionJournalRepository actionJournalRepository, IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareReceiptJournalRepository receiptJournalRepositor) { return Task.CompletedTask; }
+        public Task FirstTaskAsync() { return Task.CompletedTask; }
     }
 }

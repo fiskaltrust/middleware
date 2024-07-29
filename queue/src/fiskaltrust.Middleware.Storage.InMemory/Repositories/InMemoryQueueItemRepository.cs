@@ -102,5 +102,15 @@ namespace fiskaltrust.Middleware.Storage.InMemory.Repositories
                              select queueItem).ToAsyncEnumerable().Take(1);
             return await queueItemsForReceiptReference.FirstOrDefaultAsync();
         }
+        public Task<int> CountAsync() => Task.FromResult(Data.Count());
+
+        public async Task<ftQueueItem> GetLastQueueItemAsync()
+        {
+            var lastqueueItem =
+                (from queueItem in Data.Values
+                 orderby queueItem.ftQueueRow descending
+                 select queueItem).ToAsyncEnumerable().Take(1);
+            return await lastqueueItem.FirstOrDefaultAsync();
+        }
     }
 }

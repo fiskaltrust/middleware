@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.Abstractions;
+using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Storage.AcceptanceTest;
 using fiskaltrust.Middleware.Storage.Base;
 using fiskaltrust.Middleware.Storage.SQLite.AcceptanceTest.Helpers;
@@ -23,7 +24,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite.AcceptanceTest
 
         public override async Task<IReadOnlyJournalDERepository> CreateReadOnlyRepository(IEnumerable<ftJournalDE> entries) => await CreateRepository(entries);
 
-        public override async Task<IJournalDERepository> CreateRepository(IEnumerable<ftJournalDE> entries)
+        public override async Task<IMiddlewareJournalDERepository> CreateRepository(IEnumerable<ftJournalDE> entries)
         {
             var databasMigrator = new DatabaseMigrator(_sqliteConnectionFactory, 30 * 60, _path, new Dictionary<string, object>(), Mock.Of<ILogger<IMiddlewareBootstrapper>>());
             await databasMigrator.MigrateAsync();

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.Entity;
 using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.Contracts.Repositories;
@@ -47,5 +48,7 @@ namespace fiskaltrust.Middleware.Storage.EF.Repositories
         
         public IAsyncEnumerable<ftActionJournal> GetByPriorityAfterTimestampAsync(int lowerThanPriority, long fromTimestampInclusive) =>
             DbContext.ActionJournalList.Where(x => x.TimeStamp >= fromTimestampInclusive && x.Priority < lowerThanPriority).OrderBy(x => x.TimeStamp).ToAsyncEnumerable();
+
+        public async Task<int> CountAsync() => await DbContext.ActionJournalList.CountAsync();
     }
 }

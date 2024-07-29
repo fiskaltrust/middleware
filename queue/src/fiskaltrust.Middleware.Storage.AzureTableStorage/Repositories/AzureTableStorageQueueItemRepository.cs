@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -198,6 +199,20 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
         {
             var result = _tableClient.QueryAsync<TableEntity>(filter: TableClient.CreateQueryFilter<ftQueueItem>(x => x.ftQueueRow == queueRow));
             return MapToStorageEntity(await result.FirstOrDefaultAsync());
+        }
+
+        public async Task<int> CountAsync()
+        {
+            var results = _tableClient.QueryAsync<TableEntity>(select: new string[] { });
+            return await results.CountAsync().ConfigureAwait(false);
+        }
+
+        public async Task<ftQueueItem> GetLastQueueItemAsync() 
+        {
+            var result = _tableClient.QueryAsync<TableEntity>(select: new string[] { "PartitionKey", "RowKey" });
+            var lastEntity = await result.LastAsync();
+
+            return MapToStorageEntity(await _tableClient.GetEntityAsync<TableEntity>(lastEntity.PartitionKey, lastEntity.RowKey));
         }
     }
 }

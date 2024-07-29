@@ -37,8 +37,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
         public static string terminalID = "369a013a-37e2-4c23-8614-6a8f282e6330";
 
         public IMiddlewareQueueItemRepository queueItemRepository = new InMemoryQueueItemRepository();
-        public IReceiptJournalRepository receiptJournalRepository = new InMemoryReceiptJournalRepository();
-        public IActionJournalRepository actionJournalRepository = new InMemoryActionJournalRepository();
+        public IMiddlewareReceiptJournalRepository receiptJournalRepository = new InMemoryReceiptJournalRepository();
+        public IMiddlewareActionJournalRepository actionJournalRepository = new InMemoryActionJournalRepository();
         public InMemoryOpenTransactionRepository openTransactionRepository = new InMemoryOpenTransactionRepository();
         public IMasterDataRepository<AccountMasterData> accountMasterDataRepository = new InMemoryAccountMasterDataRepository();
         public IMasterDataRepository<OutletMasterData> outletMasterDataRepository = new InMemoryOutletMasterDataRepository();

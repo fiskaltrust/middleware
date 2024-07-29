@@ -5,6 +5,7 @@ using System.IO.Compression;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.de;
+using fiskaltrust.Middleware.Contracts.Extensions;
 using fiskaltrust.Middleware.Contracts.Data;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Models.Transactions;
@@ -44,6 +45,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
         protected string _certificationIdentification = null;
 
         public abstract string ReceiptName { get; }
+        public bool isMigrationReceipt { get; set; } = false;
 
         public RequestCommand(ILogger<RequestCommand> logger, SignatureFactoryDE signatureFactory, IDESSCDProvider deSSCDProvider,
             ITransactionPayloadFactory transactionPayloadFactory, IReadOnlyQueueItemRepository queueItemRepository, IConfigurationRepository configurationRepository,
@@ -68,6 +70,14 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
         }
 
         public abstract Task<RequestCommandResponse> ExecuteAsync(ftQueue queue, ftQueueDE queueDE, ReceiptRequest request, ftQueueItem queueItem);
+
+        protected void ThrowIfHasChargeOrPayItems(ReceiptRequest request)
+        {
+            if (request.HasChargeItems() || request.HasPayItems())
+            {
+                throw new ArgumentException($"ReceiptCase {request.ftReceiptCase:X} ({ReceiptName}) must not have Charge- or PayItems.");
+            }
+        }
 
         protected void ThrowIfImplicitFlow(ReceiptRequest request)
         {

@@ -1,15 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.ifPOS.v1.de;
 using fiskaltrust.Middleware.Contracts.Interfaces;
+using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueDE.Extensions;
+using fiskaltrust.Middleware.Localization.QueueDE.Helpers;
 using fiskaltrust.Middleware.Localization.QueueDE.Models;
 using fiskaltrust.Middleware.Localization.QueueDE.RequestCommands;
 using fiskaltrust.Middleware.Localization.QueueDE.RequestCommands.Factories;
-using fiskaltrust.Middleware.Localization.QueueDE.Services;
 using fiskaltrust.Middleware.Localization.QueueDE.Transactions;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
@@ -19,20 +18,26 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
     public class SignProcessorDE : IMarketSpecificSignProcessor
     {
         private readonly IConfigurationRepository _configurationRepository;
+        private readonly IMiddlewareJournalDERepository _journalDERepository;
         private readonly ITransactionPayloadFactory _transactionPayloadFactory;
         private readonly IRequestCommandFactory _requestCommandFactory;
         private readonly ILogger<SignProcessorDE> _logger;
+        private bool _migrationDone = false;
 
         public SignProcessorDE(
             IConfigurationRepository configurationRepository,
+            IMiddlewareJournalDERepository journalDERepository,
+            IMiddlewareQueueItemRepository queueItemRepository,
             ITransactionPayloadFactory transactionPayloadFactory,
             IRequestCommandFactory requestCommandFactory,
             ILogger<SignProcessorDE> logger)
         {
             _configurationRepository = configurationRepository;
+            _journalDERepository = journalDERepository;
             _transactionPayloadFactory = transactionPayloadFactory;
             _requestCommandFactory = requestCommandFactory;
             _logger = logger;
+            _migrationDone = MigrationHelper.IsMigrationInProgress(queueItemRepository);
         }
 
         public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ftQueue queue, ftQueueItem queueItem)
@@ -78,5 +83,22 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
         }
 
         public async Task<string> GetFtCashBoxIdentificationAsync(ftQueue queue) => (await _configurationRepository.GetQueueDEAsync(queue.ftQueueId).ConfigureAwait(false)).CashBoxIdentification;
+
+        public async Task FinalTaskAsync(ftQueue queue, ftQueueItem queueItem, ReceiptRequest request, IMiddlewareActionJournalRepository actionJournalRepository, IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareReceiptJournalRepository receiptJournalRepository)
+        {
+            if (request.IsMigrationReceipt() && !_migrationDone)
+            {
+                await MigrationHelper.FinishMigrationAync(queue, queueItem, actionJournalRepository, queueItemRepository, receiptJournalRepository, _journalDERepository);
+                _migrationDone = true;
+            }
+        }
+        public Task FirstTaskAsync() 
+        {
+            if (_migrationDone)
+            {
+                throw new InvalidOperationException(MigrationHelper.ExceptionMessage);
+            }
+            return Task.CompletedTask;
+        }
     }
 }

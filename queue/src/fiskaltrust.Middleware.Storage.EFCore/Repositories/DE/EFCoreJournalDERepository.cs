@@ -43,5 +43,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.Repositories.DE
             var result = DbContext.JournalDEList.AsQueryable().Where(x => x.FileName == fileName).OrderBy(x => x.TimeStamp);
             return result.AsAsyncEnumerable();
         }
+
+        public async Task<int> CountAsync() => await EntityFrameworkQueryableExtensions.CountAsync( DbContext.JournalDEList);
     }
 }

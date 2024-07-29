@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Azure.Data.Tables;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Storage.AzureTableStorage;
@@ -10,7 +11,7 @@ using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
 {
-    public class AzureTableStorageReceiptJournalRepository : BaseAzureTableStorageRepository<Guid, AzureTableStorageFtReceiptJournal, ftReceiptJournal>, IReceiptJournalRepository, IMiddlewareRepository<ftReceiptJournal>
+    public class AzureTableStorageReceiptJournalRepository : BaseAzureTableStorageRepository<Guid, AzureTableStorageFtReceiptJournal, ftReceiptJournal>, IReceiptJournalRepository, IMiddlewareReceiptJournalRepository, IMiddlewareRepository<ftReceiptJournal>
     {
         public AzureTableStorageReceiptJournalRepository(QueueConfiguration queueConfig, TableServiceClient tableServiceClient)
             : base(queueConfig, tableServiceClient, TABLE_NAME) { }
@@ -79,6 +80,16 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
         {
             var result = GetEntriesOnOrAfterTimeStampAsync(fromInclusive);
             return take.HasValue ? result.Take(take.Value) : result;
+        }
+
+        public Task<ftReceiptJournal> GetByQueueItemId(Guid ftQueueItemId) => throw new NotImplementedException();
+        public Task<ftReceiptJournal> GetByReceiptNumber(long ftReceiptNumber) => throw new NotImplementedException();
+        public Task<ftReceiptJournal> GetWithLastTimestampAsync() => throw new NotImplementedException();
+
+        public async Task<int> CountAsync()
+        {
+            var results = _tableClient.QueryAsync<TableEntity>(select: new string[] { });
+            return await results.CountAsync().ConfigureAwait(false);
         }
     }
 }

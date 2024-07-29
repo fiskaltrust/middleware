@@ -87,5 +87,14 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
                 }
             }
         }
+
+        public async Task<int> CountAsync()
+        {
+            using (var connection = new MySqlConnection(ConnectionString))
+            {
+                await connection.OpenAsync().ConfigureAwait(false);
+                return await connection.QueryFirstOrDefaultAsync<int>("SELECT COUNT(*) FROM ftActionJournal").ConfigureAwait(false);
+            }
+        }
     }
 }

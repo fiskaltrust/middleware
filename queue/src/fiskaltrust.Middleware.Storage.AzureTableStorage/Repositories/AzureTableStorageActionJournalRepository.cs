@@ -103,5 +103,10 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
             var result = _tableClient.QueryAsync<TableEntity>(filter: TableClient.CreateQueryFilter<TableEntity>(x => x.PartitionKey.CompareTo(Mapper.GetHashString(fromTimestampInclusive)) <= 0 && x.GetInt32(nameof(ftActionJournal.Priority)) < lowerThanPriority));
             return result.Select(MapToStorageEntity);
         }
+
+        public async Task<int> CountAsync() {
+            var results = _tableClient.QueryAsync<TableEntity>(select: new string[] { });
+            return await results.CountAsync().ConfigureAwait(false);
+        }
     }
 }

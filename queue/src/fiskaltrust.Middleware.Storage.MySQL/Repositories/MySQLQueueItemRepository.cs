@@ -170,5 +170,25 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
                 }
             }
         }
+
+        public async Task<int> CountAsync()
+        {
+            using (var connection = new MySqlConnection(ConnectionString))
+            {
+                await connection.OpenAsync().ConfigureAwait(false);
+                return await connection.QueryFirstOrDefaultAsync<int>("SELECT COUNT(*) FROM ftQueueItem").ConfigureAwait(false);
+            }
+        }
+
+        public async Task<ftQueueItem> GetLastQueueItemAsync()
+        {
+            var query = "SELECT * FROM ftQueueItem " +
+                            "ORDER BY ftQueueRow DESC LIMIT 1;";
+            using (var connection = new MySqlConnection(ConnectionString))
+            {
+                await connection.OpenAsync().ConfigureAwait(false);
+                return await connection.QueryFirstOrDefaultAsync<ftQueueItem>(query).ConfigureAwait(false);
+            }
+        }
     }
 }

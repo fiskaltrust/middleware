@@ -10,6 +10,7 @@ using fiskaltrust.storage.V0;
 using fiskaltrust.Middleware.Localization.QueueAT.Extensions;
 using fiskaltrust.Middleware.Localization.QueueAT.Helpers;
 using fiskaltrust.Middleware.Contracts.Interfaces;
+using fiskaltrust.Middleware.Contracts.Repositories;
 
 namespace fiskaltrust.Middleware.Localization.QueueAT
 {
@@ -206,6 +207,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT
         }
 
         public async Task<string> GetFtCashBoxIdentificationAsync(ftQueue queue) => (await _configurationRepository.GetQueueATAsync(queue.ftQueueId).ConfigureAwait(false)).CashBoxIdentification;
-
+        public Task FinalTaskAsync(ftQueue queue, ftQueueItem queueItem, ReceiptRequest request, IMiddlewareActionJournalRepository actionJournalRepository, IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareReceiptJournalRepository receiptJournalRepositor){ return Task.CompletedTask; }
+        public Task FirstTaskAsync() { return Task.CompletedTask; }
     }
 }

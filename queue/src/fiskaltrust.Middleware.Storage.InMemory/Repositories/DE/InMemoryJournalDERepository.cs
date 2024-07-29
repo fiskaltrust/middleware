@@ -30,5 +30,7 @@ namespace fiskaltrust.Middleware.Storage.InMemory.Repositories.DE
         }
 
         public IAsyncEnumerable<ftJournalDE> GetByFileName(string fileName) => Data.Select(x => x.Value).Where(x => x.FileName == fileName).ToAsyncEnumerable();
+
+        public Task<int> CountAsync() => Task.FromResult(Data.Count());
     }
 }
