@@ -83,9 +83,9 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
         [Fact]
         public async Task GetByTimeStampAsync_ShouldReturnAllEntries_FromAGivenTimeStamp_ShouldReturnOnlyTheseEntries()
         {
-            var expectedEntries = StorageTestFixtureProvider.GetFixture().CreateMany<ftQueueItem>(10).ToList();
-            await SetQueueRowAndTimeStamp(expectedEntries);
-            var sut = await CreateRepository(expectedEntries.OrderBy(x => x.TimeStamp));
+            var expectedEntries = StorageTestFixtureProvider.GetFixture().CreateMany<ftQueueItem>(10).OrderBy(x => x.TimeStamp).ToList();
+
+            var sut = await CreateRepository(expectedEntries);
 
             var allEntries = (await sut.GetAsync()).OrderBy(x => x.TimeStamp).ToList();
             var firstSearchedEntryTimeStamp = allEntries[1].TimeStamp;
