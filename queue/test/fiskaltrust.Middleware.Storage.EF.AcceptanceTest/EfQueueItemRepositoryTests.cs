@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts.Repositories;
@@ -25,7 +26,7 @@ namespace fiskaltrust.Middleware.Storage.EF.AcceptanceTest
             var queueId = Guid.NewGuid();
             var repository = new EfQueueItemRepository(new MiddlewareDbContext(EfConnectionStringFixture.DatabaseConnectionString, queueId));
             EfStorageBootstrapper.Update(EfConnectionStringFixture.DatabaseConnectionString, 30 * 60, queueId, Mock.Of<ILogger<IMiddlewareBootstrapper>>());
-
+            await SetQueueRowAndTimeStamp(entries.ToList());
             foreach (var item in entries)
             {
                 await repository.InsertAsync(item);

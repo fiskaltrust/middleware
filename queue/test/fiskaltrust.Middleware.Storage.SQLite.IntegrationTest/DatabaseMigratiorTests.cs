@@ -81,7 +81,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite.IntegrationTest
             {
                 ftQueueItemId = Guid.NewGuid(),
                 ftQueueId = Guid.NewGuid(),
-                ftQueueRow = 1,
+                ftQueueRow = 1000,
                 ftQueueTimeout = 5,
                 ftQueueMoment = DateTime.Now,
                 cbReceiptMoment = DateTime.Now,
@@ -122,7 +122,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite.IntegrationTest
             {
                 ftQueueItemId = Guid.NewGuid(),
                 ftQueueId = Guid.NewGuid(),
-                ftQueueRow = 1,
+                ftQueueRow = 1001,
                 ftQueueTimeout = 5,
                 ftQueueMoment = DateTime.Now,
                 cbReceiptMoment = DateTime.Now,
