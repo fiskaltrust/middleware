@@ -514,8 +514,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             foreach (var entry in entries)
             {
                 entry.TimeStamp = DateTime.UtcNow.Ticks;
-                Interlocked.Increment(ref QueueRow);
-                entry.ftQueueRow = QueueRow;
+                entry.ftQueueRow = QueueRow++;
                 await Task.Delay(1);
             }
         }
