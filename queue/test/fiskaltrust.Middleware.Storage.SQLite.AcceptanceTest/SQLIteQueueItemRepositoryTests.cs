@@ -15,6 +15,7 @@ using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using System.Linq;
 
 namespace fiskaltrust.Middleware.Storage.SQLite.AcceptanceTest
 {
@@ -38,7 +39,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite.AcceptanceTest
         {
             var databasMigrator = new DatabaseMigrator(_sqliteConnectionFactory, 30 * 60, _path, new Dictionary<string, object>(), Mock.Of<ILogger<IMiddlewareBootstrapper>>());
             await databasMigrator.MigrateAsync();
-
+            await SetQueueRowAndTimeStamp(entries.ToList());
             _repo = new SQLiteQueueItemRepository(_sqliteConnectionFactory, _path);
             foreach (var entry in entries)
             { await _repo.InsertOrUpdateAsync(entry); }

@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts.Repositories;
@@ -27,6 +28,7 @@ namespace fiskaltrust.Middleware.Storage.MySQL.AcceptanceTest
             await databasMigrator.MigrateAsync();
 
             _repo = new MySQLQueueItemRepository(MySQLConnectionStringFixture.DatabaseConnectionString);
+            await SetQueueRowAndTimeStamp(entries.ToList());
             foreach (var entry in entries)
             { await _repo.InsertOrUpdateAsync(entry); }
             return _repo;
