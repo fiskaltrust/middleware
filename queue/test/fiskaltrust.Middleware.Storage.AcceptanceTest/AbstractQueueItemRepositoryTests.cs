@@ -8,6 +8,7 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -26,10 +27,13 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
 
         public void Dispose() => DisposeDatabase();
 
+        public int QueueRow = 0;
+
         [Fact]
         public async Task CountAsync_ShouldReturnValidCount()
         {
             var entries = StorageTestFixtureProvider.GetFixture().CreateMany<ftQueueItem>(9).ToList();
+            await SetQueueRowAndTimeStamp(entries);
             var sut = await CreateRepository(entries);
 
             var count = await sut.CountAsync();
@@ -40,12 +44,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
         public async Task GetLastQueueItem_ShouldReturnLastQueueItem()
         {
             var entries = StorageTestFixtureProvider.GetFixture().CreateMany<ftQueueItem>(5).ToList();
-
-            foreach (var entry in entries)
-            {
-                entry.TimeStamp = DateTime.UtcNow.Ticks;
-                await Task.Delay(1);
-            }
+            await SetQueueRowAndTimeStamp(entries);
             var sut = await CreateRepository(entries);
 
             var last = await sut.GetLastQueueItemAsync();
@@ -56,7 +55,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
         public async Task GetAsync_ShouldReturnAllEntriesThatExistInRepository()
         {
             var expectedEntries = StorageTestFixtureProvider.GetFixture().CreateMany<ftQueueItem>(10);
-
+            await SetQueueRowAndTimeStamp(expectedEntries.ToList());
             var sut = await CreateReadOnlyRepository(expectedEntries);
 
             var actualEntries = await sut.GetAsync();
@@ -84,9 +83,9 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
         [Fact]
         public async Task GetByTimeStampAsync_ShouldReturnAllEntries_FromAGivenTimeStamp_ShouldReturnOnlyTheseEntries()
         {
-            var expectedEntries = StorageTestFixtureProvider.GetFixture().CreateMany<ftQueueItem>(10).OrderBy(x => x.TimeStamp).ToList();
-
-            var sut = await CreateRepository(expectedEntries);
+            var expectedEntries = StorageTestFixtureProvider.GetFixture().CreateMany<ftQueueItem>(10).ToList();
+            await SetQueueRowAndTimeStamp(expectedEntries);
+            var sut = await CreateRepository(expectedEntries.OrderBy(x => x.TimeStamp));
 
             var allEntries = (await sut.GetAsync()).OrderBy(x => x.TimeStamp).ToList();
             var firstSearchedEntryTimeStamp = allEntries[1].TimeStamp;
@@ -509,6 +508,16 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
 
             closestQueriedPos.ftQueueItemId.Should().Be(secondPos.ftQueueItemId);
 
+        }
+        private async Task SetQueueRowAndTimeStamp(List<ftQueueItem> entries)
+        {
+            foreach (var entry in entries)
+            {
+                entry.TimeStamp = DateTime.UtcNow.Ticks;
+                Interlocked.Increment(ref QueueRow);
+                entry.ftQueueRow = QueueRow;
+                await Task.Delay(1);
+            }
         }
     }
 }
