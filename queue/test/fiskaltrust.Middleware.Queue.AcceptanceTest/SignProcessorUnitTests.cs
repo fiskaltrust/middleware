@@ -121,6 +121,8 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
             var marketSpecificSignProcessor = new Mock<IMarketSpecificSignProcessor>(MockBehavior.Strict);
             marketSpecificSignProcessor.Setup(x => x.ProcessAsync(request, queue, It.IsAny<ftQueueItem>())).ThrowsAsync(new Exception("MyException"));
             marketSpecificSignProcessor.Setup(x => x.GetFtCashBoxIdentificationAsync(queue)).ReturnsAsync("MyCashBoxIdentification");
+            marketSpecificSignProcessor.Setup(x => x.FirstTaskAsync()).Returns(Task.CompletedTask);
+            marketSpecificSignProcessor.Setup(x => x.FinalTaskAsync(queue, It.IsAny<ftQueueItem>(), request, actionJournalRepository.Object, It.IsAny<IMiddlewareQueueItemRepository>(), receiptJournalRepository.Object)).Returns(Task.CompletedTask);
 
             var matchResponse = (ftQueueItem queueItem, ReceiptResponse response) =>
             {
