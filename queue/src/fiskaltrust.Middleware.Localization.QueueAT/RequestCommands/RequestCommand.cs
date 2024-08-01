@@ -358,7 +358,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 
                 //Exception Matrix Process
                 //A1 ??? Mehrwertsteuertausch
-                if (receiptRequest.cbPayItems == null || receiptRequest.cbPayItems.Count() == 0)
+                if (decisionBit5 && (receiptRequest.cbPayItems == null || receiptRequest.cbPayItems.Count() == 0))
                 {
                     decision.Exception += "A1";
 
