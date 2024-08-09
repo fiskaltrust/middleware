@@ -74,6 +74,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                 configurationRepository,
                 journalDERepository,
                 queueItemRepository,
+                actionJournalRepository,
                 transactionPayloadFactory,
                 new RequestCommandFactory(services.BuildServiceProvider()),
                 logger

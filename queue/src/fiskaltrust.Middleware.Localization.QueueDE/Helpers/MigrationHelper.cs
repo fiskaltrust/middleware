@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Repositories;
@@ -44,7 +45,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Helpers
             await actionJournalRepository.InsertAsync(actionJournal).ConfigureAwait(false);
         }
 
-        public static bool IsMigrationInProgress(IMiddlewareQueueItemRepository queueItemRepository)
+        public static bool IsMigrationInProgress(IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareActionJournalRepository actionJournalRepository)
         {
             var queueItem = queueItemRepository.GetLastQueueItemAsync().Result;
             if(queueItem == null)
@@ -54,6 +55,12 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Helpers
             var request = JsonConvert.DeserializeObject<ReceiptRequest>(queueItem.request);
             if ((request.ftReceiptCase & 0xFFFF) == 0x0019)
             {
+                var actionJournal = actionJournalRepository.GetByQueueItemId(queueItem.ftQueueItemId).FirstOrDefaultAsync().Result;
+
+                if(actionJournal == null)
+                {
+                    return false;
+                }
                 return true;
             }
             return false;
