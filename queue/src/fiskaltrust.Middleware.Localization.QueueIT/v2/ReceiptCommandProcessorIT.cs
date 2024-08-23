@@ -76,11 +76,15 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
 
             var documentNumber = result.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTDocumentNumber);
             var zNumber = result.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTZNumber);
-            if (!receiptResponse.ftReceiptIdentification.EndsWith("#"))
+            if (!result.ReceiptResponse.ftReceiptIdentification.EndsWith("#"))
             {
-                // in case we do not have the local identification we will add it based on what we get back 
+                receiptResponse.ftReceiptIdentification = result.ReceiptResponse.ftReceiptIdentification;
+            }
+            else
+            {
                 receiptResponse.ftReceiptIdentification += $"{zNumber.Data.PadLeft(4, '0')}-{documentNumber.Data.PadLeft(4, '0')}";
             }
+
             receiptResponse.ftSignatures = result.ReceiptResponse.ftSignatures;
             receiptResponse.InsertSignatureItems(SignaturItemFactory.CreatePOSReceiptFormatSignatures(receiptResponse));
             var journalIT = ftJournalITFactory.CreateFrom(queueItem, queueIt, new ScuResponse()
