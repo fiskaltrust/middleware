@@ -28,6 +28,8 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.IT
                 return null;
             }
 
+
+
             return new AzureTableStorageFtJournalIT
             {
                 PartitionKey = Mapper.GetHashString(src.TimeStamp),
@@ -38,7 +40,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.IT
                 ftSignaturCreationUnitITId = src.ftSignaturCreationUnitITId,
                 cbReceiptReference = src.cbReceiptReference,
                 JournalType = src.JournalType,
-                ReceiptDateTime = src.ReceiptDateTime.ToUniversalTime(),
+                ReceiptDateTime = src.ReceiptDateTime == default ? null : src.ReceiptDateTime.ToUniversalTime(), // we need to cast here since Azure Storage doesn't support very low dates
                 ReceiptNumber = src.ReceiptNumber,
                 DataJson = src.DataJson,
                 ZRepNumber = src.ZRepNumber,
