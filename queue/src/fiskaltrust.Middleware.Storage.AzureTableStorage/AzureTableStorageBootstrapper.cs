@@ -54,8 +54,19 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage
         {
             if (!string.IsNullOrEmpty(_tableStorageConfiguration.StorageAccountName))
             {
-                _tableServiceClient = new TableServiceClient(new Uri($"https://{_tableStorageConfiguration.StorageAccountName}.table.core.windows.net/"), new DefaultAzureCredential());
-                _blobServiceClient = new BlobServiceClient(new Uri($"https://{_tableStorageConfiguration.StorageAccountName}.blob.core.windows.net/"), new DefaultAzureCredential());
+                Uri tableUri;
+                Uri blobUri;
+                try
+                {
+                    tableUri = new Uri($"https://{_tableStorageConfiguration.StorageAccountName}.table.core.windows.net/");
+                    blobUri = new Uri($"https://{_tableStorageConfiguration.StorageAccountName}.blob.core.windows.net/");
+                }
+                catch (Exception e)
+                {
+                    throw new Exception($"The value for the queue parameter storageaccountname '{_tableStorageConfiguration.StorageAccountName}' is not valid.", e);
+                }
+                _tableServiceClient = new TableServiceClient(tableUri, new DefaultAzureCredential());
+                _blobServiceClient = new BlobServiceClient(blobUri, new DefaultAzureCredential());
             }
             else if (!string.IsNullOrEmpty(_tableStorageConfiguration.ConnectionString))
             {
