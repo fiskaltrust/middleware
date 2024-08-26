@@ -28,6 +28,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             IConfigurationRepository configurationRepository,
             IMiddlewareJournalDERepository journalDERepository,
             IMiddlewareQueueItemRepository queueItemRepository,
+            IMiddlewareActionJournalRepository actionJournalRepository,
             ITransactionPayloadFactory transactionPayloadFactory,
             IRequestCommandFactory requestCommandFactory,
             ILogger<SignProcessorDE> logger)
@@ -37,7 +38,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             _transactionPayloadFactory = transactionPayloadFactory;
             _requestCommandFactory = requestCommandFactory;
             _logger = logger;
-            _migrationDone = MigrationHelper.IsMigrationInProgress(queueItemRepository);
+            _migrationDone = MigrationHelper.IsMigrationInProgress(queueItemRepository, actionJournalRepository);
         }
 
         public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ftQueue queue, ftQueueItem queueItem)
