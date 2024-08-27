@@ -104,6 +104,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer
             services.AddTransient<IReadOnlyJournalATRepository, EFCoreJournalATRepository>();
             services.AddTransient<IMiddlewareRepository<ftJournalAT>, EFCoreJournalATRepository>();
 
+            services.AddTransient<IMiddlewareJournalDERepository, EFCoreJournalDERepository>();
             services.AddTransient<IJournalDERepository, EFCoreJournalDERepository>();
             services.AddTransient<IReadOnlyJournalDERepository, EFCoreJournalDERepository>();
             services.AddTransient<IMiddlewareRepository<ftJournalDE>, EFCoreJournalDERepository>();
@@ -122,6 +123,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer
             services.AddTransient<IReadOnlyJournalITRepository, EFCoreJournalITRepository>();
             services.AddTransient<IMiddlewareJournalITRepository, EFCoreJournalITRepository>();
 
+            services.AddTransient<IMiddlewareReceiptJournalRepository, EFCoreReceiptJournalRepository>();
             services.AddTransient<IReceiptJournalRepository, EFCoreReceiptJournalRepository>();
             services.AddTransient<IReadOnlyReceiptJournalRepository, EFCoreReceiptJournalRepository>();
             services.AddTransient<IMiddlewareRepository<ftReceiptJournal>, EFCoreReceiptJournalRepository>();
