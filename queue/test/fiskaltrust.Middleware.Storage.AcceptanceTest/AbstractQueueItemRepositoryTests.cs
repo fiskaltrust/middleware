@@ -50,6 +50,16 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
         }
 
         [Fact]
+        public async Task GetLastQueueItem_NoEntries_ShouldNull()
+        {
+            var entries = new List<ftQueueItem>();
+            var sut = await CreateRepository(entries);
+
+            var last = await sut.GetLastQueueItemAsync();
+            last.Should().BeNull();
+        }
+
+        [Fact]
         public async Task GetAsync_ShouldReturnAllEntriesThatExistInRepository()
         {
             var expectedEntries = StorageTestFixtureProvider.GetFixture().CreateMany<ftQueueItem>(10);
