@@ -150,6 +150,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage
             services.AddSingleton<IMiddlewareActionJournalRepository, AzureTableStorageActionJournalRepository>();
             services.AddSingleton<IActionJournalRepository, AzureTableStorageActionJournalRepository>();
             services.AddSingleton<IReadOnlyActionJournalRepository, AzureTableStorageActionJournalRepository>();
+            services.AddSingleton<IMiddlewareReceiptJournalRepository, AzureTableStorageReceiptJournalRepository>();
             services.AddSingleton<IMiddlewareRepository<ftActionJournal>, AzureTableStorageActionJournalRepository>();
 
             services.AddSingleton<IPersistentTransactionRepository<FailedFinishTransaction>, AzureTableStorageFailedFinishTransactionRepository>();

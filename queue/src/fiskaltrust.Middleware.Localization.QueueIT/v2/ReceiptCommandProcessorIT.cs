@@ -73,10 +73,18 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
             {
                 return new ProcessCommandResponse(result.ReceiptResponse, new List<ftActionJournal>());
             }
-            
+
             var documentNumber = result.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTDocumentNumber);
             var zNumber = result.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTZNumber);
-            receiptResponse.ftReceiptIdentification += $"{zNumber.Data.PadLeft(4, '0')}-{documentNumber.Data.PadLeft(4, '0')}";
+            if (!result.ReceiptResponse.ftReceiptIdentification.EndsWith("#"))
+            {
+                receiptResponse.ftReceiptIdentification = result.ReceiptResponse.ftReceiptIdentification;
+            }
+            else
+            {
+                receiptResponse.ftReceiptIdentification += $"{zNumber.Data.PadLeft(4, '0')}-{documentNumber.Data.PadLeft(4, '0')}";
+            }
+
             receiptResponse.ftSignatures = result.ReceiptResponse.ftSignatures;
             receiptResponse.InsertSignatureItems(SignaturItemFactory.CreatePOSReceiptFormatSignatures(receiptResponse));
             var journalIT = ftJournalITFactory.CreateFrom(queueItem, queueIt, new ScuResponse()
