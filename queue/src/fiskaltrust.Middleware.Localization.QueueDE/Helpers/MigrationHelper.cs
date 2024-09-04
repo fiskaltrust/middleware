@@ -11,7 +11,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Helpers
 {
     public class MigrationHelper
     {
-        public static readonly string Meassage = "Migration to another machine or the CloudCashbox started, no further receipts can be sent to this installation of the Middleware.";
+        public static readonly string Message = "Migration to another machine or the CloudCashbox started, no further receipts can be sent to this installation of the Middleware.";
         public static readonly string ExceptionMessage = "The Middleware is currently in migration mode after a 'start migration' receipt was processed. Please continue the migration process in the Portal and use the migrated instance of the Middleware to continue signing, either on another machine or in the CloudCashbox.";
         public static async Task FinishMigrationAync(ftQueue queue, ftQueueItem queueItem, IMiddlewareActionJournalRepository actionJournalRepository, IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareReceiptJournalRepository receiptJournalRepositor, IMiddlewareJournalDERepository journalDERepository)
         {
@@ -32,8 +32,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Helpers
             var actionJournal = new ftActionJournal
             {
                 ftActionJournalId = Guid.NewGuid(),
-                Message = Meassage,
-                Type = $"{0x4445000000000019:X}",
+                Message = Message,
+                Type = $"{0x4445000100000019:X}",
                 ftQueueId = queue.ftQueueId,
                 ftQueueItemId = queueItem.ftQueueItemId,
                 Moment = DateTime.UtcNow,
