@@ -12,9 +12,9 @@ namespace fiskaltrust.Middleware.SCU.DE.Test.Launcher
 {
     public static class Program
     {
-        private static readonly bool useHelipad = false;
-        private static readonly string cashBoxId = "";
-        private static readonly string accessToken = "";
+        private static readonly bool useHelipad = true;
+        private static readonly string cashBoxId = "d476d087-a0d6-4c75-b8b7-74b36cda15dd";
+        private static readonly string accessToken = "BFBq3EO/u+MyeKhlHuLZNhxCqKQXP/AuycSeZLOTMQvG05FN3us0IGa+Y4KaBNWW6/enKl3+8dq1ASGj06H7Udo=";
         private static readonly string fccDirectory = "";
 
         private static readonly string configurationFilePath = "";
@@ -57,6 +57,9 @@ namespace fiskaltrust.Middleware.SCU.DE.Test.Launcher
 
             var serviceCollection = new ServiceCollection();
             serviceCollection.AddStandardLoggers(LogLevel.Debug);
+            
+            //TODO remove this line
+            config.Package = "fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2";
 
             if (config.Package == "fiskaltrust.Middleware.SCU.DE.Swissbit")
             {
@@ -64,6 +67,10 @@ namespace fiskaltrust.Middleware.SCU.DE.Test.Launcher
             }else if (config.Package == "fiskaltrust.Middleware.SCU.DE.SwissbitCloud")
             {
                 ConfigureSwissbitCloud(config, serviceCollection);
+            }
+            else if (config.Package == "fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2")
+            {
+                ConfigureSwissbitCloudV2(config, serviceCollection);
             }
             else if (config.Package == "fiskaltrust.Middleware.SCU.DE.FiskalyCertified")
             {
@@ -212,6 +219,18 @@ namespace fiskaltrust.Middleware.SCU.DE.Test.Launcher
             };
             bootStrapper.ConfigureServices(serviceCollection);
         }
+
+
+        private static void ConfigureSwissbitCloudV2(PackageConfiguration queue, ServiceCollection serviceCollection)
+        {
+            var bootStrapper = new SwissbitCloudV2.ScuBootstrapper
+            {
+                Id = queue.Id,
+                Configuration = queue.Configuration
+            };
+            bootStrapper.ConfigureServices(serviceCollection);
+        }
+
         private static void ConfigureCryptoVision(PackageConfiguration queue, ServiceCollection serviceCollection)
         {
             var bootStrapper = new CryptoVision.ScuBootstrapper
