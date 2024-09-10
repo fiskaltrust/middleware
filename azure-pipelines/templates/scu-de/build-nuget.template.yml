@@ -78,6 +78,10 @@ steps:
 - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
   displayName: 'dotnet pack fiskaltrust.Middleware.SCU.DE.SwissbitCloud'
   workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.SwissbitCloud'
+
+- script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
+  displayName: 'dotnet pack fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2'
+  workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2'
   
 - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
   displayName: 'dotnet pack fiskaltrust.Middleware.SCU.DE.InMemory'

@@ -71,4 +71,5 @@ stages:
                 - fiskaltrust.Middleware.SCU.DE.Swissbit
                 - fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
                 - fiskaltrust.Middleware.SCU.DE.SwissbitCloud
+                - fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2               
                 - fiskaltrust.Middleware.SCU.DE.InMemory
