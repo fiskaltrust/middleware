@@ -2,8 +2,8 @@
 {
     public class SwissbitCloudV2SCUConfiguration
     {
-        public string SerialNumber { get; set; } = "54e1d00a80434c617c850a31dd7346b1";
-        public string AccessToken { get; set; } = "7e7da19d34b41c367b4340c02c86a87c8639a70a200f7cc3a39ad8d8c4e3153d";
+        public string SerialNumber { get; set; } = "fd79e44187bce2e2dcc886c89bf993df26d157503c4d953557b2e5af73571876";
+        public string AccessToken { get; set; } = "6945c6ab69f348cd3779b5ee139466c4";
         public bool EnableTarFileExport { get; set; } = true;
         public virtual string CertificationId { get; set; } = "BSI-K-TR-0490-2021";
         public bool DisplayCertificationIdAddition { get; set; } = false;
