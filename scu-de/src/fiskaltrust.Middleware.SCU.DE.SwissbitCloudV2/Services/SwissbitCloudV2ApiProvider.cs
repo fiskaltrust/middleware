@@ -50,7 +50,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
         private HttpClient GetClient()
         {
             var client = new HttpClient { BaseAddress = new Uri(_configuration.ApiEndpoint), Timeout = TimeSpan.FromSeconds(_configuration.SwissbitCloudV2Timeout) };
-            var credentials = Encoding.ASCII.GetBytes($"{_configuration.SerialNumber}:{_configuration.AccessToken}");
+            var credentials = Encoding.ASCII.GetBytes($"{_configuration.TseSerialNumber}:{_configuration.TseAccessToken}");
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(credentials));
             client.DefaultRequestHeaders.Add("REQUEST-ID", Guid.NewGuid().ToString());
 
