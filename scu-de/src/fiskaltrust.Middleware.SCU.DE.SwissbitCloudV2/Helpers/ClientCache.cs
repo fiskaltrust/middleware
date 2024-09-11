@@ -9,27 +9,26 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Helpers
     public class ClientCache
     {
         private readonly Dictionary<string, Guid> _registeredClients = new Dictionary<string, Guid>();
-        //private readonly ISwissbitCloudV2ApiProvider _swissbitCloudV2;
+        private readonly ISwissbitCloudV2ApiProvider _swissbitCloudV2;
 
-        public ClientCache() { } //=> _swissbitCloudV2 = swissbitCloudV2;
+        public ClientCache(ISwissbitCloudV2ApiProvider swissbitCloudV2) => _swissbitCloudV2 = swissbitCloudV2;
 
-        public Task<bool> IsClientExistent(string clientId)
+        public async Task<bool> IsClientExistent(string clientId)
         {
             if (!_registeredClients.Any())
             {
-                /*
-                var clientDto = await _fiskalyApiProvider.GetClientsAsync(tssId);
+                
+                var clients = await _swissbitCloudV2.GetClientsAsync();
 
-                foreach (var item in clientDto.Where(x => x.State.Equals("REGISTERED")))
+                foreach (var client in clients)
                 {
-                    if (!_registeredClients.ContainsKey(item.SerialNumber))
+                    if (!_registeredClients.ContainsKey(client))
                     {
-                        _registeredClients.Add(item.SerialNumber, item.Id);
+                        _registeredClients.Add(client, Guid.NewGuid());
                     }
                 }
-                */
             }
-            return Task.FromResult( _registeredClients.ContainsKey(clientId));
+            return _registeredClients.ContainsKey(clientId);
         }
 
         public List<string> GetClientIds() => _registeredClients.Keys.ToList();

@@ -9,7 +9,7 @@ using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Helpers;
 using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-
+using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Constants;
 namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
 {
     public class SwissbitCloudV2SCU : IDESSCD
@@ -36,12 +36,14 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                 {
                     throw new Exception($"The client {request.ClientId} is not registered.");
                 }
-                var txId = Guid.NewGuid();
+                var startTransactionRequest = new TransactionRequestDto() { 
+                    ClientId = request.ClientId,
+                    ProcessData = request.ProcessDataBase64,
+                    ProcessType = request.ProcessType
+                };
+                var startTransactionResponse = await _swissbitCloudV2Provider.TransactionAsync(TransactionType.StartTransaction, startTransactionRequest);
 
-
-                //Todo 
-
-                return new StartTransactionResponse();
+                return CreateStartTransactionResponse(request.ClientId, startTransactionResponse);
             }
             catch (Exception ex)
             {
@@ -59,8 +61,15 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                     throw new Exception($"The client {request.ClientId} is not registered.");
                 }
 
-                //Todo 
-                return new UpdateTransactionResponse();
+                var updateTransactionRequest = new TransactionRequestDto() { 
+                    ClientId = request.ClientId,
+                    ProcessData = request.ProcessDataBase64,
+                    ProcessType = request.ProcessType,
+                    Number = (int) request.TransactionNumber,
+                };
+                var updateTransactionResponse = await _swissbitCloudV2Provider.TransactionAsync(TransactionType.UpdateTransaction, updateTransactionRequest);
+
+                return CreateUpdateTransactionResponse(request.ClientId, updateTransactionRequest, updateTransactionResponse);
             }
             catch (Exception ex)
             {
@@ -78,8 +87,16 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                     throw new Exception($"The client {request.ClientId} is not registered.");
                 }
 
-                //Todo 
-                return new FinishTransactionResponse();
+                var finishTransactionRequest = new TransactionRequestDto()
+                {
+                    ClientId = request.ClientId,
+                    ProcessData = request.ProcessDataBase64,
+                    ProcessType = request.ProcessType,
+                    Number = (int) request.TransactionNumber,
+                };
+                var finishTransactionResponse = await _swissbitCloudV2Provider.TransactionAsync(TransactionType.UpdateTransaction, finishTransactionRequest);
+
+                return CreateFinishTransactionResponse(request.ClientId, finishTransactionRequest, finishTransactionResponse);
             }
             catch (Exception ex)
             {
@@ -434,6 +451,64 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                 _logger.LogError(ex, "Failed to execute {Operation} - Request: {Request}", nameof(UnregisterClientIdAsync), JsonConvert.SerializeObject(request));
                 throw;
             }
+        }
+        private StartTransactionResponse CreateStartTransactionResponse(string clientId, TransactionResponseDto transactionResponse)
+        {
+            return new StartTransactionResponse
+            {
+                TransactionNumber = (ulong) transactionResponse.Number,
+                TseSerialNumberOctet = _configuration.TseSerialNumber,
+                ClientId = clientId,
+                TimeStamp = transactionResponse.SignatureCreationTime.FromUnixTime(),
+                SignatureData = new TseSignatureData()
+                {
+                    SignatureBase64 = transactionResponse.SignatureValue,
+                    SignatureCounter = transactionResponse.SignatureCounter,
+                    SignatureAlgorithm = "transaction.Signature.Algorithm",
+                    PublicKeyBase64 = "transaction.Signature.PublicKey"
+                }
+            };
+        }
+
+        private UpdateTransactionResponse CreateUpdateTransactionResponse(string clientId, TransactionRequestDto transactionRequest, TransactionResponseDto transactionResponse)
+        {
+            return new UpdateTransactionResponse
+            {
+                TransactionNumber = (ulong) transactionResponse.Number,
+                TseSerialNumberOctet = _configuration.TseSerialNumber,
+                ClientId = clientId,
+                ProcessDataBase64 = transactionRequest.ProcessData,
+                ProcessType = transactionRequest.ProcessType,
+                TimeStamp = transactionResponse.SignatureCreationTime.FromUnixTime(),
+                SignatureData = new TseSignatureData()
+                {
+                    SignatureBase64 = transactionResponse.SignatureValue,
+                    SignatureCounter = transactionResponse.SignatureCounter,
+                    SignatureAlgorithm = "transaction.Signature.Algorithm",
+                    PublicKeyBase64 = "transaction.Signature.PublicKey"
+                }
+            };
+        }
+        private FinishTransactionResponse CreateFinishTransactionResponse(string clientId, TransactionRequestDto transactionRequest, TransactionResponseDto transactionResponse)
+        {
+            return new FinishTransactionResponse
+            {
+                TransactionNumber = (ulong) transactionResponse.Number,
+                TseSerialNumberOctet = _configuration.TseSerialNumber,
+                ClientId = clientId,
+                ProcessDataBase64 = transactionRequest.ProcessData,
+                ProcessType = transactionRequest.ProcessType,
+                StartTransactionTimeStamp = transactionResponse.SignatureCreationTime.FromUnixTime(),//To check
+                SignatureData = new TseSignatureData()
+                {
+                    SignatureBase64 = transactionResponse.SignatureValue,
+                    SignatureCounter = transactionResponse.SignatureCounter,
+                    SignatureAlgorithm = "transaction.Signature.Algorithm",
+                    PublicKeyBase64 = "transaction.Signature.PublicKey"
+                },
+                TseTimeStampFormat = "transaction.Log.TimestampFormat",
+                TimeStamp = transactionResponse.SignatureCreationTime.FromUnixTime(),
+            };
         }
     }
 }

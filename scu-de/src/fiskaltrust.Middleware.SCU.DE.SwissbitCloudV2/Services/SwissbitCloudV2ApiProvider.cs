@@ -11,6 +11,7 @@ using Newtonsoft.Json;
 using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Helpers;
 using fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser.Tar;
 using System.Net.Http.Headers;
+using System.Security.Cryptography.X509Certificates;
 
 namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
 {
@@ -30,7 +31,38 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
             _serializerSettings = new JsonSerializerSettings
             {
                 DefaultValueHandling = DefaultValueHandling.Ignore
+
             };
+        }
+
+        public async Task<TransactionResponseDto> TransactionAsync(string transactionType, TransactionRequestDto transactionRequest)
+        {
+            var jsonPayload = JsonConvert.SerializeObject(transactionRequest, _serializerSettings);
+
+            var response = await _httpClient.PostAsync($"/api/v1/tse/{transactionType}", new StringContent(jsonPayload, Encoding.UTF8, "application/json"));
+            var responseContent = await response.Content.ReadAsStringAsync();
+            if (response.IsSuccessStatusCode)
+            {
+                return JsonConvert.DeserializeObject<TransactionResponseDto>(responseContent);
+            }
+
+            throw new SwissbitCloudV2Exception($"Communication error ({response.StatusCode}) while creating a client (POST api/v1/tse/{transactionType}). Response: {responseContent}",
+                    (int) response.StatusCode, $"POST api/v1/tse/{transactionType}");
+
+        }
+
+        public async Task<List<string>> GetClientsAsync()
+        {
+             var response = await _httpClient.GetAsync($"/api/v1/tse/clients");
+            var responseContent = await response.Content.ReadAsStringAsync();
+            if (response.IsSuccessStatusCode)
+            {
+                return JsonConvert.DeserializeObject<List<string>>(responseContent);
+            }
+
+            throw new SwissbitCloudV2Exception($"Communication error ({response.StatusCode}) while creating a client (GET /api/v1/tse/clients). Response: {responseContent}",
+                    (int) response.StatusCode, $"GET /api/v1/tse/clients");
+
         }
 
         public async Task CreateClientAsync(ClientDto client)
@@ -52,8 +84,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
             var client = new HttpClient { BaseAddress = new Uri(_configuration.ApiEndpoint), Timeout = TimeSpan.FromSeconds(_configuration.SwissbitCloudV2Timeout) };
             var credentials = Encoding.ASCII.GetBytes($"{_configuration.TseSerialNumber}:{_configuration.TseAccessToken}");
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(credentials));
-            client.DefaultRequestHeaders.Add("REQUEST-ID", Guid.NewGuid().ToString());
-
+           
             return client;
         }
         public void Dispose() => _httpClient?.Dispose();

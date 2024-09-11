@@ -10,5 +10,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
     public interface ISwissbitCloudV2ApiProvider
     {
         Task CreateClientAsync(ClientDto client);
+        Task<List<string>> GetClientsAsync();
+        Task<TransactionResponseDto> TransactionAsync(string transactionType, TransactionRequestDto transactionDto);
     }
 }
