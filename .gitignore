@@ -214,3 +214,7 @@ _Pvt_Extensions/
 ModelManifest.xml
 
 .vscode
+/queue/src/fiskaltrust.Middleware.Storage.EFCore.PostgreSQL/Migrations
+/queue/src/fiskaltrust.Middleware.Storage.EFCore.SQLServer/Migrations
+/queue/.idea/.idea.fiskaltrust.Middleware/.idea
+*.sqlite

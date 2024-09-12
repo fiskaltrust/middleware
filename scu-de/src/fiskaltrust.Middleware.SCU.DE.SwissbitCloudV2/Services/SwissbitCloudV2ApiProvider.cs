@@ -52,7 +52,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
 
         public async Task<List<string>> GetClientsAsync()
         {
-             var response = await _httpClient.GetAsync($"/api/v1/tse/clients");
+            var response = await _httpClient.GetAsync($"/api/v1/tse/clients");
             var responseContent = await response.Content.ReadAsStringAsync();
             if (response.IsSuccessStatusCode)
             {
@@ -75,6 +75,20 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
                 var responseContent = await response.Content.ReadAsStringAsync();
                 throw new SwissbitCloudV2Exception($"Communication error ({response.StatusCode}) while creating a client (POST api/v1/tse/registerClient). Response: {responseContent}",
                     (int) response.StatusCode, $"PUT api/v1/tse/registerClient");
+            }
+        }
+
+        public async Task DeregisterClientAsync(ClientDto client)
+        {
+            var clientDto = new ClientDto { ClientId = client.ClientId };
+            var jsonPayload = JsonConvert.SerializeObject(client, _serializerSettings);
+
+            var response = await _httpClient.PostAsync($"/api/v1/tse/deregisterClient", new StringContent(jsonPayload, Encoding.UTF8, "application/json"));
+            if (!response.IsSuccessStatusCode)
+            {
+                var responseContent = await response.Content.ReadAsStringAsync();
+                throw new SwissbitCloudV2Exception($"Communication error ({response.StatusCode}) while deregistering client (POST /api/v1/tse/deregisterClient). Response: {responseContent}",
+                    (int) response.StatusCode, $"POST /api/v1/tse/deregisterClient for Client ID: {client.ClientId}");
             }
         }
 

@@ -18,5 +18,6 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
         Task<ExportStateResponse> GetExportStateResponseByIdAsync(string exportId);
 
         void Dispose();
+        Task DeregisterClientAsync(ClientDto clientDto);
     }
 }
