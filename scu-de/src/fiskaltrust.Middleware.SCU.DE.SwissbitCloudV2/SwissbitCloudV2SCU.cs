@@ -32,7 +32,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
         {
             try
             {
-                if (!await _clientCache.IsClientExistent( request.ClientId))
+                if (!await _clientCache.IsClientExistent(request.ClientId))
                 {
                     throw new Exception($"The client {request.ClientId} is not registered.");
                 }

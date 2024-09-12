@@ -46,7 +46,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
                 return JsonConvert.DeserializeObject<TransactionResponseDto>(responseContent);
             }
 
-            throw new SwissbitCloudV2Exception($"Communication error ({response.StatusCode}) while creating a client (POST api/v1/tse/{transactionType}). Response: {responseContent}",
+            throw new SwissbitCloudV2Exception($"Communication error ({response.StatusCode}) while processing a transaction (POST api/v1/tse/{transactionType}). Response: {responseContent}",
                     (int) response.StatusCode, $"POST api/v1/tse/{transactionType}");
 
         }
