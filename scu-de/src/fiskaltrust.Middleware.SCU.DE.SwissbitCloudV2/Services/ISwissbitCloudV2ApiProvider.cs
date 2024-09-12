@@ -12,5 +12,11 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
         Task CreateClientAsync(ClientDto client);
         Task<List<string>> GetClientsAsync();
         Task<TransactionResponseDto> TransactionAsync(string transactionType, TransactionRequestDto transactionDto);
+
+        Task<StartExportResponse> StartExport();
+        Task StoreDownloadResultAsync(string exportId);
+        Task<ExportStateResponse> GetExportStateResponseByIdAsync(string exportId);
+
+        void Dispose();
     }
 }
