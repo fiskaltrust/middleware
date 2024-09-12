@@ -316,7 +316,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                     {
                         tempStream.Seek(exportStateData.ReadPointer, SeekOrigin.Begin);
 
-                        if ((tempStream.Length - exportStateData.ReadPointer) < chunkSize)
+                        if (tempStream.Length - exportStateData.ReadPointer < chunkSize)
                         {
                             chunkSize = (int) tempStream.Length - exportStateData.ReadPointer;
                         }
@@ -456,10 +456,13 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
             {
                 if (await _clientCache.IsClientExistent(request.ClientId))
                 {
+                    var clientDto = new ClientDto { ClientId = request.ClientId };
+                    await _swissbitCloudV2Provider.DeregisterClientAsync(clientDto);
+
                     //Todo DisableClientAsync(_configuration.TssId, request.ClientId, _clientCache.GetClientId(request.ClientId));
                     _clientCache.RemoveClient(request.ClientId);
-
                 }
+
                 return new UnregisterClientIdResponse
                 {
                     ClientIds = _clientCache.GetClientIds()
@@ -471,6 +474,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                 throw;
             }
         }
+
         private StartTransactionResponse CreateStartTransactionResponse(string clientId, TransactionResponseDto transactionResponse)
         {
             return new StartTransactionResponse
