@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <TargetFrameworks>net461;net6</TargetFrameworks>
@@ -6,6 +6,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser\fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser.csproj" />
       <ProjectReference Include="..\..\src\fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2\fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.csproj" />
     </ItemGroup>
 </Project>

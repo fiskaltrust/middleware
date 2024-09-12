@@ -10,18 +10,22 @@ using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Constants;
+using System.IO;
+using System.Linq;
 namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
 {
     public class SwissbitCloudV2SCU : IDESSCD
     {
-
+        private readonly ConcurrentDictionary<string, ExportStateData> _readStreamPointer;
         private readonly ILogger<SwissbitCloudV2SCU> _logger;
         private readonly SwissbitCloudV2SCUConfiguration _configuration;
         private readonly ClientCache _clientCache;
         private readonly ISwissbitCloudV2ApiProvider _swissbitCloudV2Provider;
+        private const string _noExport = "noexport-";
 
         public SwissbitCloudV2SCU(ILogger<SwissbitCloudV2SCU> logger, ISwissbitCloudV2ApiProvider apiProvider, ClientCache clientCache, SwissbitCloudV2SCUConfiguration configuration)
         {
+            _readStreamPointer = new ConcurrentDictionary<string, ExportStateData>();
             _logger = logger;
             _configuration = configuration;
             _swissbitCloudV2Provider = apiProvider;
@@ -141,14 +145,35 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
 
         public Task ExecuteSelfTestAsync() => Task.CompletedTask;
 
-        public  Task<StartExportSessionResponse> StartExportSessionAsync(StartExportSessionRequest request)
+        public async Task<StartExportSessionResponse> StartExportSessionAsync(StartExportSessionRequest request)
         {
             try
             {
+                if (!_configuration.EnableTarFileExport)
+                {
+                    return new StartExportSessionResponse
+                    {
+                        TokenId = _noExport + Guid.NewGuid().ToString(),
+                        TseSerialNumberOctet = _configuration.TseSerialNumber
+                    };
+                }
 
-                //Todo 
+                if (!await _clientCache.IsClientExistent(request.ClientId))
+                {
+                    throw new Exception($"The client {request.ClientId} is not registered.");
+                }
+                var startExportResponse = await _swissbitCloudV2Provider.StartExport();
 
-                return Task.FromResult(new StartExportSessionResponse());
+                CacheExportAsync(startExportResponse.ExportId).ExecuteInBackgroundThread();
+
+                SetExportState(startExportResponse.ExportId, ExportState.Running);
+
+                return new StartExportSessionResponse
+                {
+                    TokenId = startExportResponse.ExportId,
+                    TseSerialNumberOctet = _configuration.TseSerialNumber
+                };
+
             }
             catch (Exception ex)
             {
@@ -157,29 +182,27 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
             }
         }
 
-        private async Task CacheExportAsync(Guid exportId, int currentTry = 0)
+        private async Task CacheExportAsync(string exportId, int currentTry = 0)
         {
             try
             {
-
-                //Todo 
+                await _swissbitCloudV2Provider.StoreDownloadResultAsync(exportId);
+                SetExportState(exportId, ExportState.Succeeded);
             }
             catch (WebException)
             {
                 if (_configuration.RetriesOnTarExportWebException > currentTry)
                 {
                     currentTry++;
-                    _logger.LogWarning($"WebException on Export from Fiskaly retry {currentTry} from {_configuration.RetriesOnTarExportWebException}, DelayOnRetriesInMs: {_configuration.DelayOnRetriesInMs}.");
+                    _logger.LogWarning($"WebException on Export from SwissbitCloud retry {currentTry} from {_configuration.RetriesOnTarExportWebException}, DelayOnRetriesInMs: {_configuration.DelayOnRetriesInMs}.");
                     await Task.Delay(_configuration.DelayOnRetriesInMs * (currentTry + 1)).ConfigureAwait(false);
                     await CacheExportAsync(exportId, currentTry).ConfigureAwait(false);
                 }
             }
             catch (Exception ex)
             {
-
                 _logger.LogError(ex, "Failed to execute {Operation} - ExportId: {ExportId}", nameof(CacheExportAsync), exportId);
-                 
-                //Todo SetExportState(exportId, ExportState., ex);
+                SetExportState(exportId, ExportState.Failed, ex);
             }
         }
 
@@ -191,7 +214,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                 //Todo 
                 var exportId = Guid.NewGuid();
 
-                CacheExportAsync(exportId).ExecuteInBackgroundThread();
+                //CacheExportAsync(exportId).ExecuteInBackgroundThread();
 
                 return Task.FromResult( new StartExportSessionResponse
                 {
@@ -212,7 +235,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
             try
             {
                 var exportId = Guid.NewGuid();
-                CacheExportAsync(exportId).ExecuteInBackgroundThread();
+                //CacheExportAsync(exportId).ExecuteInBackgroundThread();
 
                 return Task.FromResult( new StartExportSessionResponse
                 {
@@ -228,11 +251,8 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
             }
         }
 
-        public Task<ExportDataResponse> ExportDataAsync(ExportDataRequest request)
+        public async Task<ExportDataResponse> ExportDataAsync(ExportDataRequest request)
         {
-
-            //Todo
-            /*
             if (request.TokenId.StartsWith(_noExport))
             {
                 return new ExportDataResponse
@@ -247,22 +267,23 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
             {
                 if (!_readStreamPointer.ContainsKey(request.TokenId))
                 {
-                    throw new FiskalyException("The export failed to start. It needs to be retriggered");
+                    throw new SwissbitCloudV2Exception("The export failed to start. It needs to be retriggered");
                 }
                 var tempFileName = request.TokenId;
                 var exportId = Guid.Parse(request.TokenId);
 
-                var exportStateInformation = await _fiskalyApiProvider.GetExportStateInformationByIdAsync(_configuration.TssId, Guid.Parse(request.TokenId));
-                if (exportStateInformation.State == "ERROR")
+                var exportStateResponse = await _swissbitCloudV2Provider.GetExportStateResponseByIdAsync(request.TokenId);
+
+                if (exportStateResponse.State == "failure")
                 {
-                    throw new FiskalyException($"The export failed with a fiskaly internal error: {exportStateInformation.Exception}");
+                    throw new SwissbitCloudV2Exception($"The export failed with a SwissbitCloudV2 internal error. ErrorCode: {exportStateResponse.ErrorCode} ErrorMessage: {exportStateResponse.ErrorMessage}");
                 }
                 if (_readStreamPointer.TryGetValue(request.TokenId, out var exportStateDat) && exportStateDat.State == ExportState.Failed)
                 {
                     throw exportStateDat.Error;
                 }
 
-                if (exportStateInformation.State != "COMPLETED" || !File.Exists(tempFileName))
+                if (exportStateResponse.State != "success" || !File.Exists(tempFileName))
                 {
                     return new ExportDataResponse
                     {
@@ -316,8 +337,6 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                 _logger.LogError(ex, "Failed to execute {Operation} - Request: {Request}", nameof(ExportDataAsync), JsonConvert.SerializeObject(request));
                 throw;
             }
-                            */
-            return Task.FromResult(new ExportDataResponse());
         }
 
         public Task<EndExportSessionResponse> EndExportSessionAsync(EndExportSessionRequest request)
@@ -510,5 +529,22 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                 TimeStamp = transactionResponse.SignatureCreationTime.FromUnixTime(),
             };
         }
+
+        private void SetExportState(string exportId, ExportState exportState, Exception error = null)
+        {
+            _readStreamPointer.AddOrUpdate(exportId, new ExportStateData
+            {
+                ReadPointer = 0,
+                State = exportState
+            }, (key, value) =>
+            {
+                value.State = exportState;
+                value.ReadPointer = 0;
+                value.Error = error;
+                return value;
+            });
+        }
+
+        public void Dispose() => _swissbitCloudV2Provider.Dispose();
     }
 }
