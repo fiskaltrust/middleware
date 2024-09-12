@@ -139,13 +139,19 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.Stor
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Interface.Tagging", "src\fiskaltrust.Interface.Tagging\fiskaltrust.Interface.Tagging.csproj", "{FD564EEA-CEAD-47E0-BB0A-113C07F57CAA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fiskaltrust.Interface.Tagging.UnitTests", "test\fiskaltrust.Interface.Tagging.UnitTests\fiskaltrust.Interface.Tagging.UnitTests.csproj", "{9E42B570-AEEC-498E-AC81-0AB70264229B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Interface.Tagging.UnitTests", "test\fiskaltrust.Interface.Tagging.UnitTests\fiskaltrust.Interface.Tagging.UnitTests.csproj", "{9E42B570-AEEC-498E-AC81-0AB70264229B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fiskaltrust.Interface.Tagging.Generator", "src\fiskaltrust.Interface.Tagging.Generator\fiskaltrust.Interface.Tagging.Generator.csproj", "{930A9188-4273-45C5-9506-922CE7B1E712}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Interface.Tagging.Generator", "src\fiskaltrust.Interface.Tagging.Generator\fiskaltrust.Interface.Tagging.Generator.csproj", "{930A9188-4273-45C5-9506-922CE7B1E712}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fiskaltrust.Interface.Tagging.Generator.UnitTests", "test\fiskaltrust.Interface.Tagging.Generator.UnitTests\fiskaltrust.Interface.Tagging.Generator.UnitTests.csproj", "{855013AC-6255-4A3C-80C7-5140F5BD20B9}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Interface.Tagging.Generator.UnitTests", "test\fiskaltrust.Interface.Tagging.Generator.UnitTests\fiskaltrust.Interface.Tagging.Generator.UnitTests.csproj", "{855013AC-6255-4A3C-80C7-5140F5BD20B9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fiskaltrust.Interface.Tagging.Generator.IntegrationTests", "test\fiskaltrust.Interface.Tagging.Generator.IntegrationTests\fiskaltrust.Interface.Tagging.Generator.IntegrationTests.csproj", "{34229319-E3C0-4B57-A2D9-F1812CBF5311}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Interface.Tagging.Generator.IntegrationTests", "test\fiskaltrust.Interface.Tagging.Generator.IntegrationTests\fiskaltrust.Interface.Tagging.Generator.IntegrationTests.csproj", "{34229319-E3C0-4B57-A2D9-F1812CBF5311}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.Localization.QueuePT", "src\fiskaltrust.Middleware.Localization.QueuePT\fiskaltrust.Middleware.Localization.QueuePT.csproj", "{917D658E-C488-4EA5-A645-EC0E7B78CE19}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.Localization.v2", "src\fiskaltrust.Middleware.Localization.v2\fiskaltrust.Middleware.Localization.v2.csproj", "{C2242AC0-0031-4388-BF63-33FE2FBA1DD6}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "v2", "v2", "{095CBF40-606D-4CC5-91E3-D009C271BC16}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -349,6 +355,10 @@ Global
 		{7F52D143-9179-4FCF-9DC7-B5F1681BD22A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7F52D143-9179-4FCF-9DC7-B5F1681BD22A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7F52D143-9179-4FCF-9DC7-B5F1681BD22A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EEDA285C-82F8-4E6D-AAFA-9E42D3C4F0E6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EEDA285C-82F8-4E6D-AAFA-9E42D3C4F0E6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EEDA285C-82F8-4E6D-AAFA-9E42D3C4F0E6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EEDA285C-82F8-4E6D-AAFA-9E42D3C4F0E6}.Release|Any CPU.Build.0 = Release|Any CPU
 		{FD564EEA-CEAD-47E0-BB0A-113C07F57CAA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{FD564EEA-CEAD-47E0-BB0A-113C07F57CAA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FD564EEA-CEAD-47E0-BB0A-113C07F57CAA}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -369,10 +379,14 @@ Global
 		{34229319-E3C0-4B57-A2D9-F1812CBF5311}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{34229319-E3C0-4B57-A2D9-F1812CBF5311}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{34229319-E3C0-4B57-A2D9-F1812CBF5311}.Release|Any CPU.Build.0 = Release|Any CPU
-		{EEDA285C-82F8-4E6D-AAFA-9E42D3C4F0E6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{EEDA285C-82F8-4E6D-AAFA-9E42D3C4F0E6}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{EEDA285C-82F8-4E6D-AAFA-9E42D3C4F0E6}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{EEDA285C-82F8-4E6D-AAFA-9E42D3C4F0E6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{917D658E-C488-4EA5-A645-EC0E7B78CE19}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{917D658E-C488-4EA5-A645-EC0E7B78CE19}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{917D658E-C488-4EA5-A645-EC0E7B78CE19}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{917D658E-C488-4EA5-A645-EC0E7B78CE19}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C2242AC0-0031-4388-BF63-33FE2FBA1DD6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C2242AC0-0031-4388-BF63-33FE2FBA1DD6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C2242AC0-0031-4388-BF63-33FE2FBA1DD6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C2242AC0-0031-4388-BF63-33FE2FBA1DD6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -428,8 +442,8 @@ Global
 		{BD6E6701-2F8E-43D1-B583-F3DC1CA52D67} = {16BF88B4-3302-49F5-A5FA-5DA96DD03F0E}
 		{87E0049F-9DF1-4F6F-8137-7765A2B16ABA} = {5195B05E-EB55-4544-8FE6-B683747B1F9E}
 		{F39B38CB-B8B7-4537-9130-43131AD51FF2} = {31488E86-D7EB-4964-84F1-B7338BB5A7D1}
-		{27C42C72-639D-4B55-A931-6896D7095685} = {C345F1F7-C2A5-472A-A55F-987A53DF3CCE}
-		{65633C3A-65AA-4E05-8E56-7A348872CCC3} = {C345F1F7-C2A5-472A-A55F-987A53DF3CCE}
+		{27C42C72-639D-4B55-A931-6896D7095685} = {095CBF40-606D-4CC5-91E3-D009C271BC16}
+		{65633C3A-65AA-4E05-8E56-7A348872CCC3} = {095CBF40-606D-4CC5-91E3-D009C271BC16}
 		{5FAB9D88-4B90-4DF0-B1B7-1F50DF7CFCA4} = {16BF88B4-3302-49F5-A5FA-5DA96DD03F0E}
 		{3C0310D9-EC55-4115-A2D5-0DC8C1246645} = {C345F1F7-C2A5-472A-A55F-987A53DF3CCE}
 		{04B32BB6-2E1D-400F-B7B2-2638483B0825} = {16BF88B4-3302-49F5-A5FA-5DA96DD03F0E}
@@ -440,6 +454,9 @@ Global
 		{930A9188-4273-45C5-9506-922CE7B1E712} = {08381205-3409-4468-92EB-ACA65F8D82FB}
 		{855013AC-6255-4A3C-80C7-5140F5BD20B9} = {EAEEF28B-F372-48C1-8F9B-45CEB95159A2}
 		{34229319-E3C0-4B57-A2D9-F1812CBF5311} = {EAEEF28B-F372-48C1-8F9B-45CEB95159A2}
+		{917D658E-C488-4EA5-A645-EC0E7B78CE19} = {095CBF40-606D-4CC5-91E3-D009C271BC16}
+		{C2242AC0-0031-4388-BF63-33FE2FBA1DD6} = {095CBF40-606D-4CC5-91E3-D009C271BC16}
+		{095CBF40-606D-4CC5-91E3-D009C271BC16} = {C345F1F7-C2A5-472A-A55F-987A53DF3CCE}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {E8BEA609-BD83-4165-A14A-D010D2CC87AD}
