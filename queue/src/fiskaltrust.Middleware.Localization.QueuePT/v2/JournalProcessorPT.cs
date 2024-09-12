@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Interfaces;
 
-namespace fiskaltrust.Middleware.Localization.QueuePT
+namespace fiskaltrust.Middleware.Localization.QueuePT.v2
 {
     public class JournalProcessorPT : IMarketSpecificJournalProcessor
     {

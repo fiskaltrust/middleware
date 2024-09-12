@@ -1,7 +1,7 @@
 ﻿using System;
 using fiskaltrust.ifPOS.v1;
 
-namespace fiskaltrust.Middleware.Localization.v2
+namespace fiskaltrust.Middleware.Localization.v2.Interface
 {
     public static class SignatureFactory
     {

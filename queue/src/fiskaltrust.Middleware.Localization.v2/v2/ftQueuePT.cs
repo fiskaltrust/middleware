@@ -1,7 +1,7 @@
 ﻿using System;
 using fiskaltrust.storage.V0;
 
-namespace fiskaltrust.Middleware.Localization.QueuePT.Interface.Models
+namespace fiskaltrust.Middleware.Localization.v2.v2
 {
     public class ftQueuePT : QueueLocalization, ICountrySpecificQueue
     {

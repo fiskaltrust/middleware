@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel;
 
-namespace fiskaltrust.Middleware.Localization.v2.Helpers
+namespace System.Runtime.CompilerServices
 {
     /// <summary>
     /// Reserved to be used by the compiler for tracking metadata.

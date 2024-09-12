@@ -1,13 +1,12 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using fiskaltrust.Middleware.Localization.QueuePT.Interface.Models;
-using fiskaltrust.Middleware.Localization.v2;
-using fiskaltrust.Middleware.Localization.v2.Helpers;
+using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.Middleware.Localization.v2.v2;
 using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.v2
 {
-    public class ProtocolCommandProcessorPT
+    public class ProtocolCommandProcessorPT : IProtocolCommandProcessor
     {
         public async Task<ProcessCommandResponse> ProcessReceiptAsync(ProcessCommandRequest request)
         {

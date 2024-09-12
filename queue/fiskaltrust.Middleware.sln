@@ -153,6 +153,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.Loca
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "v2", "v2", "{095CBF40-606D-4CC5-91E3-D009C271BC16}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.Localization.QueuePT.UnitTest", "test\fiskaltrust.Middleware.Localization.QueuePT.UnitTest\fiskaltrust.Middleware.Localization.QueuePT.UnitTest.csproj", "{0A1860FF-6D00-4F85-9058-0854E95CA4CC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -387,6 +389,10 @@ Global
 		{C2242AC0-0031-4388-BF63-33FE2FBA1DD6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C2242AC0-0031-4388-BF63-33FE2FBA1DD6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C2242AC0-0031-4388-BF63-33FE2FBA1DD6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0A1860FF-6D00-4F85-9058-0854E95CA4CC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0A1860FF-6D00-4F85-9058-0854E95CA4CC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0A1860FF-6D00-4F85-9058-0854E95CA4CC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0A1860FF-6D00-4F85-9058-0854E95CA4CC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -457,6 +463,7 @@ Global
 		{917D658E-C488-4EA5-A645-EC0E7B78CE19} = {095CBF40-606D-4CC5-91E3-D009C271BC16}
 		{C2242AC0-0031-4388-BF63-33FE2FBA1DD6} = {095CBF40-606D-4CC5-91E3-D009C271BC16}
 		{095CBF40-606D-4CC5-91E3-D009C271BC16} = {C345F1F7-C2A5-472A-A55F-987A53DF3CCE}
+		{0A1860FF-6D00-4F85-9058-0854E95CA4CC} = {16BF88B4-3302-49F5-A5FA-5DA96DD03F0E}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {E8BEA609-BD83-4165-A14A-D010D2CC87AD}

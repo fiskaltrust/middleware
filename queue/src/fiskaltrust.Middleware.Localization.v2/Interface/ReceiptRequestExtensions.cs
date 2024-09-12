@@ -1,6 +1,6 @@
 ﻿using fiskaltrust.ifPOS.v1;
 
-namespace fiskaltrust.Middleware.Localization.v2.Helpers
+namespace fiskaltrust.Middleware.Localization.v2.Interface
 {
     public static class ReceiptRequestExtensions
     {

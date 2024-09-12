@@ -1,4 +1,4 @@
-﻿namespace fiskaltrust.Middleware.Localization.v2
+﻿namespace fiskaltrust.Middleware.Localization.v2.Interface
 {
     public static class ftStatesFlags
     {

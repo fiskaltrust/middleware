@@ -1,13 +1,12 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using fiskaltrust.Middleware.Localization.QueuePT.Interface.Models;
-using fiskaltrust.Middleware.Localization.v2;
-using fiskaltrust.Middleware.Localization.v2.Helpers;
+using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.Middleware.Localization.v2.v2;
 using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.v2
 {
-    public class DailyOperationsCommandProcessorPT
+    public class DailyOperationsCommandProcessorPT : IDailyOperationsCommandProcessor
     {
         public async Task<ProcessCommandResponse> ProcessReceiptAsync(ProcessCommandRequest request)
         {
@@ -40,7 +39,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.v2
         public async Task<ProcessCommandResponse> DailyClosing0x2011Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>()));
 
         public async Task<ProcessCommandResponse> MonthlyClosing0x2012Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>()));
-        
+
         public async Task<ProcessCommandResponse> YearlyClosing0x2013Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>()));
     }
 }
