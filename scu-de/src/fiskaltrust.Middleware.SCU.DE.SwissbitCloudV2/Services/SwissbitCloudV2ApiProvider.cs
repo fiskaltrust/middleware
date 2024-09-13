@@ -80,7 +80,6 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
 
         public async Task DeregisterClientAsync(ClientDto client)
         {
-            var clientDto = new ClientDto { ClientId = client.ClientId };
             var jsonPayload = JsonConvert.SerializeObject(client, _serializerSettings);
 
             var response = await _httpClient.PostAsync($"/api/v1/tse/deregisterClient", new StringContent(jsonPayload, Encoding.UTF8, "application/json"));
