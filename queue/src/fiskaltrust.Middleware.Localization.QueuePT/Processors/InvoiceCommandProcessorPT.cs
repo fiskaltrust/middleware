@@ -4,7 +4,7 @@ using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.v2;
 using fiskaltrust.storage.V0;
 
-namespace fiskaltrust.Middleware.Localization.QueuePT.v2
+namespace fiskaltrust.Middleware.Localization.QueuePT.Processors
 {
     public class InvoiceCommandProcessorPT : IInvoiceCommandProcessor
     {

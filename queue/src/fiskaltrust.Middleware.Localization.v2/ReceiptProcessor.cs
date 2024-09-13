@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.v2
 {
-    public class ReceiptProcessor
+    public class ReceiptProcessor : IReceiptProcessor
     {
         protected readonly IConfigurationRepository _configurationRepository;
         private readonly ILifecyclCommandProcessor _lifecyclCommandProcessor;

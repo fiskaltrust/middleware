@@ -1,13 +1,20 @@
-﻿using System.Collections.Generic;
-using System.Threading.Tasks;
+﻿using fiskaltrust.Middleware.Localization.QueuePT.Factories;
+using fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.v2;
 using fiskaltrust.storage.V0;
 
-namespace fiskaltrust.Middleware.Localization.QueuePT.v2
+namespace fiskaltrust.Middleware.Localization.QueuePT.Processors
 {
     public class ReceiptCommandProcessorPT : IReceiptCommandProcessor
     {
+        private readonly IPTSSCD _sscd;
+
+        public ReceiptCommandProcessorPT(IPTSSCD sscd)
+        {
+            _sscd = sscd;
+        }
+
         public async Task<ProcessCommandResponse> ProcessReceiptAsync(ProcessCommandRequest request)
         {
             var receiptCase = request.ReceiptRequest.ftReceiptCase & 0xFFFF;
@@ -32,7 +39,17 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.v2
 
         public async Task<ProcessCommandResponse> UnknownReceipt0x0000Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
 
-        public async Task<ProcessCommandResponse> PointOfSaleReceipt0x0001Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+        public async Task<ProcessCommandResponse> PointOfSaleReceipt0x0001Async(ProcessCommandRequest request)
+        {
+            var result = await _sscd.ProcessReceiptAsync(new ifPOS.v1.it.ProcessRequest
+            {
+                ReceiptRequest = request.ReceiptRequest,
+                ReceiptResponse = request.ReceiptResponse,
+            }, "");
+            var qrCode = PortugalReceiptCalculations.GetQRCodeFromReceipt(request.ReceiptRequest, result.Item2);
+            result.Item1.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreatePTQRCode(qrCode));
+            return await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+        }
 
         public async Task<ProcessCommandResponse> PaymentTransfer0x0002Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
 

@@ -7,17 +7,20 @@ using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Repositories;
-using fiskaltrust.Middleware.Localization.QueueIT.v2;
+using fiskaltrust.Middleware.Localization.QueuePT.Processors;
+using fiskaltrust.Middleware.Localization.v2;
+using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Moq;
 using Newtonsoft.Json;
 using Xunit;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
 {
-    public class QueueITStateTests
+    public class SignProcessorTests
     {
         private static readonly Guid _queueID = new Guid();
 
@@ -40,20 +43,17 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
             StopMoment = DateTime.UtcNow
         };
 
-        private IMarketSpecificSignProcessor GetSUT()
+        private SignProcessor GetSUT()
         {
-            var serviceCollection = new ServiceCollection();
-            serviceCollection.AddLogging();
-            serviceCollection.AddSingleton(Mock.Of<IConfigurationRepository>(MockBehavior.Strict));
-            serviceCollection.AddSingleton(Mock.Of<IJournalITRepository>());
-            serviceCollection.AddSingleton(Mock.Of<IClientFactory<IITSSCD>>(MockBehavior.Strict));
-            serviceCollection.AddSingleton(Mock.Of<IMiddlewareQueueItemRepository>(MockBehavior.Strict));
-            serviceCollection.AddSingleton(new MiddlewareConfiguration());
+            var configurationRepository = Mock.Of<IConfigurationRepository>();
+            var middlewareQueueItemRepository = Mock.Of<IMiddlewareQueueItemRepository>();
+            var middlewareReceiptJournalRepository = Mock.Of<IMiddlewareReceiptJournalRepository>();
+            var middlewareActionJournalRepository = Mock.Of<IMiddlewareActionJournalRepository>();
+            var cryptoHelper = Mock.Of<ICryptoHelper>();
+            var middlewareConfiguration = new MiddlewareConfiguration();
 
-            var bootstrapper = new QueueITBootstrapper();
-            bootstrapper.ConfigureServices(serviceCollection);
-
-            return serviceCollection.BuildServiceProvider().GetRequiredService<IMarketSpecificSignProcessor>();
+            var signProcessorPT = Mock.Of<IReceiptProcessor>();
+            return new SignProcessor(LoggerFactory.Create(x => { }).CreateLogger<SignProcessor>(), configurationRepository, middlewareQueueItemRepository, middlewareReceiptJournalRepository, middlewareActionJournalRepository, cryptoHelper, signProcessorPT.ProcessAsync, null, middlewareConfiguration);
         }
 
         public static IEnumerable<object[]> allNonInitialOperationReceipts()
@@ -89,7 +89,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
      "cbReceiptMoment": "{{DateTime.UtcNow.ToString("o")}}",
      "cbChargeItems": [],
      "cbPayItems": [],
-     "ftReceiptCase": {{0x4954200000000000 | (long) ReceiptCases.InitialOperationReceipt0x4001}},
+     "ftReceiptCase": {{0x5054200000000000 | (long) ReceiptCases.InitialOperationReceipt0x4001}},
      "ftReceiptCaseData": "",
      "cbUser": "Admin"
  }
@@ -100,7 +100,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
 
             receiptResponse.ftSignatures.Should().HaveCount(1);
             receiptResponse.ftSignatures[0].Data.Should().Be($"The queue is already operational. It is not allowed to send another InitOperation Receipt");
-            receiptResponse.ftState.Should().Be(0x4954_2000_EEEE_EEEE);
+            receiptResponse.ftState.Should().Be(0x5054_2000_EEEE_EEEE, because: $"ftState {receiptResponse.ftState.ToString("X")} is different than expected.");
         }
 
         [Theory]
@@ -116,7 +116,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
      "cbReceiptMoment": "{{DateTime.UtcNow.ToString("o")}}",
      "cbChargeItems": [],
      "cbPayItems": [],
-     "ftReceiptCase": {{0x4954200000000000 | (long) receiptCase}},
+     "ftReceiptCase": {{0x5054200000000000 | (long) receiptCase}},
      "ftReceiptCaseData": "",
      "cbUser": "Admin"
  }
@@ -126,7 +126,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
             var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, _queue, new ftQueueItem { });
 
             receiptResponse.ftSignatures.Should().BeEmpty();
-            receiptResponse.ftState.Should().Be(0x4954_2000_0000_0001);
+            receiptResponse.ftState.Should().Be(0x5054_2000_0000_0001, because: $"ftState {receiptResponse.ftState.ToString("X")} is different than expected.");
 
             actionJournals.Should().HaveCount(1);
             actionJournals[0].Message.Should().Be($"QueueId {_queue.ftQueueId} has not been activated yet.");
@@ -145,7 +145,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
      "cbReceiptMoment": "{{DateTime.UtcNow.ToString("o")}}",
      "cbChargeItems": [],
      "cbPayItems": [],
-     "ftReceiptCase": {{0x4954200000000000 | (long) receiptCase}},
+     "ftReceiptCase": {{0x5054200000000000 | (long) receiptCase}},
      "ftReceiptCaseData": "",
      "cbUser": "Admin"
  }
@@ -155,7 +155,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
             var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, _queueStopped, new ftQueueItem { });
 
             receiptResponse.ftSignatures.Should().BeEmpty();
-            receiptResponse.ftState.Should().Be(0x4954_2000_0000_0001);
+            receiptResponse.ftState.Should().Be(0x5054_2000_0000_0001, because: $"ftState {receiptResponse.ftState.ToString("X")} is different than expected.");
 
             actionJournals.Should().HaveCount(1);
             actionJournals[0].Message.Should().Be($"QueueId {_queue.ftQueueId} has been disabled.");

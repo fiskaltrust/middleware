@@ -15,6 +15,8 @@ namespace fiskaltrust.Middleware.Localization.v2.v2
 
         public string LastHash { get; set; }
 
+        public string LastSignature { get; set; }
+
         public string CashBoxIdentification { get; set; }
 
         public int SSCDFailCount { get; set; }

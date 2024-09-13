@@ -346,7 +346,7 @@ namespace fiskaltrust.Middleware.Localization.v2
                 cbTerminalID = request.cbTerminalID,
                 cbReceiptReference = request.cbReceiptReference,
                 ftReceiptMoment = DateTime.UtcNow,
-                ftState = (long) ((ulong) request.ftReceiptCase & 0xFFFF_0000_0000_0000),
+                ftState = (long) ((ulong) request.ftReceiptCase & 0xFFFF_F000_0000_0000),
                 ftReceiptIdentification = receiptIdentification
             };
             if (queue.IsDeactivated())
@@ -380,7 +380,7 @@ namespace fiskaltrust.Middleware.Localization.v2
                     Message = $"QueueId {queueItem.ftQueueId} has not been activated yet."
                 }
             };
-            receiptResponse.ftState += ftStatesFlags.SECURITY_MECHAMISN_DEACTIVATED;
+            receiptResponse.MarkAsDisabled();
             receiptResponse.ftReceiptIdentification = $"ft{queue.ftReceiptNumerator:X}#";
             return (receiptResponse, actionJournals);
         }
@@ -398,7 +398,7 @@ namespace fiskaltrust.Middleware.Localization.v2
                     Message = $"QueueId {queueItem.ftQueueId} has been disabled."
                 }
             };
-            receiptResponse.ftState += ftStatesFlags.SECURITY_MECHAMISN_DEACTIVATED;
+            receiptResponse.MarkAsDisabled();
             receiptResponse.ftReceiptIdentification = $"ft{queue.ftReceiptNumerator:X}#";
             return (receiptResponse, actionJournals);
         }

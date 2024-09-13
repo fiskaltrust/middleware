@@ -15,8 +15,13 @@ namespace fiskaltrust.Middleware.Localization.v2.Interface
                 Caption = "FAILURE",
                 Data = errorMessage,
                 ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                ftSignatureType = 0x4954_2000_0000_3000
+                ftSignatureType = (long) ((ulong) receiptResponse.ftState & (ulong) 0xFFFF_F000_0000_0000) | 0x3000
             });
+        }
+
+        public static void MarkAsDisabled(this ReceiptResponse receiptResponse)
+        {
+            receiptResponse.ftState += ftStatesFlags.SECURITY_MECHAMISN_DEACTIVATED;
         }
 
         public static void InsertSignatureItems(this ReceiptResponse receiptResponse, List<SignaturItem> signaturItems)

@@ -12,4 +12,13 @@ namespace System.Runtime.CompilerServices
     public static class IsExternalInit
     {
     }
+   
+
+    public class RequiredMemberAttribute : Attribute { }
+    public class CompilerFeatureRequiredAttribute : Attribute
+    {
+#pragma warning disable 
+        public CompilerFeatureRequiredAttribute(string name) { }
+#pragma warning restore 
+    }
 }
