@@ -26,7 +26,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.IntegrationTest
         [Trait("TseCategory", "Cloud")]
         public async Task ExportDataAsync_Should_Return_MultipleTransactionLogs()
         {
-            var sut = _fixture.GetSut();
+            var sut = await _fixture.GetSut();
 
             await sut.RegisterClientIdAsync(new RegisterClientIdRequest
             {
