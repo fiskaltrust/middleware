@@ -252,7 +252,9 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 _logger.LogDebug($"Starting SSCDFail-StartTransaction: {failedStartTransaction.cbReceiptReference}");
                 try
                 {
-                    var startTransactionResult = await _transactionFactory.PerformStartTransactionRequestAsync(failedStartTransaction.ftQueueItemId, failedStartTransaction.CashBoxIdentification, true).ConfigureAwait(false);
+                    var request = JsonConvert.DeserializeObject<ReceiptRequest>(failedStartTransaction.Request);
+                    (var processType, var payload) = _transactionPayloadFactory.CreateReceiptPayload(request);
+                    var startTransactionResult = await _transactionFactory.PerformStartTransactionRequestAsync(processType, payload, failedStartTransaction.ftQueueItemId, failedStartTransaction.CashBoxIdentification, true).ConfigureAwait(false);
                     await _openTransactionRepo.InsertOrUpdateTransactionAsync(new OpenTransaction
                     {
                         cbReceiptReference = failedStartTransaction.cbReceiptReference,

@@ -215,7 +215,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             _logger.LogTrace("RequestCommand.ProcessReceiptStartTransSignAsync [enter].");
             if (implicitFlow)
             {
-                var startTransactionResult = await _transactionFactory.PerformStartTransactionRequestAsync(queueItem.ftQueueItemId, queueDE.CashBoxIdentification).ConfigureAwait(false);
+                var startTransactionResult = await _transactionFactory.PerformStartTransactionRequestAsync(processType, payload, queueItem.ftQueueItemId, queueDE.CashBoxIdentification).ConfigureAwait(false);
                 await _openTransactionRepo.InsertOrUpdateTransactionAsync(new OpenTransaction
                 {
                     cbReceiptReference = transactionIdentifier,
@@ -239,7 +239,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
         protected async Task<ProcessReceiptResponse> ProcessReceiptAsync(string transactionIdentifier, string processType, string payload, ftQueueItem queueItem, ftQueueDE queueDE)
         {
             _logger.LogTrace("RequestCommand.ProcessReceiptAsync [enter].");
-            var startTransactionResult = await _transactionFactory.PerformStartTransactionRequestAsync(queueItem.ftQueueItemId, queueDE.CashBoxIdentification).ConfigureAwait(false);
+            var startTransactionResult = await _transactionFactory.PerformStartTransactionRequestAsync(processType, payload, queueItem.ftQueueItemId, queueDE.CashBoxIdentification).ConfigureAwait(false);
             _logger.LogTrace("RequestCommand.ProcessReceiptAsync Section openTransactionRepo.Insert [enter].");
             await _openTransactionRepo.InsertOrUpdateTransactionAsync(new OpenTransaction
             {

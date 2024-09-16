@@ -19,14 +19,17 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Transactions
             _logger = logger;
         }
 
-        public async Task<StartTransactionResponse> PerformStartTransactionRequestAsync(Guid ftQueueItemId, string cashBoxIdentification,  bool isRetry = false)
+        public async Task<StartTransactionResponse> PerformStartTransactionRequestAsync(string processType, string payload, Guid ftQueueItemId, string cashBoxIdentification, bool isRetry = false)
         {
             _logger.LogTrace("TransactionFactory.PerformStartTransactionRequestAsync [enter].");
             var startTransaction = new StartTransactionRequest
             {
                 QueueItemId = ftQueueItemId,
                 ClientId = cashBoxIdentification,
-                IsRetry = isRetry
+                IsRetry = isRetry,
+                ProcessDataBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(payload)),
+                ProcessType = processType
+
             };
             var response = await _deSSCDProvider.Instance.StartTransactionAsync(startTransaction).ConfigureAwait(false);
             _logger.LogTrace("TransactionFactory.PerformStartTransactionRequestAsync [exit].");
