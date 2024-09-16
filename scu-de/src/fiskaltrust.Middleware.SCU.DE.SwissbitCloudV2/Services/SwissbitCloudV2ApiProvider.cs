@@ -8,12 +8,9 @@ using System.Threading.Tasks;
 using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Exceptions;
 using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Models;
 using Newtonsoft.Json;
-using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Helpers;
-using fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser.Tar;
 using System.Net.Http.Headers;
-using System.Security.Cryptography.X509Certificates;
 using fiskaltrust.ifPOS.v1.de;
-using TseInfo = fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Models.TseInfo;
+
 
 namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
 {
@@ -63,6 +60,33 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
 
             throw new SwissbitCloudV2Exception($"Communication error ({response.StatusCode}) while creating a client (GET /api/v1/tse/clients). Response: {responseContent}",
                     (int) response.StatusCode, $"GET /api/v1/tse/clients");
+
+        }
+        public async Task<TseDto> GetTseStatusAsync()
+        {
+            var response = await _httpClient.GetAsync($"/api/v1/tse");
+            var responseContent = await response.Content.ReadAsStringAsync();
+            if (response.IsSuccessStatusCode)
+            {
+                return JsonConvert.DeserializeObject<TseDto>(responseContent);
+            }
+
+            throw new SwissbitCloudV2Exception($"Communication error ({response.StatusCode}) while Getting Tse Info (GET /api/v1/tse). Response: {responseContent}",
+                    (int) response.StatusCode, $"GET /api/v1/tse");
+
+        }
+
+        public async Task<List<int>> GetStartedTransactionsAsync()
+        {
+            var response = await _httpClient.GetAsync($"/api/v1/tse/transactions");
+            var responseContent = await response.Content.ReadAsStringAsync();
+            if (response.IsSuccessStatusCode)
+            {
+                return JsonConvert.DeserializeObject<List<int>>(responseContent);
+            }
+
+            throw new SwissbitCloudV2Exception($"Communication error ({response.StatusCode}) while Getting Tse transactions (GET /api/v1/tse/transactions). Response: {responseContent}",
+                    (int) response.StatusCode, $"GET /api/v1/tse/transactions");
 
         }
 

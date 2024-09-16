@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1.de;
-using TseInfo = fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Models.TseInfo;
 
 
 namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
@@ -19,6 +18,8 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
         Task<TseInfo> GetTseInfoAsync();
         Task SetTseStateAsync(TseState request);
 
+        Task<TseDto> GetTseStatusAsync();
+        Task<List<int>> GetStartedTransactionsAsync();
         Task<StartExportResponse> StartExport();
         Task StoreDownloadResultAsync(string exportId);
         Task<ExportStateResponse> GetExportStateResponseByIdAsync(string exportId);
