@@ -5,7 +5,7 @@ using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Models
 {
-    public class StartExportResponse
+    public class StartExportResponseDto
     {
         [JsonProperty("id")]
         public string ExportId { get; set; }

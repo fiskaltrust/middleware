@@ -20,11 +20,11 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
         Task<TseDto> GetTseStatusAsync();
         Task<List<int>> GetStartedTransactionsAsync();
 
-        Task<StartExportResponse> StartExport();
+        Task<StartExportResponseDto> StartExport();
         Task StoreDownloadResultAsync(string exportId);
-        Task<ExportStateResponse> GetExportStateResponseByIdAsync(string exportId);
-        Task<Stream> GetExportFromResponseUrlAsync(ExportStateResponse exportStateResponse);
-        Task<ExportStateResponse> DeleteExportByIdAsync(string exportId);
+        Task<ExportStateResponseDto> GetExportStateResponseByIdAsync(string exportId);
+        Task<Stream> GetExportFromResponseUrlAsync(ExportStateResponseDto exportStateResponse);
+        Task<ExportStateResponseDto> DeleteExportByIdAsync(string exportId);
 
 
         Task DeregisterClientAsync(ClientDto clientDto);

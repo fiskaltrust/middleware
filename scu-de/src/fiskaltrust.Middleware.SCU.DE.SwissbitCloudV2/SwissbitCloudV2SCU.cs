@@ -13,6 +13,7 @@ using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Constants;
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
+using System.Security.Cryptography;
 
 namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
 {
@@ -44,8 +45,8 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                 }
                 var startTransactionRequest = new TransactionRequestDto() { 
                     ClientId = request.ClientId,
-                    ProcessData = request.ProcessDataBase64,
-                    ProcessType = request.ProcessType
+                    ProcessData = request.ProcessDataBase64 ?? "",
+                    ProcessType = request.ProcessType ?? "",
                 };
                 var startTransactionResponse = await _swissbitCloudV2Provider.TransactionAsync(TransactionType.StartTransaction, startTransactionRequest);
 
@@ -374,10 +375,8 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
             }
         }
 
-        public Task<EndExportSessionResponse> EndExportSessionAsync(EndExportSessionRequest request)
+        public async Task<EndExportSessionResponse> EndExportSessionAsync(EndExportSessionRequest request)
         {
-            //Todo
-            /*
             if (request.TokenId.StartsWith(_noExport))
             {
                 return new EndExportSessionResponse
@@ -403,23 +402,16 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                         {
                             if (request.Erase)
                             {
-                                var openTransaction = await _fiskalyApiProvider.GetStartedTransactionsAsync(_configuration.TssId);
+                                var openTransaction = await _swissbitCloudV2Provider.GetStartedTransactionsAsync();
                                 if (openTransaction.Any())
                                 {
-                                    var list = string.Join(",", openTransaction.Select(x => x.Number).ToArray());
+                                    var list = string.Join(",", openTransaction);
                                     _logger.LogWarning("Could not delete log files from TSE after successfully exporting them because the following transactions were open: {OpenTransactions}. " +
                                         "If these transactions are not used anymore and could not be closed automatically by a daily closing receipt, please consider sending a fail-transaction-receipt to cancel them.", list);
                                 }
                                 else
                                 {
-                                    Dictionary<string, object> metadata;
-     
-                                        metadata = await _fiskalyApiProvider.GetExportMetadataAsync(_configuration.TssId, Guid.Parse(request.TokenId));
-                                    if (metadata.ContainsKey("end_transaction_number"))
-                                    {
-                                        await SetLastExportedTransactionNumber(Convert.ToInt64(metadata["end_transaction_number"], CultureInfo.InvariantCulture));
-                                        sessionResponse.IsErased = true;
-                                    }
+                                    await _swissbitCloudV2Provider.DeleteExportByIdAsync(request.TokenId);
                                 }
                             }
                             sessionResponse.IsValid = true;
@@ -448,8 +440,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                 {
                     _logger.LogError(ex, $"Failed to delete file {tempFileName} after succesfull export.");
                 }
-            }*/
-            return Task.FromResult( new EndExportSessionResponse());
+            }
         }
 
         public async Task<ScuDeEchoResponse> EchoAsync(ScuDeEchoRequest request) => await Task.FromResult(new ScuDeEchoResponse
@@ -485,7 +476,6 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
 
         public async Task<UnregisterClientIdResponse> UnregisterClientIdAsync(UnregisterClientIdRequest request)
         {
-            //Todo
             try
             {
                 if (await _clientCache.IsClientExistent(request.ClientId))

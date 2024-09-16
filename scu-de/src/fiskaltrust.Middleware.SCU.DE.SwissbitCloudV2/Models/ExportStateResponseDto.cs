@@ -5,7 +5,7 @@ using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Models
 {
-    public class ExportStateResponse
+    public class ExportStateResponseDto
     {
         /* 
             "pending""success""failure"

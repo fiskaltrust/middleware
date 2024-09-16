@@ -132,7 +132,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
             }
         }
 
-        public async Task<StartExportResponse> StartExport()
+        public async Task<StartExportResponseDto> StartExport()
         {
             var response = await _httpClient.PostAsync($"/api/v1/tse/export", null).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
@@ -141,7 +141,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
                 throw new SwissbitCloudV2Exception($"Communication error ({response.StatusCode}) while starting the export (POST api/v1/tse/export). Response: {responseContent}",
                     (int) response.StatusCode, $"PUT api/v1/tse/export");
             }
-            return JsonConvert.DeserializeObject<StartExportResponse>(await response.Content.ReadAsStringAsync());
+            return JsonConvert.DeserializeObject<StartExportResponseDto>(await response.Content.ReadAsStringAsync());
         }
 
         public async Task StoreDownloadResultAsync(string exportId)
@@ -154,7 +154,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
             contentStream.CopyTo(fileStream);
         }
 
-        public async Task<Stream> GetExportFromResponseUrlAsync(ExportStateResponse exportStateResponse)
+        public async Task<Stream> GetExportFromResponseUrlAsync(ExportStateResponseDto exportStateResponse)
         {
             using var exportClient = new HttpClient { BaseAddress = new Uri(_configuration.ApiEndpoint), Timeout = TimeSpan.FromSeconds(_configuration.SwissbitCloudV2Timeout) };
             var credentials = Encoding.ASCII.GetBytes($"{_configuration.TseSerialNumber}:{_configuration.TseAccessToken}");
@@ -170,32 +170,32 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
                 (int) response.StatusCode, $"GET {exportStateResponse.DownloadUrl}/{exportStateResponse.Filename}");
         }
 
-        public async Task<ExportStateResponse> GetExportStateResponseByIdAsync(string exportId)
+        public async Task<ExportStateResponseDto> GetExportStateResponseByIdAsync(string exportId)
         {
             var response = await _httpClient.GetAsync($"/api/v1/tse/export/{exportId}");
             var responseContent = await response.Content.ReadAsStringAsync();
             if (response.IsSuccessStatusCode)
             {
-                return JsonConvert.DeserializeObject<ExportStateResponse>(responseContent);
+                return JsonConvert.DeserializeObject<ExportStateResponseDto>(responseContent);
             }
             throw new SwissbitCloudV2Exception($"Communication error ({response.StatusCode}) while getting export state information (GET /api/v1/tse/export/{exportId}). Response: {responseContent}",
             (int) response.StatusCode, $"GET /api/v1/tse/export/{exportId}");
         }
 
-        public async Task<ExportStateResponse> DeleteExportByIdAsync(string exportId)
+        public async Task<ExportStateResponseDto> DeleteExportByIdAsync(string exportId)
         {
             var response = await _httpClient.DeleteAsync($"/api/v1/tse/export/{exportId}");
             var responseContent = await response.Content.ReadAsStringAsync();
             if (response.IsSuccessStatusCode)
             {
-                return JsonConvert.DeserializeObject<ExportStateResponse>(responseContent);
+                return JsonConvert.DeserializeObject<ExportStateResponseDto>(responseContent);
             }
             throw new SwissbitCloudV2Exception($"Communication error ({response.StatusCode}) while getting export state information (GET /api/v1/tse/export/{exportId}). Response: {responseContent}",
             (int) response.StatusCode, $"GET /api/v1/tse/export/{exportId}");
         }
 
 
-        private async Task<ExportStateResponse> WaitUntilExportFinishedAsync(string exportId)
+        private async Task<ExportStateResponseDto> WaitUntilExportFinishedAsync(string exportId)
         {
             var sw = Stopwatch.StartNew();
             do
