@@ -76,6 +76,21 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
 
         }
 
+        public async Task<TseDto> DisableTseAsync()
+        {
+            var response = await _httpClient.PostAsync("/api/v1/tse/disableSecureElement", new StringContent("", Encoding.UTF8, "application/json"));
+            var responseContent = await response.Content.ReadAsStringAsync();
+
+            if (response.IsSuccessStatusCode)
+            {
+                return await GetTseStatusAsync();
+            }
+
+            throw new SwissbitCloudV2Exception($"Communication error ({response.StatusCode}) while setting TSE state (POST /api/v1/tse/disableSecureElement). Response: {responseContent}",
+                    (int) response.StatusCode, "POST /api/v1/tse/disableSecureElement");
+
+        }
+
         public async Task<List<int>> GetStartedTransactionsAsync()
         {
             var response = await _httpClient.GetAsync($"/api/v1/tse/transactions");
@@ -212,21 +227,6 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
            
             return client;
         }
-
-        public async Task SetTseStateAsync(TseState state)
-        {
-            var jsonPayload = JsonConvert.SerializeObject(state, _serializerSettings);
-
-            var response = await _httpClient.PostAsync("/api/v1/tse/state", new StringContent(jsonPayload, Encoding.UTF8, "application/json"));
-            var responseContent = await response.Content.ReadAsStringAsync();
-
-            if (!response.IsSuccessStatusCode)
-            {
-                throw new SwissbitCloudV2Exception($"Communication error ({response.StatusCode}) while setting TSE state (POST /api/v1/tse/state). Response: {responseContent}",
-                    (int) response.StatusCode, "POST /api/v1/tse/state");
-            }
-        }
-
 
         public void Dispose() => _httpClient?.Dispose();
 

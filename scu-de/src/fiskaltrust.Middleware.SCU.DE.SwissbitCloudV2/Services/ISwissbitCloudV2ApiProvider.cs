@@ -15,7 +15,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
 
         Task<TransactionResponseDto> TransactionAsync(string transactionType, TransactionRequestDto transactionDto);
         
-        Task SetTseStateAsync(TseState request);
+        Task<TseDto> DisableTseAsync();
 
         Task<TseDto> GetTseStatusAsync();
         Task<List<int>> GetStartedTransactionsAsync();

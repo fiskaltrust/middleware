@@ -155,8 +155,19 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
         {
             try
             {
-                await _swissbitCloudV2Provider.SetTseStateAsync(request);
-                return request;
+                var tssResult = await _swissbitCloudV2Provider.GetTseStatusAsync();
+                if (tssResult.InitializationState == SwissbitCloudV2TseState.UNINITIALIZED.ToString())
+                {
+                    throw new SwissbitCloudV2Exception("The state of the TSE is 'UNINITIALIZED' and therefore not yet personalized, which is currently not supported.");
+                }
+                if (request.CurrentState != TseStates.Terminated)
+                {
+                    throw new SwissbitCloudV2Exception($"The state of the TSE is {tssResult.InitializationState} and therefore this request is not supported.");
+                }
+
+                var tseResult = await _swissbitCloudV2Provider.DisableTseAsync();
+
+                return ((SwissbitCloudV2TseState) Enum.Parse(typeof(SwissbitCloudV2TseState), tseResult.InitializationState, true)).ToTseState();
             }
             catch (Exception ex)
             {
