@@ -9,7 +9,7 @@ using Moq;
 
 namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.IntegrationTest
 {
-    public sealed class TestFixture
+    public sealed class SwissbitCloudV2Fixture
     {
         private SwissbitCloudV2SCU _instance;
 

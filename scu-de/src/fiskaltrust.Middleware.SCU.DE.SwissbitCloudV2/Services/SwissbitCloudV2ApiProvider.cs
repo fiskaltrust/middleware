@@ -12,6 +12,8 @@ using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Helpers;
 using fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser.Tar;
 using System.Net.Http.Headers;
 using System.Security.Cryptography.X509Certificates;
+using fiskaltrust.ifPOS.v1.de;
+using TseInfo = fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Models.TseInfo;
 
 namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
 {
@@ -52,7 +54,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
 
         public async Task<List<string>> GetClientsAsync()
         {
-             var response = await _httpClient.GetAsync($"/api/v1/tse/clients");
+            var response = await _httpClient.GetAsync($"/api/v1/tse/clients");
             var responseContent = await response.Content.ReadAsStringAsync();
             if (response.IsSuccessStatusCode)
             {
@@ -102,6 +104,19 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
                 var responseContent = await response.Content.ReadAsStringAsync();
                 throw new SwissbitCloudV2Exception($"Communication error ({response.StatusCode}) while creating a client (POST api/v1/tse/registerClient). Response: {responseContent}",
                     (int) response.StatusCode, $"PUT api/v1/tse/registerClient");
+            }
+        }
+
+        public async Task DeregisterClientAsync(ClientDto client)
+        {
+            var jsonPayload = JsonConvert.SerializeObject(client, _serializerSettings);
+
+            var response = await _httpClient.PostAsync($"/api/v1/tse/deregisterClient", new StringContent(jsonPayload, Encoding.UTF8, "application/json"));
+            if (!response.IsSuccessStatusCode)
+            {
+                var responseContent = await response.Content.ReadAsStringAsync();
+                throw new SwissbitCloudV2Exception($"Communication error ({response.StatusCode}) while deregistering client (POST /api/v1/tse/deregisterClient). Response: {responseContent}",
+                    (int) response.StatusCode, $"POST /api/v1/tse/deregisterClient for Client ID: {client.ClientId}");
             }
         }
 
@@ -187,6 +202,37 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
            
             return client;
         }
+
+        public async Task<TseInfo> GetTseInfoAsync()
+        {
+            var response = await _httpClient.GetAsync("/api/v1/tse");
+            var responseContent = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new SwissbitCloudV2Exception($"Communication error ({response.StatusCode}) while getting TSE info (GET /api/v1/tse). Response: {responseContent}",
+                    (int) response.StatusCode, "GET /api/v1/tse");
+            }
+
+            return JsonConvert.DeserializeObject<TseInfo>(responseContent);
+        }
+
+
+        public async Task SetTseStateAsync(TseState state)
+        {
+            var jsonPayload = JsonConvert.SerializeObject(state, _serializerSettings);
+
+            var response = await _httpClient.PostAsync("/api/v1/tse/state", new StringContent(jsonPayload, Encoding.UTF8, "application/json"));
+            var responseContent = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new SwissbitCloudV2Exception($"Communication error ({response.StatusCode}) while setting TSE state (POST /api/v1/tse/state). Response: {responseContent}",
+                    (int) response.StatusCode, "POST /api/v1/tse/state");
+            }
+        }
+
+
         public void Dispose() => _httpClient?.Dispose();
 
        

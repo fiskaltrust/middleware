@@ -12,6 +12,8 @@ using Newtonsoft.Json;
 using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Constants;
 using System.IO;
 using System.Linq;
+using TseInfo = fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Models.TseInfo;
+
 namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
 {
     public class SwissbitCloudV2SCU : IDESSCD
@@ -149,14 +151,12 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
             }
         }
 
-        public Task<TseState> SetTseStateAsync(TseState request)
+        public async Task<TseState> SetTseStateAsync(TseState request)
         {
             try
             {
-
-                //Todo 
-
-                return Task.FromResult(new TseState());
+                await _swissbitCloudV2Provider.SetTseStateAsync(request);
+                return request;
             }
             catch (Exception ex)
             {
@@ -340,7 +340,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                     {
                         tempStream.Seek(exportStateData.ReadPointer, SeekOrigin.Begin);
 
-                        if ((tempStream.Length - exportStateData.ReadPointer) < chunkSize)
+                        if (tempStream.Length - exportStateData.ReadPointer < chunkSize)
                         {
                             chunkSize = (int) tempStream.Length - exportStateData.ReadPointer;
                         }
@@ -480,10 +480,13 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
             {
                 if (await _clientCache.IsClientExistent(request.ClientId))
                 {
+                    var clientDto = new ClientDto { ClientId = request.ClientId };
+                    await _swissbitCloudV2Provider.DeregisterClientAsync(clientDto);
+
                     //Todo DisableClientAsync(_configuration.TssId, request.ClientId, _clientCache.GetClientId(request.ClientId));
                     _clientCache.RemoveClient(request.ClientId);
-
                 }
+
                 return new UnregisterClientIdResponse
                 {
                     ClientIds = _clientCache.GetClientIds()
@@ -495,6 +498,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                 throw;
             }
         }
+
         private StartTransactionResponse CreateStartTransactionResponse(string clientId, TransactionResponseDto transactionResponse)
         {
             return new StartTransactionResponse
@@ -568,6 +572,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                 return value;
             });
         }
+        
 
         public void Dispose() => _swissbitCloudV2Provider.Dispose();
     }

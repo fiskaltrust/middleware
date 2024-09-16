@@ -15,11 +15,11 @@ using Xunit;
 namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.IntegrationTest
 {
     [Collection("SwissbitCloudV2Tests")]
-    public class SwissbitCloudV2Tests : IClassFixture<TestFixture>
+    public class SwissbitCloudV2Tests : IClassFixture<SwissbitCloudV2Fixture>
     {
-        private readonly TestFixture _testFixture;
+        private readonly SwissbitCloudV2Fixture _testFixture;
 
-        public SwissbitCloudV2Tests(TestFixture testFixture)
+        public SwissbitCloudV2Tests(SwissbitCloudV2Fixture testFixture)
         {
             _testFixture = testFixture;
         }
