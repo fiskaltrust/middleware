@@ -5,7 +5,7 @@ using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Models
 {
-    public class TseInfo
+    public class TseInfo2
     {
         [JsonProperty("serialNumber")]
         public string SerialNumber { get; set; }
