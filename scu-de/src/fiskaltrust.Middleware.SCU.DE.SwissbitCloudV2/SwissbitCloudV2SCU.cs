@@ -109,14 +109,12 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
             }
         }
 
-        public Task<TseInfo> GetTseInfoAsync()
+        public async Task<TseInfo> GetTseInfoAsync()
         {
             try
             {
-
-                //Todo 
-
-                return Task.FromResult(new TseInfo());
+                var tseInfo = await _swissbitCloudV2Provider.GetTseInfoAsync();
+                return tseInfo;
             }
             catch (Exception ex)
             {
@@ -125,14 +123,12 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
             }
         }
 
-        public Task<TseState> SetTseStateAsync(TseState request)
+        public async Task<TseState> SetTseStateAsync(TseState request)
         {
             try
             {
-
-                //Todo 
-
-                return Task.FromResult(new TseState());
+                await _swissbitCloudV2Provider.SetTseStateAsync(request);
+                return request;
             }
             catch (Exception ex)
             {
@@ -548,6 +544,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                 return value;
             });
         }
+        
 
         public void Dispose() => _swissbitCloudV2Provider.Dispose();
     }
