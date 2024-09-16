@@ -200,21 +200,6 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
             return client;
         }
 
-        public async Task<TseInfo> GetTseInfoAsync()
-        {
-            var response = await _httpClient.GetAsync("/api/v1/tse");
-            var responseContent = await response.Content.ReadAsStringAsync();
-
-            if (!response.IsSuccessStatusCode)
-            {
-                throw new SwissbitCloudV2Exception($"Communication error ({response.StatusCode}) while getting TSE info (GET /api/v1/tse). Response: {responseContent}",
-                    (int) response.StatusCode, "GET /api/v1/tse");
-            }
-
-            return JsonConvert.DeserializeObject<TseInfo>(responseContent);
-        }
-
-
         public async Task SetTseStateAsync(TseState state)
         {
             var jsonPayload = JsonConvert.SerializeObject(state, _serializerSettings);
