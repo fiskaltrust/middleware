@@ -12,7 +12,6 @@ using Newtonsoft.Json;
 using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Constants;
 using System.IO;
 using System.Linq;
-using TseInfo = fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Models.TseInfo;
 using System.Collections.Generic;
 
 namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2

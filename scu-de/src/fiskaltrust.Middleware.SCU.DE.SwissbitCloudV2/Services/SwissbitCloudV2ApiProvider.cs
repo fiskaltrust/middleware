@@ -8,12 +8,9 @@ using System.Threading.Tasks;
 using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Exceptions;
 using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Models;
 using Newtonsoft.Json;
-using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Helpers;
-using fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser.Tar;
 using System.Net.Http.Headers;
-using System.Security.Cryptography.X509Certificates;
 using fiskaltrust.ifPOS.v1.de;
-using TseInfo = fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Models.TseInfo;
+
 
 namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
 {
