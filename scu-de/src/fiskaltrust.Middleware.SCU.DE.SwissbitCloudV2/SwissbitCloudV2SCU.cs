@@ -101,7 +101,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                     ProcessType = request.ProcessType,
                     Number = (int) request.TransactionNumber,
                 };
-                var finishTransactionResponse = await _swissbitCloudV2Provider.TransactionAsync(TransactionType.UpdateTransaction, finishTransactionRequest);
+                var finishTransactionResponse = await _swissbitCloudV2Provider.TransactionAsync(TransactionType.FinishTransaction, finishTransactionRequest);
 
                 return CreateFinishTransactionResponse(request.ClientId, finishTransactionRequest, finishTransactionResponse);
             }
