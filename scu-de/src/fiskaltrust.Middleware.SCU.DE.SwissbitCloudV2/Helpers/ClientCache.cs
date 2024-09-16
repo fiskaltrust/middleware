@@ -8,7 +8,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Helpers
 {
     public class ClientCache
     {
-        private readonly Dictionary<string, Guid> _registeredClients = new Dictionary<string, Guid>();
+        private readonly List<string> _registeredClients = new List<string>();
         private readonly ISwissbitCloudV2ApiProvider _swissbitCloudV2;
 
         public ClientCache(ISwissbitCloudV2ApiProvider swissbitCloudV2) => _swissbitCloudV2 = swissbitCloudV2;
@@ -22,21 +22,19 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Helpers
 
                 foreach (var client in clients)
                 {
-                    if (!_registeredClients.ContainsKey(client))
+                    if (!_registeredClients.Contains(client))
                     {
-                        _registeredClients.Add(client, Guid.NewGuid());
+                        _registeredClients.Add(client);
                     }
                 }
             }
-            return _registeredClients.ContainsKey(clientId);
+            return _registeredClients.Contains(clientId);
         }
 
-        public List<string> GetClientIds() => _registeredClients.Keys.ToList();
+        public List<string> GetClientIds() => _registeredClients;
 
-        public void AddClient(string serialNumber, Guid clientId) => _registeredClients.Add(serialNumber, clientId);
+        public void AddClient(string clientId) => _registeredClients.Add(clientId);
 
-        public void RemoveClient(string serialNumber) => _registeredClients.Remove(serialNumber);
-
-        public Guid GetClientId(string serialNumber) => _registeredClients[serialNumber];
+        public void RemoveClient(string clientId) => _registeredClients.Remove(clientId);
     }
 }

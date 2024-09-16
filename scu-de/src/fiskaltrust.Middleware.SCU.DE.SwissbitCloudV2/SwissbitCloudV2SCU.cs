@@ -457,9 +457,8 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                         throw new SwissbitCloudV2Exception($"The client '{request.ClientId}' could not be registered, as the maximum number of permitted clients for this TSS was reached. If you obtained this TSE via fiskaltrust's shop as a Queue-based product, only one client can be registered. Please refer to our product documentation for more details.");
                     }
 
-                    var clientId = Guid.NewGuid();
                     await _swissbitCloudV2Provider.CreateClientAsync(new ClientDto() {  ClientId = request.ClientId});
-                    _clientCache.AddClient(request.ClientId, clientId);
+                    _clientCache.AddClient(request.ClientId);
                 }
                 return new RegisterClientIdResponse
                 {
