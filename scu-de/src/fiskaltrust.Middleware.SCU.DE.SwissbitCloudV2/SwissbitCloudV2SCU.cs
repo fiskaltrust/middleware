@@ -12,7 +12,6 @@ using Newtonsoft.Json;
 using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Constants;
 using System.IO;
 using System.Linq;
-using System.Collections.Generic;
 namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
 {
     public class SwissbitCloudV2SCU : IDESSCD
