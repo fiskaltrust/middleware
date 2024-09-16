@@ -132,14 +132,14 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
         public async Task StoreDownloadResultAsync(string exportId)
         {
             var exportStateResponse = await WaitUntilExportFinishedAsync(exportId);
-            var contentStream = await GetExportByExportStateAsync(exportStateResponse);
+            var contentStream = await GetExportFromResponseUrlAsync(exportStateResponse);
 
             using var fileStream = File.Create(exportId.ToString());
             contentStream.Position = 0;
             contentStream.CopyTo(fileStream);
         }
 
-        public async Task<Stream> GetExportByExportStateAsync(ExportStateResponse exportStateResponse)
+        public async Task<Stream> GetExportFromResponseUrlAsync(ExportStateResponse exportStateResponse)
         {
             using var exportClient = new HttpClient { BaseAddress = new Uri(_configuration.ApiEndpoint), Timeout = TimeSpan.FromSeconds(_configuration.SwissbitCloudV2Timeout) };
             var credentials = Encoding.ASCII.GetBytes($"{_configuration.TseSerialNumber}:{_configuration.TseAccessToken}");
@@ -166,6 +166,19 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
             throw new SwissbitCloudV2Exception($"Communication error ({response.StatusCode}) while getting export state information (GET /api/v1/tse/export/{exportId}). Response: {responseContent}",
             (int) response.StatusCode, $"GET /api/v1/tse/export/{exportId}");
         }
+
+        public async Task<ExportStateResponse> DeleteExportByIdAsync(string exportId)
+        {
+            var response = await _httpClient.DeleteAsync($"/api/v1/tse/export/{exportId}");
+            var responseContent = await response.Content.ReadAsStringAsync();
+            if (response.IsSuccessStatusCode)
+            {
+                return JsonConvert.DeserializeObject<ExportStateResponse>(responseContent);
+            }
+            throw new SwissbitCloudV2Exception($"Communication error ({response.StatusCode}) while getting export state information (GET /api/v1/tse/export/{exportId}). Response: {responseContent}",
+            (int) response.StatusCode, $"GET /api/v1/tse/export/{exportId}");
+        }
+
 
         private async Task<ExportStateResponse> WaitUntilExportFinishedAsync(string exportId)
         {
