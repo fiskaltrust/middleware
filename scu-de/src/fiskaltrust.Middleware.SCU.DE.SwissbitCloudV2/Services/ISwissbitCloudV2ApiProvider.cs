@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1.de;
+using TseInfo = fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Models.TseInfo;
 
 
 namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
