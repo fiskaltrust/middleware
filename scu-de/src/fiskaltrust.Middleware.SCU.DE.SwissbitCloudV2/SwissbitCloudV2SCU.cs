@@ -12,6 +12,7 @@ using Newtonsoft.Json;
 using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Constants;
 using System.IO;
 using System.Linq;
+using System.Collections.Generic;
 namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
 {
     public class SwissbitCloudV2SCU : IDESSCD
@@ -109,14 +110,38 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
             }
         }
 
-        public Task<TseInfo> GetTseInfoAsync()
+        public async Task<TseInfo> GetTseInfoAsync()
         {
             try
             {
+                var clientDto = await _swissbitCloudV2Provider.GetClientsAsync().ConfigureAwait(false);
+                var tseResult = await _swissbitCloudV2Provider.GetTseStatusAsync();
+                var startedTransactions = await _swissbitCloudV2Provider.GetStartedTransactionsAsync();
 
-                //Todo 
-
-                return Task.FromResult(new TseInfo());
+                return new TseInfo
+                {
+                    CurrentNumberOfClients = tseResult.NumberOfRegisteredClients,
+                    CurrentNumberOfStartedTransactions = tseResult.NumberOfStartedTransactions,
+                    SerialNumberOctet = tseResult.SerialNumber,
+                    PublicKeyBase64 = "tssResult.PublicKey",
+                    FirmwareIdentification = tseResult.SoftwareVersion,
+                    CertificationIdentification = tseResult.CreditClientId,//To ask?
+                    MaxNumberOfClients = tseResult.MaxNumberOfRegisteredClients,
+                    MaxNumberOfStartedTransactions = tseResult.MaxNumberOfStartedTransactions,
+                    CertificatesBase64 = new List<string>
+                    {
+                        tseResult.CertificateChain
+                    },
+                    CurrentClientIds = clientDto,
+                    SignatureAlgorithm = "tssResult.SignatureAlgorithm",
+                    CurrentLogMemorySize = tseResult.StorageUsed,
+                    CurrentNumberOfSignatures = tseResult.CreatedSignatures,
+                    LogTimeFormat = "tseResult.SignatureTimestampFormat",
+                    MaxLogMemorySize = tseResult.StorageCapacity,
+                    MaxNumberOfSignatures = long.MaxValue,
+                    CurrentStartedTransactionNumbers = startedTransactions.Select(x => (ulong) x).ToList(),
+                    CurrentState = ((SwissbitCloudV2TseState) Enum.Parse(typeof(SwissbitCloudV2TseState), tseResult.InitializationState, true)).ToTseStateEnum()
+                };
             }
             catch (Exception ex)
             {

@@ -63,6 +63,33 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
                     (int) response.StatusCode, $"GET /api/v1/tse/clients");
 
         }
+        public async Task<TseDto> GetTseStatusAsync()
+        {
+            var response = await _httpClient.GetAsync($"/api/v1/tse");
+            var responseContent = await response.Content.ReadAsStringAsync();
+            if (response.IsSuccessStatusCode)
+            {
+                return JsonConvert.DeserializeObject<TseDto>(responseContent);
+            }
+
+            throw new SwissbitCloudV2Exception($"Communication error ({response.StatusCode}) while Getting Tse Info (GET /api/v1/tse). Response: {responseContent}",
+                    (int) response.StatusCode, $"GET /api/v1/tse");
+
+        }
+
+        public async Task<List<int>> GetStartedTransactionsAsync()
+        {
+            var response = await _httpClient.GetAsync($"/api/v1/tse/transactions");
+            var responseContent = await response.Content.ReadAsStringAsync();
+            if (response.IsSuccessStatusCode)
+            {
+                return JsonConvert.DeserializeObject<List<int>>(responseContent);
+            }
+
+            throw new SwissbitCloudV2Exception($"Communication error ({response.StatusCode}) while Getting Tse transactions (GET /api/v1/tse/transactions). Response: {responseContent}",
+                    (int) response.StatusCode, $"GET /api/v1/tse/transactions");
+
+        }
 
         public async Task CreateClientAsync(ClientDto client)
         {
