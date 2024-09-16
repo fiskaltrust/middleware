@@ -70,6 +70,24 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.IntegrationTest
 
         [Fact]
         [Trait("TseCategory", "Cloud")]
+        public async Task UnregisterClientIdAsync_Should_Remove_Registered_Client()
+        {
+            var sut = await _testFixture.GetSut();
+
+            var ClientId = Guid.NewGuid().ToString().Replace("-", "").Remove(30);
+            await sut.RegisterClientIdAsync(new RegisterClientIdRequest { ClientId = ClientId });
+
+            var clientsBeforeUnregister = await sut.RegisterClientIdAsync(new RegisterClientIdRequest { ClientId = ClientId });
+            clientsBeforeUnregister.ClientIds.Should().Contain(ClientId);
+
+            await sut.UnregisterClientIdAsync(new UnregisterClientIdRequest { ClientId = ClientId });
+
+            var clientsAfterUnregister = await sut.RegisterClientIdAsync(new RegisterClientIdRequest { ClientId = ClientId });
+            clientsAfterUnregister.ClientIds.Should().NotContain(ClientId);
+        }
+
+        [Fact]
+        [Trait("TseCategory", "Cloud")]
         public async Task UpdateTransactionAsync_Should_Not_Increment_TransactionNumber_And_Increment_SignatureCounter()
         {
             var sut = await _testFixture.GetSut();
@@ -184,7 +202,26 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.IntegrationTest
             finishResult.ProcessDataBase64.Should().BeEquivalentTo(finishRequest.ProcessDataBase64);
             finishResult.ProcessType.Should().Be(finishRequest.ProcessType);
         }
-                
+
+        [Fact]
+        [Trait("TseCategory", "Cloud")]
+        public async Task GetTseInfoAsync_Should_Return_Valid_TseInfo()
+        {
+            var sut = await _testFixture.GetSut();
+
+            var tseInfo = await sut.GetTseInfoAsync();
+
+            tseInfo.Should().NotBeNull();
+            tseInfo.SerialNumber.Should().NotBeNullOrEmpty();
+
+            var expectedHealthStates = new[] { TseHealthState.Started, TseHealthState.Stopped, TseHealthState.Defect };
+            expectedHealthStates.Should().Contain(tseInfo.HealthState);
+
+            var expectedInitStates = new[] { TseInitializationState.Initialized, TseInitializationState.Uninitialized, TseInitializationState.Disabled };
+            expectedInitStates.Should().Contain(tseInfo.InitializationState);
+        }
+
+
         private Task GetSut()
         {
             return _testFixture.GetSut();  
@@ -255,5 +292,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.IntegrationTest
                 IsRetry = false,
             };
         }
+
+       
     }
 }
