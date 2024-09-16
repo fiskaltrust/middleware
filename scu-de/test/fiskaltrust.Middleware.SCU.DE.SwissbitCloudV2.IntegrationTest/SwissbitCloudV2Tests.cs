@@ -9,6 +9,7 @@ using fiskaltrust.ifPOS.v1.de;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Org.BouncyCastle.Asn1.Ocsp;
 using Xunit;
 
 
@@ -75,15 +76,13 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.IntegrationTest
             var sut = await _testFixture.GetSut();
 
             var ClientId = Guid.NewGuid().ToString().Replace("-", "").Remove(30);
-            await sut.RegisterClientIdAsync(new RegisterClientIdRequest { ClientId = ClientId });
+            
+            var registerdClients = await sut.RegisterClientIdAsync(new RegisterClientIdRequest { ClientId = ClientId });
+            registerdClients.ClientIds.Should().Contain(ClientId);
 
-            var clientsBeforeUnregister = await sut.RegisterClientIdAsync(new RegisterClientIdRequest { ClientId = ClientId });
-            clientsBeforeUnregister.ClientIds.Should().Contain(ClientId);
+            var unregisterdClients = await sut.UnregisterClientIdAsync(new UnregisterClientIdRequest { ClientId = ClientId });
 
-            await sut.UnregisterClientIdAsync(new UnregisterClientIdRequest { ClientId = ClientId });
-
-            var clientsAfterUnregister = await sut.RegisterClientIdAsync(new RegisterClientIdRequest { ClientId = ClientId });
-            clientsAfterUnregister.ClientIds.Should().NotContain(ClientId);
+            unregisterdClients.ClientIds.Should().NotContain(ClientId);
         }
 
         [Fact]
@@ -142,8 +141,8 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.IntegrationTest
             finishResult.ProcessType.Should().Be(finishRequest.ProcessType);
 
             var tseInfo = await sut.GetTseInfoAsync();
-            //startResult.TseSerialNumberOctet.Should().Be(tseInfo.SerialNumberOctet);
-            //finishResult.TseSerialNumberOctet.Should().Be(tseInfo.SerialNumberOctet);
+            startResult.TseSerialNumberOctet.Should().Be(tseInfo.SerialNumberOctet);
+            finishResult.TseSerialNumberOctet.Should().Be(tseInfo.SerialNumberOctet);
         }
 
         [Fact]
@@ -205,27 +204,43 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.IntegrationTest
 
         [Fact]
         [Trait("TseCategory", "Cloud")]
+        public async Task SetTseStateAsync_Should_Fail_Because_AskInitialization()
+        {
+            // In SwissbitCloudV2 only DisableTSE is possible
+            // TSE will be initialize on Creation step
+            var sut = await _testFixture.GetSut();
+
+            var tseState = new TseState
+            {
+                CurrentState = TseStates.Initialized
+            };
+            var action = new Func<Task>(async () => await sut.SetTseStateAsync(tseState));
+
+            await action.Should().ThrowAsync<Exception>().WithMessage($"The state of the TSE is {tseState.CurrentState} and therefore this request is not supported.");
+           
+        }
+
+        [Fact]
+        [Trait("TseCategory", "Cloud")]
         public async Task GetTseInfoAsync_Should_Return_Valid_TseInfo()
         {
             var sut = await _testFixture.GetSut();
 
-            var tseInfo = await sut.GetTseInfoAsync();
+            var result = await sut.GetTseInfoAsync().ConfigureAwait(false);
 
-            tseInfo.Should().NotBeNull();
-            tseInfo.SerialNumber.Should().NotBeNullOrEmpty();
-
-            var expectedHealthStates = new[] { TseHealthState.Started, TseHealthState.Stopped, TseHealthState.Defect };
-            expectedHealthStates.Should().Contain(tseInfo.HealthState);
-
-            var expectedInitStates = new[] { TseInitializationState.Initialized, TseInitializationState.Uninitialized, TseInitializationState.Disabled };
-            expectedInitStates.Should().Contain(tseInfo.InitializationState);
+            result.Should().NotBeNull();
+            result.CurrentNumberOfClients.Should().BeGreaterThan(0);
+            result.SerialNumberOctet.Should().NotBeNullOrEmpty();
+            result.PublicKeyBase64.Should().NotBeNullOrEmpty();
+            result.MaxNumberOfClients.Should().BeGreaterOrEqualTo(result.CurrentNumberOfClients);
+            result.MaxNumberOfStartedTransactions.Should().BeGreaterOrEqualTo(result.CurrentNumberOfStartedTransactions);
+            result.CertificatesBase64.Should().HaveCount(1);
+            result.CurrentClientIds.Should().Contain(_testFixture.TestClientId);
+            result.CurrentState.Should().Be(TseStates.Initialized);
         }
 
 
-        private Task GetSut()
-        {
-            return _testFixture.GetSut();  
-        }
+        
 
         private StartTransactionRequest CreateStartTransactionRequest(string clientId)
         {
