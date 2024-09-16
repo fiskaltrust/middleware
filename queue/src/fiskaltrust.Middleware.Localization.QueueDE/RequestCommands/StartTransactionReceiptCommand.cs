@@ -13,7 +13,6 @@ using fiskaltrust.Middleware.Localization.QueueDE.Services;
 using fiskaltrust.Middleware.Localization.QueueDE.Transactions;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
-using static fiskaltrust.Exports.DSFinVK.Constants.DSFinVKConstants;
 
 namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 {
@@ -40,13 +39,11 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 throw new ArgumentException($"Transactionnumber {opentrans.TransactionNumber} was already started using cbReceiptReference '{request.cbReceiptReference}'.");
             }
 
-            var (processType, payload) = _transactionPayloadFactory.CreateReceiptPayload(request);
-
             var receiptResponse = CreateReceiptResponse(request, queueItem, queueDE);
 
             try
             {
-                (var transactionNumber, var signatures) = await ProcessStartTransactionRequestAsync(request.cbReceiptReference, queueItem, queueDE, processType, payload).ConfigureAwait(false);
+                (var transactionNumber, var signatures) = await ProcessStartTransactionRequestAsync(request.cbReceiptReference, queueItem, queueDE).ConfigureAwait(false);
 
                 receiptResponse.ftReceiptIdentification = request.GetReceiptIdentification(queue.ftReceiptNumerator, transactionNumber);
 
@@ -79,10 +76,10 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             }
         }
 
-        private async Task<(ulong transactionNumber, List<SignaturItem> signatures)> ProcessStartTransactionRequestAsync(string transactionIdentifier, ftQueueItem queueItem, ftQueueDE queueDE, string processType, string payload)
+        private async Task<(ulong transactionNumber, List<SignaturItem> signatures)> ProcessStartTransactionRequestAsync(string transactionIdentifier, ftQueueItem queueItem, ftQueueDE queueDE)
         {
             _logger.LogTrace("StartTransactionReceiptCommand.ProcessStartTransactionRequestAsync [enter].");
-            var startTransactionResult = await _transactionFactory.PerformStartTransactionRequestAsync(processType, payload, queueItem.ftQueueItemId, queueDE.CashBoxIdentification).ConfigureAwait(false);
+            var startTransactionResult = await _transactionFactory.PerformStartTransactionRequestAsync(queueItem.ftQueueItemId, queueDE.CashBoxIdentification).ConfigureAwait(false);
             await _openTransactionRepo.InsertOrUpdateTransactionAsync(new OpenTransaction
             {
                 cbReceiptReference = transactionIdentifier,

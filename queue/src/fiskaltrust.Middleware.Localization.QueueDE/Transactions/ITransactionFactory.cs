@@ -8,7 +8,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Transactions
 {
     public interface ITransactionFactory
     {
-        Task<StartTransactionResponse> PerformStartTransactionRequestAsync(string processType, string payload, Guid ftQueueItemId, string cashBoxIdentification, bool isRetry = false);
+        Task<StartTransactionResponse> PerformStartTransactionRequestAsync(Guid ftQueueItemId, string cashBoxIdentification, bool isRetry = false);
         Task<FinishTransactionResponse> PerformFinishTransactionRequestAsync(string processType, string payload, Guid ftQueueItemId, string cashBoxIdentification, ulong transactionNumber, bool isRetry = false);
         Task<UpdateTransactionResponse> PerformUpdateTransactionRequestAsync(string processType, string payload, Guid ftQueueItemId, string cashBoxIdentification, ulong transactionNumber, bool isRetry = false);
  }
