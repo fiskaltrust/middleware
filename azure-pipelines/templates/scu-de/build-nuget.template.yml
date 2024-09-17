@@ -1,3 +1,10 @@
+parameters:
+- name: projects
+  type: object
+
+- name: workingDirectory
+  type: string
+
 steps:    
 - task: yavt@1
   inputs:
