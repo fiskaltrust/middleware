@@ -59,7 +59,7 @@ steps:
      ${{ parameters.workingDirectory }}/src/**/*fiskaltrust*.exe
 
 - ${{ each project in parameters.projects }}:
-    - ? ${{ if eq(project, 'fiskaltrust.Middleware.SCU.DE.CryptoVision'))}}:
+    - ? ${{ if eq(project, 'fiskaltrust.Middleware.SCU.DE.CryptoVision')}}:
           - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration) /p:NuspecFile=.nuspec  
             displayName: 'dotnet pack ${{ project }}'
             workingDirectory: '${{ parameters.workingDirectory }}/src/${{ project }}'  
