@@ -1,46 +1,53 @@
-steps:    
-- task: yavt@1
+parameters:
+- name: projects
+  type: object
+
+- name: workingDirectory
+  type: string
+
+steps:
+- task: yavt@1 
   inputs:
     mode: 'Multi'
+    updateNuspecFiles: true
+    updateBuildNumber: false
     semverVersion: 'v1'
     failOnTagVersionMismatch: true
 
 - powershell: |
-    $nugetFeed = if ($Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/release/") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/main") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/tags/")) { "release" } else { "dev" }
+    $nugetFeed = if ($Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/release/") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/main") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/tags")) { "release" } else { "dev" }
     Write-Host "##vso[task.setvariable variable=NuGetFeed;]$nugetFeed"
   displayName: Set NuGet feed
-
+  
 - task: Cache@2
   inputs:
-    key: 'nuget | "$(Agent.OS)" | scu-de/**/*.csproj'
+    key: 'nuget | "$(Agent.OS)" | ${{ parameters.workingDirectory }}/**/*.csproj'
     restoreKeys: |
       nuget | "$(Agent.OS)"
       nuget
     path: $(UserProfile)/.nuget/packages
   displayName: Cache NuGet packages
 
-- task: NuGetToolInstaller@1
-
-- task: NuGetCommand@2
+- task: DotNetCoreCLI@2
   inputs:
     command: 'restore'
-    restoreSolution: '$(WorkingDirectory)/$(Solution)'
+    projects: '${{ parameters.workingDirectory }}/$(Solution)'
     feedsToUse: 'select'
     vstsFeed: '$(NuGetFeed)'
+  displayName: 'Restore'
 
-- task: JavaToolInstaller@0
+- task: DotNetCoreCLI@2
+  displayName: Build
   inputs:
-    versionSpec: '11'
-    jdkArchitectureOption: 'x64'
-    jdkSourceOption: 'PreInstalled'
+    projects: '${{ parameters.workingDirectory }}/$(Solution)'
+    arguments: '--configuration $(BuildConfiguration) --no-restore'
 
-- pwsh: |
-    & ${Env:ANDROID_SDK_ROOT}\cmdline-tools\latest\bin\sdkmanager.bat "platforms;android-28"
-
-- task: VSBuild@1
-  inputs:
-    solution: '$(WorkingDirectory)/$(Solution)'
-    configuration: '$(BuildConfiguration)'
+- script: |
+    dotnet publish --configuration $(buildConfiguration) --no-restore -f net461
+    dotnet publish --configuration $(buildConfiguration) --no-restore -f netstandard2.0
+    dotnet publish --configuration $(buildConfiguration) --no-restore -f netstandard2.1
+  displayName: 'dotnet publish fiskaltrust.Middleware.Queue.SQLite'
+  workingDirectory: '${{ parameters.workingDirectory }}/src/fiskaltrust.Middleware.Queue.SQLite'
 
 - task: codesigning@2
   displayName: 'Code Signing'
@@ -48,55 +55,21 @@ steps:
     secureFileId: 'codesigning.pfx'
     signCertPassword: '$(Code_Signing_Password)'
     filePaths: |
-      $(WorkingDirectory)/src/**/*fiskaltrust*.dll
-      $(WorkingDirectory)/src/**/*fiskaltrust*.exe
+     ${{ parameters.workingDirectory }}/src/**/*fiskaltrust*.dll
+     ${{ parameters.workingDirectory }}/src/**/*fiskaltrust*.exe
 
-- script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration) /p:NuspecFile=.nuspec
-  displayName: 'dotnet pack fiskaltrust.Middleware.SCU.DE.CryptoVision'
-  workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.CryptoVision'
-
-- script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
-  displayName: 'dotnet pack fiskaltrust.Middleware.SCU.DE.DieboldNixdorf'
-  workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.DieboldNixdorf'
-
-- script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
-  displayName: 'dotnet pack fiskaltrust.Middleware.SCU.DE.Epson'
-  workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.Epson'
-
-- script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
-  displayName: 'dotnet pack fiskaltrust.Middleware.SCU.DE.FiskalyCertified'
-  workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.FiskalyCertified'
-
-- script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration) /p:NuspecFile=.nuspec
-  displayName: 'dotnet pack fiskaltrust.Middleware.SCU.DE.Swissbit'
-  workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.Swissbit'
-
-- script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
-  displayName: 'dotnet pack fiskaltrust.Middleware.SCU.DE.DeutscheFiskal'
-  workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.DeutscheFiskal'
-
-- script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
-  displayName: 'dotnet pack fiskaltrust.Middleware.SCU.DE.SwissbitCloud'
-  workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.SwissbitCloud'
-
-- script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
-  displayName: 'dotnet pack fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2'
-  workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2'
-  
-- script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
-  displayName: 'dotnet pack fiskaltrust.Middleware.SCU.DE.InMemory'
-  workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.InMemory'
-
-- task: NuGetCommand@2
-  displayName: 'nuget pack fiskaltrust.Middleware.SCU.DE.SwissbitAndroid'
-  inputs:
-    command: 'pack'
-    packagesToPack: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.SwissbitAndroid/.nuspec'
-    versioningScheme: 'off'
-    basePath: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.SwissbitAndroid/'
+- ${{ each project in parameters.projects }}:
+    ${{ if eq(project, 'fiskaltrust.Middleware.Queue.SQLite') }}:
+      - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration) /p:NuspecFile=.nuspec
+        displayName: 'dotnet pack ${{ project }}'
+        workingDirectory: '${{ parameters.workingDirectory }}/src/${{ project }}'
+    ${{ else }}:
+      - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration) 
+        displayName: 'dotnet pack ${{ project }}'
+        workingDirectory: '${{ parameters.workingDirectory }}/src/${{ project }}'
 
 - task: PublishBuildArtifacts@1
   displayName: 'Publish Artifact: drop'
   inputs:
-    PathtoPublish: '$(build.artifactstagingdirectory)'
+    pathToPublish: '$(build.artifactstagingdirectory)'
     artifactName: packages-v1
