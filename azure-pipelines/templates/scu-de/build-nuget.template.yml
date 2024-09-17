@@ -28,26 +28,28 @@ steps:
     path: $(UserProfile)/.nuget/packages
   displayName: Cache NuGet packages
 
-- task: DotNetCoreCLI@2
+- task: NuGetToolInstaller@1
+
+- task: NuGetCommand@2
   inputs:
     command: 'restore'
-    projects: '${{ parameters.workingDirectory }}/$(Solution)'
+    restoreSolution: '${{ parameters.workingDirectory }}/$(Solution)'
     feedsToUse: 'select'
     vstsFeed: '$(NuGetFeed)'
-  displayName: 'Restore'
 
-- task: DotNetCoreCLI@2
-  displayName: Build
+- task: JavaToolInstaller@0
   inputs:
-    projects: '${{ parameters.workingDirectory }}/$(Solution)'
-    arguments: '--configuration $(BuildConfiguration) --no-restore'
+    versionSpec: '11'
+    jdkArchitectureOption: 'x64'
+    jdkSourceOption: 'PreInstalled'
 
-- script: |
-    dotnet publish --configuration $(buildConfiguration) --no-restore -f net461
-    dotnet publish --configuration $(buildConfiguration) --no-restore -f netstandard2.0
-    dotnet publish --configuration $(buildConfiguration) --no-restore -f netstandard2.1
-  displayName: 'dotnet publish fiskaltrust.Middleware.Queue.SQLite'
-  workingDirectory: '${{ parameters.workingDirectory }}/src/fiskaltrust.Middleware.Queue.SQLite'
+- pwsh: |
+    & ${Env:ANDROID_SDK_ROOT}\cmdline-tools\latest\bin\sdkmanager.bat "platforms;android-28"
+
+- task: VSBuild@1
+  inputs:
+    solution: '${{ parameters.workingDirectory }}/$(Solution)'
+    configuration: '$(BuildConfiguration)'
 
 - task: codesigning@2
   displayName: 'Code Signing'
