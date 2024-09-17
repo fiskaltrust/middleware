@@ -194,10 +194,6 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                     };
                 }
 
-                if (!await _clientCache.IsClientExistent(request.ClientId))
-                {
-                    throw new Exception($"The client {request.ClientId} is not registered.");
-                }
                 var startExportResponse = await _swissbitCloudV2Provider.StartExport();
 
                 CacheExportAsync(startExportResponse.ExportId).ExecuteInBackgroundThread();
