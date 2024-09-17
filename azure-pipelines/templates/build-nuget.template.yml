@@ -1,0 +1,75 @@
+parameters:
+- name: projects
+  type: object
+
+- name: workingDirectory
+  type: string
+
+steps:
+- task: yavt@1 
+  inputs:
+    mode: 'Multi'
+    updateNuspecFiles: true
+    updateBuildNumber: false
+    semverVersion: 'v1'
+    failOnTagVersionMismatch: true
+
+- powershell: |
+    $nugetFeed = if ($Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/release/") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/main") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/tags")) { "release" } else { "dev" }
+    Write-Host "##vso[task.setvariable variable=NuGetFeed;]$nugetFeed"
+  displayName: Set NuGet feed
+  
+- task: Cache@2
+  inputs:
+    key: 'nuget | "$(Agent.OS)" | ${{ parameters.workingDirectory }}/**/*.csproj'
+    restoreKeys: |
+      nuget | "$(Agent.OS)"
+      nuget
+    path: $(UserProfile)/.nuget/packages
+  displayName: Cache NuGet packages
+
+- task: DotNetCoreCLI@2
+  inputs:
+    command: 'restore'
+    projects: '${{ parameters.workingDirectory }}/$(Solution)'
+    feedsToUse: 'select'
+    vstsFeed: '$(NuGetFeed)'
+  displayName: 'Restore'
+
+- task: DotNetCoreCLI@2
+  displayName: Build
+  inputs:
+    projects: '${{ parameters.workingDirectory }}/$(Solution)'
+    arguments: '--configuration $(BuildConfiguration) --no-restore'
+
+- script: |
+    dotnet publish --configuration $(buildConfiguration) --no-restore -f net461
+    dotnet publish --configuration $(buildConfiguration) --no-restore -f netstandard2.0
+    dotnet publish --configuration $(buildConfiguration) --no-restore -f netstandard2.1
+  displayName: 'dotnet publish fiskaltrust.Middleware.Queue.SQLite'
+  workingDirectory: '${{ parameters.workingDirectory }}/src/fiskaltrust.Middleware.Queue.SQLite'
+
+- task: codesigning@2
+  displayName: 'Code Signing'
+  inputs:
+    secureFileId: 'codesigning.pfx'
+    signCertPassword: '$(Code_Signing_Password)'
+    filePaths: |
+     ${{ parameters.workingDirectory }}/src/**/*fiskaltrust*.dll
+     ${{ parameters.workingDirectory }}/src/**/*fiskaltrust*.exe
+
+- ${{ each project in parameters.projects }}:
+    ${{ if eq(project, 'fiskaltrust.Middleware.Queue.SQLite') }}:
+      - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration) /p:NuspecFile=.nuspec
+        displayName: 'dotnet pack ${{ project }}'
+        workingDirectory: '${{ parameters.workingDirectory }}/src/${{ project }}'
+    ${{ else }}:
+      - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration) 
+        displayName: 'dotnet pack ${{ project }}'
+        workingDirectory: '${{ parameters.workingDirectory }}/src/${{ project }}'
+
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish Artifact: drop'
+  inputs:
+    pathToPublish: '$(build.artifactstagingdirectory)'
+    artifactName: packages-v1
