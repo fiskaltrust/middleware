@@ -9,7 +9,7 @@ using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Exceptions;
 using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Models;
 using Newtonsoft.Json;
 using System.Net.Http.Headers;
-using fiskaltrust.ifPOS.v1.de;
+using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Helpers;
 
 
 namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
@@ -19,14 +19,14 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
         private const int EXPORT_TIMEOUT_MS = 18000 * 1000;
 
         private readonly SwissbitCloudV2SCUConfiguration _configuration;
-        private readonly HttpClient _httpClient;
+        private readonly HttpClientWrapper _httpClient;
         private readonly JsonSerializerSettings _serializerSettings;
 
 
-        public SwissbitCloudV2ApiProvider(SwissbitCloudV2SCUConfiguration configuration)
+        public SwissbitCloudV2ApiProvider(SwissbitCloudV2SCUConfiguration configuration, HttpClientWrapper httpClient)
         {
             _configuration = configuration;
-            _httpClient = GetClient();
+            _httpClient = httpClient;
             _serializerSettings = new JsonSerializerSettings
             {
                 DefaultValueHandling = DefaultValueHandling.Ignore
@@ -219,14 +219,6 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
             throw new TimeoutException($"Timeout of {EXPORT_TIMEOUT_MS}ms was reached while exporting the backup {exportId}.");
         }
 
-        private HttpClient GetClient()
-        {
-            var client = new HttpClient { BaseAddress = new Uri(_configuration.ApiEndpoint), Timeout = TimeSpan.FromSeconds(_configuration.SwissbitCloudV2Timeout) };
-            var credentials = Encoding.ASCII.GetBytes($"{_configuration.TseSerialNumber}:{_configuration.TseAccessToken}");
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(credentials));
-           
-            return client;
-        }
 
         public void Dispose() => _httpClient?.Dispose();
 

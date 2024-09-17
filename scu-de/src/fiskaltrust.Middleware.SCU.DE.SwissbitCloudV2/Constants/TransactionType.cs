@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Constants
+﻿namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Constants
 {
     public class TransactionType
     {

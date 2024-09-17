@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
-using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2;
 using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Exceptions;
-using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Helpers;
 using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Helpers
@@ -17,24 +16,13 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Helpers
         private readonly SwissbitCloudV2SCUConfiguration _configuration;
         private readonly ILogger<HttpClientWrapper> _logger;
 
-        public HttpClientWrapper(SwissbitCloudV2SCUConfiguration configuration, ILogger<HttpClientWrapper> logger, HttpClient httpClient)
-        {
-            _logger = logger;
-            _configuration = configuration;
-            _httpClient = httpClient;
-        }
-
         public HttpClientWrapper(SwissbitCloudV2SCUConfiguration configuration, ILogger<HttpClientWrapper> logger)
         {
             _logger = logger;
             _configuration = configuration;
-            var url = configuration.ApiEndpoint.EndsWith("/") ? configuration.ApiEndpoint : $"{configuration.ApiEndpoint}/";
-            _httpClient = new HttpClient(new HttpClientHandler { Proxy = ConfigurationHelper.CreateProxy(_configuration) })
-            {
-                BaseAddress = new Uri(url),
-                Timeout = TimeSpan.FromMilliseconds(configuration.SwissbitCloudV2Timeout)
-            };
+            _httpClient = GetClient();
         }
+
         /// <summary>
         /// This is needed for Mono to react on the client timeout. 
         /// </summary>
@@ -78,7 +66,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Helpers
                 {
                     currentTry++;
                     await Task.Delay(_configuration.DelayOnRetriesInMs * (currentTry + 1)).ConfigureAwait(false);
-                    _logger.LogWarning($"HttpStatusCode {response.StatusCode} from Fiskaly retry {currentTry} from {_configuration.RetriesOn5xxError}, DelayOnRetriesInMs: { _configuration.DelayOnRetriesInMs}.");
+                    _logger.LogWarning($"HttpStatusCode {response.StatusCode} from SwissbitCloudV2 retry {currentTry} from {_configuration.RetriesOn5xxError}, DelayOnRetriesInMs: { _configuration.DelayOnRetriesInMs}.");
                     await PutAsync(requestUri, content, currentTry).ConfigureAwait(false);
                 }
                 var responseContent = await response.Content.ReadAsStringAsync();
@@ -97,7 +85,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Helpers
                 {
                     currentTry++;
                     await Task.Delay(_configuration.DelayOnRetriesInMs * (currentTry + 1)).ConfigureAwait(false);
-                    _logger.LogWarning($"HttpStatusCode {response.StatusCode} from Fiskaly retry {currentTry} from {_configuration.RetriesOn5xxError}, DelayOnRetriesInMs: { _configuration.DelayOnRetriesInMs}.");
+                    _logger.LogWarning($"HttpStatusCode {response.StatusCode} from SwissbitCloudV2 retry {currentTry} from {_configuration.RetriesOn5xxError}, DelayOnRetriesInMs: { _configuration.DelayOnRetriesInMs}.");
                     await GetAsync(requestUri, currentTry).ConfigureAwait(false);
                 }
                 var responseContent = await response.Content.ReadAsStringAsync();
@@ -120,7 +108,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Helpers
                 {
                     currentTry++;
                     await Task.Delay(_configuration.DelayOnRetriesInMs * (currentTry + 1)).ConfigureAwait(false);
-                    _logger.LogWarning($"HttpStatusCode {response.StatusCode} from Fiskaly retry {currentTry} from {_configuration.RetriesOn5xxError}, DelayOnRetriesInMs: { _configuration.DelayOnRetriesInMs}.");
+                    _logger.LogWarning($"HttpStatusCode {response.StatusCode} from SwissbitCloudV2 retry {currentTry} from {_configuration.RetriesOn5xxError}, DelayOnRetriesInMs: { _configuration.DelayOnRetriesInMs}.");
                     await SendAsync(httpMethod, requestUri, jsonPayload, currentTry).ConfigureAwait(false);
                 }
                 var responseContent = await response.Content.ReadAsStringAsync();
@@ -139,7 +127,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Helpers
                 {
                     currentTry++;
                     await Task.Delay(_configuration.DelayOnRetriesInMs * (currentTry + 1)).ConfigureAwait(false);
-                    _logger.LogWarning($"HttpStatusCode {response.StatusCode} from Fiskaly retry {currentTry} from {_configuration.RetriesOn5xxError}, DelayOnRetriesInMs: { _configuration.DelayOnRetriesInMs}.");
+                    _logger.LogWarning($"HttpStatusCode {response.StatusCode} from SwissbitCloudV2 retry {currentTry} from {_configuration.RetriesOn5xxError}, DelayOnRetriesInMs: { _configuration.DelayOnRetriesInMs}.");
                     await PostAsync(requestUri, content, currentTry).ConfigureAwait(false);
                 }
                 var responseContent = await response.Content.ReadAsStringAsync();
@@ -149,10 +137,41 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Helpers
             return response;
         }
 
+        public async Task<HttpResponseMessage> DeleteAsync(string requestUri, int currentTry = 0)
+        {
+            var response = await WrapCall(_httpClient.DeleteAsync(requestUri), _configuration.SwissbitCloudV2Timeout).ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+            {
+                if ((int) response.StatusCode >= 500 && (int) response.StatusCode <= 599 && _configuration.RetriesOn5xxError > currentTry)
+                {
+                    currentTry++;
+                    await Task.Delay(_configuration.DelayOnRetriesInMs * (currentTry + 1)).ConfigureAwait(false);
+                    _logger.LogWarning($"HttpStatusCode {response.StatusCode} from SwissbitCloudV2 retry {currentTry} from {_configuration.RetriesOn5xxError}, DelayOnRetriesInMs: {_configuration.DelayOnRetriesInMs}.");
+                    await DeleteAsync(requestUri, currentTry).ConfigureAwait(false);
+                }
+                var responseContent = await response.Content.ReadAsStringAsync();
+                throw new SwissbitCloudV2Exception($"Communication error ({response.StatusCode}) while setting TSS metadata ({requestUri}). Response: {responseContent}");
+            }
+            return response;
+        }
+
         public void Dispose()
         {
             Dispose(true);
             GC.SuppressFinalize(this);
+        }
+
+        private HttpClient GetClient()
+        {
+            var client = new HttpClient(new HttpClientHandler { Proxy = ConfigurationHelper.CreateProxy(_configuration) })
+            {
+                BaseAddress = new Uri(_configuration.ApiEndpoint),
+                Timeout = TimeSpan.FromMilliseconds(_configuration.SwissbitCloudV2Timeout)
+            };
+            var credentials = Encoding.ASCII.GetBytes($"{_configuration.TseSerialNumber}:{_configuration.TseAccessToken}");
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(credentials));
+
+            return client;
         }
 
         // The bulk of the clean-up code is implemented in Dispose(bool)
