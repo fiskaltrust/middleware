@@ -8,9 +8,7 @@ parameters:
 steps:
 - task: yavt@1 
   inputs:
-    mode: 'Multi'
-    updateNuspecFiles: true
-    updateBuildNumber: false
+    mode: 'Multi'    
     semverVersion: 'v1'
     failOnTagVersionMismatch: true
 
