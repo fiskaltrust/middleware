@@ -238,50 +238,9 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
             }
         }
 
-        public Task<StartExportSessionResponse> StartExportSessionByTimeStampAsync(StartExportSessionByTimeStampRequest request)
-        {
-            try
-            {
+        public Task<StartExportSessionResponse> StartExportSessionByTimeStampAsync(StartExportSessionByTimeStampRequest request) => throw new NotImplementedException("Export by Time range is not implemented in SwissbitCloudV2");
 
-                //Todo 
-                var exportId = Guid.NewGuid();
-
-                //CacheExportAsync(exportId).ExecuteInBackgroundThread();
-
-                return Task.FromResult( new StartExportSessionResponse
-                {
-                    TokenId = exportId.ToString()
-
-                    //Todo TseSerialNumberOctet = tssResult.SerialNumber
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to execute {Operation} - Request: {Request}", nameof(StartExportSessionByTimeStampAsync), JsonConvert.SerializeObject(request));
-                throw;
-            }
-        }
-
-        public Task<StartExportSessionResponse> StartExportSessionByTransactionAsync(StartExportSessionByTransactionRequest request)
-        {
-            try
-            {
-                var exportId = Guid.NewGuid();
-                //CacheExportAsync(exportId).ExecuteInBackgroundThread();
-
-                return Task.FromResult( new StartExportSessionResponse
-                {
-                    TokenId = exportId.ToString(),
-
-                    //Todo TseSerialNumberOctet = tssResult.SerialNumber
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to execute {Operation} - Request: {Request}", nameof(StartExportSessionByTransactionAsync), JsonConvert.SerializeObject(request));
-                throw;
-            }
-        }
+        public Task<StartExportSessionResponse> StartExportSessionByTransactionAsync(StartExportSessionByTransactionRequest request) => throw new NotImplementedException("Export by Transaction range is not implemented in SwissbitCloudV2");
 
         public async Task<ExportDataResponse> ExportDataAsync(ExportDataRequest request)
         {
@@ -479,7 +438,6 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                     var clientDto = new ClientDto { ClientId = request.ClientId };
                     await _swissbitCloudV2Provider.DeregisterClientAsync(clientDto);
 
-                    //Todo DisableClientAsync(_configuration.TssId, request.ClientId, _clientCache.GetClientId(request.ClientId));
                     _clientCache.RemoveClient(request.ClientId);
                 }
 
