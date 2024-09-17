@@ -157,7 +157,11 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
             try
             {
                 var tssResult = await _swissbitCloudV2Provider.GetTseStatusAsync();
-                if (tssResult.InitializationState == SwissbitCloudV2TseState.UNINITIALIZED.ToString())
+                if (tssResult.InitializationState == SwissbitCloudV2TseState.initialized.ToString() && request.CurrentState == TseStates.Initialized)
+                {
+                    return request;
+                }
+                if (tssResult.InitializationState == SwissbitCloudV2TseState.uninitialized.ToString())
                 {
                     throw new SwissbitCloudV2Exception("The state of the TSE is 'UNINITIALIZED' and therefore not yet personalized, which is currently not supported.");
                 }
@@ -194,10 +198,6 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                     };
                 }
 
-                if (!await _clientCache.IsClientExistent(request.ClientId))
-                {
-                    throw new Exception($"The client {request.ClientId} is not registered.");
-                }
                 var startExportResponse = await _swissbitCloudV2Provider.StartExport();
 
                 CacheExportAsync(startExportResponse.ExportId).ExecuteInBackgroundThread();
@@ -242,50 +242,9 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
             }
         }
 
-        public Task<StartExportSessionResponse> StartExportSessionByTimeStampAsync(StartExportSessionByTimeStampRequest request)
-        {
-            try
-            {
+        public Task<StartExportSessionResponse> StartExportSessionByTimeStampAsync(StartExportSessionByTimeStampRequest request) => throw new NotImplementedException("Export by Time range is not implemented in SwissbitCloudV2");
 
-                //Todo 
-                var exportId = Guid.NewGuid();
-
-                //CacheExportAsync(exportId).ExecuteInBackgroundThread();
-
-                return Task.FromResult( new StartExportSessionResponse
-                {
-                    TokenId = exportId.ToString()
-
-                    //Todo TseSerialNumberOctet = tssResult.SerialNumber
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to execute {Operation} - Request: {Request}", nameof(StartExportSessionByTimeStampAsync), JsonConvert.SerializeObject(request));
-                throw;
-            }
-        }
-
-        public Task<StartExportSessionResponse> StartExportSessionByTransactionAsync(StartExportSessionByTransactionRequest request)
-        {
-            try
-            {
-                var exportId = Guid.NewGuid();
-                //CacheExportAsync(exportId).ExecuteInBackgroundThread();
-
-                return Task.FromResult( new StartExportSessionResponse
-                {
-                    TokenId = exportId.ToString(),
-
-                    //Todo TseSerialNumberOctet = tssResult.SerialNumber
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to execute {Operation} - Request: {Request}", nameof(StartExportSessionByTransactionAsync), JsonConvert.SerializeObject(request));
-                throw;
-            }
-        }
+        public Task<StartExportSessionResponse> StartExportSessionByTransactionAsync(StartExportSessionByTransactionRequest request) => throw new NotImplementedException("Export by Transaction range is not implemented in SwissbitCloudV2");
 
         public async Task<ExportDataResponse> ExportDataAsync(ExportDataRequest request)
         {
@@ -483,7 +442,6 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                     var clientDto = new ClientDto { ClientId = request.ClientId };
                     await _swissbitCloudV2Provider.DeregisterClientAsync(clientDto);
 
-                    //Todo DisableClientAsync(_configuration.TssId, request.ClientId, _clientCache.GetClientId(request.ClientId));
                     _clientCache.RemoveClient(request.ClientId);
                 }
 

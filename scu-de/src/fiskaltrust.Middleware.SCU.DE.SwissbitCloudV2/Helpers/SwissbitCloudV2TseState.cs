@@ -2,8 +2,8 @@
 {
     public enum SwissbitCloudV2TseState
     {
-        UNINITIALIZED = 0,
-        INITIALIZED = 1,
-        DISABLED = 2        
+        uninitialized = 0,
+        initialized = 1,
+        disabled = 2
     }
 }

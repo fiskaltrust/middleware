@@ -28,10 +28,6 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.IntegrationTest
         {
             var sut = await _fixture.GetSut();
 
-            await sut.RegisterClientIdAsync(new RegisterClientIdRequest
-            {
-                ClientId = _fixture.TestClientId
-            });
             var exportSession = await sut.StartExportSessionAsync(new StartExportSessionRequest
             {
                 ClientId = _fixture.TestClientId
