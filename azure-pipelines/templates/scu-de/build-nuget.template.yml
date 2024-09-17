@@ -9,13 +9,11 @@ steps:
 - task: yavt@1 
   inputs:
     mode: 'Multi'
-    updateNuspecFiles: true
-    updateBuildNumber: false
     semverVersion: 'v1'
     failOnTagVersionMismatch: true
 
 - powershell: |
-    $nugetFeed = if ($Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/release/") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/main") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/tags")) { "release" } else { "dev" }
+    $nugetFeed = if ($Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/release/") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/main") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/tags/")) { "release" } else { "dev" }
     Write-Host "##vso[task.setvariable variable=NuGetFeed;]$nugetFeed"
   displayName: Set NuGet feed
   
@@ -81,7 +79,7 @@ steps:
 - task: PublishBuildArtifacts@1
   displayName: 'Publish Artifact: drop'
   inputs:
-    pathToPublish: '$(build.artifactstagingdirectory)'
+    PathToPublish: '$(build.artifactstagingdirectory)'
     artifactName: packages-v1
                       
 
