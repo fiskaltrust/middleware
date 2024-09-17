@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services;
@@ -17,7 +16,6 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Helpers
         {
             if (!_registeredClients.Any())
             {
-                
                 var clients = await _swissbitCloudV2.GetClientsAsync();
 
                 foreach (var client in clients)
