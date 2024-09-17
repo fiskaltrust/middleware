@@ -68,6 +68,14 @@ steps:
           displayName: 'dotnet pack ${{ project }}'
           workingDirectory: '${{ parameters.workingDirectory }}/src/${{ project }}'
 
+- task: NuGetCommand@2
+  displayName: 'nuget pack fiskaltrust.Middleware.SCU.DE.SwissbitAndroid'
+  inputs:
+    command: 'pack'
+    packagesToPack: '${{ parameters.workingDirectory }}/src/fiskaltrust.Middleware.SCU.DE.SwissbitAndroid/.nuspec'
+    versioningScheme: 'off'
+    basePath: '${{ parameters.workingDirectory }}/src/fiskaltrust.Middleware.SCU.DE.SwissbitAndroid/'
+
 - task: PublishBuildArtifacts@1
   displayName: 'Publish Artifact: drop'
   inputs:
