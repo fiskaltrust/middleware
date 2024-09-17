@@ -13,8 +13,8 @@ namespace fiskaltrust.Middleware.SCU.DE.Test.Launcher
     public static class Program
     {
         private static readonly bool useHelipad = true;
-        private static readonly string cashBoxId = "72d0da4e-1726-4c7a-a618-81e5dbb16832";
-        private static readonly string accessToken = "BC9w465Xogvm4yIpwl9J8mhLZFDt4L0uR+pSrr8QkLv8s88yL7gJEe02ydffJTzzMNWv5ihQ3aMBztSvJKVuI/4=";
+        private static readonly string cashBoxId = "";
+        private static readonly string accessToken = "";
         private static readonly string fccDirectory = "";
 
         private static readonly string configurationFilePath = "";
@@ -220,9 +220,10 @@ namespace fiskaltrust.Middleware.SCU.DE.Test.Launcher
             bootStrapper.ConfigureServices(serviceCollection);
         }
 
-
         private static void ConfigureSwissbitCloudV2(PackageConfiguration queue, ServiceCollection serviceCollection)
         {
+            queue.Configuration.Add("TseSerialNumber", "fd79e44187bce2e2dcc886c89bf993df26d157503c4d953557b2e5af73571876");
+            queue.Configuration.Add("TseAccessToken", "6945c6ab69f348cd3779b5ee139466c4");
             var bootStrapper = new SwissbitCloudV2.ScuBootstrapper
             {
                 Id = queue.Id,

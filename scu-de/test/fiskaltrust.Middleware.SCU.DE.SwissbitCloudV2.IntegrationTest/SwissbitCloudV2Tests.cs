@@ -204,24 +204,6 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.IntegrationTest
 
         [Fact]
         [Trait("TseCategory", "Cloud")]
-        public async Task SetTseStateAsync_Should_Fail_Because_AskInitialization()
-        {
-            // In SwissbitCloudV2 only DisableTSE is possible
-            // TSE will be initialize on Creation step
-            var sut = await _testFixture.GetSut();
-
-            var tseState = new TseState
-            {
-                CurrentState = TseStates.Initialized
-            };
-            var action = new Func<Task>(async () => await sut.SetTseStateAsync(tseState));
-
-            await action.Should().ThrowAsync<Exception>().WithMessage($"The state of the TSE is {tseState.CurrentState} and therefore this request is not supported.");
-           
-        }
-
-        [Fact]
-        [Trait("TseCategory", "Cloud")]
         public async Task GetTseInfoAsync_Should_Return_Valid_TseInfo()
         {
             var sut = await _testFixture.GetSut();
@@ -238,9 +220,6 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.IntegrationTest
             result.CurrentClientIds.Should().Contain(_testFixture.TestClientId);
             result.CurrentState.Should().Be(TseStates.Initialized);
         }
-
-
-        
 
         private StartTransactionRequest CreateStartTransactionRequest(string clientId)
         {

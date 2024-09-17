@@ -9,8 +9,8 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Helpers
         {
             return value switch
             {
-                SwissbitCloudV2TseState.INITIALIZED => new TseState { CurrentState = TseStates.Initialized },
-                SwissbitCloudV2TseState.DISABLED => new TseState { CurrentState = TseStates.Terminated },
+                SwissbitCloudV2TseState.initialized => new TseState { CurrentState = TseStates.Initialized },
+                SwissbitCloudV2TseState.disabled => new TseState { CurrentState = TseStates.Terminated },
                 _ => new TseState { CurrentState = TseStates.Uninitialized },
             };
         }
@@ -19,8 +19,8 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Helpers
         {
             return value switch
             {
-                SwissbitCloudV2TseState.INITIALIZED => TseStates.Initialized,
-                SwissbitCloudV2TseState.DISABLED => TseStates.Terminated,
+                SwissbitCloudV2TseState.initialized => TseStates.Initialized,
+                SwissbitCloudV2TseState.disabled => TseStates.Terminated,
                 _ => TseStates.Uninitialized
             };
         }
@@ -29,9 +29,9 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Helpers
         {
             return value switch
             {
-                TseStates.Initialized => SwissbitCloudV2TseState.INITIALIZED,
-                TseStates.Terminated => SwissbitCloudV2TseState.DISABLED,
-                _ => SwissbitCloudV2TseState.UNINITIALIZED,
+                TseStates.Initialized => SwissbitCloudV2TseState.initialized,
+                TseStates.Terminated => SwissbitCloudV2TseState.disabled,
+                _ => SwissbitCloudV2TseState.uninitialized,
             };
         }
 
