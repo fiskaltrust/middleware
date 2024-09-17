@@ -48,7 +48,7 @@ stages:
           vmImage: $(vmImageName)
         steps:
           - template: templates/scu-de/build-nuget.template.yml
-
+  
       - job: BuildZipPackages
         displayName: Build v2 zip packages
         dependsOn: []
