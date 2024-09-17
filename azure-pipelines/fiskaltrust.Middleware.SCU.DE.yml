@@ -47,7 +47,7 @@ stages:
         pool:
           vmImage: $(vmImageName)
         steps:
-          - template: templates/build-nuget.template.yml
+          - template: templates/build-nuget.yml
             parameters:
               workingDirectory: scu-de
               projects:
