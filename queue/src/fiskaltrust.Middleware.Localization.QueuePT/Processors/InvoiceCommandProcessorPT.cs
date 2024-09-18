@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Threading.Tasks;
-using fiskaltrust.Middleware.Localization.v2.Interface;
+﻿using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.v2;
 using fiskaltrust.storage.V0;
 
