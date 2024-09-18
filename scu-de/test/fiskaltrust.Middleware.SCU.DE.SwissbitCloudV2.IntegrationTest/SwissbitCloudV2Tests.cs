@@ -6,6 +6,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using AutoFixture;
 using fiskaltrust.ifPOS.v1.de;
+using fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser.Logs;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -219,6 +220,59 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.IntegrationTest
             result.CertificatesBase64.Should().HaveCount(1);
             result.CurrentClientIds.Should().Contain(_testFixture.TestClientId);
             result.CurrentState.Should().Be(TseStates.Initialized);
+        }
+
+        [Fact]
+        [Trait("TseCategory", "Cloud")]
+        public async Task ExportDataAsync_Should_Return_MultipleTransactionLogs()
+        {
+            var sut = await _testFixture.GetSut();
+
+            var exportSession = await sut.StartExportSessionAsync(new StartExportSessionRequest
+            {
+                ClientId = _testFixture.TestClientId
+            });
+            exportSession.Should().NotBeNull();
+            using (var fileStream = File.OpenWrite($"export_{exportSession.TokenId}.tar"))
+            {
+                ExportDataResponse export;
+                do
+                {
+                    export = await sut.ExportDataAsync(new ExportDataRequest
+                    {
+                        TokenId = exportSession.TokenId,
+                        MaxChunkSize = 1024 * 1024
+                    });
+                    if (!export.TotalTarFileSizeAvailable)
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(1));
+                    }
+                    else
+                    {
+                        var allBytes = Convert.FromBase64String(export.TarFileByteChunkBase64);
+                        await fileStream.WriteAsync(allBytes, 0, allBytes.Length);
+                    }
+                } while (!export.TarFileEndOfFile);
+            }
+
+            var endSessionRequest = new EndExportSessionRequest
+            {
+                TokenId = exportSession.TokenId,
+                Erase = true
+            };
+            using (var fileStream = File.OpenRead($"export_{exportSession.TokenId}.tar"))
+            {
+                endSessionRequest.Sha256ChecksumBase64 = Convert.ToBase64String(SHA256.Create().ComputeHash(fileStream));
+            }
+
+            var endExportSessionResult = await sut.EndExportSessionAsync(endSessionRequest);
+            endExportSessionResult.IsValid.Should().BeTrue();
+
+            using (var fileStream = File.OpenRead($"export_{exportSession.TokenId}.tar"))
+            {
+                var logs = LogParser.GetLogsFromTarStream(fileStream).ToList();
+                logs.Should().HaveCountGreaterThan(0);
+            }
         }
 
         private StartTransactionRequest CreateStartTransactionRequest(string clientId)

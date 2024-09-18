@@ -15,8 +15,8 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.IntegrationTest
 
         public SwissbitCloudV2SCUConfiguration Configuration { get; } = new SwissbitCloudV2SCUConfiguration()
         {
-            TseSerialNumber = "fd79e44187bce2e2dcc886c89bf993df26d157503c4d953557b2e5af73571876",
-            TseAccessToken = "6945c6ab69f348cd3779b5ee139466c4"
+            TseSerialNumber = "84da8d02e9f617c658e8e1f2ad01c39d0e7e2d899d6dda8f56e4eb3088110531",
+            TseAccessToken = " "
         };
 
         public string TestClientId { get; } = "TestClient";
