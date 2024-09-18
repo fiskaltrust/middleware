@@ -40,6 +40,8 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.IntegrationTest
             result.SignatureData.SignatureBase64.Should().NotBeNull();
             result.SignatureData.SignatureCounter.Should().BeGreaterThan(0);
             result.ClientId.Should().Be(_testFixture.TestClientId.ToString());
+
+            await sut.FinishTransactionAsync(CreateFinishTransactionRequest(result.TransactionNumber, request.ClientId));
         }
 
         [Fact]
@@ -57,21 +59,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.IntegrationTest
 
         [Fact]
         [Trait("TseCategory", "Cloud")]
-        public async Task RegisterClientIdAsync_Should_Register_NewClient()
-        {
-            var sut = await _testFixture.GetSut();
-            var ClientId = Guid.NewGuid().ToString().Replace("-","").Remove(30);
-
-            var clients = await sut.RegisterClientIdAsync(new RegisterClientIdRequest
-            {
-                ClientId = ClientId
-            });
-            clients.ClientIds.Should().Contain(ClientId);           
-        }
-
-        [Fact]
-        [Trait("TseCategory", "Cloud")]
-        public async Task UnregisterClientIdAsync_Should_Remove_Registered_Client()
+        public async Task RegisterAndUnregisterClientIdAsync_Should_Return_ValidData()
         {
             var sut = await _testFixture.GetSut();
 
@@ -105,6 +93,8 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.IntegrationTest
             updateResult.ClientId.Should().Be(_testFixture.TestClientId.ToString());
             updateResult.ProcessDataBase64.Should().BeEquivalentTo(updateRequest.ProcessDataBase64);
             updateResult.ProcessType.Should().Be(updateRequest.ProcessType);
+
+            await sut.FinishTransactionAsync(CreateFinishTransactionRequest(startResult.TransactionNumber, startRequest.ClientId));
         }
 
         [Fact]
