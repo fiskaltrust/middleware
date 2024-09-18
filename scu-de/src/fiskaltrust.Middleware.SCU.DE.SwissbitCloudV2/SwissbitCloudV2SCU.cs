@@ -26,24 +26,16 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
         private readonly SwissbitCloudV2SCUConfiguration _configuration;
         private readonly ClientCache _clientCache;
         private readonly ISwissbitCloudV2ApiProvider _swissbitCloudV2Provider;
-        private readonly byte[] CertificatePublicKeyBytes;
-        private readonly string Algorithm = "";
         private const string _noExport = "noexport-";
-
+        private TseInfo LastTseInfo;
         public SwissbitCloudV2SCU(ILogger<SwissbitCloudV2SCU> logger, ISwissbitCloudV2ApiProvider apiProvider, ClientCache clientCache, SwissbitCloudV2SCUConfiguration configuration)
         {
             _readStreamPointer = new ConcurrentDictionary<string, ExportStateData>();
             _logger = logger;
             _configuration = configuration;
             _swissbitCloudV2Provider = apiProvider;
-            _clientCache = clientCache;
+            _clientCache = clientCache;         
            
-            var tseResult = _swissbitCloudV2Provider.GetTseStatusAsync().Result;
-            var bytes = Encoding.ASCII.GetBytes(tseResult.CertificateChain);
-            var cert = new X509Certificate2(bytes);
-
-            CertificatePublicKeyBytes = Encoding.ASCII.GetBytes(BitConverter.ToString(cert.GetPublicKey()));
-            Algorithm = cert.SignatureAlgorithm.FriendlyName;
         }
 
         public async Task<StartTransactionResponse> StartTransactionAsync(StartTransactionRequest request)
@@ -131,12 +123,20 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                 var tseResult = await _swissbitCloudV2Provider.GetTseStatusAsync();
                 var startedTransactions = await _swissbitCloudV2Provider.GetStartedTransactionsAsync();
 
-                return new TseInfo
+                var bytes = Encoding.ASCII.GetBytes(tseResult.CertificateChain);
+                var cert = new X509Certificate2(bytes);
+
+                var certPublicKey = BitConverter.ToString(cert.GetPublicKey());
+                var certPublicKeyBytes = Encoding.ASCII.GetBytes(certPublicKey);
+
+                var algorithm = cert.SignatureAlgorithm.FriendlyName;
+
+                var tseInfo= new TseInfo
                 {
                     CurrentNumberOfClients = tseResult.NumberOfRegisteredClients,
                     CurrentNumberOfStartedTransactions = tseResult.NumberOfStartedTransactions,
                     SerialNumberOctet = tseResult.SerialNumber,
-                    PublicKeyBase64 = Convert.ToBase64String(CertificatePublicKeyBytes),
+                    PublicKeyBase64 = Convert.ToBase64String(certPublicKeyBytes),
                     FirmwareIdentification = tseResult.SoftwareVersion,
                     CertificationIdentification = tseResult.CreditClientId,//To ask
                     MaxNumberOfClients = tseResult.MaxNumberOfRegisteredClients,
@@ -146,7 +146,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                         Convert.ToBase64String(Encoding.ASCII.GetBytes(tseResult.CertificateChain))
                     },
                     CurrentClientIds = clientDto,
-                    SignatureAlgorithm = Algorithm,
+                    SignatureAlgorithm = algorithm,
                     CurrentLogMemorySize = tseResult.StorageUsed,
                     CurrentNumberOfSignatures = tseResult.CreatedSignatures,
                     LogTimeFormat = "unixTime",
@@ -155,6 +155,9 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                     CurrentStartedTransactionNumbers = startedTransactions.Select(x => (ulong) x).ToList(),
                     CurrentState = ((SwissbitCloudV2TseState) Enum.Parse(typeof(SwissbitCloudV2TseState), tseResult.InitializationState, true)).ToTseStateEnum()
                 };
+                LastTseInfo = tseInfo;
+
+                return tseInfo;
             }
             catch (Exception ex)
             {
@@ -480,8 +483,8 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                 {
                     SignatureBase64 = transactionResponse.SignatureValue,
                     SignatureCounter = transactionResponse.SignatureCounter,
-                    SignatureAlgorithm = Algorithm,
-                    PublicKeyBase64 = Convert.ToBase64String(CertificatePublicKeyBytes)
+                    SignatureAlgorithm = LastTseInfo?.SignatureAlgorithm,
+                    PublicKeyBase64 = LastTseInfo?.PublicKeyBase64
                 }
             };
         }
@@ -500,8 +503,8 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                 {
                     SignatureBase64 = transactionResponse.SignatureValue,
                     SignatureCounter = transactionResponse.SignatureCounter,
-                    SignatureAlgorithm = Algorithm,
-                    PublicKeyBase64 = Convert.ToBase64String(CertificatePublicKeyBytes)
+                    SignatureAlgorithm = LastTseInfo?.SignatureAlgorithm,
+                    PublicKeyBase64 = LastTseInfo?.PublicKeyBase64
                 }
             };
         }
@@ -519,8 +522,8 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                 {
                     SignatureBase64 = transactionResponse.SignatureValue,
                     SignatureCounter = transactionResponse.SignatureCounter,
-                    SignatureAlgorithm = Algorithm,
-                    PublicKeyBase64 = Convert.ToBase64String(CertificatePublicKeyBytes)
+                    SignatureAlgorithm = LastTseInfo?.SignatureAlgorithm,
+                    PublicKeyBase64 = LastTseInfo?.PublicKeyBase64
                 },
                 TseTimeStampFormat = "unixTime",
                 TimeStamp = transactionResponse.SignatureCreationTime.FromUnixTime(),
