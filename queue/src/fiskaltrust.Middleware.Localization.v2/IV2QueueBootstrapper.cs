@@ -15,7 +15,6 @@ namespace fiskaltrust.Middleware.Localization.v2
                     IConfigurationRepository configurationRepository,
                     IMiddlewareQueueItemRepository middlewareQueueItemRepository,
                     IMiddlewareReceiptJournalRepository middlewareReceiptJournalRepository,
-                    IMiddlewareActionJournalRepository middlewareActionJournalRepository,
-                    ICryptoHelper cryptoHelper);
+                    IMiddlewareActionJournalRepository middlewareActionJournalRepository);
     }
 }

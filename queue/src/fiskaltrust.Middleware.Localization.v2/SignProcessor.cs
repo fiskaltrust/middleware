@@ -7,6 +7,7 @@ using fiskaltrust.Middleware.Contracts.Extensions;
 using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
@@ -21,7 +22,7 @@ namespace fiskaltrust.Middleware.Localization.v2
         private readonly IMiddlewareQueueItemRepository _queueItemRepository;
         private readonly IMiddlewareReceiptJournalRepository _receiptJournalRepository;
         private readonly IMiddlewareActionJournalRepository _actionJournalRepository;
-        private readonly ICryptoHelper _cryptoHelper;
+        private readonly CryptoHelper _cryptoHelper;
         private readonly Func<ReceiptRequest, ReceiptResponse, ftQueue, ftQueueItem, Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)>> _processRequest;
         private readonly string _cashBoxIdentification;
         private readonly Guid _queueId = Guid.Empty;
@@ -37,7 +38,6 @@ namespace fiskaltrust.Middleware.Localization.v2
             IMiddlewareQueueItemRepository queueItemRepository,
             IMiddlewareReceiptJournalRepository receiptJournalRepository,
             IMiddlewareActionJournalRepository actionJournalRepository,
-            ICryptoHelper cryptoHelper,
             Func<ReceiptRequest, ReceiptResponse, ftQueue, ftQueueItem, Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)>> processRequest,
             string cashBoxIdentification,
             MiddlewareConfiguration configuration)
@@ -47,7 +47,7 @@ namespace fiskaltrust.Middleware.Localization.v2
             _queueItemRepository = queueItemRepository;
             _receiptJournalRepository = receiptJournalRepository;
             _actionJournalRepository = actionJournalRepository;
-            _cryptoHelper = cryptoHelper;
+            _cryptoHelper = new CryptoHelper();
             _processRequest = processRequest;
             _cashBoxIdentification = cashBoxIdentification;
             _queueId = configuration.QueueId;

@@ -21,10 +21,6 @@ namespace fiskaltrust.Middleware.Localization.v2
         private readonly IMiddlewareRepository<ftQueueItem> _queueItemRepository;
         private readonly IMiddlewareRepository<ftReceiptJournal> _receiptJournalRepository;
         private readonly IMiddlewareRepository<ftActionJournal> _actionJournalRepository;
-        private readonly IMiddlewareRepository<ftJournalAT> _journalATRepository;
-        private readonly IMiddlewareRepository<ftJournalDE> _journalDERepository;
-        private readonly IMiddlewareRepository<ftJournalFR> _journalFRRepository;
-        private readonly IMiddlewareRepository<ftJournalME> _journalMERepository;
         private readonly IMarketSpecificJournalProcessor _marketSpecificJournalProcessor;
         private readonly ILogger<JournalProcessor> _logger;
 
@@ -33,10 +29,6 @@ namespace fiskaltrust.Middleware.Localization.v2
             IMiddlewareRepository<ftQueueItem> queueItemRepository,
             IMiddlewareRepository<ftReceiptJournal> receiptJournalRepository,
             IMiddlewareRepository<ftActionJournal> actionJournalRepository,
-            IMiddlewareRepository<ftJournalAT> journalATRepository,
-            IMiddlewareRepository<ftJournalDE> journalDERepository,
-            IMiddlewareRepository<ftJournalFR> journalFRRepository,
-            IMiddlewareRepository<ftJournalME> journalMERepository,
             IMarketSpecificJournalProcessor marketSpecificJournalProcessor,
             ILogger<JournalProcessor> logger)
         {
@@ -44,10 +36,6 @@ namespace fiskaltrust.Middleware.Localization.v2
             _queueItemRepository = queueItemRepository;
             _receiptJournalRepository = receiptJournalRepository;
             _actionJournalRepository = actionJournalRepository;
-            _journalATRepository = journalATRepository;
-            _journalDERepository = journalDERepository;
-            _journalFRRepository = journalFRRepository;
-            _journalMERepository = journalMERepository;
             _marketSpecificJournalProcessor = marketSpecificJournalProcessor;
             _logger = logger;
         }
@@ -66,10 +54,6 @@ namespace fiskaltrust.Middleware.Localization.v2
                     (long) JournalTypes.ActionJournal => ToJournalResponseAsync(GetEntitiesAsync(_actionJournalRepository, request), request.MaxChunkSize),
                     (long) JournalTypes.ReceiptJournal => ToJournalResponseAsync(GetEntitiesAsync(_receiptJournalRepository, request), request.MaxChunkSize),
                     (long) JournalTypes.QueueItem => ToJournalResponseAsync(GetEntitiesAsync(_queueItemRepository, request), request.MaxChunkSize),
-                    (long) JournalTypes.JournalAT => ToJournalResponseAsync(GetEntitiesAsync(_journalATRepository, request), request.MaxChunkSize),
-                    (long) JournalTypes.JournalDE => ToJournalResponseAsync(GetEntitiesAsync(_journalDERepository, request), request.MaxChunkSize),
-                    (long) JournalTypes.JournalFR => ToJournalResponseAsync(GetEntitiesAsync(_journalFRRepository, request), request.MaxChunkSize),
-                    (long) JournalTypes.JournalME => ToJournalResponseAsync(GetEntitiesAsync(_journalMERepository, request), request.MaxChunkSize),
                     (long) JournalTypes.Configuration => new List<JournalResponse> {
                     new JournalResponse
                     {
