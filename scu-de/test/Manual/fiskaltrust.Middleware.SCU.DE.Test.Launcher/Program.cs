@@ -12,7 +12,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Test.Launcher
 {
     public static class Program
     {
-        private static readonly bool useHelipad = true;
+        private static readonly bool useHelipad = false;
         private static readonly string cashBoxId = "";
         private static readonly string accessToken = "";
         private static readonly string fccDirectory = "";
@@ -57,9 +57,6 @@ namespace fiskaltrust.Middleware.SCU.DE.Test.Launcher
 
             var serviceCollection = new ServiceCollection();
             serviceCollection.AddStandardLoggers(LogLevel.Debug);
-            
-            //TODO remove this line
-            config.Package = "fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2";
 
             if (config.Package == "fiskaltrust.Middleware.SCU.DE.Swissbit")
             {
