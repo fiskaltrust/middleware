@@ -14,6 +14,8 @@ using System.IO;
 using System.Linq;
 using System.Collections.Generic;
 using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
+using System.Text;
 
 namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
 {
@@ -120,25 +122,33 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                 var tseResult = await _swissbitCloudV2Provider.GetTseStatusAsync();
                 var startedTransactions = await _swissbitCloudV2Provider.GetStartedTransactionsAsync();
 
+                var bytes = Encoding.ASCII.GetBytes(tseResult.CertificateChain);
+                var cert = new X509Certificate2(bytes);
+
+                var certPublicKey = BitConverter.ToString(cert.GetPublicKey());
+                var certPublicKeyBytes = Encoding.ASCII.GetBytes(certPublicKey);
+
+                var algorithm = cert.SignatureAlgorithm.FriendlyName;
+
                 return new TseInfo
                 {
                     CurrentNumberOfClients = tseResult.NumberOfRegisteredClients,
                     CurrentNumberOfStartedTransactions = tseResult.NumberOfStartedTransactions,
                     SerialNumberOctet = tseResult.SerialNumber,
-                    PublicKeyBase64 = "tssResult.PublicKey",
+                    PublicKeyBase64 = Convert.ToBase64String(certPublicKeyBytes),
                     FirmwareIdentification = tseResult.SoftwareVersion,
                     CertificationIdentification = tseResult.CreditClientId,//To ask
                     MaxNumberOfClients = tseResult.MaxNumberOfRegisteredClients,
                     MaxNumberOfStartedTransactions = tseResult.MaxNumberOfStartedTransactions,
                     CertificatesBase64 = new List<string>
                     {
-                        tseResult.CertificateChain
+                        Convert.ToBase64String(bytes)
                     },
                     CurrentClientIds = clientDto,
-                    SignatureAlgorithm = "tssResult.SignatureAlgorithm",
+                    SignatureAlgorithm = algorithm,
                     CurrentLogMemorySize = tseResult.StorageUsed,
                     CurrentNumberOfSignatures = tseResult.CreatedSignatures,
-                    LogTimeFormat = "tseResult.SignatureTimestampFormat",
+                    LogTimeFormat = "unixTime",
                     MaxLogMemorySize = tseResult.StorageCapacity,
                     MaxNumberOfSignatures = long.MaxValue,
                     CurrentStartedTransactionNumbers = startedTransactions.Select(x => (ulong) x).ToList(),
