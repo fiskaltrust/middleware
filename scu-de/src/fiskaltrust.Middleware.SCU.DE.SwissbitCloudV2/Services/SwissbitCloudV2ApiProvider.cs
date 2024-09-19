@@ -193,8 +193,6 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
             throw new SwissbitCloudV2Exception($"Communication error ({response.StatusCode}) while getting export state information (GET /api/v1/tse/export/{exportId}). Response: {responseContent}",
             (int) response.StatusCode, $"GET /api/v1/tse/export/{exportId}");
         }
-
-
         private async Task<ExportStateResponseDto> WaitUntilExportFinishedAsync(string exportId)
         {
             var sw = Stopwatch.StartNew();
@@ -219,10 +217,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
             throw new TimeoutException($"Timeout of {EXPORT_TIMEOUT_MS}ms was reached while exporting the backup {exportId}.");
         }
 
-
         public void Dispose() => _httpClient?.Dispose();
-
        
-
     }
 }
