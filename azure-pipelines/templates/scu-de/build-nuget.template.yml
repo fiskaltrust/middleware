@@ -80,12 +80,4 @@ steps:
   displayName: 'Publish Artifact: drop'
   inputs:
     PathToPublish: '$(build.artifactstagingdirectory)'
-    artifactName: packages-v1
-                      
-
-
-
-
-
-
- 
+    artifactName: packages-v1      

@@ -138,7 +138,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                     SerialNumberOctet = tseResult.SerialNumber,
                     PublicKeyBase64 = Convert.ToBase64String(certPublicKeyBytes),
                     FirmwareIdentification = tseResult.SoftwareVersion,
-                    CertificationIdentification = tseResult.CreditClientId,//To ask
+                    CertificationIdentification = _configuration.CertificationId,
                     MaxNumberOfClients = tseResult.MaxNumberOfRegisteredClients,
                     MaxNumberOfStartedTransactions = tseResult.MaxNumberOfStartedTransactions,
                     CertificatesBase64 = new List<string>
