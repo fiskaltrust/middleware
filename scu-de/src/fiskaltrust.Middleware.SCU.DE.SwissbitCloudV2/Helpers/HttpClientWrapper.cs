@@ -89,7 +89,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Helpers
                     await GetAsync(requestUri, currentTry).ConfigureAwait(false);
                 }
                 var responseContent = await response.Content.ReadAsStringAsync();
-                throw new SwissbitCloudV2Exception($"Communication error ({response.StatusCode}) while getting TSS metadata ({requestUri}). Response: {responseContent}",
+                throw new SwissbitCloudV2Exception($"Communication error ({response.StatusCode}) while executing GET {requestUri}. Response: {responseContent}",
                     (int) response.StatusCode, requestUri);
             }
             return response;
