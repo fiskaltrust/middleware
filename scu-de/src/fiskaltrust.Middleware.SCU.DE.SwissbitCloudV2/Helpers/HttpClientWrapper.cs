@@ -150,7 +150,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Helpers
                     await DeleteAsync(requestUri, currentTry).ConfigureAwait(false);
                 }
                 var responseContent = await response.Content.ReadAsStringAsync();
-                throw new SwissbitCloudV2Exception($"Communication error ({response.StatusCode}) while setting TSS metadata ({requestUri}). Response: {responseContent}");
+                throw new SwissbitCloudV2Exception($"Communication error ({response.StatusCode}) while executing DELETE {requestUri}. Response: {responseContent}");
             }
             return response;
         }
