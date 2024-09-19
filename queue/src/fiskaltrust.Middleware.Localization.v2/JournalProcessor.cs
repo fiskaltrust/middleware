@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Constants;
 using fiskaltrust.Middleware.Contracts.Interfaces;
-using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
@@ -25,17 +24,14 @@ namespace fiskaltrust.Middleware.Localization.v2
         private readonly ILogger<JournalProcessor> _logger;
 
         public JournalProcessor(
-            IReadOnlyConfigurationRepository configurationRepository,
-            IMiddlewareRepository<ftQueueItem> queueItemRepository,
-            IMiddlewareRepository<ftReceiptJournal> receiptJournalRepository,
-            IMiddlewareRepository<ftActionJournal> actionJournalRepository,
+            IStorageProvider storageProvider,
             IMarketSpecificJournalProcessor marketSpecificJournalProcessor,
             ILogger<JournalProcessor> logger)
         {
-            _configurationRepository = configurationRepository;
-            _queueItemRepository = queueItemRepository;
-            _receiptJournalRepository = receiptJournalRepository;
-            _actionJournalRepository = actionJournalRepository;
+            _configurationRepository = storageProvider.GetConfigurationRepository();
+            _queueItemRepository = storageProvider.GetMiddlewareQueueItemRepository();
+            _receiptJournalRepository = storageProvider.GetMiddlewareReceiptJournalRepository();
+            _actionJournalRepository = storageProvider.GetMiddlewareActionJournalRepository();
             _marketSpecificJournalProcessor = marketSpecificJournalProcessor;
             _logger = logger;
         }

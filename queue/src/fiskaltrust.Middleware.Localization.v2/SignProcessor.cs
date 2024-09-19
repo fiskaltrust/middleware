@@ -34,19 +34,16 @@ namespace fiskaltrust.Middleware.Localization.v2
 
         public SignProcessor(
             ILogger<SignProcessor> logger,
-            IConfigurationRepository configurationRepository,
-            IMiddlewareQueueItemRepository queueItemRepository,
-            IMiddlewareReceiptJournalRepository receiptJournalRepository,
-            IMiddlewareActionJournalRepository actionJournalRepository,
+            IStorageProvider storageProvider,
             Func<ReceiptRequest, ReceiptResponse, ftQueue, ftQueueItem, Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)>> processRequest,
             string cashBoxIdentification,
             MiddlewareConfiguration configuration)
         {
             _logger = logger;
-            _configurationRepository = configurationRepository ?? throw new ArgumentNullException(nameof(configurationRepository));
-            _queueItemRepository = queueItemRepository;
-            _receiptJournalRepository = receiptJournalRepository;
-            _actionJournalRepository = actionJournalRepository;
+            _configurationRepository = storageProvider.GetConfigurationRepository();
+            _queueItemRepository = storageProvider.GetMiddlewareQueueItemRepository();
+            _receiptJournalRepository = storageProvider.GetMiddlewareReceiptJournalRepository();
+            _actionJournalRepository = storageProvider.GetMiddlewareActionJournalRepository();
             _cryptoHelper = new CryptoHelper();
             _processRequest = processRequest;
             _cashBoxIdentification = cashBoxIdentification;
