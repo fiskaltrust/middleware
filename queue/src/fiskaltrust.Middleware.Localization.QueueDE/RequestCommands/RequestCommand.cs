@@ -467,13 +467,16 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             }
             (var type, var message) = (masterDataChanged, request.ftReceiptCase & 0xFFFF) switch
             {
-                (true, 0x0007) => (0x4445_0000_0800_0007, "Daily-closing receipt was processed, and a master data update was performed."),  //daily-closing
-                (false, 0x0007) => (0x4445_0000_0000_0007, "Daily-closing receipt was processed."),                                         //daily-closing
-                (true, 0x0005) => (0x4445_0000_0800_0007, "Monthly-closing receipt was processed, and a master data update was performed."),//monthly-closing
-                (false, 0x0005) => (0x4445_0000_0000_0007, "Monthly-closing receipt was processed."),                                        //monthly-closing
-                (true, 0x0006) => (0x4445_0000_0800_0007, "Yearly-closing receipt was processed, and a master data update was performed."), //yearly-closing
-                (false, 0x0006) => (0x4445_0000_0000_0007, "Yearly-closing receipt was processed."),                                         //yearly-closing
-                _ => (0, ""),
+                (true, 0x0007) => (0x4445_0000_0800_0007, "Daily-closing receipt was processed, and a master data update was performed."),
+                (false, 0x0007) => (0x4445_0000_0000_0007, "Daily-closing receipt was processed."),
+                (true, 0x0005) => (0x4445_0000_0800_0007, "Monthly-closing receipt was processed, and a master data update was performed."),
+                (false, 0x0005) => (0x4445_0000_0000_0007, "Monthly-closing receipt was processed."),
+                (true, 0x0006) => (0x4445_0000_0800_0007, "Yearly-closing receipt was processed, and a master data update was performed."),
+                (false, 0x0006) => (0x4445_0000_0000_0007, "Yearly-closing receipt was processed."),
+                // Migration receipt executes a daily closing as well
+                (true, 0x0019) => (0x4445_0000_0800_0007, "Daily-closing receipt was processed, and a master data update was performed."),  
+                (false, 0x0019) => (0x4445_0000_0000_0007, "Daily-closing receipt was processed."),
+                _ => throw new ArgumentException($"ReceiptCase {request.ftReceiptCase:X} is not supported for master data update.")
             };
             _logger.LogTrace("RequestCommand.UpdateMasterData [exit].");
             return (masterDataChanged, message, type);
