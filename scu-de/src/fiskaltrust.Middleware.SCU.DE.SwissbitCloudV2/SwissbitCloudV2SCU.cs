@@ -34,7 +34,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
             _logger = logger;
             _configuration = configuration;
             _swissbitCloudV2Provider = apiProvider;
-            _clientCache = clientCache;         
+            _clientCache = clientCache;
            
         }
 
@@ -212,15 +212,15 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                     };
                 }
 
-                var startExportResponse = await _swissbitCloudV2Provider.StartExport();
+                var exportDto = await _swissbitCloudV2Provider.StartExport();
 
-                CacheExportAsync(startExportResponse.ExportId).ExecuteInBackgroundThread();
+                CacheExportAsync(exportDto).ExecuteInBackgroundThread();
 
-                SetExportState(startExportResponse.ExportId, ExportState.Running);
+                SetExportState(exportDto.Id, ExportState.Running);
 
                 return new StartExportSessionResponse
                 {
-                    TokenId = startExportResponse.ExportId,
+                    TokenId = exportDto.Id,
                     TseSerialNumberOctet = _configuration.TseSerialNumber
                 };
 
@@ -232,12 +232,12 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
             }
         }
 
-        private async Task CacheExportAsync(string exportId, int currentTry = 0)
+        private async Task CacheExportAsync(ExportDto exportDto, int currentTry = 0)
         {
             try
             {
-                await _swissbitCloudV2Provider.StoreDownloadResultAsync(exportId);
-                SetExportState(exportId, ExportState.Succeeded);
+                await _swissbitCloudV2Provider.StoreDownloadResultAsync(exportDto);
+                SetExportState(exportDto.Id, ExportState.Succeeded);
             }
             catch (WebException)
             {
@@ -246,13 +246,13 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                     currentTry++;
                     _logger.LogWarning($"WebException on Export from SwissbitCloud retry {currentTry} from {_configuration.RetriesOnTarExportWebException}, DelayOnRetriesInMs: {_configuration.DelayOnRetriesInMs}.");
                     await Task.Delay(_configuration.DelayOnRetriesInMs * (currentTry + 1)).ConfigureAwait(false);
-                    await CacheExportAsync(exportId, currentTry).ConfigureAwait(false);
+                    await CacheExportAsync(exportDto, currentTry).ConfigureAwait(false);
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to execute {Operation} - ExportId: {ExportId}", nameof(CacheExportAsync), exportId);
-                SetExportState(exportId, ExportState.Failed, ex);
+                _logger.LogError(ex, "Failed to execute {Operation} - ExportId: {ExportId}", nameof(CacheExportAsync), exportDto.Id);
+                SetExportState(exportDto.Id, ExportState.Failed, ex);
             }
         }
 
@@ -283,7 +283,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
 
                 var exportStateResponse = await _swissbitCloudV2Provider.GetExportStateResponseByIdAsync(request.TokenId);
 
-                if (exportStateResponse.State == "failure")
+                if (exportStateResponse.Status == "failure")
                 {
                     throw new SwissbitCloudV2Exception($"The export failed with a SwissbitCloudV2 internal error. ErrorCode: {exportStateResponse.ErrorCode} ErrorMessage: {exportStateResponse.ErrorMessage}");
                 }
@@ -292,7 +292,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                     throw exportStateDat.Error;
                 }
 
-                if (exportStateResponse.State != "success" || !File.Exists(tempFileName))
+                if (exportStateResponse.Status != "success" || !File.Exists(tempFileName))
                 {
                     return new ExportDataResponse
                     {
@@ -384,7 +384,12 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                                 }
                                 else
                                 {
-                                    await _swissbitCloudV2Provider.DeleteExportByIdAsync(request.TokenId);
+                                    var exportDto = await _swissbitCloudV2Provider.DeleteExportByIdAsync(request.TokenId);
+                                    if (!string.IsNullOrEmpty(exportDto?.ErrorCode))
+                                    {
+                                        _logger.LogWarning($"Could not delete log files from TSE after successfully exporting. ErrorCode: {exportDto.ErrorCode} Errormessage: {exportDto.ErrorMessage}.");
+                                    }
+
                                 }
                             }
                             sessionResponse.IsValid = true;
@@ -544,7 +549,6 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                 return value;
             });
         }
-        
 
         public void Dispose() => _swissbitCloudV2Provider.Dispose();
     }

@@ -1,9 +1,7 @@
-﻿using System;
-using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Models;
+﻿using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Models;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
-using fiskaltrust.ifPOS.v1.de;
 
 
 namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
@@ -20,11 +18,12 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
         Task<TseDto> GetTseStatusAsync();
         Task<List<int>> GetStartedTransactionsAsync();
 
-        Task<StartExportResponseDto> StartExport();
-        Task StoreDownloadResultAsync(string exportId);
-        Task<ExportStateResponseDto> GetExportStateResponseByIdAsync(string exportId);
-        Task<Stream> GetExportFromResponseUrlAsync(ExportStateResponseDto exportStateResponse);
-        Task<ExportStateResponseDto> DeleteExportByIdAsync(string exportId);
+        Task<ExportDto> StartExport();
+        Task<List<ExportDto>> GetExports();
+        Task StoreDownloadResultAsync(ExportDto exportDto);
+        Task<ExportDto> GetExportStateResponseByIdAsync(string exportId);
+        Task<Stream> GetExportFromResponseUrlAsync(ExportDto exportDto);
+        Task<ExportDto> DeleteExportByIdAsync(string exportId);
 
 
         Task DeregisterClientAsync(ClientDto clientDto);

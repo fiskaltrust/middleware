@@ -90,62 +90,77 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
             await _httpClient.PostAsync($"/api/v1/tse/deregisterClient", new StringContent(jsonPayload, Encoding.UTF8, "application/json"));            
         }
 
-        public async Task<StartExportResponseDto> StartExport()
+        public async Task<ExportDto> StartExport()
         {
+            var openExports = await GetExports();
+            if (openExports.Count > 0)
+            {
+                return openExports[0];
+            }
             var response = await _httpClient.PostAsync($"/api/v1/tse/export", null).ConfigureAwait(false);
-           
-            return JsonConvert.DeserializeObject<StartExportResponseDto>(await response.Content.ReadAsStringAsync());
+
+            return JsonConvert.DeserializeObject<ExportDto>(await response.Content.ReadAsStringAsync());
         }
 
-        public async Task StoreDownloadResultAsync(string exportId)
+        public async Task<List<ExportDto>> GetExports()
         {
-            var exportStateResponse = await WaitUntilExportFinishedAsync(exportId);
-            var contentStream = await GetExportFromResponseUrlAsync(exportStateResponse);
+            var response = await _httpClient.GetAsync($"/api/v1/tse/export").ConfigureAwait(false);
 
-            using var fileStream = File.Create(exportId.ToString());
+            return JsonConvert.DeserializeObject<List<ExportDto>>(await response.Content.ReadAsStringAsync());
+        }
+
+        public async Task StoreDownloadResultAsync(ExportDto exportDto)
+        {
+            if(string.IsNullOrEmpty(exportDto.DownloadUrl))
+            {
+                exportDto = await WaitUntilExportFinishedAsync(exportDto.Id);
+            }
+            var contentStream = await GetExportFromResponseUrlAsync(exportDto);
+
+            using var fileStream = File.Create(exportDto.Id.ToString());
             contentStream.Position = 0;
             contentStream.CopyTo(fileStream);
         }
 
-        public async Task<Stream> GetExportFromResponseUrlAsync(ExportStateResponseDto exportStateResponse)
+        public async Task<Stream> GetExportFromResponseUrlAsync(ExportDto exportDto)
         {
             using var exportClient = new HttpClient { BaseAddress = new Uri(_configuration.ApiEndpoint), Timeout = TimeSpan.FromSeconds(_configuration.SwissbitCloudV2Timeout) };
             var credentials = Encoding.ASCII.GetBytes($"{_configuration.TseSerialNumber}:{_configuration.TseAccessToken}");
             exportClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(credentials));
 
-            var response = await exportClient.GetAsync($"{exportStateResponse.DownloadUrl}");
+            var response = await exportClient.GetAsync($"{exportDto.DownloadUrl}");
           
             return await response.Content.ReadAsStreamAsync();
         }
 
-        public async Task<ExportStateResponseDto> GetExportStateResponseByIdAsync(string exportId)
+        public async Task<ExportDto> GetExportStateResponseByIdAsync(string exportId)
         {
             var response = await _httpClient.GetAsync($"/api/v1/tse/export/{exportId}");
             var responseContent = await response.Content.ReadAsStringAsync();
             
-            return JsonConvert.DeserializeObject<ExportStateResponseDto>(responseContent);
+            return JsonConvert.DeserializeObject<ExportDto>(responseContent);
         }
 
-        public async Task<ExportStateResponseDto> DeleteExportByIdAsync(string exportId)
+        public async Task<ExportDto> DeleteExportByIdAsync(string exportId)
         {
             var response = await _httpClient.DeleteAsync($"/api/v1/tse/export/{exportId}");
             var responseContent = await response.Content.ReadAsStringAsync();
            
-            return JsonConvert.DeserializeObject<ExportStateResponseDto>(responseContent);
+            return JsonConvert.DeserializeObject<ExportDto>(responseContent);
         }
 
-        private async Task<ExportStateResponseDto> WaitUntilExportFinishedAsync(string exportId)
+        private async Task<ExportDto> WaitUntilExportFinishedAsync(string exportId)
         {
             var sw = Stopwatch.StartNew();
             do
             {
                 try
                 {
-                    var exportStateResponse = await GetExportStateResponseByIdAsync(exportId);
+                    var exportDto = await GetExportStateResponseByIdAsync(exportId);
 
-                    if (exportStateResponse.State == "failure" || exportStateResponse.State == "success")
+                    if (exportDto.Status == "failure" || exportDto.Status == "success")
                     {
-                        return exportStateResponse;
+                        return exportDto;
                     }
                     await Task.Delay(5000);
                 }

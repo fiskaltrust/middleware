@@ -1,17 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Models
 {
-    public class ExportStateResponseDto
+    public class ExportDto
     {
-        /* 
-            "pending""success""failure"
-         */
+        [JsonProperty("id")]
+        public string Id { get; set; }
+
+        [JsonProperty("errorMessage")]
+        public string ErrorMessage { get; set; }
+
+        [JsonProperty("createdAt")]
+        public string CreatedAt { get; set; }
+
         [JsonProperty("status")]
-        public string State { get; set; }
+        public string Status { get; set; }
 
         [JsonProperty("downloadUrl")]
         public string DownloadUrl { get; set; }
@@ -21,9 +24,5 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Models
 
         [JsonProperty("errorCode")]
         public string ErrorCode { get; set; }
-
-        [JsonProperty("errorMessage")]
-        public string ErrorMessage { get; set; }
-
     }
 }
