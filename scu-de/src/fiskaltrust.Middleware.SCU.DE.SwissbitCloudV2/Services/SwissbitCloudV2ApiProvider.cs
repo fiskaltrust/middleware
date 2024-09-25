@@ -5,11 +5,11 @@ using System.IO;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
-using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Exceptions;
 using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Models;
 using Newtonsoft.Json;
 using System.Net.Http.Headers;
 using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Helpers;
+using Microsoft.Extensions.Logging;
 
 
 namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
@@ -21,12 +21,14 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
         private readonly SwissbitCloudV2SCUConfiguration _configuration;
         private readonly HttpClientWrapper _httpClient;
         private readonly JsonSerializerSettings _serializerSettings;
+        private readonly ILogger<SwissbitCloudV2ApiProvider> _logger;
 
 
-        public SwissbitCloudV2ApiProvider(SwissbitCloudV2SCUConfiguration configuration, HttpClientWrapper httpClient)
+        public SwissbitCloudV2ApiProvider(SwissbitCloudV2SCUConfiguration configuration, HttpClientWrapper httpClient, ILogger<SwissbitCloudV2ApiProvider> logger)
         {
             _configuration = configuration;
             _httpClient = httpClient;
+            _logger = logger;
             _serializerSettings = new JsonSerializerSettings
             {
                 DefaultValueHandling = DefaultValueHandling.Ignore
@@ -95,6 +97,8 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
             var openExports = await GetExports();
             if (openExports.Count > 0)
             {
+                _logger.LogInformation($"There is already an open export with id {openExports[0].Id}. Returning this export, as only one export can be processed by Swissbitcloudv2 at a time." +
+                    $"To start a new export the old export data must be deleted and stored with a daily closing. If another daily closing is happening on another queue for this tse, data will be saved and deleted on that queue.");
                 return openExports[0];
             }
             var response = await _httpClient.PostAsync($"/api/v1/tse/export", null).ConfigureAwait(false);
