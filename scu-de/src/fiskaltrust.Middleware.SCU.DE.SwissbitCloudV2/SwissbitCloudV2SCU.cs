@@ -212,7 +212,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                     };
                 }
 
-                var exportDto = await _swissbitCloudV2Provider.StartExport();
+                var exportDto = await _swissbitCloudV2Provider.StartExportAsync();
 
                 CacheExportAsync(exportDto).ExecuteInBackgroundThread();
 
@@ -384,12 +384,20 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                                 }
                                 else
                                 {
-                                    var exportDto = await _swissbitCloudV2Provider.DeleteExportByIdAsync(request.TokenId);
-                                    if (!string.IsNullOrEmpty(exportDto?.ErrorCode))
+                                    var openExports = await _swissbitCloudV2Provider.GetExportsAsync();
+                                    var exportDto = openExports.FirstOrDefault(x => x.Id == request.TokenId);
+                                    if (exportDto != null)
                                     {
-                                        _logger.LogWarning($"Could not delete log files from TSE after successfully exporting. ErrorCode: {exportDto.ErrorCode} Errormessage: {exportDto.ErrorMessage}.");
+                                        exportDto = await _swissbitCloudV2Provider.DeleteExportByIdAsync(request.TokenId);
+                                        if (!string.IsNullOrEmpty(exportDto?.ErrorCode))
+                                        {
+                                            _logger.LogWarning($"Could not delete log files from TSE after successfully exporting. ErrorCode: {exportDto.ErrorCode} Errormessage: {exportDto.ErrorMessage}.");
+                                        }
                                     }
-
+                                    else
+                                    {
+                                        _logger.LogWarning($"Could not delete log files from TSE after successfully exporting, as it was already deleted.");
+                                    }
                                 }
                             }
                             sessionResponse.IsValid = true;

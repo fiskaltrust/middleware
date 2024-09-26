@@ -92,9 +92,9 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
             await _httpClient.PostAsync($"/api/v1/tse/deregisterClient", new StringContent(jsonPayload, Encoding.UTF8, "application/json"));            
         }
 
-        public async Task<ExportDto> StartExport()
+        public async Task<ExportDto> StartExportAsync()
         {
-            var openExports = await GetExports();
+            var openExports = await GetExportsAsync();
             if (openExports.Count > 0)
             {
                 _logger.LogInformation($"There is already an open export with id {openExports[0].Id}. Returning this export, as only one export can be processed by Swissbitcloudv2 at a time." +
@@ -106,7 +106,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
             return JsonConvert.DeserializeObject<ExportDto>(await response.Content.ReadAsStringAsync());
         }
 
-        public async Task<List<ExportDto>> GetExports()
+        public async Task<List<ExportDto>> GetExportsAsync()
         {
             var response = await _httpClient.GetAsync($"/api/v1/tse/export").ConfigureAwait(false);
 
