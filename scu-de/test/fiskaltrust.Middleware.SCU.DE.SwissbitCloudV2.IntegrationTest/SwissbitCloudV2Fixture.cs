@@ -1,7 +1,4 @@
-﻿using System;
-using System.IO;
-using System.Threading.Tasks;
-using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2;
+﻿using System.Threading.Tasks;
 using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Helpers;
 using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services;
 using Microsoft.Extensions.Logging;
@@ -15,8 +12,8 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.IntegrationTest
 
         public SwissbitCloudV2SCUConfiguration Configuration { get; } = new SwissbitCloudV2SCUConfiguration()
         {
-            TseSerialNumber = "12debb7976d3c5c49a8482f2742acc25ddd7244fe69e4b754559dc53b8166a27",
-            TseAccessToken = "4cba251e128368b7fa1abc5ce87c6dd4"
+            TseSerialNumber = "7eaf677c518fab79fe459bb9b95aac250ee0469905befa6a3a3e58ee49be9a20",
+            TseAccessToken = "c91e197069207f2c65b2048d7be9a5bf"
         };
 
         public string TestClientId { get; } = "TestClient";
@@ -25,7 +22,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.IntegrationTest
 
             if (_instance == null)
             {
-               var apiProvider = new SwissbitCloudV2ApiProvider(Configuration, new HttpClientWrapper(Configuration, Mock.Of<ILogger<HttpClientWrapper>>()));
+               var apiProvider = new SwissbitCloudV2ApiProvider(Configuration, new HttpClientWrapper(Configuration, Mock.Of<ILogger<HttpClientWrapper>>()), Mock.Of<ILogger<SwissbitCloudV2ApiProvider>>());
               _instance = new SwissbitCloudV2SCU(Mock.Of<ILogger<SwissbitCloudV2SCU>>(), apiProvider, new ClientCache(apiProvider), Configuration);
                await _instance.RegisterClientIdAsync(new ifPOS.v1.de.RegisterClientIdRequest() { ClientId = TestClientId });
             }
@@ -35,13 +32,8 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.IntegrationTest
 
         public SwissbitCloudV2SCU GetNewSut()
         {
-
-           var apiProvider = new SwissbitCloudV2ApiProvider(Configuration, new HttpClientWrapper(Configuration, Mock.Of<ILogger<HttpClientWrapper>>()));
+           var apiProvider = new SwissbitCloudV2ApiProvider(Configuration, new HttpClientWrapper(Configuration, Mock.Of<ILogger<HttpClientWrapper>>()), Mock.Of<ILogger<SwissbitCloudV2ApiProvider>>());
             return _instance = new SwissbitCloudV2SCU(Mock.Of<ILogger<SwissbitCloudV2SCU>>(), apiProvider, new ClientCache(apiProvider), Configuration);
-           
         }
-
-
-
     }
 }
