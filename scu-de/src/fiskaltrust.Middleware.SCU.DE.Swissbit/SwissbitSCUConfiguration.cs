@@ -10,5 +10,6 @@
         public bool EnableFirmwareUpdate { get; set; } = false;
         public string NativeLibArch { get; set; }
         public bool StoreTemporaryExportFiles { get; set; } = false;
+        public string ServiceFolder { get; set; }
     }
 }
