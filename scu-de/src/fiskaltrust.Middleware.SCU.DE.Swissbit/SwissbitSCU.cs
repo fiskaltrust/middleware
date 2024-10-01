@@ -773,7 +773,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
                         SetEraseEnabledForExportState(exportId, ExportState.Running);
                     }
 
-                    using (var tempStream = File.Open(exportId.ToString(), FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read))
+                    using (var tempStream = File.Open(GetTempExportFilePath(exportId.ToString()), FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read))
                     {
                         await GetProxy().ExportTarAsync(tempStream);
                     }
@@ -793,7 +793,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
             var lastlog = TarFileHelper.GetLastLogEntryFromTarFile(targetFile);
 
             //Unixt_1687767355_Sig-105945_Log-Tra_No-50549_Finish_Client-6qmZrXEtrkuBhSOA7Oi39g.log
-            var iSigStart = lastlog.IndexOf("Tra_No-")+7;
+            var iSigStart = lastlog.IndexOf("Tra_No-") + 7;
             var iSigEnd = lastlog.IndexOf('_', iSigStart);
             var lastSigCount = lastlog.Substring(iSigStart, iSigEnd - iSigStart);
             return long.Parse(lastSigCount);
@@ -840,6 +840,21 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
             });
         }
 
+        private string GetTempExportFilePath(string exportId)
+        {
+            if (FileHelper.IsFileWritable(exportId))
+            {
+                return exportId;
+            }
+
+            if (FileHelper.IsFileWritable(Path.Combine(_configuration.ServiceFolder, exportId)))
+            {
+                return Path.Combine(_configuration.ServiceFolder, exportId);
+            }
+
+            return Path.Combine(Path.GetTempPath(), exportId);
+        }
+
         public async Task<ExportDataResponse> ExportDataAsync(ExportDataRequest request)
         {
             try
@@ -854,7 +869,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
                         TarFileEndOfFile = true
                     };
                 }
-                var tempFileName = request.TokenId;
+                var tempFileName = GetTempExportFilePath(request.TokenId);
                 if (!_readStreamPointer.ContainsKey(request.TokenId))
                 {
                     throw new SwissbitException("The export failed to start. It needs to be retriggered");
@@ -931,7 +946,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
                     throw exportStateData.Error;
                 }
 
-                var tempFileName = request.TokenId;
+                var tempFileName = GetTempExportFilePath(request.TokenId);
                 return await _lockingHelper.PerformWithLock(_hwLock, async () =>
                 {
                     try
