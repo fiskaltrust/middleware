@@ -38,7 +38,11 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Repositories
                     ? await GetQueueItemOfMissingIdAsync(aj).ConfigureAwait(false)
                     : await _queueItemRepository.GetAsync(aj.ftQueueItemId).ConfigureAwait(false);
 
-                var closingNumber = JsonConvert.DeserializeAnonymousType(aj.DataJson, new JObject()).Property("closingNumber")?.Value.Value<long?>();
+                long? closingNumber = null;
+                if (aj.DataJson != null && aj.DataJson.Contains("closingNumber"))
+                {
+                    closingNumber = JsonConvert.DeserializeAnonymousType(aj.DataJson, new JObject()).Property("closingNumber")?.Value.Value<long?>();
+                }
                 if(closingNumber == null)
                 {
                     var response = JsonConvert.DeserializeObject<ReceiptResponse>(queueItem.response);

@@ -159,6 +159,10 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
             {
                 await connection.OpenAsync().ConfigureAwait(false);
                 var entry =  await connection.QueryFirstOrDefaultAsync<ftQueueItem>(query, new { ftQueueItem.ftQueueRow, receiptRequest.cbPreviousReceiptReference }).ConfigureAwait(false);
+                if (entry == null)
+                {
+                    return null;
+                }
                 var request = JsonConvert.DeserializeObject<ReceiptRequest>(entry.request);
                 if (request.IncludeInReferences())
                 {
