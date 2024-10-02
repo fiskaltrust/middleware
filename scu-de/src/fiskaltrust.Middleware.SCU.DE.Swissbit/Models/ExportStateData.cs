@@ -16,5 +16,6 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Models
         public Exception Error { get; set; } = null;
         public ExportState State { get; set; }
         public bool EraseEnabled { get; set; } = false;
+        public string ExportPath { get; set; }
     }
 }
