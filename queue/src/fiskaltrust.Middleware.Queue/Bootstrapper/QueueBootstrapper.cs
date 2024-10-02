@@ -10,6 +10,8 @@ using fiskaltrust.Interface.Tagging;
 using fiskaltrust.Middleware.Contracts.Extensions;
 using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Contracts.Models;
+using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Localization.QueueDE.Helpers;
 using fiskaltrust.Middleware.Queue.Helpers;
 using fiskaltrust.Middleware.QueueSynchronizer;
 using fiskaltrust.storage.V0;
@@ -45,7 +47,7 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
 
             services.AddSingleton(sp =>
             {
-                CreateConfigurationActionJournalAsync(middlewareConfiguration, sp.GetRequiredService<IActionJournalRepository>()).Wait();
+                CreateConfigurationActionJournalAsync(middlewareConfiguration, sp.GetRequiredService<IMiddlewareQueueItemRepository>(), sp.GetRequiredService<IMiddlewareActionJournalRepository>()).Wait();
                 return middlewareConfiguration;
             });
 
@@ -60,8 +62,13 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
             businessLogicFactoryBoostrapper.ConfigureServices(services);
         }
 
-        private static async Task CreateConfigurationActionJournalAsync(MiddlewareConfiguration middlewareConfiguration, IActionJournalRepository actionJournalRepository)
+        private static async Task CreateConfigurationActionJournalAsync(MiddlewareConfiguration middlewareConfiguration, IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareActionJournalRepository actionJournalRepository)
         {
+
+            if (MigrationHelper.IsMigrationInProgress(queueItemRepository, actionJournalRepository))
+            {
+                return;
+            }
             var configuration = new Dictionary<string, object>
             {
                 { "MachineName", Environment.MachineName },

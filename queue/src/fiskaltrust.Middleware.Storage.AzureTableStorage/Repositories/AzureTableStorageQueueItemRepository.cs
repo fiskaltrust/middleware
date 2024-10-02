@@ -210,7 +210,12 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
         public async Task<ftQueueItem> GetLastQueueItemAsync() 
         {
             var result = _tableClient.QueryAsync<TableEntity>(select: new string[] { "PartitionKey", "RowKey" });
-            var lastEntity = await result.FirstAsync();
+            var lastEntity = await result.FirstOrDefaultAsync();
+
+            if (lastEntity == null)
+            {
+                return null;
+            }
 
             return MapToStorageEntity(await _tableClient.GetEntityAsync<TableEntity>(lastEntity.PartitionKey, lastEntity.RowKey));
         }
