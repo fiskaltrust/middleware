@@ -773,7 +773,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
                         SetEraseEnabledForExportState(exportId, ExportState.Running);
                     }
 
-                    using (var tempStream = File.Open(GetTempExportFilePath(exportId.ToString()), FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read))
+                    using (var tempStream = File.Open(GetTempExportFilePath(exportId.ToString()), FileMode.OpenOrCreate, FileAccess.Write, FileShare.ReadWrite))
                     {
                         await GetProxy().ExportTarAsync(tempStream);
                     }
