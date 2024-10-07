@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -739,7 +738,8 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
                 }
 
                 await UpdateTimeAsync(GetProxy());
-                SetExportState(exportId, ExportState.Running);
+                var path = GetTempExportFilePath(exportId.ToString());
+                SetExportState(exportId, ExportState.Running, null, path);
 
                 CacheExportAsync(exportId, request.ClientId, request.Erase).FireAndForget();
 
@@ -772,8 +772,8 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
                         await GetProxy().UserLoginAsync(WormUserId.WORM_USER_ADMIN, Encoding.ASCII.GetBytes(_configuration.AdminPin));
                         SetEraseEnabledForExportState(exportId, ExportState.Running);
                     }
-
-                    using (var tempStream = File.Open(exportId.ToString(), FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read))
+                    _readStreamPointer.TryGetValue(exportId.ToString(), out var exportStateData);
+                    using (var tempStream = File.Open(exportStateData.ExportPath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Write))
                     {
                         await GetProxy().ExportTarAsync(tempStream);
                     }
@@ -793,7 +793,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
             var lastlog = TarFileHelper.GetLastLogEntryFromTarFile(targetFile);
 
             //Unixt_1687767355_Sig-105945_Log-Tra_No-50549_Finish_Client-6qmZrXEtrkuBhSOA7Oi39g.log
-            var iSigStart = lastlog.IndexOf("Tra_No-")+7;
+            var iSigStart = lastlog.IndexOf("Tra_No-") + 7;
             var iSigEnd = lastlog.IndexOf('_', iSigStart);
             var lastSigCount = lastlog.Substring(iSigStart, iSigEnd - iSigStart);
             return long.Parse(lastSigCount);
@@ -825,12 +825,13 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
             });
         }
 
-        private void SetExportState(Guid tokenId, ExportState exportState, Exception error = null)
+        private void SetExportState(Guid tokenId, ExportState exportState, Exception error = null, string path = null)
         {
             _readStreamPointer.AddOrUpdate(tokenId.ToString(), new ExportStateData
             {
                 ReadPointer = 0,
-                State = exportState
+                State = exportState,
+                ExportPath = path
             }, (key, value) =>
             {
                 value.State = exportState;
@@ -838,6 +839,21 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
                 value.Error = error;
                 return value;
             });
+        }
+
+        private string GetTempExportFilePath(string exportId)
+        {
+            if (FileHelper.IsFileWritable(exportId))
+            {
+                return exportId;
+            }
+
+            if (FileHelper.IsFileWritable(Path.Combine(_configuration.ServiceFolder, exportId)))
+            {
+                return Path.Combine(_configuration.ServiceFolder, exportId);
+            }
+
+            return Path.Combine(Path.GetTempPath(), exportId);
         }
 
         public async Task<ExportDataResponse> ExportDataAsync(ExportDataRequest request)
@@ -854,7 +870,6 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
                         TarFileEndOfFile = true
                     };
                 }
-                var tempFileName = request.TokenId;
                 if (!_readStreamPointer.ContainsKey(request.TokenId))
                 {
                     throw new SwissbitException("The export failed to start. It needs to be retriggered");
@@ -864,7 +879,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
                     throw exportStateData.Error;
                 }
 
-                if (exportStateData.State != ExportState.Succeeded || !File.Exists(tempFileName))
+                if (exportStateData.State != ExportState.Succeeded || !File.Exists(exportStateData.ExportPath))
                 {
                     return new ExportDataResponse
                     {
@@ -881,7 +896,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
                 if (request.MaxChunkSize > 0)
                 {
                     var chunkSize = request.MaxChunkSize;
-                    using (var tempStream = File.OpenRead(tempFileName))
+                    using (var tempStream = File.OpenRead(exportStateData.ExportPath))
                     {
                         tempStream.Seek(exportStateData.ReadPointer, SeekOrigin.Begin);
 
@@ -895,7 +910,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
                         exportStateData.ReadPointer += len;
                     }
                 }
-                exportDataResponse.TotalTarFileSize = new FileInfo(tempFileName).Length;
+                exportDataResponse.TotalTarFileSize = new FileInfo(exportStateData.ExportPath).Length;
                 exportDataResponse.TotalTarFileSizeAvailable = exportDataResponse.TotalTarFileSize >= 0;
                 exportDataResponse.TarFileEndOfFile = exportStateData.ReadPointer == exportDataResponse.TotalTarFileSize;
                 return exportDataResponse;
@@ -931,7 +946,6 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
                     throw exportStateData.Error;
                 }
 
-                var tempFileName = request.TokenId;
                 return await _lockingHelper.PerformWithLock(_hwLock, async () =>
                 {
                     try
@@ -940,7 +954,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
                         {
                             TokenId = request.TokenId
                         };
-                        using (var tempStream = File.Open(tempFileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                        using (var tempStream = File.Open(exportStateData.ExportPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                         {
                             var sha256 = SHA256.Create().ComputeHash(tempStream);
                             if (tempStream.Position != exportStateData.ReadPointer)
@@ -973,9 +987,9 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit
                             }
                             try
                             {
-                                if (File.Exists(tempFileName) && !_configuration.StoreTemporaryExportFiles)
+                                if (File.Exists(exportStateData.ExportPath) && !_configuration.StoreTemporaryExportFiles)
                                 {
-                                    File.Delete(tempFileName);
+                                    File.Delete(exportStateData.ExportPath);
                                 }
                             }
                             catch { }
