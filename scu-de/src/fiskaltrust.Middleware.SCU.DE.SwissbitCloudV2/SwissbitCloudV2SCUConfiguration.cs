@@ -18,5 +18,6 @@
         public int RetriesOn5xxError { get; set; } = 2;
         public int RetriesOnTarExportWebException{ get; set; } = 2;
         public int DelayOnRetriesInMs { get; set; } = 1000;
+        public int ExportTimeoutMs { get; set; } = 18000 * 1000;
     }
 }

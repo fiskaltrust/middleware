@@ -16,8 +16,6 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
 {
     public sealed class SwissbitCloudV2ApiProvider : ISwissbitCloudV2ApiProvider, IDisposable
     {
-        private const int EXPORT_TIMEOUT_MS = 18000 * 1000;
-
         private readonly SwissbitCloudV2SCUConfiguration _configuration;
         private readonly HttpClientWrapper _httpClient;
         private readonly JsonSerializerSettings _serializerSettings;
@@ -97,8 +95,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
             var openExports = await GetExportsAsync();
             if (openExports.Count > 0)
             {
-                _logger.LogInformation($"There is already an open export with id {openExports[0].Id}. Returning this export, as only one export can be processed by Swissbitcloudv2 at a time." +
-                    $"To start a new export the old export data must be deleted and stored with a daily closing. If another daily closing is happening on another queue for this tse, data will be saved and deleted on that queue.");
+                _logger.LogInformation($"There is an export with id {openExports[0].Id}. Returning this export, as only one export can be processed by Swissbitcloudv2 at a time.");
                 return openExports[0];
             }
             var response = await _httpClient.PostAsync($"/api/v1/tse/export", null).ConfigureAwait(false);
@@ -172,9 +169,9 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
                 {
                     throw;
                 }
-            } while (sw.ElapsedMilliseconds < EXPORT_TIMEOUT_MS);
+            } while (sw.ElapsedMilliseconds < _configuration.ExportTimeoutMs);
 
-            throw new TimeoutException($"Timeout of {EXPORT_TIMEOUT_MS}ms was reached while exporting the backup {exportId}.");
+            throw new TimeoutException($"Timeout of {_configuration.ExportTimeoutMs}ms was reached while exporting the backup {exportId}.");
         }
 
         public void Dispose() => _httpClient?.Dispose();
