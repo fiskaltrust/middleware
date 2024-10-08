@@ -23,6 +23,7 @@ stages:
         - Swissbit
         - DeutscheFiskal
         - SwissbitCloud
+        - SwissbitCloudV2
         - InMemory
       stages:
         - stage: Release_Sandbox
@@ -51,6 +52,7 @@ stages:
         - Swissbit
         - DeutscheFiskal
         - SwissbitCloud
+        - SwissbitCloudV2
         - InMemory
       stages:
         - stage: Release_Sandbox_Legacy
@@ -79,6 +81,7 @@ stages:
         - Swissbit
         - DeutscheFiskal
         - SwissbitCloud
+        - SwissbitCloudV2
         - InMemory
       stages:
         - stage: Release_Sandbox_Legacy_Nuget
