@@ -7,6 +7,7 @@ using fiskaltrust.Middleware.Localization.QueuePT.Exports.SAFTPT.SAFTSchemaPT104
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT
 {
+
     public class SAFTTests
     {
         public void BasicTest()

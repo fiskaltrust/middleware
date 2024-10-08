@@ -10,6 +10,7 @@ using fiskaltrust.Middleware.Localization.QueuePT.Processors;
 using fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.Middleware.Localization.v2.v2;
 using fiskaltrust.storage.serialization.DE.V0;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
@@ -58,15 +59,16 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
             configurationRepositoryMock.Setup(x => x.GetQueueAsync(_queue.ftQueueId)).ReturnsAsync(queue);
 
             var configurationRepository = configurationRepositoryMock.Object;
-            var middlewareQueueItemRepository = Mock.Of<IMiddlewareQueueItemRepository>();
+            var storageProvider = Mock.Of<IStorageProvider>();
             var middlewareReceiptJournalRepository = Mock.Of<IMiddlewareReceiptJournalRepository>();
             var middlewareActionJournalRepository = Mock.Of<IMiddlewareActionJournalRepository>();
             var cryptoHelper = Mock.Of<ICryptoHelper>();
             var middlewareConfiguration = new MiddlewareConfiguration();
             var ptSSCD = Mock.Of<IPTSSCD>();
-            var signProcessorPT = new ReceiptProcessor(LoggerFactory.Create(x => { }).CreateLogger<ReceiptProcessor>(), configurationRepository, new LifecyclCommandProcessorPT(configurationRepository), new ReceiptCommandProcessorPT(ptSSCD), new DailyOperationsCommandProcessorPT(), new InvoiceCommandProcessorPT(), new ProtocolCommandProcessorPT());
-            var signProcessor = new SignProcessor(LoggerFactory.Create(x => { }).CreateLogger<SignProcessor>(), configurationRepository, middlewareQueueItemRepository, middlewareReceiptJournalRepository, middlewareActionJournalRepository, cryptoHelper, signProcessorPT.ProcessAsync, null, middlewareConfiguration);
-            var journalProcessor = new JournalProcessor(configurationRepository, middlewareQueueItemRepository, middlewareReceiptJournalRepository, middlewareActionJournalRepository, null, null, null, null, null, null);
+            var queuePT = new ftQueuePT();
+            var signProcessorPT = new ReceiptProcessor(LoggerFactory.Create(x => { }).CreateLogger<ReceiptProcessor>(), configurationRepository, new LifecyclCommandProcessorPT(configurationRepository), new ReceiptCommandProcessorPT(ptSSCD, queuePT), new DailyOperationsCommandProcessorPT(), new InvoiceCommandProcessorPT(), new ProtocolCommandProcessorPT());
+            var signProcessor = new SignProcessor(LoggerFactory.Create(x => { }).CreateLogger<SignProcessor>(), storageProvider, signProcessorPT.ProcessAsync, null, middlewareConfiguration);
+            var journalProcessor = new JournalProcessor(storageProvider, null, null);
             return signProcessor;
         }
 

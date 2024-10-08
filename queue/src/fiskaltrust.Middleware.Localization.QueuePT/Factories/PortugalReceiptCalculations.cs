@@ -1,32 +1,50 @@
 ﻿using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Localization.QueuePT.Models;
+using fiskaltrust.Middleware.Localization.v2.v2;
+using Org.BouncyCastle.Asn1.Ocsp;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Factories
 {
+    public static class InvoiceType
+    {
+        public const string Invoice = "FT";
+        public const string SimplifiedInvoice = "FS";
+        public const string Receipt = "FR";
+        public const string DebitNote = "ND";
+        public const string CreditNote = "NC";
+    }
+
+    public static class InvoiceStatus
+    {
+        public const string Normal = "N";
+        public const string Cancelled = "A";
+        public const string SelfBilling = "S";
+        public const string SummaryDocumentForOtherDocuments = "R";
+        public const string InvoicedDocument = "F";
+    }
+
     public static class PortugalReceiptCalculations
     {
-        public static string GetQRCodeFromReceipt(ReceiptRequest request, string hash)
+        public static string CreateSimplifiedInvoiceQRCodeAnonymousCustomer(string hash, ftQueuePT queuePT, ReceiptRequest request, ReceiptResponse receiptResponse)
         {
             var taxGroups = request.cbChargeItems.GroupBy(GetIVATAxCode);
-
             var normalChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "NOR").ToList();
             var reducedChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "RED").ToList();
             var intermediateChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "INT").ToList();
             var exemptChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "ISE").ToList();
 
-
             return new PTQrCode
             {
-                IssuerTIN = "123456789",
-                CustomerTIN = "999999990",
-                CustomerCountry = "PT",
-                DocumentType = "FS",
-                DocumentStatus = "N",
+                IssuerTIN = queuePT.IssuerTIN,
+                CustomerTIN = PTQrCode.CUSTOMER_TIN_ANONYMOUS,
+                CustomerCountry = PTQrCode.CUSTOMER_COUNTRY_ANONYMOUS,
+                DocumentType = InvoiceType.SimplifiedInvoice,
+                DocumentStatus = InvoiceStatus.Normal,
                 DocumentDate = request.cbReceiptMoment,
-                UniqueIdentificationOfTheDocument = request.cbReceiptReference,
-                ATCUD = "0",
-                TaxCountryRegion = "PT",
-                TaxableBasisOfVAT_ExemptRate = exemptChargeItems.Sum(x => x.VATAmount ?? 0.0m),
+                UniqueIdentificationOfTheDocument = receiptResponse.ftReceiptIdentification, 
+                ATCUD = queuePT.ATCUD,
+                TaxCountryRegion = queuePT.TaxRegion,
+                TaxableBasisOfVAT_ExemptRate = exemptChargeItems.Sum(x => x.Amount),
                 TaxableBasisOfVAT_ReducedRate = reducedChargeItems.Sum(x => x.Amount - x.VATAmount ?? 0.0m),
                 TotalVAT_ReducedRate = reducedChargeItems.Sum(x => x.VATAmount ?? 0.0m),
                 TaxableBasisOfVAT_IntermediateRate = intermediateChargeItems.Sum(x => x.Amount - x.VATAmount ?? 0.0m),
@@ -36,7 +54,8 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.Factories
                 TotalTaxes = request.cbChargeItems.Sum(x => x.VATAmount ?? 0.0m),
                 GrossTotal = request.cbChargeItems.Sum(x => x.Amount),
                 Hash = hash[..4],
-                SoftwareCertificateNumber = ""
+                SoftwareCertificateNumber = queuePT.SoftwareCertificateNumber,
+                OtherInformation = "ftQueueId=" + receiptResponse.ftQueueID + ";ftQueueItemId=" + receiptResponse.ftQueueItemID
             }.GenerateQRCode();
         }
 

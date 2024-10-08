@@ -14,7 +14,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.PTSSCD
 
     public interface IPTSSCD
     {
-        Task<(ProcessResponse, string)> ProcessReceiptAsync(ProcessRequest request, string lastHash);
+        Task<(ProcessResponse response, string hash)> ProcessReceiptAsync(ProcessRequest request, string lastHash);
 
         Task<PTSSCDInfo> GetInfoAsync();
     }

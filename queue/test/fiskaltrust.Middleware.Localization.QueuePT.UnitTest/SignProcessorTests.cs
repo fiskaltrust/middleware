@@ -45,7 +45,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
 
         private SignProcessor GetSUT()
         {
-            var configurationRepository = Mock.Of<IConfigurationRepository>();
+            var configurationRepository = Mock.Of<IStorageProvider>();
             var middlewareQueueItemRepository = Mock.Of<IMiddlewareQueueItemRepository>();
             var middlewareReceiptJournalRepository = Mock.Of<IMiddlewareReceiptJournalRepository>();
             var middlewareActionJournalRepository = Mock.Of<IMiddlewareActionJournalRepository>();
@@ -53,7 +53,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
             var middlewareConfiguration = new MiddlewareConfiguration();
 
             var signProcessorPT = Mock.Of<IReceiptProcessor>();
-            return new SignProcessor(LoggerFactory.Create(x => { }).CreateLogger<SignProcessor>(), configurationRepository, middlewareQueueItemRepository, middlewareReceiptJournalRepository, middlewareActionJournalRepository, cryptoHelper, signProcessorPT.ProcessAsync, null, middlewareConfiguration);
+            return new SignProcessor(LoggerFactory.Create(x => { }).CreateLogger<SignProcessor>(), configurationRepository,  signProcessorPT.ProcessAsync, null, middlewareConfiguration);
         }
 
         public static IEnumerable<object[]> allNonInitialOperationReceipts()

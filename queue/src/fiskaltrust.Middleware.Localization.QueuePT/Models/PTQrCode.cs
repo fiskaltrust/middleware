@@ -1,7 +1,15 @@
-﻿namespace fiskaltrust.Middleware.Localization.QueuePT.Models
+﻿using System.Globalization;
+using System.Text;
+using fiskaltrust.Middleware.Localization.QueuePT.Exports.SAFTPT.SAFTSchemaPT10401.SourceDocumentContracts;
+using System.Xml.Linq;
+
+namespace fiskaltrust.Middleware.Localization.QueuePT.Models
 {
     public class PTQrCode
     {
+        public const string CUSTOMER_TIN_ANONYMOUS = "999999990";
+        public const string CUSTOMER_COUNTRY_ANONYMOUS = "PT";
+
         /// <summary>
         /// Fill with the issuer’s TIN without blanks and withoutcountry prefix, according to the TaxRegistrationNumber field of the SAF-T (PT).
         /// </summary>
@@ -105,60 +113,73 @@
         /// <summary>Free fill-in field, in which, for example, payment information can be indicated (e.g.: from IBAN or ATM Ref.,with the separator «;»). This field shall not contain the asterisk character (*).
         /// </summary>
         public string? OtherInformation { get; set; }
+
+        public static string CreateCurrencyValue(decimal value)
+        {
+            return value.ToString("F2", CultureInfo.InvariantCulture);
+        }
+
         public string GenerateQRCode()
         {
-            var start = $"A:{IssuerTIN}*"
-            + $"B:{CustomerTIN}*"
-            + $"C:{CustomerCountry}*"
-            + $"D:{DocumentType}*"
-            + $"E:{DocumentStatus}*"
-            + $"F:{DocumentDate:YYYYmmdd}*"
-            + $"G:{UniqueIdentificationOfTheDocument}*"
-            + $"H:{ATCUD}*";
+            var sb = new StringBuilder();
+            sb.Append($"A:{IssuerTIN}*");
+            sb.Append($"B:{CustomerTIN}*");
+            sb.Append($"C:{CustomerCountry}*");
+            sb.Append($"D:{DocumentType}*");
+            sb.Append($"E:{DocumentStatus}*");
+            sb.Append($"F:{DocumentDate:yyyyMMdd}*");
+            sb.Append($"G:{UniqueIdentificationOfTheDocument}*");
+            sb.Append($"H:{ATCUD}*");
 
-            var taxes = $"I1:{TaxCountryRegion}*";
+            sb.Append($"I1:{TaxCountryRegion}*");
+
             if (TaxableBasisOfVAT_ExemptRate.HasValue)
             {
-                taxes += $"I2:{TaxableBasisOfVAT_ExemptRate:F2}*";
+                sb.Append($"I2:{CreateCurrencyValue(TaxableBasisOfVAT_ExemptRate.Value)}*");
             }
 
             if (TaxableBasisOfVAT_ReducedRate.HasValue)
             {
-                taxes += $"I3:{TaxableBasisOfVAT_ReducedRate:F2}*";
+                sb.Append($"I3:{CreateCurrencyValue(TaxableBasisOfVAT_ReducedRate.Value)}*");
             }
 
             if (TotalVAT_ReducedRate.HasValue)
             {
-                taxes += $"I4:{TotalVAT_ReducedRate:F2}*";
+                sb.Append($"I4:{CreateCurrencyValue(TotalVAT_ReducedRate.Value)}*");
             }
 
             if (TaxableBasisOfVAT_IntermediateRate.HasValue)
             {
-                taxes += $"I5:{TaxableBasisOfVAT_IntermediateRate:F2}*";
+                sb.Append($"I5:{CreateCurrencyValue(TaxableBasisOfVAT_IntermediateRate.Value)}*");
             }
 
             if (TotalVAT_IntermediateRate.HasValue)
             {
-                taxes += $"I6:{TotalVAT_IntermediateRate:F2}*";
+                sb.Append($"I6:{CreateCurrencyValue(TotalVAT_IntermediateRate.Value)}*");
             }
 
             if (TaxableBasisOfVAT_StandardRate.HasValue)
             {
-                taxes += $"I7:{TaxableBasisOfVAT_StandardRate:F2}*";
+                sb.Append($"I7:{CreateCurrencyValue(TaxableBasisOfVAT_StandardRate.Value)}*");
             }
 
             if (TotalVAT_StandardRate.HasValue)
             {
-                taxes += $"I8:{TotalVAT_StandardRate:F2}*";
+                sb.Append($"I8:{CreateCurrencyValue(TotalVAT_StandardRate.Value)}*");
             }
 
-            var end = ""
-            + $"N:{TotalTaxes:F2}*"
-            + $"O:{GrossTotal:F2}*"
-            + $"Q:{Hash}*"
-            + $"R:{SoftwareCertificateNumber}*"
-            + $"S:{OtherInformation}";
-            return start + taxes + end;
+            sb.Append($"N:{CreateCurrencyValue(TotalTaxes)}*");
+            sb.Append($"O:{CreateCurrencyValue(GrossTotal)}*");
+            sb.Append($"Q:{Hash}*");
+            sb.Append($"R:{SoftwareCertificateNumber}*");
+
+            if (!string.IsNullOrEmpty(OtherInformation))
+            {
+                sb.Append($"S:{OtherInformation}");
+            }
+
+            return sb.ToString().TrimEnd('*'); // Removes trailing '*'
         }
+
     }
 }

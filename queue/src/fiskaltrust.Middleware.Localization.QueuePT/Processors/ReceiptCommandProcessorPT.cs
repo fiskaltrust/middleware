@@ -6,14 +6,11 @@ using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Processors
 {
-    public class ReceiptCommandProcessorPT : IReceiptCommandProcessor
+    public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT) : IReceiptCommandProcessor
     {
-        private readonly IPTSSCD _sscd;
+        private readonly IPTSSCD _sscd = sscd;
+        private readonly ftQueuePT _queuePT = queuePT;
 
-        public ReceiptCommandProcessorPT(IPTSSCD sscd)
-        {
-            _sscd = sscd;
-        }
 
         public async Task<ProcessCommandResponse> ProcessReceiptAsync(ProcessCommandRequest request)
         {
@@ -34,21 +31,23 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.Processors
                     return await Protocol0x0005Async(request);
             }
             request.ReceiptResponse.SetReceiptResponseError($"The given ftReceiptCase 0x{request.ReceiptRequest.ftReceiptCase:x} is not supported. Please refer to docs.fiskaltrust.cloud for supported cases.");
-            return new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>());
+            return new ProcessCommandResponse(request.ReceiptResponse, []);
         }
 
         public async Task<ProcessCommandResponse> UnknownReceipt0x0000Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
 
         public async Task<ProcessCommandResponse> PointOfSaleReceipt0x0001Async(ProcessCommandRequest request)
         {
-            var result = await _sscd.ProcessReceiptAsync(new ifPOS.v1.it.ProcessRequest
+            var (response, hash) = await _sscd.ProcessReceiptAsync(new ifPOS.v1.it.ProcessRequest
             {
                 ReceiptRequest = request.ReceiptRequest,
                 ReceiptResponse = request.ReceiptResponse,
-            }, "");
-            var qrCode = PortugalReceiptCalculations.GetQRCodeFromReceipt(request.ReceiptRequest, result.Item2);
-            result.Item1.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreatePTQRCode(qrCode));
-            return await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+            }, _queuePT.LastHash);
+            response.ReceiptResponse.ftReceiptIdentification = "FS " + _queuePT.SimplifiedInvoiceSeries + "/" + (++_queuePT.SimplifiedInvoiceSeriesNumerator).ToString().PadLeft(4, '0');
+            var qrCode = PortugalReceiptCalculations.CreateSimplifiedInvoiceQRCodeAnonymousCustomer(hash, _queuePT, request.ReceiptRequest, response.ReceiptResponse);
+            response.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreatePTQRCode(qrCode));
+            _queuePT.LastHash = hash;    
+            return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
         }
 
         public async Task<ProcessCommandResponse> PaymentTransfer0x0002Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);

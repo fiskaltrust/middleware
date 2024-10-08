@@ -32,5 +32,15 @@ namespace fiskaltrust.Middleware.Localization.v2.v2
         public DateTime? UsedFailedMomentMax { get; set; }
 
         public Guid? UsedFailedQueueItemId { get; set; }
+
+        /*
+         * The following fields should probably be moved to a different config
+         */
+        public string TaxRegion { get; set; }
+        public string IssuerTIN { get; set; }
+        public string ATCUD { get; set; }
+        public string SimplifiedInvoiceSeries { get; set; }
+        public long SimplifiedInvoiceSeriesNumerator { get; set; }
+        public string SoftwareCertificateNumber { get; set; }
     }
 }
