@@ -21,11 +21,11 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT
 
 
         }
-        private static AuditFile GetAuditFileFromXML(string xml)
+        private static AuditFile? GetAuditFileFromXML(string xml)
         {
             var serializer = new XmlSerializer(typeof(AuditFile));
             using var reader = new StringReader(xml);
-            return (AuditFile) serializer.Deserialize(reader);
+            return (AuditFile?) serializer.Deserialize(reader);
         }
     }
 }

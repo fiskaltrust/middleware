@@ -1,8 +1,9 @@
 ﻿using System.Threading.Tasks;
-using fiskaltrust.ifPOS.v1;
+using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueuePT.Processors;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.v2;
+using fiskaltrust.storage.V0;
 using FluentAssertions;
 using Xunit;
 
@@ -27,9 +28,15 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
             };
             var receiptResponse = new ReceiptResponse
             {
-                ftState = 0x5054_2000_0000_0000
+                ftState = 0x5054_2000_0000_0000,
+                ftCashBoxIdentification = "cashBoxIdentification",
+                ftQueueID = Guid.NewGuid(),
+                ftQueueItemID = Guid.NewGuid(),
+                ftQueueRow = 1,
+                ftReceiptIdentification = "receiptIdentification",
+                ftReceiptMoment = DateTime.UtcNow,
             };
-            var request = new ProcessCommandRequest(null, receiptRequest, receiptResponse, null);
+            var request = new ProcessCommandRequest(new ftQueue { }, receiptRequest, receiptResponse, new ftQueueItem { });
 
             var result = await _sut.ProcessReceiptAsync(request);
 
@@ -46,9 +53,15 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
             };
             var receiptResponse = new ReceiptResponse
             {
-                ftState = 0x5054_2000_0000_0000
+                ftState = 0x5054_2000_0000_0000,
+                ftCashBoxIdentification = "cashBoxIdentification",
+                ftQueueID = Guid.NewGuid(),
+                ftQueueItemID = Guid.NewGuid(),
+                ftQueueRow = 1,
+                ftReceiptIdentification = "receiptIdentification",
+                ftReceiptMoment = DateTime.UtcNow,
             };
-            var request = new ProcessCommandRequest(null, receiptRequest, receiptResponse, null);
+            var request = new ProcessCommandRequest(new ftQueue { }, receiptRequest, receiptResponse, new ftQueueItem { });
 
             var result = await _sut.ProcessReceiptAsync(request);
             result.receiptResponse.Should().Be(receiptResponse);

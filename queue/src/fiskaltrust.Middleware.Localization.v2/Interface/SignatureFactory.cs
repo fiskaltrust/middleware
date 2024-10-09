@@ -1,17 +1,16 @@
 ﻿using System;
-using fiskaltrust.ifPOS.v1;
+using fiskaltrust.Api.POS.Models.ifPOS.v2;
 
-namespace fiskaltrust.Middleware.Localization.v2.Interface
+namespace fiskaltrust.Middleware.Localization.v2.Interface;
+
+public static class SignatureFactory
 {
-    public static class SignatureFactory
-    {
-        public static SignaturItem CreateSandboxSignature(Guid queueId) =>
-            new SignaturItem
-            {
-                Caption = "S A N D B O X",
-                Data = queueId.ToString(),
-                ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                ftSignatureType = (long) SignaturItem.Types.Unknown
-            };
-    }
+    public static SignatureItem CreateSandboxSignature(Guid queueId) =>
+        new SignatureItem
+        {
+            Caption = "S A N D B O X",
+            Data = queueId.ToString(),
+            ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.Text,
+            ftSignatureType = (long) ifPOS.v1.SignaturItem.Types.Unknown
+        };
 }

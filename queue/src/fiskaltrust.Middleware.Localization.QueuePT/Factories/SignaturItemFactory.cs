@@ -1,5 +1,4 @@
-﻿using fiskaltrust.ifPOS.v1;
-using fiskaltrust.ifPOS.v1.it;
+﻿using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueuePT.Interface;
 using fiskaltrust.storage.V0;
 
@@ -7,35 +6,35 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.Factories;
 
 public static class SignaturItemFactory
 {
-    public static SignaturItem CreateInitialOperationSignature(ftQueue queue)
+    public static SignatureItem CreateInitialOperationSignature(ftQueue queue)
     {
-        return new SignaturItem()
+        return new SignatureItem()
         {
             ftSignatureType = (long) SignatureTypesPT.InitialOperationReceipt,
-            ftSignatureFormat = (long) SignaturItem.Formats.Text,
+            ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.Text,
             Caption = $"Initial-operation receipt",
             Data = $"Queue-ID: {queue.ftQueueId}"
         };
     }
 
-    public static SignaturItem CreateOutOfOperationSignature(ftQueue queue)
+    public static SignatureItem CreateOutOfOperationSignature(ftQueue queue)
     {
-        return new SignaturItem()
+        return new SignatureItem()
         {
             ftSignatureType = (long) SignatureTypesPT.OutOfOperationReceipt,
-            ftSignatureFormat = (long) SignaturItem.Formats.Text,
+            ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.Text,
             Caption = $"Out-of-operation receipt",
             Data = $"Queue-ID: {queue.ftQueueId}"
         };
     }
 
-    public static SignaturItem CreatePTQRCode(string qrCode)
+    public static SignatureItem CreatePTQRCode(string qrCode)
     {
-        return new SignaturItem()
+        return new SignatureItem()
         {
             Caption = "[www.fiskaltrust.pt]",
             Data = qrCode,
-            ftSignatureFormat = (long) SignaturItem.Formats.QR_Code,
+            ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.QR_Code,
             ftSignatureType = (long) SignatureTypesPT.PosReceipt
         };
     }

@@ -10,14 +10,14 @@ namespace fiskaltrust.Middleware.Localization.QueueGR;
 
 public class QueueGRBootstrapper : IV2QueueBootstrapper
 {
-    public IPOS CreateQueueGR(MiddlewareConfiguration middlewareConfiguration, ILoggerFactory loggerFactory, IStorageProvider storageProvider)
+    public Queue CreateQueueGR(MiddlewareConfiguration middlewareConfiguration, ILoggerFactory loggerFactory, IStorageProvider storageProvider)
     {
         var queueGR = new ftQueueGR();
         var signaturCreationUnitPT = new ftSignaturCreationUnitGR();
         var ptSSCD = new MyDataApiClient("", "");
         var signProcessorPT = new ReceiptProcessor(loggerFactory.CreateLogger<ReceiptProcessor>(), storageProvider.GetConfigurationRepository(), new LifecyclCommandProcessorGR(storageProvider.GetConfigurationRepository()), new ReceiptCommandProcessorGR(ptSSCD, queueGR, signaturCreationUnitPT), new DailyOperationsCommandProcessorGR(), new InvoiceCommandProcessorGR(), new ProtocolCommandProcessorGR(), queueGR.CashBoxIdentification);
-        var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), storageProvider, signProcessorPT.ProcessAsync, null, middlewareConfiguration);
-        var journalProcessor = new JournalProcessor(storageProvider, null, null);
+        var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), storageProvider, signProcessorPT.ProcessAsync, queueGR.CashBoxIdentification, middlewareConfiguration);
+        var journalProcessor = new JournalProcessor(storageProvider, new JournalProcessorGR(), loggerFactory.CreateLogger<JournalProcessor>());
         return new Queue(signProcessor, journalProcessor, middlewareConfiguration);
     }
 }

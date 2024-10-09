@@ -40,7 +40,7 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignat
 
     public async Task<ProcessCommandResponse> PointOfSaleReceipt0x0001Async(ProcessCommandRequest request)
     {
-        var (response, hash) = await _sscd.ProcessReceiptAsync(new ifPOS.v1.it.ProcessRequest
+        var (response, hash) = await _sscd.ProcessReceiptAsync(new ProcessRequest
         {
             ReceiptRequest = request.ReceiptRequest,
             ReceiptResponse = request.ReceiptResponse,

@@ -1,12 +1,11 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using fiskaltrust.ifPOS.v1;
+using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.storage.V0;
 
-namespace fiskaltrust.Middleware.Localization.v2
+namespace fiskaltrust.Middleware.Localization.v2;
+
+public interface IReceiptProcessor
 {
-    public interface IReceiptProcessor
-    {
-        Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ReceiptResponse receiptResponse, ftQueue queue, ftQueueItem queueItem);
-    }
+    Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ReceiptResponse receiptResponse, ftQueue queue, ftQueueItem queueItem);
 }

@@ -1,5 +1,5 @@
 ﻿using System;
-using fiskaltrust.ifPOS.v1;
+using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Contracts.Extensions;
 using fiskaltrust.Middleware.Localization.QueuePT.Models;
 using fiskaltrust.storage.serialization.DE.V0;
@@ -26,7 +26,7 @@ public static class ftActionJournalFactory
     {
         var notification = new ActivateQueuePT
         {
-            CashBoxId = Guid.Parse(request.ftCashBoxID),
+            CashBoxId = request.ftCashBoxID!.Value,
             QueueId = queueItem.ftQueueId,
             Moment = DateTime.UtcNow,
             IsStartReceipt = true,
@@ -47,7 +47,7 @@ public static class ftActionJournalFactory
     {
         var notification = new DeactivateQueuePT
         {
-            CashBoxId = Guid.Parse(request.ftCashBoxID),
+            CashBoxId = request.ftCashBoxID!.Value,
             QueueId = queueItem.ftQueueId,
             Moment = DateTime.UtcNow,
             IsStopReceipt = true,

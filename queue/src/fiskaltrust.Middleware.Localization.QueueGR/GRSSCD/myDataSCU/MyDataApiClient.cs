@@ -1,7 +1,6 @@
 ﻿using System.Net.Http.Headers;
 using System.Xml.Serialization;
-using fiskaltrust.ifPOS.v1;
-using fiskaltrust.ifPOS.v1.it;
+using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using Org.BouncyCastle.Asn1.Ocsp;
 
@@ -28,12 +27,17 @@ public class MyDataApiClient : IGRSSCD
     public async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request)
     {
         var result = await SendInvoicesAsync(request.ReceiptRequest, request.ReceiptResponse);
-        request.ReceiptResponse.AddSignatureItem(new SignaturItem
+        request.ReceiptResponse.AddSignatureItem(new SignatureItem
         {
             Caption = "MyDataContent",
-            Data = result
+            Data = result,
+            ftSignatureFormat = 0x0001,
+            ftSignatureType = 0x0001
         });
-        return new ProcessResponse();
+        return new ProcessResponse
+        {
+            ReceiptResponse = request.ReceiptResponse
+        };
     }
 
     // Generic method to handle XML serialization and API calls
@@ -45,7 +49,7 @@ public class MyDataApiClient : IGRSSCD
             [
                 new AadeBookInvoiceType
                 {
-                    uid = receiptResponse.ftQueueItemID, // guid ? maybe queueitemid
+                    uid = receiptResponse.ftQueueItemID.ToString(), // guid ? maybe queueitemid
                     //mark = (long) Guid.Parse(receiptResponse.ftQueueItemID).ToByteArray(), // receiptiditenfication?
                     //cancelledByMark = null, // only set for cancellation
                     authenticationCode = "TBD", // calculate basedon fields

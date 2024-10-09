@@ -2,151 +2,150 @@
 using System.Linq;
 using fiskaltrust.ifPOS.v1;
 
-namespace fiskaltrust.Middleware.Localization.v2.Interface
+namespace fiskaltrust.Middleware.Localization.v2.Interface;
+
+public static class ReceiptRequestHelper
 {
-    public static class ReceiptRequestHelper
+    public static ReceiptRequest ConvertToV1(ifPOS.v0.ReceiptRequest data)
     {
-        public static ReceiptRequest ConvertToV1(ifPOS.v0.ReceiptRequest data)
+        return new ReceiptRequest
         {
-            return new ReceiptRequest
-            {
-                cbArea = data.cbArea,
-                cbCustomer = data.cbCustomer,
-                cbPreviousReceiptReference = data.cbPreviousReceiptReference,
-                cbReceiptAmount = data.cbReceiptAmount,
-                cbReceiptMoment = data.cbReceiptMoment,
-                cbReceiptReference = data.cbReceiptReference,
-                cbSettlement = data.cbSettlement,
-                cbTerminalID = data.cbTerminalID,
-                cbUser = data.cbUser,
-                ftCashBoxID = data.ftCashBoxID,
-                ftPosSystemId = data.ftPosSystemId,
-                ftQueueID = data.ftQueueID,
-                ftReceiptCase = data.ftReceiptCase,
-                ftReceiptCaseData = data.ftReceiptCaseData,
-                cbChargeItems = data.cbChargeItems?.Select(ConvertToV1).ToArray() ?? Array.Empty<ChargeItem>(),
-                cbPayItems = data.cbPayItems?.Select(ConvertToV1).ToArray() ?? Array.Empty<PayItem>(),
-            };
-        }
+            cbArea = data.cbArea,
+            cbCustomer = data.cbCustomer,
+            cbPreviousReceiptReference = data.cbPreviousReceiptReference,
+            cbReceiptAmount = data.cbReceiptAmount,
+            cbReceiptMoment = data.cbReceiptMoment,
+            cbReceiptReference = data.cbReceiptReference,
+            cbSettlement = data.cbSettlement,
+            cbTerminalID = data.cbTerminalID,
+            cbUser = data.cbUser,
+            ftCashBoxID = data.ftCashBoxID,
+            ftPosSystemId = data.ftPosSystemId,
+            ftQueueID = data.ftQueueID,
+            ftReceiptCase = data.ftReceiptCase,
+            ftReceiptCaseData = data.ftReceiptCaseData,
+            cbChargeItems = data.cbChargeItems?.Select(ConvertToV1).ToArray() ?? Array.Empty<ChargeItem>(),
+            cbPayItems = data.cbPayItems?.Select(ConvertToV1).ToArray() ?? Array.Empty<PayItem>(),
+        };
+    }
 
-        public static ChargeItem ConvertToV1(ifPOS.v0.ChargeItem data)
+    public static ChargeItem ConvertToV1(ifPOS.v0.ChargeItem data)
+    {
+        return new ChargeItem
         {
-            return new ChargeItem
-            {
-                AccountNumber = data.AccountNumber,
-                Amount = data.Amount,
-                CostCenter = data.CostCenter,
-                Description = data.Description,
-                ftChargeItemCase = data.ftChargeItemCase,
-                ftChargeItemCaseData = data.ftChargeItemCaseData,
-                Moment = data.Moment,
-                Position = data.Position,
-                ProductBarcode = data.ProductBarcode,
-                ProductGroup = data.ProductGroup,
-                ProductNumber = data.ProductNumber,
-                Quantity = data.Quantity,
-                Unit = data.Unit,
-                UnitPrice = data.UnitPrice,
-                UnitQuantity = data.UnitQuantity,
-                VATAmount = data.VATAmount,
-                VATRate = data.VATRate
-            };
-        }
+            AccountNumber = data.AccountNumber,
+            Amount = data.Amount,
+            CostCenter = data.CostCenter,
+            Description = data.Description,
+            ftChargeItemCase = data.ftChargeItemCase,
+            ftChargeItemCaseData = data.ftChargeItemCaseData,
+            Moment = data.Moment,
+            Position = data.Position,
+            ProductBarcode = data.ProductBarcode,
+            ProductGroup = data.ProductGroup,
+            ProductNumber = data.ProductNumber,
+            Quantity = data.Quantity,
+            Unit = data.Unit,
+            UnitPrice = data.UnitPrice,
+            UnitQuantity = data.UnitQuantity,
+            VATAmount = data.VATAmount,
+            VATRate = data.VATRate
+        };
+    }
 
-        public static PayItem ConvertToV1(ifPOS.v0.PayItem data)
+    public static PayItem ConvertToV1(ifPOS.v0.PayItem data)
+    {
+        return new PayItem
         {
-            return new PayItem
-            {
-                AccountNumber = data.AccountNumber,
-                Amount = data.Amount,
-                CostCenter = data.CostCenter,
-                Description = data.Description,
-                ftPayItemCase = data.ftPayItemCase,
-                ftPayItemCaseData = data.ftPayItemCaseData,
-                Moment = data.Moment,
-                Position = data.Position,
-                MoneyGroup = data.MoneyGroup,
-                MoneyNumber = data.MoneyNumber,
-                Quantity = data.Quantity
-            };
-        }
+            AccountNumber = data.AccountNumber,
+            Amount = data.Amount,
+            CostCenter = data.CostCenter,
+            Description = data.Description,
+            ftPayItemCase = data.ftPayItemCase,
+            ftPayItemCaseData = data.ftPayItemCaseData,
+            Moment = data.Moment,
+            Position = data.Position,
+            MoneyGroup = data.MoneyGroup,
+            MoneyNumber = data.MoneyNumber,
+            Quantity = data.Quantity
+        };
+    }
 
-        public static ifPOS.v0.ReceiptResponse ConvertToV0(ReceiptResponse data)
+    public static ifPOS.v0.ReceiptResponse ConvertToV0(ReceiptResponse data)
+    {
+        return new ifPOS.v0.ReceiptResponse
         {
-            return new ifPOS.v0.ReceiptResponse
-            {
-                ftCashBoxID = data.ftCashBoxID,
-                cbReceiptReference = data.cbReceiptReference,
-                cbTerminalID = data.cbTerminalID,
-                ftCashBoxIdentification = data.ftCashBoxIdentification,
-                ftChargeLines = data.ftChargeLines,
-                ftPayLines = data.ftPayLines,
-                ftQueueID = data.ftQueueID,
-                ftQueueItemID = data.ftQueueItemID,
-                ftQueueRow = data.ftQueueRow,
-                ftReceiptFooter = data.ftReceiptFooter,
-                ftReceiptHeader = data.ftReceiptHeader,
-                ftReceiptIdentification = data.ftReceiptIdentification,
-                ftReceiptMoment = data.ftReceiptMoment,
-                ftState = data.ftState,
-                ftStateData = data.ftStateData,
-                ftChargeItems = data.ftChargeItems?.Select(ConvertToV0).ToArray(),
-                ftPayItems = data.ftPayItems?.Select(ConvertToV0).ToArray(),
-                ftSignatures = data.ftSignatures?.Select(ConvertToV0).ToArray(),
-            };
-        }
+            ftCashBoxID = data.ftCashBoxID,
+            cbReceiptReference = data.cbReceiptReference,
+            cbTerminalID = data.cbTerminalID,
+            ftCashBoxIdentification = data.ftCashBoxIdentification,
+            ftChargeLines = data.ftChargeLines,
+            ftPayLines = data.ftPayLines,
+            ftQueueID = data.ftQueueID,
+            ftQueueItemID = data.ftQueueItemID,
+            ftQueueRow = data.ftQueueRow,
+            ftReceiptFooter = data.ftReceiptFooter,
+            ftReceiptHeader = data.ftReceiptHeader,
+            ftReceiptIdentification = data.ftReceiptIdentification,
+            ftReceiptMoment = data.ftReceiptMoment,
+            ftState = data.ftState,
+            ftStateData = data.ftStateData,
+            ftChargeItems = data.ftChargeItems?.Select(ConvertToV0).ToArray(),
+            ftPayItems = data.ftPayItems?.Select(ConvertToV0).ToArray(),
+            ftSignatures = data.ftSignatures?.Select(ConvertToV0).ToArray(),
+        };
+    }
 
-        public static ifPOS.v0.SignaturItem ConvertToV0(SignaturItem data)
+    public static ifPOS.v0.SignaturItem ConvertToV0(SignaturItem data)
+    {
+        return new ifPOS.v0.SignaturItem
         {
-            return new ifPOS.v0.SignaturItem
-            {
-                Caption = data.Caption,
-                Data = data.Data,
-                ftSignatureFormat = data.ftSignatureFormat,
-                ftSignatureType = data.ftSignatureType
-            };
-        }
+            Caption = data.Caption,
+            Data = data.Data,
+            ftSignatureFormat = data.ftSignatureFormat,
+            ftSignatureType = data.ftSignatureType
+        };
+    }
 
-        public static ifPOS.v0.ChargeItem ConvertToV0(ChargeItem data)
+    public static ifPOS.v0.ChargeItem ConvertToV0(ChargeItem data)
+    {
+        return new ifPOS.v0.ChargeItem
         {
-            return new ifPOS.v0.ChargeItem
-            {
-                AccountNumber = data.AccountNumber,
-                Amount = data.Amount,
-                CostCenter = data.CostCenter,
-                Description = data.Description,
-                ftChargeItemCase = data.ftChargeItemCase,
-                ftChargeItemCaseData = data.ftChargeItemCaseData,
-                Moment = data.Moment,
-                Position = data.Position,
-                ProductBarcode = data.ProductBarcode,
-                ProductGroup = data.ProductGroup,
-                ProductNumber = data.ProductNumber,
-                Quantity = data.Quantity,
-                Unit = data.Unit,
-                UnitPrice = data.UnitPrice,
-                UnitQuantity = data.UnitQuantity,
-                VATAmount = data.VATAmount,
-                VATRate = data.VATRate
-            };
-        }
+            AccountNumber = data.AccountNumber,
+            Amount = data.Amount,
+            CostCenter = data.CostCenter,
+            Description = data.Description,
+            ftChargeItemCase = data.ftChargeItemCase,
+            ftChargeItemCaseData = data.ftChargeItemCaseData,
+            Moment = data.Moment,
+            Position = data.Position,
+            ProductBarcode = data.ProductBarcode,
+            ProductGroup = data.ProductGroup,
+            ProductNumber = data.ProductNumber,
+            Quantity = data.Quantity,
+            Unit = data.Unit,
+            UnitPrice = data.UnitPrice,
+            UnitQuantity = data.UnitQuantity,
+            VATAmount = data.VATAmount,
+            VATRate = data.VATRate
+        };
+    }
 
-        public static ifPOS.v0.PayItem ConvertToV0(PayItem data)
+    public static ifPOS.v0.PayItem ConvertToV0(PayItem data)
+    {
+        return new ifPOS.v0.PayItem
         {
-            return new ifPOS.v0.PayItem
-            {
-                AccountNumber = data.AccountNumber,
-                Amount = data.Amount,
-                CostCenter = data.CostCenter,
-                Description = data.Description,
-                ftPayItemCase = data.ftPayItemCase,
-                ftPayItemCaseData = data.ftPayItemCaseData,
-                Moment = data.Moment,
-                Position = data.Position,
-                MoneyGroup = data.MoneyGroup,
-                MoneyNumber = data.MoneyNumber,
-                Quantity = data.Quantity
-            };
-        }
+            AccountNumber = data.AccountNumber,
+            Amount = data.Amount,
+            CostCenter = data.CostCenter,
+            Description = data.Description,
+            ftPayItemCase = data.ftPayItemCase,
+            ftPayItemCaseData = data.ftPayItemCaseData,
+            Moment = data.Moment,
+            Position = data.Position,
+            MoneyGroup = data.MoneyGroup,
+            MoneyNumber = data.MoneyNumber,
+            Quantity = data.Quantity
+        };
     }
 }

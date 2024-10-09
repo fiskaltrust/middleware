@@ -1,7 +1,6 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
-using fiskaltrust.ifPOS.v1;
-using fiskaltrust.ifPOS.v1.it;
+using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueuePT.Models;
 using fiskaltrust.Middleware.Storage.PT;
 using fiskaltrust.storage.V0;
@@ -33,7 +32,7 @@ public class InMemorySCU : IPTSSCD
         {
             InvoiceDate = receipt.cbReceiptMoment,
             SystemEntryDate = receipt.cbReceiptMoment, // wrong
-            InvoiceNo = receipt.cbReceiptReference, // wrong
+            InvoiceNo = receipt.cbReceiptReference ?? "", // wrong
             GrossTotal = receipt.cbChargeItems.Sum(x => x.Amount),
             Hash = lastHash
         };

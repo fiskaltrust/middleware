@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
-using fiskaltrust.ifPOS.v1;
+using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD;
 using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.myDataSCU;
 using fiskaltrust.Middleware.Localization.QueueGR.Processors;
@@ -28,16 +28,23 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
         [InlineData(ReceiptCases.Protocol0x0005)]
         public async Task ProcessReceiptAsync_ShouldReturnEmptyList(ReceiptCases receiptCase)
         {
+            var queue = TestHelpers.CreateQueue();
+            var queueItem = TestHelpers.CreateQueueItem();
             var receiptRequest = new ReceiptRequest
             {
                 ftReceiptCase = (int) receiptCase
             };
             var receiptResponse = new ReceiptResponse
             {
-                ftState = 0x4752_2000_0000_0000
+                ftState = 0x4752_2000_0000_0000,               
+                ftCashBoxIdentification = "cashBoxIdentification",
+                ftQueueID = Guid.NewGuid(),
+                ftQueueItemID = Guid.NewGuid(),
+                ftQueueRow = 1,
+                ftReceiptIdentification = "receiptIdentification",
+                ftReceiptMoment = DateTime.UtcNow,
             };
-            var request = new ProcessCommandRequest(null, receiptRequest, receiptResponse, null);
-
+            var request = new ProcessCommandRequest(queue, receiptRequest, receiptResponse, queueItem);
             var result = await _sut.ProcessReceiptAsync(request);
 
             result.receiptResponse.Should().Be(receiptResponse);
@@ -47,16 +54,23 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
         [Fact]
         public async Task ProcessReceiptAsync_ShouldReturnError()
         {
+            var queue = TestHelpers.CreateQueue();
+            var queueItem = TestHelpers.CreateQueueItem();
             var receiptRequest = new ReceiptRequest
             {
                 ftReceiptCase = -1
             };
             var receiptResponse = new ReceiptResponse
             {
-                ftState = 0x4752_2000_0000_0000
+                ftState = 0x4752_2000_0000_0000,
+                ftCashBoxIdentification = "cashBoxIdentification",
+                ftQueueID = Guid.NewGuid(),
+                ftQueueItemID = Guid.NewGuid(),
+                ftQueueRow = 1,
+                ftReceiptIdentification = "receiptIdentification",
+                ftReceiptMoment = DateTime.UtcNow,
             };
-            var request = new ProcessCommandRequest(null, receiptRequest, receiptResponse, null);
-
+            var request = new ProcessCommandRequest(queue, receiptRequest, receiptResponse, queueItem);
             var result = await _sut.ProcessReceiptAsync(request);
             result.receiptResponse.Should().Be(receiptResponse);
             result.receiptResponse.ftState.Should().Be(0x4752_2000_EEEE_EEEE);
@@ -79,7 +93,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
 
             var receiptRequest = new ReceiptRequest
             {
-                ftCashBoxID = Guid.NewGuid().ToString(),
+                ftCashBoxID = Guid.NewGuid(),
                 ftReceiptCase = 0x4752_2000_0000_0000 | (long) ReceiptCases.InitialOperationReceipt0x4001,
                 cbReceiptMoment = new DateTime(2019, 12, 31),
                 cbChargeItems = [
@@ -87,33 +101,50 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
                     {
                         ftChargeItemCase = 0x4752_2000_0000_0008,
                         Amount = 12000.00m,
-                        VATAmount = 0m
+                        VATAmount = 0m,
+                        Description = "Description",
+                        Quantity = 1,
+                        VATRate = 23m
                     },
                     new ChargeItem
                     {
                         ftChargeItemCase = 0x4752_2000_0000_0001,
                         Amount = 15900m,
-                        VATAmount = 900m
+                        VATAmount = 900m,
+                        Description = "Description",
+                        Quantity = 1,
+                        VATRate = 23m
                     },
                     new ChargeItem
                     {
                         ftChargeItemCase = 0x4752_2000_0000_0006,
                         Amount = 56500m,
                         VATAmount = 6500m,
+                        Description = "Description",
+                        Quantity = 1,
+                        VATRate = 23m
                     },
                     new ChargeItem
                     {
                         ftChargeItemCase = 0x4752_2000_0000_0003,
                         Amount = 98400m,
                         VATAmount = 18400m,
+                        Description = "Description",
+                        Quantity = 1,
+                        VATRate = 23m
                     },
                 ]
             };
             var receiptResponse = new ReceiptResponse
             {
                 ftState = 0x4752_2000_0000_0000,
-                ftQueueID = queue.ftQueueId.ToString(),
-                ftQueueItemID = queueItem.ftQueueItemId.ToString()
+                ftQueueID = queue.ftQueueId,
+                ftQueueItemID = queueItem.ftQueueItemId,
+                ftCashBoxIdentification = "cashBoxIdentification",
+
+                ftQueueRow = 1,
+                ftReceiptIdentification = "receiptIdentification",
+                ftReceiptMoment = DateTime.UtcNow,
             };
 
             var request = new ProcessCommandRequest(queue, receiptRequest, receiptResponse, queueItem);
@@ -126,10 +157,10 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
 
            
             result.receiptResponse.ftState.Should().Be(0x4752_2000_0000_0000, because: $"ftState {result.receiptResponse.ftState.ToString("X")} is different than expected.");
-            var expectedSignaturItem = new SignaturItem
+            var expectedSignaturItem = new SignatureItem
             {
                 ftSignatureType = 0x4752_2000_0000_0001,
-                ftSignatureFormat = (int) SignaturItem.Formats.QR_Code,
+                ftSignatureFormat = (int) ifPOS.v1.SignaturItem.Formats.QR_Code,
                 Caption = "[www.fiskaltrust.gr]",
                 Data = $"??????"
             };

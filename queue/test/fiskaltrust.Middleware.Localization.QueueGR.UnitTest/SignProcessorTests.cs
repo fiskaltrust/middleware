@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using fiskaltrust.ifPOS.v1;
+﻿using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Repositories;
@@ -49,7 +46,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             var middlewareConfiguration = new MiddlewareConfiguration();
 
             var signProcessorPT = Mock.Of<IReceiptProcessor>();
-            return new SignProcessor(LoggerFactory.Create(x => { }).CreateLogger<SignProcessor>(), configurationRepository, signProcessorPT.ProcessAsync, null, middlewareConfiguration);
+            return new SignProcessor(LoggerFactory.Create(x => { }).CreateLogger<SignProcessor>(), configurationRepository, signProcessorPT.ProcessAsync, "cashboxidentification", middlewareConfiguration);
         }
 
         public static IEnumerable<object[]> allNonInitialOperationReceipts()

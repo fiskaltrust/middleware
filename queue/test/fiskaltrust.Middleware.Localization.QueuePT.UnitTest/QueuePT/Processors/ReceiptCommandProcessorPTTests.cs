@@ -1,12 +1,13 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
-using fiskaltrust.ifPOS.v1;
+using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueuePT.Processors;
 using fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.v2;
 using fiskaltrust.Middleware.Storage;
+using fiskaltrust.Middleware.Storage.PT;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
 using FluentAssertions.Execution;
@@ -32,9 +33,15 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
             };
             var receiptResponse = new ReceiptResponse
             {
-                ftState = 0x5054_2000_0000_0000
+                ftState = 0x5054_2000_0000_0000,
+                ftCashBoxIdentification = "cashBoxIdentification",
+                ftQueueID = Guid.NewGuid(),
+                ftQueueItemID = Guid.NewGuid(),
+                ftQueueRow = 1,
+                ftReceiptIdentification = "receiptIdentification",
+                ftReceiptMoment = DateTime.UtcNow,
             };
-            var request = new ProcessCommandRequest(null, receiptRequest, receiptResponse, null);
+            var request = new ProcessCommandRequest(new ftQueue { }, receiptRequest, receiptResponse, new ftQueueItem { });
 
             var result = await _sut.ProcessReceiptAsync(request);
 
@@ -51,9 +58,15 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
             };
             var receiptResponse = new ReceiptResponse
             {
-                ftState = 0x5054_2000_0000_0000
+                ftState = 0x5054_2000_0000_0000,
+                ftCashBoxIdentification = "cashBoxIdentification",
+                ftQueueID = Guid.NewGuid(),
+                ftQueueItemID = Guid.NewGuid(),
+                ftQueueRow = 1,
+                ftReceiptIdentification = "receiptIdentification",
+                ftReceiptMoment = DateTime.UtcNow,
             };
-            var request = new ProcessCommandRequest(null, receiptRequest, receiptResponse, null);
+            var request = new ProcessCommandRequest(new ftQueue { }, receiptRequest, receiptResponse, new ftQueueItem { });
 
             var result = await _sut.ProcessReceiptAsync(request);
             result.receiptResponse.Should().Be(receiptResponse);
@@ -85,7 +98,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
 
             var receiptRequest = new ReceiptRequest
             {
-                ftCashBoxID = Guid.NewGuid().ToString(),
+                ftCashBoxID = Guid.NewGuid(),
                 ftReceiptCase = 0x5054_2000_0000_0000 | (long) ReceiptCases.InitialOperationReceipt0x4001,
                 cbReceiptMoment = new DateTime(2019, 12, 31),
                 cbChargeItems = [
@@ -93,33 +106,49 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
                     {
                         ftChargeItemCase = 0x5054_2000_0000_0008,
                         Amount = 12000.00m,
-                        VATAmount = 0m
+                        VATAmount = 0m,
+                        Description = "Description",
+                        Quantity = 1,
+                        VATRate = 23m
                     },
                     new ChargeItem
                     {
                         ftChargeItemCase = 0x5054_2000_0000_0001,
                         Amount = 15900m,
-                        VATAmount = 900m
+                        VATAmount = 900m,
+                        Description = "Description",
+                        Quantity = 1,
+                        VATRate = 23m
                     },
                     new ChargeItem
                     {
                         ftChargeItemCase = 0x5054_2000_0000_0006,
                         Amount = 56500m,
                         VATAmount = 6500m,
+                        Description = "Description",
+                        Quantity = 1,
+                        VATRate = 23m
                     },
                     new ChargeItem
                     {
                         ftChargeItemCase = 0x5054_2000_0000_0003,
                         Amount = 98400m,
                         VATAmount = 18400m,
+                        Description = "Description",
+                        Quantity = 1,
+                        VATRate = 23m
                     },
                 ]
             };
             var receiptResponse = new ReceiptResponse
             {
                 ftState = 0x5054_2000_0000_0000,
-                ftQueueID = queue.ftQueueId.ToString(),
-                ftQueueItemID = queueItem.ftQueueItemId.ToString()
+                ftQueueID = queue.ftQueueId,
+                ftQueueItemID = queueItem.ftQueueItemId,
+                ftCashBoxIdentification = "cashBoxIdentification",
+                ftQueueRow = 1,
+                ftReceiptIdentification = "receiptIdentification",
+                ftReceiptMoment = DateTime.UtcNow,
             };
 
             var request = new ProcessCommandRequest(queue, receiptRequest, receiptResponse, queueItem);
@@ -132,10 +161,10 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
 
            
             result.receiptResponse.ftState.Should().Be(0x5054_2000_0000_0000, because: $"ftState {result.receiptResponse.ftState.ToString("X")} is different than expected.");
-            var expectedSignaturItem = new SignaturItem
+            var expectedSignaturItem = new SignatureItem
             {
                 ftSignatureType = 0x5054_2000_0000_0001,
-                ftSignatureFormat = (int) SignaturItem.Formats.QR_Code,
+                ftSignatureFormat = (int) ifPOS.v1.SignaturItem.Formats.QR_Code,
                 Caption = "[www.fiskaltrust.pt]",
                 Data = $"A:123456789*B:999999990*C:PT*D:FS*E:N*F:20191231*G:FS AB2019/0035*H:CSDF7T5H0035*I1:PT*I2:12000.00*I3:15000.00*I4:900.00*I5:50000.00*I6:6500.00*I7:80000.00*I8:18400.00*N:25800.00*O:182800.00*Q:jvs6*R:9999*S:ftQueueId={receiptResponse.ftQueueID};ftQueueItemId={receiptResponse.ftQueueItemID}"
             };
