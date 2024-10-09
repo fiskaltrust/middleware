@@ -21,7 +21,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
                 ftState = 0x5054_2000_0000_0000
             };
 
-            var sut = new ReceiptProcessor(LoggerFactory.Create(x => { }).CreateLogger<ReceiptProcessor>(), null, null, null, null, null, null);
+            var sut = new ReceiptProcessor(LoggerFactory.Create(x => { }).CreateLogger<ReceiptProcessor>(), null, null, null, null, null, null, null);
             var result = await sut.ProcessAsync(receiptRequest, receiptResponse, null, null);
 
             result.receiptResponse.Should().Be(receiptResponse);
@@ -43,7 +43,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
                 ftState = 0x5054_2000_0000_0000
             };
 
-            var sut = new ReceiptProcessor(LoggerFactory.Create(x => { }).CreateLogger<ReceiptProcessor>(), null, null, null, null, null, null);
+            var sut = new ReceiptProcessor(LoggerFactory.Create(x => { }).CreateLogger<ReceiptProcessor>(), null, null, null, null, null, null, null);
             var result = await sut.ProcessAsync(receiptRequest, receiptResponse, null, null);
 
             result.receiptResponse.Should().Be(receiptResponse);

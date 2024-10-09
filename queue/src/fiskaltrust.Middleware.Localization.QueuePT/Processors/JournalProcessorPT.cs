@@ -3,14 +3,13 @@ using System.Collections.Generic;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Interfaces;
 
-namespace fiskaltrust.Middleware.Localization.QueuePT.Processors
+namespace fiskaltrust.Middleware.Localization.QueuePT.Processors;
+
+public class JournalProcessorPT : IMarketSpecificJournalProcessor
 {
-    public class JournalProcessorPT : IMarketSpecificJournalProcessor
+    public IAsyncEnumerable<JournalResponse> ProcessAsync(JournalRequest request)
     {
-        public IAsyncEnumerable<JournalResponse> ProcessAsync(JournalRequest request)
-        {
-            // TODO integrate SAFT
-            throw new NotImplementedException();
-        }
+        // TODO integrate SAFT
+        throw new NotImplementedException();
     }
 }

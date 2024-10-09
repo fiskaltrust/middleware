@@ -1,9 +1,8 @@
 ﻿using System;
-using fiskaltrust.storage.V0;
 
-namespace fiskaltrust.Middleware.Localization.v2.v2
+namespace fiskaltrust.Middleware.Storage
 {
-    public class ftQueuePT : QueueLocalization, ICountrySpecificQueue
+    public class ftQueuePT 
     {
         public Guid ftQueueId => ftQueuePTId;
 
@@ -33,6 +32,8 @@ namespace fiskaltrust.Middleware.Localization.v2.v2
 
         public Guid? UsedFailedQueueItemId { get; set; }
 
+        public long TimeStamp { get; set; }
+
         /*
          * The following fields should probably be moved to a different config
          */
@@ -41,6 +42,5 @@ namespace fiskaltrust.Middleware.Localization.v2.v2
         public string ATCUD { get; set; }
         public string SimplifiedInvoiceSeries { get; set; }
         public long SimplifiedInvoiceSeriesNumerator { get; set; }
-        public string SoftwareCertificateNumber { get; set; }
     }
 }

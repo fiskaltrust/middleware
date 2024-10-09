@@ -37,7 +37,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
             {
                 ftState = 0x5054_2000_0000_0000
             };
-            var request = new ProcessCommandRequest(queue, null, receiptRequest, receiptResponse, queueItem);
+            var request = new ProcessCommandRequest(queue, receiptRequest, receiptResponse, queueItem);
 
             var result = await _sut.ProcessReceiptAsync(request);
 
@@ -59,7 +59,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
             {
                 ftState = 0x5054_2000_0000_0000
             };
-            var request = new ProcessCommandRequest(queue, null, receiptRequest, receiptResponse, queueItem);
+            var request = new ProcessCommandRequest(queue, receiptRequest, receiptResponse, queueItem);
 
             var result = await _sut.ProcessReceiptAsync(request);
             result.receiptResponse.Should().Be(receiptResponse);
@@ -86,7 +86,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
                 ftState = 0x5054_2000_0000_0000
             };
 
-            var request = new ProcessCommandRequest(queue, null, receiptRequest, receiptResponse, queueItem);
+            var request = new ProcessCommandRequest(queue, receiptRequest, receiptResponse, queueItem);
 
             var result = await sut.InitialOperationReceipt0x4001Async(request);
 
@@ -163,7 +163,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
                 ftState = 0x5054_2000_0000_0000
             };
 
-            var request = new ProcessCommandRequest(queue, null, receiptRequest, receiptResponse, queueItem);
+            var request = new ProcessCommandRequest(queue, receiptRequest, receiptResponse, queueItem);
 
             var result = await sut.OutOfOperationReceipt0x4002Async(request);
 
@@ -236,7 +236,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
             {
                 ftState = 0x5054_2000_0000_0000
             };
-            var request = new ProcessCommandRequest(queue, null, receiptRequest, receiptResponse, queueItem);
+            var request = new ProcessCommandRequest(queue, receiptRequest, receiptResponse, queueItem);
             var result = await sut.InitSCUSwitch0x4011Async(request);
 
             result.receiptResponse.Should().Be(receiptResponse);
@@ -264,7 +264,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
             {
                 ftState = 0x5054_2000_0000_0000
             };
-            var request = new ProcessCommandRequest(queue, null, receiptRequest, receiptResponse, queueItem);
+            var request = new ProcessCommandRequest(queue, receiptRequest, receiptResponse, queueItem);
             var result = await sut.FinishSCUSwitch0x4012Async(request);
 
             result.receiptResponse.Should().Be(receiptResponse);

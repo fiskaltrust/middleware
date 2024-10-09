@@ -2,26 +2,24 @@
 using System.IO;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.Middleware.Localization.QueuePT.Models;
 using fiskaltrust.Middleware.Localization.QueuePT.Processors;
 using fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.v2;
+using fiskaltrust.Middleware.Storage;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
 using FluentAssertions.Execution;
 using Moq;
-using Newtonsoft.Json;
 using Xunit;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processors
 {
     public class ReceiptCommandProcessorPTTests
     {
-        private readonly ReceiptCommandProcessorPT _sut = new ReceiptCommandProcessorPT(Mock.Of<IPTSSCD>(), new ftQueuePT());
+        private readonly ReceiptCommandProcessorPT _sut = new ReceiptCommandProcessorPT(Mock.Of<IPTSSCD>(), new ftQueuePT(), new ftSignaturCreationUnitPT());
 
         [Theory]
-        [InlineData(ReceiptCases.UnknownReceipt0x0000)]
         [InlineData(ReceiptCases.PaymentTransfer0x0002)]
         [InlineData(ReceiptCases.PointOfSaleReceiptWithoutObligation0x0003)]
         [InlineData(ReceiptCases.ECommerce0x0004)]
@@ -36,7 +34,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
             {
                 ftState = 0x5054_2000_0000_0000
             };
-            var request = new ProcessCommandRequest(null, null, receiptRequest, receiptResponse, null);
+            var request = new ProcessCommandRequest(null, receiptRequest, receiptResponse, null);
 
             var result = await _sut.ProcessReceiptAsync(request);
 
@@ -55,7 +53,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
             {
                 ftState = 0x5054_2000_0000_0000
             };
-            var request = new ProcessCommandRequest(null, null, receiptRequest, receiptResponse, null);
+            var request = new ProcessCommandRequest(null, receiptRequest, receiptResponse, null);
 
             var result = await _sut.ProcessReceiptAsync(request);
             result.receiptResponse.Should().Be(receiptResponse);
@@ -72,17 +70,18 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
                 IssuerTIN = "123456789",
                 TaxRegion = "PT",
                 ATCUD = "CSDF7T5H0035",
-                SoftwareCertificateNumber = "9999",
                 SimplifiedInvoiceSeries = "AB2019",
                 SimplifiedInvoiceSeriesNumerator = 34
+            };
+            var signaturCreationUnitPT = new ftSignaturCreationUnitPT
+            {
+                PrivateKey = File.ReadAllText("PrivateKey.pem"),
+                SoftwareCertificateNumber = "9999",
             };
 
             var configMock = new Mock<IConfigurationRepository>();
             configMock.Setup(x => x.InsertOrUpdateQueueAsync(It.IsAny<ftQueue>())).Returns(Task.CompletedTask);
-            var sut = new ReceiptCommandProcessorPT(new InMemorySCU(new InMemorySCUConfiguration
-            {
-                PrivateKey = File.ReadAllText("PrivateKey.pem"),
-            }), queuePT);
+            var sut = new ReceiptCommandProcessorPT(new InMemorySCU(signaturCreationUnitPT), queuePT, signaturCreationUnitPT);
 
             var receiptRequest = new ReceiptRequest
             {
@@ -123,7 +122,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
                 ftQueueItemID = queueItem.ftQueueItemId.ToString()
             };
 
-            var request = new ProcessCommandRequest(queue, null, receiptRequest, receiptResponse, queueItem);
+            var request = new ProcessCommandRequest(queue, receiptRequest, receiptResponse, queueItem);
             var result = await sut.PointOfSaleReceipt0x0001Async(request);
 
             using var scope = new AssertionScope();

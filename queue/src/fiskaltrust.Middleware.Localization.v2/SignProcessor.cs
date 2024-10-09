@@ -30,8 +30,6 @@ namespace fiskaltrust.Middleware.Localization.v2
         private readonly bool _isSandbox;
         private readonly int _receiptRequestMode = 0;
 
-        //  ProcessAsync(ReceiptRequest request, ftQueue queue, ftQueueItem queueItem);
-
         public SignProcessor(
             ILogger<SignProcessor> logger,
             IStorageProvider storageProvider,

@@ -17,9 +17,10 @@ namespace fiskaltrust.Middleware.Localization.v2
         private readonly IDailyOperationsCommandProcessor _dailyOperationsCommandProcessor;
         private readonly IInvoiceCommandProcessor _invoiceCommandProcessor;
         private readonly IProtocolCommandProcessor _protocolCommandProcessor;
+        private readonly string _cashBoxIdentification;
         private readonly ILogger<ReceiptProcessor> _logger;
 
-        public ReceiptProcessor(ILogger<ReceiptProcessor> logger, IConfigurationRepository configurationRepository, ILifecyclCommandProcessor lifecyclCommandProcessor, IReceiptCommandProcessor receiptCommandProcessor, IDailyOperationsCommandProcessor dailyOperationsCommandProcessor, IInvoiceCommandProcessor invoiceCommandProcessor, IProtocolCommandProcessor protocolCommandProcessor)
+        public ReceiptProcessor(ILogger<ReceiptProcessor> logger, IConfigurationRepository configurationRepository, ILifecyclCommandProcessor lifecyclCommandProcessor, IReceiptCommandProcessor receiptCommandProcessor, IDailyOperationsCommandProcessor dailyOperationsCommandProcessor, IInvoiceCommandProcessor invoiceCommandProcessor, IProtocolCommandProcessor protocolCommandProcessor, string cashBoxIdentification)
         {
             _configurationRepository = configurationRepository;
             _lifecyclCommandProcessor = lifecyclCommandProcessor;
@@ -27,47 +28,44 @@ namespace fiskaltrust.Middleware.Localization.v2
             _dailyOperationsCommandProcessor = dailyOperationsCommandProcessor;
             _invoiceCommandProcessor = invoiceCommandProcessor;
             _protocolCommandProcessor = protocolCommandProcessor;
+            _cashBoxIdentification = cashBoxIdentification;
             _logger = logger;
         }
 
         public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ReceiptResponse receiptResponse, ftQueue queue, ftQueueItem queueItem)
         {
-            var queueIT = new ftQueuePT
-            {
-                CashBoxIdentification = Guid.NewGuid().ToString(),
-            };
-            receiptResponse.ftCashBoxIdentification = queueIT.CashBoxIdentification;
+            receiptResponse.ftCashBoxIdentification = _cashBoxIdentification;
 
             try
             {
 
                 if (request.IsDailyOperation())
                 {
-                    (var response, var actionJournals) = await _dailyOperationsCommandProcessor.ProcessReceiptAsync(new ProcessCommandRequest(queue, queueIT, request, receiptResponse, queueItem)).ConfigureAwait(false);
+                    (var response, var actionJournals) = await _dailyOperationsCommandProcessor.ProcessReceiptAsync(new ProcessCommandRequest(queue, request, receiptResponse, queueItem)).ConfigureAwait(false);
                     return (response, actionJournals);
                 }
 
                 if (request.IsLifeCycleOperation())
                 {
-                    (var response, var actionJournals) = await _lifecyclCommandProcessor.ProcessReceiptAsync(new ProcessCommandRequest(queue, queueIT, request, receiptResponse, queueItem)).ConfigureAwait(false);
+                    (var response, var actionJournals) = await _lifecyclCommandProcessor.ProcessReceiptAsync(new ProcessCommandRequest(queue, request, receiptResponse, queueItem)).ConfigureAwait(false);
                     return (response, actionJournals);
                 }
 
                 if (request.IsReceiptOperation())
                 {
-                    var (response, actionJournals) = await _receiptCommandProcessor.ProcessReceiptAsync(new ProcessCommandRequest(queue, queueIT, request, receiptResponse, queueItem)).ConfigureAwait(false);
+                    var (response, actionJournals) = await _receiptCommandProcessor.ProcessReceiptAsync(new ProcessCommandRequest(queue, request, receiptResponse, queueItem)).ConfigureAwait(false);
                     return (response, actionJournals);
                 }
 
                 if (request.IsProtocolOperation())
                 {
-                    var (response, actionJournals) = await _protocolCommandProcessor.ProcessReceiptAsync(new ProcessCommandRequest(queue, queueIT, request, receiptResponse, queueItem)).ConfigureAwait(false);
+                    var (response, actionJournals) = await _protocolCommandProcessor.ProcessReceiptAsync(new ProcessCommandRequest(queue, request, receiptResponse, queueItem)).ConfigureAwait(false);
                     return (response, actionJournals);
                 }
 
                 if (request.IsInvoiceOperation())
                 {
-                    var (response, actionJournals) = await _invoiceCommandProcessor.ProcessReceiptAsync(new ProcessCommandRequest(queue, queueIT, request, receiptResponse, queueItem)).ConfigureAwait(false);
+                    var (response, actionJournals) = await _invoiceCommandProcessor.ProcessReceiptAsync(new ProcessCommandRequest(queue, request, receiptResponse, queueItem)).ConfigureAwait(false);
                     return (response, actionJournals);
                 }
 

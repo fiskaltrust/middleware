@@ -27,7 +27,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
             {
                 ftState = 0x5054_2000_0000_0000
             };
-            var request = new ProcessCommandRequest(null, null, receiptRequest, receiptResponse, null);
+            var request = new ProcessCommandRequest(null, receiptRequest, receiptResponse, null);
 
             var result = await _sut.ProcessReceiptAsync(request);
 
@@ -46,7 +46,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
             {
                 ftState = 0x5054_2000_0000_0000
             };
-            var request = new ProcessCommandRequest(null, null, receiptRequest, receiptResponse, null);
+            var request = new ProcessCommandRequest(null, receiptRequest, receiptResponse, null);
 
             var result = await _sut.ProcessReceiptAsync(request);
             result.receiptResponse.Should().Be(receiptResponse);
