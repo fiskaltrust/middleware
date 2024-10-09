@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.storage.V0;
 
-namespace fiskaltrust.Middleware.Localization.v2;
+namespace fiskaltrust.Middleware.Localization.v2.Interface;
 
 public interface IReceiptProcessor
 {

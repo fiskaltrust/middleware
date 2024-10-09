@@ -1,24 +1,67 @@
 ﻿using fiskaltrust.Api.POS.Models.ifPOS.v2;
-using fiskaltrust.Middleware.Contracts.Interfaces;
+using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts.Models;
+using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.Middleware.Localization.v2.Synchronizer;
+using fiskaltrust.Middleware.Storage.AzureTableStorage;
+using fiskaltrust.storage.V0;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
-#pragma warning disable
-namespace fiskaltrust.Middleware.Localization.v2;
-
-public class Queue 
+namespace fiskaltrust.Middleware.Localization.v2
 {
-    private readonly ISignProcessor _signProcessor;
-    private readonly IJournalProcessor _journalProcessor;
-    private readonly MiddlewareConfiguration _middlewareConfiguration;
-
-    public Queue(ISignProcessor signProcessor, IJournalProcessor journalProcessor, MiddlewareConfiguration middlewareConfiguration)
+    public class Queue
     {
-        _signProcessor = signProcessor;
-        _journalProcessor = journalProcessor;
-        _middlewareConfiguration = middlewareConfiguration;
+        private readonly ISignProcessor _signProcessor;
+
+        public required Guid Id { get; set; }
+        public required Dictionary<string, object> Configuration { get; set; }
+
+        public Queue(ISignProcessor signProcessor, ILoggerFactory loggerFactory)
+        {
+            _signProcessor = new LocalQueueSynchronizationDecorator(signProcessor, loggerFactory.CreateLogger<LocalQueueSynchronizationDecorator>());
+        }
+
+        private static string GetServiceFolder() => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "fiskaltrust", "service");
+
+        public Func<string, Task<string>> RegisterForSign(ILoggerFactory loggerFactory)
+        {
+            var storageConfiguration = AzureTableStorageConfiguration.FromConfigurationDictionary(Configuration);
+            var storageBootStrapper = new AzureTableStorageBootstrapper(Id, Configuration, storageConfiguration, loggerFactory.CreateLogger<IMiddlewareBootstrapper>());
+
+            var serviceCollection = new ServiceCollection();
+            storageBootStrapper.ConfigureStorageServices(serviceCollection);
+
+            var middlewareConfiguration = new MiddlewareConfiguration
+            {
+                CashBoxId = GetQueueCashbox(Id, Configuration),
+                QueueId = Id,
+                IsSandbox = Configuration.TryGetValue("sandbox", out var sandbox) && bool.TryParse(sandbox.ToString(), out var sandboxBool) && sandboxBool,
+                ServiceFolder = Configuration.TryGetValue("servicefolder", out var val) ? val.ToString() : GetServiceFolder(),
+                Configuration = Configuration
+            };
+
+            return async (message) =>
+            {
+                var request = System.Text.Json.JsonSerializer.Deserialize<ReceiptRequest>(message) ?? throw new ArgumentException($"Invalid message format. The body for the message {message} could not be serialized.");
+                var response = await _signProcessor.ProcessAsync(request);
+                return System.Text.Json.JsonSerializer.Serialize(response);
+            };
+        }
+
+        private static Guid GetQueueCashbox(Guid queueId, Dictionary<string, object> configuration)
+        {
+            var key = "init_ftQueue";
+            if (configuration.ContainsKey(key))
+            {
+                var queues = JsonConvert.DeserializeObject<List<ftQueue>>(configuration[key]!.ToString()!);
+                return queues.Where(q => q.ftQueueId == queueId).First().ftCashBoxId;
+            }
+            else
+            {
+                throw new ArgumentException("Configuration must contain 'init_ftQueue' parameter.");
+            }
+        }
     }
-
-    public async Task<ReceiptResponse> SignAsync(ReceiptRequest request) => await _signProcessor.ProcessAsync(request).ConfigureAwait(false);
-
-    public IAsyncEnumerable<ifPOS.v1.JournalResponse> JournalAsync(ifPOS.v1.JournalRequest request) => _journalProcessor.ProcessAsync(request);
 }
