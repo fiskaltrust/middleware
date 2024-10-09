@@ -1,11 +1,8 @@
 ﻿using fiskaltrust.Api.POS.Models.ifPOS.v2;
-using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Synchronizer;
-using fiskaltrust.Middleware.Storage.AzureTableStorage;
 using fiskaltrust.storage.V0;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 

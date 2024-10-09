@@ -16,7 +16,7 @@ using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR;
 
-public class AzureStorageProvider : BaseStorageBootStrapper,  IStorageProvider
+public class AzureStorageProvider : BaseStorageBootStrapper, IStorageProvider
 {
     private readonly QueueConfiguration _queueConfiguration;
     private readonly ILogger<IMiddlewareBootstrapper> _logger;
@@ -24,6 +24,8 @@ public class AzureStorageProvider : BaseStorageBootStrapper,  IStorageProvider
     private readonly AzureTableStorageConfiguration _tableStorageConfiguration;
     private readonly TableServiceClient _tableServiceClient;
     private readonly BlobServiceClient _blobServiceClient;
+
+    public bool IsInitialized { get; private set; }
 
     public AzureStorageProvider(ILoggerFactory loggerFactory, Guid id, Dictionary<string, object> configuration)
     {
@@ -45,8 +47,8 @@ public class AzureStorageProvider : BaseStorageBootStrapper,  IStorageProvider
             {
                 throw new Exception($"The value for the queue parameter storageaccountname '{_tableStorageConfiguration.StorageAccountName}' is not valid.", e);
             }
-            _tableServiceClient = new TableServiceClient(tableUri, new DefaultAzureCredential());
-            _blobServiceClient = new BlobServiceClient(blobUri, new DefaultAzureCredential());
+            _tableServiceClient = new TableServiceClient(tableUri, new ChainedTokenCredential(new VisualStudioCredential(), new DefaultAzureCredential()));
+            _blobServiceClient = new BlobServiceClient(blobUri, new ChainedTokenCredential(new VisualStudioCredential(), new DefaultAzureCredential()));
         }
         else if (!string.IsNullOrEmpty(_tableStorageConfiguration.ConnectionString))
         {
@@ -83,15 +85,23 @@ public class AzureStorageProvider : BaseStorageBootStrapper,  IStorageProvider
 
     public async Task InitAsync()
     {
-        var databaseMigrator = new DatabaseMigrator(_logger, _tableServiceClient, _blobServiceClient, _queueConfiguration);
-        await databaseMigrator.MigrateAsync().ConfigureAwait(false);
+        try
+        {
+            var databaseMigrator = new DatabaseMigrator(_logger, _tableServiceClient, _blobServiceClient, _queueConfiguration);
+            await databaseMigrator.MigrateAsync().ConfigureAwait(false);
 
-        var configurationRepository = new AzureTableStorageConfigurationRepository(_queueConfiguration, _tableServiceClient);
-        var baseStorageConfig = ParseStorageConfiguration(_configuration);
+            var configurationRepository = new AzureTableStorageConfigurationRepository(_queueConfiguration, _tableServiceClient);
+            var baseStorageConfig = ParseStorageConfiguration(_configuration);
 
-        await PersistMasterDataAsync(baseStorageConfig, configurationRepository,
-            new AzureTableStorageAccountMasterDataRepository(_queueConfiguration, _tableServiceClient), new AzureTableStorageOutletMasterDataRepository(_queueConfiguration, _tableServiceClient),
-            new AzureTableStorageAgencyMasterDataRepository(_queueConfiguration, _tableServiceClient), new AzureTableStoragePosSystemMasterDataRepository(_queueConfiguration, _tableServiceClient)).ConfigureAwait(false);
-        await PersistConfigurationAsync(baseStorageConfig, configurationRepository, _logger).ConfigureAwait(false);
+            await PersistMasterDataAsync(baseStorageConfig, configurationRepository,
+                new AzureTableStorageAccountMasterDataRepository(_queueConfiguration, _tableServiceClient), new AzureTableStorageOutletMasterDataRepository(_queueConfiguration, _tableServiceClient),
+                new AzureTableStorageAgencyMasterDataRepository(_queueConfiguration, _tableServiceClient), new AzureTableStoragePosSystemMasterDataRepository(_queueConfiguration, _tableServiceClient)).ConfigureAwait(false);
+            await PersistConfigurationAsync(baseStorageConfig, configurationRepository, _logger).ConfigureAwait(false);
+            IsInitialized = true;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Error during initialization of the AzureStorageProvider.");
+        }
     }
 }

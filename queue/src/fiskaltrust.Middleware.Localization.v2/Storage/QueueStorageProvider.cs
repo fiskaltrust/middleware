@@ -9,6 +9,7 @@ namespace fiskaltrust.Middleware.Localization.v2.Storage;
 public class QueueStorageProvider
 {
     private readonly Guid _queueId;
+    private readonly IStorageProvider _storageProvider;
     private readonly IConfigurationRepository _configurationRepository;
     private readonly IMiddlewareQueueItemRepository _middlewareQueueItemRepository;
     private readonly IMiddlewareReceiptJournalRepository _middlewareReceiptJournalRepository;
@@ -16,9 +17,10 @@ public class QueueStorageProvider
     private readonly CryptoHelper _cryptoHelper;
     private ftQueue? _cachedQueue;
 
-    public QueueStorageProvider(Guid queueId, IConfigurationRepository configurationRepository, IMiddlewareQueueItemRepository middlewareQueueItemRepository, IMiddlewareReceiptJournalRepository middlewareReceiptJournalRepository, IMiddlewareActionJournalRepository actionJournalRepository)
+    public QueueStorageProvider(Guid queueId, IStorageProvider storageProvider, IConfigurationRepository configurationRepository, IMiddlewareQueueItemRepository middlewareQueueItemRepository, IMiddlewareReceiptJournalRepository middlewareReceiptJournalRepository, IMiddlewareActionJournalRepository actionJournalRepository)
     {
         _queueId = queueId;
+        _storageProvider = storageProvider;
         _configurationRepository = configurationRepository;
         _middlewareQueueItemRepository = middlewareQueueItemRepository;
         _middlewareReceiptJournalRepository = middlewareReceiptJournalRepository;
@@ -28,7 +30,7 @@ public class QueueStorageProvider
 
     public async Task<ftQueueItem> ReserverNextQueueItem(ReceiptRequest receiptRequest)
     {
-        _cachedQueue ??= await _configurationRepository.GetQueueAsync(_queueId);
+        _cachedQueue ??= await GetQueueAsync();
 
         var queueItem = new ftQueueItem
         {
@@ -55,25 +57,37 @@ public class QueueStorageProvider
 
     public async Task<long> GetReceiptNumerator()
     {
-        _cachedQueue ??= await _configurationRepository.GetQueueAsync(_queueId);
+        _cachedQueue ??= await GetQueueAsync();
         return _cachedQueue.ftReceiptNumerator;
     }
 
     public async Task<long> GetCurrentRow()
     {
-        _cachedQueue ??= await _configurationRepository.GetQueueAsync(_queueId);
+        _cachedQueue ??= await GetQueueAsync();
         return _cachedQueue.ftCurrentRow;
     }
 
     public async Task<ftQueue> GetQueueAsync()
     {
+        var checks = 0;
+        while (!_storageProvider.IsInitialized)
+        {
+            if(checks > 500)
+            {
+                throw new Exception("Storage provider is not initialized yet.");
+            }
+
+            await Task.Delay(1000);
+            checks++;
+        }
         _cachedQueue ??= await _configurationRepository.GetQueueAsync(_queueId);
         return _cachedQueue;
     }
 
     public async Task FinishQueueItem(ftQueueItem queueItem, ReceiptResponse receiptResponse)
     {
-        var queue = await _configurationRepository.GetQueueAsync(_queueId);
+        _cachedQueue ??= await GetQueueAsync();
+        var queue = _cachedQueue;
         queueItem.response = System.Text.Json.JsonSerializer.Serialize(receiptResponse);
         queueItem.responseHash = _cryptoHelper.GenerateBase64Hash(queueItem.response);
         queueItem.ftDoneMoment = DateTime.UtcNow;
@@ -85,7 +99,8 @@ public class QueueStorageProvider
 
     public async Task<long> GetNextQueueRow()
     {
-        var queue = await _configurationRepository.GetQueueAsync(_queueId);
+        _cachedQueue ??= await GetQueueAsync();
+        var queue = _cachedQueue;
         ++queue.ftQueuedRow;
         await _configurationRepository.InsertOrUpdateQueueAsync(queue).ConfigureAwait(false);
         _cachedQueue = queue;
@@ -94,7 +109,8 @@ public class QueueStorageProvider
 
     public async Task<ftReceiptJournal> InsertReceiptJournal(ftQueueItem queueItem, ReceiptRequest receiptrequest)
     {
-        var queue = await _configurationRepository.GetQueueAsync(_queueId);
+        _cachedQueue ??= await GetQueueAsync();
+        var queue = _cachedQueue;
         queue.ftReceiptNumerator++;
         var receiptjournal = new ftReceiptJournal
         {

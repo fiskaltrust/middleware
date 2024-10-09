@@ -11,6 +11,7 @@ using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR;
 
+#pragma warning disable
 public class QueueGRBootstrapper : IV2QueueBootstrapper
 {
     public required Guid Id { get; set; }
@@ -28,11 +29,12 @@ public class QueueGRBootstrapper : IV2QueueBootstrapper
             ServiceFolder = Configuration.TryGetValue("servicefolder", out var val) ? val.ToString() : GetServiceFolder(),
             Configuration = Configuration
         };
+
+        var queueGR = JsonConvert.DeserializeObject<List<ftQueueGR>>(Configuration["init_ftQueueGR"].ToString()).First();
         var storageProvider = new AzureStorageProvider(loggerFactory, Id, Configuration);
-        var queueGR = new ftQueueGR();
         var signaturCreationUnitPT = new ftSignaturCreationUnitGR();
-        var ptSSCD = new MyDataApiClient("", "");
-        var queueStorageProvider = new QueueStorageProvider(Id, storageProvider.GetConfigurationRepository(), storageProvider.GetMiddlewareQueueItemRepository(), storageProvider.GetMiddlewareReceiptJournalRepository(), storageProvider.GetMiddlewareActionJournalRepository());
+        var ptSSCD = new MyDataApiClient(Configuration["aade-user-id"].ToString(), Configuration["ocp-apim-subscription-key"].ToString());
+        var queueStorageProvider = new QueueStorageProvider(Id, storageProvider, storageProvider.GetConfigurationRepository(), storageProvider.GetMiddlewareQueueItemRepository(), storageProvider.GetMiddlewareReceiptJournalRepository(), storageProvider.GetMiddlewareActionJournalRepository());
         var signProcessorPT = new ReceiptProcessor(loggerFactory.CreateLogger<ReceiptProcessor>(), storageProvider.GetConfigurationRepository(), new LifecyclCommandProcessorGR(storageProvider.GetConfigurationRepository()), new ReceiptCommandProcessorGR(ptSSCD, queueGR, signaturCreationUnitPT), new DailyOperationsCommandProcessorGR(), new InvoiceCommandProcessorGR(), new ProtocolCommandProcessorGR());
         var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, signProcessorPT.ProcessAsync, queueGR.CashBoxIdentification, middlewareConfiguration);
         return new Queue(signProcessor, loggerFactory)
