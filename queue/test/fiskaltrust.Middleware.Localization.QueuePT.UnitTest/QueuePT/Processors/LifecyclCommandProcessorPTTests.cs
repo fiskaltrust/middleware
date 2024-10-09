@@ -43,7 +43,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
                 ftReceiptIdentification = "receiptIdentification",
                 ftReceiptMoment = DateTime.UtcNow,
             };
-            var request = new ProcessCommandRequest(new ftQueue { }, receiptRequest, receiptResponse, new ftQueueItem { });
+            var request = new ProcessCommandRequest(queue, receiptRequest, receiptResponse);
 
             var result = await _sut.ProcessReceiptAsync(request);
 
@@ -71,7 +71,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
                 ftReceiptIdentification = "receiptIdentification",
                 ftReceiptMoment = DateTime.UtcNow,
             };
-            var request = new ProcessCommandRequest(new ftQueue { }, receiptRequest, receiptResponse, new ftQueueItem { });
+            var request = new ProcessCommandRequest(queue, receiptRequest, receiptResponse);
 
             var result = await _sut.ProcessReceiptAsync(request);
             result.receiptResponse.Should().Be(receiptResponse);
@@ -104,7 +104,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
                 ftReceiptMoment = DateTime.UtcNow,
             };
 
-            var request = new ProcessCommandRequest(queue, receiptRequest, receiptResponse, queueItem);
+            var request = new ProcessCommandRequest(queue, receiptRequest, receiptResponse);
 
             var result = await sut.InitialOperationReceipt0x4001Async(request);
 
@@ -187,7 +187,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
                 ftReceiptMoment = DateTime.UtcNow,
             };
 
-            var request = new ProcessCommandRequest(queue, receiptRequest, receiptResponse, queueItem);
+            var request = new ProcessCommandRequest(queue, receiptRequest, receiptResponse);
 
             var result = await sut.OutOfOperationReceipt0x4002Async(request);
 
@@ -266,7 +266,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
                 ftReceiptIdentification = "receiptIdentification",
                 ftReceiptMoment = DateTime.UtcNow,
             };
-            var request = new ProcessCommandRequest(queue, receiptRequest, receiptResponse, queueItem);
+            var request = new ProcessCommandRequest(queue, receiptRequest, receiptResponse);
             var result = await sut.InitSCUSwitch0x4011Async(request);
 
             result.receiptResponse.Should().Be(receiptResponse);
@@ -300,7 +300,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
                 ftReceiptIdentification = "receiptIdentification",
                 ftReceiptMoment = DateTime.UtcNow,
             };
-            var request = new ProcessCommandRequest(queue, receiptRequest, receiptResponse, queueItem);
+            var request = new ProcessCommandRequest(queue, receiptRequest, receiptResponse);
             var result = await sut.FinishSCUSwitch0x4012Async(request);
 
             result.receiptResponse.Should().Be(receiptResponse);

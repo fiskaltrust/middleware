@@ -36,8 +36,8 @@ public class LifecyclCommandProcessorPT : ILifecyclCommandProcessor
 
     public async Task<ProcessCommandResponse> InitialOperationReceipt0x4001Async(ProcessCommandRequest request)
     {
-        var (queue, receiptRequest, receiptResponse, queueItem) = request;
-        var actionJournal = ftActionJournalFactory.CreateInitialOperationActionJournal(queue, queueItem, receiptRequest);
+        var (queue, receiptRequest, receiptResponse) = request;
+        var actionJournal = ftActionJournalFactory.CreateInitialOperationActionJournal(receiptRequest, receiptResponse);
         queue.StartMoment = DateTime.UtcNow;
         await _configurationRepository.InsertOrUpdateQueueAsync(queue).ConfigureAwait(false);
         receiptResponse.AddSignatureItem(SignaturItemFactory.CreateInitialOperationSignature(queue));
@@ -46,10 +46,10 @@ public class LifecyclCommandProcessorPT : ILifecyclCommandProcessor
 
     public async Task<ProcessCommandResponse> OutOfOperationReceipt0x4002Async(ProcessCommandRequest request)
     {
-        var (queue, receiptRequest, receiptResponse, queueItem) = request;
+        var (queue, receiptRequest, receiptResponse) = request;
         queue.StopMoment = DateTime.UtcNow;
         await _configurationRepository.InsertOrUpdateQueueAsync(queue);
-        var actionJournal = ftActionJournalFactory.CreateOutOfOperationActionJournal(queue, queueItem, receiptRequest);
+        var actionJournal = ftActionJournalFactory.CreateOutOfOperationActionJournal(receiptRequest, receiptResponse);
         receiptResponse.AddSignatureItem(SignaturItemFactory.CreateOutOfOperationSignature(queue));
         receiptResponse.MarkAsDisabled();
         return new ProcessCommandResponse(receiptResponse, [actionJournal]);

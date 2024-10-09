@@ -12,15 +12,17 @@ public class QueueStorageProvider
     private readonly IConfigurationRepository _configurationRepository;
     private readonly IMiddlewareQueueItemRepository _middlewareQueueItemRepository;
     private readonly IMiddlewareReceiptJournalRepository _middlewareReceiptJournalRepository;
+    private readonly IMiddlewareActionJournalRepository _actionJournalRepository;
     private readonly CryptoHelper _cryptoHelper;
     private ftQueue? _cachedQueue;
 
-    public QueueStorageProvider(Guid queueId, IConfigurationRepository configurationRepository, IMiddlewareQueueItemRepository middlewareQueueItemRepository, IMiddlewareReceiptJournalRepository middlewareReceiptJournalRepository)
+    public QueueStorageProvider(Guid queueId, IConfigurationRepository configurationRepository, IMiddlewareQueueItemRepository middlewareQueueItemRepository, IMiddlewareReceiptJournalRepository middlewareReceiptJournalRepository, IMiddlewareActionJournalRepository actionJournalRepository)
     {
         _queueId = queueId;
         _configurationRepository = configurationRepository;
         _middlewareQueueItemRepository = middlewareQueueItemRepository;
         _middlewareReceiptJournalRepository = middlewareReceiptJournalRepository;
+        _actionJournalRepository = actionJournalRepository;
         _cryptoHelper = new CryptoHelper();
     }
 
@@ -118,4 +120,44 @@ public class QueueStorageProvider
         _cachedQueue = queue;
         return receiptjournal;
     }
+
+    public async Task CreateActionJournalAsync(string message, string type, Guid? queueItemId)
+    {
+        _cachedQueue ??= await _configurationRepository.GetQueueAsync(_queueId);
+        var actionJournal = new ftActionJournal
+        {
+            ftActionJournalId = Guid.NewGuid(),
+            ftQueueId = _cachedQueue.ftQueueId,
+            ftQueueItemId = queueItemId.GetValueOrDefault(),
+            Message = message,
+            Priority = 0,
+            Type = type,
+            Moment = DateTime.UtcNow
+        };
+        await _actionJournalRepository.InsertAsync(actionJournal).ConfigureAwait(false);
+    }
+
+    public async Task CreateActionJournalAsync(ftActionJournal actionJournal)
+    {
+        _cachedQueue ??= await _configurationRepository.GetQueueAsync(_queueId);
+        await _actionJournalRepository.InsertAsync(actionJournal).ConfigureAwait(false);
+    }
+
+    public async Task<ftQueueItem?> GetExistingQueueItemOrNullAsync(ReceiptRequest data)
+    {
+        var queueItems = (await _middlewareQueueItemRepository.GetByReceiptReferenceAsync(data.cbReceiptReference, data.cbTerminalID).ToListAsync().ConfigureAwait(false)).OrderByDescending(x => x.TimeStamp);
+        foreach (var existingQueueItem in queueItems)
+        {
+            if (!existingQueueItem.IsReceiptRequestFinished())
+            {
+                continue;
+            }
+            if (existingQueueItem.IsContentOfQueueItemEqualWithGivenRequest(data))
+            {
+                return existingQueueItem;
+            }
+        }
+        return null;
+    }
+
 }
