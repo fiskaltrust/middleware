@@ -65,9 +65,9 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.UnitTest.RequestCommands
                     Counting = false,
                     ZeroReceipt = false
                 });
-            ftStateData.Exception.Should().BeEmpty();
+            ftStateData.Exception.Should().Be("A1");
             ftStateData.Counting.Should().BeFalse();
-            ftStateData.Signing.Should().BeFalse();            
+            ftStateData.Signing.Should().BeFalse();
             ftStateData.ZeroReceipt.Should().BeFalse();
 
         }
