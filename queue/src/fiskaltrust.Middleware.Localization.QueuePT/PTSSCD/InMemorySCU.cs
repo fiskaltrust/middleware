@@ -3,7 +3,7 @@ using System.Text;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.Localization.QueuePT.Models;
-using fiskaltrust.Middleware.Storage;
+using fiskaltrust.Middleware.Storage.PT;
 using fiskaltrust.storage.V0;
 using Newtonsoft.Json;
 

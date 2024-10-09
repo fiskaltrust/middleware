@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace fiskaltrust.Middleware.Storage
+namespace fiskaltrust.Middleware.Storage.PT
 {
     public class ftSignaturCreationUnitPTConfiguration
     {

@@ -1,13 +1,9 @@
 ﻿using System;
 
-namespace fiskaltrust.Middleware.Storage
+namespace fiskaltrust.Middleware.Storage.PT
 {
-    public class ftQueuePT 
+    public class ftQueuePT
     {
-        public Guid ftQueueId => ftQueuePTId;
-
-        public Guid? ftSignaturCreationUnitId => ftSignaturCreationUnitPTId;
-
         public Guid ftQueuePTId { get; set; }
 
         public Guid? ftSignaturCreationUnitPTId { get; set; }

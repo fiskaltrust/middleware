@@ -1,12 +1,10 @@
-﻿using System;
-using fiskaltrust.ifPOS.v1;
+﻿using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Extensions;
-using fiskaltrust.Middleware.Localization.QueuePT.Models;
-using fiskaltrust.storage.serialization.DE.V0;
+using fiskaltrust.Middleware.Localization.QueueGR.Models;
 using fiskaltrust.storage.V0;
 using Newtonsoft.Json;
 
-namespace fiskaltrust.Middleware.Localization.QueuePT.Factories;
+namespace fiskaltrust.Middleware.Localization.QueueGR.Factories;
 
 public static class ftActionJournalFactory
 {
@@ -24,7 +22,7 @@ public static class ftActionJournalFactory
 
     public static ftActionJournal CreateInitialOperationActionJournal(ftQueue queue, ftQueueItem queueItem, ReceiptRequest request)
     {
-        var notification = new ActivateQueuePT
+        var notification = new ActivateQueueGR
         {
             CashBoxId = Guid.Parse(request.ftCashBoxID),
             QueueId = queueItem.ftQueueId,
@@ -32,7 +30,7 @@ public static class ftActionJournalFactory
             IsStartReceipt = true,
             Version = "V0",
         };
-        return CreateActionJournal(queue.ftQueueId, $"{request.ftReceiptCase:X}-{nameof(ActivateQueuePT)}", queueItem.ftQueueItemId, $"Initial-Operation receipt. Queue-ID: {queue.ftQueueId}", JsonConvert.SerializeObject(notification));
+        return CreateActionJournal(queue.ftQueueId, $"{request.ftReceiptCase:X}-{nameof(ActivateQueueGR)}", queueItem.ftQueueItemId, $"Initial-Operation receipt. Queue-ID: {queue.ftQueueId}", JsonConvert.SerializeObject(notification));
     }
 
     public static ftActionJournal CreateWrongStateForInitialOperationActionJournal(ftQueue queue, ftQueueItem queueItem, ReceiptRequest request)
@@ -45,7 +43,7 @@ public static class ftActionJournalFactory
 
     public static ftActionJournal CreateOutOfOperationActionJournal(ftQueue queue, ftQueueItem queueItem, ReceiptRequest request)
     {
-        var notification = new DeactivateQueuePT
+        var notification = new DeactivateQueueGR
         {
             CashBoxId = Guid.Parse(request.ftCashBoxID),
             QueueId = queueItem.ftQueueId,
@@ -53,7 +51,7 @@ public static class ftActionJournalFactory
             IsStopReceipt = true,
             Version = "V0"
         };
-        return CreateActionJournal(queue.ftQueueId, $"{request.ftReceiptCase:X}-{nameof(DeactivateQueuePT)}", queueItem.ftQueueItemId, $"Out-of-Operation receipt. Queue-ID: {queue.ftQueueId}", JsonConvert.SerializeObject(notification));
+        return CreateActionJournal(queue.ftQueueId, $"{request.ftReceiptCase:X}-{nameof(DeactivateQueueGR)}", queueItem.ftQueueItemId, $"Out-of-Operation receipt. Queue-ID: {queue.ftQueueId}", JsonConvert.SerializeObject(notification));
     }
 
     private static ftActionJournal CreateActionJournal(Guid queueId, string type, Guid queueItemId, string message, string data, int priority = -1)

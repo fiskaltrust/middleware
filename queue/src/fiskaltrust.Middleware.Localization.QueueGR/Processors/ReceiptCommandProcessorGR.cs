@@ -1,18 +1,19 @@
-﻿using fiskaltrust.Middleware.Localization.QueuePT.Factories;
-using fiskaltrust.Middleware.Localization.QueuePT.Interface;
-using fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
+﻿using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD;
+using fiskaltrust.Middleware.Localization.QueueGR.Interface;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.v2;
-using fiskaltrust.Middleware.Storage.PT;
+using fiskaltrust.Middleware.Storage.GR;
 using fiskaltrust.storage.V0;
 
-namespace fiskaltrust.Middleware.Localization.QueuePT.Processors;
+namespace fiskaltrust.Middleware.Localization.QueueGR.Processors;
 
-public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignaturCreationUnitPT signaturCreationUnitPT) : IReceiptCommandProcessor
+public class ReceiptCommandProcessorGR(IGRSSCD sscd, ftQueueGR queueGR, ftSignaturCreationUnitGR signaturCreationUnitGR) : IReceiptCommandProcessor
 {
-    private readonly IPTSSCD _sscd = sscd;
-    private readonly ftQueuePT _queuePT = queuePT;
-    private readonly ftSignaturCreationUnitPT _signaturCreationUnitPT = signaturCreationUnitPT;
+#pragma warning disable
+    private readonly IGRSSCD _sscd = sscd;
+    private readonly ftQueueGR _queueGR = queueGR;
+    private readonly ftSignaturCreationUnitGR _signaturCreationUnitGR = signaturCreationUnitGR;
+#pragma warning restore
 
     public async Task<ProcessCommandResponse> ProcessReceiptAsync(ProcessCommandRequest request)
     {
@@ -40,15 +41,11 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignat
 
     public async Task<ProcessCommandResponse> PointOfSaleReceipt0x0001Async(ProcessCommandRequest request)
     {
-        var (response, hash) = await _sscd.ProcessReceiptAsync(new ifPOS.v1.it.ProcessRequest
+        var response = await _sscd.ProcessReceiptAsync(new ifPOS.v1.it.ProcessRequest
         {
             ReceiptRequest = request.ReceiptRequest,
             ReceiptResponse = request.ReceiptResponse,
-        }, _queuePT.LastHash);
-        response.ReceiptResponse.ftReceiptIdentification = "FS " + _queuePT.SimplifiedInvoiceSeries + "/" + (++_queuePT.SimplifiedInvoiceSeriesNumerator).ToString().PadLeft(4, '0');
-        var qrCode = PortugalReceiptCalculations.CreateSimplifiedInvoiceQRCodeAnonymousCustomer(hash, _queuePT, _signaturCreationUnitPT, request.ReceiptRequest, response.ReceiptResponse);
-        response.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreatePTQRCode(qrCode));
-        _queuePT.LastHash = hash;    
+        });
         return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
     }
 

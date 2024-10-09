@@ -10,7 +10,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT;
 
 public class QueuePTBootstrapper : IV2QueueBootstrapper
 {
-    public IPOS CreateQueuePT(MiddlewareConfiguration middlewareConfiguration, ILoggerFactory loggerFactory, IStorageProvider storageProvider)
+    public IPOS CreateQueueGR(MiddlewareConfiguration middlewareConfiguration, ILoggerFactory loggerFactory, IStorageProvider storageProvider)
     {
         var queuePT = new ftQueuePT();
         var signaturCreationUnitPT = new ftSignaturCreationUnitPT();

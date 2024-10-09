@@ -1,7 +1,7 @@
 ﻿using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Localization.QueuePT.Models;
 using fiskaltrust.Middleware.Localization.v2.v2;
-using fiskaltrust.Middleware.Storage;
+using fiskaltrust.Middleware.Storage.PT;
 using Org.BouncyCastle.Asn1.Ocsp;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Factories;
