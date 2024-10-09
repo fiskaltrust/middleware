@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD;
+using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.myDataSCU;
 using fiskaltrust.Middleware.Localization.QueueGR.Processors;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.v2;
@@ -74,7 +75,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
 
             var configMock = new Mock<IConfigurationRepository>();
             configMock.Setup(x => x.InsertOrUpdateQueueAsync(It.IsAny<ftQueue>())).Returns(Task.CompletedTask);
-            var sut = new ReceiptCommandProcessorGR(new InMemorySCU(), queuePT, signaturCreationUnitPT);
+            var sut = new ReceiptCommandProcessorGR(new MyDataApiClient("", ""), queuePT, signaturCreationUnitPT);
 
             var receiptRequest = new ReceiptRequest
             {
