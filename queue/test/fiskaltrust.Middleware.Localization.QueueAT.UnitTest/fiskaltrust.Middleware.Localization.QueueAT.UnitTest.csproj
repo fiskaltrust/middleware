@@ -12,6 +12,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="RequestCommands\Requests\ProtocolReceipt.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="RequestCommands\Requests\CashSale.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
