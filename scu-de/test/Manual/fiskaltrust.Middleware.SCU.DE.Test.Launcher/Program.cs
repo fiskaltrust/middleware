@@ -65,6 +65,10 @@ namespace fiskaltrust.Middleware.SCU.DE.Test.Launcher
             {
                 ConfigureSwissbitCloud(config, serviceCollection);
             }
+            else if (config.Package == "fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2")
+            {
+                ConfigureSwissbitCloudV2(config, serviceCollection);
+            }
             else if (config.Package == "fiskaltrust.Middleware.SCU.DE.FiskalyCertified")
             {
                 ConfigureFiskalyCertified(config, serviceCollection);
@@ -212,6 +216,17 @@ namespace fiskaltrust.Middleware.SCU.DE.Test.Launcher
             };
             bootStrapper.ConfigureServices(serviceCollection);
         }
+
+        private static void ConfigureSwissbitCloudV2(PackageConfiguration queue, ServiceCollection serviceCollection)
+        {
+            var bootStrapper = new SwissbitCloudV2.ScuBootstrapper
+            {
+                Id = queue.Id,
+                Configuration = queue.Configuration
+            };
+            bootStrapper.ConfigureServices(serviceCollection);
+        }
+
         private static void ConfigureCryptoVision(PackageConfiguration queue, ServiceCollection serviceCollection)
         {
             var bootStrapper = new CryptoVision.ScuBootstrapper

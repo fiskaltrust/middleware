@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Models
+namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Models
 {
     public enum ExportState
     {
@@ -15,7 +15,5 @@ namespace fiskaltrust.Middleware.SCU.DE.Swissbit.Models
         public int ReadPointer { get; set; } = -1;
         public Exception Error { get; set; } = null;
         public ExportState State { get; set; }
-        public bool EraseEnabled { get; set; } = false;
-        public string ExportPath { get; set; }
     }
 }
