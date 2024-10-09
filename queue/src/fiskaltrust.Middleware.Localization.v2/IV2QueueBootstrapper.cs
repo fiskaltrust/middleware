@@ -6,5 +6,5 @@ namespace fiskaltrust.Middleware.Localization.v2;
 
 public interface IV2QueueBootstrapper
 {
-    Queue CreateQueueGR(MiddlewareConfiguration middlewareConfiguration, ILoggerFactory loggerFactory,IStorageProvider storageProvider);
+    Func<string, Task<string>> RegisterForSign(MiddlewareConfiguration middlewareConfiguration, ILoggerFactory loggerFactory, IStorageProvider storageProvider)
 }
