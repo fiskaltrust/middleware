@@ -45,7 +45,20 @@ public class MyDataApiClient : IGRSSCD
             [
                 new AadeBookInvoiceType
                 {
-
+                    uid = receiptResponse.ftQueueItemID, // guid ? maybe queueitemid
+                    //mark = (long) Guid.Parse(receiptResponse.ftQueueItemID).ToByteArray(), // receiptiditenfication?
+                    //cancelledByMark = null, // only set for cancellation
+                    authenticationCode = "TBD", // calculate basedon fields
+                    //transmissionFailure = null, // set by backend?
+                    issuer = CreateIssuer(), // issuer from masterdataconfig
+                    counterpart = null, // recipient.. what to do if anyonymous?
+                    paymentMethods = null, // PayItems
+                    invoiceHeader = null, // header to be done
+                    invoiceDetails = null, // chargeitems
+                    taxesTotals = null, // taxes
+                    invoiceSummary = null, // summary
+                    qrCodeUrl = null, // what to put here
+                    otherTransportDetails = null
                 }
             ]
         };
@@ -54,5 +67,39 @@ public class MyDataApiClient : IGRSSCD
         xmlSerializer.Serialize(stringWriter, doc);
         var xmlContent = stringWriter.ToString();
         return xmlContent;
+    }
+
+    private string GetUid()
+    {
+        string vat = "";
+        string dateofIssue = "";
+        string installatioNumberOfTaxisRegistry = "";
+        string typeOfDocument = "";
+        string series = "";
+        string AA = "";
+        string typeOfDeviationDocument = "";
+
+        return $"{vat}-{dateofIssue}-{installatioNumberOfTaxisRegistry}-{typeOfDocument}-{series}-{AA}-{typeOfDeviationDocument}";
+    }
+
+    private PartyType CreateIssuer()
+    {
+        return new PartyType
+        {
+            vatNumber = "",
+            country = CountryType.GR,
+            branch = 0,
+            name = "fiskaltrust GR",
+            address = new AddressType
+            {
+                street = "fiskaltrust street",
+                number = "1",
+                city = "Athens",
+                postalCode = "12345"
+            },
+            documentIdNo = "",
+            countryDocumentId = CountryType.GR,
+            supplyAccountNo = ""
+        };
     }
 }
