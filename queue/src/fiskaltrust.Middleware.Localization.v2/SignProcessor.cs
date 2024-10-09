@@ -1,12 +1,10 @@
 ﻿using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Contracts.Extensions;
 using fiskaltrust.Middleware.Contracts.Models;
-using fiskaltrust.Middleware.Contracts.Repositories;
-using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.Middleware.Localization.v2.Storage;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Localization.v2;
 
@@ -23,7 +21,7 @@ public class SignProcessor : ISignProcessor
 
     public SignProcessor(
         ILogger<SignProcessor> logger,
-        IStorageProvider storageProvider,
+        QueueStorageProvider queueStorageProvider,
         Func<ReceiptRequest, ReceiptResponse, ftQueue, ftQueueItem, Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)>> processRequest,
         string cashBoxIdentification,
         MiddlewareConfiguration configuration)
@@ -34,26 +32,26 @@ public class SignProcessor : ISignProcessor
         _queueId = configuration.QueueId;
         _cashBoxId = configuration.CashBoxId;
         _isSandbox = configuration.IsSandbox;
-        _queueStorageProvider = new QueueStorageProvider(_queueId, storageProvider.GetConfigurationRepository(), storageProvider.GetMiddlewareQueueItemRepository(), storageProvider.GetMiddlewareReceiptJournalRepository(), _actionJournalRepository);
+        _queueStorageProvider = queueStorageProvider;
         _receiptRequestMode = configuration.ReceiptRequestMode;
     }
 
-    public async Task<ReceiptResponse?> ProcessAsync(ReceiptRequest request)
+    public async Task<ReceiptResponse?> ProcessAsync(ReceiptRequest receiptRequest)
     {
         try
         {
-            ArgumentNullException.ThrowIfNull(request);
-            if (request.ftCashBoxID != _cashBoxId)
+            ArgumentNullException.ThrowIfNull(receiptRequest);
+            if (receiptRequest.ftCashBoxID != _cashBoxId)
             {
                 throw new Exception("Provided CashBoxId does not match current CashBoxId");
             }
 
-            if ((request.ftReceiptCase & 0x0000800000000000L) > 0)
+            if ((receiptRequest.ftReceiptCase & 0x0000800000000000L) > 0)
             {
                 ReceiptResponse? receiptResponseFound = null;
                 try
                 {
-                    var foundQueueItem = await _queueStorageProvider.GetExistingQueueItemOrNullAsync(request).ConfigureAwait(false);
+                    var foundQueueItem = await _queueStorageProvider.GetExistingQueueItemOrNullAsync(receiptRequest).ConfigureAwait(false);
                     if (foundQueueItem != null)
                     {
                         var message = $"Queue {_queueId} found cbReceiptReference \"{foundQueueItem.cbReceiptReference}\"";
@@ -79,7 +77,7 @@ public class SignProcessor : ISignProcessor
                     if (_receiptRequestMode == 1)
                     {
                         //try to sign, remove receiptrequest-flag
-                        request.ftReceiptCase -= 0x0000800000000000L;
+                        receiptRequest.ftReceiptCase -= 0x0000800000000000L;
                     }
                     else
                     {
@@ -87,66 +85,61 @@ public class SignProcessor : ISignProcessor
                     }
                 }
             }
-            return await InternalSign(request).ConfigureAwait(false);
+            var actionjournals = new List<ftActionJournal>();
+            try
+            {
+                var queueItem = await _queueStorageProvider.ReserverNextQueueItem(receiptRequest);
+                queueItem.ftWorkMoment = DateTime.UtcNow;
+                var receiptResponse = CreateReceiptResponse(receiptRequest, queueItem);
+                receiptResponse.ftReceiptIdentification = $"ft{await _queueStorageProvider.GetReceiptNumerator():X}#";
+                List<ftActionJournal> countrySpecificActionJournals;
+                try
+                {
+                    (receiptResponse, countrySpecificActionJournals) = await ProcessAsync(receiptRequest, receiptResponse, queueItem).ConfigureAwait(false);
+                    actionjournals.AddRange(countrySpecificActionJournals);
+                }
+                catch (Exception e)
+                {
+                    receiptResponse.HasFailed();
+                    receiptResponse.AddSignatureItem(new SignatureItem
+                    {
+                        ftSignatureFormat = 0x1,
+                        ftSignatureType = (long) (((ulong) receiptRequest.ftReceiptCase & 0xFFFF_0000_0000_0000) | 0x2000_0000_3000),
+                        Caption = "uncaught-exeption",
+                        Data = e.ToString()
+                    });
+                }
+                if (_isSandbox)
+                {
+                    receiptResponse.ftSignatures.Add(SignatureFactory.CreateSandboxSignature(_queueId));
+                }
+
+                await _queueStorageProvider.FinishQueueItem(queueItem, receiptResponse);
+
+                if ((receiptResponse.ftState & 0xFFFF_FFFF) == 0xEEEE_EEEE)
+                {
+                    var errorMessage = "An error occurred during receipt processing, resulting in ftState = 0xEEEE_EEEE.";
+                    await _queueStorageProvider.CreateActionJournalAsync(errorMessage, $"{receiptResponse.ftState:X}", queueItem.ftQueueItemId);
+                    return receiptResponse;
+                }
+                else
+                {
+                    _ = await _queueStorageProvider.InsertReceiptJournal(queueItem, receiptRequest);
+                }
+                return receiptResponse;
+            }
+            finally
+            {
+                foreach (var actionJournal in actionjournals)
+                {
+                    await _queueStorageProvider.CreateActionJournalAsync(actionJournal);
+                }
+            }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "");
             throw;
-        }
-    }
-
-    private async Task<ReceiptResponse?> InternalSign(ReceiptRequest receiptRequest)
-    {
-        var actionjournals = new List<ftActionJournal>();
-        try
-        {
-            var queueItem = await _queueStorageProvider.ReserverNextQueueItem(receiptRequest);
-            queueItem.ftWorkMoment = DateTime.UtcNow;
-            var receiptResponse = CreateReceiptResponse(receiptRequest, queueItem);
-            receiptResponse.ftReceiptIdentification = $"ft{await _queueStorageProvider.GetReceiptNumerator():X}#";
-            List<ftActionJournal> countrySpecificActionJournals;
-            try
-            {
-                (receiptResponse, countrySpecificActionJournals) = await ProcessAsync(receiptRequest, receiptResponse, queueItem).ConfigureAwait(false);
-                actionjournals.AddRange(countrySpecificActionJournals);
-            }
-            catch (Exception e)
-            {
-                receiptResponse.HasFailed();
-                receiptResponse.AddSignatureItem(new SignatureItem
-                {
-                    ftSignatureFormat = 0x1,
-                    ftSignatureType = (long) (((ulong) receiptRequest.ftReceiptCase & 0xFFFF_0000_0000_0000) | 0x2000_0000_3000),
-                    Caption = "uncaught-exeption",
-                    Data = e.ToString()
-                });
-            }
-            if (_isSandbox)
-            {
-                receiptResponse.ftSignatures.Add(SignatureFactory.CreateSandboxSignature(_queueId));
-            }
-
-            await _queueStorageProvider.FinishQueueItem(queueItem, receiptResponse);
-
-            if ((receiptResponse.ftState & 0xFFFF_FFFF) == 0xEEEE_EEEE)
-            {
-                var errorMessage = "An error occurred during receipt processing, resulting in ftState = 0xEEEE_EEEE.";
-                await _queueStorageProvider.CreateActionJournalAsync(errorMessage, $"{receiptResponse.ftState:X}", queueItem.ftQueueItemId);
-                return receiptResponse;
-            }
-            else
-            {
-                _ = await _queueStorageProvider.InsertReceiptJournal(queueItem, receiptRequest);
-            }
-            return receiptResponse;
-        }
-        finally
-        {
-            foreach (var actionJournal in actionjournals)
-            {
-                await _queueStorageProvider.CreateActionJournalAsync(actionJournal);
-            }
         }
     }
 

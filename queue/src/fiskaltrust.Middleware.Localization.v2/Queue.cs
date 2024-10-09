@@ -25,14 +25,8 @@ namespace fiskaltrust.Middleware.Localization.v2
 
         private static string GetServiceFolder() => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "fiskaltrust", "service");
 
-        public Func<string, Task<string>> RegisterForSign(ILoggerFactory loggerFactory)
+        public Func<string, Task<string>> RegisterForSign()
         {
-            var storageConfiguration = AzureTableStorageConfiguration.FromConfigurationDictionary(Configuration);
-            var storageBootStrapper = new AzureTableStorageBootstrapper(Id, Configuration, storageConfiguration, loggerFactory.CreateLogger<IMiddlewareBootstrapper>());
-
-            var serviceCollection = new ServiceCollection();
-            storageBootStrapper.ConfigureStorageServices(serviceCollection);
-
             var middlewareConfiguration = new MiddlewareConfiguration
             {
                 CashBoxId = GetQueueCashbox(Id, Configuration),

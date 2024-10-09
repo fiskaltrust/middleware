@@ -1,7 +1,7 @@
 ﻿using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.storage.V0;
 
-namespace fiskaltrust.Middleware.Localization.v2;
+namespace fiskaltrust.Middleware.Localization.v2.Helpers;
 
 public static class ftQueueItemExtensions
 {
@@ -10,7 +10,7 @@ public static class ftQueueItemExtensions
     public static bool IsContentOfQueueItemEqualWithGivenRequest(this ftQueueItem item, ReceiptRequest data)
     {
         var itemRequest = System.Text.Json.JsonSerializer.Deserialize<ReceiptRequest>(item.request);
-        if(itemRequest == null)
+        if (itemRequest == null)
         {
             return false;
         }

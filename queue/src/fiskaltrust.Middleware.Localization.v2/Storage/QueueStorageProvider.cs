@@ -4,7 +4,7 @@ using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.storage.V0;
 
-namespace fiskaltrust.Middleware.Localization.v2;
+namespace fiskaltrust.Middleware.Localization.v2.Storage;
 
 public class QueueStorageProvider
 {
@@ -64,7 +64,7 @@ public class QueueStorageProvider
         _cachedQueue ??= await _configurationRepository.GetQueueAsync(_queueId);
         return _cachedQueue.ftCurrentRow;
     }
-  
+
     public async Task<ftQueue> GetQueueAsync()
     {
         _cachedQueue ??= await _configurationRepository.GetQueueAsync(_queueId);
@@ -159,5 +159,4 @@ public class QueueStorageProvider
         }
         return null;
     }
-
 }

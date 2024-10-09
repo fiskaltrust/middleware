@@ -1,8 +1,10 @@
 ﻿using fiskaltrust.Middleware.Contracts.Models;
+using fiskaltrust.Middleware.Localization.QueueGR;
 using fiskaltrust.Middleware.Localization.QueuePT.Processors;
 using fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.Middleware.Localization.v2.Storage;
 using fiskaltrust.Middleware.Storage.PT;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
@@ -17,7 +19,7 @@ public class QueuePTBootstrapper : IV2QueueBootstrapper
 
     private static string GetServiceFolder() => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "fiskaltrust", "service");
 
-    public Queue RegisterForSign(ILoggerFactory loggerFactory, IStorageProvider storageProvider)
+    public Func<string, Task<string>> RegisterForSign(ILoggerFactory loggerFactory)
     {
         var middlewareConfiguration = new MiddlewareConfiguration
         {
@@ -28,16 +30,18 @@ public class QueuePTBootstrapper : IV2QueueBootstrapper
             Configuration = Configuration
         };
 
+        var storageProvider = new AzureStorageProvider(loggerFactory, Id, Configuration);
         var queuePT = new ftQueuePT();
         var signaturCreationUnitPT = new ftSignaturCreationUnitPT();
         var ptSSCD = new InMemorySCU(signaturCreationUnitPT);
-        var signProcessorPT = new ReceiptProcessor(loggerFactory.CreateLogger<ReceiptProcessor>(), storageProvider.GetConfigurationRepository(), new LifecyclCommandProcessorPT(storageProvider.GetConfigurationRepository()), new ReceiptCommandProcessorPT(ptSSCD, queuePT, signaturCreationUnitPT), new DailyOperationsCommandProcessorPT(), new InvoiceCommandProcessorPT(), new ProtocolCommandProcessorPT(), queuePT.CashBoxIdentification);
-        var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), storageProvider, signProcessorPT.ProcessAsync, queuePT.CashBoxIdentification, middlewareConfiguration);
+        var queueStorageProvider = new QueueStorageProvider(Id, storageProvider.GetConfigurationRepository(), storageProvider.GetMiddlewareQueueItemRepository(), storageProvider.GetMiddlewareReceiptJournalRepository(), storageProvider.GetMiddlewareActionJournalRepository());
+        var signProcessorPT = new ReceiptProcessor(loggerFactory.CreateLogger<ReceiptProcessor>(), storageProvider.GetConfigurationRepository(), new LifecyclCommandProcessorPT(storageProvider.GetConfigurationRepository()), new ReceiptCommandProcessorPT(ptSSCD, queuePT, signaturCreationUnitPT), new DailyOperationsCommandProcessorPT(), new InvoiceCommandProcessorPT(), new ProtocolCommandProcessorPT());
+        var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, signProcessorPT.ProcessAsync, queuePT.CashBoxIdentification, middlewareConfiguration);
         return new Queue(signProcessor, loggerFactory)
         {
             Id = Id,
             Configuration = Configuration,
-        };
+        }.RegisterForSign();
     }
 
     private static Guid GetQueueCashbox(Guid queueId, Dictionary<string, object> configuration)
