@@ -41,6 +41,11 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.Extensions
             return ((receiptRequest.ftReceiptCase & 0x0000_0000_0000_FFFF) == 0x0000_0000_0000_0004);
         }
 
+        public static bool IsProtolcolReceipt(this ReceiptRequest receiptRequest)
+        {
+            return ((receiptRequest.ftReceiptCase & 0x0000_0000_0000_FFFF) == 0x0000_0000_0000_000D);
+        }
+
         public static bool HasChargeAndPayItems(this ReceiptRequest receiptRequest)
         {
             return ((receiptRequest.cbChargeItems != null && receiptRequest.cbChargeItems?.Count() != 0) || (receiptRequest.cbPayItems != null && receiptRequest.cbPayItems?.Count() != 0));

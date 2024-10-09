@@ -358,11 +358,11 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 
                 //Exception Matrix Process
                 //A1 ??? Mehrwertsteuertausch
-                if (decisionBit5 && (receiptRequest.cbPayItems == null || receiptRequest.cbPayItems.Count() == 0))
+                if (receiptRequest.cbPayItems == null || receiptRequest.cbPayItems.Count() == 0)
                 {
                     decision.Exception += "A1";
 
-                    if (receiptRequest.cbChargeItems != null)
+                    if (receiptRequest.cbChargeItems != null & !receiptRequest.IsProtolcolReceipt())
                     {
                         var Query = receiptRequest.cbChargeItems?.Where(ci =>
                              satz_Normal_Values.Contains(ci.ftChargeItemCase & 0xFFFF) ||
