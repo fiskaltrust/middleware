@@ -362,7 +362,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                 {
                     decision.Exception += "A1";
 
-                    if (receiptRequest.cbChargeItems != null & !receiptRequest.IsProtocolReceipt())
+                    if (receiptRequest.cbChargeItems != null && !receiptRequest.IsProtocolReceipt())
                     {
                         var Query = receiptRequest.cbChargeItems?.Where(ci =>
                              satz_Normal_Values.Contains(ci.ftChargeItemCase & 0xFFFF) ||
