@@ -1,17 +1,8 @@
 ﻿using System;
-using fiskaltrust.Middleware.Contracts.Models.Transactions;
-using fiskaltrust.storage.V0;
-using fiskaltrust.storage.V0.MasterData;
 using Azure.Data.Tables;
-using Azure.Core;
-using Azure;
 using System.Linq;
 using System.Text;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.Extensions;
-using fiskaltrust.Middleware.Storage.AzureTableStorage.TableEntities;
-using fiskaltrust.Middleware.Storage.AzureTableStorage.TableEntities.Configuration;
-using fiskaltrust.Middleware.Storage.AzureTableStorage.TableEntities.MasterData;
-using fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories;
 
 namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
 {
@@ -51,13 +42,13 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             else
             {
                 var reqSb = new StringBuilder();
-                var fields = entity.Keys
-                    .Where(x => x.StartsWith($"{property}_{OVERSIZED_MARKER}_"))
-                    .Select(x => (int.Parse(x.Substring($"{property}_{OVERSIZED_MARKER}_".Length)), x))
-                    .ToDictionary(x => x.Item1, x => x.x);
-                foreach (var key in fields.OrderBy(x => x.Key))
+                // var fields = entity.Keys
+                //     .Where(x => x.StartsWith($"{property}_{OVERSIZED_MARKER}_"))
+                //     .Select(x => (int.Parse(x.Substring($"{property}_{OVERSIZED_MARKER}_".Length)), x))
+                //     .ToDictionary(x => x.Item1, x => x.x);
+                foreach (var key in entity.Keys.Where(x => x.StartsWith($"{property}_{OVERSIZED_MARKER}_")))
                 {
-                    reqSb.Append(entity[key.Value]);
+                    reqSb.Append(entity[key]);
                 }
                 return reqSb.ToString();
             }
