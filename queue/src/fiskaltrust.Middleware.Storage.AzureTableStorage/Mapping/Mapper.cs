@@ -53,7 +53,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
                 var reqSb = new StringBuilder();
                 var fields = entity.Keys
                     .Where(x => x.StartsWith($"{property}_{OVERSIZED_MARKER}_"))
-                    .Select(x => (int.Parse(x.Split($"{property}_{OVERSIZED_MARKER}_")[1]), x))
+                    .Select(x => (int.Parse(x.Substring($"{property}_{OVERSIZED_MARKER}_".Length)), x))
                     .ToDictionary(x => x.Item1, x => x.x);
                 foreach (var key in fields.OrderBy(x => x.Key))
                 {
