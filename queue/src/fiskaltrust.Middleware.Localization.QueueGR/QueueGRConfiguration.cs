@@ -1,4 +1,4 @@
-﻿using fiskaltrust.Middleware.Localization.v2;
+﻿using fiskaltrust.Middleware.Localization.v2.Configuration;
 using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR;

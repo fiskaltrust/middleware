@@ -6,12 +6,12 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
     </PropertyGroup>
-    
+
     <ItemGroup>
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="3.1.4" />
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\fiskaltrust.Middleware.Storage.AzureTableStorage\fiskaltrust.Middleware.Storage.AzureTableStorage.csproj" />
+        <ProjectReference Include="..\fiskaltrust.Middleware.Storage.AzureTableStorage\fiskaltrust.Middleware.Storage.AzureTableStorage.csproj"/>
     </ItemGroup>
 </Project>

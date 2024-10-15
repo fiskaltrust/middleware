@@ -1,6 +1,6 @@
 ﻿using fiskaltrust.Api.POS.Models.ifPOS.v2;
-using fiskaltrust.Middleware.Contracts.Extensions;
-using fiskaltrust.Middleware.Contracts.Models;
+using fiskaltrust.Middleware.Localization.v2.Configuration;
+using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Storage;
 using fiskaltrust.storage.V0;
@@ -88,7 +88,7 @@ public class SignProcessor : ISignProcessor
             var actionjournals = new List<ftActionJournal>();
             try
             {
-                var queueItem = await _queueStorageProvider.ReserveNextQueueItem(receiptRequest);
+                var queueItem = await _queueStorageProvider.ReserverNextQueueItem(receiptRequest);
                 queueItem.ftWorkMoment = DateTime.UtcNow;
                 var receiptResponse = CreateReceiptResponse(receiptRequest, queueItem);
                 receiptResponse.ftReceiptIdentification = $"ft{await _queueStorageProvider.GetReceiptNumerator():X}#";

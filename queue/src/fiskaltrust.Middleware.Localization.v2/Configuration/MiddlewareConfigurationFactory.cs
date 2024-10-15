@@ -1,7 +1,7 @@
 ﻿using fiskaltrust.storage.V0;
 using Newtonsoft.Json;
 
-namespace fiskaltrust.Middleware.Localization.v2;
+namespace fiskaltrust.Middleware.Localization.v2.Configuration;
 
 public static class MiddlewareConfigurationFactory
 {

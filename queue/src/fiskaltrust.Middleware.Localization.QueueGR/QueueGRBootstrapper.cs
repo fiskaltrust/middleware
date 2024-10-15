@@ -1,6 +1,7 @@
 ﻿using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.myDataSCU;
 using fiskaltrust.Middleware.Localization.QueueGR.Processors;
 using fiskaltrust.Middleware.Localization.v2;
+using fiskaltrust.Middleware.Localization.v2.Configuration;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Storage;
 using fiskaltrust.Middleware.Storage.GR;
