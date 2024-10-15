@@ -170,20 +170,36 @@ public class MyDataApiClient : IGRSSCD
 
     private int GetVATCategory(ChargeItem chargeItem) => (chargeItem.ftChargeItemCase & 0xF) switch
     {
-        0x3 => 1, // Normal 24%
-        0x1 => 2, // Discounted-1 13&
-        0x2 => 3, // Discounted-2 6%
-        0x4 => 4, // Super reduced 1 17%
-        0x5 => 5, // Super reduced 2 9%
-        0x6 => 6, // Parking VAT 4%
-        0x8 => 7, // Not Taxable
-        0x7 => 8, // Zero
-        0x0 => 0, // Unknown ???
+        (long) ChargeItemCaseVat.NormalVatRate => MyDataVatCategory.VatRate24, // Normal 24%
+        (long) ChargeItemCaseVat.DiscountedVatRate1 => MyDataVatCategory.VatRate13, // Discounted-1 13&
+        (long) ChargeItemCaseVat.DiscountedVatRate2 => MyDataVatCategory.VatRate6, // Discounted-2 6%
+        (long) ChargeItemCaseVat.SuperReducedVatRate1 => MyDataVatCategory.VatRate17, // Super reduced 1 17%
+        (long) ChargeItemCaseVat.SuperReducedVatRate2 => MyDataVatCategory.VatRate9, // Super reduced 2 9%
+        (long) ChargeItemCaseVat.ParkingVatRate => MyDataVatCategory.VatRate4, // Parking VAT 4%
+        (long) ChargeItemCaseVat.NotTaxable => MyDataVatCategory.RegistrationsWithoutVat, // Not Taxable
+        (long) ChargeItemCaseVat.ZeroVatRate => MyDataVatCategory.RegistrationsWithoutVat, // Zero
+        _ => throw new Exception($"The VAT type {chargeItem.ftChargeItemCase & 0xF} of ChargeItem with the case {chargeItem.ftChargeItemCase} is not supported."), 
     };
 
-    private int GetPaymentType(PayItem payItem) => (payItem.ftPayItemCase) switch
+    private int GetPaymentType(PayItem payItem) => (payItem.ftPayItemCase & 0xF) switch
     {
-        _ => 3, // Cash
+        (long) PayItemCases.UnknownPaymentType => MyDataPaymentMethods.Cash,
+        (long) PayItemCases.CashPayment => MyDataPaymentMethods.Cash,
+        (long) PayItemCases.NonCash => MyDataPaymentMethods.Cash,
+        (long) PayItemCases.CrossedCheque => MyDataPaymentMethods.Cheque,
+        (long) PayItemCases.DebitCardPayment => MyDataPaymentMethods.PosEPos,
+        (long) PayItemCases.CreditCardPayment => MyDataPaymentMethods.PosEPos,
+        (long) PayItemCases.VoucherPaymentCouponVoucherByMoneyValue => -1,
+        (long) PayItemCases.OnlinePayment => MyDataPaymentMethods.WebBanking,
+        (long) PayItemCases.LoyaltyProgramCustomerCardPayment => -1,
+        (long) PayItemCases.AccountsReceivable => -1,
+        (long) PayItemCases.SEPATransfer => -1,
+        (long) PayItemCases.OtherBankTransfer => -1,
+        (long) PayItemCases.TransferToCashbookVaultOwnerEmployee => -1,
+        (long) PayItemCases.InternalMaterialConsumption => -1,
+        (long) PayItemCases.Grant => -1,
+        (long) PayItemCases.TicketRestaurant => -1,
+        _ => throw new Exception($"The Payment type {payItem.ftPayItemCase & 0xF} of PayItem with the case {payItem.ftPayItemCase} is not supported."),
     };
 
     private InvoiceType GetInvoiceType(ReceiptRequest receiptRequest) => (receiptRequest.ftReceiptCase) switch
