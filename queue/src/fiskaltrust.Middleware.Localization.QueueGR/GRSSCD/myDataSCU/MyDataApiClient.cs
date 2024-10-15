@@ -15,6 +15,11 @@ public class MyDataApiClient : IGRSSCD
     private readonly string _prodBaseUrl = "https://mydataapi.aade.gr/";
     private readonly string _devBaseUrl = "https://mydataapidev.aade.gr/";
 
+    public static MyDataApiClient CreateClient(Dictionary<string, object> configuration)
+    {
+        return new MyDataApiClient(configuration["aade-user-id"].ToString(), configuration["ocp-apim-subscription-key"].ToString());
+    }
+
     public MyDataApiClient(string username, string subscriptionKey)
     {
         _httpClient = new HttpClient()

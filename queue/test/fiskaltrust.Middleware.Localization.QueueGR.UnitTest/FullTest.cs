@@ -47,12 +47,8 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             var configuration = await GetConfigurationAsync(cashBoxId, accessToken);
             var queue = configuration.ftQueues.First();
 
-            var bootstrapper = new QueueGRBootstrapper
-            {
-                Id = queue.Id,
-                Configuration = queue.Configuration
-            };
-            var signMethod = bootstrapper.RegisterForSign(new LoggerFactory());
+            var bootstrapper = new QueueGRBootstrapper(queue.Id, new LoggerFactory(), queue.Configuration);
+            var signMethod = bootstrapper.RegisterForSign();
 
             //var initialOperationRequest = InitialOperation(cashBoxId);
             //var initOperationResponse = await signMethod(System.Text.Json.JsonSerializer.Serialize(initialOperationRequest));

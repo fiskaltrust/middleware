@@ -1,9 +1,8 @@
-﻿using System;
-using System.Threading.Tasks;
-using fiskaltrust.Api.POS.Models.ifPOS.v2;
+﻿using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueueGR.Models;
 using fiskaltrust.Middleware.Localization.QueueGR.Processors;
 using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.Middleware.Localization.v2.Storage;
 using fiskaltrust.Middleware.Localization.v2.v2;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
@@ -16,7 +15,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
 {
     public class LifecyclCommandProcessorGRTests
     {
-        private readonly LifecyclCommandProcessorGR _sut = new(Mock.Of<IConfigurationRepository>());
+        private readonly LifecyclCommandProcessorGR _sut = new(Mock.Of<ILocalizedQueueStorageProvider>());
 
         [Theory]
         [InlineData(ReceiptCases.InitialOperationReceipt0x4001)]
@@ -84,8 +83,8 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
             var queue = TestHelpers.CreateQueue();
             var queueItem = TestHelpers.CreateQueueItem();
 
-            var configMock = new Mock<IConfigurationRepository>();
-            configMock.Setup(x => x.InsertOrUpdateQueueAsync(It.IsAny<ftQueue>())).Returns(Task.CompletedTask);
+            var configMock = new Mock<ILocalizedQueueStorageProvider>();
+            configMock.Setup(x => x.ActivateQueueAsync()).Returns(Task.CompletedTask);
             var sut = new LifecyclCommandProcessorGR(configMock.Object);
 
             var receiptRequest = new ReceiptRequest
@@ -156,7 +155,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
             data.QueueId.Should().Be(queueItem.ftQueueId);
             data.Version.Should().Be("V0");
 
-            configMock.Verify(x => x.InsertOrUpdateQueueAsync(queue), Times.Exactly(1));
+            configMock.Verify(x => x.ActivateQueueAsync(), Times.Exactly(1));
         }
 
         [Fact]
@@ -167,8 +166,8 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
 
             var queueItem = TestHelpers.CreateQueueItem();
 
-            var configMock = new Mock<IConfigurationRepository>();
-            configMock.Setup(x => x.InsertOrUpdateQueueAsync(It.IsAny<ftQueue>())).Returns(Task.CompletedTask);
+            var configMock = new Mock<ILocalizedQueueStorageProvider>();
+            configMock.Setup(x => x.ActivateQueueAsync()).Returns(Task.CompletedTask);
             var sut = new LifecyclCommandProcessorGR(configMock.Object);
 
             var receiptRequest = new ReceiptRequest
@@ -238,7 +237,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
             data.QueueId.Should().Be(queueItem.ftQueueId);
             data.Version.Should().Be("V0");
 
-            configMock.Verify(x => x.InsertOrUpdateQueueAsync(queue), Times.Exactly(1));
+            configMock.Verify(x => x.ActivateQueueAsync(), Times.Exactly(1));
         }
 
         [Fact]
@@ -247,8 +246,8 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
             var queue = TestHelpers.CreateQueue();
             var queueItem = TestHelpers.CreateQueueItem();
 
-            var configMock = new Mock<IConfigurationRepository>();
-            configMock.Setup(x => x.InsertOrUpdateQueueAsync(It.IsAny<ftQueue>())).Returns(Task.CompletedTask);
+            var configMock = new Mock<ILocalizedQueueStorageProvider>();
+            configMock.Setup(x => x.ActivateQueueAsync()).Returns(Task.CompletedTask);
             var sut = new LifecyclCommandProcessorGR(configMock.Object);
 
             var receiptRequest = new ReceiptRequest
@@ -282,8 +281,8 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
             var queue = TestHelpers.CreateQueue();
             var queueItem = TestHelpers.CreateQueueItem();
 
-            var configMock = new Mock<IConfigurationRepository>();
-            configMock.Setup(x => x.InsertOrUpdateQueueAsync(It.IsAny<ftQueue>())).Returns(Task.CompletedTask);
+            var configMock = new Mock<ILocalizedQueueStorageProvider>();
+            configMock.Setup(x => x.ActivateQueueAsync()).Returns(Task.CompletedTask);
             var sut = new LifecyclCommandProcessorGR(configMock.Object);
 
             var receiptRequest = new ReceiptRequest

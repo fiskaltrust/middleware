@@ -6,7 +6,7 @@ using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.v2.Storage;
 
-public class QueueStorageProvider
+public class QueueStorageProvider : IQueueStorageProvider
 {
     private readonly Guid _queueId;
     private readonly IStorageProvider _storageProvider;
@@ -17,15 +17,31 @@ public class QueueStorageProvider
     private readonly CryptoHelper _cryptoHelper;
     private ftQueue? _cachedQueue;
 
-    public QueueStorageProvider(Guid queueId, IStorageProvider storageProvider, IConfigurationRepository configurationRepository, IMiddlewareQueueItemRepository middlewareQueueItemRepository, IMiddlewareReceiptJournalRepository middlewareReceiptJournalRepository, IMiddlewareActionJournalRepository actionJournalRepository)
+    public QueueStorageProvider(Guid queueId, IStorageProvider storageProvider)
     {
         _queueId = queueId;
         _storageProvider = storageProvider;
-        _configurationRepository = configurationRepository;
-        _middlewareQueueItemRepository = middlewareQueueItemRepository;
-        _middlewareReceiptJournalRepository = middlewareReceiptJournalRepository;
-        _actionJournalRepository = actionJournalRepository;
+        _configurationRepository = storageProvider.GetConfigurationRepository();
+        _middlewareQueueItemRepository = storageProvider.GetMiddlewareQueueItemRepository();
+        _middlewareReceiptJournalRepository = storageProvider.GetMiddlewareReceiptJournalRepository();
+        _actionJournalRepository = storageProvider.GetMiddlewareActionJournalRepository();
         _cryptoHelper = new CryptoHelper();
+    }
+
+    public async Task ActivateQueueAsync()
+    {
+        _cachedQueue ??= await GetQueueAsync();
+        var queue = _cachedQueue;
+        queue.StartMoment = DateTime.UtcNow;
+        await _configurationRepository.InsertOrUpdateQueueAsync(queue).ConfigureAwait(false);
+    }
+
+    public async Task DeactivateQueueAsync()
+    {
+        _cachedQueue ??= await GetQueueAsync();
+        var queue = _cachedQueue;
+        queue.StopMoment = DateTime.UtcNow;
+        await _configurationRepository.InsertOrUpdateQueueAsync(queue).ConfigureAwait(false);
     }
 
     public async Task<ftQueueItem> ReserverNextQueueItem(ReceiptRequest receiptRequest)
@@ -72,7 +88,7 @@ public class QueueStorageProvider
         var checks = 0;
         while (!_storageProvider.IsInitialized)
         {
-            if(checks > 500)
+            if (checks > 500)
             {
                 throw new Exception("Storage provider is not initialized yet.");
             }

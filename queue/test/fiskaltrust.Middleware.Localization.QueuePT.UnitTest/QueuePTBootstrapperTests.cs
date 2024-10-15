@@ -15,16 +15,13 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
         {
             var cashBoxId = Guid.NewGuid();
             var queueId = Guid.NewGuid();
-            var bootstrapper = new QueuePTBootstrapper
-            {
-                Id = queueId,
-                Configuration = new Dictionary<string, object>
+
+            var bootstrapper = new QueuePTBootstrapper(queueId, new LoggerFactory(), new Dictionary<string, object>
                 {
                     { "storageaccountname", "test" },
                     { "init_ftQueue", Newtonsoft.Json.JsonConvert.SerializeObject(new List<ftQueue> { new ftQueue { ftQueueId = queueId, ftCashBoxId = cashBoxId } }) }
-                }
-            };
-            _ = bootstrapper.RegisterForSign(new LoggerFactory());
+                });
+            _ = bootstrapper.RegisterForSign();
 
             //var signResult = await signMethod(JsonSerializer.Serialize(new ReceiptRequest
             //{
@@ -38,16 +35,13 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
         {
             var cashBoxId = Guid.NewGuid();
             var queueId = Guid.NewGuid();
-            var bootstrapper = new QueuePTBootstrapper
-            {
-                Id = queueId,
-                Configuration = new Dictionary<string, object>
+            var bootstrapper = new QueuePTBootstrapper(queueId, new LoggerFactory(), new Dictionary<string, object>
                 {
                     { "storageaccountname", "test" },
                     { "init_ftQueue", Newtonsoft.Json.JsonConvert.SerializeObject(new List<ftQueue> { new ftQueue { ftQueueId = queueId, ftCashBoxId = cashBoxId } }) }
-                }
-            };
-            var signMethod = bootstrapper.RegisterForSign(new LoggerFactory());
+                });
+            
+            var signMethod = bootstrapper.RegisterForSign();
 
             var signResult = await signMethod(JsonSerializer.Serialize(new ReceiptRequest
             {

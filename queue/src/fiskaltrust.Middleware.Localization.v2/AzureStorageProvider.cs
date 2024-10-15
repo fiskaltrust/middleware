@@ -14,7 +14,7 @@ using fiskaltrust.storage.encryption.V0;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 
-namespace fiskaltrust.Middleware.Localization.QueueGR;
+namespace fiskaltrust.Middleware.Localization.v2;
 
 public class AzureStorageProvider : BaseStorageBootStrapper, IStorageProvider
 {

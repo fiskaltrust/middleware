@@ -8,7 +8,6 @@ namespace fiskaltrust.Middleware.Localization.v2;
 
 public class ReceiptProcessor : IReceiptProcessor
 {
-    protected readonly IConfigurationRepository _configurationRepository;
     private readonly ILifecyclCommandProcessor _lifecyclCommandProcessor;
     private readonly IReceiptCommandProcessor _receiptCommandProcessor;
     private readonly IDailyOperationsCommandProcessor _dailyOperationsCommandProcessor;
@@ -16,9 +15,8 @@ public class ReceiptProcessor : IReceiptProcessor
     private readonly IProtocolCommandProcessor _protocolCommandProcessor;
     private readonly ILogger<ReceiptProcessor> _logger;
 
-    public ReceiptProcessor(ILogger<ReceiptProcessor> logger, IConfigurationRepository configurationRepository, ILifecyclCommandProcessor lifecyclCommandProcessor, IReceiptCommandProcessor receiptCommandProcessor, IDailyOperationsCommandProcessor dailyOperationsCommandProcessor, IInvoiceCommandProcessor invoiceCommandProcessor, IProtocolCommandProcessor protocolCommandProcessor)
+    public ReceiptProcessor(ILogger<ReceiptProcessor> logger, ILifecyclCommandProcessor lifecyclCommandProcessor, IReceiptCommandProcessor receiptCommandProcessor, IDailyOperationsCommandProcessor dailyOperationsCommandProcessor, IInvoiceCommandProcessor invoiceCommandProcessor, IProtocolCommandProcessor protocolCommandProcessor)
     {
-        _configurationRepository = configurationRepository;
         _lifecyclCommandProcessor = lifecyclCommandProcessor;
         _receiptCommandProcessor = receiptCommandProcessor;
         _dailyOperationsCommandProcessor = dailyOperationsCommandProcessor;
