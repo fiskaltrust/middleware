@@ -75,7 +75,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
                 ftReceiptCase = 0x4752_2000_0000_4001,
                 cbTerminalID = "1",
                 cbReceiptReference = Guid.NewGuid().ToString(),
-                cbReceiptMoment = new DateTime(2020, 04, 08),
+                cbReceiptMoment = DateTime.UtcNow,
                 cbChargeItems = [],
                 cbPayItems = []
             };
@@ -89,7 +89,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
                 ftReceiptCase = 0x4752_2000_0000_0000,
                 cbTerminalID = "1",
                 cbReceiptReference = Guid.NewGuid().ToString(),
-                cbReceiptMoment = new DateTime(2020, 04, 08),
+                cbReceiptMoment = DateTime.UtcNow,
                 cbChargeItems =
                             [
                                 new ChargeItem
@@ -118,7 +118,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
                                 new PayItem
                     {
                         ftPayItemCase = 0x4752_2000_0000_0001,
-                        Amount = 6.2m,
+                        Amount = 12.4m,
                         Description = "Cash"
                     }
                             ]

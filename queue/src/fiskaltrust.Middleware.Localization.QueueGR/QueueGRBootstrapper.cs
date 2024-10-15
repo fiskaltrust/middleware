@@ -14,20 +14,22 @@ namespace fiskaltrust.Middleware.Localization.QueueGR;
 #pragma warning disable
 public class QueueGRBootstrapper : IV2QueueBootstrapper
 {
+    private Queue _queue;
+
     public required Guid Id { get; set; }
     public required Dictionary<string, object> Configuration { get; set; }
 
     private static string GetServiceFolder() => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "fiskaltrust", "service");
 
-    public Func<string, Task<string>> RegisterForSign(ILoggerFactory loggerFactory)
+    public QueueGRBootstrapper(Guid id, ILoggerFactory loggerFactory, Dictionary<string, object> configuration)
     {
         var middlewareConfiguration = new MiddlewareConfiguration
         {
-            CashBoxId = GetQueueCashbox(Id, Configuration),
-            QueueId = Id,
-            IsSandbox = Configuration.TryGetValue("sandbox", out var sandbox) && bool.TryParse(sandbox.ToString(), out var sandboxBool) && sandboxBool,
-            ServiceFolder = Configuration.TryGetValue("servicefolder", out var val) ? val.ToString() : GetServiceFolder(),
-            Configuration = Configuration
+            CashBoxId = GetQueueCashbox(id, configuration),
+            QueueId = id,
+            IsSandbox = configuration.TryGetValue("sandbox", out var sandbox) && bool.TryParse(sandbox.ToString(), out var sandboxBool) && sandboxBool,
+            ServiceFolder = configuration.TryGetValue("servicefolder", out var val) ? val.ToString() : GetServiceFolder(),
+            Configuration = configuration
         };
 
         var queueGR = JsonConvert.DeserializeObject<List<ftQueueGR>>(Configuration["init_ftQueueGR"].ToString()).First();
@@ -37,11 +39,21 @@ public class QueueGRBootstrapper : IV2QueueBootstrapper
         var queueStorageProvider = new QueueStorageProvider(Id, storageProvider, storageProvider.GetConfigurationRepository(), storageProvider.GetMiddlewareQueueItemRepository(), storageProvider.GetMiddlewareReceiptJournalRepository(), storageProvider.GetMiddlewareActionJournalRepository());
         var signProcessorPT = new ReceiptProcessor(loggerFactory.CreateLogger<ReceiptProcessor>(), storageProvider.GetConfigurationRepository(), new LifecyclCommandProcessorGR(storageProvider.GetConfigurationRepository()), new ReceiptCommandProcessorGR(ptSSCD, queueGR, signaturCreationUnitPT), new DailyOperationsCommandProcessorGR(), new InvoiceCommandProcessorGR(), new ProtocolCommandProcessorGR());
         var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, signProcessorPT.ProcessAsync, queueGR.CashBoxIdentification, middlewareConfiguration);
-        return new Queue(signProcessor, loggerFactory)
+        _queue = new Queue(signProcessor, loggerFactory)
         {
             Id = Id,
             Configuration = Configuration,
-        }.RegisterForSign();
+        };
+    }
+    
+    public Func<string, Task<string>> RegisterForSign()
+    {
+        return _queue.RegisterForSign();
+    }
+
+    public Func<string, Task<string>> RegisterForEcho()
+    {
+        return _queue.RegisterForEcho();
     }
 
     private static Guid GetQueueCashbox(Guid queueId, Dictionary<string, object> configuration)

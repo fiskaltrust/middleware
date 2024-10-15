@@ -14,34 +14,42 @@ namespace fiskaltrust.Middleware.Localization.QueuePT;
 
 public class QueuePTBootstrapper : IV2QueueBootstrapper
 {
-    public required Guid Id { get; set; }
-    public required Dictionary<string, object> Configuration { get; set; }
+    private readonly Queue _queue;
 
     private static string GetServiceFolder() => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "fiskaltrust", "service");
 
-    public Func<string, Task<string>> RegisterForSign(ILoggerFactory loggerFactory)
+    public QueuePTBootstrapper(Guid id, ILoggerFactory loggerFactory, Dictionary<string, object> configuration)
     {
         var middlewareConfiguration = new MiddlewareConfiguration
         {
-            CashBoxId = GetQueueCashbox(Id, Configuration),
-            QueueId = Id,
-            IsSandbox = Configuration.TryGetValue("sandbox", out var sandbox) && bool.TryParse(sandbox.ToString(), out var sandboxBool) && sandboxBool,
-            ServiceFolder = Configuration.TryGetValue("servicefolder", out var val) ? val.ToString() : GetServiceFolder(),
-            Configuration = Configuration
+            CashBoxId = GetQueueCashbox(id, configuration),
+            QueueId = id,
+            IsSandbox = configuration.TryGetValue("sandbox", out var sandbox) && bool.TryParse(sandbox.ToString(), out var sandboxBool) && sandboxBool,
+            ServiceFolder = configuration.TryGetValue("servicefolder", out var val) ? val.ToString() : GetServiceFolder(),
+            Configuration = configuration
         };
-
-        var storageProvider = new AzureStorageProvider(loggerFactory, Id, Configuration);
-        var queuePT = new ftQueuePT();
+        var queuePT = JsonConvert.DeserializeObject<List<ftQueuePT>>(configuration["init_ftQueuePT"]!.ToString()!).First();
+        var storageProvider = new AzureStorageProvider(loggerFactory, id, configuration);
         var signaturCreationUnitPT = new ftSignaturCreationUnitPT();
         var ptSSCD = new InMemorySCU(signaturCreationUnitPT);
-        var queueStorageProvider = new QueueStorageProvider(Id, storageProvider, storageProvider.GetConfigurationRepository(), storageProvider.GetMiddlewareQueueItemRepository(), storageProvider.GetMiddlewareReceiptJournalRepository(), storageProvider.GetMiddlewareActionJournalRepository());
+        var queueStorageProvider = new QueueStorageProvider(id, storageProvider, storageProvider.GetConfigurationRepository(), storageProvider.GetMiddlewareQueueItemRepository(), storageProvider.GetMiddlewareReceiptJournalRepository(), storageProvider.GetMiddlewareActionJournalRepository());
         var signProcessorPT = new ReceiptProcessor(loggerFactory.CreateLogger<ReceiptProcessor>(), storageProvider.GetConfigurationRepository(), new LifecyclCommandProcessorPT(storageProvider.GetConfigurationRepository()), new ReceiptCommandProcessorPT(ptSSCD, queuePT, signaturCreationUnitPT), new DailyOperationsCommandProcessorPT(), new InvoiceCommandProcessorPT(), new ProtocolCommandProcessorPT());
         var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, signProcessorPT.ProcessAsync, queuePT.CashBoxIdentification, middlewareConfiguration);
-        return new Queue(signProcessor, loggerFactory)
+        _queue = new Queue(signProcessor, loggerFactory)
         {
-            Id = Id,
-            Configuration = Configuration,
-        }.RegisterForSign();
+            Id = id,
+            Configuration = configuration,
+        };
+    }
+
+    public Func<string, Task<string>> RegisterForSign()
+    {
+        return _queue.RegisterForSign();
+    }
+
+    public Func<string, Task<string>> RegisterForEcho()
+    {
+        return _queue.RegisterForEcho();
     }
 
     private static Guid GetQueueCashbox(Guid queueId, Dictionary<string, object> configuration)
