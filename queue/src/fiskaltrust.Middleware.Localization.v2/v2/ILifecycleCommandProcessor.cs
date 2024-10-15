@@ -2,7 +2,7 @@
 
 namespace fiskaltrust.Middleware.Localization.v2.v2;
 
-public interface ILifecyclCommandProcessor
+public interface ILifecycleCommandProcessor
 {
     Task<ProcessCommandResponse> ProcessReceiptAsync(ProcessCommandRequest request);
     Task<ProcessCommandResponse> InitialOperationReceipt0x4001Async(ProcessCommandRequest request);

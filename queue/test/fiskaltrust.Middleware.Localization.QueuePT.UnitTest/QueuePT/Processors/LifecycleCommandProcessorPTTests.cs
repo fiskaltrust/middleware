@@ -16,7 +16,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
 {
     public class LifecyclCommandProcessorPTTests
     {
-        private readonly LifecyclCommandProcessorPT _sut = new(Mock.Of<IConfigurationRepository>());
+        private readonly LifecycleCommandProcessorPT _sut = new(Mock.Of<IConfigurationRepository>());
 
         [Theory]
         [InlineData(ReceiptCases.InitialOperationReceipt0x4001)]
@@ -86,7 +86,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
 
             var configMock = new Mock<IConfigurationRepository>();
             configMock.Setup(x => x.InsertOrUpdateQueueAsync(It.IsAny<ftQueue>())).Returns(Task.CompletedTask);
-            var sut = new LifecyclCommandProcessorPT(configMock.Object);
+            var sut = new LifecycleCommandProcessorPT(configMock.Object);
 
             var receiptRequest = new ReceiptRequest
             {
@@ -169,7 +169,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
 
             var configMock = new Mock<IConfigurationRepository>();
             configMock.Setup(x => x.InsertOrUpdateQueueAsync(It.IsAny<ftQueue>())).Returns(Task.CompletedTask);
-            var sut = new LifecyclCommandProcessorPT(configMock.Object);
+            var sut = new LifecycleCommandProcessorPT(configMock.Object);
 
             var receiptRequest = new ReceiptRequest
             {
@@ -249,7 +249,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
 
             var configMock = new Mock<IConfigurationRepository>();
             configMock.Setup(x => x.InsertOrUpdateQueueAsync(It.IsAny<ftQueue>())).Returns(Task.CompletedTask);
-            var sut = new LifecyclCommandProcessorPT(configMock.Object);
+            var sut = new LifecycleCommandProcessorPT(configMock.Object);
 
             var receiptRequest = new ReceiptRequest
             {
@@ -283,14 +283,14 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
 
             var configMock = new Mock<IConfigurationRepository>();
             configMock.Setup(x => x.InsertOrUpdateQueueAsync(It.IsAny<ftQueue>())).Returns(Task.CompletedTask);
-            var sut = new LifecyclCommandProcessorPT(configMock.Object);
+            var sut = new LifecycleCommandProcessorPT(configMock.Object);
 
             var receiptRequest = new ReceiptRequest
             {
                 ftCashBoxID = Guid.NewGuid(),
                 ftReceiptCase = 0x5054_2000_0000_0000 | (long) ReceiptCases.InitialOperationReceipt0x4001
             };
-           var receiptResponse = new ReceiptResponse
+            var receiptResponse = new ReceiptResponse
             {
                 ftState = 0x5054_2000_0000_0000,
                 ftCashBoxIdentification = "cashBoxIdentification",

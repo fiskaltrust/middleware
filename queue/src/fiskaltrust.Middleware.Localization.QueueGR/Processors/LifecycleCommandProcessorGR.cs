@@ -1,19 +1,19 @@
-﻿using fiskaltrust.Middleware.Localization.QueuePT.Factories;
-using fiskaltrust.Middleware.Localization.QueuePT.Interface;
+﻿using fiskaltrust.Middleware.Localization.QueueGR.Factories;
+using fiskaltrust.Middleware.Localization.QueueGR.Interface;
 using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.Middleware.Localization.v2.Storage;
 using fiskaltrust.Middleware.Localization.v2.v2;
 using fiskaltrust.storage.V0;
 
-namespace fiskaltrust.Middleware.Localization.QueuePT.Processors;
+namespace fiskaltrust.Middleware.Localization.QueueGR.Processors;
 
-public class LifecyclCommandProcessorPT : ILifecyclCommandProcessor
+public class LifecycleCommandProcessorGR : ILifecycleCommandProcessor
 {
-#pragma warning disable 
-    private readonly IConfigurationRepository _configurationRepository;
+    private readonly ILocalizedQueueStorageProvider _localizedQueueStorageProvider;
 
-    public LifecyclCommandProcessorPT(IConfigurationRepository configurationRepository)
+    public LifecycleCommandProcessorGR(ILocalizedQueueStorageProvider localizedQueueStorageProvider)
     {
-        _configurationRepository = configurationRepository;
+        _localizedQueueStorageProvider = localizedQueueStorageProvider;
     }
 
     public async Task<ProcessCommandResponse> ProcessReceiptAsync(ProcessCommandRequest request)
@@ -38,8 +38,7 @@ public class LifecyclCommandProcessorPT : ILifecyclCommandProcessor
     {
         var (queue, receiptRequest, receiptResponse) = request;
         var actionJournal = ftActionJournalFactory.CreateInitialOperationActionJournal(receiptRequest, receiptResponse);
-        queue.StartMoment = DateTime.UtcNow;
-        await _configurationRepository.InsertOrUpdateQueueAsync(queue).ConfigureAwait(false);
+        await _localizedQueueStorageProvider.ActivateQueueAsync();
         receiptResponse.AddSignatureItem(SignaturItemFactory.CreateInitialOperationSignature(queue));
         return new ProcessCommandResponse(receiptResponse, [actionJournal]);
     }
@@ -47,8 +46,7 @@ public class LifecyclCommandProcessorPT : ILifecyclCommandProcessor
     public async Task<ProcessCommandResponse> OutOfOperationReceipt0x4002Async(ProcessCommandRequest request)
     {
         var (queue, receiptRequest, receiptResponse) = request;
-        queue.StopMoment = DateTime.UtcNow;
-        await _configurationRepository.InsertOrUpdateQueueAsync(queue);
+        await _localizedQueueStorageProvider.DeactivateQueueAsync();
         var actionJournal = ftActionJournalFactory.CreateOutOfOperationActionJournal(receiptRequest, receiptResponse);
         receiptResponse.AddSignatureItem(SignaturItemFactory.CreateOutOfOperationSignature(queue));
         receiptResponse.MarkAsDisabled();

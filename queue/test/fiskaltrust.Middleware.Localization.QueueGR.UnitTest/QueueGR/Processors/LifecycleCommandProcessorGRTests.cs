@@ -13,9 +13,9 @@ using Xunit;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processors
 {
-    public class LifecyclCommandProcessorGRTests
+    public class LifecycleCommandProcessorGRTests
     {
-        private readonly LifecyclCommandProcessorGR _sut = new(Mock.Of<ILocalizedQueueStorageProvider>());
+        private readonly LifecycleCommandProcessorGR _sut = new(Mock.Of<ILocalizedQueueStorageProvider>());
 
         [Theory]
         [InlineData(ReceiptCases.InitialOperationReceipt0x4001)]
@@ -85,7 +85,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
 
             var configMock = new Mock<ILocalizedQueueStorageProvider>();
             configMock.Setup(x => x.ActivateQueueAsync()).Returns(Task.CompletedTask);
-            var sut = new LifecyclCommandProcessorGR(configMock.Object);
+            var sut = new LifecycleCommandProcessorGR(configMock.Object);
 
             var receiptRequest = new ReceiptRequest
             {
@@ -168,7 +168,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
 
             var configMock = new Mock<ILocalizedQueueStorageProvider>();
             configMock.Setup(x => x.ActivateQueueAsync()).Returns(Task.CompletedTask);
-            var sut = new LifecyclCommandProcessorGR(configMock.Object);
+            var sut = new LifecycleCommandProcessorGR(configMock.Object);
 
             var receiptRequest = new ReceiptRequest
             {
@@ -248,7 +248,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
 
             var configMock = new Mock<ILocalizedQueueStorageProvider>();
             configMock.Setup(x => x.ActivateQueueAsync()).Returns(Task.CompletedTask);
-            var sut = new LifecyclCommandProcessorGR(configMock.Object);
+            var sut = new LifecycleCommandProcessorGR(configMock.Object);
 
             var receiptRequest = new ReceiptRequest
             {
@@ -283,7 +283,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
 
             var configMock = new Mock<ILocalizedQueueStorageProvider>();
             configMock.Setup(x => x.ActivateQueueAsync()).Returns(Task.CompletedTask);
-            var sut = new LifecyclCommandProcessorGR(configMock.Object);
+            var sut = new LifecycleCommandProcessorGR(configMock.Object);
 
             var receiptRequest = new ReceiptRequest
             {

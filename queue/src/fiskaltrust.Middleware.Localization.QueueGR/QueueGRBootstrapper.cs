@@ -17,13 +17,13 @@ public class QueueGRBootstrapper : IV2QueueBootstrapper
     {
         var middlewareConfiguration = MiddlewareConfigurationFactory.CreateMiddlewareConfiguration(id, configuration);
         var queueGR = JsonConvert.DeserializeObject<List<ftQueueGR>>(configuration["init_ftQueueGR"]!.ToString()!).First();
-        var signaturCreationUnitPT = new ftSignaturCreationUnitGR();
-        var ptSSCD = MyDataApiClient.CreateClient(configuration);
+        var signaturCreationUnitGR = new ftSignaturCreationUnitGR();
+        var grSSCD = MyDataApiClient.CreateClient(configuration);
         var storageProvider = new AzureStorageProvider(loggerFactory, id, configuration);
         var queueStorageProvider = new QueueStorageProvider(id, storageProvider);
 
-        var signProcessorPT = new ReceiptProcessor(loggerFactory.CreateLogger<ReceiptProcessor>(), new LifecyclCommandProcessorGR(queueStorageProvider), new ReceiptCommandProcessorGR(ptSSCD, queueGR, signaturCreationUnitPT), new DailyOperationsCommandProcessorGR(), new InvoiceCommandProcessorGR(), new ProtocolCommandProcessorGR());
-        var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, signProcessorPT.ProcessAsync, queueGR.CashBoxIdentification, middlewareConfiguration);
+        var signProcessorGR = new ReceiptProcessor(loggerFactory.CreateLogger<ReceiptProcessor>(), new LifecycleCommandProcessorGR(queueStorageProvider), new ReceiptCommandProcessorGR(grSSCD, queueGR, signaturCreationUnitGR), new DailyOperationsCommandProcessorGR(), new InvoiceCommandProcessorGR(), new ProtocolCommandProcessorGR());
+        var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, signProcessorGR.ProcessAsync, queueGR.CashBoxIdentification, middlewareConfiguration);
         _queue = new Queue(signProcessor, loggerFactory)
         {
             Id = id,

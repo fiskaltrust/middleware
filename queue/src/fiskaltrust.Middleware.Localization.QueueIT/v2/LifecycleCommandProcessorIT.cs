@@ -12,13 +12,13 @@ using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.v2
 {
-    public class LifecyclCommandProcessorIT
+    public class LifecycleCommandProcessorIT
     {
         private readonly IITSSCDProvider _itSSCDProvider;
         private readonly IJournalITRepository _journalITRepository;
         private readonly IConfigurationRepository _configurationRepository;
 
-        public LifecyclCommandProcessorIT(IITSSCDProvider itSSCDProvider, IJournalITRepository journalITRepository, IConfigurationRepository configurationRepository)
+        public LifecycleCommandProcessorIT(IITSSCDProvider itSSCDProvider, IJournalITRepository journalITRepository, IConfigurationRepository configurationRepository)
         {
             _itSSCDProvider = itSSCDProvider;
             _journalITRepository = journalITRepository;

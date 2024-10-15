@@ -8,14 +8,14 @@ namespace fiskaltrust.Middleware.Localization.v2;
 
 public class ReceiptProcessor : IReceiptProcessor
 {
-    private readonly ILifecyclCommandProcessor _lifecyclCommandProcessor;
+    private readonly ILifecycleCommandProcessor _lifecyclCommandProcessor;
     private readonly IReceiptCommandProcessor _receiptCommandProcessor;
     private readonly IDailyOperationsCommandProcessor _dailyOperationsCommandProcessor;
     private readonly IInvoiceCommandProcessor _invoiceCommandProcessor;
     private readonly IProtocolCommandProcessor _protocolCommandProcessor;
     private readonly ILogger<ReceiptProcessor> _logger;
 
-    public ReceiptProcessor(ILogger<ReceiptProcessor> logger, ILifecyclCommandProcessor lifecyclCommandProcessor, IReceiptCommandProcessor receiptCommandProcessor, IDailyOperationsCommandProcessor dailyOperationsCommandProcessor, IInvoiceCommandProcessor invoiceCommandProcessor, IProtocolCommandProcessor protocolCommandProcessor)
+    public ReceiptProcessor(ILogger<ReceiptProcessor> logger, ILifecycleCommandProcessor lifecyclCommandProcessor, IReceiptCommandProcessor receiptCommandProcessor, IDailyOperationsCommandProcessor dailyOperationsCommandProcessor, IInvoiceCommandProcessor invoiceCommandProcessor, IProtocolCommandProcessor protocolCommandProcessor)
     {
         _lifecyclCommandProcessor = lifecyclCommandProcessor;
         _receiptCommandProcessor = receiptCommandProcessor;
