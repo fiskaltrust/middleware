@@ -4,4 +4,4 @@ using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.v2;
 
-public record ProcessCommandRequest(ReceiptRequest ReceiptRequest, ReceiptResponse ReceiptResponse);
+public record ProcessCommandRequest(ftQueue queue, ReceiptRequest ReceiptRequest, ReceiptResponse ReceiptResponse);
