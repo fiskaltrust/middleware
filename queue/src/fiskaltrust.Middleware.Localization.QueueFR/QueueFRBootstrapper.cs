@@ -14,6 +14,7 @@ namespace fiskaltrust.Middleware.Localization.QueueFR
             services.AddScoped<RequestCommandFactory>();
             services.AddScoped<IMarketSpecificJournalProcessor, JournalProcessorFR>();
             services.AddScoped<IMarketSpecificSignProcessor, SignProcessorFR>();
+            services.AddScoped<IArchiveProcessor, ArchiveProcessor>();
 
             services.AddScoped<PaymentProveCommand>();
             services.AddScoped<InvoiceCommand>();

@@ -1,5 +1,5 @@
 {
-  "version": "1.3.48",
+  "version": "1.3.59",
   "releaseBranches": [
     "^refs/tags/scu-de/fiskalycertified/v\\d+(?:\\.\\d+)*(?:-.*)?$"
   ]

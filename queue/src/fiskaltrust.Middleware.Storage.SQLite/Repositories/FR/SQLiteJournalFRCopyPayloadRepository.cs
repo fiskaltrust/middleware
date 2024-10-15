@@ -30,16 +30,15 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Repositories.FR
 
         public async Task InsertAsync(ftJournalFRCopyPayload payload)
         {
-            if (await DbConnection.QueryFirstOrDefaultAsync<ftJournalFRCopyPayload>(
-                "SELECT * FROM ftJournalFRCopyPayload WHERE QueueItemId = @Id LIMIT 1",
-                new { Id = GetIdForEntity(payload) }) != null)
+            if (await GetAsync(GetIdForEntity(payload)).ConfigureAwait(false) != null)
             {
                 throw new Exception("Entity with the same ID already exists.");
             }
 
             EntityUpdated(payload);
             await DbConnection.ExecuteAsync(
-                "INSERT INTO ftJournalFRCopyPayload (QueueId, CashBoxIdentification, Siret, ReceiptId, ReceiptMoment, QueueItemId, CopiedReceiptReference, CertificateSerialNumber, TimeStamp) " +
+                "INSERT INTO ftJournalFRCopyPayload " +
+                       "(QueueId,   CashBoxIdentification,  Siret,  ReceiptId,  ReceiptMoment,  QueueItemId,  CopiedReceiptReference,  CertificateSerialNumber,  TimeStamp) " +
                 "Values (@QueueId, @CashBoxIdentification, @Siret, @ReceiptId, @ReceiptMoment, @QueueItemId, @CopiedReceiptReference, @CertificateSerialNumber, @TimeStamp);",
                 payload
             ).ConfigureAwait(false);

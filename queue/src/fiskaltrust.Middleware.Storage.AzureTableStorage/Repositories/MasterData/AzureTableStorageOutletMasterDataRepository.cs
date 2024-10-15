@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Azure.Data.Tables;
 using fiskaltrust.Middleware.Contracts.Repositories;
@@ -11,9 +12,18 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.MasterDa
     public class AzureTableStorageOutletMasterDataRepository : BaseAzureTableStorageRepository<Guid, AzureTableStorageOutletMasterData, OutletMasterData>, IMasterDataRepository<OutletMasterData>
     {
         public AzureTableStorageOutletMasterDataRepository(QueueConfiguration queueConfig, TableServiceClient tableServiceClient)
-            : base(queueConfig, tableServiceClient, nameof(OutletMasterData)) { }
+            : base(queueConfig, tableServiceClient, TABLE_NAME) { }
 
-        public async Task ClearAsync() => await ClearTableAsync().ConfigureAwait(false);
+        public const string TABLE_NAME = nameof(OutletMasterData);
+
+        public async Task ClearAsync()
+        {
+            var result = _tableClient.QueryAsync<TableEntity>(select: new List<string>() { "PartitionKey", "RowKey" });
+            await foreach (var item in result)
+            {
+                await _tableClient.DeleteEntityAsync(item.PartitionKey, item.RowKey);
+            }
+        }
 
         public async Task CreateAsync(OutletMasterData entity) => await InsertAsync(entity).ConfigureAwait(false);
 
@@ -21,8 +31,47 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.MasterDa
 
         protected override Guid GetIdForEntity(OutletMasterData entity) => entity.OutletId;
 
-        protected override AzureTableStorageOutletMasterData MapToAzureEntity(OutletMasterData entity) => Mapper.Map(entity);
+        protected override AzureTableStorageOutletMasterData MapToAzureEntity(OutletMasterData src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
 
-        protected override OutletMasterData MapToStorageEntity(AzureTableStorageOutletMasterData entity) => Mapper.Map(entity);
+            return new AzureTableStorageOutletMasterData
+            {
+                PartitionKey = src.OutletId.ToString(),
+                RowKey = src.OutletId.ToString(),
+                OutletId = src.OutletId,
+                OutletName = src.OutletName,
+                Street = src.Street,
+                Zip = src.Zip,
+                City = src.City,
+                Country = src.Country,
+                VatId = src.VatId,
+                LocationId = src.LocationId
+            };
+        }
+
+
+        protected override OutletMasterData MapToStorageEntity(AzureTableStorageOutletMasterData src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+
+            return new OutletMasterData
+            {
+                OutletId = src.OutletId,
+                OutletName = src.OutletName,
+                Street = src.Street,
+                Zip = src.Zip,
+                City = src.City,
+                Country = src.Country,
+                VatId = src.VatId,
+                LocationId = src.LocationId
+            };
+        }
     }
 }

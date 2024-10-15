@@ -12,8 +12,9 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
 {
     public abstract class AbstractJournalDERepositoryTests : IDisposable
     {
-        public abstract Task<IJournalDERepository> CreateRepository(IEnumerable<ftJournalDE> entries);
+        public abstract Task<IMiddlewareJournalDERepository> CreateRepository(IEnumerable<ftJournalDE> entries);
         public abstract Task<IReadOnlyJournalDERepository> CreateReadOnlyRepository(IEnumerable<ftJournalDE> entries);
+
 
         public virtual void DisposeDatabase() { return; }
 
@@ -67,6 +68,8 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             var actualEntries = await ((IMiddlewareRepository<ftJournalDE>) sut).GetByTimeStampRangeAsync(firstSearchedEntryTimeStamp, lastSearchedEntryTimeStamp).ToListAsync();
 
             actualEntries.Should().BeEquivalentTo(allEntries.Skip(1).Take(5));
+            actualEntries.Should().BeInAscendingOrder(x => x.TimeStamp);
+            actualEntries.First().TimeStamp.Should().Be(firstSearchedEntryTimeStamp);
         }
 
         [Fact]
@@ -82,6 +85,8 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             var actualEntries = await ((IMiddlewareRepository<ftJournalDE>) sut).GetEntriesOnOrAfterTimeStampAsync(firstSearchedEntryTimeStamp).ToListAsync();
 
             actualEntries.Should().BeEquivalentTo(allEntries.Skip(1));
+            actualEntries.Should().BeInAscendingOrder(x => x.TimeStamp);
+            actualEntries.First().TimeStamp.Should().Be(firstSearchedEntryTimeStamp);
         }
 
         [Fact]
@@ -119,9 +124,12 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             var entryToInsert = StorageTestFixtureProvider.GetFixture().Create<ftJournalDE>();
 
             var sut = await CreateRepository(entries);
+            var count = (await sut.GetAsync()).Count();
+
             Func<Task> action = async () => await sut.InsertAsync(entries[0]);
 
             await action.Should().ThrowExactlyAsync<Exception>();
+            (await sut.GetAsync()).Count().Should().Be(count);
         }
 
         [Fact]
@@ -137,6 +145,16 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
 
             var insertedEntry = await sut.GetAsync(entryToInsert.ftJournalDEId);
             insertedEntry.TimeStamp.Should().BeGreaterThan(initialTimeStamp);
+        }
+
+        [Fact]
+        public async Task CountAsync_ShouldReturnValidCount()
+        {
+            var entries = StorageTestFixtureProvider.GetFixture().CreateMany<ftJournalDE>(7).ToList();
+            var sut = await CreateRepository(entries);
+
+            var count = await sut.CountAsync();
+            count.Should().Be(7);
         }
     }
 }

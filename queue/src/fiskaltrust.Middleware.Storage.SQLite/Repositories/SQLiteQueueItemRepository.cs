@@ -109,5 +109,14 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Repositories
                 yield return entry;
             }
         }
+
+        public async Task<int> CountAsync() => await DbConnection.QueryFirstOrDefaultAsync<int>("SELECT COUNT(*) FROM ftQueueItem").ConfigureAwait(false);
+        public async Task<ftQueueItem> GetLastQueueItemAsync()
+        {
+            var query = "SELECT * FROM ftQueueItem " +
+                            "ORDER BY ftQueueRow DESC LIMIT 1;";
+
+            return await DbConnection.QueryFirstOrDefaultAsync<ftQueueItem>(query).ConfigureAwait(false);
+        }
     }
 }

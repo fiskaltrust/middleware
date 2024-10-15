@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Azure.Data.Tables;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.TableEntities.Configuration;
@@ -9,14 +10,57 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.Configur
     public class AzureTableStorageSignaturCreationUnitFRRepository : BaseAzureTableStorageRepository<Guid, AzureTableStorageFtSignaturCreationUnitFR, ftSignaturCreationUnitFR>
     {
         public AzureTableStorageSignaturCreationUnitFRRepository(QueueConfiguration queueConfig, TableServiceClient tableServiceClient)
-            : base(queueConfig, tableServiceClient, nameof(ftSignaturCreationUnitFR)) { }
+            : base(queueConfig, tableServiceClient, TABLE_NAME) { }
+
+        public const string TABLE_NAME = "SignaturCreationUnitFR";
 
         protected override void EntityUpdated(ftSignaturCreationUnitFR entity) => entity.TimeStamp = DateTime.UtcNow.Ticks;
 
         protected override Guid GetIdForEntity(ftSignaturCreationUnitFR entity) => entity.ftSignaturCreationUnitFRId;
 
-        protected override AzureTableStorageFtSignaturCreationUnitFR MapToAzureEntity(ftSignaturCreationUnitFR entity) => Mapper.Map(entity);
+        public async Task InsertOrUpdateAsync(ftSignaturCreationUnitFR storageEntity)
+        {
+            EntityUpdated(storageEntity);
+            var entity = MapToAzureEntity(storageEntity);
+            await _tableClient.UpsertEntityAsync(entity, TableUpdateMode.Replace);
+        }
 
-        protected override ftSignaturCreationUnitFR MapToStorageEntity(AzureTableStorageFtSignaturCreationUnitFR entity) => Mapper.Map(entity);
+        protected override AzureTableStorageFtSignaturCreationUnitFR MapToAzureEntity(ftSignaturCreationUnitFR src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+
+            return new AzureTableStorageFtSignaturCreationUnitFR
+            {
+                PartitionKey = src.ftSignaturCreationUnitFRId.ToString(),
+                RowKey = src.ftSignaturCreationUnitFRId.ToString(),
+                ftSignaturCreationUnitFRId = src.ftSignaturCreationUnitFRId,
+                Siret = src.Siret,
+                PrivateKey = src.PrivateKey,
+                CertificateBase64 = src.CertificateBase64,
+                CertificateSerialNumber = src.CertificateSerialNumber,
+                TimeStamp = src.TimeStamp
+            };
+        }
+
+        protected override ftSignaturCreationUnitFR MapToStorageEntity(AzureTableStorageFtSignaturCreationUnitFR src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+
+            return new ftSignaturCreationUnitFR
+            {
+                ftSignaturCreationUnitFRId = src.ftSignaturCreationUnitFRId,
+                Siret = src.Siret,
+                PrivateKey = src.PrivateKey,
+                CertificateBase64 = src.CertificateBase64,
+                CertificateSerialNumber = src.CertificateSerialNumber,
+                TimeStamp = src.TimeStamp
+            };
+        }
     }
 }

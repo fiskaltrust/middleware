@@ -7,10 +7,29 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\fiskaltrust.Middleware.Localization.QueueAT\fiskaltrust.Middleware.Localization.QueueAT.csproj" />
+    <ProjectReference Include="..\..\src\fiskaltrust.Middleware.Queue\fiskaltrust.Middleware.Queue.csproj" />
+    <ProjectReference Include="..\..\src\fiskaltrust.Middleware.Storage.InMemory\fiskaltrust.Middleware.Storage.InMemory.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="RequestCommands\" />
+    <None Update="RequestCommands\Requests\CashSale.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="RequestCommands\Requests\InitialOperation.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="RequestCommands\Requests\YearlyReceipt.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="RequestCommands\Requests\MonthlyReceipt.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="RequestCommands\Requests\OutOfOperation.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="RequestCommands\Requests\ZeroReceipt.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

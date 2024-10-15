@@ -94,6 +94,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             var entries = StorageTestFixtureProvider.GetFixture().CreateMany<ftCashBox>(10).ToList();
 
             var sut = await CreateRepository(cashBoxes: entries);
+            var count = (await sut.GetCashBoxListAsync()).Count();
 
             var entryToUpdate = await sut.GetCashBoxAsync(entries[0].ftCashBoxId);
             // There is no entry that we can update that would take affect that is why we just try to reapply a existing entry
@@ -103,6 +104,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             var updatedEntry = await sut.GetCashBoxAsync(entries[0].ftCashBoxId);
 
             updatedEntry.ftCashBoxId.Should().Be(entries[0].ftCashBoxId);
+            (await sut.GetCashBoxListAsync()).Count().Should().Be(count);
         }
 
         [Fact]

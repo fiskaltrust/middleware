@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Interfaces;
+using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueFR.Extensions;
 using fiskaltrust.Middleware.Localization.QueueFR.Factories;
 using fiskaltrust.Middleware.Localization.QueueFR.Helpers;
@@ -17,10 +18,10 @@ namespace fiskaltrust.Middleware.Localization.QueueFR
         private readonly IConfigurationRepository _configurationRepository;
         private readonly IActionJournalRepository _actionJournalRepository;
         private readonly RequestCommandFactory _requestCommandFactory;
-        private readonly SignatureFactoryFR _signatureFactoryFR;
+        private readonly ISignatureFactoryFR _signatureFactoryFR;
 
         public SignProcessorFR(IConfigurationRepository configurationRepository, IActionJournalRepository actionJournalRepository,
-            RequestCommandFactory requestCommandFactory, SignatureFactoryFR signatureFactoryFR)
+            RequestCommandFactory requestCommandFactory, ISignatureFactoryFR signatureFactoryFR)
         {
             _configurationRepository = configurationRepository;
             _actionJournalRepository = actionJournalRepository;
@@ -103,5 +104,9 @@ namespace fiskaltrust.Middleware.Localization.QueueFR
 
             return ajs;
         }
+
+        public async Task<string> GetFtCashBoxIdentificationAsync(ftQueue queue) => (await _configurationRepository.GetQueueFRAsync(queue.ftQueueId).ConfigureAwait(false)).CashBoxIdentification;
+        public Task FinalTaskAsync(ftQueue queue, ftQueueItem queueItem, ReceiptRequest request, IMiddlewareActionJournalRepository actionJournalRepository, IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareReceiptJournalRepository receiptJournalRepositor) { return Task.CompletedTask; }
+        public Task FirstTaskAsync() { return Task.CompletedTask; }
     }
 }

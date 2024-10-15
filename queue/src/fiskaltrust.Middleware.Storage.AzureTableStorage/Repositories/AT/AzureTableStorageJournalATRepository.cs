@@ -12,19 +12,74 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.AT
     public class AzureTableStorageJournalATRepository : BaseAzureTableStorageRepository<Guid, AzureTableStorageFtJournalAT, ftJournalAT>, IJournalATRepository, IMiddlewareRepository<ftJournalAT>
     {
         public AzureTableStorageJournalATRepository(QueueConfiguration queueConfig, TableServiceClient tableServiceClient)
-            : base(queueConfig, tableServiceClient, nameof(ftJournalAT)) { }
+            : base(queueConfig, tableServiceClient, TABLE_NAME) { }
+
+        public const string TABLE_NAME = "JournalAT";
 
         protected override void EntityUpdated(ftJournalAT entity) => entity.TimeStamp = DateTime.UtcNow.Ticks;
 
         protected override Guid GetIdForEntity(ftJournalAT entity) => entity.ftJournalATId;
 
-        protected override AzureTableStorageFtJournalAT MapToAzureEntity(ftJournalAT entity) => Mapper.Map(entity);
+        protected override AzureTableStorageFtJournalAT MapToAzureEntity(ftJournalAT src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
 
-        protected override ftJournalAT MapToStorageEntity(AzureTableStorageFtJournalAT entity) => Mapper.Map(entity);
+            return new AzureTableStorageFtJournalAT
+            {
+                PartitionKey = Mapper.GetHashString(src.TimeStamp),
+                RowKey = src.ftJournalATId.ToString(),
+                ftJournalATId = src.ftJournalATId,
+                ftQueueId = src.ftQueueId,
+                ftSignaturCreationUnitId = src.ftSignaturCreationUnitId,
+                Number = src.Number,
+                JWSHeaderBase64url = src.JWSHeaderBase64url,
+                JWSPayloadBase64url = src.JWSPayloadBase64url,
+                JWSSignatureBase64url = src.JWSSignatureBase64url,
+                TimeStamp = src.TimeStamp
+            };
+        }
+
+        protected override ftJournalAT MapToStorageEntity(AzureTableStorageFtJournalAT src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+
+            return new ftJournalAT
+            {
+                ftJournalATId = src.ftJournalATId,
+                ftQueueId = src.ftQueueId,
+                ftSignaturCreationUnitId = src.ftSignaturCreationUnitId,
+                Number = src.Number,
+                JWSHeaderBase64url = src.JWSHeaderBase64url,
+                JWSPayloadBase64url = src.JWSPayloadBase64url,
+                JWSSignatureBase64url = src.JWSSignatureBase64url,
+                TimeStamp = src.TimeStamp
+            };
+        }
+
+        public IAsyncEnumerable<ftJournalAT> GetByTimeStampRangeAsync(long fromInclusive, long toInclusive)
+        {
+            var result = _tableClient.QueryAsync<AzureTableStorageFtJournalAT>(filter:
+                TableClient.CreateQueryFilter<AzureTableStorageFtJournalAT>(x => x.PartitionKey.CompareTo(Mapper.GetHashString(fromInclusive)) <= 0 && x.PartitionKey.CompareTo(Mapper.GetHashString(toInclusive)) >= 0));
+            return result.Select(MapToStorageEntity).OrderBy(x => x.TimeStamp);
+        }
+
+        public IAsyncEnumerable<ftJournalAT> GetEntriesOnOrAfterTimeStampAsync(long fromInclusive)
+        {
+            var result = _tableClient.QueryAsync<AzureTableStorageFtJournalAT>(filter:
+                TableClient.CreateQueryFilter<AzureTableStorageFtJournalAT>(x => x.PartitionKey.CompareTo(Mapper.GetHashString(fromInclusive)) <= 0));
+
+            return result.Select(MapToStorageEntity).OrderBy(x => x.TimeStamp);
+        }
 
         public IAsyncEnumerable<ftJournalAT> GetEntriesOnOrAfterTimeStampAsync(long fromInclusive, int? take = null)
         {
-            var result = base.GetEntriesOnOrAfterTimeStampAsync(fromInclusive).OrderBy(x => x.TimeStamp);
+            var result = GetEntriesOnOrAfterTimeStampAsync(fromInclusive);
             return take.HasValue ? result.Take(take.Value) : result;
         }
     }

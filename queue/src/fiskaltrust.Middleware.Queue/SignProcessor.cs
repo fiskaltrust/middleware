@@ -3,15 +3,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.Middleware.Contracts.Extensions;
+using fiskaltrust.Interface.Tagging;
+using fiskaltrust.Interface.Tagging.Models.Extensions;
 using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Queue.Extensions;
-using fiskaltrust.Middleware.Queue.Models;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+
 
 namespace fiskaltrust.Middleware.Queue
 {
@@ -21,25 +22,27 @@ namespace fiskaltrust.Middleware.Queue
         private readonly ILogger<SignProcessor> _logger;
         private readonly IConfigurationRepository _configurationRepository;
         private readonly IMiddlewareQueueItemRepository _queueItemRepository;
-        private readonly IReceiptJournalRepository _receiptJournalRepository;
-        private readonly IActionJournalRepository _actionJournalRepository;
+        private readonly IMiddlewareReceiptJournalRepository _receiptJournalRepository;
+        private readonly IMiddlewareActionJournalRepository _actionJournalRepository;
         private readonly ICryptoHelper _cryptoHelper;
         private readonly Guid _queueId = Guid.Empty;
         private readonly Guid _cashBoxId = Guid.Empty;
         private readonly bool _isSandbox;
         private readonly int _receiptRequestMode = 0;
         private readonly SignatureFactory _signatureFactory;
+        private readonly ReceiptConverter _receiptConverter;
         //private readonly Action<string> _onMessage;
 
         public SignProcessor(
             ILogger<SignProcessor> logger,
             IConfigurationRepository configurationRepository,
             IMiddlewareQueueItemRepository queueItemRepository,
-            IReceiptJournalRepository receiptJournalRepository,
-            IActionJournalRepository actionJournalRepository,
+            IMiddlewareReceiptJournalRepository receiptJournalRepository,
+            IMiddlewareActionJournalRepository actionJournalRepository,
             ICryptoHelper cryptoHelper,
             IMarketSpecificSignProcessor countrySpecificSignProcessor,
-            MiddlewareConfiguration configuration)
+            MiddlewareConfiguration configuration,
+            ReceiptConverter receiptConverter)
         {
             _logger = logger;
             _configurationRepository = configurationRepository ?? throw new ArgumentNullException(nameof(configurationRepository));
@@ -54,6 +57,7 @@ namespace fiskaltrust.Middleware.Queue
             _receiptRequestMode = configuration.ReceiptRequestMode;
             //_onMessage = configuration.OnMessage;
             _signatureFactory = new SignatureFactory();
+            _receiptConverter = receiptConverter;
         }
 
         public async Task<ReceiptResponse> ProcessAsync(ReceiptRequest request)
@@ -119,6 +123,9 @@ namespace fiskaltrust.Middleware.Queue
                     return null;
                 }
             }
+
+            await _countrySpecificSignProcessor.FirstTaskAsync().ConfigureAwait(false);
+
             var queueItem = new ftQueueItem
             {
                 ftQueueItemId = Guid.NewGuid(),
@@ -150,7 +157,48 @@ namespace fiskaltrust.Middleware.Queue
             {
                 queueItem.ftWorkMoment = DateTime.UtcNow;
                 _logger.LogTrace("SignProcessor.InternalSign: Calling country specific SignProcessor.");
-                (var receiptResponse, var countrySpecificActionJournals) = await _countrySpecificSignProcessor.ProcessAsync(data, queue, queueItem).ConfigureAwait(false);
+                ReceiptResponse receiptResponse;
+                List<ftActionJournal> countrySpecificActionJournals;
+                Exception exception = null;
+                try
+                {
+                    var dataToV1ExceptItaly = data;
+                    if (!data.IsCountryIT() && data.IsVersionV2())
+                    {
+                        _receiptConverter.ConvertRequestToV1(dataToV1ExceptItaly);
+                        (receiptResponse, countrySpecificActionJournals) = await _countrySpecificSignProcessor.ProcessAsync(dataToV1ExceptItaly, queue, queueItem).ConfigureAwait(false);
+                        _receiptConverter.ConvertResponseToV2(receiptResponse);
+                    }
+                    else
+                    {
+                        (receiptResponse, countrySpecificActionJournals) = await _countrySpecificSignProcessor.ProcessAsync(dataToV1ExceptItaly, queue, queueItem).ConfigureAwait(false);
+                    }
+                }
+                catch (Exception e)
+                {
+                    exception = e;
+                    countrySpecificActionJournals = new();
+                    receiptResponse = new ReceiptResponse
+                    {
+                        ftCashBoxID = queue.ftCashBoxId.ToString(),
+                        ftQueueID = queue.ftQueueId.ToString(),
+                        ftQueueItemID = queueItem.ftQueueItemId.ToString(),
+                        ftQueueRow = queue.ftCurrentRow,
+                        cbTerminalID = data.cbTerminalID,
+                        cbReceiptReference = data.cbReceiptReference,
+                        ftCashBoxIdentification = await _countrySpecificSignProcessor.GetFtCashBoxIdentificationAsync(queue),
+                        ftReceiptMoment = DateTime.UtcNow,
+                        ftSignatures = new SignaturItem[] {
+                            new SignaturItem() {
+                                ftSignatureFormat = 0x1,
+                                ftSignatureType = (long) (((ulong) data.ftReceiptCase & 0xFFFF_0000_0000_0000) | 0x2000_0000_3000),
+                                Caption = "uncaught-exeption",
+                                Data = e.ToString()
+                            }
+                        },
+                        ftState = (long) (((ulong) data.ftReceiptCase & 0xFFFF_0000_0000_0000) | 0x2000_EEEE_EEEE)
+                    };
+                }
                 _logger.LogTrace("SignProcessor.InternalSign: Country specific SignProcessor finished.");
 
                 actionjournals.AddRange(countrySpecificActionJournals);
@@ -172,6 +220,13 @@ namespace fiskaltrust.Middleware.Queue
 
                 if ((receiptResponse.ftState & 0xFFFF_FFFF) == 0xEEEE_EEEE)
                 {
+                    var errorMessage = "An error occurred during receipt processing, resulting in ftState = 0xEEEE_EEEE.";
+                    await CreateActionJournalAsync(errorMessage, $"{receiptResponse.ftState:X}", queueItem.ftQueueItemId).ConfigureAwait(false);
+
+                    if ((data.ftReceiptCase & 0xF000_0000_0000) != 0x2000_0000_0000)
+                    {
+                        throw exception;
+                    }
                     // TODO: This state indicates that something went wrong while processing the receipt request.
                     //       While we will probably introduce a parameter for this we are right now just returning
                     //       the receipt response as it is.
@@ -193,6 +248,7 @@ namespace fiskaltrust.Middleware.Queue
                 {
                     await _actionJournalRepository.InsertAsync(actionJournal).ConfigureAwait(false);
                 }
+                await _countrySpecificSignProcessor.FinalTaskAsync(queue, queueItem, data, _actionJournalRepository, _queueItemRepository, _receiptJournalRepository).ConfigureAwait(false);
             }
         }
 
@@ -235,19 +291,20 @@ namespace fiskaltrust.Middleware.Queue
             return null;
         }
 
-        public async Task CreateActionJournalAsync(string message, string type, Guid? queueItemid)
+        public async Task CreateActionJournalAsync(string message, string type, Guid? queueItemId)
         {
-            await _actionJournalRepository.InsertAsync(
-                new ftActionJournal
-                {
-                    ftActionJournalId = Guid.NewGuid(),
-                    ftQueueId = _queueId,
-                    ftQueueItemId = queueItemid.GetValueOrDefault(),
-                    Message = message,
-                    Priority = 0,
-                    Type = type,
-                    Moment = DateTime.UtcNow
-                }).ConfigureAwait(false);
+            var actionJournal = new ftActionJournal
+            {
+                ftActionJournalId = Guid.NewGuid(),
+                ftQueueId = _queueId,
+                ftQueueItemId = queueItemId.GetValueOrDefault(),
+                Message = message,
+                Priority = 0,
+                Type = type,
+                Moment = DateTime.UtcNow
+            };
+
+            await _actionJournalRepository.InsertAsync(actionJournal).ConfigureAwait(false);
         }
 
         private static bool IsContentOfQueueItemEqualWithGivenRequest(ReceiptRequest data, ftQueueItem item)

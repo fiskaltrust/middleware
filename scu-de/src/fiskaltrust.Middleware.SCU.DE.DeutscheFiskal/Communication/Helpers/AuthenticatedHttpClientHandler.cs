@@ -35,7 +35,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Communication
                 return _accessToken;
             }
 
-            using var client = new HttpClient() { BaseAddress = _config.BaseAddress };
+            using var client = new HttpClient() { BaseAddress = _config.BaseAddress, Timeout = TimeSpan.FromSeconds(_config.Timeout) };
             var credentials = Encoding.ASCII.GetBytes($"{_config.UserName}:{_config.Password}");
             var header = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(credentials));
             client.DefaultRequestHeaders.Authorization = header;

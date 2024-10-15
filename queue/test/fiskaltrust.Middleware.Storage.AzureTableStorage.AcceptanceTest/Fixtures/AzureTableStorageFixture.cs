@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Azure.Data.Tables;
+using Azure.Storage.Blobs;
 using fiskaltrust.Middleware.Abstractions;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -14,7 +15,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.AcceptanceTest.Fixtur
 
         public AzureTableStorageFixture()
         {
-            var dbMigrator = new DatabaseMigrator(Mock.Of<ILogger<IMiddlewareBootstrapper>>(), new TableServiceClient(Constants.AzureStorageConnectionString), new QueueConfiguration { QueueId = QueueId });
+            var dbMigrator = new DatabaseMigrator(Mock.Of<ILogger<IMiddlewareBootstrapper>>(), new TableServiceClient(Constants.AzureStorageConnectionString), new BlobServiceClient(Constants.AzureStorageConnectionString), new QueueConfiguration { QueueId = QueueId });
             dbMigrator.MigrateAsync().Wait();
         }
 
@@ -22,10 +23,23 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.AcceptanceTest.Fixtur
         {
             var tableServiceClient = new TableServiceClient(Constants.AzureStorageConnectionString);
             var tableClient = tableServiceClient.GetTableClient($"x{QueueId.ToString().Replace("-", "")}{entityName}");
+
             var result = tableClient.Query<TableEntity>(select: new List<string>() { "PartitionKey", "RowKey" });
             foreach (var item in result)
             {
                 tableClient.DeleteEntity(item.PartitionKey, item.RowKey);
+            }
+        }
+
+        public void CleanBlobStorage(string entityName)
+        {
+            var blobServiceClient = new BlobServiceClient(Constants.AzureStorageConnectionString);
+            var blobClient = blobServiceClient.GetBlobContainerClient(entityName);
+
+            var result = blobClient.GetBlobs();
+            foreach (var item in result)
+            {
+                blobClient.DeleteBlob(item.Name);
             }
         }
 

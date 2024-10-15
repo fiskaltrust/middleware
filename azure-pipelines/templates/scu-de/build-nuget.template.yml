@@ -1,5 +1,12 @@
-steps:    
-- task: yavt@1
+parameters:
+- name: projects
+  type: object
+
+- name: workingDirectory
+  type: string
+
+steps:
+- task: yavt@1 
   inputs:
     mode: 'Multi'
     semverVersion: 'v1'
@@ -9,10 +16,10 @@ steps:
     $nugetFeed = if ($Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/release/") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/heads/main") -or $Env:BUILD_SOURCEBRANCH.StartsWith("refs/tags/")) { "release" } else { "dev" }
     Write-Host "##vso[task.setvariable variable=NuGetFeed;]$nugetFeed"
   displayName: Set NuGet feed
-
+  
 - task: Cache@2
   inputs:
-    key: 'nuget | "$(Agent.OS)" | scu-de/**/*.csproj'
+    key: 'nuget | "$(Agent.OS)" | ${{ parameters.workingDirectory }}/**/*.csproj'
     restoreKeys: |
       nuget | "$(Agent.OS)"
       nuget
@@ -24,7 +31,7 @@ steps:
 - task: NuGetCommand@2
   inputs:
     command: 'restore'
-    restoreSolution: '$(WorkingDirectory)/$(Solution)'
+    restoreSolution: '${{ parameters.workingDirectory }}/$(Solution)'
     feedsToUse: 'select'
     vstsFeed: '$(NuGetFeed)'
 
@@ -34,9 +41,12 @@ steps:
     jdkArchitectureOption: 'x64'
     jdkSourceOption: 'PreInstalled'
 
+- pwsh: |
+    & ${Env:ANDROID_SDK_ROOT}\cmdline-tools\latest\bin\sdkmanager.bat "platforms;android-28"
+
 - task: VSBuild@1
   inputs:
-    solution: '$(WorkingDirectory)/$(Solution)'
+    solution: '${{ parameters.workingDirectory }}/$(Solution)'
     configuration: '$(BuildConfiguration)'
 
 - task: codesigning@2
@@ -45,51 +55,29 @@ steps:
     secureFileId: 'codesigning.pfx'
     signCertPassword: '$(Code_Signing_Password)'
     filePaths: |
-      $(WorkingDirectory)/src/**/*fiskaltrust*.dll
-      $(WorkingDirectory)/src/**/*fiskaltrust*.exe
+     ${{ parameters.workingDirectory }}/src/**/*fiskaltrust*.dll
+     ${{ parameters.workingDirectory }}/src/**/*fiskaltrust*.exe
 
-- script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration) /p:NuspecFile=.nuspec
-  displayName: 'dotnet pack fiskaltrust.Middleware.SCU.DE.CryptoVision'
-  workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.CryptoVision'
-
-- script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
-  displayName: 'dotnet pack fiskaltrust.Middleware.SCU.DE.DieboldNixdorf'
-  workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.DieboldNixdorf'
-
-- script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
-  displayName: 'dotnet pack fiskaltrust.Middleware.SCU.DE.Epson'
-  workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.Epson'
-
-- script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
-  displayName: 'dotnet pack fiskaltrust.Middleware.SCU.DE.FiskalyCertified'
-  workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.FiskalyCertified'
-
-- script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration) /p:NuspecFile=.nuspec
-  displayName: 'dotnet pack fiskaltrust.Middleware.SCU.DE.Swissbit'
-  workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.Swissbit'
-
-- script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
-  displayName: 'dotnet pack fiskaltrust.Middleware.SCU.DE.DeutscheFiskal'
-  workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.DeutscheFiskal'
-
-- script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
-  displayName: 'dotnet pack fiskaltrust.Middleware.SCU.DE.SwissbitCloud'
-  workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.SwissbitCloud'
-  
-- script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration)
-  displayName: 'dotnet pack fiskaltrust.Middleware.SCU.DE.InMemory'
-  workingDirectory: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.InMemory'
+- ${{ each project in parameters.projects }}:
+    - ${{ if or(eq(project, 'fiskaltrust.Middleware.SCU.DE.CryptoVision') , eq(project, 'fiskaltrust.Middleware.SCU.DE.Swissbit'))}}:
+        - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration) /p:NuspecFile=.nuspec  
+          displayName: 'dotnet pack ${{ project }}'
+          workingDirectory: '${{ parameters.workingDirectory }}/src/${{ project }}'        
+    - ${{ else }}:
+        - script: dotnet pack --output $(Build.ArtifactStagingDirectory) --no-restore --configuration $(buildConfiguration) 
+          displayName: 'dotnet pack ${{ project }}'
+          workingDirectory: '${{ parameters.workingDirectory }}/src/${{ project }}'
 
 - task: NuGetCommand@2
   displayName: 'nuget pack fiskaltrust.Middleware.SCU.DE.SwissbitAndroid'
   inputs:
     command: 'pack'
-    packagesToPack: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.SwissbitAndroid/.nuspec'
+    packagesToPack: '${{ parameters.workingDirectory }}/src/fiskaltrust.Middleware.SCU.DE.SwissbitAndroid/.nuspec'
     versioningScheme: 'off'
-    basePath: '$(WorkingDirectory)/src/fiskaltrust.Middleware.SCU.DE.SwissbitAndroid/'
+    basePath: '${{ parameters.workingDirectory }}/src/fiskaltrust.Middleware.SCU.DE.SwissbitAndroid/'
 
 - task: PublishBuildArtifacts@1
   displayName: 'Publish Artifact: drop'
   inputs:
-    PathtoPublish: '$(build.artifactstagingdirectory)'
-    artifactName: packages-v1
+    PathToPublish: '$(build.artifactstagingdirectory)'
+    artifactName: packages-v1      

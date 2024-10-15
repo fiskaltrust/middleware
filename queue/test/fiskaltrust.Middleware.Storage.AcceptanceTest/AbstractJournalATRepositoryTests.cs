@@ -66,6 +66,8 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             var actualEntries = await ((IMiddlewareRepository<ftJournalAT>) sut).GetByTimeStampRangeAsync(firstSearchedEntryTimeStamp, lastSearchedEntryTimeStamp).ToListAsync();
 
             actualEntries.Should().BeEquivalentTo(allEntries.Skip(1).Take(5));
+            actualEntries.Should().BeInAscendingOrder(x => x.TimeStamp);
+            actualEntries.First().TimeStamp.Should().Be(firstSearchedEntryTimeStamp);
         }
 
         [Fact]
@@ -81,6 +83,8 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             var actualEntries = await ((IMiddlewareRepository<ftJournalAT>) sut).GetEntriesOnOrAfterTimeStampAsync(firstSearchedEntryTimeStamp).ToListAsync();
 
             actualEntries.Should().BeEquivalentTo(allEntries.Skip(1));
+            actualEntries.Should().BeInAscendingOrder(x => x.TimeStamp);
+            actualEntries.First().TimeStamp.Should().Be(firstSearchedEntryTimeStamp);
         }
 
         [Fact]
@@ -118,9 +122,12 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             var entryToInsert = StorageTestFixtureProvider.GetFixture().Create<ftJournalAT>();
 
             var sut = await CreateRepository(entries);
+            var count = (await sut.GetAsync()).Count();
+
             Func<Task> action = async () => await sut.InsertAsync(entries[0]);
 
             await action.Should().ThrowExactlyAsync<Exception>();
+            (await sut.GetAsync()).Count().Should().Be(count);
         }
 
         [Fact]

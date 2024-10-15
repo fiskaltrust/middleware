@@ -14,19 +14,70 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.ME
     public class AzureTableStorageJournalMERepository : BaseAzureTableStorageRepository<Guid, AzureTableStorageFtJournalME, ftJournalME>, IMiddlewareRepository<ftJournalME>, IMiddlewareJournalMERepository
     {
         public AzureTableStorageJournalMERepository(QueueConfiguration queueConfig, TableServiceClient tableServiceClient)
-            : base(queueConfig, tableServiceClient, nameof(ftJournalME)) { }
+            : base(queueConfig, tableServiceClient, TABLE_NAME) { }
+
+        public const string TABLE_NAME = "JournalME";
 
         protected override void EntityUpdated(ftJournalME entity) => entity.TimeStamp = DateTime.UtcNow.Ticks;
 
         protected override Guid GetIdForEntity(ftJournalME entity) => entity.ftJournalMEId;
 
-        protected override AzureTableStorageFtJournalME MapToAzureEntity(ftJournalME entity) => Mapper.Map(entity);
+        protected override AzureTableStorageFtJournalME MapToAzureEntity(ftJournalME src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
 
-        protected override ftJournalME MapToStorageEntity(AzureTableStorageFtJournalME entity) => Mapper.Map(entity);
+            return new AzureTableStorageFtJournalME
+            {
+                PartitionKey = Mapper.GetHashString(src.TimeStamp),
+                RowKey = src.ftJournalMEId.ToString(),
+                ftJournalMEId = src.ftJournalMEId,
+                ftQueueItemId = src.ftQueueItemId,
+                cbReference = src.cbReference,
+                InvoiceNumber = src.InvoiceNumber,
+                YearlyOrdinalNumber = src.YearlyOrdinalNumber,
+                ftQueueId = src.ftQueueId,
+                TimeStamp = src.TimeStamp
+            };
+        }
+
+        protected override ftJournalME MapToStorageEntity(AzureTableStorageFtJournalME src)
+        {
+            if (src == null)
+
+            {
+                return null;
+            }
+
+            return new ftJournalME
+            {
+                ftJournalMEId = src.ftJournalMEId,
+                ftQueueItemId = src.ftQueueItemId,
+                cbReference = src.cbReference,
+                InvoiceNumber = src.InvoiceNumber,
+                YearlyOrdinalNumber = src.YearlyOrdinalNumber,
+                ftQueueId = src.ftQueueId,
+                TimeStamp = src.TimeStamp
+            };
+        }
+
+        public IAsyncEnumerable<ftJournalME> GetByTimeStampRangeAsync(long fromInclusive, long toInclusive)
+        {
+            var result = _tableClient.QueryAsync<AzureTableStorageFtJournalME>(filter: TableClient.CreateQueryFilter<AzureTableStorageFtJournalME>(x => x.PartitionKey.CompareTo(Mapper.GetHashString(fromInclusive)) <= 0 && x.PartitionKey.CompareTo(Mapper.GetHashString(toInclusive)) >= 0));
+            return result.Select(MapToStorageEntity).OrderBy(x => x.TimeStamp);
+        }
+
+        public IAsyncEnumerable<ftJournalME> GetEntriesOnOrAfterTimeStampAsync(long fromInclusive)
+        {
+            var result = _tableClient.QueryAsync<AzureTableStorageFtJournalME>(filter: TableClient.CreateQueryFilter<AzureTableStorageFtJournalME>(x => x.PartitionKey.CompareTo(Mapper.GetHashString(fromInclusive)) <= 0));
+            return result.Select(MapToStorageEntity).OrderBy(x => x.TimeStamp);
+        }
 
         public IAsyncEnumerable<ftJournalME> GetEntriesOnOrAfterTimeStampAsync(long fromInclusive, int? take = null)
         {
-            var result = base.GetEntriesOnOrAfterTimeStampAsync(fromInclusive).OrderBy(x => x.TimeStamp);
+            var result = GetEntriesOnOrAfterTimeStampAsync(fromInclusive);
             return take.HasValue ? result.Take(take.Value) : result;
         }
         public async Task<ftJournalME> GetLastEntryAsync()

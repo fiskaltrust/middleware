@@ -8,6 +8,9 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models
     {
         [XmlElement(ElementName = "printZReport")]
         public ZReport? ZReport { get; set; }
+
+        [XmlElement(ElementName = "printXReport")]
+        public XReport? XReport { get; set; }
     }
 
     [XmlType("printZReport")]

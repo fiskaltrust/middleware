@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.Entity;
 using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.Contracts.Repositories;
@@ -42,5 +43,7 @@ namespace fiskaltrust.Middleware.Storage.EF.Repositories
         public Task<ftReceiptJournal> GetByQueueItemId(Guid ftQueueItemId) => Task.FromResult(DbContext.Set<ftReceiptJournal>().FirstOrDefault(x => x.ftQueueItemId == ftQueueItemId));
 
         public Task<ftReceiptJournal> GetByReceiptNumber(long ftReceiptNumber) => Task.FromResult(DbContext.Set<ftReceiptJournal>().FirstOrDefault(x => x.ftReceiptNumber == ftReceiptNumber));
+
+        public async Task<int> CountAsync() => await DbContext.ReceiptJournalList.CountAsync();
     }
 }

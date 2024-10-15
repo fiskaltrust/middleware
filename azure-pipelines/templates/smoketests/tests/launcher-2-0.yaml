@@ -59,7 +59,6 @@ steps:
 
       ConvertTo-Json $configuration -Depth 100 | Set-Content -Path $(Build.SourcesDirectory)/launcher/configuration.json -Encoding utf8
       Write-Host "Replaced Versions in Config"
-
     displayName: Add Packages
 
   - pwsh: |

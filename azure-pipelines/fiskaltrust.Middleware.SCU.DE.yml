@@ -48,18 +48,30 @@ stages:
           vmImage: $(vmImageName)
         steps:
           - template: templates/scu-de/build-nuget.template.yml
-
+            parameters:
+              workingDirectory: scu-de
+              projects:
+                - fiskaltrust.Middleware.SCU.DE.CryptoVision
+                - fiskaltrust.Middleware.SCU.DE.DieboldNixdorf
+                - fiskaltrust.Middleware.SCU.DE.Epson
+                - fiskaltrust.Middleware.SCU.DE.FiskalyCertified
+                - fiskaltrust.Middleware.SCU.DE.Swissbit
+                - fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
+                - fiskaltrust.Middleware.SCU.DE.SwissbitCloud
+                - fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2               
+                - fiskaltrust.Middleware.SCU.DE.InMemory
+  
       - job: BuildZipPackages
         displayName: Build v2 zip packages
         dependsOn: []
         pool:
           vmImage: $(vmImageName)
-        steps:        
+        steps:
           - task: JavaToolInstaller@0
             inputs:
-              versionSpec: '11'
-              jdkArchitectureOption: 'x64'
-              jdkSourceOption: 'PreInstalled'
+              versionSpec: "11"
+              jdkArchitectureOption: "x64"
+              jdkSourceOption: "PreInstalled"
           - template: templates/build-zip.yml
             parameters:
               workingDirectory: scu-de
@@ -71,4 +83,5 @@ stages:
                 - fiskaltrust.Middleware.SCU.DE.Swissbit
                 - fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
                 - fiskaltrust.Middleware.SCU.DE.SwissbitCloud
+                - fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2               
                 - fiskaltrust.Middleware.SCU.DE.InMemory

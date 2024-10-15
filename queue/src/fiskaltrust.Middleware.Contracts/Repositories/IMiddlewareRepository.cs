@@ -26,6 +26,10 @@ namespace fiskaltrust.Middleware.Contracts.Repositories
         IAsyncEnumerable<string> GetGroupedReceiptReferenceAsync(long? fromIncl, long? toIncl);
 
         IAsyncEnumerable<ftQueueItem> GetQueueItemsForReceiptReferenceAsync(string receiptReference);
+
+        Task<int> CountAsync();
+
+        Task<ftQueueItem> GetLastQueueItemAsync();
     }
 
     public interface IMiddlewareReceiptJournalRepository : IReceiptJournalRepository, IMiddlewareRepository<ftReceiptJournal>
@@ -35,6 +39,8 @@ namespace fiskaltrust.Middleware.Contracts.Repositories
         Task<ftReceiptJournal> GetByReceiptNumber(long ftReceiptNumber);
 
         Task<ftReceiptJournal> GetWithLastTimestampAsync();
+
+        Task<int> CountAsync();
     }
 
     public interface IMiddlewareActionJournalRepository : IActionJournalRepository, IMiddlewareRepository<ftActionJournal>
@@ -44,17 +50,22 @@ namespace fiskaltrust.Middleware.Contracts.Repositories
         IAsyncEnumerable<ftActionJournal> GetByQueueItemId(Guid queueItemId);
 
         IAsyncEnumerable<ftActionJournal> GetByPriorityAfterTimestampAsync(int lowerThanPriority, long fromTimestampInclusive);
+        
+        Task<int> CountAsync();
     }
 
     public interface IMiddlewareJournalFRRepository : IJournalFRRepository, IMiddlewareRepository<ftJournalFR>
     {
         Task<ftJournalFR> GetWithLastTimestampAsync();
+        
         IAsyncEnumerable<ftJournalFR> GetProcessedCopyReceiptsAsync();
     }
 
     public interface IMiddlewareJournalDERepository : IJournalDERepository
     {
         IAsyncEnumerable<ftJournalDE> GetByFileName(string fileName);
+
+        Task<int> CountAsync();
     }
 
     public interface IMiddlewareJournalMERepository : IJournalMERepository

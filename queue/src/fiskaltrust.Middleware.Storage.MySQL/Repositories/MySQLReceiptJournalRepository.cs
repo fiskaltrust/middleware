@@ -72,9 +72,18 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
         public async Task<ftReceiptJournal> GetWithLastTimestampAsync()
         {
             using (var connection = new MySqlConnection(ConnectionString))
-            {                
+            {
                 await connection.OpenAsync().ConfigureAwait(false);
                 return await connection.QueryFirstOrDefaultAsync<ftReceiptJournal>("SELECT * FROM ftReceiptJournal ORDER BY TimeStamp DESC LIMIT 1").ConfigureAwait(false);
+            }
+        }
+
+        public async Task<int> CountAsync()
+        {
+            using (var connection = new MySqlConnection(ConnectionString))
+            {
+                await connection.OpenAsync().ConfigureAwait(false);
+                return await connection.QueryFirstOrDefaultAsync<int>("SELECT COUNT(*) FROM ftReceiptJournal").ConfigureAwait(false);
             }
         }
     }

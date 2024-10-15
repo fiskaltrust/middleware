@@ -12,7 +12,9 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
     public class AzureTableStorageOpenTransactionRepository : BaseAzureTableStorageRepository<string, AzureTableStorageOpenTransaction, OpenTransaction>, IPersistentTransactionRepository<OpenTransaction>
     {
         public AzureTableStorageOpenTransactionRepository(QueueConfiguration queueConfig, TableServiceClient tableServiceClient)
-            : base(queueConfig, tableServiceClient, nameof(OpenTransaction)) { }
+            : base(queueConfig, tableServiceClient, TABLE_NAME) { }
+
+        public const string TABLE_NAME = nameof(OpenTransaction);
 
         public async Task InsertOrUpdateTransactionAsync(OpenTransaction transaction) => await InsertOrUpdateAsync(transaction).ConfigureAwait(false);
 
@@ -22,9 +24,46 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
 
         protected override string GetIdForEntity(OpenTransaction entity) => entity.cbReceiptReference;
 
-        protected override AzureTableStorageOpenTransaction MapToAzureEntity(OpenTransaction entity) => Mapper.Map(entity);
+        public async Task InsertOrUpdateAsync(OpenTransaction storageEntity)
+        {
+            EntityUpdated(storageEntity);
+            var entity = MapToAzureEntity(storageEntity);
+            await _tableClient.UpsertEntityAsync(entity, TableUpdateMode.Replace);
+        }
 
-        protected override OpenTransaction MapToStorageEntity(AzureTableStorageOpenTransaction entity) => Mapper.Map(entity);
+        protected override AzureTableStorageOpenTransaction MapToAzureEntity(OpenTransaction src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+
+            return new AzureTableStorageOpenTransaction
+            {
+                PartitionKey = Mapper.GetHashString(src.StartMoment.Ticks),
+                RowKey = src.cbReceiptReference,
+                cbReceiptReference = src.cbReceiptReference,
+                StartMoment = src.StartMoment.ToUniversalTime(),
+                StartTransactionSignatureBase64 = src.StartTransactionSignatureBase64,
+                TransactionNumber = src.TransactionNumber.ToString()
+            };
+        }
+
+        protected override OpenTransaction MapToStorageEntity(AzureTableStorageOpenTransaction src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+
+            return new OpenTransaction
+            {
+                cbReceiptReference = src.cbReceiptReference,
+                StartMoment = src.StartMoment,
+                StartTransactionSignatureBase64 = src.StartTransactionSignatureBase64,
+                TransactionNumber = Convert.ToInt64(src.TransactionNumber)
+            };
+        }
     }
 }
 

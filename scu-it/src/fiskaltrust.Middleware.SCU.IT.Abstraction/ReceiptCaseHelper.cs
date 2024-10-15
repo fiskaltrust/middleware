@@ -31,6 +31,8 @@ public static class ReceiptCaseHelper
 
     public static bool IsVoid(this ReceiptRequest receiptRequest) => (receiptRequest.ftReceiptCase & 0x0000_0000_0004_0000) > 0x0000;
 
+    public static bool IsXReportZeroReceipt(this ReceiptRequest receiptRequest) => (receiptRequest.ftReceiptCase & 0x0000_0001_0000_0000) > 0x0000;
+
     public static bool IsVoid(this ChargeItem chargeItem) => (chargeItem.ftChargeItemCase & 0x0000_0000_0001_0000) > 0x0000;
 
     public static bool IsVoid(this PayItem payItem) => (payItem.ftPayItemCase & 0x0000_0000_0001_0000) > 0x0000;

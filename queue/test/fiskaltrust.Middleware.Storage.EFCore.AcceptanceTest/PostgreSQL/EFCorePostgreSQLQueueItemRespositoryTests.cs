@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Storage.AcceptanceTest;
@@ -22,6 +23,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.AcceptanceTest.PostgreSQL
         public override async Task<IMiddlewareQueueItemRepository> CreateRepository(IEnumerable<ftQueueItem> entries)
         {
             var repository = new EFCoreQueueItemRepository(_fixture.Context);
+            await SetQueueRowAndTimeStamp(entries.ToList());
             foreach (var item in entries ?? new List<ftQueueItem>())
             {
                 await repository.InsertOrUpdateAsync(item);

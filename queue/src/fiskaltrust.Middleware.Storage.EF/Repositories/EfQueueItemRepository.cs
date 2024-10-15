@@ -127,5 +127,12 @@ namespace fiskaltrust.Middleware.Storage.EF.Repositories
             }
             return null;
         }
+
+        public async Task<int> CountAsync() => await DbContext.QueueItemList.CountAsync();
+
+        public async Task<ftQueueItem> GetLastQueueItemAsync()
+        {
+            return await DbContext.QueueItemList.OrderByDescending(x => x.ftQueueRow).FirstOrDefaultAsync();
+        }
     }
 }

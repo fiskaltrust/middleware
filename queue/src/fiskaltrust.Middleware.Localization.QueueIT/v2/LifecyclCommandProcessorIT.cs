@@ -74,7 +74,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
             });
             if (result.ReceiptResponse.HasFailed())
             {
-                return new ProcessCommandResponse(receiptResponse, new List<ftActionJournal>());
+                return new ProcessCommandResponse(result.ReceiptResponse, new List<ftActionJournal>());
             }
 
             var signatures = new List<SignaturItem>
@@ -103,7 +103,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
             });
             if (result.ReceiptResponse.HasFailed())
             {
-                return new ProcessCommandResponse(receiptResponse, new List<ftActionJournal>());
+                return new ProcessCommandResponse(result.ReceiptResponse, new List<ftActionJournal>());
             }
 
             queue.StopMoment = DateTime.UtcNow;

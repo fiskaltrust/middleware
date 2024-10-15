@@ -4,9 +4,9 @@
     CashBoxIdentification     NVARCHAR(2147483647) NOT NULL,
     Siret                     NVARCHAR(2147483647) NOT NULL,
     ReceiptId                 NVARCHAR(2147483647) NOT NULL,
-    ReceiptMoment             DATETIME NOT NULL,
+    ReceiptMoment             BIGINT NOT NULL,
     QueueItemId               NVARCHAR(36) NOT NULL,
     CopiedReceiptReference    NVARCHAR(2147483647) NOT NULL,
     CertificateSerialNumber   NVARCHAR(2147483647) NOT NULL,
-    TimeStamp                 DATETIME NOT NULL
+    TimeStamp                 BIGINT NOT NULL
 );

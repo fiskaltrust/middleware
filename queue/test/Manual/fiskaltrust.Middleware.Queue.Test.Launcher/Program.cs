@@ -2,8 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
-using fiskaltrust.ifPOS.v1;
+using fiskaltrust.ifPOS.v1.at;
 using fiskaltrust.ifPOS.v1.de;
 using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.ifPOS.v1.me;
@@ -25,17 +24,16 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
         private static readonly string _accessToken = "";
         private static readonly string _localization = "DE";
 
-        public static async Task Main(string configurationFilePath = "", string serviceFolder = @"C:\ProgramData\fiskaltrust\service")
+        public static void Main(string configurationFilePath = "", string serviceFolder = @"C:\ProgramData\fiskaltrust\service")
         {
-
             ftCashBoxConfiguration cashBoxConfiguration = null;
             if (!string.IsNullOrEmpty(configurationFilePath))
             {
-                cashBoxConfiguration = JsonConvert.DeserializeObject<ftCashBoxConfiguration>(configurationFilePath);
+                cashBoxConfiguration = JsonConvert.DeserializeObject<ftCashBoxConfiguration>(File.ReadAllText(configurationFilePath));
             }
             else
             {
-                cashBoxConfiguration = await HelipadHelper.GetConfigurationAsync(_cashBoxId, _accessToken);
+                cashBoxConfiguration = HelipadHelper.GetConfigurationAsync(_cashBoxId, _accessToken).Result;
             }
             if (string.IsNullOrEmpty(serviceFolder))
             {
@@ -46,7 +44,7 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
 
             config.Configuration.Add("cashboxid", cashBoxConfiguration.ftCashBoxId);
             config.Configuration.Add("accesstoken", _accessToken);
-            config.Configuration.Add("useoffline", false);
+            config.Configuration.Add("useoffline", true);
             config.Configuration.Add("sandbox", true);
             config.Configuration.Add("servicefolder", serviceFolder);
             config.Configuration.Add("configuration", JsonConvert.SerializeObject(cashBoxConfiguration));
@@ -59,11 +57,8 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
             serviceCollection.AddStandardLoggers(LogLevel.Debug);
 
 
-            if (_localization == "DE")
-            {
-                serviceCollection.AddScoped<IClientFactory<IDESSCD>, DESSCDClientFactory>();
-            }
-            else if (_localization == "ME")
+
+            if (_localization == "ME")
             {
                 serviceCollection.AddScoped<IClientFactory<IMESSCD>, MESSCDClientFactory>();
                 OverrideMasterdata(_localization, config);
@@ -72,22 +67,38 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
             {
                 serviceCollection.AddScoped<IClientFactory<IITSSCD>, ITSSCDClientFactory>();
             }
+            else if (_localization == "AT")
+            {
+                serviceCollection.AddScoped<IClientFactory<IATSSCD>, ATSSCDClientFactory>();
+            }
+            else if (_localization == "DE")
+            {
+                serviceCollection.AddScoped<IClientFactory<IDESSCD>, DESSCDClientFactory>();
+            }
 
-
-            if (config.Package == "fiskaltrust.Middleware.Queue.SQLite")
+            if (config.Package == "fiskaltrust.Middleware.Queue.SQLite" || config.Package == "fiskaltrust.service.sqlite")
             {
                 ConfigureSQLite(config, serviceCollection);
+            }
+            else if (config.Package == "fiskaltrust.Middleware.Queue.EF")
+            {
+                ConfigureEF(config, serviceCollection);
             }
             else if (config.Package == "fiskaltrust.Middleware.Queue.MySQL")
             {
                 ConfigureMySQL(config, serviceCollection);
-            } else
+            }
+            else if (config.Package == "fiskaltrust.Middleware.Queue.AzureTableStorage" || config.Package == "fiskaltrust.service.azure")
+            {
+                ConfigureAzureTableStorage(config, serviceCollection);
+            }
+            else
             {
                 throw new NotSupportedException($"The given package {config.Package} is not supported.");
             }
             var provider = serviceCollection.BuildServiceProvider();
 
-            var pos = provider.GetRequiredService<IPOS>();
+            var pos = provider.GetRequiredService<ifPOS.v1.IPOS>();
             HostingHelper.SetupServiceForObject(config, pos, provider.GetRequiredService<ILoggerFactory>());
 
             Console.WriteLine("Press key to end program");
@@ -129,10 +140,32 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
             };
             bootStrapper.ConfigureServices(serviceCollection);
         }
-        
+
         private static void ConfigureMySQL(PackageConfiguration queue, ServiceCollection serviceCollection)
         {
             var bootStrapper = new MySQL.PosBootstrapper
+            {
+                Id = queue.Id,
+                Configuration = queue.Configuration
+            };
+            bootStrapper.ConfigureServices(serviceCollection);
+        }
+
+        private static void ConfigureAzureTableStorage(PackageConfiguration queue, ServiceCollection serviceCollection)
+        {
+            queue.Url = new string[] { "rest://localhost:5000" };
+            var bootStrapper = new AzureTableStorage.PosBootstrapper
+            {
+                Id = queue.Id,
+                Configuration = queue.Configuration
+            };
+            bootStrapper.ConfigureServices(serviceCollection);
+        }
+
+        private static void ConfigureEF(PackageConfiguration queue, ServiceCollection serviceCollection)
+        {
+            var bootStrapper = new EF.PosBootstrapper
+
             {
                 Id = queue.Id,
                 Configuration = queue.Configuration

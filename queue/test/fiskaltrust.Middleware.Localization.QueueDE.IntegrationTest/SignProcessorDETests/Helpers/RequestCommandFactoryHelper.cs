@@ -28,7 +28,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             ILogger<SignProcessorDE> logger,
             IConfigurationRepository configurationRepository,
             IMiddlewareJournalDERepository journalDERepository,
-            IActionJournalRepository actionJournalRepository,
+            IMiddlewareActionJournalRepository actionJournalRepository,
             IDESSCDProvider dESSCDProvider,
             ITransactionPayloadFactory transactionPayloadFactory,
             IPersistentTransactionRepository<FailedFinishTransaction> failedFinishTransactionRepo,
@@ -36,7 +36,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             IPersistentTransactionRepository<OpenTransaction> openTransactionRepo,
             IMasterDataService masterDataService,
             MiddlewareConfiguration middlewareConfiguration,
-            IReadOnlyQueueItemRepository queueItemRepository,
+            IMiddlewareQueueItemRepository queueItemRepository,
             SignatureFactoryDE signatureFactory,
             ITarFileCleanupService tarFileCleanupService = null)
         {
@@ -58,6 +58,10 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             services.AddSingleton(_ => middlewareConfiguration);
             services.AddSingleton(_ => QueueDEConfiguration.FromMiddlewareConfiguration(Mock.Of<ILogger<QueueDEConfiguration>>(), middlewareConfiguration));
             services.AddSingleton(_ => masterDataService);
+            services.AddSingleton(_ => journalDERepository);
+            services.AddSingleton(_ => queueItemRepository as IReadOnlyQueueItemRepository);
+            services.AddSingleton(_ => actionJournalRepository as IActionJournalRepository);
+          
 
             if(tarFileCleanupService == null)
             {
@@ -68,6 +72,9 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
 
             var signProcessor =  new SignProcessorDE(
                 configurationRepository,
+                journalDERepository,
+                queueItemRepository,
+                actionJournalRepository,
                 transactionPayloadFactory,
                 new RequestCommandFactory(services.BuildServiceProvider()),
                 logger

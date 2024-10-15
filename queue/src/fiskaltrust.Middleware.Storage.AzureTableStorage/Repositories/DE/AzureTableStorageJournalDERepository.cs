@@ -14,38 +14,76 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
 {
     public class AzureTableStorageJournalDERepository : BaseAzureTableStorageRepository<Guid, AzureTableStorageFtJournalDE, ftJournalDE>, IJournalDERepository, IMiddlewareRepository<ftJournalDE>, IMiddlewareJournalDERepository
     {
-        private const string JOURNALDE_BLOB_CONTAINER = "ftjournalde";
+        public const string BLOB_CONTAINER_NAME = "ftjournalde";
+        public const string TABLE_NAME = "JournalDE";
         private readonly QueueConfiguration _queueConfig;
         private readonly BlobContainerClient _blobContainerClient;
 
         public AzureTableStorageJournalDERepository(QueueConfiguration queueConfig, TableServiceClient tableServiceClient, BlobServiceClient blobServiceClient)
-            : base(queueConfig, tableServiceClient, nameof(ftJournalDE))
+            : base(queueConfig, tableServiceClient, TABLE_NAME)
         {
             _queueConfig = queueConfig;
-            _blobContainerClient = blobServiceClient.GetBlobContainerClient(JOURNALDE_BLOB_CONTAINER);
+            _blobContainerClient = blobServiceClient.GetBlobContainerClient(BLOB_CONTAINER_NAME);
         }
 
         protected override void EntityUpdated(ftJournalDE entity) => entity.TimeStamp = DateTime.UtcNow.Ticks;
 
         protected override Guid GetIdForEntity(ftJournalDE entity) => entity.ftJournalDEId;
 
-        protected override AzureTableStorageFtJournalDE MapToAzureEntity(ftJournalDE entity) => Mapper.Map(entity);
+        protected override AzureTableStorageFtJournalDE MapToAzureEntity(ftJournalDE src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
 
-        protected override ftJournalDE MapToStorageEntity(AzureTableStorageFtJournalDE entity) => Mapper.Map(entity);
+            return new AzureTableStorageFtJournalDE
+            {
+                PartitionKey = Mapper.GetHashString(src.TimeStamp),
+                RowKey = src.ftJournalDEId.ToString(),
+                ftJournalDEId = src.ftJournalDEId,
+                ftQueueId = src.ftQueueId,
+                Number = src.Number,
+                ftQueueItemId = src.ftQueueItemId,
+                FileContentBase64 = src.FileContentBase64,
+                FileExtension = src.FileExtension,
+                FileName = src.FileName,
+                TimeStamp = src.TimeStamp
+            };
+        }
+
+        protected override ftJournalDE MapToStorageEntity(AzureTableStorageFtJournalDE src)
+        {
+            if (src == null)
+            {
+                return null;
+            }
+
+            return new ftJournalDE
+            {
+                ftJournalDEId = src.ftJournalDEId,
+                ftQueueId = src.ftQueueId,
+                ftQueueItemId = src.ftQueueItemId,
+                FileContentBase64 = src.FileContentBase64,
+                FileExtension = src.FileExtension,
+                FileName = src.FileName,
+                Number = src.Number,
+                TimeStamp = src.TimeStamp,
+            };
+        }
 
         public IAsyncEnumerable<ftJournalDE> GetEntriesOnOrAfterTimeStampAsync(long fromInclusive, int? take = null)
         {
-            var result = _tableClient
-                .QueryAsync<AzureTableStorageFtJournalDE>(filter: TableClient.CreateQueryFilter($"PartitionKey le {Mapper.GetHashString(fromInclusive)}"))
-                .SelectAwait(async x =>
+            var result = _tableClient.QueryAsync<AzureTableStorageFtJournalDE>(filter: TableClient.CreateQueryFilter<AzureTableStorageFtJournalDE>(x => x.PartitionKey.CompareTo(Mapper.GetHashString(fromInclusive)) <= 0))
+                .Select(MapToStorageEntity)
+                .OrderBy(x => x.TimeStamp)
+                .SelectAwait(async (journal) =>
                 {
-                    var entity = MapToStorageEntity(x);
-                    entity.FileContentBase64 = await DownloadJournalDEFromBlobAsync(entity);
-                    return entity;
+                    journal.FileContentBase64 = await DownloadJournalDEFromBlobAsync(journal);
+                    return journal;
                 });
 
-
-            return take.HasValue ? result.TakeLast(take.Value).OrderBy(x => x.TimeStamp) : result.OrderBy(x => x.TimeStamp);
+            return take.HasValue ? result.Take(take.Value) : result;
         }
 
         public IAsyncEnumerable<ftJournalDE> GetByFileName(string fileName)
@@ -104,9 +142,13 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
             }).ToEnumerable());
         }
 
-        public override async IAsyncEnumerable<ftJournalDE> GetByTimeStampRangeAsync(long fromInclusive, long toInclusive)
+
+
+        public async IAsyncEnumerable<ftJournalDE> GetByTimeStampRangeAsync(long fromInclusive, long toInclusive)
         {
-            var journals = base.GetByTimeStampRangeAsync(fromInclusive, toInclusive);
+            var result = _tableClient.QueryAsync<AzureTableStorageFtJournalDE>(filter: 
+                TableClient.CreateQueryFilter<AzureTableStorageFtJournalDE>(x => x.PartitionKey.CompareTo(Mapper.GetHashString(fromInclusive)) <= 0 && x.PartitionKey.CompareTo(Mapper.GetHashString(toInclusive)) >= 0));
+            var journals = result.Select(MapToStorageEntity).OrderBy(x => x.TimeStamp);
             await foreach (var journal in journals)
             {
                 journal.FileContentBase64 = await DownloadJournalDEFromBlobAsync(journal);
@@ -126,6 +168,12 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
             }
 
             return null;
+        }
+
+        public async Task<int> CountAsync()
+        {
+            var results = _tableClient.QueryAsync<TableEntity>(select: new string[] { });
+            return await results.CountAsync().ConfigureAwait(false);
         }
     }
 }

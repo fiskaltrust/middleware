@@ -34,5 +34,7 @@ namespace fiskaltrust.Middleware.Storage.InMemory.Repositories
         public Task<ftReceiptJournal> GetByReceiptNumber(long ftReceiptNumber) => Task.FromResult(Data.Values.FirstOrDefault(x => x.ftReceiptNumber == ftReceiptNumber));
         
         public Task<ftReceiptJournal> GetWithLastTimestampAsync() => Task.FromResult(Data.Values.OrderByDescending(x => x.TimeStamp).FirstOrDefault());
+
+        public Task<int> CountAsync() => Task.FromResult(Data.Count());
     }
 }

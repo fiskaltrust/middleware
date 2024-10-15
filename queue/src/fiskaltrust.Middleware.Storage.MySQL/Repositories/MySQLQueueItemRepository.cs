@@ -159,6 +159,10 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
             {
                 await connection.OpenAsync().ConfigureAwait(false);
                 var entry =  await connection.QueryFirstOrDefaultAsync<ftQueueItem>(query, new { ftQueueItem.ftQueueRow, receiptRequest.cbPreviousReceiptReference }).ConfigureAwait(false);
+                if (entry == null)
+                {
+                    return null;
+                }
                 var request = JsonConvert.DeserializeObject<ReceiptRequest>(entry.request);
                 if (request.IncludeInReferences())
                 {
@@ -168,6 +172,26 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
                 {
                     return null;
                 }
+            }
+        }
+
+        public async Task<int> CountAsync()
+        {
+            using (var connection = new MySqlConnection(ConnectionString))
+            {
+                await connection.OpenAsync().ConfigureAwait(false);
+                return await connection.QueryFirstOrDefaultAsync<int>("SELECT COUNT(*) FROM ftQueueItem").ConfigureAwait(false);
+            }
+        }
+
+        public async Task<ftQueueItem> GetLastQueueItemAsync()
+        {
+            var query = "SELECT * FROM ftQueueItem " +
+                            "ORDER BY ftQueueRow DESC LIMIT 1;";
+            using (var connection = new MySqlConnection(ConnectionString))
+            {
+                await connection.OpenAsync().ConfigureAwait(false);
+                return await connection.QueryFirstOrDefaultAsync<ftQueueItem>(query).ConfigureAwait(false);
             }
         }
     }

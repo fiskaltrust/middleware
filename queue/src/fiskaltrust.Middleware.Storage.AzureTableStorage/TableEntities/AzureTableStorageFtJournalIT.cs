@@ -13,7 +13,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.TableEntities
         public long JournalType { get; set; }
         public string cbReceiptReference { get; set; }
         public string DataJson { get; set; }
-        public DateTime ReceiptDateTime { get; set; }
+        public DateTime? ReceiptDateTime { get; set; }
         public long TimeStamp { get; set; }
     }
 }

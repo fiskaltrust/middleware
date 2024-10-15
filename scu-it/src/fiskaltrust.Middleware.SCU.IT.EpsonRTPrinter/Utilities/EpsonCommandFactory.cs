@@ -331,7 +331,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                     itemAndMessages.Add(new() { PrintRecItem = printRecItem, PrintRecMessage = printRecMessage });
                 }
                 else if (i.IsSingleUseVoucher() && i.Amount < 0)
-                {
+                {  
                     var printRecItemAdjustment = new PrintRecItemAdjustment
                     {
                         Description = i.Description,
@@ -351,6 +351,17 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                         Department = 11,
                     };
                     itemAndMessages.Add(new() { PrintRecItem = printRecItem });
+                }
+                else if (i.Amount < 0)
+                {
+                    var printRecItemAdjustment = new PrintRecItemAdjustment
+                    {
+                        Description = i.Description,
+                        Amount = Math.Abs(i.Amount),
+                        AdjustmentType = 3,
+                        Department = i.GetVatGroup(),
+                    };
+                    itemAndMessages.Add(new() { PrintRecItemAdjustment = printRecItemAdjustment });
                 }
                 else
                 {

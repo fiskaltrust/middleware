@@ -116,7 +116,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
             transactionPayloadFactory.Setup(x => x.CreateReceiptPayload(It.IsAny<ReceiptRequest>())).Returns(("Kassenbeleg-V1", "payload"));
 
             var journalRepositoryMock = new Mock<IMiddlewareJournalDERepository>(MockBehavior.Strict);
-            var actionJournalRepositoryMock = new Mock<IActionJournalRepository>(MockBehavior.Strict);
+            var actionJournalRepositoryMock = new Mock<IMiddlewareActionJournalRepository>(MockBehavior.Strict);
             var config = new MiddlewareConfiguration { Configuration = new Dictionary<string, object>() };
             var sut = RequestCommandFactoryHelper.ConstructSignProcessor(loggerMock.Object, configurationRepository.Object, journalRepositoryMock.Object, actionJournalRepositoryMock.Object, 
                 deSSCDProviderMock.Object, transactionPayloadFactory.Object, new InMemoryFailedFinishTransactionRepository(), new InMemoryFailedStartTransactionRepository(), 
@@ -197,7 +197,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
             transactionPayloadFactory.Setup(x => x.CreateReceiptPayload(It.IsAny<ReceiptRequest>())).Returns(("Kassenbeleg-V1", "payload"));
 
             var journalRepositoryMock = new Mock<IMiddlewareJournalDERepository>(MockBehavior.Strict);
-            var actionJournalRepositoryMock = new Mock<IActionJournalRepository>(MockBehavior.Strict);
+            var actionJournalRepositoryMock = new Mock<IMiddlewareActionJournalRepository>(MockBehavior.Strict);
             var config = new MiddlewareConfiguration { Configuration = new Dictionary<string, object>() };
             var sut = RequestCommandFactoryHelper.ConstructSignProcessor(loggerMock.Object, configurationRepository.Object, journalRepositoryMock.Object, actionJournalRepositoryMock.Object, 
                 deSSCDProviderMock.Object, transactionPayloadFactory.Object, new InMemoryFailedFinishTransactionRepository(), new InMemoryFailedStartTransactionRepository(), 
@@ -299,7 +299,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
             transactionPayloadFactory.Setup(x => x.CreateReceiptPayload(It.IsAny<ReceiptRequest>())).Returns(("Kassenbeleg-V1", "payload"));
 
             var journalRepositoryMock = new Mock<IMiddlewareJournalDERepository>(MockBehavior.Strict);
-            var actionJournalRepositoryMock = new Mock<IActionJournalRepository>(MockBehavior.Strict);
+            var actionJournalRepositoryMock = new Mock<IMiddlewareActionJournalRepository>(MockBehavior.Strict);
             var config = new MiddlewareConfiguration { Configuration = new Dictionary<string, object>() };
             var sut = RequestCommandFactoryHelper.ConstructSignProcessor(loggerMock.Object, configurationRepository.Object, journalRepositoryMock.Object, actionJournalRepositoryMock.Object, 
                 deSSCDProviderMock.Object, transactionPayloadFactory.Object, new InMemoryFailedFinishTransactionRepository(), new InMemoryFailedStartTransactionRepository(), 
@@ -404,7 +404,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
             deSSCDProviderMock.SetupGet(x => x.Instance).Returns(desscdClient.Object);
 
             var journalRepositoryMock = new Mock<IMiddlewareJournalDERepository>(MockBehavior.Strict);
-            var actionJournalRepositoryMock = new Mock<IActionJournalRepository>(MockBehavior.Strict);
+            var actionJournalRepositoryMock = new Mock<IMiddlewareActionJournalRepository>(MockBehavior.Strict);
             var config = new MiddlewareConfiguration { Configuration = new Dictionary<string, object>() };
             var sut = RequestCommandFactoryHelper.ConstructSignProcessor(loggerMock.Object, configurationRepository.Object, journalRepositoryMock.Object, actionJournalRepositoryMock.Object, 
                 deSSCDProviderMock.Object, transactionPayloadFactory.Object, new InMemoryFailedFinishTransactionRepository(), new InMemoryFailedStartTransactionRepository(), 

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using AutoFixture;
 using Azure.Data.Tables;
 using Azure.Storage.Blobs;
+using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Storage.AcceptanceTest;
 using fiskaltrust.Middleware.Storage.AzureTableStorage;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.AcceptanceTest.Fixtures;
@@ -24,7 +25,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.AcceptanceTest
 
         public override async Task<IReadOnlyJournalDERepository> CreateReadOnlyRepository(IEnumerable<ftJournalDE> entries) => await CreateRepository(entries);
 
-        public override async Task<IJournalDERepository> CreateRepository(IEnumerable<ftJournalDE> entries)
+        public override async Task<IMiddlewareJournalDERepository> CreateRepository(IEnumerable<ftJournalDE> entries)
         {
             var azureJournalDERepository = new AzureTableStorageJournalDERepository(new QueueConfiguration { QueueId = _fixture.QueueId }, new TableServiceClient(Constants.AzureStorageConnectionString), new BlobServiceClient(Constants.AzureStorageConnectionString));
             foreach (var entry in entries)
@@ -35,7 +36,11 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.AcceptanceTest
             return azureJournalDERepository;
         }
 
-        public override void DisposeDatabase() => _fixture.CleanTable(nameof(ftJournalDE));
+        public override void DisposeDatabase()
+        {
+            _fixture.CleanTable(AzureTableStorageJournalDERepository.TABLE_NAME);
+            _fixture.CleanBlobStorage(AzureTableStorageJournalDERepository.BLOB_CONTAINER_NAME);
+        }
 
         public override async Task InsertAsync_ShouldUpdateEntry_IfEntryAlreadyExists()
         {

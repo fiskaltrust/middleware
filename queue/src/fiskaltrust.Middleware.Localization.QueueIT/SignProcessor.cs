@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Extensions;
 using fiskaltrust.Middleware.Contracts.Interfaces;
+using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueIT.Constants;
 using fiskaltrust.Middleware.Localization.QueueIT.Extensions;
 using fiskaltrust.Middleware.Localization.QueueIT.Helpers;
@@ -24,7 +25,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
 
         public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ftQueue queue, ftQueueItem queueItem)
         {
-          
+
             var receiptIdentification = $"ft{queue.ftReceiptNumerator:X}#";
             var receiptResponse = new ReceiptResponse
             {
@@ -38,23 +39,21 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
                 ftState = Cases.BASE_STATE,
                 ftReceiptIdentification = receiptIdentification
             };
-
             if (queue.IsDeactivated())
             {
                 return ReturnWithQueueIsDisabled(queue, receiptResponse, queueItem);
             }
-
+             
             if (request.IsInitialOperation() && !queue.IsNew())
             {
                 receiptResponse.SetReceiptResponseError("The queue is already operational. It is not allowed to send another InitOperation Receipt");
                 return (receiptResponse, new List<ftActionJournal>());
             }
-
+            
             if (!request.IsInitialOperation() && queue.IsNew())
             {
                 return ReturnWithQueueIsNotActive(queue, receiptResponse, queueItem);
             }
-
             return await _signProcessorIT.ProcessAsync(request, receiptResponse, queue, queueItem).ConfigureAwait(false);
         }
 
@@ -93,5 +92,9 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
             receiptResponse.ftReceiptIdentification = $"ft{queue.ftReceiptNumerator:X}#";
             return (receiptResponse, actionJournals);
         }
+
+        public async Task<string> GetFtCashBoxIdentificationAsync(ftQueue queue) => (await _configurationRepository.GetQueueITAsync(queue.ftQueueId).ConfigureAwait(false)).CashBoxIdentification;
+        public Task FinalTaskAsync(ftQueue queue, ftQueueItem queueItem, ReceiptRequest request, IMiddlewareActionJournalRepository actionJournalRepository, IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareReceiptJournalRepository receiptJournalRepositor) { return Task.CompletedTask; }
+        public Task FirstTaskAsync() { return Task.CompletedTask; }
     }
 }

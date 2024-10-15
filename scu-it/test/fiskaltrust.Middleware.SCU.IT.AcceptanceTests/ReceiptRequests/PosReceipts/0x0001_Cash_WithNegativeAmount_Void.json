@@ -1,0 +1,59 @@
+{
+  "ftCashBoxID": "bb734f2c-24fa-4ec8-9346-b2893cb7a98e",
+  "ftQueueID": "497981fb-e60c-4e6c-b058-b6cb46a7e144",
+  "ftPosSystemId": "497981fb-e60c-4e6c-b058-b6cb46a7e144",
+  "cbTerminalID": "1",
+  "cbReceiptReference": "497981fb-e60c-4e6c-b058-b6cb46a7e144",
+  "cbReceiptMoment": "2024-01-09T10:03:22.7Z",
+  "cbChargeItems": [
+    {
+      "Position": 100,
+      "Quantity": -1.0000,
+      "Description": "Felsenkeller",
+      "Amount": -4.80000000000000000000000000,
+      "VATRate": 10.0000,
+      "ftChargeItemCase": 5283883447184523281,
+      "ftChargeItemCaseData": "",
+      "VATAmount": -0.4363636363636363636363636364,
+      "CostCenter": "4",
+      "ProductGroup": "Biere",
+      "ProductNumber": "5009",
+      "ProductBarcode": "",
+      "Unit": "Stk",
+      "Moment": "2024-05-09T10:03:11.233Z"
+    },
+    {
+
+      "Position": 200,
+      "Quantity": 1.0000,
+      "Description": "Klein",
+      "Amount": 2.00000000000000000000000000,
+      "VATRate": 10.0000,
+      "ftChargeItemCase": 5283883447184523281,
+      "ftChargeItemCaseData": "",
+      "VATAmount": 0.1818181818181818181818181818,
+      "CostCenter": "4",
+      "ProductGroup": "Pizza",
+      "ProductNumber": "40041",
+      "ProductBarcode": "",
+      "Unit": "Stk",
+      "Moment": "2024-05-09T10:03:17.173Z"
+    }
+  ],
+  "cbPayItems": [
+    {
+      "Quantity": 1.0,
+      "Description": "Bar",
+      "Amount": -2.8000,
+      "ftPayItemCase": 5283883447184523265,
+      "ftPayItemCaseData": "",
+      "CostCenter": "4",
+      "MoneyGroup": "1",
+      "MoneyNumber": ""
+    }
+  ],
+  "ftReceiptCase": 5283883447318740993,
+  "cbReceiptAmount": -2.80,
+  "cbUser": "Chef",
+  "cbArea": "1"
+}

@@ -39,5 +39,6 @@ namespace fiskaltrust.Middleware.Storage.InMemory.Repositories
         public IAsyncEnumerable<ftActionJournal> GetByPriorityAfterTimestampAsync(int lowerThanPriority, long fromTimestampInclusive) =>
             Data.Select(x => x.Value).Where(x => x.TimeStamp >= fromTimestampInclusive && x.Priority < lowerThanPriority).OrderBy(x => x.TimeStamp).ToAsyncEnumerable();
 
+        public Task<int> CountAsync() => Task.FromResult(Data.Count());
     }
 }

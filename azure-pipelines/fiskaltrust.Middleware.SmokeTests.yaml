@@ -10,7 +10,6 @@ resources:
 
     - pipeline: helpers
       source: fiskaltrust.Middleware.Helper
-      project: department-develop-research
       branch: master
 
     - pipeline: launcher-1-3
@@ -28,13 +27,13 @@ variables:
 trigger: none
 pr: none
 
-schedules:
-  - cron: 0 0 * * *
-    displayName: Nightly Run
-    branches:
-      include:
-        - main
-    always: true
+#schedules:
+#  - cron: 0 0 * * *
+#    displayName: Nightly Run
+#    branches:
+#      include:
+#        - main
+#    always: true
 
 stages:
   - template: templates/smoketests/harness.yaml

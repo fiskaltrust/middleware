@@ -67,6 +67,7 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </AndroidNativeLibrary>
     <None Include="Resources\AboutResources.txt" />
+    <None Include="version.json" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="fiskaltrust.interface" Version="1.3.40" />

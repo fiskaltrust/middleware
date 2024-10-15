@@ -12,7 +12,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
 {
     public abstract class AbstractActionJournalRepositoryTests : IDisposable
     {
-        public abstract Task<IActionJournalRepository> CreateRepository(IEnumerable<ftActionJournal> entries);
+        public abstract Task<IMiddlewareActionJournalRepository> CreateRepository(IEnumerable<ftActionJournal> entries);
         public abstract Task<IReadOnlyActionJournalRepository> CreateReadOnlyRepository(IEnumerable<ftActionJournal> entries);
 
         public virtual void DisposeDatabase() { return; }
@@ -68,6 +68,8 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             var actualEntries = await ((IMiddlewareRepository<ftActionJournal>) sut).GetByTimeStampRangeAsync(firstSearchedEntryTimeStamp, lastSearchedEntryTimeStamp).ToListAsync();
 
             actualEntries.Should().BeEquivalentTo(allEntries.Skip(1).Take(5));
+            actualEntries.Should().BeInAscendingOrder(x => x.TimeStamp);
+            actualEntries.First().TimeStamp.Should().Be(firstSearchedEntryTimeStamp);
         }
 
         [Fact]
@@ -83,6 +85,8 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             var actualEntries = await ((IMiddlewareRepository<ftActionJournal>) sut).GetEntriesOnOrAfterTimeStampAsync(firstSearchedEntryTimeStamp).ToListAsync();
 
             actualEntries.Should().BeEquivalentTo(allEntries.Skip(1));
+            actualEntries.Should().BeInAscendingOrder(x => x.TimeStamp);
+            actualEntries.First().TimeStamp.Should().Be(firstSearchedEntryTimeStamp);
         }
 
         [Fact]
@@ -101,10 +105,46 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
         }
 
         [Fact]
+        public async Task GetByTimeStampAsync_ShouldReturnAllEntries_FromAGivenTimeStamp_WithTake_ShouldReturnOnlyWithLowerPriority()
+        {
+            var fixture = StorageTestFixtureProvider.GetFixture();
+            fixture.Customize<ftActionJournal>(c => c.With(a => a.Priority, 3));
+
+            var expectedEntries = fixture.CreateMany<ftActionJournal>(10).ToList();
+            await UpdateTimestamp(expectedEntries);
+            expectedEntries = expectedEntries.OrderBy(x => x.TimeStamp).ToList();
+            expectedEntries[3].Priority = 0;
+            expectedEntries[4].Priority = 1;
+            expectedEntries[5].Priority = 2;
+            var sut = await CreateRepository(expectedEntries);
+
+            var firstSearchedEntryTimeStamp = expectedEntries[3].TimeStamp;
+
+            var actualEntries = await ((IMiddlewareActionJournalRepository) sut).GetByPriorityAfterTimestampAsync(3, firstSearchedEntryTimeStamp).ToListAsync();
+
+            actualEntries.Should().BeEquivalentTo(expectedEntries.Skip(3).Take(3));
+        }
+
+        [Fact]
         public async Task InsertAsync_ShouldAddEntry_ToTheDatabase()
         {
             var entries = StorageTestFixtureProvider.GetFixture().CreateMany<ftActionJournal>(10).ToList();
             var entryToInsert = StorageTestFixtureProvider.GetFixture().Create<ftActionJournal>();
+
+            var sut = await CreateRepository(entries);
+            await sut.InsertAsync(entryToInsert);
+
+            var insertedEntry = await sut.GetAsync(entryToInsert.ftActionJournalId);
+            insertedEntry.Should().BeEquivalentTo(entryToInsert);
+        }
+
+        [Fact]
+        public async Task InsertAsync_ShouldAddHugeEntry_ToTheDatabase()
+        {
+            var entries = StorageTestFixtureProvider.GetFixture().CreateMany<ftActionJournal>(10).ToList();
+            var entryToInsert = StorageTestFixtureProvider.GetFixture().Create<ftActionJournal>();
+            entryToInsert.DataBase64 = string.Join(string.Empty, StorageTestFixtureProvider.GetFixture().CreateMany<char>(40_000));
+            entryToInsert.DataJson = string.Join(string.Empty, StorageTestFixtureProvider.GetFixture().CreateMany<char>(40_000));
 
             var sut = await CreateRepository(entries);
             await sut.InsertAsync(entryToInsert);
@@ -138,6 +178,16 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
 
             var insertedEntry = await sut.GetAsync(entryToInsert.ftActionJournalId);
             insertedEntry.TimeStamp.Should().BeGreaterThan(initialTimeStamp);
+        }
+
+        [Fact]
+        public async Task CountAsync_ShouldReturnValidCount()
+        {
+            var entries = StorageTestFixtureProvider.GetFixture().CreateMany<ftActionJournal>(8).ToList();
+            var sut = await CreateRepository(entries);
+
+            var count = await sut.CountAsync();
+            count.Should().Be(8);
         }
 
         private static async Task UpdateTimestamp(List<ftActionJournal> expectedEntries)

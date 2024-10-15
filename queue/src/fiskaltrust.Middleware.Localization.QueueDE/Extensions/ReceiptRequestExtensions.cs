@@ -109,7 +109,12 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
         {
             return ((receiptRequest.ftReceiptCase & 0x0000_0000_0000_FFFF) == 0x0000_0000_0000_000B);
         }
-        
+
+        public static bool IsMigrationReceipt(this ReceiptRequest receiptRequest)
+        {
+            return ((receiptRequest.ftReceiptCase & 0x0000_0000_0000_FFFF) == 0x0000_0000_0000_0019);
+        }
+
         public static bool IsVoid(this ReceiptRequest receiptRequest)
         {
             return (receiptRequest.ftReceiptCase & 0x0000_0000_0004_0000) > 0x0000;

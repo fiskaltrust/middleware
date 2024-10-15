@@ -16,6 +16,7 @@ using fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser.Logs;
 using fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser.Logs.Models;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
 {
@@ -72,7 +73,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
 
                 if (!_fccDownloadService.IsInstalled(_fccDirectory))
                 {
-                    if (_fccDownloadService.DownloadFccAsync(_fccDirectory).Result)
+                    if (_fccDownloadService.DownloadFccAsync(_fccDirectory, null).Result)
                     {
                         _fccInitializationService.Initialize(_fccDirectory);
                         _version = new Version(_configuration.FccVersion);
@@ -80,7 +81,8 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
                 }
                 else if (!_fccDownloadService.IsLatestVersion(_fccDirectory, new Version(_configuration.FccVersion)))
                 {
-                    if (_fccDownloadService.DownloadFccAsync(_fccDirectory).Result)
+                    var currentlyInstalledVersion = _fccDownloadService.UsedFCCVersion;
+                    if (_fccDownloadService.DownloadFccAsync(_fccDirectory, currentlyInstalledVersion).Result)
                     {
                         _fccInitializationService.Update(_fccDirectory);
                     }
@@ -93,10 +95,8 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
                 {
                     _fccInitializationService.Initialize(_fccDirectory);
                 }
-                if (_configuration.FccHeapMemory.HasValue)
-                {
-                    ConfigHelper.SetFccHeapMemoryForRunScript(_fccDirectory, _configuration.FccHeapMemory.Value);
-                }
+                ConfigHelper.SetConfiguration(_configuration, _fccDirectory);
+
                 if (_version == null)
                 {
                     _version = _fccDownloadService.UsedFCCVersion;
@@ -265,6 +265,12 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
                     CurrentStartedTransactionNumbers = startedTransactions.Select(x => (ulong) x.TransactionNumber).ToList(),
                     CurrentState = activeKey.state.ToTseState(),
                 };
+
+                if(_configuration.EnableFccMetrics)
+                {
+                    var metrics = await _fccProcessHost.QueryMetrics();
+                    _logger.LogDebug($"FCC Metrics: {JToken.Parse(metrics).ToString(Formatting.Indented)}");
+                }
                 return _lastTseInfo;
             }
             catch (Exception ex)
