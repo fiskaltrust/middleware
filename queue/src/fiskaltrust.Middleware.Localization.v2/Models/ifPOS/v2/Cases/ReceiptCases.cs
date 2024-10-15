@@ -1,4 +1,4 @@
-﻿namespace fiskaltrust.Middleware.Localization.v2.Interface;
+﻿namespace fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 
 public enum ReceiptCases : long
 {
