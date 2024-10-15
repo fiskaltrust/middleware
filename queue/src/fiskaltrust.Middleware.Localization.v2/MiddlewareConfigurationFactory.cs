@@ -1,5 +1,4 @@
-﻿using fiskaltrust.Middleware.Contracts.Models;
-using fiskaltrust.storage.V0;
+﻿using fiskaltrust.storage.V0;
 using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Localization.v2;

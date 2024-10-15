@@ -13,8 +13,6 @@ public class QueuePTBootstrapper : IV2QueueBootstrapper
 {
     private readonly Queue _queue;
 
-    private static string GetServiceFolder() => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "fiskaltrust", "service");
-
     public QueuePTBootstrapper(Guid id, ILoggerFactory loggerFactory, Dictionary<string, object> configuration)
     {
         var middlewareConfiguration = MiddlewareConfigurationFactory.CreateMiddlewareConfiguration(id, configuration);

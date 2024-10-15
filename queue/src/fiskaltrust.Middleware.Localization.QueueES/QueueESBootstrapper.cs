@@ -15,7 +15,6 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
 {
     private readonly Queue _queue;
 
-
     public QueueESBootstrapper(Guid id, ILoggerFactory loggerFactory, Dictionary<string, object> configuration)
     {
         var middlewareConfiguration = MiddlewareConfigurationFactory.CreateMiddlewareConfiguration(id, configuration);

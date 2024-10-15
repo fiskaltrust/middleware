@@ -12,7 +12,6 @@ using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.Security;
 
 namespace fiskaltrust.Middleware.Localization.v2.Helpers;
-
 public class CryptoHelper
 {
     private const string ES256_JWS_HEADER = "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9";

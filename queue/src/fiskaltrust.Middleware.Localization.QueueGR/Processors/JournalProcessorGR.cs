@@ -1,11 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using fiskaltrust.ifPOS.v1;
-using fiskaltrust.Middleware.Contracts.Interfaces;
+﻿using fiskaltrust.ifPOS.v1;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.Processors;
 
-public class JournalProcessorGR : IMarketSpecificJournalProcessor
+public class JournalProcessorGR 
 {
     public IAsyncEnumerable<JournalResponse> ProcessAsync(JournalRequest request)
     {

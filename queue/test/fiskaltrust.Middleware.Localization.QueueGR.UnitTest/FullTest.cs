@@ -1,9 +1,7 @@
-﻿using fiskaltrust.Api.POS.Models.ifPOS.v2;
-using fiskaltrust.storage.serialization.V0;
-using fiskaltrust.storage.V0;
-using FluentAssertions;
+﻿using System.Text.Json;
+using fiskaltrust.Api.POS.Models.ifPOS.v2;
+using fiskaltrust.Middleware.Localization.v2.Configuration;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using Xunit;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
@@ -27,7 +25,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
                         throw new Exception($"The configuration for {cashBoxId} is empty and therefore not valid.");
                     }
 
-                    var configuration = JsonConvert.DeserializeObject<ftCashBoxConfiguration>(content);
+                    var configuration = JsonSerializer.Deserialize<ftCashBoxConfiguration>(content) ?? throw new Exception($"The configuration for {cashBoxId} is empty and therefore not valid.");
                     configuration.TimeStamp = DateTime.UtcNow.Ticks;
                     return configuration;
                 }
@@ -45,9 +43,9 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             var accessToken = "BEY4hxE27GCNO+N074huiQUj0Vra/hUGVyYBIn34NEo765YGjOf0OACyLLvHh3N5cEXcs5TJhB4bl6U66CKU/W4=";
 
             var configuration = await GetConfigurationAsync(cashBoxId, accessToken);
-            var queue = configuration.ftQueues.First();
+            var queue = configuration.ftQueues?.First() ?? throw new Exception($"The configuration for {cashBoxId} is empty and therefore not valid.");
 
-            var bootstrapper = new QueueGRBootstrapper(queue.Id, new LoggerFactory(), queue.Configuration);
+            var bootstrapper = new QueueGRBootstrapper(queue.Id, new LoggerFactory(), queue.Configuration ?? new Dictionary<string, object>());
             var signMethod = bootstrapper.RegisterForSign();
 
             //var initialOperationRequest = InitialOperation(cashBoxId);
