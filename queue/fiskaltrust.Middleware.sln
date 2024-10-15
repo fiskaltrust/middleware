@@ -161,6 +161,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.Loca
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.Localization.QueueGR.UnitTest", "test\fiskaltrust.Middleware.Localization.QueueGR.UnitTest\fiskaltrust.Middleware.Localization.QueueGR.UnitTest.csproj", "{6041CD04-8361-450C-91E7-6275DBF4C17B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fiskaltrust.Middleware.Localization.QueueES.UnitTest", "test\fiskaltrust.Middleware.Localization.QueueES.UnitTest\fiskaltrust.Middleware.Localization.QueueES.UnitTest.csproj", "{EA9BED33-E964-4770-8CD8-9A90D6273996}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -411,6 +413,10 @@ Global
 		{6041CD04-8361-450C-91E7-6275DBF4C17B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6041CD04-8361-450C-91E7-6275DBF4C17B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6041CD04-8361-450C-91E7-6275DBF4C17B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EA9BED33-E964-4770-8CD8-9A90D6273996}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EA9BED33-E964-4770-8CD8-9A90D6273996}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EA9BED33-E964-4770-8CD8-9A90D6273996}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EA9BED33-E964-4770-8CD8-9A90D6273996}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -485,6 +491,7 @@ Global
 		{AE95A622-FB4B-4C98-A0A3-725C52A736AF} = {5195B05E-EB55-4544-8FE6-B683747B1F9E}
 		{C823688D-1812-4864-BDDC-8BF5E45FEC18} = {095CBF40-606D-4CC5-91E3-D009C271BC16}
 		{6041CD04-8361-450C-91E7-6275DBF4C17B} = {16BF88B4-3302-49F5-A5FA-5DA96DD03F0E}
+		{EA9BED33-E964-4770-8CD8-9A90D6273996} = {16BF88B4-3302-49F5-A5FA-5DA96DD03F0E}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {E8BEA609-BD83-4165-A14A-D010D2CC87AD}

@@ -39,14 +39,14 @@ public class MyDataApiClient : IGRSSCD
         if (response.IsSuccessStatusCode)
         {
             var ersult = GetResponse(content);
-            if(ersult != null)
+            if (ersult != null)
             {
                 var data = ersult.response[0];
-                for(var i = 0; i < data.ItemsElementName.Length; i++)
+                for (var i = 0; i < data.ItemsElementName.Length; i++)
                 {
                     if (data.ItemsElementName[i] == ItemsChoiceType.qrUrl)
                     {
-                        request.ReceiptResponse.AddSignatureItem(CreatePTQRCode(data.Items[i].ToString()));
+                        request.ReceiptResponse.AddSignatureItem(CreateGRQRCode(data.Items[i].ToString()));
                     }
                     else
                     {
@@ -77,7 +77,7 @@ public class MyDataApiClient : IGRSSCD
         };
     }
 
-    public static SignatureItem CreatePTQRCode(string qrCode)
+    public static SignatureItem CreateGRQRCode(string qrCode)
     {
         return new SignatureItem()
         {
