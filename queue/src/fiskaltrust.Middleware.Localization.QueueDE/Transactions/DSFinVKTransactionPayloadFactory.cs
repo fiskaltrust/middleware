@@ -51,7 +51,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Transactions
                         ? item.Amount / item.Quantity
                         : 0;
                     
-                    var itemquantity = item.Amount <= 0  && item.Quantity >= 0 ? item.Quantity * -1 : item.Quantity;
+                    var itemquantity = item.Amount < 0  && item.Quantity > 0 ? item.Quantity * -1 : item.Quantity;
                     payloadStringBuilder.AppendFormat(CultureInfo.InvariantCulture, "{0:0.##########}", itemquantity);
                     payloadStringBuilder.Append(";\"");
                     payloadStringBuilder.Append(item.Description.Replace("\"", "\"\""));
