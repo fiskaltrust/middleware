@@ -74,10 +74,24 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Tests.Mapping
             {
                 "This is the first chunk",
                 "This is the second chunk",
-                "This is the third chunk"
+                "This is the third chunk",
+                "This is the fourth chunk",
+                "This is the fifth chunk",
+                "This is the sixth chunk",
+                "This is the seventh chunk",
+                "This is the eighth chunk",
+                "This is the ninth chunk",
+                "This is the tenth chunk",
+                "This is the eleventh chunk",
+                "This is the twelfth chunk",
+                "This is the thirteenth chunk",
+                "This is the fourteenth chunk",
+                "This is the fifteenth chunk",
+                "This is the sixteenth chunk",
+                "This is the seventeenth chunk",
             };
             var chunkCount = chunks.Length;
-            for (var i = 0; i < chunkCount; i++)
+            foreach (var (i, chunk) in chunks.Select((x, i) => (i, x)).Reverse())
             {
                 var chunkProperty = $"{property}_oversize_{i}";
                 entity[chunkProperty] = chunks[i];

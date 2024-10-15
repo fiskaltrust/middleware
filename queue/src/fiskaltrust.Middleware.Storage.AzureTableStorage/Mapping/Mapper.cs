@@ -50,10 +50,11 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             }
             else
             {
+                var marker = $"{property}_{OVERSIZED_MARKER}_{{0}}";
                 var reqSb = new StringBuilder();
-                foreach (var key in entity.Keys.Where(x => x.StartsWith($"{property}_{OVERSIZED_MARKER}_")))
+                for (var i = 0; entity.ContainsKey(string.Format(marker, i)); i++)
                 {
-                    reqSb.Append(entity[key]);
+                    reqSb.Append(entity[string.Format(marker, i)]);
                 }
                 return reqSb.ToString();
             }
