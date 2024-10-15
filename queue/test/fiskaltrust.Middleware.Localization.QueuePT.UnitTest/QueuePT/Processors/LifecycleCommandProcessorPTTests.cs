@@ -14,7 +14,7 @@ using Xunit;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processors
 {
-    public class LifecyclCommandProcessorPTTests
+    public class LifecycleCommandProcessorPTTests
     {
         private readonly LifecycleCommandProcessorPT _sut = new(Mock.Of<IConfigurationRepository>());
 
