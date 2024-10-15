@@ -5,7 +5,7 @@ using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueueES.ESSSCD;
 using fiskaltrust.Middleware.Localization.QueueES.Processors;
 using fiskaltrust.Middleware.Localization.v2.Interface;
-using fiskaltrust.Middleware.Localization.v2.v2;
+using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Storage;
 using fiskaltrust.Middleware.Storage.ES;
 using fiskaltrust.storage.V0;

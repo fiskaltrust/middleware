@@ -5,7 +5,7 @@ using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueuePT.Processors;
 using fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
 using fiskaltrust.Middleware.Localization.v2.Interface;
-using fiskaltrust.Middleware.Localization.v2.v2;
+using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Storage;
 using fiskaltrust.Middleware.Storage.PT;
 using fiskaltrust.storage.V0;
@@ -159,7 +159,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
             result.actionJournals.Should().BeEmpty();
             result.receiptResponse.ftSignatures.Should().NotBeEmpty();
 
-           
+
             result.receiptResponse.ftState.Should().Be(0x5054_2000_0000_0000, because: $"ftState {result.receiptResponse.ftState.ToString("X")} is different than expected.");
             var expectedSignaturItem = new SignatureItem
             {

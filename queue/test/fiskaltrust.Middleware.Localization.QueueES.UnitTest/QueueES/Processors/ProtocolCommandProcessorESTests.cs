@@ -1,7 +1,7 @@
 ﻿using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueueES.Processors;
 using fiskaltrust.Middleware.Localization.v2.Interface;
-using fiskaltrust.Middleware.Localization.v2.v2;
+using fiskaltrust.Middleware.Localization.v2;
 using FluentAssertions;
 using Xunit;
 
@@ -24,7 +24,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             var queueItem = TestHelpers.CreateQueueItem();
             var receiptRequest = new ReceiptRequest
             {
-                ftReceiptCase = (int)receiptCase
+                ftReceiptCase = (int) receiptCase
             };
             var receiptResponse = new ReceiptResponse
             {

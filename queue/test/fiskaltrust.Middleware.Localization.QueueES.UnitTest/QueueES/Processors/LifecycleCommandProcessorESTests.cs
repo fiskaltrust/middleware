@@ -3,7 +3,7 @@ using fiskaltrust.Middleware.Localization.QueueES.Models;
 using fiskaltrust.Middleware.Localization.QueueES.Processors;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Storage;
-using fiskaltrust.Middleware.Localization.v2.v2;
+using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
 using FluentAssertions.Execution;
@@ -30,7 +30,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             var receiptRequest = new ReceiptRequest
             {
                 ftCashBoxID = Guid.NewGuid(),
-                ftReceiptCase = (int)receiptCase
+                ftReceiptCase = (int) receiptCase
             };
             var receiptResponse = new ReceiptResponse
             {
@@ -90,7 +90,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             var receiptRequest = new ReceiptRequest
             {
                 ftCashBoxID = Guid.NewGuid(),
-                ftReceiptCase = 0x4752_2000_0000_0000 | (long)ReceiptCases.InitialOperationReceipt0x4001
+                ftReceiptCase = 0x4752_2000_0000_0000 | (long) ReceiptCases.InitialOperationReceipt0x4001
             };
             var receiptResponse = new ReceiptResponse
             {
@@ -120,7 +120,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             {
                 Caption = "Initial-operation receipt",
                 Data = $"Queue-ID: {queue.ftQueueId}",
-                ftSignatureFormat = (int)ifPOS.v1.SignaturItem.Formats.Text,
+                ftSignatureFormat = (int) ifPOS.v1.SignaturItem.Formats.Text,
                 ftSignatureType = 0x4752_2000_0001_1001
             };
 
@@ -173,7 +173,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             var receiptRequest = new ReceiptRequest
             {
                 ftCashBoxID = Guid.NewGuid(),
-                ftReceiptCase = 0x4752_2000_0000_0000 | (long)ReceiptCases.OutOfOperationReceipt0x4002
+                ftReceiptCase = 0x4752_2000_0000_0000 | (long) ReceiptCases.OutOfOperationReceipt0x4002
             };
             var receiptResponse = new ReceiptResponse
             {
@@ -201,7 +201,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             var expectedSignaturItem = new SignatureItem
             {
                 ftSignatureType = 0x4752_2000_0001_1002,
-                ftSignatureFormat = (int)ifPOS.v1.SignaturItem.Formats.Text,
+                ftSignatureFormat = (int) ifPOS.v1.SignaturItem.Formats.Text,
                 Caption = "Out-of-operation receipt",
                 Data = $"Queue-ID: {queue.ftQueueId}"
             };
@@ -253,7 +253,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             var receiptRequest = new ReceiptRequest
             {
                 ftCashBoxID = Guid.NewGuid(),
-                ftReceiptCase = 0x4752_2000_0000_0000 | (long)ReceiptCases.InitialOperationReceipt0x4001
+                ftReceiptCase = 0x4752_2000_0000_0000 | (long) ReceiptCases.InitialOperationReceipt0x4001
             };
             var receiptResponse = new ReceiptResponse
             {
@@ -288,7 +288,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             var receiptRequest = new ReceiptRequest
             {
                 ftCashBoxID = Guid.NewGuid(),
-                ftReceiptCase = 0x4752_2000_0000_0000 | (long)ReceiptCases.InitialOperationReceipt0x4001
+                ftReceiptCase = 0x4752_2000_0000_0000 | (long) ReceiptCases.InitialOperationReceipt0x4001
             };
             var receiptResponse = new ReceiptResponse
             {

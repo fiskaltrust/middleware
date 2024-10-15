@@ -1,7 +1,7 @@
 ﻿using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueuePT.Processors;
 using fiskaltrust.Middleware.Localization.v2.Interface;
-using fiskaltrust.Middleware.Localization.v2.v2;
+using fiskaltrust.Middleware.Localization.v2;
 using FluentAssertions;
 using Xunit;
 

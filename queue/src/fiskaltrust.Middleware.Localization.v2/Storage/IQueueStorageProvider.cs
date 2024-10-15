@@ -10,7 +10,7 @@ namespace fiskaltrust.Middleware.Localization.v2.Storage
         Task FinishQueueItem(ftQueueItem queueItem, ReceiptResponse receiptResponse);
         Task<long> GetCurrentRow();
         Task<ftQueueItem?> GetExistingQueueItemOrNullAsync(ReceiptRequest data);
-        Task<long> GetNextQueueRow();
+        Task<long> IncrementQueueRow();
         Task<ftQueue> GetQueueAsync();
         Task<long> GetReceiptNumerator();
         Task<ftReceiptJournal> InsertReceiptJournal(ftQueueItem queueItem, ReceiptRequest receiptrequest);

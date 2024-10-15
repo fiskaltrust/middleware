@@ -57,7 +57,7 @@ public class QueueStorageProvider : IQueueStorageProvider
             cbReceiptMoment = receiptRequest.cbReceiptMoment,
             cbTerminalID = receiptRequest.cbTerminalID,
             cbReceiptReference = receiptRequest.cbReceiptReference,
-            ftQueueRow = await GetNextQueueRow(),
+            ftQueueRow = await IncrementQueueRow(),
             country = receiptRequest.GetCountry(),
             version = "v2",
             request = System.Text.Json.JsonSerializer.Serialize(receiptRequest),
@@ -107,7 +107,7 @@ public class QueueStorageProvider : IQueueStorageProvider
         _cachedQueue = queue;
     }
 
-    public async Task<long> GetNextQueueRow()
+    public async Task<long> IncrementQueueRow()
     {
         _cachedQueue ??= await GetQueueAsync();
         var queue = _cachedQueue;

@@ -1,7 +1,7 @@
 ﻿using fiskaltrust.Middleware.Localization.QueueES.ESSSCD;
 using fiskaltrust.Middleware.Localization.QueueES.Interface;
 using fiskaltrust.Middleware.Localization.v2.Interface;
-using fiskaltrust.Middleware.Localization.v2.v2;
+using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Storage.ES;
 using fiskaltrust.storage.V0;
 

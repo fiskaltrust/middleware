@@ -6,7 +6,7 @@ using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD;
 using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.myDataSCU;
 using fiskaltrust.Middleware.Localization.QueueGR.Processors;
 using fiskaltrust.Middleware.Localization.v2.Interface;
-using fiskaltrust.Middleware.Localization.v2.v2;
+using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Storage;
 using fiskaltrust.Middleware.Storage.GR;
 using fiskaltrust.storage.V0;
@@ -36,7 +36,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
             };
             var receiptResponse = new ReceiptResponse
             {
-                ftState = 0x4752_2000_0000_0000,               
+                ftState = 0x4752_2000_0000_0000,
                 ftCashBoxIdentification = "cashBoxIdentification",
                 ftQueueID = Guid.NewGuid(),
                 ftQueueItemID = Guid.NewGuid(),
@@ -155,7 +155,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
             result.actionJournals.Should().BeEmpty();
             result.receiptResponse.ftSignatures.Should().NotBeEmpty();
 
-           
+
             result.receiptResponse.ftState.Should().Be(0x4752_2000_0000_0000, because: $"ftState {result.receiptResponse.ftState.ToString("X")} is different than expected.");
             var expectedSignaturItem = new SignatureItem
             {

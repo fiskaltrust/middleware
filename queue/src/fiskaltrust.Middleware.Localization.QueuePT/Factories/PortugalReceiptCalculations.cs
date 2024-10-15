@@ -1,6 +1,6 @@
 ﻿using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueuePT.Models;
-using fiskaltrust.Middleware.Localization.v2.v2;
+using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Storage.PT;
 using Org.BouncyCastle.Asn1.Ocsp;
 
@@ -42,7 +42,7 @@ public static class PortugalReceiptCalculations
             DocumentType = InvoiceType.SimplifiedInvoice,
             DocumentStatus = InvoiceStatus.Normal,
             DocumentDate = request.cbReceiptMoment,
-            UniqueIdentificationOfTheDocument = receiptResponse.ftReceiptIdentification, 
+            UniqueIdentificationOfTheDocument = receiptResponse.ftReceiptIdentification,
             ATCUD = queuePT.ATCUD,
             TaxCountryRegion = queuePT.TaxRegion,
             TaxableBasisOfVAT_ExemptRate = exemptChargeItems.Sum(x => x.Amount),

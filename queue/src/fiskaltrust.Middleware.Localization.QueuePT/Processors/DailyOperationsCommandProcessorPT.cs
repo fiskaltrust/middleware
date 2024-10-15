@@ -1,6 +1,6 @@
 ﻿using fiskaltrust.Middleware.Localization.QueuePT.Interface;
 using fiskaltrust.Middleware.Localization.v2.Interface;
-using fiskaltrust.Middleware.Localization.v2.v2;
+using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Processors;

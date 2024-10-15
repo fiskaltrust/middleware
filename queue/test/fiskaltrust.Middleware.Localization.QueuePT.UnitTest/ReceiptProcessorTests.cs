@@ -1,7 +1,7 @@
 ﻿using System.Threading.Tasks;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.v2;
-using fiskaltrust.Middleware.Localization.v2.v2;
+using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;

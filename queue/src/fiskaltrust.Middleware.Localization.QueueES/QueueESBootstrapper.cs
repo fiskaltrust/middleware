@@ -23,11 +23,13 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
 
         var signaturCreationUnitES = new ftSignaturCreationUnitES();
         var esSSCD = new InMemorySCU(signaturCreationUnitES);
+
         var storageProvider = new AzureStorageProvider(loggerFactory, id, configuration);
         var queueStorageProvider = new QueueStorageProvider(id, storageProvider);
 
         var signProcessorES = new ReceiptProcessor(loggerFactory.CreateLogger<ReceiptProcessor>(), new LifecycleCommandProcessorES(queueStorageProvider), new ReceiptCommandProcessorES(esSSCD, queueES, signaturCreationUnitES), new DailyOperationsCommandProcessorES(), new InvoiceCommandProcessorES(), new ProtocolCommandProcessorES());
         var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, signProcessorES.ProcessAsync, queueES.CashBoxIdentification, middlewareConfiguration);
+
         _queue = new Queue(signProcessor, loggerFactory)
         {
             Id = id,

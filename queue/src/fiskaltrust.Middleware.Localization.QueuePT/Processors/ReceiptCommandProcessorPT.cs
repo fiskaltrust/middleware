@@ -2,7 +2,7 @@
 using fiskaltrust.Middleware.Localization.QueuePT.Interface;
 using fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
 using fiskaltrust.Middleware.Localization.v2.Interface;
-using fiskaltrust.Middleware.Localization.v2.v2;
+using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Storage.PT;
 using fiskaltrust.storage.V0;
 
@@ -48,7 +48,7 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignat
         response.ReceiptResponse.ftReceiptIdentification = "FS " + _queuePT.SimplifiedInvoiceSeries + "/" + (++_queuePT.SimplifiedInvoiceSeriesNumerator).ToString().PadLeft(4, '0');
         var qrCode = PortugalReceiptCalculations.CreateSimplifiedInvoiceQRCodeAnonymousCustomer(hash, _queuePT, _signaturCreationUnitPT, request.ReceiptRequest, response.ReceiptResponse);
         response.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreatePTQRCode(qrCode));
-        _queuePT.LastHash = hash;    
+        _queuePT.LastHash = hash;
         return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
     }
 

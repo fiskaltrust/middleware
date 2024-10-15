@@ -3,7 +3,7 @@ using fiskaltrust.Middleware.Localization.QueueGR.Models;
 using fiskaltrust.Middleware.Localization.QueueGR.Processors;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Storage;
-using fiskaltrust.Middleware.Localization.v2.v2;
+using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
 using FluentAssertions.Execution;

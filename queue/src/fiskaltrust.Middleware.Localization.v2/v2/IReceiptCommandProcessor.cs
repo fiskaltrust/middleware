@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 
-namespace fiskaltrust.Middleware.Localization.v2.v2;
+namespace fiskaltrust.Middleware.Localization.v2;
 
 public interface IReceiptCommandProcessor
 {
