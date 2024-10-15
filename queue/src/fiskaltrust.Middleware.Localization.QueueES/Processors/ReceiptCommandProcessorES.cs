@@ -4,6 +4,7 @@ using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Storage.ES;
 using fiskaltrust.storage.V0;
+using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.Processors;
 
@@ -21,7 +22,7 @@ public class ReceiptCommandProcessorES(IESSSCD sscd, ftQueueES queueES, ftSignat
         switch (receiptCase)
         {
             case (int) ReceiptCases.UnknownReceipt0x0000:
-                return await UnknownReceipt0x0000Async(request);
+                return await UnknownReceipt0x0000Async(request).ConfigureAwait(false);
             case (int) ReceiptCases.PointOfSaleReceipt0x0001:
                 return await PointOfSaleReceipt0x0001Async(request);
             case (int) ReceiptCases.PaymentTransfer0x0002:

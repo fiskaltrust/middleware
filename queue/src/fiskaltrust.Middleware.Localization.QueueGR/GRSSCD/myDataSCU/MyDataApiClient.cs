@@ -4,6 +4,7 @@ using System.Xml.Serialization;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueueGR.Interface;
 using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using Org.BouncyCastle.Asn1.Ocsp;
 
 #pragma warning disable

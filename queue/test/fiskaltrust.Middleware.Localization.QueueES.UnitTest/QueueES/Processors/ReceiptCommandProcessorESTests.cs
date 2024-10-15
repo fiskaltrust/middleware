@@ -13,6 +13,7 @@ using FluentAssertions;
 using FluentAssertions.Execution;
 using Moq;
 using Xunit;
+using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processors
 {
