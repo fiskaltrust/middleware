@@ -44,7 +44,7 @@ public class QueueStorageProvider : IQueueStorageProvider
         await _configurationRepository.InsertOrUpdateQueueAsync(queue).ConfigureAwait(false);
     }
 
-    public async Task<ftQueueItem> ReserverNextQueueItem(ReceiptRequest receiptRequest)
+    public async Task<ftQueueItem> ReserveNextQueueItem(ReceiptRequest receiptRequest)
     {
         _cachedQueue ??= await GetQueueAsync();
 
@@ -85,16 +85,10 @@ public class QueueStorageProvider : IQueueStorageProvider
 
     public async Task<ftQueue> GetQueueAsync()
     {
-        var checks = 0;
-        while (!_storageProvider.IsInitialized)
+        await Task.WhenAny(Task.Delay(TimeSpan.FromMinutes(5)), _storageProvider.Initialized);
+        if (!_storageProvider.Initialized.IsCompleted)
         {
-            if (checks > 500)
-            {
-                throw new Exception("Storage provider is not initialized yet.");
-            }
-
-            await Task.Delay(1000);
-            checks++;
+            throw new Exception("Storage provider is not initialized yet.");
         }
         _cachedQueue ??= await _configurationRepository.GetQueueAsync(_queueId);
         return _cachedQueue;

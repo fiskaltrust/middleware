@@ -14,7 +14,7 @@ namespace fiskaltrust.Middleware.Localization.v2.Storage
         Task<ftQueue> GetQueueAsync();
         Task<long> GetReceiptNumerator();
         Task<ftReceiptJournal> InsertReceiptJournal(ftQueueItem queueItem, ReceiptRequest receiptrequest);
-        Task<ftQueueItem> ReserverNextQueueItem(ReceiptRequest receiptRequest);
+        Task<ftQueueItem> ReserveNextQueueItem(ReceiptRequest receiptRequest);
     }
 
     public interface ILocalizedQueueStorageProvider

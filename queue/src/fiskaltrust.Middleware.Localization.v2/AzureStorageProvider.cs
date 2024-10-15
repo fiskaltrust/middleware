@@ -25,11 +25,13 @@ public class AzureStorageProvider : BaseStorageBootStrapper, IStorageProvider
     private readonly TableServiceClient _tableServiceClient;
     private readonly BlobServiceClient _blobServiceClient;
 
-    public bool IsInitialized { get; private set; }
+    private readonly TaskCompletionSource _initializedCompletionSource;
+    public Task Initialized => _initializedCompletionSource.Task;
 
     public AzureStorageProvider(ILoggerFactory loggerFactory, Guid id, Dictionary<string, object> configuration)
     {
         _configuration = configuration;
+        _initializedCompletionSource = new TaskCompletionSource();
         _tableStorageConfiguration = AzureTableStorageConfiguration.FromConfigurationDictionary(configuration);
         _queueConfiguration = new QueueConfiguration { QueueId = id };
         _logger = loggerFactory.CreateLogger<IMiddlewareBootstrapper>();
@@ -97,11 +99,12 @@ public class AzureStorageProvider : BaseStorageBootStrapper, IStorageProvider
                 new AzureTableStorageAccountMasterDataRepository(_queueConfiguration, _tableServiceClient), new AzureTableStorageOutletMasterDataRepository(_queueConfiguration, _tableServiceClient),
                 new AzureTableStorageAgencyMasterDataRepository(_queueConfiguration, _tableServiceClient), new AzureTableStoragePosSystemMasterDataRepository(_queueConfiguration, _tableServiceClient)).ConfigureAwait(false);
             await PersistConfigurationAsync(baseStorageConfig, configurationRepository, _logger).ConfigureAwait(false);
-            IsInitialized = true;
+            _initializedCompletionSource.SetResult();
         }
         catch (Exception e)
         {
             _logger.LogError(e, "Error during initialization of the AzureStorageProvider.");
+            _initializedCompletionSource.SetException(e);
         }
     }
 }
