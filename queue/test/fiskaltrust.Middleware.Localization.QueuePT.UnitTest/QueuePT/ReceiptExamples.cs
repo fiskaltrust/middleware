@@ -1,6 +1,6 @@
-﻿using fiskaltrust.ifPOS.v1;
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 using System;
+using fiskaltrust.Api.POS.Models.ifPOS.v2;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT;
 
@@ -30,8 +30,8 @@ public static class ReceiptExamples
 
     public static ReceiptRequest CASH_SALES_RECEIPT = new ReceiptRequest
     {
-        ftCashBoxID = Guid.NewGuid().ToString(),
-        ftPosSystemId = Guid.Empty.ToString(),
+        ftCashBoxID = Guid.NewGuid(),
+        ftPosSystemId = Guid.Empty,
         cbTerminalID = "00010001",
         cbReceiptReference = "0001-0002",
         cbUser = "user",
@@ -70,8 +70,8 @@ public static class ReceiptExamples
 
     public static ReceiptRequest DEBIT_SALES_RECEIPT = new ReceiptRequest
     {
-        ftCashBoxID = Guid.NewGuid().ToString(),
-        ftPosSystemId = Guid.Empty.ToString(),
+        ftCashBoxID = Guid.NewGuid(),
+        ftPosSystemId = Guid.Empty,
         cbTerminalID = "00010001",
         cbReceiptReference = "0001-0002",
         cbUser = "user",
@@ -110,8 +110,8 @@ public static class ReceiptExamples
 
     public static ReceiptRequest MULTIPLE_PAYITEMS_SALES_RECEIPT = new ReceiptRequest
     {
-        ftCashBoxID = Guid.NewGuid().ToString(),
-        ftPosSystemId = Guid.Empty.ToString(),
+        ftCashBoxID = Guid.NewGuid(),
+        ftPosSystemId = Guid.Empty,
         cbTerminalID = "00010001",
         cbReceiptReference = "0001-0002",
         cbUser = "user",

@@ -14,18 +14,19 @@ public interface IJournalProcessor
 {
     IAsyncEnumerable<JournalResponse> ProcessAsync(JournalRequest request);
 }
+
 public class JournalProcessor : IJournalProcessor
 {
     private readonly IReadOnlyConfigurationRepository _configurationRepository;
     private readonly IMiddlewareRepository<ftQueueItem> _queueItemRepository;
     private readonly IMiddlewareRepository<ftReceiptJournal> _receiptJournalRepository;
     private readonly IMiddlewareRepository<ftActionJournal> _actionJournalRepository;
-    private readonly IMarketSpecificJournalProcessor _marketSpecificJournalProcessor;
+    private readonly IJournalProcessor _marketSpecificJournalProcessor;
     private readonly ILogger<JournalProcessor> _logger;
 
     public JournalProcessor(
         IStorageProvider storageProvider,
-        IMarketSpecificJournalProcessor marketSpecificJournalProcessor,
+        IJournalProcessor marketSpecificJournalProcessor,
         ILogger<JournalProcessor> logger)
     {
         _configurationRepository = storageProvider.GetConfigurationRepository();

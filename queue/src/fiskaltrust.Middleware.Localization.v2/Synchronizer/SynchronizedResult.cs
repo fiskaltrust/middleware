@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Runtime.ExceptionServices;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using System.Runtime.ExceptionServices;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
 
 namespace fiskaltrust.Middleware.Localization.v2.Synchronizer

@@ -1,17 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using fiskaltrust.ifPOS.v1;
+﻿using System.Text.Json;
+using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueuePT.Exports.SAFTPT.SAFTSchemaPT10401.HeaderContracts;
 using fiskaltrust.Middleware.Localization.QueuePT.Exports.SAFTPT.SAFTSchemaPT10401.MasterFileContracts;
 using fiskaltrust.Middleware.Localization.QueuePT.Exports.SAFTPT.SAFTSchemaPT10401.SourceDocumentContracts;
+using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Exports.SAFTPT.SAFTSchemaPT10401;
 
 public static class SAFTMapping
 {
-    public static AuditFile CreateAuditFile(List<ReceiptRequest> receiptRequests)
+    public static AuditFile CreateAuditFile(List<ftQueueItem> queueItems)
     {
+        var receiptRequests = queueItems.Select(x => JsonSerializer.Deserialize<ReceiptRequest>(x.request)!).ToList();
         var invoices = receiptRequests.Select(GetInvoiceForReceiptRequest).ToList();
         return new AuditFile
         {
@@ -40,10 +40,10 @@ public static class SAFTMapping
         return receiptRequest.SelectMany(x => x.cbChargeItems).Select(x => new Product
         {
             ProductType = "S",
-            ProductCode = x.ProductNumber,
+            ProductCode = x.ProductNumber ?? "",
             ProductGroup = x.ProductGroup,
             ProductDescription = x.Description,
-            ProductNumberCode = x.ProductNumber
+            ProductNumberCode = x.ProductNumber ?? ""
         }).DistinctBy(x => x.ProductCode).ToList();
 
         /*
@@ -246,7 +246,7 @@ public static class SAFTMapping
 
     private static List<Customer> GetCustomers(List<ReceiptRequest> receiptRequest)
     {
-        return receiptRequest.Where(x => !string.IsNullOrEmpty(x.cbCustomer)).Select(x =>
+        return receiptRequest.Where(x => x.cbCustomer != null).Select(x =>
         {
             var customer = new Customer
             {
@@ -345,7 +345,7 @@ public static class SAFTMapping
             {
                 InvoiceStatus = "N",
                 InvoiceStatusDate = receiptRequest.cbReceiptMoment,
-                SourceID = receiptRequest.ftCashBoxID,
+                SourceID = receiptRequest.ftCashBoxID?.ToString()!,
                 SourceBilling = "P",
             },
             Hash = "TBD",
@@ -359,7 +359,7 @@ public static class SAFTMapping
                 CashVATSchemeIndicator = 0,
                 ThirdPartiesBillingIndicator = 0,
             },
-            SourceID = receiptRequest.ftCashBoxID,
+            SourceID = receiptRequest.ftCashBoxID?.ToString()!,
             SystemEntryDate = receiptRequest.cbReceiptMoment,
             CustomerID = "0",
             //CustomerID = "0047.ATU68541544",
@@ -417,11 +417,11 @@ public static class SAFTMapping
         };
         return new Line
         {
-            LineNumber = chargeItem.Position,
-            ProductCode = chargeItem.ProductNumber,
+            LineNumber = (long) chargeItem.Position,
+            ProductCode = chargeItem.ProductNumber ?? "",
             ProductDescription = chargeItem.Description,
             Quantity = Helpers.CreateMonetaryValue(chargeItem.Quantity),
-            UnitOfMeasure = chargeItem.Unit,
+            UnitOfMeasure = chargeItem.Unit ?? "",
             UnitPrice = Helpers.CreateMonetaryValue(chargeItem.UnitPrice),
             TaxPointDate = chargeItem.Moment.GetValueOrDefault(), // need some more checks here.. fallback?
             Description = chargeItem.Description,

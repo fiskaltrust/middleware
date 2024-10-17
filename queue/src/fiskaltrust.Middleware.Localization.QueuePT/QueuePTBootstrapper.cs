@@ -24,7 +24,8 @@ public class QueuePTBootstrapper : IV2QueueBootstrapper
         var queueStorageProvider = new QueueStorageProvider(id, storageProvider);
         var signProcessorPT = new ReceiptProcessor(loggerFactory.CreateLogger<ReceiptProcessor>(), new LifecycleCommandProcessorPT(storageProvider.GetConfigurationRepository()), new ReceiptCommandProcessorPT(ptSSCD, queuePT, signaturCreationUnitPT), new DailyOperationsCommandProcessorPT(), new InvoiceCommandProcessorPT(), new ProtocolCommandProcessorPT());
         var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, signProcessorPT.ProcessAsync, queuePT.CashBoxIdentification, middlewareConfiguration);
-        _queue = new Queue(signProcessor, loggerFactory)
+        var journalProcessor = new JournalProcessor(storageProvider, new JournalProcessorPT(storageProvider), loggerFactory.CreateLogger<JournalProcessor>());
+        _queue = new Queue(signProcessor, journalProcessor, loggerFactory)
         {
             Id = id,
             Configuration = configuration,
