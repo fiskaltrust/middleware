@@ -19,7 +19,7 @@ public class QueuePTBootstrapper : IV2QueueBootstrapper
     {
         var middlewareConfiguration = MiddlewareConfigurationFactory.CreateMiddlewareConfiguration(id, configuration);
         var queuePT = Newtonsoft.Json.JsonConvert.DeserializeObject<List<ftQueuePT>>(configuration["init_ftQueuePT"]!.ToString()!).First();
-        var storageProvider = new AzureStorageProvider(loggerFactory, id, JsonSerializer.Deserialize<AzureTableStorageConfiguration>(JsonSerializer.Serialize(configuration))!);
+        var storageProvider = new AzureStorageProvider(loggerFactory, id, configuration);
         var signaturCreationUnitPT = Newtonsoft.Json.JsonConvert.DeserializeObject<List<ftSignaturCreationUnitPT>>(configuration["init_ftSignaturCreationUnitPT"]!.ToString()!).First();
         var ptSSCD = new InMemorySCU(signaturCreationUnitPT);
         var queueStorageProvider = new QueueStorageProvider(id, storageProvider);

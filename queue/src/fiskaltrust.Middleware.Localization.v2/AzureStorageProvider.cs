@@ -29,8 +29,6 @@ public class AzureStorageProvider : BaseStorageBootStrapper, IStorageProvider
     private readonly TaskCompletionSource _initializedCompletionSource;
     public Task Initialized => _initializedCompletionSource.Task;
 
-    public AzureStorageProvider(ILoggerFactory loggerFactory, Guid id, AzureTableStorageConfiguration configuration) : this(loggerFactory, id, JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(configuration))) { }
-
     public AzureStorageProvider(ILoggerFactory loggerFactory, Guid id, Dictionary<string, object> configuration)
     {
         _configuration = configuration;
