@@ -40,11 +40,15 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
     public Func<string, Task<string>> RegisterForSign()
     {
         return _queue.RegisterForSign();
-
     }
 
     public Func<string, Task<string>> RegisterForEcho()
     {
         return _queue.RegisterForEcho();
+    }
+
+    public Func<string, Task<string>> RegisterForJournal()
+    {
+        return _queue.RegisterForJournal();
     }
 }

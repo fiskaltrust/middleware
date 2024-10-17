@@ -41,4 +41,9 @@ public class QueuePTBootstrapper : IV2QueueBootstrapper
     {
         return _queue.RegisterForEcho();
     }
+
+    public Func<string, Task<string>> RegisterForJournal()
+    {
+        return _queue.RegisterForJournal();
+    }
 }
