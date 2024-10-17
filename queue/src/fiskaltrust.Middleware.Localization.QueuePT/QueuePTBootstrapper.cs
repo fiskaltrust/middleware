@@ -1,12 +1,13 @@
-﻿using fiskaltrust.Middleware.Localization.QueuePT.Processors;
+﻿using System.Text.Json;
+using fiskaltrust.Middleware.Localization.QueuePT.Processors;
 using fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Configuration;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Storage;
+using fiskaltrust.Middleware.Storage.AzureTableStorage;
 using fiskaltrust.Middleware.Storage.PT;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT;
 
@@ -17,9 +18,9 @@ public class QueuePTBootstrapper : IV2QueueBootstrapper
     public QueuePTBootstrapper(Guid id, ILoggerFactory loggerFactory, Dictionary<string, object> configuration)
     {
         var middlewareConfiguration = MiddlewareConfigurationFactory.CreateMiddlewareConfiguration(id, configuration);
-        var queuePT = JsonConvert.DeserializeObject<List<ftQueuePT>>(configuration["init_ftQueuePT"]!.ToString()!).First();
-        var storageProvider = new AzureStorageProvider(loggerFactory, id, configuration);
-        var signaturCreationUnitPT = new ftSignaturCreationUnitPT();
+        var queuePT = Newtonsoft.Json.JsonConvert.DeserializeObject<List<ftQueuePT>>(configuration["init_ftQueuePT"]!.ToString()!).First();
+        var storageProvider = new AzureStorageProvider(loggerFactory, id, JsonSerializer.Deserialize<AzureTableStorageConfiguration>(JsonSerializer.Serialize(configuration))!);
+        var signaturCreationUnitPT = Newtonsoft.Json.JsonConvert.DeserializeObject<List<ftSignaturCreationUnitPT>>(configuration["init_ftSignaturCreationUnitPT"]!.ToString()!).First();
         var ptSSCD = new InMemorySCU(signaturCreationUnitPT);
         var queueStorageProvider = new QueueStorageProvider(id, storageProvider);
         var signProcessorPT = new ReceiptProcessor(loggerFactory.CreateLogger<ReceiptProcessor>(), new LifecycleCommandProcessorPT(storageProvider.GetConfigurationRepository()), new ReceiptCommandProcessorPT(ptSSCD, queuePT, signaturCreationUnitPT), new DailyOperationsCommandProcessorPT(), new InvoiceCommandProcessorPT(), new ProtocolCommandProcessorPT());

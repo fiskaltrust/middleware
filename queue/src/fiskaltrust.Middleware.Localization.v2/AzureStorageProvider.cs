@@ -13,6 +13,7 @@ using fiskaltrust.Middleware.Storage.Base;
 using fiskaltrust.storage.encryption.V0;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Localization.v2;
 
@@ -27,6 +28,8 @@ public class AzureStorageProvider : BaseStorageBootStrapper, IStorageProvider
 
     private readonly TaskCompletionSource _initializedCompletionSource;
     public Task Initialized => _initializedCompletionSource.Task;
+
+    public AzureStorageProvider(ILoggerFactory loggerFactory, Guid id, AzureTableStorageConfiguration configuration) : this(loggerFactory, id, JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(configuration))) { }
 
     public AzureStorageProvider(ILoggerFactory loggerFactory, Guid id, Dictionary<string, object> configuration)
     {
@@ -49,8 +52,8 @@ public class AzureStorageProvider : BaseStorageBootStrapper, IStorageProvider
             {
                 throw new Exception($"The value for the queue parameter storageaccountname '{_tableStorageConfiguration.StorageAccountName}' is not valid.", e);
             }
-            _tableServiceClient = new TableServiceClient(tableUri, new ChainedTokenCredential(new AzureCliCredential(), new DefaultAzureCredential()));
-            _blobServiceClient = new BlobServiceClient(blobUri, new ChainedTokenCredential(new AzureCliCredential(), new DefaultAzureCredential()));
+            _tableServiceClient = new TableServiceClient(tableUri, new ChainedTokenCredential(new VisualStudioCredential(), new AzureCliCredential(), new DefaultAzureCredential()));
+            _blobServiceClient = new BlobServiceClient(blobUri, new ChainedTokenCredential(new VisualStudioCredential(), new AzureCliCredential(), new DefaultAzureCredential()));
         }
         else if (!string.IsNullOrEmpty(_tableStorageConfiguration.ConnectionString))
         {

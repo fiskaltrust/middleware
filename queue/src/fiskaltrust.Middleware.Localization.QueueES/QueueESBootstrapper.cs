@@ -1,13 +1,15 @@
-﻿using fiskaltrust.Middleware.Localization.QueueES.ESSSCD;
+﻿using System.Text.Json;
+using fiskaltrust.Middleware.Localization.QueueES.ESSSCD;
 using fiskaltrust.Middleware.Localization.QueueES.Processors;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Configuration;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Storage;
+using fiskaltrust.Middleware.Storage.AzureTableStorage;
 using fiskaltrust.Middleware.Storage.ES;
 
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
+
 
 namespace fiskaltrust.Middleware.Localization.QueueES;
 
@@ -19,12 +21,11 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
     public QueueESBootstrapper(Guid id, ILoggerFactory loggerFactory, Dictionary<string, object> configuration)
     {
         var middlewareConfiguration = MiddlewareConfigurationFactory.CreateMiddlewareConfiguration(id, configuration);
-        var queueES = JsonConvert.DeserializeObject<List<ftQueueES>>(configuration["init_ftQueueES"]!.ToString()!).First();
+        var queueES = Newtonsoft.Json.JsonConvert.DeserializeObject<List<ftQueueES>>(configuration["init_ftQueueES"]!.ToString()!).First();
 
         var signaturCreationUnitES = new ftSignaturCreationUnitES();
         var esSSCD = new InMemorySCU(signaturCreationUnitES);
-
-        var storageProvider = new AzureStorageProvider(loggerFactory, id, configuration);
+        var storageProvider = new AzureStorageProvider(loggerFactory, id, JsonSerializer.Deserialize<AzureTableStorageConfiguration>(JsonSerializer.Serialize(configuration))!);
         var queueStorageProvider = new QueueStorageProvider(id, storageProvider);
 
         var signProcessorES = new ReceiptProcessor(loggerFactory.CreateLogger<ReceiptProcessor>(), new LifecycleCommandProcessorES(queueStorageProvider), new ReceiptCommandProcessorES(esSSCD, queueES, signaturCreationUnitES), new DailyOperationsCommandProcessorES(), new InvoiceCommandProcessorES(), new ProtocolCommandProcessorES());
