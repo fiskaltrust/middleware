@@ -11,16 +11,18 @@ public static class SAFTMapping
 {
     public static AuditFile CreateAuditFile(List<ftQueueItem> queueItems)
     {
-        var receiptRequests = queueItems.Select(x => JsonSerializer.Deserialize<ReceiptRequest>(x.request)!).ToList();
-        var invoices = receiptRequests.Select(GetInvoiceForReceiptRequest).ToList();
+        var receiptRequests = queueItems.Select(x => (receiptRequest: JsonSerializer.Deserialize<ReceiptRequest>(x.request)!, receiptResponse: JsonSerializer.Deserialize<ReceiptResponse>(x.response))).ToList();
+        var actualReceiptRequests = receiptRequests.Where(x => x.receiptResponse != null && ((long) x.receiptResponse.ftState & 0xFF) ==  0x00).Cast<(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)>().ToList();
+
+        var invoices = actualReceiptRequests.Select(GetInvoiceForReceiptRequest).ToList();
         return new AuditFile
         {
             Header = GetHeader(),
             MasterFiles = new MasterFiles
             {
-                Customer = GetCustomers(receiptRequests),
-                Product = GetProducts(receiptRequests),
-                TaxTable = GetTaxTable(receiptRequests)
+                Customer = GetCustomers(actualReceiptRequests.Select(x => x.receiptRequest).ToList()),
+                Product = GetProducts(actualReceiptRequests.Select(x => x.receiptRequest).ToList()),
+                TaxTable = GetTaxTable(actualReceiptRequests.Select(x => x.receiptRequest).ToList())
             },
             SourceDocuments = new SourceDocuments
             {
@@ -331,8 +333,9 @@ public static class SAFTMapping
         };
     }
 
-    public static Invoice GetInvoiceForReceiptRequest(ReceiptRequest receiptRequest)
+    public static Invoice GetInvoiceForReceiptRequest((ReceiptRequest receiptRequest, ReceiptResponse receiptResponse) receipt)
     {
+        var receiptRequest = receipt.receiptRequest;
         var lines = receiptRequest.cbChargeItems.Select(GetLine).ToList();
         var taxable = receiptRequest.cbChargeItems.Sum(x => x.VATAmount.GetValueOrDefault());
         var grossAmount = receiptRequest.cbChargeItems.Sum(x => x.Amount);
