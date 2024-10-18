@@ -12,6 +12,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\fiskaltrust.Middleware.Storage.AzureTableStorage\fiskaltrust.Middleware.Storage.AzureTableStorage.csproj"/>
+        <ProjectReference Include="..\fiskaltrust.Middleware.Storage.AzureTableStorage\fiskaltrust.Middleware.Storage.AzureTableStorage.csproj" />
+        <ProjectReference Include="..\fiskaltrust.Middleware.Storage\fiskaltrust.Middleware.Storage.csproj" />
     </ItemGroup>
 </Project>

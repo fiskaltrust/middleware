@@ -4,6 +4,9 @@ using fiskaltrust.Middleware.Contracts.Constants;
 using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.Middleware.Storage.ES;
+using fiskaltrust.Middleware.Storage.GR;
+using fiskaltrust.Middleware.Storage.PT;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -23,10 +26,12 @@ public class JournalProcessor : IJournalProcessor
     private readonly IMiddlewareRepository<ftActionJournal> _actionJournalRepository;
     private readonly IJournalProcessor _marketSpecificJournalProcessor;
     private readonly ILogger<JournalProcessor> _logger;
+    private readonly Dictionary<string, object> _configuration;
 
     public JournalProcessor(
         IStorageProvider storageProvider,
         IJournalProcessor marketSpecificJournalProcessor,
+        Dictionary<string, object> configuration,
         ILogger<JournalProcessor> logger)
     {
         _configurationRepository = storageProvider.GetConfigurationRepository();
@@ -34,6 +39,7 @@ public class JournalProcessor : IJournalProcessor
         _receiptJournalRepository = storageProvider.GetMiddlewareReceiptJournalRepository();
         _actionJournalRepository = storageProvider.GetMiddlewareActionJournalRepository();
         _marketSpecificJournalProcessor = marketSpecificJournalProcessor;
+        _configuration = configuration;
         _logger = logger;
     }
 
@@ -87,14 +93,20 @@ public class JournalProcessor : IJournalProcessor
             QueueList = await _configurationRepository.GetQueueListAsync().ConfigureAwait(false),
             QueueATList = await _configurationRepository.GetQueueATListAsync().ConfigureAwait(false),
             QueueDEList = await _configurationRepository.GetQueueDEListAsync().ConfigureAwait(false),
+            QueueESList = string.IsNullOrEmpty(_configuration["init_ftQueueES"]?.ToString()) ? [] : JsonConvert.DeserializeObject<List<ftQueueES>>(_configuration["init_ftQueueES"]!.ToString()!),
             QueueFRList = await _configurationRepository.GetQueueFRListAsync().ConfigureAwait(false),
-            QueueMEList = await _configurationRepository.GetQueueMEListAsync().ConfigureAwait(false),
+            QueueGRList = string.IsNullOrEmpty(_configuration["init_ftQueueGR"]?.ToString()) ? [] : JsonConvert.DeserializeObject<List<ftQueueGR>>(_configuration["init_ftQueueGR"]!.ToString()!),
             QueueITList = await _configurationRepository.GetQueueITListAsync().ConfigureAwait(false),
+            QueueMEList = await _configurationRepository.GetQueueMEListAsync().ConfigureAwait(false),
+            QueuePTList = string.IsNullOrEmpty(_configuration["init_ftQueuePT"]?.ToString()) ? [] : JsonConvert.DeserializeObject<List<ftQueuePT>>(_configuration["init_ftQueuePT"]!.ToString()!),
             SignaturCreationUnitATList = await _configurationRepository.GetSignaturCreationUnitATListAsync().ConfigureAwait(false),
             SignaturCreationUnitDEList = await _configurationRepository.GetSignaturCreationUnitDEListAsync().ConfigureAwait(false),
+            SignaturCreationUnitESList = string.IsNullOrEmpty(_configuration["init_ftSignaturCreationUnitES"]?.ToString()) ? [] : JsonConvert.DeserializeObject<List<ftSignaturCreationUnitES>>(_configuration["init_ftSignaturCreationUnitES"]!.ToString()!),
             SignaturCreationUnitFRList = await _configurationRepository.GetSignaturCreationUnitFRListAsync().ConfigureAwait(false),
-            SignaturCreationUnitMEList = await _configurationRepository.GetSignaturCreationUnitMEListAsync().ConfigureAwait(false),
+            SignaturCreationUnitGRList = string.IsNullOrEmpty(_configuration["init_ftSignaturCreationUnitGR"]?.ToString()) ? [] : JsonConvert.DeserializeObject<List<ftSignaturCreationUnitGR>>(_configuration["init_ftSignaturCreationUnitGR"]!.ToString()!),
             SignaturCreationUnitITList = await _configurationRepository.GetSignaturCreationUnitITListAsync().ConfigureAwait(false),
+            SignaturCreationUnitMEList = await _configurationRepository.GetSignaturCreationUnitMEListAsync().ConfigureAwait(false),
+            SignaturCreationUnitPTList = string.IsNullOrEmpty(_configuration["init_ftSignaturCreationUnitPT"]?.ToString()) ? [] : JsonConvert.DeserializeObject<List<ftSignaturCreationUnitPT>>(_configuration["init_ftSignaturCreationUnitPT"]!.ToString()!),
         };
     }
 

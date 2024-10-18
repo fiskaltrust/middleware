@@ -1,11 +1,9 @@
-﻿using System.Text.Json;
-using fiskaltrust.Middleware.Localization.QueuePT.Processors;
+﻿using fiskaltrust.Middleware.Localization.QueuePT.Processors;
 using fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Configuration;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Storage;
-using fiskaltrust.Middleware.Storage.AzureTableStorage;
 using fiskaltrust.Middleware.Storage.PT;
 using Microsoft.Extensions.Logging;
 
@@ -25,7 +23,7 @@ public class QueuePTBootstrapper : IV2QueueBootstrapper
         var queueStorageProvider = new QueueStorageProvider(id, storageProvider);
         var signProcessorPT = new ReceiptProcessor(loggerFactory.CreateLogger<ReceiptProcessor>(), new LifecycleCommandProcessorPT(storageProvider.GetConfigurationRepository()), new ReceiptCommandProcessorPT(ptSSCD, queuePT, signaturCreationUnitPT), new DailyOperationsCommandProcessorPT(), new InvoiceCommandProcessorPT(), new ProtocolCommandProcessorPT());
         var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, signProcessorPT.ProcessAsync, queuePT.CashBoxIdentification, middlewareConfiguration);
-        var journalProcessor = new JournalProcessor(storageProvider, new JournalProcessorPT(storageProvider), loggerFactory.CreateLogger<JournalProcessor>());
+        var journalProcessor = new JournalProcessor(storageProvider, new JournalProcessorPT(storageProvider), configuration, loggerFactory.CreateLogger<JournalProcessor>());
         _queue = new Queue(signProcessor, journalProcessor, loggerFactory)
         {
             Id = id,
