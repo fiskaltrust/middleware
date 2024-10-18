@@ -93,21 +93,38 @@ public class JournalProcessor : IJournalProcessor
             QueueList = await _configurationRepository.GetQueueListAsync().ConfigureAwait(false),
             QueueATList = await _configurationRepository.GetQueueATListAsync().ConfigureAwait(false),
             QueueDEList = await _configurationRepository.GetQueueDEListAsync().ConfigureAwait(false),
-            QueueESList = string.IsNullOrEmpty(_configuration["init_ftQueueES"]?.ToString()) ? [] : JsonConvert.DeserializeObject<List<ftQueueES>>(_configuration["init_ftQueueES"]!.ToString()!),
+            QueueESList = GetConfigurationFromDictionary< ftQueueES>("init_ftQueueES"),
             QueueFRList = await _configurationRepository.GetQueueFRListAsync().ConfigureAwait(false),
-            QueueGRList = string.IsNullOrEmpty(_configuration["init_ftQueueGR"]?.ToString()) ? [] : JsonConvert.DeserializeObject<List<ftQueueGR>>(_configuration["init_ftQueueGR"]!.ToString()!),
+            QueueGRList = GetConfigurationFromDictionary<ftQueueGR>("init_ftQueueGR"),
             QueueITList = await _configurationRepository.GetQueueITListAsync().ConfigureAwait(false),
             QueueMEList = await _configurationRepository.GetQueueMEListAsync().ConfigureAwait(false),
-            QueuePTList = string.IsNullOrEmpty(_configuration["init_ftQueuePT"]?.ToString()) ? [] : JsonConvert.DeserializeObject<List<ftQueuePT>>(_configuration["init_ftQueuePT"]!.ToString()!),
+            QueuePTList = GetConfigurationFromDictionary<ftQueuePT>("init_ftQueuePT"),
             SignaturCreationUnitATList = await _configurationRepository.GetSignaturCreationUnitATListAsync().ConfigureAwait(false),
             SignaturCreationUnitDEList = await _configurationRepository.GetSignaturCreationUnitDEListAsync().ConfigureAwait(false),
-            SignaturCreationUnitESList = string.IsNullOrEmpty(_configuration["init_ftSignaturCreationUnitES"]?.ToString()) ? [] : JsonConvert.DeserializeObject<List<ftSignaturCreationUnitES>>(_configuration["init_ftSignaturCreationUnitES"]!.ToString()!),
+            SignaturCreationUnitESList = GetConfigurationFromDictionary<ftSignaturCreationUnitES>("init_ftSignaturCreationUnitES"),
             SignaturCreationUnitFRList = await _configurationRepository.GetSignaturCreationUnitFRListAsync().ConfigureAwait(false),
-            SignaturCreationUnitGRList = string.IsNullOrEmpty(_configuration["init_ftSignaturCreationUnitGR"]?.ToString()) ? [] : JsonConvert.DeserializeObject<List<ftSignaturCreationUnitGR>>(_configuration["init_ftSignaturCreationUnitGR"]!.ToString()!),
+            SignaturCreationUnitGRList = GetConfigurationFromDictionary<ftSignaturCreationUnitGR>("init_ftSignaturCreationUnitGR"),
             SignaturCreationUnitITList = await _configurationRepository.GetSignaturCreationUnitITListAsync().ConfigureAwait(false),
             SignaturCreationUnitMEList = await _configurationRepository.GetSignaturCreationUnitMEListAsync().ConfigureAwait(false),
-            SignaturCreationUnitPTList = string.IsNullOrEmpty(_configuration["init_ftSignaturCreationUnitPT"]?.ToString()) ? [] : JsonConvert.DeserializeObject<List<ftSignaturCreationUnitPT>>(_configuration["init_ftSignaturCreationUnitPT"]!.ToString()!),
+            SignaturCreationUnitPTList = GetConfigurationFromDictionary<ftSignaturCreationUnitPT>("init_ftSignaturCreationUnitPT"),
         };
+    }
+
+    private List<T> GetConfigurationFromDictionary<T>(string key)
+    {
+        try
+        {
+            if (_configuration.ContainsKey(key))
+            {
+                return JsonConvert.DeserializeObject<List<T>>(_configuration[key]!.ToString()!);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An error occured while processing the Journal request.");
+        }
+        return [];
+
     }
 
     private async IAsyncEnumerable<JournalResponse> ToJournalResponseAsync<T>(IAsyncEnumerable<T> asyncEnumerable, int chunkSize)
