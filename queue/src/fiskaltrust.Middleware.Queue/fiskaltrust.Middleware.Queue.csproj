@@ -22,7 +22,6 @@
         <ProjectReference Include="..\fiskaltrust.Middleware.Localization.QueueDEFAULT\fiskaltrust.Middleware.Localization.QueueDEFAULT.csproj" />
         <ProjectReference Include="..\fiskaltrust.Middleware.Localization.QueueDE\fiskaltrust.Middleware.Localization.QueueDE.csproj" />
         <ProjectReference Include="..\fiskaltrust.Middleware.Localization.QueueFR\fiskaltrust.Middleware.Localization.QueueFR.csproj" />
-        <ProjectReference Include="..\fiskaltrust.Middleware.Localization.QueueES\fiskaltrust.Middleware.Localization.QueueES.csproj" />
         <ProjectReference Include="..\fiskaltrust.Middleware.Localization.QueueIT\fiskaltrust.Middleware.Localization.QueueIT.csproj" />
         <ProjectReference Include="..\fiskaltrust.Middleware.Localization.QueueME\fiskaltrust.Middleware.Localization.QueueME.csproj" />
         <ProjectReference Include="..\fiskaltrust.Middleware.QueueSynchronizer\fiskaltrust.Middleware.QueueSynchronizer.csproj" />
