@@ -421,7 +421,7 @@ public static class SAFTMapping
         0x1001 => "FT",
         0x1002 => "FT",
         0x1003 => "FT",
-        _ => throw new NotImplementedException($"The given receipt case {receiptRequest.ftReceiptCase} is not supported in Portugal"),
+        _ => "FS"
     };
 
     public static Line GetLine(ChargeItem chargeItem)
