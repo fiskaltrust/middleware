@@ -330,9 +330,10 @@ public static class SAFTMapping
         {
             return null;
         }
+
         var invoice = new Invoice
         {
-            InvoiceNo = receipt.receiptResponse.ftReceiptIdentification.Split("#")[1],
+            InvoiceNo = receipt.receiptResponse.ftReceiptIdentification,
             ATCUD = atcudSignature.Data,
             DocumentStatus = new DocumentStatus
             {
