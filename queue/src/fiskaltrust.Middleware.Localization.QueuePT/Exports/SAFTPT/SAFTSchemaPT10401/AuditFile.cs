@@ -1,9 +1,6 @@
-﻿using System.Xml.Serialization;
-using fiskaltrust.Middleware.Localization.QueuePT.Exports.SAFTPT.SAFTSchemaPT10401.HeaderContracts;
-using fiskaltrust.Middleware.Localization.QueuePT.Exports.SAFTPT.SAFTSchemaPT10401.MasterFileContracts;
-using fiskaltrust.Middleware.Localization.QueuePT.Exports.SAFTPT.SAFTSchemaPT10401.SourceDocumentContracts;
+using System.Xml.Serialization;
 
-namespace fiskaltrust.Middleware.Localization.QueuePT.Exports.SAFTPT.SAFTSchemaPT10401;
+namespace fiskaltrust.SAFT.CLI.SAFTSchemaPT10401;
 
 [XmlRoot(ElementName = "AuditFile", Namespace = "urn:OECD:StandardAuditFile-Tax:PT_1.04_01")]
 public class AuditFile

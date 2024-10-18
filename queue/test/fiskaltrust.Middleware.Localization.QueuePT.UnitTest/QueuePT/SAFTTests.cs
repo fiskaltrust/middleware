@@ -3,7 +3,7 @@ using System.IO;
 using System.Text.Json;
 using System.Xml.Serialization;
 using fiskaltrust.Middleware.Localization.QueuePT.Exports.SAFTPT;
-using fiskaltrust.Middleware.Localization.QueuePT.Exports.SAFTPT.SAFTSchemaPT10401;
+using fiskaltrust.SAFT.CLI.SAFTSchemaPT10401;
 using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT
@@ -13,16 +13,6 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT
     {
         public void BasicTest()
         {
-            var queueItem = new ftQueueItem
-            {
-                request = JsonSerializer.Serialize(ReceiptExamples.NUNO_BASIC_RECEIPT),
-            };
-            var auditFile = SAFTMapping.CreateAuditFile([queueItem]);
-            XmlHelpers.SerializeAuditFile(auditFile, @"C:\GitHub\market-pt-services\SAFT\docs\examples\SAFT_Nuno_Invoice_2.xml");
-            var content = File.ReadAllText(@"C:\GitHub\market-pt-services\SAFT\docs\examples\SAFT_Nuno_Invoice.xml");
-            var result = GetAuditFileFromXML(content);
-            Console.WriteLine(JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true }));
-
 
 
         }

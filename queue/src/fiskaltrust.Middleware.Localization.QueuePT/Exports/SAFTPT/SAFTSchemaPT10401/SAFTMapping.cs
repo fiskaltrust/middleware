@@ -1,23 +1,26 @@
-﻿using System.Text.Json;
+﻿using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
-using fiskaltrust.Middleware.Localization.QueuePT.Exports.SAFTPT.SAFTSchemaPT10401.HeaderContracts;
-using fiskaltrust.Middleware.Localization.QueuePT.Exports.SAFTPT.SAFTSchemaPT10401.MasterFileContracts;
-using fiskaltrust.Middleware.Localization.QueuePT.Exports.SAFTPT.SAFTSchemaPT10401.SourceDocumentContracts;
+using fiskaltrust.Middleware.Localization.QueuePT.Exports.SAFTPT;
+using fiskaltrust.Middleware.Localization.QueuePT.Interface;
+using fiskaltrust.Middleware.Storage.PT;
 using fiskaltrust.storage.V0;
+using fiskaltrust.storage.V0.MasterData;
 
-namespace fiskaltrust.Middleware.Localization.QueuePT.Exports.SAFTPT.SAFTSchemaPT10401;
+namespace fiskaltrust.SAFT.CLI.SAFTSchemaPT10401;
 
 public static class SAFTMapping
 {
-    public static AuditFile CreateAuditFile(List<ftQueueItem> queueItems)
+    public static AuditFile CreateAuditFile(AccountMasterData accountMasterData, List<ftQueueItem> queueItems)
     {
         var receiptRequests = queueItems.Select(x => (receiptRequest: JsonSerializer.Deserialize<ReceiptRequest>(x.request)!, receiptResponse: JsonSerializer.Deserialize<ReceiptResponse>(x.response))).ToList();
-        var actualReceiptRequests = receiptRequests.Where(x => x.receiptResponse != null && ((long) x.receiptResponse.ftState & 0xFF) ==  0x00).Cast<(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)>().ToList();
+        var actualReceiptRequests = receiptRequests.Where(x => x.receiptResponse != null && ((long) x.receiptResponse.ftState & 0xFF) == 0x00).Cast<(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)>().ToList();
 
-        var invoices = actualReceiptRequests.Select(GetInvoiceForReceiptRequest).ToList();
+        var invoices = actualReceiptRequests.Select(x => SAFTMapping.GetInvoiceForReceiptRequest(accountMasterData, x)).Where(x => x != null).ToList();
         return new AuditFile
         {
-            Header = GetHeader(),
+            Header = GetHeader(accountMasterData),
             MasterFiles = new MasterFiles
             {
                 Customer = GetCustomers(actualReceiptRequests.Select(x => x.receiptRequest).ToList()),
@@ -29,9 +32,9 @@ public static class SAFTMapping
                 SalesInvoices = new SalesInvoices
                 {
                     NumberOfEntries = invoices.Count,
-                    TotalDebit = invoices.SelectMany(x => x.Line).Sum(x => x.DebitAmount ?? 0.0m),
-                    TotalCredit = invoices.SelectMany(x => x.Line).Sum(x => x.CreditAmount),
-                    Invoice = invoices,
+                    TotalDebit = invoices.SelectMany(x => x!.Line).Sum(x => x.DebitAmount ?? 0.0m),
+                    TotalCredit = invoices.SelectMany(x => x!.Line).Sum(x => x.CreditAmount),
+                    Invoice = invoices!,
                 }
             }
         };
@@ -39,36 +42,17 @@ public static class SAFTMapping
 
     private static List<Product> GetProducts(List<ReceiptRequest> receiptRequest)
     {
-        return receiptRequest.SelectMany(x => x.cbChargeItems).Select(x => new Product
+        return receiptRequest.SelectMany(x => x.cbChargeItems).Select(x =>
         {
-            ProductType = "S",
-            ProductCode = x.ProductNumber ?? "",
-            ProductGroup = x.ProductGroup,
-            ProductDescription = x.Description,
-            ProductNumberCode = x.ProductNumber ?? ""
+            return new Product
+            {
+                ProductType = GetProductType(x),
+                ProductCode = x.ProductNumber ?? Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(x.Description))),
+                ProductGroup = x.ProductGroup,
+                ProductDescription = x.Description,
+                ProductNumberCode = x.ProductNumber ?? Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(x.Description))),
+            };
         }).DistinctBy(x => x.ProductCode).ToList();
-
-        /*
-         *  Product = [
-                new Product
-            {
-                ProductType = "S",
-                ProductCode = "SUPCERTIFIC",
-                ProductGroup = "Sem fam lia",
-                ProductDescription = "Suporte Certifica  o Software",
-                ProductNumberCode = "SUPCERTIFIC"
-            },
-            new Product
-            {
-                ProductType = "S",
-                ProductCode = "SRVCASAMO",
-                ProductGroup = "Servi os",
-                ProductDescription = "Support Casa Monthly fee",
-                ProductNumberCode = "SRVCASAMO"
-            }
-            ],
-         * */
-
     }
 
     private static TaxTable GetTaxTable(List<ReceiptRequest> receiptRequest)
@@ -248,77 +232,76 @@ public static class SAFTMapping
 
     private static List<Customer> GetCustomers(List<ReceiptRequest> receiptRequest)
     {
-        return receiptRequest.Where(x => x.cbCustomer != null).Select(x =>
+        var customerData = receiptRequest.Where(x => x.cbCustomer != null).Select(x =>
         {
+            var middlewareCustomer = GetCustomerIfIncludeded(x)!;
             var customer = new Customer
             {
-                CustomerID = "0047.ATU68541544",
+                CustomerID = middlewareCustomer.CustomerId,
                 AccountID = "Desconhecido",
-                CustomerTaxID = "ATU68541544",
-                CompanyName = "fiskaltrust consulting gmbh",
+                CustomerTaxID = middlewareCustomer.CustomerVATId,
+                CompanyName = middlewareCustomer.CustomerName,
                 BillingAddress = new BillingAddress
                 {
                     BuildingNumber = "Desconheci",
-                    StreetName = "Alpenstra e",
-                    AddressDetail = "fiskaltrust consulting gmbh  Alpenstra e 99  5020 Salzburg",
-                    City = "Salzburg",
-                    PostalCode = "5020",
+                    StreetName = middlewareCustomer.CustomerStreet,
+                    AddressDetail = $"{middlewareCustomer.CustomerName} {middlewareCustomer.CustomerStreet}  {middlewareCustomer.CustomerZip} {middlewareCustomer.CustomerCity}",
+                    City = middlewareCustomer.CustomerCity,
+                    PostalCode = middlewareCustomer.CustomerZip,
                     Region = "Desconhecido",
-                    Country = "AT",
-                },
-                Telephone = "Desconhecido", // not required
-                Fax = "Desconhecido", // not required
-                Email = "Desconhecido", // not required
-                Website = "Desconhecido", // not required
-                SelfBillingIndicator = 0, // not required
+                    Country = middlewareCustomer.CustomerCountry,
+                }
             };
             return customer;
         }).DistinctBy(x => x.CustomerID).ToList();
 
-        //return [
-        //        new Customer
-        //        {
-        //            CustomerID = "0047.ATU68541544",
-        //            AccountID = "Desconhecido",
-        //            CustomerTaxID = "ATU68541544",
-        //            CompanyName = "fiskaltrust consulting gmbh",
-        //            BillingAddress = new BillingAddress
-        //            {
-        //                BuildingNumber = "Desconheci",
-        //                StreetName = "Alpenstra e",
-        //                AddressDetail = "fiskaltrust consulting gmbh  Alpenstra e 99  5020 Salzburg",
-        //                City = "Salzburg",
-        //                PostalCode = "5020",
-        //                Region = "Desconhecido",
-        //                Country = "AT",
-        //            },
-        //            Telephone = "Desconhecido", // not required
-        //            Fax = "Desconhecido", // not required
-        //            Email = "Desconhecido", // not required
-        //            Website = "Desconhecido", // not required
-        //            SelfBillingIndicator = 0, // not required
-        //        }
-        //];
+        if (receiptRequest.Any(x => x.cbCustomer == null))
+        {
+            customerData.Add(new Customer
+            {
+                CustomerID = "Consumidor final",
+                AccountID = "Desconhecido",
+                CustomerTaxID = "999999990",
+                CompanyName = "Consumidor final",
+                BillingAddress = new BillingAddress
+                {
+                    AddressDetail = "Desconhecido",
+                    City = "Desconhecido",
+                    PostalCode = "Desconhecido",
+                    Country = "Desconhecido"
+                }
+            });
+        }
+        return customerData;
     }
 
-    public static Header GetHeader()
+    public static MiddlewareCustomer? GetCustomerIfIncludeded(ReceiptRequest receiptRequest)
+    {
+        if (receiptRequest.cbCustomer == null)
+        {
+            return null;
+        }
+        return JsonSerializer.Deserialize<MiddlewareCustomer>(JsonSerializer.Serialize(receiptRequest.cbCustomer));
+    }
+
+    public static Header GetHeader(AccountMasterData accountMasterData)
     {
         return new Header
         {
             AuditFileVersion = "1.04_01",
-            CompanyID = "TBD",
-            TaxRegistrationNumber = 199998132,
+            CompanyID = accountMasterData.TaxId,
+            TaxRegistrationNumber = int.Parse(accountMasterData.TaxId),
             TaxAccountingBasis = TaxAccountingBasis.Invoicing,
-            CompanyName = "fiskaltrust consulting gmbh",
+            CompanyName = accountMasterData.AccountName,
             //BusinessName = null,
             CompanyAddress = new CompanyAddress
             {
-                StreetName = "Alpenstra e",
-                AddressDetail = "O seu endere o Alpenstra e 99  5020 Salzburg",
-                City = "Salzburg",
-                PostalCode = "5020",
+                StreetName = accountMasterData.Street,
+                AddressDetail = $"{accountMasterData.AccountName} {accountMasterData.Street}  {accountMasterData.Zip} {accountMasterData.City}",
+                City = accountMasterData.City,
+                PostalCode = accountMasterData.Zip,
                 Region = "Desconhecido",
-                Country = "AT",
+                Country = accountMasterData.Country,
             },
             FiscalYear = DateTime.UtcNow.Year,
             StartDate = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 01),
@@ -333,64 +316,45 @@ public static class SAFTMapping
         };
     }
 
-    public static Invoice GetInvoiceForReceiptRequest((ReceiptRequest receiptRequest, ReceiptResponse receiptResponse) receipt)
+    public static Invoice? GetInvoiceForReceiptRequest(AccountMasterData accountMasterData, (ReceiptRequest receiptRequest, ReceiptResponse receiptResponse) receipt)
     {
         var receiptRequest = receipt.receiptRequest;
         var lines = receiptRequest.cbChargeItems.Select(GetLine).ToList();
         var taxable = receiptRequest.cbChargeItems.Sum(x => x.VATAmount.GetValueOrDefault());
         var grossAmount = receiptRequest.cbChargeItems.Sum(x => x.Amount);
+        var hashSignature = receipt.receiptResponse.ftSignatures.Where(x => x.ftSignatureType == (long) SignatureTypesPT.Hash).FirstOrDefault();
+        var atcudSignature = receipt.receiptResponse.ftSignatures.Where(x => x.ftSignatureType == (long) SignatureTypesPT.ATCUD).FirstOrDefault();
         var netAmount = grossAmount - taxable;
+        var invoiceType = GetInvoiceType(receiptRequest);
+        if (hashSignature == null || atcudSignature == null)
+        {
+            return null;
+        }
         var invoice = new Invoice
         {
-            InvoiceNo = "TBD",
-            ATCUD = "TBD",
+            InvoiceNo = receipt.receiptResponse.ftReceiptIdentification.Split("#")[1],
+            ATCUD = atcudSignature.Data,
             DocumentStatus = new DocumentStatus
             {
                 InvoiceStatus = "N",
                 InvoiceStatusDate = receiptRequest.cbReceiptMoment,
-                SourceID = receiptRequest.ftCashBoxID?.ToString()!,
+                SourceID = JsonSerializer.Serialize(receiptRequest.cbUser),
                 SourceBilling = "P",
             },
-            Hash = "TBD",
+            Hash = hashSignature.Data,
             HashControl = 1,
             Period = receiptRequest.cbReceiptMoment.Month,
             InvoiceDate = receiptRequest.cbReceiptMoment,
-            InvoiceType = "FS",
+            InvoiceType = GetInvoiceType(receiptRequest),
             SpecialRegimes = new SpecialRegimes
             {
                 SelfBillingIndicator = 0,
                 CashVATSchemeIndicator = 0,
                 ThirdPartiesBillingIndicator = 0,
             },
-            SourceID = receiptRequest.ftCashBoxID?.ToString()!,
+            SourceID = JsonSerializer.Serialize(receiptRequest.cbUser),
             SystemEntryDate = receiptRequest.cbReceiptMoment,
             CustomerID = "0",
-            //CustomerID = "0047.ATU68541544",
-            //ShipTo = new ShipTo
-            //{
-            //    Address = new Address
-            //    {
-            //        StreetName = "Alpenstra e",
-            //        AddressDetail = "O seu endere o Alpenstra e 99  5020 Salzburg",
-            //        City = "Salzburg",
-            //        PostalCode = "5020",
-            //        Region = "Desconhecido",
-            //        Country = "AT",
-            //    },
-            //},
-            //ShipFrom = new ShipFrom
-            //{
-            //    Address = new Address
-            //    {
-            //        StreetName = "R DO PORTO", // not required
-            //        AddressDetail = "O Nosso Endere o R DO PORTO N33 7Dto  2775-543 Carcavelos",
-            //        City = "Carcavelos",
-            //        PostalCode = "2775-543",
-            //        Region = "Desconhecido", // not required
-            //        Country = "PT",
-            //    },
-            //},
-            // MovementStartTime = new DateTime(2024, 06, 27, 11, 37, 18),
             Line = lines,
             DocumentTotals = new DocumentTotals
             {
@@ -399,6 +363,41 @@ public static class SAFTMapping
                 GrossTotal = Helpers.CreateTwoDigitMonetaryValue(grossAmount),
             }
         };
+        var customer = GetCustomerIfIncludeded(receiptRequest);
+        if (customer != null)
+        {
+            invoice.CustomerID = customer.CustomerId;
+        }
+        if (receiptRequest.cbChargeItems.Any(x => GetProductType(x) == "P"))
+        {
+            if (customer != null)
+            {
+                invoice.ShipTo = new ShipTo
+                {
+                    Address = new Address
+                    {
+                        StreetName = customer.CustomerStreet,
+                        AddressDetail = $"{customer.CustomerName} {customer.CustomerStreet}  {customer.CustomerZip} {customer.CustomerCity}",
+                        City = customer.CustomerCity,
+                        PostalCode = customer.CustomerZip,
+                        Region = "Desconhecido",
+                        Country = customer.CustomerCountry,
+                    },
+                };
+            }
+            invoice.ShipFrom = new ShipFrom
+            {
+                Address = new Address
+                {
+                    StreetName = accountMasterData.Street,
+                    AddressDetail = $"{accountMasterData.AccountName} {accountMasterData.Street}  {accountMasterData.Zip} {accountMasterData.City}",
+                    City = accountMasterData.City,
+                    PostalCode = accountMasterData.Zip,
+                    Region = "Desconhecido",
+                    Country = accountMasterData.Country,
+                }
+            };
+        }
 
         invoice.DocumentTotals.Payment = receiptRequest.cbPayItems.Select(x => new Payment
         {
@@ -408,6 +407,21 @@ public static class SAFTMapping
         }).ToList();
         return invoice;
     }
+
+    private static string GetInvoiceType(ReceiptRequest receiptRequest) => (receiptRequest.ftReceiptCase & 0xFFFF) switch
+    {
+        0x0000 => "FS",
+        0x0001 => "FS",
+        0x0002 => "FS",
+        0x0003 => "FS",
+        0x0004 => "FS",
+        0x0005 => "FS", // no invoicetype.. workign document?
+        0x1000 => "FT",
+        0x1001 => "FT",
+        0x1002 => "FT",
+        0x1003 => "FT",
+        _ => throw new NotImplementedException($"The given receipt case {receiptRequest.ftReceiptCase} is not supported in Portugal"),
+    };
 
     public static Line GetLine(ChargeItem chargeItem)
     {
@@ -460,34 +474,33 @@ public static class SAFTMapping
         _ => "Isento Artigo 14.  do RITI (ou similar)",
     };
 
-
-    /*
-     * “CC” - Credit card;
-“CD” - Debit card;
-“CH” - Bank cheque;
-“CI” – International Letter of Credit;
-“CO” - Gift cheque or gift card;
-“CS” - Balance compensation in current account;
-    “DE” - Electronic Money, for example, on fidelity or points cards;
-“LC” - Commercial Bill;
-“MB” - Payment references for ATM;
-“NU” – Cash;
-“OU” – Other means not mentioned;
-“PR” – Exchange of goods;
-“TB” – Banking transfer or authorized direct debit;
-“TR” - Non-wage compensation titles regardless of their support [paper or digital format], for instance, meal or education vouchers, etc.
-    */
     public static string GetPaymentMecahnism(PayItem payItem) => (payItem.ftPayItemCase & 0xF) switch
     {
-        0x0 => "OU", // Unknown – Other means not mentioned
+        0x0 => "OU", // Unknown � Other means not mentioned
         0x1 => "NU", // Cash
-        0x2 => "OU", // Non Cash – Other means not mentioned
+        0x2 => "OU", // Non Cash � Other means not mentioned
         0x3 => "CH", // Bank cheque
         0x4 => "CD", // Debit Card
         0x5 => "CC", // Credit Card
         0x6 => "CO", // Voucher Gift cheque or gift card;
-        0x7 => "OU", // Online payment – Other means not mentioned
-        0x8 => "OU", // Online payment – Other means not mentioned
-        _ => "OU", // Other – Other means not mentioned
+        0x7 => "OU", // Online payment � Other means not mentioned
+        0x8 => "OU", // Online payment � Other means not mentioned
+        _ => "OU", // Other � Other means not mentioned
+    };
+
+    public static string GetProductType(ChargeItem chargeItem) => (chargeItem.ftChargeItemCase & 0xF0) switch
+    {
+        0x00 => "O", // Unknown type of service / - Others (e.g. charged freights, advance payments received or sale of assets);
+        0x10 => "P", // Delivery (supply of goods) / Products
+        0x20 => "S", // Other service (supply of service) / Services
+        0x30 => "S", // Tip / Services
+        0x40 => "?", // Voucher / ???
+        0x50 => "S", // Catalog Service / Services
+        0x60 => "?", // Not own sales Agency busines / ???
+        0x70 => "?", // Own Consumption / ???
+        0x80 => "?", // Grant / ???
+        0x90 => "?", // Receivable / ???
+        0xA0 => "?", // Receivable / ???
+        _ => throw new NotImplementedException($"The given ChargeItemCase {chargeItem.ftChargeItemCase} type is not supported"),
     };
 }

@@ -1,6 +1,6 @@
 ﻿using System.IO;
 using System.Xml.Serialization;
-using fiskaltrust.Middleware.Localization.QueuePT.Exports.SAFTPT.SAFTSchemaPT10401;
+using fiskaltrust.SAFT.CLI.SAFTSchemaPT10401;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Exports.SAFTPT;
 

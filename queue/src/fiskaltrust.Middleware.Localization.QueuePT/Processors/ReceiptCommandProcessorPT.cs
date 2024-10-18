@@ -48,6 +48,20 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignat
         }, _queuePT.LastHash);
         response.ReceiptResponse.ftReceiptIdentification = "FS " + _queuePT.SimplifiedInvoiceSeries + "/" + (++_queuePT.SimplifiedInvoiceSeriesNumerator).ToString().PadLeft(4, '0');
         var qrCode = PortugalReceiptCalculations.CreateSimplifiedInvoiceQRCodeAnonymousCustomer(hash, _queuePT, _signaturCreationUnitPT, request.ReceiptRequest, response.ReceiptResponse);
+        response.ReceiptResponse.AddSignatureItem(new Api.POS.Models.ifPOS.v2.SignatureItem
+        {
+            Caption = "ATCUD",
+            Data = _queuePT.ATCUD,
+            ftSignatureFormat = 0x0001,
+            ftSignatureType = (long) SignatureTypesPT.ATCUD,
+        });
+        response.ReceiptResponse.AddSignatureItem(new Api.POS.Models.ifPOS.v2.SignatureItem
+        {
+            Caption = "Hash",
+            Data = hash,
+            ftSignatureFormat = 0x0001,
+            ftSignatureType = (long) SignatureTypesPT.Hash,
+        });
         response.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreatePTQRCode(qrCode));
         _queuePT.LastHash = hash;
         return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);

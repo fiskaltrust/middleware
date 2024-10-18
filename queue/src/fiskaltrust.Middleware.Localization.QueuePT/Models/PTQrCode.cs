@@ -1,6 +1,5 @@
 ﻿using System.Globalization;
 using System.Text;
-using fiskaltrust.Middleware.Localization.QueuePT.Exports.SAFTPT.SAFTSchemaPT10401.SourceDocumentContracts;
 using System.Xml.Linq;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Models;
