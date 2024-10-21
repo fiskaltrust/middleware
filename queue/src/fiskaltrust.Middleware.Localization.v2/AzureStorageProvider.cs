@@ -12,6 +12,7 @@ using fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.MasterData;
 using fiskaltrust.Middleware.Storage.Base;
 using fiskaltrust.storage.encryption.V0;
 using fiskaltrust.storage.V0;
+using fiskaltrust.storage.V0.MasterData;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -86,6 +87,10 @@ public class AzureStorageProvider : BaseStorageBootStrapper, IStorageProvider
     public IMiddlewareQueueItemRepository GetMiddlewareQueueItemRepository() => new AzureTableStorageQueueItemRepository(_queueConfiguration, _tableServiceClient, new AzureTableStorageReceiptReferenceIndexRepository(_queueConfiguration, _tableServiceClient));
     public IMiddlewareReceiptJournalRepository GetMiddlewareReceiptJournalRepository() => new AzureTableStorageReceiptJournalRepository(_queueConfiguration, _tableServiceClient);
 
+    public IMasterDataRepository<AccountMasterData> GetAccountMasterDataRepository() => new AzureTableStorageAccountMasterDataRepository(_queueConfiguration, _tableServiceClient);
+    public IMasterDataRepository<OutletMasterData> GetOutletMasterDataRepository() => new AzureTableStorageOutletMasterDataRepository(_queueConfiguration, _tableServiceClient);
+    public IMasterDataRepository<PosSystemMasterData> GetPosSystemMasterDataRepository() => new AzureTableStoragePosSystemMasterDataRepository(_queueConfiguration, _tableServiceClient);
+    public IMasterDataRepository<AgencyMasterData> GetAgencyMasterDataRepository() => new AzureTableStorageAgencyMasterDataRepository(_queueConfiguration, _tableServiceClient);
     public async Task InitAsync()
     {
         try
