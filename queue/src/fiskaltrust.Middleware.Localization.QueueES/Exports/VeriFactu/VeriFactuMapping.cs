@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Encodings.Web;
 using System.Web;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
+using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.storage.V0.MasterData;
 
@@ -17,7 +18,7 @@ public class VeriFactuMapping
         _masterData = masterData;
     }
 
-    public RegFactuSistemaFacturacion CreateRegFactuSistemaFacturacion(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, ReceiptResponse? previous)
+    public RegFactuSistemaFacturacion CreateRegFactuSistemaFacturacion(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, (IDFacturaExpedidaType id, string hash)? previous)
     {
         var cabecera = new Cabecera
         {
@@ -43,7 +44,7 @@ public class VeriFactuMapping
             registroFactura.Add(
                 new RegistroFacturaType
                 {
-                    Item = CreateRegistroFacturacionAlta(receiptRequest, receiptResponse)
+                    Item = CreateRegistroFacturacionAlta(receiptRequest, receiptResponse, previous)
                 });
         }
 
@@ -59,7 +60,7 @@ public class VeriFactuMapping
         throw new NotImplementedException();
     }
 
-    public RegistroFacturacionAltaType CreateRegistroFacturacionAlta(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
+    public RegistroFacturacionAltaType CreateRegistroFacturacionAlta(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, (IDFacturaExpedidaType id, string hash)? previous)
     {
         var registroFacturacionAlta = new RegistroFacturacionAltaType
         {
@@ -70,17 +71,20 @@ public class VeriFactuMapping
                 NumSerieFactura = receiptResponse.ftReceiptIdentification, // Maybe split from '#'
                 FechaExpedicionFactura = receiptRequest.cbReceiptMoment.ToString("dd-MM-yyy")
             },
-            // RefExterna
+            // RefExterna = receiptRequest.ftQueueItemID, This field is described in the exel but not in the xsd files
             NombreRazonEmisor = _masterData.Outlet.OutletName, // "Name and business name of the person required to issue the invoice."
-            TipoFactura = ClaveTipoFacturaType.F2, // From ReceiptCase
+            TipoFactura = receiptRequest.ftReceiptCase switch
+            {
+                _ => ClaveTipoFacturaType.F1, // figure out
+            },
             ImporteRectificacion = new DesgloseRectificacionType
             {
-                BaseRectificada = receiptRequest.cbChargeItems.Sum(chargeItem => chargeItem.VATAmount).ToString(), // Maybe need to truncate to 12,2
-                CuotaRectificada = null, // whats the difference between these two
+                BaseRectificada = receiptRequest.cbChargeItems.Sum(chargeItem => chargeItem.GetVATAmount()).ToString("0.00"), // rounding/validation?
+                CuotaRectificada = null, // whats the difference between this and `BaseRectificada`
             },
             Desglose = receiptRequest.cbChargeItems.Select(chargeItem => new DetalleType
             {
-                BaseImponibleOimporteNoSujeto = (chargeItem.Amount - chargeItem.VATAmount).ToString(), // Maybe need to truncate to 12,2
+                BaseImponibleOimporteNoSujeto = (chargeItem.Amount - chargeItem.GetVATAmount()).ToString("0.00"),
                 Item = chargeItem.ftChargeItemCase switch
                 {
                     _ => CalificacionOperacionType.S1 // figure out
@@ -88,18 +92,21 @@ public class VeriFactuMapping
                     // OperacionExentaType
                 }
             }).ToArray(),
-            CuotaTotal = receiptRequest.cbChargeItems.Sum(chargeItem => chargeItem.VATAmount).ToString(), // is this correct? how should this differ from ImporteRectificacion
-            ImporteTotal = (receiptRequest.cbReceiptAmount ?? receiptRequest.cbChargeItems.Sum(chargeItem => chargeItem.Amount)).ToString(), // Maybe need to truncate to 12,2
+            CuotaTotal = receiptRequest.cbChargeItems.Sum(chargeItem => chargeItem.GetVATAmount()).ToString("0.00"), // is this correct? how should this differ from ImporteRectificacion
+            ImporteTotal = (receiptRequest.cbReceiptAmount ?? receiptRequest.cbChargeItems.Sum(chargeItem => chargeItem.Amount)).ToString("0.00"),
             Encadenamiento = new RegistroFacturacionAltaTypeEncadenamiento
             {
                 Item = receiptRequest.IsInitialOperation()
                     ? PrimerRegistroCadenaType.S
                     : new EncadenamientoFacturaAnteriorType
                     {
-                        IDEmisorFactura = _masterData.Outlet.VatId, // This needs to be actually the `IDEmisorFactura` of the previous receipt
-                        NumSerieFactura = null, // NumSerieFactura of previous receipt
-                        FechaExpedicionFactura = null, // FechaExpedicionFactura of previous receipt
-                        Huella = null, // Calculated Hash
+                        IDEmisorFactura = previous!.Value.id.IDEmisorFactura,
+                        // The `IDEmisorFactura` field needs to be the `IDFactura.IDEmisorFactura` of the previous receipt.
+                        // We could either save the last IDEmisorFactura in the queueES like this
+                        // or have a change masterdata reciept where we udpate the masterdata and handle this case
+                        NumSerieFactura = previous!.Value.id.NumSerieFactura,
+                        FechaExpedicionFactura = previous!.Value.id.FechaExpedicionFactura,
+                        Huella = previous!.Value.hash,
                     }
             },
             SistemaInformatico = new SistemaInformaticoType
