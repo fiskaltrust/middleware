@@ -457,7 +457,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
         private static readonly int _vatRateDeduction1 = 2;
         private static readonly int _vatRateDeduction2 = 3;
         private static readonly int _vatRateSuperReduced1 = 4;
-        private static readonly int _vatRateZero = 0;
+        private static readonly int _vatRateZero = 13;
         private static readonly int _vatRateUnknown = -1;
         private static readonly int _notTaxable = 0;
         private static int _vatRateSuperReduced2;
