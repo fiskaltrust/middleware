@@ -34,7 +34,6 @@ public class VeriFactuMapping
 
         var registroFactura = new List<RegistroFacturaType>();
 
-        // also for refund?
         if (receiptRequest.IsVoid())
         {
             registroFactura.Add(
@@ -90,7 +89,7 @@ public class VeriFactuMapping
             ImporteRectificacion = new DesgloseRectificacionType
             {
                 // Do we need rounding for all the the decimals or should we fail if it's not in the range?
-                BaseRectificada = receiptRequest.cbChargeItems.Sum(chargeItem => chargeItem.GetVATAmount()).ToString("0.00"),
+                BaseRectificada = receiptRequest.cbChargeItems.Sum(chargeItem => chargeItem.GetVATAmount()).ToString("0.00"), // helper
                 // whats the difference between `CuotaRectificada` and `BaseRectificada`
                 CuotaRectificada = null,
             },
@@ -124,6 +123,7 @@ public class VeriFactuMapping
                     }
             },
             // Which PosSystem from the list should we take? In DE we just take the first one...
+            // Is this fiskaltrust or the dealer/creator
             SistemaInformatico = new SistemaInformaticoType
             {
                 // "Name and company name of the producing person or entity."
@@ -152,21 +152,36 @@ public class VeriFactuMapping
 public static class RegistroFacturacionAltaTypeExt
 {
     public static string GetHuella(this RegistroFacturacionAltaType registroFacturacionAlta)
-    {
-        var data = new StringBuilder()
-            .AppendFormat(GetValue("IDEmisorFactura", registroFacturacionAlta.IDFactura.IDEmisorFactura))
-            .AppendFormat(GetValue("NumSerieFactura", registroFacturacionAlta.IDFactura.NumSerieFactura))
-            .AppendFormat(GetValue("FechaExpedicionFactura", registroFacturacionAlta.IDFactura.FechaExpedicionFactura))
-            .AppendFormat(GetValue("TipoFactura", Enum.GetName(registroFacturacionAlta.TipoFactura)!))
-            .AppendFormat(GetValue("CuotaTotal", registroFacturacionAlta.CuotaTotal))
-            .AppendFormat(GetValue("ImporteTotal", registroFacturacionAlta.ImporteTotal))
-            .AppendFormat(GetValue("Huella", registroFacturacionAlta.Encadenamiento.Item is EncadenamientoFacturaAnteriorType alta
-                ? alta.Huella
-                : "S"))
-            .AppendFormat(GetValue("FechaHoraHusoGenRegistro", registroFacturacionAlta.FechaHoraHusoGenRegistro.ToString("yyyy-MM-ddThh:mm:sszzz"), separator: false))
-            .ToString();
+        => registroFacturacionAlta.GetHuella(new List<(string key, Func<RegistroFacturacionAltaType, string> value)> {
+            ("IDEmisorFactura", x => x.IDFactura.IDEmisorFactura),
+            ("NumSerieFactura", x => x.IDFactura.NumSerieFactura),
+            ("FechaExpedicionFactura", x => x.IDFactura.FechaExpedicionFactura),
+            ("TipoFactura", x => Enum.GetName(x.TipoFactura)!),
+            ("CuotaTotal", x => x.CuotaTotal),
+            ("ImporteTotal", x => x.ImporteTotal),
+            ("Huella", x => x.Encadenamiento.Item is EncadenamientoFacturaAnteriorType alta ? alta.Huella : "S"),
+            ("FechaHoraHusoGenRegistro", x => x.FechaHoraHusoGenRegistro.ToString("yyyy-MM-ddThh:mm:sszzz")),
+        });
 
-        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(data));
+    public static string GetHuella(this RegistroFacturacionAnulacionType registroFacturacionAnulacion)
+        => registroFacturacionAnulacion.GetHuella(new List<(string key, Func<RegistroFacturacionAnulacionType, string> value)> {
+            ("IDEmisorFacturaAnulada", x => x.IDFactura.IDEmisorFacturaAnulada),
+            ("NumSerieFacturaAnulada", x => x.IDFactura.NumSerieFacturaAnulada),
+            ("FechaExpedicionFacturaAnulada", x => x.IDFactura.FechaExpedicionFacturaAnulada),
+            ("Huella", x => x.Encadenamiento.Item is EncadenamientoFacturaAnteriorType alta ? alta.Huella : "S"),
+            ("FechaHoraHusoGenRegistro", x => x.FechaHoraHusoGenRegistro.ToString("yyyy-MM-ddThh:mm:sszzz")),
+        });
+
+
+    private static string GetHuella<T>(this T self, List<(string key, Func<T, string> value)> selectors)
+    {
+        var data = new StringBuilder();
+        foreach (var (n, (key, value)) in selectors.Select((x, i) => (i + 1, x)))
+        {
+            data.AppendFormat(GetValue(key, value(self), selectors.Count == n));
+        }
+
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(data.ToString()));
 
         return Convert.ToHexString(hash);
     }
