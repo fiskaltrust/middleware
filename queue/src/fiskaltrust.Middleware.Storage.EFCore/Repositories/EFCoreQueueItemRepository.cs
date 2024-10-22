@@ -115,7 +115,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.Repositories
 
         public async Task<ftQueueItem> GetLastQueueItemAsync()
         {
-            return await DbContext.QueueItemList.AsQueryable().OrderByDescending(x => x.ftQueueRow).FirstOrDefaultAsync();
+            return await DbContext.QueueItemList.AsQueryable().OrderByDescending(x => x.TimeStamp).FirstOrDefaultAsync();
         }
     }
 }

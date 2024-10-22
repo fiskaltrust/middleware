@@ -108,7 +108,7 @@ namespace fiskaltrust.Middleware.Storage.InMemory.Repositories
         {
             var lastqueueItem =
                 (from queueItem in Data.Values
-                 orderby queueItem.ftQueueRow descending
+                 orderby queueItem.TimeStamp descending
                  select queueItem).ToAsyncEnumerable().Take(1);
             return await lastqueueItem.FirstOrDefaultAsync();
         }
