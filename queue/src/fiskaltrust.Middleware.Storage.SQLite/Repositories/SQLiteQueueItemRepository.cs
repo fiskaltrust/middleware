@@ -114,7 +114,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Repositories
         public async Task<ftQueueItem> GetLastQueueItemAsync()
         {
             var query = "SELECT * FROM ftQueueItem " +
-                            "ORDER BY ftQueueRow DESC LIMIT 1;";
+                            "ORDER BY TimeStamp DESC LIMIT 1;";
 
             return await DbConnection.QueryFirstOrDefaultAsync<ftQueueItem>(query).ConfigureAwait(false);
         }
