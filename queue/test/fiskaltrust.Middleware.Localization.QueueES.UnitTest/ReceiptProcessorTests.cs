@@ -16,11 +16,11 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
         {
             var receiptRequest = new ReceiptRequest
             {
-                ftReceiptCase = 0x5054_2000_0000_0000
+                ftReceiptCase = 0x4752_2000_0000_0000
             };
             var receiptResponse = new ReceiptResponse
             {
-                ftState = 0x5054_2000_0000_0000,
+                ftState = 0x4752_2000_0000_0000,
                 ftCashBoxIdentification = "cashBoxIdentification",
                 ftQueueID = Guid.NewGuid(),
                 ftQueueItemID = Guid.NewGuid(),
@@ -35,7 +35,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
             result.receiptResponse.Should().Be(receiptResponse);
             result.receiptResponse.ftState.Should().Be(0x4752_2000_EEEE_EEEE);
             result.receiptResponse.ftSignatures.Should().HaveCount(1);
-            result.receiptResponse.ftSignatures[0].ftSignatureType.Should().Be(0x5054_2000_0000_3000);
+            result.receiptResponse.ftSignatures[0].ftSignatureType.Should().Be(0x4752_2000_0000_3000);
             result.receiptResponse.ftSignatures[0].Caption.Should().Be("FAILURE");
         }
 
@@ -63,7 +63,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
             result.receiptResponse.Should().Be(receiptResponse);
             result.receiptResponse.ftState.Should().Be(0x4752_2000_EEEE_EEEE);
             result.receiptResponse.ftSignatures.Should().HaveCount(1);
-            result.receiptResponse.ftSignatures[0].ftSignatureType.Should().Be(0x5054_2000_0000_3000);
+            result.receiptResponse.ftSignatures[0].ftSignatureType.Should().Be(0x4752_2000_0000_3000);
             result.receiptResponse.ftSignatures[0].Caption.Should().Be("FAILURE");
         }
     }
