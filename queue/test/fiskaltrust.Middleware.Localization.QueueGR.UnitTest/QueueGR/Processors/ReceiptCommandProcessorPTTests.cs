@@ -90,7 +90,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
 
             var configMock = new Mock<IConfigurationRepository>();
             configMock.Setup(x => x.InsertOrUpdateQueueAsync(It.IsAny<ftQueue>())).Returns(Task.CompletedTask);
-            var sut = new ReceiptCommandProcessorGR(new MyDataApiClient("", ""), queuePT, signaturCreationUnitPT);
+            var sut = new ReceiptCommandProcessorGR(new MyDataApiClient("", "", false), queuePT, signaturCreationUnitPT);
 
             var receiptRequest = new ReceiptRequest
             {

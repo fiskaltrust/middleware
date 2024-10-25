@@ -16,7 +16,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.QueueGR.IGRSSCD
                 ftReceiptCase = 0x4752_2000_0000_0000,
                 cbTerminalID = "1",
                 cbReceiptReference = Guid.NewGuid().ToString(),
-                cbReceiptMoment = new DateTime(2020, 04, 08),
+                cbReceiptMoment = DateTime.UtcNow,
                 cbChargeItems =
                 [
                     new ChargeItem
@@ -59,12 +59,12 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.QueueGR.IGRSSCD
                 cbTerminalID = receiptRequest.cbTerminalID,
                 ftQueueID = Guid.Parse("30100f56-6009-48fb-a612-90143e48a67b"),
                 ftQueueItemID = Guid.NewGuid(),
-                ftQueueRow = 1,
+                ftQueueRow = 5,
                 ftReceiptIdentification = "ft123#",
                 ftReceiptMoment = DateTime.UtcNow
             };
 
-            var sut = new MyDataApiClient("", "");
+            var sut = new MyDataApiClient("user11111111", "41291863a36d552c4d7fc8195d427dd3", true);
             var payload = sut.GenerateInvoicePayload(receiptRequest, receiptResponse);
 
 
@@ -77,7 +77,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.QueueGR.IGRSSCD
             var req = JsonSerializer.Serialize(receiptRequest);
             var data = JsonSerializer.Serialize(result.ReceiptResponse);
 
-            var issueRequest = new 
+            var issueRequest = new
             {
                 ReceiptRequest = receiptRequest,
                 ReceiptResponse = receiptResponse

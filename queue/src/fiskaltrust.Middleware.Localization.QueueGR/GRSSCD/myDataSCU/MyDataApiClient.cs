@@ -1,5 +1,6 @@
 ﻿using System.Net.Http.Headers;
 using System.Text;
+using System.Text.Json;
 using System.Xml.Serialization;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueueGR.Interface;
@@ -16,13 +17,19 @@ public class MyDataApiClient : IGRSSCD
     private readonly string _prodBaseUrl = "https://mydataapi.aade.gr/";
     private readonly string _devBaseUrl = "https://mydataapidev.aade.gr/";
 
+    private readonly bool _iseinvoiceProvider;
+
     public static MyDataApiClient CreateClient(Dictionary<string, object> configuration)
     {
-        return new MyDataApiClient(configuration["aade-user-id"].ToString(), configuration["ocp-apim-subscription-key"].ToString());
+        var iseinvoiceProvider = false;
+        if (configuration.TryGetValue("iseinvoiceProvider", out var data) && bool.TryParse(data?.ToString(), out iseinvoiceProvider))
+        { }
+        return new MyDataApiClient(configuration["aade-user-id"].ToString(), configuration["ocp-apim-subscription-key"].ToString(), iseinvoiceProvider);
     }
 
-    public MyDataApiClient(string username, string subscriptionKey)
+    public MyDataApiClient(string username, string subscriptionKey, bool iseinvoiceProvider)
     {
+        _iseinvoiceProvider = iseinvoiceProvider;
         _httpClient = new HttpClient()
         {
             BaseAddress = new Uri(_devBaseUrl)
@@ -35,7 +42,9 @@ public class MyDataApiClient : IGRSSCD
     public async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request)
     {
         var payload = GenerateInvoicePayload(request.ReceiptRequest, request.ReceiptResponse);
-        var response = await _httpClient.PostAsync("/SendInvoices", new StringContent(payload, Encoding.UTF8, "application/xml"));
+
+        var path = _iseinvoiceProvider ? "/myDataProvider/SendInvoices" : "/SendReceipts";
+        var response = await _httpClient.PostAsync(path, new StringContent(payload, Encoding.UTF8, "application/xml"));
         var content = await response.Content.ReadAsStringAsync();
         if (response.IsSuccessStatusCode)
         {
@@ -43,22 +52,34 @@ public class MyDataApiClient : IGRSSCD
             if (ersult != null)
             {
                 var data = ersult.response[0];
-                for (var i = 0; i < data.ItemsElementName.Length; i++)
+                if (data.statusCode.ToLower() == "success")
                 {
-                    if (data.ItemsElementName[i] == ItemsChoiceType.qrUrl)
+                    for (var i = 0; i < data.ItemsElementName.Length; i++)
                     {
-                        request.ReceiptResponse.AddSignatureItem(CreateGRQRCode(data.Items[i].ToString()));
-                    }
-                    else
-                    {
-                        request.ReceiptResponse.AddSignatureItem(new SignatureItem
+                        if (data.ItemsElementName[i] == ItemsChoiceType.qrUrl)
                         {
-                            Data = data.Items[i].ToString(),
-                            Caption = data.ItemsElementName[i].ToString(),
-                            ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.Text,
-                            ftSignatureType = (long) SignatureTypesGR.MyDataInfo
-                        });
+                            request.ReceiptResponse.AddSignatureItem(CreateGRQRCode(data.Items[i].ToString()));
+                        }
+                        else
+                        {
+                            request.ReceiptResponse.AddSignatureItem(new SignatureItem
+                            {
+                                Data = data.Items[i].ToString(),
+                                Caption = data.ItemsElementName[i].ToString(),
+                                ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.Text,
+                                ftSignatureType = (long) SignatureTypesGR.MyDataInfo
+                            });
+                        }
                     }
+                }
+                else
+                {
+                    var errors = data.Items.Cast<ResponseTypeErrors>().SelectMany(x => x.error);
+                    request.ReceiptResponse.SetReceiptResponseError(JsonSerializer.Serialize(new AADEEErrorResponse
+                    {
+                        AADEError = data.statusCode,
+                        Errors = errors.ToList()
+                    }));
                 }
             }
             else
@@ -76,6 +97,12 @@ public class MyDataApiClient : IGRSSCD
         {
             ReceiptResponse = request.ReceiptResponse
         };
+    }
+
+    public class AADEEErrorResponse
+    {
+        public string AADEError { get; set; }
+        public List<ErrorType> Errors { get; set; }
     }
 
     public static SignatureItem CreateGRQRCode(string qrCode)
@@ -179,7 +206,7 @@ public class MyDataApiClient : IGRSSCD
         (long) ChargeItemCaseVat.ParkingVatRate => MyDataVatCategory.VatRate4, // Parking VAT 4%
         (long) ChargeItemCaseVat.NotTaxable => MyDataVatCategory.RegistrationsWithoutVat, // Not Taxable
         (long) ChargeItemCaseVat.ZeroVatRate => MyDataVatCategory.RegistrationsWithoutVat, // Zero
-        _ => throw new Exception($"The VAT type {chargeItem.ftChargeItemCase & 0xF} of ChargeItem with the case {chargeItem.ftChargeItemCase} is not supported."), 
+        _ => throw new Exception($"The VAT type {chargeItem.ftChargeItemCase & 0xF} of ChargeItem with the case {chargeItem.ftChargeItemCase} is not supported."),
     };
 
     private int GetPaymentType(PayItem payItem) => (payItem.ftPayItemCase & 0xF) switch
