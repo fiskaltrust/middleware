@@ -1,4 +1,5 @@
 ﻿using System.Net.Http.Headers;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Xml.Serialization;
@@ -39,9 +40,13 @@ public class MyDataApiClient : IGRSSCD
     }
 
     public async Task<GRSSCDInfo> GetInfoAsync() => await Task.FromResult(new GRSSCDInfo());
+
+    
+
     public async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request)
     {
-        var payload = GenerateInvoicePayload(request.ReceiptRequest, request.ReceiptResponse);
+        var doc = MapToInvoicesDoc(request.ReceiptRequest, request.ReceiptResponse);
+        var payload = GenerateInvoicePayload(doc);
 
         var path = _iseinvoiceProvider ? "/myDataProvider/SendInvoices" : "/SendReceipts";
         var response = await _httpClient.PostAsync(path, new StringContent(payload, Encoding.UTF8, "application/xml"));
@@ -71,6 +76,18 @@ public class MyDataApiClient : IGRSSCD
                             });
                         }
                     }
+                    if (_iseinvoiceProvider)
+                    {
+                        request.ReceiptResponse.AddSignatureItem(CreateGRQRCode($"https://receipts-sandbox.fiskaltrust.eu/{request.ReceiptResponse.ftQueueID}/{request.ReceiptResponse.ftQueueItemID}"));
+                    }
+
+                    request.ReceiptResponse.AddSignatureItem(new SignatureItem
+                    {
+                        Data = $"{doc.invoice[0].issuer.vatNumber}|{doc.invoice[0].invoiceHeader.issueDate.ToString("dd/MM/yyyy")}|{doc.invoice[0].issuer.branch}|{doc.invoice[0].invoiceHeader.invoiceType}|{doc.invoice[0].invoiceHeader.series}|{doc.invoice[0].invoiceHeader.aa}",
+                        Caption = "Αριθμός τιμολογίου",
+                        ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.Text,
+                        ftSignatureType = (long) SignatureTypesGR.MyDataInfo
+                    });
                 }
                 else
                 {
@@ -143,45 +160,46 @@ public class MyDataApiClient : IGRSSCD
             classificationTypeSpecified = true
         }).ToList();
 
+        var inv = new AadeBookInvoiceType
+        {
+            issuer = CreateIssuer(), // issuer from masterdataconfig
+            paymentMethods = receiptRequest.cbPayItems.Select(x => new PaymentMethodDetailType
+            {
+                type = GetPaymentType(x),
+                amount = x.Amount,
+                paymentMethodInfo = x.Description
+            }).ToArray(),
+            invoiceHeader = new InvoiceHeaderType
+            {
+                series = "A",
+                aa = receiptResponse.ftQueueRow.ToString(),
+                issueDate = receiptRequest.cbReceiptMoment,
+                invoiceType = GetInvoiceType(receiptRequest),
+                currency = CurrencyType.EUR,
+                currencySpecified = true
+            },
+            invoiceDetails = invoiceDetails.ToArray(),
+            invoiceSummary = new InvoiceSummaryType
+            {
+                totalNetValue = receiptRequest.cbChargeItems.Sum(x => x.Amount - (x.VATAmount ?? 0.0m)),
+                totalVatAmount = receiptRequest.cbChargeItems.Sum(x => x.VATAmount ?? 0.0m),
+                totalWithheldAmount = 0.0m,
+                totalFeesAmount = 0.0m,
+                totalStampDutyAmount = 0.0m,
+                totalOtherTaxesAmount = 0.0m,
+                totalDeductionsAmount = 0.0m,
+                totalGrossValue = receiptRequest.cbChargeItems.Sum(x => x.Amount),
+                incomeClassification = incomeClassificationGroups.ToArray()
+            }
+        };
         var doc = new InvoicesDoc
         {
-            invoice =
-              [
-                  new AadeBookInvoiceType
-                    {
-                        issuer = CreateIssuer(), // issuer from masterdataconfig
-                        paymentMethods = receiptRequest.cbPayItems.Select(x => new PaymentMethodDetailType
-                          {
-                              type = GetPaymentType(x),
-                              amount = x.Amount,
-                              paymentMethodInfo = x.Description
-                          }).ToArray(),
-                        invoiceHeader = new InvoiceHeaderType
-                        {
-                            series = receiptResponse.ftCashBoxIdentification,
-                            aa = receiptResponse.ftQueueRow.ToString(),
-                            issueDate = receiptRequest.cbReceiptMoment,
-                            invoiceType = GetInvoiceType(receiptRequest),
-                            currency = CurrencyType.EUR,
-                            currencySpecified = true
-                        },
-                        invoiceDetails = invoiceDetails.ToArray(),
-                        invoiceSummary = new InvoiceSummaryType {
-                            totalNetValue = receiptRequest.cbChargeItems.Sum(x => x.Amount - (x.VATAmount ?? 0.0m)),
-                            totalVatAmount = receiptRequest.cbChargeItems.Sum(x => x.VATAmount ?? 0.0m),
-                            totalWithheldAmount = 0.0m,
-                            totalFeesAmount = 0.0m,
-                            totalStampDutyAmount = 0.0m,
-                            totalOtherTaxesAmount = 0.0m,
-                            totalDeductionsAmount = 0.0m,
-                            totalGrossValue = receiptRequest.cbChargeItems.Sum(x => x.Amount),
-                            incomeClassification = incomeClassificationGroups.ToArray()
-                        }
-                    }
-              ]
+            invoice = [ inv ]
         };
         return doc;
     }
+
+    public string GetUid(AadeBookInvoiceType invoice) => Encoding.UTF8.GetString(SHA1.HashData(Encoding.UTF8.GetBytes($"{invoice.issuer.vatNumber}-{invoice.invoiceHeader.issueDate}-{invoice.issuer.branch}-{invoice.invoiceHeader.invoiceType}-{invoice.invoiceHeader.series}-{invoice.invoiceHeader.aa}")));
 
     private IncomeClassificationValueType GetIncomeClassificationValueType(ChargeItem chargeItem) => (chargeItem.ftChargeItemCase & 0xF0) switch
     {
@@ -236,9 +254,8 @@ public class MyDataApiClient : IGRSSCD
     };
 
     // Generic method to handle XML serialization and API calls
-    public string GenerateInvoicePayload(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
+    public string GenerateInvoicePayload(InvoicesDoc doc)
     {
-        var doc = MapToInvoicesDoc(receiptRequest, receiptResponse);
         var xmlSerializer = new XmlSerializer(typeof(InvoicesDoc));
         using var stringWriter = new StringWriter();
         xmlSerializer.Serialize(stringWriter, doc);
