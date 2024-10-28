@@ -187,7 +187,7 @@ namespace fiskaltrust.Middleware.Storage.MySQL.Repositories
         public async Task<ftQueueItem> GetLastQueueItemAsync()
         {
             var query = "SELECT * FROM ftQueueItem " +
-                            "ORDER BY ftQueueRow DESC LIMIT 1;";
+                            "ORDER BY TimeStamp DESC LIMIT 1;";
             using (var connection = new MySqlConnection(ConnectionString))
             {
                 await connection.OpenAsync().ConfigureAwait(false);
