@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Web;
+using System.Xml.Serialization;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
@@ -149,7 +150,7 @@ public class VeriFactuMapping
     }
 }
 
-public static class RegistroFacturacionAltaTypeExt
+public static class HuellaExt
 {
     public static string GetHuella(this RegistroFacturacionAltaType registroFacturacionAlta)
         => registroFacturacionAlta.GetHuella(new List<(string key, Func<RegistroFacturacionAltaType, string> value)> {
@@ -188,4 +189,17 @@ public static class RegistroFacturacionAltaTypeExt
 
     private static string GetValue(string key, string value, bool encoded = false, bool separator = true)
         => key + "=" + (encoded ? HttpUtility.UrlEncode(value.Trim()) : value.Trim()) + (separator ? "&" : "");
+}
+
+public static class XmlExt
+{
+    public static string Serialize(this RegistroFacturacionAltaType registroFacturacionAlta)
+    {
+        var serializer = new XmlSerializer(typeof(RegistroFacturacionAltaType));
+        using var writer = new StringWriter();
+
+        serializer.Serialize(writer, registroFacturacionAlta);
+
+        return writer.ToString();
+    }
 }

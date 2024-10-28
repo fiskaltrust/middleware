@@ -5,10 +5,11 @@ using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Configuration;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.MasterData;
+using fiskaltrust.Middleware.Localization.v2.QueueES.Storage;
 using fiskaltrust.Middleware.Localization.v2.Storage;
 using fiskaltrust.Middleware.Storage.AzureTableStorage;
 using fiskaltrust.Middleware.Storage.ES;
-
+using fiskaltrust.storage.V0.MasterData;
 using Microsoft.Extensions.Logging;
 
 
@@ -25,12 +26,29 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
         var queueES = Newtonsoft.Json.JsonConvert.DeserializeObject<List<ftQueueES>>(configuration["init_ftQueueES"]!.ToString()!).First();
 
         var signaturCreationUnitES = new ftSignaturCreationUnitES();
-        var esSSCD = new InMemorySCU(signaturCreationUnitES);
         var storageProvider = new AzureStorageProvider(loggerFactory, id, configuration);
         var queueStorageProvider = new QueueStorageProvider(id, storageProvider);
+        var scuStateProvider = new SCUStateProvider(id, storageProvider);
 
         var masterDataService = new MasterDataService(configuration, storageProvider);
-        var signProcessorES = new ReceiptProcessor(loggerFactory.CreateLogger<ReceiptProcessor>(), new LifecycleCommandProcessorES(queueStorageProvider), new ReceiptCommandProcessorES(esSSCD, queueES, signaturCreationUnitES), new DailyOperationsCommandProcessorES(), new InvoiceCommandProcessorES(), new ProtocolCommandProcessorES());
+        var esSSCD = new InMemorySCU(signaturCreationUnitES, masterDataService.GetCurrentDataAsync().Result); // put this in an async scu init process
+        var signProcessorES = new ReceiptProcessor(
+            loggerFactory.CreateLogger<ReceiptProcessor>(),
+            new LifecycleCommandProcessorES(
+                esSSCD,
+                queueStorageProvider,
+                scuStateProvider
+            ),
+            new ReceiptCommandProcessorES(
+                esSSCD,
+                queueES,
+                signaturCreationUnitES,
+                scuStateProvider
+            ),
+            new DailyOperationsCommandProcessorES(),
+            new InvoiceCommandProcessorES(),
+            new ProtocolCommandProcessorES()
+        );
         var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, signProcessorES.ProcessAsync, queueES.CashBoxIdentification, middlewareConfiguration);
         var journalProcessor = new JournalProcessor(storageProvider, new JournalProcessorES(), configuration, loggerFactory.CreateLogger<JournalProcessor>());
         _queue = new Queue(signProcessor, journalProcessor, loggerFactory)

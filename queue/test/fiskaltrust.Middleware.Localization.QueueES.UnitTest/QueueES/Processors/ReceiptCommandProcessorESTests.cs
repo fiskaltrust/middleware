@@ -14,12 +14,16 @@ using FluentAssertions.Execution;
 using Moq;
 using Xunit;
 using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.Localization.v2.QueueES.Storage;
+using fiskaltrust.storage.V0.MasterData;
+using AutoFixture;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processors
 {
     public class ReceiptCommandProcessorESTests
     {
-        private readonly ReceiptCommandProcessorES _sut = new ReceiptCommandProcessorES(Mock.Of<IESSSCD>(), new ftQueueES(), new ftSignaturCreationUnitES());
+        private readonly Fixture _fixture = new Fixture();
+        private readonly ReceiptCommandProcessorES _sut = new ReceiptCommandProcessorES(Mock.Of<IESSSCD>(), new ftQueueES(), new ftSignaturCreationUnitES(), Mock.Of<ISCUStateProvider>());
 
         [Theory]
         [InlineData(ReceiptCases.PaymentTransfer0x0002)]
@@ -84,12 +88,20 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             var queueES = new ftQueueES();
             var signaturCreationUnitES = new ftSignaturCreationUnitES
             {
-
+                StateData = System.Text.Json.JsonSerializer.Serialize(new StateData
+                {
+                    EncadenamientoAlta = null,
+                    EncadenamientoAnulacion = null
+                })
             };
+
+            var masterDataConfiguration = _fixture.Create<MasterDataConfiguration>();
 
             var configMock = new Mock<IConfigurationRepository>();
             configMock.Setup(x => x.InsertOrUpdateQueueAsync(It.IsAny<ftQueue>())).Returns(Task.CompletedTask);
-            var sut = new ReceiptCommandProcessorES(new InMemorySCU(signaturCreationUnitES), queueES, signaturCreationUnitES);
+            var scuStateMock = new Mock<ISCUStateProvider>();
+            scuStateMock.Setup(x => x.LoadAsync()).ReturnsAsync(System.Text.Json.JsonSerializer.Deserialize<StateData>(signaturCreationUnitES.StateData)!);
+            var sut = new ReceiptCommandProcessorES(new InMemorySCU(signaturCreationUnitES, masterDataConfiguration), queueES, signaturCreationUnitES, scuStateMock.Object);
 
             var receiptRequest = new ReceiptRequest
             {
@@ -143,7 +155,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
                 ftCashBoxIdentification = "cashBoxIdentification",
 
                 ftQueueRow = 1,
-                ftReceiptIdentification = "receiptIdentification",
+                ftReceiptIdentification = "0#0",
                 ftReceiptMoment = DateTime.UtcNow,
             };
 

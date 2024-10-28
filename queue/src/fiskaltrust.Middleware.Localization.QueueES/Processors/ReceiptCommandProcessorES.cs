@@ -5,15 +5,17 @@ using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Storage.ES;
 using fiskaltrust.storage.V0;
 using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.Localization.v2.QueueES.Storage;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.Processors;
 
-public class ReceiptCommandProcessorES(IESSSCD sscd, ftQueueES queueES, ftSignaturCreationUnitES signaturCreationUnitES) : IReceiptCommandProcessor
+public class ReceiptCommandProcessorES(IESSSCD sscd, ftQueueES queueES, ftSignaturCreationUnitES signaturCreationUnitES, ISCUStateProvider scuStateProvider) : IReceiptCommandProcessor
 {
 #pragma warning disable
     private readonly IESSSCD _sscd = sscd;
     private readonly ftQueueES _queueES = queueES;
     private readonly ftSignaturCreationUnitES _signaturCreationUnitES = signaturCreationUnitES;
+    private readonly ISCUStateProvider _scuStateProvider = scuStateProvider;
 #pragma warning restore
 
     public async Task<ProcessCommandResponse> ProcessReceiptAsync(ProcessCommandRequest request)
@@ -42,11 +44,14 @@ public class ReceiptCommandProcessorES(IESSSCD sscd, ftQueueES queueES, ftSignat
 
     public async Task<ProcessCommandResponse> PointOfSaleReceipt0x0001Async(ProcessCommandRequest request)
     {
+        var (_, receiptRequest, receiptResponse) = request;
         var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
         {
-            ReceiptRequest = request.ReceiptRequest,
-            ReceiptResponse = request.ReceiptResponse,
+            ReceiptRequest = receiptRequest,
+            ReceiptResponse = receiptResponse,
+            StateData = await _scuStateProvider.LoadAsync()
         });
+        await _scuStateProvider.SaveAsync(response.StateData);
         return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
     }
 

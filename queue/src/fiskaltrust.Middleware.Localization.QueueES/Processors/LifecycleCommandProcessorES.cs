@@ -5,17 +5,22 @@ using fiskaltrust.Middleware.Localization.v2.Storage;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.storage.V0;
 using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.Localization.QueueES.ESSSCD;
+using fiskaltrust.Middleware.Localization.v2.QueueES.Storage;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.Processors;
 
 public class LifecycleCommandProcessorES : ILifecycleCommandProcessor
 {
     private readonly ILocalizedQueueStorageProvider _localizedQueueStorageProvider;
+    private readonly ISCUStateProvider _scuStateProvider;
+    private readonly IESSSCD _sscd;
 
-
-    public LifecycleCommandProcessorES(ILocalizedQueueStorageProvider localizedQueueStorageProvider)
+    public LifecycleCommandProcessorES(IESSSCD sscd, ILocalizedQueueStorageProvider localizedQueueStorageProvider, ISCUStateProvider scuStateProvider)
     {
+        _sscd = sscd;
         _localizedQueueStorageProvider = localizedQueueStorageProvider;
+        _scuStateProvider = scuStateProvider;
     }
 
     public async Task<ProcessCommandResponse> ProcessReceiptAsync(ProcessCommandRequest request)
@@ -38,7 +43,17 @@ public class LifecycleCommandProcessorES : ILifecycleCommandProcessor
 
     public async Task<ProcessCommandResponse> InitialOperationReceipt0x4001Async(ProcessCommandRequest request)
     {
+        // should an initial operation receipt initialize both the Alta and Anulacion chains?
+        // maybe by cancelling its self? ^^
+
         var (queue, receiptRequest, receiptResponse) = request;
+        var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
+        {
+            ReceiptRequest = receiptRequest,
+            ReceiptResponse = receiptResponse,
+            StateData = await _scuStateProvider.LoadAsync()
+        });
+        await _scuStateProvider.SaveAsync(response.StateData); // what happens if the storage is down?
         var actionJournal = ftActionJournalFactory.CreateInitialOperationActionJournal(receiptRequest, receiptResponse);
         await _localizedQueueStorageProvider.ActivateQueueAsync();
 

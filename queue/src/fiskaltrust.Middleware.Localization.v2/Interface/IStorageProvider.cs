@@ -7,7 +7,7 @@ namespace fiskaltrust.Middleware.Localization.v2.Interface;
 public interface IStorageProvider
 {
     Task Initialized { get; }
-    IConfigurationRepository GetConfigurationRepository();
+    Middleware.Storage.Repositories.IConfigurationRepository GetConfigurationRepository();
     IMiddlewareQueueItemRepository GetMiddlewareQueueItemRepository();
     IMiddlewareReceiptJournalRepository GetMiddlewareReceiptJournalRepository();
     IMiddlewareActionJournalRepository GetMiddlewareActionJournalRepository();
