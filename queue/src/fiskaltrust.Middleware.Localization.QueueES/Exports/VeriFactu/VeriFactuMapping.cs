@@ -160,7 +160,7 @@ public static class HuellaExt
             ("TipoFactura", x => Enum.GetName(x.TipoFactura)!),
             ("CuotaTotal", x => x.CuotaTotal),
             ("ImporteTotal", x => x.ImporteTotal),
-            ("Huella", x => x.Encadenamiento.Item is EncadenamientoFacturaAnteriorType alta ? alta.Huella : "S"),
+            ("Huella", x => x.Encadenamiento.Item is EncadenamientoFacturaAnteriorType encadenamiento ? encadenamiento.Huella : "S"),
             ("FechaHoraHusoGenRegistro", x => x.FechaHoraHusoGenRegistro.ToString("yyyy-MM-ddThh:mm:sszzz")),
         });
 
@@ -169,7 +169,7 @@ public static class HuellaExt
             ("IDEmisorFacturaAnulada", x => x.IDFactura.IDEmisorFacturaAnulada),
             ("NumSerieFacturaAnulada", x => x.IDFactura.NumSerieFacturaAnulada),
             ("FechaExpedicionFacturaAnulada", x => x.IDFactura.FechaExpedicionFacturaAnulada),
-            ("Huella", x => x.Encadenamiento.Item is EncadenamientoFacturaAnteriorType alta ? alta.Huella : "S"),
+            ("Huella", x => x.Encadenamiento.Item is EncadenamientoFacturaAnteriorType encadenamiento ? encadenamiento.Huella : "S"),
             ("FechaHoraHusoGenRegistro", x => x.FechaHoraHusoGenRegistro.ToString("yyyy-MM-ddThh:mm:sszzz")),
         });
 

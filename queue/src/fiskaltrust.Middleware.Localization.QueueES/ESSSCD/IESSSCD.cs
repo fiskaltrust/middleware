@@ -11,37 +11,16 @@ public interface IESSSCD
 }
 
 
-public class Encadenamiento
-{
-    public required string IDEmisorFactura { get; set; }
-
-    public required string NumSerieFactura { get; set; }
-
-    public required string FechaExpedicionFactura { get; set; }
-
-    public required string Huella { get; set; }
-}
-
-public class StateData
-{
-    public required Encadenamiento? EncadenamientoAlta { get; set; }
-
-    public required Encadenamiento? EncadenamientoAnulacion { get; set; }
-}
-
 public class ProcessRequest
 {
     public required ReceiptRequest ReceiptRequest { get; set; }
 
     public required ReceiptResponse ReceiptResponse { get; set; }
-
-    public required StateData StateData { get; set; }
+    public required ReceiptRequest? PreviousReceiptRequest { get; set; }
+    public required ReceiptResponse? PreviousReceiptResponse { get; set; }
 }
 
 public class ProcessResponse
 {
     public required ReceiptResponse ReceiptResponse { get; set; }
-    public required byte[] Journal { get; set; }
-    public required string JournalType { get; set; }
-    public required StateData StateData { get; set; }
 }

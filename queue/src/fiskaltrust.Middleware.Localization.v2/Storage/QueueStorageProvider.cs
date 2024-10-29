@@ -185,4 +185,21 @@ public class QueueStorageProvider : IQueueStorageProvider
         }
         return null;
     }
+
+    private ftQueueItem? _lastReceipt = null;
+    public async Task<ftQueueItem?> LoadLastReceipt()
+    {
+        if (_lastReceipt is null)
+        {
+            var receiptJournal = await _middlewareReceiptJournalRepository.GetWithLastTimestampAsync();
+            if (receiptJournal is null)
+            {
+                return null;
+            }
+
+            _lastReceipt = await _middlewareQueueItemRepository.GetAsync(receiptJournal.ftQueueItemId);
+        }
+
+        return _lastReceipt;
+    }
 }

@@ -14,16 +14,46 @@ using FluentAssertions.Execution;
 using Moq;
 using Xunit;
 using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
-using fiskaltrust.Middleware.Localization.v2.QueueES.Storage;
 using fiskaltrust.storage.V0.MasterData;
 using AutoFixture;
+using fiskaltrust.Middleware.Localization.v2.Storage;
+using System.Text.Json;
+using fiskaltrust.Middleware.Contracts.Factories;
+using System.Text;
+using fiskaltrust.Middleware.Localization.QueueES.Interface;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processors
 {
     public class ReceiptCommandProcessorESTests
     {
-        private readonly Fixture _fixture = new Fixture();
-        private readonly ReceiptCommandProcessorES _sut = new ReceiptCommandProcessorES(Mock.Of<IESSSCD>(), new ftQueueES(), new ftSignaturCreationUnitES(), Mock.Of<ISCUStateProvider>());
+        private readonly Fixture _fixture;
+
+        public ReceiptCommandProcessorESTests()
+        {
+            _fixture = new Fixture();
+            _fixture.Customize<ReceiptResponse>(c => c
+                .With(r => r.ftReceiptIdentification, () => $"{_fixture.Create<uint>():X}#{_fixture.Create<string>()}")
+                .With(r => r.ftSignatures, () =>
+                    _fixture
+                        .CreateMany<SignatureItem>()
+                        .Append(Factories.SignaturItemFactory.CreateESQRCode(Convert.ToBase64String(_fixture.CreateMany<byte>().ToArray())))
+                        .Append(new SignatureItem
+                        {
+                            ftSignatureType = (long) SignatureTypesES.IDEmisorFactura,
+                            ftSignatureFormat = (int) ifPOS.v1.SignaturItem.Formats.QR_Code,
+                            Caption = "IDEmisorFactura",
+                            Data = _fixture.Create<string>()
+                        })
+                        .ToList()
+                )
+            );
+            _fixture.Customize<ftQueueItem>(c => c
+                .With(q => q.request, () => JsonSerializer.Serialize(_fixture.Create<ReceiptRequest>()))
+                .With(q => q.response, () => JsonSerializer.Serialize(_fixture.Create<ReceiptResponse>()))
+            );
+        }
+
+        private readonly ReceiptCommandProcessorES _sut = new ReceiptCommandProcessorES(Mock.Of<IESSSCD>(), new ftQueueES(), new ftSignaturCreationUnitES(), Mock.Of<IQueueStorageProvider>());
 
         [Theory]
         [InlineData(ReceiptCases.PaymentTransfer0x0002)]
@@ -88,20 +118,16 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             var queueES = new ftQueueES();
             var signaturCreationUnitES = new ftSignaturCreationUnitES
             {
-                StateData = System.Text.Json.JsonSerializer.Serialize(new StateData
-                {
-                    EncadenamientoAlta = null,
-                    EncadenamientoAnulacion = null
-                })
+
             };
 
             var masterDataConfiguration = _fixture.Create<MasterDataConfiguration>();
 
             var configMock = new Mock<IConfigurationRepository>();
             configMock.Setup(x => x.InsertOrUpdateQueueAsync(It.IsAny<ftQueue>())).Returns(Task.CompletedTask);
-            var scuStateMock = new Mock<ISCUStateProvider>();
-            scuStateMock.Setup(x => x.LoadAsync()).ReturnsAsync(System.Text.Json.JsonSerializer.Deserialize<StateData>(signaturCreationUnitES.StateData)!);
-            var sut = new ReceiptCommandProcessorES(new InMemorySCU(signaturCreationUnitES, masterDataConfiguration), queueES, signaturCreationUnitES, scuStateMock.Object);
+            var storageMock = new Mock<IQueueStorageProvider>();
+            storageMock.Setup(x => x.LoadLastReceipt()).ReturnsAsync(_fixture.Create<ftQueueItem>());
+            var sut = new ReceiptCommandProcessorES(new InMemorySCU(signaturCreationUnitES, masterDataConfiguration), queueES, signaturCreationUnitES, storageMock.Object);
 
             var receiptRequest = new ReceiptRequest
             {

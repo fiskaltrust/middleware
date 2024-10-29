@@ -5,7 +5,6 @@ using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Configuration;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.MasterData;
-using fiskaltrust.Middleware.Localization.v2.QueueES.Storage;
 using fiskaltrust.Middleware.Localization.v2.Storage;
 using fiskaltrust.Middleware.Storage.AzureTableStorage;
 using fiskaltrust.Middleware.Storage.ES;
@@ -28,7 +27,6 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
         var signaturCreationUnitES = new ftSignaturCreationUnitES();
         var storageProvider = new AzureStorageProvider(loggerFactory, id, configuration);
         var queueStorageProvider = new QueueStorageProvider(id, storageProvider);
-        var scuStateProvider = new SCUStateProvider(id, storageProvider);
 
         var masterDataService = new MasterDataService(configuration, storageProvider);
         var esSSCD = new InMemorySCU(signaturCreationUnitES, masterDataService.GetCurrentDataAsync().Result); // put this in an async scu init process
@@ -36,14 +34,13 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
             loggerFactory.CreateLogger<ReceiptProcessor>(),
             new LifecycleCommandProcessorES(
                 esSSCD,
-                queueStorageProvider,
-                scuStateProvider
+                queueStorageProvider
             ),
             new ReceiptCommandProcessorES(
                 esSSCD,
                 queueES,
                 signaturCreationUnitES,
-                scuStateProvider
+                queueStorageProvider
             ),
             new DailyOperationsCommandProcessorES(),
             new InvoiceCommandProcessorES(),

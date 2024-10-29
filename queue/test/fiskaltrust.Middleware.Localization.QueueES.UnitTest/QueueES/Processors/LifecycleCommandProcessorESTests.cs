@@ -12,7 +12,6 @@ using Newtonsoft.Json;
 using Xunit;
 using AutoFixture;
 using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
-using fiskaltrust.Middleware.Localization.v2.QueueES.Storage;
 using fiskaltrust.Middleware.Localization.QueueES.ESSSCD;
 using fiskaltrust.Middleware.Storage.ES;
 using fiskaltrust.storage.V0.MasterData;
@@ -22,7 +21,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
     public class LifecycleCommandProcessorESTests
     {
         private readonly Fixture _fixture = new Fixture();
-        private readonly LifecycleCommandProcessorES _sut = new(new InMemorySCU(new ftSignaturCreationUnitES { }, new MasterDataConfiguration { }), Mock.Of<ILocalizedQueueStorageProvider>(), Mock.Of<ISCUStateProvider>());
+        private readonly LifecycleCommandProcessorES _sut = new(new InMemorySCU(new ftSignaturCreationUnitES { }, new MasterDataConfiguration { }), Mock.Of<ILocalizedQueueStorageProvider>());
 
         [Theory]
         [InlineData(ReceiptCases.InitialOperationReceipt0x4001)]
@@ -36,20 +35,14 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
 
             var signaturCreationUnitES = new ftSignaturCreationUnitES
             {
-                StateData = System.Text.Json.JsonSerializer.Serialize(new StateData
-                {
-                    EncadenamientoAlta = null,
-                    EncadenamientoAnulacion = null
-                })
+
             };
 
             var masterDataConfiguration = _fixture.Create<MasterDataConfiguration>();
 
             var configMock = new Mock<ILocalizedQueueStorageProvider>();
             configMock.Setup(x => x.ActivateQueueAsync()).Returns(Task.CompletedTask);
-            var scuStateMock = new Mock<ISCUStateProvider>();
-            scuStateMock.Setup(x => x.LoadAsync()).ReturnsAsync(System.Text.Json.JsonSerializer.Deserialize<StateData>(signaturCreationUnitES.StateData)!);
-            var sut = new LifecycleCommandProcessorES(new InMemorySCU(signaturCreationUnitES, masterDataConfiguration), configMock.Object, scuStateMock.Object);
+            var sut = new LifecycleCommandProcessorES(new InMemorySCU(signaturCreationUnitES, masterDataConfiguration), configMock.Object);
 
             var receiptRequest = new ReceiptRequest
             {
@@ -109,20 +102,14 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
 
             var signaturCreationUnitES = new ftSignaturCreationUnitES
             {
-                StateData = System.Text.Json.JsonSerializer.Serialize(new StateData
-                {
-                    EncadenamientoAlta = null,
-                    EncadenamientoAnulacion = null
-                })
+
             };
 
             var masterDataConfiguration = _fixture.Create<MasterDataConfiguration>();
 
             var configMock = new Mock<ILocalizedQueueStorageProvider>();
             configMock.Setup(x => x.ActivateQueueAsync()).Returns(Task.CompletedTask);
-            var scuStateMock = new Mock<ISCUStateProvider>();
-            scuStateMock.Setup(x => x.LoadAsync()).ReturnsAsync(System.Text.Json.JsonSerializer.Deserialize<StateData>(signaturCreationUnitES.StateData)!);
-            var sut = new LifecycleCommandProcessorES(new InMemorySCU(signaturCreationUnitES, masterDataConfiguration), configMock.Object, scuStateMock.Object);
+            var sut = new LifecycleCommandProcessorES(new InMemorySCU(signaturCreationUnitES, masterDataConfiguration), configMock.Object);
 
             var receiptRequest = new ReceiptRequest
             {
@@ -215,9 +202,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             };
 
             var configMock = new Mock<ILocalizedQueueStorageProvider>();
-            var scuStateMock = new Mock<ISCUStateProvider>();
-            configMock.Setup(x => x.ActivateQueueAsync()).Returns(Task.CompletedTask);
-            var sut = new LifecycleCommandProcessorES(new InMemorySCU(signaturCreationUnitES, masterDataConfiguration), configMock.Object, scuStateMock.Object);
+            var sut = new LifecycleCommandProcessorES(new InMemorySCU(signaturCreationUnitES, masterDataConfiguration), configMock.Object);
 
             var receiptRequest = new ReceiptRequest
             {
@@ -306,9 +291,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             };
 
             var configMock = new Mock<ILocalizedQueueStorageProvider>();
-            var scuStateMock = new Mock<ISCUStateProvider>();
-            configMock.Setup(x => x.ActivateQueueAsync()).Returns(Task.CompletedTask);
-            var sut = new LifecycleCommandProcessorES(new InMemorySCU(signaturCreationUnitES, masterDataConfiguration), configMock.Object, scuStateMock.Object);
+            var sut = new LifecycleCommandProcessorES(new InMemorySCU(signaturCreationUnitES, masterDataConfiguration), configMock.Object);
 
             var receiptRequest = new ReceiptRequest
             {
@@ -352,9 +335,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             };
 
             var configMock = new Mock<ILocalizedQueueStorageProvider>();
-            var scuStateMock = new Mock<ISCUStateProvider>();
-            configMock.Setup(x => x.ActivateQueueAsync()).Returns(Task.CompletedTask);
-            var sut = new LifecycleCommandProcessorES(new InMemorySCU(signaturCreationUnitES, masterDataConfiguration), configMock.Object, scuStateMock.Object);
+            var sut = new LifecycleCommandProcessorES(new InMemorySCU(signaturCreationUnitES, masterDataConfiguration), configMock.Object);
 
             var receiptRequest = new ReceiptRequest
             {

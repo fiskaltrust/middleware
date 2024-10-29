@@ -1,7 +1,9 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
+using fiskaltrust.Middleware.Contracts.Factories;
 using fiskaltrust.Middleware.Localization.QueueES.Exports;
+using fiskaltrust.Middleware.Localization.QueueES.Factories;
 using fiskaltrust.Middleware.Localization.QueueES.Interface;
 using fiskaltrust.Middleware.Localization.QueueES.Models;
 using fiskaltrust.Middleware.Localization.v2.Interface;
@@ -35,54 +37,39 @@ public class InMemorySCU : IESSSCD
 
     public async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request)
     {
-        request.ReceiptResponse.AddSignatureItem(CreateESQRCode(""));
-
         if (request.ReceiptRequest.IsVoid())
         {
             throw new NotImplementedException();
         }
         else
         {
-            var journalES = _veriFactuMapping.CreateRegistroFacturacionAlta(request.ReceiptRequest, request.ReceiptResponse, request.StateData.EncadenamientoAlta is null ? null : (
+            var journalES = _veriFactuMapping.CreateRegistroFacturacionAlta(request.ReceiptRequest, request.ReceiptResponse, request.PreviousReceiptRequest is null || request.PreviousReceiptResponse is null ? null : (
                 new IDFacturaExpedidaType
                 {
-                    IDEmisorFactura = request.StateData.EncadenamientoAlta.IDEmisorFactura,
-                    NumSerieFactura = request.StateData.EncadenamientoAlta.NumSerieFactura,
-                    FechaExpedicionFactura = request.StateData.EncadenamientoAlta.FechaExpedicionFactura
+                    IDEmisorFactura = request.PreviousReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.IDEmisorFactura).Data,
+                    NumSerieFactura = request.PreviousReceiptResponse.ftReceiptIdentification.Split('#')[1],
+                    FechaExpedicionFactura = request.PreviousReceiptRequest.cbReceiptMoment.ToString("dd-MM-yyy")
                 },
-                request.StateData.EncadenamientoAlta.Huella
-                )
-            );
+                request.PreviousReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.PosReceipt).Data
+            ));
+
+            request.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreateESQRCode(journalES.Huella));
+            if (journalES.Encadenamiento.Item is EncadenamientoFacturaAnteriorType encadenamiento)
+            {
+                request.ReceiptResponse.AddSignatureItem(new SignatureItem
+                {
+                    Caption = "IDEmisorFactura",
+                    Data = encadenamiento.IDEmisorFactura,
+                    ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.Text,
+                    ftSignatureType = (long) SignatureTypesES.IDEmisorFactura
+                });
+            }
             return await Task.FromResult(new ProcessResponse
             {
                 ReceiptResponse = request.ReceiptResponse,
-                JournalType = "VeriFactu",
-                Journal = Encoding.UTF8.GetBytes(journalES.Serialize()),
-                StateData = new StateData
-                {
-                    EncadenamientoAnulacion = request.StateData.EncadenamientoAnulacion,
-                    EncadenamientoAlta = new Encadenamiento
-                    {
-                        IDEmisorFactura = journalES.IDFactura.IDEmisorFactura,
-                        NumSerieFactura = journalES.IDFactura.NumSerieFactura,
-                        FechaExpedicionFactura = journalES.IDFactura.FechaExpedicionFactura,
-                        Huella = journalES.Huella
-                    }
-                }
             });
         }
     }
 
     public Task<ESSSCDInfo> GetInfoAsync() => throw new NotImplementedException();
-
-    public static SignatureItem CreateESQRCode(string qrCode)
-    {
-        return new SignatureItem()
-        {
-            Caption = "[www.fiskaltrust.es]",
-            Data = qrCode,
-            ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.QR_Code,
-            ftSignatureType = (long) SignatureTypesES.PosReceipt
-        };
-    }
 }

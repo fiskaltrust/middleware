@@ -6,21 +6,20 @@ using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.storage.V0;
 using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueueES.ESSSCD;
-using fiskaltrust.Middleware.Localization.v2.QueueES.Storage;
+using System.Text.Json;
+using fiskaltrust.Api.POS.Models.ifPOS.v2;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.Processors;
 
 public class LifecycleCommandProcessorES : ILifecycleCommandProcessor
 {
-    private readonly ILocalizedQueueStorageProvider _localizedQueueStorageProvider;
-    private readonly ISCUStateProvider _scuStateProvider;
+    private readonly ILocalizedQueueStorageProvider _queueStorageProvider;
     private readonly IESSSCD _sscd;
 
-    public LifecycleCommandProcessorES(IESSSCD sscd, ILocalizedQueueStorageProvider localizedQueueStorageProvider, ISCUStateProvider scuStateProvider)
+    public LifecycleCommandProcessorES(IESSSCD sscd, ILocalizedQueueStorageProvider queueStorageProvider)
     {
         _sscd = sscd;
-        _localizedQueueStorageProvider = localizedQueueStorageProvider;
-        _scuStateProvider = scuStateProvider;
+        _queueStorageProvider = queueStorageProvider;
     }
 
     public async Task<ProcessCommandResponse> ProcessReceiptAsync(ProcessCommandRequest request)
@@ -46,25 +45,24 @@ public class LifecycleCommandProcessorES : ILifecycleCommandProcessor
         // should an initial operation receipt initialize both the Alta and Anulacion chains?
         // maybe by cancelling its self? ^^
 
-        var (queue, receiptRequest, receiptResponse) = request;
         var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
         {
-            ReceiptRequest = receiptRequest,
-            ReceiptResponse = receiptResponse,
-            StateData = await _scuStateProvider.LoadAsync()
+            ReceiptRequest = request.ReceiptRequest,
+            ReceiptResponse = request.ReceiptResponse,
+            PreviousReceiptRequest = null,
+            PreviousReceiptResponse = null,
         });
-        await _scuStateProvider.SaveAsync(response.StateData); // what happens if the storage is down?
-        var actionJournal = ftActionJournalFactory.CreateInitialOperationActionJournal(receiptRequest, receiptResponse);
-        await _localizedQueueStorageProvider.ActivateQueueAsync();
+        var actionJournal = ftActionJournalFactory.CreateInitialOperationActionJournal(request.ReceiptRequest, request.ReceiptResponse);
+        await _queueStorageProvider.ActivateQueueAsync();
 
-        receiptResponse.AddSignatureItem(SignaturItemFactory.CreateInitialOperationSignature(queue));
-        return new ProcessCommandResponse(receiptResponse, [actionJournal]);
+        response.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreateInitialOperationSignature(request.queue));
+        return new ProcessCommandResponse(response.ReceiptResponse, [actionJournal]);
     }
 
     public async Task<ProcessCommandResponse> OutOfOperationReceipt0x4002Async(ProcessCommandRequest request)
     {
         var (queue, receiptRequest, receiptResponse) = request;
-        await _localizedQueueStorageProvider.DeactivateQueueAsync();
+        await _queueStorageProvider.DeactivateQueueAsync();
 
         var actionJournal = ftActionJournalFactory.CreateOutOfOperationActionJournal(receiptRequest, receiptResponse);
         receiptResponse.AddSignatureItem(SignaturItemFactory.CreateOutOfOperationSignature(queue));
