@@ -144,6 +144,7 @@ public class QueueStorageProvider : IQueueStorageProvider
         queue.ftReceiptTotalizer += receiptjournal.ftReceiptTotal;
         await _configurationRepository.InsertOrUpdateQueueAsync(queue).ConfigureAwait(false);
         _cachedQueue = queue;
+        _lastReceipt = queueItem;
         return receiptjournal;
     }
 

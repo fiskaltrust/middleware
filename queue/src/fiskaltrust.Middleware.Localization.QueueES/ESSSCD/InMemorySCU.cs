@@ -47,23 +47,22 @@ public class InMemorySCU : IESSSCD
                 new IDFacturaExpedidaType
                 {
                     IDEmisorFactura = request.PreviousReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.IDEmisorFactura).Data,
-                    NumSerieFactura = request.PreviousReceiptResponse.ftReceiptIdentification.Split('#')[1],
+                    NumSerieFactura = request.PreviousReceiptResponse.ftReceiptIdentification,
                     FechaExpedicionFactura = request.PreviousReceiptRequest.cbReceiptMoment.ToString("dd-MM-yyy")
                 },
                 request.PreviousReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.PosReceipt).Data
             ));
 
             request.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreateESQRCode(journalES.Huella));
-            if (journalES.Encadenamiento.Item is EncadenamientoFacturaAnteriorType encadenamiento)
+
+            request.ReceiptResponse.AddSignatureItem(new SignatureItem
             {
-                request.ReceiptResponse.AddSignatureItem(new SignatureItem
-                {
-                    Caption = "IDEmisorFactura",
-                    Data = encadenamiento.IDEmisorFactura,
-                    ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.Text,
-                    ftSignatureType = (long) SignatureTypesES.IDEmisorFactura
-                });
-            }
+                Caption = "IDEmisorFactura",
+                Data = journalES.Encadenamiento.Item is EncadenamientoFacturaAnteriorType encadenamiento ? encadenamiento.IDEmisorFactura : journalES.IDFactura.IDEmisorFactura,
+                ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.Text,
+                ftSignatureType = (long) SignatureTypesES.IDEmisorFactura
+            });
+
             return await Task.FromResult(new ProcessResponse
             {
                 ReceiptResponse = request.ReceiptResponse,
