@@ -62,6 +62,13 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignat
             ftSignatureFormat = 0x0001,
             ftSignatureType = (long) SignatureTypesPT.Hash,
         });
+        response.ReceiptResponse.AddSignatureItem(new Api.POS.Models.ifPOS.v2.SignatureItem
+        {
+            Caption = "Hash",
+            Data = hash,
+            ftSignatureFormat = 0x0001,
+            ftSignatureType = (long) SignatureTypesPT.Hash,
+        });
         response.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreatePTQRCode(qrCode));
         _queuePT.LastHash = hash;
         return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);

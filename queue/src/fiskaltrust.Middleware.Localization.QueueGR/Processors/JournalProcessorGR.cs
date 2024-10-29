@@ -1,6 +1,9 @@
-﻿using fiskaltrust.ifPOS.v1;
+﻿using System.Xml.Serialization;
+using fiskaltrust.ifPOS.v1;
+using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.storage.V0.MasterData;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.Processors;
 
@@ -14,8 +17,28 @@ public class JournalProcessorGR : IJournalProcessor
         _storageProvider = storageProvider;
     }
 
-    public IAsyncEnumerable<JournalResponse> ProcessAsync(JournalRequest request)
+    public async IAsyncEnumerable<JournalResponse> ProcessAsync(JournalRequest request)
     {
-        throw new NotImplementedException();
+        var masterData = new AccountMasterData
+        {
+            AccountId = Guid.NewGuid(),
+            AccountName = "fiskaltrust ",
+            Street = "TEST STRET",
+            Zip = "1111-2222",
+            City = "Test",
+            Country = "PT",
+            TaxId = "199999999"
+        };
+        var queueItems = await _storageProvider.GetMiddlewareQueueItemRepository().GetAsync();
+        var data = new AADEFactory();
+        using var memoryStream = new MemoryStream();
+        var invoiecDoc = data.MapToInvoicesDoc(queueItems.ToList());
+        var xmlSerializer = new XmlSerializer(typeof(InvoicesDoc));
+        xmlSerializer.Serialize(memoryStream, invoiecDoc);
+        memoryStream.Position = 0;
+        yield return new JournalResponse
+        {
+            Chunk = memoryStream.ToArray().ToList()
+        };
     }
 }
