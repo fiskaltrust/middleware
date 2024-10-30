@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using fiskaltrust.Middleware.Localization.QueueES.ESSSCD;
 using fiskaltrust.Middleware.Localization.QueueES.Processors;
+using fiskaltrust.Middleware.Localization.QueuePT.Processors;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Configuration;
 using fiskaltrust.Middleware.Localization.v2.Interface;
@@ -29,7 +30,8 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
         var queueStorageProvider = new QueueStorageProvider(id, storageProvider);
 
         var masterDataService = new MasterDataService(configuration, storageProvider);
-        var esSSCD = new InMemorySCU(signaturCreationUnitES, masterDataService.GetCurrentDataAsync().Result); // put this in an async scu init process
+        var masterData = masterDataService.GetCurrentDataAsync().Result; // put this in an async scu init process
+        var esSSCD = new InMemorySCU(signaturCreationUnitES, masterData);
         var signProcessorES = new ReceiptProcessor(
             loggerFactory.CreateLogger<ReceiptProcessor>(),
             new LifecycleCommandProcessorES(
@@ -47,7 +49,7 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
             new ProtocolCommandProcessorES()
         );
         var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, signProcessorES.ProcessAsync, queueES.CashBoxIdentification, middlewareConfiguration);
-        var journalProcessor = new JournalProcessor(storageProvider, new JournalProcessorES(), configuration, loggerFactory.CreateLogger<JournalProcessor>());
+        var journalProcessor = new JournalProcessor(storageProvider, new JournalProcessorES(storageProvider.GetMiddlewareReceiptJournalRepository(), storageProvider.GetMiddlewareQueueItemRepository(), masterData), configuration, loggerFactory.CreateLogger<JournalProcessor>());
         _queue = new Queue(signProcessor, journalProcessor, loggerFactory)
         {
             Id = id,

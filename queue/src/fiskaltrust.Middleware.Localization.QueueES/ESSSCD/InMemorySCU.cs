@@ -1,16 +1,10 @@
-﻿using System.Security.Cryptography;
-using System.Text;
-using fiskaltrust.Api.POS.Models.ifPOS.v2;
-using fiskaltrust.Middleware.Contracts.Factories;
+﻿using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueueES.Exports;
 using fiskaltrust.Middleware.Localization.QueueES.Factories;
 using fiskaltrust.Middleware.Localization.QueueES.Interface;
-using fiskaltrust.Middleware.Localization.QueueES.Models;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Storage.ES;
-using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
-using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.ESSSCD;
 
@@ -25,13 +19,13 @@ public class InMemorySCUConfiguration
 
 public class InMemorySCU : IESSSCD
 {
-    private readonly ftSignaturCreationUnitES _signaturCreationUnitES;
+    // private readonly ftSignaturCreationUnitES _signaturCreationUnitES;
 
     private readonly VeriFactuMapping _veriFactuMapping;
 
-    public InMemorySCU(ftSignaturCreationUnitES signaturCreationUnitES, MasterDataConfiguration masterData)
+    public InMemorySCU(ftSignaturCreationUnitES _, MasterDataConfiguration masterData)
     {
-        _signaturCreationUnitES = signaturCreationUnitES;
+        //_signaturCreationUnitES = signaturCreationUnitES;
         _veriFactuMapping = new VeriFactuMapping(masterData);
     }
 

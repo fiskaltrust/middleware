@@ -1,11 +1,14 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Encodings.Web;
+using System.Text.Json;
 using System.Web;
 using System.Xml.Serialization;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
+using fiskaltrust.Middleware.Localization.QueueES.Interface;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.Exports;
@@ -19,7 +22,7 @@ public class VeriFactuMapping
         _masterData = masterData;
     }
 
-    public RegFactuSistemaFacturacion CreateRegFactuSistemaFacturacion(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, (IDFacturaExpedidaType id, string hash)? previous)
+    public async Task<RegFactuSistemaFacturacion> CreateRegFactuSistemaFacturacionAsync(IAsyncEnumerable<ftQueueItem> queueItems)
     {
         var cabecera = new Cabecera
         {
@@ -34,22 +37,39 @@ public class VeriFactuMapping
         };
 
         var registroFactura = new List<RegistroFacturaType>();
+        ReceiptRequest? previousReceiptRequest = null;
+        ReceiptResponse? previousReceiptResponse = null;
 
-        if (receiptRequest.IsVoid())
+        await foreach (var queueItem in queueItems)
         {
-            registroFactura.Add(
-                new RegistroFacturaType
-                {
-                    Item = CreateRegistroFacturacionAnulacion(receiptRequest, receiptResponse)
-                });
-        }
-        else
-        {
-            registroFactura.Add(
-                new RegistroFacturaType
-                {
-                    Item = CreateRegistroFacturacionAlta(receiptRequest, receiptResponse, previous)
-                });
+            var receiptRequest = JsonSerializer.Deserialize<ReceiptRequest>(queueItem.request)!;
+            var receiptResponse = JsonSerializer.Deserialize<ReceiptResponse>(queueItem.response)!;
+            if (receiptRequest.IsVoid())
+            {
+                registroFactura.Add(
+                    new RegistroFacturaType
+                    {
+                        Item = CreateRegistroFacturacionAnulacion(receiptRequest, receiptResponse)
+                    });
+            }
+            else
+            {
+                registroFactura.Add(
+                    new RegistroFacturaType
+                    {
+                        Item = CreateRegistroFacturacionAlta(receiptRequest, receiptResponse, previousReceiptRequest is null || previousReceiptResponse is null ? null : (new IDFacturaExpedidaType
+                        {
+                            IDEmisorFactura = previousReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.IDEmisorFactura).Data,
+                            NumSerieFactura = previousReceiptResponse.ftReceiptIdentification,
+                            FechaExpedicionFactura = previousReceiptRequest.cbReceiptMoment.ToString("dd-MM-yyy")
+                        },
+                            previousReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.PosReceipt).Data
+                        ))
+                    });
+            }
+
+            previousReceiptRequest = receiptRequest;
+            previousReceiptResponse = receiptResponse;
         }
 
         return new RegFactuSistemaFacturacion
@@ -91,7 +111,7 @@ public class VeriFactuMapping
             {
                 // Do we need rounding for all the the decimals or should we fail if it's not in the range?
                 BaseRectificada = receiptRequest.cbChargeItems.Sum(chargeItem => chargeItem.GetVATAmount()).ToString("0.00"), // helper
-                // whats the difference between `CuotaRectificada` and `BaseRectificada`
+                                                                                                                              // whats the difference between `CuotaRectificada` and `BaseRectificada`
                 CuotaRectificada = null,
             },
             Desglose = receiptRequest.cbChargeItems.Select(chargeItem => new DetalleType
@@ -196,6 +216,16 @@ public static class XmlExt
     public static string Serialize(this RegistroFacturacionAltaType registroFacturacionAlta)
     {
         var serializer = new XmlSerializer(typeof(RegistroFacturacionAltaType));
+        using var writer = new StringWriter();
+
+        serializer.Serialize(writer, registroFacturacionAlta);
+
+        return writer.ToString();
+    }
+
+    public static string Serialize(this RegFactuSistemaFacturacion registroFacturacionAlta)
+    {
+        var serializer = new XmlSerializer(typeof(RegFactuSistemaFacturacion));
         using var writer = new StringWriter();
 
         serializer.Serialize(writer, registroFacturacionAlta);
