@@ -5,17 +5,21 @@ using fiskaltrust.Middleware.Localization.v2.Storage;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.storage.V0;
 using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.Localization.QueueES.ESSSCD;
+using System.Text.Json;
+using fiskaltrust.Api.POS.Models.ifPOS.v2;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.Processors;
 
 public class LifecycleCommandProcessorES : ILifecycleCommandProcessor
 {
-    private readonly ILocalizedQueueStorageProvider _localizedQueueStorageProvider;
+    private readonly ILocalizedQueueStorageProvider _queueStorageProvider;
+    private readonly IESSSCD _sscd;
 
-
-    public LifecycleCommandProcessorES(ILocalizedQueueStorageProvider localizedQueueStorageProvider)
+    public LifecycleCommandProcessorES(IESSSCD sscd, ILocalizedQueueStorageProvider queueStorageProvider)
     {
-        _localizedQueueStorageProvider = localizedQueueStorageProvider;
+        _sscd = sscd;
+        _queueStorageProvider = queueStorageProvider;
     }
 
     public async Task<ProcessCommandResponse> ProcessReceiptAsync(ProcessCommandRequest request)
@@ -38,18 +42,27 @@ public class LifecycleCommandProcessorES : ILifecycleCommandProcessor
 
     public async Task<ProcessCommandResponse> InitialOperationReceipt0x4001Async(ProcessCommandRequest request)
     {
-        var (queue, receiptRequest, receiptResponse) = request;
-        var actionJournal = ftActionJournalFactory.CreateInitialOperationActionJournal(receiptRequest, receiptResponse);
-        await _localizedQueueStorageProvider.ActivateQueueAsync();
+        // should an initial operation receipt initialize both the Alta and Anulacion chains?
+        // maybe by cancelling its self? ^^
 
-        receiptResponse.AddSignatureItem(SignaturItemFactory.CreateInitialOperationSignature(queue));
-        return new ProcessCommandResponse(receiptResponse, [actionJournal]);
+        var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
+        {
+            ReceiptRequest = request.ReceiptRequest,
+            ReceiptResponse = request.ReceiptResponse,
+            PreviousReceiptRequest = null,
+            PreviousReceiptResponse = null,
+        });
+        var actionJournal = ftActionJournalFactory.CreateInitialOperationActionJournal(request.ReceiptRequest, request.ReceiptResponse);
+        await _queueStorageProvider.ActivateQueueAsync();
+
+        response.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreateInitialOperationSignature(request.queue));
+        return new ProcessCommandResponse(response.ReceiptResponse, [actionJournal]);
     }
 
     public async Task<ProcessCommandResponse> OutOfOperationReceipt0x4002Async(ProcessCommandRequest request)
     {
         var (queue, receiptRequest, receiptResponse) = request;
-        await _localizedQueueStorageProvider.DeactivateQueueAsync();
+        await _queueStorageProvider.DeactivateQueueAsync();
 
         var actionJournal = ftActionJournalFactory.CreateOutOfOperationActionJournal(receiptRequest, receiptResponse);
         receiptResponse.AddSignatureItem(SignaturItemFactory.CreateOutOfOperationSignature(queue));

@@ -32,7 +32,7 @@ public static class SignaturItemFactory
     {
         return new SignatureItem()
         {
-            Caption = "[www.fiskaltrust.gr]",
+            Caption = "[www.fiskaltrust.es]",
             Data = qrCode,
             ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.QR_Code,
             ftSignatureType = (long) SignatureTypesES.PosReceipt

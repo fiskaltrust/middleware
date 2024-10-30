@@ -84,7 +84,9 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
 
         public Task<ftReceiptJournal> GetByQueueItemId(Guid ftQueueItemId) => throw new NotImplementedException();
         public Task<ftReceiptJournal> GetByReceiptNumber(long ftReceiptNumber) => throw new NotImplementedException();
-        public Task<ftReceiptJournal> GetWithLastTimestampAsync() => throw new NotImplementedException();
+        public async Task<ftReceiptJournal> GetWithLastTimestampAsync()
+            => MapToStorageEntity(await _tableClient.QueryAsync<AzureTableStorageFtReceiptJournal>().OrderBy(x => x.TimeStamp).LastAsync());
+
 
         public async Task<int> CountAsync()
         {

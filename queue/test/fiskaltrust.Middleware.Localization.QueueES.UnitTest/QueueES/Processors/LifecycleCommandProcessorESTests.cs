@@ -10,13 +10,18 @@ using FluentAssertions.Execution;
 using Moq;
 using Newtonsoft.Json;
 using Xunit;
+using AutoFixture;
 using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.Localization.QueueES.ESSSCD;
+using fiskaltrust.Middleware.Storage.ES;
+using fiskaltrust.storage.V0.MasterData;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processors
 {
     public class LifecycleCommandProcessorESTests
     {
-        private readonly LifecycleCommandProcessorES _sut = new(Mock.Of<ILocalizedQueueStorageProvider>());
+        private readonly Fixture _fixture = new Fixture();
+        private readonly LifecycleCommandProcessorES _sut = new(new InMemorySCU(new ftSignaturCreationUnitES { }, new MasterDataConfiguration { }), Mock.Of<ILocalizedQueueStorageProvider>());
 
         [Theory]
         [InlineData(ReceiptCases.InitialOperationReceipt0x4001)]
@@ -27,6 +32,17 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
         {
             var queue = TestHelpers.CreateQueue();
             var queueItem = TestHelpers.CreateQueueItem();
+
+            var signaturCreationUnitES = new ftSignaturCreationUnitES
+            {
+
+            };
+
+            var masterDataConfiguration = _fixture.Create<MasterDataConfiguration>();
+
+            var configMock = new Mock<ILocalizedQueueStorageProvider>();
+            configMock.Setup(x => x.ActivateQueueAsync()).Returns(Task.CompletedTask);
+            var sut = new LifecycleCommandProcessorES(new InMemorySCU(signaturCreationUnitES, masterDataConfiguration), configMock.Object);
 
             var receiptRequest = new ReceiptRequest
             {
@@ -40,12 +56,12 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
                 ftQueueID = Guid.NewGuid(),
                 ftQueueItemID = Guid.NewGuid(),
                 ftQueueRow = 1,
-                ftReceiptIdentification = "receiptIdentification",
+                ftReceiptIdentification = "0#0",
                 ftReceiptMoment = DateTime.UtcNow,
             };
             var request = new ProcessCommandRequest(queue, receiptRequest, receiptResponse);
 
-            var result = await _sut.ProcessReceiptAsync(request);
+            var result = await sut.ProcessReceiptAsync(request);
 
             result.receiptResponse.Should().Be(receiptResponse);
             result.receiptResponse.ftState.Should().NotBe(0x4752_2000_EEEE_EEEE);
@@ -84,9 +100,16 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             var queue = TestHelpers.CreateQueue();
             var queueItem = TestHelpers.CreateQueueItem();
 
+            var signaturCreationUnitES = new ftSignaturCreationUnitES
+            {
+
+            };
+
+            var masterDataConfiguration = _fixture.Create<MasterDataConfiguration>();
+
             var configMock = new Mock<ILocalizedQueueStorageProvider>();
             configMock.Setup(x => x.ActivateQueueAsync()).Returns(Task.CompletedTask);
-            var sut = new LifecycleCommandProcessorES(configMock.Object);
+            var sut = new LifecycleCommandProcessorES(new InMemorySCU(signaturCreationUnitES, masterDataConfiguration), configMock.Object);
 
             var receiptRequest = new ReceiptRequest
             {
@@ -100,7 +123,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
                 ftQueueID = Guid.NewGuid(),
                 ftQueueItemID = Guid.NewGuid(),
                 ftQueueRow = 1,
-                ftReceiptIdentification = "receiptIdentification",
+                ftReceiptIdentification = "0#0",
                 ftReceiptMoment = DateTime.UtcNow,
             };
 
@@ -108,9 +131,10 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
 
             var result = await sut.InitialOperationReceipt0x4001Async(request);
 
+            using var scope = new AssertionScope();
+
             queue.StartMoment.Should().BeCloseTo(DateTime.UtcNow, 1000);
 
-            using var scope = new AssertionScope();
             result.receiptResponse.Should().Be(receiptResponse);
             result.actionJournals.Should().NotBeEmpty();
             result.receiptResponse.ftSignatures.Should().NotBeEmpty();
@@ -167,9 +191,18 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
 
             var queueItem = TestHelpers.CreateQueueItem();
 
+            var signaturCreationUnitES = new ftSignaturCreationUnitES
+            {
+
+            };
+
+            var masterDataConfiguration = new MasterDataConfiguration
+            {
+
+            };
+
             var configMock = new Mock<ILocalizedQueueStorageProvider>();
-            configMock.Setup(x => x.ActivateQueueAsync()).Returns(Task.CompletedTask);
-            var sut = new LifecycleCommandProcessorES(configMock.Object);
+            var sut = new LifecycleCommandProcessorES(new InMemorySCU(signaturCreationUnitES, masterDataConfiguration), configMock.Object);
 
             var receiptRequest = new ReceiptRequest
             {
@@ -247,9 +280,18 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             var queue = TestHelpers.CreateQueue();
             var queueItem = TestHelpers.CreateQueueItem();
 
+            var signaturCreationUnitES = new ftSignaturCreationUnitES
+            {
+
+            };
+
+            var masterDataConfiguration = new MasterDataConfiguration
+            {
+
+            };
+
             var configMock = new Mock<ILocalizedQueueStorageProvider>();
-            configMock.Setup(x => x.ActivateQueueAsync()).Returns(Task.CompletedTask);
-            var sut = new LifecycleCommandProcessorES(configMock.Object);
+            var sut = new LifecycleCommandProcessorES(new InMemorySCU(signaturCreationUnitES, masterDataConfiguration), configMock.Object);
 
             var receiptRequest = new ReceiptRequest
             {
@@ -282,9 +324,18 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             var queue = TestHelpers.CreateQueue();
             var queueItem = TestHelpers.CreateQueueItem();
 
+            var signaturCreationUnitES = new ftSignaturCreationUnitES
+            {
+
+            };
+
+            var masterDataConfiguration = new MasterDataConfiguration
+            {
+
+            };
+
             var configMock = new Mock<ILocalizedQueueStorageProvider>();
-            configMock.Setup(x => x.ActivateQueueAsync()).Returns(Task.CompletedTask);
-            var sut = new LifecycleCommandProcessorES(configMock.Object);
+            var sut = new LifecycleCommandProcessorES(new InMemorySCU(signaturCreationUnitES, masterDataConfiguration), configMock.Object);
 
             var receiptRequest = new ReceiptRequest
             {

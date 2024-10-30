@@ -65,7 +65,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.QueueGR.IGRSSCD
             };
 
             var sut = new MyDataApiClient("user11111111", "41291863a36d552c4d7fc8195d427dd3", true);
-            var payload = sut.GenerateInvoicePayload(receiptRequest, receiptResponse);
+            // var payload = sut.GenerateInvoicePayload(receiptRequest, receiptResponse);
 
 
             var result = await sut.ProcessReceiptAsync(new GRSSCD.ProcessRequest
