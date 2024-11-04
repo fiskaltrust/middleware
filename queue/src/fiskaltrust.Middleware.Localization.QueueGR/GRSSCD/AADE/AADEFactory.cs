@@ -6,11 +6,19 @@ using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.myDataSCU;
 using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using fiskaltrust.storage.V0;
+using fiskaltrust.storage.V0.MasterData;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE
 {
     public class AADEFactory
     {
+        private readonly MasterDataConfiguration _masterDataConfiguration;
+
+        public AADEFactory(MasterDataConfiguration masterDataConfiguration)
+        {
+            _masterDataConfiguration = masterDataConfiguration;
+        }
+
         private IncomeClassificationValueType GetIncomeClassificationValueType(ChargeItem chargeItem) => (chargeItem.ftChargeItemCase & 0xF0) switch
         {
             _ => IncomeClassificationValueType.E3_561_007,
@@ -60,6 +68,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE
 
         private InvoiceType GetInvoiceType(ReceiptRequest receiptRequest) => receiptRequest.ftReceiptCase switch
         {
+            0x4752_2000_0000_1001 => InvoiceType.Item11, // Retail - Sales Invoice
             _ => InvoiceType.Item111, // Retail - Simplified Invoice
         };
 
@@ -88,7 +97,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE
         {
             var invoiceUid = receiptResponse.ftSignatures.FirstOrDefault(x => x.Caption == "invoiceUid")?.Data;
             var invoiceMarkText = receiptResponse.ftSignatures.FirstOrDefault(x => x.Caption == "invoiceMark")?.Data;
-            if(int.TryParse(invoiceMarkText, out var invoiceMark))
+            if (int.TryParse(invoiceMarkText, out var invoiceMark))
             {
 
             }
@@ -122,6 +131,9 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE
                 classificationType = x.Key.classificationType,
                 classificationTypeSpecified = true
             }).ToList();
+
+
+            var identification = long.Parse(receiptResponse.ftReceiptIdentification.Replace("ft", "").Split("#")[0], System.Globalization.NumberStyles.HexNumber);
             var inv = new AadeBookInvoiceType
             {
                 mark = invoiceMark,
@@ -136,8 +148,8 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE
                 }).ToArray(),
                 invoiceHeader = new InvoiceHeaderType
                 {
-                    series = "A",
-                    aa = receiptResponse.ftQueueRow.ToString(),
+                    series = "013",
+                    aa = identification.ToString(),
                     issueDate = receiptRequest.cbReceiptMoment,
                     invoiceType = GetInvoiceType(receiptRequest),
                     currency = CurrencyType.EUR,
@@ -186,6 +198,9 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE
                 classificationType = x.Key.classificationType,
                 classificationTypeSpecified = true
             }).ToList();
+
+            var identification = long.Parse(receiptResponse.ftReceiptIdentification.Replace("ft", "").Split("#")[0], System.Globalization.NumberStyles.HexNumber);
+
             var inv = new AadeBookInvoiceType
             {
                 issuer = CreateIssuer(), // issuer from masterdataconfig
@@ -197,8 +212,8 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE
                 }).ToArray(),
                 invoiceHeader = new InvoiceHeaderType
                 {
-                    series = "A",
-                    aa = receiptResponse.ftQueueRow.ToString(),
+                    series = "013",
+                    aa = identification.ToString(),
                     issueDate = receiptRequest.cbReceiptMoment,
                     invoiceType = GetInvoiceType(receiptRequest),
                     currency = CurrencyType.EUR,
@@ -225,13 +240,23 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE
         {
             return new PartyType
             {
-                vatNumber = "997671771",
+                vatNumber = _masterDataConfiguration.Account.VatId,
                 country = CountryType.GR,
-                branch = 1,
+                branch = 0,
             };
         }
 
-        public string GetUid(AadeBookInvoiceType invoice) => Encoding.UTF8.GetString(SHA1.HashData(Encoding.UTF8.GetBytes($"{invoice.issuer.vatNumber}-{invoice.invoiceHeader.issueDate}-{invoice.issuer.branch}-{invoice.invoiceHeader.invoiceType}-{invoice.invoiceHeader.series}-{invoice.invoiceHeader.aa}")));
+        public string GetUid(AadeBookInvoiceType invoice) => BitConverter.ToString(SHA1.HashData(Encoding.UTF8.GetBytes($"{invoice.issuer.vatNumber}-{invoice.invoiceHeader.issueDate.ToString("yyyy-MM-dd")}-{invoice.issuer.branch}-{GetInvoiceType(invoice.invoiceHeader.invoiceType)}-{invoice.invoiceHeader.series}-{invoice.invoiceHeader.aa}"))).Replace("-", "");
+
+        public string GetInvoiceType(InvoiceType invoiceType)
+        {
+            return invoiceType switch
+            {
+                InvoiceType.Item11 => "1.1",
+                InvoiceType.Item111 => "11.1",
+                _ => "Α2_11.1",
+            };
+        }
 
         public string GenerateInvoicePayload(InvoicesDoc doc)
         {

@@ -44,9 +44,15 @@ public class MyDataApiClient : IGRSSCD
 
     public async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request)
     {
-        var aadeFacotry = new AADEFactory();
-        var doc = aadeFacotry.MapToInvoicesDoc(request.ReceiptRequest, request.ReceiptResponse);
-        var payload = aadeFacotry.GenerateInvoicePayload(doc);
+        var aadFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
+        {
+            Account = new storage.V0.MasterData.AccountMasterData
+            {
+                VatId = "997671771"
+            }
+        });
+        var doc = aadFactory.MapToInvoicesDoc(request.ReceiptRequest, request.ReceiptResponse);
+        var payload = aadFactory.GenerateInvoicePayload(doc);
 
         var path = _iseinvoiceProvider ? "/myDataProvider/SendInvoices" : "/SendReceipts";
         var response = await _httpClient.PostAsync(path, new StringContent(payload, Encoding.UTF8, "application/xml"));
@@ -132,7 +138,7 @@ public class MyDataApiClient : IGRSSCD
             ftSignatureType = (long) SignatureTypesGR.PosReceipt
         };
     }
-    
+
     public ResponseDoc GetResponse(string xmlContent)
     {
         var xmlSerializer = new XmlSerializer(typeof(ResponseDoc));

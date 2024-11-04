@@ -30,9 +30,15 @@ public class JournalProcessorGR : IJournalProcessor
             TaxId = "199999999"
         };
         var queueItems = await _storageProvider.GetMiddlewareQueueItemRepository().GetAsync();
-        var data = new AADEFactory();
+        var aadFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
+        {
+            Account = new storage.V0.MasterData.AccountMasterData
+            {
+                VatId = "997671771"
+            }
+        });
         using var memoryStream = new MemoryStream();
-        var invoiecDoc = data.MapToInvoicesDoc(queueItems.ToList());
+        var invoiecDoc = aadFactory.MapToInvoicesDoc(queueItems.ToList());
         var xmlSerializer = new XmlSerializer(typeof(InvoicesDoc));
         xmlSerializer.Serialize(memoryStream, invoiecDoc);
         memoryStream.Position = 0;
