@@ -5,11 +5,18 @@ using System.Xml.Serialization;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.myDataSCU;
 using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
+using fiskaltrust.SAFT.CLI;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE
 {
+    public class WithHoldingChargeItem
+    {
+        public decimal WithHoldingPercentage { get; set; }
+        public decimal WithHoldingAmount { get; set; }
+    }
+
     public class AADEFactory
     {
         private readonly MasterDataConfiguration _masterDataConfiguration;
@@ -23,6 +30,24 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE
         {
             _ => IncomeClassificationValueType.E3_561_007,
         };
+
+        /// <summary>
+        /// The following income classifications belong to myDATA API
+        /// 
+        /// category1_1 => Revenue from Sales of Goods (+ / -)
+        /// category1_2 => Revenue from Sales of Products (+ / -)
+        /// category1_3 => Revenue from Sales of Services (+ / -)
+        /// category1_4 => Proceeds from Sale of Assets (+ / -)
+        /// category1_5 => Other income/profit (+ / -)
+        /// category1_6 => Self-delivery / Self-use (+ / -)
+        /// category1_7 => Revenue for third parties (+ / -)
+        /// category1_8 => Revenue from previous years (+ / -)
+        /// category1_9 => Deferred income (+ / -)
+        /// category1_10 => Other revenue adjustment entries (+ / -)
+        /// category1_95 => Other revenue Information (+ / -)
+        /// category3 => Movement        
+        /// </summary>
+
 
         private IncomeClassificationCategoryType GetIncomeClassificationCategoryType(ChargeItem chargeItem) => (chargeItem.ftChargeItemCase & 0xF0) switch
         {
@@ -174,21 +199,35 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE
 
         private AadeBookInvoiceType CreateInvoiceDocType(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
         {
-            var invoiceDetails = receiptRequest.cbChargeItems.Select(x => new InvoiceRowType
+            var totalWithholdAmount = 0m;
+            var invoiceDetails = receiptRequest.cbChargeItems.Select(x =>
             {
-                quantity = x.Quantity,
-                lineNumber = (int) x.Position,
-                vatAmount = x.VATAmount ?? 0.0m,
-                netValue = x.Amount - (x.VATAmount ?? 0.0m),
-                vatCategory = GetVATCategory(x),
-                incomeClassification = [
-                              new IncomeClassificationType {
-                                        amount =x.Amount - (x.VATAmount ?? 0.0m),
+                var invoiceRow = new InvoiceRowType
+                {
+                    quantity = x.Quantity,
+                    lineNumber = (int) x.Position,
+                    vatAmount = x.VATAmount ?? 0.0m,
+                    netValue = x.Amount - (x.VATAmount ?? 0.0m),
+                    vatCategory = GetVATCategory(x),
+                    incomeClassification = [
+                                   new IncomeClassificationType {
+                                        amount = x.Amount -  (x.VATAmount ?? 0.0m),
                                         classificationCategory = GetIncomeClassificationCategoryType(x),
                                         classificationType = GetIncomeClassificationValueType(x),
                                         classificationTypeSpecified = true
                                     }
-                          ]
+                               ],
+                    
+                };
+                if (x.ftChargeItemCaseData is WithHoldingChargeItem chargeItem)
+                {
+                    invoiceRow.withheldAmountSpecified = true;
+                    invoiceRow.withheldAmount = chargeItem.WithHoldingAmount;
+                    invoiceRow.withheldPercentCategory = 3;
+                    invoiceRow.withheldPercentCategorySpecified = true;
+                    totalWithholdAmount += chargeItem.WithHoldingAmount;
+                }
+                return invoiceRow;
             }).ToList();
 
             var incomeClassificationGroups = invoiceDetails.SelectMany(x => x.incomeClassification).GroupBy(x => (x.classificationCategory, x.classificationType)).Select(x => new IncomeClassificationType
@@ -201,18 +240,39 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE
 
             var identification = long.Parse(receiptResponse.ftReceiptIdentification.Replace("ft", "").Split("#")[0], System.Globalization.NumberStyles.HexNumber);
 
-            var inv = new AadeBookInvoiceType
+            var paymentMethods = receiptRequest.cbPayItems.Where(x => (x.ftPayItemCase & ((long) 0xFF)) != 0x99).Select(x =>
             {
-                issuer = CreateIssuer(), // issuer from masterdataconfig
-                paymentMethods = receiptRequest.cbPayItems.Select(x => new PaymentMethodDetailType
+                var payment = new PaymentMethodDetailType
                 {
                     type = GetPaymentType(x),
                     amount = x.Amount,
-                    paymentMethodInfo = x.Description
-                }).ToArray(),
+                    paymentMethodInfo = x.Description,
+                };
+                if (x.ftPayItemCaseData is PayItemCaseData provider)
+                {
+                    if (provider.Provider is PayItemCaseProviderVivaWallet vivaPayment)
+                    {
+                        payment.transactionId = vivaPayment.ProtocolResponse?.aadeTransactionId;
+                        payment.ProvidersSignature = new ProviderSignatureType
+                        {
+                            Signature = vivaPayment.ProtocolRequest?.aadeProviderSignature,
+                            SigningAuthor = "", // need to be filled??
+                        };
+                    }
+                }
+
+                return payment;
+            }).ToArray();
+
+            var withholdingItems = receiptRequest.cbPayItems.Where(x => (x.ftPayItemCase & ((long) 0xFF)) == 0x99).ToList();
+
+            var inv = new AadeBookInvoiceType
+            {
+                issuer = CreateIssuer(), // issuer from masterdataconfig
+                paymentMethods = paymentMethods,
                 invoiceHeader = new InvoiceHeaderType
                 {
-                    series = "013",
+                    series = "0",
                     aa = identification.ToString(),
                     issueDate = receiptRequest.cbReceiptMoment,
                     invoiceType = GetInvoiceType(receiptRequest),
@@ -224,15 +284,24 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE
                 {
                     totalNetValue = receiptRequest.cbChargeItems.Sum(x => x.Amount - (x.VATAmount ?? 0.0m)),
                     totalVatAmount = receiptRequest.cbChargeItems.Sum(x => x.VATAmount ?? 0.0m),
-                    totalWithheldAmount = 0.0m,
+                    totalWithheldAmount = totalWithholdAmount,
                     totalFeesAmount = 0.0m,
                     totalStampDutyAmount = 0.0m,
                     totalOtherTaxesAmount = 0.0m,
                     totalDeductionsAmount = 0.0m,
-                    totalGrossValue = receiptRequest.cbChargeItems.Sum(x => x.Amount),
+                    totalGrossValue = receiptRequest.cbChargeItems.Sum(x => x.Amount) - totalWithholdAmount,
                     incomeClassification = incomeClassificationGroups.ToArray()
-                }
+                },
             };
+            if (receiptRequest.cbCustomer != null)
+            {
+                inv.counterpart = new PartyType
+                {
+                    vatNumber = ((MiddlewareCustomer) receiptRequest.cbCustomer).CustomerVATId,
+                    country = CountryType.GR,
+                    branch = 0,
+                };
+            }
             return inv;
         }
 
@@ -254,7 +323,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE
             {
                 InvoiceType.Item11 => "1.1",
                 InvoiceType.Item111 => "11.1",
-                _ => "Α2_11.1",
+                _ => "11.1",
             };
         }
 
