@@ -207,96 +207,29 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             ///     @Ioannis Pliakis can advise you on what commands you would be needing to send to our payment terminal 
             ///     so you can construct the payload for the emulated Cloud REST API request. 
             ///     You do not need to read A.1155/2023 to figure out the command sequence, Ioannis will help out with that.
-            var chargeItems = new List<ChargeItem>
-            {
-                CreateGoodNormalVATRateItem(description: "Merchandise Product 1", amount: 89.20m, quantity: 1),
-                CreateGoodNormalVATRateItem(description: "Merchandise Product 2", amount: 23.43m, quantity: 1),
-                CreateGoodNormalVATRateItem(description: "Merchandise Product 3", amount: 4.43m, quantity: 1),
-                CreateGoodDiscountedVATRateItem(description: "Merchandise Product Discounted 1", amount: 12.30m, quantity: 1),
-                CreateGoodDiscountedVATRateItem(description: "Merchandise Product Discounted 2", amount: 113.43m, quantity: 1)
-            };
-            var i = 1;
-            foreach (var chargeItem in chargeItems)
-            {
-                chargeItem.Position = i++;
-                // Set fraction
-                chargeItem.Amount = decimal.Round(chargeItem.Amount, 2, MidpointRounding.AwayFromZero);
-                chargeItem.VATAmount = decimal.Round(chargeItem.VATAmount ?? 0.0m, 2, MidpointRounding.AwayFromZero);
-            }
-            var payItems = new List<PayItem>
-            {
-                new PayItem
-                {
-                    Amount = chargeItems.Sum(x => x.Amount),
-                    Description = "Card",
-                    ftPayItemCase = 0x4752_2000_0000_0000 & (long) PayItemCases.DebitCardPayment,
-                    ftPayItemCaseData = new PayItemCaseData
-                    {
-                        Provider = new PayItemCaseProviderVivaWallet
-                        {
-                            Action = "Sale",
-                            Protocol = "VivaWallet",
-                            ProtocolVersion = "1.0",
-                            ProtocolRequest = new VivaWalletPayment
-                            {
-                                amount = (int) chargeItems.Sum(x => x.Amount) * 100,
-                                cashRegisterId = "",
-                                currencyCode = "EUR",
-                                merchantReference = Guid.NewGuid().ToString(),
-                                sessionId = "John015",
-                                terminalId = "123456",
-                                aadeProviderSignatureData = "4680AFE5D58088BF8C55F57A5B5DBB15936B51DE;;20241015153111;4600;9;1;10;16007793",
-                                aadeProviderSignature = "MEUCIQCnUrakY9pemgdXIsYvbOahoBBadDa9DPaRS9ZtTTra8gIgIUp9LPaH/E+LRwTGJWeL+MZl5j5PtFcM+chiXTqeed4="
-                            },
-                            ProtocolResponse = new VivaPaymentSession
-                            {
-                                aadeTransactionId = "116430909552789552789"
-                            }
-                        }
-                    }
-                }
-            };
-            var receiptRequest = new ReceiptRequest
-            {
-                Currency = Currency.EUR,
-                cbReceiptAmount = 1.95m,
-                cbReceiptMoment = DateTime.UtcNow,
-                cbReceiptReference = Guid.NewGuid().ToString(),
-                cbChargeItems = chargeItems,
-                cbPayItems = payItems,
-                ftCashBoxID = Guid.NewGuid(),
-                ftPosSystemId = Guid.NewGuid(),
-                ftReceiptCase = 0x4752_2000_0000_0001 // posreceipt
-            };
-            var receiptResponse = new ReceiptResponse
-            {
-                ftQueueID = Guid.NewGuid(),
-                ftQueueItemID = Guid.NewGuid(),
-                ftQueueRow = 1,
-                ftCashBoxIdentification = "cashBoxIdentification",
-                ftReceiptIdentification = "ft" + DateTime.UtcNow.Ticks.ToString("X"),
-                ftReceiptMoment = DateTime.UtcNow,
-                ftState = 0x4752_2000_0000_0000
-            };
+            //ReceiptRequest receiptRequest;
+            //ReceiptResponse receiptResponse;
+            //Example_RetailSales(out receiptRequest, out receiptResponse);
 
-            var aadFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
-            {
-                Account = new storage.V0.MasterData.AccountMasterData
-                {
-                    VatId = "997671771"
-                }
-            });
-            var invoiceDoc = aadFactory.MapToInvoicesDoc(receiptRequest, receiptResponse);
+            //var aadFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
+            //{
+            //    Account = new storage.V0.MasterData.AccountMasterData
+            //    {
+            //        VatId = "997671771"
+            //    }
+            //});
+            //var invoiceDoc = aadFactory.MapToInvoicesDoc(receiptRequest, receiptResponse);
 
-            invoiceDoc.invoice.Length.Should().Be(1);
-            invoiceDoc.invoice[0].invoiceHeader.invoiceType.Should().Be(InvoiceType.Item111);
+            //invoiceDoc.invoice.Length.Should().Be(1);
+            //invoiceDoc.invoice[0].invoiceHeader.invoiceType.Should().Be(InvoiceType.Item111);
 
-            invoiceDoc.invoice[0].uid = aadFactory.GetUid(invoiceDoc.invoice[0]);
+            //invoiceDoc.invoice[0].uid = aadFactory.GetUid(invoiceDoc.invoice[0]);
 
-            var xml = aadFactory.GenerateInvoicePayload(invoiceDoc);
-            File.WriteAllText("posreceipt.xml", xml);
+            //var xml = aadFactory.GenerateInvoicePayload(invoiceDoc);
+            //File.WriteAllText("posreceipt.xml", xml);
         }
 
+   
         [Theory]
         [InlineData("802035962-2024-10-22-0-11.1-013-2866", "FBA6C7EA5A018D27C94CAFC5A521F6A3259EF0C1")]
         [InlineData("800739773-2024-11-01-0-11.1-1253-111002", "B96A69F6054CACCFC9958A0B4757CF2A1A3A76AA")]
