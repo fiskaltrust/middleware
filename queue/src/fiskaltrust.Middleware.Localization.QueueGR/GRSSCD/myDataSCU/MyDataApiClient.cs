@@ -38,6 +38,8 @@ public class MyDataApiClient : IGRSSCD
         };
         _httpClient.DefaultRequestHeaders.Add("aade-user-id", username);
         _httpClient.DefaultRequestHeaders.Add("ocp-apim-subscription-key", subscriptionKey);
+        _offline = false;
+        _mega_offline = true;
     }
 
     public async Task<GRSSCDInfo> GetInfoAsync() => await Task.FromResult(new GRSSCDInfo());
@@ -53,10 +55,54 @@ public class MyDataApiClient : IGRSSCD
         });
         var doc = aadFactory.MapToInvoicesDoc(request.ReceiptRequest, request.ReceiptResponse);
         var payload = aadFactory.GenerateInvoicePayload(doc);
+        if (request.ReceiptRequest.IsLateSigning())
+        {
+            // TODO how should we support this case?
+            foreach (var item in doc.invoice)
+            {
+                item.transmissionFailureSpecified = true;
+                item.transmissionFailure = 1;
+            }
+
+            request.ReceiptResponse.AddSignatureItem(new SignatureItem
+            {
+                Data = $"Απώλεια Διασύνδεσης Οντότητας - Παρόχου",
+                Caption = "Transmission Failure_1",
+                ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.Text,
+                ftSignatureType = (long) SignatureTypesGR.MyDataInfo
+            });
+            return new ProcessResponse
+            {
+                ReceiptResponse = request.ReceiptResponse
+            };
+        }
 
         var path = _iseinvoiceProvider ? "/myDataProvider/SendInvoices" : "/SendReceipts";
         var response = await _httpClient.PostAsync(path, new StringContent(payload, Encoding.UTF8, "application/xml"));
         var content = await response.Content.ReadAsStringAsync();
+        if((int) response.StatusCode >= 500)
+        {
+            foreach (var item in doc.invoice)
+            {
+                item.transmissionFailureSpecified = true;
+                item.transmissionFailure = 2;
+            }
+            if (_iseinvoiceProvider)
+            {
+                request.ReceiptResponse.AddSignatureItem(CreateGRQRCode($"https://receipts-sandbox.fiskaltrust.eu/{request.ReceiptResponse.ftQueueID}/{request.ReceiptResponse.ftQueueItemID}"));
+            }
+            request.ReceiptResponse.AddSignatureItem(new SignatureItem
+            {
+                Data = $"Απώλεια Διασύνδεσης Παρόχου – ΑΑΔΕ",
+                Caption = "Transmission Failure_2",
+                ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.Text,
+                ftSignatureType = (long) SignatureTypesGR.MyDataInfo
+            });
+            return new ProcessResponse
+            {
+                ReceiptResponse = request.ReceiptResponse
+            };
+        }
         if (response.IsSuccessStatusCode)
         {
             var ersult = GetResponse(content);

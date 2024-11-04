@@ -101,7 +101,7 @@ namespace fiskaltrust.Api.POS.Models.ifPOS.v2
         [JsonPropertyName("Provider")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         [DataMember(EmitDefaultValue = false, IsRequired = false)]
-        public PayItemCaseProviderData? Provider { get; set; }
+        public PayItemCaseProviderVivaWallet? Provider { get; set; }
 
         [JsonPropertyName("Receipt")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

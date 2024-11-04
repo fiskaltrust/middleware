@@ -10,6 +10,8 @@ public static class ReceiptRequestExtensions
 
     public static bool IsInitialOperation(this ReceiptRequest receiptRequest) => (receiptRequest.ftReceiptCase & 0x0000_0000_0000_FFFF) == 0x4001;
 
+    public static bool IsLateSigning(this ReceiptRequest receiptRequest) => (receiptRequest.ftReceiptCase & 0x0000_0000_0001_0000) == 0x0000_0000_0001_0000;
+
     public static bool IsReceiptOperation(this ReceiptRequest receiptRequest) => (receiptRequest.ftReceiptCase & 0x0000_0000_0000_F000) == 0x0000;
 
     public static bool IsInvoiceOperation(this ReceiptRequest receiptRequest) => (receiptRequest.ftReceiptCase & 0x0000_0000_0000_F000) == 0x1000;

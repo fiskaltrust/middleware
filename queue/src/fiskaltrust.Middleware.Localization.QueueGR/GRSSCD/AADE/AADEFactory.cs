@@ -111,11 +111,11 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE
 
         public InvoicesDoc MapToInvoicesDoc(List<ftQueueItem> queueItems)
         {
-            var receiptRequests = queueItems.Select(x => (receiptRequest: JsonSerializer.Deserialize<ReceiptRequest>(x.request)!, receiptResponse: JsonSerializer.Deserialize<ReceiptResponse>(x.response))).ToList();
+            var receiptRequests = queueItems.Where(x => !string.IsNullOrEmpty(x.request)  && !string.IsNullOrEmpty(x.response)).Select(x => (receiptRequest: JsonSerializer.Deserialize<ReceiptRequest>(x.request)!, receiptResponse: JsonSerializer.Deserialize<ReceiptResponse>(x.response))).ToList();
             var actualReceiptRequests = receiptRequests.Where(x => x.receiptResponse != null && ((long) x.receiptResponse.ftState & 0xFF) == 0x00).Cast<(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)>().ToList();
             var doc = new InvoicesDoc
             {
-                invoice = actualReceiptRequests.Select(x => MapToInvoiceResult(x.receiptRequest, x.receiptResponse)).ToArray()
+                invoice = actualReceiptRequests.Select(x => CreateInvoiceDocType(x.receiptRequest, x.receiptResponse)).ToArray()
             };
             return doc;
         }
@@ -128,85 +128,6 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE
                 invoice = [inv]
             };
             return doc;
-        }
-
-        private AadeBookInvoiceType MapToInvoiceResult(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
-        {
-            var invoiceUid = receiptResponse.ftSignatures.FirstOrDefault(x => x.Caption == "invoiceUid")?.Data;
-            var invoiceMarkText = receiptResponse.ftSignatures.FirstOrDefault(x => x.Caption == "invoiceMark")?.Data;
-            if (int.TryParse(invoiceMarkText, out var invoiceMark))
-            {
-
-            }
-            else
-            {
-                invoiceMark = -1;
-            }
-            var authenticationCode = receiptResponse.ftSignatures.FirstOrDefault(x => x.Caption == "authenticationCode")?.Data;
-
-            var invoiceDetails = receiptRequest.cbChargeItems.Select(x => new InvoiceRowType
-            {
-                quantity = x.Quantity,
-                lineNumber = (int) x.Position,
-                vatAmount = x.VATAmount ?? 0.0m,
-                netValue = x.Amount - (x.VATAmount ?? 0.0m),
-                vatCategory = GetVATCategory(x),
-                incomeClassification = [
-                              new IncomeClassificationType {
-                                        amount =x.Amount - (x.VATAmount ?? 0.0m),
-                                        classificationCategory = GetIncomeClassificationCategoryType(x),
-                                        classificationType = receiptRequest.IsInvoiceOperation() ? GetIncomeClassificationValueTypeForInvoice(x) :  GetIncomeClassificationValueTypeForPrivate(x),
-                                        classificationTypeSpecified = true
-                                    }
-                          ]
-            }).ToList();
-
-            var incomeClassificationGroups = invoiceDetails.SelectMany(x => x.incomeClassification).GroupBy(x => (x.classificationCategory, x.classificationType)).Select(x => new IncomeClassificationType
-            {
-                amount = x.Sum(y => y.amount),
-                classificationCategory = x.Key.classificationCategory,
-                classificationType = x.Key.classificationType,
-                classificationTypeSpecified = true
-            }).ToList();
-
-
-            var identification = long.Parse(receiptResponse.ftReceiptIdentification.Replace("ft", "").Split("#")[0], System.Globalization.NumberStyles.HexNumber);
-            var inv = new AadeBookInvoiceType
-            {
-                mark = invoiceMark,
-                uid = invoiceUid ?? "",
-                authenticationCode = authenticationCode ?? "",
-                issuer = CreateIssuer(), // issuer from masterdataconfig
-                paymentMethods = receiptRequest.cbPayItems.Select(x => new PaymentMethodDetailType
-                {
-                    type = GetPaymentType(x),
-                    amount = x.Amount,
-                    paymentMethodInfo = x.Description
-                }).ToArray(),
-                invoiceHeader = new InvoiceHeaderType
-                {
-                    series = "013",
-                    aa = identification.ToString(),
-                    issueDate = receiptRequest.cbReceiptMoment,
-                    invoiceType = GetInvoiceType(receiptRequest),
-                    currency = CurrencyType.EUR,
-                    currencySpecified = true
-                },
-                invoiceDetails = invoiceDetails.ToArray(),
-                invoiceSummary = new InvoiceSummaryType
-                {
-                    totalNetValue = receiptRequest.cbChargeItems.Sum(x => x.Amount - (x.VATAmount ?? 0.0m)),
-                    totalVatAmount = receiptRequest.cbChargeItems.Sum(x => x.VATAmount ?? 0.0m),
-                    totalWithheldAmount = 0.0m,
-                    totalFeesAmount = 0.0m,
-                    totalStampDutyAmount = 0.0m,
-                    totalOtherTaxesAmount = 0.0m,
-                    totalDeductionsAmount = 0.0m,
-                    totalGrossValue = receiptRequest.cbChargeItems.Sum(x => x.Amount),
-                    incomeClassification = incomeClassificationGroups.ToArray()
-                }
-            };
-            return inv;
         }
 
         private AadeBookInvoiceType CreateInvoiceDocType(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
@@ -231,13 +152,17 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE
                                ],
 
                 };
-                if (x.ftChargeItemCaseData is WithHoldingChargeItem chargeItem)
+                if (x.ftChargeItemCaseData != null)
                 {
-                    invoiceRow.withheldAmountSpecified = true;
-                    invoiceRow.withheldAmount = chargeItem.WithHoldingAmount;
-                    invoiceRow.withheldPercentCategory = 3;
-                    invoiceRow.withheldPercentCategorySpecified = true;
-                    totalWithholdAmount += chargeItem.WithHoldingAmount;
+                    var chargeItem = JsonSerializer.Deserialize<WithHoldingChargeItem>(JsonSerializer.Serialize(x.ftChargeItemCaseData));
+                    if (chargeItem != null)
+                    {
+                        invoiceRow.withheldAmountSpecified = true;
+                        invoiceRow.withheldAmount = chargeItem.WithHoldingAmount;
+                        invoiceRow.withheldPercentCategory = 3;
+                        invoiceRow.withheldPercentCategorySpecified = true;
+                        totalWithholdAmount += chargeItem.WithHoldingAmount;
+                    }
                 }
                 return invoiceRow;
             }).ToList();
@@ -260,8 +185,9 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE
                     amount = x.Amount,
                     paymentMethodInfo = x.Description,
                 };
-                if (x.ftPayItemCaseData is PayItemCaseData provider)
+                if (x.ftPayItemCaseData != null)
                 {
+                    var provider = JsonSerializer.Deserialize<PayItemCaseData>(JsonSerializer.Serialize(x.ftPayItemCaseData))!;
                     if (provider.Provider is PayItemCaseProviderVivaWallet vivaPayment)
                     {
 
@@ -269,7 +195,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE
                         payment.ProvidersSignature = new ProviderSignatureType
                         {
                             Signature = vivaPayment.ProtocolRequest?.aadeProviderSignature,
-                            SigningAuthor = "", // need to be filled??
+                            SigningAuthor = "viva.com", // need to be filled??
                         };
                     }
                 }
@@ -308,12 +234,29 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE
             };
             if (receiptRequest.cbCustomer != null)
             {
+                var customer = JsonSerializer.Deserialize<MiddlewareCustomer>(JsonSerializer.Serialize(receiptRequest.cbCustomer));
                 inv.counterpart = new PartyType
                 {
-                    vatNumber = ((MiddlewareCustomer) receiptRequest.cbCustomer).CustomerVATId,
+                    vatNumber = customer?.CustomerVATId,
                     country = CountryType.GR,
                     branch = 0,
                 };
+            }
+            if (receiptResponse.ftSignatures.Count > 0)
+            {
+                var invoiceUid = receiptResponse.ftSignatures.FirstOrDefault(x => x.Caption == "invoiceUid")?.Data;
+                var invoiceMarkText = receiptResponse.ftSignatures.FirstOrDefault(x => x.Caption == "invoiceMark")?.Data;
+                var authenticationCode = receiptResponse.ftSignatures.FirstOrDefault(x => x.Caption == "authenticationCode")?.Data;
+                if (long.TryParse(invoiceMarkText, out var invoiceMark))
+                {
+                    inv.uid = invoiceUid;
+                    inv.authenticationCode = authenticationCode;
+                    inv.mark = invoiceMark;
+                }
+                else
+                {
+                    invoiceMark = -1;
+                }
             }
             return inv;
         }
