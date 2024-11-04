@@ -12,7 +12,8 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
 {
     public class InvoiceCommandProcessorGRTests
     {
-        private readonly InvoiceCommandProcessorGR _sut = new InvoiceCommandProcessorGR();
+#pragma warning disable
+        private readonly InvoiceCommandProcessorGR _sut = new InvoiceCommandProcessorGR(null, null, null);
 
         [Theory]
         [InlineData(ReceiptCases.InvoiceUnknown0x1000)]
