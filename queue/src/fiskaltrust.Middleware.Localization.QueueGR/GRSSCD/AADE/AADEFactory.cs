@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Xml.Serialization;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.myDataSCU;
+using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using fiskaltrust.SAFT.CLI;
 using fiskaltrust.storage.V0;
@@ -26,8 +27,19 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE
             _masterDataConfiguration = masterDataConfiguration;
         }
 
-        private IncomeClassificationValueType GetIncomeClassificationValueType(ChargeItem chargeItem) => (chargeItem.ftChargeItemCase & 0xF0) switch
+        private IncomeClassificationValueType GetIncomeClassificationValueTypeForInvoice(ChargeItem chargeItem) => (chargeItem.ftChargeItemCase & 0xF0) switch
         {
+            0x00 => IncomeClassificationValueType.E3_561_001,
+            0x10 => IncomeClassificationValueType.E3_561_001,
+            0x20 => IncomeClassificationValueType.E3_561_001,
+            _ => IncomeClassificationValueType.E3_561_007,
+        };
+
+        private IncomeClassificationValueType GetIncomeClassificationValueTypeForPrivate(ChargeItem chargeItem) => (chargeItem.ftChargeItemCase & 0xF0) switch
+        {
+            0x00 => IncomeClassificationValueType.E3_561_003,
+            0x10 => IncomeClassificationValueType.E3_561_003,
+            0x20 => IncomeClassificationValueType.E3_561_003,
             _ => IncomeClassificationValueType.E3_561_007,
         };
 
@@ -57,7 +69,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE
             _ => IncomeClassificationCategoryType.category1_2,
         };
 
-        private int GetVATCategory(ChargeItem chargeItem) => (chargeItem.ftChargeItemCase & 0xF) switch
+        private int GetVATCategory(ChargeItem chargeItem) => (chargeItem.ftChargeItemCase & 0x0F) switch
         {
             (long) ChargeItemCaseVat.NormalVatRate => MyDataVatCategory.VatRate24, // Normal 24%
             (long) ChargeItemCaseVat.DiscountedVatRate1 => MyDataVatCategory.VatRate13, // Discounted-1 13&
@@ -143,7 +155,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE
                               new IncomeClassificationType {
                                         amount =x.Amount - (x.VATAmount ?? 0.0m),
                                         classificationCategory = GetIncomeClassificationCategoryType(x),
-                                        classificationType = GetIncomeClassificationValueType(x),
+                                        classificationType = receiptRequest.IsInvoiceOperation() ? GetIncomeClassificationValueTypeForInvoice(x) :  GetIncomeClassificationValueTypeForPrivate(x),
                                         classificationTypeSpecified = true
                                     }
                           ]
@@ -213,11 +225,11 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE
                                    new IncomeClassificationType {
                                         amount = x.Amount -  (x.VATAmount ?? 0.0m),
                                         classificationCategory = GetIncomeClassificationCategoryType(x),
-                                        classificationType = GetIncomeClassificationValueType(x),
+                                        classificationType = receiptRequest.IsInvoiceOperation() ? GetIncomeClassificationValueTypeForInvoice(x) :  GetIncomeClassificationValueTypeForPrivate(x),
                                         classificationTypeSpecified = true
                                     }
                                ],
-                    
+
                 };
                 if (x.ftChargeItemCaseData is WithHoldingChargeItem chargeItem)
                 {
@@ -252,6 +264,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE
                 {
                     if (provider.Provider is PayItemCaseProviderVivaWallet vivaPayment)
                     {
+
                         payment.transactionId = vivaPayment.ProtocolResponse?.aadeTransactionId;
                         payment.ProvidersSignature = new ProviderSignatureType
                         {
@@ -304,6 +317,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE
             }
             return inv;
         }
+
 
         private PartyType CreateIssuer()
         {
