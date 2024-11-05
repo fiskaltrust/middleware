@@ -38,8 +38,6 @@ public class MyDataApiClient : IGRSSCD
         };
         _httpClient.DefaultRequestHeaders.Add("aade-user-id", username);
         _httpClient.DefaultRequestHeaders.Add("ocp-apim-subscription-key", subscriptionKey);
-        _offline = false;
-        _mega_offline = true;
     }
 
     public async Task<GRSSCDInfo> GetInfoAsync() => await Task.FromResult(new GRSSCDInfo());
