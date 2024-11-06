@@ -16,6 +16,8 @@ public static class ReceiptRequestExtensions
 
     public static bool IsInvoiceOperation(this ReceiptRequest receiptRequest) => (receiptRequest.ftReceiptCase & 0x0000_0000_0000_F000) == 0x1000;
 
+    public static bool IsInvoiceB2COperation(this ReceiptRequest receiptRequest) => (receiptRequest.ftReceiptCase & 0x0000_0000_0000_F00F) == 0x1001;
+
     public static bool IsDailyOperation(this ReceiptRequest receiptRequest) => (receiptRequest.ftReceiptCase & 0x0000_0000_0000_F000) == 0x2000;
 
     public static bool IsProtocolOperation(this ReceiptRequest receiptRequest) => (receiptRequest.ftReceiptCase & 0x0000_0000_0000_F000) == 0x3000;

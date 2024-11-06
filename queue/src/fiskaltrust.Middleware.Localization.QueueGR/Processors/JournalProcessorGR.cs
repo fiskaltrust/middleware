@@ -3,6 +3,7 @@ using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.Processors;
@@ -29,7 +30,15 @@ public class JournalProcessorGR : IJournalProcessor
             Country = "PT",
             TaxId = "199999999"
         };
-        var queueItems = await _storageProvider.GetMiddlewareQueueItemRepository().GetAsync();
+        var queueItems = new List<ftQueueItem>();
+        if (request.From > 0)
+        {
+            queueItems = (_storageProvider.GetMiddlewareQueueItemRepository().GetEntriesOnOrAfterTimeStampAsync(request.From).ToBlockingEnumerable()).ToList();
+        }
+        else
+        {
+            queueItems = (await _storageProvider.GetMiddlewareQueueItemRepository().GetAsync()).ToList();
+        }
         var aadFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
         {
             Account = new storage.V0.MasterData.AccountMasterData

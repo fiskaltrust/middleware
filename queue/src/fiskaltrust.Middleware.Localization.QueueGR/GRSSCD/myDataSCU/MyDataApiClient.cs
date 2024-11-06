@@ -52,7 +52,6 @@ public class MyDataApiClient : IGRSSCD
             }
         });
         var doc = aadFactory.MapToInvoicesDoc(request.ReceiptRequest, request.ReceiptResponse);
-        var payload = aadFactory.GenerateInvoicePayload(doc);
         if (request.ReceiptRequest.IsLateSigning())
         {
             // TODO how should we support this case?
@@ -75,6 +74,7 @@ public class MyDataApiClient : IGRSSCD
             };
         }
 
+        var payload = aadFactory.GenerateInvoicePayload(doc);
         var path = _iseinvoiceProvider ? "/myDataProvider/SendInvoices" : "/SendReceipts";
         var response = await _httpClient.PostAsync(path, new StringContent(payload, Encoding.UTF8, "application/xml"));
         var content = await response.Content.ReadAsStringAsync();

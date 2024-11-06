@@ -1,4 +1,4 @@
-using fiskaltrust.Api.POS.Models.ifPOS.v2;
+﻿using fiskaltrust.Api.POS.Models.ifPOS.v2;
 
 namespace fiskaltrust.Middleware.Localization.v2.Helpers;
 

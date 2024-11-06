@@ -1,4 +1,5 @@
-﻿using System.Security.Cryptography;
+﻿using System.Collections.Specialized;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Xml.Serialization;
@@ -60,7 +61,6 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE
         /// category3 => Movement        
         /// </summary>
 
-
         private IncomeClassificationCategoryType GetIncomeClassificationCategoryType(ChargeItem chargeItem) => (chargeItem.ftChargeItemCase & 0xF0) switch
         {
             0x00 => IncomeClassificationCategoryType.category1_2,
@@ -78,7 +78,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE
             (long) ChargeItemCaseVat.SuperReducedVatRate2 => MyDataVatCategory.VatRate9, // Super reduced 2 9%
             (long) ChargeItemCaseVat.ParkingVatRate => MyDataVatCategory.VatRate4, // Parking VAT 4%
             (long) ChargeItemCaseVat.NotTaxable => MyDataVatCategory.RegistrationsWithoutVat, // Not Taxable
-            (long) ChargeItemCaseVat.ZeroVatRate => MyDataVatCategory.RegistrationsWithoutVat, // Zero
+            (long) ChargeItemCaseVat.ZeroVatRate => MyDataVatCategory.ExcludingVat, // Zero
             _ => throw new Exception($"The VAT type {chargeItem.ftChargeItemCase & 0xF} of ChargeItem with the case {chargeItem.ftChargeItemCase} is not supported."),
         };
 
@@ -103,15 +103,82 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE
             _ => throw new Exception($"The Payment type {payItem.ftPayItemCase & 0xF} of PayItem with the case {payItem.ftPayItemCase} is not supported."),
         };
 
-        private InvoiceType GetInvoiceType(ReceiptRequest receiptRequest) => receiptRequest.ftReceiptCase switch
+        public static InvoiceType GetInvoiceType(ReceiptRequest receiptRequest)
         {
-            0x4752_2000_0000_1001 => InvoiceType.Item11, // Retail - Sales Invoice
-            _ => InvoiceType.Item111, // Retail - Simplified Invoice
-        };
+            if (receiptRequest.IsInvoiceOperation())
+            {
+                if(receiptRequest.IsInvoiceB2COperation() && !receiptRequest.ContainsCustomerInfo())
+                {
+                    // in this case we don't know the customer so we cannot add the VAT. The invoice is handled as a Μη Αντικριζόμενα operation ( non facing)
+                    if (receiptRequest.cbChargeItems.All(x => (x.ftChargeItemCase & 0xF0) == 0x20))
+                    {
+                        return InvoiceType.Item112;
+                    }
+                    else
+                    {
+                        return InvoiceType.Item111;
+                    }
+                }
+
+                if (receiptRequest.cbChargeItems.Any(x => x.IsAgencyBusiness()))
+                {
+                    return InvoiceType.Item14;
+                }
+                else if (receiptRequest.IsInvoiceOperation() && receiptRequest.cbChargeItems.All(x => (x.ftChargeItemCase & 0xF0) == 0x20))
+                {
+                    if (receiptRequest.HasEUCustomer())
+                    {
+                        return InvoiceType.Item22;
+                    }
+                    else if (receiptRequest.HasNonEUCustomer())
+                    {
+                        return InvoiceType.Item23;
+                    }
+                    else
+                    {
+                        return InvoiceType.Item21;
+                    }
+                }
+                else
+                {
+                    if (receiptRequest.HasEUCustomer())
+                    {
+                        return InvoiceType.Item12;
+                    }
+                    else if (receiptRequest.HasNonEUCustomer())
+                    {
+                        return InvoiceType.Item13;
+                    }
+                    else
+                    {
+                        return InvoiceType.Item11;
+                    }
+                }
+            }
+
+
+            if (receiptRequest.IsReceiptOperation())
+            {
+                if (receiptRequest.cbChargeItems.All(x => (x.ftChargeItemCase & 0xF0) == 0x20))
+                {
+                    return InvoiceType.Item112;
+                }
+                else
+                {
+                    return InvoiceType.Item111;
+                }
+            }
+
+            return receiptRequest.ftReceiptCase switch
+            {
+                0x4752_2000_0000_3004 => InvoiceType.Item84, // POS Receipt
+                _ => throw new Exception("Unknown type of receipt " + receiptRequest.ftReceiptCase)
+            };
+        }
 
         public InvoicesDoc MapToInvoicesDoc(List<ftQueueItem> queueItems)
         {
-            var receiptRequests = queueItems.Where(x => !string.IsNullOrEmpty(x.request)  && !string.IsNullOrEmpty(x.response)).Select(x => (receiptRequest: JsonSerializer.Deserialize<ReceiptRequest>(x.request)!, receiptResponse: JsonSerializer.Deserialize<ReceiptResponse>(x.response))).ToList();
+            var receiptRequests = queueItems.Where(x => !string.IsNullOrEmpty(x.request) && !string.IsNullOrEmpty(x.response)).Select(x => (receiptRequest: JsonSerializer.Deserialize<ReceiptRequest>(x.request)!, receiptResponse: JsonSerializer.Deserialize<ReceiptResponse>(x.response))).ToList();
             var actualReceiptRequests = receiptRequests.Where(x => x.receiptResponse != null && ((long) x.receiptResponse.ftState & 0xFF) == 0x00).Cast<(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)>().ToList();
             var doc = new InvoicesDoc
             {
@@ -142,16 +209,72 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE
                     vatAmount = x.VATAmount ?? 0.0m,
                     netValue = x.Amount - (x.VATAmount ?? 0.0m),
                     vatCategory = GetVATCategory(x),
-                    incomeClassification = [
-                                   new IncomeClassificationType {
+                };
+
+                if (invoiceRow.vatCategory == MyDataVatCategory.ExcludingVat)
+                {
+                    invoiceRow.vatExemptionCategorySpecified = true;
+                    invoiceRow.vatExemptionCategory = 1;
+                }
+                if ((receiptRequest.ftReceiptCase & 0xFFFF) == 0x3004)
+                {
+                    invoiceRow.incomeClassification = [
+                      new IncomeClassificationType {
+                                        amount = x.Amount -  (x.VATAmount ?? 0.0m),
+                                        classificationCategory = IncomeClassificationCategoryType.category1_95
+                                    }
+                  ];
+                }
+                else
+                {
+                    if (x.IsAgencyBusiness())
+                    {
+                        invoiceRow.incomeClassification = [
+                           new IncomeClassificationType {
+                                            amount = x.Amount -  (x.VATAmount ?? 0.0m),
+                                            classificationCategory = IncomeClassificationCategoryType.category1_7,
+                                            classificationType = receiptRequest.HasEUCustomer() ? IncomeClassificationValueType.E3_881_003 : IncomeClassificationValueType.E3_881_001,
+                                            classificationTypeSpecified = true
+                                        }
+                       ];
+                    }
+                    else
+                    {
+                        if (receiptRequest.HasEUCustomer())
+                        {
+                            invoiceRow.incomeClassification = [
+                                new IncomeClassificationType {
+                                amount = x.Amount -  (x.VATAmount ?? 0.0m),
+                                classificationCategory = GetIncomeClassificationCategoryType(x),
+                                classificationType = IncomeClassificationValueType.E3_561_005,
+                                classificationTypeSpecified = true
+                            }
+                            ];
+                        }
+                        else if (receiptRequest.HasNonEUCustomer())
+                        {
+                            invoiceRow.incomeClassification = [
+                                new IncomeClassificationType {
+                                amount = x.Amount -  (x.VATAmount ?? 0.0m),
+                                classificationCategory = GetIncomeClassificationCategoryType(x),
+                                classificationType = IncomeClassificationValueType.E3_561_006,
+                                classificationTypeSpecified = true
+                            }
+                            ];
+                        }
+                        else
+                        {
+                            invoiceRow.incomeClassification = [
+                                           new IncomeClassificationType {
                                         amount = x.Amount -  (x.VATAmount ?? 0.0m),
                                         classificationCategory = GetIncomeClassificationCategoryType(x),
                                         classificationType = receiptRequest.IsInvoiceOperation() ? GetIncomeClassificationValueTypeForInvoice(x) :  GetIncomeClassificationValueTypeForPrivate(x),
                                         classificationTypeSpecified = true
                                     }
-                               ],
-
-                };
+                                       ];
+                        }
+                    }
+                }
                 if (x.ftChargeItemCaseData != null)
                 {
                     var chargeItem = JsonSerializer.Deserialize<WithHoldingChargeItem>(JsonSerializer.Serialize(x.ftChargeItemCaseData));
@@ -167,13 +290,18 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE
                 return invoiceRow;
             }).ToList();
 
-            var incomeClassificationGroups = invoiceDetails.SelectMany(x => x.incomeClassification).GroupBy(x => (x.classificationCategory, x.classificationType)).Select(x => new IncomeClassificationType
+            var incomeClassificationGroups = invoiceDetails.SelectMany(x => x.incomeClassification).Where(x => x.classificationTypeSpecified).GroupBy(x => (x.classificationCategory, x.classificationType)).Select(x => new IncomeClassificationType
             {
                 amount = x.Sum(y => y.amount),
                 classificationCategory = x.Key.classificationCategory,
                 classificationType = x.Key.classificationType,
                 classificationTypeSpecified = true
             }).ToList();
+            incomeClassificationGroups.AddRange(invoiceDetails.SelectMany(x => x.incomeClassification).Where(x => !x.classificationTypeSpecified).GroupBy(x => x.classificationCategory).Select(x => new IncomeClassificationType
+            {
+                amount = x.Sum(y => y.amount),
+                classificationCategory = x.Key,
+            }).ToList());
 
             var identification = long.Parse(receiptResponse.ftReceiptIdentification.Replace("ft", "").Split("#")[0], System.Globalization.NumberStyles.HexNumber);
 
@@ -234,13 +362,48 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE
             };
             if (receiptRequest.cbCustomer != null)
             {
-                var customer = JsonSerializer.Deserialize<MiddlewareCustomer>(JsonSerializer.Serialize(receiptRequest.cbCustomer));
-                inv.counterpart = new PartyType
+                var customer = receiptRequest.GetCustomerOrNull();
+                if (receiptRequest.HasGreeceCustomer())
                 {
-                    vatNumber = customer?.CustomerVATId,
-                    country = CountryType.GR,
-                    branch = 0,
-                };
+                    inv.counterpart = new PartyType
+                    {
+                        vatNumber = customer?.CustomerVATId,
+                        country = CountryType.GR,
+                        branch = 0,
+                    };
+                }
+                else if (receiptRequest.HasEUCustomer())
+                {
+                    inv.counterpart = new PartyType
+                    {
+                        vatNumber = customer?.CustomerVATId,
+                        country = CountryType.AT,
+                        name = customer?.CustomerName,
+                        address = new AddressType
+                        {
+                            street = customer?.CustomerStreet,
+                            city = customer?.CustomerCity,
+                            postalCode = customer?.CustomerZip
+                        },
+                        branch = 0,
+                    };
+                }
+                else if (receiptRequest.HasNonEUCustomer())
+                {
+                    inv.counterpart = new PartyType
+                    {
+                        vatNumber = customer?.CustomerVATId,
+                        country = CountryType.US,
+                        name = customer?.CustomerName,
+                        address = new AddressType
+                        {
+                            street = customer?.CustomerStreet,
+                            city = customer?.CustomerCity,
+                            postalCode = customer?.CustomerZip
+                        },
+                        branch = 0,
+                    };
+                }
             }
             if (receiptResponse.ftSignatures.Count > 0)
             {
