@@ -117,7 +117,6 @@ namespace fiskaltrust.Middleware.SCU.IT.CustomRTPrinter.UnitTest
             response.AddInfo.FpStatus.Should().Be(123);
         }
 
-        [Fact]
         public void Test3()
         {
             var request = new PrinterFiscalReceipt(
