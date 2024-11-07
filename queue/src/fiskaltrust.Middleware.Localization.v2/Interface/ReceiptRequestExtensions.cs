@@ -4,6 +4,8 @@ namespace fiskaltrust.Middleware.Localization.v2.Interface;
 
 public static class ReceiptRequestExtensions
 {
+    public static long GetCasePart(this ReceiptRequest receiptRequest) => receiptRequest.ftReceiptCase & 0x0000_0000_0000_FFFF;
+
     public static bool IsVoid(this ReceiptRequest receiptRequest) => (receiptRequest.ftReceiptCase & 0x0000_0000_0004_0000) > 0;
 
     public static bool IsRefund(this ReceiptRequest receiptRequest) => (receiptRequest.ftReceiptCase & 0x0000_0000_0100_0000) > 0;

@@ -43,15 +43,17 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE
             return false;
         }
 
+        public static bool HasGreeceCountryCode(this ReceiptRequest receiptRequest)
+        {
+            return ((ulong) receiptRequest.ftReceiptCase & 0xFFFF_0000_0000_0000) == 0x4752_0000_0000_0000;
+        }
+
         public static bool HasNonEUCountryCode(this ReceiptRequest receiptRequest)
         {
             return ((ulong) receiptRequest.ftReceiptCase & 0xFFFF_0000_0000_0000) == 0x0000_0000_0000_0000;
         }
 
-        public static bool HasGreeceCountryCode(this ReceiptRequest receiptRequest)
-        {
-            return ((ulong) receiptRequest.ftReceiptCase & 0xFFFF_0000_0000_0000) == 0x4752_0000_0000_0000;
-        }
+        public static bool HasOnlyServiceItems(this ReceiptRequest receiptRequest) => receiptRequest.cbChargeItems.All(x => (x.ftChargeItemCase & 0xF0) == 0x20);
 
         public static bool HasEUCountryCode(this ReceiptRequest receiptRequest)
         {

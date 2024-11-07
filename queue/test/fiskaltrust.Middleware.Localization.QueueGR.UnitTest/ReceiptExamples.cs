@@ -1,5 +1,6 @@
 ﻿using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE;
+using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE.Models;
 using fiskaltrust.Middleware.Localization.QueueGR.UnitTest;
 using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using fiskaltrust.SAFT.CLI;

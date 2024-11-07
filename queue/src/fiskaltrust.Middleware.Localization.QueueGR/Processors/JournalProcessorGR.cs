@@ -43,7 +43,7 @@ public class JournalProcessorGR : IJournalProcessor
         {
             Account = new storage.V0.MasterData.AccountMasterData
             {
-                VatId = "997671771"
+                VatId = "112545020"
             }
         });
         using var memoryStream = new MemoryStream();

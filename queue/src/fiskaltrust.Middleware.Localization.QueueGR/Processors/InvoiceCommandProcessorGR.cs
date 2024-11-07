@@ -29,6 +29,8 @@ public class InvoiceCommandProcessorGR(IGRSSCD sscd, ftQueueGR queueGR, ftSignat
                 return await InvoiceB2B0x1002Async(request);
             case (int) ReceiptCases.InvoiceB2G0x1003:
                 return await InvoiceB2G0x1003Async(request);
+            case 0x1004:
+                return await InvoiceUnknown0x1000Async(request);
         }
         request.ReceiptResponse.SetReceiptResponseError(ErrorMessages.UnknownReceiptCase(request.ReceiptRequest.ftReceiptCase));
         return new ProcessCommandResponse(request.ReceiptResponse, []);

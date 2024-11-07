@@ -3,7 +3,10 @@ using fiskaltrust.SAFT.CLI;
 
 public static class AADECertificationExamples
 {
-    public static ReceiptRequest A1_1_1p1(Guid cashBoxId)
+    public const string CUSOMTER_VATNUMBER = "026883248";
+    //public const string CUSOMTER_VATNUMBER = "997671770";
+
+    public static ReceiptRequest A1_1_1p1()
     {
         return new ReceiptRequest
         {
@@ -34,17 +37,16 @@ public static class AADECertificationExamples
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
-            ftCashBoxID = cashBoxId,
             ftPosSystemId = Guid.NewGuid(),
             ftReceiptCase = 0x4752_2000_0000_1001,
             cbCustomer = new MiddlewareCustomer
             {
-                CustomerVATId = "997671770",
+                CustomerVATId = CUSOMTER_VATNUMBER,
             }
         };
     }
 
-    public static ReceiptRequest A1_1_1p2(Guid cashBoxId)
+    public static ReceiptRequest A1_1_1p2()
     {
         return new ReceiptRequest
         {
@@ -75,7 +77,6 @@ public static class AADECertificationExamples
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
-            ftCashBoxID = cashBoxId,
             ftPosSystemId = Guid.NewGuid(),
             ftReceiptCase = 0x4154_2000_0000_1001,
             cbCustomer = new MiddlewareCustomer
@@ -90,7 +91,7 @@ public static class AADECertificationExamples
         };
     }
 
-    public static ReceiptRequest A1_1_1p3(Guid cashBoxId)
+    public static ReceiptRequest A1_1_1p3()
     {
         return new ReceiptRequest
         {
@@ -121,12 +122,11 @@ public static class AADECertificationExamples
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
-            ftCashBoxID = cashBoxId,
             ftPosSystemId = Guid.NewGuid(),
             ftReceiptCase = 0x5553_2000_0000_1001,
             cbCustomer = new MiddlewareCustomer
             {
-                CustomerVATId = "ATU68541544",
+                CustomerVATId = "000000000000",
                 CustomerCountry = "US",
                 CustomerCity = "Salzburg",
                 CustomerZip = "5020",
@@ -136,7 +136,7 @@ public static class AADECertificationExamples
         };
     }
 
-    public static ReceiptRequest A1_1_1p4(Guid cashBoxId)
+    public static ReceiptRequest A1_1_1p4()
     {
         return new ReceiptRequest
         {
@@ -167,7 +167,6 @@ public static class AADECertificationExamples
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
-            ftCashBoxID = cashBoxId,
             ftPosSystemId = Guid.NewGuid(),
             ftReceiptCase = 0x4154_2000_0000_1001,
             cbCustomer = new MiddlewareCustomer
@@ -182,7 +181,7 @@ public static class AADECertificationExamples
         };
     }
 
-    public static ReceiptRequest A1_1_1p5(Guid cashBoxId)
+    public static ReceiptRequest A1_1_1p5()
     {
         return new ReceiptRequest
         {
@@ -219,22 +218,22 @@ public static class AADECertificationExamples
             [
                 new PayItem
                 {
-                    Amount = 100m,
+                    Amount = 200m,
                     Description = "Cash",
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
-            ftCashBoxID = cashBoxId,
+
             ftPosSystemId = Guid.NewGuid(),
             ftReceiptCase = 0x4752_2000_0000_1001,
             cbCustomer = new MiddlewareCustomer
             {
-                CustomerVATId = "997671770",
+                CustomerVATId = CUSOMTER_VATNUMBER,
             }
         };
     }
 
-    public static ReceiptRequest A1_1_1p6(Guid cashBoxId)
+    public static ReceiptRequest A1_1_1p6()
     {
         return new ReceiptRequest
         {
@@ -243,7 +242,7 @@ public static class AADECertificationExamples
             cbReceiptAmount = 100m,
             cbReceiptMoment = DateTime.UtcNow,
             cbReceiptReference = Guid.NewGuid().ToString(),
-            cbPreviousReceiptReference = "400001941216788",
+            cbPreviousReceiptReference = "400001941223252",
             cbChargeItems =
             [
                 new ChargeItem
@@ -266,17 +265,17 @@ public static class AADECertificationExamples
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
-            ftCashBoxID = cashBoxId,
+
             ftPosSystemId = Guid.NewGuid(),
             ftReceiptCase = 0x4752_2000_0000_1001,
             cbCustomer = new MiddlewareCustomer
             {
-                CustomerVATId = "997671770",
+                CustomerVATId = CUSOMTER_VATNUMBER,
             }
         };
     }
 
-    public static ReceiptRequest A1_2_2p1(Guid cashBoxId)
+    public static ReceiptRequest A1_2_2p1()
     {
         return new ReceiptRequest
         {
@@ -307,17 +306,17 @@ public static class AADECertificationExamples
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
-            ftCashBoxID = cashBoxId,
+
             ftPosSystemId = Guid.NewGuid(),
             ftReceiptCase = 0x4752_2000_0000_1001,
             cbCustomer = new MiddlewareCustomer
             {
-                CustomerVATId = "997671770",
+                CustomerVATId = CUSOMTER_VATNUMBER,
             }
         };
     }
 
-    public static ReceiptRequest A1_2_2p2(Guid cashBoxId)
+    public static ReceiptRequest A1_2_2p2()
     {
         return new ReceiptRequest
         {
@@ -348,7 +347,7 @@ public static class AADECertificationExamples
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
-            ftCashBoxID = cashBoxId,
+
             ftPosSystemId = Guid.NewGuid(),
             ftReceiptCase = 0x4154_2000_0000_1001,
             cbCustomer = new MiddlewareCustomer
@@ -363,7 +362,7 @@ public static class AADECertificationExamples
         };
     }
 
-    public static ReceiptRequest A1_2_2p3(Guid cashBoxId)
+    public static ReceiptRequest A1_2_2p3()
     {
         return new ReceiptRequest
         {
@@ -394,12 +393,12 @@ public static class AADECertificationExamples
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
-            ftCashBoxID = cashBoxId,
+
             ftPosSystemId = Guid.NewGuid(),
             ftReceiptCase = 0x5553_2000_0000_1001,
             cbCustomer = new MiddlewareCustomer
             {
-                CustomerVATId = "ATU68541544",
+                CustomerVATId = "000000000000",
                 CustomerCountry = "US",
                 CustomerCity = "Salzburg",
                 CustomerZip = "5020",
@@ -409,7 +408,7 @@ public static class AADECertificationExamples
         };
     }
 
-    public static ReceiptRequest A1_2_2p4(Guid cashBoxId)
+    public static ReceiptRequest A1_2_2p4()
     {
         return new ReceiptRequest
         {
@@ -418,7 +417,7 @@ public static class AADECertificationExamples
             cbReceiptAmount = 100m,
             cbReceiptMoment = DateTime.UtcNow,
             cbReceiptReference = Guid.NewGuid().ToString(),
-            cbPreviousReceiptReference = "400001941216780", // need to replace this with lookup
+            cbPreviousReceiptReference = "400001941223255", // need to replace this with lookup
             cbChargeItems =
             [
                 new ChargeItem
@@ -441,17 +440,17 @@ public static class AADECertificationExamples
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
-            ftCashBoxID = cashBoxId,
+
             ftPosSystemId = Guid.NewGuid(),
             ftReceiptCase = 0x4752_2000_0000_1001,
             cbCustomer = new MiddlewareCustomer
             {
-                CustomerVATId = "997671770",
+                CustomerVATId = CUSOMTER_VATNUMBER,
             }
         };
     }
 
-    public static ReceiptRequest A1_5_5p1(Guid cashBoxId)
+    public static ReceiptRequest A1_5_5p1()
     {
         return new ReceiptRequest
         {
@@ -483,17 +482,17 @@ public static class AADECertificationExamples
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
-            ftCashBoxID = cashBoxId,
+
             ftPosSystemId = Guid.NewGuid(),
-            ftReceiptCase = 0x4752_2000_0000_0005,
+            ftReceiptCase = 0x4752_2000_0000_1004,
             cbCustomer = new MiddlewareCustomer
             {
-                CustomerVATId = "997671770",
+                CustomerVATId = CUSOMTER_VATNUMBER,
             }
         };
     }
 
-    public static ReceiptRequest A1_5_5p2(Guid cashBoxId)
+    public static ReceiptRequest A1_5_5p2()
     {
         return new ReceiptRequest
         {
@@ -507,10 +506,10 @@ public static class AADECertificationExamples
                 new ChargeItem
                 {
                     Position = 1,
-                    Amount = -100,
+                    Amount = 100,
                     VATRate = 24,
                     VATAmount = 0,
-                    ftChargeItemCase = 0x4752_2000_0002_6027,
+                    ftChargeItemCase = 0x4752_2000_0000_6027,
                     Quantity = -1,
                     Description = "Line item 1"
                 }
@@ -519,23 +518,23 @@ public static class AADECertificationExamples
             [
                 new PayItem
                 {
-                    Amount = -100m,
-                    Quantity = -1,
+                    Amount = 100m,
+                    Quantity = 1,
                     Description = "Gutschrift",
-                    ftPayItemCase = 0x4752_2000_0002_0001
+                    ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
-            ftCashBoxID = cashBoxId,
+
             ftPosSystemId = Guid.NewGuid(),
-            ftReceiptCase = 0x4752_2000_0100_0005,
+            ftReceiptCase = 0x4752_2000_0000_1004,
             cbCustomer = new MiddlewareCustomer
             {
-                CustomerVATId = "997671770",
+                CustomerVATId = CUSOMTER_VATNUMBER,
             }
         };
     }
 
-    public static ReceiptRequest A1_6_6p1(Guid cashBoxId)
+    public static ReceiptRequest A1_6_6p1()
     {
         return new ReceiptRequest
         {
@@ -566,17 +565,17 @@ public static class AADECertificationExamples
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
-            ftCashBoxID = cashBoxId,
+
             ftPosSystemId = Guid.NewGuid(),
             ftReceiptCase = 0x4752_2000_0000_3003,
             cbCustomer = new MiddlewareCustomer
             {
-                CustomerVATId = "997671770",
+                CustomerVATId = CUSOMTER_VATNUMBER,
             }
         };
     }
 
-    public static ReceiptRequest A1_6_6p2(Guid cashBoxId)
+    public static ReceiptRequest A1_6_6p2()
     {
         return new ReceiptRequest
         {
@@ -607,17 +606,17 @@ public static class AADECertificationExamples
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
-            ftCashBoxID = cashBoxId,
+
             ftPosSystemId = Guid.NewGuid(),
             ftReceiptCase = 0x4752_2000_0000_3003,
             cbCustomer = new MiddlewareCustomer
             {
-                CustomerVATId = "997671770",
+                CustomerVATId = CUSOMTER_VATNUMBER,
             }
         };
     }
  
-    public static ReceiptRequest A1_7_7p1(Guid cashBoxId)
+    public static ReceiptRequest A1_7_7p1()
     {
         return new ReceiptRequest
         {
@@ -648,7 +647,7 @@ public static class AADECertificationExamples
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
-            ftCashBoxID = cashBoxId,
+
             ftPosSystemId = Guid.NewGuid(),
             ftReceiptCase = 0x4752_2000_0000_3006,
             cbCustomer = new MiddlewareCustomer
@@ -662,7 +661,7 @@ public static class AADECertificationExamples
         };
     }
 
-    public static ReceiptRequest A1_8_8p1(Guid cashBoxId)
+    public static ReceiptRequest A1_8_8p1()
     {
         return new ReceiptRequest
         {
@@ -688,13 +687,13 @@ public static class AADECertificationExamples
             [
                 new PayItem
                 {
-                    Amount = 4,
+                    Amount = 100,
                     Quantity = 1,
                     Description = "Cash",
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
-            ftCashBoxID = cashBoxId,
+
             ftPosSystemId = Guid.NewGuid(),
             ftReceiptCase = 0x4752_2000_0000_3005, // Rent not defined yet
             cbCustomer = new MiddlewareCustomer
@@ -709,7 +708,7 @@ public static class AADECertificationExamples
         };
     }
 
-    public static ReceiptRequest A1_8_8p2(Guid cashBoxId)
+    public static ReceiptRequest A1_8_8p2()
     {
         return new ReceiptRequest
         {
@@ -741,13 +740,13 @@ public static class AADECertificationExamples
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
-            ftCashBoxID = cashBoxId,
+
             ftPosSystemId = Guid.NewGuid(),
             ftReceiptCase = 0x4752_2000_0000_0001
         };
     }
    
-    public static ReceiptRequest A1_8_8p4(Guid cashBoxId)
+    public static ReceiptRequest A1_8_8p4()
     {
         return new ReceiptRequest
         {
@@ -779,13 +778,13 @@ public static class AADECertificationExamples
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
-            ftCashBoxID = cashBoxId,
+
             ftPosSystemId = Guid.NewGuid(),
             ftReceiptCase = 0x4752_2000_0000_3004
         };
     }
 
-    public static ReceiptRequest A1_8_8p5(Guid cashBoxId)
+    public static ReceiptRequest A1_8_8p5()
     {
         return new ReceiptRequest
         {
@@ -817,13 +816,13 @@ public static class AADECertificationExamples
                     ftPayItemCase = 0x4752_2000_0002_0001
                 }
             ],
-            ftCashBoxID = cashBoxId,
+
             ftPosSystemId = Guid.NewGuid(),
             ftReceiptCase = 0x4752_2000_0100_3004
         };
     }
 
-    public static ReceiptRequest A2_11_11p1(Guid cashBoxId)
+    public static ReceiptRequest A2_11_11p1()
     {
         return new ReceiptRequest
         {
@@ -854,13 +853,13 @@ public static class AADECertificationExamples
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
-            ftCashBoxID = cashBoxId,
+
             ftPosSystemId = Guid.NewGuid(),
             ftReceiptCase = 0x4752_2000_0000_0001
         };
     }
 
-    public static ReceiptRequest A2_11_11p2(Guid cashBoxId)
+    public static ReceiptRequest A2_11_11p2()
     {
         return new ReceiptRequest
         {
@@ -891,13 +890,13 @@ public static class AADECertificationExamples
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
-            ftCashBoxID = cashBoxId,
+
             ftPosSystemId = Guid.NewGuid(),
             ftReceiptCase = 0x4752_2000_0000_0001
         };
     }
 
-    public static ReceiptRequest A2_11_11p3(Guid cashBoxId)
+    public static ReceiptRequest A2_11_11p3()
     {
         return new ReceiptRequest
         {
@@ -928,13 +927,13 @@ public static class AADECertificationExamples
                     ftPayItemCase = 0x4752_2000_0000_1001
                 }
             ],
-            ftCashBoxID = cashBoxId,
+
             ftPosSystemId = Guid.NewGuid(),
             ftReceiptCase = 0x4752_2000_0000_0001
         };
     }
 
-    public static ReceiptRequest A2_11_11p4(Guid cashBoxId)
+    public static ReceiptRequest A2_11_11p4()
     {
         return new ReceiptRequest
         {
@@ -965,13 +964,13 @@ public static class AADECertificationExamples
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
-            ftCashBoxID = cashBoxId,
+
             ftPosSystemId = Guid.NewGuid(),
-            ftReceiptCase = 0x4752_2000_0000_0001
+            ftReceiptCase = 0x4752_2000_0000_0005
         };
     }
 
-    public static ReceiptRequest A2_11_1p5(Guid cashBoxId)
+    public static ReceiptRequest A2_11_1p5()
     {
         return new ReceiptRequest
         {
@@ -1002,7 +1001,7 @@ public static class AADECertificationExamples
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
-            ftCashBoxID = cashBoxId,
+
             ftPosSystemId = Guid.NewGuid(),
             ftReceiptCase = 0x4555_2000_0000_0001
         };

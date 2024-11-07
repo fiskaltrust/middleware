@@ -33,6 +33,10 @@ public class ProtocolCommandProcessorGR(IGRSSCD sscd, ftQueueGR queueGR, ftSigna
                 return await Order0x3004Async(request);
             case (int) ReceiptCases.CopyReceiptPrintExistingReceipt0x3010:
                 return await CopyReceiptPrintExistingReceipt0x3010Async(request);
+            case 0x3005:
+                return await Order0x3004Async(request);
+            case 0x3006:
+                return await Order0x3004Async(request);
         }
         request.ReceiptResponse.SetReceiptResponseError(ErrorMessages.UnknownReceiptCase(request.ReceiptRequest.ftReceiptCase));
         return new ProcessCommandResponse(request.ReceiptResponse, []);
@@ -44,7 +48,15 @@ public class ProtocolCommandProcessorGR(IGRSSCD sscd, ftQueueGR queueGR, ftSigna
 
     public async Task<ProcessCommandResponse> ProtocolAccountingEvent0x3002Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
 
-    public async Task<ProcessCommandResponse> InternalUsageMaterialConsumption0x3003Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+    public async Task<ProcessCommandResponse> InternalUsageMaterialConsumption0x3003Async(ProcessCommandRequest request)
+    {
+        var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
+        {
+            ReceiptRequest = request.ReceiptRequest,
+            ReceiptResponse = request.ReceiptResponse,
+        });
+        return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+    }
 
     public async Task<ProcessCommandResponse> Order0x3004Async(ProcessCommandRequest request)
     {

@@ -4,5 +4,5 @@ namespace fiskaltrust.Middleware.Localization.v2.Helpers;
 
 public static class ChargeItemExt
 {
-    public static decimal GetVATAmount(this ChargeItem chargeItem) => chargeItem.VATAmount ?? (chargeItem.Amount * chargeItem.VATRate);
+    public static decimal GetVATAmount(this ChargeItem chargeItem) => chargeItem.VATAmount ?? (chargeItem.Amount / (100 + chargeItem.VATRate) * chargeItem.VATRate);
 }

@@ -50,11 +50,43 @@ public class ReceiptCommandProcessorGR(IGRSSCD sscd, ftQueueGR queueGR, ftSignat
         return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
     }
 
-    public async Task<ProcessCommandResponse> PaymentTransfer0x0002Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+    public async Task<ProcessCommandResponse> PaymentTransfer0x0002Async(ProcessCommandRequest request)
+    {
+        var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
+        {
+            ReceiptRequest = request.ReceiptRequest,
+            ReceiptResponse = request.ReceiptResponse,
+        });
+        return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+    }
 
-    public async Task<ProcessCommandResponse> PointOfSaleReceiptWithoutObligation0x0003Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+    public async Task<ProcessCommandResponse> PointOfSaleReceiptWithoutObligation0x0003Async(ProcessCommandRequest request)
+    {
+        var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
+        {
+            ReceiptRequest = request.ReceiptRequest,
+            ReceiptResponse = request.ReceiptResponse,
+        });
+        return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+    }
 
-    public async Task<ProcessCommandResponse> ECommerce0x0004Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+    public async Task<ProcessCommandResponse> ECommerce0x0004Async(ProcessCommandRequest request)
+    {
+        var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
+        {
+            ReceiptRequest = request.ReceiptRequest,
+            ReceiptResponse = request.ReceiptResponse,
+        });
+        return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+    }
 
-    public async Task<ProcessCommandResponse> Protocol0x0005Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+    public async Task<ProcessCommandResponse> Protocol0x0005Async(ProcessCommandRequest request)
+    {
+        var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
+        {
+            ReceiptRequest = request.ReceiptRequest,
+            ReceiptResponse = request.ReceiptResponse,
+        });
+        return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+    }
 }
