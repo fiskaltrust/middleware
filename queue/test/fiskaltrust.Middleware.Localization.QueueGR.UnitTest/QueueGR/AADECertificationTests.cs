@@ -2,7 +2,9 @@
 using System.Xml.Serialization;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE;
+using fiskaltrust.Middleware.Localization.QueueGR.Interface;
 using FluentAssertions;
+using FluentAssertions.Execution;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -32,7 +34,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             return xmlSerializer.Deserialize(stringReader) as ResponseDoc;
         }
 
-        private async Task SendToMayData(string xml)
+        private async Task<string?> SendToMayData(string xml)
         {
             var httpClient = new HttpClient()
             {
@@ -49,11 +51,24 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             }
 
             var ersult = GetResponse(content);
+            var marker = "";
             if (ersult != null)
             {
                 var data = ersult.response[0];
                 if (data.statusCode.ToLower() == "success")
                 {
+                    for (var i = 0; i < data.ItemsElementName.Length; i++)
+                    {
+                        if (data.ItemsElementName[i] == ItemsChoiceType.qrUrl)
+                        {
+
+                        }
+                        else if (data.ItemsElementName[i] == ItemsChoiceType.invoiceMark)
+                        {
+                            marker = data.Items[i].ToString();
+
+                        }
+                    }
                     _output.WriteLine(content);
                 }
                 else
@@ -71,7 +86,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
                 _output.WriteLine(content);
                 throw new Exception("Invalid response" + content);
             }
-
+            return marker;
         }
 
         [Fact]
@@ -106,7 +121,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             var xml = _aadeFactory.GenerateInvoicePayload(invoiceDoc);
             await SendToMayData(xml);
         }
-      
+
         [Fact]
         public async Task AADECertificationExamples_A1_1_1p4()
         {
@@ -199,10 +214,17 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
         [Fact]
         public async Task AADECertificationExamples_A1_5_5p1()
         {
-            var invoiceDoc = _aadeFactory.MapToInvoicesDoc(AADECertificationExamples.A1_5_5p1(Guid.NewGuid()), ExampleResponse);
-            //&invoiceDoc.invoice[0].invoiceHeader.invoiceType.Should().Be(InvoiceType.Item51);
-            //invoiceDoc.invoice[0].invoiceSummary.incomeClassification[0].classificationCategory.Should().Be(IncomeClassificationCategoryType.category1_3);
-            //invoiceDoc.invoice[0].invoiceSummary.incomeClassification[0].classificationType.Should().Be(IncomeClassificationValueType.E3_561_006);
+            var invoiceOriginal = _aadeFactory.MapToInvoicesDoc(AADECertificationExamples.A1_1_1p1(Guid.NewGuid()), ExampleResponse);
+            var marker = await SendToMayData(_aadeFactory.GenerateInvoicePayload(invoiceOriginal));
+
+            var creditnote = AADECertificationExamples.A1_5_5p1(Guid.NewGuid());
+            creditnote.cbPreviousReceiptReference = marker;
+            await Task.Delay(1000);
+            var invoiceDoc = _aadeFactory.MapToInvoicesDoc(creditnote, ExampleResponse);
+            using var assertionScope = new AssertionScope();
+            invoiceDoc.invoice[0].invoiceHeader.invoiceType.Should().Be(InvoiceType.Item51);
+            invoiceDoc.invoice[0].invoiceSummary.incomeClassification[0].classificationCategory.Should().Be(IncomeClassificationCategoryType.category1_2);
+            invoiceDoc.invoice[0].invoiceSummary.incomeClassification[0].classificationType.Should().Be(IncomeClassificationValueType.E3_561_001);
             var xml = _aadeFactory.GenerateInvoicePayload(invoiceDoc);
             await SendToMayData(xml);
         }
@@ -210,8 +232,13 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
         [Fact]
         public async Task AADECertificationExamples_A1_5_5p2()
         {
-            await Task.Yield();
-            throw new NotImplementedException("");
+            var invoiceDoc = _aadeFactory.MapToInvoicesDoc(AADECertificationExamples.A1_5_5p2(Guid.NewGuid()), ExampleResponse);
+            using var assertionScope = new AssertionScope();
+            invoiceDoc.invoice[0].invoiceHeader.invoiceType.Should().Be(InvoiceType.Item52);
+            invoiceDoc.invoice[0].invoiceSummary.incomeClassification[0].classificationCategory.Should().Be(IncomeClassificationCategoryType.category1_3);
+            invoiceDoc.invoice[0].invoiceSummary.incomeClassification[0].classificationType.Should().Be(IncomeClassificationValueType.E3_561_001);
+            var xml = _aadeFactory.GenerateInvoicePayload(invoiceDoc);
+            await SendToMayData(xml);
         }
 
         [Fact]
@@ -326,8 +353,12 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
         [Fact]
         public async Task AADECertificationExamples_A2_11_11p4()
         {
-            await Task.Yield();
-            throw new NotImplementedException("");
+            var invoiceDoc = _aadeFactory.MapToInvoicesDoc(AADECertificationExamples.A2_11_11p4(Guid.NewGuid()), ExampleResponse);
+            invoiceDoc.invoice[0].invoiceHeader.invoiceType.Should().Be(InvoiceType.Item114);
+            invoiceDoc.invoice[0].invoiceSummary.incomeClassification[0].classificationCategory.Should().Be(IncomeClassificationCategoryType.category1_2);
+            invoiceDoc.invoice[0].invoiceSummary.incomeClassification[0].classificationType.Should().Be(IncomeClassificationValueType.E3_561_003);
+            var xml = _aadeFactory.GenerateInvoicePayload(invoiceDoc);
+            await SendToMayData(xml);
         }
 
         [Fact]

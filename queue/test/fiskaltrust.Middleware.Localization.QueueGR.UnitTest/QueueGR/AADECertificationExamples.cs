@@ -460,6 +460,48 @@ public static class AADECertificationExamples
             cbReceiptAmount = 100m,
             cbReceiptMoment = DateTime.UtcNow,
             cbReceiptReference = Guid.NewGuid().ToString(),
+            cbPreviousReceiptReference = "400001941221523",
+            cbChargeItems =
+            [
+                new ChargeItem
+                {
+                    Position = 1,
+                    Amount = 100,
+                    VATRate = 24,
+                    VATAmount = decimal.Round(100 / (100M + 24) * 24, 2, MidpointRounding.ToEven),
+                    ftChargeItemCase = 0x4752_2000_0000_0013,
+                    Quantity = 1,
+                    Description = "Line item 1"
+                }
+            ],
+            cbPayItems =
+            [
+                new PayItem
+                {
+                    Amount = 100m,
+                    Description = "Cash",
+                    ftPayItemCase = 0x4752_2000_0000_0001
+                }
+            ],
+            ftCashBoxID = cashBoxId,
+            ftPosSystemId = Guid.NewGuid(),
+            ftReceiptCase = 0x4752_2000_0000_0005,
+            cbCustomer = new MiddlewareCustomer
+            {
+                CustomerVATId = "997671770",
+            }
+        };
+    }
+
+    public static ReceiptRequest A1_5_5p2(Guid cashBoxId)
+    {
+        return new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptAmount = 100m,
+            cbReceiptMoment = DateTime.UtcNow,
+            cbReceiptReference = Guid.NewGuid().ToString(),
             cbChargeItems =
             [
                 new ChargeItem
@@ -485,15 +527,10 @@ public static class AADECertificationExamples
             ],
             ftCashBoxID = cashBoxId,
             ftPosSystemId = Guid.NewGuid(),
-            ftReceiptCase = 0x5553_2000_0100_1001,
+            ftReceiptCase = 0x4752_2000_0100_0005,
             cbCustomer = new MiddlewareCustomer
             {
-                CustomerVATId = "ATU68541544",
-                CustomerCountry = "US",
-                CustomerCity = "Salzburg",
-                CustomerZip = "5020",
-                CustomerStreet = "Alpenstraße 99/2.OG/02",
-                CustomerName = "fiskaltrust consulting gmbh"
+                CustomerVATId = "997671770",
             }
         };
     }
@@ -889,6 +926,43 @@ public static class AADECertificationExamples
                     Amount = 99,
                     Description = "Cash",
                     ftPayItemCase = 0x4752_2000_0000_1001
+                }
+            ],
+            ftCashBoxID = cashBoxId,
+            ftPosSystemId = Guid.NewGuid(),
+            ftReceiptCase = 0x4752_2000_0000_0001
+        };
+    }
+
+    public static ReceiptRequest A2_11_11p4(Guid cashBoxId)
+    {
+        return new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptAmount = 100m,
+            cbReceiptMoment = DateTime.UtcNow,
+            cbReceiptReference = Guid.NewGuid().ToString(),
+            cbChargeItems =
+            [
+                new ChargeItem
+                {
+                    Position = 1,
+                    Amount = 100,
+                    VATRate = 24,
+                    VATAmount = decimal.Round(100 / (100M + 24) * 24, 2, MidpointRounding.ToEven),
+                    ftChargeItemCase = 0x4752_2000_0000_0013,
+                    Quantity = 1,
+                    Description = "Line item 1"
+                }
+            ],
+            cbPayItems =
+            [
+                new PayItem
+                {
+                    Amount = 100m,
+                    Description = "Cash",
+                    ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
             ftCashBoxID = cashBoxId,

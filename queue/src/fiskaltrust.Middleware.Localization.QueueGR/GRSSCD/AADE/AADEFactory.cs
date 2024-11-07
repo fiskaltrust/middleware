@@ -67,6 +67,10 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE
         /// </summary>
         private IncomeClassificationValueType GetIncomeClassificationValueType(ReceiptRequest receiptRequest, ChargeItem chargeItem)
         {
+            if ((receiptRequest.ftReceiptCase & 0xFFFF) == 0x0005)
+            {
+                return IncomeClassificationValueType.E3_561_001;
+            }
             if ((receiptRequest.ftReceiptCase & 0xFFFF) == 0x3005)
             {
                 return IncomeClassificationValueType.E3_562;
@@ -308,6 +312,18 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE
                 }
             }
 
+            if((receiptRequest.ftReceiptCase & 0xFFFF) == 0x0005)
+            {
+                if (!string.IsNullOrEmpty(receiptRequest.cbPreviousReceiptReference))
+                {
+
+                    return InvoiceType.Item52;
+                }
+                else
+                {
+                    return InvoiceType.Item51;
+                }
+            }
 
             if (receiptRequest.IsReceiptOperation())
             {
