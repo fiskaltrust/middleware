@@ -4,6 +4,7 @@ using fiskaltrust.SAFT.CLI;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE
 {
+
     public static class ChargeItemExtensions
     {
         public static bool IsAgencyBusiness(this ChargeItem chargeItem) => (chargeItem.ftChargeItemCase & 0xF0) == 0x60;
@@ -41,6 +42,23 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE
             }
             return false;
         }
+
+        public static bool HasNonEUCountryCode(this ReceiptRequest receiptRequest)
+        {
+            return ((ulong) receiptRequest.ftReceiptCase & 0xFFFF_0000_0000_0000) == 0x0000_0000_0000_0000;
+        }
+
+        public static bool HasGreeceCountryCode(this ReceiptRequest receiptRequest)
+        {
+            return ((ulong) receiptRequest.ftReceiptCase & 0xFFFF_0000_0000_0000) == 0x4752_0000_0000_0000;
+        }
+
+        public static bool HasEUCountryCode(this ReceiptRequest receiptRequest)
+        {
+            return EU_CountryCodes.Contains((ulong) receiptRequest.ftReceiptCase & 0xFFFF_0000_0000_0000);
+        }
+
+        public static List<ulong> EU_CountryCodes = new List<ulong> { 0x4555_0000_0000_0000, 0x4752_0000_0000_0000, 0x4154_0000_0000_0000 };
 
         public static bool HasEUCustomer(this ReceiptRequest receiptRequest)
         {

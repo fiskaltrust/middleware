@@ -1,9 +1,7 @@
-﻿using System.Text.Json;
+﻿using System.Net.Http.Json;
+using System.Text.Json;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
-using fiskaltrust.Middleware.Localization.QueueGR.Interface;
 using fiskaltrust.Middleware.Localization.v2.Configuration;
-using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
-using fiskaltrust.SAFT.CLI;
 using Microsoft.Extensions.Logging;
 using Xunit;
 
@@ -39,41 +37,84 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             }
         }
 
-
-        [Fact]
-        public async Task Journal()
+        public async Task<(QueueGRBootstrapper bootstrapper, Guid cashBoxId)> InitializeQueueGRBootstrapperAsync()
         {
             var cashBoxId = Guid.Parse("e117e4b5-88ea-4511-a134-e5408f3cfd4c");
             var accessToken = "BBNu3xCxDz9VKOTQJQATmCzj1zQRjeE25DW/F8hcqsk/Uc5hHc4m1lEgd2QDsWLpa6MRDHz+vLlQs0hCprWt9XY=";
             var configuration = await GetConfigurationAsync(cashBoxId, accessToken);
             var queue = configuration.ftQueues?.First() ?? throw new Exception($"The configuration for {cashBoxId} is empty and therefore not valid.");
             var bootstrapper = new QueueGRBootstrapper(queue.Id, new LoggerFactory(), queue.Configuration ?? new Dictionary<string, object>());
-            var signMethod = bootstrapper.RegisterForJournal();
-
-            var receiptRequest = Example_RetailSales(cashBoxId);
-            var result = await signMethod(System.Text.Json.JsonSerializer.Serialize(new ifPOS.v1.JournalRequest
-            {
-                ftJournalType = 0x4752_2000_0000_0001,
-            }));
+            return (bootstrapper, cashBoxId);
         }
 
         [Fact]
         public async Task Example_RetailSales_Tests()
         {
-            var cashBoxId = Guid.Parse("e117e4b5-88ea-4511-a134-e5408f3cfd4c");
-            var accessToken = "BBNu3xCxDz9VKOTQJQATmCzj1zQRjeE25DW/F8hcqsk/Uc5hHc4m1lEgd2QDsWLpa6MRDHz+vLlQs0hCprWt9XY=";
-            var configuration = await GetConfigurationAsync(cashBoxId, accessToken);
-            var queue = configuration.ftQueues?.First() ?? throw new Exception($"The configuration for {cashBoxId} is empty and therefore not valid.");
-            var bootstrapper = new QueueGRBootstrapper(queue.Id, new LoggerFactory(), queue.Configuration ?? new Dictionary<string, object>());
+            (var bootstrapper, var cashBoxId) = await InitializeQueueGRBootstrapperAsync();
             var signMethod = bootstrapper.RegisterForSign();
-
-            var receiptRequest = Example_RetailSales(cashBoxId);
+            var receiptRequest = ReceiptExamples.Example_RetailSales(cashBoxId);
             var exampleCashSalesResponse = await signMethod(System.Text.Json.JsonSerializer.Serialize(receiptRequest));
             var result = await SendIssueAsync(receiptRequest, System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesResponse)!);
         }
 
         [Fact]
+        public async Task Example_RetailSales_Error2_Tests()
+        {
+            (var bootstrapper, var cashBoxId) = await InitializeQueueGRBootstrapperAsync();
+            var signMethod = bootstrapper.RegisterForSign();
+            var ticks = DateTime.UtcNow.Ticks;
+            var receiptRequest = ReceiptExamples.Example_RetailSales(cashBoxId);
+            var exampleCashSalesResponse = await signMethod(System.Text.Json.JsonSerializer.Serialize(receiptRequest));
+            await StoreDataAsync("A11_1_offline_2", "A11_1_offline_2", ticks, bootstrapper, receiptRequest, System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesResponse)!);
+        }
+
+        [Fact]
+        public async Task Example_RetailSales_LateSigning_Tests()
+        {
+            (var bootstrapper, var cashBoxId) = await InitializeQueueGRBootstrapperAsync();
+            var signMethod = bootstrapper.RegisterForSign();
+            var ticks = DateTime.UtcNow.Ticks;
+            var receiptRequest = ReceiptExamples.Example_RetailSales(cashBoxId);
+            receiptRequest.ftReceiptCase = receiptRequest.ftReceiptCase | 0x0000_0000_0001_0000;
+            var exampleCashSalesResponse = await signMethod(JsonSerializer.Serialize(receiptRequest));
+            await StoreDataAsync("A11_1_offline_1", "A11_1_offline_1", ticks, bootstrapper, receiptRequest, System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesResponse)!);
+        }
+
+        [Fact]
         public async Task Example_SalesInvoice_1_1_Tests()
+        {
+            (var bootstrapper, var cashBoxId) = await InitializeQueueGRBootstrapperAsync();
+            var signMethod = bootstrapper.RegisterForSign();
+            var ticks = DateTime.UtcNow.Ticks;
+            var receiptRequest = ReceiptExamples.Example_SalesInvoice_1_1(cashBoxId);
+            var exampleCashSalesResponse = await signMethod(JsonSerializer.Serialize(receiptRequest));
+            await StoreDataAsync("A1_1", "A1_1", ticks, bootstrapper, receiptRequest, System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesResponse)!);
+        }
+
+        [Fact]
+        public async Task Example_SalesInvoice_1_1_Tests_nowithholding()
+        {
+            (var bootstrapper, var cashBoxId) = await InitializeQueueGRBootstrapperAsync();
+            var signMethod = bootstrapper.RegisterForSign();
+            var ticks = DateTime.UtcNow.Ticks;
+            var receiptRequest = ReceiptExamples.Example_SalesInvoice_1_1(cashBoxId);
+            var exampleCashSalesResponse = await signMethod(JsonSerializer.Serialize(receiptRequest));
+            await StoreDataAsync("A1_1", "A1_1", ticks, bootstrapper, receiptRequest, System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesResponse)!);
+        }
+
+        [Fact]
+        public async Task Example_POSReceipt_Tests()
+        {
+            (var bootstrapper, var cashBoxId) = await InitializeQueueGRBootstrapperAsync();
+            var signMethod = bootstrapper.RegisterForSign();
+            var ticks = DateTime.UtcNow.Ticks;
+            var receiptRequest = ReceiptExamples.ExamplePosReceipt(cashBoxId);
+            var exampleCashSalesResponse = await signMethod(JsonSerializer.Serialize(receiptRequest));
+            await StoreDataAsync("A1_8_4", "A1_8_4", ticks, bootstrapper, receiptRequest, System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesResponse)!);
+        }
+
+        [Fact]
+        public async Task Example_POSReceipt_Testss_A11_1_Online_100()
         {
             var cashBoxId = Guid.Parse("e117e4b5-88ea-4511-a134-e5408f3cfd4c");
             var accessToken = "BBNu3xCxDz9VKOTQJQATmCzj1zQRjeE25DW/F8hcqsk/Uc5hHc4m1lEgd2QDsWLpa6MRDHz+vLlQs0hCprWt9XY=";
@@ -82,13 +123,32 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             var bootstrapper = new QueueGRBootstrapper(queue.Id, new LoggerFactory(), queue.Configuration ?? new Dictionary<string, object>());
             var signMethod = bootstrapper.RegisterForSign();
 
-            var receiptRequest = Example_SalesInvoice_1_1(cashBoxId);
-            var exampleCashSalesResponse = await signMethod(System.Text.Json.JsonSerializer.Serialize(receiptRequest));
-            var response = System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesResponse)!;
-            var result = await SendIssueAsync(receiptRequest, response);
+            var ticks = DateTime.UtcNow.Ticks;
+            var receiptRequest = ReceiptExamples.Example_RetailSales_100(cashBoxId);
+            var raw = System.Text.Json.JsonSerializer.Serialize(receiptRequest);
+            var exampleCashSalesResponse = await signMethod(raw);
+
+            await StoreDataAsync("A11_1_Online_100", "A11_1_Online_100", ticks, bootstrapper, receiptRequest, System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesResponse)!);
         }
 
-        private async Task<string> SendIssueAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
+        public async Task StoreDataAsync(string folder, string casename, long ticks, QueueGRBootstrapper bootstrapper, ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
+        {
+            var result = await SendIssueAsync(receiptRequest, receiptResponse);
+
+            var pdfdata = await new HttpClient().GetAsync(result?.DocumentURL + "?format=pdf");
+
+            var journalMethod = bootstrapper.RegisterForJournal();
+            var xmlData = await journalMethod(System.Text.Json.JsonSerializer.Serialize(new ifPOS.v1.JournalRequest
+            {
+                ftJournalType = 0x4752_2000_0000_0001,
+                From = ticks
+            }));
+            Directory.CreateDirectory("C:\\temp\\viva_examples\\" + folder);
+            File.WriteAllBytes($"C:\\temp\\viva_examples\\{folder}\\{casename}.receipt.pdf", await pdfdata.Content.ReadAsByteArrayAsync());
+            File.WriteAllText($"C:\\temp\\viva_examples\\{folder}\\{casename}_aade.xml", xmlData);
+        }
+
+        private async Task<IssueResponse?> SendIssueAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
         {
             var client = new HttpClient();
             var request = new HttpRequestMessage(HttpMethod.Post, "https://possystem-api-sandbox.fiskaltrust.eu/v2/issue");
@@ -103,195 +163,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             var content = new StringContent(data, null, "application/json");
             request.Content = content;
             var response = await client.SendAsync(request);
-            return await response.Content.ReadAsStringAsync();
-        }
-
-        private static ReceiptRequest InitialOperation(Guid cashBoxId)
-        {
-            return new ReceiptRequest
-            {
-                ftCashBoxID = cashBoxId,
-                ftReceiptCase = 0x4752_2000_0000_4001,
-                cbTerminalID = "1",
-                cbReceiptReference = Guid.NewGuid().ToString(),
-                cbReceiptMoment = DateTime.UtcNow,
-                cbChargeItems = [],
-                cbPayItems = []
-            };
-        }
-
-        private static ReceiptRequest Example_SalesInvoice_1_1(Guid cashBoxId)
-        {
-            var chargeItems = new List<ChargeItem> {
-                    AADEFactoryTests.CreateGoodNormalVATRateItem(description: "Product 1", amount: 89.20m, quantity: 1),
-                    AADEFactoryTests.CreateGoodNormalVATRateItem(description: "Product 2", amount: 23.43m, quantity: 1),
-                    AADEFactoryTests.CreateServiceNormalVATRateItem_WithWithHoldingTax(description: "Service Provision 1", netAmount: 461.93m, quantity: 1),
-                    AADEFactoryTests.CreateGoodDiscountedVATRateItem(description: "Merchandise Product 1", amount: 12.30m, quantity: 1),
-                    AADEFactoryTests.CreateGoodDiscountedVATRateItem(description: "Merchandise Product 2", amount: 113.43m, quantity: 1),
-                };
-
-            var i = 1;
-            foreach (var chargeItem in chargeItems)
-            {
-                chargeItem.Position = i++;
-                // Set fraction
-                chargeItem.Amount = decimal.Round(chargeItem.Amount, 2, MidpointRounding.AwayFromZero);
-                chargeItem.VATAmount = decimal.Round(chargeItem.VATAmount ?? 0.0m, 2, MidpointRounding.AwayFromZero);
-            }
-
-            var payItems = new List<PayItem>
-            {
-                new PayItem
-                {
-                    Amount = -92.39m,
-                    Description = "VAT withholding (-20%)",
-                    ftPayItemCase = 0x4752_2000_0000_0099
-                },
-                new PayItem
-                {
-                    Amount = chargeItems.Sum(x => x.Amount) -  92.39m,
-                    Description = "Cash",
-                    ftPayItemCase = 0x4752_2000_0000_0001
-                }
-            };
-
-            i = 1;
-            foreach (var payItem in payItems)
-            {
-                payItem.Position = i++;
-                // Set fraction
-                payItem.Amount = decimal.Round(payItem.Amount, 2, MidpointRounding.AwayFromZero);
-            }
-
-            var receiptRequest = new ReceiptRequest
-            {
-                cbTerminalID = "1",
-                Currency = Currency.EUR,
-                cbReceiptAmount = chargeItems.Sum(x => x.Amount) - 92.39m,
-                cbReceiptMoment = DateTime.UtcNow,
-                cbReceiptReference = Guid.NewGuid().ToString(),
-                cbChargeItems = chargeItems,
-                cbPayItems = payItems,
-                ftCashBoxID = cashBoxId,
-                ftPosSystemId = Guid.NewGuid(),
-                ftReceiptCase = 0x4752_2000_0000_1001,
-                cbCustomer = new MiddlewareCustomer
-                {
-                    CustomerVATId = "997671770",
-
-                }
-            };
-            return receiptRequest;
-        }
-
-        private static ReceiptRequest Example_RetailSales(Guid cashBoxId)
-        {
-            var chargeItems = new List<ChargeItem>
-            {
-                AADEFactoryTests.CreateGoodNormalVATRateItem(description: "Merchandise Product 1", amount: 1.3m, quantity: 1),
-                AADEFactoryTests.CreateGoodNormalVATRateItem(description: "Merchandise Product 2", amount: 1.0m, quantity: 1),
-                AADEFactoryTests.CreateGoodNormalVATRateItem(description: "Merchandise Product 3", amount: 1.2m, quantity: 1),
-                AADEFactoryTests.CreateGoodDiscountedVATRateItem(description: "Merchandise Product Discounted 1", amount: 0.5m, quantity: 1),
-                AADEFactoryTests.CreateGoodDiscountedVATRateItem(description: "Merchandise Product Discounted 2", amount: 0.6m, quantity: 1)
-            };
-            var i = 1;
-            foreach (var chargeItem in chargeItems)
-            {
-                chargeItem.Position = i++;
-                // Set fraction
-                chargeItem.Amount = decimal.Round(chargeItem.Amount, 2, MidpointRounding.AwayFromZero);
-                chargeItem.VATAmount = decimal.Round(chargeItem.VATAmount ?? 0.0m, 2, MidpointRounding.AwayFromZero);
-            }
-            var payItems = new List<PayItem>
-            {
-                new PayItem
-                {
-                    Amount = chargeItems.Sum(x => x.Amount),
-                    Description = "Card",
-                    ftPayItemCase = 0x4752_2000_0000_0000 | (long) PayItemCases.DebitCardPayment,
-                    ftPayItemCaseData = new PayItemCaseData
-                    {
-                        Provider = new PayItemCaseProviderVivaWallet
-                        {
-                            Action = "Sale",
-                            Protocol = "VivaWallet",
-                            ProtocolVersion = "1.0",
-                            ProtocolRequest = new VivaWalletPayment
-                            {
-                                amount = (int) chargeItems.Sum(x => x.Amount) * 100,
-                                cashRegisterId = "",
-                                currencyCode = "EUR",
-                                merchantReference = Guid.NewGuid().ToString(),
-                                sessionId = "John015",
-                                terminalId = "123456",
-                                aadeProviderSignatureData = "4680AFE5D58088BF8C55F57A5B5DBB15936B51DE;;20241015153111;4600;9;1;10;16007793",
-                                aadeProviderSignature = "MEUCIQCnUrakY9pemgdXIsYvbOahoBBadDa9DPaRS9ZtTTra8gIgIUp9LPaH/E+LRwTGJWeL+MZl5j5PtFcM+chiXTqeed4="
-                            },
-                            ProtocolResponse = new VivaPaymentSession
-                            {
-                                aadeTransactionId = "116430909552789552789"
-                            }
-                        }
-                    }
-                }
-            };
-            return new ReceiptRequest
-            {
-                Currency = Currency.EUR,
-                cbReceiptAmount = chargeItems.Sum(x => x.Amount),
-                cbReceiptMoment = DateTime.UtcNow,
-                cbReceiptReference = Guid.NewGuid().ToString(),
-                cbChargeItems = chargeItems,
-                cbPayItems = payItems,
-                ftCashBoxID = cashBoxId,
-                ftPosSystemId = Guid.NewGuid(),
-                cbTerminalID = "1",
-                ftReceiptCase = 0x4752_2000_0000_0001 // posreceipt
-            };
-        }
-
-        private static ReceiptRequest ExampleCashSales(Guid cashBoxId)
-        {
-            return new ReceiptRequest
-            {
-                ftCashBoxID = cashBoxId,
-                ftReceiptCase = 0x4752_2000_0000_0000,
-                cbTerminalID = "1",
-                cbReceiptReference = Guid.NewGuid().ToString(),
-                cbReceiptMoment = DateTime.UtcNow,
-                cbChargeItems =
-                            [
-                                new ChargeItem
-                    {
-                        Position = 1,
-                        ftChargeItemCase = 0x4752_2000_0000_0013,
-                        VATAmount = 1.2m,
-                        Amount = 6.2m,
-                        VATRate = 24m,
-                        Quantity = 1,
-                        Description = "ChargeItem1"
-                    },
-                    new ChargeItem
-                    {
-                        Position = 2,
-                        ftChargeItemCase = 0x4752_2000_0000_0013,
-                        VATAmount = 1.2m,
-                        Amount = 6.2m,
-                        VATRate = 24m,
-                        Quantity = 1,
-                        Description = "ChargeItem2"
-                    }
-                            ],
-                cbPayItems =
-                            [
-                                new PayItem
-                    {
-                        ftPayItemCase = 0x4752_2000_0000_0001,
-                        Amount = 12.4m,
-                        Description = "Cash"
-                    }
-                            ]
-            };
+            return await response.Content.ReadFromJsonAsync<IssueResponse>();
         }
     }
 }

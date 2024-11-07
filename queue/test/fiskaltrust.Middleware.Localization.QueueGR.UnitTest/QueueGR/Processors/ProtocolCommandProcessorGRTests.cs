@@ -10,7 +10,8 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
 {
     public class ProtocolCommandProcessorGRTests
     {
-        private readonly ProtocolCommandProcessorGR _sut = new();
+#pragma warning disable
+        private readonly ProtocolCommandProcessorGR _sut = new(null, null, null);
 
         [Theory]
         [InlineData(ReceiptCases.ProtocolUnspecified0x3000)]
