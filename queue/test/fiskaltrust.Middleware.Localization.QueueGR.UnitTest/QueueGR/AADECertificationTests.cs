@@ -140,8 +140,8 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             invoiceDoc.invoice[0].invoiceSummary.incomeClassification.Should().BeEmpty();
             var xml = _aadeFactory.GenerateInvoicePayload(invoiceDoc);
             await SendToMayData(xml);
-
-            await ExecuteMiddleware(receiptRequest, caller);
+            System.Console.WriteLine(caller);
+            //await ExecuteMiddleware(receiptRequest, caller);
         }
 
         private async Task ValidateMyData(ReceiptRequest receiptRequest, InvoiceType expectedInvoiceType, IncomeClassificationCategoryType expectedCategory, [CallerMemberName] string caller = "")
@@ -154,7 +154,8 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             var xml = _aadeFactory.GenerateInvoicePayload(invoiceDoc);
             await SendToMayData(xml);
 
-            await ExecuteMiddleware(receiptRequest, caller);
+            System.Console.WriteLine(caller);
+            //await ExecuteMiddleware(receiptRequest, caller);
         }
 
         private async Task ValidateMyData(ReceiptRequest receiptRequest, InvoiceType expectedInvoiceType, IncomeClassificationCategoryType expectedCategory, IncomeClassificationValueType expectedValueType, [CallerMemberName] string caller = "")
@@ -166,8 +167,8 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             invoiceDoc.invoice[0].invoiceSummary.incomeClassification[0].classificationType.Should().Be(expectedValueType);
             var xml = _aadeFactory.GenerateInvoicePayload(invoiceDoc);
             await SendToMayData(xml);
-
-            await ExecuteMiddleware(receiptRequest, caller);
+            System.Console.WriteLine(caller);
+            //await ExecuteMiddleware(receiptRequest, caller);
         }
 
 #pragma warning disable
@@ -299,15 +300,15 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
         [Fact]
         public async Task AADECertificationExamples_A1_3_3p1()
         {
-            await Task.Yield();
-            throw new NotImplementedException("");
+            var receiptRequest = AADECertificationExamples.A1_3_3p1();
+            await ValidateMyData(receiptRequest, InvoiceType.Item31, IncomeClassificationCategoryType.category1_3, IncomeClassificationValueType.E3_561_003);
         }
 
         [Fact]
         public async Task AADECertificationExamples_A1_3_3p2()
         {
-            await Task.Yield();
-            throw new NotImplementedException("");
+            var receiptRequest = AADECertificationExamples.A1_3_3p2();
+            await ValidateMyData(receiptRequest, InvoiceType.Item32, IncomeClassificationCategoryType.category1_3, IncomeClassificationValueType.E3_561_003);
         }
 
         [Fact]

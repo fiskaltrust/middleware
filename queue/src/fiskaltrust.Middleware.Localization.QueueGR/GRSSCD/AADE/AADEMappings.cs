@@ -212,6 +212,16 @@ public static class AADEMappings
     {
         if (receiptRequest.IsReceiptOperation())
         {
+
+            if (receiptRequest.GetCasePart() == 0x0003)
+            {
+                if(!string.IsNullOrEmpty(receiptRequest.ftReceiptCaseData?.ToString()))
+                {
+                    return InvoiceType.Item32;
+                }
+                return InvoiceType.Item31;
+            }
+
             if (receiptRequest.GetCasePart() == 0x0005)
             {
                 return InvoiceType.Item114;

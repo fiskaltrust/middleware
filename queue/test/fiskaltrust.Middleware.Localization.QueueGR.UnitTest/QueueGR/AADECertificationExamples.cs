@@ -450,6 +450,89 @@ public static class AADECertificationExamples
         };
     }
 
+    public static ReceiptRequest A1_3_3p1()
+    {
+        return new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptAmount = 100m,
+            cbReceiptMoment = DateTime.UtcNow,
+            cbReceiptReference = Guid.NewGuid().ToString(),
+            cbChargeItems =
+            [
+                new ChargeItem
+                {
+                    Position = 1,
+                    Amount = 100,
+                    VATRate = 24,
+                    VATAmount = decimal.Round(100 / (100M + 24) * 24, 2, MidpointRounding.ToEven),
+                    ftChargeItemCase = 0x4752_2000_0000_0023,
+                    Quantity = 1,
+                    Description = "Line item 1"
+                }
+            ],
+            cbPayItems =
+            [
+                new PayItem
+                {
+                    Amount = 100m,
+                    Description = "Cash",
+                    ftPayItemCase = 0x4752_2000_0000_0001
+                }
+            ],
+
+            ftPosSystemId = Guid.NewGuid(),
+            ftReceiptCase = 0x4752_2000_0000_0003,
+            cbCustomer = new MiddlewareCustomer
+            {
+                CustomerVATId = CUSOMTER_VATNUMBER,
+            }
+        };
+    }
+
+    public static ReceiptRequest A1_3_3p2()
+    {
+        return new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptAmount = 100m,
+            cbReceiptMoment = DateTime.UtcNow,
+            cbReceiptReference = Guid.NewGuid().ToString(),
+            cbChargeItems =
+            [
+                new ChargeItem
+                {
+                    Position = 1,
+                    Amount = 100,
+                    VATRate = 24,
+                    VATAmount = 0,
+                    ftChargeItemCase = 0x4752_2000_0000_6027,
+                    Quantity = 1,
+                    Description = "Line item 1"
+                }
+            ],
+            cbPayItems =
+            [
+                new PayItem
+                {
+                    Amount = 100m,
+                    Description = "Cash",
+                    ftPayItemCase = 0x4752_2000_0000_0001
+                }
+            ],
+            ftPosSystemId = Guid.NewGuid(),
+            ftReceiptCase = 0x4752_2000_0000_0003,
+            cbCustomer = new MiddlewareCustomer
+            {
+                CustomerVATId = CUSOMTER_VATNUMBER,
+            },
+            ftReceiptCaseData = "3.2"
+        };
+    }
+
+
     public static ReceiptRequest A1_5_5p1()
     {
         return new ReceiptRequest
@@ -615,7 +698,7 @@ public static class AADECertificationExamples
             }
         };
     }
- 
+
     public static ReceiptRequest A1_7_7p1()
     {
         return new ReceiptRequest
@@ -745,7 +828,7 @@ public static class AADECertificationExamples
             ftReceiptCase = 0x4752_2000_0000_0001
         };
     }
-   
+
     public static ReceiptRequest A1_8_8p4()
     {
         return new ReceiptRequest
