@@ -150,6 +150,10 @@ public class AADEFactory
                 invoiceRow.incomeClassification = [];
                 invoiceRow.vatCategory = 8;
             }
+            else if(receiptRequest.GetCasePart() == 0x0003)
+            {
+                invoiceRow.incomeClassification = [];
+            }
             else
             {
                 if (receiptRequest.cbChargeItems.Any(x => (x.ftChargeItemCase & 0xF0) == 0x90))
@@ -274,6 +278,15 @@ public class AADEFactory
                 country = CountryType.GR,
                 branch = 0,
             };
+            if(receiptRequest.GetCasePart() == 0x0003)
+            {
+                inv.counterpart.address = new AddressType
+                {
+                    street = customer?.CustomerStreet,
+                    city = customer?.CustomerCity,
+                    postalCode = customer?.CustomerZip
+                };
+            }
         }
         else if (receiptRequest.HasEUCustomer())
         {

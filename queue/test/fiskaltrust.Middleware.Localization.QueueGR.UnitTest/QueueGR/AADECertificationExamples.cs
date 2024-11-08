@@ -465,9 +465,9 @@ public static class AADECertificationExamples
                 {
                     Position = 1,
                     Amount = 100,
-                    VATRate = 24,
-                    VATAmount = decimal.Round(100 / (100M + 24) * 24, 2, MidpointRounding.ToEven),
-                    ftChargeItemCase = 0x4752_2000_0000_0023,
+                    VATRate = 0,
+                    VATAmount = 0,
+                    ftChargeItemCase = 0x4752_2000_0000_0028,
                     Quantity = 1,
                     Description = "Line item 1"
                 }
@@ -487,6 +487,10 @@ public static class AADECertificationExamples
             cbCustomer = new MiddlewareCustomer
             {
                 CustomerVATId = CUSOMTER_VATNUMBER,
+                CustomerCity = "Athens",
+                CustomerCountry = "GR",
+                CustomerZip = "1111",
+                CustomerStreet = "Examplestreet"
             }
         };
     }
@@ -506,9 +510,9 @@ public static class AADECertificationExamples
                 {
                     Position = 1,
                     Amount = 100,
-                    VATRate = 24,
+                    VATRate = 0,
                     VATAmount = 0,
-                    ftChargeItemCase = 0x4752_2000_0000_6027,
+                    ftChargeItemCase = 0x4752_2000_0000_0028,
                     Quantity = 1,
                     Description = "Line item 1"
                 }
@@ -527,11 +531,14 @@ public static class AADECertificationExamples
             cbCustomer = new MiddlewareCustomer
             {
                 CustomerVATId = CUSOMTER_VATNUMBER,
+                CustomerCity = "Athens",
+                CustomerCountry = "GR",
+                CustomerZip = "1111",
+                CustomerStreet = "Examplestreet"
             },
             ftReceiptCaseData = "3.2"
         };
     }
-
 
     public static ReceiptRequest A1_5_5p1()
     {

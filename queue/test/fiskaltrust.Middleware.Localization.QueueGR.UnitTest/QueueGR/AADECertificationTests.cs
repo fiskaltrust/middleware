@@ -141,7 +141,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             var xml = _aadeFactory.GenerateInvoicePayload(invoiceDoc);
             await SendToMayData(xml);
             System.Console.WriteLine(caller);
-            //await ExecuteMiddleware(receiptRequest, caller);
+            await ExecuteMiddleware(receiptRequest, caller);
         }
 
         private async Task ValidateMyData(ReceiptRequest receiptRequest, InvoiceType expectedInvoiceType, IncomeClassificationCategoryType expectedCategory, [CallerMemberName] string caller = "")
@@ -301,14 +301,14 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
         public async Task AADECertificationExamples_A1_3_3p1()
         {
             var receiptRequest = AADECertificationExamples.A1_3_3p1();
-            await ValidateMyData(receiptRequest, InvoiceType.Item31, IncomeClassificationCategoryType.category1_3, IncomeClassificationValueType.E3_561_003);
+            await ValidateMyData(receiptRequest, InvoiceType.Item31);
         }
 
         [Fact]
         public async Task AADECertificationExamples_A1_3_3p2()
         {
             var receiptRequest = AADECertificationExamples.A1_3_3p2();
-            await ValidateMyData(receiptRequest, InvoiceType.Item32, IncomeClassificationCategoryType.category1_3, IncomeClassificationValueType.E3_561_003);
+            await ValidateMyData(receiptRequest, InvoiceType.Item32);
         }
 
         [Fact]
