@@ -140,7 +140,7 @@ public class AADEFactory
             inv.invoiceHeader.correlatedInvoices = [long.Parse(receiptRequest.cbPreviousReceiptReference)];
         }
         AddCounterpart(receiptRequest, inv);
-        SetValuesIfExistent(receiptResponse, inv);
+        SetValuesIfExistent(receiptRequest, receiptResponse, inv);
         return inv;
     }
 
@@ -227,7 +227,7 @@ public class AADEFactory
         }).ToList();
     }
 
-    private static void SetValuesIfExistent(ReceiptResponse receiptResponse, AadeBookInvoiceType inv)
+    private static void SetValuesIfExistent(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, AadeBookInvoiceType inv)
     {
         if (receiptResponse.ftSignatures.Count > 0)
         {
@@ -246,15 +246,21 @@ public class AADEFactory
                 invoiceMark = -1;
             }
 
+            if (receiptRequest.IsLateSigning())
+            {
+                inv.transmissionFailureSpecified = true;
+                inv.transmissionFailure = 1;
+            }
             var transmissionFailure1 = receiptResponse.ftSignatures.FirstOrDefault(x => x.Caption == "Transmission Failure_1")?.Data;
             if(transmissionFailure1 != null)
             {
-                inv.transmissionFailure = 1;
+       
             }
 
             var transmissionFailure2 = receiptResponse.ftSignatures.FirstOrDefault(x => x.Caption == "Transmission Failure_2")?.Data;
             if (transmissionFailure2 != null)
             {
+                inv.transmissionFailureSpecified = true;
                 inv.transmissionFailure = 2;
             }
         }
