@@ -245,6 +245,18 @@ public class AADEFactory
             {
                 invoiceMark = -1;
             }
+
+            var transmissionFailure1 = receiptResponse.ftSignatures.FirstOrDefault(x => x.Caption == "Transmission Failure_1")?.Data;
+            if(transmissionFailure1 != null)
+            {
+                inv.transmissionFailure = 1;
+            }
+
+            var transmissionFailure2 = receiptResponse.ftSignatures.FirstOrDefault(x => x.Caption == "Transmission Failure_2")?.Data;
+            if (transmissionFailure2 != null)
+            {
+                inv.transmissionFailure = 2;
+            }
         }
     }
 
