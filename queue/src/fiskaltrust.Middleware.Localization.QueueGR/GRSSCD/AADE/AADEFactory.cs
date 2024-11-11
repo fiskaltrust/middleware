@@ -38,6 +38,18 @@ public class AADEFactory
     {
         var receiptRequests = queueItems.Where(x => !string.IsNullOrEmpty(x.request) && !string.IsNullOrEmpty(x.response)).Select(x => (receiptRequest: JsonSerializer.Deserialize<ReceiptRequest>(x.request)!, receiptResponse: JsonSerializer.Deserialize<ReceiptResponse>(x.response))).ToList();
         var actualReceiptRequests = receiptRequests.Where(x => x.receiptResponse != null && ((long) x.receiptResponse.ftState & 0xFF) == 0x00).Cast<(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)>().ToList();
+        actualReceiptRequests = actualReceiptRequests.Where(x =>
+        {
+            try
+            {
+                AADEMappings.GetInvoiceType(x.receiptRequest);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }).ToList();
         var doc = new InvoicesDoc
         {
             invoice = actualReceiptRequests.Select(x => CreateInvoiceDocType(x.receiptRequest, x.receiptResponse)).ToArray()
