@@ -27,8 +27,8 @@ public class AADEFactory
         {
             throw new Exception("It is not allowed to mix agency and non agency receipts.");
         }
-        
-        if(receiptRequest.cbChargeItems.Sum(x => x.Amount) != receiptRequest.cbPayItems.Sum(x => x.Amount))
+
+        if (receiptRequest.cbChargeItems.Sum(x => x.Amount) != receiptRequest.cbPayItems.Sum(x => x.Amount))
         {
             throw new Exception("The sum of the charge items must be equal to the sum of the pay items.");
         }
@@ -40,6 +40,12 @@ public class AADEFactory
         var actualReceiptRequests = receiptRequests.Where(x => x.receiptResponse != null && ((long) x.receiptResponse.ftState & 0xFF) == 0x00).Cast<(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)>().ToList();
         actualReceiptRequests = actualReceiptRequests.Where(x =>
         {
+            var mark = x.receiptResponse.ftSignatures.FirstOrDefault(x => x.Caption == "invoiceMark")?.Data;
+            if (mark == null)
+            {
+                return false;
+            }
+
             try
             {
                 AADEMappings.GetInvoiceType(x.receiptRequest);
@@ -162,7 +168,7 @@ public class AADEFactory
                 invoiceRow.incomeClassification = [];
                 invoiceRow.vatCategory = 8;
             }
-            else if(receiptRequest.GetCasePart() == 0x0003)
+            else if (receiptRequest.GetCasePart() == 0x0003)
             {
                 invoiceRow.incomeClassification = [];
             }
@@ -290,7 +296,7 @@ public class AADEFactory
                 country = CountryType.GR,
                 branch = 0,
             };
-            if(receiptRequest.GetCasePart() == 0x0003)
+            if (receiptRequest.GetCasePart() == 0x0003)
             {
                 inv.counterpart.address = new AddressType
                 {
