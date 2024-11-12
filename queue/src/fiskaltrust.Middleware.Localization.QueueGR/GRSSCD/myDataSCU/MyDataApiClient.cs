@@ -54,7 +54,6 @@ public class MyDataApiClient : IGRSSCD
         var doc = aadFactory.MapToInvoicesDoc(request.ReceiptRequest, request.ReceiptResponse);
         if (request.ReceiptRequest.IsLateSigning())
         {
-            // TODO how should we support this case?
             foreach (var item in doc.invoice)
             {
                 item.transmissionFailureSpecified = true;
@@ -68,10 +67,6 @@ public class MyDataApiClient : IGRSSCD
                 ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.Text,
                 ftSignatureType = (long) SignatureTypesGR.MyDataInfo
             });
-            return new ProcessResponse
-            {
-                ReceiptResponse = request.ReceiptResponse
-            };
         }
 
         var payload = aadFactory.GenerateInvoicePayload(doc);
