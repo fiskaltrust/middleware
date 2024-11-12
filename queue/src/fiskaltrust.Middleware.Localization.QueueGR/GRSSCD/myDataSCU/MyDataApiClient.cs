@@ -126,6 +126,8 @@ public class MyDataApiClient : IGRSSCD
                         request.ReceiptResponse.AddSignatureItem(CreateGRQRCode($"https://receipts-sandbox.fiskaltrust.eu/{request.ReceiptResponse.ftQueueID}/{request.ReceiptResponse.ftQueueItemID}"));
                     }
 
+                    request.ReceiptResponse.ftReceiptIdentification += $"{doc.invoice[0].invoiceHeader.series}-{doc.invoice[0].invoiceHeader.aa}";
+
                     request.ReceiptResponse.AddSignatureItem(new SignatureItem
                     {
                         Data = $"{doc.invoice[0].issuer.vatNumber}|{doc.invoice[0].invoiceHeader.issueDate.ToString("dd/MM/yyyy")}|{doc.invoice[0].issuer.branch}|{doc.invoice[0].invoiceHeader.invoiceType}|{doc.invoice[0].invoiceHeader.series}|{doc.invoice[0].invoiceHeader.aa}",
