@@ -48,6 +48,10 @@ public class JournalProcessorGR : IJournalProcessor
         });
         using var memoryStream = new MemoryStream();
         var invoiecDoc = aadFactory.MapToInvoicesDoc(queueItems.ToList());
+        if(request.To == -1)
+        {
+            invoiecDoc.invoice = invoiecDoc.invoice.OrderByDescending(x => x.mark).Take(1).ToArray();
+        }
         var xmlSerializer = new XmlSerializer(typeof(InvoicesDoc));
         xmlSerializer.Serialize(memoryStream, invoiecDoc);
         memoryStream.Position = 0;
