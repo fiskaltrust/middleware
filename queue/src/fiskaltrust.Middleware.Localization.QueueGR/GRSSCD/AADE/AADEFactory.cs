@@ -234,12 +234,14 @@ public class AADEFactory
             var invoiceUid = receiptResponse.ftSignatures.FirstOrDefault(x => x.Caption == "invoiceUid")?.Data;
             var invoiceMarkText = receiptResponse.ftSignatures.FirstOrDefault(x => x.Caption == "invoiceMark")?.Data;
             var authenticationCode = receiptResponse.ftSignatures.FirstOrDefault(x => x.Caption == "authenticationCode")?.Data;
+            var qrCode = receiptResponse.ftSignatures.FirstOrDefault(x => x.Caption == "authenticationCode")?.Data;
             if (long.TryParse(invoiceMarkText, out var invoiceMark))
             {
                 inv.uid = invoiceUid;
                 inv.authenticationCode = authenticationCode;
                 inv.mark = invoiceMark;
                 inv.markSpecified = true;
+                inv.qrCodeUrl = $"https://receipts-sandbox.fiskaltrust.eu/{receiptResponse.ftQueueID}/{receiptResponse.ftQueueItemID}";
             }
             else
             {
