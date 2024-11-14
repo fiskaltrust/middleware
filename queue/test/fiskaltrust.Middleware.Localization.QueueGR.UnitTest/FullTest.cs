@@ -131,6 +131,25 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             await StoreDataAsync("A11_1_Online_100", "A11_1_Online_100", ticks, bootstrapper, receiptRequest, System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesResponse)!);
         }
 
+        [Fact]
+        public async Task Example_POSReceipt_Testss_A11_1_Online_100_App2App()
+        {
+            var cashBoxId = Guid.Parse("e117e4b5-88ea-4511-a134-e5408f3cfd4c");
+            var accessToken = "BBNu3xCxDz9VKOTQJQATmCzj1zQRjeE25DW/F8hcqsk/Uc5hHc4m1lEgd2QDsWLpa6MRDHz+vLlQs0hCprWt9XY=";
+            var configuration = await GetConfigurationAsync(cashBoxId, accessToken);
+            var queue = configuration.ftQueues?.First() ?? throw new Exception($"The configuration for {cashBoxId} is empty and therefore not valid.");
+            var bootstrapper = new QueueGRBootstrapper(queue.Id, new LoggerFactory(), queue.Configuration ?? new Dictionary<string, object>());
+            var signMethod = bootstrapper.RegisterForSign();
+
+            var ticks = DateTime.UtcNow.Ticks;
+            var receiptRequest = ReceiptExamples.Example_RetailSales_100App2APp(cashBoxId);
+            var raw = System.Text.Json.JsonSerializer.Serialize(receiptRequest);
+            var exampleCashSalesResponse = await signMethod(raw);
+
+            await StoreDataAsync("A11_1_Online_100", "A11_1_Online_100", ticks, bootstrapper, receiptRequest, System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesResponse)!);
+        }
+
+
         public async Task StoreDataAsync(string folder, string casename, long ticks, QueueGRBootstrapper bootstrapper, ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
         {
             var result = await SendIssueAsync(receiptRequest, receiptResponse);

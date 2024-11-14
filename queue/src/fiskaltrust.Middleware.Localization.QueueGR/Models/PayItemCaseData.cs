@@ -64,6 +64,19 @@ namespace fiskaltrust.Api.POS.Models.ifPOS.v2
         public int tipAmount { get; set; }
     }
 
+    public class PayItemCaseProviderVivaWalletApp2APp : PayItemCaseProviderData
+    {
+        [JsonPropertyName("ProtocolRequest")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        [DataMember(EmitDefaultValue = false, IsRequired = false)]
+        public string ProtocolRequest { get; set; }
+
+        [JsonPropertyName("ProtocolResponse")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        [DataMember(EmitDefaultValue = false, IsRequired = false)]
+        public string ProtocolResponse { get; set; }
+    }
+
     public class PayItemCaseProviderVivaWallet : PayItemCaseProviderData
     {
         [JsonPropertyName("ProtocolRequest")]
@@ -96,12 +109,38 @@ namespace fiskaltrust.Api.POS.Models.ifPOS.v2
         public required string Action { get; set; }
     }
 
-    public class PayItemCaseData
+    public class PayItemCaseDataApp2App
+    {
+        [JsonPropertyName("Provider")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        [DataMember(EmitDefaultValue = false, IsRequired = false)]
+        public PayItemCaseProviderVivaWalletApp2APp? Provider { get; set; }
+
+        [JsonPropertyName("Receipt")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        [DataMember(EmitDefaultValue = false, IsRequired = false)]
+        public List<string>? Receipt { get; set; }
+    }
+
+    public class PayItemCaseDataCloudApi
     {
         [JsonPropertyName("Provider")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         [DataMember(EmitDefaultValue = false, IsRequired = false)]
         public PayItemCaseProviderVivaWallet? Provider { get; set; }
+
+        [JsonPropertyName("Receipt")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        [DataMember(EmitDefaultValue = false, IsRequired = false)]
+        public List<string>? Receipt { get; set; }
+    }
+
+    public class GenericPaymentPayload
+    {
+        [JsonPropertyName("Provider")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        [DataMember(EmitDefaultValue = false, IsRequired = false)]
+        public PayItemCaseProviderData? Provider { get; set; }
 
         [JsonPropertyName("Receipt")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

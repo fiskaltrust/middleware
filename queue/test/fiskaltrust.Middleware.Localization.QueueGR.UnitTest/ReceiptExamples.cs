@@ -30,7 +30,7 @@ public static class ReceiptExamples
                     Amount = 100m,
                     Description = "DebitCard",
                     ftPayItemCase = 0x4752_2000_0000_0000 | (long) PayItemCases.DebitCardPayment,
-                    ftPayItemCaseData = new PayItemCaseData
+                    ftPayItemCaseData = new PayItemCaseDataCloudApi
                     {
                         Provider = new PayItemCaseProviderVivaWallet
                         {
@@ -103,7 +103,7 @@ public static class ReceiptExamples
             {
                 new PayItem
                 {
-                    Amount = -92.39m,
+                    Amount = 92.39m,
                     Description = "VAT withholding (-20%)",
                     ftPayItemCase = 0x4752_2000_0000_0099
                 },
@@ -228,7 +228,7 @@ public static class ReceiptExamples
                     Amount = chargeItems.Sum(x => x.Amount),
                     Description = "Card",
                     ftPayItemCase = 0x4752_2000_0000_0000 | (long) PayItemCases.DebitCardPayment,
-                    ftPayItemCaseData = new PayItemCaseData
+                    ftPayItemCaseData = new PayItemCaseDataCloudApi
                     {
                         Provider = new PayItemCaseProviderVivaWallet
                         {
@@ -289,7 +289,7 @@ public static class ReceiptExamples
                     Amount = chargeItems.Sum(x => x.Amount),
                     Description = "Card",
                     ftPayItemCase = 0x4752_2000_0000_0000 | (long) PayItemCases.DebitCardPayment,
-                    ftPayItemCaseData = new PayItemCaseData
+                    ftPayItemCaseData = new PayItemCaseDataCloudApi
                     {
                         Provider = new PayItemCaseProviderVivaWallet
                         {
@@ -311,6 +311,54 @@ public static class ReceiptExamples
                             {
                                 aadeTransactionId = "116431015555865555865"
                             }
+                        }
+                    }
+                }
+            };
+        return new ReceiptRequest
+        {
+            Currency = Currency.EUR,
+            cbReceiptAmount = chargeItems.Sum(x => x.Amount),
+            cbReceiptMoment = DateTime.UtcNow,
+            cbReceiptReference = Guid.NewGuid().ToString(),
+            cbChargeItems = chargeItems,
+            cbPayItems = payItems,
+            ftCashBoxID = cashBoxId,
+            ftPosSystemId = Guid.NewGuid(),
+            cbTerminalID = "1",
+            ftReceiptCase = 0x4752_2000_0000_0001 // posreceipt
+        };
+    }
+
+    public static ReceiptRequest Example_RetailSales_100App2APp(Guid cashBoxId)
+    {
+        var chargeItems = new List<ChargeItem>
+            {
+                CreateGoodNormalVATRateItem(description: "Merchandise Product 1", amount: 100m, quantity: 1)
+            };
+        var i = 1;
+        foreach (var chargeItem in chargeItems)
+        {
+            chargeItem.Position = i++;
+            chargeItem.Amount = decimal.Round(chargeItem.Amount, 2, MidpointRounding.AwayFromZero);
+            chargeItem.VATAmount = decimal.Round(chargeItem.VATAmount ?? 0.0m, 2, MidpointRounding.AwayFromZero);
+        }
+        var payItems = new List<PayItem>
+            {
+                new PayItem
+                {
+                    Amount = chargeItems.Sum(x => x.Amount),
+                    Description = "Card",
+                    ftPayItemCase = 0x4752_2000_0000_0000 | (long) PayItemCases.DebitCardPayment,
+                    ftPayItemCaseData = new PayItemCaseDataApp2App
+                    {
+                        Provider = new PayItemCaseProviderVivaWalletApp2APp
+                        {
+                            Action = "Sale",
+                            Protocol = "viva_eft_pos_instore",
+                            ProtocolVersion = "1.0",
+                            ProtocolRequest = "vivapayclient://pay/v1?appId=eu.fiskaltrust.instore.app&action=sale&clientTransactionId=8a0dc1e5-faab-4d6b-a079-6e45090dd6e1&amount=100&callback=instoreapp%3a%2f%2fresult&show_receipt=false&show_transaction_result=false&show_rating=false&aadeProviderId=999&aadeProviderSignatureData=8a0dc1e5-faab-4d6b-a079-6e45090dd6e1%3b%3b20241114064040%3b100%3b100%3b2400%3b100%3b16009303&aadeProviderSignature=MEQCIF%2fe2aI7KpxAKzvh8pahDEQkQP9kuKZgfx%2bo9LQIc9AxAiA7fQlHL4GjMUpN4ccGZ3ufw6GRfxQ3hBi%2b8n964G5PeA%3d%3d",
+                            ProtocolResponse = "instoreapp://result?aid=A0000000041010&status=success&message=Transaction successful&action=sale&clientTransactionId=8a0dc1e5-faab-4d6b-a079-6e45090dd6e1&amount=100&rrn=431918572473&verificationMethod=CONTACTLESS - NO CVM&cardType=Debit Mastercard&accountNumber=535686******1364&referenceNumber=572473&authorisationCode=572473&tid=16009303&orderCode=4319195747009303&transactionDate=2024-11-14T20:40:49.6303015+02:00&transactionId=16f91d0a-c23d-4499-b60e-75f189a346be&paymentMethod=CARD_PRESENT&shortOrderCode=4319195747&aadeTransactionId=116431918572473572473"
                         }
                     }
                 }

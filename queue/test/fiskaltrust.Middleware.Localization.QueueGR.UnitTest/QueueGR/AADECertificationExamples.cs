@@ -1097,4 +1097,45 @@ public static class AADECertificationExamples
         };
     }
 
+    public static ReceiptRequest A2_11_1p5_WithTip()
+    {
+        return new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptAmount = 100m,
+            cbReceiptMoment = DateTime.UtcNow,
+            cbReceiptReference = Guid.NewGuid().ToString(),
+            cbChargeItems =
+            [
+                new ChargeItem
+                {
+                    Position = 1,
+                    Amount = 100,
+                    VATRate = 24,
+                    VATAmount = decimal.Round(100 / (100M + 24) * 24, 2, MidpointRounding.ToEven),
+                    ftChargeItemCase = 0x4752_2000_0000_0013,
+                    Quantity = 1,
+                    Description = "Line item 1"
+                }
+            ],
+            cbPayItems =
+            [
+                new PayItem
+                {
+                    Amount = 100m,
+                    Description = "Cash",
+                    ftPayItemCase = 0x475220000000000E
+                },
+                new PayItem   {
+                    Description = "Φιλοδώρημα",
+                    ftPayItemCase = 0x4752_2000_0040_000E,
+                    Amount = 0
+                }
+            ],
+            ftPosSystemId = Guid.NewGuid(),
+            ftReceiptCase = 0x4555_2000_0000_0001
+        };
+    }
+
 }

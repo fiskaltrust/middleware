@@ -50,8 +50,8 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
 
         public async Task<(QueueGRBootstrapper bootstrapper, Guid cashBoxId)> InitializeQueueGRBootstrapperAsync()
         {
-            var cashBoxId = Guid.Parse("f78f303c-a14c-4eed-a4c9-b80ff00c6023");
-            var accessToken = "BA6lFIUJhsU86zBGJ7328scdl+wkR1N74DzSHJaa7PmRnAEF3WHcMzglvP+lLKZMojc1cvKfe/CeO4Dk0/NkKxE=";
+            var cashBoxId = Guid.Parse("f2d672a2-21ea-4825-96d0-972b71e757c6");
+            var accessToken = "BFNLZiBzSu2rUB1Sh2rxE7WrzHST5oZP7xgGsQWeGLZnGCZTmbUbRIquWs+7qUR7ua2TG9R0z4TvygrTHiFRj2I=";
             var configuration = await GetConfigurationAsync(cashBoxId, accessToken);
             var queue = configuration.ftQueues?.First() ?? throw new Exception($"The configuration for {cashBoxId} is empty and therefore not valid.");
             var bootstrapper = new QueueGRBootstrapper(queue.Id, new LoggerFactory(), queue.Configuration ?? new Dictionary<string, object>());
@@ -155,7 +155,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             await SendToMayData(xml);
 
             System.Console.WriteLine(caller);
-            //await ExecuteMiddleware(receiptRequest, caller);
+           //await ExecuteMiddleware(receiptRequest, caller);
         }
 
         private async Task ValidateMyData(ReceiptRequest receiptRequest, InvoiceType expectedInvoiceType, IncomeClassificationCategoryType expectedCategory, IncomeClassificationValueType expectedValueType, [CallerMemberName] string caller = "")
@@ -168,7 +168,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             var xml = _aadeFactory.GenerateInvoicePayload(invoiceDoc);
             await SendToMayData(xml);
             System.Console.WriteLine(caller);
-            //await ExecuteMiddleware(receiptRequest, caller);
+            await ExecuteMiddleware(receiptRequest, caller);
         }
 
 #pragma warning disable
@@ -225,6 +225,18 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             File.WriteAllBytes($"C:\\temp\\viva_aade_certification_examples\\{folder}\\{casename}.receipt.pdf", await pdfdata.Content.ReadAsByteArrayAsync());
             File.WriteAllBytes($"C:\\temp\\viva_aade_certification_examples\\{folder}\\{casename}.receipt.png", await pngdata.Content.ReadAsByteArrayAsync());
             File.WriteAllText($"C:\\temp\\viva_aade_certification_examples\\{folder}\\{casename}_aade.xml", xmlData);
+        }
+
+        [Fact]
+        public async void JOurnal()
+        {
+            (var bootstrapper, var cashBoxId) = await InitializeQueueGRBootstrapperAsync();
+            var journalMethod = bootstrapper.RegisterForJournal();
+            var xmlData = await journalMethod(System.Text.Json.JsonSerializer.Serialize(new ifPOS.v1.JournalRequest
+            {
+                ftJournalType = 0x4752_2000_0000_0001,
+                From = 0
+            }));
         }
 
         [Fact]
@@ -319,7 +331,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             var marker = await SendToMayData(_aadeFactory.GenerateInvoicePayload(invoiceOriginal));
 
             var creditnote = AADECertificationExamples.A1_5_5p1();
-            creditnote.cbPreviousReceiptReference = "400001941223252";
+            creditnote.cbPreviousReceiptReference = "400001941508802";
             await Task.Delay(1000);
             //var invoiceDoc = _aadeFactory.MapToInvoicesDoc(creditnote, ExampleResponse);
             //using var assertionScope = new AssertionScope();
@@ -382,6 +394,13 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
         }
 
         [Fact]
+        public async Task d()
+        {
+            var receiptRequest  = ReceiptExamples.Example_SalesInvoice_1_1(Guid.NewGuid());
+            await ValidateMyData(receiptRequest, InvoiceType.Item11, IncomeClassificationCategoryType.category1_95);
+        }
+
+        [Fact]
         public async Task AADECertificationExamples_A1_8_8p5()
         {
             var receiptRequest = AADECertificationExamples.A1_8_8p5();
@@ -421,6 +440,13 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
         {
             var receiptRequest = AADECertificationExamples.A2_11_1p5();
             await ValidateMyData(receiptRequest, InvoiceType.Item115, IncomeClassificationCategoryType.category1_7, IncomeClassificationValueType.E3_881_003);
+        }
+
+        [Fact]
+        public async Task AADECertificationExamples_A2_WithTip()
+        {
+            var receiptRequest = AADECertificationExamples.A2_11_1p5_WithTip();
+            await ValidateMyData(receiptRequest, InvoiceType.Item111, IncomeClassificationCategoryType.category1_2, IncomeClassificationValueType.E3_561_003);
         }
 
         public ReceiptResponse ExampleResponse => new ReceiptResponse

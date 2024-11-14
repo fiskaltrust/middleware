@@ -1,6 +1,8 @@
-﻿using System.Security.Cryptography;
+﻿using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Web;
 using System.Xml.Serialization;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE.Models;
@@ -287,16 +289,36 @@ public class AADEFactory
 
             if (x.ftPayItemCaseData != null)
             {
-                var provider = JsonSerializer.Deserialize<PayItemCaseData>(JsonSerializer.Serialize(x.ftPayItemCaseData))!;
-                if (provider.Provider is PayItemCaseProviderVivaWallet vivaPayment)
+                var providerData = JsonSerializer.Deserialize<GenericPaymentPayload>(JsonSerializer.Serialize(x.ftPayItemCaseData));
+                if (providerData != null && providerData.Provider != null && providerData.Provider.Protocol == "viva_eft_pos_instore")
                 {
-
-                    payment.transactionId = vivaPayment.ProtocolResponse?.aadeTransactionId;
-                    payment.ProvidersSignature = new ProviderSignatureType
+                    var app2AppApi = JsonSerializer.Deserialize<PayItemCaseDataApp2App>(JsonSerializer.Serialize(x.ftPayItemCaseData))!;
+                    if (app2AppApi.Provider is PayItemCaseProviderVivaWalletApp2APp vivaAppToApp)
                     {
-                        Signature = vivaPayment.ProtocolRequest?.aadeProviderSignature,
-                        SigningAuthor = "viva.com", // need to be filled??
-                    };
+                        var requestUri = HttpUtility.ParseQueryString(new Uri(vivaAppToApp.ProtocolRequest).Query);
+                        var responesUri = HttpUtility.ParseQueryString(new Uri(vivaAppToApp.ProtocolResponse).Query);
+                        payment.transactionId = responesUri["aadeTransactionId"];
+
+                        payment.ProvidersSignature = new ProviderSignatureType
+                        {
+                            Signature = requestUri["aadeProviderSignature"],
+                            SigningAuthor = "viva.com", // need to be filled??
+                        };
+                    }
+                }
+                else if (providerData != null && providerData.Provider != null && providerData.Provider.Protocol.Contains("viva"))
+                {
+                    var providerCloudRestApi = JsonSerializer.Deserialize<PayItemCaseDataCloudApi>(JsonSerializer.Serialize(x.ftPayItemCaseData))!;
+                    if (providerCloudRestApi.Provider is PayItemCaseProviderVivaWallet vivaPayment)
+                    {
+
+                        payment.transactionId = vivaPayment.ProtocolResponse?.aadeTransactionId;
+                        payment.ProvidersSignature = new ProviderSignatureType
+                        {
+                            Signature = vivaPayment.ProtocolRequest?.aadeProviderSignature,
+                            SigningAuthor = "viva.com", // need to be filled??
+                        };
+                    }
                 }
             }
             return payment;
