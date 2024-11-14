@@ -5,7 +5,6 @@ using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Configuration;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Storage;
-using fiskaltrust.Middleware.Storage.AzureTableStorage;
 using fiskaltrust.Middleware.Storage.GR;
 using Microsoft.Extensions.Logging;
 
@@ -21,7 +20,8 @@ public class QueueGRBootstrapper : IV2QueueBootstrapper
         var queueGR = Newtonsoft.Json.JsonConvert.DeserializeObject<List<ftQueueGR>>(configuration["init_ftQueueGR"]!.ToString()!).First();
         var signaturCreationUnitGR = new ftSignaturCreationUnitGR();
         var grSSCD = MyDataApiClient.CreateClient(configuration);
-        var storageProvider = new AzureStorageProvider(loggerFactory, id, configuration);
+        var storageProvider = new AzureStorageProvider(loggerFactory, id, Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonSerializer.Serialize(configuration)));
+        //var storageProvider = new AzureStorageProvider(loggerFactory, id, configuration);
         var queueStorageProvider = new QueueStorageProvider(id, storageProvider);
 
         var signProcessorGR = new ReceiptProcessor(loggerFactory.CreateLogger<ReceiptProcessor>(), new LifecycleCommandProcessorGR(queueStorageProvider), new ReceiptCommandProcessorGR(grSSCD, queueGR, signaturCreationUnitGR), new DailyOperationsCommandProcessorGR(), new InvoiceCommandProcessorGR(grSSCD, queueGR, signaturCreationUnitGR), new ProtocolCommandProcessorGR(grSSCD, queueGR, signaturCreationUnitGR));

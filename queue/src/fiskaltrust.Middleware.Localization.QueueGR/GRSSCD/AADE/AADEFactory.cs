@@ -270,7 +270,7 @@ public class AADEFactory
 
     private static List<PaymentMethodDetailType> GetPayments(ReceiptRequest receiptRequest)
     {
-        return receiptRequest.cbPayItems.Where(x => (x.ftPayItemCase & ((long) 0xFF)) != 0x99).Select(x =>
+        return receiptRequest.cbPayItems.Where(x => (x.ftPayItemCase & ((long) 0xFF)) != 0x99).Where(x => x.ftPayItemCase != 0x4752_2000_0040_000E).Select(x =>
         {
             var payment = new PaymentMethodDetailType
             {
@@ -278,6 +278,13 @@ public class AADEFactory
                 amount = receiptRequest.IsRefund() ? -x.Amount : x.Amount,
                 paymentMethodInfo = x.Description,
             };
+            var tipPayment = receiptRequest.cbPayItems.FirstOrDefault(x => (x.ftPayItemCase & 0x0000_0000_0040_0000) == 0x0000_0000_0040_0000);
+            if (tipPayment != null)
+            {
+                payment.tipAmount = tipPayment.Amount;
+                payment.tipAmountSpecified = true;
+            }
+
             if (x.ftPayItemCaseData != null)
             {
                 var provider = JsonSerializer.Deserialize<PayItemCaseData>(JsonSerializer.Serialize(x.ftPayItemCaseData))!;

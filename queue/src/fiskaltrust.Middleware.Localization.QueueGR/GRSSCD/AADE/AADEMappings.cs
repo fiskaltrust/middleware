@@ -365,7 +365,7 @@ public static class AADEMappings
         (long) PayItemCases.OtherBankTransfer => -1,
         (long) PayItemCases.TransferToCashbookVaultOwnerEmployee => -1,
         (long) PayItemCases.InternalMaterialConsumption => -1,
-        (long) PayItemCases.Grant => -1,
+        (long) PayItemCases.Grant => MyDataPaymentMethods.OnCredit,
         (long) PayItemCases.TicketRestaurant => -1,
         _ => throw new Exception($"The Payment type {payItem.ftPayItemCase & 0xF} of PayItem with the case {payItem.ftPayItemCase} is not supported."),
     };
