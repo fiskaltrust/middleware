@@ -290,7 +290,7 @@ public class AADEFactory
             if (x.ftPayItemCaseData != null)
             {
                 var providerData = JsonSerializer.Deserialize<GenericPaymentPayload>(JsonSerializer.Serialize(x.ftPayItemCaseData));
-                if (providerData != null && providerData.Provider != null && providerData.Provider.Protocol == "viva_eft_pos_instore")
+                if (providerData != null && providerData.Provider != null && providerData.Provider.ProtocolRequest is JsonElement dat && dat.ValueKind == JsonValueKind.String)
                 {
                     var app2AppApi = JsonSerializer.Deserialize<PayItemCaseDataApp2App>(JsonSerializer.Serialize(x.ftPayItemCaseData))!;
                     if (app2AppApi.Provider is PayItemCaseProviderVivaWalletApp2APp vivaAppToApp)
@@ -306,7 +306,7 @@ public class AADEFactory
                         };
                     }
                 }
-                else if (providerData != null && providerData.Provider != null && providerData.Provider.Protocol.Contains("viva"))
+                else if (providerData != null && providerData.Provider != null && providerData.Provider.ProtocolRequest is JsonElement datS && datS.ValueKind == JsonValueKind.Object)
                 {
                     var providerCloudRestApi = JsonSerializer.Deserialize<PayItemCaseDataCloudApi>(JsonSerializer.Serialize(x.ftPayItemCaseData))!;
                     if (providerCloudRestApi.Provider is PayItemCaseProviderVivaWallet vivaPayment)

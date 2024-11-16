@@ -355,10 +355,10 @@ public static class ReceiptExamples
                         Provider = new PayItemCaseProviderVivaWalletApp2APp
                         {
                             Action = "Sale",
-                            Protocol = "viva_eft_pos_instore",
+                            Protocol = "use_auto",
                             ProtocolVersion = "1.0",
-                            ProtocolRequest = "vivapayclient://pay/v1?appId=eu.fiskaltrust.instore.app&action=sale&clientTransactionId=8a0dc1e5-faab-4d6b-a079-6e45090dd6e1&amount=100&callback=instoreapp%3a%2f%2fresult&show_receipt=false&show_transaction_result=false&show_rating=false&aadeProviderId=999&aadeProviderSignatureData=8a0dc1e5-faab-4d6b-a079-6e45090dd6e1%3b%3b20241114064040%3b100%3b100%3b2400%3b100%3b16009303&aadeProviderSignature=MEQCIF%2fe2aI7KpxAKzvh8pahDEQkQP9kuKZgfx%2bo9LQIc9AxAiA7fQlHL4GjMUpN4ccGZ3ufw6GRfxQ3hBi%2b8n964G5PeA%3d%3d",
-                            ProtocolResponse = "instoreapp://result?aid=A0000000041010&status=success&message=Transaction successful&action=sale&clientTransactionId=8a0dc1e5-faab-4d6b-a079-6e45090dd6e1&amount=100&rrn=431918572473&verificationMethod=CONTACTLESS - NO CVM&cardType=Debit Mastercard&accountNumber=535686******1364&referenceNumber=572473&authorisationCode=572473&tid=16009303&orderCode=4319195747009303&transactionDate=2024-11-14T20:40:49.6303015+02:00&transactionId=16f91d0a-c23d-4499-b60e-75f189a346be&paymentMethod=CARD_PRESENT&shortOrderCode=4319195747&aadeTransactionId=116431918572473572473"
+                            ProtocolRequest = "vivapayclient://pay/v1?appId=eu.fiskaltrust.instore.app&action=sale&clientTransactionId=29d6e88a-432a-44bd-8390-20af43d48df0&amount=100&callback=instoreapp%3a%2f%2fresult&show_receipt=false&show_transaction_result=false&show_rating=false&aadeProviderId=999&aadeProviderSignatureData=29d6e88a-432a-44bd-8390-20af43d48df0%3b%3b20241116101605%3b100%3b100%3b2400%3b100%3b16009303&aadeProviderSignature=MEQCIBaEvb4fHFPn2omFEExMcKmPyz62mhGqX5TsB8AjDJRpAiAYWgnzvwpNzSXr98QTQJ%2bThMfvYZe48MtA5Eed0QfEow%3d%3d",
+                            ProtocolResponse = "instoreapp://result?aid=A0000000041010&status=success&message=Transaction successful&action=sale&clientTransactionId=29d6e88a-432a-44bd-8390-20af43d48df0&amount=100&rrn=432122575537&verificationMethod=CONTACTLESS - NO CVM&cardType=Debit Mastercard&accountNumber=535686******1364&referenceNumber=575537&authorisationCode=575537&tid=16009303&orderCode=4321235753009303&transactionDate=2024-11-17T00:16:11.4043324+02:00&transactionId=ca0532f1-75e6-465f-a11e-ebb065a87a91&paymentMethod=CARD_PRESENT&shortOrderCode=4321235753&aadeTransactionId=116432122575537575537"
                         }
                     }
                 }

@@ -107,6 +107,16 @@ namespace fiskaltrust.Api.POS.Models.ifPOS.v2
         [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
         [DataMember(EmitDefaultValue = true, IsRequired = true)]
         public required string Action { get; set; }
+
+        [JsonPropertyName("ProtocolRequest")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        [DataMember(EmitDefaultValue = false, IsRequired = false)]
+        public object ProtocolRequest { get; set; }
+
+        [JsonPropertyName("ProtocolResponse")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        [DataMember(EmitDefaultValue = false, IsRequired = false)]
+        public object ProtocolResponse { get; set; }
     }
 
     public class PayItemCaseDataApp2App
