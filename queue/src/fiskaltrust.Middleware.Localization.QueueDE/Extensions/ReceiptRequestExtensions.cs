@@ -457,10 +457,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
             }
         }
 
-        public static bool IsPositionCancellation(long payOrChargeCase)
-        {
-            return ((payOrChargeCase & 0x0000_0000_0020_0000) > 0x0000);
-        }
+        public static bool IsPositionCancellation(long payOrChargeCase) => (payOrChargeCase & 0x0000_0000_0020_0000) > 0x0000;
 
     }
 }
