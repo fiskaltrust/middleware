@@ -272,7 +272,7 @@ public class AADEFactory
 
     private static List<PaymentMethodDetailType> GetPayments(ReceiptRequest receiptRequest)
     {
-        return receiptRequest.cbPayItems.Where(x => (x.ftPayItemCase & ((long) 0xFF)) != 0x99).Where(x => x.ftPayItemCase != 0x4752_2000_0040_000E).Select(x =>
+        return receiptRequest.cbPayItems.Where(x => (x.ftPayItemCase & ((long) 0xFF)) != 0x99).Where(x => x.ftPayItemCase != 0x4752_2000_0040_000E && x.ftPayItemCase != 0x4752_2000_0040_0004).Select(x =>
         {
             var payment = new PaymentMethodDetailType
             {
