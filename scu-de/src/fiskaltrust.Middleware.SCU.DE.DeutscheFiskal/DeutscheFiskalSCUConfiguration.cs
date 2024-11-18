@@ -16,7 +16,7 @@
         public string FccUri { get; set; }
         public virtual string CertificationId { get; set; } = "BSI-K-TR-0524-2024";
         public bool DisplayCertificationIdAddition { get; set; } = true;
-        public string CertificationIdAddition { get; set; }
+        public string CertificationIdAddition { get; set; } = "USK ausgesetzt";
         public string ServiceFolder { get; set; }
         public string FccVersion { get; set; } = "4.1.1";
         public string ProxyServer { get; set; }
