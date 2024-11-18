@@ -14,18 +14,20 @@ public class ESSSCDInfo
 
 public class InMemorySCUConfiguration
 {
-
+    public string BaseUrl { get; set; } = "https://prewww2.aeat.es/wlpl/TIKE-CONT/ValidarQR";
 }
 
 public class InMemorySCU : IESSSCD
 {
     // private readonly ftSignaturCreationUnitES _signaturCreationUnitES;
 
+    private readonly InMemorySCUConfiguration _configuration;
     private readonly VeriFactuMapping _veriFactuMapping;
 
-    public InMemorySCU(ftSignaturCreationUnitES _, MasterDataConfiguration masterData)
+    public InMemorySCU(ftSignaturCreationUnitES _, MasterDataConfiguration masterData, InMemorySCUConfiguration configuration)
     {
         //_signaturCreationUnitES = signaturCreationUnitES;
+        _configuration = configuration;
         _veriFactuMapping = new VeriFactuMapping(masterData);
     }
 
@@ -47,7 +49,7 @@ public class InMemorySCU : IESSSCD
                 request.PreviousReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.PosReceipt).Data
             ));
 
-            request.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreateESQRCode(journalES.Huella));
+            request.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreateESQRCode(_configuration.BaseUrl, journalES));
 
             request.ReceiptResponse.AddSignatureItem(new SignatureItem
             {
