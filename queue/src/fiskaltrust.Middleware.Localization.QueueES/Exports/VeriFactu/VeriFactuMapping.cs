@@ -24,7 +24,7 @@ public class VeriFactuMapping
 
     public async Task<RegFactuSistemaFacturacion> CreateRegFactuSistemaFacturacionAsync(IAsyncEnumerable<ftQueueItem> queueItems)
     {
-        var cabecera = new Cabecera
+        var cabecera = new CabeceraType
         {
             ObligadoEmision = new PersonaFisicaJuridicaESType
             {
