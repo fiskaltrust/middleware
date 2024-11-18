@@ -130,14 +130,6 @@ public class MyDataApiClient : IGRSSCD
 
                     request.ReceiptResponse.AddSignatureItem(new SignatureItem
                     {
-                        Data = $"{doc.invoice[0].invoiceHeader.series}",
-                        Caption = " Σειρά",
-                        ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.Text,
-                        ftSignatureType = (long) SignatureTypesGR.MyDataInfo
-                    });
-
-                    request.ReceiptResponse.AddSignatureItem(new SignatureItem
-                    {
                         Data = $"{doc.invoice[0].issuer.vatNumber}|{doc.invoice[0].invoiceHeader.issueDate.ToString("dd/MM/yyyy")}|{doc.invoice[0].issuer.branch}|{doc.invoice[0].invoiceHeader.invoiceType}|{doc.invoice[0].invoiceHeader.series}|{doc.invoice[0].invoiceHeader.aa}",
                         Caption = "Μοναδικός αριιθμός παραστατικού",
                         ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.Text,
