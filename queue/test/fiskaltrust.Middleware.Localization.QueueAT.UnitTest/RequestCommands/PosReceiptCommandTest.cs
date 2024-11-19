@@ -44,5 +44,32 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.UnitTest.RequestCommands
             ftStateData.ZeroReceipt.Should().BeFalse();
 
         }
+        [Fact]
+        public async Task ExecuteAsync_ProtocolReceiptWithoutPayItem_ShouldNotBeSigned()
+        {
+            await _fixture.CreateConfigurationRepository();
+            var _posReceiptCommand = new PosReceiptCommand(_fixture.GetIATSSCDProvider("35"), _fixture.middlewareConfiguration, _fixture.queueATConfiguration, _fixture.logger);
+
+            var request = _fixture.CreateReceiptRequest("ProtocolReceipt.json");
+            var queueItem = _fixture.CreateQueueItem(request);
+            var response = RequestCommand.CreateReceiptResponse(request, queueItem, _fixture.queueATNotSignAll, _fixture.queue);
+            var result = await _posReceiptCommand.ExecuteAsync(_fixture.queue, _fixture.queueATNotSignAll, request, queueItem, response);
+
+            _fixture.TestCommandResult(request, queueItem, result);
+           
+            var ftStateData = JsonConvert.DeserializeAnonymousType(result.ReceiptResponse.ftStateData,
+                new
+                {
+                    Exception = string.Empty,
+                    Signing = false,
+                    Counting = false,
+                    ZeroReceipt = false
+                });
+            ftStateData.Exception.Should().Be("A1");
+            ftStateData.Counting.Should().BeFalse();
+            ftStateData.Signing.Should().BeFalse();
+            ftStateData.ZeroReceipt.Should().BeFalse();
+
+        }
     }
 }
