@@ -31,7 +31,7 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
 
         var masterDataService = new MasterDataService(configuration, storageProvider);
         var masterData = masterDataService.GetCurrentDataAsync().Result; // put this in an async scu init process
-        var esSSCD = new InMemorySCU(signaturCreationUnitES, masterData);
+        var esSSCD = new InMemorySCU(signaturCreationUnitES, masterData, new InMemorySCUConfiguration());
         var signProcessorES = new ReceiptProcessor(
             loggerFactory.CreateLogger<ReceiptProcessor>(),
             new LifecycleCommandProcessorES(

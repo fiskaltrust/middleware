@@ -1,26 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- editado con XMLSpy v2019 sp1 (x64) (http://www.altova.com) por AEAT (Agencia Estatal de
-Administracion Tributaria ((AEAT))) -->
-<!-- edited with XMLSpy v2009 sp1 (http://www.altova.com) by PC Corporativo (AGENCIA TRIBUTARIA) -->
 <schema xmlns="http://www.w3.org/2001/XMLSchema" xmlns:ds="http://www.w3.org/2000/09/xmldsig#"
   xmlns:sf="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicaciones/es/aeat/tike/cont/ws/SuministroInformacion.xsd"
   targetNamespace="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicaciones/es/aeat/tike/cont/ws/SuministroInformacion.xsd"
   elementFormDefault="qualified">
-  <import namespace="http://www.w3.org/2000/09/xmldsig#"
-    schemaLocation="xmldsig-core-schema.xsd" />
-  <!-- Suministro genérico
-	 -->
-  <complexType name="SistemaFacturacionFact">
-    <annotation>
-      <documentation xml:lang="es"> Sistemas de facturacion </documentation>
-    </annotation>
-    <sequence>
-      <element name="Cabecera" type="sf:Cabecera" />
-    </sequence>
-  </complexType>
-  <!-- Cabecera 
-     -->
-  <complexType name="Cabecera">
+  <import namespace="http://www.w3.org/2000/09/xmldsig#" schemaLocation="xmldsig-core-schema.xsd" />
+  <complexType name="CabeceraType">
     <annotation>
       <documentation xml:lang="es"> Datos de cabecera </documentation>
     </annotation>
@@ -49,23 +33,26 @@ Administracion Tributaria ((AEAT))) -->
         <complexType>
           <sequence>
             <element name="RefRequerimiento" type="sf:TextMax18Type" />
+            <element name="FinRequerimiento" type="sf:FinRequerimientoType" minOccurs="0" />
           </sequence>
         </complexType>
       </element>
     </sequence>
   </complexType>
+  <element name="RegistroAlta" type="sf:RegistroFacturacionAltaType" />
+  <element name="RegistroAnulacion" type="sf:RegistroFacturacionAnulacionType" />
   <!-- Datos de presentacion en la respuesta
 -->
   <complexType name="DatosPresentacionType">
     <sequence>
       <element name="NIFPresentador" type="sf:NIFType" />
-      <element name="TimestampPresentacion" type="sf:Timestamp" />
+      <element name="TimestampPresentacion" type="dateTime" />
     </sequence>
   </complexType>
   <complexType name="DatosPresentacion2Type">
     <sequence>
       <element name="NIFPresentador" type="sf:NIFType" />
-      <element name="TimestampPresentacion" type="sf:Timestamp" />
+      <element name="TimestampPresentacion" type="dateTime" />
       <element name="IdPeticion" type="sf:TextMax20Type" />
     </sequence>
   </complexType>
@@ -137,6 +124,7 @@ Administracion Tributaria ((AEAT))) -->
     <sequence>
       <element name="IDVersion" type="sf:VersionType" />
       <element name="IDFactura" type="sf:IDFacturaExpedidaType" />
+      <element name="RefExterna" type="sf:TextMax70Type" minOccurs="0" />
       <element name="NombreRazonEmisor" type="sf:TextMax120Type" />
       <element name="Subsanacion" type="sf:SubsanacionType" minOccurs="0" />
       <element name="RechazoPrevio" type="sf:RechazoPrevioType" minOccurs="0" />
@@ -226,6 +214,7 @@ Administracion Tributaria ((AEAT))) -->
     <sequence>
       <element name="IDVersion" type="sf:VersionType" />
       <element name="IDFactura" type="sf:IDFacturaExpedidaBajaType" />
+      <element name="RefExterna" type="sf:TextMax60Type" minOccurs="0" />
       <element name="SinRegistroPrevio" type="sf:SinRegistroPrevioType" minOccurs="0" />
       <element name="RechazoPrevio" type="sf:RechazoPrevioAnulacionType" minOccurs="0" />
       <element name="GeneradoPor" type="sf:GeneradoPorType" minOccurs="0" />
@@ -567,6 +556,12 @@ Administracion Tributaria ((AEAT))) -->
       <pattern value="\d{0,4}" />
     </restriction>
   </simpleType>
+  <!-- Cadena de 1500 caracteres -->
+  <simpleType name="TextMax1500Type">
+    <restriction base="string">
+      <maxLength value="1500" />
+    </restriction>
+  </simpleType>
   <!-- Cadena de 500 caracteres -->
   <simpleType name="TextMax500Type">
     <restriction base="string">
@@ -595,6 +590,12 @@ Administracion Tributaria ((AEAT))) -->
   <simpleType name="TextMax100Type">
     <restriction base="string">
       <maxLength value="100" />
+    </restriction>
+  </simpleType>
+  <!-- Cadena de 70 caracteres -->
+  <simpleType name="TextMax70Type">
+    <restriction base="string">
+      <maxLength value="70" />
     </restriction>
   </simpleType>
   <!-- Cadena de 65 caracteres -->
@@ -888,6 +889,14 @@ Administracion Tributaria ((AEAT))) -->
       <enumeration value="N" />
     </restriction>
   </simpleType>
+  <!-- Indicador que especifica que se ha finalizado la remisión de registros de facturación tras un
+  requerimiento -->
+  <simpleType name="FinRequerimientoType">
+    <restriction base="string">
+      <enumeration value="S" />
+      <enumeration value="N" />
+    </restriction>
+  </simpleType>
   <simpleType name="GeneradoPorType">
     <restriction base="string">
       <enumeration value="E">
@@ -952,8 +961,7 @@ Administracion Tributaria ((AEAT))) -->
       </enumeration>
     </restriction>
   </simpleType>
-  <!-- CLAVE QUE IDENTIFICARÁ EL TIPO DE RÉGIMEN DEL IVA O UNA OPERACIÓN CON TRASCENDENCIA
-  TRIBUTARIA 
+  <!-- CLAVE QUE IDENTIFICARÁ EL TIPO DE RÉGIMEN DEL IVA/IGIC
      -->
   <simpleType name="IdOperacionesTrascendenciaTributariaType">
     <restriction base="string">
@@ -964,6 +972,7 @@ Administracion Tributaria ((AEAT))) -->
       <enumeration value="05" />
       <enumeration value="06" />
       <enumeration value="07" />
+      <enumeration value="08" />
       <enumeration value="09" />
       <enumeration value="10" />
       <enumeration value="11" />
@@ -1327,7 +1336,7 @@ Administracion Tributaria ((AEAT))) -->
           </annotation>
         </element>
       </choice>
-      <element name="IndicadorRepresentante" type="sf:CuponType" minOccurs="0">
+      <element name="IndicadorRepresentante" type="sf:IndicadorRepresentanteType" minOccurs="0">
         <annotation>
           <documentation xml:lang="es"> Flag opcional que tendrá valor S si la consulta la está
             realizando el representante/asesor del obligado tributario. A rellenar solo en caso de
@@ -1395,6 +1404,30 @@ Administracion Tributaria ((AEAT))) -->
       <enumeration value="05">
         <annotation>
           <documentation xml:lang="es">Otros</documentation>
+        </annotation>
+      </enumeration>
+    </restriction>
+  </simpleType>
+  <!--Información
+  de la operación realizada que se devuelve como respuesta al envío de un registro de facturación -->
+  <complexType name="OperacionType">
+    <sequence>
+      <element name="TipoOperacion" type="sf:TipoOperacionType" />
+      <element name="Subsanacion" type="sf:SubsanacionType" minOccurs="0" />
+      <element name="RechazoPrevio" type="sf:RechazoPrevioType" minOccurs="0" />
+      <element name="SinRegistroPrevio" type="sf:SinRegistroPrevioType" minOccurs="0" />
+    </sequence>
+  </complexType>
+  <simpleType name="TipoOperacionType">
+    <restriction base="string">
+      <enumeration value="Alta">
+        <annotation>
+          <documentation xml:lang="es">La operación realizada ha sido un alta</documentation>
+        </annotation>
+      </enumeration>
+      <enumeration value="Anulacion">
+        <annotation>
+          <documentation xml:lang="es">La operación realizada ha sido una anulación</documentation>
         </annotation>
       </enumeration>
     </restriction>

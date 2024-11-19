@@ -24,9 +24,21 @@ using System.Xml.Serialization;
     "es/es/aeat/tike/cont/ws/SuministroLR.xsd")]
 [System.Xml.Serialization.XmlRootAttribute(Namespace="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicacion" +
     "es/es/aeat/tike/cont/ws/SuministroLR.xsd", IsNullable=false)]
-public partial class RegFactuSistemaFacturacion : SistemaFacturacionFact {
+public partial class RegFactuSistemaFacturacion {
+    
+    private CabeceraType cabeceraField;
     
     private RegistroFacturaType[] registroFacturaField;
+    
+    /// <remarks/>
+    public CabeceraType Cabecera {
+        get {
+            return this.cabeceraField;
+        }
+        set {
+            this.cabeceraField = value;
+        }
+    }
     
     /// <remarks/>
     [System.Xml.Serialization.XmlElementAttribute("RegistroFactura")]
@@ -46,20 +58,54 @@ public partial class RegFactuSistemaFacturacion : SistemaFacturacionFact {
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicacion" +
-    "es/es/aeat/tike/cont/ws/SuministroLR.xsd")]
-public partial class RegistroFacturaType {
+    "es/es/aeat/tike/cont/ws/SuministroInformacion.xsd")]
+public partial class CabeceraType {
     
-    private object itemField;
+    private PersonaFisicaJuridicaESType obligadoEmisionField;
+    
+    private PersonaFisicaJuridicaESType representanteField;
+    
+    private CabeceraTypeRemisionVoluntaria remisionVoluntariaField;
+    
+    private CabeceraTypeRemisionRequerimiento remisionRequerimientoField;
     
     /// <remarks/>
-    [System.Xml.Serialization.XmlElementAttribute("RegistroAlta", typeof(RegistroFacturacionAltaType))]
-    [System.Xml.Serialization.XmlElementAttribute("RegistroAnulacion", typeof(RegistroFacturacionAnulacionType))]
-    public object Item {
+    public PersonaFisicaJuridicaESType ObligadoEmision {
         get {
-            return this.itemField;
+            return this.obligadoEmisionField;
         }
         set {
-            this.itemField = value;
+            this.obligadoEmisionField = value;
+        }
+    }
+    
+    /// <remarks/>
+    public PersonaFisicaJuridicaESType Representante {
+        get {
+            return this.representanteField;
+        }
+        set {
+            this.representanteField = value;
+        }
+    }
+    
+    /// <remarks/>
+    public CabeceraTypeRemisionVoluntaria RemisionVoluntaria {
+        get {
+            return this.remisionVoluntariaField;
+        }
+        set {
+            this.remisionVoluntariaField = value;
+        }
+    }
+    
+    /// <remarks/>
+    public CabeceraTypeRemisionRequerimiento RemisionRequerimiento {
+        get {
+            return this.remisionRequerimientoField;
+        }
+        set {
+            this.remisionRequerimientoField = value;
         }
     }
 }
@@ -71,532 +117,29 @@ public partial class RegistroFacturaType {
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicacion" +
     "es/es/aeat/tike/cont/ws/SuministroInformacion.xsd")]
-public partial class RegistroFacturacionAltaType {
+public partial class PersonaFisicaJuridicaESType {
     
-    private VersionType iDVersionField;
+    private string nombreRazonField;
     
-    private IDFacturaExpedidaType iDFacturaField;
-    
-    private string nombreRazonEmisorField;
-    
-    private SubsanacionType subsanacionField;
-    
-    private bool subsanacionFieldSpecified;
-    
-    private RechazoPrevioType rechazoPrevioField;
-    
-    private bool rechazoPrevioFieldSpecified;
-    
-    private ClaveTipoFacturaType tipoFacturaField;
-    
-    private ClaveTipoRectificativaType tipoRectificativaField;
-    
-    private bool tipoRectificativaFieldSpecified;
-    
-    private IDFacturaARType[] facturasRectificadasField;
-    
-    private IDFacturaARType[] facturasSustituidasField;
-    
-    private DesgloseRectificacionType importeRectificacionField;
-    
-    private string fechaOperacionField;
-    
-    private string descripcionOperacionField;
-    
-    private SimplificadaCualificadaType facturaSimplificadaArt7273Field;
-    
-    private bool facturaSimplificadaArt7273FieldSpecified;
-    
-    private CompletaSinDestinatarioType facturaSinIdentifDestinatarioArt61dField;
-    
-    private bool facturaSinIdentifDestinatarioArt61dFieldSpecified;
-    
-    private MacrodatoType macrodatoField;
-    
-    private bool macrodatoFieldSpecified;
-    
-    private TercerosODestinatarioType emitidaPorTerceroODestinatarioField;
-    
-    private bool emitidaPorTerceroODestinatarioFieldSpecified;
-    
-    private PersonaFisicaJuridicaType terceroField;
-    
-    private PersonaFisicaJuridicaType[] destinatariosField;
-    
-    private CuponType cuponField;
-    
-    private bool cuponFieldSpecified;
-    
-    private DetalleType[] desgloseField;
-    
-    private string cuotaTotalField;
-    
-    private string importeTotalField;
-    
-    private RegistroFacturacionAltaTypeEncadenamiento encadenamientoField;
-    
-    private SistemaInformaticoType sistemaInformaticoField;
-    
-    private System.DateTime fechaHoraHusoGenRegistroField;
-    
-    private string numRegistroAcuerdoFacturacionField;
-    
-    private string idAcuerdoSistemaInformaticoField;
-    
-    private TipoHuellaType tipoHuellaField;
-    
-    private string huellaField;
-    
-    private SignatureType signatureField;
+    private string nIFField;
     
     /// <remarks/>
-    public VersionType IDVersion {
+    public string NombreRazon {
         get {
-            return this.iDVersionField;
+            return this.nombreRazonField;
         }
         set {
-            this.iDVersionField = value;
+            this.nombreRazonField = value;
         }
     }
     
     /// <remarks/>
-    public IDFacturaExpedidaType IDFactura {
+    public string NIF {
         get {
-            return this.iDFacturaField;
+            return this.nIFField;
         }
         set {
-            this.iDFacturaField = value;
-        }
-    }
-    
-    /// <remarks/>
-    public string NombreRazonEmisor {
-        get {
-            return this.nombreRazonEmisorField;
-        }
-        set {
-            this.nombreRazonEmisorField = value;
-        }
-    }
-    
-    /// <remarks/>
-    public SubsanacionType Subsanacion {
-        get {
-            return this.subsanacionField;
-        }
-        set {
-            this.subsanacionField = value;
-        }
-    }
-    
-    /// <remarks/>
-    [System.Xml.Serialization.XmlIgnoreAttribute()]
-    public bool SubsanacionSpecified {
-        get {
-            return this.subsanacionFieldSpecified;
-        }
-        set {
-            this.subsanacionFieldSpecified = value;
-        }
-    }
-    
-    /// <remarks/>
-    public RechazoPrevioType RechazoPrevio {
-        get {
-            return this.rechazoPrevioField;
-        }
-        set {
-            this.rechazoPrevioField = value;
-        }
-    }
-    
-    /// <remarks/>
-    [System.Xml.Serialization.XmlIgnoreAttribute()]
-    public bool RechazoPrevioSpecified {
-        get {
-            return this.rechazoPrevioFieldSpecified;
-        }
-        set {
-            this.rechazoPrevioFieldSpecified = value;
-        }
-    }
-    
-    /// <remarks/>
-    public ClaveTipoFacturaType TipoFactura {
-        get {
-            return this.tipoFacturaField;
-        }
-        set {
-            this.tipoFacturaField = value;
-        }
-    }
-    
-    /// <remarks/>
-    public ClaveTipoRectificativaType TipoRectificativa {
-        get {
-            return this.tipoRectificativaField;
-        }
-        set {
-            this.tipoRectificativaField = value;
-        }
-    }
-    
-    /// <remarks/>
-    [System.Xml.Serialization.XmlIgnoreAttribute()]
-    public bool TipoRectificativaSpecified {
-        get {
-            return this.tipoRectificativaFieldSpecified;
-        }
-        set {
-            this.tipoRectificativaFieldSpecified = value;
-        }
-    }
-    
-    /// <remarks/>
-    [System.Xml.Serialization.XmlArrayItemAttribute("IDFacturaRectificada", IsNullable=false)]
-    public IDFacturaARType[] FacturasRectificadas {
-        get {
-            return this.facturasRectificadasField;
-        }
-        set {
-            this.facturasRectificadasField = value;
-        }
-    }
-    
-    /// <remarks/>
-    [System.Xml.Serialization.XmlArrayItemAttribute("IDFacturaSustituida", IsNullable=false)]
-    public IDFacturaARType[] FacturasSustituidas {
-        get {
-            return this.facturasSustituidasField;
-        }
-        set {
-            this.facturasSustituidasField = value;
-        }
-    }
-    
-    /// <remarks/>
-    public DesgloseRectificacionType ImporteRectificacion {
-        get {
-            return this.importeRectificacionField;
-        }
-        set {
-            this.importeRectificacionField = value;
-        }
-    }
-    
-    /// <remarks/>
-    public string FechaOperacion {
-        get {
-            return this.fechaOperacionField;
-        }
-        set {
-            this.fechaOperacionField = value;
-        }
-    }
-    
-    /// <remarks/>
-    public string DescripcionOperacion {
-        get {
-            return this.descripcionOperacionField;
-        }
-        set {
-            this.descripcionOperacionField = value;
-        }
-    }
-    
-    /// <remarks/>
-    public SimplificadaCualificadaType FacturaSimplificadaArt7273 {
-        get {
-            return this.facturaSimplificadaArt7273Field;
-        }
-        set {
-            this.facturaSimplificadaArt7273Field = value;
-        }
-    }
-    
-    /// <remarks/>
-    [System.Xml.Serialization.XmlIgnoreAttribute()]
-    public bool FacturaSimplificadaArt7273Specified {
-        get {
-            return this.facturaSimplificadaArt7273FieldSpecified;
-        }
-        set {
-            this.facturaSimplificadaArt7273FieldSpecified = value;
-        }
-    }
-    
-    /// <remarks/>
-    public CompletaSinDestinatarioType FacturaSinIdentifDestinatarioArt61d {
-        get {
-            return this.facturaSinIdentifDestinatarioArt61dField;
-        }
-        set {
-            this.facturaSinIdentifDestinatarioArt61dField = value;
-        }
-    }
-    
-    /// <remarks/>
-    [System.Xml.Serialization.XmlIgnoreAttribute()]
-    public bool FacturaSinIdentifDestinatarioArt61dSpecified {
-        get {
-            return this.facturaSinIdentifDestinatarioArt61dFieldSpecified;
-        }
-        set {
-            this.facturaSinIdentifDestinatarioArt61dFieldSpecified = value;
-        }
-    }
-    
-    /// <remarks/>
-    public MacrodatoType Macrodato {
-        get {
-            return this.macrodatoField;
-        }
-        set {
-            this.macrodatoField = value;
-        }
-    }
-    
-    /// <remarks/>
-    [System.Xml.Serialization.XmlIgnoreAttribute()]
-    public bool MacrodatoSpecified {
-        get {
-            return this.macrodatoFieldSpecified;
-        }
-        set {
-            this.macrodatoFieldSpecified = value;
-        }
-    }
-    
-    /// <remarks/>
-    public TercerosODestinatarioType EmitidaPorTerceroODestinatario {
-        get {
-            return this.emitidaPorTerceroODestinatarioField;
-        }
-        set {
-            this.emitidaPorTerceroODestinatarioField = value;
-        }
-    }
-    
-    /// <remarks/>
-    [System.Xml.Serialization.XmlIgnoreAttribute()]
-    public bool EmitidaPorTerceroODestinatarioSpecified {
-        get {
-            return this.emitidaPorTerceroODestinatarioFieldSpecified;
-        }
-        set {
-            this.emitidaPorTerceroODestinatarioFieldSpecified = value;
-        }
-    }
-    
-    /// <remarks/>
-    public PersonaFisicaJuridicaType Tercero {
-        get {
-            return this.terceroField;
-        }
-        set {
-            this.terceroField = value;
-        }
-    }
-    
-    /// <remarks/>
-    [System.Xml.Serialization.XmlArrayItemAttribute("IDDestinatario", IsNullable=false)]
-    public PersonaFisicaJuridicaType[] Destinatarios {
-        get {
-            return this.destinatariosField;
-        }
-        set {
-            this.destinatariosField = value;
-        }
-    }
-    
-    /// <remarks/>
-    public CuponType Cupon {
-        get {
-            return this.cuponField;
-        }
-        set {
-            this.cuponField = value;
-        }
-    }
-    
-    /// <remarks/>
-    [System.Xml.Serialization.XmlIgnoreAttribute()]
-    public bool CuponSpecified {
-        get {
-            return this.cuponFieldSpecified;
-        }
-        set {
-            this.cuponFieldSpecified = value;
-        }
-    }
-    
-    /// <remarks/>
-    [System.Xml.Serialization.XmlArrayItemAttribute("DetalleDesglose", IsNullable=false)]
-    public DetalleType[] Desglose {
-        get {
-            return this.desgloseField;
-        }
-        set {
-            this.desgloseField = value;
-        }
-    }
-    
-    /// <remarks/>
-    public string CuotaTotal {
-        get {
-            return this.cuotaTotalField;
-        }
-        set {
-            this.cuotaTotalField = value;
-        }
-    }
-    
-    /// <remarks/>
-    public string ImporteTotal {
-        get {
-            return this.importeTotalField;
-        }
-        set {
-            this.importeTotalField = value;
-        }
-    }
-    
-    /// <remarks/>
-    public RegistroFacturacionAltaTypeEncadenamiento Encadenamiento {
-        get {
-            return this.encadenamientoField;
-        }
-        set {
-            this.encadenamientoField = value;
-        }
-    }
-    
-    /// <remarks/>
-    public SistemaInformaticoType SistemaInformatico {
-        get {
-            return this.sistemaInformaticoField;
-        }
-        set {
-            this.sistemaInformaticoField = value;
-        }
-    }
-    
-    /// <remarks/>
-    public System.DateTime FechaHoraHusoGenRegistro {
-        get {
-            return this.fechaHoraHusoGenRegistroField;
-        }
-        set {
-            this.fechaHoraHusoGenRegistroField = value;
-        }
-    }
-    
-    /// <remarks/>
-    public string NumRegistroAcuerdoFacturacion {
-        get {
-            return this.numRegistroAcuerdoFacturacionField;
-        }
-        set {
-            this.numRegistroAcuerdoFacturacionField = value;
-        }
-    }
-    
-    /// <remarks/>
-    public string IdAcuerdoSistemaInformatico {
-        get {
-            return this.idAcuerdoSistemaInformaticoField;
-        }
-        set {
-            this.idAcuerdoSistemaInformaticoField = value;
-        }
-    }
-    
-    /// <remarks/>
-    public TipoHuellaType TipoHuella {
-        get {
-            return this.tipoHuellaField;
-        }
-        set {
-            this.tipoHuellaField = value;
-        }
-    }
-    
-    /// <remarks/>
-    public string Huella {
-        get {
-            return this.huellaField;
-        }
-        set {
-            this.huellaField = value;
-        }
-    }
-    
-    /// <remarks/>
-    [System.Xml.Serialization.XmlElementAttribute(Namespace="http://www.w3.org/2000/09/xmldsig#")]
-    public SignatureType Signature {
-        get {
-            return this.signatureField;
-        }
-        set {
-            this.signatureField = value;
-        }
-    }
-}
-
-/// <remarks/>
-[System.CodeDom.Compiler.GeneratedCodeAttribute("xsd", "4.8.3928.0")]
-[System.SerializableAttribute()]
-[System.Xml.Serialization.XmlTypeAttribute(Namespace="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicacion" +
-    "es/es/aeat/tike/cont/ws/SuministroInformacion.xsd")]
-public enum VersionType {
-    
-    /// <remarks/>
-    [System.Xml.Serialization.XmlEnumAttribute("1.0")]
-    Item10,
-}
-
-/// <remarks/>
-[System.CodeDom.Compiler.GeneratedCodeAttribute("xsd", "4.8.3928.0")]
-[System.SerializableAttribute()]
-[System.Diagnostics.DebuggerStepThroughAttribute()]
-[System.ComponentModel.DesignerCategoryAttribute("code")]
-[System.Xml.Serialization.XmlTypeAttribute(Namespace="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicacion" +
-    "es/es/aeat/tike/cont/ws/SuministroInformacion.xsd")]
-public partial class IDFacturaExpedidaType {
-    
-    private string iDEmisorFacturaField;
-    
-    private string numSerieFacturaField;
-    
-    private string fechaExpedicionFacturaField;
-    
-    /// <remarks/>
-    public string IDEmisorFactura {
-        get {
-            return this.iDEmisorFacturaField;
-        }
-        set {
-            this.iDEmisorFacturaField = value;
-        }
-    }
-    
-    /// <remarks/>
-    public string NumSerieFactura {
-        get {
-            return this.numSerieFacturaField;
-        }
-        set {
-            this.numSerieFacturaField = value;
-        }
-    }
-    
-    /// <remarks/>
-    public string FechaExpedicionFactura {
-        get {
-            return this.fechaExpedicionFacturaField;
-        }
-        set {
-            this.fechaExpedicionFacturaField = value;
+            this.nIFField = value;
         }
     }
 }
@@ -654,11 +197,15 @@ public partial class IDFacturaExpedidaBajaType {
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicacion" +
     "es/es/aeat/tike/cont/ws/SuministroInformacion.xsd")]
+[System.Xml.Serialization.XmlRootAttribute("RegistroAnulacion", Namespace="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicacion" +
+    "es/es/aeat/tike/cont/ws/SuministroInformacion.xsd", IsNullable=false)]
 public partial class RegistroFacturacionAnulacionType {
     
     private VersionType iDVersionField;
     
     private IDFacturaExpedidaBajaType iDFacturaField;
+    
+    private string refExternaField;
     
     private SinRegistroPrevioType sinRegistroPrevioField;
     
@@ -703,6 +250,16 @@ public partial class RegistroFacturacionAnulacionType {
         }
         set {
             this.iDFacturaField = value;
+        }
+    }
+    
+    /// <remarks/>
+    public string RefExterna {
+        get {
+            return this.refExternaField;
+        }
+        set {
+            this.refExternaField = value;
         }
     }
     
@@ -839,6 +396,18 @@ public partial class RegistroFacturacionAnulacionType {
             this.signatureField = value;
         }
     }
+}
+
+/// <remarks/>
+[System.CodeDom.Compiler.GeneratedCodeAttribute("xsd", "4.8.3928.0")]
+[System.SerializableAttribute()]
+[System.Xml.Serialization.XmlTypeAttribute(Namespace="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicacion" +
+    "es/es/aeat/tike/cont/ws/SuministroInformacion.xsd")]
+public enum VersionType {
+    
+    /// <remarks/>
+    [System.Xml.Serialization.XmlEnumAttribute("1.0")]
+    Item10,
 }
 
 /// <remarks/>
@@ -3216,6 +2785,10 @@ public enum IdOperacionesTrascendenciaTributariaType {
     Item07,
     
     /// <remarks/>
+    [System.Xml.Serialization.XmlEnumAttribute("08")]
+    Item08,
+    
+    /// <remarks/>
     [System.Xml.Serialization.XmlEnumAttribute("09")]
     Item09,
     
@@ -3397,29 +2970,41 @@ public partial class IDFacturaARType {
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicacion" +
     "es/es/aeat/tike/cont/ws/SuministroInformacion.xsd")]
-public partial class PersonaFisicaJuridicaESType {
+public partial class IDFacturaExpedidaType {
     
-    private string nombreRazonField;
+    private string iDEmisorFacturaField;
     
-    private string nIFField;
+    private string numSerieFacturaField;
+    
+    private string fechaExpedicionFacturaField;
     
     /// <remarks/>
-    public string NombreRazon {
+    public string IDEmisorFactura {
         get {
-            return this.nombreRazonField;
+            return this.iDEmisorFacturaField;
         }
         set {
-            this.nombreRazonField = value;
+            this.iDEmisorFacturaField = value;
         }
     }
     
     /// <remarks/>
-    public string NIF {
+    public string NumSerieFactura {
         get {
-            return this.nIFField;
+            return this.numSerieFacturaField;
         }
         set {
-            this.nIFField = value;
+            this.numSerieFacturaField = value;
+        }
+    }
+    
+    /// <remarks/>
+    public string FechaExpedicionFactura {
+        get {
+            return this.fechaExpedicionFacturaField;
+        }
+        set {
+            this.fechaExpedicionFacturaField = value;
         }
     }
 }
@@ -3431,158 +3016,488 @@ public partial class PersonaFisicaJuridicaESType {
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicacion" +
     "es/es/aeat/tike/cont/ws/SuministroInformacion.xsd")]
-public partial class Cabecera {
+[System.Xml.Serialization.XmlRootAttribute("RegistroAlta", Namespace="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicacion" +
+    "es/es/aeat/tike/cont/ws/SuministroInformacion.xsd", IsNullable=false)]
+public partial class RegistroFacturacionAltaType {
     
-    private PersonaFisicaJuridicaESType obligadoEmisionField;
+    private VersionType iDVersionField;
     
-    private PersonaFisicaJuridicaESType representanteField;
+    private IDFacturaExpedidaType iDFacturaField;
     
-    private CabeceraRemisionVoluntaria remisionVoluntariaField;
+    private string refExternaField;
     
-    private CabeceraRemisionRequerimiento remisionRequerimientoField;
+    private string nombreRazonEmisorField;
+    
+    private SubsanacionType subsanacionField;
+    
+    private bool subsanacionFieldSpecified;
+    
+    private RechazoPrevioType rechazoPrevioField;
+    
+    private bool rechazoPrevioFieldSpecified;
+    
+    private ClaveTipoFacturaType tipoFacturaField;
+    
+    private ClaveTipoRectificativaType tipoRectificativaField;
+    
+    private bool tipoRectificativaFieldSpecified;
+    
+    private IDFacturaARType[] facturasRectificadasField;
+    
+    private IDFacturaARType[] facturasSustituidasField;
+    
+    private DesgloseRectificacionType importeRectificacionField;
+    
+    private string fechaOperacionField;
+    
+    private string descripcionOperacionField;
+    
+    private SimplificadaCualificadaType facturaSimplificadaArt7273Field;
+    
+    private bool facturaSimplificadaArt7273FieldSpecified;
+    
+    private CompletaSinDestinatarioType facturaSinIdentifDestinatarioArt61dField;
+    
+    private bool facturaSinIdentifDestinatarioArt61dFieldSpecified;
+    
+    private MacrodatoType macrodatoField;
+    
+    private bool macrodatoFieldSpecified;
+    
+    private TercerosODestinatarioType emitidaPorTerceroODestinatarioField;
+    
+    private bool emitidaPorTerceroODestinatarioFieldSpecified;
+    
+    private PersonaFisicaJuridicaType terceroField;
+    
+    private PersonaFisicaJuridicaType[] destinatariosField;
+    
+    private CuponType cuponField;
+    
+    private bool cuponFieldSpecified;
+    
+    private DetalleType[] desgloseField;
+    
+    private string cuotaTotalField;
+    
+    private string importeTotalField;
+    
+    private RegistroFacturacionAltaTypeEncadenamiento encadenamientoField;
+    
+    private SistemaInformaticoType sistemaInformaticoField;
+    
+    private System.DateTime fechaHoraHusoGenRegistroField;
+    
+    private string numRegistroAcuerdoFacturacionField;
+    
+    private string idAcuerdoSistemaInformaticoField;
+    
+    private TipoHuellaType tipoHuellaField;
+    
+    private string huellaField;
+    
+    private SignatureType signatureField;
     
     /// <remarks/>
-    public PersonaFisicaJuridicaESType ObligadoEmision {
+    public VersionType IDVersion {
         get {
-            return this.obligadoEmisionField;
+            return this.iDVersionField;
         }
         set {
-            this.obligadoEmisionField = value;
+            this.iDVersionField = value;
         }
     }
     
     /// <remarks/>
-    public PersonaFisicaJuridicaESType Representante {
+    public IDFacturaExpedidaType IDFactura {
         get {
-            return this.representanteField;
+            return this.iDFacturaField;
         }
         set {
-            this.representanteField = value;
+            this.iDFacturaField = value;
         }
     }
     
     /// <remarks/>
-    public CabeceraRemisionVoluntaria RemisionVoluntaria {
+    public string RefExterna {
         get {
-            return this.remisionVoluntariaField;
+            return this.refExternaField;
         }
         set {
-            this.remisionVoluntariaField = value;
+            this.refExternaField = value;
         }
     }
     
     /// <remarks/>
-    public CabeceraRemisionRequerimiento RemisionRequerimiento {
+    public string NombreRazonEmisor {
         get {
-            return this.remisionRequerimientoField;
+            return this.nombreRazonEmisorField;
         }
         set {
-            this.remisionRequerimientoField = value;
-        }
-    }
-}
-
-/// <remarks/>
-[System.CodeDom.Compiler.GeneratedCodeAttribute("xsd", "4.8.3928.0")]
-[System.SerializableAttribute()]
-[System.Diagnostics.DebuggerStepThroughAttribute()]
-[System.ComponentModel.DesignerCategoryAttribute("code")]
-[System.Xml.Serialization.XmlTypeAttribute(AnonymousType=true, Namespace="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicacion" +
-    "es/es/aeat/tike/cont/ws/SuministroInformacion.xsd")]
-public partial class CabeceraRemisionVoluntaria {
-    
-    private string fechaFinVeriFactuField;
-    
-    private IncidenciaType incidenciaField;
-    
-    private bool incidenciaFieldSpecified;
-    
-    /// <remarks/>
-    public string FechaFinVeriFactu {
-        get {
-            return this.fechaFinVeriFactuField;
-        }
-        set {
-            this.fechaFinVeriFactuField = value;
+            this.nombreRazonEmisorField = value;
         }
     }
     
     /// <remarks/>
-    public IncidenciaType Incidencia {
+    public SubsanacionType Subsanacion {
         get {
-            return this.incidenciaField;
+            return this.subsanacionField;
         }
         set {
-            this.incidenciaField = value;
+            this.subsanacionField = value;
         }
     }
     
     /// <remarks/>
     [System.Xml.Serialization.XmlIgnoreAttribute()]
-    public bool IncidenciaSpecified {
+    public bool SubsanacionSpecified {
         get {
-            return this.incidenciaFieldSpecified;
+            return this.subsanacionFieldSpecified;
         }
         set {
-            this.incidenciaFieldSpecified = value;
+            this.subsanacionFieldSpecified = value;
         }
     }
-}
-
-/// <remarks/>
-[System.CodeDom.Compiler.GeneratedCodeAttribute("xsd", "4.8.3928.0")]
-[System.SerializableAttribute()]
-[System.Xml.Serialization.XmlTypeAttribute(Namespace="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicacion" +
-    "es/es/aeat/tike/cont/ws/SuministroInformacion.xsd")]
-public enum IncidenciaType {
     
     /// <remarks/>
-    S,
-    
-    /// <remarks/>
-    N,
-}
-
-/// <remarks/>
-[System.CodeDom.Compiler.GeneratedCodeAttribute("xsd", "4.8.3928.0")]
-[System.SerializableAttribute()]
-[System.Diagnostics.DebuggerStepThroughAttribute()]
-[System.ComponentModel.DesignerCategoryAttribute("code")]
-[System.Xml.Serialization.XmlTypeAttribute(AnonymousType=true, Namespace="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicacion" +
-    "es/es/aeat/tike/cont/ws/SuministroInformacion.xsd")]
-public partial class CabeceraRemisionRequerimiento {
-    
-    private string refRequerimientoField;
-    
-    /// <remarks/>
-    public string RefRequerimiento {
+    public RechazoPrevioType RechazoPrevio {
         get {
-            return this.refRequerimientoField;
+            return this.rechazoPrevioField;
         }
         set {
-            this.refRequerimientoField = value;
+            this.rechazoPrevioField = value;
         }
     }
-}
-
-/// <remarks/>
-[System.CodeDom.Compiler.GeneratedCodeAttribute("xsd", "4.8.3928.0")]
-[System.SerializableAttribute()]
-[System.Diagnostics.DebuggerStepThroughAttribute()]
-[System.ComponentModel.DesignerCategoryAttribute("code")]
-[System.Xml.Serialization.XmlTypeAttribute(Namespace="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicacion" +
-    "es/es/aeat/tike/cont/ws/SuministroInformacion.xsd")]
-public partial class SistemaFacturacionFact {
-    
-    private Cabecera cabeceraField;
     
     /// <remarks/>
-    public Cabecera Cabecera {
+    [System.Xml.Serialization.XmlIgnoreAttribute()]
+    public bool RechazoPrevioSpecified {
         get {
-            return this.cabeceraField;
+            return this.rechazoPrevioFieldSpecified;
         }
         set {
-            this.cabeceraField = value;
+            this.rechazoPrevioFieldSpecified = value;
+        }
+    }
+    
+    /// <remarks/>
+    public ClaveTipoFacturaType TipoFactura {
+        get {
+            return this.tipoFacturaField;
+        }
+        set {
+            this.tipoFacturaField = value;
+        }
+    }
+    
+    /// <remarks/>
+    public ClaveTipoRectificativaType TipoRectificativa {
+        get {
+            return this.tipoRectificativaField;
+        }
+        set {
+            this.tipoRectificativaField = value;
+        }
+    }
+    
+    /// <remarks/>
+    [System.Xml.Serialization.XmlIgnoreAttribute()]
+    public bool TipoRectificativaSpecified {
+        get {
+            return this.tipoRectificativaFieldSpecified;
+        }
+        set {
+            this.tipoRectificativaFieldSpecified = value;
+        }
+    }
+    
+    /// <remarks/>
+    [System.Xml.Serialization.XmlArrayItemAttribute("IDFacturaRectificada", IsNullable=false)]
+    public IDFacturaARType[] FacturasRectificadas {
+        get {
+            return this.facturasRectificadasField;
+        }
+        set {
+            this.facturasRectificadasField = value;
+        }
+    }
+    
+    /// <remarks/>
+    [System.Xml.Serialization.XmlArrayItemAttribute("IDFacturaSustituida", IsNullable=false)]
+    public IDFacturaARType[] FacturasSustituidas {
+        get {
+            return this.facturasSustituidasField;
+        }
+        set {
+            this.facturasSustituidasField = value;
+        }
+    }
+    
+    /// <remarks/>
+    public DesgloseRectificacionType ImporteRectificacion {
+        get {
+            return this.importeRectificacionField;
+        }
+        set {
+            this.importeRectificacionField = value;
+        }
+    }
+    
+    /// <remarks/>
+    public string FechaOperacion {
+        get {
+            return this.fechaOperacionField;
+        }
+        set {
+            this.fechaOperacionField = value;
+        }
+    }
+    
+    /// <remarks/>
+    public string DescripcionOperacion {
+        get {
+            return this.descripcionOperacionField;
+        }
+        set {
+            this.descripcionOperacionField = value;
+        }
+    }
+    
+    /// <remarks/>
+    public SimplificadaCualificadaType FacturaSimplificadaArt7273 {
+        get {
+            return this.facturaSimplificadaArt7273Field;
+        }
+        set {
+            this.facturaSimplificadaArt7273Field = value;
+        }
+    }
+    
+    /// <remarks/>
+    [System.Xml.Serialization.XmlIgnoreAttribute()]
+    public bool FacturaSimplificadaArt7273Specified {
+        get {
+            return this.facturaSimplificadaArt7273FieldSpecified;
+        }
+        set {
+            this.facturaSimplificadaArt7273FieldSpecified = value;
+        }
+    }
+    
+    /// <remarks/>
+    public CompletaSinDestinatarioType FacturaSinIdentifDestinatarioArt61d {
+        get {
+            return this.facturaSinIdentifDestinatarioArt61dField;
+        }
+        set {
+            this.facturaSinIdentifDestinatarioArt61dField = value;
+        }
+    }
+    
+    /// <remarks/>
+    [System.Xml.Serialization.XmlIgnoreAttribute()]
+    public bool FacturaSinIdentifDestinatarioArt61dSpecified {
+        get {
+            return this.facturaSinIdentifDestinatarioArt61dFieldSpecified;
+        }
+        set {
+            this.facturaSinIdentifDestinatarioArt61dFieldSpecified = value;
+        }
+    }
+    
+    /// <remarks/>
+    public MacrodatoType Macrodato {
+        get {
+            return this.macrodatoField;
+        }
+        set {
+            this.macrodatoField = value;
+        }
+    }
+    
+    /// <remarks/>
+    [System.Xml.Serialization.XmlIgnoreAttribute()]
+    public bool MacrodatoSpecified {
+        get {
+            return this.macrodatoFieldSpecified;
+        }
+        set {
+            this.macrodatoFieldSpecified = value;
+        }
+    }
+    
+    /// <remarks/>
+    public TercerosODestinatarioType EmitidaPorTerceroODestinatario {
+        get {
+            return this.emitidaPorTerceroODestinatarioField;
+        }
+        set {
+            this.emitidaPorTerceroODestinatarioField = value;
+        }
+    }
+    
+    /// <remarks/>
+    [System.Xml.Serialization.XmlIgnoreAttribute()]
+    public bool EmitidaPorTerceroODestinatarioSpecified {
+        get {
+            return this.emitidaPorTerceroODestinatarioFieldSpecified;
+        }
+        set {
+            this.emitidaPorTerceroODestinatarioFieldSpecified = value;
+        }
+    }
+    
+    /// <remarks/>
+    public PersonaFisicaJuridicaType Tercero {
+        get {
+            return this.terceroField;
+        }
+        set {
+            this.terceroField = value;
+        }
+    }
+    
+    /// <remarks/>
+    [System.Xml.Serialization.XmlArrayItemAttribute("IDDestinatario", IsNullable=false)]
+    public PersonaFisicaJuridicaType[] Destinatarios {
+        get {
+            return this.destinatariosField;
+        }
+        set {
+            this.destinatariosField = value;
+        }
+    }
+    
+    /// <remarks/>
+    public CuponType Cupon {
+        get {
+            return this.cuponField;
+        }
+        set {
+            this.cuponField = value;
+        }
+    }
+    
+    /// <remarks/>
+    [System.Xml.Serialization.XmlIgnoreAttribute()]
+    public bool CuponSpecified {
+        get {
+            return this.cuponFieldSpecified;
+        }
+        set {
+            this.cuponFieldSpecified = value;
+        }
+    }
+    
+    /// <remarks/>
+    [System.Xml.Serialization.XmlArrayItemAttribute("DetalleDesglose", IsNullable=false)]
+    public DetalleType[] Desglose {
+        get {
+            return this.desgloseField;
+        }
+        set {
+            this.desgloseField = value;
+        }
+    }
+    
+    /// <remarks/>
+    public string CuotaTotal {
+        get {
+            return this.cuotaTotalField;
+        }
+        set {
+            this.cuotaTotalField = value;
+        }
+    }
+    
+    /// <remarks/>
+    public string ImporteTotal {
+        get {
+            return this.importeTotalField;
+        }
+        set {
+            this.importeTotalField = value;
+        }
+    }
+    
+    /// <remarks/>
+    public RegistroFacturacionAltaTypeEncadenamiento Encadenamiento {
+        get {
+            return this.encadenamientoField;
+        }
+        set {
+            this.encadenamientoField = value;
+        }
+    }
+    
+    /// <remarks/>
+    public SistemaInformaticoType SistemaInformatico {
+        get {
+            return this.sistemaInformaticoField;
+        }
+        set {
+            this.sistemaInformaticoField = value;
+        }
+    }
+    
+    /// <remarks/>
+    public System.DateTime FechaHoraHusoGenRegistro {
+        get {
+            return this.fechaHoraHusoGenRegistroField;
+        }
+        set {
+            this.fechaHoraHusoGenRegistroField = value;
+        }
+    }
+    
+    /// <remarks/>
+    public string NumRegistroAcuerdoFacturacion {
+        get {
+            return this.numRegistroAcuerdoFacturacionField;
+        }
+        set {
+            this.numRegistroAcuerdoFacturacionField = value;
+        }
+    }
+    
+    /// <remarks/>
+    public string IdAcuerdoSistemaInformatico {
+        get {
+            return this.idAcuerdoSistemaInformaticoField;
+        }
+        set {
+            this.idAcuerdoSistemaInformaticoField = value;
+        }
+    }
+    
+    /// <remarks/>
+    public TipoHuellaType TipoHuella {
+        get {
+            return this.tipoHuellaField;
+        }
+        set {
+            this.tipoHuellaField = value;
+        }
+    }
+    
+    /// <remarks/>
+    public string Huella {
+        get {
+            return this.huellaField;
+        }
+        set {
+            this.huellaField = value;
+        }
+    }
+    
+    /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute(Namespace="http://www.w3.org/2000/09/xmldsig#")]
+    public SignatureType Signature {
+        get {
+            return this.signatureField;
+        }
+        set {
+            this.signatureField = value;
         }
     }
 }
@@ -3764,6 +3679,154 @@ public partial class RegistroFacturacionAltaTypeEncadenamiento {
 [System.Diagnostics.DebuggerStepThroughAttribute()]
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(Namespace="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicacion" +
+    "es/es/aeat/tike/cont/ws/SuministroLR.xsd")]
+public partial class RegistroFacturaType {
+    
+    private object itemField;
+    
+    /// <remarks/>
+    [System.Xml.Serialization.XmlElementAttribute("RegistroAlta", typeof(RegistroFacturacionAltaType), Namespace="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicacion" +
+        "es/es/aeat/tike/cont/ws/SuministroInformacion.xsd")]
+    [System.Xml.Serialization.XmlElementAttribute("RegistroAnulacion", typeof(RegistroFacturacionAnulacionType), Namespace="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicacion" +
+        "es/es/aeat/tike/cont/ws/SuministroInformacion.xsd")]
+    public object Item {
+        get {
+            return this.itemField;
+        }
+        set {
+            this.itemField = value;
+        }
+    }
+}
+
+/// <remarks/>
+[System.CodeDom.Compiler.GeneratedCodeAttribute("xsd", "4.8.3928.0")]
+[System.SerializableAttribute()]
+[System.Diagnostics.DebuggerStepThroughAttribute()]
+[System.ComponentModel.DesignerCategoryAttribute("code")]
+[System.Xml.Serialization.XmlTypeAttribute(AnonymousType=true, Namespace="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicacion" +
+    "es/es/aeat/tike/cont/ws/SuministroInformacion.xsd")]
+public partial class CabeceraTypeRemisionVoluntaria {
+    
+    private string fechaFinVeriFactuField;
+    
+    private IncidenciaType incidenciaField;
+    
+    private bool incidenciaFieldSpecified;
+    
+    /// <remarks/>
+    public string FechaFinVeriFactu {
+        get {
+            return this.fechaFinVeriFactuField;
+        }
+        set {
+            this.fechaFinVeriFactuField = value;
+        }
+    }
+    
+    /// <remarks/>
+    public IncidenciaType Incidencia {
+        get {
+            return this.incidenciaField;
+        }
+        set {
+            this.incidenciaField = value;
+        }
+    }
+    
+    /// <remarks/>
+    [System.Xml.Serialization.XmlIgnoreAttribute()]
+    public bool IncidenciaSpecified {
+        get {
+            return this.incidenciaFieldSpecified;
+        }
+        set {
+            this.incidenciaFieldSpecified = value;
+        }
+    }
+}
+
+/// <remarks/>
+[System.CodeDom.Compiler.GeneratedCodeAttribute("xsd", "4.8.3928.0")]
+[System.SerializableAttribute()]
+[System.Xml.Serialization.XmlTypeAttribute(Namespace="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicacion" +
+    "es/es/aeat/tike/cont/ws/SuministroInformacion.xsd")]
+public enum IncidenciaType {
+    
+    /// <remarks/>
+    S,
+    
+    /// <remarks/>
+    N,
+}
+
+/// <remarks/>
+[System.CodeDom.Compiler.GeneratedCodeAttribute("xsd", "4.8.3928.0")]
+[System.SerializableAttribute()]
+[System.Diagnostics.DebuggerStepThroughAttribute()]
+[System.ComponentModel.DesignerCategoryAttribute("code")]
+[System.Xml.Serialization.XmlTypeAttribute(AnonymousType=true, Namespace="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicacion" +
+    "es/es/aeat/tike/cont/ws/SuministroInformacion.xsd")]
+public partial class CabeceraTypeRemisionRequerimiento {
+    
+    private string refRequerimientoField;
+    
+    private FinRequerimientoType finRequerimientoField;
+    
+    private bool finRequerimientoFieldSpecified;
+    
+    /// <remarks/>
+    public string RefRequerimiento {
+        get {
+            return this.refRequerimientoField;
+        }
+        set {
+            this.refRequerimientoField = value;
+        }
+    }
+    
+    /// <remarks/>
+    public FinRequerimientoType FinRequerimiento {
+        get {
+            return this.finRequerimientoField;
+        }
+        set {
+            this.finRequerimientoField = value;
+        }
+    }
+    
+    /// <remarks/>
+    [System.Xml.Serialization.XmlIgnoreAttribute()]
+    public bool FinRequerimientoSpecified {
+        get {
+            return this.finRequerimientoFieldSpecified;
+        }
+        set {
+            this.finRequerimientoFieldSpecified = value;
+        }
+    }
+}
+
+/// <remarks/>
+[System.CodeDom.Compiler.GeneratedCodeAttribute("xsd", "4.8.3928.0")]
+[System.SerializableAttribute()]
+[System.Xml.Serialization.XmlTypeAttribute(Namespace="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicacion" +
+    "es/es/aeat/tike/cont/ws/SuministroInformacion.xsd")]
+public enum FinRequerimientoType {
+    
+    /// <remarks/>
+    S,
+    
+    /// <remarks/>
+    N,
+}
+
+/// <remarks/>
+[System.CodeDom.Compiler.GeneratedCodeAttribute("xsd", "4.8.3928.0")]
+[System.SerializableAttribute()]
+[System.Diagnostics.DebuggerStepThroughAttribute()]
+[System.ComponentModel.DesignerCategoryAttribute("code")]
+[System.Xml.Serialization.XmlTypeAttribute(Namespace="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicacion" +
     "es/es/aeat/tike/cont/ws/RespuestaSuministro.xsd")]
 [System.Xml.Serialization.XmlRootAttribute("RespuestaRegFactuSistemaFacturacion", Namespace="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicacion" +
     "es/es/aeat/tike/cont/ws/RespuestaSuministro.xsd", IsNullable=false)]
@@ -3794,6 +3857,10 @@ public partial class RespuestaExpedidaType {
     
     private IDFacturaExpedidaType iDFacturaField;
     
+    private OperacionType operacionField;
+    
+    private string refExternaField;
+    
     private EstadoRegistroType estadoRegistroField;
     
     private string codigoErrorRegistroField;
@@ -3809,6 +3876,26 @@ public partial class RespuestaExpedidaType {
         }
         set {
             this.iDFacturaField = value;
+        }
+    }
+    
+    /// <remarks/>
+    public OperacionType Operacion {
+        get {
+            return this.operacionField;
+        }
+        set {
+            this.operacionField = value;
+        }
+    }
+    
+    /// <remarks/>
+    public string RefExterna {
+        get {
+            return this.refExternaField;
+        }
+        set {
+            this.refExternaField = value;
         }
     }
     
@@ -3852,6 +3939,117 @@ public partial class RespuestaExpedidaType {
             this.registroDuplicadoField = value;
         }
     }
+}
+
+/// <remarks/>
+[System.CodeDom.Compiler.GeneratedCodeAttribute("xsd", "4.8.3928.0")]
+[System.SerializableAttribute()]
+[System.Diagnostics.DebuggerStepThroughAttribute()]
+[System.ComponentModel.DesignerCategoryAttribute("code")]
+[System.Xml.Serialization.XmlTypeAttribute(Namespace="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicacion" +
+    "es/es/aeat/tike/cont/ws/SuministroInformacion.xsd")]
+public partial class OperacionType {
+    
+    private TipoOperacionType tipoOperacionField;
+    
+    private SubsanacionType subsanacionField;
+    
+    private bool subsanacionFieldSpecified;
+    
+    private RechazoPrevioType rechazoPrevioField;
+    
+    private bool rechazoPrevioFieldSpecified;
+    
+    private SinRegistroPrevioType sinRegistroPrevioField;
+    
+    private bool sinRegistroPrevioFieldSpecified;
+    
+    /// <remarks/>
+    public TipoOperacionType TipoOperacion {
+        get {
+            return this.tipoOperacionField;
+        }
+        set {
+            this.tipoOperacionField = value;
+        }
+    }
+    
+    /// <remarks/>
+    public SubsanacionType Subsanacion {
+        get {
+            return this.subsanacionField;
+        }
+        set {
+            this.subsanacionField = value;
+        }
+    }
+    
+    /// <remarks/>
+    [System.Xml.Serialization.XmlIgnoreAttribute()]
+    public bool SubsanacionSpecified {
+        get {
+            return this.subsanacionFieldSpecified;
+        }
+        set {
+            this.subsanacionFieldSpecified = value;
+        }
+    }
+    
+    /// <remarks/>
+    public RechazoPrevioType RechazoPrevio {
+        get {
+            return this.rechazoPrevioField;
+        }
+        set {
+            this.rechazoPrevioField = value;
+        }
+    }
+    
+    /// <remarks/>
+    [System.Xml.Serialization.XmlIgnoreAttribute()]
+    public bool RechazoPrevioSpecified {
+        get {
+            return this.rechazoPrevioFieldSpecified;
+        }
+        set {
+            this.rechazoPrevioFieldSpecified = value;
+        }
+    }
+    
+    /// <remarks/>
+    public SinRegistroPrevioType SinRegistroPrevio {
+        get {
+            return this.sinRegistroPrevioField;
+        }
+        set {
+            this.sinRegistroPrevioField = value;
+        }
+    }
+    
+    /// <remarks/>
+    [System.Xml.Serialization.XmlIgnoreAttribute()]
+    public bool SinRegistroPrevioSpecified {
+        get {
+            return this.sinRegistroPrevioFieldSpecified;
+        }
+        set {
+            this.sinRegistroPrevioFieldSpecified = value;
+        }
+    }
+}
+
+/// <remarks/>
+[System.CodeDom.Compiler.GeneratedCodeAttribute("xsd", "4.8.3928.0")]
+[System.SerializableAttribute()]
+[System.Xml.Serialization.XmlTypeAttribute(Namespace="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicacion" +
+    "es/es/aeat/tike/cont/ws/SuministroInformacion.xsd")]
+public enum TipoOperacionType {
+    
+    /// <remarks/>
+    Alta,
+    
+    /// <remarks/>
+    Anulacion,
 }
 
 /// <remarks/>
@@ -3961,7 +4159,7 @@ public partial class RespuestaBaseType {
     
     private DatosPresentacionType datosPresentacionField;
     
-    private Cabecera cabeceraField;
+    private CabeceraType cabeceraField;
     
     private string tiempoEsperaEnvioField;
     
@@ -3988,7 +4186,7 @@ public partial class RespuestaBaseType {
     }
     
     /// <remarks/>
-    public Cabecera Cabecera {
+    public CabeceraType Cabecera {
         get {
             return this.cabeceraField;
         }
@@ -4029,7 +4227,7 @@ public partial class DatosPresentacionType {
     
     private string nIFPresentadorField;
     
-    private string timestampPresentacionField;
+    private System.DateTime timestampPresentacionField;
     
     /// <remarks/>
     public string NIFPresentador {
@@ -4042,7 +4240,7 @@ public partial class DatosPresentacionType {
     }
     
     /// <remarks/>
-    public string TimestampPresentacion {
+    public System.DateTime TimestampPresentacion {
         get {
             return this.timestampPresentacionField;
         }

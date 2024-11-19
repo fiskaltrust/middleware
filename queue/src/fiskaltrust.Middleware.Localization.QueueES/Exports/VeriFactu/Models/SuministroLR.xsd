@@ -12,13 +12,10 @@ Estatal de Administracion Tributaria ((AEAT))) -->
     schemaLocation="SuministroInformacion.xsd" />
   <element name="RegFactuSistemaFacturacion">
     <complexType>
-      <complexContent>
-        <extension base="sf:SistemaFacturacionFact">
-          <sequence>
-            <element name="RegistroFactura" type="sfLR:RegistroFacturaType" maxOccurs="1000" />
-          </sequence>
-        </extension>
-      </complexContent>
+      <sequence>
+        <element name="Cabecera" type="sf:CabeceraType" />
+        <element name="RegistroFactura" type="sfLR:RegistroFacturaType" maxOccurs="1000" />
+      </sequence>
     </complexType>
   </element>
   <complexType name="RegistroFacturaType">
@@ -27,8 +24,8 @@ Estatal de Administracion Tributaria ((AEAT))) -->
     </annotation>
     <sequence>
       <choice>
-        <element name="RegistroAlta" type="sf:RegistroFacturacionAltaType" />
-        <element name="RegistroAnulacion" type="sf:RegistroFacturacionAnulacionType" />
+        <element ref="sf:RegistroAlta" />
+        <element ref="sf:RegistroAnulacion" />
       </choice>
     </sequence>
   </complexType>

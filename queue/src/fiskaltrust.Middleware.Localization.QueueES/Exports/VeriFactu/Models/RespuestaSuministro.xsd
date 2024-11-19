@@ -30,7 +30,7 @@ Estatal de Administracion Tributaria ((AEAT))) -->
             genera si no hay rechazo del envio </documentation>
         </annotation>
       </element>
-      <element name="Cabecera" type="sf:Cabecera">
+      <element name="Cabecera" type="sf:CabeceraType">
         <annotation>
           <documentation xml:lang="es"> Se devuelve la cabecera que se incluyó en el envío. </documentation>
         </annotation>
@@ -74,6 +74,8 @@ Estatal de Administracion Tributaria ((AEAT))) -->
           <documentation xml:lang="es"> ID Factura Expedida </documentation>
         </annotation>
       </element>
+      <element name="Operacion" type="sf:OperacionType" />
+      <element name="RefExterna" type="sf:TextMax70Type" minOccurs="0" />
       <element name="EstadoRegistro" type="sfR:EstadoRegistroType">
         <annotation>
           <documentation xml:lang="es"> Estado del registro. Correcto o Incorrecto </documentation>
@@ -84,7 +86,7 @@ Estatal de Administracion Tributaria ((AEAT))) -->
           <documentation xml:lang="es"> Código del error de registro, en su caso. </documentation>
         </annotation>
       </element>
-      <element name="DescripcionErrorRegistro" type="sf:TextMax500Type" minOccurs="0">
+      <element name="DescripcionErrorRegistro" type="sf:TextMax1500Type" minOccurs="0">
         <annotation>
           <documentation xml:lang="es"> Descripción detallada del error de registro, en su caso. </documentation>
         </annotation>
