@@ -92,7 +92,7 @@ public class VeriFactuMapping
             IDFactura = new IDFacturaExpedidaType
             {
                 IDEmisorFactura = _masterData.Outlet.VatId,
-                NumSerieFactura = receiptResponse.ftReceiptIdentification, // split at '#' when we have the correct value
+                NumSerieFactura = receiptResponse.ftReceiptIdentification.Split('#')[1],
                 FechaExpedicionFactura = receiptRequest.cbReceiptMoment.ToString("dd-MM-yyy")
             },
             // This field is described in the exel but not present in the xsd files

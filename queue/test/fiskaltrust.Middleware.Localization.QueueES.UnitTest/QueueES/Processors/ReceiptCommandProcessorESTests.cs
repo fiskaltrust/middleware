@@ -122,6 +122,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             };
 
             var masterDataConfiguration = _fixture.Create<MasterDataConfiguration>();
+            masterDataConfiguration.Outlet.VatId = "VATTEST";
 
             var configMock = new Mock<IConfigurationRepository>();
             configMock.Setup(x => x.InsertOrUpdateQueueAsync(It.IsAny<ftQueue>())).Returns(Task.CompletedTask);
@@ -136,6 +137,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
                 ftCashBoxID = Guid.NewGuid(),
                 ftReceiptCase = 0x4553_2000_0000_0000 | (long) ReceiptCases.InitialOperationReceipt0x4001,
                 cbReceiptMoment = new DateTime(2019, 12, 31),
+                cbReceiptReference = "TEST",
                 cbChargeItems = [
                     new ChargeItem
                     {
@@ -183,7 +185,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
                 ftCashBoxIdentification = "cashBoxIdentification",
 
                 ftQueueRow = 1,
-                ftReceiptIdentification = "0#0",
+                ftReceiptIdentification = "0#",
                 ftReceiptMoment = DateTime.UtcNow,
             };
 
@@ -202,11 +204,11 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
                 ftSignatureType = 0x4553_2000_0000_0001,
                 ftSignatureFormat = (int) ifPOS.v1.SignaturItem.Formats.QR_Code,
                 Caption = "[www.fiskaltrust.es]",
-                Data = $"??????"
+                Data = "https://prewww2.aeat.es/wlpl/TIKE-CONT/ValidarQR?nif=VATTEST&numserie=1%2fTEST&fecha=31-12-2019&importe=182800.00"
             };
             result.receiptResponse.ftQueueID.Should().Be(receiptResponse.ftQueueID);
             result.receiptResponse.ftQueueItemID.Should().Be(receiptResponse.ftQueueItemID);
-            result.receiptResponse.ftReceiptIdentification.Should().Be("????");
+            result.receiptResponse.ftReceiptIdentification.Should().Be("0#1/TEST");
             result.receiptResponse.ftSignatures[0].Should().BeEquivalentTo(expectedSignaturItem);
         }
     }

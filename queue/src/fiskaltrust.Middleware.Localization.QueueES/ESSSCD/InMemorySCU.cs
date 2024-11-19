@@ -38,6 +38,7 @@ public class InMemorySCU : IESSSCD
 
     public async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request)
     {
+        request.ReceiptResponse.ftReceiptIdentification += $"{request.ReceiptResponse.ftQueueRow}/{request.ReceiptRequest.cbReceiptReference}";
         if (request.ReceiptRequest.IsVoid())
         {
             throw new NotImplementedException();
