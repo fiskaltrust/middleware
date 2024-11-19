@@ -5,6 +5,7 @@ using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.SCU.IT.Abstraction;
 using System.Collections.Generic;
 using Newtonsoft.Json;
+using System.Security.Cryptography;
 
 #pragma warning disable
 
@@ -331,7 +332,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                     itemAndMessages.Add(new() { PrintRecItem = printRecItem, PrintRecMessage = printRecMessage });
                 }
                 else if (i.IsSingleUseVoucher() && i.Amount < 0)
-                {  
+                {
                     var printRecItemAdjustment = new PrintRecItemAdjustment
                     {
                         Description = i.Description,
@@ -465,6 +466,20 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
 
         public static int GetVatGroup(this ChargeItem chargeItem)
         {
+            if ((chargeItem.ftChargeItemCase & 0xF) == 0x8)
+            {
+                return (chargeItem.ftChargeItemCase & 0xF000) switch
+                {
+                    0x8000 => 10,
+                    0x2000 => 11,
+                    0x1000 => 12,
+                    0x3000 => 13,
+                    0x4000 => 14,
+                    0x5000 => 15,
+                    _ => _vatRateUnknown // ?
+                };
+            }
+
             return (chargeItem.ftChargeItemCase & 0xF) switch
             {
                 0x0 => _vatRateUnknown, // 0 ???
