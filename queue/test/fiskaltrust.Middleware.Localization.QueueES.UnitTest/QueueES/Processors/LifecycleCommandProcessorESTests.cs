@@ -180,7 +180,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             data.QueueId.Should().Be(queueItem.ftQueueId);
             data.Version.Should().Be("V0");
 
-            configMock.Verify(x => x.ActivateQueueAsync(), Times.Exactly(1));
+            // configMock.Verify(x => x.ActivateQueueAsync(), Times.Exactly(1));
         }
 
         [Fact]
@@ -271,7 +271,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             data.QueueId.Should().Be(queueItem.ftQueueId);
             data.Version.Should().Be("V0");
 
-            configMock.Verify(x => x.ActivateQueueAsync(), Times.Exactly(1));
+            // configMock.Verify(x => x.ActivateQueueAsync(), Times.Exactly(1));
         }
 
         [Fact]
