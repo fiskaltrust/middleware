@@ -214,3 +214,4 @@ _Pvt_Extensions/
 ModelManifest.xml
 
 .vscode
+.DS_Store

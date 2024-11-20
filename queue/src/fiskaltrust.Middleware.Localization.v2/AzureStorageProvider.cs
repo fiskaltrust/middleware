@@ -82,7 +82,7 @@ public class AzureStorageProvider : BaseStorageBootStrapper, IStorageProvider
         Task.Run(() => InitAsync());
     }
 
-    public Middleware.Storage.Repositories.IConfigurationRepository GetConfigurationRepository() => new AzureTableStorageConfigurationRepository(_queueConfiguration, _tableServiceClient);
+    public IConfigurationRepository GetConfigurationRepository() => new AzureTableStorageConfigurationRepository(_queueConfiguration, _tableServiceClient);
     public IMiddlewareActionJournalRepository GetMiddlewareActionJournalRepository() => new AzureTableStorageActionJournalRepository(_queueConfiguration, _tableServiceClient);
     public IMiddlewareQueueItemRepository GetMiddlewareQueueItemRepository() => new AzureTableStorageQueueItemRepository(_queueConfiguration, _tableServiceClient, new AzureTableStorageReceiptReferenceIndexRepository(_queueConfiguration, _tableServiceClient));
     public IMiddlewareReceiptJournalRepository GetMiddlewareReceiptJournalRepository() => new AzureTableStorageReceiptJournalRepository(_queueConfiguration, _tableServiceClient);

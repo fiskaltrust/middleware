@@ -6,8 +6,6 @@ namespace fiskaltrust.Middleware.Storage.ES
     {
         public Guid ftSignaturCreationUnitESId { get; set; }
 
-        public string StateData { get; set; }
-
         public long TimeStamp { get; set; }
     }
 }
