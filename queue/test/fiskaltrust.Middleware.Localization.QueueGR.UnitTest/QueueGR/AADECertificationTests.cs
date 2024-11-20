@@ -37,7 +37,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
                         throw new Exception($"The configuration for {cashBoxId} is empty and therefore not valid.");
                     }
 
-                    var configuration = JsonSerializer.Deserialize<ftCashBoxConfiguration>(content) ?? throw new Exception($"The configuration for {cashBoxId} is empty and therefore not valid.");
+                    var configuration = Newtonsoft.Json.JsonConvert.DeserializeObject<ftCashBoxConfiguration>(content) ?? throw new Exception($"The configuration for {cashBoxId} is empty and therefore not valid.");
                     configuration.TimeStamp = DateTime.UtcNow.Ticks;
                     return configuration;
                 }
@@ -155,7 +155,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             await SendToMayData(xml);
 
             System.Console.WriteLine(caller);
-           //await ExecuteMiddleware(receiptRequest, caller);
+            //await ExecuteMiddleware(receiptRequest, caller);
         }
 
         private async Task ValidateMyData(ReceiptRequest receiptRequest, InvoiceType expectedInvoiceType, IncomeClassificationCategoryType expectedCategory, IncomeClassificationValueType expectedValueType, [CallerMemberName] string caller = "")
@@ -396,7 +396,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
         [Fact]
         public async Task d()
         {
-            var receiptRequest  = ReceiptExamples.Example_SalesInvoice_1_1(Guid.NewGuid());
+            var receiptRequest = ReceiptExamples.Example_SalesInvoice_1_1(Guid.NewGuid());
             await ValidateMyData(receiptRequest, InvoiceType.Item11, IncomeClassificationCategoryType.category1_95);
         }
 
