@@ -26,7 +26,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
                         throw new Exception($"The configuration for {cashBoxId} is empty and therefore not valid.");
                     }
 
-                    var configuration = JsonSerializer.Deserialize<ftCashBoxConfiguration>(content) ?? throw new Exception($"The configuration for {cashBoxId} is empty and therefore not valid.");
+                    var configuration = Newtonsoft.Json.JsonConvert.DeserializeObject<ftCashBoxConfiguration>(content) ?? throw new Exception($"The configuration for {cashBoxId} is empty and therefore not valid.");
                     configuration.TimeStamp = DateTime.UtcNow.Ticks;
                     return configuration;
                 }
