@@ -457,7 +457,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
         private static readonly int _vatRateDeduction1 = 2;
         private static readonly int _vatRateDeduction2 = 3;
         private static readonly int _vatRateSuperReduced1 = 4;
-        private static readonly int _vatRateZero = 0;
+        private static readonly int _vatRateZero = 13;
         private static readonly int _vatRateUnknown = -1;
         private static readonly int _notTaxable = 0;
         private static int _vatRateSuperReduced2;
@@ -465,6 +465,20 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
 
         public static int GetVatGroup(this ChargeItem chargeItem)
         {
+            if ((chargeItem.ftChargeItemCase & 0xF) == 0x8)
+            {
+                return (chargeItem.ftChargeItemCase & 0xF000) switch
+                {
+                    0x8000 => 10,
+                    0x2000 => 11,
+                    0x1000 => 12,
+                    0x3000 => 13,
+                    0x4000 => 14,
+                    0x5000 => 15,
+                    _ => _vatRateUnknown // ?
+                };
+            }
+
             return (chargeItem.ftChargeItemCase & 0xF) switch
             {
                 0x0 => _vatRateUnknown, // 0 ???
