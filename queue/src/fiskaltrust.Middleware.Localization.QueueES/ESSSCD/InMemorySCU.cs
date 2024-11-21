@@ -1,10 +1,12 @@
-﻿using System.Text.Json;
+﻿using System.Text;
+using System.Text.Json;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueueES.Exports;
 using fiskaltrust.Middleware.Localization.QueueES.Factories;
 using fiskaltrust.Middleware.Localization.QueueES.Interface;
 using fiskaltrust.Middleware.Localization.v2.Configuration;
 using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.Middleware.SCU.ES.Helpers;
 using fiskaltrust.Middleware.Storage.ES;
 using fiskaltrust.storage.V0.MasterData;
 
@@ -52,15 +54,16 @@ public class InMemorySCU : IESSSCD
                     NumSerieFactura = request.PreviousReceiptResponse.ftReceiptIdentification,
                     FechaExpedicionFactura = request.PreviousReceiptRequest.cbReceiptMoment.ToString("dd-MM-yyy")
                 },
-                request.PreviousReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.PosReceipt).Data
+                request.PreviousReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.Huella).Data
             ));
 
             request.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreateESQRCode(_configuration.BaseUrl, journalES));
+            request.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreateESSignature(Encoding.UTF8.GetBytes(XmlHelpers.Serialize(journalES.Signature))));
 
             request.ReceiptResponse.AddSignatureItem(new SignatureItem
             {
                 Caption = "IDEmisorFactura",
-                Data = journalES.Encadenamiento.Item is EncadenamientoFacturaAnteriorType encadenamiento ? encadenamiento.IDEmisorFactura : journalES.IDFactura.IDEmisorFactura,
+                Data = journalES.IDFactura.IDEmisorFactura,
                 ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.Text,
                 ftSignatureType = (long) SignatureTypesES.IDEmisorFactura
             });

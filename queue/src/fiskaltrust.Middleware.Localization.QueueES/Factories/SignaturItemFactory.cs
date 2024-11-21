@@ -47,18 +47,29 @@ public static class SignaturItemFactory
             Caption = "[www.fiskaltrust.es]",
             Data = uriBuider.Uri.ToString(),
             ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.QR_Code,
-            ftSignatureType = (long) SignatureTypesES.PosReceipt
+            ftSignatureType = (long) SignatureTypesES.VeriFactu
         };
     }
 
-    public static SignatureItem CreateESQRCode(string qrCode)
+    public static SignatureItem CreateESSignature(byte[] signature)
     {
         return new SignatureItem()
         {
-            Caption = "[www.fiskaltrust.es]",
-            Data = qrCode,
-            ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.QR_Code,
-            ftSignatureType = (long) SignatureTypesES.PosReceipt
+            Caption = "Signature",
+            Data = Convert.ToBase64String(signature),
+            ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.Base64,
+            ftSignatureType = (long) SignatureTypesES.Signature
+        };
+    }
+
+    public static SignatureItem CreateESHuella(string huella)
+    {
+        return new SignatureItem()
+        {
+            Caption = "Huella",
+            Data = huella,
+            ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.Text,
+            ftSignatureType = (long) SignatureTypesES.Huella
         };
     }
 }

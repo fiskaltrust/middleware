@@ -36,7 +36,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
                 .With(r => r.ftSignatures, () =>
                     _fixture
                         .CreateMany<SignatureItem>()
-                        .Append(Factories.SignaturItemFactory.CreateESQRCode(Convert.ToBase64String(_fixture.CreateMany<byte>().ToArray())))
+                        .Append(Factories.SignaturItemFactory.CreateESHuella(Convert.ToBase64String(_fixture.CreateMany<byte>().ToArray())))
                         .Append(new SignatureItem
                         {
                             ftSignatureType = (long) SignatureTypesES.IDEmisorFactura,

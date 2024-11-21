@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Web;
 using System.Xml.Serialization;
@@ -8,6 +8,7 @@ using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueueES.Interface;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.Middleware.SCU.ES.Helpers;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 
@@ -63,7 +64,7 @@ public class VeriFactuMapping
                             NumSerieFactura = previousReceiptResponse.ftReceiptIdentification,
                             FechaExpedicionFactura = previousReceiptRequest.cbReceiptMoment.ToString("dd-MM-yyy")
                         },
-                            previousReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.PosReceipt).Data
+                            previousReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.Huella).Data
                         ))
                     });
             }
@@ -95,8 +96,6 @@ public class VeriFactuMapping
                 NumSerieFactura = receiptResponse.ftReceiptIdentification.Split('#')[1],
                 FechaExpedicionFactura = receiptRequest.cbReceiptMoment.ToString("dd-MM-yyy")
             },
-            // This field is described in the exel but not present in the xsd files
-            // RefExterna = receiptRequest.ftQueueItemID,
 
             // "Name and business name of the person required to issue the invoice."
             // Not sure how this needs to be formated. Maybe we'll need some extra fields in the master data?
@@ -110,9 +109,10 @@ public class VeriFactuMapping
             ImporteRectificacion = new DesgloseRectificacionType
             {
                 // Do we need rounding for all the the decimals or should we fail if it's not in the range?
-                BaseRectificada = receiptRequest.cbChargeItems.Sum(chargeItem => chargeItem.GetVATAmount()).ToString("0.00"), // helper
-                                                                                                                              // whats the difference between `CuotaRectificada` and `BaseRectificada`
-                CuotaRectificada = null,
+                BaseRectificada = receiptRequest.cbChargeItems.Sum(chargeItem => chargeItem.Amount - chargeItem.GetVATAmount()).ToString("0.00"), // helper for tostring
+
+                CuotaRectificada = receiptRequest.cbChargeItems.Sum(chargeItem => chargeItem.GetVATAmount()).ToString("0.00"),
+                // CuotaRecargoRectificado = receiptRequest.cbChargeItems.Sum(chargeItem => chargeItem.GetVATAmount()).ToString("0.00")
             },
             Desglose = receiptRequest.cbChargeItems.Select(chargeItem => new DetalleType
             {
@@ -125,7 +125,6 @@ public class VeriFactuMapping
                     // _ => OperacionExentaType
                 }
             }).ToArray(),
-            // is this correct? how should this differ from `ImporteRectificacion`
             CuotaTotal = receiptRequest.cbChargeItems.Sum(chargeItem => chargeItem.GetVATAmount()).ToString("0.00"),
             ImporteTotal = (receiptRequest.cbReceiptAmount ?? receiptRequest.cbChargeItems.Sum(chargeItem => chargeItem.Amount)).ToString("0.00"),
             Encadenamiento = new RegistroFacturacionAltaTypeEncadenamiento
@@ -134,39 +133,51 @@ public class VeriFactuMapping
                     ? PrimerRegistroCadenaType.S
                     : new EncadenamientoFacturaAnteriorType
                     {
-                        // The `IDEmisorFactura` field needs to be the `IDFactura.IDEmisorFactura` of the previous receipt.
-                        // We could either save the last IDEmisorFactura in the queueES like this
-                        // or have a change masterdata reciept where we udpate the masterdata and handle this case
                         IDEmisorFactura = previous!.Value.id.IDEmisorFactura,
                         NumSerieFactura = previous!.Value.id.NumSerieFactura,
                         FechaExpedicionFactura = previous!.Value.id.FechaExpedicionFactura,
-                        Huella = previous!.Value.hash,
+                        Huella = previous!.Value.hash
                     }
             },
             // Which PosSystem from the list should we take? In DE we just take the first one...
             // Is this fiskaltrust or the dealer/creator
             SistemaInformatico = new SistemaInformaticoType
             {
-                // "Name and company name of the producing person or entity."
-                // The brand name is maybe not enough here?
-                NombreRazon = _masterData.PosSystems.FirstOrDefault()!.Brand,
+                NombreRazon = "fiskaltrust", // add real name here... and maybe get that from the config
                 // VatId of producing company. We don't have that right now.
-                Item = null,
-                // "Identification code given by the producing person or entity to its computerised invoicing system (RIS) which, once installed, constitutes the RIS used. It should distinguish it from any other possible different RIS produced by the same producing person or entity. The possible restrictions to its values shall be detailed in the corresponding documentation in the AEAT electronic office (validations document...)."
-                // Is this correct? does this need to be in a specific format or something registered with the government somewhere?
-                IdSistemaInformatico = _masterData.PosSystems.FirstOrDefault()!.Type,
-                Version = _masterData.PosSystems.FirstOrDefault()!.SoftwareVersion,
-                // "Installation number of the computerised invoicing system (RIS) used. It must be distinguished from any other possible RIS used for the invoicing of the person liable to issue invoices, i.e. from other possible past, present or future RIS installations used for the invoicing of the person liable to issue invoices, even if the same producer's RIS is used in these installations."
-                // We don't have that right now.
-                NumeroInstalacion = null,
+                Item = "NIF-fiskaltrust",
+                IdSistemaInformatico = "fiskaltrust.Middleware.Queue.AzureTableStorage", // or add cloudcashbox etc. like the launcher type? would be annoying ^^
+                Version = "", // version
+                NumeroInstalacion = receiptResponse.ftCashBoxIdentification,
             },
             FechaHoraHusoGenRegistro = receiptResponse.ftReceiptMoment,
-            TipoHuella = TipoHuellaType.Item01
+            TipoHuella = TipoHuellaType.Item01,
         };
 
         registroFacturacionAlta.Huella = registroFacturacionAlta.GetHuella();
 
-        return registroFacturacionAlta;
+        using var rsa = RSA.Create();
+
+        // Create a certificate request with the RSA key pair
+        var request = new CertificateRequest("CN=SelfSignedCert", rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+
+        // Set additional properties of the certificate
+        request.CertificateExtensions.Add(
+            new X509BasicConstraintsExtension(false, false, 0, true));
+
+        request.CertificateExtensions.Add(
+            new X509EnhancedKeyUsageExtension(
+                new OidCollection { new Oid("1.3.6.1.5.5.7.3.1") }, true));
+
+        // Set the validity period of the certificate
+        var notBefore = DateTimeOffset.UtcNow;
+        var notAfter = notBefore.AddYears(1);
+
+        // Create a self-signed certificate from the certificate request
+        var cert = request.CreateSelfSigned(notBefore, notAfter);
+
+
+        return XmlHelpers.Deserialize<RegistroFacturacionAltaType>(XmlHelpers.SignXmlContentWithXades(XmlHelpers.GetXMLIncludingNamespace(registroFacturacionAlta, "sf", "RegistroFacturacionAlta"), cert))!;
     }
 }
 
@@ -216,7 +227,7 @@ public static class XmlExt
     public static string Serialize(this RegistroFacturacionAltaType registroFacturacionAlta)
     {
         var serializer = new XmlSerializer(typeof(RegistroFacturacionAltaType));
-        using var writer = new StringWriter();
+        using var writer = new Utf8StringWriter();
 
         serializer.Serialize(writer, registroFacturacionAlta);
 
@@ -226,7 +237,7 @@ public static class XmlExt
     public static string Serialize(this RegFactuSistemaFacturacion registroFacturacionAlta)
     {
         var serializer = new XmlSerializer(typeof(RegFactuSistemaFacturacion));
-        using var writer = new StringWriter();
+        using var writer = new Utf8StringWriter();
 
         serializer.Serialize(writer, registroFacturacionAlta);
 
