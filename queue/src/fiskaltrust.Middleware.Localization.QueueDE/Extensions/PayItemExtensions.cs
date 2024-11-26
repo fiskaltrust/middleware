@@ -42,8 +42,5 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
         }
 
         public static decimal InverseAmountIfNotVoidReceipt(this PayItem payItem, bool isVoidReceipt) => isVoidReceipt ? payItem.Amount : payItem.Amount * -1;
-
-        public static bool IsPositionCancellation(this PayItem payItem) => (payItem.ftPayItemCase & 0x0000_0000_0020_0000) > 0x0000;
-
     }
 }

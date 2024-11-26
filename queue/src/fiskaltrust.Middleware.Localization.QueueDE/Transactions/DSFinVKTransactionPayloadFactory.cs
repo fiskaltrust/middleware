@@ -133,7 +133,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Transactions
                         }
 
                         var foreignAmount = payItemCaseData.Value<decimal>(foreignCurrecyAmountKey);
-                        foreignAmount = CalculationHelper.GetAmount(item, foreignAmount);
+                        foreignAmount = CalculationHelper.ReviseAmountOnNegativeQuantity(item.Quantity, foreignAmount);
                         paymentDict.AddOrUpdate($"{DSFinVKConstants.PROCESS_DATA_PAYMENT_CASH_TEXT}:{payItemCaseData.Value<string>(currencyCodeKey)}", foreignAmount, (k, v) => v + foreignAmount);
                         break;
                     }
@@ -157,7 +157,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Transactions
                                 amount = payItemCaseData.Value<decimal>(foreignCurrecyAmountKey);
                             }
                         }
-                        amount = CalculationHelper.GetAmount(item, amount);
+                        amount = CalculationHelper.ReviseAmountOnNegativeQuantity(item.Quantity, amount);
                         paymentDict.AddOrUpdate(currency.Length == 0 ? DSFinVKConstants.PROCESS_DATA_PAYMENT_NON_CASH_TEXT : $"{DSFinVKConstants.PROCESS_DATA_PAYMENT_NON_CASH_TEXT}:{currency}", amount, (k, v) => v + amount);
                         break;
                     }
@@ -166,7 +166,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Transactions
                     case 0x000B:
                     default:
                     {
-                        var amount = CalculationHelper.GetAmount(item, item.Amount);
+                        var amount = CalculationHelper.ReviseAmountOnNegativeQuantity(item.Quantity, item.Amount);
                         paymentDict.AddOrUpdate(DSFinVKConstants.PROCESS_DATA_PAYMENT_CASH_TEXT, amount, (k, v) => v + amount);
                         break;
                     }
