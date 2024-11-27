@@ -9,5 +9,7 @@ namespace fiskaltrust.Middleware.Contracts.Repositories.FR
         Task<int> GetCountOfCopiesAsync(string cbPreviousReceiptReference);
         Task InsertAsync(ftJournalFRCopyPayload c);
         Task<ftJournalFRCopyPayload> GetAsync(Guid queueItemId);
+        Task InsertAsync(storage.V0.ftJournalFRCopyPayload ftJournalFRCopyPayload);
+        Task InsertAsync(storage.V0.ftJournalFRCopyPayload ftJournalFRCopyPayload);
     }
 }

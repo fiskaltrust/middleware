@@ -5,6 +5,7 @@ using fiskaltrust.Middleware.Contracts.Models.Transactions;
 using Microsoft.EntityFrameworkCore.Design;
 using System;
 using fiskaltrust.Middleware.Contracts.Models.FR;
+using ftJournalFRCopyPayload = fiskaltrust.Middleware.Contracts.Models.FR.ftJournalFRCopyPayload;
 
 namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL
 {
