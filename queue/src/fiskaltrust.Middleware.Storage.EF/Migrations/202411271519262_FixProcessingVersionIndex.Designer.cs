@@ -7,13 +7,13 @@ namespace fiskaltrust.Middleware.Storage.EF.Migrations
     using System.Resources;
     
     [GeneratedCode("EntityFramework.Migrations", "6.4.4")]
-    public sealed partial class AddProcessingVersion : IMigrationMetadata
+    public sealed partial class FixProcessingVersionIndex : IMigrationMetadata
     {
-        private readonly ResourceManager Resources = new ResourceManager(typeof(AddProcessingVersion));
+        private readonly ResourceManager Resources = new ResourceManager(typeof(FixProcessingVersionIndex));
         
         string IMigrationMetadata.Id
         {
-            get { return "202411271059372_AddProcessingVersion"; }
+            get { return "202411271519262_FixProcessingVersionIndex"; }
         }
         
         string IMigrationMetadata.Source
