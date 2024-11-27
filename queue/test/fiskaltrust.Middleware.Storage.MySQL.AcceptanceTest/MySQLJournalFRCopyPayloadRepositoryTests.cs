@@ -13,6 +13,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using MySqlConnector;
 using Xunit;
+using ftJournalFRCopyPayload = fiskaltrust.storage.V0.ftJournalFRCopyPayload;
 
 namespace fiskaltrust.Middleware.Storage.MySQL.AcceptanceTest
 {

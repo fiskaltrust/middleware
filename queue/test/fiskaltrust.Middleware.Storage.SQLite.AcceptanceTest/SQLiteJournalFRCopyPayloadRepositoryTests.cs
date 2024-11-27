@@ -14,6 +14,7 @@ using fiskaltrust.Middleware.Storage.SQLite.Repositories.FR;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 using Moq;
+using ftJournalFRCopyPayload = fiskaltrust.storage.V0.ftJournalFRCopyPayload;
 
 namespace fiskaltrust.Middleware.Storage.SQLite.AcceptanceTest
 {

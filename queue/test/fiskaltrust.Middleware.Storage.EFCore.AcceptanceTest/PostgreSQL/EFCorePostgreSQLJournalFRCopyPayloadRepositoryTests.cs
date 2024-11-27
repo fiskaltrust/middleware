@@ -9,6 +9,7 @@ using fiskaltrust.Middleware.Storage.EFCore.Repositories.FR;
 using fiskaltrust.storage.V0;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
+using ftJournalFRCopyPayload = fiskaltrust.storage.V0.ftJournalFRCopyPayload;
 
 namespace fiskaltrust.Middleware.Storage.EFCore.AcceptanceTest.PostgreSQL
 {
