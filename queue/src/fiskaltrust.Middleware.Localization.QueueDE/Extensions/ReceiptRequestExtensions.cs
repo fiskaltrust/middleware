@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.Middleware.Contracts.Extensions;
 using fiskaltrust.Middleware.Localization.QueueDE.Constants;
 using Microsoft.Extensions.Logging;
 
@@ -290,23 +289,23 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
                     case 0x0000:
                         if (item.VATRate == 19.0m)
                         {
-                            normal += item.Amount * GetSignForAmount(item.Quantity, item.Amount);
+                            normal += GetAmount(item.ftChargeItemCase, item.Quantity, item.Amount);
                         }
                         else if (item.VATRate == 7.0m)
                         {
-                            discounted_1 += item.Amount * GetSignForAmount(item.Quantity, item.Amount);
+                            discounted_1 += GetAmount(item.ftChargeItemCase, item.Quantity, item.Amount);
                         }
                         else if (item.VATRate == 10.7m)
                         {
-                            special_1 += item.Amount * GetSignForAmount(item.Quantity, item.Amount);
+                            special_1 += GetAmount(item.ftChargeItemCase, item.Quantity, item.Amount);
                         }
                         else if (item.VATRate == 5.5m)
                         {
-                            special_2 += item.Amount * GetSignForAmount(item.Quantity, item.Amount);
+                            special_2 += GetAmount(item.ftChargeItemCase, item.Quantity, item.Amount);
                         }
                         else
                         {
-                            zero += item.Amount * GetSignForAmount(item.Quantity, item.Amount);
+                            zero += GetAmount(item.ftChargeItemCase, item.Quantity, item.Amount);
                         }
                         break;
                     case 0x0001:
@@ -324,7 +323,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
                     case 0x0079:
                     case 0x0081:
                     case 0x0089:
-                        normal += item.Amount * GetSignForAmount(item.Quantity, item.Amount);
+                        normal += GetAmount(item.ftChargeItemCase, item.Quantity, item.Amount);
                         break;
                     case 0x0002:
                     case 0x0012:
@@ -341,7 +340,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
                     case 0x007A:
                     case 0x0082:
                     case 0x008A:
-                        discounted_1 += item.Amount * GetSignForAmount(item.Quantity, item.Amount);
+                        discounted_1 += GetAmount(item.ftChargeItemCase, item.Quantity, item.Amount);
                         break;
                     case 0x0003:
                     case 0x0013:
@@ -358,7 +357,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
                     case 0x007B:
                     case 0x0083:
                     case 0x008B:
-                        special_1 += item.Amount * GetSignForAmount(item.Quantity, item.Amount);
+                        special_1 += GetAmount(item.ftChargeItemCase, item.Quantity, item.Amount);
                         break;
                     case 0x0004:
                     case 0x0014:
@@ -375,10 +374,10 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
                     case 0x007C:
                     case 0x0084:
                     case 0x008C:
-                        special_2 += item.Amount * GetSignForAmount(item.Quantity, item.Amount);
+                        special_2 += GetAmount(item.ftChargeItemCase, item.Quantity, item.Amount);
                         break;
                     default:
-                        zero += item.Amount * GetSignForAmount(item.Quantity, item.Amount);
+                        zero += GetAmount(item.ftChargeItemCase, item.Quantity, item.Amount);
 
                         break;
                 }
@@ -403,7 +402,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
                     case 0x0015:
                     case 0x0016:
                     case 0x0017:
-                        item.Amount = item.Amount * GetSignForAmount(item.Quantity, item.Amount);
+                        item.Amount = GetAmount(item.ftPayItemCase, item.Quantity, item.Amount);
                         zero += item.Amount * -1;
                         break;
                     default:
@@ -434,16 +433,31 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
                 request.cbReceiptMoment
             }).Min();
         }
-        private static decimal GetSignForAmount(decimal quantity, decimal amount) => quantity < 0 && amount >= 0 ? -1 : 1;
+
+        public static decimal GetAmount(long payOrChargeCase, decimal quantity, decimal amount)
+        {
+            if (IsPositionCancellation(payOrChargeCase))
+            {
+                return amount;
+            }
+            else
+            {
+                return quantity < 0 && amount >= 0 ? amount * -1 : amount;
+            }
+        }
+
         public static void CheckForEqualSumChargePayItems(this ReceiptRequest request, ILogger logger)
         {
-            var chargeAmount = request.cbChargeItems != null ? request.cbChargeItems.Sum(x => x.Amount != null ? x.Amount * GetSignForAmount(x.Quantity, x.Amount) : 0) : 0;
-            var payAmount = request.cbPayItems != null ? request.cbPayItems.Sum(x => x.Amount != null ? x.Amount * GetSignForAmount(x.Quantity, x.Amount) : 0) : 0;
+            var chargeAmount = request.cbChargeItems != null ? request.cbChargeItems.Sum(x => x.Amount != null ? GetAmount(x.ftChargeItemCase, x.Quantity, x.Amount) : 0) : 0;
+            var payAmount = request.cbPayItems != null ? request.cbPayItems.Sum(x => x.Amount != null ? GetAmount(x.ftPayItemCase, x.Quantity, x.Amount) : 0) : 0;
             if (chargeAmount != payAmount)
             {
                 var _differentPayChargeAmount = $"Aggregated sum of ChargeItem amounts ({chargeAmount}) does not match the sum of PayItem amount ({payAmount}). This is usually a hint for an implementation issue. Please see https://docs.fiskaltrust.cloud/docs/poscreators/middleware-doc for more details.";
                 logger.LogWarning(_differentPayChargeAmount);
             }
         }
+
+        public static bool IsPositionCancellation(long payOrChargeCase) => (payOrChargeCase & 0x0000_0000_0020_0000) > 0x0000;
+
     }
 }
