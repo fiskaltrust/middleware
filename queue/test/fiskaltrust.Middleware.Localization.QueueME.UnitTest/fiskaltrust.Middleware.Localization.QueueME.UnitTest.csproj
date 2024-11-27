@@ -19,4 +19,8 @@
       <ProjectReference Include="..\..\src\fiskaltrust.Middleware.Storage.InMemory\fiskaltrust.Middleware.Storage.InMemory.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <PackageReference Update="fiskaltrust.storage" Version="1.3.66" />
+    </ItemGroup>
+
 </Project>
