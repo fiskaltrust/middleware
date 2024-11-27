@@ -85,7 +85,8 @@ namespace fiskaltrust.Middleware.Storage.SQLite.IntegrationTest
                 ftQueueTimeout = 5,
                 ftQueueMoment = DateTime.Now,
                 cbReceiptMoment = DateTime.Now,
-                TimeStamp = DateTime.Now.Ticks
+                TimeStamp = DateTime.Now.Ticks,
+                ProcessingVersion = "1.0.0"
             });
             File.Exists("waldb.sqlite-wal").Should().BeTrue();
         }
@@ -126,7 +127,8 @@ namespace fiskaltrust.Middleware.Storage.SQLite.IntegrationTest
                 ftQueueTimeout = 5,
                 ftQueueMoment = DateTime.Now,
                 cbReceiptMoment = DateTime.Now,
-                TimeStamp = DateTime.Now.Ticks
+                TimeStamp = DateTime.Now.Ticks,
+                ProcessingVersion = "1.0"
             });
             File.Exists("walOffdb.sqlite-wal").Should().BeFalse();
 

@@ -162,6 +162,7 @@ namespace fiskaltrust.Middleware.Storage.EF
             modelBuilder.Entity<ftQueueItem>().Property(x => x.cbReceiptReference).HasMaxLength(450);
             modelBuilder.Entity<ftQueueItem>().HasIndex(x => x.cbReceiptReference);
             modelBuilder.Entity<ftQueueItem>().HasIndex(x => x.TimeStamp);
+            modelBuilder.Entity<ftQueueItem>().HasIndex(x => x.ProcessingVersion);
 
             modelBuilder.Entity<ftReceiptJournal>().ToTable(nameof(ftReceiptJournal));
             modelBuilder.Entity<ftReceiptJournal>().HasKey(x => x.ftReceiptJournalId, x => x.IsClustered(false));
