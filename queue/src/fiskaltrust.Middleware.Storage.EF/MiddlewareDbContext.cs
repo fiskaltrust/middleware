@@ -6,7 +6,7 @@ using fiskaltrust.Middleware.Contracts.Models.FR;
 using fiskaltrust.Middleware.Contracts.Models.Transactions;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
-using ftJournalFRCopyPayload = fiskaltrust.storage.V0.ftJournalFRCopyPayload;
+using ftJournalFRCopyPayload = fiskaltrust.Middleware.Contracts.Models.FR.ftJournalFRCopyPayload;
 
 namespace fiskaltrust.Middleware.Storage.EF
 {
@@ -163,7 +163,6 @@ namespace fiskaltrust.Middleware.Storage.EF
             modelBuilder.Entity<ftQueueItem>().Property(x => x.cbReceiptReference).HasMaxLength(450);
             modelBuilder.Entity<ftQueueItem>().HasIndex(x => x.cbReceiptReference);
             modelBuilder.Entity<ftQueueItem>().HasIndex(x => x.TimeStamp);
-            modelBuilder.Entity<ftQueueItem>().HasIndex(x => x.ProcessingVersion);
 
             modelBuilder.Entity<ftReceiptJournal>().ToTable(nameof(ftReceiptJournal));
             modelBuilder.Entity<ftReceiptJournal>().HasKey(x => x.ftReceiptJournalId, x => x.IsClustered(false));
