@@ -21,4 +21,8 @@
         <ProjectReference Include="..\fiskaltrust.Middleware.Storage.Base\fiskaltrust.Middleware.Storage.Base.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <PackageReference Update="fiskaltrust.storage" Version="1.3.66" />
+    </ItemGroup>
+
 </Project>
