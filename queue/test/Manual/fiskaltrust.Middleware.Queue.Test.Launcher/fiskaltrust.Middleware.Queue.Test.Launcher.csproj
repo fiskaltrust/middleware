@@ -53,6 +53,7 @@
 
   <ItemGroup>
     <PackageReference Update="fiskaltrust.interface" Version="1.3.55-rc2" />
+    <PackageReference Update="fiskaltrust.storage" Version="1.3.66" />
   </ItemGroup>
 
 </Project>
