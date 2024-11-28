@@ -27,7 +27,11 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
 
         public const string TABLE_NAME = "QueueItem";
 
-        protected override void EntityUpdated(ftQueueItem entity) => entity.TimeStamp = DateTime.UtcNow.Ticks;
+        protected override void EntityUpdated(ftQueueItem entity)
+        {
+            entity.TimeStamp = DateTime.UtcNow.Ticks;
+            entity.ProcessingVersion ??= "0.0.0"; 
+        }
 
         protected override Guid GetIdForEntity(ftQueueItem entity) => entity.ftQueueItemId;
 
@@ -55,6 +59,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
                 { nameof(ftQueueItem.ftQueueRow), src.ftQueueRow },
                 { nameof(ftQueueItem.ftQueueId), src.ftQueueId },
                 { nameof(ftQueueItem.TimeStamp), src.TimeStamp },
+                { nameof(ftQueueItem.ProcessingVersion), src.ProcessingVersion },
             };
 
             entity.SetOversized(nameof(ftQueueItem.request), src.request);
