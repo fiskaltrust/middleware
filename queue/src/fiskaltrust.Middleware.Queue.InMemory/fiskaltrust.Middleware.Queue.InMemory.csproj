@@ -37,10 +37,6 @@
         <ProjectReference Include="..\fiskaltrust.Middleware.Storage.InMemory\fiskaltrust.Middleware.Storage.InMemory.csproj" PrivateAssets="all" />
     </ItemGroup>
 
-    <ItemGroup>
-      <PackageReference Update="fiskaltrust.storage" Version="1.3.66" />
-    </ItemGroup>
-
     <Target DependsOnTargets="ResolveReferences" Name="CopyProjectReferencesToPackage">
         <ItemGroup>
             <BuildOutputInPackage Include="@(ReferenceCopyLocalPaths-&gt;WithMetadataValue('ReferenceSourceTarget', 'ProjectReference'))" />
