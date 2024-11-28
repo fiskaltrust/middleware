@@ -542,7 +542,7 @@ namespace fiskaltrust.Middleware.Storage.AcceptanceTest
             {
                 entry.TimeStamp = DateTime.UtcNow.Ticks;
                 entry.ftQueueRow = QueueRow++;
-                await Task.Delay(1);
+                await Task.Delay(2);
             }
         }
     }
