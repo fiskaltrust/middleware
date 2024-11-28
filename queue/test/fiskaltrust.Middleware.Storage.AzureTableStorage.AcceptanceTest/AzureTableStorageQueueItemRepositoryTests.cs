@@ -42,6 +42,11 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.AcceptanceTest
         public override async Task InsertOrUpdateAsync_ShouldUpdateEntry_IfEntryAlreadyExists()
         {
             var entries = StorageTestFixtureProvider.GetFixture().CreateMany<ftQueueItem>(10).ToList();
+            foreach (var entry in entries)
+            {
+                entry.ProcessingVersion = "0.0.0"; 
+            }
+            
             var sut = await CreateRepository(entries);
             var count = (await sut.GetAsync()).Count();
             var entryToUpdate = await sut.GetAsync(entries[0].ftQueueItemId);
