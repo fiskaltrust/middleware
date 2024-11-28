@@ -55,7 +55,6 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
                 { nameof(ftQueueItem.ftQueueRow), src.ftQueueRow },
                 { nameof(ftQueueItem.ftQueueId), src.ftQueueId },
                 { nameof(ftQueueItem.TimeStamp), src.TimeStamp },
-                { nameof(ftQueueItem.ProcessingVersion), src.ProcessingVersion } 
             };
 
             entity.SetOversized(nameof(ftQueueItem.request), src.request);
@@ -89,8 +88,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
                 ftQueueId = src.GetGuid(nameof(ftQueueItem.ftQueueId)).GetValueOrDefault(),
                 TimeStamp = src.GetInt64(nameof(ftQueueItem.TimeStamp)).GetValueOrDefault(),
                 request = src.GetOversized(nameof(ftQueueItem.request)),
-                response = src.GetOversized(nameof(ftQueueItem.response)),
-                ProcessingVersion = src.GetString(nameof(ftQueueItem.ProcessingVersion)) 
+                response = src.GetOversized(nameof(ftQueueItem.response))
             };
         }
 
@@ -105,7 +103,6 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
         public async Task InsertOrUpdateAsync(ftQueueItem storageEntity)
         {
             EntityUpdated(storageEntity);
-            storageEntity.ProcessingVersion = "1.0.0";
             var entity = MapToAzureEntity(storageEntity);
             await _tableClient.UpsertEntityAsync(entity, TableUpdateMode.Replace);
             await _receiptReferenceIndexRepository.InsertOrUpdateAsync(new ReceiptReferenceIndex { cbReceiptReference = storageEntity.cbReceiptReference, ftQueueItemId = storageEntity.ftQueueItemId });
