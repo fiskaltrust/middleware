@@ -12,7 +12,6 @@ using fiskaltrust.Middleware.Storage.ES;
 using fiskaltrust.storage.V0.MasterData;
 using Microsoft.Extensions.Logging;
 
-
 namespace fiskaltrust.Middleware.Localization.QueueES;
 
 
@@ -32,7 +31,7 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
         var masterDataService = new MasterDataService(configuration, storageProvider);
         storageProvider.Initialized.Wait();
         var masterData = masterDataService.GetCurrentDataAsync().Result;  // put this in an async scu init process
-        var esSSCD = new InMemorySCU(signaturCreationUnitES, masterData, new InMemorySCUConfiguration());
+        var esSSCD = new InMemorySCU(signaturCreationUnitES, masterData, new InMemorySCUConfiguration(), storageProvider.GetMiddlewareQueueItemRepository());
         var signProcessorES = new ReceiptProcessor(
             loggerFactory.CreateLogger<ReceiptProcessor>(),
             new LifecycleCommandProcessorES(
@@ -45,7 +44,9 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
                 signaturCreationUnitES,
                 queueStorageProvider
             ),
-            new DailyOperationsCommandProcessorES(),
+            new DailyOperationsCommandProcessorES(
+                esSSCD,
+                queueStorageProvider),
             new InvoiceCommandProcessorES(),
             new ProtocolCommandProcessorES()
         );

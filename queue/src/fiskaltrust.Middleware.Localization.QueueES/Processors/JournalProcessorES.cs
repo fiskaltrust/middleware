@@ -21,7 +21,7 @@ public class JournalProcessorES : IJournalProcessor
     {
         _receiptJournalRepository = receiptJournalRepository;
         _queueItemRepository = queueItemRepository;
-        _veriFactuMapping = new VeriFactuMapping(masterData);
+        _veriFactuMapping = new VeriFactuMapping(masterData, queueItemRepository);
     }
 
     public async IAsyncEnumerable<JournalResponse> ProcessAsync(JournalRequest request)

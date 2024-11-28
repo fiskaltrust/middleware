@@ -5,6 +5,8 @@ using System.Text.Json;
 using System.Web;
 using System.Xml.Serialization;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
+using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Localization.QueueES.Helpers;
 using fiskaltrust.Middleware.Localization.QueueES.Interface;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
@@ -17,10 +19,12 @@ namespace fiskaltrust.Middleware.Localization.QueueES.Exports;
 public class VeriFactuMapping
 {
     private readonly MasterDataConfiguration _masterData;
+    private readonly IMiddlewareQueueItemRepository _queueItemRepository;
 
-    public VeriFactuMapping(MasterDataConfiguration masterData)
+    public VeriFactuMapping(MasterDataConfiguration masterData, IMiddlewareQueueItemRepository queueItemRepository)
     {
         _masterData = masterData;
+        _queueItemRepository = queueItemRepository;
     }
 
     public async Task<RegFactuSistemaFacturacion> CreateRegFactuSistemaFacturacionAsync(IAsyncEnumerable<ftQueueItem> queueItems)
@@ -50,7 +54,14 @@ public class VeriFactuMapping
                 registroFactura.Add(
                     new RegistroFacturaType
                     {
-                        Item = CreateRegistroFacturacionAnulacion(receiptRequest, receiptResponse)
+                        Item = await CreateRegistroFacturacionAnulacion(receiptRequest, receiptResponse, previousReceiptRequest is null || previousReceiptResponse is null ? null : (new IDFacturaExpedidaType
+                        {
+                            IDEmisorFactura = previousReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.IDEmisorFactura).Data,
+                            NumSerieFactura = previousReceiptResponse.ftReceiptIdentification,
+                            FechaExpedicionFactura = previousReceiptRequest.cbReceiptMoment.ToString("dd-MM-yyy")
+                        },
+                            previousReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.Huella).Data
+                        ))
                     });
             }
             else
@@ -80,9 +91,73 @@ public class VeriFactuMapping
         };
     }
 
-    public RegistroFacturacionAnulacionType CreateRegistroFacturacionAnulacion(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
+    public async Task<RegistroFacturacionAnulacionType> CreateRegistroFacturacionAnulacion(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, (IDFacturaExpedidaType id, string hash)? previous)
     {
-        throw new NotImplementedException();
+        var previousQueueItems = _queueItemRepository.GetByReceiptReferenceAsync(receiptRequest.cbPreviousReceiptReference);
+        if (await previousQueueItems.IsEmptyAsync())
+        {
+            throw new Exception($"Receipt with cbReceiptReference {receiptRequest.cbPreviousReceiptReference} not found.");
+        }
+
+        var voidedQueueItem = await previousQueueItems.SingleOrDefaultAsync() ?? throw new Exception($"Multiple receipts with cbReceiptReference {receiptRequest.cbPreviousReceiptReference} found.");
+
+        var voidedReceiptRequest = JsonSerializer.Deserialize<ReceiptRequest>(voidedQueueItem.request)!;
+        var voidedReceiptResponse = JsonSerializer.Deserialize<ReceiptResponse>(voidedQueueItem.response)!;
+
+        var registroFacturacionAnulacion = new RegistroFacturacionAnulacionType
+        {
+            IDVersion = VersionType.Item10,
+            IDFactura = new IDFacturaExpedidaBajaType
+            {
+
+                IDEmisorFacturaAnulada = voidedReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.IDEmisorFactura).Data,
+                NumSerieFacturaAnulada = voidedReceiptResponse.ftReceiptIdentification.Split('#')[1],
+                FechaExpedicionFacturaAnulada = voidedReceiptRequest.cbReceiptMoment.ToString("dd-MM-yyy")
+            },
+            Encadenamiento = new RegistroFacturacionAnulacionTypeEncadenamiento
+            {
+                Item = receiptRequest.IsInitialOperation()
+                    ? PrimerRegistroCadenaType.S
+                    : new EncadenamientoFacturaAnteriorType
+                    {
+                        IDEmisorFactura = previous!.Value.id.IDEmisorFactura,
+                        NumSerieFactura = previous!.Value.id.NumSerieFactura,
+                        FechaExpedicionFactura = previous!.Value.id.FechaExpedicionFactura,
+                        Huella = previous!.Value.hash
+                    }
+            },
+            // Which PosSystem from the list should we take? In DE we just take the first one...
+            // Is this fiskaltrust or the dealer/creator
+            SistemaInformatico = new SistemaInformaticoType
+            {
+                NombreRazon = "fiskaltrust", // add real name here... and maybe get that from the config
+                // VatId of producing company. We don't have that right now.
+                Item = "NIF-fiskaltrust",
+                IdSistemaInformatico = "fiskaltrust.Middleware.Queue.AzureTableStorage", // or add cloudcashbox etc. like the launcher type? would be annoying ^^
+                Version = "", // version
+                NumeroInstalacion = receiptResponse.ftCashBoxIdentification,
+            },
+            FechaHoraHusoGenRegistro = receiptResponse.ftReceiptMoment,
+            TipoHuella = TipoHuellaType.Item01,
+        };
+
+        registroFacturacionAnulacion.Huella = registroFacturacionAnulacion.GetHuella();
+
+        using var rsa = RSA.Create();
+
+        var request = new CertificateRequest("CN=SelfSignedCert", rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        request.CertificateExtensions.Add(
+            new X509BasicConstraintsExtension(false, false, 0, true));
+        request.CertificateExtensions.Add(
+            new X509EnhancedKeyUsageExtension(
+                new OidCollection { new Oid("1.3.6.1.5.5.7.3.1") }, true));
+
+        var notBefore = DateTimeOffset.UtcNow;
+        var notAfter = notBefore.AddYears(1);
+
+        var cert = request.CreateSelfSigned(notBefore, notAfter);
+
+        return XmlHelpers.Deserialize<RegistroFacturacionAnulacionType>(XmlHelpers.SignXmlContentWithXades(XmlHelpers.GetXMLIncludingNamespace(registroFacturacionAnulacion, "sf", "RegistroFacturacionAlta"), cert))!;
     }
 
     public RegistroFacturacionAltaType CreateRegistroFacturacionAlta(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, (IDFacturaExpedidaType id, string hash)? previous)
@@ -109,14 +184,14 @@ public class VeriFactuMapping
             ImporteRectificacion = new DesgloseRectificacionType
             {
                 // Do we need rounding for all the the decimals or should we fail if it's not in the range?
-                BaseRectificada = receiptRequest.cbChargeItems.Sum(chargeItem => chargeItem.Amount - chargeItem.GetVATAmount()).ToString("0.00"), // helper for tostring
+                BaseRectificada = receiptRequest.cbChargeItems.Sum(chargeItem => chargeItem.Amount - chargeItem.GetVATAmount()).ToVeriFactuNumber(), // helper for tostring
 
-                CuotaRectificada = receiptRequest.cbChargeItems.Sum(chargeItem => chargeItem.GetVATAmount()).ToString("0.00"),
-                // CuotaRecargoRectificado = receiptRequest.cbChargeItems.Sum(chargeItem => chargeItem.GetVATAmount()).ToString("0.00")
+                CuotaRectificada = receiptRequest.cbChargeItems.Sum(chargeItem => chargeItem.GetVATAmount()).ToVeriFactuNumber(),
+                // CuotaRecargoRectificado = receiptRequest.cbChargeItems.Sum(chargeItem => chargeItem.GetVATAmount()).ToVeriFactuNumber()
             },
             Desglose = receiptRequest.cbChargeItems.Select(chargeItem => new DetalleType
             {
-                BaseImponibleOimporteNoSujeto = (chargeItem.Amount - chargeItem.GetVATAmount()).ToString("0.00"),
+                BaseImponibleOimporteNoSujeto = (chargeItem.Amount - chargeItem.GetVATAmount()).ToVeriFactuNumber(),
                 Item = chargeItem.ftChargeItemCase switch
                 {
                     // figure out which ones map to which ones
@@ -125,8 +200,8 @@ public class VeriFactuMapping
                     // _ => OperacionExentaType
                 }
             }).ToArray(),
-            CuotaTotal = receiptRequest.cbChargeItems.Sum(chargeItem => chargeItem.GetVATAmount()).ToString("0.00"),
-            ImporteTotal = (receiptRequest.cbReceiptAmount ?? receiptRequest.cbChargeItems.Sum(chargeItem => chargeItem.Amount)).ToString("0.00"),
+            CuotaTotal = receiptRequest.cbChargeItems.Sum(chargeItem => chargeItem.GetVATAmount()).ToVeriFactuNumber(),
+            ImporteTotal = (receiptRequest.cbReceiptAmount ?? receiptRequest.cbChargeItems.Sum(chargeItem => chargeItem.Amount)).ToVeriFactuNumber(),
             Encadenamiento = new RegistroFacturacionAltaTypeEncadenamiento
             {
                 Item = receiptRequest.IsInitialOperation()
@@ -158,24 +233,18 @@ public class VeriFactuMapping
 
         using var rsa = RSA.Create();
 
-        // Create a certificate request with the RSA key pair
         var request = new CertificateRequest("CN=SelfSignedCert", rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
 
-        // Set additional properties of the certificate
         request.CertificateExtensions.Add(
             new X509BasicConstraintsExtension(false, false, 0, true));
-
         request.CertificateExtensions.Add(
             new X509EnhancedKeyUsageExtension(
                 new OidCollection { new Oid("1.3.6.1.5.5.7.3.1") }, true));
 
-        // Set the validity period of the certificate
         var notBefore = DateTimeOffset.UtcNow;
         var notAfter = notBefore.AddYears(1);
 
-        // Create a self-signed certificate from the certificate request
         var cert = request.CreateSelfSigned(notBefore, notAfter);
-
 
         return XmlHelpers.Deserialize<RegistroFacturacionAltaType>(XmlHelpers.SignXmlContentWithXades(XmlHelpers.GetXMLIncludingNamespace(registroFacturacionAlta, "sf", "RegistroFacturacionAlta"), cert))!;
     }
