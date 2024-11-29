@@ -176,10 +176,10 @@ public class VeriFactuMapping
             // Not sure how this needs to be formated. Maybe we'll need some extra fields in the master data?
             // Should this be the AccountName, or OutletName or sth from the Agencies?
             NombreRazonEmisor = _masterData.Account.AccountName,
-            TipoFactura = receiptRequest.ftReceiptCase switch
+            TipoFactura = (receiptRequest.ftReceiptCase & 0xF000) switch
             {
-                // figure out which ones map to which ones
-                _ => ClaveTipoFacturaType.F1,
+                0 => ClaveTipoFacturaType.F2, // QUESTION: is simplified invoice correct? 
+                _ => throw new Exception($"Invalid receipt case {receiptRequest.ftReceiptCase}")
             },
             ImporteRectificacion = new DesgloseRectificacionType
             {
@@ -192,12 +192,26 @@ public class VeriFactuMapping
             Desglose = receiptRequest.cbChargeItems.Select(chargeItem => new DetalleType
             {
                 BaseImponibleOimporteNoSujeto = (chargeItem.Amount - chargeItem.GetVATAmount()).ToVeriFactuNumber(),
-                Item = chargeItem.ftChargeItemCase switch
+                Item = (chargeItem.ftChargeItemCase & 0xFF00) switch
                 {
-                    // figure out which ones map to which ones
+                    2 => (chargeItem.ftChargeItemCase & 0x0F00) switch
+                    {
+                        0 => CalificacionOperacionType.N1, // TODO: Document
+                        1 => CalificacionOperacionType.N2, // TODO: Document
+                        _ => throw new Exception($"Invalid charge item case {chargeItem.ftChargeItemCase}")
+                    },
+                    3 => (chargeItem.ftChargeItemCase & 0x0F00) switch
+                    {
+                        0 => OperacionExentaType.E1, // TODO: Document
+                        1 => OperacionExentaType.E2, // TODO: Document
+                        2 => OperacionExentaType.E3, // TODO: Document
+                        3 => OperacionExentaType.E4, // TODO: Document
+                        4 => OperacionExentaType.E5, // TODO: Document
+                        5 => OperacionExentaType.E6, // TODO: Document
+                        _ => throw new Exception($"Invalid charge item case {chargeItem.ftChargeItemCase}")
+                    },
+                    5 => CalificacionOperacionType.S2,
                     _ => CalificacionOperacionType.S1
-                    // _ => CalificacionOperacionType
-                    // _ => OperacionExentaType
                 }
             }).ToArray(),
             CuotaTotal = receiptRequest.cbChargeItems.Sum(chargeItem => chargeItem.GetVATAmount()).ToVeriFactuNumber(),
