@@ -93,6 +93,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
                 ftQueueId = src.GetGuid(nameof(ftQueueItem.ftQueueId)).GetValueOrDefault(),
                 TimeStamp = src.GetInt64(nameof(ftQueueItem.TimeStamp)).GetValueOrDefault(),
                 request = src.GetOversized(nameof(ftQueueItem.request)),
+                ProcessingVersion = src.GetString(nameof(ftQueueItem.ProcessingVersion)),
                 response = src.GetOversized(nameof(ftQueueItem.response))
             };
         }
