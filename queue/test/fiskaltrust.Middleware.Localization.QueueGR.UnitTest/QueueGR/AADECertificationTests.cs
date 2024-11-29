@@ -5,7 +5,6 @@ using System.Text.Json;
 using System.Xml.Serialization;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE;
-using fiskaltrust.Middleware.Localization.QueueGR.Interface;
 using fiskaltrust.Middleware.Localization.v2.Configuration;
 using FluentAssertions;
 using FluentAssertions.Execution;
@@ -84,6 +83,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
                 BaseAddress = new Uri("https://mydataapidev.aade.gr/")
             };
             httpClient.DefaultRequestHeaders.Add("aade-user-id", "user11111111");
+            httpClient.DefaultRequestHeaders.Add("ocp-apim-subscription-key", "41291863a36d552c4d7fc8195d427dd3");
             httpClient.DefaultRequestHeaders.Add("ocp-apim-subscription-key", "41291863a36d552c4d7fc8195d427dd3");
 
             var response = await httpClient.PostAsync("/myDataProvider/SendInvoices", new StringContent(xml, Encoding.UTF8, "application/xml"));

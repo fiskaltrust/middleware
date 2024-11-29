@@ -32,9 +32,11 @@ public static class AADECertificationExamplesCard
             [
                 new PayItem
                 {
+                    Position = 1,
+                    Quantity = 1,
                     Amount = 100m,
-                    Description = "Cash",
-                    ftPayItemCase = 0x4752_2000_0000_0001
+                    Description = "Κάρτα",
+                    ftPayItemCase = 0x4752_2000_0000_0004
                 },
                 new PayItem
                 {
@@ -66,7 +68,7 @@ public static class AADECertificationExamplesCard
                 new ChargeItem
                 {
                     Position = 1,
-                    Amount = 100,
+                    Amount = 150,
                     VATRate = 0,
                     VATAmount = 0,
                     ftChargeItemCase = 0x4752_2000_0000_0067,
@@ -78,9 +80,11 @@ public static class AADECertificationExamplesCard
             [
                 new PayItem
                 {
-                    Amount = 100m,
-                    Description = "Cash",
-                    ftPayItemCase = 0x4752_2000_0000_0001
+                    Position = 1,
+                    Quantity = 1,
+                    Amount = 150,
+                    Description = "Κάρτα",
+                    ftPayItemCase = 0x4752_2000_0000_0004
                 },
                 new PayItem
                 {
@@ -130,9 +134,11 @@ public static class AADECertificationExamplesCard
             [
                 new PayItem
                 {
+                    Position = 1,
+                    Quantity = 1,
                     Amount = 100m,
-                    Description = "Cash",
-                    ftPayItemCase = 0x4752_2000_0000_0001
+                    Description = "Κάρτα",
+                    ftPayItemCase = 0x4752_2000_0000_0004
                 },
                 new PayItem
                 {
@@ -177,9 +183,11 @@ public static class AADECertificationExamplesCard
             [
                 new PayItem
                 {
+                    Position = 1,
+                    Quantity = 1,
                     Amount = 100m,
-                    Description = "Cash",
-                    ftPayItemCase = 0x4752_2000_0000_0001
+                    Description = "Κάρτα",
+                    ftPayItemCase = 0x4752_2000_0000_0004
                 },
                 new PayItem
                 {
@@ -225,9 +233,11 @@ public static class AADECertificationExamplesCard
             [
                 new PayItem
                 {
+                    Position = 1,
+                    Quantity = 1,
                     Amount = 100m,
-                    Description = "Cash",
-                    ftPayItemCase = 0x4752_2000_0000_0001
+                    Description = "Κάρτα",
+                    ftPayItemCase = 0x4752_2000_0000_0004
                 },
                 new PayItem
                 {
@@ -273,9 +283,11 @@ public static class AADECertificationExamplesCard
             [
                 new PayItem
                 {
+                    Position = 1,
+                    Quantity = 1,
                     Amount = 100m,
-                    Description = "Cash",
-                    ftPayItemCase = 0x4752_2000_0000_0001
+                    Description = "Κάρτα",
+                    ftPayItemCase = 0x4752_2000_0000_0004
                 },
                 new PayItem
                 {
@@ -308,7 +320,7 @@ public static class AADECertificationExamplesCard
                 new ChargeItem
                 {
                     Position = 1,
-                    Amount = 100,
+                    Amount = 150,
                     VATRate = 0,
                     VATAmount = 0,
                     ftChargeItemCase = 0x4752_2000_0000_6027,
@@ -320,10 +332,11 @@ public static class AADECertificationExamplesCard
             [
                 new PayItem
                 {
-                    Amount = 100m,
+                    Position = 1,   
                     Quantity = 1,
-                    Description = "Gutschrift",
-                    ftPayItemCase = 0x4752_2000_0000_0001
+                    Amount = 150,
+                    Description = "Κάρτα",
+                    ftPayItemCase = 0x4752_2000_0000_0004
                 },
                 new PayItem
                 {
@@ -356,7 +369,7 @@ public static class AADECertificationExamplesCard
                 new ChargeItem
                 {
                     Position = 1,
-                    Amount = 100,
+                    Amount = 150,
                     VATRate = 0,
                     VATAmount = 0,
                     ftChargeItemCase = 0x4752_2000_0000_0018,
@@ -368,10 +381,11 @@ public static class AADECertificationExamplesCard
             [
                 new PayItem
                 {
-                    Amount = 100,
+                    Position = 1,
                     Quantity = 1,
-                    Description = "Cash",
-                    ftPayItemCase = 0x4752_2000_0000_0001
+                    Amount = 150,
+                    Description = "Κάρτα",
+                    ftPayItemCase = 0x4752_2000_0000_0004
                 },
                 new PayItem
                 {
@@ -400,7 +414,7 @@ public static class AADECertificationExamplesCard
                 new ChargeItem
                 {
                     Position = 1,
-                    Amount = -100,
+                    Amount = -150,
                     VATRate = 0,
                     VATAmount = 0,
                     ftChargeItemCase = 0x4752_2000_0002_0018,
@@ -412,10 +426,11 @@ public static class AADECertificationExamplesCard
             [
                 new PayItem
                 {
-                    Amount = -100,
+                    Position = 1,
                     Quantity = 1,
-                    Description = "Cash",
-                    ftPayItemCase = 0x4752_2000_0002_0001
+                    Amount = -150,
+                    Description = "Κάρτα",
+                    ftPayItemCase = 0x4752_2000_0000_0004
                 },
                 new PayItem
                 {
@@ -456,9 +471,11 @@ public static class AADECertificationExamplesCard
             [
                 new PayItem
                 {
+                    Position = 1,
+                    Quantity = 1,
                     Amount = 100m,
-                    Description = "Cash",
-                    ftPayItemCase = 0x4752_2000_0000_0001
+                    Description = "Κάρτα",
+                    ftPayItemCase = 0x4752_2000_0000_0004
                 },
                 new PayItem
                 {
@@ -499,52 +516,11 @@ public static class AADECertificationExamplesCard
             [
                 new PayItem
                 {
-                    Amount = 100m,
-                    Description = "Cash",
-                    ftPayItemCase = 0x4752_2000_0000_0001
-                },
-                new PayItem
-                {
-                    Description = "Φιλοδώρημα",
-                    ftPayItemCase = 0x4752_2000_0040_0004,
-                    Amount = 0
-                }
-            ],
-
-            ftPosSystemId = Guid.NewGuid(),
-            ftReceiptCase = 0x4752_2000_0000_0001
-        };
-    }
-
-    public static ReceiptRequest A2_11_11p3()
-    {
-        return new ReceiptRequest
-        {
-            cbTerminalID = "1",
-            Currency = Currency.EUR,
-            cbReceiptAmount = 99,
-            cbReceiptMoment = DateTime.UtcNow,
-            cbReceiptReference = Guid.NewGuid().ToString(),
-            cbChargeItems =
-            [
-                new ChargeItem
-                {
                     Position = 1,
-                    Amount = 99,
-                    VATRate = 24,
-                    VATAmount = decimal.Round(100 / (100M + 24) * 24, 2, MidpointRounding.ToEven),
-                    ftChargeItemCase = 0x4752_2000_0000_0013,
                     Quantity = 1,
-                    Description = "Line item 1"
-                }
-            ],
-            cbPayItems =
-            [
-                new PayItem
-                {
-                    Amount = 99,
-                    Description = "Cash",
-                    ftPayItemCase = 0x4752_2000_0000_1001
+                    Amount = 100m,
+                    Description = "Κάρτα",
+                    ftPayItemCase = 0x4752_2000_0000_0004
                 },
                 new PayItem
                 {
@@ -585,9 +561,11 @@ public static class AADECertificationExamplesCard
             [
                 new PayItem
                 {
+                    Position = 1,
+                    Quantity = 1,
                     Amount = 100m,
-                    Description = "Cash",
-                    ftPayItemCase = 0x4752_2000_0000_0001
+                    Description = "Κάρτα",
+                    ftPayItemCase = 0x4752_2000_0000_0004
                 },
                 new PayItem
                 {
@@ -628,9 +606,11 @@ public static class AADECertificationExamplesCard
             [
                 new PayItem
                 {
+                    Position = 1,
+                    Quantity = 1,
                     Amount = 100m,
-                    Description = "Cash",
-                    ftPayItemCase = 0x4752_2000_0000_0001
+                    Description = "Κάρτα",
+                    ftPayItemCase = 0x4752_2000_0000_0004
                 },
                 new PayItem
                 {

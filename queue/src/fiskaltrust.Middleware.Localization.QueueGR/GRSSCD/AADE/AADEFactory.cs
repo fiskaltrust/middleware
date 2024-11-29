@@ -93,25 +93,45 @@ public class AADEFactory
             classificationCategory = x.Key,
         }).ToList());
 
-        var expensesClassificationGroups = invoiceDetails.Where(x => x.expensesClassification != null).SelectMany(x => x.expensesClassification).Where(x => x.classificationTypeSpecified).GroupBy(x => (x.classificationCategory, x.classificationType)).Select(x => new ExpensesClassificationType
+        var expensesClassificationGroups = invoiceDetails.Where(x => x.expensesClassification != null).SelectMany(x => x.expensesClassification).Where(x => x.classificationTypeSpecified & x.classificationCategorySpecified).GroupBy(x => (x.classificationCategory, x.classificationType)).Select(x => new ExpensesClassificationType
         {
             amount = x.Sum(y => y.amount),
             classificationCategory = x.Key.classificationCategory,
+            classificationCategorySpecified = true,
             classificationType = x.Key.classificationType,
             classificationTypeSpecified = true
         }).ToList();
-        expensesClassificationGroups.AddRange(invoiceDetails.Where(x => x.expensesClassification != null).SelectMany(x => x.expensesClassification).Where(x => !x.classificationTypeSpecified).GroupBy(x => x.classificationCategory).Select(x => new ExpensesClassificationType
+        expensesClassificationGroups.AddRange(invoiceDetails.Where(x => x.expensesClassification != null).SelectMany(x => x.expensesClassification).Where(x => !x.classificationTypeSpecified && x.classificationCategorySpecified).GroupBy(x => x.classificationCategory).Select(x => new ExpensesClassificationType
         {
             amount = x.Sum(y => y.amount),
             classificationCategorySpecified = true,
             classificationCategory = x.Key,
         }).ToList());
+        expensesClassificationGroups.AddRange(invoiceDetails.Where(x => x.expensesClassification != null).SelectMany(x => x.expensesClassification).Where(x => x.classificationTypeSpecified && !x.classificationCategorySpecified).GroupBy(x => x.classificationType).Select(x => new ExpensesClassificationType
+        {
+            amount = x.Sum(y => y.amount),
+            classificationTypeSpecified = true,
+            classificationType = x.Key,
+        }).ToList());
 
         var identification = long.Parse(receiptResponse.ftReceiptIdentification.Replace("ft", "").Split("#")[0], System.Globalization.NumberStyles.HexNumber);
         var paymentMethods = GetPayments(receiptRequest);
+        var issuer = CreateIssuer();
+        //if (receiptRequest.IsSelfPricingOperation())
+        //{
+
+        //    var customer = receiptRequest.GetCustomerOrNull();
+        //    issuer = new PartyType
+        //    {
+        //        vatNumber = customer?.CustomerVATId,
+        //        country = CountryType.GR,
+        //        branch = 0,
+        //    };
+        //}
+
         var inv = new AadeBookInvoiceType
         {
-            issuer = CreateIssuer(),
+            issuer = issuer,
             paymentMethods = [.. paymentMethods],
             invoiceHeader = new InvoiceHeaderType
             {
@@ -171,6 +191,55 @@ public class AADEFactory
                 invoiceRow.otherTaxesPercentCategorySpecified = true;
                 invoiceRow.incomeClassification = [];
                 invoiceRow.vatCategory = 8;
+            }
+            else if (receiptRequest.IsSelfPricingOperation())
+            {
+                if (invoiceRow.vatCategory == MyDataVatCategory.ExcludingVat)
+                {
+                    invoiceRow.vatExemptionCategorySpecified = true;
+                    invoiceRow.vatExemptionCategory = 1;
+                }
+
+                if (receiptRequest.cbChargeItems.Any(x => (x.ftChargeItemCase & 0xF0) == 0x90))
+                {
+                    if (receiptRequest.cbChargeItems.Any(x => (x.ftChargeItemCase & 0xF0) == 0x90) && (x.ftChargeItemCase & 0xF0) != 0x90)
+                    {
+                        invoiceRow.invoiceDetailType = 2;
+                        invoiceRow.invoiceDetailTypeSpecified = true;
+                        invoiceRow.incomeClassification = [];
+                        invoiceRow.expensesClassification = [
+                           new ExpensesClassificationType {
+                                                        amount = invoiceRow.netValue,
+                                                        classificationCategorySpecified = true,
+        
+                                                        classificationCategory = ExpensesClassificationCategoryType.category2_9
+                                                    }
+                            ];
+                    }
+                    else if ((x.ftChargeItemCase & 0xF0) == 0x90)
+                    {
+                        invoiceRow.invoiceDetailType = 1;
+                        invoiceRow.invoiceDetailTypeSpecified = true;
+                        invoiceRow.expensesClassification = [];
+                    }
+                }
+                else
+                {
+                    invoiceRow.expensesClassification = [
+                        new ExpensesClassificationType {
+                                                amount = invoiceRow.netValue,
+                                                classificationCategorySpecified = true,
+                                                classificationType = ExpensesClassificationTypeClassificationType.E3_102_001,
+                                                classificationTypeSpecified = true,
+                                                classificationCategory = ExpensesClassificationCategoryType.category2_1
+                                            },
+                        new ExpensesClassificationType {
+                                                amount = invoiceRow.netValue,
+                                                classificationType = ExpensesClassificationTypeClassificationType.VAT_361,
+                                                classificationTypeSpecified = true
+                                            },
+                    ];
+                }
             }
             else if (receiptRequest.GetCasePart() == 0x0003)
             {
@@ -258,9 +327,9 @@ public class AADEFactory
                 inv.transmissionFailure = 1;
             }
             var transmissionFailure1 = receiptResponse.ftSignatures.FirstOrDefault(x => x.Caption == "Transmission Failure_1")?.Data;
-            if(transmissionFailure1 != null)
+            if (transmissionFailure1 != null)
             {
-       
+
             }
 
             var transmissionFailure2 = receiptResponse.ftSignatures.FirstOrDefault(x => x.Caption == "Transmission Failure_2")?.Data;
@@ -327,7 +396,7 @@ public class AADEFactory
         }).ToList();
     }
 
-    private static void AddCounterpart(ReceiptRequest receiptRequest, AadeBookInvoiceType inv)
+    private void AddCounterpart(ReceiptRequest receiptRequest, AadeBookInvoiceType inv)
     {
         if (!receiptRequest.ContainsCustomerInfo())
         {

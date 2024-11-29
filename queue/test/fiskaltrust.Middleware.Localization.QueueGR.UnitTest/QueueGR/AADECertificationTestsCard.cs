@@ -1,7 +1,9 @@
 ﻿using System.Net.Http.Json;
 using System.Runtime.CompilerServices;
+using System.Runtime.Serialization;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Xml.Serialization;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE;
@@ -14,7 +16,26 @@ using Xunit.Abstractions;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
 {
-    public class AADECertificationTestsSelfPricing
+    public class PayResponse
+    {
+        [JsonPropertyName("Protocol")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+        [DataMember(EmitDefaultValue = true, IsRequired = true)]
+        public required string Protocol { get; set; }
+
+        [JsonPropertyName("ftQueueID")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+        [DataMember(EmitDefaultValue = true, IsRequired = true)]
+        public Guid ftQueueId { get; set; }
+
+        [JsonPropertyName("ftPayItems")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+        [DataMember(EmitDefaultValue = true, IsRequired = true)]
+        public required List<PayItem> ftPayItems { get; set; }
+    }
+
+
+    public class AADECertificationTestsCard
     {
         private readonly ITestOutputHelper _output;
         private readonly AADEFactory _aadeFactory;
@@ -57,7 +78,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             return (bootstrapper, cashBoxId);
         }
 
-        public AADECertificationTestsSelfPricing(ITestOutputHelper output)
+        public AADECertificationTestsCard(ITestOutputHelper output)
         {
             _output = output;
             _aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
@@ -131,18 +152,6 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             return marker;
         }
 
-        private async Task ValidateMyData(ReceiptRequest receiptRequest, InvoiceType expectedInvoiceType, [CallerMemberName] string caller = "")
-        {
-            using var scope = new AssertionScope();
-            var invoiceDoc = _aadeFactory.MapToInvoicesDoc(receiptRequest, ExampleResponse);
-            invoiceDoc.invoice[0].invoiceHeader.invoiceType.Should().Be(expectedInvoiceType);
-            invoiceDoc.invoice[0].invoiceSummary.incomeClassification.Should().BeEmpty();
-            var xml = _aadeFactory.GenerateInvoicePayload(invoiceDoc);
-            await SendToMayData(xml);
-            System.Console.WriteLine(caller);
-            await ExecuteMiddleware(receiptRequest, caller);
-        }
-
         private async Task ValidateMyData(ReceiptRequest receiptRequest, InvoiceType expectedInvoiceType, IncomeClassificationCategoryType expectedCategory, [CallerMemberName] string caller = "")
         {
             using var scope = new AssertionScope();
@@ -152,21 +161,20 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             invoiceDoc.invoice[0].invoiceSummary.incomeClassification[0].classificationTypeSpecified.Should().BeFalse();
             var xml = _aadeFactory.GenerateInvoicePayload(invoiceDoc);
             await SendToMayData(xml);
-
-            System.Console.WriteLine(caller);
-            //await ExecuteMiddleware(receiptRequest, caller);
+            await ExecuteMiddleware(receiptRequest, caller);
         }
 
         private async Task ValidateMyData(ReceiptRequest receiptRequest, InvoiceType expectedInvoiceType, IncomeClassificationCategoryType expectedCategory, IncomeClassificationValueType expectedValueType, [CallerMemberName] string caller = "")
         {
+            var payment = await SendPayRequest(receiptRequest.cbPayItems[0]);
+            receiptRequest.cbPayItems[0] = payment!.ftPayItems[0];
             using var scope = new AssertionScope();
             var invoiceDoc = _aadeFactory.MapToInvoicesDoc(receiptRequest, ExampleResponse);
             invoiceDoc.invoice[0].invoiceHeader.invoiceType.Should().Be(expectedInvoiceType);
-            //invoiceDoc.invoice[0].invoiceSummary.incomeClassification[0].classificationCategory.Should().Be(expectedCategory);
-            //invoiceDoc.invoice[0].invoiceSummary.incomeClassification[0].classificationType.Should().Be(expectedValueType);
+            invoiceDoc.invoice[0].invoiceSummary.incomeClassification[0].classificationCategory.Should().Be(expectedCategory);
+            invoiceDoc.invoice[0].invoiceSummary.incomeClassification[0].classificationType.Should().Be(expectedValueType);
             var xml = _aadeFactory.GenerateInvoicePayload(invoiceDoc);
             await SendToMayData(xml);
-            System.Console.WriteLine(caller);
             await ExecuteMiddleware(receiptRequest, caller);
         }
 
@@ -201,6 +209,87 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             return await response.Content.ReadFromJsonAsync<IssueResponse>();
         }
 
+
+        private async Task<PayResponse?> SendRefundRequest(string operationId, PayItem payItem)
+        {
+            var client = new HttpClient();
+            var request = new HttpRequestMessage(HttpMethod.Post, "https://possystem-api-sandbox.fiskaltrust.eu/v2/pay");
+            var cashBoxId = Guid.Parse("f2d672a2-21ea-4825-96d0-972b71e757c6");
+            var accessToken = "BFNLZiBzSu2rUB1Sh2rxE7WrzHST5oZP7xgGsQWeGLZnGCZTmbUbRIquWs+7qUR7ua2TG9R0z4TvygrTHiFRj2I=";
+            request.Headers.Add("x-cashbox-id", cashBoxId.ToString());
+            request.Headers.Add("x-cashbox-accesstoken", accessToken);
+            request.Headers.Add("x-operation-id", Guid.NewGuid().ToString());
+            var content = new StringContent("{\r\n   " +
+                "\"Action\": \"refund\"," +
+                "\"Protocol\": \"viva_eft_pos\"," +
+                "\"cbPayItem\": {" +
+                    $"\"{nameof(PayItem.MoneyBarcode)}\": \"{operationId}\",\r\n        " +
+                    $"\"Position\": {payItem.Position},\r\n        " +
+                    $"\"Quantity\": {payItem.Quantity},\r\n        " +
+                    $"\"Description\": \"{payItem.Description}\",\r\n        " +
+                    $"\"Amount\": {Math.Abs(payItem.Amount)},\r\n        " +
+                    $"\"ftPayItemCase\": {payItem.ftPayItemCase}\r\n    " +
+                    "},\r\n    \"cbTerminalId\": \"16009303\"\r\n}", null, "application/json");
+            request.Content = content;
+            var response = await client.SendAsync(request);
+            if(!response.IsSuccessStatusCode)
+            {
+                throw new Exception(await response.Content.ReadAsStringAsync());
+            }
+            return await response.Content.ReadFromJsonAsync<PayResponse>();
+        }
+
+        private async Task<(PayResponse?, string sessionid)> SendPayRequestGetOperationId(PayItem payItem)
+        {
+            var operationId = Guid.NewGuid().ToString();
+            var client = new HttpClient();
+            var request = new HttpRequestMessage(HttpMethod.Post, "https://possystem-api-sandbox.fiskaltrust.eu/v2/pay");
+            var cashBoxId = Guid.Parse("f2d672a2-21ea-4825-96d0-972b71e757c6");
+            var accessToken = "BFNLZiBzSu2rUB1Sh2rxE7WrzHST5oZP7xgGsQWeGLZnGCZTmbUbRIquWs+7qUR7ua2TG9R0z4TvygrTHiFRj2I=";
+            request.Headers.Add("x-cashbox-id", cashBoxId.ToString());
+            request.Headers.Add("x-cashbox-accesstoken", accessToken);
+            request.Headers.Add("x-operation-id", operationId);
+            var content = new StringContent("{\r\n   " +
+                "\"Action\": \"payment\"," +
+                "\"Protocol\": \"viva_eft_pos\"," +
+                "\"cbPayItem\": {" +
+                    $"\"Position\": {payItem.Position},\r\n        " +
+                    $"\"Quantity\": {payItem.Quantity},\r\n        " +
+                    $"\"Description\": \"{payItem.Description}\",\r\n        " +
+                    $"\"Amount\": {Math.Abs(payItem.Amount)},\r\n        " +
+                    $"\"ftPayItemCase\": {payItem.ftPayItemCase}\r\n    " +
+                    "},\r\n    \"cbTerminalId\": \"16009303\"\r\n}", null, "application/json");
+            request.Content = content;
+            var response = await client.SendAsync(request);
+            return (await response.Content.ReadFromJsonAsync<PayResponse>(), operationId);
+        }
+
+
+        private async Task<PayResponse?> SendPayRequest(PayItem payItem)
+        {
+            var client = new HttpClient();
+            var request = new HttpRequestMessage(HttpMethod.Post, "https://possystem-api-sandbox.fiskaltrust.eu/v2/pay");
+            var cashBoxId = Guid.Parse("f2d672a2-21ea-4825-96d0-972b71e757c6");
+            var accessToken = "BFNLZiBzSu2rUB1Sh2rxE7WrzHST5oZP7xgGsQWeGLZnGCZTmbUbRIquWs+7qUR7ua2TG9R0z4TvygrTHiFRj2I=";
+            request.Headers.Add("x-cashbox-id", cashBoxId.ToString());
+            request.Headers.Add("x-cashbox-accesstoken", accessToken);
+            request.Headers.Add("x-operation-id", Guid.NewGuid().ToString());
+            var content = new StringContent("{\r\n   " +
+                "\"Action\": \"payment\"," +
+                "\"Protocol\": \"viva_eft_pos_instore\"," +
+                "\"cbPayItem\": {" +
+                    $"\"Position\": {payItem.Position},\r\n        " +
+                    $"\"Quantity\": {payItem.Quantity},\r\n        " +
+                    $"\"Description\": \"{payItem.Description}\",\r\n        " +
+                    $"\"Amount\": {Math.Abs(payItem.Amount)},\r\n        " +
+                    $"\"ftPayItemCase\": {payItem.ftPayItemCase}\r\n    " +
+                    "},\r\n    \"cbTerminalId\": \"16009303\"\r\n}", null, "application/json");
+            request.Content = content;
+            var response = await client.SendAsync(request);
+            return await response.Content.ReadFromJsonAsync<PayResponse>();
+        }
+
+
         public async Task StoreDataAsync(string folder, string casename, long ticks, QueueGRBootstrapper bootstrapper, ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
         {
             var result = await SendIssueAsync(receiptRequest, receiptResponse);
@@ -213,7 +302,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
                 ftJournalType = 0x4752_2000_0000_0001,
                 From = ticks
             }));
-            var baseFolder = Path.Combine("C:\\temp", "viva_aade_certification_examples_selfpricing");
+            var baseFolder = Path.Combine("C:\\temp", "viva_aade_certification_examples_card");
             var folderPath = Path.Combine(baseFolder, folder);
             Directory.CreateDirectory(Path.Combine(baseFolder, folder));
             File.WriteAllText(Path.Combine(folderPath, casename + ".receiptrequest.json"), JsonSerializer.Serialize(receiptRequest, new JsonSerializerOptions
@@ -244,42 +333,35 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
         [Fact]
         public async void AADECertificationExamples_A1_1_1p1()
         {
-            var receiptRequest = AADECertificationExamplesSelfPricing.A1_1_1p1();
+            var receiptRequest = AADECertificationExamplesCard.A1_1_1p1();
             await ValidateMyData(receiptRequest, InvoiceType.Item11, IncomeClassificationCategoryType.category1_2, IncomeClassificationValueType.E3_561_001);
         }
 
         [Fact]
         public async Task AADECertificationExamples_A1_1_1p4()
         {
-            var receiptRequest = AADECertificationExamplesSelfPricing.A1_1_1p4();
+            var receiptRequest = AADECertificationExamplesCard.A1_1_1p4();
             await ValidateMyData(receiptRequest, InvoiceType.Item14, IncomeClassificationCategoryType.category1_7, IncomeClassificationValueType.E3_881_003);
-        }
-
-        [Fact]
-        public async Task AADECertificationExamples_A1_1_1p5()
-        {
-            var receiptRequest = AADECertificationExamplesSelfPricing.A1_1_1p5();
-            await ValidateMyData(receiptRequest, InvoiceType.Item15, IncomeClassificationCategoryType.category1_2, IncomeClassificationValueType.E3_561_001);
         }
 
         [Fact]
         public async Task AADECertificationExamples_A1_1_1p6()
         {
-            var receiptRequest = AADECertificationExamplesSelfPricing.A1_1_1p6();
+            var receiptRequest = AADECertificationExamplesCard.A1_1_1p6();
             await ValidateMyData(receiptRequest, InvoiceType.Item16, IncomeClassificationCategoryType.category1_2, IncomeClassificationValueType.E3_561_001);
         }
 
         [Fact]
         public async void AADECertificationExamples_A1_2_2p1()
         {
-            var receiptRequest = AADECertificationExamplesSelfPricing.A1_2_2p1();
+            var receiptRequest = AADECertificationExamplesCard.A1_2_2p1();
             await ValidateMyData(receiptRequest, InvoiceType.Item21, IncomeClassificationCategoryType.category1_3, IncomeClassificationValueType.E3_561_001);
         }
 
         [Fact]
         public async Task AADECertificationExamples_A1_2_2p4()
         {
-            var receiptRequest = AADECertificationExamplesSelfPricing.A1_2_2p4();
+            var receiptRequest = AADECertificationExamplesCard.A1_2_2p4();
             await ValidateMyData(receiptRequest, InvoiceType.Item24, IncomeClassificationCategoryType.category1_3, IncomeClassificationValueType.E3_561_001);
         }
 
@@ -287,11 +369,11 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
         public async Task AADECertificationExamples_A1_5_5p1()
         {
 
-            //var invoiceOriginal = _aadeFactory.MapToInvoicesDoc(AADECertificationExamplesSelfPricing.A1_1_1p1(), ExampleResponse);
+            //var invoiceOriginal = _aadeFactory.MapToInvoicesDoc(AADECertificationExamplesCard.A1_1_1p1(), ExampleResponse);
             //var marker = await SendToMayData(_aadeFactory.GenerateInvoicePayload(invoiceOriginal));
 
-            var creditnote = AADECertificationExamplesSelfPricing.A1_5_5p1();
-            creditnote.cbPreviousReceiptReference = "400001941974572";
+            var creditnote = AADECertificationExamplesCard.A1_5_5p1();
+            creditnote.cbPreviousReceiptReference = "400001941974232";
             await Task.Delay(1000);
             //var invoiceDoc = _aadeFactory.MapToInvoicesDoc(creditnote, ExampleResponse);
             //using var assertionScope = new AssertionScope();
@@ -300,15 +382,66 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             //invoiceDoc.invoice[0].invoiceSummary.incomeClassification[0].classificationType.Should().Be(IncomeClassificationValueType.E3_561_001);
             //var xml = _aadeFactory.GenerateInvoicePayload(invoiceDoc);
             //await SendToMayData(xml);
-
+            var payment = await SendPayRequest(creditnote.cbPayItems[0]);
+            creditnote.cbPayItems[0] = payment!.ftPayItems[0];
             await ExecuteMiddleware(creditnote, "AADECertificationExamples_A1_5_5p1");
+        }
+
+        [Fact]
+        public async Task AADECertificationExamples_A1_8_8p4()
+        {
+            var receiptRequest = AADECertificationExamplesCard.A1_8_8p4();
+            var payment = await SendPayRequest(receiptRequest.cbPayItems[0]);
+            receiptRequest.cbPayItems[0] = payment!.ftPayItems[0];
+            await ValidateMyData(receiptRequest, InvoiceType.Item84, IncomeClassificationCategoryType.category1_95);
+        }
+
+        [Fact]
+        public async Task AADECertificationExamples_A1_8_8p5()
+        {
+            var receiptRequest = AADECertificationExamplesCard.A1_8_8p5();
+            var payment = await SendPayRequestGetOperationId(receiptRequest.cbPayItems[0]);
+
+            var refund = await SendRefundRequest(payment.sessionid, receiptRequest.cbPayItems[0]);
+            receiptRequest.cbPayItems[0] = refund!.ftPayItems[0];
+            receiptRequest.cbPayItems[0].Amount = -receiptRequest.cbPayItems[0].Amount;
+            await ValidateMyData(receiptRequest, InvoiceType.Item85, IncomeClassificationCategoryType.category1_95);
         }
 
         [Fact]
         public async Task AADECertificationExamples_A1_5_5p2()
         {
-            var receiptRequest = AADECertificationExamplesSelfPricing.A1_5_5p2();
+            var receiptRequest = AADECertificationExamplesCard.A1_5_5p2();
             await ValidateMyData(receiptRequest, InvoiceType.Item52, IncomeClassificationCategoryType.category1_3, IncomeClassificationValueType.E3_561_001);
+        }
+
+        [Fact]
+        public async Task AADECertificationExamples_A2_11_11p1()
+        {
+            var receiptRequest = AADECertificationExamplesCard.A2_11_11p1();
+            await ValidateMyData(receiptRequest, InvoiceType.Item111, IncomeClassificationCategoryType.category1_2, IncomeClassificationValueType.E3_561_003);
+        }
+
+        [Fact]
+        public async Task AADECertificationExamples_A2_11_11p2()
+        {
+            var receiptRequest = AADECertificationExamplesCard.A2_11_11p2();
+            await ValidateMyData(receiptRequest, InvoiceType.Item112, IncomeClassificationCategoryType.category1_3, IncomeClassificationValueType.E3_561_003);
+        }
+
+
+        [Fact]
+        public async Task AADECertificationExamples_A2_11_11p4()
+        {
+            var receiptRequest = AADECertificationExamplesCard.A2_11_11p4();
+            await ValidateMyData(receiptRequest, InvoiceType.Item114, IncomeClassificationCategoryType.category1_2, IncomeClassificationValueType.E3_561_001);
+        }
+
+        [Fact]
+        public async Task AADECertificationExamples_A2_11_11p5()
+        {
+            var receiptRequest = AADECertificationExamplesCard.A2_11_1p5();
+            await ValidateMyData(receiptRequest, InvoiceType.Item115, IncomeClassificationCategoryType.category1_7, IncomeClassificationValueType.E3_881_003);
         }
 
         public ReceiptResponse ExampleResponse => new ReceiptResponse
