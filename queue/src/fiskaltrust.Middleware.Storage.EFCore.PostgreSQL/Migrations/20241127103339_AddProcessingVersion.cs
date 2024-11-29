@@ -11,19 +11,10 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
                 table: "ftQueueItem",
                 type: "text",
                 nullable: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ftQueueItem_ProcessingVersion",
-                table: "ftQueueItem",
-                column: "ProcessingVersion");
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropIndex(
-                name: "IX_ftQueueItem_ProcessingVersion",
-                table: "ftQueueItem");
-
             migrationBuilder.DropColumn(
                 name: "ProcessingVersion",
                 table: "ftQueueItem");

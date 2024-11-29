@@ -1,1 +1,1 @@
-﻿ALTER TABLE ftQueueItem ADD COLUMN ProcessingVersion VARCHAR(255) NULL;
+﻿ALTER TABLE ftQueueItem ADD COLUMN ProcessingVersion LONGTEXT NULL;

@@ -30,7 +30,6 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
         protected override void EntityUpdated(ftQueueItem entity)
         {
             entity.TimeStamp = DateTime.UtcNow.Ticks;
-            entity.ProcessingVersion ??= "0.0.0"; 
         }
 
         protected override Guid GetIdForEntity(ftQueueItem entity) => entity.ftQueueItemId;
