@@ -119,6 +119,8 @@ public class AADEFactory
                 aa = identification.ToString(),
                 issueDate = receiptRequest.cbReceiptMoment,
                 invoiceType = AADEMappings.GetInvoiceType(receiptRequest),
+                selfPricing = receiptRequest.IsSelfPricingOperation(),
+                selfPricingSpecified = receiptRequest.IsSelfPricingOperation(),
                 currency = CurrencyType.EUR,
                 currencySpecified = true
             },

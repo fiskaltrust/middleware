@@ -22,6 +22,8 @@ public static class ReceiptRequestExtensions
 
     public static bool IsDailyOperation(this ReceiptRequest receiptRequest) => (receiptRequest.ftReceiptCase & 0x0000_0000_0000_F000) == 0x2000;
 
+    public static bool IsSelfPricingOperation(this ReceiptRequest receiptRequest) => (receiptRequest.ftReceiptCase & 0x0000_0F00_0000_0000) == 0x0000_0100_0000_0000;
+
     public static bool IsProtocolOperation(this ReceiptRequest receiptRequest) => (receiptRequest.ftReceiptCase & 0x0000_0000_0000_F000) == 0x3000;
 
     public static bool IsLifeCycleOperation(this ReceiptRequest receiptRequest) => (receiptRequest.ftReceiptCase & 0x0000_0000_0000_F000) == 0x4000;
