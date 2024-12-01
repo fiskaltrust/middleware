@@ -70,8 +70,8 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
 
         public async Task<(QueueGRBootstrapper bootstrapper, Guid cashBoxId)> InitializeQueueGRBootstrapperAsync()
         {
-            var cashBoxId = Guid.Parse("f2d672a2-21ea-4825-96d0-972b71e757c6");
-            var accessToken = "BFNLZiBzSu2rUB1Sh2rxE7WrzHST5oZP7xgGsQWeGLZnGCZTmbUbRIquWs+7qUR7ua2TG9R0z4TvygrTHiFRj2I=";
+            var cashBoxId = Guid.Parse(Constants.CASHBOX_CERTIFICATION_ID);
+            var accessToken = Constants.CASHBOX_CERTIFICATION_ACCESSTOKEN;
             var configuration = await GetConfigurationAsync(cashBoxId, accessToken);
             var queue = configuration.ftQueues?.First() ?? throw new Exception($"The configuration for {cashBoxId} is empty and therefore not valid.");
             var bootstrapper = new QueueGRBootstrapper(queue.Id, new LoggerFactory(), queue.Configuration ?? new Dictionary<string, object>());
@@ -193,8 +193,8 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
         {
             var client = new HttpClient();
             var request = new HttpRequestMessage(HttpMethod.Post, "https://possystem-api-sandbox.fiskaltrust.eu/v2/issue");
-            var cashBoxId = Guid.Parse("f2d672a2-21ea-4825-96d0-972b71e757c6");
-            var accessToken = "BFNLZiBzSu2rUB1Sh2rxE7WrzHST5oZP7xgGsQWeGLZnGCZTmbUbRIquWs+7qUR7ua2TG9R0z4TvygrTHiFRj2I=";
+            var cashBoxId = Guid.Parse(Constants.CASHBOX_CERTIFICATION_ID);
+            var accessToken = Constants.CASHBOX_CERTIFICATION_ACCESSTOKEN;
             request.Headers.Add("x-cashbox-id", cashBoxId.ToString());
             request.Headers.Add("x-cashbox-accesstoken", accessToken);
             var data = JsonSerializer.Serialize(new
@@ -214,8 +214,8 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
         {
             var client = new HttpClient();
             var request = new HttpRequestMessage(HttpMethod.Post, "https://possystem-api-sandbox.fiskaltrust.eu/v2/pay");
-            var cashBoxId = Guid.Parse("f2d672a2-21ea-4825-96d0-972b71e757c6");
-            var accessToken = "BFNLZiBzSu2rUB1Sh2rxE7WrzHST5oZP7xgGsQWeGLZnGCZTmbUbRIquWs+7qUR7ua2TG9R0z4TvygrTHiFRj2I=";
+            var cashBoxId = Guid.Parse(Constants.CASHBOX_CERTIFICATION_ID);
+            var accessToken = Constants.CASHBOX_CERTIFICATION_ACCESSTOKEN;
             request.Headers.Add("x-cashbox-id", cashBoxId.ToString());
             request.Headers.Add("x-cashbox-accesstoken", accessToken);
             request.Headers.Add("x-operation-id", Guid.NewGuid().ToString());
@@ -244,8 +244,8 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             var operationId = Guid.NewGuid().ToString();
             var client = new HttpClient();
             var request = new HttpRequestMessage(HttpMethod.Post, "https://possystem-api-sandbox.fiskaltrust.eu/v2/pay");
-            var cashBoxId = Guid.Parse("f2d672a2-21ea-4825-96d0-972b71e757c6");
-            var accessToken = "BFNLZiBzSu2rUB1Sh2rxE7WrzHST5oZP7xgGsQWeGLZnGCZTmbUbRIquWs+7qUR7ua2TG9R0z4TvygrTHiFRj2I=";
+            var cashBoxId = Guid.Parse(Constants.CASHBOX_CERTIFICATION_ID);
+            var accessToken = Constants.CASHBOX_CERTIFICATION_ACCESSTOKEN;
             request.Headers.Add("x-cashbox-id", cashBoxId.ToString());
             request.Headers.Add("x-cashbox-accesstoken", accessToken);
             request.Headers.Add("x-operation-id", operationId);
@@ -373,7 +373,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             //var marker = await SendToMayData(_aadeFactory.GenerateInvoicePayload(invoiceOriginal));
 
             var creditnote = AADECertificationExamplesCard.A1_5_5p1();
-            creditnote.cbPreviousReceiptReference = "400001941974232";
+            creditnote.cbPreviousReceiptReference = "400001941996088";
             await Task.Delay(1000);
             //var invoiceDoc = _aadeFactory.MapToInvoicesDoc(creditnote, ExampleResponse);
             //using var assertionScope = new AssertionScope();

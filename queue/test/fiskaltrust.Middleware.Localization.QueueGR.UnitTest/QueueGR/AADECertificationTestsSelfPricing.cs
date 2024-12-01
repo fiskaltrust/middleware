@@ -14,6 +14,7 @@ using Xunit.Abstractions;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
 {
+
     public class AADECertificationTestsSelfPricing
     {
         private readonly ITestOutputHelper _output;
@@ -49,8 +50,8 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
 
         public async Task<(QueueGRBootstrapper bootstrapper, Guid cashBoxId)> InitializeQueueGRBootstrapperAsync()
         {
-            var cashBoxId = Guid.Parse("f2d672a2-21ea-4825-96d0-972b71e757c6");
-            var accessToken = "BFNLZiBzSu2rUB1Sh2rxE7WrzHST5oZP7xgGsQWeGLZnGCZTmbUbRIquWs+7qUR7ua2TG9R0z4TvygrTHiFRj2I=";
+            var cashBoxId = Guid.Parse(Constants.CASHBOX_CERTIFICATION_ID);
+            var accessToken = Constants.CASHBOX_CERTIFICATION_ACCESSTOKEN;
             var configuration = await GetConfigurationAsync(cashBoxId, accessToken);
             var queue = configuration.ftQueues?.First() ?? throw new Exception($"The configuration for {cashBoxId} is empty and therefore not valid.");
             var bootstrapper = new QueueGRBootstrapper(queue.Id, new LoggerFactory(), queue.Configuration ?? new Dictionary<string, object>());
@@ -178,15 +179,20 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             var signMethod = bootstrapper.RegisterForSign();
             var ticks = DateTime.UtcNow.Ticks;
             var exampleCashSalesResponse = await signMethod(JsonSerializer.Serialize(receiptRequest));
-            await StoreDataAsync(caller, caller, ticks, bootstrapper, receiptRequest, System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesResponse)!);
+            var receiptResponse = System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesResponse)!;
+            if((receiptResponse.ftState & 0x0000_0000_0000_FFFF) != 0x0000)
+            {
+                throw new Exception(exampleCashSalesResponse);
+            }
+            await StoreDataAsync(caller, caller, ticks, bootstrapper, receiptRequest, receiptResponse);
         }
 
         private async Task<IssueResponse?> SendIssueAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
         {
             var client = new HttpClient();
             var request = new HttpRequestMessage(HttpMethod.Post, "https://possystem-api-sandbox.fiskaltrust.eu/v2/issue");
-            var cashBoxId = Guid.Parse("f2d672a2-21ea-4825-96d0-972b71e757c6");
-            var accessToken = "BFNLZiBzSu2rUB1Sh2rxE7WrzHST5oZP7xgGsQWeGLZnGCZTmbUbRIquWs+7qUR7ua2TG9R0z4TvygrTHiFRj2I=";
+            var cashBoxId = Guid.Parse(Constants.CASHBOX_CERTIFICATION_ID);
+            var accessToken = Constants.CASHBOX_CERTIFICATION_ACCESSTOKEN;
             request.Headers.Add("x-cashbox-id", cashBoxId.ToString());
             request.Headers.Add("x-cashbox-accesstoken", accessToken);
             var data = JsonSerializer.Serialize(new
@@ -258,7 +264,14 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
         [Fact]
         public async Task AADECertificationExamples_A1_1_1p5()
         {
-            var receiptRequest = AADECertificationExamplesSelfPricing.A1_1_1p5();
+            var receiptRequest = AADECertificationExamplesSelfPricing.A1_1_1p5_1();
+            await ValidateMyData(receiptRequest, InvoiceType.Item15, IncomeClassificationCategoryType.category1_2, IncomeClassificationValueType.E3_561_001);
+        }
+
+        [Fact]
+        public async Task AADECertificationExamples_A1_1_1p5_2()
+        {
+            var receiptRequest = AADECertificationExamplesSelfPricing.A1_1_1p5_2();
             await ValidateMyData(receiptRequest, InvoiceType.Item15, IncomeClassificationCategoryType.category1_2, IncomeClassificationValueType.E3_561_001);
         }
 
@@ -291,7 +304,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             //var marker = await SendToMayData(_aadeFactory.GenerateInvoicePayload(invoiceOriginal));
 
             var creditnote = AADECertificationExamplesSelfPricing.A1_5_5p1();
-            creditnote.cbPreviousReceiptReference = "400001941974572";
+            creditnote.cbPreviousReceiptReference = "400001941995967";
             await Task.Delay(1000);
             //var invoiceDoc = _aadeFactory.MapToInvoicesDoc(creditnote, ExampleResponse);
             //using var assertionScope = new AssertionScope();
