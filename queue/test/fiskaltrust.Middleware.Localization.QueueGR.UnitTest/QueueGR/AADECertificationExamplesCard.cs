@@ -50,6 +50,10 @@ public static class AADECertificationExamplesCard
             cbCustomer = new MiddlewareCustomer
             {
                 CustomerVATId = CUSOMTER_VATNUMBER,
+                CustomerName = "Πελάτης A.E.",
+                CustomerStreet = "Κηφισίας 12, 12345, Αθήνα",
+                CustomerCity = "Αθηνών",
+                CustomerCountry = "GR",
             }
         };
     }
@@ -60,7 +64,7 @@ public static class AADECertificationExamplesCard
         {
             cbTerminalID = "1",
             Currency = Currency.EUR,
-            cbReceiptAmount = 100m,
+            cbReceiptAmount = 150m,
             cbReceiptMoment = DateTime.UtcNow,
             cbReceiptReference = Guid.NewGuid().ToString(),
             cbChargeItems =
@@ -153,6 +157,10 @@ public static class AADECertificationExamplesCard
             cbCustomer = new MiddlewareCustomer
             {
                 CustomerVATId = CUSOMTER_VATNUMBER,
+                CustomerName = "Πελάτης A.E.",
+                CustomerStreet = "Κηφισίας 12, 12345, Αθήνα",
+                CustomerCity = "Αθηνών",
+                CustomerCountry = "GR",
             }
         };
     }
@@ -202,6 +210,10 @@ public static class AADECertificationExamplesCard
             cbCustomer = new MiddlewareCustomer
             {
                 CustomerVATId = CUSOMTER_VATNUMBER,
+                CustomerName = "Πελάτης A.E.",
+                CustomerStreet = "Κηφισίας 12, 12345, Αθήνα",
+                CustomerCity = "Αθηνών",
+                CustomerCountry = "GR",
             }
         };
     }
@@ -252,6 +264,10 @@ public static class AADECertificationExamplesCard
             cbCustomer = new MiddlewareCustomer
             {
                 CustomerVATId = CUSOMTER_VATNUMBER,
+                CustomerName = "Πελάτης A.E.",
+                CustomerStreet = "Κηφισίας 12, 12345, Αθήνα",
+                CustomerCity = "Αθηνών",
+                CustomerCountry = "GR",
             }
         };
     }
@@ -302,6 +318,10 @@ public static class AADECertificationExamplesCard
             cbCustomer = new MiddlewareCustomer
             {
                 CustomerVATId = CUSOMTER_VATNUMBER,
+                CustomerName = "Πελάτης A.E.",
+                CustomerStreet = "Κηφισίας 12, 12345, Αθήνα",
+                CustomerCity = "Αθηνών",
+                CustomerCountry = "GR",
             }
         };
     }
@@ -312,7 +332,7 @@ public static class AADECertificationExamplesCard
         {
             cbTerminalID = "1",
             Currency = Currency.EUR,
-            cbReceiptAmount = 100m,
+            cbReceiptAmount = 150m,
             cbReceiptMoment = DateTime.UtcNow,
             cbReceiptReference = Guid.NewGuid().ToString(),
             cbChargeItems =
@@ -351,6 +371,10 @@ public static class AADECertificationExamplesCard
             cbCustomer = new MiddlewareCustomer
             {
                 CustomerVATId = CUSOMTER_VATNUMBER,
+                CustomerName = "Πελάτης A.E.",
+                CustomerStreet = "Κηφισίας 12, 12345, Αθήνα",
+                CustomerCity = "Αθηνών",
+                CustomerCountry = "GR",
             }
         };
     }
@@ -361,7 +385,7 @@ public static class AADECertificationExamplesCard
         {
             cbTerminalID = "1",
             Currency = Currency.EUR,
-            cbReceiptAmount = 4m,
+            cbReceiptAmount = 150m,
             cbReceiptMoment = DateTime.UtcNow,
             cbReceiptReference = Guid.NewGuid().ToString(),
             cbChargeItems =
@@ -396,7 +420,15 @@ public static class AADECertificationExamplesCard
             ],
 
             ftPosSystemId = Guid.NewGuid(),
-            ftReceiptCase = 0x4752_2000_0000_3004
+            ftReceiptCase = 0x4752_2000_0000_3004,
+            cbCustomer = new MiddlewareCustomer
+            {
+                CustomerVATId = CUSOMTER_VATNUMBER,
+                CustomerName = "Πελάτης A.E.",
+                CustomerStreet = "Κηφισίας 12, 12345, Αθήνα",
+                CustomerCity = "Αθηνών",
+                CustomerCountry = "GR",
+            }
         };
     }
 
@@ -406,7 +438,7 @@ public static class AADECertificationExamplesCard
         {
             cbTerminalID = "1",
             Currency = Currency.EUR,
-            cbReceiptAmount = 4m,
+            cbReceiptAmount = -150,
             cbReceiptMoment = DateTime.UtcNow,
             cbReceiptReference = Guid.NewGuid().ToString(),
             cbChargeItems =
@@ -441,7 +473,15 @@ public static class AADECertificationExamplesCard
             ],
 
             ftPosSystemId = Guid.NewGuid(),
-            ftReceiptCase = 0x4752_2000_0100_3004
+            ftReceiptCase = 0x4752_2000_0100_3004,
+            cbCustomer = new MiddlewareCustomer
+            {
+                CustomerVATId = CUSOMTER_VATNUMBER,
+                CustomerName = "Πελάτης A.E.",
+                CustomerStreet = "Κηφισίας 12, 12345, Αθήνα",
+                CustomerCity = "Αθηνών",
+                CustomerCountry = "GR",
+            }
         };
     }
 
@@ -586,7 +626,7 @@ public static class AADECertificationExamplesCard
         {
             cbTerminalID = "1",
             Currency = Currency.EUR,
-            cbReceiptAmount = 100m,
+            cbReceiptAmount = 150m,
             cbReceiptMoment = DateTime.UtcNow,
             cbReceiptReference = Guid.NewGuid().ToString(),
             cbChargeItems =
@@ -594,8 +634,8 @@ public static class AADECertificationExamplesCard
                 new ChargeItem
                 {
                     Position = 1,
-                    Amount = 100,
-                    VATRate = 24,
+                    Amount = 150,
+                    VATRate = 0,
                     VATAmount = 0,
                     ftChargeItemCase = 0x4752_2000_0000_0067,
                     Quantity = 1,
@@ -608,7 +648,7 @@ public static class AADECertificationExamplesCard
                 {
                     Position = 1,
                     Quantity = 1,
-                    Amount = 100m,
+                    Amount = 150m,
                     Description = "Κάρτα",
                     ftPayItemCase = 0x4752_2000_0000_0004
                 },

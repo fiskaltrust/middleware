@@ -33,7 +33,7 @@ public static class AADECertificationExamplesSelfPricing
                 new PayItem
                 {
                     Amount = 100m,
-                    Description = "Cash",
+                    Description = "Μετρητά",
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
@@ -42,6 +42,10 @@ public static class AADECertificationExamplesSelfPricing
             cbCustomer = new MiddlewareCustomer
             {
                 CustomerVATId = CUSOMTER_VATNUMBER,
+                CustomerName = "Πελάτης A.E.",
+                CustomerStreet = "Κηφισίας 12, 12345, Αθήνα",
+                CustomerCity = "Αθηνών",
+                CustomerCountry = "GR",
             }
         };
     }
@@ -61,7 +65,7 @@ public static class AADECertificationExamplesSelfPricing
                 {
                     Position = 1,
                     Amount = 100,
-                    VATRate = 24,
+                    VATRate = 0,
                     VATAmount = 0,
                     ftChargeItemCase = 0x4752_2000_0000_0067,
                     Quantity = 1,
@@ -73,7 +77,7 @@ public static class AADECertificationExamplesSelfPricing
                 new PayItem
                 {
                     Amount = 100m,
-                    Description = "Cash",
+                    Description = "Μετρητά",
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
@@ -91,13 +95,13 @@ public static class AADECertificationExamplesSelfPricing
         };
     }
 
-    public static ReceiptRequest A1_1_1p5()
+    public static ReceiptRequest A1_1_1p5_1()
     {
         return new ReceiptRequest
         {
             cbTerminalID = "1",
             Currency = Currency.EUR,
-            cbReceiptAmount = 100m,
+            cbReceiptAmount = 200m,
             cbReceiptMoment = DateTime.UtcNow,
             cbReceiptReference = Guid.NewGuid().ToString(),
             cbChargeItems =
@@ -129,7 +133,7 @@ public static class AADECertificationExamplesSelfPricing
                 new PayItem
                 {
                     Amount = 200m,
-                    Description = "Cash",
+                    Description = "Μετρητά",
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
@@ -139,6 +143,65 @@ public static class AADECertificationExamplesSelfPricing
             cbCustomer = new MiddlewareCustomer
             {
                 CustomerVATId = CUSOMTER_VATNUMBER,
+                CustomerName = "Πελάτης A.E.",
+                CustomerStreet = "Κηφισίας 12, 12345, Αθήνα",
+                CustomerCity = "Αθηνών",
+                CustomerCountry = "GR",
+            }
+        };
+    }
+
+    public static ReceiptRequest A1_1_1p5_2()
+    {
+        return new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptAmount = 220m,
+            cbReceiptMoment = DateTime.UtcNow,
+            cbReceiptReference = Guid.NewGuid().ToString(),
+            cbChargeItems =
+            [
+                new ChargeItem
+                {
+                    Position = 1,
+                    Amount = 120,
+                    VATRate = 24,
+                    VATAmount = decimal.Round(120 / (100M + 24) * 24, 2, MidpointRounding.ToEven),
+                    ftChargeItemCase = 0x4752_2000_0000_0093,
+                    Quantity = 1,
+                    Description = "Line item 1"
+                },
+                new ChargeItem
+                {
+                    Position = 2,
+                    Amount = 100,
+                    VATRate = 24,
+                    VATAmount = decimal.Round(100 / (100M + 24) * 24, 2, MidpointRounding.ToEven),
+                    ftChargeItemCase = 0x4752_2000_0000_0013,
+                    Quantity = 1,
+                    Description = "Line item 1"
+                }
+            ],
+            cbPayItems =
+            [
+                new PayItem
+                {
+                    Amount = 220m,
+                    Description = "Μετρητά",
+                    ftPayItemCase = 0x4752_2000_0000_0001
+                }
+            ],
+
+            ftPosSystemId = Guid.NewGuid(),
+            ftReceiptCase = 0x4752_2100_0000_1001,
+            cbCustomer = new MiddlewareCustomer
+            {
+                CustomerVATId = CUSOMTER_VATNUMBER,
+                CustomerName = "Πελάτης A.E.",
+                CustomerStreet = "Κηφισίας 12, 12345, Αθήνα",
+                CustomerCity = "Αθηνών",
+                CustomerCountry = "GR",
             }
         };
     }
@@ -171,7 +234,7 @@ public static class AADECertificationExamplesSelfPricing
                 new PayItem
                 {
                     Amount = 100m,
-                    Description = "Cash",
+                    Description = "Μετρητά",
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
@@ -181,6 +244,10 @@ public static class AADECertificationExamplesSelfPricing
             cbCustomer = new MiddlewareCustomer
             {
                 CustomerVATId = CUSOMTER_VATNUMBER,
+                CustomerName = "Πελάτης A.E.",
+                CustomerStreet = "Κηφισίας 12, 12345, Αθήνα",
+                CustomerCity = "Αθηνών",
+                CustomerCountry = "GR",
             }
         };
     }
@@ -212,7 +279,7 @@ public static class AADECertificationExamplesSelfPricing
                 new PayItem
                 {
                     Amount = 100m,
-                    Description = "Cash",
+                    Description = "Μετρητά",
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
@@ -222,6 +289,10 @@ public static class AADECertificationExamplesSelfPricing
             cbCustomer = new MiddlewareCustomer
             {
                 CustomerVATId = CUSOMTER_VATNUMBER,
+                CustomerName = "Πελάτης A.E.",
+                CustomerStreet = "Κηφισίας 12, 12345, Αθήνα",
+                CustomerCity = "Αθηνών",
+                CustomerCountry = "GR",
             }
         };
     }
@@ -254,7 +325,7 @@ public static class AADECertificationExamplesSelfPricing
                 new PayItem
                 {
                     Amount = 100m,
-                    Description = "Cash",
+                    Description = "Μετρητά",
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
@@ -264,6 +335,10 @@ public static class AADECertificationExamplesSelfPricing
             cbCustomer = new MiddlewareCustomer
             {
                 CustomerVATId = CUSOMTER_VATNUMBER,
+                CustomerName = "Πελάτης A.E.",
+                CustomerStreet = "Κηφισίας 12, 12345, Αθήνα",
+                CustomerCity = "Αθηνών",
+                CustomerCountry = "GR",
             }
         };
     }
@@ -296,7 +371,7 @@ public static class AADECertificationExamplesSelfPricing
                 new PayItem
                 {
                     Amount = 100m,
-                    Description = "Cash",
+                    Description = "Μετρητά",
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
@@ -306,6 +381,10 @@ public static class AADECertificationExamplesSelfPricing
             cbCustomer = new MiddlewareCustomer
             {
                 CustomerVATId = CUSOMTER_VATNUMBER,
+                CustomerName = "Πελάτης A.E.",
+                CustomerStreet = "Κηφισίας 12, 12345, Αθήνα",
+                CustomerCity = "Αθηνών",
+                CustomerCountry = "GR",
             }
         };
     }
@@ -325,10 +404,10 @@ public static class AADECertificationExamplesSelfPricing
                 {
                     Position = 1,
                     Amount = 100,
-                    VATRate = 24,
+                    VATRate = 0,
                     VATAmount = 0,
                     ftChargeItemCase = 0x4752_2000_0000_6027,
-                    Quantity = -1,
+                    Quantity = 1,
                     Description = "Line item 1"
                 }
             ],
@@ -338,7 +417,7 @@ public static class AADECertificationExamplesSelfPricing
                 {
                     Amount = 100m,
                     Quantity = 1,
-                    Description = "Gutschrift",
+                    Description = "Πίστωση",
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
@@ -348,6 +427,10 @@ public static class AADECertificationExamplesSelfPricing
             cbCustomer = new MiddlewareCustomer
             {
                 CustomerVATId = CUSOMTER_VATNUMBER,
+                CustomerName = "Πελάτης A.E.",
+                CustomerStreet = "Κηφισίας 12, 12345, Αθήνα",
+                CustomerCity = "Αθηνών",
+                CustomerCountry = "GR",
             }
         };
     }
