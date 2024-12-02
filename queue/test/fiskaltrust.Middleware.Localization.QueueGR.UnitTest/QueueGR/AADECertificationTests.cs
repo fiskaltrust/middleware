@@ -14,6 +14,11 @@ using Xunit.Abstractions;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
 {
+    public static class Constants
+    {
+        public const string CASHBOX_CERTIFICATION_ID = "";
+        public const string CASHBOX_CERTIFICATION_ACCESSTOKEN = "";
+    }
     public class AADECertificationTests
     {
         private readonly ITestOutputHelper _output;
