@@ -47,6 +47,7 @@
         <ProjectReference Include="..\fiskaltrust.Middleware.Storage.MySQL\fiskaltrust.Middleware.Storage.MySQL.csproj" PrivateAssets="all" />
     </ItemGroup>
 
+
     <Target DependsOnTargets="ResolveReferences" Name="CopyProjectReferencesToPackage">
         <ItemGroup>
             <BuildOutputInPackage Include="@(ReferenceCopyLocalPaths-&gt;WithMetadataValue('ReferenceSourceTarget', 'ProjectReference'))" />

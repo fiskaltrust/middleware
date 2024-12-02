@@ -1,0 +1,1 @@
+﻿ALTER TABLE ftQueueItem ADD COLUMN ProcessingVersion NVARCHAR(2147483647) NULL;
