@@ -15,13 +15,14 @@ using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueueES.ESSSCD;
 using fiskaltrust.Middleware.Storage.ES;
 using fiskaltrust.storage.V0.MasterData;
+using fiskaltrust.Middleware.Contracts.Repositories;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processors
 {
     public class LifecycleCommandProcessorESTests
     {
         private readonly Fixture _fixture = new Fixture();
-        private readonly LifecycleCommandProcessorES _sut = new(new InMemorySCU(new ftSignaturCreationUnitES { }, new MasterDataConfiguration { }, new InMemorySCUConfiguration { }), Mock.Of<ILocalizedQueueStorageProvider>());
+        private readonly LifecycleCommandProcessorES _sut = new(new InMemorySCU(new ftSignaturCreationUnitES { }, new MasterDataConfiguration { }, new InMemorySCUConfiguration { }, Mock.Of<IMiddlewareQueueItemRepository>()), Mock.Of<ILocalizedQueueStorageProvider>());
 
         [Theory]
         [InlineData(ReceiptCases.InitialOperationReceipt0x4001)]
@@ -42,7 +43,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
 
             var configMock = new Mock<ILocalizedQueueStorageProvider>();
             configMock.Setup(x => x.ActivateQueueAsync()).Returns(Task.CompletedTask);
-            var sut = new LifecycleCommandProcessorES(new InMemorySCU(signaturCreationUnitES, masterDataConfiguration, new InMemorySCUConfiguration()), configMock.Object);
+            var sut = new LifecycleCommandProcessorES(new InMemorySCU(signaturCreationUnitES, masterDataConfiguration, new InMemorySCUConfiguration(), Mock.Of<IMiddlewareQueueItemRepository>()), configMock.Object);
 
             var receiptRequest = new ReceiptRequest
             {
@@ -109,7 +110,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
 
             var configMock = new Mock<ILocalizedQueueStorageProvider>();
             configMock.Setup(x => x.ActivateQueueAsync()).Returns(Task.CompletedTask);
-            var sut = new LifecycleCommandProcessorES(new InMemorySCU(signaturCreationUnitES, masterDataConfiguration, new InMemorySCUConfiguration()), configMock.Object);
+            var sut = new LifecycleCommandProcessorES(new InMemorySCU(signaturCreationUnitES, masterDataConfiguration, new InMemorySCUConfiguration(), Mock.Of<IMiddlewareQueueItemRepository>()), configMock.Object);
 
             var receiptRequest = new ReceiptRequest
             {
@@ -202,7 +203,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             };
 
             var configMock = new Mock<ILocalizedQueueStorageProvider>();
-            var sut = new LifecycleCommandProcessorES(new InMemorySCU(signaturCreationUnitES, masterDataConfiguration, new InMemorySCUConfiguration()), configMock.Object);
+            var sut = new LifecycleCommandProcessorES(new InMemorySCU(signaturCreationUnitES, masterDataConfiguration, new InMemorySCUConfiguration(), Mock.Of<IMiddlewareQueueItemRepository>()), configMock.Object);
 
             var receiptRequest = new ReceiptRequest
             {
@@ -291,7 +292,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             };
 
             var configMock = new Mock<ILocalizedQueueStorageProvider>();
-            var sut = new LifecycleCommandProcessorES(new InMemorySCU(signaturCreationUnitES, masterDataConfiguration, new InMemorySCUConfiguration()), configMock.Object);
+            var sut = new LifecycleCommandProcessorES(new InMemorySCU(signaturCreationUnitES, masterDataConfiguration, new InMemorySCUConfiguration(), Mock.Of<IMiddlewareQueueItemRepository>()), configMock.Object);
 
             var receiptRequest = new ReceiptRequest
             {
@@ -335,7 +336,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             };
 
             var configMock = new Mock<ILocalizedQueueStorageProvider>();
-            var sut = new LifecycleCommandProcessorES(new InMemorySCU(signaturCreationUnitES, masterDataConfiguration, new InMemorySCUConfiguration()), configMock.Object);
+            var sut = new LifecycleCommandProcessorES(new InMemorySCU(signaturCreationUnitES, masterDataConfiguration, new InMemorySCUConfiguration(), Mock.Of<IMiddlewareQueueItemRepository>()), configMock.Object);
 
             var receiptRequest = new ReceiptRequest
             {

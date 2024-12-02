@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using System.Text.Json;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Contracts.Repositories;
@@ -21,6 +22,8 @@ public class InMemorySCUConfiguration
 {
     public string BaseUrl { get; set; } = "https://prewww2.aeat.es/wlpl/TIKE-CONT/ValidarQR";
 
+    public X509Certificate2 Certificate { get; set; } = null!;
+
     public static InMemorySCUConfiguration FromConfiguration(PackageConfiguration packageConfiguration)
         => JsonSerializer.Deserialize<InMemorySCUConfiguration>(JsonSerializer.Serialize(packageConfiguration.Configuration)) ?? new InMemorySCUConfiguration();
 }
@@ -34,7 +37,7 @@ public class InMemorySCU : IESSSCD
     public InMemorySCU(ftSignaturCreationUnitES _, MasterDataConfiguration masterData, InMemorySCUConfiguration configuration, IMiddlewareQueueItemRepository queueItemRepository)
     {
         _configuration = configuration;
-        _veriFactuMapping = new VeriFactuMapping(masterData, queueItemRepository);
+        _veriFactuMapping = new VeriFactuMapping(masterData, queueItemRepository, configuration.Certificate);
     }
 
     public async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request)
@@ -104,6 +107,8 @@ public class InMemorySCU : IESSSCD
                 ftSignatureType = (long) SignatureTypesES.IDEmisorFactura
             });
 
+            var client = new sfPortTypeVerifactuClient(sfPortTypeVerifactuClient.EndpointConfiguration.SistemaVerifactuSelloPruebas);
+            var response = await client.RegFactuSistemaFacturacionAsync(_veriFactuMapping.CreateRegFactuSistemaFacturacion([new RegistroFacturaType { Item = journalES }]));
             return await Task.FromResult(new ProcessResponse
             {
                 ReceiptResponse = request.ReceiptResponse,

@@ -20,14 +20,16 @@ public class VeriFactuMapping
 {
     private readonly MasterDataConfiguration _masterData;
     private readonly IMiddlewareQueueItemRepository _queueItemRepository;
+    private readonly X509Certificate2? _certificate;
 
-    public VeriFactuMapping(MasterDataConfiguration masterData, IMiddlewareQueueItemRepository queueItemRepository)
+    public VeriFactuMapping(MasterDataConfiguration masterData, IMiddlewareQueueItemRepository queueItemRepository, X509Certificate2? certificate = null)
     {
         _masterData = masterData;
         _queueItemRepository = queueItemRepository;
+        _certificate = certificate;
     }
 
-    public async Task<RegFactuSistemaFacturacion> CreateRegFactuSistemaFacturacionAsync(IAsyncEnumerable<ftQueueItem> queueItems)
+    public RegFactuSistemaFacturacion CreateRegFactuSistemaFacturacion(IEnumerable<RegistroFacturaType> registroFactura)
     {
         var cabecera = new CabeceraType
         {
@@ -41,6 +43,15 @@ public class VeriFactuMapping
             },
         };
 
+        return new RegFactuSistemaFacturacion
+        {
+            Cabecera = cabecera,
+            RegistroFactura = registroFactura.ToArray()
+        };
+    }
+
+    public async Task<RegFactuSistemaFacturacion> CreateRegFactuSistemaFacturacionAsync(IAsyncEnumerable<ftQueueItem> queueItems)
+    {
         var registroFactura = new List<RegistroFacturaType>();
         ReceiptRequest? previousReceiptRequest = null;
         ReceiptResponse? previousReceiptResponse = null;
@@ -84,11 +95,7 @@ public class VeriFactuMapping
             previousReceiptResponse = receiptResponse;
         }
 
-        return new RegFactuSistemaFacturacion
-        {
-            Cabecera = cabecera,
-            RegistroFactura = registroFactura.ToArray()
-        };
+        return CreateRegFactuSistemaFacturacion(registroFactura);
     }
 
     public async Task<RegistroFacturacionAnulacionType> CreateRegistroFacturacionAnulacion(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, (IDFacturaExpedidaType id, string hash)? previous)
@@ -143,21 +150,7 @@ public class VeriFactuMapping
 
         registroFacturacionAnulacion.Huella = registroFacturacionAnulacion.GetHuella();
 
-        using var rsa = RSA.Create();
-
-        var request = new CertificateRequest("CN=SelfSignedCert", rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-        request.CertificateExtensions.Add(
-            new X509BasicConstraintsExtension(false, false, 0, true));
-        request.CertificateExtensions.Add(
-            new X509EnhancedKeyUsageExtension(
-                new OidCollection { new Oid("1.3.6.1.5.5.7.3.1") }, true));
-
-        var notBefore = DateTimeOffset.UtcNow;
-        var notAfter = notBefore.AddYears(1);
-
-        var cert = request.CreateSelfSigned(notBefore, notAfter);
-
-        return XmlHelpers.Deserialize<RegistroFacturacionAnulacionType>(XmlHelpers.SignXmlContentWithXades(XmlHelpers.GetXMLIncludingNamespace(registroFacturacionAnulacion, "sf", "RegistroFacturacionAlta"), cert))!;
+        return _certificate is null ? registroFacturacionAnulacion : XmlHelpers.Deserialize<RegistroFacturacionAnulacionType>(XmlHelpers.SignXmlContentWithXades(XmlHelpers.GetXMLIncludingNamespace(registroFacturacionAnulacion, "sf", "RegistroFacturacionAlta"), _certificate))!;
     }
 
     public RegistroFacturacionAltaType CreateRegistroFacturacionAlta(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, (IDFacturaExpedidaType id, string hash)? previous)
@@ -178,8 +171,8 @@ public class VeriFactuMapping
             NombreRazonEmisor = _masterData.Account.AccountName,
             TipoFactura = (receiptRequest.ftReceiptCase & 0xF000) switch
             {
-                0 => ClaveTipoFacturaType.F2, // QUESTION: is simplified invoice correct? 
-                _ => throw new Exception($"Invalid receipt case {receiptRequest.ftReceiptCase}")
+                _ => ClaveTipoFacturaType.F2, // QUESTION: is simplified invoice correct?
+                // _ => throw new Exception($"Invalid receipt case {receiptRequest.ftReceiptCase}")
             },
             ImporteRectificacion = new DesgloseRectificacionType
             {
@@ -245,22 +238,7 @@ public class VeriFactuMapping
 
         registroFacturacionAlta.Huella = registroFacturacionAlta.GetHuella();
 
-        using var rsa = RSA.Create();
-
-        var request = new CertificateRequest("CN=SelfSignedCert", rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-
-        request.CertificateExtensions.Add(
-            new X509BasicConstraintsExtension(false, false, 0, true));
-        request.CertificateExtensions.Add(
-            new X509EnhancedKeyUsageExtension(
-                new OidCollection { new Oid("1.3.6.1.5.5.7.3.1") }, true));
-
-        var notBefore = DateTimeOffset.UtcNow;
-        var notAfter = notBefore.AddYears(1);
-
-        var cert = request.CreateSelfSigned(notBefore, notAfter);
-
-        return XmlHelpers.Deserialize<RegistroFacturacionAltaType>(XmlHelpers.SignXmlContentWithXades(XmlHelpers.GetXMLIncludingNamespace(registroFacturacionAlta, "sf", "RegistroFacturacionAlta"), cert))!;
+        return _certificate is null ? registroFacturacionAlta : XmlHelpers.Deserialize<RegistroFacturacionAltaType>(XmlHelpers.SignXmlContentWithXades(XmlHelpers.GetXMLIncludingNamespace(registroFacturacionAlta, "sf", "RegistroFacturacionAlta"), _certificate))!;
     }
 }
 

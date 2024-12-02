@@ -1,4 +1,4 @@
-﻿using fiskaltrust.Api.POS.Models.ifPOS.v2;
+using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.storage.serialization.V0;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
@@ -47,11 +47,13 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
             var configuration = await GetConfigurationAsync(cashBoxId, accessToken);
             var queue = configuration.ftQueues.First();
 
+            queue.Configuration["certificate"] = Convert.ToBase64String(await File.ReadAllBytesAsync("Certificates/Certificado_PF_99999910G_CERTIFICADO_FISICA_PRUEBAS_Pre.p12"));
+            queue.Configuration["certificatePassword"] = "1234";
             var bootstrapper = new QueueESBootstrapper(queue.Id, new LoggerFactory(), queue.Configuration);
             var signMethod = bootstrapper.RegisterForSign();
 
-            //var initialOperationRequest = InitialOperation(cashBoxId);
-            //var initOperationResponse = await signMethod(System.Text.Json.JsonSerializer.Serialize(initialOperationRequest));
+            var initialOperationRequest = InitialOperation(cashBoxId);
+            var initOperationResponse = await signMethod(System.Text.Json.JsonSerializer.Serialize(initialOperationRequest));
 
             var receiptRequest = ExampleCashSales(cashBoxId);
             var exampleCashSalesResponse = await signMethod(System.Text.Json.JsonSerializer.Serialize(receiptRequest));

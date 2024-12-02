@@ -7,7 +7,7 @@ using Newtonsoft.Json;
 namespace fiskaltrust.Middleware.Localization.v2.MasterData;
 public class MasterDataService : IMasterDataService
 {
-    private const string CONFIG_KEY = "init_masterData";
+    public const string CONFIG_KEY = "init_masterData";
 
     private readonly Dictionary<string, object> _configuration;
     private readonly IMasterDataRepository<AccountMasterData> _accountMasterDataRepository;

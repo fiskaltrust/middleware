@@ -21,6 +21,7 @@ using System.Text.Json;
 using fiskaltrust.Middleware.Contracts.Factories;
 using System.Text;
 using fiskaltrust.Middleware.Localization.QueueES.Interface;
+using fiskaltrust.Middleware.Contracts.Repositories;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processors
 {
@@ -130,7 +131,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             storageMock.Setup(x => x.LoadLastReceipt()).ReturnsAsync(_fixture.Create<ftQueueItem>());
 
             var config = new InMemorySCUConfiguration();
-            var sut = new ReceiptCommandProcessorES(new InMemorySCU(signaturCreationUnitES, masterDataConfiguration, config), queueES, signaturCreationUnitES, storageMock.Object);
+            var sut = new ReceiptCommandProcessorES(new InMemorySCU(signaturCreationUnitES, masterDataConfiguration, config, Mock.Of<IMiddlewareQueueItemRepository>()), queueES, signaturCreationUnitES, storageMock.Object);
 
             var receiptRequest = new ReceiptRequest
             {

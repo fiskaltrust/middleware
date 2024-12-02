@@ -1,4 +1,6 @@
-﻿using System.Text.Json;
+﻿using System.Security.Cryptography.X509Certificates;
+using System.Text;
+using System.Text.Json;
 using fiskaltrust.Middleware.Localization.QueueES.ESSSCD;
 using fiskaltrust.Middleware.Localization.QueueES.Processors;
 using fiskaltrust.Middleware.Localization.QueuePT.Processors;
@@ -30,8 +32,17 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
 
         var masterDataService = new MasterDataService(configuration, storageProvider);
         storageProvider.Initialized.Wait();
-        var masterData = masterDataService.GetCurrentDataAsync().Result;  // put this in an async scu init process
-        var esSSCD = new InMemorySCU(signaturCreationUnitES, masterData, new InMemorySCUConfiguration(), storageProvider.GetMiddlewareQueueItemRepository());
+        var masterData = masterDataService.GetCurrentDataAsync().Result; // put this in an async scu init process
+        var esSSCD = new InMemorySCU(
+            signaturCreationUnitES,
+            masterData,
+            new InMemorySCUConfiguration()
+            {
+                Certificate = new X509Certificate2(
+                    Convert.FromBase64String(middlewareConfiguration.Configuration!["certificate"].ToString()!),
+                    middlewareConfiguration.Configuration!["certificatePassword"].ToString())
+            },
+            storageProvider.GetMiddlewareQueueItemRepository());
         var signProcessorES = new ReceiptProcessor(
             loggerFactory.CreateLogger<ReceiptProcessor>(),
             new LifecycleCommandProcessorES(

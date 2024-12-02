@@ -21,4 +21,10 @@
             Include="..\..\src\fiskaltrust.Middleware.Localization.QueueES\fiskaltrust.Middleware.Localization.QueueES.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <None Update="Certificates\**">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+
 </Project>

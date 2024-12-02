@@ -6,12 +6,15 @@ using fiskaltrust.Middleware.Localization.v2;
 using FluentAssertions;
 using Xunit;
 using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
+using Moq;
+using fiskaltrust.Middleware.Localization.QueueES.ESSSCD;
+using fiskaltrust.Middleware.Localization.v2.Storage;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processors
 {
     public class DailyOperationsCommandProcessorESTests
     {
-        private readonly DailyOperationsCommandProcessorES _sut = new DailyOperationsCommandProcessorES();
+        private readonly DailyOperationsCommandProcessorES _sut = new DailyOperationsCommandProcessorES(Mock.Of<IESSSCD>(), Mock.Of<IQueueStorageProvider>());
 
         [Theory]
         [InlineData(ReceiptCases.ZeroReceipt0x2000)]
