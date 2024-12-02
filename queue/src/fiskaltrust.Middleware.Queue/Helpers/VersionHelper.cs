@@ -1,10 +1,14 @@
 ﻿namespace fiskaltrust.Middleware.Queue.Helpers;
 
-public class VersionHelper
+public static class VersionHelper
 {
-    public static string GetCurrentMiddlewareVersion()
+    private static readonly string _currentMiddlewareVersion;
+
+    static VersionHelper()
     {
-        var version = typeof(SignProcessor).Assembly.GetName().Version;
-        return version?.ToString();
+        var version = typeof(VersionHelper).Assembly.GetName().Version;
+        _currentMiddlewareVersion = version?.ToString();
     }
+    
+    public static string GetCurrentMiddlewareVersion() => _currentMiddlewareVersion;
 }
