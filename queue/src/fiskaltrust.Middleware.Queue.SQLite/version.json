@@ -1,5 +1,5 @@
 {
-  "version": "1.3.64",
+  "version": "1.3.66-rc1",
   "releaseBranches": [
     "^refs/tags/queue/sqlite/v\\d+(?:\\.\\d+)*(?:-.*)?$"
   ]
