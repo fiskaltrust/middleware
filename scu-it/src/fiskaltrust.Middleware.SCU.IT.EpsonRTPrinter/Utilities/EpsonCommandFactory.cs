@@ -5,6 +5,7 @@ using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.SCU.IT.Abstraction;
 using System.Collections.Generic;
 using Newtonsoft.Json;
+using System.Security.Cryptography;
 
 #pragma warning disable
 
@@ -331,7 +332,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                     itemAndMessages.Add(new() { PrintRecItem = printRecItem, PrintRecMessage = printRecMessage });
                 }
                 else if (i.IsSingleUseVoucher() && i.Amount < 0)
-                {  
+                {
                     var printRecItemAdjustment = new PrintRecItemAdjustment
                     {
                         Description = i.Description,

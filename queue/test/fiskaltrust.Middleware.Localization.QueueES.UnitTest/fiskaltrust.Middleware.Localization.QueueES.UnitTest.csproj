@@ -1,0 +1,30 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks>net8</TargetFrameworks>
+        <LangVersion>Latest</LangVersion>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Serilog" Version="2.9.0" />
+        <PackageReference Include="Microsoft.Extensions.Logging" Version="3.1.4" />
+        <PackageReference Include="Microsoft.Extensions.Logging.ApplicationInsights"
+            Version="2.14.0" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="3.1.4" />
+        <PackageReference Include="Microsoft.Extensions.Logging.TraceSource" Version="3.1.4" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference
+            Include="..\..\src\fiskaltrust.Middleware.Localization.QueueES\fiskaltrust.Middleware.Localization.QueueES.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Update="Certificates\**">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+
+</Project>
