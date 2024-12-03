@@ -5,6 +5,8 @@ using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.SCU.IT.Abstraction;
 using System.Collections.Generic;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
+using Newtonsoft.Json.Linq;
 
 #pragma warning disable
 
@@ -46,10 +48,26 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
         private static void AddTrailerLines(EpsonRTPrinterSCUConfiguration configuration, ReceiptRequest receiptRequest, FiscalReceipt fiscalReceipt)
         {
             var index = 1;
-            if (string.IsNullOrWhiteSpace(configuration.AdditionalTrailerLines))
-                return;
+            var lines = new List<string>();
 
-            var lines = JsonConvert.DeserializeObject<List<string>>(configuration.AdditionalTrailerLines);
+            if (!string.IsNullOrWhiteSpace(configuration.AdditionalTrailerLines))
+                lines.AddRange(JsonConvert.DeserializeObject<List<string>>(configuration.AdditionalTrailerLines));
+
+            if (!string.IsNullOrEmpty(receiptRequest.ftReceiptCaseData))
+            {
+                try
+                {
+                    var doc = JsonConvert.DeserializeObject(receiptRequest.ftReceiptCaseData);
+                    var children = ((Newtonsoft.Json.Linq.JObject) doc).Children().Where(x => (x as JProperty) != null && (x as JProperty).Name == "cbReceiptLines");
+                    if (children.Count() > 0)
+                    {
+                        var receiptLines = children.Values().FirstOrDefault().ToArray().Select(x => x.ToString()).ToArray(); 
+                        lines.AddRange(receiptLines.ToList().Where(x => x != null).Select(x => x!)?.ToList() ?? new List<string>());
+                    }
+                }
+                catch { }
+            }
+
             foreach (var trailerLine in lines)
             {
                 var data = trailerLine.Replace("{cbArea}", receiptRequest.cbArea).Replace("{cbUser}", receiptRequest.cbUser);
