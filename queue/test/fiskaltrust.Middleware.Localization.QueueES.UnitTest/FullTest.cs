@@ -1,4 +1,4 @@
-using fiskaltrust.Api.POS.Models.ifPOS.v2;
+﻿using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.storage.serialization.V0;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
@@ -47,7 +47,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
             var configuration = await GetConfigurationAsync(cashBoxId, accessToken);
             var queue = configuration.ftQueues.First();
 
-            queue.Configuration["certificate"] = Convert.ToBase64String(await File.ReadAllBytesAsync("Certificates/Certificado_PF_99999910G_CERTIFICADO_FISICA_PRUEBAS_Pre.p12"));
+            queue.Configuration["certificate"] = Convert.ToBase64String(await File.ReadAllBytesAsync("Certificates/Certificado_RPJ_A39200019_CERTIFICADO_ENTIDAD_PRUEBAS_4_Pre.p12"));
             queue.Configuration["certificatePassword"] = "1234";
             var bootstrapper = new QueueESBootstrapper(queue.Id, new LoggerFactory(), queue.Configuration);
             var signMethod = bootstrapper.RegisterForSign();

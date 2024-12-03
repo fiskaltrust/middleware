@@ -29,6 +29,9 @@ public class VeriFactuMapping
         _certificate = certificate;
     }
 
+    public RegFactuSistemaFacturacion CreateRegFactuSistemaFacturacion(RegistroFacturacionAnulacionType registroFacturacionAnulacion) => CreateRegFactuSistemaFacturacion(new RegistroFacturaType { Item = registroFacturacionAnulacion });
+    public RegFactuSistemaFacturacion CreateRegFactuSistemaFacturacion(RegistroFacturacionAltaType registroFacturacionAlta) => CreateRegFactuSistemaFacturacion(new RegistroFacturaType { Item = registroFacturacionAlta });
+    public RegFactuSistemaFacturacion CreateRegFactuSistemaFacturacion(RegistroFacturaType registroFactura) => CreateRegFactuSistemaFacturacion([registroFactura]);
     public RegFactuSistemaFacturacion CreateRegFactuSistemaFacturacion(IEnumerable<RegistroFacturaType> registroFactura)
     {
         var cabecera = new CabeceraType

@@ -1,4 +1,5 @@
 ﻿using System.Security.Cryptography.X509Certificates;
+using System.ServiceModel;
 using System.Text;
 using System.Text.Json;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
@@ -9,6 +10,7 @@ using fiskaltrust.Middleware.Localization.QueueES.Interface;
 using fiskaltrust.Middleware.Localization.v2.Configuration;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.SCU.ES.Helpers;
+using fiskaltrust.Middleware.SCU.ES.Soap;
 using fiskaltrust.Middleware.Storage.ES;
 using fiskaltrust.storage.V0.MasterData;
 
@@ -107,8 +109,15 @@ public class InMemorySCU : IESSSCD
                 ftSignatureType = (long) SignatureTypesES.IDEmisorFactura
             });
 
-            var client = new sfPortTypeVerifactuClient(sfPortTypeVerifactuClient.EndpointConfiguration.SistemaVerifactuSelloPruebas);
-            var response = await client.RegFactuSistemaFacturacionAsync(_veriFactuMapping.CreateRegFactuSistemaFacturacion([new RegistroFacturaType { Item = journalES }]));
+            var envelope = new Envelope
+            {
+                Body = new Body
+                {
+                    RegFactuSistemaFacturacion = _veriFactuMapping.CreateRegFactuSistemaFacturacion(journalES)
+                }
+            };
+
+            var response = await new Client(new Uri("https://prewww10.aeat.es"), _configuration.Certificate).SendAsync(envelope);
             return await Task.FromResult(new ProcessResponse
             {
                 ReceiptResponse = request.ReceiptResponse,
