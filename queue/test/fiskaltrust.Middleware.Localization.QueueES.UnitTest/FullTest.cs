@@ -41,8 +41,8 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
         [Fact]
         public async Task FullTests()
         {
-            var cashBoxId = Guid.Parse("0237a598-5227-49e7-823c-2f10b2b1d29c");
-            var accessToken = "BH/j9w3Lj1qHKuh+9cDxSS7ZfHFYjdsxjxtJ7l/X6RP7o9j2SGHTxJskXLMPe8RKigRdgvHKp4zheC0myha7MnY=";
+            var cashBoxId = Guid.Parse("c6ce3f92-aaa6-4616-a19e-d14cc4a3ba34");
+            var accessToken = "BKqPI2Z6RffUxvqK88GjFQ6jFD/5GGhQlEcJwxGBj0NbcqDUP88Gy6fHaTXPzZEy48P1obv3vXHmnIW4jkmFqKI=";
 
             var configuration = await GetConfigurationAsync(cashBoxId, accessToken);
             var queue = configuration.ftQueues.First();
@@ -60,8 +60,9 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
             var issueRequest = new
             {
                 ReceiptRequest = receiptRequest,
-                ReceiptResponse = System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesResponse)
+                ReceiptResponse = System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesResponse)!
             };
+            issueRequest.ReceiptResponse.ftState.Should().Match(x => (x & 0xFFFF_FFFF) < 0xEEEE_EEEE, $"ftState 0x{issueRequest.ReceiptResponse.ftState:X} should be < 0xEEEE_EEEE\n{exampleCashSalesResponse}\n");
             var dd = System.Text.Json.JsonSerializer.Serialize(issueRequest);
         }
 

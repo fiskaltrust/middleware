@@ -29,7 +29,7 @@ public class JournalProcessorES : IJournalProcessor
         var veriFactu = await _veriFactuMapping.CreateRegFactuSistemaFacturacionAsync(_receiptJournalRepository.GetEntriesOnOrAfterTimeStampAsync(0).SelectAwait(async x => await _queueItemRepository.GetAsync(x.ftQueueItemId)));
         yield return new JournalResponse
         {
-            Chunk = Encoding.UTF8.GetBytes(veriFactu.Serialize()).ToList()
+            Chunk = Encoding.UTF8.GetBytes(veriFactu.XmlSerialize()).ToList()
         };
     }
 }

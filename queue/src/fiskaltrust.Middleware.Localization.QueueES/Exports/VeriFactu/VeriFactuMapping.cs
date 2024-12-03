@@ -2,7 +2,9 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Web;
+using System.Xml;
 using System.Xml.Serialization;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Contracts.Repositories;
@@ -13,6 +15,7 @@ using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.SCU.ES.Helpers;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
+using Microsoft.VisualBasic;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.Exports;
 
@@ -42,7 +45,7 @@ public class VeriFactuMapping
                 // Not sure how this needs to be formated. Maybe we'll need some extra fields in the master data?
                 // Should this be the AccountName, or OutletName or sth from the Agencies?
                 NombreRazon = _masterData.Account.AccountName,
-                NIF = _masterData.Outlet.VatId
+                NIF = _masterData.Account.VatId
             },
         };
 
@@ -177,13 +180,14 @@ public class VeriFactuMapping
                 _ => ClaveTipoFacturaType.F2, // QUESTION: is simplified invoice correct?
                 // _ => throw new Exception($"Invalid receipt case {receiptRequest.ftReceiptCase}")
             },
+            DescripcionOperacion = "test", // TODO: add descrpiton?
             ImporteRectificacion = new DesgloseRectificacionType
             {
                 // Do we need rounding for all the the decimals or should we fail if it's not in the range?
                 BaseRectificada = receiptRequest.cbChargeItems.Sum(chargeItem => chargeItem.Amount - chargeItem.GetVATAmount()).ToVeriFactuNumber(), // helper for tostring
 
                 CuotaRectificada = receiptRequest.cbChargeItems.Sum(chargeItem => chargeItem.GetVATAmount()).ToVeriFactuNumber(),
-                // CuotaRecargoRectificado = receiptRequest.cbChargeItems.Sum(chargeItem => chargeItem.GetVATAmount()).ToVeriFactuNumber()
+                // CuotaRecargoRectificado = receiptRequest.cbChargeItems.Sum(chargeItem => chargeItem.GetVATAmount()).ToVeriFactuNumber(),
             },
             Desglose = receiptRequest.cbChargeItems.Select(chargeItem => new DetalleType
             {
@@ -229,10 +233,14 @@ public class VeriFactuMapping
             SistemaInformatico = new SistemaInformaticoType
             {
                 NombreRazon = "fiskaltrust", // add real name here... and maybe get that from the config
+                NombreSistemaInformatico = "fiskaltrust.Middleware",
+                // Identification code given by the producing person or entity to its computerised invoicing system (RIS) which, once installed, constitutes the RIS used.
+                // It should distinguish it from any other possible different RIS produced by the same producing person or entity.
+                // The possible restrictions to its values shall be detailed in the corresponding documentation in the AEAT electronic office (validations document...).
+                IdSistemaInformatico = "00", // alphanumeric(2)
                 // VatId of producing company. We don't have that right now.
-                Item = "NIF-fiskaltrust",
-                IdSistemaInformatico = "fiskaltrust.Middleware.Queue.AzureTableStorage", // or add cloudcashbox etc. like the launcher type? would be annoying ^^
-                Version = "", // version
+                Item = "M0291081Q",
+                Version = "1.0.0", // version
                 NumeroInstalacion = receiptResponse.ftCashBoxIdentification,
             },
             FechaHoraHusoGenRegistro = receiptResponse.ftReceiptMoment,
@@ -288,19 +296,10 @@ public static class HuellaExt
 
 public static class XmlExt
 {
-    public static string Serialize(this RegistroFacturacionAltaType registroFacturacionAlta)
+    public static string XmlSerialize<T>(this T registroFacturacionAlta)
     {
-        var serializer = new XmlSerializer(typeof(RegistroFacturacionAltaType));
-        using var writer = new Utf8StringWriter();
+        var serializer = new XmlSerializer(typeof(T));
 
-        serializer.Serialize(writer, registroFacturacionAlta);
-
-        return writer.ToString();
-    }
-
-    public static string Serialize(this RegFactuSistemaFacturacion registroFacturacionAlta)
-    {
-        var serializer = new XmlSerializer(typeof(RegFactuSistemaFacturacion));
         using var writer = new Utf8StringWriter();
 
         serializer.Serialize(writer, registroFacturacionAlta);

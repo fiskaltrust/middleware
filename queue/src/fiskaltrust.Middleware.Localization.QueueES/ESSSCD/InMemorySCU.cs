@@ -109,15 +109,27 @@ public class InMemorySCU : IESSSCD
                 ftSignatureType = (long) SignatureTypesES.IDEmisorFactura
             });
 
-            var envelope = new Envelope
+            var envelope = new Envelope<RequestBody>
             {
-                Body = new Body
+                Body = new RequestBody
                 {
                     RegFactuSistemaFacturacion = _veriFactuMapping.CreateRegFactuSistemaFacturacion(journalES)
                 }
             };
-
+            var xml = envelope.XmlSerialize();
             var response = await new Client(new Uri("https://prewww10.aeat.es"), _configuration.Certificate).SendAsync(envelope);
+
+            if (response.IsErr)
+            {
+                throw new Exception(response.ErrValue!.ToString());
+            }
+
+            var respuesta = response.OkValue!;
+            if (respuesta.EstadoEnvio != EstadoEnvioType.Correcto)
+            {
+                var line = respuesta.RespuestaLinea.Where(x => x.IDFactura.NumSerieFactura == journalES.IDFactura.NumSerieFactura).Single();
+                throw new Exception($"{respuesta.EstadoEnvio}({line.CodigoErrorRegistro}): {line.DescripcionErrorRegistro}");
+            }
             return await Task.FromResult(new ProcessResponse
             {
                 ReceiptResponse = request.ReceiptResponse,

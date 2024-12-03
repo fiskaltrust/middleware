@@ -1,11 +1,28 @@
-using System;
-using System.IO;
-using System.Net.Http.Headers;
+using System.Diagnostics;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Xml;
+using System.Xml.Linq;
 using System.Xml.Serialization;
+using fiskaltrust.Middleware.Localization.QueueES.Exports;
+using fiskaltrust.Middleware.SCU.ES.Helpers;
+using Org.BouncyCastle.Bcpg;
 
 namespace fiskaltrust.Middleware.SCU.ES.Soap;
+
+public record Error
+{
+    public record Http(string Value) : Error();
+    public record Soap(string Value) : Error();
+
+#pragma warning disable CS8509 // The switch expression does not handle all possible values of its input type (it is not exhaustive).
+    public override string ToString() => this switch
+    {
+        Http http => $"HTTP Error: {http.Value}",
+        Soap soap => $"SOAP Error: {soap.Value}",
+    };
+#pragma warning restore CS8509 // The switch expression does not handle all possible values of its input type (it is not exhaustive).
+}
 
 public class Client
 {
@@ -22,18 +39,28 @@ public class Client
         _httpClient.DefaultRequestHeaders.Add("AcceptCharset", "utf-8");
     }
 
-    public async Task<string> SendAsync(Envelope envelope)
+    public async Task<Result<RespuestaRegFactuSistemaFacturacionType, Error>> SendAsync(Envelope<RequestBody> envelope)
     {
-        var response = await _httpClient.PostAsync("/wlpl/TIKE-CONT/ws/SistemaFacturacion/VerifactuSOAP", new StringContent(envelope.Serialize(), Encoding.UTF8, "application/soap+xml"));
+        var response = await _httpClient.PostAsync("/wlpl/TIKE-CONT/ws/SistemaFacturacion/VerifactuSOAP", new StringContent(envelope.XmlSerialize(), Encoding.UTF8, "application/soap+xml"));
 
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-        var content = await response.Content.ReadAsStringAsync();
+        var serializer = new XmlSerializer(typeof(Envelope<ResponseBody>));
+        var content = (Envelope<ResponseBody>) serializer.Deserialize(await response.Content.ReadAsStreamAsync())!;
 
         if (!response.IsSuccessStatusCode)
         {
-            throw new Exception(content);
+            return new Error.Http(content.XmlSerialize());
         }
 
-        return content;
+        if (content.Body.Content is Fault fault)
+        {
+            return new Error.Soap($"{fault.FaultCode}{(fault.Detail.ErrorCode.HasValue ? $"({fault.Detail.ErrorCode.Value})" : "")}: {fault.FaultString}");
+        }
+
+        if (content.Body.Content is RespuestaRegFactuSistemaFacturacionType repusta)
+        {
+            return repusta;
+        }
+        throw new UnreachableException();
     }
 }
