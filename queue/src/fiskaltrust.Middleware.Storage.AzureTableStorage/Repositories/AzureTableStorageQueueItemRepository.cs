@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -19,6 +18,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
     public class AzureTableStorageQueueItemRepository : BaseAzureTableStorageRepository<Guid, TableEntity, ftQueueItem>, IMiddlewareQueueItemRepository, IMiddlewareRepository<ftQueueItem>
     {
         private readonly AzureTableStorageReceiptReferenceIndexRepository _receiptReferenceIndexRepository;
+
         public AzureTableStorageQueueItemRepository(QueueConfiguration queueConfig, TableServiceClient tableServiceClient, AzureTableStorageReceiptReferenceIndexRepository receiptReferenceIndexRepository)
             : base(queueConfig, tableServiceClient, TABLE_NAME)
         {
@@ -27,7 +27,10 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
 
         public const string TABLE_NAME = "QueueItem";
 
-        protected override void EntityUpdated(ftQueueItem entity) => entity.TimeStamp = DateTime.UtcNow.Ticks;
+        protected override void EntityUpdated(ftQueueItem entity)
+        {
+            entity.TimeStamp = DateTime.UtcNow.Ticks;
+        }
 
         protected override Guid GetIdForEntity(ftQueueItem entity) => entity.ftQueueItemId;
 
@@ -54,7 +57,8 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
                 { nameof(ftQueueItem.ftQueueMoment), src.ftQueueMoment.ToUniversalTime() },
                 { nameof(ftQueueItem.ftQueueRow), src.ftQueueRow },
                 { nameof(ftQueueItem.ftQueueId), src.ftQueueId },
-                { nameof(ftQueueItem.TimeStamp), src.TimeStamp }
+                { nameof(ftQueueItem.TimeStamp), src.TimeStamp },
+                { nameof(ftQueueItem.ProcessingVersion), src.ProcessingVersion },
             };
 
             entity.SetOversized(nameof(ftQueueItem.request), src.request);
@@ -88,6 +92,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
                 ftQueueId = src.GetGuid(nameof(ftQueueItem.ftQueueId)).GetValueOrDefault(),
                 TimeStamp = src.GetInt64(nameof(ftQueueItem.TimeStamp)).GetValueOrDefault(),
                 request = src.GetOversized(nameof(ftQueueItem.request)),
+                ProcessingVersion = src.GetString(nameof(ftQueueItem.ProcessingVersion)),
                 response = src.GetOversized(nameof(ftQueueItem.response))
             };
         }
@@ -156,7 +161,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
                     where
                     (fromIncl.HasValue ? queueItem.TimeStamp >= fromIncl.Value : true) &&
                     (toIncl.HasValue ? queueItem.TimeStamp <= toIncl.Value : true) &&
-                    (!string.IsNullOrEmpty(queueItem.response)) && JsonConvert.DeserializeObject<ReceiptRequest>(queueItem.request).IncludeInReferences()
+                    !string.IsNullOrEmpty(queueItem.response) && JsonConvert.DeserializeObject<ReceiptRequest>(queueItem.request).IncludeInReferences()
                     group queueItem by queueItem.cbReceiptReference into newGroup
                     orderby newGroup.Key
                     select newGroup.Key;
@@ -170,7 +175,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
         {
             var queueItemsForReceiptReference =
                 from queueItem in GetByReceiptReferenceAsync(receiptReference).ToEnumerable()
-                where (!string.IsNullOrEmpty(queueItem.response)) && JsonConvert.DeserializeObject<ReceiptRequest>(queueItem.request).IncludeInReferences()
+                where !string.IsNullOrEmpty(queueItem.response) && JsonConvert.DeserializeObject<ReceiptRequest>(queueItem.request).IncludeInReferences()
                 orderby queueItem.TimeStamp
                 select queueItem;
             await foreach (var entry in queueItemsForReceiptReference.ToAsyncEnumerable())

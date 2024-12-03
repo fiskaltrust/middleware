@@ -6,6 +6,7 @@ using System;
 using System.Linq;
 using fiskaltrust.Middleware.Contracts.Models.FR;
 using Microsoft.EntityFrameworkCore.Design;
+using ftJournalFRCopyPayload = fiskaltrust.Middleware.Contracts.Models.FR.ftJournalFRCopyPayload;
 
 namespace fiskaltrust.Middleware.Storage.EFCore.SQLServer
 {

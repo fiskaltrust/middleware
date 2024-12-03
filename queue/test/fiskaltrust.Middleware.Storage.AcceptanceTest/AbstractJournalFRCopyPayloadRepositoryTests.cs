@@ -9,6 +9,7 @@ using fiskaltrust.Middleware.Contracts.Repositories.FR;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
 using Xunit;
+using ftJournalFRCopyPayload = fiskaltrust.Middleware.Contracts.Models.FR.ftJournalFRCopyPayload;
 
 namespace fiskaltrust.Middleware.Storage.AcceptanceTest
 {
