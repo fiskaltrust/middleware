@@ -6,6 +6,7 @@ using System.Xml.Linq;
 using System.Xml.Serialization;
 using fiskaltrust.Middleware.Localization.QueueES.Exports;
 using fiskaltrust.Middleware.SCU.ES.Helpers;
+using fiskaltrust.Middleware.SCU.ES.Models;
 using Org.BouncyCastle.Bcpg;
 
 namespace fiskaltrust.Middleware.SCU.ES.Soap;
@@ -39,7 +40,7 @@ public class Client
         _httpClient.DefaultRequestHeaders.Add("AcceptCharset", "utf-8");
     }
 
-    public async Task<Result<RespuestaRegFactuSistemaFacturacionType, Error>> SendAsync(Envelope<RequestBody> envelope)
+    public async Task<Result<RespuestaRegFactuSistemaFacturacion, Error>> SendAsync(Envelope<RequestBody> envelope)
     {
         var response = await _httpClient.PostAsync("/wlpl/TIKE-CONT/ws/SistemaFacturacion/VerifactuSOAP", new StringContent(envelope.XmlSerialize(), Encoding.UTF8, "application/soap+xml"));
 
@@ -57,7 +58,7 @@ public class Client
             return new Error.Soap($"{fault.FaultCode}{(fault.Detail.ErrorCode.HasValue ? $"({fault.Detail.ErrorCode.Value})" : "")}: {fault.FaultString}");
         }
 
-        if (content.Body.Content is RespuestaRegFactuSistemaFacturacionType repusta)
+        if (content.Body.Content is RespuestaRegFactuSistemaFacturacion repusta)
         {
             return repusta;
         }

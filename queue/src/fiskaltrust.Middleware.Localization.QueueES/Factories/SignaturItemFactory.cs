@@ -1,6 +1,7 @@
 ﻿using System.Web;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueueES.Interface;
+using fiskaltrust.Middleware.SCU.ES.Models;
 using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.Factories;
@@ -29,7 +30,7 @@ public static class SignaturItemFactory
         };
     }
 
-    public static SignatureItem CreateESQRCode(string baseUrl, RegistroFacturacionAltaType registroFacturacionAlta)
+    public static SignatureItem CreateESQRCode(string baseUrl, RegistroFacturacionAlta registroFacturacionAlta)
     {
         var query = HttpUtility.ParseQueryString(String.Empty);
         query.Add("nif", registroFacturacionAlta.IDFactura.IDEmisorFactura);

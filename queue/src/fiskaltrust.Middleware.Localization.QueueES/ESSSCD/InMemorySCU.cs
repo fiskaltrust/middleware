@@ -10,6 +10,7 @@ using fiskaltrust.Middleware.Localization.QueueES.Interface;
 using fiskaltrust.Middleware.Localization.v2.Configuration;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.SCU.ES.Helpers;
+using fiskaltrust.Middleware.SCU.ES.Models;
 using fiskaltrust.Middleware.SCU.ES.Soap;
 using fiskaltrust.Middleware.Storage.ES;
 using fiskaltrust.storage.V0.MasterData;
@@ -48,7 +49,7 @@ public class InMemorySCU : IESSSCD
         if (request.ReceiptRequest.IsVoid())
         {
             var journalES = await _veriFactuMapping.CreateRegistroFacturacionAnulacion(request.ReceiptRequest, request.ReceiptResponse, request.PreviousReceiptRequest is null || request.PreviousReceiptResponse is null ? null : (
-                new IDFacturaExpedidaType
+                new IDFactura
                 {
                     IDEmisorFactura = request.PreviousReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.IDEmisorFactura).Data,
                     NumSerieFactura = request.PreviousReceiptResponse.ftReceiptIdentification,
@@ -82,7 +83,7 @@ public class InMemorySCU : IESSSCD
         else
         {
             var journalES = _veriFactuMapping.CreateRegistroFacturacionAlta(request.ReceiptRequest, request.ReceiptResponse, request.PreviousReceiptRequest is null || request.PreviousReceiptResponse is null ? null : (
-                new IDFacturaExpedidaType
+                new IDFactura
                 {
                     IDEmisorFactura = request.PreviousReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.IDEmisorFactura).Data,
                     NumSerieFactura = request.PreviousReceiptResponse.ftReceiptIdentification,
@@ -125,9 +126,9 @@ public class InMemorySCU : IESSSCD
             }
 
             var respuesta = response.OkValue!;
-            if (respuesta.EstadoEnvio != EstadoEnvioType.Correcto)
+            if (respuesta.EstadoEnvio != EstadoEnvio.Correcto)
             {
-                var line = respuesta.RespuestaLinea.Where(x => x.IDFactura.NumSerieFactura == journalES.IDFactura.NumSerieFactura).Single();
+                var line = respuesta.RespuestaLinea!.Where(x => x.IDFactura.NumSerieFactura == journalES.IDFactura.NumSerieFactura).Single();
                 throw new Exception($"{respuesta.EstadoEnvio}({line.CodigoErrorRegistro}): {line.DescripcionErrorRegistro}");
             }
             return await Task.FromResult(new ProcessResponse

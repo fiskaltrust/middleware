@@ -1,5 +1,6 @@
 using System.Xml.Linq;
 using System.Xml.Serialization;
+using fiskaltrust.Middleware.SCU.ES.Models;
 
 namespace fiskaltrust.Middleware.SCU.ES.Soap;
 
@@ -34,6 +35,6 @@ public class Fault
 public class ResponseBody
 {
     [XmlElement("Fault", Type = typeof(Fault))]
-    [XmlElement("RespuestaRegFactuSistemaFacturacion", Type = typeof(RespuestaRegFactuSistemaFacturacionType), Namespace = "https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicaciones/es/aeat/tike/cont/ws/RespuestaSuministro.xsd")]
+    [XmlElement("RespuestaRegFactuSistemaFacturacion", Type = typeof(RespuestaRegFactuSistemaFacturacion), Namespace = "https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicaciones/es/aeat/tike/cont/ws/RespuestaSuministro.xsd")]
     public required object Content { get; set; }
 }

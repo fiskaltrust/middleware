@@ -41,8 +41,8 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
         [Fact]
         public async Task FullTests()
         {
-            var cashBoxId = Guid.Parse("c6ce3f92-aaa6-4616-a19e-d14cc4a3ba34");
-            var accessToken = "BKqPI2Z6RffUxvqK88GjFQ6jFD/5GGhQlEcJwxGBj0NbcqDUP88Gy6fHaTXPzZEy48P1obv3vXHmnIW4jkmFqKI=";
+            var cashBoxId = Guid.Parse("4bf886c3-77cc-473d-93a5-0072049bee5c");
+            var accessToken = "BGos9MlC/n+7bZwmCazLZxlJbhfCuiRd9ZSNdGKzPg55JsdQSVjk4LJkwyouMZrgx+uoRtyjsbDdKFGFBKOfU8s=";
 
             var configuration = await GetConfigurationAsync(cashBoxId, accessToken);
             var queue = configuration.ftQueues.First();
@@ -62,7 +62,8 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
                 ReceiptRequest = receiptRequest,
                 ReceiptResponse = System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesResponse)!
             };
-            issueRequest.ReceiptResponse.ftState.Should().Match(x => (x & 0xFFFF_FFFF) < 0xEEEE_EEEE, $"ftState 0x{issueRequest.ReceiptResponse.ftState:X} should be < 0xEEEE_EEEE\n{exampleCashSalesResponse}\n");
+            var errorItem = issueRequest.ReceiptResponse.ftSignatures.Find(x => (x.ftSignatureType & 0xFFFF_FFFF) == 0x3000);
+            issueRequest.ReceiptResponse.ftState.Should().Match(x => (x & 0xFFFF_FFFF) < 0xEEEE_EEEE, $"ftState 0x{issueRequest.ReceiptResponse.ftState:X} should be < 0xEEEE_EEEE\n{errorItem?.Data ?? exampleCashSalesResponse}\n");
             var dd = System.Text.Json.JsonSerializer.Serialize(issueRequest);
         }
 
@@ -95,9 +96,9 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
                     {
                         Position = 1,
                         ftChargeItemCase = 0x4752_2000_0000_0013,
-                        VATAmount = 1.2m,
+                        VATAmount = 1.30m,
                         Amount = 6.2m,
-                        VATRate = 24m,
+                        VATRate = 21m,
                         Quantity = 1,
                         Description = "ChargeItem1"
                     },
@@ -105,9 +106,9 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
                     {
                         Position = 2,
                         ftChargeItemCase = 0x4752_2000_0000_0013,
-                        VATAmount = 1.2m,
+                        VATAmount = 1.30m,
                         Amount = 6.2m,
-                        VATRate = 24m,
+                        VATRate = 21m,
                         Quantity = 1,
                         Description = "ChargeItem2"
                     }
