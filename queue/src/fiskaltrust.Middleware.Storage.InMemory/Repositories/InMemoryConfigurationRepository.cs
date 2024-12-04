@@ -93,13 +93,22 @@ namespace fiskaltrust.Middleware.Storage.InMemory.Repositories
         public async Task<IEnumerable<ftQueueME>> GetQueueMEListAsync() => await _queueMERepository.GetAsync().ConfigureAwait(false);
         public async Task<ftQueueME> GetQueueMEAsync(Guid queueMEId) => await _queueMERepository.GetAsync(queueMEId).ConfigureAwait(false);
 
+        public Task<IEnumerable<ftQueueES>> GetQueueESListAsync() => throw new NotImplementedException();
+        public Task<ftQueueES> GetQueueESAsync(Guid queueESId) => throw new NotImplementedException();
+        public Task InsertOrUpdateQueueESAsync(ftQueueES queue) => throw new NotImplementedException();
+
         public async Task<ftSignaturCreationUnitAT> GetSignaturCreationUnitATAsync(Guid id) => await _signaturCreationUnitATRepository.GetAsync(id).ConfigureAwait(false);
         public async Task<IEnumerable<ftSignaturCreationUnitAT>> GetSignaturCreationUnitATListAsync() => await _signaturCreationUnitATRepository.GetAsync().ConfigureAwait(false);
         public async Task InsertOrUpdateSignaturCreationUnitATAsync(ftSignaturCreationUnitAT scu) => await _signaturCreationUnitATRepository.InsertOrUpdateAsync(scu).ConfigureAwait(false);
 
         public async Task<ftSignaturCreationUnitDE> GetSignaturCreationUnitDEAsync(Guid id) => await _signaturCreationUnitDERepository.GetAsync(id).ConfigureAwait(false);
+        Task<IEnumerable<ftSignaturCreationUnitES>> IReadOnlyConfigurationRepository.GetSignaturCreationUnitESListAsync() => GetSignaturCreationUnitESListAsync();
+
+        public Task<ftSignaturCreationUnitES> GetSignaturCreationUnitESAsync(Guid signaturCreationUnitESId) => throw new NotImplementedException();
+
         public async Task<IEnumerable<ftSignaturCreationUnitDE>> GetSignaturCreationUnitDEListAsync() => await _signaturCreationUnitDERepository.GetAsync().ConfigureAwait(false);
         public async Task InsertOrUpdateSignaturCreationUnitDEAsync(ftSignaturCreationUnitDE scu) => await _signaturCreationUnitDERepository.InsertOrUpdateAsync(scu).ConfigureAwait(false);
+        Task IConfigurationRepository.InsertOrUpdateSignaturCreationUnitESAsync(ftSignaturCreationUnitES scu) => InsertOrUpdateSignaturCreationUnitESAsync(scu);
 
         public async Task<ftSignaturCreationUnitFR> GetSignaturCreationUnitFRAsync(Guid id) => await _signaturCreationUnitFRRepository.GetAsync(id).ConfigureAwait(false);
         public async Task<IEnumerable<ftSignaturCreationUnitFR>> GetSignaturCreationUnitFRListAsync() => await _signaturCreationUnitFRRepository.GetAsync().ConfigureAwait(false);
@@ -112,5 +121,10 @@ namespace fiskaltrust.Middleware.Storage.InMemory.Repositories
         public async Task InsertOrUpdateSignaturCreationUnitMEAsync(ftSignaturCreationUnitME scu) => await _signaturCreationUnitMERepository.InsertOrUpdateAsync(scu).ConfigureAwait(false);
         public async Task<IEnumerable<ftSignaturCreationUnitME>> GetSignaturCreationUnitMEListAsync() => await _signaturCreationUnitMERepository.GetAsync().ConfigureAwait(false);
         public async Task<ftSignaturCreationUnitME> GetSignaturCreationUnitMEAsync(Guid signaturCreationUnitDEId) => await _signaturCreationUnitMERepository.GetAsync(signaturCreationUnitDEId).ConfigureAwait(false);
+
+        public Task<ftSignaturCreationUnitES> GetSignaturCreationUnitESAsync() => throw new NotImplementedException();
+        public Task<IEnumerable<ftSignaturCreationUnitES>> GetSignaturCreationUnitESListAsync() => throw new NotImplementedException();
+        public Task InsertOrUpdateSignaturCreationUnitESAsync(ftSignaturCreationUnitES scu) => throw new NotImplementedException();
+
     }
 }

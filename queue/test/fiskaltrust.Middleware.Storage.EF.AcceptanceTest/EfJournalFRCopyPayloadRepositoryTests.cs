@@ -13,6 +13,7 @@ using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using ftJournalFRCopyPayload = fiskaltrust.Middleware.Contracts.Models.FR.ftJournalFRCopyPayload;
 
 namespace fiskaltrust.Middleware.Storage.EF.AcceptanceTest
 {

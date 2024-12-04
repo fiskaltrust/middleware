@@ -9,6 +9,7 @@ using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Queue.Extensions;
+using fiskaltrust.Middleware.Queue.Helpers;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -135,7 +136,8 @@ namespace fiskaltrust.Middleware.Queue
                 cbReceiptMoment = data.cbReceiptMoment,
                 cbTerminalID = data.cbTerminalID,
                 cbReceiptReference = data.cbReceiptReference,
-                ftQueueRow = ++queue.ftQueuedRow
+                ftQueueRow = ++queue.ftQueuedRow,
+                ProcessingVersion = VersionHelper.GetCurrentMiddlewareVersion()
             };
             if (queueItem.ftQueueTimeout == 0)
             {

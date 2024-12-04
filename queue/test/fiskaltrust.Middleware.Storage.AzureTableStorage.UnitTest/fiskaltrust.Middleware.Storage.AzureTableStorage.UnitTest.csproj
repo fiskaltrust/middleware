@@ -6,8 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference
-      Include="..\..\src\fiskaltrust.Middleware.Storage.AzureTableStorage\fiskaltrust.Middleware.Storage.AzureTableStorage.csproj" />
+    <ProjectReference Include="..\..\src\fiskaltrust.Middleware.Storage.AzureTableStorage\fiskaltrust.Middleware.Storage.AzureTableStorage.csproj" />
   </ItemGroup>
 
 </Project>

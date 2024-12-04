@@ -459,7 +459,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                 0x06 => new EpsonPaymentType() { PaymentType = 6, Index = 1 },
                 0x07 => new EpsonPaymentType() { PaymentType = 5, Index = 0 },
                 0x08 => new EpsonPaymentType() { PaymentType = 5, Index = 0 },
-                0x09 => new EpsonPaymentType() { PaymentType = 5, Index = 0 },
+                0x09 => new EpsonPaymentType() { PaymentType = 5, Index = 3 },
                 0x0A => new EpsonPaymentType() { PaymentType = 2, Index = 1 },
                 0x0B => new EpsonPaymentType() { PaymentType = 2, Index = 1 },
                 0x0C => new EpsonPaymentType() { PaymentType = 0, Index = 0 },
