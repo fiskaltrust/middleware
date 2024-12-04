@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1.de;
 using fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Communication;
@@ -244,12 +245,15 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
                 // TODO check how many items are returned by selfCheckResult.KeyInfos and how they behave
                 var activeKey = selfCheckResult.keyInfos.FirstOrDefault(x => x.state == KeyState.Active) ?? selfCheckResult.keyInfos.First();
 
+                var cert = new X509Certificate2(Convert.FromBase64String(tssDetails.LeafCertificate));
+                var certificatePublicKeyBase64 = Convert.ToBase64String(cert.GetPublicKey());
+
                 _lastTseInfo = new TseInfo
                 {
                     CurrentNumberOfClients = clients.Count,
                     CurrentNumberOfStartedTransactions = fccInfo.CurrentNumberOfTransactions,
                     SerialNumberOctet = tssDetails.SerialNumberHex,
-                    PublicKeyBase64 = tssDetails.PublicKey,
+                    PublicKeyBase64 = certificatePublicKeyBase64,
                     FirmwareIdentification = JsonConvert.SerializeObject(new Dictionary<string, string> { { "fccVersion", selfCheckResult.fccVersion }, { "localClientVersion", selfCheckResult.localClientVersion }, { "remoteCspVersion", selfCheckResult.remoteCspVersion } }),
                     CertificationIdentification = GetCertificationIdentification(),
                     MaxNumberOfClients = fccInfo.MaxNumberClients,
