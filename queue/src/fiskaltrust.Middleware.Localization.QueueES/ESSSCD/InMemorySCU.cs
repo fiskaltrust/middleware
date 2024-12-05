@@ -78,6 +78,7 @@ public class InMemorySCU : IESSSCD
             return await Task.FromResult(new ProcessResponse
             {
                 ReceiptResponse = request.ReceiptResponse,
+                Signed = true
             });
         }
         else
@@ -134,6 +135,7 @@ public class InMemorySCU : IESSSCD
             return await Task.FromResult(new ProcessResponse
             {
                 ReceiptResponse = request.ReceiptResponse,
+                Signed = true
             });
         }
     }

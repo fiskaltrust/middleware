@@ -2,10 +2,8 @@
 using fiskaltrust.Middleware.Localization.QueueES.Interface;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2;
-using fiskaltrust.Middleware.Storage.ES;
 using fiskaltrust.storage.V0;
 using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
-using fiskaltrust.Middleware.Localization.v2.Storage;
 using System.Text.Json;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
 
@@ -51,8 +49,8 @@ public class ReceiptCommandProcessorES(IESSSCD sscd, Storage.ES.IConfigurationRe
         {
             ReceiptRequest = request.ReceiptRequest,
             ReceiptResponse = request.ReceiptResponse,
-            PreviousReceiptRequest = JsonSerializer.Deserialize<ReceiptRequest>(previousQueueItem!.request)!, // handle null case?
-            PreviousReceiptResponse = JsonSerializer.Deserialize<ReceiptResponse>(previousQueueItem!.response)!,
+            PreviousReceiptRequest = previousQueueItem is null ? null : JsonSerializer.Deserialize<ReceiptRequest>(previousQueueItem.request)!, // handle null case?
+            PreviousReceiptResponse = previousQueueItem is null ? null : JsonSerializer.Deserialize<ReceiptResponse>(previousQueueItem.response)!,
         });
         if (response.Signed)
         {

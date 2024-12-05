@@ -132,7 +132,7 @@ public class VeriFactuMapping
             },
             Encadenamiento = new RegistroFacturacionAnulacionEncadenamiento
             {
-                Item = receiptRequest.IsInitialOperation()
+                Item = previous is null
                     ? PrimerRegistroCadena.S
                     : new EncadenamientoFacturaAnterior
                     {
@@ -227,7 +227,7 @@ public class VeriFactuMapping
             ImporteTotal = (receiptRequest.cbReceiptAmount ?? receiptRequest.cbChargeItems.Sum(chargeItem => chargeItem.Amount)).ToVeriFactuNumber(),
             Encadenamiento = new RegistroFacturacionAltaEncadenamiento
             {
-                Item = receiptRequest.IsInitialOperation()
+                Item = previous is null
                     ? PrimerRegistroCadena.S
                     : new EncadenamientoFacturaAnterior
                     {

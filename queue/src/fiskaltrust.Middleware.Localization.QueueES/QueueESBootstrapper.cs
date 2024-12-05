@@ -24,7 +24,6 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
     public QueueESBootstrapper(Guid id, ILoggerFactory loggerFactory, Dictionary<string, object> configuration)
     {
         var middlewareConfiguration = MiddlewareConfigurationFactory.CreateMiddlewareConfiguration(id, configuration);
-        var queueES = Newtonsoft.Json.JsonConvert.DeserializeObject<List<ftQueueES>>(configuration["init_ftQueueES"]!.ToString()!).First();
 
         var signaturCreationUnitES = new ftSignaturCreationUnitES();
         var storageProvider = new AzureStorageProvider(loggerFactory, id, configuration);
@@ -33,6 +32,13 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
         var masterDataService = new MasterDataService(configuration, storageProvider);
         storageProvider.Initialized.Wait();
         var masterData = masterDataService.GetCurrentDataAsync().Result; // put this in an async scu init process
+        var queueESRepository = (IConfigurationRepository) storageProvider.GetConfigurationRepository();
+        var queueES = queueESRepository.GetQueueESAsync(id).Result;
+        if (queueES is null)
+        {
+            queueES = Newtonsoft.Json.JsonConvert.DeserializeObject<List<ftQueueES>>(configuration["init_ftQueueES"]!.ToString()!).First();
+            queueESRepository.InsertOrUpdateQueueESAsync(queueES);
+        }
         var esSSCD = new InMemorySCU(
             signaturCreationUnitES,
             masterData,
@@ -46,14 +52,12 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
         var signProcessorES = new ReceiptProcessor(
             loggerFactory.CreateLogger<ReceiptProcessor>(),
             new LifecycleCommandProcessorES(
-                esSSCD,
                 queueStorageProvider
             ),
             new ReceiptCommandProcessorES(
                 esSSCD,
-                queueES,
-                signaturCreationUnitES,
-                queueStorageProvider
+                (IConfigurationRepository) storageProvider.GetConfigurationRepository(),
+                storageProvider.GetMiddlewareQueueItemRepository()
             ),
             new DailyOperationsCommandProcessorES(
                 esSSCD,

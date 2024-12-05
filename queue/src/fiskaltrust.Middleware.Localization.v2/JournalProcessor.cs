@@ -20,7 +20,7 @@ public interface IJournalProcessor
 
 public class JournalProcessor : IJournalProcessor
 {
-    private readonly IReadOnlyConfigurationRepository _configurationRepository;
+    private readonly storage.V0.IReadOnlyConfigurationRepository _configurationRepository;
     private readonly IMiddlewareRepository<ftQueueItem> _queueItemRepository;
     private readonly IMiddlewareRepository<ftReceiptJournal> _receiptJournalRepository;
     private readonly IMiddlewareRepository<ftActionJournal> _actionJournalRepository;
@@ -93,7 +93,7 @@ public class JournalProcessor : IJournalProcessor
             QueueList = await _configurationRepository.GetQueueListAsync().ConfigureAwait(false),
             QueueATList = await _configurationRepository.GetQueueATListAsync().ConfigureAwait(false),
             QueueDEList = await _configurationRepository.GetQueueDEListAsync().ConfigureAwait(false),
-            QueueESList = GetConfigurationFromDictionary< ftQueueES>("init_ftQueueES"),
+            QueueESList = GetConfigurationFromDictionary<ftQueueES>("init_ftQueueES"),
             QueueFRList = await _configurationRepository.GetQueueFRListAsync().ConfigureAwait(false),
             QueueGRList = GetConfigurationFromDictionary<ftQueueGR>("init_ftQueueGR"),
             QueueITList = await _configurationRepository.GetQueueITListAsync().ConfigureAwait(false),
