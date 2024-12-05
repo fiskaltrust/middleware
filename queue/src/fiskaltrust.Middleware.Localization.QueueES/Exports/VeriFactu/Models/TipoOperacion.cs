@@ -7,4 +7,6 @@ public enum TipoOperacion
 {
     Alta,
     Anulacion,
+    [XmlEnum("")]
+    Null
 }

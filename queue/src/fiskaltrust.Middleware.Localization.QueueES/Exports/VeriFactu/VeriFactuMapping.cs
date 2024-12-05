@@ -174,7 +174,7 @@ public class VeriFactuMapping
             IDVersion = Version.Item10,
             IDFactura = new IDFactura
             {
-                IDEmisorFactura = _masterData.Outlet.VatId,
+                IDEmisorFactura = _masterData.Account.VatId,
                 NumSerieFactura = receiptResponse.ftReceiptIdentification.Split('#')[1],
                 FechaExpedicionFactura = receiptRequest.cbReceiptMoment.ToString("dd-MM-yyy")
             },
