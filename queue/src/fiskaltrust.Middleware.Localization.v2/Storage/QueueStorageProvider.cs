@@ -144,7 +144,6 @@ public class QueueStorageProvider : IQueueStorageProvider
         queue.ftReceiptTotalizer += receiptjournal.ftReceiptTotal;
         await _configurationRepository.InsertOrUpdateQueueAsync(queue).ConfigureAwait(false);
         _cachedQueue = queue;
-        _lastReceipt = queueItem;
         return receiptjournal;
     }
 
@@ -185,22 +184,5 @@ public class QueueStorageProvider : IQueueStorageProvider
             }
         }
         return null;
-    }
-
-    private ftQueueItem? _lastReceipt = null;
-    public async Task<ftQueueItem?> LoadLastReceipt()
-    {
-        if (_lastReceipt is null)
-        {
-            var receiptJournal = await _middlewareReceiptJournalRepository.GetWithLastTimestampAsync();
-            if (receiptJournal is null)
-            {
-                return null;
-            }
-
-            _lastReceipt = await _middlewareQueueItemRepository.GetAsync(receiptJournal.ftQueueItemId);
-        }
-
-        return _lastReceipt;
     }
 }

@@ -11,13 +11,12 @@ using fiskaltrust.Api.POS.Models.ifPOS.v2;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.Processors;
 
-public class ReceiptCommandProcessorES(IESSSCD sscd, ftQueueES queueES, ftSignaturCreationUnitES signaturCreationUnitES, IQueueStorageProvider queueStorageProvider) : IReceiptCommandProcessor
+public class ReceiptCommandProcessorES(IESSSCD sscd, Storage.ES.IConfigurationRepository configurationRepository, IReadOnlyQueueItemRepository queueItemRepository) : IReceiptCommandProcessor
 {
 #pragma warning disable
     private readonly IESSSCD _sscd = sscd;
-    private readonly ftQueueES _queueES = queueES;
-    private readonly ftSignaturCreationUnitES _signaturCreationUnitES = signaturCreationUnitES;
-    private readonly IQueueStorageProvider _queueStorageProvider = queueStorageProvider;
+    private readonly Storage.ES.IConfigurationRepository _configurationRepository = configurationRepository;
+    private readonly IReadOnlyQueueItemRepository _queueItemRepository = queueItemRepository;
 #pragma warning restore
 
     public async Task<ProcessCommandResponse> ProcessReceiptAsync(ProcessCommandRequest request)
@@ -46,7 +45,8 @@ public class ReceiptCommandProcessorES(IESSSCD sscd, ftQueueES queueES, ftSignat
 
     public async Task<ProcessCommandResponse> PointOfSaleReceipt0x0001Async(ProcessCommandRequest request)
     {
-        var previousQueueItem = await _queueStorageProvider.LoadLastReceipt();
+        var queueES = await _configurationRepository.GetQueueESAsync(request.queue.ftQueueId);
+        var previousQueueItem = queueES.SSCDSignQueueItemId is not null ? await _queueItemRepository.GetAsync(queueES.SSCDSignQueueItemId.Value) : null;
         var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
         {
             ReceiptRequest = request.ReceiptRequest,
@@ -54,6 +54,11 @@ public class ReceiptCommandProcessorES(IESSSCD sscd, ftQueueES queueES, ftSignat
             PreviousReceiptRequest = JsonSerializer.Deserialize<ReceiptRequest>(previousQueueItem!.request)!, // handle null case?
             PreviousReceiptResponse = JsonSerializer.Deserialize<ReceiptResponse>(previousQueueItem!.response)!,
         });
+        if (response.Signed)
+        {
+            queueES.SSCDSignQueueItemId = response.ReceiptResponse.ftQueueItemID;
+            await _configurationRepository.InsertOrUpdateQueueESAsync(queueES);
+        }
         return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
     }
 

@@ -37,79 +37,16 @@ public class DailyOperationsCommandProcessorES(IESSSCD sscd, IQueueStorageProvid
         request.ReceiptResponse.SetReceiptResponseError(ErrorMessages.UnknownReceiptCase(request.ReceiptRequest.ftReceiptCase));
         return new ProcessCommandResponse(request.ReceiptResponse, []);
     }
+    public async Task<ProcessCommandResponse> ZeroReceipt0x2000Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>()));
 
-    public async Task<ProcessCommandResponse> ZeroReceipt0x2000Async(ProcessCommandRequest request)
-    {
-        var previousQueueItem = await _queueStorageProvider.LoadLastReceipt();
-        var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
-        {
-            ReceiptRequest = request.ReceiptRequest,
-            ReceiptResponse = request.ReceiptResponse,
-            PreviousReceiptRequest = JsonSerializer.Deserialize<ReceiptRequest>(previousQueueItem!.request)!, // handle null case?
-            PreviousReceiptResponse = JsonSerializer.Deserialize<ReceiptResponse>(previousQueueItem!.response)!,
-        });
-        return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
-    }
+    public async Task<ProcessCommandResponse> OneReceipt0x2001Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>()));
 
-    public async Task<ProcessCommandResponse> OneReceipt0x2001Async(ProcessCommandRequest request)
-    {
-        var previousQueueItem = await _queueStorageProvider.LoadLastReceipt();
-        var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
-        {
-            ReceiptRequest = request.ReceiptRequest,
-            ReceiptResponse = request.ReceiptResponse,
-            PreviousReceiptRequest = JsonSerializer.Deserialize<ReceiptRequest>(previousQueueItem!.request)!, // handle null case?
-            PreviousReceiptResponse = JsonSerializer.Deserialize<ReceiptResponse>(previousQueueItem!.response)!,
-        });
-        return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
-    }
+    public async Task<ProcessCommandResponse> ShiftClosing0x2010Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>()));
 
-    public async Task<ProcessCommandResponse> ShiftClosing0x2010Async(ProcessCommandRequest request)
-    {
-        var previousQueueItem = await _queueStorageProvider.LoadLastReceipt();
-        var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
-        {
-            ReceiptRequest = request.ReceiptRequest,
-            ReceiptResponse = request.ReceiptResponse,
-            PreviousReceiptRequest = JsonSerializer.Deserialize<ReceiptRequest>(previousQueueItem!.request)!, // handle null case?
-            PreviousReceiptResponse = JsonSerializer.Deserialize<ReceiptResponse>(previousQueueItem!.response)!,
-        });
-        return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
-    }
-    public async Task<ProcessCommandResponse> DailyClosing0x2011Async(ProcessCommandRequest request)
-    {
-        var previousQueueItem = await _queueStorageProvider.LoadLastReceipt();
-        var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
-        {
-            ReceiptRequest = request.ReceiptRequest,
-            ReceiptResponse = request.ReceiptResponse,
-            PreviousReceiptRequest = JsonSerializer.Deserialize<ReceiptRequest>(previousQueueItem!.request)!, // handle null case?
-            PreviousReceiptResponse = JsonSerializer.Deserialize<ReceiptResponse>(previousQueueItem!.response)!,
-        });
-        return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
-    }
-    public async Task<ProcessCommandResponse> MonthlyClosing0x2012Async(ProcessCommandRequest request)
-    {
-        var previousQueueItem = await _queueStorageProvider.LoadLastReceipt();
-        var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
-        {
-            ReceiptRequest = request.ReceiptRequest,
-            ReceiptResponse = request.ReceiptResponse,
-            PreviousReceiptRequest = JsonSerializer.Deserialize<ReceiptRequest>(previousQueueItem!.request)!, // handle null case?
-            PreviousReceiptResponse = JsonSerializer.Deserialize<ReceiptResponse>(previousQueueItem!.response)!,
-        });
-        return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
-    }
-    public async Task<ProcessCommandResponse> YearlyClosing0x2013Async(ProcessCommandRequest request)
-    {
-        var previousQueueItem = await _queueStorageProvider.LoadLastReceipt();
-        var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
-        {
-            ReceiptRequest = request.ReceiptRequest,
-            ReceiptResponse = request.ReceiptResponse,
-            PreviousReceiptRequest = JsonSerializer.Deserialize<ReceiptRequest>(previousQueueItem!.request)!, // handle null case?
-            PreviousReceiptResponse = JsonSerializer.Deserialize<ReceiptResponse>(previousQueueItem!.response)!,
-        });
-        return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
-    }
+    public async Task<ProcessCommandResponse> DailyClosing0x2011Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>()));
+
+    public async Task<ProcessCommandResponse> MonthlyClosing0x2012Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>()));
+
+    public async Task<ProcessCommandResponse> YearlyClosing0x2013Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>()));
+
 }

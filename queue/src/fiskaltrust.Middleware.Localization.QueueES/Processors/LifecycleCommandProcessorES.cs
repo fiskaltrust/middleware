@@ -14,11 +14,9 @@ namespace fiskaltrust.Middleware.Localization.QueueES.Processors;
 public class LifecycleCommandProcessorES : ILifecycleCommandProcessor
 {
     private readonly ILocalizedQueueStorageProvider _queueStorageProvider;
-    private readonly IESSSCD _sscd;
 
-    public LifecycleCommandProcessorES(IESSSCD sscd, ILocalizedQueueStorageProvider queueStorageProvider)
+    public LifecycleCommandProcessorES(ILocalizedQueueStorageProvider queueStorageProvider)
     {
-        _sscd = sscd;
         _queueStorageProvider = queueStorageProvider;
     }
 
@@ -42,21 +40,12 @@ public class LifecycleCommandProcessorES : ILifecycleCommandProcessor
 
     public async Task<ProcessCommandResponse> InitialOperationReceipt0x4001Async(ProcessCommandRequest request)
     {
-        // should an initial operation receipt initialize both the Alta and Anulacion chains?
-        // maybe by cancelling its self? ^^
-
-        var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
-        {
-            ReceiptRequest = request.ReceiptRequest,
-            ReceiptResponse = request.ReceiptResponse,
-            PreviousReceiptRequest = null,
-            PreviousReceiptResponse = null,
-        });
-        var actionJournal = ftActionJournalFactory.CreateInitialOperationActionJournal(request.ReceiptRequest, request.ReceiptResponse);
+        var (queue, receiptRequest, receiptResponse) = request;
+        var actionJournal = ftActionJournalFactory.CreateInitialOperationActionJournal(receiptRequest, receiptResponse);
         await _queueStorageProvider.ActivateQueueAsync();
 
-        response.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreateInitialOperationSignature(request.queue));
-        return new ProcessCommandResponse(response.ReceiptResponse, [actionJournal]);
+        receiptResponse.AddSignatureItem(SignaturItemFactory.CreateInitialOperationSignature(queue));
+        return new ProcessCommandResponse(receiptResponse, [actionJournal]);
     }
 
     public async Task<ProcessCommandResponse> OutOfOperationReceipt0x4002Async(ProcessCommandRequest request)
