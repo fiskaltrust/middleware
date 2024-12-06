@@ -4,7 +4,6 @@ using System.Text.Json;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueuePT.Exports.SAFTPT;
 using fiskaltrust.Middleware.Localization.QueuePT.Interface;
-using fiskaltrust.Middleware.Storage.PT;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 
@@ -38,7 +37,7 @@ public static class SAFTMapping
                     NumberOfEntries = invoices.Count,
                     TotalDebit = invoices.SelectMany(x => x!.Line).Sum(x => x.DebitAmount ?? 0.0m),
                     TotalCredit = invoices.SelectMany(x => x!.Line).Sum(x => x.CreditAmount),
-                    Invoice = invoices!,
+                    Invoice = invoices!
                 }
             }
         };
@@ -62,7 +61,6 @@ public static class SAFTMapping
     private static TaxTable GetTaxTable(List<ReceiptRequest> receiptRequest)
     {
         var lines = receiptRequest.SelectMany(x => x.cbChargeItems).Select(GetLine);
-
         var taxTableEntries = lines.Select(x => new TaxTableEntry
         {
             TaxType = x.Tax.TaxType,
@@ -71,7 +69,6 @@ public static class SAFTMapping
             Description = "",
             TaxPercentage = x.Tax.TaxPercentage
         }).DistinctBy(x => x.TaxCode).ToList();
-
         return new TaxTable
         {
             TaxTableEntry = taxTableEntries
