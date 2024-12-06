@@ -16,12 +16,12 @@ public static class SAFTMapping
     {
         var receiptRequests = queueItems.Select(x => (receiptRequest: JsonSerializer.Deserialize<ReceiptRequest>(x.request)!, receiptResponse: JsonSerializer.Deserialize<ReceiptResponse>(x.response))).ToList();
         var actualReceiptRequests = receiptRequests.Where(x => x.receiptResponse != null && ((long) x.receiptResponse.ftState & 0xFF) == 0x00).Cast<(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)>().ToList();
-
-        var invoices = actualReceiptRequests.Select(x => SAFTMapping.GetInvoiceForReceiptRequest(accountMasterData, x)).Where(x => x != null).ToList();
-        if(to > 0)
+        if (to < 0)
         {
-            invoices = invoices.Take(to).ToList();
+            actualReceiptRequests = actualReceiptRequests.Take(-to).ToList();
         }
+        var invoices = actualReceiptRequests.Select(x => SAFTMapping.GetInvoiceForReceiptRequest(accountMasterData, x)).Where(x => x != null).ToList();
+ 
         return new AuditFile
         {
             Header = GetHeader(accountMasterData),
