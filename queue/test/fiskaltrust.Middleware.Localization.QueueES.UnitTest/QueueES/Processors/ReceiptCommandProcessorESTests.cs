@@ -54,7 +54,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             );
         }
 
-        private readonly ReceiptCommandProcessorES _sut = new ReceiptCommandProcessorES(Mock.Of<IESSSCD>(), new ftQueueES(), new ftSignaturCreationUnitES(), Mock.Of<IQueueStorageProvider>());
+        private readonly ReceiptCommandProcessorES _sut = new ReceiptCommandProcessorES(Mock.Of<IESSSCD>(), Mock.Of<Storage.ES.IConfigurationRepository>(), Mock.Of<IQueueItemRepository>());
 
         [Theory]
         [InlineData(ReceiptCases.PaymentTransfer0x0002)]
@@ -116,7 +116,11 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
         {
             var queue = TestHelpers.CreateQueue();
             var queueItem = TestHelpers.CreateQueueItem();
-            var queueES = new ftQueueES();
+            var previousQueueItem = TestHelpers.CreateQueueItem();
+            var queueES = new ftQueueES()
+            {
+                SSCDSignQueueItemId = previousQueueItem.ftQueueItemId
+            };
             var signaturCreationUnitES = new ftSignaturCreationUnitES
             {
 
@@ -125,13 +129,15 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             var masterDataConfiguration = _fixture.Create<MasterDataConfiguration>();
             masterDataConfiguration.Outlet.VatId = "VATTEST";
 
-            var configMock = new Mock<IConfigurationRepository>();
+            var configMock = new Mock<storage.V0.IConfigurationRepository>();
             configMock.Setup(x => x.InsertOrUpdateQueueAsync(It.IsAny<ftQueue>())).Returns(Task.CompletedTask);
-            var storageMock = new Mock<IQueueStorageProvider>();
-            storageMock.Setup(x => x.LoadLastReceipt()).ReturnsAsync(_fixture.Create<ftQueueItem>());
+            var configurationRepositoryMock = new Mock<Storage.ES.IConfigurationRepository>();
+            configurationRepositoryMock.Setup(x => x.GetQueueESAsync(queue.ftQueueId)).ReturnsAsync(queueES);
+            var queueItemRepositoryMock = new Mock<IQueueItemRepository>();
+            queueItemRepositoryMock.Setup(x => x.GetAsync(previousQueueItem.ftQueueItemId)).ReturnsAsync(previousQueueItem);
 
             var config = new InMemorySCUConfiguration();
-            var sut = new ReceiptCommandProcessorES(new InMemorySCU(signaturCreationUnitES, masterDataConfiguration, config, Mock.Of<IMiddlewareQueueItemRepository>()), queueES, signaturCreationUnitES, storageMock.Object);
+            var sut = new ReceiptCommandProcessorES(new InMemorySCU(signaturCreationUnitES, masterDataConfiguration, config, Mock.Of<IMiddlewareQueueItemRepository>()), configurationRepositoryMock.Object, queueItemRepositoryMock.Object);
 
             var receiptRequest = new ReceiptRequest
             {
