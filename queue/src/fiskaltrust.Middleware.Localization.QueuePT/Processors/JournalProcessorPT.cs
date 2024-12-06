@@ -40,7 +40,7 @@ public class JournalProcessorPT : IJournalProcessor
         {
             queueItems = (await _storageProvider.GetMiddlewareQueueItemRepository().GetAsync()).ToList();
         }
-        var data = SAFTMapping.CreateAuditFile(masterData, queueItems);
+        var data = SAFTMapping.CreateAuditFile(masterData, queueItems, (int) request.To);
         using var memoryStream = new MemoryStream();
         var serializer = new XmlSerializer(typeof(AuditFile));
         serializer.Serialize(memoryStream, data);
