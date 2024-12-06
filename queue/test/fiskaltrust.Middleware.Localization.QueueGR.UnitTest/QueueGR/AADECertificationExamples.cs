@@ -33,16 +33,12 @@ public static class AADECertificationExamples
                 new PayItem
                 {
                     Amount = 100m,
-                    Description = "Cash",
+                    Description = "Μετρητά",
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
             ftPosSystemId = Guid.NewGuid(),
-            ftReceiptCase = 0x4752_2000_0000_1001,
-            cbCustomer = new MiddlewareCustomer
-            {
-                CustomerVATId = CUSOMTER_VATNUMBER,
-            }
+            ftReceiptCase = 0x4752_2000_0000_1001
         };
     }
 
@@ -73,7 +69,7 @@ public static class AADECertificationExamples
                 new PayItem
                 {
                     Amount = 100m,
-                    Description = "Cash",
+                    Description = "Μετρητά",
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
@@ -81,8 +77,7 @@ public static class AADECertificationExamples
             ftReceiptCase = 0x4154_2000_0000_1001,
             cbCustomer = new MiddlewareCustomer
             {
-                CustomerVATId = "ATU68541544",
-                CustomerCountry = "AT",
+                CustomerVATId = CUSOMTER_VATNUMBER,
                 CustomerCity = "Salzburg",
                 CustomerZip = "5020",
                 CustomerStreet = "Alpenstraße 99/2.OG/02",
@@ -118,12 +113,12 @@ public static class AADECertificationExamples
                 new PayItem
                 {
                     Amount = 100m,
-                    Description = "Cash",
+                    Description = "Μετρητά",
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
             ftPosSystemId = Guid.NewGuid(),
-            ftReceiptCase = 0x5553_2000_0000_1001,
+            ftReceiptCase = 0x0000_2000_0000_1001,
             cbCustomer = new MiddlewareCustomer
             {
                 CustomerVATId = "000000000000",
@@ -163,20 +158,20 @@ public static class AADECertificationExamples
                 new PayItem
                 {
                     Amount = 100m,
-                    Description = "Cash",
+                    Description = "Μετρητά",
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
             ftPosSystemId = Guid.NewGuid(),
-            ftReceiptCase = 0x4154_2000_0000_1001,
+            ftReceiptCase = 0x4752_2000_0000_1001,
             cbCustomer = new MiddlewareCustomer
             {
-                CustomerVATId = "ATU68541544",
-                CustomerCountry = "AT",
-                CustomerCity = "Salzburg",
-                CustomerZip = "5020",
-                CustomerStreet = "Alpenstraße 99/2.OG/02",
-                CustomerName = "fiskaltrust consulting gmbh"
+                CustomerVATId = CUSOMTER_VATNUMBER,
+                CustomerName = "Πελάτης A.E.",
+                CustomerStreet = "Κηφισίας 12, 12345, Αθήνα",
+                CustomerCity = "Αθηνών",
+                CustomerCountry = "GR",
+                CustomerZip = "12345"
             }
         };
     }
@@ -219,7 +214,7 @@ public static class AADECertificationExamples
                 new PayItem
                 {
                     Amount = 200m,
-                    Description = "Cash",
+                    Description = "Μετρητά",
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
@@ -261,7 +256,7 @@ public static class AADECertificationExamples
                 new PayItem
                 {
                     Amount = 100m,
-                    Description = "Cash",
+                    Description = "Μετρητά",
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
@@ -302,7 +297,7 @@ public static class AADECertificationExamples
                 new PayItem
                 {
                     Amount = 100m,
-                    Description = "Cash",
+                    Description = "Μετρητά",
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
@@ -343,7 +338,7 @@ public static class AADECertificationExamples
                 new PayItem
                 {
                     Amount = 100m,
-                    Description = "Cash",
+                    Description = "Μετρητά",
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
@@ -352,8 +347,7 @@ public static class AADECertificationExamples
             ftReceiptCase = 0x4154_2000_0000_1001,
             cbCustomer = new MiddlewareCustomer
             {
-                CustomerVATId = "ATU68541544",
-                CustomerCountry = "AT",
+                CustomerVATId = CUSOMTER_VATNUMBER,
                 CustomerCity = "Salzburg",
                 CustomerZip = "5020",
                 CustomerStreet = "Alpenstraße 99/2.OG/02",
@@ -389,7 +383,7 @@ public static class AADECertificationExamples
                 new PayItem
                 {
                     Amount = 100m,
-                    Description = "Cash",
+                    Description = "Μετρητά",
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
@@ -436,7 +430,7 @@ public static class AADECertificationExamples
                 new PayItem
                 {
                     Amount = 100m,
-                    Description = "Cash",
+                    Description = "Μετρητά",
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
@@ -477,7 +471,7 @@ public static class AADECertificationExamples
                 new PayItem
                 {
                     Amount = 100m,
-                    Description = "Cash",
+                    Description = "Μετρητά",
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
@@ -522,7 +516,7 @@ public static class AADECertificationExamples
                 new PayItem
                 {
                     Amount = 100m,
-                    Description = "Cash",
+                    Description = "Μετρητά",
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
@@ -531,10 +525,11 @@ public static class AADECertificationExamples
             cbCustomer = new MiddlewareCustomer
             {
                 CustomerVATId = CUSOMTER_VATNUMBER,
-                CustomerCity = "Athens",
+                CustomerName = "Πελάτης A.E.",
+                CustomerStreet = "Κηφισίας 12, 12345, Αθήνα",
+                CustomerCity = "Αθηνών",
                 CustomerCountry = "GR",
-                CustomerZip = "1111",
-                CustomerStreet = "Examplestreet"
+                CustomerZip = "12345"
             },
             ftReceiptCaseData = "3.2"
         };
@@ -568,7 +563,7 @@ public static class AADECertificationExamples
                 new PayItem
                 {
                     Amount = 100m,
-                    Description = "Cash",
+                    Description = "Μετρητά",
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
@@ -651,7 +646,7 @@ public static class AADECertificationExamples
                 new PayItem
                 {
                     Amount = 100m,
-                    Description = "Cash",
+                    Description = "Μετρητά",
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
@@ -692,7 +687,7 @@ public static class AADECertificationExamples
                 new PayItem
                 {
                     Amount = 100m,
-                    Description = "Cash",
+                    Description = "Μετρητά",
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
@@ -702,6 +697,10 @@ public static class AADECertificationExamples
             cbCustomer = new MiddlewareCustomer
             {
                 CustomerVATId = CUSOMTER_VATNUMBER,
+                CustomerName = "Πελάτης A.E.",
+                CustomerStreet = "Κηφισίας 12, 12345, Αθήνα",
+                CustomerCity = "Αθηνών",
+                CustomerCountry = "GR",
             }
         };
     }
@@ -733,7 +732,7 @@ public static class AADECertificationExamples
                 new PayItem
                 {
                     Amount = 100m,
-                    Description = "Cash",
+                    Description = "Μετρητά",
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
@@ -742,11 +741,12 @@ public static class AADECertificationExamples
             ftReceiptCase = 0x4752_2000_0000_3006,
             cbCustomer = new MiddlewareCustomer
             {
-                CustomerCountry = "AT",
-                CustomerVATId = "ATU68541544",
-                CustomerCity = "Salzburg",
-                CustomerZip = "5020",
-                CustomerStreet = "Alpenstraße 99/2.OG/02",
+                CustomerVATId = CUSOMTER_VATNUMBER,
+                CustomerName = "Πελάτης A.E.",
+                CustomerStreet = "Κηφισίας 12, 12345, Αθήνα",
+                CustomerCity = "Αθηνών",
+                CustomerCountry = "GR",
+                CustomerZip = "12345"
             }
         };
     }
@@ -779,7 +779,7 @@ public static class AADECertificationExamples
                 {
                     Amount = 100,
                     Quantity = 1,
-                    Description = "Cash",
+                    Description = "Μετρητά",
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
@@ -788,12 +788,11 @@ public static class AADECertificationExamples
             ftReceiptCase = 0x4752_2000_0000_3005, // Rent not defined yet
             cbCustomer = new MiddlewareCustomer
             {
-                CustomerVATId = "ATU68541544",
-                CustomerCountry = "AT",
-                CustomerCity = "Salzburg",
-                CustomerZip = "5020",
-                CustomerStreet = "Alpenstraße 99/2.OG/02",
-                CustomerName = "fiskaltrust consulting gmbh"
+                CustomerVATId = CUSOMTER_VATNUMBER,
+                CustomerName = "Πελάτης A.E.",
+                CustomerStreet = "Κηφισίας 12, 12345, Αθήνα",
+                CustomerCity = "Αθηνών",
+                CustomerCountry = "GR",
             }
         };
     }
@@ -813,9 +812,9 @@ public static class AADECertificationExamples
                 {
                     Position = 1,
                     Amount = 4,
-                    VATRate = 0,
-                    VATAmount = 0,
-                    ftChargeItemCase = 0x4752_2000_0000_1168, // Nature for the Climate Resilience Tax 
+                    VATRate = 24,
+                    VATAmount = 2,
+                    ftChargeItemCase = 0x4752_2000_0000_1163, // Nature for the Climate Resilience Tax 
                     Quantity = 1,
                     Description = "Climate Resilience Tax"
                 }
@@ -826,7 +825,7 @@ public static class AADECertificationExamples
                 {
                     Amount = 4,
                     Quantity = 1,
-                    Description = "Cash",
+                    Description = "Μετρητά",
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
@@ -864,7 +863,7 @@ public static class AADECertificationExamples
                 {
                     Amount = 100,
                     Quantity = 1,
-                    Description = "Cash",
+                    Description = "Μετρητά",
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
@@ -902,7 +901,7 @@ public static class AADECertificationExamples
                 {
                     Amount = -100,
                     Quantity = 1,
-                    Description = "Cash",
+                    Description = "Μετρητά",
                     ftPayItemCase = 0x4752_2000_0002_0001
                 }
             ],
@@ -939,7 +938,7 @@ public static class AADECertificationExamples
                 new PayItem
                 {
                     Amount = 100m,
-                    Description = "Cash",
+                    Description = "Μετρητά",
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
@@ -976,8 +975,8 @@ public static class AADECertificationExamples
                 new PayItem
                 {
                     Amount = 100m,
-                    Description = "Cash",
-                    ftPayItemCase = 0x4752_2000_0000_0001
+                    Description = "Μετρητά",
+                    ftPayItemCase = 0x4752_2000_0000_0001   
                 }
             ],
 
@@ -1013,7 +1012,7 @@ public static class AADECertificationExamples
                 new PayItem
                 {
                     Amount = 99,
-                    Description = "Cash",
+                    Description = "Μετρητά",
                     ftPayItemCase = 0x4752_2000_0000_1001
                 }
             ],
@@ -1050,7 +1049,7 @@ public static class AADECertificationExamples
                 new PayItem
                 {
                     Amount = 100m,
-                    Description = "Cash",
+                    Description = "Μετρητά",
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
@@ -1076,8 +1075,8 @@ public static class AADECertificationExamples
                     Position = 1,
                     Amount = 100,
                     VATRate = 24,
-                    VATAmount = 0,
-                    ftChargeItemCase = 0x4752_2000_0000_0067,
+                    VATAmount = decimal.Round(100 / (100M + 24) * 24, 2, MidpointRounding.ToEven),
+                    ftChargeItemCase = 0x4752_2000_0000_0063,
                     Quantity = 1,
                     Description = "Line item 1"
                 }
@@ -1087,7 +1086,7 @@ public static class AADECertificationExamples
                 new PayItem
                 {
                     Amount = 100m,
-                    Description = "Cash",
+                    Description = "Μετρητά",
                     ftPayItemCase = 0x4752_2000_0000_0001
                 }
             ],
@@ -1124,7 +1123,7 @@ public static class AADECertificationExamples
                 new PayItem
                 {
                     Amount = 100m,
-                    Description = "Cash",
+                    Description = "Μετρητά",
                     ftPayItemCase = 0x475220000000000E
                 },
                 new PayItem   {

@@ -408,7 +408,7 @@ public class AADEFactory
         }
 
         var customer = receiptRequest.GetCustomerOrNull();
-        if (receiptRequest.HasGreeceCustomer())
+        if (receiptRequest.HasGreeceCountryCode())
         {
             inv.counterpart = new PartyType
             {
@@ -416,7 +416,7 @@ public class AADEFactory
                 country = CountryType.GR,
                 branch = 0,
             };
-            if (receiptRequest.GetCasePart() == 0x0003)
+            if (receiptRequest.GetCasePart() == 0x0003 || inv.invoiceHeader.invoiceType == InvoiceType.Item14 || inv.invoiceHeader.invoiceType == InvoiceType.Item71)
             {
                 inv.counterpart.address = new AddressType
                 {
@@ -426,23 +426,25 @@ public class AADEFactory
                 };
             }
         }
-        else if (receiptRequest.HasEUCustomer())
+        else if (receiptRequest.HasEUCountryCode())
         {
+
             inv.counterpart = new PartyType
             {
                 vatNumber = customer?.CustomerVATId,
-                country = CountryType.AT,
+                country = customer?.CustomerCountry == "GR" ? CountryType.GR : CountryType.AT,
                 name = customer?.CustomerName,
                 address = new AddressType
                 {
+                    //number = "0",
                     street = customer?.CustomerStreet,
                     city = customer?.CustomerCity,
-                    postalCode = customer?.CustomerZip
+                    postalCode = customer?.CustomerZip                    
                 },
                 branch = 0,
             };
         }
-        else if (receiptRequest.HasNonEUCustomer())
+        else if (receiptRequest.HasNonEUCountryCode())
         {
             inv.counterpart = new PartyType
             {

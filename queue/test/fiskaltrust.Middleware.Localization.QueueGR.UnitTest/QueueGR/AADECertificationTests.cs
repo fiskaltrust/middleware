@@ -54,8 +54,8 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
 
         public async Task<(QueueGRBootstrapper bootstrapper, Guid cashBoxId)> InitializeQueueGRBootstrapperAsync()
         {
-            var cashBoxId = Guid.Parse("f2d672a2-21ea-4825-96d0-972b71e757c6");
-            var accessToken = "BFNLZiBzSu2rUB1Sh2rxE7WrzHST5oZP7xgGsQWeGLZnGCZTmbUbRIquWs+7qUR7ua2TG9R0z4TvygrTHiFRj2I=";
+            var cashBoxId = Guid.Parse(Constants.CASHBOX_CERTIFICATION_ID);
+            var accessToken = Constants.CASHBOX_CERTIFICATION_ACCESSTOKEN;
             var configuration = await GetConfigurationAsync(cashBoxId, accessToken);
             var queue = configuration.ftQueues?.First() ?? throw new Exception($"The configuration for {cashBoxId} is empty and therefore not valid.");
             var bootstrapper = new QueueGRBootstrapper(queue.Id, new LoggerFactory(), queue.Configuration ?? new Dictionary<string, object>());
@@ -88,7 +88,6 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
                 BaseAddress = new Uri("https://mydataapidev.aade.gr/")
             };
             httpClient.DefaultRequestHeaders.Add("aade-user-id", "user11111111");
-            httpClient.DefaultRequestHeaders.Add("ocp-apim-subscription-key", "41291863a36d552c4d7fc8195d427dd3");
             httpClient.DefaultRequestHeaders.Add("ocp-apim-subscription-key", "41291863a36d552c4d7fc8195d427dd3");
 
             var response = await httpClient.PostAsync("/myDataProvider/SendInvoices", new StringContent(xml, Encoding.UTF8, "application/xml"));
@@ -269,7 +268,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
         public async Task AADECertificationExamples_A1_1_1p4()
         {
             var receiptRequest = AADECertificationExamples.A1_1_1p4();
-            await ValidateMyData(receiptRequest, InvoiceType.Item14, IncomeClassificationCategoryType.category1_7, IncomeClassificationValueType.E3_881_003);
+            await ValidateMyData(receiptRequest, InvoiceType.Item14, IncomeClassificationCategoryType.category1_7, IncomeClassificationValueType.E3_881_001);
         }
 
         [Fact]

@@ -1,4 +1,5 @@
-﻿using System.Net.Http.Json;
+﻿using System.Linq.Expressions;
+using System.Net.Http.Json;
 using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using System.Text;
@@ -191,6 +192,17 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
 
         private async Task<IssueResponse?> SendIssueAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
         {
+
+            receiptRequest.cbReceiptAmount = Math.Abs(receiptRequest.cbReceiptAmount ?? 0.0m);
+            foreach(var chargeItem in receiptRequest.cbChargeItems)
+            {
+                chargeItem.Amount = Math.Abs(chargeItem.Amount);
+            }
+            foreach(var payItem in receiptRequest.cbPayItems)
+            {
+                payItem.Amount = Math.Abs(payItem.Amount);
+            }
+
             var client = new HttpClient();
             var request = new HttpRequestMessage(HttpMethod.Post, "https://possystem-api-sandbox.fiskaltrust.eu/v2/issue");
             var cashBoxId = Guid.Parse(Constants.CASHBOX_CERTIFICATION_ID);
@@ -269,8 +281,8 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
         {
             var client = new HttpClient();
             var request = new HttpRequestMessage(HttpMethod.Post, "https://possystem-api-sandbox.fiskaltrust.eu/v2/pay");
-            var cashBoxId = Guid.Parse("f2d672a2-21ea-4825-96d0-972b71e757c6");
-            var accessToken = "BFNLZiBzSu2rUB1Sh2rxE7WrzHST5oZP7xgGsQWeGLZnGCZTmbUbRIquWs+7qUR7ua2TG9R0z4TvygrTHiFRj2I=";
+            var cashBoxId = Guid.Parse(Constants.CASHBOX_CERTIFICATION_ID);
+            var accessToken = Constants.CASHBOX_CERTIFICATION_ACCESSTOKEN;
             request.Headers.Add("x-cashbox-id", cashBoxId.ToString());
             request.Headers.Add("x-cashbox-accesstoken", accessToken);
             request.Headers.Add("x-operation-id", Guid.NewGuid().ToString());
@@ -286,6 +298,10 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
                     "},\r\n    \"cbTerminalId\": \"16009303\"\r\n}", null, "application/json");
             request.Content = content;
             var response = await client.SendAsync(request);
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception(await response.Content.ReadAsStringAsync());
+            }
             return await response.Content.ReadFromJsonAsync<PayResponse>();
         }
 

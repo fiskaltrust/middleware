@@ -284,11 +284,11 @@ public static class AADEMappings
                     return InvoiceType.Item24;
                 }
 
-                if (receiptRequest.HasEUCustomer())
+                if (receiptRequest.HasEUCountryCode())
                 {
                     return InvoiceType.Item22;
                 }
-                else if (receiptRequest.HasNonEUCustomer())
+                else if (receiptRequest.HasNonEUCountryCode())
                 {
                     return InvoiceType.Item23;
                 }

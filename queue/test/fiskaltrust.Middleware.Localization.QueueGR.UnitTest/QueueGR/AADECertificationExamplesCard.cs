@@ -98,15 +98,15 @@ public static class AADECertificationExamplesCard
                 }
             ],
             ftPosSystemId = Guid.NewGuid(),
-            ftReceiptCase = 0x4154_2000_0000_1001,
+            ftReceiptCase = 0x4752_2000_0000_1001,
             cbCustomer = new MiddlewareCustomer
             {
-                CustomerVATId = "ATU68541544",
-                CustomerCountry = "AT",
-                CustomerCity = "Salzburg",
-                CustomerZip = "5020",
-                CustomerStreet = "Alpenstraße 99/2.OG/02",
-                CustomerName = "fiskaltrust consulting gmbh"
+                CustomerVATId = CUSOMTER_VATNUMBER,
+                CustomerName = "Πελάτης A.E.",
+                CustomerStreet = "Κηφισίας 12, 12345, Αθήνα",
+                CustomerCity = "Αθηνών",
+                CustomerCountry = "GR",
+                CustomerZip = "12345"
             }
         };
     }
@@ -344,7 +344,7 @@ public static class AADECertificationExamplesCard
                     VATRate = 0,
                     VATAmount = 0,
                     ftChargeItemCase = 0x4752_2000_0000_6027,
-                    Quantity = -1,
+                    Quantity = 1,
                     Description = "Line item 1"
                 }
             ],
@@ -626,7 +626,7 @@ public static class AADECertificationExamplesCard
         {
             cbTerminalID = "1",
             Currency = Currency.EUR,
-            cbReceiptAmount = 150m,
+            cbReceiptAmount = 100m,
             cbReceiptMoment = DateTime.UtcNow,
             cbReceiptReference = Guid.NewGuid().ToString(),
             cbChargeItems =
@@ -634,10 +634,10 @@ public static class AADECertificationExamplesCard
                 new ChargeItem
                 {
                     Position = 1,
-                    Amount = 150,
-                    VATRate = 0,
-                    VATAmount = 0,
-                    ftChargeItemCase = 0x4752_2000_0000_0067,
+                    Amount = 100,
+                    VATRate = 24,
+                    VATAmount = decimal.Round(100 / (100M + 24) * 24, 2, MidpointRounding.ToEven),
+                    ftChargeItemCase = 0x4752_2000_0000_0063,
                     Quantity = 1,
                     Description = "Line item 1"
                 }
@@ -648,7 +648,7 @@ public static class AADECertificationExamplesCard
                 {
                     Position = 1,
                     Quantity = 1,
-                    Amount = 150m,
+                    Amount = 100m,
                     Description = "Κάρτα",
                     ftPayItemCase = 0x4752_2000_0000_0004
                 },

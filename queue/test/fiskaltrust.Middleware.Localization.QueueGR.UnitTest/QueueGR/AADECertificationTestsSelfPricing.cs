@@ -304,7 +304,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             //var marker = await SendToMayData(_aadeFactory.GenerateInvoicePayload(invoiceOriginal));
 
             var creditnote = AADECertificationExamplesSelfPricing.A1_5_5p1();
-            creditnote.cbPreviousReceiptReference = "400001941995967";
+            creditnote.cbPreviousReceiptReference = "400001942899521";
             await Task.Delay(1000);
             //var invoiceDoc = _aadeFactory.MapToInvoicesDoc(creditnote, ExampleResponse);
             //using var assertionScope = new AssertionScope();
