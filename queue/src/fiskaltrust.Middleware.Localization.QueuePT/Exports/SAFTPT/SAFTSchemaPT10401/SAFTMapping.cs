@@ -433,7 +433,6 @@ public static class SAFTMapping
             TaxCountryRegion = "PT", // will depend on the location of the taxpayer.. autonomous regions madeira and azores
             TaxCode = GetIVATAxCode(chargeItem),
             TaxPercentage = Helpers.CreateMonetaryValue(chargeItem.VATRate),
-            TaxAmount = Helpers.CreateMonetaryValue(chargeItem.VATAmount),
         };
         return new Line
         {
