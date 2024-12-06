@@ -23,7 +23,7 @@ public class ESSSCDInfo
 
 public class InMemorySCUConfiguration
 {
-    public string BaseUrl { get; set; } = "https://prewww2.aeat.es/wlpl/TIKE-CONT/ValidarQR";
+    public string BaseUrl { get; set; } = "https://prewww10.aeat.es";
 
     public X509Certificate2 Certificate { get; set; } = null!;
 
@@ -93,7 +93,7 @@ public class InMemorySCU : IESSSCD
                 request.PreviousReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.Huella).Data
             ));
 
-            request.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreateESQRCode(_configuration.BaseUrl, journalES));
+            request.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreateESQRCode(_configuration.BaseUrl + "/wlpl/TIKE-CONT/ValidarQR", journalES));
             request.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreateESSignature(Encoding.UTF8.GetBytes(XmlHelpers.Serialize(journalES.Signature))));
 
             request.ReceiptResponse.AddSignatureItem(new SignatureItem
@@ -119,7 +119,7 @@ public class InMemorySCU : IESSSCD
                 }
             };
             var xml = envelope.XmlSerialize();
-            var response = await new Client(new Uri("https://prewww10.aeat.es"), _configuration.Certificate).SendAsync(envelope);
+            var response = await new Client(new Uri(_configuration.BaseUrl), _configuration.Certificate).SendAsync(envelope);
 
             if (response.IsErr)
             {
