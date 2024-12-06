@@ -355,7 +355,7 @@ public static class SAFTMapping
             },
             SourceID = JsonSerializer.Serialize(receiptRequest.cbUser),
             SystemEntryDate = receiptRequest.cbReceiptMoment,
-            CustomerID = "0",
+            CustomerID = "999999990",
             Line = lines,
             DocumentTotals = new DocumentTotals
             {
