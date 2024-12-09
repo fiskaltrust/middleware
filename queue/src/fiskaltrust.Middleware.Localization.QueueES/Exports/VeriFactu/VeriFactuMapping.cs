@@ -157,7 +157,7 @@ public class VeriFactuMapping
                 TipoUsoPosibleMultiOT = Booleano.N,
                 IndicadorMultiplesOT = Booleano.N
             },
-            FechaHoraHusoGenRegistro = TimeZoneInfo.ConvertTimeBySystemTimeZoneId(receiptResponse.ftReceiptMoment, "Europe/Madrid"),
+            FechaHoraHusoGenRegistro = TimeZoneInfo.ConvertTimeBySystemTimeZoneId(new DateTimeOffset(receiptResponse.ftReceiptMoment, TimeSpan.Zero), "Europe/Madrid"),
             TipoHuella = TipoHuella.Item01,
             Huella = null!
         };
@@ -256,7 +256,7 @@ public class VeriFactuMapping
                 TipoUsoPosibleMultiOT = Booleano.N,
                 IndicadorMultiplesOT = Booleano.N
             },
-            FechaHoraHusoGenRegistro = TimeZoneInfo.ConvertTimeBySystemTimeZoneId(receiptResponse.ftReceiptMoment, "Europe/Madrid"),
+            FechaHoraHusoGenRegistro = TimeZoneInfo.ConvertTimeBySystemTimeZoneId(new DateTimeOffset(receiptResponse.ftReceiptMoment, TimeSpan.Zero), "Europe/Madrid"),
             TipoHuella = TipoHuella.Item01,
             Huella = null!
         };
