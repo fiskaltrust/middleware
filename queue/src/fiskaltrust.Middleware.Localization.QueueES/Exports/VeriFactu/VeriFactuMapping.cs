@@ -157,7 +157,7 @@ public class VeriFactuMapping
                 TipoUsoPosibleMultiOT = Booleano.N,
                 IndicadorMultiplesOT = Booleano.N
             },
-            FechaHoraHusoGenRegistro = receiptResponse.ftReceiptMoment,
+            FechaHoraHusoGenRegistro = TimeZoneInfo.ConvertTimeBySystemTimeZoneId(receiptResponse.ftReceiptMoment, "Europe/Madrid"),
             TipoHuella = TipoHuella.Item01,
             Huella = null!
         };
@@ -255,7 +255,7 @@ public class VeriFactuMapping
                 TipoUsoPosibleMultiOT = Booleano.N,
                 IndicadorMultiplesOT = Booleano.N
             },
-            FechaHoraHusoGenRegistro = receiptResponse.ftReceiptMoment,
+            FechaHoraHusoGenRegistro = TimeZoneInfo.ConvertTimeBySystemTimeZoneId(receiptResponse.ftReceiptMoment, "Europe/Madrid"),
             TipoHuella = TipoHuella.Item01,
             Huella = null!
         };
@@ -276,7 +276,7 @@ public static class HuellaExt
             ("TipoFactura", x => Enum.GetName(x.TipoFactura)!),
             ("CuotaTotal", x => x.CuotaTotal),
             ("ImporteTotal", x => x.ImporteTotal),
-            ("Huella", x => x.Encadenamiento.Item is EncadenamientoFacturaAnterior encadenamiento ? encadenamiento.Huella : "S"),
+            ("Huella", x => x.Encadenamiento.Item is EncadenamientoFacturaAnterior encadenamiento ? encadenamiento.Huella : ""),
             ("FechaHoraHusoGenRegistro", x => x.FechaHoraHusoGenRegistro.ToString("yyyy-MM-ddThh:mm:sszzz")),
         });
 
@@ -285,7 +285,7 @@ public static class HuellaExt
             ("IDEmisorFacturaAnulada", x => x.IDFactura.IDEmisorFacturaAnulada),
             ("NumSerieFacturaAnulada", x => x.IDFactura.NumSerieFacturaAnulada),
             ("FechaExpedicionFacturaAnulada", x => x.IDFactura.FechaExpedicionFacturaAnulada),
-            ("Huella", x => x.Encadenamiento.Item is EncadenamientoFacturaAnterior encadenamiento ? encadenamiento.Huella : "S"),
+            ("Huella", x => x.Encadenamiento.Item is EncadenamientoFacturaAnterior encadenamiento ? encadenamiento.Huella : ""),
             ("FechaHoraHusoGenRegistro", x => x.FechaHoraHusoGenRegistro.ToString("yyyy-MM-ddThh:mm:sszzz")),
         });
 
@@ -295,10 +295,10 @@ public static class HuellaExt
         var data = new StringBuilder();
         foreach (var (n, (key, value)) in selectors.Select((x, i) => (i + 1, x)))
         {
-            data.AppendFormat(GetValue(key, value(self), selectors.Count == n));
+            data.AppendFormat(GetValue(key, value(self), false, selectors.Count != n));
         }
-
-        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(data.ToString()));
+        var stringData = data.ToString();
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(stringData));
 
         return Convert.ToHexString(hash);
     }

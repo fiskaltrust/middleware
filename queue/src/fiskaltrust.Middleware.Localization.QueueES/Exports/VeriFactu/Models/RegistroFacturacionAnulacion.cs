@@ -35,13 +35,13 @@ public class RegistroFacturacionAnulacion
     public required SistemaInformatico SistemaInformatico { get; set; }
 
     [XmlIgnore]
-    public required DateTime FechaHoraHusoGenRegistro { get; set; }
+    public required DateTimeOffset FechaHoraHusoGenRegistro { get; set; }
 
     [XmlElement("FechaHoraHusoGenRegistro", Order = 25)]
     public string FechaHoraHusoGenRegistroString
     {
         get => FechaHoraHusoGenRegistro.ToString("yyyy-MM-ddTHH:mm:sszzz");
-        set => FechaHoraHusoGenRegistro = DateTime.Parse(value);
+        set => FechaHoraHusoGenRegistro = DateTimeOffset.Parse(value);
     }
 
     [XmlElement(Order = 10)]
