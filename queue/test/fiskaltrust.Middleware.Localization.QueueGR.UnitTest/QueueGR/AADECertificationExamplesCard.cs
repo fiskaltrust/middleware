@@ -64,7 +64,7 @@ public static class AADECertificationExamplesCard
         {
             cbTerminalID = "1",
             Currency = Currency.EUR,
-            cbReceiptAmount = 150m,
+            cbReceiptAmount = 100m,
             cbReceiptMoment = DateTime.UtcNow,
             cbReceiptReference = Guid.NewGuid().ToString(),
             cbChargeItems =
@@ -72,10 +72,10 @@ public static class AADECertificationExamplesCard
                 new ChargeItem
                 {
                     Position = 1,
-                    Amount = 150,
-                    VATRate = 0,
-                    VATAmount = 0,
-                    ftChargeItemCase = 0x4752_2000_0000_0067,
+                    Amount = 100,
+                    VATRate = 24,
+                    VATAmount = decimal.Round(100 / (100M + 24) * 24, 2, MidpointRounding.ToEven),
+                    ftChargeItemCase = 0x4752_2000_0000_0063,
                     Quantity = 1,
                     Description = "Line item 1"
                 }
@@ -86,7 +86,7 @@ public static class AADECertificationExamplesCard
                 {
                     Position = 1,
                     Quantity = 1,
-                    Amount = 150,
+                    Amount = 100,
                     Description = "Κάρτα",
                     ftPayItemCase = 0x4752_2000_0000_0004
                 },
@@ -332,7 +332,7 @@ public static class AADECertificationExamplesCard
         {
             cbTerminalID = "1",
             Currency = Currency.EUR,
-            cbReceiptAmount = 150m,
+            cbReceiptAmount = 100,
             cbReceiptMoment = DateTime.UtcNow,
             cbReceiptReference = Guid.NewGuid().ToString(),
             cbChargeItems =
@@ -340,10 +340,10 @@ public static class AADECertificationExamplesCard
                 new ChargeItem
                 {
                     Position = 1,
-                    Amount = 150,
-                    VATRate = 0,
-                    VATAmount = 0,
-                    ftChargeItemCase = 0x4752_2000_0000_6027,
+                    Amount = 100,
+                    VATRate = 24,
+                    VATAmount = decimal.Round(100 / (100M + 24) * 24, 2, MidpointRounding.ToEven),
+                    ftChargeItemCase = 0x4752_2000_0000_6023,
                     Quantity = 1,
                     Description = "Line item 1"
                 }
@@ -354,7 +354,7 @@ public static class AADECertificationExamplesCard
                 {
                     Position = 1,   
                     Quantity = 1,
-                    Amount = 150,
+                    Amount = 100,
                     Description = "Κάρτα",
                     ftPayItemCase = 0x4752_2000_0000_0004
                 },

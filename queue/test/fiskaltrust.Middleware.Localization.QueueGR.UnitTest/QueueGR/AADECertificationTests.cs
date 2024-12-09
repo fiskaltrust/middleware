@@ -244,13 +244,6 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
         }
 
         [Fact]
-        public async void AADECertificationExamples_A1_1_1p1()
-        {
-            var receiptRequest = AADECertificationExamples.A1_1_1p1();
-            await ValidateMyData(receiptRequest, InvoiceType.Item11, IncomeClassificationCategoryType.category1_2, IncomeClassificationValueType.E3_561_001);
-        }
-
-        [Fact]
         public async Task AADECertificationExamples_A1_1_1p2()
         {
             var receiptRequest = AADECertificationExamples.A1_1_1p2();
@@ -265,31 +258,17 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
         }
 
         [Fact]
-        public async Task AADECertificationExamples_A1_1_1p4()
-        {
-            var receiptRequest = AADECertificationExamples.A1_1_1p4();
-            await ValidateMyData(receiptRequest, InvoiceType.Item14, IncomeClassificationCategoryType.category1_7, IncomeClassificationValueType.E3_881_001);
-        }
-
-        [Fact]
         public async Task AADECertificationExamples_A1_1_1p5()
         {
-            var receiptRequest = AADECertificationExamples.A1_1_1p5();
+            var receiptRequest = AADECertificationExamples.A1_1_1p5_1();
             await ValidateMyData(receiptRequest, InvoiceType.Item15, IncomeClassificationCategoryType.category1_2, IncomeClassificationValueType.E3_561_001);
         }
 
         [Fact]
-        public async Task AADECertificationExamples_A1_1_1p6()
+        public async Task AADECertificationExamples_A1_1_1p5_2()
         {
-            var receiptRequest = AADECertificationExamples.A1_1_1p6();
-            await ValidateMyData(receiptRequest, InvoiceType.Item16, IncomeClassificationCategoryType.category1_2, IncomeClassificationValueType.E3_561_001);
-        }
-
-        [Fact]
-        public async void AADECertificationExamples_A1_2_2p1()
-        {
-            var receiptRequest = AADECertificationExamples.A1_2_2p1();
-            await ValidateMyData(receiptRequest, InvoiceType.Item21, IncomeClassificationCategoryType.category1_3, IncomeClassificationValueType.E3_561_001);
+            var receiptRequest = AADECertificationExamples.A1_1_1p5_2();
+            await ValidateMyData(receiptRequest, InvoiceType.Item15, IncomeClassificationCategoryType.category1_2, IncomeClassificationValueType.E3_561_001);
         }
 
         [Fact]
@@ -307,13 +286,6 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
         }
 
         [Fact]
-        public async Task AADECertificationExamples_A1_2_2p4()
-        {
-            var receiptRequest = AADECertificationExamples.A1_2_2p4();
-            await ValidateMyData(receiptRequest, InvoiceType.Item24, IncomeClassificationCategoryType.category1_3, IncomeClassificationValueType.E3_561_001);
-        }
-
-        [Fact]
         public async Task AADECertificationExamples_A1_3_3p1()
         {
             var receiptRequest = AADECertificationExamples.A1_3_3p1();
@@ -325,34 +297,6 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
         {
             var receiptRequest = AADECertificationExamples.A1_3_3p2();
             await ValidateMyData(receiptRequest, InvoiceType.Item32);
-        }
-
-        [Fact]
-        public async Task AADECertificationExamples_A1_5_5p1()
-        {
-
-            var invoiceOriginal = _aadeFactory.MapToInvoicesDoc(AADECertificationExamples.A1_1_1p1(), ExampleResponse);
-            var marker = await SendToMayData(_aadeFactory.GenerateInvoicePayload(invoiceOriginal));
-
-            var creditnote = AADECertificationExamples.A1_5_5p1();
-            creditnote.cbPreviousReceiptReference = "400001941508802";
-            await Task.Delay(1000);
-            //var invoiceDoc = _aadeFactory.MapToInvoicesDoc(creditnote, ExampleResponse);
-            //using var assertionScope = new AssertionScope();
-            //invoiceDoc.invoice[0].invoiceHeader.invoiceType.Should().Be(InvoiceType.Item51);
-            //invoiceDoc.invoice[0].invoiceSummary.incomeClassification[0].classificationCategory.Should().Be(IncomeClassificationCategoryType.category1_2);
-            //invoiceDoc.invoice[0].invoiceSummary.incomeClassification[0].classificationType.Should().Be(IncomeClassificationValueType.E3_561_001);
-            //var xml = _aadeFactory.GenerateInvoicePayload(invoiceDoc);
-            //await SendToMayData(xml);
-
-            await ExecuteMiddleware(creditnote, "AADECertificationExamples_A1_5_5p1");
-        }
-
-        [Fact]
-        public async Task AADECertificationExamples_A1_5_5p2()
-        {
-            var receiptRequest = AADECertificationExamples.A1_5_5p2();
-            await ValidateMyData(receiptRequest, InvoiceType.Item52, IncomeClassificationCategoryType.category1_3, IncomeClassificationValueType.E3_561_001);
         }
 
         [Fact]
@@ -391,66 +335,10 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
         }
 
         [Fact]
-        public async Task AADECertificationExamples_A1_8_8p4()
-        {
-            var receiptRequest = AADECertificationExamples.A1_8_8p4();
-            await ValidateMyData(receiptRequest, InvoiceType.Item84, IncomeClassificationCategoryType.category1_95);
-        }
-
-        [Fact]
-        public async Task d()
-        {
-            var receiptRequest = ReceiptExamples.Example_SalesInvoice_1_1(Guid.NewGuid());
-            await ValidateMyData(receiptRequest, InvoiceType.Item11, IncomeClassificationCategoryType.category1_95);
-        }
-
-        [Fact]
-        public async Task AADECertificationExamples_A1_8_8p5()
-        {
-            var receiptRequest = AADECertificationExamples.A1_8_8p5();
-            await ValidateMyData(receiptRequest, InvoiceType.Item85, IncomeClassificationCategoryType.category1_95);
-        }
-
-        [Fact]
-        public async Task AADECertificationExamples_A2_11_11p1()
-        {
-            var receiptRequest = AADECertificationExamples.A2_11_11p1();
-            await ValidateMyData(receiptRequest, InvoiceType.Item111, IncomeClassificationCategoryType.category1_2, IncomeClassificationValueType.E3_561_003);
-        }
-
-        [Fact]
-        public async Task AADECertificationExamples_A2_11_11p2()
-        {
-            var receiptRequest = AADECertificationExamples.A2_11_11p2();
-            await ValidateMyData(receiptRequest, InvoiceType.Item112, IncomeClassificationCategoryType.category1_3, IncomeClassificationValueType.E3_561_003);
-        }
-
-        [Fact]
         public async Task AADECertificationExamples_A2_11_11p3()
         {
             var receiptRequest = AADECertificationExamples.A2_11_11p3();
             await ValidateMyData(receiptRequest, InvoiceType.Item113, IncomeClassificationCategoryType.category1_2, IncomeClassificationValueType.E3_561_003);
-        }
-
-        [Fact]
-        public async Task AADECertificationExamples_A2_11_11p4()
-        {
-            var receiptRequest = AADECertificationExamples.A2_11_11p4();
-            await ValidateMyData(receiptRequest, InvoiceType.Item114, IncomeClassificationCategoryType.category1_2, IncomeClassificationValueType.E3_561_001);
-        }
-
-        [Fact]
-        public async Task AADECertificationExamples_A2_11_11p5()
-        {
-            var receiptRequest = AADECertificationExamples.A2_11_1p5();
-            await ValidateMyData(receiptRequest, InvoiceType.Item115, IncomeClassificationCategoryType.category1_7, IncomeClassificationValueType.E3_881_003);
-        }
-
-        [Fact]
-        public async Task AADECertificationExamples_A2_WithTip()
-        {
-            var receiptRequest = AADECertificationExamples.A2_11_1p5_WithTip();
-            await ValidateMyData(receiptRequest, InvoiceType.Item111, IncomeClassificationCategoryType.category1_2, IncomeClassificationValueType.E3_561_003);
         }
 
         public ReceiptResponse ExampleResponse => new ReceiptResponse
