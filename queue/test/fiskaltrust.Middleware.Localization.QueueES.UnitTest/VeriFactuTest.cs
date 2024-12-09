@@ -3,6 +3,7 @@ using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueES.ESSSCD;
 using fiskaltrust.Middleware.Localization.QueueES.Exports;
+using fiskaltrust.Middleware.SCU.ES.Models;
 using fiskaltrust.Middleware.SCU.ES.Soap;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
@@ -15,6 +16,57 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
 {
     public class VeriFactuTest()
     {
+        [Fact]
+        public async Task ResetReceipts()
+        {
+            var certificate = new X509Certificate2(await File.ReadAllBytesAsync("Certificates/Certificado_RPJ_A39200019_CERTIFICADO_ENTIDAD_PRUEBAS_4_Pre.p12"), "1234");
+
+            var masterData = new MasterDataConfiguration()
+            {
+                Account = new AccountMasterData
+                {
+                    VatId = "M0291081Q",
+                    AccountName = "Thomas Steininger"
+                }
+            };
+            var queueItemRepository = new Mock<IMiddlewareQueueItemRepository>();
+
+            var receiptRequest = ExampleCashSales(Guid.NewGuid());
+            var receiptResponse = new ReceiptResponse
+            {
+                ftQueueID = Guid.NewGuid(),
+                ftQueueItemID = Guid.NewGuid(),
+                ftQueueRow = 0,
+                ftCashBoxIdentification = Guid.NewGuid().ToString(),
+                ftReceiptIdentification = $"0#0/{receiptRequest.cbReceiptReference}",
+                ftReceiptMoment = DateTime.UtcNow,
+                ftState = 0x4752_2000_0000_0000,
+            };
+
+            var veriFactuMapping = new VeriFactuMapping(masterData, queueItemRepository.Object, certificate);
+            var journalES = veriFactuMapping.CreateRegistroFacturacionAlta(receiptRequest, receiptResponse, null);
+
+            var client = new Client(new Uri(new InMemorySCUConfiguration().BaseUrl), certificate);
+
+            var envelope = new Envelope<RequestBody>
+            {
+                Body = new RequestBody
+                {
+                    RegFactuSistemaFacturacion = veriFactuMapping.CreateRegFactuSistemaFacturacion(journalES)
+                }
+            };
+            envelope.Body.RegFactuSistemaFacturacion.RegistroFactura.First().Item.As<RegistroFacturacionAlta>().Subsanacion = Booleano.S;
+            envelope.Body.RegFactuSistemaFacturacion.RegistroFactura.First().Item.As<RegistroFacturacionAlta>().RechazoPrevio = RechazoPrevio.X;
+
+            var requestXml = envelope.XmlSerialize();
+            var response = await client.SendAsync(envelope);
+
+            using var scope = new AssertionScope();
+            response.IsOk.Should().BeTrue($"Response should not be error\n{response.ErrValue?.ToString()}\n");
+            response.OkValue!.RespuestaLinea.Should().HaveCount(1);
+            response.OkValue!.RespuestaLinea!.First().CodigoErrorRegistro.Should().BeNullOrEmpty();
+            response.OkValue!.RespuestaLinea!.First().DescripcionErrorRegistro.Should().BeNullOrEmpty();
+        }
         [Fact]
         public async Task VeriFactuTestInit()
         {
