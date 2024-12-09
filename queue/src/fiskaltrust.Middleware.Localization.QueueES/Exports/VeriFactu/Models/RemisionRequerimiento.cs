@@ -10,4 +10,6 @@ public class RemisionRequerimiento
 
     [XmlElement(Order = 1)]
     public Booleano? FinRequerimiento { get; set; }
+    [XmlIgnore]
+    public bool FinRequerimientoSpecified => FinRequerimiento is not null;
 }

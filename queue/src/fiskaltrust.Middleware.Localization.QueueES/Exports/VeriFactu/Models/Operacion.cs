@@ -10,10 +10,16 @@ public class Operacion
 
     [XmlElement(Order = 1)]
     public Booleano? Subsanacion { get; set; }
+    [XmlIgnore]
+    public bool SubsanacionSpecified => Subsanacion is not null;
 
     [XmlElement(Order = 2)]
     public RechazoPrevio? RechazoPrevio { get; set; }
+    [XmlIgnore]
+    public bool RechazoPrevioSpecified => RechazoPrevio is not null;
 
     [XmlElement(Order = 3)]
     public Booleano? SinRegistroPrevio { get; set; }
+    [XmlIgnore]
+    public bool SinRegistroPrevioSpecified => SinRegistroPrevio is not null;
 }

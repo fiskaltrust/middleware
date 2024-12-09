@@ -13,4 +13,6 @@ public class DesgloseRectificacion
 
     [XmlElement(Order = 2)]
     public string? CuotaRecargoRectificado { get; set; }
+    [XmlIgnore]
+    public bool CuotaRecargoRectificadoSpecified => CuotaRecargoRectificado is not null;
 }

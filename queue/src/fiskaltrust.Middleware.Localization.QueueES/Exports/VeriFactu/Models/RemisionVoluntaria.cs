@@ -7,7 +7,11 @@ public class RemisionVoluntaria
 {
     [XmlElement(Order = 0)]
     public string? FechaFinVeriFactu { get; set; }
+    [XmlIgnore]
+    public bool FechaFinVeriFactuSpecified => FechaFinVeriFactu is not null;
 
     [XmlElement(Order = 1)]
     public Booleano? Incidencia { get; set; }
+    [XmlIgnore]
+    public bool IncidenciaSpecified => Incidencia is not null;
 }

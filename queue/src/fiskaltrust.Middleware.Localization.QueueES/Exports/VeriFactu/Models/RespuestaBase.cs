@@ -7,8 +7,12 @@ public class RespuestaBase
 {
     [XmlElement(Order = 0)]
     public string? CSV { get; set; }
+    [XmlIgnore]
+    public bool CSVSpecified => CSV is not null;
     [XmlElement(Order = 1)]
     public DatosPresentacion? DatosPresentacion { get; set; }
+    [XmlIgnore]
+    public bool DatosPresentacionSpecified => DatosPresentacion is not null;
     [XmlElement(Order = 2)]
     public required Cabecera Cabecera { get; set; }
     [XmlElement(Order = 3)]

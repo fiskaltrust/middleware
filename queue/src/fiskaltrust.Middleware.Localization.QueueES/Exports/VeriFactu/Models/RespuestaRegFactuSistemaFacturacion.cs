@@ -7,4 +7,6 @@ public class RespuestaRegFactuSistemaFacturacion : RespuestaBase
 {
     [XmlElement("RespuestaLinea", Order = 0)]
     public RespuestaExpedida[]? RespuestaLinea { get; set; }
+    [XmlIgnore]
+    public bool RespuestaLineaSpecified => RespuestaLinea is not null;
 }

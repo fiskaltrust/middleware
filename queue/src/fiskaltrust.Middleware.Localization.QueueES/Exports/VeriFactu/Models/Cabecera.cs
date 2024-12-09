@@ -10,10 +10,16 @@ public partial class Cabecera
 
     [XmlElement(Order = 1)]
     public PersonaFisicaJuridicaES? Representante { get; set; }
+    [XmlIgnore]
+    public bool RepresentanteSpecified => Representante is not null;
 
     [XmlElement(Order = 2)]
     public RemisionVoluntaria? RemisionVoluntaria { get; set; }
+    [XmlIgnore]
+    public bool RemisionVoluntariaSpecified => RemisionVoluntaria is not null;
 
     [XmlElement(Order = 3)]
     public RemisionRequerimiento? RemisionRequerimiento { get; set; }
+    [XmlIgnore]
+    public bool RemisionRequerimientoSpecified => RemisionRequerimiento is not null;
 }

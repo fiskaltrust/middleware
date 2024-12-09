@@ -15,18 +15,28 @@ public class RegistroFacturacionAnulacion
 
     [XmlElement(Order = 2)]
     public string? RefExterna { get; set; }
+    [XmlIgnore]
+    public bool RefExternaSpecified => RefExterna is not null;
 
     [XmlElement(Order = 3)]
     public Booleano? SinRegistroPrevio { get; set; }
+    [XmlIgnore]
+    public bool SinRegistroPrevioSpecified => SinRegistroPrevio is not null;
 
     [XmlElement(Order = 4)]
     public Booleano? RechazoPrevio { get; set; }
+    [XmlIgnore]
+    public bool RechazoPrevioSpecified => RechazoPrevio is not null;
 
     [XmlElement(Order = 5)]
     public GeneradoPor? GeneradoPor { get; set; }
+    [XmlIgnore]
+    public bool GeneradoPorSpecified => GeneradoPor is not null;
 
     [XmlElement(Order = 6)]
     public PersonaFisicaJuridica? Generador { get; set; }
+    [XmlIgnore]
+    public bool GeneradorSpecified => Generador is not null;
 
     [XmlElement(Order = 7)]
     public required RegistroFacturacionAnulacionEncadenamiento Encadenamiento { get; set; }
@@ -52,4 +62,6 @@ public class RegistroFacturacionAnulacion
 
     [XmlElement(Namespace = "http://www.w3.org/2000/09/xmldsig#", Order = 12)]
     public XmlElement? Signature { get; set; }
+    [XmlIgnore]
+    public bool SignatureSpecified => Signature is not null;
 }

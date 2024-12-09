@@ -13,7 +13,11 @@ public class RegistroDuplicado
 
     [XmlElement(DataType = "integer", Order = 2)]
     public string? CodigoErrorRegistro { get; set; }
+    [XmlIgnore]
+    public bool CodigoErrorRegistroSpecified => CodigoErrorRegistro is not null;
 
     [XmlElement(Order = 3)]
     public string? DescripcionErrorRegistro { get; set; }
+    [XmlIgnore]
+    public bool DescripcionErrorRegistroSpecified => DescripcionErrorRegistro is not null;
 }

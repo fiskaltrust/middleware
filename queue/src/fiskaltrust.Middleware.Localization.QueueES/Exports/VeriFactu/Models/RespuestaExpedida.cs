@@ -11,12 +11,20 @@ public class RespuestaExpedida
     public required Operacion Operacion { get; set; }
     [XmlElement(Order = 2)]
     public string? RefExterna { get; set; }
+    [XmlIgnore]
+    public bool RefExternaSpecified => RefExterna is not null;
     [XmlElement(Order = 3)]
     public required EstadoRegistro EstadoRegistro { get; set; }
     [XmlElement(DataType = "integer", Order = 4)]
     public string? CodigoErrorRegistro { get; set; }
+    [XmlIgnore]
+    public bool CodigoErrorRegistroSpecified => CodigoErrorRegistro is not null;
     [XmlElement(Order = 5)]
     public string? DescripcionErrorRegistro { get; set; }
+    [XmlIgnore]
+    public bool DescripcionErrorRegistroSpecified => DescripcionErrorRegistro is not null;
     [XmlElement(Order = 6)]
     public RegistroDuplicado? RegistroDuplicado { get; set; }
+    [XmlIgnore]
+    public bool RegistroDuplicadoSpecified => RegistroDuplicado is not null;
 }
