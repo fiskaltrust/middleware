@@ -71,13 +71,7 @@ public static class SAFTMapping
         }).DistinctBy(x => x.TaxCode).ToList();
         return new TaxTable
         {
-            TaxTableEntry = taxTableEntries
-        };
-
-        /*
-         * TaxTable = new TaxTable
-            {
-                TaxTableEntry = [
+            TaxTableEntry = [
                     new TaxTableEntry
                 {
                     TaxType = "IS",
@@ -227,8 +221,7 @@ public static class SAFTMapping
                     TaxPercentage = 5.000000m,
                 },
             ],
-            }
-        */
+        };
     }
 
     private static List<Customer> GetCustomers(List<ReceiptRequest> receiptRequest)
@@ -356,7 +349,7 @@ public static class SAFTMapping
             },
             SourceID = JsonSerializer.Serialize(receiptRequest.cbUser),
             SystemEntryDate = receiptRequest.cbReceiptMoment,
-            CustomerID = "999999990",
+            CustomerID = "Consumidor final",
             Line = lines,
             DocumentTotals = new DocumentTotals
             {
@@ -434,6 +427,20 @@ public static class SAFTMapping
             TaxCode = GetIVATAxCode(chargeItem),
             TaxPercentage = Helpers.CreateMonetaryValue(chargeItem.VATRate),
         };
+
+        var unitPrice = chargeItem.UnitPrice;
+        if (!unitPrice.HasValue)
+        {
+            if (chargeItem.Amount == 0 || chargeItem.Quantity == 0)
+            {
+                unitPrice = 0m;
+            }
+            else
+            {
+                unitPrice = chargeItem.Amount / chargeItem.Quantity;
+            }
+        }
+
         return new Line
         {
             LineNumber = (long) chargeItem.Position,
@@ -441,7 +448,7 @@ public static class SAFTMapping
             ProductDescription = chargeItem.Description,
             Quantity = Helpers.CreateMonetaryValue(chargeItem.Quantity),
             UnitOfMeasure = chargeItem.Unit ?? "",
-            UnitPrice = Helpers.CreateMonetaryValue(chargeItem.UnitPrice),
+            UnitPrice = Helpers.CreateMonetaryValue(unitPrice),
             TaxPointDate = chargeItem.Moment.GetValueOrDefault(), // need some more checks here.. fallback?
             Description = chargeItem.Description,
             CreditAmount = Helpers.CreateMonetaryValue(chargeItem.Amount - chargeItem.VATAmount),
