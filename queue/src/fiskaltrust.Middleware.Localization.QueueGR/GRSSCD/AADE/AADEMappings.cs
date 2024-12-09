@@ -238,7 +238,7 @@ public static class AADEMappings
             }
             else if (receiptRequest.cbReceiptAmount < 100m)
             {
-                return InvoiceType.Item111;
+                return InvoiceType.Item113;
             }
             else if (receiptRequest.HasOnlyServiceItems())
             {

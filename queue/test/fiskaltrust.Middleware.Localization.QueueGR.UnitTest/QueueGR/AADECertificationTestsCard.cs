@@ -335,18 +335,6 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
         }
 
         [Fact]
-        public async void JOurnal()
-        {
-            (var bootstrapper, var cashBoxId) = await InitializeQueueGRBootstrapperAsync();
-            var journalMethod = bootstrapper.RegisterForJournal();
-            var xmlData = await journalMethod(System.Text.Json.JsonSerializer.Serialize(new ifPOS.v1.JournalRequest
-            {
-                ftJournalType = 0x4752_2000_0000_0001,
-                From = 0
-            }));
-        }
-
-        [Fact]
         public async void AADECertificationExamples_A1_1_1p1()
         {
             var receiptRequest = AADECertificationExamplesCard.A1_1_1p1();
@@ -357,7 +345,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
         public async Task AADECertificationExamples_A1_1_1p4()
         {
             var receiptRequest = AADECertificationExamplesCard.A1_1_1p4();
-            await ValidateMyData(receiptRequest, InvoiceType.Item14, IncomeClassificationCategoryType.category1_7, IncomeClassificationValueType.E3_881_003);
+            await ValidateMyData(receiptRequest, InvoiceType.Item14, IncomeClassificationCategoryType.category1_7, IncomeClassificationValueType.E3_881_001);
         }
 
         [Fact]
@@ -404,6 +392,13 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
         }
 
         [Fact]
+        public async Task AADECertificationExamples_A1_5_5p2()
+        {
+            var receiptRequest = AADECertificationExamplesCard.A1_5_5p2();
+            await ValidateMyData(receiptRequest, InvoiceType.Item52, IncomeClassificationCategoryType.category1_3, IncomeClassificationValueType.E3_561_001);
+        }
+
+        [Fact]
         public async Task AADECertificationExamples_A1_8_8p4()
         {
             var receiptRequest = AADECertificationExamplesCard.A1_8_8p4();
@@ -422,13 +417,6 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             receiptRequest.cbPayItems[0] = refund!.ftPayItems[0];
             receiptRequest.cbPayItems[0].Amount = -receiptRequest.cbPayItems[0].Amount;
             await ValidateMyData(receiptRequest, InvoiceType.Item85, IncomeClassificationCategoryType.category1_95);
-        }
-
-        [Fact]
-        public async Task AADECertificationExamples_A1_5_5p2()
-        {
-            var receiptRequest = AADECertificationExamplesCard.A1_5_5p2();
-            await ValidateMyData(receiptRequest, InvoiceType.Item52, IncomeClassificationCategoryType.category1_3, IncomeClassificationValueType.E3_561_001);
         }
 
         [Fact]
