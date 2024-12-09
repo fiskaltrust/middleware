@@ -449,12 +449,12 @@ public class AADEFactory
             inv.counterpart = new PartyType
             {
                 vatNumber = customer?.CustomerVATId,
-                country = CountryType.US,
+                country = CountryType.GB,
                 name = customer?.CustomerName,
                 address = new AddressType
                 {
-                    street = customer?.CustomerStreet,
-                    city = customer?.CustomerCity,
+                    street = customer?.CustomerStreet?.Replace(", United Kingdom", ""),
+                    city = customer?.CustomerCity?.Replace(", United Kingdom", ""),
                     postalCode = customer?.CustomerZip
                 },
                 branch = 0,
