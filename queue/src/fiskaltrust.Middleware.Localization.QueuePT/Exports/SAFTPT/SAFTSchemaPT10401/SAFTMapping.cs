@@ -253,7 +253,7 @@ public static class SAFTMapping
         {
             customerData.Add(new Customer
             {
-                CustomerID = "Consumidor final",
+                CustomerID = "0",
                 AccountID = "Desconhecido",
                 CustomerTaxID = "999999990",
                 CompanyName = "Consumidor final",
@@ -349,7 +349,7 @@ public static class SAFTMapping
             },
             SourceID = JsonSerializer.Serialize(receiptRequest.cbUser),
             SystemEntryDate = receiptRequest.cbReceiptMoment,
-            CustomerID = "Consumidor final",
+            CustomerID = "0",
             Line = lines,
             DocumentTotals = new DocumentTotals
             {
