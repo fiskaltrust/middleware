@@ -188,7 +188,8 @@ public class VeriFactuMapping
                 _ => ClaveTipoFactura.F2, // QUESTION: is simplified invoice correct?
                 // _ => throw new Exception($"Invalid receipt case {receiptRequest.ftReceiptCase}")
             },
-            DescripcionOperacion = "test", // TODO: add descrpiton?
+            DescripcionOperacion = "test", // TODO: add descrpiton?,
+            // FacturaSinIdentifDestinatarioArt61d = Booleano.S, // TODO: do we need this art. 61d?
             Desglose = receiptRequest.cbChargeItems.Select(chargeItem => new Detalle
             {
                 // 01 Value added tax (VAT)
