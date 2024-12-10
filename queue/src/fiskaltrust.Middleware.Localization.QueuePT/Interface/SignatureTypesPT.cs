@@ -9,5 +9,6 @@ public enum SignatureTypesPT : long
 
     ATCUD = 0x5054_2000_0000_0010,
     Hash = 0x5054_2000_0000_0012,
+    HashPrint = 0x5054_2000_0000_0013,
     // TBD define signaturetypes => interface ??
 }
