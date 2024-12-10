@@ -45,6 +45,7 @@ public class ReceiptCommandProcessorES(IESSSCD sscd, Storage.ES.IConfigurationRe
     {
         var queueES = await _configurationRepository.GetQueueESAsync(request.queue.ftQueueId);
         var previousQueueItem = queueES.SSCDSignQueueItemId is not null ? await _queueItemRepository.GetAsync(queueES.SSCDSignQueueItemId.Value) : null;
+
         var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
         {
             ReceiptRequest = request.ReceiptRequest,
@@ -52,11 +53,10 @@ public class ReceiptCommandProcessorES(IESSSCD sscd, Storage.ES.IConfigurationRe
             PreviousReceiptRequest = previousQueueItem is null ? null : JsonSerializer.Deserialize<ReceiptRequest>(previousQueueItem.request)!, // handle null case?
             PreviousReceiptResponse = previousQueueItem is null ? null : JsonSerializer.Deserialize<ReceiptResponse>(previousQueueItem.response)!,
         });
-        if (response.Signed)
-        {
-            queueES.SSCDSignQueueItemId = response.ReceiptResponse.ftQueueItemID;
-            await _configurationRepository.InsertOrUpdateQueueESAsync(queueES);
-        }
+
+        queueES.SSCDSignQueueItemId = response.ReceiptResponse.ftQueueItemID;
+        await _configurationRepository.InsertOrUpdateQueueESAsync(queueES);
+
         return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
     }
 

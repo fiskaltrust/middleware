@@ -278,7 +278,7 @@ public static class HuellaExt
             ("CuotaTotal", x => x.CuotaTotal),
             ("ImporteTotal", x => x.ImporteTotal),
             ("Huella", x => x.Encadenamiento.Item is EncadenamientoFacturaAnterior encadenamiento ? encadenamiento.Huella : ""),
-            ("FechaHoraHusoGenRegistro", x => x.FechaHoraHusoGenRegistro.ToString("yyyy-MM-ddThh:mm:sszzz")),
+            ("FechaHoraHusoGenRegistro", x => x.FechaHoraHusoGenRegistro.ToString("yyyy-MM-ddTHH:mm:sszzz")),
         });
 
     public static string GetHuella(this RegistroFacturacionAnulacion registroFacturacionAnulacion)
@@ -287,7 +287,7 @@ public static class HuellaExt
             ("NumSerieFacturaAnulada", x => x.IDFactura.NumSerieFacturaAnulada),
             ("FechaExpedicionFacturaAnulada", x => x.IDFactura.FechaExpedicionFacturaAnulada),
             ("Huella", x => x.Encadenamiento.Item is EncadenamientoFacturaAnterior encadenamiento ? encadenamiento.Huella : ""),
-            ("FechaHoraHusoGenRegistro", x => x.FechaHoraHusoGenRegistro.ToString("yyyy-MM-ddThh:mm:sszzz")),
+            ("FechaHoraHusoGenRegistro", x => x.FechaHoraHusoGenRegistro.ToString("yyyy-MM-ddTHH:mm:sszzz")),
         });
 
 

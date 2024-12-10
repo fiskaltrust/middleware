@@ -41,8 +41,8 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
         [Fact]
         public async Task FullTests()
         {
-            var cashBoxId = Guid.Parse("4bf886c3-77cc-473d-93a5-0072049bee5c");
-            var accessToken = "BGos9MlC/n+7bZwmCazLZxlJbhfCuiRd9ZSNdGKzPg55JsdQSVjk4LJkwyouMZrgx+uoRtyjsbDdKFGFBKOfU8s=";
+            var cashBoxId = Guid.Parse("932c0466-ddc9-48fe-be35-8196b77563d3");
+            var accessToken = "BFDXN+aGLs9l845qyHUZt6GiuuvOYMXhu1KqAKzppYAPimQVLJWjxVxnfxkPL3pvPIaYdh3yie/ioIF6E1aVOkk=";
 
             var configuration = await GetConfigurationAsync(cashBoxId, accessToken);
             var queue = configuration.ftQueues.First();
@@ -54,6 +54,13 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
 
             var initialOperationRequest = InitialOperation(cashBoxId);
             var initOperationResponse = await signMethod(System.Text.Json.JsonSerializer.Serialize(initialOperationRequest));
+
+            var receiptRequestWrong = ExampleCashSales(cashBoxId);
+            receiptRequestWrong.cbChargeItems.First().VATRate = 20;
+            var exampleCashSalesResponseWrongString = await signMethod(System.Text.Json.JsonSerializer.Serialize(receiptRequestWrong));
+            var exampleCashSalesResponseWrong = System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesResponseWrongString)!;
+
+            exampleCashSalesResponseWrong.ftState.Should().Match(x => (x & 0xFFFF_FFFF) == 0xEEEE_EEEE, $"ftState 0x{exampleCashSalesResponseWrong.ftState:X} should be == 0xEEEE_EEEE\n{exampleCashSalesResponseWrong.ftSignatures.Find(x => (x.ftSignatureType & 0xFFFF_FFFF) == 0x3000)?.Data ?? exampleCashSalesResponseWrongString}\n");
 
             var receiptRequest = ExampleCashSales(cashBoxId);
             var exampleCashSalesResponse = await signMethod(System.Text.Json.JsonSerializer.Serialize(receiptRequest));

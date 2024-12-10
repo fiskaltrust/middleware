@@ -23,5 +23,4 @@ public class ProcessRequest
 public class ProcessResponse
 {
     public required ReceiptResponse ReceiptResponse { get; set; }
-    public required bool Signed { get; set; }
 }
