@@ -59,7 +59,7 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignat
         {
             Caption = "Hash",
             Data = hash,
-            ftSignatureFormat = 0x0001,
+            ftSignatureFormat = 0x0000_0000_0001_0001,
             ftSignatureType = (long) SignatureTypesPT.Hash,
         });
         response.ReceiptResponse.AddSignatureItem(new Api.POS.Models.ifPOS.v2.SignatureItem
@@ -67,7 +67,7 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignat
             Caption = "Hash",
             Data = hash,
             ftSignatureFormat = 0x0001,
-            ftSignatureType = (long) SignatureTypesPT.Hash,
+            ftSignatureType = (long) SignatureTypesPT.HashPrint,
         });
         response.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreatePTQRCode(qrCode));
         _queuePT.LastHash = hash;
