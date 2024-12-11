@@ -25,7 +25,7 @@ public class ESSSCDInfo
 public class InMemorySCUConfiguration
 {
     public string BaseUrl { get; set; } = "https://prewww10.aeat.es";
-    public string QRCodeBaseUrl { get; set; } = "https://prewww10.aeat.es";
+    public string QRCodeBaseUrl { get; set; } = "https://prewww2.aeat.es";
 
     public X509Certificate2 Certificate { get; set; } = null!;
 
