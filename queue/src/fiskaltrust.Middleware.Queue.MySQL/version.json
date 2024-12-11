@@ -1,5 +1,5 @@
 {
-  "version": "1.3.66-rc1",
+  "version": "1.3.66",
   "releaseBranches": [
     "^refs/tags/queue/mysql/v\\d+(?:\\.\\d+)*(?:-.*)?$"
   ]
