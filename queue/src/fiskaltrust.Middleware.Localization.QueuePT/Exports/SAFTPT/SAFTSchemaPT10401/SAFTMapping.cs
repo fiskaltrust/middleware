@@ -314,6 +314,11 @@ public static class SAFTMapping
     {
         var receiptRequest = receipt.receiptRequest;
         var lines = receiptRequest.cbChargeItems.Select(GetLine).ToList();
+        if(lines.Count == 0)
+        {
+            return null;
+        }
+
         var taxable = receiptRequest.cbChargeItems.Sum(x => x.VATAmount.GetValueOrDefault());
         var grossAmount = receiptRequest.cbChargeItems.Sum(x => x.Amount);
         var hashSignature = receipt.receiptResponse.ftSignatures.Where(x => x.ftSignatureType == (long) SignatureTypesPT.Hash).FirstOrDefault();
