@@ -25,6 +25,7 @@ public class ESSSCDInfo
 public class InMemorySCUConfiguration
 {
     public string BaseUrl { get; set; } = "https://prewww10.aeat.es";
+    public string QRCodeBaseUrl { get; set; } = "https://prewww10.aeat.es";
 
     public X509Certificate2 Certificate { get; set; } = null!;
 
@@ -106,7 +107,7 @@ public class InMemorySCU : IESSSCD
                 journalES.Huella,
                 journalES.Signature,
                 journalES.IDFactura.IDEmisorFactura,
-                SignaturItemFactory.CreateESQRCode(_configuration.BaseUrl + "/wlpl/TIKE-CONT/ValidarQR", journalES)
+                SignaturItemFactory.CreateESQRCode(_configuration.QRCodeBaseUrl + "/wlpl/TIKE-CONT/ValidarQR", journalES)
             );
         }
 
