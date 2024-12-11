@@ -69,6 +69,10 @@ public class VeriFactuMapping
         {
             var receiptRequest = JsonSerializer.Deserialize<ReceiptRequest>(queueItem.request)!;
             var receiptResponse = JsonSerializer.Deserialize<ReceiptResponse>(queueItem.response)!;
+            if (!(receiptResponse.ftSignatures.Any(x => x.ftSignatureType == (long) SignatureTypesES.Huella) && receiptResponse.ftSignatures.Any(x => x.ftSignatureType == (long) SignatureTypesES.IDEmisorFactura)))
+            {
+                continue;
+            }
             if (receiptRequest.IsVoid())
             {
                 registroFactura.Add(
@@ -146,13 +150,16 @@ public class VeriFactuMapping
             // Is this fiskaltrust or the dealer/creator
             SistemaInformatico = new SistemaInformatico
             {
-                NombreRazon = "fiskaltrust", // add real name here... and maybe get that from the config
-                // VatId of producing company. We don't have that right now.
-                Item = "NIF-fiskaltrust",
-                IdSistemaInformatico = "fiskaltrust.Middleware.Queue.AzureTableStorage", // or add cloudcashbox etc. like the launcher type? would be annoying ^^
-                Version = "", // version
-                NumeroInstalacion = receiptResponse.ftCashBoxIdentification,
+                NombreRazon = "Thomas Steininger", // add real name here... and maybe get that from the config
                 NombreSistemaInformatico = "fiskaltrust.Middleware",
+                // Identification code given by the producing person or entity to its computerised invoicing system (RIS) which, once installed, constitutes the RIS used.
+                // It should distinguish it from any other possible different RIS produced by the same producing person or entity.
+                // The possible restrictions to its values shall be detailed in the corresponding documentation in the AEAT electronic office (validations document...).
+                IdSistemaInformatico = "00", // alphanumeric(2)
+                // VatId of producing company. We don't have that right now.
+                Item = "M0291081Q",
+                Version = "1.0.0", // version
+                NumeroInstalacion = receiptResponse.ftCashBoxIdentification,
                 TipoUsoPosibleSoloVerifactu = Booleano.N,
                 TipoUsoPosibleMultiOT = Booleano.N,
                 IndicadorMultiplesOT = Booleano.N

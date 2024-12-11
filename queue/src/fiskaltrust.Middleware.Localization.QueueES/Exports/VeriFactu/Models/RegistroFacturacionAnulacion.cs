@@ -47,7 +47,7 @@ public class RegistroFacturacionAnulacion
     [XmlIgnore]
     public required DateTimeOffset FechaHoraHusoGenRegistro { get; set; }
 
-    [XmlElement("FechaHoraHusoGenRegistro", Order = 25)]
+    [XmlElement("FechaHoraHusoGenRegistro", Order = 9)]
     public string FechaHoraHusoGenRegistroString
     {
         get => FechaHoraHusoGenRegistro.ToString("yyyy-MM-ddTHH:mm:sszzz");
