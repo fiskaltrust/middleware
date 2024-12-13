@@ -81,7 +81,7 @@ public class VeriFactuMapping
                         Item = await CreateRegistroFacturacionAnulacion(receiptRequest, receiptResponse, previousReceiptRequest is null || previousReceiptResponse is null ? null : (new IDFactura
                         {
                             IDEmisorFactura = previousReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.IDEmisorFactura).Data,
-                            NumSerieFactura = previousReceiptResponse.ftReceiptIdentification,
+                            NumSerieFactura = previousReceiptResponse.ftReceiptIdentification.Split('#')[1],
                             FechaExpedicionFactura = previousReceiptRequest.cbReceiptMoment.ToString("dd-MM-yyy")
                         },
                             previousReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.Huella).Data
@@ -96,7 +96,7 @@ public class VeriFactuMapping
                         Item = CreateRegistroFacturacionAlta(receiptRequest, receiptResponse, previousReceiptRequest is null || previousReceiptResponse is null ? null : (new IDFactura
                         {
                             IDEmisorFactura = previousReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.IDEmisorFactura).Data,
-                            NumSerieFactura = previousReceiptResponse.ftReceiptIdentification,
+                            NumSerieFactura = previousReceiptResponse.ftReceiptIdentification.Split('#')[1],
                             FechaExpedicionFactura = previousReceiptRequest.cbReceiptMoment.ToString("dd-MM-yyy")
                         },
                             previousReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.Huella).Data

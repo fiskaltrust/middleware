@@ -57,7 +57,7 @@ public class InMemorySCU : IESSSCD
                 new IDFactura
                 {
                     IDEmisorFactura = request.PreviousReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.IDEmisorFactura).Data,
-                    NumSerieFactura = request.PreviousReceiptResponse.ftReceiptIdentification,
+                    NumSerieFactura = request.PreviousReceiptResponse.ftReceiptIdentification.Split('#')[1],
                     FechaExpedicionFactura = request.PreviousReceiptRequest.cbReceiptMoment.ToString("dd-MM-yyy")
                 },
                 request.PreviousReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.Huella).Data
@@ -86,7 +86,7 @@ public class InMemorySCU : IESSSCD
                 new IDFactura
                 {
                     IDEmisorFactura = request.PreviousReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.IDEmisorFactura).Data,
-                    NumSerieFactura = request.PreviousReceiptResponse.ftReceiptIdentification,
+                    NumSerieFactura = request.PreviousReceiptResponse.ftReceiptIdentification.Split('#')[1],
                     FechaExpedicionFactura = request.PreviousReceiptRequest.cbReceiptMoment.ToString("dd-MM-yyy")
                 },
                 request.PreviousReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.Huella).Data
