@@ -75,17 +75,14 @@ public class VeriFactuMapping
             }
             if (receiptRequest.IsVoid())
             {
+                if (previousReceiptRequest is null || previousReceiptResponse is null)
+                {
+                    throw new Exception("There needs to be a previous receipt in the chain to perform a void");
+                }
                 registroFactura.Add(
                     new RegistroFactura
                     {
-                        Item = await CreateRegistroFacturacionAnulacion(receiptRequest, receiptResponse, previousReceiptRequest is null || previousReceiptResponse is null ? null : (new IDFactura
-                        {
-                            IDEmisorFactura = previousReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.IDEmisorFactura).Data,
-                            NumSerieFactura = previousReceiptResponse.ftReceiptIdentification.Split('#')[1],
-                            FechaExpedicionFactura = previousReceiptRequest.cbReceiptMoment.ToString("dd-MM-yyy")
-                        },
-                            previousReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.Huella).Data
-                        ))
+                        Item = await CreateRegistroFacturacionAnulacionAsync(receiptRequest, receiptResponse, previousReceiptRequest, previousReceiptResponse)
                     });
             }
             else
@@ -93,14 +90,7 @@ public class VeriFactuMapping
                 registroFactura.Add(
                     new RegistroFactura
                     {
-                        Item = CreateRegistroFacturacionAlta(receiptRequest, receiptResponse, previousReceiptRequest is null || previousReceiptResponse is null ? null : (new IDFactura
-                        {
-                            IDEmisorFactura = previousReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.IDEmisorFactura).Data,
-                            NumSerieFactura = previousReceiptResponse.ftReceiptIdentification.Split('#')[1],
-                            FechaExpedicionFactura = previousReceiptRequest.cbReceiptMoment.ToString("dd-MM-yyy")
-                        },
-                            previousReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.Huella).Data
-                        ))
+                        Item = await CreateRegistroFacturacionAltaAsync(receiptRequest, receiptResponse, previousReceiptRequest, previousReceiptResponse)
                     });
             }
 
@@ -111,7 +101,7 @@ public class VeriFactuMapping
         return CreateRegFactuSistemaFacturacion(registroFactura);
     }
 
-    public async Task<RegistroFacturacionAnulacion> CreateRegistroFacturacionAnulacion(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, (IDFactura id, string hash)? previous)
+    public async Task<RegistroFacturacionAnulacion> CreateRegistroFacturacionAnulacionAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, ReceiptRequest previousReceiptRequest, ReceiptResponse previousReceiptResponse)
     {
         var previousQueueItems = _queueItemRepository.GetByReceiptReferenceAsync(receiptRequest.cbPreviousReceiptReference);
         if (await previousQueueItems.IsEmptyAsync())
@@ -136,15 +126,7 @@ public class VeriFactuMapping
             },
             Encadenamiento = new RegistroFacturacionAnulacionEncadenamiento
             {
-                Item = previous is null
-                    ? PrimerRegistroCadena.S
-                    : new EncadenamientoFacturaAnterior
-                    {
-                        IDEmisorFactura = previous!.Value.id.IDEmisorFactura,
-                        NumSerieFactura = previous!.Value.id.NumSerieFactura,
-                        FechaExpedicionFactura = previous!.Value.id.FechaExpedicionFactura,
-                        Huella = previous!.Value.hash
-                    }
+                Item = await GetEncadenamientoFacturaAnteriorAsync(previousReceiptRequest, previousReceiptResponse)
             },
             // Which PosSystem from the list should we take? In DE we just take the first one...
             // Is this fiskaltrust or the dealer/creator
@@ -174,7 +156,7 @@ public class VeriFactuMapping
         return _certificate is null ? registroFacturacionAnulacion : XmlHelpers.Deserialize<RegistroFacturacionAnulacion>(XmlHelpers.SignXmlContentWithXades(XmlHelpers.GetXMLIncludingNamespace(registroFacturacionAnulacion, "sf", "RegistroFacturacionAlta"), _certificate))!;
     }
 
-    public RegistroFacturacionAlta CreateRegistroFacturacionAlta(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, (IDFactura id, string hash)? previous)
+    public async Task<RegistroFacturacionAlta> CreateRegistroFacturacionAltaAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, ReceiptRequest? previousReceiptRequest, ReceiptResponse? previousReceiptResponse)
     {
         var registroFacturacionAlta = new RegistroFacturacionAlta
         {
@@ -235,15 +217,7 @@ public class VeriFactuMapping
             ImporteTotal = (receiptRequest.cbReceiptAmount ?? receiptRequest.cbChargeItems.Sum(chargeItem => chargeItem.Amount)).ToVeriFactuNumber(),
             Encadenamiento = new RegistroFacturacionAltaEncadenamiento
             {
-                Item = previous is null
-                    ? PrimerRegistroCadena.S
-                    : new EncadenamientoFacturaAnterior
-                    {
-                        IDEmisorFactura = previous!.Value.id.IDEmisorFactura,
-                        NumSerieFactura = previous!.Value.id.NumSerieFactura,
-                        FechaExpedicionFactura = previous!.Value.id.FechaExpedicionFactura,
-                        Huella = previous!.Value.hash
-                    }
+                Item = await GetEncadenamientoFacturaAnteriorAsync(previousReceiptRequest, previousReceiptResponse)
             },
             // Which PosSystem from the list should we take? In DE we just take the first one...
             // Is this fiskaltrust or the dealer/creator
@@ -271,6 +245,48 @@ public class VeriFactuMapping
         registroFacturacionAlta.Huella = registroFacturacionAlta.GetHuella();
 
         return _certificate is null ? registroFacturacionAlta : XmlHelpers.Deserialize<RegistroFacturacionAlta>(XmlHelpers.SignXmlContentWithXades(XmlHelpers.GetXMLIncludingNamespace(registroFacturacionAlta, "sf", "RegistroFacturacionAlta"), _certificate))!;
+    }
+
+    private async Task<object> GetEncadenamientoFacturaAnteriorAsync(ReceiptRequest? previousReceiptRequest, ReceiptResponse? previousReceiptResponse)
+    {
+        if (previousReceiptRequest is null || previousReceiptResponse is null)
+        {
+            return PrimerRegistroCadena.S;
+        }
+
+        var previousHash = previousReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.Huella).Data;
+
+        if (previousReceiptRequest?.IsVoid() ?? false)
+        {
+            var previousQueueItems = _queueItemRepository.GetByReceiptReferenceAsync(previousReceiptRequest.cbPreviousReceiptReference);
+            if (await previousQueueItems.IsEmptyAsync())
+            {
+                throw new Exception($"Receipt with cbReceiptReference {previousReceiptRequest.cbPreviousReceiptReference} not found.");
+            }
+
+            var voidedQueueItem = await previousQueueItems.SingleOrDefaultAsync() ?? throw new Exception($"Multiple receipts with cbReceiptReference {previousReceiptRequest.cbPreviousReceiptReference} found.");
+
+            var voidedReceiptRequest = JsonSerializer.Deserialize<ReceiptRequest>(voidedQueueItem.request)!;
+            var voidedReceiptResponse = JsonSerializer.Deserialize<ReceiptResponse>(voidedQueueItem.response)!;
+
+            return new EncadenamientoFacturaAnterior
+            {
+                IDEmisorFactura = voidedReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.IDEmisorFactura).Data,
+                NumSerieFactura = voidedReceiptResponse.ftReceiptIdentification.Split('#')[1],
+                FechaExpedicionFactura = voidedReceiptRequest!.cbReceiptMoment.ToString("dd-MM-yyy"),
+                Huella = previousReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.Huella).Data
+            };
+        }
+        else
+        {
+            return new EncadenamientoFacturaAnterior
+            {
+                IDEmisorFactura = previousReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.IDEmisorFactura).Data,
+                NumSerieFactura = previousReceiptResponse.ftReceiptIdentification.Split('#')[1],
+                FechaExpedicionFactura = previousReceiptRequest!.cbReceiptMoment.ToString("dd-MM-yyy"),
+                Huella = previousHash
+            };
+        }
     }
 }
 

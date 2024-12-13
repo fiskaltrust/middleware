@@ -53,15 +53,12 @@ public class InMemorySCU : IESSSCD
 
         if (request.ReceiptRequest.IsVoid())
         {
-            var journalES = await _veriFactuMapping.CreateRegistroFacturacionAnulacion(request.ReceiptRequest, request.ReceiptResponse, request.PreviousReceiptRequest is null || request.PreviousReceiptResponse is null ? null : (
-                new IDFactura
-                {
-                    IDEmisorFactura = request.PreviousReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.IDEmisorFactura).Data,
-                    NumSerieFactura = request.PreviousReceiptResponse.ftReceiptIdentification.Split('#')[1],
-                    FechaExpedicionFactura = request.PreviousReceiptRequest.cbReceiptMoment.ToString("dd-MM-yyy")
-                },
-                request.PreviousReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.Huella).Data
-            ));
+            if (request.PreviousReceiptRequest is null || request.PreviousReceiptResponse is null)
+            {
+                throw new Exception("There needs to be a previous receipt in the chain to perform a void");
+            }
+
+            var journalES = await _veriFactuMapping.CreateRegistroFacturacionAnulacionAsync(request.ReceiptRequest, request.ReceiptResponse, request.PreviousReceiptRequest, request.PreviousReceiptResponse);
 
             var envelope = new Envelope<RequestBody>
             {
@@ -82,15 +79,7 @@ public class InMemorySCU : IESSSCD
         }
         else
         {
-            var journalES = _veriFactuMapping.CreateRegistroFacturacionAlta(request.ReceiptRequest, request.ReceiptResponse, request.PreviousReceiptRequest is null || request.PreviousReceiptResponse is null ? null : (
-                new IDFactura
-                {
-                    IDEmisorFactura = request.PreviousReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.IDEmisorFactura).Data,
-                    NumSerieFactura = request.PreviousReceiptResponse.ftReceiptIdentification.Split('#')[1],
-                    FechaExpedicionFactura = request.PreviousReceiptRequest.cbReceiptMoment.ToString("dd-MM-yyy")
-                },
-                request.PreviousReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.Huella).Data
-            ));
+            var journalES = await _veriFactuMapping.CreateRegistroFacturacionAltaAsync(request.ReceiptRequest, request.ReceiptResponse, request.PreviousReceiptRequest, request.PreviousReceiptResponse);
 
             var envelope = new Envelope<RequestBody>
             {
@@ -113,7 +102,7 @@ public class InMemorySCU : IESSSCD
 
         return new ProcessResponse
         {
-            ReceiptResponse = request.ReceiptResponse,
+            ReceiptResponse = receiptResponse,
         };
     }
 

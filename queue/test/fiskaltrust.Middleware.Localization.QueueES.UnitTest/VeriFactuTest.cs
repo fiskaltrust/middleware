@@ -44,7 +44,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
             };
 
             var veriFactuMapping = new VeriFactuMapping(masterData, queueItemRepository.Object, certificate);
-            var journalES = veriFactuMapping.CreateRegistroFacturacionAlta(receiptRequest, receiptResponse, null);
+            var journalES = await veriFactuMapping.CreateRegistroFacturacionAltaAsync(receiptRequest, receiptResponse, null, null);
 
             var client = new Client(new Uri(new InMemorySCUConfiguration().BaseUrl), certificate);
 
@@ -95,7 +95,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
             };
 
             var veriFactuMapping = new VeriFactuMapping(masterData, queueItemRepository.Object, certificate);
-            var journalES = veriFactuMapping.CreateRegistroFacturacionAlta(receiptRequest, receiptResponse, null);
+            var journalES = await veriFactuMapping.CreateRegistroFacturacionAltaAsync(receiptRequest, receiptResponse, null, null);
 
             var client = new Client(new Uri(new InMemorySCUConfiguration().BaseUrl), certificate);
 

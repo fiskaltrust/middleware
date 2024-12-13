@@ -41,8 +41,8 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
         [Fact]
         public async Task FullTests()
         {
-            var cashBoxId = Guid.Parse("932c0466-ddc9-48fe-be35-8196b77563d3");
-            var accessToken = "BFDXN+aGLs9l845qyHUZt6GiuuvOYMXhu1KqAKzppYAPimQVLJWjxVxnfxkPL3pvPIaYdh3yie/ioIF6E1aVOkk=";
+            var cashBoxId = Guid.Parse("8e2e348b-0a37-45d6-8f22-0aaa82db44ea");
+            var accessToken = "BMlOgJSEC1url4Nwd9QSc7rIXGfiEC65Afai4WZjPxbIIUIHykTnp96nryJsnsC98BYaY2jh+lZIbN06JF6LEtg=";
 
             var configuration = await GetConfigurationAsync(cashBoxId, accessToken);
             var queue = configuration.ftQueues.First();
