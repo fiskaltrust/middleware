@@ -136,8 +136,8 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             var queueItemRepositoryMock = new Mock<IQueueItemRepository>();
             queueItemRepositoryMock.Setup(x => x.GetAsync(previousQueueItem.ftQueueItemId)).ReturnsAsync(previousQueueItem);
 
-            var config = new InMemorySCUConfiguration();
-            var sut = new ReceiptCommandProcessorES(new InMemorySCU(signaturCreationUnitES, masterDataConfiguration, config, Mock.Of<IMiddlewareQueueItemRepository>()), configurationRepositoryMock.Object, queueItemRepositoryMock.Object);
+            var config = new VeriFactuSCUConfiguration();
+            var sut = new ReceiptCommandProcessorES(new VeriFactuSCU(signaturCreationUnitES, masterDataConfiguration, config, Mock.Of<IMiddlewareQueueItemRepository>()), configurationRepositoryMock.Object, queueItemRepositoryMock.Object);
 
             var receiptRequest = new ReceiptRequest
             {

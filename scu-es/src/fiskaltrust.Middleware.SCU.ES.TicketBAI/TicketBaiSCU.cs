@@ -9,11 +9,11 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web;
+using System.Text.Json;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI.Helpers;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI.Models;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI.Territories;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using System.Xml;
 
 #pragma warning disable IDE0052
@@ -104,7 +104,7 @@ public class TicketBaiSCU : IESSSCD
             httpRequestHeaders.Headers.Add("eus-bizkaia-n3-content-type", "application/xml");
             // TODO which year needs to be transmitted?
             httpRequestHeaders.Headers.Add("eus-bizkaia-n3-data",
-                    JsonConvert.SerializeObject(Bizkaia.GenerateHeader(ticketBaiRequest.Sujetos.Emisor.NIF, ticketBaiRequest.Sujetos.Emisor.ApellidosNombreRazonSocial, "240", DateTime.UtcNow.Year.ToString())));
+                    JsonSerializer.Serialize(Bizkaia.GenerateHeader(ticketBaiRequest.Sujetos.Emisor.NIF, ticketBaiRequest.Sujetos.Emisor.ApellidosNombreRazonSocial, "240", DateTime.UtcNow.Year.ToString())));
             var response = await _httpClient.SendAsync(httpRequestHeaders);
             var responseContent = await response.Content.ReadAsStringAsync();
             var result = GetResponseFromContent(responseContent, ticketBaiRequest);

@@ -18,28 +18,24 @@ using fiskaltrust.storage.V0.MasterData;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.ESSSCD;
 
-public class ESSSCDInfo
-{
-}
-
-public class InMemorySCUConfiguration
+public class VeriFactuSCUConfiguration
 {
     public string BaseUrl { get; set; } = "https://prewww10.aeat.es";
     public string QRCodeBaseUrl { get; set; } = "https://prewww2.aeat.es";
 
     public X509Certificate2 Certificate { get; set; } = null!;
 
-    public static InMemorySCUConfiguration FromConfiguration(PackageConfiguration packageConfiguration)
-        => JsonSerializer.Deserialize<InMemorySCUConfiguration>(JsonSerializer.Serialize(packageConfiguration.Configuration)) ?? new InMemorySCUConfiguration();
+    public static VeriFactuSCUConfiguration FromConfiguration(PackageConfiguration packageConfiguration)
+        => JsonSerializer.Deserialize<VeriFactuSCUConfiguration>(JsonSerializer.Serialize(packageConfiguration.Configuration)) ?? new VeriFactuSCUConfiguration();
 }
 
-public class InMemorySCU : IESSSCD
+public class VeriFactuSCU : IESSSCD
 {
-    private readonly InMemorySCUConfiguration _configuration;
+    private readonly VeriFactuSCUConfiguration _configuration;
 
     private readonly VeriFactuMapping _veriFactuMapping;
 
-    public InMemorySCU(ftSignaturCreationUnitES _, MasterDataConfiguration masterData, InMemorySCUConfiguration configuration, IMiddlewareQueueItemRepository queueItemRepository)
+    public VeriFactuSCU(ftSignaturCreationUnitES _, MasterDataConfiguration masterData, VeriFactuSCUConfiguration configuration, IMiddlewareQueueItemRepository queueItemRepository)
     {
         _configuration = configuration;
         _veriFactuMapping = new VeriFactuMapping(masterData, queueItemRepository, configuration.Certificate);

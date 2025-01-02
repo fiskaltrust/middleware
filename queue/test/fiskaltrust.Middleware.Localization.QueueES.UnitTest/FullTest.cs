@@ -39,17 +39,25 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
         }
 
         [Fact]
-        public async Task FullTests()
+        public async Task FullTestsVeriFactu()
         {
-            var cashBoxId = Guid.Parse("8e2e348b-0a37-45d6-8f22-0aaa82db44ea");
-            var accessToken = "BMlOgJSEC1url4Nwd9QSc7rIXGfiEC65Afai4WZjPxbIIUIHykTnp96nryJsnsC98BYaY2jh+lZIbN06JF6LEtg=";
+            var cashBoxId = Guid.Parse("8e577045-5b59-4e34-875b-90a2dd22f53f");
+            var accessToken = "BFSKksXHFdi5Qt0UkwX2b3NuSC8EptKxsXEgfWcWJgD1peft+IF6LqJTt6lpjggT/E+mkQ2PLeMfGsVDabtlbcY=";
 
             var configuration = await GetConfigurationAsync(cashBoxId, accessToken);
             var queue = configuration.ftQueues.First();
+            var scu = configuration.ftSignaturCreationDevices.First();
 
-            queue.Configuration["certificate"] = Convert.ToBase64String(await File.ReadAllBytesAsync("Certificates/Certificado_RPJ_A39200019_CERTIFICADO_ENTIDAD_PRUEBAS_4_Pre.p12"));
-            queue.Configuration["certificatePassword"] = "1234";
-            var bootstrapper = new QueueESBootstrapper(queue.Id, new LoggerFactory(), queue.Configuration);
+            scu.Configuration["certificate"] = Convert.ToBase64String(await File.ReadAllBytesAsync("Certificates/Certificado_RPJ_A39200019_CERTIFICADO_ENTIDAD_PRUEBAS_4_Pre.p12"));
+            scu.Configuration["certificatePassword"] = "1234";
+            var bootstrapper = new QueueESBootstrapper(queue.Id, new LoggerFactory(), queue.Configuration, new v2.Configuration.PackageConfiguration
+            {
+                Configuration = scu.Configuration,
+                Id = scu.Id,
+                Package = scu.Package,
+                Url = scu.Url.ToList(),
+                Version = scu.Version
+            });
             var signMethod = bootstrapper.RegisterForSign();
             var journalMethod = bootstrapper.RegisterForJournal();
             {
@@ -109,6 +117,80 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
             }));
         }
 
+
+        // hacks:
+        // cashboxidentification maxlen 20
+        // cbreceiptreference maxlen 20
+        [Fact]
+        public async Task FullTestsTicketBAI()
+        {
+            var cashBoxId = Guid.Parse("08ea0e85-5732-4cf4-a28a-d2b8d8fb2762");
+            var accessToken = "BH/OgHA0pcwxtn4R5hvHJZ+JoGjrNWQytIHqC21kQWRt9wgZovf8FxNH2yoKdSD2waOmaH1jcluqsxjHpkXRRlc=";
+
+            var configuration = await GetConfigurationAsync(cashBoxId, accessToken);
+            var queue = configuration.ftQueues.First();
+            var scu = configuration.ftSignaturCreationDevices.First();
+
+            scu.Configuration["certificate"] = Convert.ToBase64String(await File.ReadAllBytesAsync("Certificates/Araba/dispositivo_act.p12"));
+            scu.Configuration["certificatePassword"] = "Iz3np32023";
+            var bootstrapper = new QueueESBootstrapper(queue.Id, new LoggerFactory(), queue.Configuration, new v2.Configuration.PackageConfiguration
+            {
+                Configuration = scu.Configuration,
+                Id = scu.Id,
+                Package = scu.Package,
+                Url = scu.Url.ToList(),
+                Version = scu.Version
+            });
+            var signMethod = bootstrapper.RegisterForSign();
+            var journalMethod = bootstrapper.RegisterForJournal();
+            {
+
+                var initialOperationRequest = InitialOperation(cashBoxId);
+                var initOperationResponse = await signMethod(System.Text.Json.JsonSerializer.Serialize(initialOperationRequest));
+            }
+
+            var receiptRequest = ExampleCashSalesTicketBAIHacks(cashBoxId);
+            {
+                var exampleCashSalesResponseString = await signMethod(System.Text.Json.JsonSerializer.Serialize(receiptRequest));
+                var exampleCashSalesResponse = System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesResponseString)!;
+                var errorItem = exampleCashSalesResponse.ftSignatures.Find(x => (x.ftSignatureType & 0xFFFF_FFFF) == 0x3000);
+                exampleCashSalesResponse.ftState.Should().Match(x => (x & 0xFFFF_FFFF) < 0xEEEE_EEEE, $"ftState 0x{exampleCashSalesResponse.ftState:X} should be < 0xEEEE_EEEE\n{errorItem?.Data ?? exampleCashSalesResponseString}\n");
+            }
+
+            // {
+            //     var receiptRequestVoid = ExampleCashSales(cashBoxId);
+            //     receiptRequestVoid.ftReceiptCase = receiptRequestVoid.ftReceiptCase | 0x0004_0000;
+            //     receiptRequestVoid.cbPreviousReceiptReference = receiptRequest.cbReceiptReference;
+            //     var exampleCashSalesVoidResponseString = await signMethod(System.Text.Json.JsonSerializer.Serialize(receiptRequestVoid));
+            //     var exampleCashSalesVoidResponse = System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesVoidResponseString)!;
+            //     var errorItemVoid = exampleCashSalesVoidResponse.ftSignatures.Find(x => (x.ftSignatureType & 0xFFFF_FFFF) == 0x3000);
+            //     exampleCashSalesVoidResponse.ftState.Should().Match(x => (x & 0xFFFF_FFFF) < 0xEEEE_EEEE, $"ftState 0x{exampleCashSalesVoidResponse.ftState:X} should be < 0xEEEE_EEEE\n{errorItemVoid?.Data ?? exampleCashSalesVoidResponseString}\n");
+            // }
+
+            // receiptRequest = ExampleCashSales(cashBoxId);
+            // {
+            //     var exampleCashSalesResponseString = await signMethod(System.Text.Json.JsonSerializer.Serialize(receiptRequest));
+            //     var exampleCashSalesResponse = System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesResponseString)!;
+            //     var errorItem = exampleCashSalesResponse.ftSignatures.Find(x => (x.ftSignatureType & 0xFFFF_FFFF) == 0x3000);
+            //     exampleCashSalesResponse.ftState.Should().Match(x => (x & 0xFFFF_FFFF) < 0xEEEE_EEEE, $"ftState 0x{exampleCashSalesResponse.ftState:X} should be < 0xEEEE_EEEE\n{errorItem?.Data ?? exampleCashSalesResponseString}\n");
+            // }
+
+            // {
+            //     var receiptRequestVoid = ExampleCashSales(cashBoxId);
+            //     receiptRequestVoid.ftReceiptCase = receiptRequestVoid.ftReceiptCase | 0x0004_0000;
+            //     receiptRequestVoid.cbPreviousReceiptReference = receiptRequest.cbReceiptReference;
+            //     var exampleCashSalesVoidResponseString = await signMethod(System.Text.Json.JsonSerializer.Serialize(receiptRequestVoid));
+            //     var exampleCashSalesVoidResponse = System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesVoidResponseString)!;
+            //     var errorItemVoid = exampleCashSalesVoidResponse.ftSignatures.Find(x => (x.ftSignatureType & 0xFFFF_FFFF) == 0x3000);
+            //     exampleCashSalesVoidResponse.ftState.Should().Match(x => (x & 0xFFFF_FFFF) < 0xEEEE_EEEE, $"ftState 0x{exampleCashSalesVoidResponse.ftState:X} should be < 0xEEEE_EEEE\n{errorItemVoid?.Data ?? exampleCashSalesVoidResponseString}\n");
+            // }
+
+            // var veriFactuString = await journalMethod(System.Text.Json.JsonSerializer.Serialize(new ifPOS.v1.JournalRequest
+            // {
+            //     ftJournalType = 0x4752_2000_0000_0000
+            // }));
+        }
+
         private static ReceiptRequest InitialOperation(Guid cashBoxId)
         {
             return new ReceiptRequest
@@ -149,6 +231,49 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
                         Position = 2,
                         ftChargeItemCase = 0x4752_2000_0000_0013,
                         VATAmount = 1.30m,
+                        Amount = 6.2m,
+                        VATRate = 21m,
+                        Quantity = 1,
+                        Description = "ChargeItem2"
+                    }
+                            ],
+                cbPayItems =
+                            [
+                                new PayItem
+                    {
+                        ftPayItemCase = 0x4752_2000_0000_0001,
+                        Amount = 12.4m,
+                        Description = "Cash"
+                    }
+                            ]
+            };
+        }
+        private static ReceiptRequest ExampleCashSalesTicketBAIHacks(Guid cashBoxId)
+        {
+            return new ReceiptRequest
+            {
+                ftCashBoxID = cashBoxId,
+                ftReceiptCase = 0x4752_2000_0000_0000,
+                cbTerminalID = "1",
+                cbReceiptReference = string.Concat(Guid.NewGuid().ToString().Take(20)),
+                cbReceiptMoment = DateTime.UtcNow,
+                cbChargeItems =
+                            [
+                                new ChargeItem
+                    {
+                        Position = 1,
+                        ftChargeItemCase = 0x4752_2000_0000_0013,
+                        VATAmount = 1.3m,
+                        Amount = 6.2m,
+                        VATRate = 21m,
+                        Quantity = 1,
+                        Description = "ChargeItem1"
+                    },
+                    new ChargeItem
+                    {
+                        Position = 2,
+                        ftChargeItemCase = 0x4752_2000_0000_0013,
+                        VATAmount = 1.3m,
                         Amount = 6.2m,
                         VATRate = 21m,
                         Quantity = 1,

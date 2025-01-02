@@ -7,5 +7,6 @@ public enum SignatureTypesES : long
     VeriFactu = 0x4553_2000_0000_0001,
     IDEmisorFactura = 0x4553_2000_0000_0002,
     Signature = 0x4553_2000_0000_0003,
-    Huella = 0x4553_2000_0000_0004
+    Huella = 0x4553_2000_0000_0004,
+    TicketBAI = 0x4553_2000_0000_0005,
 }
