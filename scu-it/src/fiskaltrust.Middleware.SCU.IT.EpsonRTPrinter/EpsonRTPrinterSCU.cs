@@ -580,7 +580,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         return text;
     }
 
-    public static PrinterNonFiscal PerformUnspecifiedProtocolReceipt(ReceiptRequest request)
+    private static PrinterNonFiscal PerformUnspecifiedProtocolReceipt(ReceiptRequest request)
     {
         var content = new PrinterNonFiscal();
 
