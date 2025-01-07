@@ -38,7 +38,7 @@ public class TicketBaiSCU : IESSSCD
             InvoiceNumber = request.ReceiptRequest.cbReceiptReference!, //?
             LastInvoiceMoment = request.PreviousReceiptResponse?.ftReceiptMoment,
             LastInvoiceNumber = request.PreviousReceiptRequest?.cbReceiptReference,
-            LastInvoiceSignature = request.PreviousReceiptResponse?.ftSignatures?.First(x => x.ftSignatureType == (long) SignatureTypesES.TicketBAI).Data,
+            LastInvoiceSignature = request.PreviousReceiptResponse?.ftSignatures?.First(x => x.ftSignatureType == (long) SignatureTypesES.Signature).Data,
             Series = "",
             InvoiceLine = request.ReceiptRequest.cbChargeItems.Select(c => new InvoiceLine
             {

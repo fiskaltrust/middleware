@@ -122,6 +122,10 @@ public class TicketBaiSCU : IESSSCD
             var result = GetResponseFromContent(responseContent, ticketBaiRequest);
             result.RequestContent = content;
             return result;
+            // El fichero de alta TicketBAI no cumple el esquema XSD - cvc-maxLength-valid: Value 'https://pruebas-ticketbai.araba.eus/tbai/qrtbai/?id=TBAI-B10646545-070125-4yElymt0i%2bmPt-096&amp;s=&amp;nf=8524270b-0&amp;i=12.4&amp;cr=043' with length = '124' is not facet-valid w
+            // El fichero de alta TicketBAI no cumple el esquema XSD - cvc-maxLength-valid: Value 'https://pruebas-ticketbai.araba.eus/tbai/qrtbai/?id=TBAI-B10646545-070125-4yElymt0i+mPt-096&amp;s=&amp;nf=8524270b-0&amp;i=12.4&amp;cr=043' with length = '124' is not facet-valid w
+
+            // El fichero de alta TicketBAI no cumple el esquema XSD - cvc-maxLength-valid: Value 'https://pruebas-ticketbai.araba.eus/tbai/qrtbai/?id=TBAI-B10646545-070125-eNPL8S1/JGBAo-200&amp;s=&amp;nf=d8382&amp;i=12.4&amp;cr=180' with length = '119' is not facet-valid with r
         }
     }
 
@@ -144,7 +148,11 @@ public class TicketBaiSCU : IESSSCD
         var ticketBaiRequest = _ticketBaiFactory.ConvertTo(request);
         var xml = XmlHelpers.GetXMLIncludingNamespace(ticketBaiRequest);
         var content = XmlHelpers.SignXmlContentWithXades(xml, _ticketBaiTerritory.PolicyIdentifier, _ticketBaiTerritory.PolicyDigest, _configuration.Certificate);
-        var response = await _httpClient.PostAsync(_ticketBaiTerritory.CancelInvoices, new StringContent(content, Encoding.UTF8, "application/xml"));
+        var httpRequestHeaders = new HttpRequestMessage(HttpMethod.Post, new Uri(_ticketBaiTerritory.SandboxEndpoint + _ticketBaiTerritory.CancelInvoices))
+        {
+            Content = new StringContent(content, Encoding.UTF8, "application/xml")
+        };
+        var response = await _httpClient.SendAsync(httpRequestHeaders);
         var responseContent = await response.Content.ReadAsStringAsync();
         var result = GetResponseFromContent(responseContent, ticketBaiRequest);
         result.RequestContent = content;
