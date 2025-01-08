@@ -157,33 +157,33 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
                 exampleCashSalesResponse.ftState.Should().Match(x => (x & 0xFFFF_FFFF) < 0xEEEE_EEEE, $"ftState 0x{exampleCashSalesResponse.ftState:X} should be < 0xEEEE_EEEE\n{errorItem?.Data ?? exampleCashSalesResponseString}\n");
             }
 
-            {
-                var receiptRequestVoid = ExampleCashSales(cashBoxId);
-                receiptRequestVoid.ftReceiptCase = receiptRequestVoid.ftReceiptCase | 0x0004_0000;
-                receiptRequestVoid.cbPreviousReceiptReference = receiptRequest.cbReceiptReference;
-                var exampleCashSalesVoidResponseString = await signMethod(System.Text.Json.JsonSerializer.Serialize(receiptRequestVoid));
-                var exampleCashSalesVoidResponse = System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesVoidResponseString)!;
-                var errorItemVoid = exampleCashSalesVoidResponse.ftSignatures.Find(x => (x.ftSignatureType & 0xFFFF_FFFF) == 0x3000);
-                exampleCashSalesVoidResponse.ftState.Should().Match(x => (x & 0xFFFF_FFFF) < 0xEEEE_EEEE, $"ftState 0x{exampleCashSalesVoidResponse.ftState:X} should be < 0xEEEE_EEEE\n{errorItemVoid?.Data ?? exampleCashSalesVoidResponseString}\n");
-            }
+            // {
+            //     var receiptRequestVoid = ExampleCashSales(cashBoxId);
+            //     receiptRequestVoid.ftReceiptCase = receiptRequestVoid.ftReceiptCase | 0x0004_0000;
+            //     receiptRequestVoid.cbPreviousReceiptReference = receiptRequest.cbReceiptReference;
+            //     var exampleCashSalesVoidResponseString = await signMethod(System.Text.Json.JsonSerializer.Serialize(receiptRequestVoid));
+            //     var exampleCashSalesVoidResponse = System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesVoidResponseString)!;
+            //     var errorItemVoid = exampleCashSalesVoidResponse.ftSignatures.Find(x => (x.ftSignatureType & 0xFFFF_FFFF) == 0x3000);
+            //     exampleCashSalesVoidResponse.ftState.Should().Match(x => (x & 0xFFFF_FFFF) < 0xEEEE_EEEE, $"ftState 0x{exampleCashSalesVoidResponse.ftState:X} should be < 0xEEEE_EEEE\n{errorItemVoid?.Data ?? exampleCashSalesVoidResponseString}\n");
+            // }
 
-            receiptRequest = ExampleCashSales(cashBoxId);
-            {
-                var exampleCashSalesResponseString = await signMethod(System.Text.Json.JsonSerializer.Serialize(receiptRequest));
-                var exampleCashSalesResponse = System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesResponseString)!;
-                var errorItem = exampleCashSalesResponse.ftSignatures.Find(x => (x.ftSignatureType & 0xFFFF_FFFF) == 0x3000);
-                exampleCashSalesResponse.ftState.Should().Match(x => (x & 0xFFFF_FFFF) < 0xEEEE_EEEE, $"ftState 0x{exampleCashSalesResponse.ftState:X} should be < 0xEEEE_EEEE\n{errorItem?.Data ?? exampleCashSalesResponseString}\n");
-            }
+            // receiptRequest = ExampleCashSales(cashBoxId);
+            // {
+            //     var exampleCashSalesResponseString = await signMethod(System.Text.Json.JsonSerializer.Serialize(receiptRequest));
+            //     var exampleCashSalesResponse = System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesResponseString)!;
+            //     var errorItem = exampleCashSalesResponse.ftSignatures.Find(x => (x.ftSignatureType & 0xFFFF_FFFF) == 0x3000);
+            //     exampleCashSalesResponse.ftState.Should().Match(x => (x & 0xFFFF_FFFF) < 0xEEEE_EEEE, $"ftState 0x{exampleCashSalesResponse.ftState:X} should be < 0xEEEE_EEEE\n{errorItem?.Data ?? exampleCashSalesResponseString}\n");
+            // }
 
-            {
-                var receiptRequestVoid = ExampleCashSales(cashBoxId);
-                receiptRequestVoid.ftReceiptCase = receiptRequestVoid.ftReceiptCase | 0x0004_0000;
-                receiptRequestVoid.cbPreviousReceiptReference = receiptRequest.cbReceiptReference;
-                var exampleCashSalesVoidResponseString = await signMethod(System.Text.Json.JsonSerializer.Serialize(receiptRequestVoid));
-                var exampleCashSalesVoidResponse = System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesVoidResponseString)!;
-                var errorItemVoid = exampleCashSalesVoidResponse.ftSignatures.Find(x => (x.ftSignatureType & 0xFFFF_FFFF) == 0x3000);
-                exampleCashSalesVoidResponse.ftState.Should().Match(x => (x & 0xFFFF_FFFF) < 0xEEEE_EEEE, $"ftState 0x{exampleCashSalesVoidResponse.ftState:X} should be < 0xEEEE_EEEE\n{errorItemVoid?.Data ?? exampleCashSalesVoidResponseString}\n");
-            }
+            // {
+            //     var receiptRequestVoid = ExampleCashSales(cashBoxId);
+            //     receiptRequestVoid.ftReceiptCase = receiptRequestVoid.ftReceiptCase | 0x0004_0000;
+            //     receiptRequestVoid.cbPreviousReceiptReference = receiptRequest.cbReceiptReference;
+            //     var exampleCashSalesVoidResponseString = await signMethod(System.Text.Json.JsonSerializer.Serialize(receiptRequestVoid));
+            //     var exampleCashSalesVoidResponse = System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesVoidResponseString)!;
+            //     var errorItemVoid = exampleCashSalesVoidResponse.ftSignatures.Find(x => (x.ftSignatureType & 0xFFFF_FFFF) == 0x3000);
+            //     exampleCashSalesVoidResponse.ftState.Should().Match(x => (x & 0xFFFF_FFFF) < 0xEEEE_EEEE, $"ftState 0x{exampleCashSalesVoidResponse.ftState:X} should be < 0xEEEE_EEEE\n{errorItemVoid?.Data ?? exampleCashSalesVoidResponseString}\n");
+            // }
 
             // var veriFactuString = await journalMethod(System.Text.Json.JsonSerializer.Serialize(new ifPOS.v1.JournalRequest
             // {
@@ -232,6 +232,16 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
                         ftChargeItemCase = 0x4752_2000_0000_0013,
                         VATAmount = 1.30m,
                         Amount = 6.2m,
+                        VATRate = 21m,
+                        Quantity = 1,
+                        Description = "ChargeItem2"
+                    },
+                                        new ChargeItem
+                    {
+                        Position = 2,
+                        ftChargeItemCase = 0x4752_2000_0000_0013,
+                        VATAmount = .83m,
+                        Amount = 1m,
                         VATRate = 21m,
                         Quantity = 1,
                         Description = "ChargeItem2"

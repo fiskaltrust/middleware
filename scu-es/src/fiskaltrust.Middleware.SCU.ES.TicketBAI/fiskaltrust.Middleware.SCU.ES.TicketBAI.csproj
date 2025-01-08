@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <Description>The fiskaltrust Middleware implementation of the Ticket BAI SCU for Spain (Basque).</Description>
-        <TargetFrameworks>netstandard2.0;net6</TargetFrameworks>
+        <TargetFrameworks>net8</TargetFrameworks>
         <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);CopyProjectReferencesToPackage</TargetsForTfmSpecificBuildOutput>
         <Nullable>enable</Nullable>
     </PropertyGroup>
