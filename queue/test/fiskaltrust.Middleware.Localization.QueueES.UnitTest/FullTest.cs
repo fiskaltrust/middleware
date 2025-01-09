@@ -38,7 +38,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
             }
         }
 
-        [Fact(Skip = "Local certificates")]
+        [Fact, Trait("only", "local")]
         public async Task FullTestsVeriFactu()
         {
             var cashBoxId = Guid.Parse("8e577045-5b59-4e34-875b-90a2dd22f53f");
@@ -121,7 +121,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
         // hacks:
         // cashboxidentification maxlen 20
         // cbreceiptreference maxlen 20
-        [Fact(Skip = "Local certificates")]
+        [Fact, Trait("only", "local")]
         public async Task FullTestsTicketBAI()
         {
             var cashBoxId = Guid.Parse("31ad88c3-5a5d-4968-8330-524010a67b49");

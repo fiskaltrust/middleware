@@ -69,7 +69,7 @@ public class VeriFactuMapping
         {
             var receiptRequest = JsonSerializer.Deserialize<ReceiptRequest>(queueItem.request)!;
             var receiptResponse = JsonSerializer.Deserialize<ReceiptResponse>(queueItem.response)!;
-            if (!(receiptResponse.ftSignatures.Any(x => x.ftSignatureType == (long) SignatureTypesES.Huella) && receiptResponse.ftSignatures.Any(x => x.ftSignatureType == (long) SignatureTypesES.IDEmisorFactura)))
+            if (!(receiptResponse.ftSignatures.Any(x => x.ftSignatureType == (long) SignatureTypesES.Huella) && receiptResponse.ftSignatures.Any(x => x.ftSignatureType == (long) SignatureTypesES.QRCode)))
             {
                 continue;
             }
@@ -120,7 +120,7 @@ public class VeriFactuMapping
             IDFactura = new IDFacturaExpedidaBaja
             {
 
-                IDEmisorFacturaAnulada = voidedReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.IDEmisorFactura).Data,
+                IDEmisorFacturaAnulada = voidedReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.NIF).Data,
                 NumSerieFacturaAnulada = voidedReceiptResponse.ftReceiptIdentification.Split('#')[1],
                 FechaExpedicionFacturaAnulada = voidedReceiptRequest.cbReceiptMoment.ToString("dd-MM-yyy")
             },
@@ -271,7 +271,7 @@ public class VeriFactuMapping
 
             return new EncadenamientoFacturaAnterior
             {
-                IDEmisorFactura = voidedReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.IDEmisorFactura).Data,
+                IDEmisorFactura = voidedReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.NIF).Data,
                 NumSerieFactura = voidedReceiptResponse.ftReceiptIdentification.Split('#')[1],
                 FechaExpedicionFactura = voidedReceiptRequest!.cbReceiptMoment.ToString("dd-MM-yyy"),
                 Huella = previousReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.Huella).Data
@@ -281,7 +281,7 @@ public class VeriFactuMapping
         {
             return new EncadenamientoFacturaAnterior
             {
-                IDEmisorFactura = previousReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.IDEmisorFactura).Data,
+                IDEmisorFactura = previousReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.NIF).Data,
                 NumSerieFactura = previousReceiptResponse.ftReceiptIdentification.Split('#')[1],
                 FechaExpedicionFactura = previousReceiptRequest!.cbReceiptMoment.ToString("dd-MM-yyy"),
                 Huella = previousHash

@@ -64,7 +64,7 @@ public class TicketBaiSCU : IESSSCD
             Caption = "[www.fiskaltrust.es]",
             Data = submitResponse.QrCode!.ToString(),
             ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.QR_Code,
-            ftSignatureType = (long) SignatureTypesES.TicketBAI
+            ftSignatureType = (long) SignatureTypesES.QRCode
         });
 
         request.ReceiptResponse.AddSignatureItem(new SignatureItem()
@@ -73,6 +73,14 @@ public class TicketBaiSCU : IESSSCD
             Data = submitResponse.ShortSignatureValue!,
             ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.Base64,
             ftSignatureType = (long) SignatureTypesES.Signature
+        });
+
+        request.ReceiptResponse.AddSignatureItem(new SignatureItem
+        {
+            Caption = $"Signature Scope",
+            Data = "TicketBAI",
+            ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.Text,
+            ftSignatureType = (long) SignatureTypesES.SignatureScope
         });
 
         return new ProcessResponse

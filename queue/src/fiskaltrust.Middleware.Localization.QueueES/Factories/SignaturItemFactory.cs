@@ -30,7 +30,7 @@ public static class SignaturItemFactory
         };
     }
 
-    public static SignatureItem CreateESQRCode(string baseUrl, RegistroFacturacionAlta registroFacturacionAlta)
+    public static SignatureItem CreateVeriFactuQRCode(string baseUrl, RegistroFacturacionAlta registroFacturacionAlta)
     {
         var query = HttpUtility.ParseQueryString(String.Empty);
         query.Add("nif", registroFacturacionAlta.IDFactura.IDEmisorFactura);
@@ -48,7 +48,7 @@ public static class SignaturItemFactory
             Caption = "[www.fiskaltrust.es]",
             Data = uriBuider.Uri.ToString(),
             ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.QR_Code,
-            ftSignatureType = (long) SignatureTypesES.VeriFactu
+            ftSignatureType = (long) SignatureTypesES.QRCode,
         };
     }
 

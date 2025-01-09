@@ -69,7 +69,6 @@ public class VeriFactuSCU : IESSSCD
                 request,
                 journalES.IDFactura.NumSerieFacturaAnulada,
                 journalES.Huella,
-                journalES.Signature,
                 journalES.IDFactura.IDEmisorFacturaAnulada
             );
         }
@@ -90,9 +89,8 @@ public class VeriFactuSCU : IESSSCD
                 request,
                 journalES.IDFactura.NumSerieFactura,
                 journalES.Huella,
-                journalES.Signature,
                 journalES.IDFactura.IDEmisorFactura,
-                SignaturItemFactory.CreateESQRCode(_configuration.QRCodeBaseUrl + "/wlpl/TIKE-CONT/ValidarQR", journalES)
+                SignaturItemFactory.CreateVeriFactuQRCode(_configuration.QRCodeBaseUrl + "/wlpl/TIKE-CONT/ValidarQR", journalES)
             );
         }
 
@@ -107,7 +105,6 @@ public class VeriFactuSCU : IESSSCD
         ProcessRequest request,
         string numSerieFactura,
         string huella,
-        XmlElement? signature,
         string idEmisorFactura,
         SignatureItem? signatureItem = null
         )
@@ -132,19 +129,24 @@ public class VeriFactuSCU : IESSSCD
         });
         request.ReceiptResponse.AddSignatureItem(new SignatureItem
         {
-            Caption = $"IDEmisorFactura{(request.ReceiptRequest.IsVoid() ? "Anulada" : null)}",
+            Caption = $"NIF",
             Data = idEmisorFactura,
             ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.Text,
-            ftSignatureType = (long) SignatureTypesES.IDEmisorFactura
+            ftSignatureType = (long) SignatureTypesES.NIF
         });
 
+        request.ReceiptResponse.AddSignatureItem(new SignatureItem
+        {
+            Caption = $"Signature Scope",
+            Data = "VeriFactu",
+            ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.Text,
+            ftSignatureType = (long) SignatureTypesES.SignatureScope
+        });
 
         if (signatureItem is not null)
         {
             request.ReceiptResponse.AddSignatureItem(signatureItem);
         }
-
-        request.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreateESSignature(Encoding.UTF8.GetBytes(XmlHelpers.Serialize(signature))));
 
         return request.ReceiptResponse;
     }

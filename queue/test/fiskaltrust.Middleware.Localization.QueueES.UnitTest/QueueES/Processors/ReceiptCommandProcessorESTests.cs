@@ -40,7 +40,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
                         .Append(Factories.SignaturItemFactory.CreateESHuella(Convert.ToBase64String(_fixture.CreateMany<byte>().ToArray())))
                         .Append(new SignatureItem
                         {
-                            ftSignatureType = (long) SignatureTypesES.IDEmisorFactura,
+                            ftSignatureType = (long) SignatureTypesES.NIF,
                             ftSignatureFormat = (int) ifPOS.v1.SignaturItem.Formats.QR_Code,
                             Caption = "IDEmisorFactura",
                             Data = _fixture.Create<string>()
