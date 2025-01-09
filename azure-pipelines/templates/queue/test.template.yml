@@ -35,7 +35,7 @@ steps:
     inputs:
       command: "test"
       projects: "$(WorkingDirectory)/**/*.UnitTest.csproj"
-      arguments: '--configuration $(BuildConfiguration) --no-restore --collect "XPlat Code Coverage" --settings $(WorkingDirectory)/test/coverage.runsettings' --filter only!=local
+      arguments: '--configuration $(BuildConfiguration) --no-restore --collect "XPlat Code Coverage" --settings $(WorkingDirectory)/test/coverage.runsettings --filter only!=local'
       nobuild: true
     displayName: "Run unit tests"
     env:
@@ -47,7 +47,7 @@ steps:
     inputs:
       command: "test"
       projects: "$(WorkingDirectory)/**/*.IntegrationTest.csproj"
-      arguments: '--configuration $(BuildConfiguration) --no-restore --collect "XPlat Code Coverage" --settings $(WorkingDirectory)/test/coverage.runsettings' --filter only!=local
+      arguments: '--configuration $(BuildConfiguration) --no-restore --collect "XPlat Code Coverage" --settings $(WorkingDirectory)/test/coverage.runsettings --filter only!=local'
       nobuild: true
     displayName: "Run integration tests"
     env:
