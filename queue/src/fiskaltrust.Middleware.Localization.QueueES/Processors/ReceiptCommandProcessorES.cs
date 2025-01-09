@@ -46,6 +46,19 @@ public class ReceiptCommandProcessorES(IESSSCD sscd, Storage.ES.IConfigurationRe
         var queueES = await _configurationRepository.GetQueueESAsync(request.queue.ftQueueId);
         var previousQueueItem = queueES.SSCDSignQueueItemId is not null ? await _queueItemRepository.GetAsync(queueES.SSCDSignQueueItemId.Value) : null;
 
+        if (previousQueueItem is not null)
+        {
+            if (previousQueueItem?.request is null)
+            {
+                throw new Exception("Previous queue item request is null");
+            }
+
+            if (previousQueueItem?.request is null)
+            {
+                throw new Exception("Previous queue item request is null");
+            }
+        }
+
         var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
         {
             ReceiptRequest = request.ReceiptRequest,

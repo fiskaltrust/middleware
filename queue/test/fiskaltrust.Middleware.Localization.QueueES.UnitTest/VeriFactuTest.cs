@@ -16,7 +16,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
 {
     public class VeriFactuTest()
     {
-        [Fact(Skip = "Local certificates")]
+        [Fact, Trait("only", "local")]
         public async Task ResetReceipts()
         {
             var certificate = new X509Certificate2(await File.ReadAllBytesAsync("Certificates/Certificado_RPJ_A39200019_CERTIFICADO_ENTIDAD_PRUEBAS_4_Pre.p12"), "1234");
@@ -68,7 +68,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
             response.OkValue!.RespuestaLinea!.First().DescripcionErrorRegistro.Should().BeNullOrEmpty();
         }
 
-        [Fact(Skip = "Local certificates")]
+        [Fact, Trait("only", "local")]
         public async Task VeriFactuTestInit()
         {
             var certificate = new X509Certificate2(await File.ReadAllBytesAsync("Certificates/Certificado_RPJ_A39200019_CERTIFICADO_ENTIDAD_PRUEBAS_4_Pre.p12"), "1234");

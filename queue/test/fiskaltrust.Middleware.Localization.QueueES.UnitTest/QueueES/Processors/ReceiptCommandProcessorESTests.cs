@@ -111,12 +111,95 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             result.receiptResponse.ftState.Should().Be(0x4553_2000_EEEE_EEEE);
         }
 
-        [Fact]
+        [Fact(Skip = "Make client mockable")]
         public async Task PointOfSaleReceipt0x0001Async_Should_Return_QRCodeInSignatures()
         {
             var queue = TestHelpers.CreateQueue();
             var queueItem = TestHelpers.CreateQueueItem();
             var previousQueueItem = TestHelpers.CreateQueueItem();
+            var previousReceiptRequest = new ReceiptRequest
+            {
+                ftCashBoxID = Guid.NewGuid(),
+                ftReceiptCase = 0x4553_2000_0000_0000 | (long) ReceiptCases.InitialOperationReceipt0x4001,
+                cbReceiptMoment = new DateTime(2019, 12, 31),
+                cbReceiptReference = "TEST",
+                cbChargeItems = [
+                    new ChargeItem
+                    {
+                        ftChargeItemCase = 0x4553_2000_0000_0008,
+                        Amount = 12000.00m,
+                        VATAmount = 0m,
+                        Description = "Description",
+                        Quantity = 1,
+                        VATRate = 23m
+                    },
+                    new ChargeItem
+                    {
+                        ftChargeItemCase = 0x4553_2000_0000_0001,
+                        Amount = 15900m,
+                        VATAmount = 900m,
+                        Description = "Description",
+                        Quantity = 1,
+                        VATRate = 23m
+                    },
+                    new ChargeItem
+                    {
+                        ftChargeItemCase = 0x4553_2000_0000_0006,
+                        Amount = 56500m,
+                        VATAmount = 6500m,
+                        Description = "Description",
+                        Quantity = 1,
+                        VATRate = 23m
+                    },
+                    new ChargeItem
+                    {
+                        ftChargeItemCase = 0x4553_2000_0000_0003,
+                        Amount = 98400m,
+                        VATAmount = 18400m,
+                        Description = "Description",
+                        Quantity = 1,
+                        VATRate = 23m
+                    },
+                ]
+            };
+            var previousReceiptResponse = new ReceiptResponse
+            {
+                ftState = 0x4553_2000_0000_0000,
+                ftQueueID = queue.ftQueueId,
+                ftQueueItemID = queueItem.ftQueueItemId,
+                ftCashBoxIdentification = "cashBoxIdentification",
+
+                ftQueueRow = 1,
+                ftReceiptIdentification = "0#",
+                ftReceiptMoment = DateTime.UtcNow,
+                ftSignatures = new[] {
+                    new SignatureItem
+                    {
+                        ftSignatureType = 0x4553_2000_0000_0001,
+                        ftSignatureFormat = (int) ifPOS.v1.SignaturItem.Formats.QR_Code,
+                        Caption = "[www.fiskaltrust.es]",
+                        Data = "https://prewww2.aeat.es/wlpl/TIKE-CONT/ValidarQR?nif=VATTEST&numserie=1%2fTEST&fecha=31-12-2019&importe=182800.00"
+                    },
+                    new SignatureItem
+                    {
+                        ftSignatureType = (long) SignatureTypesES.Huella,
+                        ftSignatureFormat = (int) ifPOS.v1.SignaturItem.Formats.Text,
+                        Caption = "Huella",
+                        Data = "testHuella"
+                    },
+                    new SignatureItem
+                    {
+                        ftSignatureType = (long) SignatureTypesES.NIF,
+                        ftSignatureFormat = (int) ifPOS.v1.SignaturItem.Formats.Text,
+                        Caption = "NIF",
+                        Data = "testNIF"
+                    },
+                }.ToList()
+            };
+
+            previousQueueItem.request = JsonSerializer.Serialize(previousReceiptRequest);
+            previousQueueItem.response = JsonSerializer.Serialize(previousReceiptResponse);
+
             var queueES = new ftQueueES()
             {
                 SSCDSignQueueItemId = previousQueueItem.ftQueueItemId
