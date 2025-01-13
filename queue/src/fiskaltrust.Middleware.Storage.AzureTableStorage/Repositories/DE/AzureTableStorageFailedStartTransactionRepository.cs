@@ -1,11 +1,9 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Azure.Data.Tables;
 using fiskaltrust.Middleware.Contracts.Data;
 using fiskaltrust.Middleware.Contracts.Models.Transactions;
+using fiskaltrust.Middleware.Storage.AzureTableStorage.Helpers;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping;
-using fiskaltrust.Middleware.Storage.AzureTableStorage.TableEntities;
-using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
 {
@@ -18,11 +16,11 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
 
         public async Task InsertOrUpdateTransactionAsync(FailedStartTransaction transaction) => await InsertOrUpdateAsync(transaction).ConfigureAwait(false);
 
-        public async Task<bool> ExistsAsync(string cbReceiptReference) => await GetAsync(cbReceiptReference).ConfigureAwait(false) != null;
+        public async Task<bool> ExistsAsync(string cbReceiptReference) => await GetAsync(ConversionHelper.ReplaceNonAllowedKeyCharacters(cbReceiptReference)).ConfigureAwait(false) != null;
 
         protected override void EntityUpdated(FailedStartTransaction entity) { }
 
-        protected override string GetIdForEntity(FailedStartTransaction entity) => entity.cbReceiptReference;
+        protected override string GetIdForEntity(FailedStartTransaction entity) => ConversionHelper.ReplaceNonAllowedKeyCharacters(entity.cbReceiptReference);
 
         public async Task InsertOrUpdateAsync(FailedStartTransaction storageEntity)
         {
@@ -38,7 +36,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
                 return null;
             }
 
-            var entity = new TableEntity(Mapper.GetHashString(src.StartMoment.Ticks), src.cbReceiptReference)
+            var entity = new TableEntity(Mapper.GetHashString(src.StartMoment.Ticks), GetIdForEntity(src))
             {
                 { nameof(FailedStartTransaction.cbReceiptReference), src.cbReceiptReference },
                 { nameof(FailedStartTransaction.CashBoxIdentification), src.CashBoxIdentification },
