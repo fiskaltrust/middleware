@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Azure.Data.Tables;
 using fiskaltrust.Middleware.Contracts.Data;
 using fiskaltrust.Middleware.Contracts.Models.Transactions;
+using fiskaltrust.Middleware.Storage.AzureTableStorage.Helpers;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.TableEntities;
 using fiskaltrust.storage.V0;
@@ -18,11 +19,11 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
 
         public async Task InsertOrUpdateTransactionAsync(OpenTransaction transaction) => await InsertOrUpdateAsync(transaction).ConfigureAwait(false);
 
-        public async Task<bool> ExistsAsync(string cbReceiptReference) => await GetAsync(cbReceiptReference).ConfigureAwait(false) != null;
+        public async Task<bool> ExistsAsync(string cbReceiptReference) => await GetAsync(ConversionHelper.ReplaceNonAllowedKeyCharacters(cbReceiptReference)).ConfigureAwait(false) != null;
 
         protected override void EntityUpdated(OpenTransaction entity) { }
 
-        protected override string GetIdForEntity(OpenTransaction entity) => entity.cbReceiptReference;
+        protected override string GetIdForEntity(OpenTransaction entity) => ConversionHelper.ReplaceNonAllowedKeyCharacters(entity.cbReceiptReference);
 
         public async Task InsertOrUpdateAsync(OpenTransaction storageEntity)
         {
@@ -41,7 +42,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
             return new AzureTableStorageOpenTransaction
             {
                 PartitionKey = Mapper.GetHashString(src.StartMoment.Ticks),
-                RowKey = src.cbReceiptReference,
+                RowKey = GetIdForEntity(src),
                 cbReceiptReference = src.cbReceiptReference,
                 StartMoment = src.StartMoment.ToUniversalTime(),
                 StartTransactionSignatureBase64 = src.StartTransactionSignatureBase64,
