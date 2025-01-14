@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
+using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 
 namespace fiskaltrust.Api.POS.Models.ifPOS.v2;
 
@@ -14,12 +15,12 @@ public class SignatureItem
     [JsonPropertyName("ftSignatureFormat")]
     [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
     [DataMember(EmitDefaultValue = true, IsRequired = true)]
-    public required long ftSignatureFormat { get; set; }
+    public required SignatureFormat ftSignatureFormat { get; set; }
 
     [JsonPropertyName("ftSignatureType")]
     [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
     [DataMember(EmitDefaultValue = true, IsRequired = true)]
-    public required long ftSignatureType { get; set; }
+    public required SignatureType ftSignatureType { get; set; }
 
     [JsonPropertyName("Caption")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]

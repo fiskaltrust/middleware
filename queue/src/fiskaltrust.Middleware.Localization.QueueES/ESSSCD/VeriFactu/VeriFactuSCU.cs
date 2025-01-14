@@ -5,11 +5,13 @@ using System.Text.Json;
 using System.Xml;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Localization.QueueES.Models.Cases;
 using fiskaltrust.Middleware.Localization.QueueES.Exports;
 using fiskaltrust.Middleware.Localization.QueueES.Factories;
 using fiskaltrust.Middleware.Localization.QueueES.Interface;
 using fiskaltrust.Middleware.Localization.v2.Configuration;
 using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.SCU.ES.Helpers;
 using fiskaltrust.Middleware.SCU.ES.Models;
 using fiskaltrust.Middleware.SCU.ES.Soap;
@@ -47,7 +49,7 @@ public class VeriFactuSCU : IESSSCD
 
         ReceiptResponse receiptResponse;
 
-        if (request.ReceiptRequest.IsVoid())
+        if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void))
         {
             if (request.PreviousReceiptRequest is null || request.PreviousReceiptResponse is null)
             {
@@ -90,7 +92,14 @@ public class VeriFactuSCU : IESSSCD
                 journalES.IDFactura.NumSerieFactura,
                 journalES.Huella,
                 journalES.IDFactura.IDEmisorFactura,
-                SignaturItemFactory.CreateVeriFactuQRCode(_configuration.QRCodeBaseUrl + "/wlpl/TIKE-CONT/ValidarQR", journalES)
+                [
+                    SignaturItemFactory.CreateVeriFactuQRCode(_configuration.QRCodeBaseUrl + "/wlpl/TIKE-CONT/ValidarQR", journalES),
+                    new SignatureItem {
+                        Data = "Factura verificable en la Sede electrónica de la AEAT",
+                        ftSignatureFormat = SignatureFormat.Text,
+                        ftSignatureType = 0,
+                    }
+                ]
             );
         }
 
@@ -106,7 +115,7 @@ public class VeriFactuSCU : IESSSCD
         string numSerieFactura,
         string huella,
         string idEmisorFactura,
-        SignatureItem? signatureItem = null
+        SignatureItem[]? signatureItems = null
         )
     {
         if (veriFactuResponse.IsErr)
@@ -124,28 +133,31 @@ public class VeriFactuSCU : IESSSCD
         {
             Caption = "Huella",
             Data = huella,
-            ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.Text,
-            ftSignatureType = (long) SignatureTypesES.Huella
+            ftSignatureFormat = SignatureFormat.Text,
+            ftSignatureType = SignatureTypeES.Huella.As<SignatureType>()
         });
         request.ReceiptResponse.AddSignatureItem(new SignatureItem
         {
-            Caption = $"NIF",
+            Caption = $"IDEmisorFactura{(request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void) ? "Anulada" : null)}",
             Data = idEmisorFactura,
-            ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.Text,
-            ftSignatureType = (long) SignatureTypesES.NIF
+            ftSignatureFormat = SignatureFormat.Text,
+            ftSignatureType = SignatureTypeES.NIF.As<SignatureType>()
         });
 
         request.ReceiptResponse.AddSignatureItem(new SignatureItem
         {
             Caption = $"Signature Scope",
             Data = "VeriFactu",
-            ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.Text,
-            ftSignatureType = (long) SignatureTypesES.SignatureScope
+            ftSignatureFormat = SignatureFormat.Text,
+            ftSignatureType = SignatureTypeES.SignatureScope.As<SignatureType>()
         });
 
-        if (signatureItem is not null)
+        if (signatureItems is not null)
         {
-            request.ReceiptResponse.AddSignatureItem(signatureItem);
+            foreach (var signatureItem in signatureItems)
+            {
+                request.ReceiptResponse.AddSignatureItem(signatureItem);
+            }
         }
 
         return request.ReceiptResponse;

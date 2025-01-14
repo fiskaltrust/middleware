@@ -2,6 +2,7 @@
 using System.Text.Json;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.v2.Configuration;
+using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using Microsoft.Extensions.Logging;
 using Xunit;
 
@@ -75,7 +76,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             var signMethod = bootstrapper.RegisterForSign();
             var ticks = DateTime.UtcNow.Ticks;
             var receiptRequest = ReceiptExamples.Example_RetailSales(cashBoxId);
-            receiptRequest.ftReceiptCase = receiptRequest.ftReceiptCase | 0x0000_0000_0001_0000;
+            receiptRequest.ftReceiptCase = receiptRequest.ftReceiptCase.WithFlag(ReceiptCaseFlags.LateSigning);
             var exampleCashSalesResponse = await signMethod(JsonSerializer.Serialize(receiptRequest));
             await StoreDataAsync("A11_1_offline_1", "A11_1_offline_1", ticks, bootstrapper, receiptRequest, System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesResponse)!);
         }

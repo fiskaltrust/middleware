@@ -1,4 +1,6 @@
 ﻿using fiskaltrust.Api.POS.Models.ifPOS.v2;
+using fiskaltrust.Middleware.Localization.QueueES.Models.Cases;
+using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using fiskaltrust.storage.serialization.V0;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
@@ -72,43 +74,43 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
                 var exampleCashSalesResponseWrongString = await signMethod(System.Text.Json.JsonSerializer.Serialize(receiptRequestWrong));
                 var exampleCashSalesResponseWrong = System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesResponseWrongString)!;
 
-                exampleCashSalesResponseWrong.ftState.Should().Match(x => (x & 0xFFFF_FFFF) == 0xEEEE_EEEE, $"ftState 0x{exampleCashSalesResponseWrong.ftState:X} should be == 0xEEEE_EEEE\n{exampleCashSalesResponseWrong.ftSignatures.Find(x => (x.ftSignatureType & 0xFFFF_FFFF) == 0x3000)?.Data ?? exampleCashSalesResponseWrongString}\n");
+                exampleCashSalesResponseWrong.ftState.Should().Match((State x) => x.IsState(State.Error), $"ftState 0x{exampleCashSalesResponseWrong.ftState:X} should be == 0xEEEE_EEEE\n{exampleCashSalesResponseWrong.ftSignatures.Find(x => x.ftSignatureType.Type() == (SignatureTypeES) 0x3000)?.Data ?? exampleCashSalesResponseWrongString}\n");
             }
 
             var receiptRequest = ExampleCashSales(cashBoxId);
             {
                 var exampleCashSalesResponseString = await signMethod(System.Text.Json.JsonSerializer.Serialize(receiptRequest));
                 var exampleCashSalesResponse = System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesResponseString)!;
-                var errorItem = exampleCashSalesResponse.ftSignatures.Find(x => (x.ftSignatureType & 0xFFFF_FFFF) == 0x3000);
-                exampleCashSalesResponse.ftState.Should().Match(x => (x & 0xFFFF_FFFF) < 0xEEEE_EEEE, $"ftState 0x{exampleCashSalesResponse.ftState:X} should be < 0xEEEE_EEEE\n{errorItem?.Data ?? exampleCashSalesResponseString}\n");
+                var errorItem = exampleCashSalesResponse.ftSignatures.Find(x => x.ftSignatureType.Type() == (SignatureTypeES) 0x3000);
+                exampleCashSalesResponse.ftState.Should().Match((State x) => (long) x.State() < 0xEEEE_EEEE, $"ftState 0x{exampleCashSalesResponse.ftState:X} should be < 0xEEEE_EEEE\n{errorItem?.Data ?? exampleCashSalesResponseString}\n");
             }
 
             {
                 var receiptRequestVoid = ExampleCashSales(cashBoxId);
-                receiptRequestVoid.ftReceiptCase = receiptRequestVoid.ftReceiptCase | 0x0004_0000;
+                receiptRequestVoid.ftReceiptCase = (ReceiptCase) ((long) receiptRequestVoid.ftReceiptCase | 0x0004_0000);
                 receiptRequestVoid.cbPreviousReceiptReference = receiptRequest.cbReceiptReference;
                 var exampleCashSalesVoidResponseString = await signMethod(System.Text.Json.JsonSerializer.Serialize(receiptRequestVoid));
                 var exampleCashSalesVoidResponse = System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesVoidResponseString)!;
-                var errorItemVoid = exampleCashSalesVoidResponse.ftSignatures.Find(x => (x.ftSignatureType & 0xFFFF_FFFF) == 0x3000);
-                exampleCashSalesVoidResponse.ftState.Should().Match(x => (x & 0xFFFF_FFFF) < 0xEEEE_EEEE, $"ftState 0x{exampleCashSalesVoidResponse.ftState:X} should be < 0xEEEE_EEEE\n{errorItemVoid?.Data ?? exampleCashSalesVoidResponseString}\n");
+                var errorItemVoid = exampleCashSalesVoidResponse.ftSignatures.Find(x => x.ftSignatureType.Type() == (SignatureTypeES) 0x3000);
+                exampleCashSalesVoidResponse.ftState.Should().Match((State x) => (long) x.State() < 0xEEEE_EEEE, $"ftState 0x{exampleCashSalesVoidResponse.ftState:X} should be < 0xEEEE_EEEE\n{errorItemVoid?.Data ?? exampleCashSalesVoidResponseString}\n");
             }
 
             receiptRequest = ExampleCashSales(cashBoxId);
             {
                 var exampleCashSalesResponseString = await signMethod(System.Text.Json.JsonSerializer.Serialize(receiptRequest));
                 var exampleCashSalesResponse = System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesResponseString)!;
-                var errorItem = exampleCashSalesResponse.ftSignatures.Find(x => (x.ftSignatureType & 0xFFFF_FFFF) == 0x3000);
-                exampleCashSalesResponse.ftState.Should().Match(x => (x & 0xFFFF_FFFF) < 0xEEEE_EEEE, $"ftState 0x{exampleCashSalesResponse.ftState:X} should be < 0xEEEE_EEEE\n{errorItem?.Data ?? exampleCashSalesResponseString}\n");
+                var errorItem = exampleCashSalesResponse.ftSignatures.Find(x => x.ftSignatureType.Type() == (SignatureTypeES) 0x3000);
+                exampleCashSalesResponse.ftState.Should().Match((State x) => (long) x.State() < 0xEEEE_EEEE, $"ftState 0x{exampleCashSalesResponse.ftState:X} should be < 0xEEEE_EEEE\n{errorItem?.Data ?? exampleCashSalesResponseString}\n");
             }
 
             {
                 var receiptRequestVoid = ExampleCashSales(cashBoxId);
-                receiptRequestVoid.ftReceiptCase = receiptRequestVoid.ftReceiptCase | 0x0004_0000;
+                receiptRequestVoid.ftReceiptCase = (ReceiptCase) ((long) receiptRequestVoid.ftReceiptCase | 0x0004_0000);
                 receiptRequestVoid.cbPreviousReceiptReference = receiptRequest.cbReceiptReference;
                 var exampleCashSalesVoidResponseString = await signMethod(System.Text.Json.JsonSerializer.Serialize(receiptRequestVoid));
                 var exampleCashSalesVoidResponse = System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesVoidResponseString)!;
-                var errorItemVoid = exampleCashSalesVoidResponse.ftSignatures.Find(x => (x.ftSignatureType & 0xFFFF_FFFF) == 0x3000);
-                exampleCashSalesVoidResponse.ftState.Should().Match(x => (x & 0xFFFF_FFFF) < 0xEEEE_EEEE, $"ftState 0x{exampleCashSalesVoidResponse.ftState:X} should be < 0xEEEE_EEEE\n{errorItemVoid?.Data ?? exampleCashSalesVoidResponseString}\n");
+                var errorItemVoid = exampleCashSalesVoidResponse.ftSignatures.Find(x => x.ftSignatureType.Type() == (SignatureTypeES) 0x3000);
+                exampleCashSalesVoidResponse.ftState.Should().Match((State x) => (long) x.State() < 0xEEEE_EEEE, $"ftState 0x{exampleCashSalesVoidResponse.ftState:X} should be < 0xEEEE_EEEE\n{errorItemVoid?.Data ?? exampleCashSalesVoidResponseString}\n");
             }
 
             var veriFactuString = await journalMethod(System.Text.Json.JsonSerializer.Serialize(new ifPOS.v1.JournalRequest
@@ -153,8 +155,8 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
             {
                 var exampleCashSalesResponseString = await signMethod(System.Text.Json.JsonSerializer.Serialize(receiptRequest));
                 var exampleCashSalesResponse = System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesResponseString)!;
-                var errorItem = exampleCashSalesResponse.ftSignatures.Find(x => (x.ftSignatureType & 0xFFFF_FFFF) == 0x3000);
-                exampleCashSalesResponse.ftState.Should().Match(x => (x & 0xFFFF_FFFF) < 0xEEEE_EEEE, $"ftState 0x{exampleCashSalesResponse.ftState:X} should be < 0xEEEE_EEEE\n{errorItem?.Data ?? exampleCashSalesResponseString}\n");
+                var errorItem = exampleCashSalesResponse.ftSignatures.Find(x => x.ftSignatureType.Type() == (SignatureTypeES) 0x3000);
+                exampleCashSalesResponse.ftState.Should().Match((State x) => (long) x.State() < 0xEEEE_EEEE, $"ftState 0x{exampleCashSalesResponse.ftState:X} should be < 0xEEEE_EEEE\n{errorItem?.Data ?? exampleCashSalesResponseString}\n");
             }
 
             // {
@@ -196,7 +198,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
             return new ReceiptRequest
             {
                 ftCashBoxID = cashBoxId,
-                ftReceiptCase = 0x4752_2000_0000_4001,
+                ftReceiptCase = (ReceiptCase) 0x4752_2000_0000_4001,
                 cbTerminalID = "1",
                 cbReceiptReference = Guid.NewGuid().ToString(),
                 cbReceiptMoment = DateTime.UtcNow,
@@ -210,7 +212,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
             return new ReceiptRequest
             {
                 ftCashBoxID = cashBoxId,
-                ftReceiptCase = 0x4752_2000_0000_0000,
+                ftReceiptCase = (ReceiptCase) 0x4752_2000_0000_0000,
                 cbTerminalID = "1",
                 cbReceiptReference = Guid.NewGuid().ToString(),
                 cbReceiptMoment = DateTime.UtcNow,
@@ -219,7 +221,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
                                 new ChargeItem
                     {
                         Position = 1,
-                        ftChargeItemCase = 0x4752_2000_0000_0013,
+                        ftChargeItemCase = (ChargeItemCase) 0x4752_2000_0000_0013,
                         VATAmount = 1.30m,
                         Amount = 6.2m,
                         VATRate = 21m,
@@ -229,7 +231,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
                     new ChargeItem
                     {
                         Position = 2,
-                        ftChargeItemCase = 0x4752_2000_0000_0013,
+                        ftChargeItemCase = (ChargeItemCase) 0x4752_2000_0000_0013,
                         VATAmount = 1.30m,
                         Amount = 6.2m,
                         VATRate = 21m,
@@ -239,7 +241,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
                                         new ChargeItem
                     {
                         Position = 2,
-                        ftChargeItemCase = 0x4752_2000_0000_0013,
+                        ftChargeItemCase = (ChargeItemCase) 0x4752_2000_0000_0013,
                         VATAmount = .83m,
                         Amount = 1m,
                         VATRate = 21m,
@@ -251,7 +253,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
                             [
                                 new PayItem
                     {
-                        ftPayItemCase = 0x4752_2000_0000_0001,
+                        ftPayItemCase = (PayItemCase) 0x4752_2000_0000_0001,
                         Amount = 12.4m,
                         Description = "Cash"
                     }
@@ -263,7 +265,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
             return new ReceiptRequest
             {
                 ftCashBoxID = cashBoxId,
-                ftReceiptCase = 0x4752_2000_0000_0000,
+                ftReceiptCase = (ReceiptCase) 0x4752_2000_0000_0000,
                 cbTerminalID = "1",
                 cbReceiptReference = string.Concat(Guid.NewGuid().ToString().Take(5)),
                 cbReceiptMoment = DateTime.UtcNow,
@@ -272,7 +274,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
                                 new ChargeItem
                     {
                         Position = 1,
-                        ftChargeItemCase = 0x4752_2000_0000_0013,
+                        ftChargeItemCase = (ChargeItemCase) 0x4752_2000_0000_0013,
                         VATAmount = 1.3m,
                         Amount = 6.2m,
                         VATRate = 21m,
@@ -282,7 +284,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
                     new ChargeItem
                     {
                         Position = 2,
-                        ftChargeItemCase = 0x4752_2000_0000_0013,
+                        ftChargeItemCase = (ChargeItemCase) 0x4752_2000_0000_0013,
                         VATAmount = 1.3m,
                         Amount = 6.2m,
                         VATRate = 21m,
@@ -294,7 +296,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
                             [
                                 new PayItem
                     {
-                        ftPayItemCase = 0x4752_2000_0000_0001,
+                        ftPayItemCase = (PayItemCase) 0x4752_2000_0000_0001,
                         Amount = 12.4m,
                         Description = "Cash"
                     }

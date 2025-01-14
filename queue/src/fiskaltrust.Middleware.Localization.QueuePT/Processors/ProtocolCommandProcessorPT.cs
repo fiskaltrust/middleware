@@ -10,23 +10,23 @@ public class ProtocolCommandProcessorPT : IProtocolCommandProcessor
 {
     public async Task<ProcessCommandResponse> ProcessReceiptAsync(ProcessCommandRequest request)
     {
-        var receiptCase = request.ReceiptRequest.ftReceiptCase & 0xFFFF;
+        var receiptCase = request.ReceiptRequest.ftReceiptCase.Case();
         switch (receiptCase)
         {
-            case (int) ReceiptCases.ProtocolUnspecified0x3000:
+            case ReceiptCase.ProtocolUnspecified0x3000:
                 return await ProtocolUnspecified0x3000Async(request);
-            case (int) ReceiptCases.ProtocolTechnicalEvent0x3001:
+            case ReceiptCase.ProtocolTechnicalEvent0x3001:
                 return await ProtocolTechnicalEvent0x3001Async(request);
-            case (int) ReceiptCases.ProtocolAccountingEvent0x3002:
+            case ReceiptCase.ProtocolAccountingEvent0x3002:
                 return await ProtocolAccountingEvent0x3002Async(request);
-            case (int) ReceiptCases.InternalUsageMaterialConsumption0x3003:
+            case ReceiptCase.InternalUsageMaterialConsumption0x3003:
                 return await InternalUsageMaterialConsumption0x3003Async(request);
-            case (int) ReceiptCases.Order0x3004:
+            case ReceiptCase.Order0x3004:
                 return await Order0x3004Async(request);
-            case (int) ReceiptCases.CopyReceiptPrintExistingReceipt0x3010:
+            case ReceiptCase.CopyReceiptPrintExistingReceipt0x3010:
                 return await CopyReceiptPrintExistingReceipt0x3010Async(request);
         }
-        request.ReceiptResponse.SetReceiptResponseError(ErrorMessages.UnknownReceiptCase(request.ReceiptRequest.ftReceiptCase));
+        request.ReceiptResponse.SetReceiptResponseError(ErrorMessages.UnknownReceiptCase((long) request.ReceiptRequest.ftReceiptCase));
         return new ProcessCommandResponse(request.ReceiptResponse, []);
     }
 

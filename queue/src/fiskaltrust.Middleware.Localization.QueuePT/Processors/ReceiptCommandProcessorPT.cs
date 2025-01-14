@@ -6,6 +6,7 @@ using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Storage.PT;
 using fiskaltrust.storage.V0;
 using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Processors;
 
@@ -17,23 +18,23 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignat
 
     public async Task<ProcessCommandResponse> ProcessReceiptAsync(ProcessCommandRequest request)
     {
-        var receiptCase = request.ReceiptRequest.ftReceiptCase & 0xFFFF;
+        var receiptCase = request.ReceiptRequest.ftReceiptCase.Case();
         switch (receiptCase)
         {
-            case (int) ReceiptCases.UnknownReceipt0x0000:
+            case ReceiptCase.UnknownReceipt0x0000:
                 return await UnknownReceipt0x0000Async(request);
-            case (int) ReceiptCases.PointOfSaleReceipt0x0001:
+            case ReceiptCase.PointOfSaleReceipt0x0001:
                 return await PointOfSaleReceipt0x0001Async(request);
-            case (int) ReceiptCases.PaymentTransfer0x0002:
+            case ReceiptCase.PaymentTransfer0x0002:
                 return await PaymentTransfer0x0002Async(request);
-            case (int) ReceiptCases.PointOfSaleReceiptWithoutObligation0x0003:
+            case ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003:
                 return await PointOfSaleReceiptWithoutObligation0x0003Async(request);
-            case (int) ReceiptCases.ECommerce0x0004:
+            case ReceiptCase.ECommerce0x0004:
                 return await ECommerce0x0004Async(request);
-            case (int) ReceiptCases.Protocol0x0005:
+            case ReceiptCase.Protocol0x0005:
                 return await Protocol0x0005Async(request);
         }
-        request.ReceiptResponse.SetReceiptResponseError(ErrorMessages.UnknownReceiptCase(request.ReceiptRequest.ftReceiptCase));
+        request.ReceiptResponse.SetReceiptResponseError(ErrorMessages.UnknownReceiptCase((long) request.ReceiptRequest.ftReceiptCase));
         return new ProcessCommandResponse(request.ReceiptResponse, []);
     }
 
@@ -52,22 +53,22 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignat
         {
             Caption = "ATCUD",
             Data = _queuePT.ATCUD,
-            ftSignatureFormat = 0x0001,
-            ftSignatureType = (long) SignatureTypesPT.ATCUD,
+            ftSignatureFormat = SignatureFormat.Text,
+            ftSignatureType = SignatureTypePT.ATCUD.As<SignatureType>(),
         });
         response.ReceiptResponse.AddSignatureItem(new Api.POS.Models.ifPOS.v2.SignatureItem
         {
             Caption = "Hash",
             Data = hash,
-            ftSignatureFormat = 0x0000_0000_0001_0001,
-            ftSignatureType = (long) SignatureTypesPT.Hash,
+            ftSignatureFormat = SignatureFormat.Text.WithFlag(SignatureFormatFlags.AfterHeader),
+            ftSignatureType = SignatureTypePT.Hash.As<SignatureType>(),
         });
         response.ReceiptResponse.AddSignatureItem(new Api.POS.Models.ifPOS.v2.SignatureItem
         {
             Caption = "Hash",
             Data = hash,
-            ftSignatureFormat = 0x0001,
-            ftSignatureType = (long) SignatureTypesPT.HashPrint,
+            ftSignatureFormat = SignatureFormat.Text,
+            ftSignatureType = SignatureTypePT.HashPrint.As<SignatureType>(),
         });
         response.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreatePTQRCode(qrCode));
         _queuePT.LastHash = hash;

@@ -1,16 +1,17 @@
 ﻿using System.Text.Json;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
+using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using fiskaltrust.SAFT.CLI;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE
 {
 
-    public static class ChargeItemExtensions
-    {
-        public static bool IsAgencyBusiness(this ChargeItem chargeItem) => (chargeItem.ftChargeItemCase & 0xF0) == 0x60;
-    }
+    // public static class ChargeItemExtensions
+    // {
+    //     public static bool IsAgencyBusiness(this ChargeItem chargeItem) => (chargeItem.ftChargeItemCase & 0xF0) == 0x60;
+    // }
 
-    public static class ReceiptRequestExtensions 
+    public static class ReceiptRequestExtensions
     {
         public static bool ContainsCustomerInfo(this ReceiptRequest receiptRequest)
         {
@@ -53,7 +54,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE
             return ((ulong) receiptRequest.ftReceiptCase & 0xFFFF_0000_0000_0000) == 0x0000_0000_0000_0000;
         }
 
-        public static bool HasOnlyServiceItems(this ReceiptRequest receiptRequest) => receiptRequest.cbChargeItems.All(x => (x.ftChargeItemCase & 0xF0) == 0x20);
+        public static bool HasOnlyServiceItems(this ReceiptRequest receiptRequest) => receiptRequest.cbChargeItems.All(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.OtherService));
 
         public static bool HasEUCountryCode(this ReceiptRequest receiptRequest)
         {

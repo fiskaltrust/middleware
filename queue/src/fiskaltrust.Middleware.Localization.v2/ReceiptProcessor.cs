@@ -1,5 +1,6 @@
 ﻿using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 
@@ -29,31 +30,31 @@ public class ReceiptProcessor : IReceiptProcessor
         try
         {
 
-            if (request.IsDailyOperation())
+            if (request.ftReceiptCase.IsType(ReceiptCaseType.DailyOperations))
             {
                 (var response, var actionJournals) = await _dailyOperationsCommandProcessor.ProcessReceiptAsync(new ProcessCommandRequest(queue, request, receiptResponse)).ConfigureAwait(false);
                 return (response, actionJournals);
             }
 
-            if (request.IsLifeCycleOperation())
+            if (request.ftReceiptCase.IsType(ReceiptCaseType.Lifecycle))
             {
                 (var response, var actionJournals) = await _lifecyclCommandProcessor.ProcessReceiptAsync(new ProcessCommandRequest(queue, request, receiptResponse)).ConfigureAwait(false);
                 return (response, actionJournals);
             }
 
-            if (request.IsReceiptOperation())
+            if (request.ftReceiptCase.IsType(ReceiptCaseType.Receipt))
             {
                 var (response, actionJournals) = await _receiptCommandProcessor.ProcessReceiptAsync(new ProcessCommandRequest(queue, request, receiptResponse)).ConfigureAwait(false);
                 return (response, actionJournals);
             }
 
-            if (request.IsProtocolOperation())
+            if (request.ftReceiptCase.IsType(ReceiptCaseType.Log))
             {
                 var (response, actionJournals) = await _protocolCommandProcessor.ProcessReceiptAsync(new ProcessCommandRequest(queue, request, receiptResponse)).ConfigureAwait(false);
                 return (response, actionJournals);
             }
 
-            if (request.IsInvoiceOperation())
+            if (request.ftReceiptCase.IsType(ReceiptCaseType.Invoice))
             {
                 var (response, actionJournals) = await _invoiceCommandProcessor.ProcessReceiptAsync(new ProcessCommandRequest(queue, request, receiptResponse)).ConfigureAwait(false);
                 return (response, actionJournals);

@@ -3,6 +3,7 @@ using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueES.ESSSCD;
 using fiskaltrust.Middleware.Localization.QueueES.Exports;
+using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.SCU.ES.Models;
 using fiskaltrust.Middleware.SCU.ES.Soap;
 using fiskaltrust.storage.V0;
@@ -40,7 +41,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
                 ftCashBoxIdentification = Guid.NewGuid().ToString(),
                 ftReceiptIdentification = $"0#0/{receiptRequest.cbReceiptReference}",
                 ftReceiptMoment = DateTime.UtcNow,
-                ftState = 0x4752_2000_0000_0000,
+                ftState = (State) 0x4752_2000_0000_0000,
             };
 
             var veriFactuMapping = new VeriFactuMapping(masterData, queueItemRepository.Object, certificate);
@@ -92,7 +93,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
                 ftCashBoxIdentification = Guid.NewGuid().ToString(),
                 ftReceiptIdentification = $"0#0/{receiptRequest.cbReceiptReference}",
                 ftReceiptMoment = DateTime.UtcNow,
-                ftState = 0x4752_2000_0000_0000,
+                ftState = (State) 0x4752_2000_0000_0000,
             };
 
             var veriFactuMapping = new VeriFactuMapping(masterData, queueItemRepository.Object, certificate);
@@ -122,7 +123,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
             return new ReceiptRequest
             {
                 ftCashBoxID = cashBoxId,
-                ftReceiptCase = 0x4752_2000_0000_0000,
+                ftReceiptCase = (ReceiptCase) 0x4752_2000_0000_0000,
                 cbTerminalID = "1",
                 cbReceiptReference = Guid.NewGuid().ToString(),
                 cbReceiptMoment = DateTime.UtcNow,
@@ -131,7 +132,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
                                 new ChargeItem
                     {
                         Position = 1,
-                        ftChargeItemCase = 0x4752_2000_0000_0013,
+                        ftChargeItemCase = (ChargeItemCase) 0x4752_2000_0000_0013,
                         VATAmount = 1.30m,
                         Amount = 6.2m,
                         VATRate = 21m,
@@ -141,7 +142,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
                     new ChargeItem
                     {
                         Position = 2,
-                        ftChargeItemCase = 0x4752_2000_0000_0013,
+                        ftChargeItemCase = (ChargeItemCase) 0x4752_2000_0000_0013,
                         VATAmount = 1.30m,
                         Amount = 6.2m,
                         VATRate = 21m,
@@ -153,7 +154,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
                             [
                                 new PayItem
                     {
-                        ftPayItemCase = 0x4752_2000_0000_0001,
+                        ftPayItemCase = (PayItemCase) 0x4752_2000_0000_0001,
                         Amount = 12.4m,
                         Description = "Cash"
                     }

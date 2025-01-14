@@ -17,6 +17,8 @@ using fiskaltrust.Middleware.Storage.ES;
 using fiskaltrust.storage.V0.MasterData;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI;
 using Microsoft.Extensions.Logging;
+using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.Localization.QueueES.Models.Cases;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.ESSSCD;
 
@@ -38,7 +40,7 @@ public class TicketBaiSCU : IESSSCD
             InvoiceNumber = request.ReceiptRequest.cbReceiptReference!, //?
             LastInvoiceMoment = request.PreviousReceiptResponse?.ftReceiptMoment,
             LastInvoiceNumber = request.PreviousReceiptRequest?.cbReceiptReference,
-            LastInvoiceSignature = request.PreviousReceiptResponse?.ftSignatures?.First(x => x.ftSignatureType == (long) SignatureTypesES.Signature).Data,
+            LastInvoiceSignature = request.PreviousReceiptResponse?.ftSignatures?.First(x => x.ftSignatureType.IsType(SignatureTypeES.Signature)).Data,
             Series = "",
             InvoiceLine = request.ReceiptRequest.cbChargeItems.Select(c => new InvoiceLine
             {
@@ -50,7 +52,7 @@ public class TicketBaiSCU : IESSSCD
             }).ToList()
         };
 
-        var submitResponse = request.ReceiptRequest.IsVoid()
+        var submitResponse = request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)
             ? await _scu.CancelInvoiceAsync(submitInvoiceRequest)
             : await _scu.SubmitInvoiceAsync(submitInvoiceRequest);
 
@@ -63,24 +65,24 @@ public class TicketBaiSCU : IESSSCD
         {
             Caption = "[www.fiskaltrust.es]",
             Data = submitResponse.QrCode!.ToString(),
-            ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.QR_Code,
-            ftSignatureType = (long) SignatureTypesES.QRCode
+            ftSignatureFormat = SignatureFormat.QRCode,
+            ftSignatureType = SignatureTypeES.Url.As<SignatureType>()
         });
 
         request.ReceiptResponse.AddSignatureItem(new SignatureItem()
         {
             Caption = "Signature",
             Data = submitResponse.ShortSignatureValue!,
-            ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.Base64,
-            ftSignatureType = (long) SignatureTypesES.Signature
+            ftSignatureFormat = SignatureFormat.Base64,
+            ftSignatureType = SignatureTypeES.Signature.As<SignatureType>()
         });
 
         request.ReceiptResponse.AddSignatureItem(new SignatureItem
         {
             Caption = $"Signature Scope",
             Data = "TicketBAI",
-            ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.Text,
-            ftSignatureType = (long) SignatureTypesES.SignatureScope
+            ftSignatureFormat = SignatureFormat.Text,
+            ftSignatureType = SignatureTypeES.SignatureScope.As<SignatureType>()
         });
 
         return new ProcessResponse
