@@ -22,6 +22,8 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
 
         protected override string GetIdForEntity(FailedStartTransaction entity) => ConversionHelper.ReplaceNonAllowedKeyCharacters(entity.cbReceiptReference);
 
+        public override Task<FailedStartTransaction> GetAsync(string id) => base.GetAsync(ConversionHelper.ReplaceNonAllowedKeyCharacters(id));
+
         public async Task InsertOrUpdateAsync(FailedStartTransaction storageEntity)
         {
             EntityUpdated(storageEntity);
