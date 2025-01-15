@@ -77,6 +77,17 @@ public class TicketBaiSCU : IESSSCD
             ftSignatureType = SignatureTypeES.Signature.As<SignatureType>()
         });
 
+        foreach (var message in submitResponse.ResultMessages)
+        {
+            request.ReceiptResponse.AddSignatureItem(new SignatureItem()
+            {
+                Caption = message.code,
+                Data = message.message,
+                ftSignatureFormat = SignatureFormat.Text,
+                ftSignatureType = SignatureType.Unknown.WithCategory(SignatureTypeCategory.Information)
+            });
+        }
+
         return new ProcessResponse
         {
             ReceiptResponse = request.ReceiptResponse
