@@ -32,7 +32,7 @@ public static class SignaturItemFactory
         };
     }
 
-    public static SignatureItem CreateVeriFactuQRCode(string baseUrl, RegistroFacturacionAlta registroFacturacionAlta)
+    public static SignatureItem[] CreateVeriFactuQRCode(string baseUrl, RegistroFacturacionAlta registroFacturacionAlta)
     {
         var query = HttpUtility.ParseQueryString(String.Empty);
         query.Add("nif", registroFacturacionAlta.IDFactura.IDEmisorFactura);
@@ -45,13 +45,20 @@ public static class SignaturItemFactory
             Query = query.ToString()
         };
 
-        return new SignatureItem()
-        {
-            Caption = "QR tributario:",
-            Data = uriBuider.Uri.ToString(),
-            ftSignatureFormat = SignatureFormat.Text.WithPosition(SignatureFormatPosition.BeforeHeader),
-            ftSignatureType = SignatureTypeES.Url.As<SignatureType>(),
-        };
+        return [
+            new SignatureItem()
+            {
+                Caption = "QR tributario:",
+                Data = uriBuider.Uri.ToString(),
+                ftSignatureFormat = SignatureFormat.QRCode.WithPosition(SignatureFormatPosition.BeforeHeader),
+                ftSignatureType = SignatureTypeES.Url.As<SignatureType>(),
+            },
+            new SignatureItem {
+                Data = "Factura verificable en la Sede electrónica de la AEAT",
+                ftSignatureFormat = SignatureFormat.Text.WithPosition(SignatureFormatPosition.BeforeHeader),
+                ftSignatureType = SignatureType.Unknown,
+            }
+        ];
     }
 
     public static SignatureItem CreateESSignature(byte[] signature)
