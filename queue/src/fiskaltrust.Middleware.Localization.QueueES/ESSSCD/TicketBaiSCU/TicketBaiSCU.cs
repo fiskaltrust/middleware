@@ -81,7 +81,7 @@ public class TicketBaiSCU : IESSSCD
         {
             request.ReceiptResponse.AddSignatureItem(new SignatureItem()
             {
-                Caption = message.code,
+                Caption = $"Codigo {message.code}",
                 Data = message.message,
                 ftSignatureFormat = SignatureFormat.Text,
                 ftSignatureType = SignatureType.Unknown.WithCategory(SignatureTypeCategory.Information)
