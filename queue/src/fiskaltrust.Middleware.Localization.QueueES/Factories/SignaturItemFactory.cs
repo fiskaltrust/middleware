@@ -49,7 +49,7 @@ public static class SignaturItemFactory
         {
             Caption = "[www.fiskaltrust.es]",
             Data = uriBuider.Uri.ToString(),
-            ftSignatureFormat = SignatureFormat.Text.WithFlag(SignatureFormatFlags.BeforeHeader),
+            ftSignatureFormat = SignatureFormat.Text.WithPosition(SignatureFormatPosition.BeforeHeader),
             ftSignatureType = SignatureTypeES.Url.As<SignatureType>(),
         };
     }

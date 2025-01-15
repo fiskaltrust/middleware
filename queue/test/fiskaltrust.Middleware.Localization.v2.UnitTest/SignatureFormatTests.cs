@@ -35,11 +35,11 @@ public class SignatureFormatTests
         for (var i = 0; i < 1000; i++)
         {
             var signatureFormat = _fixture.Create<SignatureFormat>();
-            var signatureFormatFlag = _fixture.Create<SignatureFormatFlags>();
+            var signatureFormatFlag = _fixture.Create<SignatureFormatPosition>();
 
-            var result = signatureFormat.WithFlag(signatureFormatFlag);
+            var result = signatureFormat.WithPosition(signatureFormatFlag);
 
-            result.IsFlag(signatureFormatFlag).Should().BeTrue();
+            result.IsPosition(signatureFormatFlag).Should().BeTrue();
         }
     }
 

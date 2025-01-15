@@ -60,7 +60,7 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignat
         {
             Caption = "Hash",
             Data = hash,
-            ftSignatureFormat = SignatureFormat.Text.WithFlag(SignatureFormatFlags.AfterHeader),
+            ftSignatureFormat = SignatureFormat.Text.WithPosition(SignatureFormatPosition.AfterHeader),
             ftSignatureType = SignatureTypePT.Hash.As<SignatureType>(),
         });
         response.ReceiptResponse.AddSignatureItem(new Api.POS.Models.ifPOS.v2.SignatureItem

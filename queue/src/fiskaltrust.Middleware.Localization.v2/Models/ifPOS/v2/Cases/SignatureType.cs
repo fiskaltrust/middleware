@@ -2,6 +2,7 @@
 
 public enum SignatureType : long
 {
+    Unknown
 }
 
 public static class SignatureTypeExt

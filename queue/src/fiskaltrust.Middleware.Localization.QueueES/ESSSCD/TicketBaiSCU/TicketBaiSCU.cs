@@ -77,14 +77,6 @@ public class TicketBaiSCU : IESSSCD
             ftSignatureType = SignatureTypeES.Signature.As<SignatureType>()
         });
 
-        request.ReceiptResponse.AddSignatureItem(new SignatureItem
-        {
-            Caption = $"Signature Scope",
-            Data = "TicketBAI",
-            ftSignatureFormat = SignatureFormat.Text,
-            ftSignatureType = SignatureTypeES.SignatureScope.As<SignatureType>()
-        });
-
         return new ProcessResponse
         {
             ReceiptResponse = request.ReceiptResponse

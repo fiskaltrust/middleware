@@ -96,8 +96,8 @@ public class VeriFactuSCU : IESSSCD
                     SignaturItemFactory.CreateVeriFactuQRCode(_configuration.QRCodeBaseUrl + "/wlpl/TIKE-CONT/ValidarQR", journalES),
                     new SignatureItem {
                         Data = "Factura verificable en la Sede electrónica de la AEAT",
-                        ftSignatureFormat = SignatureFormat.Text,
-                        ftSignatureType = 0,
+                        ftSignatureFormat = SignatureFormat.Text.WithPosition(SignatureFormatPosition.BeforeHeader),
+                        ftSignatureType = SignatureType.Unknown,
                     }
                 ]
             );
@@ -144,13 +144,6 @@ public class VeriFactuSCU : IESSSCD
             ftSignatureType = SignatureTypeES.NIF.As<SignatureType>()
         });
 
-        request.ReceiptResponse.AddSignatureItem(new SignatureItem
-        {
-            Caption = $"Signature Scope",
-            Data = "VeriFactu",
-            ftSignatureFormat = SignatureFormat.Text,
-            ftSignatureType = SignatureTypeES.SignatureScope.As<SignatureType>()
-        });
 
         if (signatureItems is not null)
         {

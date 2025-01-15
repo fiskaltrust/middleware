@@ -10,7 +10,6 @@ public enum SignatureTypeES : long
     NIF = 0x4553_2000_0000_0002,
     Signature = 0x4553_2000_0000_0003,
     Huella = 0x4553_2000_0000_0004,
-    SignatureScope = 0x4553_2000_0000_0005,
 }
 
 public static class SignatureTypeESExt
