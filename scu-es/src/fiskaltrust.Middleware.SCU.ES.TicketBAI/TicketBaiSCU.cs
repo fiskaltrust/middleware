@@ -179,9 +179,10 @@ public class TicketBaiSCU : IESSSCD
                 ShortSignatureValue = identifier[3],
                 Identifier = ticketBaiResponse.Salida.IdentificadorTBAI,
                 ResponseContent = responseContent,
+                SignatureValue = ticketBaiRequest.Signature,
                 Succeeded = true,
                 QrCode = GetQrCodeUri(ticketBaiRequest, ticketBaiResponse),
-                ResultMessages = ticketBaiResponse.Salida.ResultadosValidacion.Select(x => (x.Codigo, x.Descripcion)).ToList()
+                ResultMessages = ticketBaiResponse.Salida?.ResultadosValidacion?.Select(x => (x.Codigo, x.Descripcion))?.ToList() ?? new()
             };
         }
         else

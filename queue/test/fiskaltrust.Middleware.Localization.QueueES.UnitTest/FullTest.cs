@@ -1,4 +1,5 @@
-﻿using fiskaltrust.Api.POS.Models.ifPOS.v2;
+﻿using System.Text.Json;
+using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueueES.Models.Cases;
 using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using fiskaltrust.storage.serialization.V0;
@@ -224,7 +225,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
 
             var receiptRequest = ExampleCashSalesTicketBAIHacks(cashBoxId);
             {
-                var exampleCashSalesResponseString = await signMethod(System.Text.Json.JsonSerializer.Serialize(receiptRequest));
+                var exampleCashSalesResponseString = await signMethod(ExampleCashSalesGipuzkoaHacks(cashBoxId));
                 var exampleCashSalesResponse = System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesResponseString)!;
                 var errorItem = exampleCashSalesResponse.ftSignatures.Find(x => x.ftSignatureType.Type() == (SignatureTypeES) 0x3000);
                 exampleCashSalesResponse.ftState.Should().Match((State x) => (long) x.State() < 0xEEEE_EEEE, $"ftState 0x{exampleCashSalesResponse.ftState:X} should be < 0xEEEE_EEEE\n{errorItem?.Data ?? exampleCashSalesResponseString}\n");
@@ -330,6 +331,27 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
                     }
                             ]
             };
+        }
+
+        private static string ExampleCashSalesGipuzkoaHacks(Guid cashBoxId)
+        {
+            var request = System.Text.Json.JsonSerializer.Deserialize<ReceiptRequest>("""
+            {"ftCashBoxID":"52db0330-be54-46af-8d95-29f8390d13d9",
+            "cbTerminalID":"",
+            "ftPosSystemId":"7b5955e3-4944-4ff3-8df9-46166b70132a",
+            "cbReceiptReference":"23-1736259319003",
+            "cbArea":"0",
+            "cbUser":"Chef",
+            "cbCustomer":null,
+            "ftReceiptCase":4995371596056100865,
+            "cbChargeItems":[{"Amount":0.2,"Description":"Artikel2","ProductNumber":"2","Quantity":1,"VATRate":21,"ftChargeItemCase":4995371596056100867,"Moment":"2025-01-15T12:26:19.781Z","Position":1,"VATAmount":0.03}],
+            "cbPayItems":[{"Position":1,"Quantity":1,"Moment":"2025-01-15T12:26:21.997Z","Description":"Cash","Amount":0.2,"ftPayItemCase":4995371596056100865}],
+            "cbReceiptAmount":0.2,
+            "cbReceiptMoment":"2025-01-15T12:26:24.463Z"}
+            """)!;
+            request.cbReceiptReference = string.Concat(Guid.NewGuid().ToString().Take(5));
+            request.ftCashBoxID = cashBoxId;
+            return System.Text.Json.JsonSerializer.Serialize(request);
         }
         private static ReceiptRequest ExampleCashSalesTicketBAIHacks(Guid cashBoxId)
         {
