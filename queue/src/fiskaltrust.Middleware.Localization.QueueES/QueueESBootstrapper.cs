@@ -54,7 +54,7 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
                 },
                 storageProvider.GetMiddlewareQueueItemRepository());
         }
-        else
+        else if (scuConfiguration.Package == "fiskaltrust.Middleware.SCU.ES.TicketBAI")
         {
             esSSCD = new TicketBaiSCU(loggerFactory, signaturCreationUnitES, new SCU.ES.TicketBAI.TicketBaiSCUConfiguration
             {
@@ -63,9 +63,14 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
                         scuConfiguration.Configuration!["certificatePassword"].ToString()),
                 EmisorApellidosNombreRazonSocial = masterData.Account.AccountName,
                 EmisorNif = masterData.Account.VatId,
-                TicketBaiTerritory = SCU.ES.TicketBAI.TicketBaiTerritory.Araba
+                TicketBaiTerritory = (SCU.ES.TicketBAI.TicketBaiTerritory) Enum.Parse(typeof(SCU.ES.TicketBAI.TicketBaiTerritory), scuConfiguration.Configuration["territory"].ToString()!)
             });
         }
+        else
+        {
+            throw new Exception("Unknown SCU package");
+        }
+
         var signProcessorES = new ReceiptProcessor(
             loggerFactory.CreateLogger<ReceiptProcessor>(),
             new LifecycleCommandProcessorES(
