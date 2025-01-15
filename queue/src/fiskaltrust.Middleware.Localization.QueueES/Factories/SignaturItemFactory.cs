@@ -47,7 +47,7 @@ public static class SignaturItemFactory
 
         return new SignatureItem()
         {
-            Caption = "[www.fiskaltrust.es]",
+            Caption = "QR tributario:",
             Data = uriBuider.Uri.ToString(),
             ftSignatureFormat = SignatureFormat.Text.WithPosition(SignatureFormatPosition.BeforeHeader),
             ftSignatureType = SignatureTypeES.Url.As<SignatureType>(),
