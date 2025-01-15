@@ -9,6 +9,7 @@ using System.Xml.Serialization;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE;
 using fiskaltrust.Middleware.Localization.v2.Configuration;
+using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using FluentAssertions;
 using FluentAssertions.Execution;
 using Microsoft.Extensions.Logging;
@@ -194,11 +195,11 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
         {
 
             receiptRequest.cbReceiptAmount = Math.Abs(receiptRequest.cbReceiptAmount ?? 0.0m);
-            foreach(var chargeItem in receiptRequest.cbChargeItems)
+            foreach (var chargeItem in receiptRequest.cbChargeItems)
             {
                 chargeItem.Amount = Math.Abs(chargeItem.Amount);
             }
-            foreach(var payItem in receiptRequest.cbPayItems)
+            foreach (var payItem in receiptRequest.cbPayItems)
             {
                 payItem.Amount = Math.Abs(payItem.Amount);
             }
@@ -244,7 +245,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
                     "},\r\n    \"cbTerminalId\": \"16009303\"\r\n}", null, "application/json");
             request.Content = content;
             var response = await client.SendAsync(request);
-            if(!response.IsSuccessStatusCode)
+            if (!response.IsSuccessStatusCode)
             {
                 throw new Exception(await response.Content.ReadAsStringAsync());
             }
@@ -456,7 +457,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             ftCashBoxIdentification = "cashBoxIdentification",
             ftReceiptIdentification = "ft" + DateTime.UtcNow.Ticks.ToString("X"),
             ftReceiptMoment = DateTime.UtcNow,
-            ftState = 0x4752_2000_0000_0000
+            ftState = (State) 0x4752_2000_0000_0000
         };
     }
 }

@@ -10,23 +10,23 @@ public class DailyOperationsCommandProcessorPT : IDailyOperationsCommandProcesso
 {
     public async Task<ProcessCommandResponse> ProcessReceiptAsync(ProcessCommandRequest request)
     {
-        var receiptCase = request.ReceiptRequest.ftReceiptCase & 0xFFFF;
+        var receiptCase = request.ReceiptRequest.ftReceiptCase.Case();
         switch (receiptCase)
         {
-            case (int) ReceiptCases.ZeroReceipt0x2000:
+            case ReceiptCase.ZeroReceipt0x2000:
                 return await ZeroReceipt0x2000Async(request);
-            case (int) ReceiptCases.OneReceipt0x2001:
+            case ReceiptCase.OneReceipt0x2001:
                 return await OneReceipt0x2001Async(request);
-            case (int) ReceiptCases.ShiftClosing0x2010:
+            case ReceiptCase.ShiftClosing0x2010:
                 return await ShiftClosing0x2010Async(request);
-            case (int) ReceiptCases.DailyClosing0x2011:
+            case ReceiptCase.DailyClosing0x2011:
                 return await DailyClosing0x2011Async(request);
-            case (int) ReceiptCases.MonthlyClosing0x2012:
+            case ReceiptCase.MonthlyClosing0x2012:
                 return await MonthlyClosing0x2012Async(request);
-            case (int) ReceiptCases.YearlyClosing0x2013:
+            case ReceiptCase.YearlyClosing0x2013:
                 return await YearlyClosing0x2013Async(request);
         }
-        request.ReceiptResponse.SetReceiptResponseError(ErrorMessages.UnknownReceiptCase(request.ReceiptRequest.ftReceiptCase));
+        request.ReceiptResponse.SetReceiptResponseError(ErrorMessages.UnknownReceiptCase((long) request.ReceiptRequest.ftReceiptCase));
         return new ProcessCommandResponse(request.ReceiptResponse, []);
     }
 

@@ -10,19 +10,19 @@ public class InvoiceCommandProcessorES : IInvoiceCommandProcessor
 {
     public async Task<ProcessCommandResponse> ProcessReceiptAsync(ProcessCommandRequest request)
     {
-        var receiptCase = request.ReceiptRequest.ftReceiptCase & 0xFFFF;
+        var receiptCase = request.ReceiptRequest.ftReceiptCase.Case();
         switch (receiptCase)
         {
-            case (int) ReceiptCases.InvoiceUnknown0x1000:
+            case ReceiptCase.InvoiceUnknown0x1000:
                 return await InvoiceUnknown0x1000Async(request);
-            case (int) ReceiptCases.InvoiceB2C0x1001:
+            case ReceiptCase.InvoiceB2C0x1001:
                 return await InvoiceB2C0x1001Async(request);
-            case (int) ReceiptCases.InvoiceB2B0x1002:
+            case ReceiptCase.InvoiceB2B0x1002:
                 return await InvoiceB2B0x1002Async(request);
-            case (int) ReceiptCases.InvoiceB2G0x1003:
+            case ReceiptCase.InvoiceB2G0x1003:
                 return await InvoiceB2G0x1003Async(request);
         }
-        request.ReceiptResponse.SetReceiptResponseError(ErrorMessages.UnknownReceiptCase(request.ReceiptRequest.ftReceiptCase));
+        request.ReceiptResponse.SetReceiptResponseError(ErrorMessages.UnknownReceiptCase((long) request.ReceiptRequest.ftReceiptCase));
         return new ProcessCommandResponse(request.ReceiptResponse, []);
     }
 

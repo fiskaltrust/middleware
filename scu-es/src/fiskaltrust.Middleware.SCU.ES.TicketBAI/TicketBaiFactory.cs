@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI.Models;
+using System.Globalization;
 
 #pragma warning disable IDE0052
 
@@ -70,7 +71,7 @@ public class TicketBaiFactory
                 FechaOperacion = request.InvoiceMoment.ToString("dd-MM-yyyy"), //TODO: needs to be set if issuing the invoice was different from the actual date
                 DescripcionFactura = "Invoice", //TODO: Can we hardcode this value?
                 DetallesFactura = CreateFacturas(request),
-                ImporteTotalFactura = request.InvoiceLine.Sum(x => x.Amount).ToString("#.##"),
+                ImporteTotalFactura = request.InvoiceLine.Sum(x => x.Amount).ToString("0.00", CultureInfo.InvariantCulture),
                 Claves = new List<IDClaveType>
                         {
                             new IDClaveType
@@ -127,9 +128,9 @@ public class TicketBaiFactory
         var vatRates = request.InvoiceLine.GroupBy(x => x.VATRate);
         return vatRates.Select(x => new DetalleIVAType
         {
-            BaseImponible = x.Sum(x => x.Amount - x.VATAmount).ToString("#.##"),
-            TipoImpositivo = x.Key.ToString("#.##"),
-            CuotaImpuesto = x.Sum(x => x.VATAmount).ToString("#.##"),
+            BaseImponible = x.Sum(x => x.Amount - x.VATAmount).ToString("0.00", CultureInfo.InvariantCulture),
+            TipoImpositivo = x.Key.ToString("0.00", CultureInfo.InvariantCulture),
+            CuotaImpuesto = x.Sum(x => x.VATAmount).ToString("0.00", CultureInfo.InvariantCulture),
             OperacionEnRecargoDeEquivalenciaORegimenSimplificado = SiNoType.N
         }).ToList();
     }
@@ -139,10 +140,10 @@ public class TicketBaiFactory
         return request.InvoiceLine.Select(x => new IDDetalleFacturaType
         {
             DescripcionDetalle = x.Description,
-            Cantidad = x.Quantity.ToString("#.##"),
-            ImporteUnitario = (x.Amount - x.VATAmount).ToString("#.##"),
+            Cantidad = x.Quantity.ToString("0.00", CultureInfo.InvariantCulture),
+            ImporteUnitario = (x.Amount - x.VATAmount).ToString("0.00", CultureInfo.InvariantCulture),
             //Descuento = "0", TODO How should we handle discounts? is this a must have or can e ignore that
-            ImporteTotal = x.Amount.ToString("#.##")
+            ImporteTotal = x.Amount.ToString("0.00", CultureInfo.InvariantCulture)
         }).ToList();
     }
 }

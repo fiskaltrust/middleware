@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
+using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 
 namespace fiskaltrust.Api.POS.Models.ifPOS.v2;
 
@@ -90,7 +91,7 @@ public class ReceiptResponse
     [JsonPropertyName("ftState")]
     [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
     [DataMember(EmitDefaultValue = true, IsRequired = true)]
-    public required long ftState { get; set; }
+    public required State ftState { get; set; }
 
     [JsonPropertyName("ftStateData")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]

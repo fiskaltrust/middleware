@@ -2,6 +2,7 @@
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.v2.Storage;
@@ -58,7 +59,7 @@ public class QueueStorageProvider : IQueueStorageProvider
             cbTerminalID = receiptRequest.cbTerminalID,
             cbReceiptReference = receiptRequest.cbReceiptReference,
             ftQueueRow = await IncrementQueueRow(),
-            country = receiptRequest.GetCountry(),
+            country = receiptRequest.ftReceiptCase.Country(),
             version = "v2",
             request = System.Text.Json.JsonSerializer.Serialize(receiptRequest),
         };

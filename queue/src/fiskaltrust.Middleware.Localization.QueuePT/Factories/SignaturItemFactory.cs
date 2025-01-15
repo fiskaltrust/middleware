@@ -1,5 +1,7 @@
 ﻿using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueuePT.Interface;
+using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
+using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Factories;
@@ -10,8 +12,8 @@ public static class SignaturItemFactory
     {
         return new SignatureItem()
         {
-            ftSignatureType = (long) SignatureTypesPT.InitialOperationReceipt,
-            ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.Text,
+            ftSignatureType = SignatureTypePT.InitialOperationReceipt.As<SignatureType>(),
+            ftSignatureFormat = SignatureFormat.Text,
             Caption = $"Initial-operation receipt",
             Data = $"Queue-ID: {queue.ftQueueId}"
         };
@@ -21,8 +23,8 @@ public static class SignaturItemFactory
     {
         return new SignatureItem()
         {
-            ftSignatureType = (long) SignatureTypesPT.OutOfOperationReceipt,
-            ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.Text,
+            ftSignatureType = SignatureTypePT.OutOfOperationReceipt.As<SignatureType>(),
+            ftSignatureFormat = SignatureFormat.Text,
             Caption = $"Out-of-operation receipt",
             Data = $"Queue-ID: {queue.ftQueueId}"
         };
@@ -34,8 +36,8 @@ public static class SignaturItemFactory
         {
             Caption = "[www.fiskaltrust.pt]",
             Data = qrCode,
-            ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.QR_Code,
-            ftSignatureType = (long) SignatureTypesPT.PosReceipt
+            ftSignatureFormat = SignatureFormat.QRCode,
+            ftSignatureType = SignatureTypePT.PosReceipt.As<SignatureType>()
         };
     }
 }

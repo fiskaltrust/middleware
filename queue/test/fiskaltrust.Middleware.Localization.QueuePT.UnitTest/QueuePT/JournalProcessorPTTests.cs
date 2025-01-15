@@ -2,8 +2,10 @@
 using System.Text.Json;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueuePT.Interface;
+using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
 using fiskaltrust.Middleware.Localization.QueuePT.Processors;
 using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using fiskaltrust.storage.V0;
 using Moq;
 using Xunit;
@@ -23,7 +25,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT
                     request = JsonSerializer.Serialize(ReceiptExamples.CASH_SALES_RECEIPT),
                     response = JsonSerializer.Serialize(new ReceiptResponse
                     {
-                        ftState = 0x5054_2000_0000_0000,
+                        ftState = (State) 0x5054_2000_0000_0000,
                         ftCashBoxIdentification = "cashBoxIdentification",
                         ftQueueID = Guid.NewGuid(),
                         ftQueueItemID = Guid.NewGuid(),
@@ -32,13 +34,13 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT
                         ftSignatures = [
                             new SignatureItem {
                                 Data = "hash_data",
-                                ftSignatureType = (long) SignatureTypesPT.Hash,
-                                ftSignatureFormat = 0x001,
+                                ftSignatureType = SignatureTypePT.Hash.As<SignatureType>(),
+                                ftSignatureFormat = (SignatureFormat) 0x001,
                             },
                             new SignatureItem {
                                 Data = "atcud_data",
-                                ftSignatureType = (long) SignatureTypesPT.ATCUD,
-                                ftSignatureFormat = 0x001,
+                                ftSignatureType = SignatureTypePT.ATCUD.As<SignatureType>(),
+                                ftSignatureFormat = (SignatureFormat) 0x001,
                             }
                         ],
                         ftReceiptMoment = DateTime.UtcNow,
@@ -49,7 +51,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT
                     request = JsonSerializer.Serialize(ReceiptExamples.CASH_SALES_RECEIPT),
                     response = JsonSerializer.Serialize(new ReceiptResponse
                     {
-                        ftState = 0x5054_2000_0000_0000,
+                        ftState = (State) 0x5054_2000_0000_0000,
                         ftCashBoxIdentification = "cashBoxIdentification",
                         ftQueueID = Guid.NewGuid(),
                         ftQueueItemID = Guid.NewGuid(),
@@ -58,13 +60,13 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT
                         ftSignatures = [
                             new SignatureItem {
                                 Data = "hash_data",
-                                ftSignatureType = (long) SignatureTypesPT.Hash,
-                                ftSignatureFormat = 0x001,
+                                ftSignatureType = SignatureTypePT.Hash.As<SignatureType>(),
+                                ftSignatureFormat = (SignatureFormat) 0x001,
                             },
                             new SignatureItem {
                                 Data = "atcud_data",
-                                ftSignatureType = (long) SignatureTypesPT.ATCUD,
-                                ftSignatureFormat = 0x001,
+                                ftSignatureType = SignatureTypePT.ATCUD.As<SignatureType>(),
+                                ftSignatureFormat = (SignatureFormat) 0x001,
                             }
                         ],
                         ftReceiptMoment = DateTime.UtcNow,
@@ -75,7 +77,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT
                     request = JsonSerializer.Serialize(ReceiptExamples.CASH_SALES_RECEIPT),
                     response = JsonSerializer.Serialize(new ReceiptResponse
                     {
-                        ftState = 0x5054_2000_0000_0000,
+                        ftState = (State) 0x5054_2000_0000_0000,
                         ftCashBoxIdentification = "cashBoxIdentification",
                         ftQueueID = Guid.NewGuid(),
                         ftQueueItemID = Guid.NewGuid(),
@@ -85,13 +87,13 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT
                         ftSignatures = [
                             new SignatureItem {
                                 Data = "hash_data",
-                                ftSignatureType = (long) SignatureTypesPT.Hash,
-                                ftSignatureFormat = 0x001,
+                                ftSignatureType = SignatureTypePT.Hash.As<SignatureType>(),
+                                ftSignatureFormat = (SignatureFormat) 0x001,
                             },
                             new SignatureItem {
                                 Data = "atcud_data",
-                                ftSignatureType = (long) SignatureTypesPT.ATCUD,
-                                ftSignatureFormat = 0x001,
+                                ftSignatureType = SignatureTypePT.ATCUD.As<SignatureType>(),
+                                ftSignatureFormat = (SignatureFormat) 0x001,
                             }
                         ]
                     }),

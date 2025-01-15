@@ -15,21 +15,21 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
         private readonly InvoiceCommandProcessorES _sut = new InvoiceCommandProcessorES();
 
         [Theory]
-        [InlineData(ReceiptCases.InvoiceUnknown0x1000)]
-        [InlineData(ReceiptCases.InvoiceB2C0x1001)]
-        [InlineData(ReceiptCases.InvoiceB2B0x1002)]
-        [InlineData(ReceiptCases.InvoiceB2G0x1003)]
-        public async Task ProcessReceiptAsync_ShouldReturnEmptyList(ReceiptCases receiptCase)
+        [InlineData(ReceiptCase.InvoiceUnknown0x1000)]
+        [InlineData(ReceiptCase.InvoiceB2C0x1001)]
+        [InlineData(ReceiptCase.InvoiceB2B0x1002)]
+        [InlineData(ReceiptCase.InvoiceB2G0x1003)]
+        public async Task ProcessReceiptAsync_ShouldReturnEmptyList(ReceiptCase receiptCase)
         {
             var queue = TestHelpers.CreateQueue();
             var queueItem = TestHelpers.CreateQueueItem();
             var receiptRequest = new ReceiptRequest
             {
-                ftReceiptCase = (int) receiptCase
+                ftReceiptCase = receiptCase
             };
             var receiptResponse = new ReceiptResponse
             {
-                ftState = 0x4752_2000_0000_0000,
+                ftState = (State) 0x4752_2000_0000_0000,
                 ftCashBoxIdentification = "cashBoxIdentification",
                 ftQueueID = Guid.NewGuid(),
                 ftQueueItemID = Guid.NewGuid(),
@@ -51,11 +51,11 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             var queueItem = TestHelpers.CreateQueueItem();
             var receiptRequest = new ReceiptRequest
             {
-                ftReceiptCase = -1
+                ftReceiptCase = (ReceiptCase) (-1)
             };
             var receiptResponse = new ReceiptResponse
             {
-                ftState = 0x4752_2000_0000_0000,
+                ftState = (State) 0x4752_2000_0000_0000,
                 ftCashBoxIdentification = "cashBoxIdentification",
                 ftQueueID = Guid.NewGuid(),
                 ftQueueItemID = Guid.NewGuid(),

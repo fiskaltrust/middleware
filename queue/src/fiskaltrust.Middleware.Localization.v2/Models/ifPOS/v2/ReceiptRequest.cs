@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
@@ -46,7 +47,7 @@ public class ReceiptRequest
     [JsonPropertyName("ftReceiptCase")]
     [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
     [DataMember(Order = 80, EmitDefaultValue = false, IsRequired = false)]
-    public long ftReceiptCase { get; set; } = 0;
+    public ReceiptCase ftReceiptCase { get; set; } = 0;
 
     [JsonPropertyName("ftReceiptCaseData")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]

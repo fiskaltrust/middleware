@@ -8,10 +8,12 @@ using System.Xml;
 using System.Xml.Serialization;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Localization.QueueES.Models.Cases;
 using fiskaltrust.Middleware.Localization.QueueES.Helpers;
 using fiskaltrust.Middleware.Localization.QueueES.Interface;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.SCU.ES.Helpers;
 using fiskaltrust.Middleware.SCU.ES.Models;
 using fiskaltrust.storage.V0;
@@ -69,11 +71,11 @@ public class VeriFactuMapping
         {
             var receiptRequest = JsonSerializer.Deserialize<ReceiptRequest>(queueItem.request)!;
             var receiptResponse = JsonSerializer.Deserialize<ReceiptResponse>(queueItem.response)!;
-            if (!(receiptResponse.ftSignatures.Any(x => x.ftSignatureType == (long) SignatureTypesES.Huella) && receiptResponse.ftSignatures.Any(x => x.ftSignatureType == (long) SignatureTypesES.IDEmisorFactura)))
+            if (!(receiptResponse.ftSignatures.Any(x => x.ftSignatureType.IsType(SignatureTypeES.Huella)) && receiptResponse.ftSignatures.Any(x => x.ftSignatureType.IsType(SignatureTypeES.Url))))
             {
                 continue;
             }
-            if (receiptRequest.IsVoid())
+            if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void))
             {
                 if (previousReceiptRequest is null || previousReceiptResponse is null)
                 {
@@ -120,7 +122,7 @@ public class VeriFactuMapping
             IDFactura = new IDFacturaExpedidaBaja
             {
 
-                IDEmisorFacturaAnulada = voidedReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.IDEmisorFactura).Data,
+                IDEmisorFacturaAnulada = voidedReceiptResponse.ftSignatures.First(x => x.ftSignatureType.IsType(SignatureTypeES.NIF)).Data,
                 NumSerieFacturaAnulada = voidedReceiptResponse.ftReceiptIdentification.Split('#')[1],
                 FechaExpedicionFacturaAnulada = voidedReceiptRequest.cbReceiptMoment.ToString("dd-MM-yyy")
             },
@@ -172,7 +174,7 @@ public class VeriFactuMapping
             // Not sure how this needs to be formated. Maybe we'll need some extra fields in the master data?
             // Should this be the AccountName, or OutletName or sth from the Agencies?
             NombreRazonEmisor = _masterData.Account.AccountName,
-            TipoFactura = (receiptRequest.ftReceiptCase & 0xF000) switch
+            TipoFactura = receiptRequest.ftReceiptCase.GetType() switch
             {
                 _ => ClaveTipoFactura.F2, // QUESTION: is simplified invoice correct?
                 // _ => throw new Exception($"Invalid receipt case {receiptRequest.ftReceiptCase}")
@@ -189,26 +191,22 @@ public class VeriFactuMapping
                 // we'll have to check these in detail
                 ClaveRegimen = IdOperacionesTrascendenciaTributaria.Item01,
                 BaseImponibleOimporteNoSujeto = (chargeItem.Amount - chargeItem.GetVATAmount()).ToVeriFactuNumber(),
-                Item = (chargeItem.ftChargeItemCase & 0xFF00) switch
+                Item = chargeItem.ftChargeItemCase.NatureOfVat() switch
                 {
-                    2 => (chargeItem.ftChargeItemCase & 0x0F00) switch
-                    {
-                        0 => CalificacionOperacion.N1, // TODO: Document
-                        1 => CalificacionOperacion.N2, // TODO: Document
-                        _ => throw new Exception($"Invalid charge item case {chargeItem.ftChargeItemCase}")
-                    },
-                    3 => (chargeItem.ftChargeItemCase & 0x0F00) switch
-                    {
-                        0 => OperacionExenta.E1, // TODO: Document
-                        1 => OperacionExenta.E2, // TODO: Document
-                        2 => OperacionExenta.E3, // TODO: Document
-                        3 => OperacionExenta.E4, // TODO: Document
-                        4 => OperacionExenta.E5, // TODO: Document
-                        5 => OperacionExenta.E6, // TODO: Document
-                        _ => throw new Exception($"Invalid charge item case {chargeItem.ftChargeItemCase}")
-                    },
-                    5 => CalificacionOperacion.S2,
-                    _ => CalificacionOperacion.S1 // If CalificacionOperacion is S1 and BaseImponibleACoste is not filled in, TipoImpositivo and CuotaRepercutida are mandatory.
+                    ChargeItemCaseNatureOfVatES.UsualVatApplies => CalificacionOperacion.S1, // If CalificacionOperacion is S1 and BaseImponibleACoste is not filled in, TipoImpositivo and CuotaRepercutida are mandatory.
+
+                    ChargeItemCaseNatureOfVatES.NotSubjectArticle7and14 => CalificacionOperacion.N1, // TODO: Document
+                    ChargeItemCaseNatureOfVatES.NotSubjectLocationRules => CalificacionOperacion.N2, // TODO: Document
+
+                    ChargeItemCaseNatureOfVatES.ExteptArticle20 => OperacionExenta.E1, // TODO: Document
+                    ChargeItemCaseNatureOfVatES.ExteptArticle21 => OperacionExenta.E2, // TODO: Document
+                    ChargeItemCaseNatureOfVatES.ExteptArticle22 => OperacionExenta.E3, // TODO: Document
+                    ChargeItemCaseNatureOfVatES.ExteptArticle23And24 => OperacionExenta.E4, // TODO: Document
+                    ChargeItemCaseNatureOfVatES.ExteptArticle25 => OperacionExenta.E5, // TODO: Document
+                    ChargeItemCaseNatureOfVatES.ExteptOthers => OperacionExenta.E6, // TODO: Document
+
+                    ChargeItemCaseNatureOfVatES.ReverseCharge => CalificacionOperacion.S2,
+                    _ => throw new Exception($"Invalid charge item case {chargeItem.ftChargeItemCase}")
                 },
                 TipoImpositivo = chargeItem.VATRate.ToVeriFactuNumber(),
                 CuotaRepercutida = (chargeItem.VATAmount ?? chargeItem.Amount * chargeItem.VATRate).ToVeriFactuNumber()
@@ -254,9 +252,9 @@ public class VeriFactuMapping
             return PrimerRegistroCadena.S;
         }
 
-        var previousHash = previousReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.Huella).Data;
+        var previousHash = previousReceiptResponse.ftSignatures.First(x => x.ftSignatureType.IsType(SignatureTypeES.Huella)).Data;
 
-        if (previousReceiptRequest?.IsVoid() ?? false)
+        if (previousReceiptRequest is not null && previousReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void))
         {
             var previousQueueItems = _queueItemRepository.GetByReceiptReferenceAsync(previousReceiptRequest.cbPreviousReceiptReference);
             if (await previousQueueItems.IsEmptyAsync())
@@ -271,17 +269,17 @@ public class VeriFactuMapping
 
             return new EncadenamientoFacturaAnterior
             {
-                IDEmisorFactura = voidedReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.IDEmisorFactura).Data,
+                IDEmisorFactura = voidedReceiptResponse.ftSignatures.First(x => x.ftSignatureType.IsType(SignatureTypeES.NIF)).Data,
                 NumSerieFactura = voidedReceiptResponse.ftReceiptIdentification.Split('#')[1],
                 FechaExpedicionFactura = voidedReceiptRequest!.cbReceiptMoment.ToString("dd-MM-yyy"),
-                Huella = previousReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.Huella).Data
+                Huella = previousReceiptResponse.ftSignatures.First(x => x.ftSignatureType.IsType(SignatureTypeES.Huella)).Data
             };
         }
         else
         {
             return new EncadenamientoFacturaAnterior
             {
-                IDEmisorFactura = previousReceiptResponse.ftSignatures.First(x => x.ftSignatureType == (long) SignatureTypesES.IDEmisorFactura).Data,
+                IDEmisorFactura = previousReceiptResponse.ftSignatures.First(x => x.ftSignatureType.IsType(SignatureTypeES.NIF)).Data,
                 NumSerieFactura = previousReceiptResponse.ftReceiptIdentification.Split('#')[1],
                 FechaExpedicionFactura = previousReceiptRequest!.cbReceiptMoment.ToString("dd-MM-yyy"),
                 Huella = previousHash

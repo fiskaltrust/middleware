@@ -6,6 +6,7 @@ using System.Xml.Serialization;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE;
 using fiskaltrust.Middleware.Localization.QueueGR.Interface;
+using fiskaltrust.Middleware.Localization.QueueGR.Models.Cases;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using Org.BouncyCastle.Asn1.Ocsp;
@@ -52,7 +53,7 @@ public class MyDataApiClient : IGRSSCD
             }
         });
         var doc = aadFactory.MapToInvoicesDoc(request.ReceiptRequest, request.ReceiptResponse);
-        if (request.ReceiptRequest.IsLateSigning())
+        if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.LateSigning))
         {
             foreach (var item in doc.invoice)
             {
@@ -64,8 +65,8 @@ public class MyDataApiClient : IGRSSCD
             {
                 Data = $"Απώλεια Διασύνδεσης Οντότητας - Παρόχου",
                 Caption = "Transmission Failure_1",
-                ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.Text,
-                ftSignatureType = (long) SignatureTypesGR.MyDataInfo
+                ftSignatureFormat = SignatureFormat.Text,
+                ftSignatureType = SignatureTypeGR.MyDataInfo.As<SignatureType>()
             });
         }
 
@@ -73,7 +74,7 @@ public class MyDataApiClient : IGRSSCD
         var path = _iseinvoiceProvider ? "/myDataProvider/SendInvoices" : "/SendReceipts";
         var response = await _httpClient.PostAsync(path, new StringContent(payload, Encoding.UTF8, "application/xml"));
         var content = await response.Content.ReadAsStringAsync();
-        if((int) response.StatusCode >= 500)
+        if ((int) response.StatusCode >= 500)
         {
             foreach (var item in doc.invoice)
             {
@@ -88,8 +89,8 @@ public class MyDataApiClient : IGRSSCD
             {
                 Data = $"Απώλεια Διασύνδεσης Παρόχου – ΑΑΔΕ",
                 Caption = "Transmission Failure_2",
-                ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.Text,
-                ftSignatureType = (long) SignatureTypesGR.MyDataInfo
+                ftSignatureFormat = SignatureFormat.Text,
+                ftSignatureType = SignatureTypeGR.MyDataInfo.As<SignatureType>()
             });
             return new ProcessResponse
             {
@@ -116,8 +117,8 @@ public class MyDataApiClient : IGRSSCD
                             {
                                 Data = data.Items[i].ToString(),
                                 Caption = data.ItemsElementName[i].ToString(),
-                                ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.Text,
-                                ftSignatureType = (long) SignatureTypesGR.MyDataInfo
+                                ftSignatureFormat = SignatureFormat.Text,
+                                ftSignatureType = SignatureTypeGR.MyDataInfo.As<SignatureType>()
                             });
                         }
                     }
@@ -132,8 +133,8 @@ public class MyDataApiClient : IGRSSCD
                     {
                         Data = $"{doc.invoice[0].issuer.vatNumber}|{doc.invoice[0].invoiceHeader.issueDate.ToString("dd/MM/yyyy")}|{doc.invoice[0].issuer.branch}|{doc.invoice[0].invoiceHeader.invoiceType}|{doc.invoice[0].invoiceHeader.series}|{doc.invoice[0].invoiceHeader.aa}",
                         Caption = "Μοναδικός αριιθμός παραστατικού",
-                        ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.Text,
-                        ftSignatureType = (long) SignatureTypesGR.MyDataInfo
+                        ftSignatureFormat = SignatureFormat.Text,
+                        ftSignatureType = SignatureTypeGR.MyDataInfo.As<SignatureType>()
                     });
                 }
                 else
@@ -175,8 +176,8 @@ public class MyDataApiClient : IGRSSCD
         {
             Caption = "[www.fiskaltrust.gr]",
             Data = qrCode,
-            ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.QR_Code,
-            ftSignatureType = (long) SignatureTypesGR.PosReceipt
+            ftSignatureFormat = SignatureFormat.QRCode,
+            ftSignatureType = SignatureTypeGR.PosReceipt.As<SignatureType>()
         };
     }
 

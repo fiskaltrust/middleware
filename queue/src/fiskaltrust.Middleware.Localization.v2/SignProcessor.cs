@@ -2,6 +2,7 @@
 using fiskaltrust.Middleware.Localization.v2.Configuration;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.v2.Storage;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
@@ -46,7 +47,7 @@ public class SignProcessor : ISignProcessor
                 throw new Exception("Provided CashBoxId does not match current CashBoxId");
             }
 
-            if ((receiptRequest.ftReceiptCase & 0x0000800000000000L) > 0)
+            if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.ReceiptRequested))
             {
                 ReceiptResponse? receiptResponseFound = null;
                 try
@@ -103,8 +104,8 @@ public class SignProcessor : ISignProcessor
                     receiptResponse.HasFailed();
                     receiptResponse.AddSignatureItem(new SignatureItem
                     {
-                        ftSignatureFormat = 0x1,
-                        ftSignatureType = (long) (((ulong) receiptRequest.ftReceiptCase & 0xFFFF_0000_0000_0000) | 0x2000_0000_3000),
+                        ftSignatureFormat = SignatureFormat.Text,
+                        ftSignatureType = receiptRequest.ftReceiptCase.Reset().As<SignatureType>().WithCategory(SignatureTypeCategory.Failure),
                         Caption = "uncaught-exeption",
                         Data = e.ToString()
                     });
@@ -116,7 +117,7 @@ public class SignProcessor : ISignProcessor
 
                 await _queueStorageProvider.FinishQueueItem(queueItem, receiptResponse);
 
-                if ((receiptResponse.ftState & 0xFFFF_FFFF) == 0xEEEE_EEEE)
+                if (receiptResponse.ftState.IsState(State.Error))
                 {
                     var errorMessage = "An error occurred during receipt processing, resulting in ftState = 0xEEEE_EEEE.";
                     await _queueStorageProvider.CreateActionJournalAsync(errorMessage, $"{receiptResponse.ftState:X}", queueItem.ftQueueItemId);
@@ -155,7 +156,7 @@ public class SignProcessor : ISignProcessor
             cbReceiptReference = receiptRequest.cbReceiptReference,
             ftCashBoxIdentification = _cashBoxIdentification,
             ftReceiptMoment = DateTime.UtcNow,
-            ftState = (long) ((ulong) receiptRequest.ftReceiptCase & 0xFFFF_F000_0000_0000),
+            ftState = (State) ((ulong) receiptRequest.ftReceiptCase & 0xFFFF_F000_0000_0000),
             ftReceiptIdentification = "",
         };
     }
@@ -168,13 +169,13 @@ public class SignProcessor : ISignProcessor
             return ReturnWithQueueIsDisabled(queue, receiptResponse, queueItem);
         }
 
-        if (request.IsInitialOperation() && !queue.IsNew())
+        if (request.ftReceiptCase.IsCase(ReceiptCase.InitialOperationReceipt0x4001) && !queue.IsNew())
         {
             receiptResponse.SetReceiptResponseError("The queue is already operational. It is not allowed to send another InitOperation Receipt");
             return (receiptResponse, new List<ftActionJournal>());
         }
 
-        if (!request.IsInitialOperation() && queue.IsNew())
+        if (!request.ftReceiptCase.IsCase(ReceiptCase.InitialOperationReceipt0x4001) && queue.IsNew())
         {
             return ReturnWithQueueIsNotActive(queue, receiptResponse, queueItem);
         }

@@ -2,6 +2,7 @@
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueuePT;
 using fiskaltrust.Middleware.Localization.v2.Configuration;
+using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using Microsoft.Extensions.Logging;
 using Xunit;
 
@@ -67,7 +68,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             return new ReceiptRequest
             {
                 ftCashBoxID = cashBoxId,
-                ftReceiptCase = 0x5054_2000_0000_4001,
+                ftReceiptCase = (ReceiptCase) 0x5054_2000_0000_4001,
                 cbTerminalID = "1",
                 cbReceiptReference = Guid.NewGuid().ToString(),
                 cbReceiptMoment = DateTime.UtcNow,
@@ -81,7 +82,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             return new ReceiptRequest
             {
                 ftCashBoxID = cashBoxId,
-                ftReceiptCase = 0x5054_2000_0000_0000,
+                ftReceiptCase = (ReceiptCase) 0x5054_2000_0000_0000,
                 cbTerminalID = "1",
                 cbReceiptReference = Guid.NewGuid().ToString(),
                 cbReceiptMoment = DateTime.UtcNow,
@@ -90,7 +91,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
                                 new ChargeItem
                     {
                         Position = 1,
-                        ftChargeItemCase = 0x5054_2000_0000_0013,
+                        ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0013,
                         VATAmount = 1.2m,
                         Amount = 6.2m,
                         VATRate = 24m,
@@ -100,7 +101,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
                     new ChargeItem
                     {
                         Position = 2,
-                        ftChargeItemCase = 0x5054_2000_0000_0013,
+                        ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0013,
                         VATAmount = 1.2m,
                         Amount = 6.2m,
                         VATRate = 24m,
@@ -112,7 +113,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
                             [
                                 new PayItem
                     {
-                        ftPayItemCase = 0x5054_2000_0000_0001,
+                        ftPayItemCase = (PayItemCase) 0x5054_2000_0000_0001,
                         Amount = 12.4m,
                         Description = "Cash"
                     }

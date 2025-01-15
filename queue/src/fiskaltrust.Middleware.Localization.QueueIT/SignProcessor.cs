@@ -43,13 +43,13 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
             {
                 return ReturnWithQueueIsDisabled(queue, receiptResponse, queueItem);
             }
-             
+
             if (request.IsInitialOperation() && !queue.IsNew())
             {
                 receiptResponse.SetReceiptResponseError("The queue is already operational. It is not allowed to send another InitOperation Receipt");
                 return (receiptResponse, new List<ftActionJournal>());
             }
-            
+
             if (!request.IsInitialOperation() && queue.IsNew())
             {
                 return ReturnWithQueueIsNotActive(queue, receiptResponse, queueItem);

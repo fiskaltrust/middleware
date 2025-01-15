@@ -9,11 +9,11 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web;
+using System.Text.Json;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI.Helpers;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI.Models;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI.Territories;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using System.Xml;
 
 #pragma warning disable IDE0052
@@ -104,7 +104,7 @@ public class TicketBaiSCU : IESSSCD
             httpRequestHeaders.Headers.Add("eus-bizkaia-n3-content-type", "application/xml");
             // TODO which year needs to be transmitted?
             httpRequestHeaders.Headers.Add("eus-bizkaia-n3-data",
-                    JsonConvert.SerializeObject(Bizkaia.GenerateHeader(ticketBaiRequest.Sujetos.Emisor.NIF, ticketBaiRequest.Sujetos.Emisor.ApellidosNombreRazonSocial, "240", DateTime.UtcNow.Year.ToString())));
+                    JsonSerializer.Serialize(Bizkaia.GenerateHeader(ticketBaiRequest.Sujetos.Emisor.NIF, ticketBaiRequest.Sujetos.Emisor.ApellidosNombreRazonSocial, "240", DateTime.UtcNow.Year.ToString())));
             var response = await _httpClient.SendAsync(httpRequestHeaders);
             var responseContent = await response.Content.ReadAsStringAsync();
             var result = GetResponseFromContent(responseContent, ticketBaiRequest);
@@ -144,7 +144,11 @@ public class TicketBaiSCU : IESSSCD
         var ticketBaiRequest = _ticketBaiFactory.ConvertTo(request);
         var xml = XmlHelpers.GetXMLIncludingNamespace(ticketBaiRequest);
         var content = XmlHelpers.SignXmlContentWithXades(xml, _ticketBaiTerritory.PolicyIdentifier, _ticketBaiTerritory.PolicyDigest, _configuration.Certificate);
-        var response = await _httpClient.PostAsync(_ticketBaiTerritory.CancelInvoices, new StringContent(content, Encoding.UTF8, "application/xml"));
+        var httpRequestHeaders = new HttpRequestMessage(HttpMethod.Post, new Uri(_ticketBaiTerritory.SandboxEndpoint + _ticketBaiTerritory.CancelInvoices))
+        {
+            Content = new StringContent(content, Encoding.UTF8, "application/xml")
+        };
+        var response = await _httpClient.SendAsync(httpRequestHeaders);
         var responseContent = await response.Content.ReadAsStringAsync();
         var result = GetResponseFromContent(responseContent, ticketBaiRequest);
         result.RequestContent = content;
@@ -175,9 +179,10 @@ public class TicketBaiSCU : IESSSCD
                 ShortSignatureValue = identifier[3],
                 Identifier = ticketBaiResponse.Salida.IdentificadorTBAI,
                 ResponseContent = responseContent,
+                SignatureValue = ticketBaiRequest.Signature,
                 Succeeded = true,
                 QrCode = GetQrCodeUri(ticketBaiRequest, ticketBaiResponse),
-                ResultMessages = ticketBaiResponse.Salida.ResultadosValidacion.Select(x => (x.Codigo, x.Descripcion)).ToList()
+                ResultMessages = ticketBaiResponse.Salida?.ResultadosValidacion?.Select(x => (x.Codigo, x.Descripcion))?.ToList() ?? new()
             };
         }
         else

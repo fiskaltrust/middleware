@@ -13,23 +13,23 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
         private readonly ProtocolCommandProcessorES _sut = new();
 
         [Theory]
-        [InlineData(ReceiptCases.ProtocolUnspecified0x3000)]
-        [InlineData(ReceiptCases.ProtocolTechnicalEvent0x3001)]
-        [InlineData(ReceiptCases.ProtocolAccountingEvent0x3002)]
-        [InlineData(ReceiptCases.InternalUsageMaterialConsumption0x3003)]
-        [InlineData(ReceiptCases.Order0x3004)]
-        [InlineData(ReceiptCases.CopyReceiptPrintExistingReceipt0x3010)]
-        public async Task ProcessReceiptAsync_ShouldReturnEmptyList(ReceiptCases receiptCase)
+        [InlineData(ReceiptCase.ProtocolUnspecified0x3000)]
+        [InlineData(ReceiptCase.ProtocolTechnicalEvent0x3001)]
+        [InlineData(ReceiptCase.ProtocolAccountingEvent0x3002)]
+        [InlineData(ReceiptCase.InternalUsageMaterialConsumption0x3003)]
+        [InlineData(ReceiptCase.Order0x3004)]
+        [InlineData(ReceiptCase.CopyReceiptPrintExistingReceipt0x3010)]
+        public async Task ProcessReceiptAsync_ShouldReturnEmptyList(ReceiptCase receiptCase)
         {
             var queue = TestHelpers.CreateQueue();
             var queueItem = TestHelpers.CreateQueueItem();
             var receiptRequest = new ReceiptRequest
             {
-                ftReceiptCase = (int) receiptCase
+                ftReceiptCase = receiptCase
             };
             var receiptResponse = new ReceiptResponse
             {
-                ftState = 0x4752_2000_0000_0000,
+                ftState = (State) 0x4752_2000_0000_0000,
                 ftCashBoxIdentification = "cashBoxIdentification",
                 ftQueueID = Guid.NewGuid(),
                 ftQueueItemID = Guid.NewGuid(),
@@ -52,11 +52,11 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             var queueItem = TestHelpers.CreateQueueItem();
             var receiptRequest = new ReceiptRequest
             {
-                ftReceiptCase = -1
+                ftReceiptCase = (ReceiptCase) (-1)
             };
             var receiptResponse = new ReceiptResponse
             {
-                ftState = 0x4752_2000_0000_0000,
+                ftState = (State) 0x4752_2000_0000_0000,
                 ftCashBoxIdentification = "cashBoxIdentification",
                 ftQueueID = Guid.NewGuid(),
                 ftQueueItemID = Guid.NewGuid(),

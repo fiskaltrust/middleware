@@ -1,4 +1,5 @@
 ﻿using fiskaltrust.Api.POS.Models.ifPOS.v2;
+using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using fiskaltrust.SAFT.CLI;
 
 public static class AADECertificationExamplesSelfPricing
@@ -23,7 +24,7 @@ public static class AADECertificationExamplesSelfPricing
                     Amount = 100,
                     VATRate = 24,
                     VATAmount = decimal.Round(100 / (100M + 24) * 24, 2, MidpointRounding.ToEven),
-                    ftChargeItemCase = 0x4752_2000_0000_0013,
+                    ftChargeItemCase = (ChargeItemCase) 0x4752_2000_0000_0013,
                     Quantity = 1,
                     Description = "Line item 1"
                 }
@@ -34,11 +35,11 @@ public static class AADECertificationExamplesSelfPricing
                 {
                     Amount = 100m,
                     Description = "Μετρητά",
-                    ftPayItemCase = 0x4752_2000_0000_0001
+                    ftPayItemCase = (PayItemCase) 0x4752_2000_0000_0001
                 }
             ],
             ftPosSystemId = Guid.NewGuid(),
-            ftReceiptCase = 0x4752_2100_0000_1001,
+            ftReceiptCase = (ReceiptCase) 0x4752_2100_0000_1001,
             cbCustomer = new MiddlewareCustomer
             {
                 CustomerVATId = CUSOMTER_VATNUMBER,
@@ -67,7 +68,7 @@ public static class AADECertificationExamplesSelfPricing
                     Amount = 100,
                     VATRate = 24,
                     VATAmount = decimal.Round(100 / (100M + 24) * 24, 2, MidpointRounding.ToEven),
-                    ftChargeItemCase = 0x4752_2000_0000_0063,
+                    ftChargeItemCase = (ChargeItemCase) 0x4752_2000_0000_0063,
                     Quantity = 1,
                     Description = "Line item 1"
                 }
@@ -78,11 +79,11 @@ public static class AADECertificationExamplesSelfPricing
                 {
                     Amount = 100m,
                     Description = "Μετρητά",
-                    ftPayItemCase = 0x4752_2000_0000_0001
+                    ftPayItemCase = (PayItemCase) 0x4752_2000_0000_0001
                 }
             ],
             ftPosSystemId = Guid.NewGuid(),
-            ftReceiptCase = 0x4752_2100_0000_1001,
+            ftReceiptCase = (ReceiptCase) 0x4752_2100_0000_1001,
             cbCustomer = new MiddlewareCustomer
             {
                 CustomerVATId = CUSOMTER_VATNUMBER,
@@ -112,7 +113,7 @@ public static class AADECertificationExamplesSelfPricing
                     Amount = 100,
                     VATRate = 24,
                     VATAmount = decimal.Round(100 / (100M + 24) * 24, 2, MidpointRounding.ToEven),
-                    ftChargeItemCase = 0x4752_2000_0000_0093,
+                    ftChargeItemCase = (ChargeItemCase) 0x4752_2000_0000_0093,
                     Quantity = 1,
                     Description = "Line item 1"
                 },
@@ -122,7 +123,7 @@ public static class AADECertificationExamplesSelfPricing
                     Amount = 100,
                     VATRate = 24,
                     VATAmount = decimal.Round(100 / (100M + 24) * 24, 2, MidpointRounding.ToEven),
-                    ftChargeItemCase = 0x4752_2000_0000_0013,
+                    ftChargeItemCase = (ChargeItemCase) 0x4752_2000_0000_0013,
                     Quantity = 1,
                     Description = "Line item 1"
                 }
@@ -134,12 +135,12 @@ public static class AADECertificationExamplesSelfPricing
                 {
                     Amount = 200m,
                     Description = "Μετρητά",
-                    ftPayItemCase = 0x4752_2000_0000_0001
+                    ftPayItemCase = (PayItemCase) 0x4752_2000_0000_0001
                 }
             ],
 
             ftPosSystemId = Guid.NewGuid(),
-            ftReceiptCase = 0x4752_2100_0000_1001,
+            ftReceiptCase = (ReceiptCase) 0x4752_2100_0000_1001,
             cbCustomer = new MiddlewareCustomer
             {
                 CustomerVATId = CUSOMTER_VATNUMBER,
@@ -168,7 +169,7 @@ public static class AADECertificationExamplesSelfPricing
                     Amount = 120,
                     VATRate = 24,
                     VATAmount = decimal.Round(120 / (100M + 24) * 24, 2, MidpointRounding.ToEven),
-                    ftChargeItemCase = 0x4752_2000_0000_0093,
+                    ftChargeItemCase = (ChargeItemCase) 0x4752_2000_0000_0093,
                     Quantity = 1,
                     Description = "Line item 1"
                 },
@@ -178,7 +179,7 @@ public static class AADECertificationExamplesSelfPricing
                     Amount = 100,
                     VATRate = 24,
                     VATAmount = decimal.Round(100 / (100M + 24) * 24, 2, MidpointRounding.ToEven),
-                    ftChargeItemCase = 0x4752_2000_0000_0013,
+                    ftChargeItemCase = (ChargeItemCase) 0x4752_2000_0000_0013,
                     Quantity = 1,
                     Description = "Line item 1"
                 }
@@ -189,12 +190,12 @@ public static class AADECertificationExamplesSelfPricing
                 {
                     Amount = 220m,
                     Description = "Μετρητά",
-                    ftPayItemCase = 0x4752_2000_0000_0001
+                    ftPayItemCase = (PayItemCase) 0x4752_2000_0000_0001
                 }
             ],
 
             ftPosSystemId = Guid.NewGuid(),
-            ftReceiptCase = 0x4752_2100_0000_1001,
+            ftReceiptCase = (ReceiptCase) 0x4752_2100_0000_1001,
             cbCustomer = new MiddlewareCustomer
             {
                 CustomerVATId = CUSOMTER_VATNUMBER,
@@ -224,7 +225,7 @@ public static class AADECertificationExamplesSelfPricing
                     Amount = 100,
                     VATRate = 24,
                     VATAmount = decimal.Round(100 / (100M + 24) * 24, 2, MidpointRounding.ToEven),
-                    ftChargeItemCase = 0x4752_2000_0000_0013,
+                    ftChargeItemCase = (ChargeItemCase) 0x4752_2000_0000_0013,
                     Quantity = 1,
                     Description = "Line item 1"
                 }
@@ -235,12 +236,12 @@ public static class AADECertificationExamplesSelfPricing
                 {
                     Amount = 100m,
                     Description = "Μετρητά",
-                    ftPayItemCase = 0x4752_2000_0000_0001
+                    ftPayItemCase = (PayItemCase) 0x4752_2000_0000_0001
                 }
             ],
 
             ftPosSystemId = Guid.NewGuid(),
-            ftReceiptCase = 0x4752_2100_0000_1001,
+            ftReceiptCase = (ReceiptCase) 0x4752_2100_0000_1001,
             cbCustomer = new MiddlewareCustomer
             {
                 CustomerVATId = CUSOMTER_VATNUMBER,
@@ -269,7 +270,7 @@ public static class AADECertificationExamplesSelfPricing
                     Amount = 100,
                     VATRate = 24,
                     VATAmount = decimal.Round(100 / (100M + 24) * 24, 2, MidpointRounding.ToEven),
-                    ftChargeItemCase = 0x4752_2000_0000_0023,
+                    ftChargeItemCase = (ChargeItemCase) 0x4752_2000_0000_0023,
                     Quantity = 1,
                     Description = "Line item 1"
                 }
@@ -280,12 +281,12 @@ public static class AADECertificationExamplesSelfPricing
                 {
                     Amount = 100m,
                     Description = "Μετρητά",
-                    ftPayItemCase = 0x4752_2000_0000_0001
+                    ftPayItemCase = (PayItemCase) 0x4752_2000_0000_0001
                 }
             ],
 
             ftPosSystemId = Guid.NewGuid(),
-            ftReceiptCase = 0x4752_2100_0000_1001,
+            ftReceiptCase = (ReceiptCase) 0x4752_2100_0000_1001,
             cbCustomer = new MiddlewareCustomer
             {
                 CustomerVATId = CUSOMTER_VATNUMBER,
@@ -315,7 +316,7 @@ public static class AADECertificationExamplesSelfPricing
                     Amount = 100,
                     VATRate = 24,
                     VATAmount = decimal.Round(100 / (100M + 24) * 24, 2, MidpointRounding.ToEven),
-                    ftChargeItemCase = 0x4752_2000_0000_0023,
+                    ftChargeItemCase = (ChargeItemCase) 0x4752_2000_0000_0023,
                     Quantity = 1,
                     Description = "Line item 1"
                 }
@@ -326,12 +327,12 @@ public static class AADECertificationExamplesSelfPricing
                 {
                     Amount = 100m,
                     Description = "Μετρητά",
-                    ftPayItemCase = 0x4752_2000_0000_0001
+                    ftPayItemCase = (PayItemCase) 0x4752_2000_0000_0001
                 }
             ],
 
             ftPosSystemId = Guid.NewGuid(),
-            ftReceiptCase = 0x4752_2100_0000_1001,
+            ftReceiptCase = (ReceiptCase) 0x4752_2100_0000_1001,
             cbCustomer = new MiddlewareCustomer
             {
                 CustomerVATId = CUSOMTER_VATNUMBER,
@@ -361,7 +362,7 @@ public static class AADECertificationExamplesSelfPricing
                     Amount = 100,
                     VATRate = 24,
                     VATAmount = decimal.Round(100 / (100M + 24) * 24, 2, MidpointRounding.ToEven),
-                    ftChargeItemCase = 0x4752_2000_0000_0013,
+                    ftChargeItemCase = (ChargeItemCase) 0x4752_2000_0000_0013,
                     Quantity = 1,
                     Description = "Line item 1"
                 }
@@ -372,12 +373,12 @@ public static class AADECertificationExamplesSelfPricing
                 {
                     Amount = 100m,
                     Description = "Μετρητά",
-                    ftPayItemCase = 0x4752_2000_0000_0001
+                    ftPayItemCase = (PayItemCase) 0x4752_2000_0000_0001
                 }
             ],
 
             ftPosSystemId = Guid.NewGuid(),
-            ftReceiptCase = 0x4752_2100_0000_1004,
+            ftReceiptCase = (ReceiptCase) 0x4752_2100_0000_1004,
             cbCustomer = new MiddlewareCustomer
             {
                 CustomerVATId = CUSOMTER_VATNUMBER,
@@ -406,7 +407,7 @@ public static class AADECertificationExamplesSelfPricing
                     Amount = 100,
                     VATRate = 24,
                     VATAmount = decimal.Round(100 / (100M + 24) * 24, 2, MidpointRounding.ToEven),
-                    ftChargeItemCase = 0x4752_2000_0000_6023,
+                    ftChargeItemCase = (ChargeItemCase) 0x4752_2000_0000_6023,
                     Quantity = 1,
                     Description = "Line item 1"
                 }
@@ -418,12 +419,12 @@ public static class AADECertificationExamplesSelfPricing
                     Amount = 100m,
                     Quantity = 1,
                     Description = "Πίστωση",
-                    ftPayItemCase = 0x4752_2000_0000_0001
+                    ftPayItemCase = (PayItemCase) 0x4752_2000_0000_0001
                 }
             ],
 
             ftPosSystemId = Guid.NewGuid(),
-            ftReceiptCase = 0x4752_2100_0000_1004,
+            ftReceiptCase = (ReceiptCase) 0x4752_2100_0000_1004,
             cbCustomer = new MiddlewareCustomer
             {
                 CustomerVATId = CUSOMTER_VATNUMBER,

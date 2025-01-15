@@ -4,6 +4,8 @@ using System.Text.Json;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueuePT.Exports.SAFTPT;
 using fiskaltrust.Middleware.Localization.QueuePT.Interface;
+using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
+using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 
@@ -20,7 +22,7 @@ public static class SAFTMapping
             actualReceiptRequests = actualReceiptRequests.Take(-to).ToList();
         }
         var invoices = actualReceiptRequests.Select(x => SAFTMapping.GetInvoiceForReceiptRequest(accountMasterData, x)).Where(x => x != null).ToList();
- 
+
         return new AuditFile
         {
             Header = GetHeader(accountMasterData),
@@ -314,15 +316,15 @@ public static class SAFTMapping
     {
         var receiptRequest = receipt.receiptRequest;
         var lines = receiptRequest.cbChargeItems.Select(GetLine).ToList();
-        if(lines.Count == 0)
+        if (lines.Count == 0)
         {
             return null;
         }
 
         var taxable = receiptRequest.cbChargeItems.Sum(x => x.VATAmount.GetValueOrDefault());
         var grossAmount = receiptRequest.cbChargeItems.Sum(x => x.Amount);
-        var hashSignature = receipt.receiptResponse.ftSignatures.Where(x => x.ftSignatureType == (long) SignatureTypesPT.Hash).FirstOrDefault();
-        var atcudSignature = receipt.receiptResponse.ftSignatures.Where(x => x.ftSignatureType == (long) SignatureTypesPT.ATCUD).FirstOrDefault();
+        var hashSignature = receipt.receiptResponse.ftSignatures.Where(x => x.ftSignatureType.IsType(SignatureTypePT.Hash)).FirstOrDefault();
+        var atcudSignature = receipt.receiptResponse.ftSignatures.Where(x => x.ftSignatureType.IsType(SignatureTypePT.ATCUD)).FirstOrDefault();
         var netAmount = grossAmount - taxable;
         var invoiceType = GetInvoiceType(receiptRequest);
         if (hashSignature == null || atcudSignature == null)
@@ -408,18 +410,18 @@ public static class SAFTMapping
         return invoice;
     }
 
-    private static string GetInvoiceType(ReceiptRequest receiptRequest) => (receiptRequest.ftReceiptCase & 0xFFFF) switch
+    private static string GetInvoiceType(ReceiptRequest receiptRequest) => receiptRequest.ftReceiptCase.Case() switch
     {
-        0x0000 => "FS",
-        0x0001 => "FS",
-        0x0002 => "FS",
-        0x0003 => "FS",
-        0x0004 => "FS",
-        0x0005 => "FS", // no invoicetype.. workign document?
-        0x1000 => "FT",
-        0x1001 => "FT",
-        0x1002 => "FT",
-        0x1003 => "FT",
+        ReceiptCase.UnknownReceipt0x0000 => "FS",
+        ReceiptCase.PointOfSaleReceipt0x0001 => "FS",
+        ReceiptCase.PaymentTransfer0x0002 => "FS",
+        ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003 => "FS",
+        ReceiptCase.ECommerce0x0004 => "FS",
+        ReceiptCase.Protocol0x0005 => "FS", // no invoicetype.. workign document?
+        ReceiptCase.InvoiceUnknown0x1000 => "FT",
+        ReceiptCase.InvoiceB2C0x1001 => "FT",
+        ReceiptCase.InvoiceB2B0x1002 => "FT",
+        ReceiptCase.InvoiceB2G0x1003 => "FT",
         _ => "FS"
     };
 
@@ -464,57 +466,57 @@ public static class SAFTMapping
     }
 
     // https://taxfoundation.org/data/all/eu/value-added-tax-2024-vat-rates-europe/
-    public static string GetIVATAxCode(ChargeItem chargeItem) => (chargeItem.ftChargeItemCase & 0xF) switch
+    public static string GetIVATAxCode(ChargeItem chargeItem) => chargeItem.ftChargeItemCase.Vat() switch
     {
-        0x0 => throw new NotImplementedException("There is no unkown rate in Portugal"),
-        0x1 => "RED",
-        0x2 => throw new NotImplementedException("There is no reduced-2 rate in Portugal"),
-        0x3 => "NOR",
-        0x4 => throw new NotImplementedException("There is no super-reduced-1 rate in Portugal"),
-        0x5 => throw new NotImplementedException("There is no super-reduced-2 rate in Portugal"),
-        0x6 => "INT",
-        0x7 => throw new NotImplementedException("There is no zero rate in Portugal"),
-        0x8 => "ISE",
-        _ => throw new NotImplementedException("The given tax scheme is not supported in Portugal"),
+        ChargeItemCase.UnknownService => throw new NotImplementedException("There is no unkown rate in Portugal"),
+        ChargeItemCase.DiscountedVatRate1 => "RED",
+        ChargeItemCase.DiscountedVatRate2 => throw new NotImplementedException("There is no reduced-2 rate in Portugal"),
+        ChargeItemCase.NormalVatRate => "NOR",
+        ChargeItemCase.SuperReducedVatRate1 => throw new NotImplementedException("There is no super-reduced-1 rate in Portugal"),
+        ChargeItemCase.SuperReducedVatRate2 => throw new NotImplementedException("There is no super-reduced-2 rate in Portugal"),
+        ChargeItemCase.ParkingVatRate => "INT",
+        ChargeItemCase.ZeroVatRate => throw new NotImplementedException("There is no zero rate in Portugal"),
+        ChargeItemCase.NotTaxable => "ISE",
+        ChargeItemCase c => throw new NotImplementedException($"The given tax scheme 0x{c:X} is not supported in Portugal"),
     };
 
-    public static string GetTaxExemptionCode(ChargeItem chargeItem) => (chargeItem.ftChargeItemCase & 0xFF00) switch
+    public static string GetTaxExemptionCode(ChargeItem chargeItem) => chargeItem.ftChargeItemCase.NatureOfVat() switch
     {
         _ => "M16",
     };
 
-    public static string GetTaxExemptionReason(ChargeItem chargeItem) => (chargeItem.ftChargeItemCase & 0xFF00) switch
+    public static string GetTaxExemptionReason(ChargeItem chargeItem) => chargeItem.ftChargeItemCase.NatureOfVat() switch
     {
         _ => "Isento Artigo 14.  do RITI (ou similar)",
     };
 
-    public static string GetPaymentMecahnism(PayItem payItem) => (payItem.ftPayItemCase & 0xF) switch
+    public static string GetPaymentMecahnism(PayItem payItem) => payItem.ftPayItemCase.Case() switch
     {
-        0x0 => "OU", // Unknown � Other means not mentioned
-        0x1 => "NU", // Cash
-        0x2 => "OU", // Non Cash � Other means not mentioned
-        0x3 => "CH", // Bank cheque
-        0x4 => "CD", // Debit Card
-        0x5 => "CC", // Credit Card
-        0x6 => "CO", // Voucher Gift cheque or gift card;
-        0x7 => "OU", // Online payment � Other means not mentioned
-        0x8 => "OU", // Online payment � Other means not mentioned
+        PayItemCase.UnknownPaymentType => "OU", // Unknown � Other means not mentioned
+        PayItemCase.CashPayment => "NU", // Cash
+        PayItemCase.NonCash => "OU", // Non Cash � Other means not mentioned
+        PayItemCase.CrossedCheque => "CH", // Bank cheque
+        PayItemCase.DebitCardPayment => "CD", // Debit Card
+        PayItemCase.CreditCardPayment => "CC", // Credit Card
+        PayItemCase.VoucherPaymentCouponVoucherByMoneyValue => "CO", // Voucher Gift cheque or gift card;
+        PayItemCase.OnlinePayment => "OU", // Online payment � Other means not mentioned
+        PayItemCase.LoyaltyProgramCustomerCardPayment => "OU", // Online payment � Other means not mentioned
         _ => "OU", // Other � Other means not mentioned
     };
 
-    public static string GetProductType(ChargeItem chargeItem) => (chargeItem.ftChargeItemCase & 0xF0) switch
+    public static string GetProductType(ChargeItem chargeItem) => chargeItem.ftChargeItemCase.TypeOfService() switch
     {
-        0x00 => "O", // Unknown type of service / - Others (e.g. charged freights, advance payments received or sale of assets);
-        0x10 => "P", // Delivery (supply of goods) / Products
-        0x20 => "S", // Other service (supply of service) / Services
-        0x30 => "S", // Tip / Services
-        0x40 => "?", // Voucher / ???
-        0x50 => "S", // Catalog Service / Services
-        0x60 => "?", // Not own sales Agency busines / ???
-        0x70 => "?", // Own Consumption / ???
-        0x80 => "?", // Grant / ???
-        0x90 => "?", // Receivable / ???
-        0xA0 => "?", // Receivable / ???
+        ChargeItemCaseTypeOfService.UnknownService => "O", // Unknown type of service / - Others (e.g. charged freights, advance payments received or sale of assets);
+        ChargeItemCaseTypeOfService.Delivery => "P", // Delivery (supply of goods) / Products
+        ChargeItemCaseTypeOfService.OtherService => "S", // Other service (supply of service) / Services
+        ChargeItemCaseTypeOfService.Tip => "S", // Tip / Services
+        ChargeItemCaseTypeOfService.Voucher => "?", // Voucher / ???
+        ChargeItemCaseTypeOfService.CatalogService => "S", // Catalog Service / Services
+        ChargeItemCaseTypeOfService.NotOwnSales => "?", // Not own sales Agency busines / ???
+        ChargeItemCaseTypeOfService.OwnConsumption => "?", // Own Consumption / ???
+        ChargeItemCaseTypeOfService.Grant => "?", // Grant / ???
+        ChargeItemCaseTypeOfService.Receivable => "?", // Receivable / ???
+        ChargeItemCaseTypeOfService.CashTransfer => "?", // Receivable / ???
         _ => throw new NotImplementedException($"The given ChargeItemCase {chargeItem.ftChargeItemCase} type is not supported"),
     };
 }

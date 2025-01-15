@@ -12,7 +12,7 @@ public static class ReceiptExamples
         return new ReceiptRequest
         {
             ftCashBoxID = cashBoxId,
-            ftReceiptCase = 0x4752_2000_0000_4001,
+            ftReceiptCase = (ReceiptCase) 0x4752_2000_0000_4001,
             cbTerminalID = "1",
             cbReceiptReference = Guid.NewGuid().ToString(),
             cbReceiptMoment = DateTime.UtcNow,
@@ -29,7 +29,7 @@ public static class ReceiptExamples
                 {
                     Amount = 100m,
                     Description = "DebitCard",
-                    ftPayItemCase = 0x4752_2000_0000_0000 | (long) PayItemCases.DebitCardPayment,
+                    ftPayItemCase = (PayItemCase) (0x4752_2000_0000_0000 | (long) PayItemCase.DebitCardPayment),
                     ftPayItemCaseData = new PayItemCaseDataCloudApi
                     {
                         Provider = new PayItemCaseProviderVivaWallet
@@ -70,12 +70,12 @@ public static class ReceiptExamples
                     VATAmount = 0m,
                     Description = "Line Item 1",
                     Position = 1,
-                    ftChargeItemCase = 0x4752_2000_0000_0018
+                    ftChargeItemCase = (ChargeItemCase) 0x4752_2000_0000_0018
                 }],
             cbPayItems = payItems,
             ftCashBoxID = cashBoxId,
             ftPosSystemId = Guid.NewGuid(),
-            ftReceiptCase = 0x4752_2000_0000_3004
+            ftReceiptCase = (ReceiptCase) 0x4752_2000_0000_3004
         };
         return receiptRequest;
     }
@@ -105,13 +105,13 @@ public static class ReceiptExamples
                 {
                     Amount = 92.39m,
                     Description = "VAT withholding (-20%)",
-                    ftPayItemCase = 0x4752_2000_0000_0099
+                    ftPayItemCase = (PayItemCase) 0x4752_2000_0000_0099
                 },
                 new PayItem
                 {
                     Amount = chargeItems.Sum(x => x.Amount) -  92.39m,
                     Description = "Cash",
-                    ftPayItemCase = 0x4752_2000_0000_0001
+                    ftPayItemCase = (PayItemCase) 0x4752_2000_0000_0001
                 }
             };
 
@@ -134,7 +134,7 @@ public static class ReceiptExamples
             cbPayItems = payItems,
             ftCashBoxID = cashBoxId,
             ftPosSystemId = Guid.NewGuid(),
-            ftReceiptCase = 0x4752_2000_0000_1001,
+            ftReceiptCase = (ReceiptCase) 0x4752_2000_0000_1001,
             cbCustomer = new MiddlewareCustomer
             {
                 CustomerVATId = "997671770",
@@ -169,7 +169,7 @@ public static class ReceiptExamples
                 {
                     Amount = chargeItems.Sum(x => x.Amount),
                     Description = "Cash",
-                    ftPayItemCase = 0x4752_2000_0000_0001
+                    ftPayItemCase = (PayItemCase) 0x4752_2000_0000_0001
                 }
             };
 
@@ -192,7 +192,7 @@ public static class ReceiptExamples
             cbPayItems = payItems,
             ftCashBoxID = cashBoxId,
             ftPosSystemId = Guid.NewGuid(),
-            ftReceiptCase = 0x4752_2000_0000_1001,
+            ftReceiptCase = (ReceiptCase) 0x4752_2000_0000_1001,
             cbCustomer = new MiddlewareCustomer
             {
                 CustomerVATId = "997671770",
@@ -227,7 +227,7 @@ public static class ReceiptExamples
                 {
                     Amount = chargeItems.Sum(x => x.Amount),
                     Description = "Card",
-                    ftPayItemCase = 0x4752_2000_0000_0000 | (long) PayItemCases.DebitCardPayment,
+                    ftPayItemCase = (PayItemCase) (0x4752_2000_0000_0000 | (long) PayItemCase.DebitCardPayment),
                     ftPayItemCaseData = new PayItemCaseDataCloudApi
                     {
                         Provider = new PayItemCaseProviderVivaWallet
@@ -265,7 +265,7 @@ public static class ReceiptExamples
             ftCashBoxID = cashBoxId,
             ftPosSystemId = Guid.NewGuid(),
             cbTerminalID = "1",
-            ftReceiptCase = 0x4752_2000_0000_0001 // posreceipt
+            ftReceiptCase = (ReceiptCase) 0x4752_2000_0000_0001 // posreceipt
         };
     }
 
@@ -288,7 +288,7 @@ public static class ReceiptExamples
                 {
                     Amount = chargeItems.Sum(x => x.Amount),
                     Description = "Card",
-                    ftPayItemCase = 0x4752_2000_0000_0000 | (long) PayItemCases.DebitCardPayment,
+                    ftPayItemCase = (PayItemCase) (0x4752_2000_0000_0000 | (long) PayItemCase.DebitCardPayment),
                     ftPayItemCaseData = new PayItemCaseDataCloudApi
                     {
                         Provider = new PayItemCaseProviderVivaWallet
@@ -326,7 +326,7 @@ public static class ReceiptExamples
             ftCashBoxID = cashBoxId,
             ftPosSystemId = Guid.NewGuid(),
             cbTerminalID = "1",
-            ftReceiptCase = 0x4752_2000_0000_0001 // posreceipt
+            ftReceiptCase = (ReceiptCase) 0x4752_2000_0000_0001 // posreceipt
         };
     }
 
@@ -349,7 +349,7 @@ public static class ReceiptExamples
                 {
                     Amount = chargeItems.Sum(x => x.Amount),
                     Description = "Card",
-                    ftPayItemCase = 0x4752_2000_0000_0000 | (long) PayItemCases.DebitCardPayment,
+                    ftPayItemCase = (PayItemCase) (0x4752_2000_0000_0000 | (long) PayItemCase.DebitCardPayment),
                     ftPayItemCaseData = new PayItemCaseDataApp2App
                     {
                         Provider = new PayItemCaseProviderVivaWalletApp2APp
@@ -374,7 +374,7 @@ public static class ReceiptExamples
             ftCashBoxID = cashBoxId,
             ftPosSystemId = Guid.NewGuid(),
             cbTerminalID = "1",
-            ftReceiptCase = 0x4752_2000_0000_0001 // posreceipt
+            ftReceiptCase = (ReceiptCase) 0x4752_2000_0000_0001 // posreceipt
         };
     }
 
@@ -383,7 +383,7 @@ public static class ReceiptExamples
         return new ReceiptRequest
         {
             ftCashBoxID = cashBoxId,
-            ftReceiptCase = 0x4752_2000_0000_0000,
+            ftReceiptCase = (ReceiptCase) 0x4752_2000_0000_0000,
             cbTerminalID = "1",
             cbReceiptReference = Guid.NewGuid().ToString(),
             cbReceiptMoment = DateTime.UtcNow,
@@ -392,7 +392,7 @@ public static class ReceiptExamples
                             new ChargeItem
                     {
                         Position = 1,
-                        ftChargeItemCase = 0x4752_2000_0000_0013,
+                        ftChargeItemCase = (ChargeItemCase) 0x4752_2000_0000_0013,
                         VATAmount = 1.2m,
                         Amount = 6.2m,
                         VATRate = 24m,
@@ -402,7 +402,7 @@ public static class ReceiptExamples
                     new ChargeItem
                     {
                         Position = 2,
-                        ftChargeItemCase = 0x4752_2000_0000_0013,
+                        ftChargeItemCase = (ChargeItemCase) 0x4752_2000_0000_0013,
                         VATAmount = 1.2m,
                         Amount = 6.2m,
                         VATRate = 24m,
@@ -414,7 +414,7 @@ public static class ReceiptExamples
                         [
                             new PayItem
                     {
-                        ftPayItemCase = 0x4752_2000_0000_0001,
+                        ftPayItemCase = (PayItemCase) 0x4752_2000_0000_0001,
                         Amount = 12.4m,
                         Description = "Cash"
                     }
@@ -432,7 +432,7 @@ public static class ReceiptExamples
             Amount = netAmount + vatAmount,
             VATRate = vatRate,
             VATAmount = vatAmount,
-            ftChargeItemCase = 0x4752_2000_0000_0023,
+            ftChargeItemCase = (ChargeItemCase) 0x4752_2000_0000_0023,
             Quantity = quantity,
             Description = description,
             ftChargeItemCaseData = new WithHoldingChargeItem
@@ -452,7 +452,7 @@ public static class ReceiptExamples
             Amount = amount,
             VATRate = vatRate,
             VATAmount = amount / (100M + vatRate) * vatRate,
-            ftChargeItemCase = 0x4752_2000_0000_0023,
+            ftChargeItemCase = (ChargeItemCase) 0x4752_2000_0000_0023,
             Quantity = quantity,
             Description = description
         };
@@ -466,7 +466,7 @@ public static class ReceiptExamples
             Amount = amount,
             VATRate = vatRate,
             VATAmount = amount / (100M + vatRate) * vatRate,
-            ftChargeItemCase = 0x4752_2000_0000_0021,
+            ftChargeItemCase = (ChargeItemCase) 0x4752_2000_0000_0021,
             Quantity = quantity,
             Description = description
         };
@@ -478,7 +478,7 @@ public static class ReceiptExamples
         return new PayItem
         {
             Amount = amount * (percent / 100),
-            ftPayItemCase = 0x4752_2000_0000_099,
+            ftPayItemCase = (PayItemCase) 0x4752_2000_0000_099,
             Quantity = 1,
             Description = description
         };
@@ -492,7 +492,7 @@ public static class ReceiptExamples
             Amount = amount,
             VATRate = vatRate,
             VATAmount = amount / (100M + vatRate) * vatRate,
-            ftChargeItemCase = 0x4752_2000_0000_0013,
+            ftChargeItemCase = (ChargeItemCase) 0x4752_2000_0000_0013,
             Quantity = quantity,
             Description = description
         };
@@ -506,7 +506,7 @@ public static class ReceiptExamples
             Amount = amount,
             VATRate = vatRate,
             VATAmount = amount / (100M + vatRate) * vatRate,
-            ftChargeItemCase = 0x4752_2000_0000_0011,
+            ftChargeItemCase = (ChargeItemCase) 0x4752_2000_0000_0011,
             Quantity = quantity,
             Description = description
         };
