@@ -19,7 +19,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
 {
     public class ReceiptCommandProcessorPTTests
     {
-        private readonly ReceiptCommandProcessorPT _sut = new ReceiptCommandProcessorPT(Mock.Of<IPTSSCD>(), new ftQueuePT(), new ftSignaturCreationUnitPT());
+        private readonly ReceiptCommandProcessorPT _sut = new ReceiptCommandProcessorPT(Mock.Of<IPTSSCD>(), new ftQueuePT(), new ftSignaturCreationUnitPT(), Mock.Of<IReadOnlyQueueItemRepository>());
 
         [Theory]
         [InlineData(ReceiptCases.PaymentTransfer0x0002)]
@@ -95,7 +95,10 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
 
             var configMock = new Mock<IConfigurationRepository>();
             configMock.Setup(x => x.InsertOrUpdateQueueAsync(It.IsAny<ftQueue>())).Returns(Task.CompletedTask);
-            var sut = new ReceiptCommandProcessorPT(new InMemorySCU(signaturCreationUnitPT), queuePT, signaturCreationUnitPT);
+
+            var queueItemRepository = new Mock<IReadOnlyQueueItemRepository>();
+
+            var sut = new ReceiptCommandProcessorPT(new InMemorySCU(signaturCreationUnitPT), queuePT, signaturCreationUnitPT, queueItemRepository.Object);
 
             var receiptRequest = new ReceiptRequest
             {
