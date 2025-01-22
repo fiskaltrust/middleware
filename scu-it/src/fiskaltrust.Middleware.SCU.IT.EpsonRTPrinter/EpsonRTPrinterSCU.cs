@@ -21,6 +21,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
     private readonly IEpsonFpMateClient _httpClient;
     private readonly EpsonRTPrinterSCUConfiguration _configuration;
     private readonly ErrorInfoFactory _errorCodeFactory = new();
+    private string _serialnr;
 
     public EpsonRTPrinterSCU(ILogger<EpsonRTPrinterSCU> logger, EpsonRTPrinterSCUConfiguration configuration, IEpsonFpMateClient epsonCloudHttpClient)
     {
@@ -35,7 +36,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
     {
         var result = await QueryPrinterStatusAsync();
         _logger.LogInformation(JsonConvert.SerializeObject(result));
-        var _serialnr = "";
+        _serialnr = "";
         if (string.IsNullOrEmpty(_serialnr) && result?.Printerstatus?.RtType != null)
         {
             _serialnr = await GetSerialNumberAsync(result.Printerstatus.RtType).ConfigureAwait(false);
@@ -230,7 +231,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
 
             var data = SoapSerializer.Serialize(content);
             _logger.LogDebug("Request content ({receiptreference}): {content}", receiptRequest.cbReceiptReference, SoapSerializer.Serialize(data));
-            var response = await SendRequestAsync(data);
+            var response = await _httpClient.SendCommandAsync(data);
 
             using var responseContent = await response.Content.ReadAsStreamAsync();
             var result = SoapSerializer.DeserializeToSoapEnvelope<PrinterReceiptResponse>(responseContent);
@@ -271,11 +272,9 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         try
         {
             var content = EpsonCommandFactory.CreateInvoiceRequestContent(_configuration, receiptRequest);
-            var data = SoapSerializer.Serialize(content);
-            ;
+            var data = SoapSerializer.Serialize(content);;
             _logger.LogDebug("Request content ({receiptreference}): {content}", receiptRequest.cbReceiptReference, data);
-            var response = await SendRequestAsync(data);
-
+            var response = await _httpClient.SendCommandAsync(data);
             using var responseContent = await response.Content.ReadAsStreamAsync();
             var result = SoapSerializer.DeserializeToSoapEnvelope<PrinterReceiptResponse>(responseContent);
             if (result != null)
@@ -559,42 +558,6 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         return (resultItems, resultVatLegend);
     }
 
-    private static List<PrintItem> GetPayItemLines(PayItem payItem)
-    {
-        var resultItems = new List<PrintItem>();
-
-        var isRefundOrVoid = ReceiptCaseHelper.IsVoid(payItem) || ReceiptCaseHelper.IsRefund(payItem);
-        var amount = isRefundOrVoid ? -payItem.Amount : payItem.Amount;
-        var description = payItem.Description;
-        var amountText = GetAmountString(amount, 9);
-
-        while (description.Length > 0)
-        {
-            var desc = description.Length <= 36 ? description + new string(' ', 36 - description.Length) : description.Substring(0, 36);
-            resultItems.Add(new PrintNormal() { Operator = "1", Data = $"{desc} {amountText}" });
-            if (desc.Length >= description.Length)
-            {
-                description = string.Empty;
-            }
-            else
-            {
-                description = description.Substring(desc.Length);
-            }
-        }
-
-        return resultItems;
-    }
-
-    private static string GetCenteredText(string text, int length)
-    {
-        if (text.Length < length)
-        {
-            return new string(' ', (length - text.Length) / 2) + text;
-        }
-
-        return text;
-    }
-
     private static PrinterNonFiscal PerformUnspecifiedProtocolReceipt(ReceiptRequest request)
     {
         var content = new PrinterNonFiscal();
@@ -740,7 +703,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
             var content = PerformUnspecifiedProtocolReceipt(request.ReceiptRequest);
             var data = SoapSerializer.Serialize(content);
             _logger.LogDebug("Request content ({receiptreference}): {content}", request.ReceiptRequest.cbReceiptReference, SoapSerializer.Serialize(data));
-            var response = await SendRequestAsync(data);
+            var response = await _httpClient.SendCommandAsync(data);
 
             using var responseContent = await response.Content.ReadAsStreamAsync();
             var printerResponse = SoapSerializer.DeserializeToSoapEnvelope<PrinterResponse>(responseContent);
@@ -876,11 +839,14 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         PrinterReceiptResponse result = null;
         try
         {
-
-            var content = EpsonCommandFactory.CreateRefundRequestContent(_configuration, request.ReceiptRequest, long.Parse(referenceDocNumber), long.Parse(referenceZNumber), DateTime.Parse(referenceDateTime), result?.Receipt?.SerialNumber);
+            if (string.IsNullOrEmpty(_serialnr))
+            {
+                _ = await GetRTInfoAsync();
+            }
+            var content = EpsonCommandFactory.CreateRefundRequestContent(_configuration, request.ReceiptRequest, long.Parse(referenceDocNumber), long.Parse(referenceZNumber), DateTime.Parse(referenceDateTime), _serialnr);
             var data = SoapSerializer.Serialize(content);
             _logger.LogDebug("Request content ({receiptreference}): {content}", request.ReceiptRequest.cbReceiptReference, SoapSerializer.Serialize(data));
-            var response = await SendRequestAsync(data);
+            var response = await _httpClient.SendCommandAsync(data);
 
             using var responseContent = await response.Content.ReadAsStreamAsync();
             result = SoapSerializer.DeserializeToSoapEnvelope<PrinterReceiptResponse>(responseContent);
@@ -902,7 +868,12 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         }
         catch (Exception e)
         {
-            fiscalResponse = Helpers.ExceptionInfo(e);
+            var errorInfo = Helpers.ExceptionInfo(e);
+            request.ReceiptResponse.SetReceiptResponseErrored(errorInfo.SSCDErrorInfo?.Info ?? "");
+            return new ProcessResponse
+            {
+                ReceiptResponse = request.ReceiptResponse
+            };
         }
 
         if (!fiscalResponse.Success)
@@ -943,20 +914,25 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         var referenceDateTime = request.ReceiptResponse.GetSignaturItem(SignatureTypesIT.RTReferenceDocumentMoment)?.Data;
         if (string.IsNullOrEmpty(referenceZNumber) || string.IsNullOrEmpty(referenceDocNumber) || string.IsNullOrEmpty(referenceDateTime))
         {
-            request.ReceiptResponse.SetReceiptResponseErrored("Cannot void receipt without references.");
+            request.ReceiptResponse.SetReceiptResponseErrored($"The given cbPreviousReceiptReference '{request.ReceiptRequest.cbPreviousReceiptReference}' does not reference a request with RT references.");
             return new ProcessResponse
             {
                 ReceiptResponse = request.ReceiptResponse
             };
         }
+
         FiscalReceiptResponse fiscalResponse;
         PrinterReceiptResponse result = null;
         try
         {
-            var content = EpsonCommandFactory.CreateVoidRequestContent(_configuration, request.ReceiptRequest, long.Parse(referenceDocNumber), long.Parse(referenceZNumber), DateTime.Parse(referenceDateTime), result?.Receipt?.SerialNumber);
+            if (string.IsNullOrEmpty(_serialnr))
+            {
+                _ = await GetRTInfoAsync();
+            }
+            var content = EpsonCommandFactory.CreateVoidRequestContent(_configuration, request.ReceiptRequest, long.Parse(referenceDocNumber), long.Parse(referenceZNumber), DateTime.Parse(referenceDateTime), _serialnr);
             var data = SoapSerializer.Serialize(content);
             _logger.LogDebug("Request content ({receiptreference}): {content}", request.ReceiptRequest.cbReceiptReference, SoapSerializer.Serialize(data));
-            var response = await SendRequestAsync(data);
+            var response = await _httpClient.SendCommandAsync(data);
 
             using var responseContent = await response.Content.ReadAsStreamAsync();
             result = SoapSerializer.DeserializeToSoapEnvelope<PrinterReceiptResponse>(responseContent);
@@ -1015,7 +991,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
     {
         var serialQuery = new PrinterCommand() { DirectIO = DirectIO.GetSerialNrCommand() };
         var content = SoapSerializer.Serialize(serialQuery);
-        var responseSerialnr = await SendRequestAsync(content);
+        var responseSerialnr = await _httpClient.SendCommandAsync(content);
 
         using var responseContent = await responseSerialnr.Content.ReadAsStreamAsync();
         var result = SoapSerializer.DeserializeToSoapEnvelope<PrinterCommandResponse>(responseContent);
@@ -1028,7 +1004,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
     {
         var resetCommand = new PrinterCommand() { ResetPrinter = new ResetPrinter() { Operator = "" } };
         var xml = SoapSerializer.Serialize(resetCommand);
-        await SendRequestAsync(xml);
+        await _httpClient.SendCommandAsync(xml);
     }
 
     private async Task<ReceiptResponse> PerformDailyCosing(ReceiptResponse receiptResponse)
@@ -1039,7 +1015,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
             {
                 ZReport = new ZReport()
             };
-            var response = await SendRequestAsync(SoapSerializer.Serialize(fiscalReport));
+            var response = await _httpClient.SendCommandAsync(SoapSerializer.Serialize(fiscalReport));
             using var responseContent = await response.Content.ReadAsStreamAsync();
             var result = SoapSerializer.DeserializeToSoapEnvelope<ReportResponse>(responseContent);
             if (!result?.Success ?? false)
@@ -1049,7 +1025,6 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
                 receiptResponse.SetReceiptResponseErrored(errorInfo.Info);
                 return receiptResponse;
             }
-
             var zRepNumber = result?.ReportInfo?.ZRepNumber != null ? long.Parse(result.ReportInfo.ZRepNumber) : 0;
             receiptResponse.ftSignatures = SignatureFactory.CreateDailyClosingReceiptSignatures(zRepNumber);
             return receiptResponse;
@@ -1072,7 +1047,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
             {
                 XReport = new XReport()
             };
-            var response = await SendRequestAsync(SoapSerializer.Serialize(fiscalReport));
+            var response = await _httpClient.SendCommandAsync(SoapSerializer.Serialize(fiscalReport));
             using var responseContent = await response.Content.ReadAsStreamAsync();
             var reportResponse = SoapSerializer.DeserializeToSoapEnvelope<ReportResponse>(responseContent);
             if (!(result?.Success ?? false))
@@ -1102,7 +1077,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
     </s:Body>
 </s:Envelope>
 """;
-        return await SendRequestAsync(data);
+        return await _httpClient.SendCommandAsync(data);
     }
 
     private async Task<HttpResponseMessage> PerformReprint(string day, string month, string year, long receiptNumber)
@@ -1117,17 +1092,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
     </s:Body>
 </s:Envelope>
 """;
-        return await SendRequestAsync(data);
-    }
-
-    private async Task<HttpResponseMessage> SendRequestAsync(string content)
-    {
-        var response = await _httpClient.SendCommandAsync(content);
-        if (!response.IsSuccessStatusCode)
-        {
-            throw new HttpRequestException($"An error occured while sending a request to the Epson device (StatusCode: {response.StatusCode}, Content: {await response.Content.ReadAsStringAsync()})");
-        }
-        return response;
+        return await _httpClient.SendCommandAsync(data);
     }
 
     public SSCDErrorInfo GetErrorInfo(string? code, string? status, string? printerStatus)
