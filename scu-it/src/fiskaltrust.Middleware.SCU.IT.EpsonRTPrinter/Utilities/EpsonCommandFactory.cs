@@ -503,12 +503,43 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                 0x1 => _vatRateDeduction1, // 10%
                 0x2 => _vatRateDeduction2, // 4%
                 0x3 => _vatRateBasic, // 22%
-                0x4 => _vatRateSuperReduced1, // ?
+                0x4 => _vatRateSuperReduced1, // 5%
                 0x5 => _vatRateSuperReduced2, // ?
                 0x6 => _vatRateParking, // ?
                 0x7 => _vatRateZero, // ?
                 0x8 => _notTaxable, // ? 
                 _ => _vatRateUnknown // ?
+            };
+        }
+
+        public static (string, string, decimal) GetVatInfo(this ChargeItem chargeItem)
+        {
+            if ((chargeItem.ftChargeItemCase & 0xF) == 0x8)
+            {
+                return (chargeItem.ftChargeItemCase & 0xF000) switch
+                {
+                    0x8000 => ("   EE*", "*EE = Esclusa", 0),
+                    0x2000 => ("   NS*", "*NS = Non soggetta", 0),
+                    0x1000 => ("   NI*", "*NI = Non imponibile", 0),
+                    0x3000 => ("   ES*", "*ES = Esente", 0),
+                    0x4000 => ("   RM*", "*RM = Regime del margine", 0),
+                    0x5000 => ("   AL*", "*AL = Operazione non IVA", 0),
+                    _ => ("      ", "", 0) // ?
+                };
+            }
+
+            return (chargeItem.ftChargeItemCase & 0xF) switch
+            {
+                0x0 => ("      ", "", 0), // 0 ???
+                0x1 => ("10,00%", "", 10), // 10%
+                0x2 => (" 4,00%", "", 4), // 4%
+                0x3 => ("22,00%", "", 22), // 22%
+                0x4 => (" 5,00%", "", 5), // 5%
+                0x5 => ("      ", "", 0), // ?
+                0x6 => ("      ", "", 0), // ?
+                0x7 => ("      ", "", 0), // ?
+                0x8 => ("      ", "", 0), // ? 
+                _ => ("      ", "", 0) // ?
             };
         }
     }
