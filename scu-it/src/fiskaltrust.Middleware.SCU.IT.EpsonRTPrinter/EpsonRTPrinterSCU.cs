@@ -21,7 +21,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
     private readonly IEpsonFpMateClient _httpClient;
     private readonly EpsonRTPrinterSCUConfiguration _configuration;
     private readonly ErrorInfoFactory _errorCodeFactory = new();
-    private string _serialnr;
+    private string? _serialnr;
 
     public EpsonRTPrinterSCU(ILogger<EpsonRTPrinterSCU> logger, EpsonRTPrinterSCUConfiguration configuration, IEpsonFpMateClient epsonCloudHttpClient)
     {

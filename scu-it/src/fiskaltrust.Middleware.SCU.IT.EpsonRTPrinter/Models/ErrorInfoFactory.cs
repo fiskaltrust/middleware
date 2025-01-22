@@ -65,8 +65,8 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models
             { 42, "TIPO NON VALIDO (DOC di RESO) - Reference document cannot be a refund document. It must a commercial document." },
         };
 
-        public string GetCodeInfo(string code) => _epsonErrorCodes.ContainsKey(code) ? _epsonErrorCodes[code] : string.Empty;
+        public string GetCodeInfo(string code) => _epsonErrorCodes.ContainsKey(code) ? _epsonErrorCodes[code] : code;
 
-        public string GetStatusInfo(int status) => _epsonErrorStatus.ContainsKey(status) ? _epsonErrorStatus[status] : string.Empty;
+        public string GetStatusInfo(int status) => _epsonErrorStatus.ContainsKey(status) ? _epsonErrorStatus[status] : status;
     }
 }
