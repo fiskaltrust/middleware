@@ -67,6 +67,6 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Models
 
         public string GetCodeInfo(string code) => _epsonErrorCodes.ContainsKey(code) ? _epsonErrorCodes[code] : code;
 
-        public string GetStatusInfo(int status) => _epsonErrorStatus.ContainsKey(status) ? _epsonErrorStatus[status] : status;
+        public string GetStatusInfo(int status) => _epsonErrorStatus.ContainsKey(status) ? _epsonErrorStatus[status] : status.ToString();
     }
 }

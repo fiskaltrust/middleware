@@ -272,7 +272,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         try
         {
             var content = EpsonCommandFactory.CreateInvoiceRequestContent(_configuration, receiptRequest);
-            var data = SoapSerializer.Serialize(content);;
+            var data = SoapSerializer.Serialize(content);
             _logger.LogDebug("Request content ({receiptreference}): {content}", receiptRequest.cbReceiptReference, data);
             var response = await _httpClient.SendCommandAsync(data);
             using var responseContent = await response.Content.ReadAsStreamAsync();
