@@ -271,11 +271,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         try
         {
             var content = EpsonCommandFactory.CreateInvoiceRequestContent(_configuration, receiptRequest);
-            var data = SoapSerializer.Serialize(content).Replace("<NotExistingOnEpsonItemMsg>", "").Replace("</NotExistingOnEpsonItemMsg>", "")
-            .Replace("<NotExistingOnEpsonAdjMsg>", "")
-            .Replace("</NotExistingOnEpsonAdjMsg>", "")
-            .Replace("<NotExistingOnEpsonTotalMsg>", "")
-            .Replace("</NotExistingOnEpsonTotalMsg>", "");
+            var data = SoapSerializer.Serialize(content);
             ;
             _logger.LogDebug("Request content ({receiptreference}): {content}", receiptRequest.cbReceiptReference, data);
             var response = await SendRequestAsync(data);
