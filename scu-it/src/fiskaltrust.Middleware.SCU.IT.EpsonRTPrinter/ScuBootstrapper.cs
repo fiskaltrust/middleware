@@ -18,6 +18,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter
 
             _ = serviceCollection
                 .AddSingleton(epsonScuConfig)
+                .AddScoped<IEpsonFpMateClient, LocalEpsonFpMateClient>()
                 .AddScoped<IITSSCD, EpsonRTPrinterSCU>();
         }
     }
