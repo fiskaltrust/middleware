@@ -257,6 +257,20 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
                 RTCustomerID = "", // Todo dread customerid from data           
             };
             receiptResponse.ftSignatures = SignatureFactory.CreateDocumentoCommercialeSignatures(posReceiptSignatur).ToArray();
+
+            if (result?.Receipt?.PrinterStatus != null && !result.Receipt.PrinterStatus.StartsWith("0"))
+            {
+                receiptResponse.AddSignatureItem(
+                        new SignaturItem()
+                        {
+                            Caption = "WARNING",
+                            Data = Helpers.GetPrinterStatus(result?.Receipt?.PrinterStatus),
+                            ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                            ftSignatureType = 0x4954_2000_0000_1000
+                        }
+                    );
+            }
+
             return receiptResponse;
         }
         catch (Exception e)
@@ -299,7 +313,22 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
                 RTCodiceLotteria = "",
                 RTCustomerID = "", // Todo dread customerid from data           
             };
+
             receiptResponse.ftSignatures = SignatureFactory.CreateDocumentoCommercialeSignatures(posReceiptSignatur).ToArray();
+
+            if (result?.Receipt?.PrinterStatus != null && !result.Receipt.PrinterStatus.StartsWith("0"))
+            {
+                receiptResponse.AddSignatureItem(
+                        new SignaturItem()
+                        {
+                            Caption = "WARNING",
+                            Data = Helpers.GetPrinterStatus(result?.Receipt?.PrinterStatus),
+                            ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                            ftSignatureType = 0x4954_2000_0000_1000
+                        }
+                    );
+            }
+
             return receiptResponse;
         }
         catch (Exception e)
@@ -787,6 +816,20 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
                 RTReferenceDocMoment = DateTime.Parse(referenceDateTime)
             };
             request.ReceiptResponse.ftSignatures = SignatureFactory.CreateDocumentoCommercialeSignatures(posReceiptSignatur).ToArray();
+
+            if (result?.Receipt?.PrinterStatus != null && !result.Receipt.PrinterStatus.StartsWith("0"))
+            {
+                request.ReceiptResponse.AddSignatureItem(
+                        new ifPOS.v1.SignaturItem()
+                        {
+                            Caption = "WARNING",
+                            Data = Helpers.GetPrinterStatus(result?.Receipt?.PrinterStatus),
+                            ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.Text,
+                            ftSignatureType = 0x4954_2000_0000_1000
+                        }
+                    );
+            }
+
             return new ProcessResponse
             {
                 ReceiptResponse = request.ReceiptResponse
@@ -857,6 +900,20 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
                 RTReferenceDocMoment = DateTime.Parse(referenceDateTime)
             };
             request.ReceiptResponse.ftSignatures = SignatureFactory.CreateDocumentoCommercialeSignatures(posReceiptSignatur).ToArray();
+
+            if (result?.Receipt?.PrinterStatus != null && !result.Receipt.PrinterStatus.StartsWith("0"))
+            {
+                request.ReceiptResponse.AddSignatureItem(
+                        new ifPOS.v1.SignaturItem()
+                        {
+                            Caption = "WARNING",
+                            Data = Helpers.GetPrinterStatus(result?.Receipt?.PrinterStatus),
+                            ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.Text,
+                            ftSignatureType = 0x4954_2000_0000_1000
+                        }
+                    );
+            }
+
             return new ProcessResponse
             {
                 ReceiptResponse = request.ReceiptResponse
@@ -914,6 +971,20 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
             }
             var zRepNumber = result?.ReportInfo?.ZRepNumber != null ? long.Parse(result.ReportInfo.ZRepNumber) : 0;
             receiptResponse.ftSignatures = SignatureFactory.CreateDailyClosingReceiptSignatures(zRepNumber);
+
+            if (result?.ReportInfo?.PrinterStatus != null && !result.ReportInfo.PrinterStatus.StartsWith("0"))
+            {
+                receiptResponse.AddSignatureItem(
+                        new SignaturItem()
+                        {
+                            Caption = "WARNING",
+                            Data = Helpers.GetPrinterStatus(result?.ReportInfo?.PrinterStatus),
+                            ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                            ftSignatureType = 0x4954_2000_0000_1000
+                        }
+                    );
+            }
+
             return receiptResponse;
         }
         catch (Exception e)
