@@ -103,7 +103,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
                 return await ProcessPerformReprint(request);
             }
 
-            if (receiptCase == (long) ITReceiptCases.ProtocolUnspecified0x3000)
+            if (receiptCase == (long) ITReceiptCases.ProtocolUnspecified0x3000 &&  ((request.ReceiptRequest.ftReceiptCase & 0x0000_0002_0000_0000) != 0))
             {
                 return await ProcessUnspecifiedProtocolReceipt(request);
             }
@@ -124,18 +124,8 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         }
         catch (Exception ex)
         {
-            var signatures = new List<SignaturItem>
-        {
-            new SignaturItem
-            {
-                Caption = "epson-printer-generic-error",
-                Data = $"{ex}",
-                ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                ftSignatureType = 0x4954_2000_0000_3000
-            }
-        };
-            request.ReceiptResponse.ftState |= 0xEEEE_EEEE;
-            return ProcessResponseHelpers.CreateResponse(request.ReceiptResponse, signatures);
+            request.ReceiptResponse.SetReceiptResponseErrored("epson-printer-generic-error", ex.ToString());
+            return Helpers.CreateResponse(request.ReceiptResponse);
         }
     }
 
@@ -260,15 +250,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
 
             if (result?.Receipt?.PrinterStatus != null && !result.Receipt.PrinterStatus.StartsWith("0"))
             {
-                receiptResponse.AddSignatureItem(
-                        new SignaturItem()
-                        {
-                            Caption = "WARNING",
-                            Data = Helpers.GetPrinterStatus(result?.Receipt?.PrinterStatus),
-                            ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                            ftSignatureType = 0x4954_2000_0000_1000
-                        }
-                    );
+                receiptResponse.AddWarningSignatureItem(Helpers.GetPrinterStatus(result?.Receipt?.PrinterStatus) ?? "");
             }
 
             return receiptResponse;
@@ -295,7 +277,6 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
             {
                 _logger.LogDebug("Response content ({receiptreference}): {content}", receiptRequest.cbReceiptReference, SoapSerializer.Serialize(result));
             }
-
             var fiscalReceiptResponse = await SetReceiptResponse(result);
             if (!fiscalReceiptResponse.Success)
             {
@@ -313,22 +294,11 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
                 RTCodiceLotteria = "",
                 RTCustomerID = "", // Todo dread customerid from data           
             };
-
             receiptResponse.ftSignatures = SignatureFactory.CreateDocumentoCommercialeSignatures(posReceiptSignatur).ToArray();
-
             if (result?.Receipt?.PrinterStatus != null && !result.Receipt.PrinterStatus.StartsWith("0"))
             {
-                receiptResponse.AddSignatureItem(
-                        new SignaturItem()
-                        {
-                            Caption = "WARNING",
-                            Data = Helpers.GetPrinterStatus(result?.Receipt?.PrinterStatus),
-                            ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                            ftSignatureType = 0x4954_2000_0000_1000
-                        }
-                    );
+                receiptResponse.AddWarningSignatureItem(Helpers.GetPrinterStatus(result?.Receipt?.PrinterStatus) ?? "");
             }
-
             return receiptResponse;
         }
         catch (Exception e)
@@ -340,302 +310,11 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         }
     }
 
-    private static string GetAmountString(decimal amount, int length)
-    {
-        var amountText = string.Format("{0:0.00}", amount).Replace(".",",");
-        
-        if (amountText.Length < length)
-        {
-            amountText = new string(' ', length-amountText.Length) + amountText;
-        }
-
-        return amountText;
-    }
-
-    private static (List<PrintItem>, List<string>) GetChargeItemLines(ChargeItem chargeItem, string vatText, string vatLegendText)
-    {
-        var resultItems = new List<PrintItem>();
-        var resultVatLegend = new List<string>();
-
-        var isRefundOrVoid = ReceiptCaseHelper.IsVoid(chargeItem) || ReceiptCaseHelper.IsRefund(chargeItem);
-        var quantity = isRefundOrVoid ? -chargeItem.Quantity : chargeItem.Quantity;
-        var amount = isRefundOrVoid ? -chargeItem.Amount : chargeItem.Amount;
-        var description = chargeItem.Description;
-
-        if (quantity == 0)
-        {
-            while (description.Length > 0)
-            {
-                var desc = description.Length <= 46 ? description : description.Substring(0, 46);
-                resultItems.Add(new PrintNormal() { Operator = "1", Data = desc });
-                description = description.Substring(desc.Length);
-            }
-            if (!string.IsNullOrWhiteSpace(chargeItem.ftChargeItemCaseData))
-            {
-                switch (chargeItem.ftChargeItemCase & 0x0000_00F0_0000_0000)
-                {
-                    case 0x0000_0010_0000_0000: //BMP
-                    {
-                        resultItems.Add(new PrintGraphicCoupon() { Operator = "1", GraphicFormat = PrintGraphicCouponGraphicFormat.BMP, Base64Data = chargeItem.ftChargeItemCaseData });
-                        break;
-                    }
-                    case 0x0000_0020_0000_0000: //Raster
-                    {
-                        resultItems.Add(new PrintGraphicCoupon() { Operator = "1", GraphicFormat = PrintGraphicCouponGraphicFormat.Raster, Base64Data = chargeItem.ftChargeItemCaseData });
-                        break;
-                    }
-                }
-            }
-            if (!string.IsNullOrWhiteSpace(chargeItem.ProductBarcode))
-            {
-                switch (chargeItem.ftChargeItemCase & 0x0000_000F_0000_0000)
-                {
-                    case 0x0000_0000_0000_0000: //EAN13
-                    {
-                        if ((chargeItem.ProductBarcode.Length != 13) || 
-                            !chargeItem.ProductBarcode.All(char.IsDigit))
-                        {
-                            throw new Exception("EAN 13 code must be 13 numeric chars length!");
-                        }
-                        resultItems.Add(new PrintBarCode() { Operator = "1", Code = chargeItem.ProductBarcode, CodeType = PrintBarCodeType.EAN13, Height = 128, HRIFont = PrintBarCodeHRIFont.A, HRIPosition = PrintBarCodeHRIPosition.Below, Position = "901", Width = PrintBarCodeWidth.Width3 });
-                        break;
-                    }
-                    case 0x0000_0001_0000_0000: //EAN8
-                    {
-                        if ((chargeItem.ProductBarcode.Length != 8) || 
-                            !chargeItem.ProductBarcode.All(char.IsDigit))
-                        {
-                            throw new Exception("EAN 8 code must be 8 numeric chars length!");
-                        }
-                        resultItems.Add(new PrintBarCode() { Operator = "1", Code = chargeItem.ProductBarcode, CodeType = PrintBarCodeType.EAN8, Height = 128, HRIFont = PrintBarCodeHRIFont.A, HRIPosition = PrintBarCodeHRIPosition.Below, Position = "901", Width = PrintBarCodeWidth.Width3 });
-                        break;
-                    }
-                    case 0x0000_0002_0000_0000: //UPCA
-                    {
-                        if ((chargeItem.ProductBarcode.Length != 12) || 
-                            !chargeItem.ProductBarcode.All(char.IsDigit))
-                        {
-                            throw new Exception("UPC-A code must be 12 numeric chars length!");
-                        }
-                        resultItems.Add(new PrintBarCode() { Operator = "1", Code = chargeItem.ProductBarcode, CodeType = PrintBarCodeType.UPCA, Height = 128, HRIFont = PrintBarCodeHRIFont.A, HRIPosition = PrintBarCodeHRIPosition.Below, Position = "901", Width = PrintBarCodeWidth.Width3 });
-                        break;
-                    }
-                    case 0x0000_0003_0000_0000: //UPCE
-                    {
-                        if ((chargeItem.ProductBarcode.Length != 12) || 
-                            !chargeItem.ProductBarcode.All(char.IsDigit) || 
-                            !chargeItem.ProductBarcode.StartsWith("0"))
-                        {
-                            throw new Exception("UPC-E code must be 12 numeric chars length and start with 0!");
-                        }
-                        resultItems.Add(new PrintBarCode() { Operator = "1", Code = chargeItem.ProductBarcode, CodeType = PrintBarCodeType.UPCE, Height = 128, HRIFont = PrintBarCodeHRIFont.A, HRIPosition = PrintBarCodeHRIPosition.Below, Position = "901", Width = PrintBarCodeWidth.Width3 });
-                        break;
-                    }
-                    case 0x0000_0004_0000_0000: //CODE39
-                    {
-                        if ((chargeItem.ProductBarcode.Length < 1) || 
-                            (chargeItem.ProductBarcode.Length > 34))
-                        {
-                            throw new Exception("CODE39 code must be 1 to 34 chars length!");
-                        }
-                        resultItems.Add(new PrintBarCode() { Operator = "1", Code = chargeItem.ProductBarcode, CodeType = PrintBarCodeType.CODE39, Height = 128, HRIFont = PrintBarCodeHRIFont.A, HRIPosition = PrintBarCodeHRIPosition.Below, Position = "901", Width = PrintBarCodeWidth.Width2 });
-                        break;
-                    }
-                    case 0x0000_0005_0000_0000: //CODE93
-                    {
-                        if ((chargeItem.ProductBarcode.Length < 1) ||
-                            (chargeItem.ProductBarcode.Length > 59))
-                        {
-                            throw new Exception("CODE93 code must be 1 to 59 chars length!");
-                        }
-                        resultItems.Add(new PrintBarCode() { Operator = "1", Code = chargeItem.ProductBarcode, CodeType = PrintBarCodeType.CODE93, Height = 128, HRIFont = PrintBarCodeHRIFont.A, HRIPosition = PrintBarCodeHRIPosition.Below, Position = "901", Width = PrintBarCodeWidth.Width2 });
-                        break;
-                    }
-                    case 0x0000_0006_0000_0000: //CODE128
-                    {
-                        if ((chargeItem.ProductBarcode.Length < 3) ||
-                            (chargeItem.ProductBarcode.Length > 100) || 
-                            (!chargeItem.ProductBarcode.StartsWith("{A") && 
-                            !chargeItem.ProductBarcode.StartsWith("{B") &&
-                            !chargeItem.ProductBarcode.StartsWith("{C")))
-                        {
-                            throw new Exception("CODE128 code must be 3 to 100 chars length and must start with either {A or {B or {C!");
-                        }
-                        resultItems.Add(new PrintBarCode() { Operator = "1", Code = chargeItem.ProductBarcode, CodeType = PrintBarCodeType.CODE128, Height = 128, HRIFont = PrintBarCodeHRIFont.A, HRIPosition = PrintBarCodeHRIPosition.Below, Position = "901", Width = PrintBarCodeWidth.Width2 });
-                        break;
-                    }
-                    case 0x0000_0007_0000_0000: //CODABAR
-                    {
-                        if ((chargeItem.ProductBarcode.Length < 1) ||
-                            (chargeItem.ProductBarcode.Length > 47))
-                        {
-                            throw new Exception("CODABAR code must be 1 to 47 chars length!");
-                        }
-                        resultItems.Add(new PrintBarCode() { Operator = "1", Code = chargeItem.ProductBarcode, CodeType = PrintBarCodeType.CODABAR, Height = 128, HRIFont = PrintBarCodeHRIFont.A, HRIPosition = PrintBarCodeHRIPosition.Below, Position = "901", Width = PrintBarCodeWidth.Width3 });
-                        break;
-                    }
-                    case 0x0000_0008_0000_0000: //ITF
-                    {
-                        if ((chargeItem.ProductBarcode.Length < 2) ||
-                            (chargeItem.ProductBarcode.Length > 62) ||
-                            (chargeItem.ProductBarcode.Length % 2 == 1) ||
-                            !chargeItem.ProductBarcode.All(char.IsDigit))
-                        {
-                            throw new Exception("ITF code must be 2 to 62 numeric chars length!");
-                        }
-                        resultItems.Add(new PrintBarCode() { Operator = "1", Code = chargeItem.ProductBarcode, CodeType = PrintBarCodeType.ITF, Height = 128, HRIFont = PrintBarCodeHRIFont.A, HRIPosition = PrintBarCodeHRIPosition.Below, Position = "901", Width = PrintBarCodeWidth.Width3 });
-                        break;
-                    }
-                    case 0x0000_0009_0000_0000: //QRCODE1
-                    {
-                        resultItems.Add(new PrintBarCode() { Operator = "1", Code = chargeItem.ProductBarcode, CodeType = PrintBarCodeType.QRCODE1, QRCodeAlignment = PrintBarCodeQRCodeAlignment.Centred, QRCodeDataType = PrintBarCodeQRCodeDataType.AlphaNumeric, QRCodeErrorCorrection = 0, QRCodeSize = 4 });
-                        break;
-                    }
-                    case 0x0000_000A_0000_0000: //QRCODE2
-                    {
-                        resultItems.Add(new PrintBarCode() { Operator = "1", Code = chargeItem.ProductBarcode, CodeType = PrintBarCodeType.QRCODE2, QRCodeAlignment = PrintBarCodeQRCodeAlignment.Centred, QRCodeDataType = PrintBarCodeQRCodeDataType.AlphaNumeric, QRCodeErrorCorrection = 2, QRCodeSize = 4 });
-                        break;
-                    }
-                    case 0x0000_000B_0000_0000: //CodeType74
-                    {
-                        if ((chargeItem.ProductBarcode.Length < 2) ||
-                            (chargeItem.ProductBarcode.Length > 96))
-                        {
-                            throw new Exception("74 code must be 2 to 96 chars length!");
-                        }
-                        resultItems.Add(new PrintBarCode() { Operator = "1", Code = chargeItem.ProductBarcode, CodeType = PrintBarCodeType.CodeType74, Height = 128, HRIFont = PrintBarCodeHRIFont.A, HRIPosition = PrintBarCodeHRIPosition.Below, Position = "901", Width = PrintBarCodeWidth.Width3 });
-                        break;
-                    }
-                    case 0x0000_000C_0000_0000: //CodeType75
-                    {
-                        if ((chargeItem.ProductBarcode.Length != 13) ||
-                            !chargeItem.ProductBarcode.All(char.IsDigit))
-                        {
-                            throw new Exception("75 code must be 13 numeric chars length!");
-                        }
-                        resultItems.Add(new PrintBarCode() { Operator = "1", Code = chargeItem.ProductBarcode, CodeType = PrintBarCodeType.CodeType75, Height = 128, HRIFont = PrintBarCodeHRIFont.A, HRIPosition = PrintBarCodeHRIPosition.Below, Position = "901", Width = PrintBarCodeWidth.Width3 });
-                        break;
-                    }
-                    case 0x0000_000D_0000_0000: //CodeType76
-                    {
-                        if ((chargeItem.ProductBarcode.Length != 13) ||
-                            !chargeItem.ProductBarcode.All(char.IsDigit))
-                        {
-                            throw new Exception("76 code must be 13 numeric chars length!");
-                        }
-                        resultItems.Add(new PrintBarCode() { Operator = "1", Code = chargeItem.ProductBarcode, CodeType = PrintBarCodeType.CodeType76, Height = 128, HRIFont = PrintBarCodeHRIFont.A, HRIPosition = PrintBarCodeHRIPosition.Below, Position = "901", Width = PrintBarCodeWidth.Width3 });
-                        break;
-                    }
-                    case 0x0000_000E_0000_0000: //CodeType77
-                    {
-                        if ((chargeItem.ProductBarcode.Length != 13) ||
-                            !chargeItem.ProductBarcode.All(char.IsDigit) ||
-                            (!chargeItem.ProductBarcode.StartsWith("0") &&
-                            !chargeItem.ProductBarcode.StartsWith("1")))
-                        {
-                            throw new Exception("77 code must be 13 numeric chars length and start with 0 or 1!");
-                        }
-                        resultItems.Add(new PrintBarCode() { Operator = "1", Code = chargeItem.ProductBarcode, CodeType = PrintBarCodeType.CodeType77, Height = 128, HRIFont = PrintBarCodeHRIFont.A, HRIPosition = PrintBarCodeHRIPosition.Below, Position = "901", Width = PrintBarCodeWidth.Width3 });
-                        break;
-                    }
-                    case 0x0000_000F_0000_0000: //CodeType78
-                    {
-                        if ((chargeItem.ProductBarcode.Length < 2) ||
-                            (chargeItem.ProductBarcode.Length > 70))
-                        {
-                            throw new Exception("78 code must be 2 to 70 chars length!");
-                        }
-                        resultItems.Add(new PrintBarCode() { Operator = "1", Code = chargeItem.ProductBarcode, CodeType = PrintBarCodeType.CodeType78, Height = 128, HRIFont = PrintBarCodeHRIFont.A, HRIPosition = PrintBarCodeHRIPosition.Below, Position = "901", Width = PrintBarCodeWidth.Width2 });
-                        break;
-                    }
-                }
-            }
-        }
-        else if (quantity > 0)
-        {
-            if (!string.IsNullOrWhiteSpace(vatLegendText) && !resultVatLegend.Contains(vatLegendText))
-            {
-                resultVatLegend.Add(vatLegendText);
-            }
-
-            var amountText = GetAmountString(amount, 13);
-
-            description = description.Length <= 38 ? description : description.Substring(0, 38);
-            if (description.Length <= 25)
-            {
-                var desc = description.Length <= 25 ? description + new string(' ', 25 - description.Length) : description.Substring(0, 25);
-                resultItems.Add(new PrintNormal() { Operator = "1", Data = $"{desc} {vatText} {amountText}" });
-            }
-            else
-            {
-                var desc = description.Length <= 25 ? description + new string(' ', 25 - description.Length) : description.Substring(0, 25);
-                resultItems.Add(new PrintNormal() { Operator = "1", Data = $"{desc}" });
-                desc = description.Substring(25);
-                desc += new string(' ', 25 - desc.Length);
-                resultItems.Add(new PrintNormal() { Operator = "1", Data = $"{desc} {vatText} {amountText}" });
-            }
-            if (quantity > 1)
-            {
-                resultItems.Add(new PrintNormal() { Operator = "1", Data = $"  n.{quantity} * {amount / quantity:0.00}" });
-            }
-        }
-        if (!string.IsNullOrWhiteSpace(chargeItem.ProductBarcode))
-        {
-            //TODO establish the string content
-        }
-
-        return (resultItems, resultVatLegend);
-    }
-
-    private static PrinterNonFiscal PerformUnspecifiedProtocolReceipt(ReceiptRequest request)
-    {
-        var content = new PrinterNonFiscal();
-
-        content.BeginNonFiscal = new BeginNonFiscal() { Operator = "1" };
-        content.EndNonFiscal = new EndNonFiscal() { Operator = "1" };
-        content.PrintItems = new List<PrintItem>();
-
-        var vatLegend = new List<string>();
-
-        var isReceiptLike = request.cbChargeItems.Where(x => x.Amount != 0).Count() > 0 && request.cbPayItems.Where(x => x.Amount != 0).Count() > 0;
-
-        if (isReceiptLike)
-        {
-            content.PrintItems.Add(new PrintNormal() { Operator = "1", Data = $"DESCRIZIONE                 IVA      Prezzo(€)" });
-        }
-
-        var totalCi = 0M;
-        var vat = 0M;
-
-        foreach (var ci in request.cbChargeItems)
-        {
-            var vatValues = EpsonCommandFactory.GetVatInfo(ci);
-
-            var cil = GetChargeItemLines(ci, vatValues.Item1, vatValues.Item2);
-            content.PrintItems.AddRange(cil.Item1);
-            vatLegend.AddRange(cil.Item2);
-            totalCi += ci.Amount;
-            vat += ci.Amount * vatValues.Item3 / 100;
-        }
-
-        if (isReceiptLike)
-        {
-            content.PrintItems.Add(new PrintNormal() { Operator = "1", Data = $"" });
-            content.PrintItems.Add(new PrintNormal() { Operator = "1", Data = $"Subtotale                            {GetAmountString(totalCi, 9)}" });
-            content.PrintItems.Add(new PrintNormal() { Operator = "1", Data = $"" });
-            content.PrintItems.Add(new PrintNormal() { Operator = "1", Data = $"TOTALE COMPLESSIVO                   {GetAmountString(totalCi, 9)}" });
-            content.PrintItems.Add(new PrintNormal() { Operator = "1", Data = $"DI CUI IVA                           {GetAmountString(vat, 9)}" });
-            content.PrintItems.Add(new PrintNormal() { Operator = "1", Data = $"" });
-        }
-
-        return content;
-    }
-
     private async Task<ProcessResponse> ProcessUnspecifiedProtocolReceipt(ProcessRequest request)
     {
         try
         {
-            var content = PerformUnspecifiedProtocolReceipt(request.ReceiptRequest);
+            var content = EpsonCommandFactory.PerformUnspecifiedProtocolReceipt(request.ReceiptRequest);
             var data = SoapSerializer.Serialize(content);
             _logger.LogDebug("Request content ({receiptreference}): {content}", request.ReceiptRequest.cbReceiptReference, SoapSerializer.Serialize(data));
             var response = await _httpClient.SendCommandAsync(data);
@@ -816,20 +495,10 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
                 RTReferenceDocMoment = DateTime.Parse(referenceDateTime)
             };
             request.ReceiptResponse.ftSignatures = SignatureFactory.CreateDocumentoCommercialeSignatures(posReceiptSignatur).ToArray();
-
             if (result?.Receipt?.PrinterStatus != null && !result.Receipt.PrinterStatus.StartsWith("0"))
             {
-                request.ReceiptResponse.AddSignatureItem(
-                        new ifPOS.v1.SignaturItem()
-                        {
-                            Caption = "WARNING",
-                            Data = Helpers.GetPrinterStatus(result?.Receipt?.PrinterStatus),
-                            ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.Text,
-                            ftSignatureType = 0x4954_2000_0000_1000
-                        }
-                    );
+                request.ReceiptResponse.AddWarningSignatureItem(Helpers.GetPrinterStatus(result?.Receipt?.PrinterStatus) ?? "");
             }
-
             return new ProcessResponse
             {
                 ReceiptResponse = request.ReceiptResponse
@@ -903,17 +572,8 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
 
             if (result?.Receipt?.PrinterStatus != null && !result.Receipt.PrinterStatus.StartsWith("0"))
             {
-                request.ReceiptResponse.AddSignatureItem(
-                        new ifPOS.v1.SignaturItem()
-                        {
-                            Caption = "WARNING",
-                            Data = Helpers.GetPrinterStatus(result?.Receipt?.PrinterStatus),
-                            ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.Text,
-                            ftSignatureType = 0x4954_2000_0000_1000
-                        }
-                    );
+                request.ReceiptResponse.AddWarningSignatureItem(Helpers.GetPrinterStatus(result?.Receipt?.PrinterStatus) ?? "");
             }
-
             return new ProcessResponse
             {
                 ReceiptResponse = request.ReceiptResponse
@@ -971,20 +631,10 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
             }
             var zRepNumber = result?.ReportInfo?.ZRepNumber != null ? long.Parse(result.ReportInfo.ZRepNumber) : 0;
             receiptResponse.ftSignatures = SignatureFactory.CreateDailyClosingReceiptSignatures(zRepNumber);
-
             if (result?.ReportInfo?.PrinterStatus != null && !result.ReportInfo.PrinterStatus.StartsWith("0"))
             {
-                receiptResponse.AddSignatureItem(
-                        new SignaturItem()
-                        {
-                            Caption = "WARNING",
-                            Data = Helpers.GetPrinterStatus(result?.ReportInfo?.PrinterStatus),
-                            ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                            ftSignatureType = 0x4954_2000_0000_1000
-                        }
-                    );
+                receiptResponse.AddWarningSignatureItem(Helpers.GetPrinterStatus(result?.ReportInfo?.PrinterStatus) ?? "");
             }
-
             return receiptResponse;
         }
         catch (Exception e)
@@ -1022,36 +672,9 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         return ProcessResponseHelpers.CreateResponse(receiptResponse, stateData, signatures);
     }
 
-    private async Task<HttpResponseMessage> LoginAsync()
-    {
-        var password = (_configuration.Password ?? "").PadRight(100, ' ').PadRight(32, ' ');
-        var data = $"""
-<?xml version="1.0" encoding="utf-8"?>
-<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
-    <s:Body>
-        <printerCommand>
-            <directIO command="4038" data="02{password}" />
-        </printerCommand>
-    </s:Body>
-</s:Envelope>
-""";
-        return await _httpClient.SendCommandAsync(data);
-    }
+    private async Task<HttpResponseMessage> LoginAsync() => await _httpClient.SendCommandAsync(EpsonCommandFactory.LoginCommand(_configuration.Password));
 
-    private async Task<HttpResponseMessage> PerformReprint(string day, string month, string year, long receiptNumber)
-    {
-        var data = $"""
-<?xml version="1.0" encoding="utf-8"?>
-<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
-    <s:Body>
-        <printerCommand>
-            <directIO command="3098" data="01{day}{month}{year}{receiptNumber.ToString().PadLeft(4, '0')}{receiptNumber.ToString().PadLeft(4, '0')}" />
-        </printerCommand>
-    </s:Body>
-</s:Envelope>
-""";
-        return await _httpClient.SendCommandAsync(data);
-    }
+    private async Task<HttpResponseMessage> PerformReprint(string day, string month, string year, long receiptNumber) => await _httpClient.SendCommandAsync(EpsonCommandFactory.ReprintCommand(day, month, year, receiptNumber));
 
     public SSCDErrorInfo GetErrorInfo(string? code, string? status, string? printerStatus)
     {
