@@ -14,11 +14,9 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
 {
     public static class EpsonCommandFactory
     {
-        private static (List<PrintItem>, List<string>) GetChargeItemLines(ChargeItem chargeItem, string vatText, string vatLegendText)
+        private static List<PrintItem> GetChargeItemLines(ChargeItem chargeItem, string vatText, string vatLegendText)
         {
             var resultItems = new List<PrintItem>();
-            var resultVatLegend = new List<string>();
-
             var isRefundOrVoid = ReceiptCaseHelper.IsVoid(chargeItem) || ReceiptCaseHelper.IsRefund(chargeItem);
             var quantity = isRefundOrVoid ? -chargeItem.Quantity : chargeItem.Quantity;
             var amount = isRefundOrVoid ? -chargeItem.Amount : chargeItem.Amount;
@@ -215,11 +213,6 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
             }
             else if (quantity > 0)
             {
-                if (!string.IsNullOrWhiteSpace(vatLegendText) && !resultVatLegend.Contains(vatLegendText))
-                {
-                    resultVatLegend.Add(vatLegendText);
-                }
-
                 var amountText = GetAmountString(amount, 13);
 
                 description = description.Length <= 38 ? description : description.Substring(0, 38);
@@ -246,7 +239,7 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                 //TODO establish the string content
             }
 
-            return (resultItems, resultVatLegend);
+            return resultItems;
         }
 
         public static PrinterNonFiscal PerformUnspecifiedProtocolReceipt(ReceiptRequest request)
@@ -256,39 +249,12 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
             content.BeginNonFiscal = new BeginNonFiscal() { Operator = "1" };
             content.EndNonFiscal = new EndNonFiscal() { Operator = "1" };
             content.PrintItems = new List<PrintItem>();
-
-            var vatLegend = new List<string>();
-
-            var isReceiptLike = request.cbChargeItems.Where(x => x.Amount != 0).Count() > 0 && request.cbPayItems.Where(x => x.Amount != 0).Count() > 0;
-            if (isReceiptLike)
-            {
-                content.PrintItems.Add(new PrintNormal() { Operator = "1", Data = $"DESCRIZIONE                 IVA      Prezzo(€)" });
-            }
-
-            var totalCi = 0M;
-            var vat = 0M;
-
             foreach (var ci in request.cbChargeItems)
             {
                 var vatValues = EpsonCommandFactory.GetVatInfo(ci);
-
                 var cil = GetChargeItemLines(ci, vatValues.Item1, vatValues.Item2);
-                content.PrintItems.AddRange(cil.Item1);
-                vatLegend.AddRange(cil.Item2);
-                totalCi += ci.Amount;
-                vat += ci.Amount * vatValues.Item3 / 100;
+                content.PrintItems.AddRange(cil);
             }
-
-            if (isReceiptLike)
-            {
-                content.PrintItems.Add(new PrintNormal() { Operator = "1", Data = $"" });
-                content.PrintItems.Add(new PrintNormal() { Operator = "1", Data = $"Subtotale                            {GetAmountString(totalCi, 9)}" });
-                content.PrintItems.Add(new PrintNormal() { Operator = "1", Data = $"" });
-                content.PrintItems.Add(new PrintNormal() { Operator = "1", Data = $"TOTALE COMPLESSIVO                   {GetAmountString(totalCi, 9)}" });
-                content.PrintItems.Add(new PrintNormal() { Operator = "1", Data = $"DI CUI IVA                           {GetAmountString(vat, 9)}" });
-                content.PrintItems.Add(new PrintNormal() { Operator = "1", Data = $"" });
-            }
-
             return content;
         }
 
