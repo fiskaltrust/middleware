@@ -72,8 +72,15 @@ namespace fiskaltrust.Middleware.Storage.SQLite.DatabaseInitialization
             foreach (var migrationScript in notAppliedMigrations)
             {
                 _logger.LogDebug($"Updating database with migration script {migrationScript}..");
-                await connection.ExecuteAsync(File.ReadAllText(migrationScript), commandTimeout: _timeoutSec).ConfigureAwait(false);
-                await SetCurrentVersionAsync(connection, Path.GetFileNameWithoutExtension(migrationScript)).ConfigureAwait(false);
+                try
+                {
+                    await connection.ExecuteAsync(File.ReadAllText(migrationScript), commandTimeout: _timeoutSec).ConfigureAwait(false);
+                    await SetCurrentVersionAsync(connection, Path.GetFileNameWithoutExtension(migrationScript)).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex.Message);
+                }
                 _logger.LogDebug($"Applying the migration script was successful. Set current version to {Path.GetFileNameWithoutExtension(migrationScript)}.");
 
                 if (Path.GetFileName(migrationScript) == "012_ftJournalFRCopyPayload.sqlite")
