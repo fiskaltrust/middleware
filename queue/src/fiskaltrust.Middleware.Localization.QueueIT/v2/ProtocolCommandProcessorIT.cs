@@ -54,7 +54,35 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
             return new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>());
         }
 
-        public async Task<ProcessCommandResponse> ProtocolUnspecified0x3000Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+        public async Task<ProcessCommandResponse> ProtocolUnspecified0x3000Async(ProcessCommandRequest request)
+        {
+            if ((request.ReceiptRequest.ftReceiptCase & 0x0000_0002_0000_0000) != 0)
+            {
+                var (queue, queueIT, receiptRequest, receiptResponse, queueItem) = request;
+                try
+                {
+                    var result = await _itSSCDProvider.ProcessReceiptAsync(new ProcessRequest
+                    {
+                        ReceiptRequest = receiptRequest,
+                        ReceiptResponse = receiptResponse
+                    });
+                    if (result.ReceiptResponse.HasFailed())
+                    {
+                        return new ProcessCommandResponse(result.ReceiptResponse, new List<ftActionJournal>());
+                    }
+                    return new ProcessCommandResponse(result.ReceiptResponse, new List<ftActionJournal>());
+                }
+                catch (Exception ex)
+                {
+                    receiptResponse.SetReceiptResponseError(ex.Message);
+                    return new ProcessCommandResponse(receiptResponse, new List<ftActionJournal>());
+                }
+            }
+            else
+            {
+                return await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+            }
+        }
 
         public async Task<ProcessCommandResponse> ProtocolTechnicalEvent0x3001Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
 
