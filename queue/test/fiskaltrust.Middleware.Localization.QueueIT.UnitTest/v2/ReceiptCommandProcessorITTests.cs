@@ -3,19 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.Contracts.Repositories;
-using fiskaltrust.Middleware.Localization.QueueIT.Constants;
-using fiskaltrust.Middleware.Localization.QueueIT.Helpers;
 using fiskaltrust.Middleware.Localization.QueueIT.v2;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
-using Newtonsoft.Json;
 using Xunit;
-
-#pragma warning disable
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest.v2;
 
@@ -26,8 +20,8 @@ public class ReceiptCommandProcessorITTests
     {
         var cbPreviousReceiptReference = Guid.NewGuid().ToString();
 
-        var queueItemRepositoryMock = new Mock<IMiddlewareQueueItemRepository>();
-        queueItemRepositoryMock.Setup(x => x.GetByReceiptReferenceAsync(cbPreviousReceiptReference, null)).Returns(new List<ftQueueItem> { }.ToAsyncEnumerable());
+        var queueItemRepositoryMock = new Mock<IMiddlewareQueueItemRepository>(MockBehavior.Strict);
+        queueItemRepositoryMock.Setup(x => x.GetByReceiptReferenceAsync(cbPreviousReceiptReference, "")).Returns(new List<ftQueueItem> { }.ToAsyncEnumerable());
 
         var itSSCDProvider = Mock.Of<IITSSCDProvider>(MockBehavior.Strict);
         var journalITRepository = Mock.Of<IJournalITRepository>(MockBehavior.Strict);
@@ -35,7 +29,7 @@ public class ReceiptCommandProcessorITTests
 
         var request = new ProcessCommandRequest(new ftQueue(), new ftQueueIT(), new ReceiptRequest
         {
-            ftReceiptCase = (0x4954200000000000 | (long) ReceiptCases.PointOfSaleReceipt0x0001 | 0x0000_0000_0004_0000),
+            ftReceiptCase = 0x4954200000000000 | (long) ReceiptCases.PointOfSaleReceipt0x0001 | 0x0000_0000_0004_0000,
             cbPreviousReceiptReference = cbPreviousReceiptReference
         }, new ReceiptResponse(), new ftQueueItem());
         var processor = new ReceiptCommandProcessorIT(itSSCDProvider, journalITRepository, queueItemRepositoryMock.Object);
@@ -50,8 +44,8 @@ public class ReceiptCommandProcessorITTests
     {
         var cbPreviousReceiptReference = Guid.NewGuid().ToString();
 
-        var queueItemRepositoryMock = new Mock<IMiddlewareQueueItemRepository>();
-        queueItemRepositoryMock.Setup(x => x.GetByReceiptReferenceAsync(cbPreviousReceiptReference, null)).Returns(new List<ftQueueItem> { }.ToAsyncEnumerable());
+        var queueItemRepositoryMock = new Mock<IMiddlewareQueueItemRepository>(MockBehavior.Strict);
+        queueItemRepositoryMock.Setup(x => x.GetByReceiptReferenceAsync(cbPreviousReceiptReference, "")).Returns(new List<ftQueueItem> { }.ToAsyncEnumerable());
 
         var itSSCDProvider = Mock.Of<IITSSCDProvider>(MockBehavior.Strict);
         var journalITRepository = Mock.Of<IJournalITRepository>(MockBehavior.Strict);
@@ -59,7 +53,7 @@ public class ReceiptCommandProcessorITTests
 
         var request = new ProcessCommandRequest(new ftQueue(), new ftQueueIT(), new ReceiptRequest
         {
-            ftReceiptCase = (0x4954200000000000 | (long) ReceiptCases.PointOfSaleReceipt0x0001 | 0x0000_0000_0100_0000),
+            ftReceiptCase = 0x4954200000000000 | (long) ReceiptCases.PointOfSaleReceipt0x0001 | 0x0000_0000_0100_0000,
             cbPreviousReceiptReference = cbPreviousReceiptReference
         }, new ReceiptResponse(), new ftQueueItem());
         var processor = new ReceiptCommandProcessorIT(itSSCDProvider, journalITRepository, queueItemRepositoryMock.Object);
