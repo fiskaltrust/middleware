@@ -81,7 +81,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite.DatabaseInitialization
                 catch (Exception ex)
                 {
                     //Bug Fix #385, Migrationscript 004 is not executed in Launcher
-                    if (!ex.Message.Contains("SQL logic error") && !ex.Message.Contains("duplicate column name: Request"))
+                    if (!migrationScript.Contains("014_FailedFinishTransactionRequest.sqlite3") && !ex.Message.Contains("Request"))
                     {
                         exception = new Exception(ex.Message);
                     }
