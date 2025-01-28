@@ -69,6 +69,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite.DatabaseInitialization
             {
                 _logger.LogInformation($"{notAppliedMigrations.Count()} pending database updates were detected. Updating database now.");
             }
+            Exception exception = null;
             foreach (var migrationScript in notAppliedMigrations)
             {
                 _logger.LogDebug($"Updating database with migration script {migrationScript}..");
@@ -79,7 +80,15 @@ namespace fiskaltrust.Middleware.Storage.SQLite.DatabaseInitialization
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex.Message);
+                    //Bug Fix #385, Migrationscript 004 is not executed in Launcher
+                    if (!ex.Message.Contains("SQL logic error") && !ex.Message.Contains("duplicate column name: Request"))
+                    {
+                        exception = new Exception(ex.Message);
+                    }
+                }
+                if (exception != null)
+                {
+                    throw exception;
                 }
                 _logger.LogDebug($"Applying the migration script was successful. Set current version to {Path.GetFileNameWithoutExtension(migrationScript)}.");
 
