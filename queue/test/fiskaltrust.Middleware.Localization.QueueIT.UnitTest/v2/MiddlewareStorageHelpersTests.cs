@@ -10,6 +10,7 @@ using fiskaltrust.storage.V0;
 using FluentAssertions;
 using Moq;
 using Newtonsoft.Json;
+using Org.BouncyCastle.Asn1.Ocsp;
 using Xunit;
 
 namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest.v2;
@@ -76,12 +77,18 @@ public class MiddlewareStorageHelpersTests
         var request = new ProcessCommandRequest(new ftQueue(), new ftQueueIT(), new ReceiptRequest
         {
             cbPreviousReceiptReference = cbPreviousReceiptReference
-        }, new ReceiptResponse(), new ftQueueItem());
+        }, new ReceiptResponse
+        {
+            ftSignatures = signatures.ToArray()
+        }, new ftQueueItem());
         var result = await MiddlewareStorageHelpers.LoadReceiptReferencesToResponse(queueItemRepositoryMock.Object, request.ReceiptRequest, request.QueueItem, request.ReceiptResponse);
         (result.ftState & 0xFFFF_FFFF).Should().NotBe(0xEEEE_EEEE);
         result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentNumber) && x.Data == documentNumberSignature.Data);
         result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceZNumber) && x.Data == documentZNumber.Data);
         result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentMoment) && x.Data == documentMoment.Data);
+        result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentNumber) && x.Data == documentNumberSignature.Data);
+        result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTZNumber) && x.Data == documentZNumber.Data);
+        result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentMoment) && x.Data == documentMoment.Data);
     }
 
     [Fact]
@@ -130,12 +137,18 @@ public class MiddlewareStorageHelpersTests
         {
             cbTerminalID = "myterminalid",
             cbPreviousReceiptReference = cbPreviousReceiptReference
-        }, new ReceiptResponse(), new ftQueueItem());
+        }, new ReceiptResponse
+        {
+            ftSignatures = signatures.ToArray()
+        }, new ftQueueItem());
         var result = await MiddlewareStorageHelpers.LoadReceiptReferencesToResponse(queueItemRepositoryMock.Object, request.ReceiptRequest, request.QueueItem, request.ReceiptResponse);
         (result.ftState & 0xFFFF_FFFF).Should().NotBe(0xEEEE_EEEE);
         result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentNumber) && x.Data == documentNumberSignature.Data);
         result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceZNumber) && x.Data == documentZNumber.Data);
         result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentMoment) && x.Data == documentMoment.Data);
+        result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentNumber) && x.Data == documentNumberSignature.Data);
+        result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTZNumber) && x.Data == documentZNumber.Data);
+        result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentMoment) && x.Data == documentMoment.Data);
     }
 
     [Fact]
@@ -228,11 +241,17 @@ public class MiddlewareStorageHelpersTests
         {
             cbTerminalID = "myterminalid",
             cbPreviousReceiptReference = cbPreviousReceiptReference
-        }, new ReceiptResponse(), new ftQueueItem());
+        }, new ReceiptResponse
+        {
+            ftSignatures = signatures2.ToArray()
+        }, new ftQueueItem());
         var result = await MiddlewareStorageHelpers.LoadReceiptReferencesToResponse(queueItemRepositoryMock.Object, request.ReceiptRequest, request.QueueItem, request.ReceiptResponse);
         (result.ftState & 0xFFFF_FFFF).Should().NotBe(0xEEEE_EEEE);
         result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentNumber) && x.Data == documentNumberSignature2.Data);
         result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceZNumber) && x.Data == documentZNumber2.Data);
         result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentMoment) && x.Data == documentMoment2.Data);
+        result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentNumber) && x.Data == documentNumberSignature2.Data);
+        result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTZNumber) && x.Data == documentZNumber2.Data);
+        result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentMoment) && x.Data == documentMoment2.Data);
     }
 }

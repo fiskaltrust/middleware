@@ -45,8 +45,6 @@ public class ProtocolCommandProcessorITTests
     public async Task CopyReceiptPrintExistingReceipt0x3010Async_ShouldReturn_ReferenceSignatures_IfLoadedReceipt_ContainsThem()
     {
         var cbPreviousReceiptReference = Guid.NewGuid().ToString();
-
-
         var documentNumberSignature = new SignaturItem
         {
             Caption = "<doc-number>",
@@ -96,7 +94,10 @@ public class ProtocolCommandProcessorITTests
         var request = new ProcessCommandRequest(new ftQueue(), new ftQueueIT(), new ReceiptRequest
         {
             cbPreviousReceiptReference = cbPreviousReceiptReference
-        }, new ReceiptResponse(), new ftQueueItem());
+        }, new ReceiptResponse
+        {
+            ftSignatures = signatures.ToArray()
+        }, new ftQueueItem());
         var processor = new ProtocolCommandProcessorIT(itSSCDProviderMock.Object, journalITRepository, queueItemRepositoryMock.Object, logger);
 
         var result = await processor.CopyReceiptPrintExistingReceipt0x3010Async(request);
@@ -104,6 +105,9 @@ public class ProtocolCommandProcessorITTests
         result.receiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentNumber) && x.Data == documentNumberSignature.Data);
         result.receiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceZNumber) && x.Data == documentZNumber.Data);
         result.receiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentMoment) && x.Data == documentMoment.Data);
+        result.receiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentNumber) && x.Data == documentNumberSignature.Data);
+        result.receiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTZNumber) && x.Data == documentZNumber.Data);
+        result.receiptResponse.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentMoment) && x.Data == documentMoment.Data);
 
     }
 }
