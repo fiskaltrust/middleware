@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.it;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueIT.Constants;
+using fiskaltrust.Middleware.Localization.QueueIT.Extensions;
 using fiskaltrust.Middleware.Localization.QueueIT.Helpers;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
@@ -94,8 +96,13 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
 
         public async Task<ProcessCommandResponse> CopyReceiptPrintExistingReceipt0x3010Async(ProcessCommandRequest request)
         {
-            var (queue, queueIT, receiptRequest, receiptResponse, queueItem) = request;
-            await LoadReceiptReferencesToResponse(receiptRequest, queueItem, receiptResponse);
+            var (queue, queueIt, receiptRequest, receiptResponse, queueItem) = request;
+            receiptResponse = await MiddlewareStorageHelpers.LoadReceiptReferencesToResponse(_queueItemRepository, receiptRequest, queueItem, receiptResponse);
+            if (receiptResponse.HasFailed())
+            {
+                return new ProcessCommandResponse(receiptResponse, new List<ftActionJournal>());
+            }
+  
             try
             {
                 var result = await _itSSCDProvider.ProcessReceiptAsync(new ProcessRequest
@@ -113,47 +120,6 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
             {
                 receiptResponse.SetReceiptResponseError(ex.Message);
                 return new ProcessCommandResponse(receiptResponse, new List<ftActionJournal>());
-            }
-        }
-
-        private async Task LoadReceiptReferencesToResponse(ReceiptRequest request, ftQueueItem queueItem, ReceiptResponse receiptResponse)
-        {
-            var queueItems = _queueItemRepository.GetByReceiptReferenceAsync(request.cbPreviousReceiptReference, request.cbTerminalID);
-            await foreach (var existingQueueItem in queueItems)
-            {
-                var referencedResponse = JsonConvert.DeserializeObject<ReceiptResponse>(existingQueueItem.response);
-                var documentNumber = referencedResponse.GetSignaturItem(SignatureTypesIT.RTDocumentNumber).Data;
-                var zNumber = referencedResponse.GetSignaturItem(SignatureTypesIT.RTZNumber).Data;
-                var documentMoment = referencedResponse.GetSignaturItem(SignatureTypesIT.RTDocumentMoment)?.Data;
-                documentMoment ??= queueItem.cbReceiptMoment.ToString("yyyy-MM-dd");
-                var signatures = new List<SignaturItem>();
-                signatures.AddRange(receiptResponse.ftSignatures);
-                signatures.AddRange(new List<SignaturItem>
-                    {
-                        new SignaturItem
-                        {
-                            Caption = "<reference-z-number>",
-                            Data = zNumber.ToString(),
-                            ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                            ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceZNumber
-                        },
-                        new SignaturItem
-                        {
-                            Caption = "<reference-doc-number>",
-                            Data = documentNumber.ToString(),
-                            ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                            ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentNumber
-                        },
-                        new SignaturItem
-                        {
-                            Caption = "<reference-timestamp>",
-                            Data = documentMoment,
-                            ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                            ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentMoment
-                        },
-                    });
-                receiptResponse.ftSignatures = signatures.ToArray();
-                break;
             }
         }
     }
