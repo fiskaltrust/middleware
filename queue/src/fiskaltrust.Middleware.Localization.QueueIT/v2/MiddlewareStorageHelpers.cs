@@ -28,51 +28,44 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
                 queueItems = queueItems.Where(x => x.cbTerminalID == request.cbTerminalID);
             }
 
+
             await foreach (var existingQueueItem in queueItems)
-            {                 
+            {
                 var referencedResponse = JsonConvert.DeserializeObject<ReceiptResponse>(existingQueueItem.response);
+                if (referencedResponse.GetSignaturItem(SignatureTypesIT.RTDocumentNumber) == null || referencedResponse.GetSignaturItem(SignatureTypesIT.RTZNumber) == null || referencedResponse.GetSignaturItem(SignatureTypesIT.RTDocumentMoment) == null)
+                {
+                    break;
+                }
+                var documentNumber = referencedResponse.GetSignaturItem(SignatureTypesIT.RTDocumentNumber).Data;
+                var zNumber = referencedResponse.GetSignaturItem(SignatureTypesIT.RTZNumber).Data;
+                var documentMoment = referencedResponse.GetSignaturItem(SignatureTypesIT.RTDocumentMoment)?.Data;
+                documentMoment ??= queueItem.cbReceiptMoment.ToString("yyyy-MM-dd");
                 var signatures = new List<SignaturItem>();
                 signatures.AddRange(receiptResponse.ftSignatures);
-                foreach (var signature in referencedResponse.ftSignatures)
-                {
-                    if (signature.ftSignatureFormat != (long) SignaturItem.Formats.Text)
+                signatures.AddRange(new List<SignaturItem>
                     {
-                        continue;
-                    }
-
-                    if (signature.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentNumber))
-                    {
-                        signatures.Add(new SignaturItem
-                        {
-                            Caption = "<reference-doc-number>",
-                            Data = signature.Data.ToString(),
-                            ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                            ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentNumber
-                        });
-                    }
-                    else if (signature.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTZNumber))
-                    {
-                        signatures.Add(new SignaturItem
+                        new SignaturItem
                         {
                             Caption = "<reference-z-number>",
-                            Data = signature.Data.ToString(),
+                            Data = zNumber.ToString(),
                             ftSignatureFormat = (long) SignaturItem.Formats.Text,
                             ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceZNumber
-                        });
-                    }
-                    else if (signature.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentMoment))
-                    {
-                        var documentMoment = signature.Data;
-                        documentMoment ??= queueItem.cbReceiptMoment.ToString("yyyy-MM-dd");
-                        signatures.Add(new SignaturItem
+                        },
+                        new SignaturItem
+                        {
+                            Caption = "<reference-doc-number>",
+                            Data = documentNumber.ToString(),
+                            ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                            ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentNumber
+                        },
+                        new SignaturItem
                         {
                             Caption = "<reference-timestamp>",
                             Data = documentMoment,
                             ftSignatureFormat = (long) SignaturItem.Formats.Text,
                             ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentMoment
-                        });
-                    }
-                }
+                        },
+                    });
                 receiptResponse.ftSignatures = signatures.ToArray();
                 break;
             }
