@@ -24,7 +24,7 @@ public class ProtocolCommandProcessorITTests
         var cbPreviousReceiptReference = Guid.NewGuid().ToString();
 
         var queueItemRepositoryMock = new Mock<IMiddlewareQueueItemRepository>(MockBehavior.Strict);
-        queueItemRepositoryMock.Setup(x => x.GetByReceiptReferenceAsync(cbPreviousReceiptReference, "")).Returns(new List<ftQueueItem> { }.ToAsyncEnumerable());
+        queueItemRepositoryMock.Setup(x => x.GetByReceiptReferenceAsync(cbPreviousReceiptReference, null)).Returns(new List<ftQueueItem> { }.ToAsyncEnumerable());
 
         var itSSCDProvider = Mock.Of<IITSSCDProvider>(MockBehavior.Strict);
         var journalITRepository = Mock.Of<IJournalITRepository>(MockBehavior.Strict);
@@ -75,7 +75,7 @@ public class ProtocolCommandProcessorITTests
         };
 
         var queueItemRepositoryMock = new Mock<IMiddlewareQueueItemRepository>(MockBehavior.Strict);
-        queueItemRepositoryMock.Setup(x => x.GetByReceiptReferenceAsync(cbPreviousReceiptReference, "")).Returns(new List<ftQueueItem> {
+        queueItemRepositoryMock.Setup(x => x.GetByReceiptReferenceAsync(cbPreviousReceiptReference, null)).Returns(new List<ftQueueItem> {
         new ftQueueItem
             {
                 response  = JsonConvert.SerializeObject(new ReceiptResponse

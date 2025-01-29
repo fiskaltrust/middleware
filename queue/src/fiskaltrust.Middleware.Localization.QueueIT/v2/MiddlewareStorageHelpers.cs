@@ -16,15 +16,20 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
     {
         public static async Task<ReceiptResponse> LoadReceiptReferencesToResponse(IMiddlewareQueueItemRepository queueItemRepository, ReceiptRequest request, ftQueueItem queueItem, ReceiptResponse receiptResponse)
         {
-            var queueItems = queueItemRepository.GetByReceiptReferenceAsync(request.cbPreviousReceiptReference, request.cbTerminalID);
+            var queueItems = queueItemRepository.GetByReceiptReferenceAsync(request.cbPreviousReceiptReference, null);
             if (queueItems == null || !await queueItems.AnyAsync())
             {
                 receiptResponse.SetReceiptResponseError($"There is no item available with the given cbPreviousReceiptReference '{request.cbPreviousReceiptReference}'.");
                 return receiptResponse;
             }
 
-            await foreach (var existingQueueItem in queueItems)
+            if (!string.IsNullOrEmpty(request.cbTerminalID) && await queueItems.AnyAsync(x => x.cbTerminalID == request.cbTerminalID))
             {
+                queueItems = queueItems.Where(x => x.cbTerminalID == request.cbTerminalID);
+            }
+
+            await foreach (var existingQueueItem in queueItems)
+            {                 
                 var referencedResponse = JsonConvert.DeserializeObject<ReceiptResponse>(existingQueueItem.response);
                 var signatures = new List<SignaturItem>();
                 signatures.AddRange(receiptResponse.ftSignatures);
