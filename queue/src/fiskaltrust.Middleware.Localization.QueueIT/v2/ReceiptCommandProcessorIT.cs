@@ -61,7 +61,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
             var (queue, queueIt, receiptRequest, receiptResponse, queueItem) = request;
             if (request.ReceiptRequest.IsVoid() || request.ReceiptRequest.IsRefund())
             {
-                receiptResponse = await MiddlewareStorageHelpers.LoadReceiptReferencesToResponse(_queueItemRepository, request.ReceiptRequest, request.QueueItem, request.ReceiptResponse);
+                receiptResponse = await MiddlewareStorageHelpers.LoadReceiptReferencesToResponse(_queueItemRepository, receiptRequest, queueItem, receiptResponse);
                 if (receiptResponse.HasFailed())
                 {
                     return new ProcessCommandResponse(receiptResponse, new List<ftActionJournal>());

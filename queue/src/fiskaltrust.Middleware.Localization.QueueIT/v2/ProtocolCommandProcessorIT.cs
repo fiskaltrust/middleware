@@ -97,7 +97,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
         public async Task<ProcessCommandResponse> CopyReceiptPrintExistingReceipt0x3010Async(ProcessCommandRequest request)
         {
             var (queue, queueIt, receiptRequest, receiptResponse, queueItem) = request;
-            receiptResponse = await MiddlewareStorageHelpers.LoadReceiptReferencesToResponse(_queueItemRepository, request.ReceiptRequest, request.QueueItem, request.ReceiptResponse);
+            receiptResponse = await MiddlewareStorageHelpers.LoadReceiptReferencesToResponse(_queueItemRepository, receiptRequest, queueItem, receiptResponse);
             if (receiptResponse.HasFailed())
             {
                 return new ProcessCommandResponse(receiptResponse, new List<ftActionJournal>());
