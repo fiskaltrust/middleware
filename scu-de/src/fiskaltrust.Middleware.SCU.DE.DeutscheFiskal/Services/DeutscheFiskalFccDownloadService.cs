@@ -31,8 +31,8 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
             _logger = logger;
         }
 
-        public bool IsInstalled(string fccDirectory) => File.Exists(GetCloudConnectorPath(fccDirectory));
-
+        public bool IsInstalled(string fccDirectory) => File.Exists(Path.Combine(fccDirectory, ".fccdata\\install\\fcc-version.dat"));
+        public bool IsDownloaded(string fccDirectory) => File.Exists(GetCloudConnectorPath(fccDirectory));
         public bool IsLatestVersion(string fccDirectory, Version latestVersion)
         {
             using (var archive = ZipFile.OpenRead(GetCloudConnectorPath(fccDirectory)))
