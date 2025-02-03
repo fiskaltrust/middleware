@@ -469,10 +469,10 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             {
                 (true, 0x0007) => (0x4445_0000_0800_0007, "Daily-closing receipt was processed, and a master data update was performed."),
                 (false, 0x0007) => (0x4445_0000_0000_0007, "Daily-closing receipt was processed."),
-                (true, 0x0005) => (0x4445_0000_0800_0007, "Monthly-closing receipt was processed, and a master data update was performed."),
-                (false, 0x0005) => (0x4445_0000_0000_0007, "Monthly-closing receipt was processed."),
-                (true, 0x0006) => (0x4445_0000_0800_0007, "Yearly-closing receipt was processed, and a master data update was performed."),
-                (false, 0x0006) => (0x4445_0000_0000_0007, "Yearly-closing receipt was processed."),
+                (true, 0x0005) => (0x4445_0000_0800_0005, "Monthly-closing receipt was processed, and a master data update was performed."),
+                (false, 0x0005) => (0x4445_0000_0000_0005, "Monthly-closing receipt was processed."),
+                (true, 0x0006) => (0x4445_0000_0800_0006, "Yearly-closing receipt was processed, and a master data update was performed."),
+                (false, 0x0006) => (0x4445_0000_0000_0006, "Yearly-closing receipt was processed."),
                 // Migration receipt executes a daily closing as well
                 (true, 0x0019) => (0x4445_0000_0800_0007, "Daily-closing receipt was processed, and a master data update was performed."),  
                 (false, 0x0019) => (0x4445_0000_0000_0007, "Daily-closing receipt was processed."),
