@@ -72,8 +72,19 @@ namespace fiskaltrust.Middleware.Storage.SQLite.DatabaseInitialization
             foreach (var migrationScript in notAppliedMigrations)
             {
                 _logger.LogDebug($"Updating database with migration script {migrationScript}..");
-                await connection.ExecuteAsync(File.ReadAllText(migrationScript), commandTimeout: _timeoutSec).ConfigureAwait(false);
-                await SetCurrentVersionAsync(connection, Path.GetFileNameWithoutExtension(migrationScript)).ConfigureAwait(false);
+                try
+                {
+                    await connection.ExecuteAsync(File.ReadAllText(migrationScript), commandTimeout: _timeoutSec).ConfigureAwait(false);
+                    await SetCurrentVersionAsync(connection, Path.GetFileNameWithoutExtension(migrationScript)).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    //Bug Fix #385, Migrationscript 004 is not executed in Launcher
+                    if (!migrationScript.Contains("014_FailedFinishTransactionRequest.sqlite3") && !ex.Message.Contains("Request"))
+                    {
+                        throw;
+                    }
+                }
                 _logger.LogDebug($"Applying the migration script was successful. Set current version to {Path.GetFileNameWithoutExtension(migrationScript)}.");
 
                 if (Path.GetFileName(migrationScript) == "012_ftJournalFRCopyPayload.sqlite")
