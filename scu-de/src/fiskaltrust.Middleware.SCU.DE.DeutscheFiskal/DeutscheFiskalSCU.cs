@@ -63,7 +63,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
             }
         }
 
-        private void StartLocalFCC()
+        private async void StartLocalFCC()
         {
             try
             {
@@ -74,11 +74,13 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
 
                 if (!_fccDownloadService.IsInstalled(_fccDirectory))
                 {
-                    if (_fccDownloadService.DownloadFccAsync(_fccDirectory, null).Result)
+                    if (!_fccDownloadService.IsDownloaded(_fccDirectory))
                     {
-                        _fccInitializationService.Initialize(_fccDirectory);
-                        _version = new Version(_configuration.FccVersion);
+                        await _fccDownloadService.DownloadFccAsync(_fccDirectory, null);
                     }
+                    _fccInitializationService.Initialize(_fccDirectory);
+                    _version = new Version(_configuration.FccVersion);
+
                 }
                 else if (!_fccDownloadService.IsLatestVersion(_fccDirectory, new Version(_configuration.FccVersion)))
                 {
