@@ -254,4 +254,100 @@ public class MiddlewareStorageHelpersTests
         result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTZNumber) && x.Data == documentZNumber2.Data);
         result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentMoment) && x.Data == documentMoment2.Data);
     }
+
+    [Fact]
+    public async Task LoadReceiptReferencesToResponse_ShouldReturn_CorrectReceipt_IfLoadedReceipt_ContainsThem_AndUseRightReceipt_AndSkip_FailedReceipts_IfMatchesWithTerminalId()
+    {
+        var cbPreviousReceiptReference = Guid.NewGuid().ToString();
+        var error = new SignaturItem
+        {
+            Caption = "FAILURE",
+            Data = "Failed to process receiptcase 0x4954200008003010. with the following exception message: Object reference not set to an instance of an object.",
+            ftSignatureFormat = (long) SignaturItem.Formats.Text,
+            ftSignatureType = 5283883447184535552
+        };
+        var signatures1 = new List<SignaturItem> {
+            error
+        };
+
+        var documentNumberSignature2 = new SignaturItem
+        {
+            Caption = "<doc-number>",
+            Data = "11111",
+            ftSignatureFormat = (long) SignaturItem.Formats.Text,
+            ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentNumber
+        };
+        var documentZNumber2 = new SignaturItem
+        {
+            Caption = "<z-number>",
+            Data = "434",
+            ftSignatureFormat = (long) SignaturItem.Formats.Text,
+            ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.RTZNumber
+        };
+        var documentMoment2 = new SignaturItem
+        {
+            Caption = "<timestamp>",
+            Data = "2024-01-01",
+            ftSignatureFormat = (long) SignaturItem.Formats.Text,
+            ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentMoment
+        };
+        var signatures2 = new List<SignaturItem> {
+            documentNumberSignature2,
+            documentZNumber2,
+            documentMoment2
+        };
+
+        var queueItemRepositoryMock = new Mock<IMiddlewareQueueItemRepository>(MockBehavior.Strict);
+        queueItemRepositoryMock.Setup(x => x.GetByReceiptReferenceAsync(cbPreviousReceiptReference, null)).Returns(new List<ftQueueItem> 
+        {
+            new ftQueueItem
+            {
+                request = JsonConvert.SerializeObject(new ReceiptRequest
+                {
+                }),
+                response  = JsonConvert.SerializeObject(new ReceiptResponse
+                {
+                    ftSignatures = signatures1.ToArray(),
+                    ftState =  Cases.BASE_STATE |0xEEEE_EEEE
+                })
+            },
+            new ftQueueItem
+            {
+                request = JsonConvert.SerializeObject(new ReceiptRequest
+                {
+                }),
+                response  = JsonConvert.SerializeObject(new ReceiptResponse
+                {
+                    ftSignatures = signatures2.ToArray()
+                })
+            },
+            new ftQueueItem
+            {
+                request = JsonConvert.SerializeObject(new ReceiptRequest
+                {
+                }),
+                response  = JsonConvert.SerializeObject(new ReceiptResponse
+                {
+                    ftSignatures = signatures1.ToArray(),
+                    ftState =  Cases.BASE_STATE |0xEEEE_EEEE
+                })
+            },
+        }.ToAsyncEnumerable());
+
+        var request = new ProcessCommandRequest(new ftQueue(), new ftQueueIT(), new ReceiptRequest
+        {
+            cbPreviousReceiptReference = cbPreviousReceiptReference
+        }, new ReceiptResponse
+        {
+            ftSignatures = signatures2.ToArray()
+        }, new ftQueueItem());
+        var result = await MiddlewareStorageHelpers.LoadReceiptReferencesToResponse(queueItemRepositoryMock.Object, request.ReceiptRequest, request.QueueItem, request.ReceiptResponse);
+        (result.ftState & 0xFFFF_FFFF).Should().NotBe(0xEEEE_EEEE);
+        result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentNumber) && x.Data == documentNumberSignature2.Data);
+        result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceZNumber) && x.Data == documentZNumber2.Data);
+        result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentMoment) && x.Data == documentMoment2.Data);
+        result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentNumber) && x.Data == documentNumberSignature2.Data);
+        result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTZNumber) && x.Data == documentZNumber2.Data);
+        result.ftSignatures.Should().Contain(x => x.ftSignatureType == (Cases.BASE_STATE | (long) SignatureTypesIT.RTDocumentMoment) && x.Data == documentMoment2.Data);
+    }
 }

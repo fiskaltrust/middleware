@@ -30,12 +30,19 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
 
 
             await foreach (var existingQueueItem in queueItems)
-            {
+            {  
                 var referencedResponse = JsonConvert.DeserializeObject<ReceiptResponse>(existingQueueItem.response);
+                if ((referencedResponse.ftState & 0xEEEE_EEEE) == 0xEEEE_EEEE)
+                {
+                    continue;
+                }
                 if (referencedResponse.GetSignaturItem(SignatureTypesIT.RTDocumentNumber) == null || referencedResponse.GetSignaturItem(SignatureTypesIT.RTZNumber) == null || referencedResponse.GetSignaturItem(SignatureTypesIT.RTDocumentMoment) == null)
                 {
                     break;
                 }
+
+
+
                 var documentNumber = referencedResponse.GetSignaturItem(SignatureTypesIT.RTDocumentNumber).Data;
                 var zNumber = referencedResponse.GetSignaturItem(SignatureTypesIT.RTZNumber).Data;
                 var documentMoment = referencedResponse.GetSignaturItem(SignatureTypesIT.RTDocumentMoment)?.Data;
