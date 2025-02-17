@@ -4,13 +4,14 @@ on:
   issue_comment:
     types: [created]
 
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
 jobs:
   slashCommandDispatch:
     runs-on: ubuntu-latest
-    permissions:
-      pull-requests: write
-      issues: write
-      contents: write
     steps:
       - name: Slash Command Dispatch
         uses: peter-evans/slash-command-dispatch@v4
