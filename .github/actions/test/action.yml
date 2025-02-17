@@ -1,0 +1,42 @@
+name: 'Test'
+inputs:
+  directory:
+    required: true
+    type: string
+  pattern:
+    required: true
+    type: string
+  args:
+    default: ''
+    type: string
+  upload:
+    default: true
+    type: boolean
+
+runs:
+  using: "composite"
+  steps:
+    - name: Test
+      shell: pwsh
+      run: |
+        $failed = $false
+
+        Get-ChildItem "${{ inputs.directory }}" -Recurse -Filter "*.${{ inputs.pattern }}.csproj" | ForEach-Object {
+          dotnet test "$_" -l:trx ${{ inputs.args }}
+          if ($LASTEXITCODE -ne 0) {
+            $failed = $true
+          }
+        }
+
+        if ($failed) {
+          Write-Error "One or more tests failed."
+          exit 1
+        }
+
+    - name: Upload test results
+      if: inputs.upload
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.pattern }}-test-results
+        path: '${{ inputs.directory }}/**/*.trx'
+        

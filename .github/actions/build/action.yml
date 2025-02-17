@@ -1,0 +1,26 @@
+name: 'Build'
+inputs:
+  solution:
+    required: true
+    type: string
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: |
+          6.0.x
+          8.0.x
+    
+    - name: Install MinVer
+      run: dotnet tool install --global minver-cli --version 6.0.0
+      shell: pwsh
+
+    - name: Restore
+      run: dotnet restore "${{ inputs.solution }}"
+      shell: pwsh
+      
+    - name: Build
+      run: dotnet build "${{ inputs.solution }}" --no-restore
+      shell: pwsh

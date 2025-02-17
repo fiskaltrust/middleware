@@ -1,0 +1,76 @@
+name: Queue CI
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        type: string
+        required: true
+  workflow_dispatch:
+    inputs:
+      ref:
+        type: string
+        required: true
+  pull_request:
+    paths:
+      - .github/workflows/**
+      - queue/**
+
+jobs:
+  test:
+    name: Test
+    runs-on:  windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }} 
+          fetch-depth: 0
+          filter: tree:0
+
+      - uses: ./.github/actions/build
+        with:
+          solution: queue/fiskaltrust.Middleware.sln
+
+      - name: Unit Tests
+        uses: ./.github/actions/test
+        with:
+          directory: queue/test
+          pattern: "UnitTest"
+          args: '--no-build'
+        env:
+          CONNECTIONSTRING_AZURE_STORAGE_TESTS: ${{ secrets.CONNECTIONSTRING_AZURE_STORAGE_TESTS }}
+          CONNECTIONSTRING_POSTGRESQL_TESTS: ${{ secrets.CONNECTIONSTRING_POSTGRESQL_TESTS }}
+          CONNECTIONSTRING_MYSQL_TESTS: ${{ secrets.CONNECTIONSTRING_MYSQL_TESTS }}
+
+      - name: Unit Tests
+        uses: ./.github/actions/test
+        with:
+          directory: queue/test
+          pattern: "IntegrationTest"
+          args: '--no-build'
+        env:
+          CONNECTIONSTRING_AZURE_STORAGE_TESTS: ${{ secrets.CONNECTIONSTRING_AZURE_STORAGE_TESTS }}
+          CONNECTIONSTRING_POSTGRESQL_TESTS: ${{ secrets.CONNECTIONSTRING_POSTGRESQL_TESTS }}
+          CONNECTIONSTRING_MYSQL_TESTS: ${{ secrets.CONNECTIONSTRING_MYSQL_TESTS }}
+
+  publish-test-results:
+    name: Publish Tests Results
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      checks: write
+      pull-requests: write
+    if: always()
+
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          check_name: Queue Test Results
+          files: "artifacts/**/*.trx"

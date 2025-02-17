@@ -1,0 +1,45 @@
+name: Queue Package
+
+on:
+  workflow_call:
+    inputs:
+      package:
+        type: string
+        required: true
+      ref:
+        type: string
+        required: true
+
+jobs:
+  test:
+    name: Package
+    runs-on:  windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          filter: tree:0
+          ref: ${{ inputs.ref }}
+
+      - uses: ./.github/actions/build
+        with:
+          solution: queue/fiskaltrust.Middleware.sln
+
+      - uses: ./.github/actions/sign
+        with:
+          path: queue
+
+      - name: Publish SQLite binaries for manual NuGet packing
+        if: inputs.package == 'fiskaltrust.Middleware.Queue.SQLite'
+        working-directory: 'queue/src/fiskaltrust.Middleware.Queue.SQLite'
+        run: |
+          dotnet publish --configuration Release --no-restore -f net461
+          dotnet publish --configuration Release --no-restore -f netstandard2.0
+          dotnet publish --configuration Release --no-restore -f netstandard2.1
+
+      - uses: ./.github/actions/package
+        with:
+          path: queue
+          project: ${{ inputs.package }}
+      

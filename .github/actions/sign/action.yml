@@ -1,0 +1,29 @@
+name: 'Sign'
+inputs:
+  path:
+    required: true
+    type: string
+
+runs:
+  using: "composite"
+  steps:
+    - name: Filter files for codesigning
+      id: filter_files_for_codesigning
+      run: |
+        $files = Get-ChildItem -Path "${{ inputs.path }}" -Filter "fiskaltrust.*.dll" -Recurse | Select-Object -ExpandProperty FullName
+        
+        # Multiline outputs required a unique delimiter
+        $EOF = -join (1..15 | ForEach {[char]((48..57)+(65..90)+(97..122) | Get-Random)})
+        "FILTERED_FILES<<$EOF" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+        foreach ($file in $files) {
+          $file | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+        }
+        "$EOF" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+  
+    - name: Sign binaries
+      uses: dlemstra/code-sign-action@v1
+      with:
+        certificate: '${{ secrets.SIGNING_CERTIFICATE }}'
+        password: '${{ secrets.SIGNING_CERT_PASSWORD }}'
+        files: |-
+          ${{ steps.filter_files_for_codesigning.outputs.FILTERED_FILES }}
