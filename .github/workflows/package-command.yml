@@ -4,19 +4,7 @@ on:
     types: [package-command]
 
 jobs:
-  start:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Add reaction
-        uses: peter-evans/create-or-update-comment@v4
-        if: success()
-        with:
-          repository: ${{ github.event.client_payload.github.payload.repository.full_name }}
-          comment-id: ${{ github.event.client_payload.github.payload.comment.id }}
-          reactions: eyes
-
   queue:
-    needs: start
     if: github.event.client_payload.slash_command.args.unnamed.arg1 == 'queue'
     uses: ./.github/workflows/queue-package.yml
     with:
