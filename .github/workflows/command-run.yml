@@ -1,19 +1,30 @@
-name: Package Command
+name: Run Command
 on:
   repository_dispatch:
-    types: [package-command]
+    types: [run-command]
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
 
 jobs:
-  queue:
-    if: github.event.client_payload.slash_command.args.unnamed.arg1 == 'queue'
-    uses: ./.github/workflows/queue-package.yml
+  queue-acceptance-tests:
+    if: github.event.client_payload.slash_command.args.unnamed.arg1 == 'queue' && github.event.client_payload.slash_command.args.unnamed.arg2 == 'acceptance-tests'
+    uses: ./.github/workflows/queue-acceptance-tests.yml
     with:
-      package: queue/src/fiskaltrust.Middleware.Queue.${{ github.event.client_payload.slash_command.args.unnamed.arg2 }}
       ref: ${{ github.event.client_payload.pull_request.head.ref }}
 
+  queue-build:
+    if: github.event.client_payload.slash_command.args.unnamed.arg1 == 'queue' && github.event.client_payload.slash_command.args.unnamed.arg2 == 'ci'
+    uses: ./.github/workflows/queue-build.yml
+    with:
+      ref: ${{ github.event.client_payload.pull_request.head.ref }}
+  
   finish:
     needs:
-      - queue
+      - queue-acceptance-tests
+      - queue-build
     runs-on: ubuntu-latest
     steps:
       - name: Add reaction
