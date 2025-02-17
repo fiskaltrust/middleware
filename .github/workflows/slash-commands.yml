@@ -17,6 +17,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           issue-type: pull-request
+          permission: write
           commands: |
             run
             package
