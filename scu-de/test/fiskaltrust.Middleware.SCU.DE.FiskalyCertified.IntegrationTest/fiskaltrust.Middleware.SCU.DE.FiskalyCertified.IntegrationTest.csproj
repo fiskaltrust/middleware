@@ -2,7 +2,6 @@
 
 	<PropertyGroup>
 		<TargetFrameworks>net461;net6</TargetFrameworks>
-		<IsPackable>false</IsPackable>
 		<LangVersion>8.0</LangVersion>
 	</PropertyGroup>
 

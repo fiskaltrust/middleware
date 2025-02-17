@@ -4,6 +4,7 @@
         <Description>The fiskaltrust Middleware implementation of an in-memory demo SCU for Montenegro. Not intended for production usage.</Description>
         <TargetFrameworks>netstandard2.0;net461;net6</TargetFrameworks>
         <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);CopyProjectReferencesToPackage</TargetsForTfmSpecificBuildOutput>
+        <MinVerTagPrefix>scu-me/inmemory/v</MinVerTagPrefix>
     </PropertyGroup>
 
     <ItemGroup>
@@ -17,6 +18,10 @@
         <PackageReference Include="System.ServiceModel.NetTcp" Version="4.4.*" />
         <PackageReference Include="System.ServiceModel.Security" Version="4.4.*" />
         <PackageReference Include="Bogus" Version="34.0.2" />
+        <PackageReference Include="MinVer" Version="6.0.0">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+        </PackageReference>
     </ItemGroup>
 
     <Target DependsOnTargets="ResolveReferences" Name="CopyProjectReferencesToPackage">
