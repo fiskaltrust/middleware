@@ -4,6 +4,7 @@
         <Description>The fiskaltrust Middleware implementation for a InMemory Demo TSE..</Description>
         <TargetFrameworks>netstandard2.0;net461;net6</TargetFrameworks>
         <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);CopyProjectReferencesToPackage</TargetsForTfmSpecificBuildOutput>
+        <MinVerTagPrefix>scu-de/inmemory/v</MinVerTagPrefix>
     </PropertyGroup>
 
     <ItemGroup>
@@ -14,6 +15,10 @@
         <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
         <PackageReference Include="sharpcompress" Version="0.24.0" />
         <PackageReference Include="System.Formats.Asn1" Version="5.0.0" />
+        <PackageReference Include="MinVer" Version="6.0.0">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+        </PackageReference>
     </ItemGroup>
 
     <Target DependsOnTargets="ResolveReferences" Name="CopyProjectReferencesToPackage">
