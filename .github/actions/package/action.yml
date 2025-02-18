@@ -10,9 +10,19 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - name: Install MinVer
+      run: dotnet tool install --global minver-cli --version 6.0.0
+      shell: pwsh
+
     - name: Publish v1 Nuget packages
       shell: pwsh
       run: dotnet pack "${{ inputs.path }}/${{ inputs.project }}/${{ inputs.project }}.csproj" --no-restore --configuration Release --output ./publish/package-v1-${{ inputs.project }}
+
+    - name: Upload v1 Package
+      uses: actions/upload-artifact@v4
+      with:
+        name: package-v1-${{ inputs.project }}
+        path: ./publish/package-v1-${{ inputs.project }}
 
     - name: Publish v2 zip packages
       shell: pwsh
@@ -30,21 +40,25 @@ runs:
           }
         }
 
-        dotnet publish $csprojFile --configuration Release -f net6 --output ./publish/raw/packages-v2/${{ inputs.project }} --no-build /p:DebugType=None /p:DebugSymbols=false
-        Compress-Archive -Path ./publish/raw/packages-v2/${{ inputs.project }}/* -DestinationPath ./publish/packages-v2-${{ inputs.project }}/$version.zip
+        Write-Host "Version: $version"
+        if($version -eq "") {
+          Write-Error "Version not found"
+          exit 1
+        }
+
+        dotnet publish $csprojFile --configuration Release -f net6 --output ./publish/raw/packages-v2-${{ inputs.project }} --no-build /p:DebugType=None /p:DebugSymbols=false
+        ls ./publish/raw/packages-v2-${{ inputs.project }}
+
+        Compress-Archive -Path ./publish/raw/packages-v2-${{ inputs.project }}/* -DestinationPath ./publish/packages-v2-${{ inputs.project }}/$version.zip
+        ls ./publish/packages-v2-${{ inputs.project }}
 
         $hash = Get-FileHash ./publish/packages-v2-${{ inputs.project }}/$version.zip -Algorithm SHA256
         $hashbytes = $hash.Hash -split '([A-F0-9]{2})' | foreach-object { if ($_) {[System.Convert]::ToByte($_,16)}}
         $hashstring = [System.Convert]::ToBase64String($hashbytes)
         $hashstring | Set-Content ./publish/packages-v2-${{ inputs.project }}/$version.zip.hash
+        ls ./publish/packages-v2-${{ inputs.project }}
 
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: package-v1-${{ inputs.project }}
-        path: ./publish/package-v1-${{ inputs.project }}
-
-    - name: Upload build artifacts
+    - name: Upload v2 Package
       uses: actions/upload-artifact@v4
       with:
         name: package-v2-${{ inputs.project }}

@@ -12,10 +12,6 @@ runs:
         dotnet-version: |
           6.0.x
           8.0.x
-    
-    - name: Install MinVer
-      run: dotnet tool install --global minver-cli --version 6.0.0
-      shell: pwsh
 
     - name: Restore
       run: dotnet restore "${{ inputs.solution }}"
