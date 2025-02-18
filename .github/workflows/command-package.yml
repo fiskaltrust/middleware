@@ -3,6 +3,10 @@ on:
   repository_dispatch:
     types: [package-command]
 
+permissions:
+  pull-requests: write
+  checks: write
+
 jobs:
   queue:
     if: github.event.client_payload.slash_command.args.unnamed.arg1 == 'queue'
