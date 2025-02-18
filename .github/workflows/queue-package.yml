@@ -1,6 +1,11 @@
 name: Queue Package
 
 on:
+  workflow_dispatch:
+    inputs:
+      package:
+        type: string
+        required: true
   workflow_call:
     inputs:
       package:
