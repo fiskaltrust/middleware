@@ -9,9 +9,6 @@ inputs:
   args:
     default: ''
     type: string
-  upload:
-    default: true
-    type: boolean
 
 runs:
   using: "composite"
@@ -41,7 +38,7 @@ runs:
         }
 
     - name: Upload test results
-      if: inputs.upload
+      if: always()
       uses: actions/upload-artifact@v4
       with:
         name: ${{ inputs.pattern }}-test-results
