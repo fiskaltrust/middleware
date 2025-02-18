@@ -4,8 +4,15 @@ on:
   workflow_dispatch:
     inputs:
       package:
-        type: string
+        type: choice
         required: true
+        options:
+          - AzureTableStorage
+          - EF
+          - InMemory
+          - MySQL
+          - PostgreSQL
+          - SQLite
   workflow_call:
     inputs:
       package:
