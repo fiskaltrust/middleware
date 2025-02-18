@@ -7,6 +7,9 @@ on:
       ref:
         type: string
         required: true
+  pull_request:
+    branches:
+      - main
 
 jobs:
   acceptance-test:
@@ -30,7 +33,7 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
 
-      - name: AzureTableStorage Acceptance Tests
+      - name: ${{ matrix.project }} Acceptance Tests
         uses: ./.github/actions/test
         with:
           directory: queue/test

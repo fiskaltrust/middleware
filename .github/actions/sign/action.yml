@@ -9,6 +9,7 @@ runs:
   steps:
     - name: Filter files for codesigning
       id: filter_files_for_codesigning
+      shell: pwsh
       run: |
         $files = Get-ChildItem -Path "${{ inputs.path }}" -Filter "fiskaltrust.*.dll" -Recurse | Select-Object -ExpandProperty FullName
         
