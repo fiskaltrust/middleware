@@ -3,6 +3,12 @@ inputs:
   path:
     required: true
     type: string
+  certificate:
+    required: true
+    type: string
+  password:
+    required: true
+    type: string
 
 runs:
   using: "composite"
@@ -24,7 +30,7 @@ runs:
     - name: Sign binaries
       uses: dlemstra/code-sign-action@v1
       with:
-        certificate: '${{ secrets.SIGNING_CERTIFICATE }}'
-        password: '${{ secrets.SIGNING_CERT_PASSWORD }}'
+        certificate: '${{ inputs.certificate }}'
+        password: '${{ inputs.password }}'
         files: |-
           ${{ steps.filter_files_for_codesigning.outputs.FILTERED_FILES }}

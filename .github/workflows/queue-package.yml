@@ -29,6 +29,8 @@ jobs:
       - uses: ./.github/actions/sign
         with:
           path: queue
+          certificate: '${{ secrets.SIGNING_CERTIFICATE }}'
+          password: '${{ secrets.SIGNING_CERT_PASSWORD }}'
 
       - name: Publish SQLite binaries for manual NuGet packing
         if: inputs.package == 'fiskaltrust.Middleware.Queue.SQLite'
