@@ -14,7 +14,7 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
     public class IPOSTests
     {
         private readonly string _host = "localhost";
-        private readonly int _port = 10042;
+        private readonly int _port = 20044;
 
         public Server StartHost(IPOS posInstance)
         {
@@ -27,7 +27,7 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
             return server;
         }
 
-        public IPOS GetClient() 
+        public IPOS GetClient()
         {
             var channel = new Channel(_host, _port, ChannelCredentials.Insecure);
             return channel.CreateGrpcService<IPOS>();
