@@ -2,11 +2,6 @@ name: Queue Acceptance Tests
 
 on:
   workflow_dispatch:
-    inputs:
-      ref:
-        type: string
-        default: main
-
   workflow_call:
     inputs:
       ref:

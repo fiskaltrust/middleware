@@ -20,12 +20,19 @@ runs:
       shell: pwsh
       run: |
         $failed = $false
+        $any = $false
 
         Get-ChildItem "${{ inputs.directory }}" -Recurse -Filter "*.${{ inputs.pattern }}.csproj" | ForEach-Object {
+          $any = $true
           dotnet test "$_" -l:trx ${{ inputs.args }}
           if ($LASTEXITCODE -ne 0) {
             $failed = $true
           }
+        }
+
+        if (!$any) {
+          Write-Error "No test projects found."
+          exit 1
         }
 
         if ($failed) {
