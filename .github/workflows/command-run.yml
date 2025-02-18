@@ -25,6 +25,7 @@ jobs:
       - queue-acceptance-tests
       - queue-build
     runs-on: ubuntu-latest
+    if: always()
     steps:
       - name: Add reaction
         uses: peter-evans/create-or-update-comment@v4
