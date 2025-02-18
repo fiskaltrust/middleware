@@ -12,7 +12,7 @@ runs:
   steps:
     - name: Publish v1 Nuget packages
       shell: pwsh
-      run: dotnet pack "${{ inputs.path }}/${{ inputs.project }}" --no-restore --configuration Release --output ./publish/package-v1-${{ inputs.project }}
+      run: dotnet pack "${{ inputs.path }}/${{ inputs.project }}/${{ inputs.project }}.csproj" --no-restore --configuration Release --output ./publish/package-v1-${{ inputs.project }}
 
     - name: Publish v2 zip packages
       shell: pwsh

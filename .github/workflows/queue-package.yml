@@ -7,12 +7,12 @@ on:
         type: choice
         required: true
         options:
-          - AzureTableStorage
-          - EF
-          - InMemory
-          - MySQL
-          - PostgreSQL
-          - SQLite
+          - fiskaltrust.Middleware.Queue.AzureTableStorage
+          - fiskaltrust.Middleware.Queue.EF
+          - fiskaltrust.Middleware.Queue.InMemory
+          - fiskaltrust.Middleware.Queue.MySQL
+          - fiskaltrust.Middleware.Queue.PostgreSQL
+          - fiskaltrust.Middleware.Queue.SQLite
   workflow_call:
     inputs:
       package:
@@ -40,7 +40,7 @@ jobs:
 
       - uses: ./.github/actions/sign
         with:
-          path: queue
+          path: queue/src
           certificate: '${{ secrets.SIGNING_CERTIFICATE }}'
           password: '${{ secrets.SIGNING_CERT_PASSWORD }}'
 
@@ -54,6 +54,6 @@ jobs:
 
       - uses: ./.github/actions/package
         with:
-          path: queue
+          path: queue/src
           project: ${{ inputs.package }}
       

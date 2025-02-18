@@ -9,7 +9,7 @@ jobs:
     uses: ./.github/workflows/queue-package.yml
     secrets: inherit
     with:
-      package: queue/src/fiskaltrust.Middleware.Queue.${{ github.event.client_payload.slash_command.args.unnamed.arg2 }}
+      package: fiskaltrust.Middleware.Queue.${{ github.event.client_payload.slash_command.args.unnamed.arg2 }}
       ref: ${{ github.event.client_payload.pull_request.head.ref }}
 
   success:
