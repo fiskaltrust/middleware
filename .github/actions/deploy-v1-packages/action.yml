@@ -10,16 +10,28 @@ inputs:
   storageAccountName:
     required: true
     type: string
-  sas:
+  tenantId:
+    required: true
+    type: string
+  subscriptionId:
+    required: true
+    type: string
+  clientId:
     required: true
     type: string
 
 runs:
   using: "composite"
   steps:
+    - name: Azure login
+      uses: azure/login@v2
+      with:
+        client-id: ${{ inputs.clientId }}
+        tenant-id: ${{ inputs.tenantId }}
+        subscription-id: ${{ inputs.subscriptionId }}
     - name: Azure CLI script
       uses: azure/cli@v2
       with:
         azcliversion: latest
         inlineScript: |
-          az storage blob upload-batch --account-name ${{ inputs.storageAccountName }} --sas-token "${{ inputs.sas }}" -d "packages" -s "${{ inputs.directory }}" --pattern "${{ inputs.package }}.*.nupkg"
+          az storage blob upload-batch --account-name ${{ inputs.storageAccountName }} -d "packages" -s "${{ inputs.directory }}" --pattern "${{ inputs.package }}.*.nupkg"

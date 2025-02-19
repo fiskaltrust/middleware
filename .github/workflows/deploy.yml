@@ -11,27 +11,6 @@ on:
         required: true
 
 jobs:
-  nuget:
-    name: Deploy Nuget Feed
-    runs-on: windows-latest
-    needs: []
-    environment: ${{ inputs.environment }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Download v1 Package
-        uses: actions/download-artifact@v4
-        with:
-          name: package-v1-${{ inputs.package }}
-          path: artifacts/package-v1-${{ inputs.package }}
-      
-      - name: Deploy to Nuget Feed
-        uses: ./.github/actions/deploy-nuget
-        with:
-          feed: ${{ vars.NUGET_FEED_URL }}
-          directory: artifacts/package-v1-${{ inputs.package }}
-          pat: ${{ secrets.NUGET_FEED_API_KEY }}
-
   packages-v1:
     name: Deploy v1 Packages
     runs-on: ubuntu-latest
@@ -52,7 +31,9 @@ jobs:
           directory: artifacts/package-v1-${{ inputs.package }}
           package: ${{ inputs.package }}
           storageAccountName: ${{ vars.PACKAGES_V1_STORAGE_ACCOUNT_NAME }}
-          sas: ${{ secrets.PACKAGES_V1_STORAGE_ACCOUNT_SAS }}
+          clientId: ${{ secrets.AZURE_CLIENT_ID }}
+          tenantId: ${{ secrets.AZURE_TENANT_ID }}
+          subscriptionId: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
   packages-v2:
     name: Deploy v2 Package
@@ -74,4 +55,6 @@ jobs:
           directory: artifacts/package-v2-${{ inputs.package }}
           package: ${{ inputs.package }}
           storageAccountName: ${{ vars.PACKAGES_V2_STORAGE_ACCOUNT_NAME }}
-          sas: ${{ secrets.PACKAGES_V2_STORAGE_ACCOUNT_SAS }}
+          clientId: ${{ secrets.AZURE_CLIENT_ID }}
+          tenantId: ${{ secrets.AZURE_TENANT_ID }}
+          subscriptionId: ${{ secrets.AZURE_SUBSCRIPTION_ID }}

@@ -16,6 +16,4 @@ runs:
   steps:
     - name:
       shell: pwsh
-      run: dotnet nuget push "${{ inputs.directory }}/*.nuget" -s "${{ inputs.feed }}" -k az
-      env:
-        VSS_NUGET_EXTERNAL_FEED_ENDPOINTS: '{"endpointCredentials": [{"endpoint":"${{ inputs.feed }}", "password":"${{ inputs.pat }}"}]'
+      run: dotnet nuget push "${{ inputs.directory }}/*.nuget" -s "${{ inputs.feed }}" -k ${{ inputs.pat }}
