@@ -1,0 +1,53 @@
+name: 'Queue Release'
+on:
+  push:
+    tags:
+      - queue/*
+
+jobs:
+  test:
+    needs: []
+    uses: ./.github/workflows/queue-build.yml
+    secrets: inherit
+  
+  meta:
+    needs: []
+    runs-on: ubuntu-latest
+    outputs:
+      package: ${{ steps.meta.outputs.package }}
+    steps:
+      - id: meta
+        shell: pwsh
+        run: |
+          if(!${{ github.ref }} -match "queue/([^/]*)/v(.*)") {
+            throw "Invalid tag format"
+          }
+          $package = switch($matches[1]) {
+            "azuretablestorage" { "AzureTableStorage" }
+            "ef" { "EF" }
+            "inmemory" { "InMemory" }
+            "mysql" { "MySQL" }
+            "postgresql" { "PostgreSQL" }
+            "sqlite" { "SQLite" }
+          }
+          Write-Output "package=fiskaltrust.Middleware.Queue.$package" >> "$GITHUB_OUTPUT"
+
+  package:
+    needs: [meta]
+    uses: ./.github/workflows/queue-package.yml
+    with:
+      package: ${{ needs.meta.outputs.package }}
+
+  sandbox:
+    needs: [meta, package]
+    uses: ./.github/workflows/deploy.yml
+    with:
+      package: ${{ needs.meta.outputs.package }}
+      environment: sandbox
+
+  production:
+    needs: [meta, package, sandbox]
+    uses: ./.github/workflows/deploy.yml
+    with:
+      package: ${{ needs.meta.outputs.package }}
+      environment: production
