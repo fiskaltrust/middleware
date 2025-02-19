@@ -49,6 +49,8 @@ namespace fiskaltrust.Middleware.Localization.QueueAT
             AddStateFlagIfNewMonthOrYearStarted(request, response, queueAT);
             var requestCommandResponse = await PerformReceiptRequest(request, queueItem, queue, queueAT, response).ConfigureAwait(false);
 
+            additionalActionJournals.AddRange(ProcessSSCDFailedReceipt(queueItem, response, null, queue, queueAT));
+
             if (requestCommandResponse.JournalAT != null)
             {
                 await _journalATRepository.InsertAsync(requestCommandResponse.JournalAT);
