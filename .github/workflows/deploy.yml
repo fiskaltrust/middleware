@@ -11,9 +11,31 @@ on:
         required: true
 
 jobs:
-  sandbox:
-    name: Deploy
+  nuget:
+    name: Deploy Nuget Feed
     runs-on: windows-latest
+    needs: []
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download v1 Package
+        uses: actions/download-artifact@v4
+        with:
+          name: package-v1-${{ inputs.package }}
+          path: artifacts
+      
+      - name: Deploy to Nuget Feed
+        uses: ./.github/actions/deploy-nuget
+        with:
+          feed: ${{ vars.NUGET_FEED_URL }}
+          path: artifacts/package-v1-${{ inputs.package }}
+          apiKey: ${{ secrets.NUGET_FEED_API_KEY }}
+
+  packages-v1:
+    name: Deploy v1 Packages
+    runs-on: windows-latest
+    needs: []
     environment: ${{ inputs.environment }}
     steps:
       - uses: actions/checkout@v4
@@ -24,19 +46,6 @@ jobs:
           name: package-v1-${{ inputs.package }}
           path: artifacts
 
-      - name: Download v2 Package
-        uses: actions/download-artifact@v4
-        with:
-          name: package-v2-${{ inputs.package }}
-          path: artifacts
-      
-      - name: Deploy to Nuget Feed
-        uses: ./.github/actions/deploy-nuget
-        with:
-          feed: ${{ vars.NUGET_FEED_URL }}
-          path: artifacts/package-v1-${{ inputs.package }}
-          apiKey: ${{ secrets.NUGET_FEED_API_KEY }}
-
       - name: Deploy to Portal Storage
         uses: ./.github/actions/deploy-storage
         with:
@@ -44,6 +53,20 @@ jobs:
           package: ${{ inputs.package }}
           storageAccountName: ${{ vars.PACKAGES_V1_STORAGE_ACCOUNT_NAME }}
           sas: ${{ secrets.PACKAGES_V1_STORAGE_ACCOUNT_SAS }}
+
+  packages-v2:
+    name: Deploy v2 Package
+    runs-on: windows-latest
+    needs: []
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download v2 Package
+        uses: actions/download-artifact@v4
+        with:
+          name: package-v2-${{ inputs.package }}
+          path: artifacts
 
       - name: Deploy to Packages v2
         uses: ./.github/actions/deploy-zip
