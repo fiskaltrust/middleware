@@ -22,6 +22,6 @@ runs:
       with:
         azcliversion: latest
         inlineScript: |
-          az storage blob upload-batch --account-name ${{ inputs.storageAccountName }} -d "packages" -s "${{ inputs.directory }}" --pattern "${{ inputs.package }}.*.nupkg"
+          az storage blob upload-batch --account-name ${{ inputs.storageAccountName }} --sas-token -d "packages" -s "${{ inputs.directory }}" --pattern "${{ inputs.package }}.*.nupkg"
       env:
         AZURE_STORAGE_SAS_TOKEN: ${{ inputs.sas }}

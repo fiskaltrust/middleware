@@ -30,7 +30,7 @@ jobs:
         with:
           feed: ${{ vars.NUGET_FEED_URL }}
           directory: artifacts/package-v1-${{ inputs.package }}
-          apiKey: ${{ secrets.NUGET_FEED_API_KEY }}
+          pat: ${{ secrets.NUGET_FEED_API_KEY }}
 
   packages-v1:
     name: Deploy v1 Packages

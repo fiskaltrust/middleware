@@ -7,7 +7,7 @@ inputs:
   feed:
     required: true
     type: string
-  apiKey:
+  pat:
     required: true
     type: string
 
@@ -16,4 +16,6 @@ runs:
   steps:
     - name:
       shell: pwsh
-      run: dotnet nuget push "${{ inputs.directory }}/*.nuget" -k "${{ inputs.apiKey }}" -s "${{ inputs.feed }}"
+      run: dotnet nuget push "${{ inputs.directory }}/*.nuget" -p "${{ inputs.pat }}" -s "${{ inputs.feed }}" -k az
+      env:
+        VSS_NUGET_EXTERNAL_FEED_ENDPOINTS: '{"endpointCredentials": [{"endpoint":"${{ inputs.feed }}", "password":"${{ inputs.pat }}"}]'
