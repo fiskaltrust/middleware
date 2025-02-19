@@ -1,7 +1,7 @@
 name: 'Deploy Nuget'
 
 inputs:
-  path:
+  directory:
     required: true
     type: string
   feed:
@@ -16,4 +16,4 @@ runs:
   steps:
     - name:
       shell: pwsh
-      run: dotnet nuget push "${{ inputs.path }}/*.nuget" -k "${{ inputs.apiKey }}" -s "${{ inputs.feed }}"
+      run: dotnet nuget push "${{ inputs.directory }}/*.nuget" -k "${{ inputs.apiKey }}" -s "${{ inputs.feed }}"

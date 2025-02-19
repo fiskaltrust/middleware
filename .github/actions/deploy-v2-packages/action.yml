@@ -22,6 +22,6 @@ runs:
       with:
         azcliversion: latest
         inlineScript: |
-          az storage blob upload-batch --account-name ${{ inputs.storageAccountName }} --auth-mode key -d "packages" --destination-path "undefined/${{ inputs.package }}/" -s "${{ inputs.directory }}" --pattern "*.zip*"
+          az storage blob upload-batch --account-name ${{ inputs.storageAccountName }} -d "packages" --destination-path "undefined/${{ inputs.package }}/" -s "${{ inputs.directory }}" --pattern "*.zip*"
       env:
         AZURE_STORAGE_SAS_TOKEN: ${{ inputs.sas }}

@@ -23,13 +23,13 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: package-v1-${{ inputs.package }}
-          path: artifacts
+          path: artifacts/package-v1-${{ inputs.package }}
       
       - name: Deploy to Nuget Feed
         uses: ./.github/actions/deploy-nuget
         with:
           feed: ${{ vars.NUGET_FEED_URL }}
-          path: artifacts/package-v1-${{ inputs.package }}
+          directory: artifacts/package-v1-${{ inputs.package }}
           apiKey: ${{ secrets.NUGET_FEED_API_KEY }}
 
   packages-v1:
@@ -44,12 +44,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: package-v1-${{ inputs.package }}
-          path: artifacts
+          path: artifacts/package-v1-${{ inputs.package }}
 
       - name: Deploy to v1 Packages
         uses: ./.github/actions/deploy-v1-packages
         with:
-          directory: artifacts/package-v2-${{ inputs.package }}
+          directory: artifacts/package-v1-${{ inputs.package }}
           package: ${{ inputs.package }}
           storageAccountName: ${{ vars.PACKAGES_V1_STORAGE_ACCOUNT_NAME }}
           sas: ${{ secrets.PACKAGES_V1_STORAGE_ACCOUNT_SAS }}
@@ -66,12 +66,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: package-v2-${{ inputs.package }}
-          path: artifacts
+          path: artifacts/package-v2-${{ inputs.package }}
 
       - name: Deploy to v2 Packages
         uses: ./.github/actions/deploy-v2-packages
         with:
           directory: artifacts/package-v2-${{ inputs.package }}
           package: ${{ inputs.package }}
-          storageAccountName: ${{ secrets.PACKAGES_V2_STORAGE_ACCOUNT_NAME }}
+          storageAccountName: ${{ vars.PACKAGES_V2_STORAGE_ACCOUNT_NAME }}
           sas: ${{ secrets.PACKAGES_V2_STORAGE_ACCOUNT_SAS }}
