@@ -1,4 +1,4 @@
-name: 'Deploy v1 Storage'
+name: 'Deploy v1 Packages'
 
 inputs:
   directory:

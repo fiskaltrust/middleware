@@ -34,7 +34,7 @@ jobs:
 
   packages-v1:
     name: Deploy v1 Packages
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     needs: []
     environment: ${{ inputs.environment }}
     steps:
@@ -46,8 +46,8 @@ jobs:
           name: package-v1-${{ inputs.package }}
           path: artifacts
 
-      - name: Deploy to Portal Storage
-        uses: ./.github/actions/deploy-storage
+      - name: Deploy to v1 Packages
+        uses: ./.github/actions/deploy-v1-packages
         with:
           directory: artifacts/package-v2-${{ inputs.package }}
           package: ${{ inputs.package }}
@@ -56,7 +56,7 @@ jobs:
 
   packages-v2:
     name: Deploy v2 Package
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     needs: []
     environment: ${{ inputs.environment }}
     steps:
@@ -68,8 +68,8 @@ jobs:
           name: package-v2-${{ inputs.package }}
           path: artifacts
 
-      - name: Deploy to Packages v2
-        uses: ./.github/actions/deploy-zip
+      - name: Deploy to v2 Packages
+        uses: ./.github/actions/deploy-v2-packages
         with:
           directory: artifacts/package-v2-${{ inputs.package }}
           package: ${{ inputs.package }}

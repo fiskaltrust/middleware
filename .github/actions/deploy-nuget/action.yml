@@ -16,4 +16,4 @@ runs:
   steps:
     - name:
       shell: pwsh
-      run: dotnet nuget push "${{ inputs.path }}" -k ${{ inputs.key }} -s ${{ inputs.feed }}
+      run: dotnet nuget push "${{ inputs.path }}" -k ${{ inputs.apiKey }} -s ${{ inputs.feed }}
