@@ -1,0 +1,19 @@
+name: 'Deploy Nuget'
+
+inputs:
+  path:
+    required: true
+    type: string
+  feed:
+    required: true
+    type: string
+  apiKey:
+    required: true
+    type: string
+
+runs:
+  using: "composite"
+  steps:
+    - name:
+      shell: pwsh
+      run: dotnet nuget push "${{ inputs.path }}" -k ${{ inputs.key }} -s ${{ inputs.feed }}

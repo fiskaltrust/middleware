@@ -1,14 +1,14 @@
 name: Package Command
 on:
   repository_dispatch:
-    types: [package-command]
+    types: [package-command, deploy-command]
 
 permissions:
   pull-requests: write
   checks: write
 
 jobs:
-  queue:
+  queue-package:
     if: github.event.client_payload.slash_command.args.unnamed.arg1 == 'queue'
     uses: ./.github/workflows/queue-package.yml
     secrets: inherit
@@ -16,9 +16,18 @@ jobs:
       package: fiskaltrust.Middleware.Queue.${{ github.event.client_payload.slash_command.args.unnamed.arg2 }}
       ref: ${{ github.event.client_payload.pull_request.head.ref }}
 
+  queue-deploy:
+    if: success() && github.event.client_payload.slash_command.command == 'deploy'
+    needs: [queue-package]
+    uses: ./.github/workflows/deploy.yml
+    with:
+      package: fiskaltrust.Middleware.Queue.${{ github.event.client_payload.slash_command.args.unnamed.arg2 }}
+      environment: sandbox
+
   success:
     needs:
-      - queue
+      - queue-package
+      - queue-deploy
     runs-on: ubuntu-latest
     if: success()
     steps:
@@ -31,7 +40,8 @@ jobs:
 
   failure:
     needs:
-      - queue
+      - queue-package
+      - queue-deploy
     runs-on: ubuntu-latest
     if: failure()
     steps:

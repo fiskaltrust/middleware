@@ -1,0 +1,52 @@
+name: Deploy
+
+on:
+  workflow_call:
+    inputs:
+      package:
+        type: string
+        required: true
+      environment:
+        type: string
+        required: true
+
+jobs:
+  sandbox:
+    name: Deploy
+    runs-on: windows-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Download v1 Package
+        uses: actions/download-artifact@v4
+        with:
+          name: package-v1-${{ inputs.package }}
+          path: artifacts/package-v1
+
+      - name: Download v2 Package
+        uses: actions/download-artifact@v4
+        with:
+          name: package-v2-${{ inputs.package }}
+          path: artifacts/package-v2
+      
+      - name: Deploy to Nuget Feed
+        uses: ./.github/actions/deploy-nuget
+        with:
+          feed: ${{ vars.NUGET_FEED_URL }}
+          path: artifacts/package-v1
+          apiKey: ${{ secrets.NUGET_FEED_API_KEY }}
+
+      - name: Deploy to Portal Storage
+        uses: ./.github/actions/deploy-storage
+        with:
+          directory: artifacts/package-v2
+          package: ${{ inputs.package }}
+          storageAccountName: ${{ vars.PACKAGES_V1_STORAGE_ACCOUNT_NAME }}
+          sas: ${{ secrets.PACKAGES_V1_STORAGE_ACCOUNT_SAS }}
+
+      - name: Deploy to Packages v2
+        uses: ./.github/actions/deploy-zip
+        with:
+          directory: artifacts/package-v2
+          package: ${{ inputs.package }}
+          storageAccountName: ${{ secrets.PACKAGES_V2_STORAGE_ACCOUNT_NAME }}
+          sas: ${{ secrets.PACKAGES_V2_STORAGE_ACCOUNT_SAS }}

@@ -23,3 +23,4 @@ jobs:
           commands: |
             run
             package
+            deploy

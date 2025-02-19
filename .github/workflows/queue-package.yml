@@ -23,7 +23,7 @@ on:
         required: true
 
 jobs:
-  test:
+  package:
     name: Package
     runs-on:  windows-latest
 
@@ -56,4 +56,3 @@ jobs:
         with:
           path: queue/src
           project: ${{ inputs.package }}
-      
