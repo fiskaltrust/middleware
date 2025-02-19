@@ -17,16 +17,11 @@ inputs:
 runs:
   using: "composite"
   steps:
-    # - name: Azure Login
-    #   uses: azure/login@v2
-    #   with:
-    #     creds: ${{ inputs.azureCredentials }}
-
     - name: Azure CLI script
       uses: azure/cli@v2
       with:
         azcliversion: latest
         inlineScript: |
-          az storage blob upload-batch --account-name ${{ inputs.storageAccountName }} -d "packages" -s "${{ inputs.directory }}" --pattern "${{ package }}.*.nupkg"
+          az storage blob upload-batch --account-name ${{ inputs.storageAccountName }} -d "packages" -s "${{ inputs.directory }}" --pattern "${{ inputs.package }}.*.nupkg"
       env:
         AZURE_STORAGE_SAS_TOKEN: ${{ inputs.sas }}

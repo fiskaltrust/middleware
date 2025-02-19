@@ -1,4 +1,4 @@
-name: 'Deploy v1 Storage'
+name: 'Deploy v2 Storage'
 
 inputs:
   directory:
@@ -17,16 +17,11 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Azure Login
-      uses: azure/login@v2
-      with:
-        creds: ${{ inputs.azureCredentials }}
-
     - name: Azure CLI script
       uses: azure/cli@v2
       with:
         azcliversion: latest
         inlineScript: |
-          az storage blob upload-batch --account-name ${{ inputs.storageAccountName }} --auth-mode key -d "packages" --destination-path "undefined/${{ package }}/" -s "${{ inputs.directory }}" --pattern "*.zip*"
+          az storage blob upload-batch --account-name ${{ inputs.storageAccountName }} --auth-mode key -d "packages" --destination-path "undefined/${{ inputs.package }}/" -s "${{ inputs.directory }}" --pattern "*.zip*"
       env:
         AZURE_STORAGE_SAS_TOKEN: ${{ inputs.sas }}

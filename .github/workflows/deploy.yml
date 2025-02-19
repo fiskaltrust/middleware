@@ -16,29 +16,31 @@ jobs:
     runs-on: windows-latest
     environment: ${{ inputs.environment }}
     steps:
+      - uses: actions/checkout@v4
+
       - name: Download v1 Package
         uses: actions/download-artifact@v4
         with:
           name: package-v1-${{ inputs.package }}
-          path: artifacts/package-v1
+          path: artifacts
 
       - name: Download v2 Package
         uses: actions/download-artifact@v4
         with:
           name: package-v2-${{ inputs.package }}
-          path: artifacts/package-v2
+          path: artifacts
       
       - name: Deploy to Nuget Feed
         uses: ./.github/actions/deploy-nuget
         with:
           feed: ${{ vars.NUGET_FEED_URL }}
-          path: artifacts/package-v1
+          path: artifacts/package-v1-${{ inputs.package }}
           apiKey: ${{ secrets.NUGET_FEED_API_KEY }}
 
       - name: Deploy to Portal Storage
         uses: ./.github/actions/deploy-storage
         with:
-          directory: artifacts/package-v2
+          directory: artifacts/package-v2-${{ inputs.package }}
           package: ${{ inputs.package }}
           storageAccountName: ${{ vars.PACKAGES_V1_STORAGE_ACCOUNT_NAME }}
           sas: ${{ secrets.PACKAGES_V1_STORAGE_ACCOUNT_SAS }}
@@ -46,7 +48,7 @@ jobs:
       - name: Deploy to Packages v2
         uses: ./.github/actions/deploy-zip
         with:
-          directory: artifacts/package-v2
+          directory: artifacts/package-v2-${{ inputs.package }}
           package: ${{ inputs.package }}
           storageAccountName: ${{ secrets.PACKAGES_V2_STORAGE_ACCOUNT_NAME }}
           sas: ${{ secrets.PACKAGES_V2_STORAGE_ACCOUNT_SAS }}
