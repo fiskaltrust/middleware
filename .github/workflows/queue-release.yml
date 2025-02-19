@@ -5,11 +5,15 @@ on:
       - queue/*
 
 jobs:
-  test:
+  tests:
     needs: []
     uses: ./.github/workflows/queue-build.yml
     secrets: inherit
   
+  acceptance-tests:
+    needs: [tests]
+    uses: ./.github/workflows/queue-acceptance-tests.yml
+
   meta:
     needs: []
     runs-on: ubuntu-latest
@@ -33,7 +37,7 @@ jobs:
           Write-Output "package=fiskaltrust.Middleware.Queue.$package" >> "$GITHUB_OUTPUT"
 
   package:
-    needs: [meta]
+    needs: [meta, tests, acceptance-tests]
     uses: ./.github/workflows/queue-package.yml
     with:
       package: ${{ needs.meta.outputs.package }}

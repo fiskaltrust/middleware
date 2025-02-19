@@ -6,7 +6,7 @@ on:
     inputs:
       ref:
         type: string
-        required: true
+        required: false
   push:
     branches:
       - main
