@@ -4,6 +4,10 @@ on:
     tags:
       - queue/*
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   tests:
     needs: []

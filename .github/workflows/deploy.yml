@@ -10,6 +10,10 @@ on:
         type: string
         required: true
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   packages-v1:
     name: Deploy v1 Packages
