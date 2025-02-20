@@ -31,7 +31,7 @@ jobs:
       - queue-package
       - queue-deploy
     runs-on: ubuntu-latest
-    if: success('queue-package')
+    if: !failure() && success('queue-package')
     steps:
       - name: Add reaction
         uses: peter-evans/create-or-update-comment@v4
