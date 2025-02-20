@@ -48,6 +48,7 @@ jobs:
 
   sandbox:
     needs: [meta, package]
+    secrets: inherit
     permissions:
       id-token: write
       contents: read
@@ -58,6 +59,7 @@ jobs:
 
   production:
     needs: [meta, package, sandbox]
+    secrets: inherit
     permissions:
       id-token: write
       contents: read

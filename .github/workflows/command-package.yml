@@ -19,6 +19,7 @@ jobs:
   queue-deploy:
     if: success() && github.event.client_payload.slash_command.command == 'deploy'
     needs: [queue-package]
+    secrets: inherit
     permissions:
       id-token: write
       contents: read
