@@ -4,7 +4,10 @@ on:
   workflow_dispatch:
   workflow_call:
     inputs:
-      ref:
+      commit:
+        type: string
+        required: false
+      only:
         type: string
         required: false
   push:
@@ -30,10 +33,12 @@ jobs:
           - fiskaltrust.Middleware.Queue.AcceptanceTest
     steps:
       - uses: actions/checkout@v4
+        if: inputs.only == '' || inputs.only == matrix.project
         with:
-          ref: ${{ inputs.ref }}
+          ref: ${{ inputs.commit }}
 
       - name: ${{ matrix.project }} Acceptance Tests
+        if: inputs.only == '' || inputs.only == matrix.project
         uses: ./.github/actions/test
         with:
           directory: queue/test
@@ -63,4 +68,6 @@ jobs:
         uses: EnricoMi/publish-unit-test-result-action@v2
         with:
           check_name: Acceptance Test Results
+          comment_mode: always
           files: "artifacts/**/*.trx"
+          commit: ${{ inputs.commit }}

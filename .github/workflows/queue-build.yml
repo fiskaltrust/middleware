@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   workflow_call:
     inputs:
-      ref:
+      commit:
         type: string
         required: false
   pull_request:
@@ -20,7 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref }} 
+          ref: ${{ inputs.commit }} 
           fetch-depth: 0
           filter: tree:0
 
