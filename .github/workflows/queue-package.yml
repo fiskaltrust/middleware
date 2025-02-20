@@ -13,6 +13,10 @@ on:
           - fiskaltrust.Middleware.Queue.MySQL
           - fiskaltrust.Middleware.Queue.PostgreSQL
           - fiskaltrust.Middleware.Queue.SQLite
+      deploy:
+        type: boolean
+        default: false
+
   workflow_call:
     inputs:
       package:
@@ -56,3 +60,14 @@ jobs:
         with:
           path: queue/src
           project: ${{ inputs.package }}
+  
+  deploy:
+    needs: [package]
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/deploy.yml
+    with:
+      package: ${{ inputs.package }}
+      environment: sandbox
