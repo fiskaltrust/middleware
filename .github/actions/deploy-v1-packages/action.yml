@@ -39,4 +39,4 @@ runs:
       with:
         azcliversion: latest
         inlineScript: |
-          az storage blob upload-batch --account-name ${{ inputs.storageAccountName }} -d "packages" -s "${{ inputs.directory }}" --pattern "${{ inputs.package }}.*.nupkg"
+          az storage blob upload-batch --account-name ${{ inputs.storageAccountName }}  --auth-mode key -d "packages" -s "${{ inputs.directory }}" --pattern "${{ inputs.package }}.*.nupkg"

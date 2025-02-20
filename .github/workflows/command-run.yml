@@ -51,6 +51,5 @@ jobs:
           comment-id: ${{ github.event.client_payload.github.payload.comment.id }}
           reactions: confused
           reactions-edit-mode: replace
-          append-separator: space
           body: |
             [![](https://badgen.net/static/${{ github.event.client_payload.slash_command.command }}%20${{ github.run_id }}/failed/red)](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
