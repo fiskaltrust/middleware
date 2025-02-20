@@ -1,5 +1,9 @@
 name: 'Deploy v2 Packages'
 
+permissions:
+  id-token: write
+  contents: read
+
 inputs:
   directory:
     required: true

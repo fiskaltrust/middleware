@@ -6,8 +6,6 @@ on:
 permissions:
   pull-requests: write
   checks: write
-  id-token: write
-  contents: read
 
 jobs:
   queue-package:
@@ -21,6 +19,9 @@ jobs:
   queue-deploy:
     if: success() && github.event.client_payload.slash_command.command == 'deploy'
     needs: [queue-package]
+    permissions:
+      id-token: write
+      contents: read
     uses: ./.github/workflows/deploy.yml
     with:
       package: fiskaltrust.Middleware.Queue.${{ github.event.client_payload.slash_command.args.unnamed.arg2 }}

@@ -1,4 +1,5 @@
 name: 'Test'
+
 inputs:
   directory:
     required: true
