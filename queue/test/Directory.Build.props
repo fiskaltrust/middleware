@@ -20,7 +20,7 @@
         </PackageReference>
     </ItemGroup>
 
-    <ItemGroup>
+    <ItemGroup Condition="'$(PropsReferences)' != 'False'">
         <ProjectReference Include="..\..\..\interface\src\fiskaltrust.ifPOS\fiskaltrust.interface.csproj" >
             <NoWarn>NU1605</NoWarn>
             <NoWarn>NU5104</NoWarn>
