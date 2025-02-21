@@ -62,7 +62,6 @@ jobs:
           project: ${{ inputs.package }}
   
   deploy:
-    if: inputs.deploy
     needs: [package]
     secrets: inherit
     permissions:

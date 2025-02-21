@@ -2,6 +2,7 @@
 
     <PropertyGroup>
         <TargetFrameworks>net461;net6</TargetFrameworks>
+        <IsPackable>false</IsPackable>
         <LangVersion>latest</LangVersion>
         <DebugType>Full</DebugType>
         <DebugSymbols>true</DebugSymbols>

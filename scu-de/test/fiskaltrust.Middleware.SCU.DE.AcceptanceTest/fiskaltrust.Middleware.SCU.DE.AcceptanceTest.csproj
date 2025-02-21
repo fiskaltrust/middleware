@@ -3,6 +3,7 @@
 	<PropertyGroup>
 		<TargetFrameworks>net6;net461</TargetFrameworks>
 
+		<IsPackable>false</IsPackable>
 	</PropertyGroup>
 
 	<ItemGroup>

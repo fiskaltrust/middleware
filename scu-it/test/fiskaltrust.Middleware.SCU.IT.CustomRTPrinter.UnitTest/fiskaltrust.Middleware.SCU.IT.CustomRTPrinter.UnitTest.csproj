@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <TargetFrameworks>net6</TargetFrameworks>
+    <IsPackable>false</IsPackable>
       <LangVersion>Latest</LangVersion>
   </PropertyGroup>
 
