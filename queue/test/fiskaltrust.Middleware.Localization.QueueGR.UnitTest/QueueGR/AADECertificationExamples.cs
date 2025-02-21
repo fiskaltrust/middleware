@@ -541,7 +541,7 @@ public static class AADECertificationExamples
                 new ChargeItem
                 {
                     Position = 1,
-                    Amount = 100,
+                    Amount = 4,
                     VATRate = 0,
                     VATAmount = 0,
                     ftChargeItemCase = (ChargeItemCase) 0x4752_2000_0000_0018,
@@ -553,7 +553,7 @@ public static class AADECertificationExamples
             [
                 new PayItem
                 {
-                    Amount = 100,
+                    Amount = 4,
                     Quantity = 1,
                     Description = "Μετρητά",
                     ftPayItemCase = (PayItemCase) 0x4752_2000_0000_0001,
