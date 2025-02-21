@@ -127,13 +127,7 @@
         <Content Include="bin\Release\netstandard2.0\publish\**\*.dll" Pack="true" PackagePath="lib\netstandard2.0" />
     
         <Content Include="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Contracts.dll" Pack="true" PackagePath="lib\netstandard2.1" />
-        <Content Include="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Localization.QueueDE.dll" Pack="true" PackagePath="lib\netstandard2.1" />
-        <Content Include="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Localization.QueueDEFAULT.dll" Pack="true" PackagePath="lib\netstandard2.1" />
-        <Content Include="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Localization.QueueME.dll" Pack="true" PackagePath="lib\netstandard2.1" />
-        <Content Include="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Localization.QueueAT.dll" Pack="true" PackagePath="lib\netstandard2.1" />
-        <Content Include="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Localization.QueueFR.dll" Pack="true" PackagePath="lib\netstandard2.1" />
-        <Content Include="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Localization.QueueIT.dll" Pack="true" PackagePath="lib\netstandard2.1" />
-        <Content Include="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Localization.QueueES.dll" Pack="true" PackagePath="lib\netstandard2.1" />
+        <Content Include="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Localization.*.dll" Pack="true" PackagePath="lib\netstandard2.1" />
         <Content Include="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Queue.dll" Pack="true" PackagePath="lib\netstandard2.1" />
         <Content Include="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Queue.SQLite.dll" Pack="true" PackagePath="lib\netstandard2.1" />
         <Content Include="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.QueueSynchronizer.dll" Pack="true" PackagePath="lib\netstandard2.1" />
