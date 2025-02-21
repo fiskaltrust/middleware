@@ -7,14 +7,14 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="fiskaltrust.interface" Version="1.3.55-rc2">
+        <ProjectReference Include="..\..\..\interface\src\fiskaltrust.ifPOS\fiskaltrust.interface.csproj" >
             <NoWarn>NU1605</NoWarn>
             <NoWarn>NU5104</NoWarn>
-        </PackageReference>
-        <PackageReference Include="fiskaltrust.storage" Version="1.3.66">
+        </ProjectReference>
+        <ProjectReference Include="..\..\..\storage\src\fiskaltrust.storage\fiskaltrust.storage.csproj" >
             <NoWarn>NU1605</NoWarn>
             <NoWarn>NU5104</NoWarn>
-        </PackageReference>
+        </ProjectReference>
     </ItemGroup>
  
 </Project>
