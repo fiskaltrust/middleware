@@ -10,5 +10,6 @@
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
         <Deterministic>true</Deterministic>
         <LangVersion>11.0</LangVersion>
-    </PropertyGroup>    
+        <MinVerDefaultPreReleaseIdentifiers>ci</MinVerDefaultPreReleaseIdentifiers>
+    </PropertyGroup>
 </Project>
