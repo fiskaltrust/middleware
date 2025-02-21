@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net461;net6.0</TargetFrameworks>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <LangVersion>8.0</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\fiskaltrust.Middleware.Interface.Client.Common\fiskaltrust.Middleware.Interface.Client.Common.csproj" />
+    <ProjectReference Include="..\..\src\fiskaltrust.Middleware.Interface.Client.Grpc\fiskaltrust.Middleware.Interface.Client.Grpc.csproj" />
+    <ProjectReference Include="..\..\src\fiskaltrust.Middleware.Interface.Client.Http\fiskaltrust.Middleware.Interface.Client.Http.csproj" />
+    <ProjectReference Include="..\..\src\fiskaltrust.Middleware.Interface.Client.Soap\fiskaltrust.Middleware.Interface.Client.Soap.csproj" />
+    <ProjectReference Include="..\fiskaltrust.Middleware.Interface.Tests.Helpers\fiskaltrust.Middleware.Interface.Tests.Helpers.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net461'">
+    <DefineConstants>WCF</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.7.2" />
+    <PackageReference Include="NUnit" Version="3.10.1" />
+    <PackageReference Include="NUnit3TestAdapter" Version="3.10.0" />
+    <PackageReference Include="NunitXml.TestLogger" Version="2.1.41" />
+    <PackageReference Include="FluentAssertions" Version="5.6.0" />
+    <PackageReference Include="Grpc.Core" Version="2.28.1" />
+    <PackageReference Include="protobuf-net.Grpc.Native" Version="1.0.37" />
+    <PackageReference Include="System.Interactive.Async" Version="4.0.0" />
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="5.0.0" />
+    <PackageReference Include="System.Linq.Async" Version="4.0.0" />    
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net461'">
+    <Reference Include="System.ServiceModel" />
+    <Reference Include="System.ServiceModel.Web" />
+  </ItemGroup>
+  
+</Project>

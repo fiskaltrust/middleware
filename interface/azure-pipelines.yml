@@ -1,0 +1,87 @@
+resources:
+- repo: self
+
+trigger:
+  batch: true
+  branches:
+    include:
+    - master
+    - refs/tags/*
+  
+pr:
+- master
+
+variables:
+- group: 'Code Signing Certificates'
+- name: BuildConfiguration
+  value: release
+- name: BuildPlatform
+  value: any cpu
+- name: Solution
+  value: 'fiskaltrust.Middleware.Interface.sln'
+
+jobs:
+  - job: Build 
+    pool:
+      vmImage: windows-latest
+    steps:
+    - task: VisualStudioTestPlatformInstaller@1
+      displayName: VsTest Platform Installer
+
+    - task: yavt@1
+      inputs:
+        mode: 'Multi'
+        semverVersion: 'v1'
+        
+    - task: DotNetCoreCLI@2
+      displayName: Restore
+      inputs:
+        command: 'restore'
+        projects: '**/*.csproj'
+        feedsToUse: 'select'
+        vstsFeed: 'dev'   # TODO Remove before merge
+
+    - task: DotNetCoreCLI@2
+      displayName: Build
+      inputs:
+        projects: '$(Solution)'
+        arguments: '--configuration $(BuildConfiguration)'
+
+    - task: codesigning@2
+      displayName: 'Code Signing '
+      inputs:
+        secureFileId: 'codesigning.pfx'
+        signCertPassword: '$(Code_Signing_Password)'
+        filePaths: |
+         **/fiskaltrust*.dll
+         **/fiskaltrust*.exe
+
+    - script: dotnet test --no-build --configuration $(buildConfiguration)  --test-adapter-path:. --logger:nunit;LogFilePath=TestResults.xml
+      displayName: 'dotnet test ifPOS'
+      workingDirectory:  'test\fiskaltrust.ifPOS.Tests'
+
+    - script: dotnet test --no-build --configuration $(buildConfiguration)  --test-adapter-path:. --logger:nunit;LogFilePath=TestResults.xml
+      displayName: 'dotnet test Clients'
+      workingDirectory:  'test\fiskaltrust.Middleware.Interface.Client.Tests'
+      
+    - task: PublishTestResults@2
+      displayName: 'Publish Test Results'
+      inputs:
+        testResultsFormat: NUnit
+        testResultsFiles: '**/*TestResults*.xml'
+        mergeTestResults: true
+        failTaskOnFailedTests: true
+        buildConfiguration: $(buildConfiguration)
+
+    - task: DotNetCoreCLI@2
+      displayName: dotnet pack
+      inputs:
+        command: 'pack'
+        packagesToPack: 'src/**/*.csproj'
+        nobuild: true
+        versioningScheme: 'off'
+
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish Artifact: drop'
+      inputs:
+        PathtoPublish: '$(build.artifactstagingdirectory)'

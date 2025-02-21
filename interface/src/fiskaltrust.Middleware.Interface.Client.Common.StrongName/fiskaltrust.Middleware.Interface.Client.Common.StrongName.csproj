@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFrameworks>net461;netstandard2.0</TargetFrameworks>
+		<LangVersion>8</LangVersion>
+		<IsPackable>false</IsPackable>
+		<SignAssembly>true</SignAssembly>
+		<AssemblyOriginatorKeyFile>../fiskaltrust.interface.StrongName/fiskaltrust.interface.snk</AssemblyOriginatorKeyFile>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="fiskaltrust.interface.StrongName" Version="1.3.55-rc2" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Compile Include="..\fiskaltrust.Middleware.Interface.Client.Common\**\*.cs" Exclude="..\fiskaltrust.Middleware.Interface.Client.Common\obj\**\*.cs" />
+	</ItemGroup>
+</Project>
