@@ -25,6 +25,17 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.DE
 
         public override Task<FailedFinishTransaction> GetAsync(string id) => base.GetAsync(ConversionHelper.ReplaceNonAllowedKeyCharacters(id));
 
+        public override async Task<FailedFinishTransaction> RemoveAsync(string key)
+        {
+            var entity = await RetrieveAsync(ConversionHelper.ReplaceNonAllowedKeyCharacters(key)).ConfigureAwait(false);
+            if (entity != null)
+            {
+                await _tableClient.DeleteEntityAsync(entity.PartitionKey, entity.RowKey);
+            }
+
+            return MapToStorageEntity(entity);
+        }
+
         public async Task InsertOrUpdateAsync(FailedFinishTransaction storageEntity)
         {
             EntityUpdated(storageEntity);
