@@ -19,19 +19,19 @@ public class LifecycleCommandProcessorPT : ILifecycleCommandProcessor
 
     public async Task<ProcessCommandResponse> ProcessReceiptAsync(ProcessCommandRequest request)
     {
-        var receiptCase = request.ReceiptRequest.ftReceiptCase & 0xFFFF;
+        var receiptCase = request.ReceiptRequest.ftReceiptCase.Case();
         switch (receiptCase)
         {
-            case (int) ReceiptCases.InitialOperationReceipt0x4001:
+            case ReceiptCase.InitialOperationReceipt0x4001:
                 return await InitialOperationReceipt0x4001Async(request);
-            case (int) ReceiptCases.OutOfOperationReceipt0x4002:
+            case ReceiptCase.OutOfOperationReceipt0x4002:
                 return await OutOfOperationReceipt0x4002Async(request);
-            case (int) ReceiptCases.InitSCUSwitch0x4011:
+            case ReceiptCase.InitSCUSwitch0x4011:
                 return await InitSCUSwitch0x4011Async(request);
-            case (int) ReceiptCases.FinishSCUSwitch0x4012:
+            case ReceiptCase.FinishSCUSwitch0x4012:
                 return await FinishSCUSwitch0x4012Async(request);
         }
-        request.ReceiptResponse.SetReceiptResponseError(ErrorMessages.UnknownReceiptCase(request.ReceiptRequest.ftReceiptCase));
+        request.ReceiptResponse.SetReceiptResponseError(ErrorMessages.UnknownReceiptCase((long) request.ReceiptRequest.ftReceiptCase));
         return new ProcessCommandResponse(request.ReceiptResponse, []);
     }
 

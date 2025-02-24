@@ -24,3 +24,7 @@ public class ProcessResponse
 {
     public required ReceiptResponse ReceiptResponse { get; set; }
 }
+
+public class ESSSCDInfo
+{
+}

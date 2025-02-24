@@ -28,7 +28,12 @@ public record Error
 #pragma warning restore CS8509 // The switch expression does not handle all possible values of its input type (it is not exhaustive).
 }
 
-public class Client
+public interface IClient
+{
+    public Task<Result<RespuestaRegFactuSistemaFacturacion, Error>> SendAsync(Envelope<RequestBody> envelope);
+}
+
+public class Client : IClient
 {
     private HttpClient _httpClient { get; }
 

@@ -6,6 +6,7 @@ using System.Xml.Serialization;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE;
 using fiskaltrust.Middleware.Localization.v2.Configuration;
+using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using FluentAssertions;
 using FluentAssertions.Execution;
 using Microsoft.Extensions.Logging;
@@ -180,7 +181,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             var ticks = DateTime.UtcNow.Ticks;
             var exampleCashSalesResponse = await signMethod(JsonSerializer.Serialize(receiptRequest));
             var receiptResponse = System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesResponse)!;
-            if((receiptResponse.ftState & 0x0000_0000_0000_FFFF) != 0x0000)
+            if (((long) receiptResponse.ftState & 0x0000_0000_0000_FFFF) != 0x0000)
             {
                 throw new Exception(exampleCashSalesResponse);
             }
@@ -332,7 +333,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             ftCashBoxIdentification = "cashBoxIdentification",
             ftReceiptIdentification = "ft" + DateTime.UtcNow.Ticks.ToString("X"),
             ftReceiptMoment = DateTime.UtcNow,
-            ftState = 0x4752_2000_0000_0000
+            ftState = (State) 0x4752_2000_0000_0000
         };
     }
 }

@@ -1,5 +1,6 @@
 ﻿using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.myDataSCU;
+using fiskaltrust.Middleware.Localization.QueueGR.Models.Cases;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
@@ -11,8 +12,8 @@ public static class AADEMappings
     public static IncomeClassificationType GetIncomeClassificationType(ReceiptRequest receiptRequest, ChargeItem chargeItem)
     {
         var vatAmount = chargeItem.GetVATAmount();
-        var netAmount = receiptRequest.IsRefund() ? (-chargeItem.Amount - -vatAmount) : chargeItem.Amount - vatAmount;
-        if ((receiptRequest.ftReceiptCase & 0xFFFF) == 0x3004)
+        var netAmount = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? (-chargeItem.Amount - -vatAmount) : chargeItem.Amount - vatAmount;
+        if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004))
         {
             return new IncomeClassificationType
             {
@@ -68,24 +69,24 @@ public static class AADEMappings
     /// </summary>
     public static IncomeClassificationValueType GetIncomeClassificationValueType(ReceiptRequest receiptRequest, ChargeItem chargeItem)
     {
-        if ((receiptRequest.ftReceiptCase & 0xFFFF) == 0x0005)
+        if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Protocol0x0005))
         {
             return IncomeClassificationValueType.E3_561_001;
         }
-        if ((receiptRequest.ftReceiptCase & 0xFFFF) == 0x3005)
+        if (receiptRequest.ftReceiptCase.Case() == (ReceiptCase) 0x3005) // TODO
         {
             return IncomeClassificationValueType.E3_562;
         }
-        if ((receiptRequest.ftReceiptCase & 0xFFFF) == 0x3003)
+        if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.InternalUsageMaterialConsumption0x3003))
         {
             return IncomeClassificationValueType.E3_595;
         }
 
-        if (chargeItem.IsAgencyBusiness())
+        if (chargeItem.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.NotOwnSales))
         {
-            if (receiptRequest.IsReceiptOperation())
+            if (receiptRequest.ftReceiptCase.IsType(ReceiptCaseType.Receipt))
             {
-                if ((chargeItem.ftChargeItemCase & 0xFF00) == NatureExemptions.EndOfClimateCrisesNature)
+                if (chargeItem.ftChargeItemCase.IsNatureOfVat(ChargeItemCaseNatureOfVatGR.ExtemptEndOfClimateCrises))
                 {
                     return IncomeClassificationValueType.E3_881_001;
                 }
@@ -121,15 +122,15 @@ public static class AADEMappings
             }
         }
 
-        if (receiptRequest.IsInvoiceOperation())
+        if (receiptRequest.ftReceiptCase.IsType(ReceiptCaseType.Invoice))
         {
             if (receiptRequest.HasGreeceCountryCode())
             {
-                return (chargeItem.ftChargeItemCase & 0xF0) switch
+                return chargeItem.ftChargeItemCase.TypeOfService() switch
                 {
-                    0x00 => IncomeClassificationValueType.E3_561_001,
-                    0x10 => IncomeClassificationValueType.E3_561_001,
-                    0x20 => IncomeClassificationValueType.E3_561_001,
+                    ChargeItemCaseTypeOfService.UnknownService => IncomeClassificationValueType.E3_561_001,
+                    ChargeItemCaseTypeOfService.Delivery => IncomeClassificationValueType.E3_561_001,
+                    ChargeItemCaseTypeOfService.OtherService => IncomeClassificationValueType.E3_561_001,
                     _ => IncomeClassificationValueType.E3_561_007,
                 };
             }
@@ -142,30 +143,30 @@ public static class AADEMappings
                 return IncomeClassificationValueType.E3_561_006;
             }
         }
-        else if (receiptRequest.IsReceiptOperation())
+        else if (receiptRequest.ftReceiptCase.IsType(ReceiptCaseType.Receipt))
         {
-            return (chargeItem.ftChargeItemCase & 0xF0) switch
+            return chargeItem.ftChargeItemCase.TypeOfService() switch
             {
-                0x00 => IncomeClassificationValueType.E3_561_003,
-                0x10 => IncomeClassificationValueType.E3_561_003,
-                0x20 => IncomeClassificationValueType.E3_561_003,
+                ChargeItemCaseTypeOfService.UnknownService => IncomeClassificationValueType.E3_561_003,
+                ChargeItemCaseTypeOfService.Delivery => IncomeClassificationValueType.E3_561_003,
+                ChargeItemCaseTypeOfService.OtherService => IncomeClassificationValueType.E3_561_003,
                 _ => IncomeClassificationValueType.E3_561_007,
             };
         }
 
-        if ((receiptRequest.ftReceiptCase & 0xFFFF) == 0x3006)
+        if (receiptRequest.ftReceiptCase.Case() == (ReceiptCase) 0x3006) // TODO
         {
-            return (chargeItem.ftChargeItemCase & 0xF0) switch
+            return chargeItem.ftChargeItemCase.TypeOfService() switch
             {
-                0x00 => IncomeClassificationValueType.E3_561_001,
+                ChargeItemCaseTypeOfService.UnknownService => IncomeClassificationValueType.E3_561_001,
                 _ => IncomeClassificationValueType.E3_561_007,
             };
         }
-        return (chargeItem.ftChargeItemCase & 0xF0) switch
+        return chargeItem.ftChargeItemCase.TypeOfService() switch
         {
-            0x00 => IncomeClassificationValueType.E3_561_003,
-            0x10 => IncomeClassificationValueType.E3_561_003,
-            0x20 => IncomeClassificationValueType.E3_561_003,
+            ChargeItemCaseTypeOfService.UnknownService => IncomeClassificationValueType.E3_561_003,
+            ChargeItemCaseTypeOfService.Delivery => IncomeClassificationValueType.E3_561_003,
+            ChargeItemCaseTypeOfService.OtherService => IncomeClassificationValueType.E3_561_003,
             _ => IncomeClassificationValueType.E3_561_007,
         };
     }
@@ -188,48 +189,48 @@ public static class AADEMappings
     /// </summary>
     public static IncomeClassificationCategoryType GetIncomeClassificationCategoryType(ReceiptRequest receiptRequest, ChargeItem chargeItem)
     {
-        if ((receiptRequest.ftReceiptCase & 0xFFFF) == 0x3003)
+        if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.InternalUsageMaterialConsumption0x3003))
         {
             return IncomeClassificationCategoryType.category1_6;
         }
 
-        if ((receiptRequest.ftReceiptCase & 0xFFFF) == 0x3005)
+        if (receiptRequest.ftReceiptCase.Case() == (ReceiptCase) 0x3005) // TODO
         {
             return IncomeClassificationCategoryType.category1_5;
         }
 
-        return (chargeItem.ftChargeItemCase & 0xF0) switch
+        return chargeItem.ftChargeItemCase.TypeOfService() switch
         {
-            0x00 => IncomeClassificationCategoryType.category1_2,
-            0x10 => IncomeClassificationCategoryType.category1_2,
-            0x20 => IncomeClassificationCategoryType.category1_3,
-            0x60 => IncomeClassificationCategoryType.category1_7,
+            ChargeItemCaseTypeOfService.UnknownService => IncomeClassificationCategoryType.category1_2,
+            ChargeItemCaseTypeOfService.Delivery => IncomeClassificationCategoryType.category1_2,
+            ChargeItemCaseTypeOfService.OtherService => IncomeClassificationCategoryType.category1_3,
+            ChargeItemCaseTypeOfService.NotOwnSales => IncomeClassificationCategoryType.category1_7,
             _ => IncomeClassificationCategoryType.category1_2,
         };
     }
 
     public static InvoiceType GetInvoiceType(ReceiptRequest receiptRequest)
     {
-        if (receiptRequest.IsReceiptOperation())
+        if (receiptRequest.ftReceiptCase.IsType(ReceiptCaseType.Receipt))
         {
 
-            if (receiptRequest.GetCasePart() == 0x0003)
+            if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003))
             {
-                if(!string.IsNullOrEmpty(receiptRequest.ftReceiptCaseData?.ToString()))
+                if (!string.IsNullOrEmpty(receiptRequest.ftReceiptCaseData?.ToString()))
                 {
                     return InvoiceType.Item32;
                 }
                 return InvoiceType.Item31;
             }
 
-            if (receiptRequest.GetCasePart() == 0x0005)
+            if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Protocol0x0005))
             {
                 return InvoiceType.Item114;
             }
 
-            if (receiptRequest.cbChargeItems.All(x => x.IsAgencyBusiness()))
+            if (receiptRequest.cbChargeItems.All(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.NotOwnSales)))
             {
-                if (receiptRequest.cbChargeItems.Any(x => (x.ftChargeItemCase & 0xFF00) == NatureExemptions.EndOfClimateCrisesNature))
+                if (receiptRequest.cbChargeItems.Any(x => x.ftChargeItemCase.IsNatureOfVat(ChargeItemCaseNatureOfVatGR.ExtemptEndOfClimateCrises)))
                 {
                     return InvoiceType.Item82;
                 }
@@ -250,17 +251,17 @@ public static class AADEMappings
             }
         }
 
-        if (receiptRequest.IsInvoiceOperation())
+        if (receiptRequest.ftReceiptCase.IsType(ReceiptCaseType.Invoice))
         {
-            if (receiptRequest.GetCasePart() == 0x1004)
+            if (receiptRequest.ftReceiptCase.Case() == (ReceiptCase) 0x1004) // TODO
             {
                 return !string.IsNullOrEmpty(receiptRequest.cbPreviousReceiptReference) ? InvoiceType.Item51 : InvoiceType.Item52;
             }
 
-            if (receiptRequest.IsInvoiceB2COperation() && !receiptRequest.ContainsCustomerInfo())
+            if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.InvoiceB2C0x1001) && !receiptRequest.ContainsCustomerInfo())
             {
                 // in this case we don't know the customer so we cannot add the VAT. The invoice is handled as a Μη Αντικριζόμενα operation ( non facing)
-                if (receiptRequest.cbChargeItems.All(x => (x.ftChargeItemCase & 0xF0) == 0x20))
+                if (receiptRequest.cbChargeItems.All(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.OtherService)))
                 {
                     return InvoiceType.Item112;
                 }
@@ -269,15 +270,15 @@ public static class AADEMappings
                     return InvoiceType.Item111;
                 }
             }
-            if (receiptRequest.cbChargeItems.Any(x => (x.ftChargeItemCase & 0xF0) == 0x90))
+            if (receiptRequest.cbChargeItems.Any(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable)))
             {
                 return InvoiceType.Item15;
             }
-            if (receiptRequest.cbChargeItems.Any(x => x.IsAgencyBusiness()))
+            if (receiptRequest.cbChargeItems.Any(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.NotOwnSales)))
             {
                 return InvoiceType.Item14;
             }
-            else if (receiptRequest.IsInvoiceOperation() && receiptRequest.cbChargeItems.All(x => (x.ftChargeItemCase & 0xF0) == 0x20))
+            else if (receiptRequest.ftReceiptCase.IsType(ReceiptCaseType.Invoice) && receiptRequest.cbChargeItems.All(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.OtherService)))
             {
                 if (!string.IsNullOrEmpty(receiptRequest.cbPreviousReceiptReference))
                 {
@@ -319,55 +320,55 @@ public static class AADEMappings
             }
         }
 
-        if (receiptRequest.IsProtocolOperation())
+        if (receiptRequest.ftReceiptCase.IsType(ReceiptCaseType.Log))
         {
-            switch (receiptRequest.GetCasePart())
+            switch (receiptRequest.ftReceiptCase.Case())
             {
-                case 0x3003:
+                case ReceiptCase.InternalUsageMaterialConsumption0x3003:
                     return receiptRequest.HasOnlyServiceItems() ? InvoiceType.Item62 : InvoiceType.Item61;
-                case 0x3004:
-                    return receiptRequest.IsRefund() ? InvoiceType.Item85 : InvoiceType.Item84;
-                case 0x3005:
+                case ReceiptCase.Order0x3004:
+                    return receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? InvoiceType.Item85 : InvoiceType.Item84;
+                case (ReceiptCase) 0x3005: // TODO
                     return InvoiceType.Item81;
-                case 0x3006:
+                case (ReceiptCase) 0x3006: // TODO
                     return InvoiceType.Item71;
             }
         }
         throw new Exception("Unknown type of receipt " + receiptRequest.ftReceiptCase.ToString("x"));
     }
 
-    public static int GetVATCategory(ChargeItem chargeItem) => (chargeItem.ftChargeItemCase & 0x0F) switch
+    public static int GetVATCategory(ChargeItem chargeItem) => chargeItem.ftChargeItemCase.Vat() switch
     {
-        (long) ChargeItemCaseVat.NormalVatRate => MyDataVatCategory.VatRate24, // Normal 24%
-        (long) ChargeItemCaseVat.DiscountedVatRate1 => MyDataVatCategory.VatRate13, // Discounted-1 13&
-        (long) ChargeItemCaseVat.DiscountedVatRate2 => MyDataVatCategory.VatRate6, // Discounted-2 6%
-        (long) ChargeItemCaseVat.SuperReducedVatRate1 => MyDataVatCategory.VatRate17, // Super reduced 1 17%
-        (long) ChargeItemCaseVat.SuperReducedVatRate2 => MyDataVatCategory.VatRate9, // Super reduced 2 9%
-        (long) ChargeItemCaseVat.ParkingVatRate => MyDataVatCategory.VatRate4, // Parking VAT 4%
-        (long) ChargeItemCaseVat.NotTaxable => MyDataVatCategory.RegistrationsWithoutVat, // Not Taxable
-        (long) ChargeItemCaseVat.ZeroVatRate => MyDataVatCategory.ExcludingVat, // Zero
-        _ => throw new Exception($"The VAT type {chargeItem.ftChargeItemCase & 0xF} of ChargeItem with the case {chargeItem.ftChargeItemCase} is not supported."),
+        ChargeItemCase.NormalVatRate => MyDataVatCategory.VatRate24, // Normal 24%
+        ChargeItemCase.DiscountedVatRate1 => MyDataVatCategory.VatRate13, // Discounted-1 13&
+        ChargeItemCase.DiscountedVatRate2 => MyDataVatCategory.VatRate6, // Discounted-2 6%
+        ChargeItemCase.SuperReducedVatRate1 => MyDataVatCategory.VatRate17, // Super reduced 1 17%
+        ChargeItemCase.SuperReducedVatRate2 => MyDataVatCategory.VatRate9, // Super reduced 2 9%
+        ChargeItemCase.ParkingVatRate => MyDataVatCategory.VatRate4, // Parking VAT 4%
+        ChargeItemCase.NotTaxable => MyDataVatCategory.RegistrationsWithoutVat, // Not Taxable
+        ChargeItemCase.ZeroVatRate => MyDataVatCategory.ExcludingVat, // Zero
+        ChargeItemCase c => throw new Exception($"The VAT type {c} of ChargeItem with the case {chargeItem.ftChargeItemCase} is not supported."),
     };
 
-    public static int GetPaymentType(PayItem payItem) => (payItem.ftPayItemCase & 0xF) switch
+    public static int GetPaymentType(PayItem payItem) => payItem.ftPayItemCase.Case() switch
     {
-        (long) PayItemCases.UnknownPaymentType => MyDataPaymentMethods.Cash,
-        (long) PayItemCases.CashPayment => MyDataPaymentMethods.Cash,
-        (long) PayItemCases.NonCash => MyDataPaymentMethods.Cash,
-        (long) PayItemCases.CrossedCheque => MyDataPaymentMethods.Cheque,
-        (long) PayItemCases.DebitCardPayment => MyDataPaymentMethods.PosEPos,
-        (long) PayItemCases.CreditCardPayment => MyDataPaymentMethods.PosEPos,
-        (long) PayItemCases.VoucherPaymentCouponVoucherByMoneyValue => -1,
-        (long) PayItemCases.OnlinePayment => MyDataPaymentMethods.WebBanking,
-        (long) PayItemCases.LoyaltyProgramCustomerCardPayment => -1,
-        (long) PayItemCases.AccountsReceivable => -1,
-        (long) PayItemCases.SEPATransfer => -1,
-        (long) PayItemCases.OtherBankTransfer => -1,
-        (long) PayItemCases.TransferToCashbookVaultOwnerEmployee => -1,
-        (long) PayItemCases.InternalMaterialConsumption => -1,
-        (long) PayItemCases.Grant => MyDataPaymentMethods.OnCredit,
-        (long) PayItemCases.TicketRestaurant => -1,
-        _ => throw new Exception($"The Payment type {payItem.ftPayItemCase & 0xF} of PayItem with the case {payItem.ftPayItemCase} is not supported."),
+        PayItemCase.UnknownPaymentType => MyDataPaymentMethods.Cash,
+        PayItemCase.CashPayment => MyDataPaymentMethods.Cash,
+        PayItemCase.NonCash => MyDataPaymentMethods.Cash,
+        PayItemCase.CrossedCheque => MyDataPaymentMethods.Cheque,
+        PayItemCase.DebitCardPayment => MyDataPaymentMethods.PosEPos,
+        PayItemCase.CreditCardPayment => MyDataPaymentMethods.PosEPos,
+        PayItemCase.VoucherPaymentCouponVoucherByMoneyValue => -1,
+        PayItemCase.OnlinePayment => MyDataPaymentMethods.WebBanking,
+        PayItemCase.LoyaltyProgramCustomerCardPayment => -1,
+        PayItemCase.AccountsReceivable => -1,
+        PayItemCase.SEPATransfer => -1,
+        PayItemCase.OtherBankTransfer => -1,
+        PayItemCase.TransferToCashbookVaultOwnerEmployee => -1,
+        PayItemCase.InternalMaterialConsumption => -1,
+        PayItemCase.Grant => MyDataPaymentMethods.OnCredit,
+        PayItemCase.TicketRestaurant => -1,
+        PayItemCase c => throw new Exception($"The Payment type {c} of PayItem with the case {payItem.ftPayItemCase} is not supported."),
     };
 
     public static bool RequiresCustomerInfo(InvoiceType invoiceType)

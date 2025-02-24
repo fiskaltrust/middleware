@@ -20,11 +20,11 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
         private readonly LifecycleCommandProcessorPT _sut = new(Mock.Of<IConfigurationRepository>());
 
         [Theory]
-        [InlineData(ReceiptCases.InitialOperationReceipt0x4001)]
-        [InlineData(ReceiptCases.OutOfOperationReceipt0x4002)]
-        [InlineData(ReceiptCases.InitSCUSwitch0x4011)]
-        [InlineData(ReceiptCases.FinishSCUSwitch0x4012)]
-        public async Task ProcessReceiptAsync_ShouldReturnEmptyList(ReceiptCases receiptCase)
+        [InlineData(ReceiptCase.InitialOperationReceipt0x4001)]
+        [InlineData(ReceiptCase.OutOfOperationReceipt0x4002)]
+        [InlineData(ReceiptCase.InitSCUSwitch0x4011)]
+        [InlineData(ReceiptCase.FinishSCUSwitch0x4012)]
+        public async Task ProcessReceiptAsync_ShouldReturnEmptyList(ReceiptCase receiptCase)
         {
             var queue = TestHelpers.CreateQueue();
             var queueItem = TestHelpers.CreateQueueItem();
@@ -32,11 +32,11 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
             var receiptRequest = new ReceiptRequest
             {
                 ftCashBoxID = Guid.NewGuid(),
-                ftReceiptCase = (int) receiptCase
+                ftReceiptCase = receiptCase
             };
             var receiptResponse = new ReceiptResponse
             {
-                ftState = 0x5054_2000_0000_0000,
+                ftState = (State) 0x5054_2000_0000_0000,
                 ftCashBoxIdentification = "cashBoxIdentification",
                 ftQueueID = Guid.NewGuid(),
                 ftQueueItemID = Guid.NewGuid(),
@@ -60,11 +60,11 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
 
             var receiptRequest = new ReceiptRequest
             {
-                ftReceiptCase = -1
+                ftReceiptCase = (ReceiptCase) (-1)
             };
             var receiptResponse = new ReceiptResponse
             {
-                ftState = 0x5054_2000_0000_0000,
+                ftState = (State) 0x5054_2000_0000_0000,
                 ftCashBoxIdentification = "cashBoxIdentification",
                 ftQueueID = Guid.NewGuid(),
                 ftQueueItemID = Guid.NewGuid(),
@@ -92,11 +92,11 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
             var receiptRequest = new ReceiptRequest
             {
                 ftCashBoxID = Guid.NewGuid(),
-                ftReceiptCase = 0x5054_2000_0000_0000 | (long) ReceiptCases.InitialOperationReceipt0x4001
+                ftReceiptCase = (ReceiptCase) (0x5054_2000_0000_0000 | (long) ReceiptCase.InitialOperationReceipt0x4001)
             };
             var receiptResponse = new ReceiptResponse
             {
-                ftState = 0x5054_2000_0000_0000,
+                ftState = (State) 0x5054_2000_0000_0000,
                 ftCashBoxIdentification = "cashBoxIdentification",
                 ftQueueID = Guid.NewGuid(),
                 ftQueueItemID = Guid.NewGuid(),
@@ -122,8 +122,8 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
             {
                 Caption = "Initial-operation receipt",
                 Data = $"Queue-ID: {queue.ftQueueId}",
-                ftSignatureFormat = (int) ifPOS.v1.SignaturItem.Formats.Text,
-                ftSignatureType = 0x5054_2000_0001_1001
+                ftSignatureFormat = SignatureFormat.Text,
+                ftSignatureType = (SignatureType) 0x5054_2000_0001_1001
             };
 
             result.receiptResponse.ftSignatures[0].Should().BeEquivalentTo(expectedSignaturItem);
@@ -175,11 +175,11 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
             var receiptRequest = new ReceiptRequest
             {
                 ftCashBoxID = Guid.NewGuid(),
-                ftReceiptCase = 0x5054_2000_0000_0000 | (long) ReceiptCases.OutOfOperationReceipt0x4002
+                ftReceiptCase = (ReceiptCase) (0x5054_2000_0000_0000 | (long) ReceiptCase.OutOfOperationReceipt0x4002)
             };
             var receiptResponse = new ReceiptResponse
             {
-                ftState = 0x5054_2000_0000_0000,
+                ftState = (State) 0x5054_2000_0000_0000,
                 ftCashBoxIdentification = "cashBoxIdentification",
                 ftQueueID = Guid.NewGuid(),
                 ftQueueItemID = Guid.NewGuid(),
@@ -202,8 +202,8 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
 
             var expectedSignaturItem = new SignatureItem
             {
-                ftSignatureType = 0x5054_2000_0001_1002,
-                ftSignatureFormat = (int) ifPOS.v1.SignaturItem.Formats.Text,
+                ftSignatureType = (SignatureType) 0x5054_2000_0001_1002,
+                ftSignatureFormat = SignatureFormat.Text,
                 Caption = "Out-of-operation receipt",
                 Data = $"Queue-ID: {queue.ftQueueId}"
             };
@@ -255,11 +255,11 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
             var receiptRequest = new ReceiptRequest
             {
                 ftCashBoxID = Guid.NewGuid(),
-                ftReceiptCase = 0x5054_2000_0000_0000 | (long) ReceiptCases.InitialOperationReceipt0x4001
+                ftReceiptCase = (ReceiptCase) (0x5054_2000_0000_0000 | (long) ReceiptCase.InitialOperationReceipt0x4001)
             };
             var receiptResponse = new ReceiptResponse
             {
-                ftState = 0x5054_2000_0000_0000,
+                ftState = (State) 0x5054_2000_0000_0000,
                 ftCashBoxIdentification = "cashBoxIdentification",
                 ftQueueID = Guid.NewGuid(),
                 ftQueueItemID = Guid.NewGuid(),
@@ -289,11 +289,11 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
             var receiptRequest = new ReceiptRequest
             {
                 ftCashBoxID = Guid.NewGuid(),
-                ftReceiptCase = 0x5054_2000_0000_0000 | (long) ReceiptCases.InitialOperationReceipt0x4001
+                ftReceiptCase = (ReceiptCase) (0x5054_2000_0000_0000 | (long) ReceiptCase.InitialOperationReceipt0x4001)
             };
             var receiptResponse = new ReceiptResponse
             {
-                ftState = 0x5054_2000_0000_0000,
+                ftState = (State) 0x5054_2000_0000_0000,
                 ftCashBoxIdentification = "cashBoxIdentification",
                 ftQueueID = Guid.NewGuid(),
                 ftQueueItemID = Guid.NewGuid(),

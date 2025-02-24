@@ -1,4 +1,5 @@
 ﻿using fiskaltrust.Api.POS.Models.ifPOS.v2;
+using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 
 namespace fiskaltrust.Middleware.Localization.v2.Interface;
 
@@ -9,7 +10,7 @@ public static class SignatureFactory
         {
             Caption = "S A N D B O X",
             Data = queueId.ToString(),
-            ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.Text,
-            ftSignatureType = (long) ifPOS.v1.SignaturItem.Types.Unknown
+            ftSignatureFormat = SignatureFormat.Text,
+            ftSignatureType = 0
         };
 }

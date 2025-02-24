@@ -1,6 +1,7 @@
 ﻿using System.Web;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
-using fiskaltrust.Middleware.Localization.QueueES.Interface;
+using fiskaltrust.Middleware.Localization.QueueES.Models.Cases;
+using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.SCU.ES.Models;
 using fiskaltrust.storage.V0;
 
@@ -12,8 +13,8 @@ public static class SignaturItemFactory
     {
         return new SignatureItem()
         {
-            ftSignatureType = (long) SignatureTypesES.InitialOperationReceipt,
-            ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.Text,
+            ftSignatureFormat = SignatureFormat.Text,
+            ftSignatureType = SignatureTypeES.InitialOperationReceipt.As<SignatureType>().WithFlag(SignatureTypeFlags.ArchivingRequired).WithCategory(SignatureTypeCategory.Information),
             Caption = $"Initial-operation receipt",
             Data = $"Queue-ID: {queue.ftQueueId}"
         };
@@ -23,14 +24,14 @@ public static class SignaturItemFactory
     {
         return new SignatureItem()
         {
-            ftSignatureType = (long) SignatureTypesES.OutOfOperationReceipt,
-            ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.Text,
+            ftSignatureType = SignatureTypeES.OutOfOperationReceipt.As<SignatureType>().WithFlag(SignatureTypeFlags.ArchivingRequired).WithCategory(SignatureTypeCategory.Information),
+            ftSignatureFormat = SignatureFormat.Text,
             Caption = $"Out-of-operation receipt",
             Data = $"Queue-ID: {queue.ftQueueId}"
         };
     }
 
-    public static SignatureItem CreateESQRCode(string baseUrl, RegistroFacturacionAlta registroFacturacionAlta)
+    public static SignatureItem[] CreateVeriFactuQRCode(string baseUrl, RegistroFacturacionAlta registroFacturacionAlta)
     {
         var query = HttpUtility.ParseQueryString(String.Empty);
         query.Add("nif", registroFacturacionAlta.IDFactura.IDEmisorFactura);
@@ -43,13 +44,20 @@ public static class SignaturItemFactory
             Query = query.ToString()
         };
 
-        return new SignatureItem()
-        {
-            Caption = "[www.fiskaltrust.es]",
-            Data = uriBuider.Uri.ToString(),
-            ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.QR_Code,
-            ftSignatureType = (long) SignatureTypesES.VeriFactu
-        };
+        return [
+            new SignatureItem()
+            {
+                Caption = "QR tributario:",
+                Data = uriBuider.Uri.ToString(),
+                ftSignatureFormat = SignatureFormat.QRCode.WithPosition(SignatureFormatPosition.BeforeHeader),
+                ftSignatureType = SignatureTypeES.Url.As<SignatureType>(),
+            },
+            new SignatureItem {
+                Data = "Factura verificable en la Sede electrónica de la AEAT",
+                ftSignatureFormat = SignatureFormat.Text.WithPosition(SignatureFormatPosition.BeforeHeader),
+                ftSignatureType = SignatureType.Unknown,
+            }
+        ];
     }
 
     public static SignatureItem CreateESSignature(byte[] signature)
@@ -58,8 +66,8 @@ public static class SignaturItemFactory
         {
             Caption = "Signature",
             Data = Convert.ToBase64String(signature),
-            ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.Base64,
-            ftSignatureType = (long) SignatureTypesES.Signature
+            ftSignatureFormat = SignatureFormat.Base64,
+            ftSignatureType = SignatureTypeES.Signature.As<SignatureType>().WithFlag(SignatureTypeFlags.VisualizationOptional)
         };
     }
 
@@ -69,8 +77,8 @@ public static class SignaturItemFactory
         {
             Caption = "Huella",
             Data = huella,
-            ftSignatureFormat = (long) ifPOS.v1.SignaturItem.Formats.Text,
-            ftSignatureType = (long) SignatureTypesES.Huella
+            ftSignatureFormat = SignatureFormat.Text,
+            ftSignatureType = SignatureTypeES.Huella.As<SignatureType>()
         };
     }
 }

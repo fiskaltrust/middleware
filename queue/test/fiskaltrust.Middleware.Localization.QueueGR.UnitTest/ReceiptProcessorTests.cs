@@ -1,5 +1,6 @@
 ﻿using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.v2;
+using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
@@ -16,11 +17,11 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
         {
             var receiptRequest = new ReceiptRequest
             {
-                ftReceiptCase = 0x5054_2000_0000_0000
+                ftReceiptCase = (ReceiptCase) 0x5054_2000_0000_0000
             };
             var receiptResponse = new ReceiptResponse
             {
-                ftState = 0x5054_2000_0000_0000,
+                ftState = (State) 0x5054_2000_0000_0000,
                 ftCashBoxIdentification = "cashBoxIdentification",
                 ftQueueID = Guid.NewGuid(),
                 ftQueueItemID = Guid.NewGuid(),
@@ -44,11 +45,11 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
         {
             var receiptRequest = new ReceiptRequest
             {
-                ftReceiptCase = 0x4752_2000_0000_0000
+                ftReceiptCase = (ReceiptCase) 0x4752_2000_0000_0000
             };
             var receiptResponse = new ReceiptResponse
             {
-                ftState = 0x4752_2000_0000_0000,
+                ftState = (State) 0x4752_2000_0000_0000,
                 ftCashBoxIdentification = "cashBoxIdentification",
                 ftQueueID = Guid.NewGuid(),
                 ftQueueItemID = Guid.NewGuid(),

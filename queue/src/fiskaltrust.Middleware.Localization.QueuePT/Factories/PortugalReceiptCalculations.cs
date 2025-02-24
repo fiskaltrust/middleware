@@ -1,6 +1,7 @@
 ﻿using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueuePT.Models;
 using fiskaltrust.Middleware.Localization.v2;
+using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Storage.PT;
 using Org.BouncyCastle.Asn1.Ocsp;
 
@@ -60,17 +61,17 @@ public static class PortugalReceiptCalculations
         }.GenerateQRCode();
     }
 
-    public static string GetIVATAxCode(ChargeItem chargeItem) => (chargeItem.ftChargeItemCase & 0xF) switch
+    public static string GetIVATAxCode(ChargeItem chargeItem) => chargeItem.ftChargeItemCase.Vat() switch
     {
-        0x0 => "",
-        0x1 => "RED",
-        0x2 => "",
-        0x3 => "NOR",
-        0x4 => "",
-        0x5 => "",
-        0x6 => "INT",
-        0x7 => "",
-        0x8 => "ISE",
+        ChargeItemCase.UnknownService => "",
+        ChargeItemCase.DiscountedVatRate1 => "RED",
+        ChargeItemCase.DiscountedVatRate2 => "",
+        ChargeItemCase.NormalVatRate => "NOR",
+        ChargeItemCase.SuperReducedVatRate1 => "",
+        ChargeItemCase.SuperReducedVatRate2 => "",
+        ChargeItemCase.ParkingVatRate => "INT",
+        ChargeItemCase.ZeroVatRate => "",
+        ChargeItemCase.NotTaxable => "ISE",
         _ => ""
     };
 }

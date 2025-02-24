@@ -21,7 +21,7 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
 {
     private readonly Queue _queue;
 
-    public QueueESBootstrapper(Guid id, ILoggerFactory loggerFactory, Dictionary<string, object> configuration)
+    public QueueESBootstrapper(Guid id, ILoggerFactory loggerFactory, Dictionary<string, object> configuration, PackageConfiguration scuConfiguration)
     {
         var middlewareConfiguration = MiddlewareConfigurationFactory.CreateMiddlewareConfiguration(id, configuration);
 
@@ -39,16 +39,38 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
             queueES = Newtonsoft.Json.JsonConvert.DeserializeObject<List<ftQueueES>>(configuration["init_ftQueueES"]!.ToString()!).First();
             queueESRepository.InsertOrUpdateQueueESAsync(queueES);
         }
-        var esSSCD = new InMemorySCU(
-            signaturCreationUnitES,
-            masterData,
-            new InMemorySCUConfiguration()
+        IESSSCD esSSCD;
+        if (scuConfiguration.Package == "fiskaltrust.Middleware.SCU.ES.VeriFactu")
+        {
+
+            esSSCD = new VeriFactuSCU(
+                signaturCreationUnitES,
+                masterData,
+                new VeriFactuSCUConfiguration()
+                {
+                    Certificate = new X509Certificate2(
+                        Convert.FromBase64String(scuConfiguration.Configuration!["certificate"].ToString()!),
+                        scuConfiguration.Configuration!["certificatePassword"].ToString())
+                },
+                storageProvider.GetMiddlewareQueueItemRepository());
+        }
+        else if (scuConfiguration.Package == "fiskaltrust.Middleware.SCU.ES.TicketBAI")
+        {
+            esSSCD = new TicketBaiSCU(loggerFactory, signaturCreationUnitES, new SCU.ES.TicketBAI.TicketBaiSCUConfiguration
             {
                 Certificate = new X509Certificate2(
-                    Convert.FromBase64String(middlewareConfiguration.Configuration!["certificate"].ToString()!),
-                    middlewareConfiguration.Configuration!["certificatePassword"].ToString())
-            },
-            storageProvider.GetMiddlewareQueueItemRepository());
+                        Convert.FromBase64String(scuConfiguration.Configuration!["certificate"].ToString()!),
+                        scuConfiguration.Configuration!["certificatePassword"].ToString()),
+                EmisorApellidosNombreRazonSocial = masterData.Account.AccountName,
+                EmisorNif = masterData.Account.VatId,
+                TicketBaiTerritory = (SCU.ES.TicketBAI.TicketBaiTerritory) Enum.Parse(typeof(SCU.ES.TicketBAI.TicketBaiTerritory), scuConfiguration.Configuration["territory"].ToString()!)
+            });
+        }
+        else
+        {
+            throw new Exception("Unknown SCU package");
+        }
+
         var signProcessorES = new ReceiptProcessor(
             loggerFactory.CreateLogger<ReceiptProcessor>(),
             new LifecycleCommandProcessorES(

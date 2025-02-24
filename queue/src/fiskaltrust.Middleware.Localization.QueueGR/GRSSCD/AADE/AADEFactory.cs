@@ -7,8 +7,11 @@ using System.Xml.Serialization;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE.Models;
 using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.myDataSCU;
+using fiskaltrust.Middleware.Localization.QueueGR.Interface;
+using fiskaltrust.Middleware.Localization.QueueGR.Models.Cases;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 
@@ -25,7 +28,7 @@ public class AADEFactory
 
     public void ValidateReceiptRequest(ReceiptRequest receiptRequest)
     {
-        if (receiptRequest.cbChargeItems.Any(x => x.IsAgencyBusiness()) && !receiptRequest.cbChargeItems.All(x => x.IsAgencyBusiness()))
+        if (receiptRequest.cbChargeItems.Any(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.NotOwnSales)) && !receiptRequest.cbChargeItems.All(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.NotOwnSales)))
         {
             throw new Exception("It is not allowed to mix agency and non agency receipts.");
         }
@@ -139,8 +142,8 @@ public class AADEFactory
                 aa = identification.ToString(),
                 issueDate = receiptRequest.cbReceiptMoment,
                 invoiceType = AADEMappings.GetInvoiceType(receiptRequest),
-                selfPricing = receiptRequest.IsSelfPricingOperation(),
-                selfPricingSpecified = receiptRequest.IsSelfPricingOperation(),
+                selfPricing = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.IsSelfPricingOperation),
+                selfPricingSpecified = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.IsSelfPricingOperation),
                 currency = CurrencyType.EUR,
                 currencySpecified = true
             },
@@ -175,14 +178,14 @@ public class AADEFactory
             var vatAmount = x.GetVATAmount();
             var invoiceRow = new InvoiceRowType
             {
-                quantity = receiptRequest.IsRefund() ? -x.Quantity : x.Quantity,
+                quantity = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -x.Quantity : x.Quantity,
                 lineNumber = (int) x.Position,
-                vatAmount = receiptRequest.IsRefund() ? -vatAmount : vatAmount,
-                netValue = receiptRequest.IsRefund() ? (-x.Amount - -vatAmount) : x.Amount - vatAmount,
+                vatAmount = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -vatAmount : vatAmount,
+                netValue = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? (-x.Amount - -vatAmount) : x.Amount - vatAmount,
                 vatCategory = AADEMappings.GetVATCategory(x),
             };
 
-            if ((x.ftChargeItemCase & 0xFF00) == NatureExemptions.EndOfClimateCrisesNature)
+            if (x.ftChargeItemCase.IsNatureOfVat(ChargeItemCaseNatureOfVatGR.ExtemptEndOfClimateCrises))
             {
                 invoiceRow.netValue = 0;
                 invoiceRow.otherTaxesAmount = x.Amount;
@@ -192,7 +195,7 @@ public class AADEFactory
                 invoiceRow.incomeClassification = [];
                 invoiceRow.vatCategory = 8;
             }
-            else if (receiptRequest.IsSelfPricingOperation())
+            else if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.IsSelfPricingOperation))
             {
                 if (invoiceRow.vatCategory == MyDataVatCategory.ExcludingVat)
                 {
@@ -200,9 +203,12 @@ public class AADEFactory
                     invoiceRow.vatExemptionCategory = 1;
                 }
 
-                if (receiptRequest.cbChargeItems.Any(x => (x.ftChargeItemCase & 0xF0) == 0x90))
+                if (receiptRequest.cbChargeItems.Any(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable)))
                 {
-                    if (receiptRequest.cbChargeItems.Any(x => (x.ftChargeItemCase & 0xF0) == 0x90) && (x.ftChargeItemCase & 0xF0) != 0x90)
+                    // original line as follows:
+                    // if (receiptRequest.cbChargeItems.Any(x => (x.ftChargeItemCase & 0xF0) == 0x90) && (x.ftChargeItemCase & 0xF0) != 0x90)
+                    // I've left the logic the same but I don't think it's meant that way. there are two different x that shadow each other.
+                    if (receiptRequest.cbChargeItems.Any(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable) && !x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable)))
                     {
                         invoiceRow.invoiceDetailType = 2;
                         invoiceRow.invoiceDetailTypeSpecified = true;
@@ -211,12 +217,12 @@ public class AADEFactory
                            new ExpensesClassificationType {
                                                         amount = invoiceRow.netValue,
                                                         classificationCategorySpecified = true,
-        
+
                                                         classificationCategory = ExpensesClassificationCategoryType.category2_9
                                                     }
                             ];
                     }
-                    else if ((x.ftChargeItemCase & 0xF0) == 0x90)
+                    else if (x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable))
                     {
                         invoiceRow.invoiceDetailType = 1;
                         invoiceRow.invoiceDetailTypeSpecified = true;
@@ -241,15 +247,16 @@ public class AADEFactory
                     ];
                 }
             }
-            else if (receiptRequest.GetCasePart() == 0x0003)
+            else if (receiptRequest.ftReceiptCase.Case() == ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003)
             {
                 invoiceRow.incomeClassification = [];
             }
             else
             {
-                if (receiptRequest.cbChargeItems.Any(x => (x.ftChargeItemCase & 0xF0) == 0x90))
+                // same as above
+                if (receiptRequest.cbChargeItems.Any(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable)))
                 {
-                    if (receiptRequest.cbChargeItems.Any(x => (x.ftChargeItemCase & 0xF0) == 0x90) && (x.ftChargeItemCase & 0xF0) != 0x90)
+                    if (receiptRequest.cbChargeItems.Any(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable) && !x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable)))
                     {
                         invoiceRow.invoiceDetailType = 2;
                         invoiceRow.invoiceDetailTypeSpecified = true;
@@ -262,7 +269,7 @@ public class AADEFactory
                                         }
                         ];
                     }
-                    else if ((x.ftChargeItemCase & 0xF0) == 0x90)
+                    else if (x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable))
                     {
                         invoiceRow.invoiceDetailType = 1;
                         invoiceRow.invoiceDetailTypeSpecified = true;
@@ -321,7 +328,7 @@ public class AADEFactory
                 invoiceMark = -1;
             }
 
-            if (receiptRequest.IsLateSigning())
+            if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.LateSigning))
             {
                 inv.transmissionFailureSpecified = true;
                 inv.transmissionFailure = 1;
@@ -343,15 +350,18 @@ public class AADEFactory
 
     private static List<PaymentMethodDetailType> GetPayments(ReceiptRequest receiptRequest)
     {
-        return receiptRequest.cbPayItems.Where(x => (x.ftPayItemCase & ((long) 0xFF)) != 0x99).Where(x => x.ftPayItemCase != 0x4752_2000_0040_000E && x.ftPayItemCase != 0x4752_2000_0040_0004).Select(x =>
+        // what is payitemcase 99?
+        return receiptRequest.cbPayItems
+            .Where(x => (int) x.ftPayItemCase.Case() != 0x99)
+            .Where(x => !(x.ftPayItemCase.IsCase(PayItemCase.Grant) && x.ftPayItemCase.IsFlag(PayItemCaseFlags.Tip)) && !(x.ftPayItemCase.IsCase(PayItemCase.DebitCardPayment) && x.ftPayItemCase.IsFlag(PayItemCaseFlags.Tip))).Select(x =>
         {
             var payment = new PaymentMethodDetailType
             {
                 type = AADEMappings.GetPaymentType(x),
-                amount = receiptRequest.IsRefund() ? -x.Amount : x.Amount,
+                amount = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -x.Amount : x.Amount,
                 paymentMethodInfo = x.Description,
             };
-            var tipPayment = receiptRequest.cbPayItems.FirstOrDefault(x => (x.ftPayItemCase & 0x0000_0000_0040_0000) == 0x0000_0000_0040_0000);
+            var tipPayment = receiptRequest.cbPayItems.FirstOrDefault(x => x.ftPayItemCase.IsFlag(PayItemCaseFlags.Tip));
             if (tipPayment != null)
             {
                 payment.tipAmount = tipPayment.Amount;
@@ -416,7 +426,7 @@ public class AADEFactory
                 country = CountryType.GR,
                 branch = 0,
             };
-            if (receiptRequest.GetCasePart() == 0x0003 || inv.invoiceHeader.invoiceType == InvoiceType.Item14 || inv.invoiceHeader.invoiceType == InvoiceType.Item71)
+            if (receiptRequest.ftReceiptCase.Case() == ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003 || inv.invoiceHeader.invoiceType == InvoiceType.Item14 || inv.invoiceHeader.invoiceType == InvoiceType.Item71)
             {
                 inv.counterpart.address = new AddressType
                 {
@@ -439,7 +449,7 @@ public class AADEFactory
                     //number = "0",
                     street = customer?.CustomerStreet,
                     city = customer?.CustomerCity,
-                    postalCode = customer?.CustomerZip                    
+                    postalCode = customer?.CustomerZip
                 },
                 branch = 0,
             };
