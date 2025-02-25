@@ -21,18 +21,24 @@ public class MyDataApiClient : IGRSSCD
     private readonly string _devBaseUrl = "https://mydataapidev.aade.gr/";
 
     private readonly bool _iseinvoiceProvider;
+    private readonly bool _aadeoffline;
 
     public static MyDataApiClient CreateClient(Dictionary<string, object> configuration)
     {
         var iseinvoiceProvider = false;
         if (configuration.TryGetValue("iseinvoiceProvider", out var data) && bool.TryParse(data?.ToString(), out iseinvoiceProvider))
         { }
-        return new MyDataApiClient(configuration["aade-user-id"].ToString(), configuration["ocp-apim-subscription-key"].ToString(), iseinvoiceProvider);
+
+        var aadeoffline = false;
+        if (configuration.TryGetValue("aadeoffline", out var aadeofflinedata) && bool.TryParse(aadeofflinedata?.ToString(), out aadeoffline))
+        { }
+        return new MyDataApiClient(configuration["aade-user-id"].ToString(), configuration["ocp-apim-subscription-key"].ToString(), iseinvoiceProvider, aadeoffline);
     }
 
-    public MyDataApiClient(string username, string subscriptionKey, bool iseinvoiceProvider)
+    public MyDataApiClient(string username, string subscriptionKey, bool iseinvoiceProvider, bool aadeoffline = false)
     {
         _iseinvoiceProvider = iseinvoiceProvider;
+        _aadeoffline = aadeoffline;
         _httpClient = new HttpClient()
         {
             BaseAddress = new Uri(_devBaseUrl)
@@ -72,19 +78,26 @@ public class MyDataApiClient : IGRSSCD
 
         var payload = aadFactory.GenerateInvoicePayload(doc);
         var path = _iseinvoiceProvider ? "/myDataProvider/SendInvoices" : "/SendReceipts";
+        if(_aadeoffline)
+        {
+            request.ReceiptResponse.AddSignatureItem(new SignatureItem
+            {
+                Data = $"Απώλεια Διασύνδεσης Παρόχου – ΑΑΔΕ",
+                Caption = "Transmission Failure_2",
+                ftSignatureFormat = SignatureFormat.Text,
+                ftSignatureType = SignatureTypeGR.MyDataInfo.As<SignatureType>()
+            });
+            return new ProcessResponse
+            {
+                ReceiptResponse = request.ReceiptResponse
+            };
+        }
+
         var response = await _httpClient.PostAsync(path, new StringContent(payload, Encoding.UTF8, "application/xml"));
         var content = await response.Content.ReadAsStringAsync();
         if ((int) response.StatusCode >= 500)
         {
-            foreach (var item in doc.invoice)
-            {
-                item.transmissionFailureSpecified = true;
-                item.transmissionFailure = 2;
-            }
-            if (_iseinvoiceProvider)
-            {
-                request.ReceiptResponse.AddSignatureItem(CreateGRQRCode($"https://receipts-sandbox.fiskaltrust.eu/{request.ReceiptResponse.ftQueueID}/{request.ReceiptResponse.ftQueueItemID}"));
-            }
+            // todo should we relaly return this?
             request.ReceiptResponse.AddSignatureItem(new SignatureItem
             {
                 Data = $"Απώλεια Διασύνδεσης Παρόχου – ΑΑΔΕ",
