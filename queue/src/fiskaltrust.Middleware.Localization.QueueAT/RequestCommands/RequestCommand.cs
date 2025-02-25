@@ -475,7 +475,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
             if (requiresCounting)
             {
                 totalizer += betrag_Normal + betrag_Erm1 + betrag_Erm2 + betrag_Besonders + betrag_Null;
-                totalizer = Math.Round(totalizer, 2);
+                totalizer = Math.Round(totalizer, 2, MidpointRounding.AwayFromZero);
 
                 if (_middlewareConfiguration.IsSandbox)
                 {
@@ -576,7 +576,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                                 journalAT.ftSignaturCreationUnitId = scu.ftSignaturCreationUnitATId;
 
                                 queueAT.ftCashNumerator = cashNumerator;
-                                queueAT.ftCashTotalizer += Math.Round(totalizer, 2);
+                                queueAT.ftCashTotalizer += Math.Round(totalizer, 2, MidpointRounding.AwayFromZero);
                                 queueAT.LastSignatureHash = CreateLastReceiptSignature($"{journalAT.JWSHeaderBase64url}.{journalAT.JWSPayloadBase64url}.{journalAT.JWSSignatureBase64url}");
                                 queueAT.LastSignatureZDA = zda;
                                 queueAT.LastSignatureCertificateSerialNumber = certificateSerialNumber;
@@ -628,7 +628,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                 journalAT.ftSignaturCreationUnitId = Guid.Empty;
 
                 queueAT.ftCashNumerator = cashNumerator;
-                queueAT.ftCashTotalizer += Math.Round(totalizer, 2);
+                queueAT.ftCashTotalizer += Math.Round(totalizer, 2, MidpointRounding.AwayFromZero);
                 queueAT.LastSignatureHash = CreateLastReceiptSignature($"{journalAT.JWSHeaderBase64url}.{journalAT.JWSPayloadBase64url}.{journalAT.JWSSignatureBase64url}");
 
                 signatures.Add(new SignaturItem() { Caption = $"Sicherheitseinrichtung ausgefallen", Data = $"{failedReceiptJwsPayload}_{Convert.ToBase64String(ConversionHelper.FromBase64UrlString(SSCD_JWS_SIGNATURE_FAILED))}", ftSignatureFormat = (long) SignaturItem.Formats.QR_Code, ftSignatureType = (long) SignaturItem.Types.AT_RKSV });
