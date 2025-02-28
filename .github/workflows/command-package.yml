@@ -65,6 +65,8 @@ jobs:
           edit-mode: replace
           body: |
             /${{ github.event.client_payload.slash_command.command }} ${{ github.event.client_payload.slash_command.args.all }}
+            [![](https://badgen.net/static/${{ github.event.client_payload.slash_command.command }}%20${{ github.run_id }}/success/green)](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+    
   failure:
     needs:
       - queue-package
@@ -82,4 +84,4 @@ jobs:
           edit-mode: replace
           body: |
             /${{ github.event.client_payload.slash_command.command }} ${{ github.event.client_payload.slash_command.args.all }}
-            [![](https://badgen.net/static/${{ github.event.client_payload.slash_command.command }}%20${{ github.run_id }}/failed/red)](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            [![](https://badgen.net/static/${{ github.event.client_payload.slash_command.command }}%20${{ github.run_id }}/failure/red)](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
