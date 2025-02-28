@@ -6,6 +6,8 @@ on:
 permissions:
   pull-requests: write
   checks: write
+  id-token: write
+  contents: read
 
 jobs:
   queue-package:
