@@ -38,25 +38,17 @@ jobs:
           filter: tree:0
           ref: ${{ inputs.commit }}
 
-      - uses: actions/setup-dotnet@v4
-        if: inputs.package == 'fiskaltrust.Middleware.Queue.SQLite'
+      - uses: ./.github/actions/build
         with:
-          dotnet-version: |
-            6.0.x
-            8.0.x
-  
+          solution: queue/fiskaltrust.Middleware.sln
+
       - run: |
-          dotnet restore "queue/fiskaltrust.Middleware.sln"
           dotnet publish --configuration Release --no-restore -f net461
           dotnet publish --configuration Release --no-restore -f netstandard2.0
           dotnet publish --configuration Release --no-restore -f netstandard2.1
         if: inputs.package == 'fiskaltrust.Middleware.Queue.SQLite'
         working-directory: queue/src/fiskaltrust.Middleware.Queue.SQLite
-        name: Publish SQLite extras
-        
-      - uses: ./.github/actions/build
-        with:
-          solution: queue/fiskaltrust.Middleware.sln
+        name: Publish SQLite for nuget
 
       - uses: ./.github/actions/sign
         with:
@@ -68,6 +60,7 @@ jobs:
         with:
           path: queue/src
           project: ${{ inputs.package }}
+          nuspec: .nuspec
   
   deploy:
     if: inputs.deploy
