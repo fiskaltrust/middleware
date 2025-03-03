@@ -27,7 +27,7 @@
         <dependency id="Microsoft.Data.Sqlite" version="3.1.4" />
         <dependency id="System.Linq.Async" version="4.1.1" />
         <dependency id="SharpCompress" version="0.28.2" />
-        <dependency id="CsvHelper" version="28.0.1" />
+        <dependency id="CsvHelper" version="15.0.5" />
       </group>
     </dependencies>
   </metadata>

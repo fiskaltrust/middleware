@@ -4,7 +4,6 @@
         <Description>The fiskaltrust Middleware Queue with an SQLite storage provider.</Description>
         <TargetFrameworks>netstandard2.0;netstandard2.1;net461;net6</TargetFrameworks>
         <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);CopyProjectReferencesToPackage</TargetsForTfmSpecificBuildOutput>
-        <NoWarn>NU5118</NoWarn>
         <MinVerTagPrefix>queue/sqlite/v</MinVerTagPrefix>
     </PropertyGroup>
 
