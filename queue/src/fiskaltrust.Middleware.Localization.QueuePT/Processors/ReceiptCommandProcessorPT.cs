@@ -232,20 +232,28 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignat
 
     private async Task LoadReceiptReferencesToResponse(ReceiptRequest request, ReceiptResponse receiptResponse)
     {
-        var queueItems = readOnlyQueueItemRepository.GetByReceiptReferenceAsync(request.cbPreviousReceiptReference, request.cbTerminalID);
-        await foreach (var existingQueueItem in queueItems)
+        try
         {
-            if (string.IsNullOrEmpty(existingQueueItem.response))
+            var queueItems = readOnlyQueueItemRepository.GetByReceiptReferenceAsync(request.cbPreviousReceiptReference, request.cbTerminalID);
+            await foreach (var existingQueueItem in queueItems)
             {
-                continue;
-            }
+                if (string.IsNullOrEmpty(existingQueueItem.response))
+                {
+                    continue;
+                }
 
-            var referencedResponse = JsonSerializer.Deserialize<ReceiptResponse>(existingQueueItem.response);
-            receiptResponse.ftStateData = new
-            {
-                ReferencedReceiptResponse = referencedResponse
-            };
-            break;
+                var referencedResponse = JsonSerializer.Deserialize<ReceiptResponse>(existingQueueItem.response);
+                receiptResponse.ftStateData = new
+                {
+                    ReferencedReceiptResponse = referencedResponse
+                };
+                break;
+            }
+        }
+#pragma warning disable
+        catch (Exception ex)
+        {
+            throw;
         }
     }
 }

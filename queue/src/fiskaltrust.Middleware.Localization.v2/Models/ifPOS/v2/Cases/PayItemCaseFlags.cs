@@ -21,3 +21,4 @@ public static class PayItemCaseFlagsExt
     // HasFlag would be a nicer name but that method does alrady exist for all enums
     public static bool IsFlag(this PayItemCase self, PayItemCaseFlags flag) => ((long) self & (long) flag) == (long) flag;
 }
+

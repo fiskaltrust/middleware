@@ -66,7 +66,7 @@ public class ReceiptProcessor : IReceiptProcessor
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to process receiptcase 0x{receiptcase}", request.ftReceiptCase.ToString("X"));
-            receiptResponse.SetReceiptResponseError($"Failed to process receiptcase 0x{request.ftReceiptCase.ToString("X")}. with the following exception message: " + ex.Message);
+            receiptResponse.SetReceiptResponseError($"Failed to process receiptcase 0x{request.ftReceiptCase.ToString("X")}. with the following exception message: " + ex.ToString());
             return (receiptResponse, new List<ftActionJournal>());
         }
     }

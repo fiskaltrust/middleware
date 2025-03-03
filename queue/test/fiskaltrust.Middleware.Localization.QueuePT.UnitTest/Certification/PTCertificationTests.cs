@@ -177,11 +177,22 @@ public class PTCertificationTests
     }
 
     [Fact]
+    public async Task RunJournalCall()
+    {
+
+        var xmlData = await _journalMethod(JsonSerializer.Serialize(new ifPOS.v1.JournalRequest
+        {
+            ftJournalType = 0x5054_2000_0000_0001
+        }));
+    }
+
+
+    [Fact]
     public async Task PTCertificationExamples_Case_5_5()
     {
         var receiptRequest = PTCertificationExamples.Case_5_1();
         var (ticks, receiptResponse) = await ExecuteSign(receiptRequest);
-        var refundRequest = PTCertificationExamples.Case_5_5();
+        var refundRequest = PTCertificationExamples.Case_5_5(receiptRequest.cbReceiptReference);
         await ValidateMyData(refundRequest);
     }
 

@@ -3,7 +3,6 @@ using System.Text;
 using System.Text.Json;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueuePT.Exports.SAFTPT;
-using fiskaltrust.Middleware.Localization.QueuePT.Interface;
 using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
 using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using fiskaltrust.storage.V0;
@@ -45,13 +44,20 @@ public static class SAFTMapping
         var middlewareCustomer = JsonSerializer.Deserialize<MiddlewareCustomer>(JsonSerializer.Serialize(receiptRequest.cbCustomer))!;
         if (string.IsNullOrEmpty(middlewareCustomer.CustomerId))
         {
-            middlewareCustomer.CustomerId = Convert.ToBase64String(MD5.HashData(Encoding.UTF8.GetBytes(middlewareCustomer.CustomerVATId)));
+            if (string.IsNullOrEmpty(middlewareCustomer.CustomerVATId))
+            {
+                middlewareCustomer.CustomerId = Convert.ToBase64String(MD5.HashData(Encoding.UTF8.GetBytes(middlewareCustomer.CustomerName)));
+            }
+            else
+            {
+                middlewareCustomer.CustomerId = Convert.ToBase64String(MD5.HashData(Encoding.UTF8.GetBytes(middlewareCustomer.CustomerVATId)));
+            }
         }
         var customer = new Customer
         {
             CustomerID = middlewareCustomer.CustomerId,
             AccountID = "Desconhecido",
-            CustomerTaxID = middlewareCustomer.CustomerVATId,
+            CustomerTaxID = middlewareCustomer.CustomerVATId ?? "999999990",
             CompanyName = middlewareCustomer.CustomerName,
             BillingAddress = new BillingAddress
             {
@@ -113,7 +119,7 @@ public static class SAFTMapping
 
     private static TaxTable GetTaxTable(List<ReceiptRequest> receiptRequest)
     {
-        var lines = receiptRequest.SelectMany(x => x.cbChargeItems.Select(c => GetLine(x, c)));
+        var lines = receiptRequest.SelectMany(x => GetGroupedChargeItems(x).Select(c => GetLine(x, c)));
         var taxTableEntries = lines.Select(x => new TaxTableEntry
         {
             TaxType = x.Tax.TaxType,
@@ -312,14 +318,14 @@ public static class SAFTMapping
     public static Invoice? GetInvoiceForReceiptRequest((ReceiptRequest receiptRequest, ReceiptResponse receiptResponse) receipt)
     {
         var receiptRequest = receipt.receiptRequest;
-        var lines = receiptRequest.cbChargeItems.Select(x => GetLine(receiptRequest, x)).ToList();
+        var lines = GetGroupedChargeItems(receiptRequest).Select(x => GetLine(receiptRequest, x)).ToList();
         if (lines.Count == 0)
         {
             return null;
         }
 
-        var taxable = receiptRequest.cbChargeItems.Sum(x => x.VATAmount.GetValueOrDefault());
-        var grossAmount = receiptRequest.cbChargeItems.Sum(x => x.Amount);
+        var taxable = receiptRequest.cbChargeItems.Sum(x => x.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund) ? x.VATAmount.GetValueOrDefault() * -1 : x.VATAmount.GetValueOrDefault());
+        var grossAmount = receiptRequest.cbChargeItems.Sum(x => x.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund) ? x.Amount * -1 : x.Amount);
         var hashSignature = receipt.receiptResponse.ftSignatures.Where(x => x.ftSignatureType.IsType(SignatureTypePT.Hash)).FirstOrDefault();
         var atcudSignature = receipt.receiptResponse.ftSignatures.Where(x => x.ftSignatureType.IsType(SignatureTypePT.ATCUD)).FirstOrDefault();
         var netAmount = grossAmount - taxable;
@@ -362,20 +368,30 @@ public static class SAFTMapping
                 GrossTotal = Helpers.CreateTwoDigitMonetaryValue(grossAmount),
             }
         };
-        invoice.DocumentTotals.Payment = receiptRequest.cbPayItems.Select(x => new Payment
-        {
-            PaymentAmount = x.Amount,
-            PaymentDate = x.Moment ?? receiptRequest.cbReceiptMoment,
-            PaymentMechanism = GetPaymentMecahnism(x),
-        }).ToList();
+        invoice.DocumentTotals.Payment = receiptRequest.cbPayItems.Select(x => GetPayment(receiptRequest, x)).ToList();
         return invoice;
+    }
+
+    public static Payment GetPayment(ReceiptRequest receiptRequest, PayItem payItem)
+    {
+        var amount = payItem.Amount;
+        if (payItem.ftPayItemCase.IsFlag(PayItemCaseFlags.Refund))
+        {
+            amount *= -1;
+        }
+        return new Payment
+        {
+            PaymentAmount = amount,
+            PaymentDate = payItem.Moment ?? receiptRequest.cbReceiptMoment,
+            PaymentMechanism = GetPaymentMecahnism(payItem),
+        };
     }
 
     private static string GetInvoiceType(ReceiptRequest receiptRequest)
     {
-        if (receiptRequest.ftReceiptCase == ReceiptCase.PointOfSaleReceipt0x0001 && receiptRequest.ftReceiptCase.HasFlag(ReceiptCaseFlags.Refund))
+        if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PointOfSaleReceipt0x0001) && receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
         {
-            return "CN";
+            return "NC";
         }
 
         return receiptRequest.ftReceiptCase.Case() switch
@@ -391,47 +407,56 @@ public static class SAFTMapping
             ReceiptCase.InvoiceB2B0x1002 => "FT",
             ReceiptCase.InvoiceB2G0x1003 => "FT",
             _ => "FS"
-        }
+        };
     }
 
-    public static Line GetLine(ReceiptRequest receiptRequest, ChargeItem chargeItem)
+    public static Line GetLine(ReceiptRequest receiptRequest, (ChargeItem chargeItem, List<ChargeItem> modifiers) chargeItem)
     {
+        var chargeItemData = chargeItem.chargeItem;
         var tax = new Tax
         {
             TaxType = "IVA", // one of IVA => vat; IS => stamp duty; NS => Not subject to VAT or Stamp Duty.
             TaxCountryRegion = "PT", // will depend on the location of the taxpayer.. autonomous regions madeira and azores
-            TaxCode = GetIVATAxCode(chargeItem),
-            TaxPercentage = Helpers.CreateMonetaryValue(chargeItem.VATRate),
+            TaxCode = GetIVATAxCode(chargeItemData),
+            TaxPercentage = Helpers.CreateMonetaryValue(chargeItemData.VATRate)
         };
 
-        var unitPrice = chargeItem.UnitPrice;
-        if (!unitPrice.HasValue)
+        var unitPrice = 0m;
+        var netLinePrice = chargeItemData.Amount + chargeItem.modifiers.Sum(x => x.Amount) + chargeItem.modifiers.Sum(x => x.VATAmount ?? 0.0m);
+        var quantity = chargeItemData.Quantity;
+        if (chargeItem.chargeItem.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund))
         {
-            if (chargeItem.Amount == 0 || chargeItem.Quantity == 0)
-            {
-                unitPrice = 0m;
-            }
-            else
-            {
-                unitPrice = chargeItem.Amount / chargeItem.Quantity;
-            }
+            netLinePrice *= -1;
+            quantity *= -1;
         }
 
-        return new Line
+        if (chargeItemData.Amount == 0 || quantity == 0)
         {
-            LineNumber = (long) chargeItem.Position,
-            ProductCode = chargeItem.ProductNumber ?? Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(chargeItem.Description))),
-            ProductDescription = chargeItem.Description,
-            Quantity = Helpers.CreateMonetaryValue(chargeItem.Quantity),
-            UnitOfMeasure = chargeItem.Unit ?? "Unit",
+            unitPrice = 0m;
+        }
+        else
+        {
+            unitPrice = netLinePrice / quantity;
+        }
+        var line = new Line
+        {
+            LineNumber = (long) chargeItemData.Position,
+            ProductCode = chargeItemData.ProductNumber ?? Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(chargeItemData.Description))),
+            ProductDescription = chargeItemData.Description,
+            Quantity = Helpers.CreateMonetaryValue(quantity),
+            UnitOfMeasure = chargeItemData.Unit ?? "Unit",
             UnitPrice = Helpers.CreateMonetaryValue(unitPrice),
-            TaxPointDate = chargeItem.Moment ?? receiptRequest.cbReceiptMoment,
-            Description = chargeItem.Description,
-            CreditAmount = Helpers.CreateMonetaryValue(chargeItem.Amount - chargeItem.VATAmount),
-            Tax = tax,
-            //TaxExemptionReason = GetTaxExemptionReason(chargeItem),
-            //TaxExemptionCode = GetTaxExemptionCode(chargeItem)
+            TaxPointDate = chargeItemData.Moment ?? receiptRequest.cbReceiptMoment,
+            Description = chargeItemData.Description,
+            CreditAmount = Helpers.CreateMonetaryValue(netLinePrice),
+            Tax = tax
         };
+        if (((long) chargeItemData.ftChargeItemCase & (long) 0xFF00) > 0x0000)
+        {
+            line.TaxExemptionReason = GetTaxExemptionReason(chargeItemData);
+            line.TaxExemptionCode = GetTaxExemptionCode(chargeItemData);
+        }
+        return line;
     }
 
     // https://taxfoundation.org/data/all/eu/value-added-tax-2024-vat-rates-europe/
@@ -439,11 +464,11 @@ public static class SAFTMapping
     {
         ChargeItemCase.UnknownService => throw new NotImplementedException("There is no unkown rate in Portugal"),
         ChargeItemCase.DiscountedVatRate1 => "RED",
-        ChargeItemCase.DiscountedVatRate2 => throw new NotImplementedException("There is no reduced-2 rate in Portugal"),
+        ChargeItemCase.DiscountedVatRate2 => "INT",
         ChargeItemCase.NormalVatRate => "NOR",
         ChargeItemCase.SuperReducedVatRate1 => throw new NotImplementedException("There is no super-reduced-1 rate in Portugal"),
         ChargeItemCase.SuperReducedVatRate2 => throw new NotImplementedException("There is no super-reduced-2 rate in Portugal"),
-        ChargeItemCase.ParkingVatRate => "INT",
+        ChargeItemCase.ParkingVatRate => throw new NotImplementedException("There is no parking vat rate in Portugal"),
         ChargeItemCase.ZeroVatRate => throw new NotImplementedException("There is no zero rate in Portugal"),
         ChargeItemCase.NotTaxable => "ISE",
         ChargeItemCase c => throw new NotImplementedException($"The given tax scheme 0x{c:X} is not supported in Portugal"),
@@ -488,4 +513,29 @@ public static class SAFTMapping
         ChargeItemCaseTypeOfService.CashTransfer => "?", // Receivable / ???
         _ => throw new NotImplementedException($"The given ChargeItemCase {chargeItem.ftChargeItemCase} type is not supported"),
     };
+
+    public static List<(ChargeItem chargeItem, List<ChargeItem> modifiers)> GetGroupedChargeItems(this ReceiptRequest receiptRequest)
+    {
+        var data = new List<(ChargeItem chargeItem, List<ChargeItem> modifiers)>();
+        foreach (var receiptChargeItem in receiptRequest.cbChargeItems)
+        {
+            if (((long) receiptChargeItem.ftChargeItemCase & 0x0000_0000_0004_0000) > 0)
+            {
+                var last = data.LastOrDefault();
+                if (last == default)
+                {
+                    data.Add((receiptChargeItem, new List<ChargeItem>()));
+                }
+                else
+                {
+                    last.modifiers.Add(receiptChargeItem);
+                }
+            }
+            else
+            {
+                data.Add((receiptChargeItem, new List<ChargeItem>()));
+            }
+        }
+        return data;
+    }
 }
