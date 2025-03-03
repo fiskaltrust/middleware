@@ -14,12 +14,13 @@ using FluentAssertions.Execution;
 using Moq;
 using Xunit;
 using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.Contracts.Repositories;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processors;
 
 public class ReceiptCommandProcessorPTTests
 {
-    private readonly ReceiptCommandProcessorPT _sut = new ReceiptCommandProcessorPT(Mock.Of<IPTSSCD>(), new ftQueuePT(), new ftSignaturCreationUnitPT(), Mock.Of<IReadOnlyQueueItemRepository>());
+    private readonly ReceiptCommandProcessorPT _sut = new ReceiptCommandProcessorPT(Mock.Of<IPTSSCD>(), new ftQueuePT(), new ftSignaturCreationUnitPT(), Mock.Of<IMiddlewareQueueItemRepository>());
 
     [Theory]
     [InlineData(ReceiptCase.PaymentTransfer0x0002)]
@@ -96,7 +97,7 @@ public class ReceiptCommandProcessorPTTests
         var configMock = new Mock<IConfigurationRepository>();
         configMock.Setup(x => x.InsertOrUpdateQueueAsync(It.IsAny<ftQueue>())).Returns(Task.CompletedTask);
 
-        var queueItemRepository = new Mock<IReadOnlyQueueItemRepository>();
+        var queueItemRepository = new Mock<IMiddlewareQueueItemRepository>();
 
         var sut = new ReceiptCommandProcessorPT(new InMemorySCU(signaturCreationUnitPT), queuePT, signaturCreationUnitPT, queueItemRepository.Object);
 

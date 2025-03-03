@@ -32,7 +32,7 @@ public static class SAFTMapping
             AddressDetail = "Desconhecido",
             City = "Desconhecido",
             PostalCode = "Desconhecido",
-            Country = "Desconhecido"
+            Country = "PT"
         }
     };
 
@@ -79,7 +79,7 @@ public static class SAFTMapping
             Header = GetHeader(accountMasterData),
             MasterFiles = new MasterFiles
             {
-                Customer = [..actualReceiptRequests.Select(x => GetCustomerData(x.receiptRequest)).DistinctBy(x => x.CustomerID)],
+                Customer = [.. actualReceiptRequests.Select(x => GetCustomerData(x.receiptRequest)).DistinctBy(x => x.CustomerID)],
                 Product = GetProducts(actualReceiptRequests.Select(x => x.receiptRequest).ToList()),
                 TaxTable = GetTaxTable(actualReceiptRequests.Select(x => x.receiptRequest).ToList())
             },
@@ -328,7 +328,7 @@ public static class SAFTMapping
         {
             return null;
         }
-
+        var customer = GetCustomerData(receiptRequest);
         var invoice = new Invoice
         {
             InvoiceNo = receipt.receiptResponse.ftReceiptIdentification,
@@ -353,8 +353,8 @@ public static class SAFTMapping
             },
             SourceID = JsonSerializer.Serialize(receiptRequest.cbUser),
             SystemEntryDate = receiptRequest.cbReceiptMoment,
-            CustomerID = "0",
             Line = lines,
+            CustomerID = customer.CustomerID,
             DocumentTotals = new DocumentTotals
             {
                 TaxPayable = Helpers.CreateTwoDigitMonetaryValue(taxable),
@@ -362,8 +362,6 @@ public static class SAFTMapping
                 GrossTotal = Helpers.CreateTwoDigitMonetaryValue(grossAmount),
             }
         };
-        var customer = GetCustomerData(receiptRequest);
-        invoice.CustomerID = customer.CustomerID;
         invoice.DocumentTotals.Payment = receiptRequest.cbPayItems.Select(x => new Payment
         {
             PaymentAmount = x.Amount,
@@ -373,20 +371,28 @@ public static class SAFTMapping
         return invoice;
     }
 
-    private static string GetInvoiceType(ReceiptRequest receiptRequest) => receiptRequest.ftReceiptCase.Case() switch
+    private static string GetInvoiceType(ReceiptRequest receiptRequest)
     {
-        ReceiptCase.UnknownReceipt0x0000 => "FS",
-        ReceiptCase.PointOfSaleReceipt0x0001 => "FS",
-        ReceiptCase.PaymentTransfer0x0002 => "FS",
-        ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003 => "FS",
-        ReceiptCase.ECommerce0x0004 => "FS",
-        ReceiptCase.Protocol0x0005 => "FS", // no invoicetype.. workign document?
-        ReceiptCase.InvoiceUnknown0x1000 => "FT",
-        ReceiptCase.InvoiceB2C0x1001 => "FT",
-        ReceiptCase.InvoiceB2B0x1002 => "FT",
-        ReceiptCase.InvoiceB2G0x1003 => "FT",
-        _ => "FS"
-    };
+        if (receiptRequest.ftReceiptCase == ReceiptCase.PointOfSaleReceipt0x0001 && receiptRequest.ftReceiptCase.HasFlag(ReceiptCaseFlags.Refund))
+        {
+            return "CN";
+        }
+
+        return receiptRequest.ftReceiptCase.Case() switch
+        {
+            ReceiptCase.UnknownReceipt0x0000 => "FS",
+            ReceiptCase.PointOfSaleReceipt0x0001 => "FS",
+            ReceiptCase.PaymentTransfer0x0002 => "FS",
+            ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003 => "FS",
+            ReceiptCase.ECommerce0x0004 => "FS",
+            ReceiptCase.Protocol0x0005 => "FS", // no invoicetype.. workign document?
+            ReceiptCase.InvoiceUnknown0x1000 => "FT",
+            ReceiptCase.InvoiceB2C0x1001 => "FT",
+            ReceiptCase.InvoiceB2B0x1002 => "FT",
+            ReceiptCase.InvoiceB2G0x1003 => "FT",
+            _ => "FS"
+        }
+    }
 
     public static Line GetLine(ReceiptRequest receiptRequest, ChargeItem chargeItem)
     {
@@ -419,7 +425,7 @@ public static class SAFTMapping
             Quantity = Helpers.CreateMonetaryValue(chargeItem.Quantity),
             UnitOfMeasure = chargeItem.Unit ?? "Unit",
             UnitPrice = Helpers.CreateMonetaryValue(unitPrice),
-            TaxPointDate = chargeItem.Moment ?? receiptRequest.cbReceiptMoment, 
+            TaxPointDate = chargeItem.Moment ?? receiptRequest.cbReceiptMoment,
             Description = chargeItem.Description,
             CreditAmount = Helpers.CreateMonetaryValue(chargeItem.Amount - chargeItem.VATAmount),
             Tax = tax,

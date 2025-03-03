@@ -3,6 +3,7 @@ using fiskaltrust.Middleware.Localization.QueuePT.Models;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Storage.PT;
+using fiskaltrust.SAFT.CLI.SAFTSchemaPT10401;
 using Org.BouncyCastle.Asn1.Ocsp;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Factories;
@@ -27,7 +28,7 @@ public static class InvoiceStatus
 
 public static class PortugalReceiptCalculations
 {
-    public static string CreateSimplifiedInvoiceQRCodeAnonymousCustomer(string hash, ftQueuePT queuePT, ftSignaturCreationUnitPT signaturCreationUnitPT, ReceiptRequest request, ReceiptResponse receiptResponse)
+    public static string CreateCreditNoteQRCode(string hash, ftQueuePT queuePT, ftSignaturCreationUnitPT signaturCreationUnitPT, ReceiptRequest request, ReceiptResponse receiptResponse)
     {
         var taxGroups = request.cbChargeItems.GroupBy(GetIVATAxCode);
         var normalChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "NOR").ToList();
@@ -35,11 +36,51 @@ public static class PortugalReceiptCalculations
         var intermediateChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "INT").ToList();
         var exemptChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "ISE").ToList();
 
+        var customer = SAFTMapping.GetCustomerData(request);
+        var customerTIN = customer.CustomerTaxID;
+        var customerCountry = customer.BillingAddress.Country;
         return new PTQrCode
         {
             IssuerTIN = queuePT.IssuerTIN,
-            CustomerTIN = PTQrCode.CUSTOMER_TIN_ANONYMOUS,
-            CustomerCountry = PTQrCode.CUSTOMER_COUNTRY_ANONYMOUS,
+            CustomerTIN = customerTIN,
+            CustomerCountry = customerCountry,
+            DocumentType = InvoiceType.CreditNote,
+            DocumentStatus = InvoiceStatus.Normal,
+            DocumentDate = request.cbReceiptMoment,
+            UniqueIdentificationOfTheDocument = receiptResponse.ftReceiptIdentification,
+            ATCUD = queuePT.ATCUD,
+            TaxCountryRegion = queuePT.TaxRegion,
+            TaxableBasisOfVAT_ExemptRate = exemptChargeItems.Sum(x => x.Amount),
+            TaxableBasisOfVAT_ReducedRate = reducedChargeItems.Sum(x => x.Amount - x.VATAmount ?? 0.0m),
+            TotalVAT_ReducedRate = reducedChargeItems.Sum(x => x.VATAmount ?? 0.0m),
+            TaxableBasisOfVAT_IntermediateRate = intermediateChargeItems.Sum(x => x.Amount - x.VATAmount ?? 0.0m),
+            TotalVAT_IntermediateRate = intermediateChargeItems.Sum(x => x.VATAmount ?? 0.0m),
+            TaxableBasisOfVAT_StandardRate = normalChargeItems.Sum(x => x.Amount - x.VATAmount ?? 0.0m),
+            TotalVAT_StandardRate = normalChargeItems.Sum(x => x.VATAmount ?? 0.0m),
+            TotalTaxes = request.cbChargeItems.Sum(x => x.VATAmount ?? 0.0m),
+            GrossTotal = request.cbChargeItems.Sum(x => x.Amount),
+            Hash = hash[..4],
+            SoftwareCertificateNumber = signaturCreationUnitPT.SoftwareCertificateNumber,
+            OtherInformation = "ftQueueId=" + receiptResponse.ftQueueID + ";ftQueueItemId=" + receiptResponse.ftQueueItemID
+        }.GenerateQRCode();
+    }
+
+    public static string CreateSimplifiedInvoiceQRCode(string hash, ftQueuePT queuePT, ftSignaturCreationUnitPT signaturCreationUnitPT, ReceiptRequest request, ReceiptResponse receiptResponse)
+    {
+        var taxGroups = request.cbChargeItems.GroupBy(GetIVATAxCode);
+        var normalChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "NOR").ToList();
+        var reducedChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "RED").ToList();
+        var intermediateChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "INT").ToList();
+        var exemptChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "ISE").ToList();
+
+        var customer = SAFTMapping.GetCustomerData(request);
+        var customerTIN = customer.CustomerTaxID;
+        var customerCountry = customer.BillingAddress.Country;
+        return new PTQrCode
+        {
+            IssuerTIN = queuePT.IssuerTIN,
+            CustomerTIN = customerTIN,
+            CustomerCountry = customerCountry,
             DocumentType = InvoiceType.SimplifiedInvoice,
             DocumentStatus = InvoiceStatus.Normal,
             DocumentDate = request.cbReceiptMoment,

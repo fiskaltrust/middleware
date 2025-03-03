@@ -70,10 +70,54 @@ public static class PTCertificationExamples
         };
     }
 
-    public static ReceiptRequest Case_5_2()
+    public static ReceiptRequest Case_5_2(string receiptReference)
     {
         // A voided document. Status “A”
-        throw new Exception("Not implemented");
+        // Simplified invoice with customer identification with NIF (VAT number)
+        var chargeItems = new List<ChargeItem>
+        {
+                new ChargeItem
+                {
+                    Position = 1,
+                    Amount = 100,
+                    VATRate = PTVATRates.Normal,
+                    VATAmount = VATHelpers.CalculateVAT(100, PTVATRates.Normal),
+                    ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0013,
+                    Quantity = 1,
+                    Description = "Line item 1"
+                }
+        };
+
+        return new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            cbReceiptAmount = chargeItems.Sum(x => x.Amount),
+            cbReceiptMoment = DateTime.UtcNow,
+            cbReceiptReference = Guid.NewGuid().ToString(),
+            cbChargeItems = chargeItems,
+            cbPayItems =
+            [
+                new PayItem
+                {
+                    Position = 1,
+                    Quantity = 1,
+                    Amount = chargeItems.Sum(x => x.Amount),
+                    Description = "Cash",
+                    ftPayItemCase = (PayItemCase) 0x5054_2000_0000_0001,
+                }
+            ],
+            cbPreviousReceiptReference = receiptReference,
+            ftPosSystemId = Guid.NewGuid(),
+            ftReceiptCase = (ReceiptCase) 0x5054_2000_0004_0001,
+            cbCustomer = new MiddlewareCustomer
+            {
+                CustomerVATId = CUSOMTER_VATNUMBER,
+                CustomerCity = "Salzburg",
+                CustomerZip = "5020",
+                CustomerStreet = "Alpenstraße 99/2.OG/02",
+                CustomerName = "fiskaltrust consulting gmbh"
+            }
+        };
     }
 
     public static ReceiptRequest Case_5_3()
@@ -91,7 +135,49 @@ public static class PTCertificationExamples
     public static ReceiptRequest Case_5_5()
     {
         // A credit note based on the document 5.4. If you don’t have the number 5.4 you should do it based on a different document.
-        throw new Exception("Not implemented");
+        var chargeItems = new List<ChargeItem>
+        {
+                new ChargeItem
+                {
+                    Position = 1,
+                    Amount = -100,
+                    VATRate = PTVATRates.Normal,
+                    VATAmount = -VATHelpers.CalculateVAT(100, PTVATRates.Normal),
+                    ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0002_0013,
+                    Quantity = -1,
+                    Description = "Line item 1"
+                }
+        };
+
+        return new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            cbReceiptAmount = chargeItems.Sum(x => x.Amount),
+            cbReceiptMoment = DateTime.UtcNow,
+            cbReceiptReference = Guid.NewGuid().ToString(),
+            cbChargeItems = chargeItems,
+            cbPayItems =
+            [
+                new PayItem
+                {
+                    Position = 1,
+                    Quantity = 1,
+                    Amount = -chargeItems.Sum(x => x.Amount),
+                    Description = "Cash",
+                    ftPayItemCase = (PayItemCase) 0x5054_2000_0002_0001,
+                }
+            ],
+            ftPosSystemId = Guid.NewGuid(),
+            ftReceiptCase = (ReceiptCase) 0x5054_2000_0100_0001,
+            cbCustomer = new MiddlewareCustomer
+            {
+                CustomerVATId = CUSOMTER_VATNUMBER,
+                CustomerCity = "Salzburg",
+                CustomerZip = "5020",
+                CustomerStreet = "Alpenstraße 99/2.OG/02",
+                CustomerName = "fiskaltrust consulting gmbh"
+            }
+        };
     }
 
     public static ReceiptRequest Case_5_6()
@@ -301,8 +387,42 @@ public static class PTCertificationExamples
 
     public static ReceiptRequest Case_5_10()
     {
-        // A document to another customer but also without NIF.
-        throw new Exception("Not implemented");
+        // A document for another identified client who has also not indicated their VAT number
+        var chargeItems = new List<ChargeItem>
+        {
+            new ChargeItem
+            {
+                Position = 1,
+                Amount = 150m,
+                VATRate = PTVATRates.Normal,
+                VATAmount = VATHelpers.CalculateVAT(150m, PTVATRates.Normal),
+                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0013,
+                Quantity = 1,
+                Description = "Line item 1"
+            }
+        };
+
+        return new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            cbReceiptAmount = chargeItems.Sum(x => x.Amount),
+            cbReceiptMoment = DateTime.UtcNow,
+            cbReceiptReference = Guid.NewGuid().ToString(),
+            cbChargeItems = chargeItems,
+            cbPayItems =
+            [
+                new PayItem
+                {
+                    Position = 1,
+                    Quantity = 1,
+                    Amount = chargeItems.Sum(x => x.Amount),
+                    Description = "Cash",
+                    ftPayItemCase = (PayItemCase) 0x5054_2000_0000_0001,
+                }
+            ],
+            ftPosSystemId = Guid.NewGuid(),
+            ftReceiptCase = (ReceiptCase) 0x5054_2000_0000_0001
+        };
     }
 
     public static ReceiptRequest Case_5_11()
