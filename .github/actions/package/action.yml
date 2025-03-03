@@ -6,7 +6,7 @@ inputs:
   project:
     required: true
     type: string  
-  v1-args:
+  v1Args:
     default: ''
     type: string
 
@@ -19,7 +19,7 @@ runs:
 
     - name: Publish v1 Nuget packages
       shell: pwsh
-      run: dotnet pack "${{ inputs.path }}/${{ inputs.project }}/${{ inputs.project }}.csproj" --no-restore --configuration Release --output ./publish/package-v1-${{ inputs.project }} ${{ inputs.v1-args }}
+      run: dotnet pack "${{ inputs.path }}/${{ inputs.project }}/${{ inputs.project }}.csproj" --no-restore --configuration Release --output ./publish/package-v1-${{ inputs.project }} ${{ inputs.v1Args }}
 
     - name: Upload v1 Package
       uses: actions/upload-artifact@v4

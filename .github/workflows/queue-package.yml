@@ -61,7 +61,7 @@ jobs:
         with:
           path: queue/src
           project: ${{ inputs.package }}
-          v1-args: /p:NuspecFile=.nuspec
+          v1Args: /p:NuspecFile=.nuspec
 
       - uses: ./.github/actions/package
         if: inputs.package != 'fiskaltrust.Middleware.Queue.SQLite'
