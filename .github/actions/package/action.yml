@@ -19,7 +19,7 @@ runs:
 
     - name: Publish v1 Nuget packages
       shell: pwsh
-      run: dotnet pack "${{ inputs.path }}/${{ inputs.project }}/${{ inputs.project }}.csproj" --no-restore --configuration Release --output ./publish/package-v1-${{ inputs.project }} ${{ !inputs.nuspec && format('/p:NuspecFile={0}', inputs.nuspec) || '' }}
+      run: dotnet pack "${{ inputs.path }}/${{ inputs.project }}/${{ inputs.project }}.csproj" --no-restore --configuration Release --output ./publish/package-v1-${{ inputs.project }} ${{ inputs.nuspec && format('/p:NuspecFile={0}', inputs.nuspec) || '' }}
 
     - name: Upload v1 Package
       uses: actions/upload-artifact@v4
