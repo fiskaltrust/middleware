@@ -24,23 +24,10 @@ jobs:
           fetch-depth: 0
           filter: tree:0
 
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: |
-            6.0.x
-            8.0.x
-  
-      - run: |
-          dotnet restore "${{ inputs.solution }}"
-          dotnet publish --no-restore -f net461
-          dotnet publish --no-restore -f netstandard2.0
-          dotnet publish --no-restore -f netstandard2.1
-        working-directory: queue/src/fiskaltrust.Middleware.Queue.SQLite
-        name: Publish SQLite extras
-
       - uses: ./.github/actions/build
         with:
           solution: queue/fiskaltrust.Middleware.sln
+          configuration: Debug
 
       - name: Unit Tests
         uses: ./.github/actions/test

@@ -3,7 +3,9 @@ inputs:
   solution:
     required: true
     type: string
-
+  configuration:
+    type: string
+    default: Release
 runs:
   using: "composite"
   steps:
@@ -18,5 +20,5 @@ runs:
       shell: pwsh
       
     - name: Build
-      run: dotnet build "${{ inputs.solution }}" --no-restore
+      run: dotnet build "${{ inputs.solution }}" --configuration ${{ inputs.configuration }} --no-restore
       shell: pwsh
