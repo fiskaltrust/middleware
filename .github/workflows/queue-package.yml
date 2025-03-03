@@ -57,10 +57,17 @@ jobs:
           password: '${{ secrets.SIGNING_CERT_PASSWORD }}'
 
       - uses: ./.github/actions/package
+        if: inputs.package == 'fiskaltrust.Middleware.Queue.SQLite'
         with:
           path: queue/src
           project: ${{ inputs.package }}
-          nuspec: .nuspec
+          v1-args: /p:NuspecFile=.nuspec
+
+      - uses: ./.github/actions/package
+        if: inputs.package != 'fiskaltrust.Middleware.Queue.SQLite'
+        with:
+          path: queue/src
+          project: ${{ inputs.package }}
   
   deploy:
     if: inputs.deploy
