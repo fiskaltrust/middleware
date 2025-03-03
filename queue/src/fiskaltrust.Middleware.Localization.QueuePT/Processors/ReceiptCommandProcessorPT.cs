@@ -8,8 +8,18 @@ using fiskaltrust.storage.V0;
 using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
 using System.Text.Json;
+using fiskaltrust.Api.POS.Models.ifPOS.v2;
+using System.Diagnostics;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Processors;
+
+public class ReceiptRequestValidatorPT
+{
+    public static void ValidateReceiptOrThrow(ReceiptRequest receiptRequest)
+    {
+  
+    }
+}
 
 public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignaturCreationUnitPT signaturCreationUnitPT, IReadOnlyQueueItemRepository readOnlyQueueItemRepository) : IReceiptCommandProcessor
 {
@@ -17,7 +27,7 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignat
     private readonly ftQueuePT _queuePT = queuePT;
     private readonly ftSignaturCreationUnitPT _signaturCreationUnitPT = signaturCreationUnitPT;
     private readonly IReadOnlyQueueItemRepository _readOnlyQueueItemRepository = readOnlyQueueItemRepository;
-
+    private const string SIMPLIFIED_INVOICE_SERIES_PREFIX = "ft FS1";
     public static long? SimplifiedInvoiceSeriesNumerator { get; set; }
 
     public async Task<ProcessCommandResponse> ProcessReceiptAsync(ProcessCommandRequest request)
@@ -46,25 +56,33 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignat
 
     public async Task<ProcessCommandResponse> PointOfSaleReceipt0x0001Async(ProcessCommandRequest request)
     {
-        if(SimplifiedInvoiceSeriesNumerator == null)
+        ReceiptRequestValidatorPT.ValidateReceiptOrThrow(request.ReceiptRequest);
+
+        if (SimplifiedInvoiceSeriesNumerator == null)
         {
             var queueItems = (await _readOnlyQueueItemRepository.GetAsync()).OrderByDescending(x => x.ftQueueRow);
             foreach(var queueItem in queueItems)
             {
-                var lastReceiptResponse = JsonSerializer.Deserialize<Api.POS.Models.ifPOS.v2.ReceiptResponse>(queueItem.response);
+                if(string.IsNullOrEmpty(queueItem.response))
+                {
+                    continue;
+                }
+
+                var lastReceiptResponse = JsonSerializer.Deserialize<ReceiptResponse>(queueItem.response);
                 if (lastReceiptResponse == null)
                 {
                     continue;
                 }
 
-                if ((lastReceiptResponse.ftState & 0XF) != 0)
-                {
-                    continue;
-                }
+                //if ((lastReceiptResponse.ftState & (State)0x0F) != 0)
+                //{
+                //    continue;
+                //}
 
-                if (lastReceiptResponse.ftReceiptIdentification.Contains("FS"))
+                if (lastReceiptResponse.ftReceiptIdentification.StartsWith(SIMPLIFIED_INVOICE_SERIES_PREFIX))
                 {
                     SimplifiedInvoiceSeriesNumerator = int.Parse(lastReceiptResponse.ftReceiptIdentification.Split("/")[1]);
+                    break;
                 }
             }
         }
@@ -80,29 +98,37 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignat
             ReceiptRequest = request.ReceiptRequest,
             ReceiptResponse = request.ReceiptResponse,
         }, _queuePT.LastHash);
-        response.ReceiptResponse.ftReceiptIdentification = "FS " + _queuePT.SimplifiedInvoiceSeries + "/" + SimplifiedInvoiceSeriesNumerator!.ToString()!.PadLeft(4, '0');
+        response.ReceiptResponse.ftReceiptIdentification = SIMPLIFIED_INVOICE_SERIES_PREFIX + "/" + SimplifiedInvoiceSeriesNumerator!.ToString()!.PadLeft(4, '0');
         var qrCode = PortugalReceiptCalculations.CreateSimplifiedInvoiceQRCodeAnonymousCustomer(hash, _queuePT, _signaturCreationUnitPT, request.ReceiptRequest, response.ReceiptResponse);
-        response.ReceiptResponse.AddSignatureItem(new Api.POS.Models.ifPOS.v2.SignatureItem
+        response.ReceiptResponse.AddSignatureItem(new SignatureItem
         {
             Caption = "ATCUD",
-            Data = _queuePT.ATCUD,
+            Data = _queuePT.ATCUD + "-" + SimplifiedInvoiceSeriesNumerator,
             ftSignatureFormat = SignatureFormat.Text,
             ftSignatureType = SignatureTypePT.ATCUD.As<SignatureType>(),
         });
-        response.ReceiptResponse.AddSignatureItem(new Api.POS.Models.ifPOS.v2.SignatureItem
+        response.ReceiptResponse.AddSignatureItem(new SignatureItem
         {
             Caption = "Hash",
             Data = hash,
             ftSignatureFormat = SignatureFormat.Text.WithPosition(SignatureFormatPosition.AfterHeader),
             ftSignatureType = SignatureTypePT.Hash.As<SignatureType>(),
         });
-        response.ReceiptResponse.AddSignatureItem(new Api.POS.Models.ifPOS.v2.SignatureItem
+        response.ReceiptResponse.AddSignatureItem(new SignatureItem
         {
             Caption = "Hash",
-            Data = hash,
+            Data = hash[..4],
             ftSignatureFormat = SignatureFormat.Text,
             ftSignatureType = SignatureTypePT.HashPrint.As<SignatureType>(),
         });
+        response.ReceiptResponse.AddSignatureItem(new SignatureItem
+        {
+            Caption = "Processed by certified program",
+            Data = "no.9999/AT",
+            ftSignatureFormat = SignatureFormat.Text,
+            ftSignatureType = SignatureTypePT.CertificationNo.As<SignatureType>(),
+        });
+        
         response.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreatePTQRCode(qrCode));
         _queuePT.LastHash = hash;
         return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);

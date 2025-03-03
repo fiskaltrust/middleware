@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.Xml.Serialization;
 
 namespace fiskaltrust.SAFT.CLI.SAFTSchemaPT10401;
@@ -183,7 +183,7 @@ public class Header
     [XmlElement(ElementName = "ProductCompanyTaxID")]
     [MaxLength(20)]
     [Required]
-    public required int ProductCompanyTaxID { get; set; }
+    public required string ProductCompanyTaxID { get; set; }
 
     /// <summary>
     /// Number of the software certificate allocated to the entity that created the software, pursuant to Ordinance No. 363/2010, of 23th June.
@@ -192,7 +192,7 @@ public class Header
     /// </summary>
     [XmlElement(ElementName = "SoftwareCertificateNumber")]
     [Required]
-    public required int SoftwareCertificateNumber { get; set; }
+    public required string SoftwareCertificateNumber { get; set; }
 
     /// <summary>
     /// Name of the product that generates the SAF-T (PT).

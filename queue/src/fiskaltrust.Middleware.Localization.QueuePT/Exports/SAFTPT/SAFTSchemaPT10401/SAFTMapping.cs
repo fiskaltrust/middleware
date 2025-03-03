@@ -11,8 +11,60 @@ using fiskaltrust.storage.V0.MasterData;
 
 namespace fiskaltrust.SAFT.CLI.SAFTSchemaPT10401;
 
+public static class CertificationPosSystem
+{
+    public const string ProductCompanyTaxID = "980833310";
+    public const string SoftwareCertificateNumber = "0000";
+    public const string ProductID = "fiskaltrust/fiskaltrust.CloudCashBox";
+    public const string ProductVersion = "2.0";
+}
+
 public static class SAFTMapping
 {
+    private static readonly Customer _anonymousCustomer = new Customer
+    {
+        CustomerID = "0",
+        AccountID = "Desconhecido",
+        CustomerTaxID = "999999990",
+        CompanyName = "Consumidor final",
+        BillingAddress = new BillingAddress
+        {
+            AddressDetail = "Desconhecido",
+            City = "Desconhecido",
+            PostalCode = "Desconhecido",
+            Country = "Desconhecido"
+        }
+    };
+
+    public static Customer GetCustomerData(ReceiptRequest receiptRequest)
+    {
+        if (receiptRequest.cbCustomer == null)
+        {
+            return _anonymousCustomer;
+        }
+        var middlewareCustomer = JsonSerializer.Deserialize<MiddlewareCustomer>(JsonSerializer.Serialize(receiptRequest.cbCustomer))!;
+        if (string.IsNullOrEmpty(middlewareCustomer.CustomerId))
+        {
+            middlewareCustomer.CustomerId = Convert.ToBase64String(MD5.HashData(Encoding.UTF8.GetBytes(middlewareCustomer.CustomerVATId)));
+        }
+        var customer = new Customer
+        {
+            CustomerID = middlewareCustomer.CustomerId,
+            AccountID = "Desconhecido",
+            CustomerTaxID = middlewareCustomer.CustomerVATId,
+            CompanyName = middlewareCustomer.CustomerName,
+            BillingAddress = new BillingAddress
+            {
+                StreetName = middlewareCustomer.CustomerStreet,
+                AddressDetail = $"{middlewareCustomer.CustomerName} {middlewareCustomer.CustomerStreet}  {middlewareCustomer.CustomerZip} {middlewareCustomer.CustomerCity}",
+                City = middlewareCustomer.CustomerCity,
+                PostalCode = middlewareCustomer.CustomerZip,
+                Country = middlewareCustomer.CustomerCountry ?? "PT",
+            }
+        };
+        return customer;
+    }
+
     public static AuditFile CreateAuditFile(AccountMasterData accountMasterData, List<ftQueueItem> queueItems, int to)
     {
         var receiptRequests = queueItems.Select(x => (receiptRequest: JsonSerializer.Deserialize<ReceiptRequest>(x.request)!, receiptResponse: JsonSerializer.Deserialize<ReceiptResponse>(x.response))).ToList();
@@ -21,14 +73,13 @@ public static class SAFTMapping
         {
             actualReceiptRequests = actualReceiptRequests.Take(-to).ToList();
         }
-        var invoices = actualReceiptRequests.Select(x => SAFTMapping.GetInvoiceForReceiptRequest(accountMasterData, x)).Where(x => x != null).ToList();
-
+        var invoices = actualReceiptRequests.Select(x => SAFTMapping.GetInvoiceForReceiptRequest(x)).Where(x => x != null).ToList();
         return new AuditFile
         {
             Header = GetHeader(accountMasterData),
             MasterFiles = new MasterFiles
             {
-                Customer = GetCustomers(actualReceiptRequests.Select(x => x.receiptRequest).ToList()),
+                Customer = [..actualReceiptRequests.Select(x => GetCustomerData(x.receiptRequest)).DistinctBy(x => x.CustomerID)],
                 Product = GetProducts(actualReceiptRequests.Select(x => x.receiptRequest).ToList()),
                 TaxTable = GetTaxTable(actualReceiptRequests.Select(x => x.receiptRequest).ToList())
             },
@@ -62,7 +113,7 @@ public static class SAFTMapping
 
     private static TaxTable GetTaxTable(List<ReceiptRequest> receiptRequest)
     {
-        var lines = receiptRequest.SelectMany(x => x.cbChargeItems).Select(GetLine);
+        var lines = receiptRequest.SelectMany(x => x.cbChargeItems.Select(c => GetLine(x, c)));
         var taxTableEntries = lines.Select(x => new TaxTableEntry
         {
             TaxType = x.Tax.TaxType,
@@ -226,60 +277,6 @@ public static class SAFTMapping
         };
     }
 
-    private static List<Customer> GetCustomers(List<ReceiptRequest> receiptRequest)
-    {
-        var customerData = receiptRequest.Where(x => x.cbCustomer != null).Select(x =>
-        {
-            var middlewareCustomer = GetCustomerIfIncludeded(x)!;
-            var customer = new Customer
-            {
-                CustomerID = middlewareCustomer.CustomerId,
-                AccountID = "Desconhecido",
-                CustomerTaxID = middlewareCustomer.CustomerVATId,
-                CompanyName = middlewareCustomer.CustomerName,
-                BillingAddress = new BillingAddress
-                {
-                    BuildingNumber = "Desconheci",
-                    StreetName = middlewareCustomer.CustomerStreet,
-                    AddressDetail = $"{middlewareCustomer.CustomerName} {middlewareCustomer.CustomerStreet}  {middlewareCustomer.CustomerZip} {middlewareCustomer.CustomerCity}",
-                    City = middlewareCustomer.CustomerCity,
-                    PostalCode = middlewareCustomer.CustomerZip,
-                    Region = "Desconhecido",
-                    Country = middlewareCustomer.CustomerCountry,
-                }
-            };
-            return customer;
-        }).DistinctBy(x => x.CustomerID).ToList();
-
-        if (receiptRequest.Any(x => x.cbCustomer == null))
-        {
-            customerData.Add(new Customer
-            {
-                CustomerID = "0",
-                AccountID = "Desconhecido",
-                CustomerTaxID = "999999990",
-                CompanyName = "Consumidor final",
-                BillingAddress = new BillingAddress
-                {
-                    AddressDetail = "Desconhecido",
-                    City = "Desconhecido",
-                    PostalCode = "Desconhecido",
-                    Country = "Desconhecido"
-                }
-            });
-        }
-        return customerData;
-    }
-
-    public static MiddlewareCustomer? GetCustomerIfIncludeded(ReceiptRequest receiptRequest)
-    {
-        if (receiptRequest.cbCustomer == null)
-        {
-            return null;
-        }
-        return JsonSerializer.Deserialize<MiddlewareCustomer>(JsonSerializer.Serialize(receiptRequest.cbCustomer));
-    }
-
     public static Header GetHeader(AccountMasterData accountMasterData)
     {
         return new Header
@@ -303,19 +300,19 @@ public static class SAFTMapping
             StartDate = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 01),
             EndDate = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, DateTime.DaysInMonth(DateTime.UtcNow.Year, DateTime.UtcNow.Month)),
             CurrencyCode = "EUR",
-            DateCreated = new DateTime(2024, 06, 27),
+            DateCreated = DateTime.UtcNow,
             TaxEntity = "GLOBAL",
-            ProductCompanyTaxID = 00000000,
-            SoftwareCertificateNumber = 0000,
-            ProductID = "fiskaltrust.Middleware",
-            ProductVersion = "1.3",
+            ProductCompanyTaxID = CertificationPosSystem.ProductCompanyTaxID,
+            SoftwareCertificateNumber = CertificationPosSystem.SoftwareCertificateNumber,
+            ProductID = CertificationPosSystem.ProductID,
+            ProductVersion = CertificationPosSystem.ProductVersion,
         };
     }
 
-    public static Invoice? GetInvoiceForReceiptRequest(AccountMasterData accountMasterData, (ReceiptRequest receiptRequest, ReceiptResponse receiptResponse) receipt)
+    public static Invoice? GetInvoiceForReceiptRequest((ReceiptRequest receiptRequest, ReceiptResponse receiptResponse) receipt)
     {
         var receiptRequest = receipt.receiptRequest;
-        var lines = receiptRequest.cbChargeItems.Select(GetLine).ToList();
+        var lines = receiptRequest.cbChargeItems.Select(x => GetLine(receiptRequest, x)).ToList();
         if (lines.Count == 0)
         {
             return null;
@@ -365,46 +362,12 @@ public static class SAFTMapping
                 GrossTotal = Helpers.CreateTwoDigitMonetaryValue(grossAmount),
             }
         };
-        var customer = GetCustomerIfIncludeded(receiptRequest);
-        if (customer != null)
-        {
-            invoice.CustomerID = customer.CustomerId;
-        }
-        if (receiptRequest.cbChargeItems.Any(x => GetProductType(x) == "P"))
-        {
-            if (customer != null)
-            {
-                invoice.ShipTo = new ShipTo
-                {
-                    Address = new Address
-                    {
-                        StreetName = customer.CustomerStreet,
-                        AddressDetail = $"{customer.CustomerName} {customer.CustomerStreet}  {customer.CustomerZip} {customer.CustomerCity}",
-                        City = customer.CustomerCity,
-                        PostalCode = customer.CustomerZip,
-                        Region = "Desconhecido",
-                        Country = customer.CustomerCountry,
-                    },
-                };
-            }
-            invoice.ShipFrom = new ShipFrom
-            {
-                Address = new Address
-                {
-                    StreetName = accountMasterData.Street,
-                    AddressDetail = $"{accountMasterData.AccountName} {accountMasterData.Street}  {accountMasterData.Zip} {accountMasterData.City}",
-                    City = accountMasterData.City,
-                    PostalCode = accountMasterData.Zip,
-                    Region = "Desconhecido",
-                    Country = accountMasterData.Country,
-                }
-            };
-        }
-
+        var customer = GetCustomerData(receiptRequest);
+        invoice.CustomerID = customer.CustomerID;
         invoice.DocumentTotals.Payment = receiptRequest.cbPayItems.Select(x => new Payment
         {
             PaymentAmount = x.Amount,
-            PaymentDate = x.Moment,
+            PaymentDate = x.Moment ?? receiptRequest.cbReceiptMoment,
             PaymentMechanism = GetPaymentMecahnism(x),
         }).ToList();
         return invoice;
@@ -425,7 +388,7 @@ public static class SAFTMapping
         _ => "FS"
     };
 
-    public static Line GetLine(ChargeItem chargeItem)
+    public static Line GetLine(ReceiptRequest receiptRequest, ChargeItem chargeItem)
     {
         var tax = new Tax
         {
@@ -451,12 +414,12 @@ public static class SAFTMapping
         return new Line
         {
             LineNumber = (long) chargeItem.Position,
-            ProductCode = chargeItem.ProductNumber ?? "",
+            ProductCode = chargeItem.ProductNumber ?? Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(chargeItem.Description))),
             ProductDescription = chargeItem.Description,
             Quantity = Helpers.CreateMonetaryValue(chargeItem.Quantity),
-            UnitOfMeasure = chargeItem.Unit ?? "",
+            UnitOfMeasure = chargeItem.Unit ?? "Unit",
             UnitPrice = Helpers.CreateMonetaryValue(unitPrice),
-            TaxPointDate = chargeItem.Moment.GetValueOrDefault(), // need some more checks here.. fallback?
+            TaxPointDate = chargeItem.Moment ?? receiptRequest.cbReceiptMoment, 
             Description = chargeItem.Description,
             CreditAmount = Helpers.CreateMonetaryValue(chargeItem.Amount - chargeItem.VATAmount),
             Tax = tax,
