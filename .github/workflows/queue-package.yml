@@ -41,14 +41,7 @@ jobs:
       - uses: ./.github/actions/build
         with:
           solution: queue/fiskaltrust.Middleware.sln
-
-      # - run: |
-      #     dotnet publish --configuration Release --no-restore -f net461
-      #     dotnet publish --configuration Release --no-restore -f netstandard2.0
-      #     dotnet publish --configuration Release --no-restore -f netstandard2.1
-      #   if: inputs.package == 'fiskaltrust.Middleware.Queue.SQLite'
-      #   working-directory: queue/src/fiskaltrust.Middleware.Queue.SQLite
-      #   name: Publish SQLite for nuget
+          configuration: Release
 
       - uses: ./.github/actions/sign
         with:
