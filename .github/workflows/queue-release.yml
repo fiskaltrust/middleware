@@ -4,6 +4,12 @@ on:
     tags:
       - queue/**/v*
 
+permissions:
+  checks: write
+  pull-requests: write
+  id-token: write
+  contents: read
+
 jobs:
   tests:
     needs: []
