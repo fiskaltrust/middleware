@@ -2,7 +2,7 @@ name: 'Queue Release'
 on:
   push:
     tags:
-      - queue/*
+      - queue/**/v*
 
 jobs:
   tests:
