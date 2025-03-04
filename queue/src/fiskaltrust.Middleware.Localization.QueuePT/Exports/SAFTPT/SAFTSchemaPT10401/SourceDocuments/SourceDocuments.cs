@@ -1,4 +1,4 @@
-using System.Xml.Serialization;
+﻿using System.Xml.Serialization;
 
 namespace fiskaltrust.SAFT.CLI.SAFTSchemaPT10401;
 
@@ -24,8 +24,8 @@ public class SourceDocuments
     /// 
     /// This table shall not include the documents required to be exported in Tables 4.1. – SalesInvoices or 4.2 – MovementOfGoods.
     /// </summary>
-    //[XmlElement(ElementName = "WorkingDocuments.")]
-    //public object? WorkingDocuments. { get; set; }
+    [XmlElement(ElementName = "WorkingDocuments")]
+    public WorkingDocuments? WorkingDocuments { get; set; }
 
     /// <summary>
     /// Receipts issued after the entry into force of this structure should be exported on this table.

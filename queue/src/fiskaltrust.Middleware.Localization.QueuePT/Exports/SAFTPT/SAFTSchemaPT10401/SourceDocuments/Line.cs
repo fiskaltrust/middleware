@@ -86,8 +86,25 @@ public class Line
         }
     }
 
-    [XmlElement(ElementName = "CreditAmount")]
-    public required decimal CreditAmount { get; set; }
+    [XmlIgnore]
+    public decimal? CreditAmount { get; set; }
+
+    [XmlElement("CreditAmount", IsNullable = false)]
+    public object CreditAmountProperty
+    {
+        get => CreditAmount;
+        set
+        {
+            if (value == null)
+            {
+                CreditAmount = null;
+            }
+            else
+            {
+                CreditAmount = decimal.Parse(value.ToString());
+            }
+        }
+    }
 
     [XmlElement(ElementName = "Tax")]
     public required Tax Tax { get; set; }

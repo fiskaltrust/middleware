@@ -23,12 +23,12 @@ public class JournalProcessorPT : IJournalProcessor
         var masterData = new AccountMasterData
         {
             AccountId = Guid.NewGuid(),
-            AccountName = "fiskaltrust ",
-            Street = "TEST STRET",
-            Zip = "1111-2222",
-            City = "Test",
+            AccountName = "FISKALTRUST CONSULTING GMBH - SUCURSAL EM",
+            Street = "AV DA REPUBLICA N 35 4 ANDAR",
+            Zip = "1050 - 186",
+            City = "Lisboa",
             Country = "PT",
-            TaxId = "199999999"
+            TaxId = "980833310"
         };
 
         List<ftQueueItem> queueItems;

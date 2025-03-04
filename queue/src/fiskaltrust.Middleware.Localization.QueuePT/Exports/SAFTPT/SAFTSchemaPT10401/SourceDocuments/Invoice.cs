@@ -19,7 +19,7 @@ public class Invoice
     public required string ATCUD { get; set; }
 
     [XmlElement(ElementName = "DocumentStatus")]
-    public required DocumentStatus DocumentStatus { get; set; }
+    public required InvoiceDocumentStatus DocumentStatus { get; set; }
 
     [XmlElement(ElementName = "Hash")]
     public required string Hash { get; set; }

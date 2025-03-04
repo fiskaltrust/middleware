@@ -1,10 +1,9 @@
-﻿using System.Globalization;
-using System.Xml.Serialization;
+﻿using System.Xml.Serialization;
 
 namespace fiskaltrust.SAFT.CLI.SAFTSchemaPT10401;
 
 [XmlRoot(ElementName = "DocumentTotals")]
-public class DocumentTotals
+public class WorkDocumentTotals
 {
     [XmlElement(ElementName = "TaxPayable")]
     public required decimal TaxPayable { get; set; }
@@ -17,12 +16,6 @@ public class DocumentTotals
 
     [XmlElement(ElementName = "Currency")]
     public Currency? Currency { get; set; }
-
-    [XmlElement(ElementName = "Settlement")]
-    public Settlement? Settlement { get; set; }
-
-    [XmlElement(ElementName = "Payment")]
-    public List<Payment>? Payment { get; set; }
 }
 
 

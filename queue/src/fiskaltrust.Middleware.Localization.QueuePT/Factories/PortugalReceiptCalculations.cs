@@ -28,7 +28,7 @@ public static class InvoiceStatus
 
 public static class PortugalReceiptCalculations
 {
-    public static string CreateCreditNoteQRCode(string hash, ftQueuePT queuePT, ftSignaturCreationUnitPT signaturCreationUnitPT, ReceiptRequest request, ReceiptResponse receiptResponse)
+    public static string CreateCreditNoteQRCode(string qrCodeHash, string issuerTIN, string taxRegion, string atcud, ReceiptRequest request, ReceiptResponse receiptResponse)
     {
         var taxGroups = request.cbChargeItems.GroupBy(GetIVATAxCode);
         var normalChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "NOR").ToList();
@@ -41,15 +41,15 @@ public static class PortugalReceiptCalculations
         var customerCountry = customer.BillingAddress.Country;
         return new PTQrCode
         {
-            IssuerTIN = queuePT.IssuerTIN,
+            IssuerTIN = issuerTIN,
             CustomerTIN = customerTIN,
             CustomerCountry = customerCountry,
             DocumentType = InvoiceType.CreditNote,
             DocumentStatus = InvoiceStatus.Normal,
             DocumentDate = request.cbReceiptMoment,
             UniqueIdentificationOfTheDocument = receiptResponse.ftReceiptIdentification,
-            ATCUD = queuePT.ATCUD,
-            TaxCountryRegion = queuePT.TaxRegion,
+            ATCUD = atcud,
+            TaxCountryRegion = taxRegion,
             TaxableBasisOfVAT_ExemptRate = exemptChargeItems.Sum(x => x.Amount),
             TaxableBasisOfVAT_ReducedRate = reducedChargeItems.Sum(x => x.Amount - x.VATAmount ?? 0.0m),
             TotalVAT_ReducedRate = reducedChargeItems.Sum(x => x.VATAmount ?? 0.0m),
@@ -59,13 +59,13 @@ public static class PortugalReceiptCalculations
             TotalVAT_StandardRate = normalChargeItems.Sum(x => x.VATAmount ?? 0.0m),
             TotalTaxes = request.cbChargeItems.Sum(x => x.VATAmount ?? 0.0m),
             GrossTotal = request.cbChargeItems.Sum(x => x.Amount),
-            Hash = hash[..4],
-            SoftwareCertificateNumber = signaturCreationUnitPT.SoftwareCertificateNumber,
+            Hash = qrCodeHash,
+            SoftwareCertificateNumber = CertificationPosSystem.SoftwareCertificateNumber,
             OtherInformation = "ftQueueId=" + receiptResponse.ftQueueID + ";ftQueueItemId=" + receiptResponse.ftQueueItemID
         }.GenerateQRCode();
     }
 
-    public static string CreateSimplifiedInvoiceQRCode(string hash, ftQueuePT queuePT, ftSignaturCreationUnitPT signaturCreationUnitPT, ReceiptRequest request, ReceiptResponse receiptResponse)
+    public static string CreateSimplifiedInvoiceQRCode(string qrCodeHash, string issuerTIN, string taxRegion, string atcud, ReceiptRequest request, ReceiptResponse receiptResponse)
     {
         var taxGroups = request.cbChargeItems.GroupBy(GetIVATAxCode);
         var normalChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "NOR").ToList();
@@ -78,15 +78,15 @@ public static class PortugalReceiptCalculations
         var customerCountry = customer.BillingAddress.Country;
         return new PTQrCode
         {
-            IssuerTIN = queuePT.IssuerTIN,
+            IssuerTIN = issuerTIN,
             CustomerTIN = customerTIN,
             CustomerCountry = customerCountry,
             DocumentType = InvoiceType.SimplifiedInvoice,
             DocumentStatus = InvoiceStatus.Normal,
             DocumentDate = request.cbReceiptMoment,
             UniqueIdentificationOfTheDocument = receiptResponse.ftReceiptIdentification,
-            ATCUD = queuePT.ATCUD,
-            TaxCountryRegion = queuePT.TaxRegion,
+            ATCUD = atcud,
+            TaxCountryRegion = taxRegion,
             TaxableBasisOfVAT_ExemptRate = exemptChargeItems.Sum(x => x.Amount),
             TaxableBasisOfVAT_ReducedRate = reducedChargeItems.Sum(x => x.Amount - x.VATAmount ?? 0.0m),
             TotalVAT_ReducedRate = reducedChargeItems.Sum(x => x.VATAmount ?? 0.0m),
@@ -96,8 +96,8 @@ public static class PortugalReceiptCalculations
             TotalVAT_StandardRate = normalChargeItems.Sum(x => x.VATAmount ?? 0.0m),
             TotalTaxes = request.cbChargeItems.Sum(x => x.VATAmount ?? 0.0m),
             GrossTotal = request.cbChargeItems.Sum(x => x.Amount),
-            Hash = hash[..4],
-            SoftwareCertificateNumber = signaturCreationUnitPT.SoftwareCertificateNumber,
+            Hash = qrCodeHash,
+            SoftwareCertificateNumber = CertificationPosSystem.SoftwareCertificateNumber,
             OtherInformation = "ftQueueId=" + receiptResponse.ftQueueID + ";ftQueueItemId=" + receiptResponse.ftQueueItemID
         }.GenerateQRCode();
     }

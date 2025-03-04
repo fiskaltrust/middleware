@@ -13,7 +13,7 @@ namespace fiskaltrust.SAFT.CLI.SAFTSchemaPT10401;
 public static class CertificationPosSystem
 {
     public const string ProductCompanyTaxID = "980833310";
-    public const string SoftwareCertificateNumber = "0000";
+    public const string SoftwareCertificateNumber = "9999";
     public const string ProductID = "fiskaltrust/fiskaltrust.CloudCashBox";
     public const string ProductVersion = "2.0";
 }
@@ -79,6 +79,7 @@ public static class SAFTMapping
         {
             actualReceiptRequests = actualReceiptRequests.Take(-to).ToList();
         }
+        actualReceiptRequests = actualReceiptRequests.OrderBy(x => x.receiptRequest.cbReceiptMoment).ToList();
         var invoices = actualReceiptRequests.Select(x => SAFTMapping.GetInvoiceForReceiptRequest(x)).Where(x => x != null).ToList();
         return new AuditFile
         {
@@ -87,7 +88,7 @@ public static class SAFTMapping
             {
                 Customer = [.. actualReceiptRequests.Select(x => GetCustomerData(x.receiptRequest)).DistinctBy(x => x.CustomerID)],
                 Product = GetProducts(actualReceiptRequests.Select(x => x.receiptRequest).ToList()),
-                TaxTable = GetTaxTable(actualReceiptRequests.Select(x => x.receiptRequest).ToList())
+                TaxTable = GetTaxTable(actualReceiptRequests.Select(x => x).ToList())
             },
             SourceDocuments = new SourceDocuments
             {
@@ -95,7 +96,7 @@ public static class SAFTMapping
                 {
                     NumberOfEntries = invoices.Count,
                     TotalDebit = invoices.SelectMany(x => x!.Line).Sum(x => x.DebitAmount ?? 0.0m),
-                    TotalCredit = invoices.SelectMany(x => x!.Line).Sum(x => x.CreditAmount),
+                    TotalCredit = invoices.SelectMany(x => x!.Line).Sum(x => x.CreditAmount ?? 0.0m),
                     Invoice = invoices!
                 }
             }
@@ -117,9 +118,9 @@ public static class SAFTMapping
         }).DistinctBy(x => x.ProductCode).ToList();
     }
 
-    private static TaxTable GetTaxTable(List<ReceiptRequest> receiptRequest)
+    private static TaxTable GetTaxTable(List<(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)> receipt)
     {
-        var lines = receiptRequest.SelectMany(x => GetGroupedChargeItems(x).Select(c => GetLine(x, c)));
+        var lines = receipt.SelectMany(x => GetGroupedChargeItems(x.receiptRequest).Select(c => GetLine(x.receiptRequest, x.receiptResponse, c)));
         var taxTableEntries = lines.Select(x => new TaxTableEntry
         {
             TaxType = x.Tax.TaxType,
@@ -318,7 +319,7 @@ public static class SAFTMapping
     public static Invoice? GetInvoiceForReceiptRequest((ReceiptRequest receiptRequest, ReceiptResponse receiptResponse) receipt)
     {
         var receiptRequest = receipt.receiptRequest;
-        var lines = GetGroupedChargeItems(receiptRequest).Select(x => GetLine(receiptRequest, x)).ToList();
+        var lines = GetGroupedChargeItems(receiptRequest).Select(x => GetLine(receiptRequest, receipt.receiptResponse, x)).ToList();
         if (lines.Count == 0)
         {
             return null;
@@ -339,7 +340,7 @@ public static class SAFTMapping
         {
             InvoiceNo = receipt.receiptResponse.ftReceiptIdentification,
             ATCUD = atcudSignature.Data,
-            DocumentStatus = new DocumentStatus
+            DocumentStatus = new InvoiceDocumentStatus
             {
                 InvoiceStatus = "N",
                 InvoiceStatusDate = receiptRequest.cbReceiptMoment,
@@ -368,6 +369,13 @@ public static class SAFTMapping
                 GrossTotal = Helpers.CreateTwoDigitMonetaryValue(grossAmount),
             }
         };
+        //if (lines.Any(x => x.SettlementAmount.HasValue))
+        //{
+        //    invoice.DocumentTotals.Settlement = new Settlement
+        //    {
+        //        SettlementAmount = lines.Sum(x => x.SettlementAmount ?? 0)
+        //    };
+        //}
         invoice.DocumentTotals.Payment = receiptRequest.cbPayItems.Select(x => GetPayment(receiptRequest, x)).ToList();
         return invoice;
     }
@@ -410,7 +418,7 @@ public static class SAFTMapping
         };
     }
 
-    public static Line GetLine(ReceiptRequest receiptRequest, (ChargeItem chargeItem, List<ChargeItem> modifiers) chargeItem)
+    public static Line GetLine(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, (ChargeItem chargeItem, List<ChargeItem> modifiers) chargeItem)
     {
         var chargeItemData = chargeItem.chargeItem;
         var tax = new Tax
@@ -422,7 +430,7 @@ public static class SAFTMapping
         };
 
         var unitPrice = 0m;
-        var netLinePrice = chargeItemData.Amount + chargeItem.modifiers.Sum(x => x.Amount) + chargeItem.modifiers.Sum(x => x.VATAmount ?? 0.0m);
+        var netLinePrice = chargeItemData.Amount + chargeItem.modifiers.Sum(x => x.Amount) + chargeItem.modifiers.Sum(x => x.VATAmount ?? 0.0m) - chargeItem.chargeItem.VATAmount ?? 0.0m;
         var quantity = chargeItemData.Quantity;
         if (chargeItem.chargeItem.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund))
         {
@@ -436,6 +444,7 @@ public static class SAFTMapping
         }
         else
         {
+            // calculate 5 digits after digit
             unitPrice = netLinePrice / quantity;
         }
         var line = new Line
@@ -448,9 +457,29 @@ public static class SAFTMapping
             UnitPrice = Helpers.CreateMonetaryValue(unitPrice),
             TaxPointDate = chargeItemData.Moment ?? receiptRequest.cbReceiptMoment,
             Description = chargeItemData.Description,
-            CreditAmount = Helpers.CreateMonetaryValue(netLinePrice),
+
             Tax = tax
         };
+
+        if(GetInvoiceType(receiptRequest) == "NC")
+        {
+            var referencedReceiptReference = ((JsonElement) receiptResponse.ftStateData!).GetProperty("ReferencedReceiptResponse").Deserialize<ReceiptResponse>();
+            line.References = new References
+            {
+                Reference = referencedReceiptReference!.ftReceiptIdentification,
+                Reason = "Devolução"
+            };
+            line.DebitAmount = Helpers.CreateMonetaryValue(netLinePrice);
+        }
+        else
+        {
+            line.CreditAmount = Helpers.CreateMonetaryValue(netLinePrice);
+        }
+
+        if (chargeItem.modifiers.Count > 0)
+        {
+            line.SettlementAmount = chargeItem.modifiers.Sum(x => Math.Abs(x.Amount));
+        }
         if (((long) chargeItemData.ftChargeItemCase & (long) 0xFF00) > 0x0000)
         {
             line.TaxExemptionReason = GetTaxExemptionReason(chargeItemData);

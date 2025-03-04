@@ -102,7 +102,7 @@ public static class PTCertificationExamples
                     Position = 1,
                     Amount = -100,
                     VATRate = PTVATRates.Normal,
-                    VATAmount = -VATHelpers.CalculateVAT(100, PTVATRates.Normal),
+                    VATAmount = VATHelpers.CalculateVAT(-100, PTVATRates.Normal),
                     ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0002_0013,
                     Quantity = -1,
                     Description = "Line item 1"
@@ -158,7 +158,7 @@ public static class PTCertificationExamples
                 VATAmount = VATHelpers.CalculateVAT(100, PTVATRates.Discounted1),
                 ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0011,
                 Quantity = 1,
-                Description = "Line item 1 (reduced 6%)"
+                Description = "Line item 1"
             },
             new ChargeItem
             {
@@ -168,7 +168,7 @@ public static class PTCertificationExamples
                 VATAmount = VATHelpers.CalculateVAT(50, PTVATRates.NotTaxable),
                 ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_3018,
                 Quantity = 1,
-                Description = "Line item 2 (exempt)"
+                Description = "Line item 2"
             },
             new ChargeItem
             {
@@ -178,7 +178,7 @@ public static class PTCertificationExamples
                 VATAmount = VATHelpers.CalculateVAT(25, PTVATRates.Discounted2),
                 ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0011,
                 Quantity = 1,
-                Description = "Line item 1 (13%)"
+                Description = "Line item 1"
             },
             new ChargeItem
             {
@@ -188,7 +188,7 @@ public static class PTCertificationExamples
                 VATAmount = VATHelpers.CalculateVAT(12.5m, PTVATRates.Normal),
                 ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0013,
                 Quantity = 1,
-                Description = "Line item 1 (Normal)"
+                Description = "Line item 1"
             }
         };
         return new ReceiptRequest
@@ -227,30 +227,30 @@ public static class PTCertificationExamples
                 Position = 1,
                 Amount = 100 * 0.55m,
                 VATRate = PTVATRates.Normal,
-                VATAmount = VATHelpers.CalculateVAT(100, PTVATRates.Normal),
+                VATAmount = VATHelpers.CalculateVAT(100 * 0.55m, PTVATRates.Normal),
                 ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0013,
                 Quantity = 100,
-                Description = "Line item 1 (reduced 6%)"
+                Description = "Line item 1"
             },
             new ChargeItem
             {
-                Position = 2,
+                Position = 1,
                 Amount = -(100 * 0.55m) * 0.088m,
                 VATRate = PTVATRates.Normal,
                 VATAmount = VATHelpers.CalculateVAT(-(100 * 0.55m) * 0.088m, PTVATRates.Normal),
                 ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0004_0013,
                 Quantity = 1,
-                Description = "Discount Line item 1 (reduced 6%)"
+                Description = "Discount Line item 1"
             },
             new ChargeItem
             {
-                Position = 3,
+                Position = 2,
                 Amount = 12.5m,
                 VATRate = PTVATRates.Normal,
-                VATAmount = VATHelpers.CalculateVAT(100, PTVATRates.Normal),
+                VATAmount = VATHelpers.CalculateVAT(12.5m, PTVATRates.Normal),
                 ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0013,
                 Quantity = 1,
-                Description = "Line item 1 (Normal)"
+                Description = "Line item 1"
             }
         };
         return new ReceiptRequest
@@ -317,6 +317,7 @@ public static class PTCertificationExamples
                     ftPayItemCase = (PayItemCase) 0x5054_2000_0000_0001,
                 }
             ],
+            cbUser = 1,
             ftPosSystemId = Guid.NewGuid(),
             ftReceiptCase = (ReceiptCase) 0x5054_2000_0000_0001,
             cbCustomer = new MiddlewareCustomer
@@ -364,6 +365,7 @@ public static class PTCertificationExamples
                     ftPayItemCase = (PayItemCase) 0x5054_2000_0000_0001,
                 }
             ],
+            cbUser = 1,
             ftPosSystemId = Guid.NewGuid(),
             ftReceiptCase = (ReceiptCase) 0x5054_2000_0000_0001,
             cbCustomer = new MiddlewareCustomer
