@@ -251,4 +251,19 @@ public class PTCertificationTests
         var receiptRequest = PTCertificationExamples.Case_5_13();
         await ValidateMyData(receiptRequest);
     }
+
+    [Fact]
+    public async Task PTCertificationExamples_Case_5_13_1()
+    {
+        var receiptRequest = PTCertificationExamples.Case_5_13_1_Invoice();
+        await ValidateMyData(receiptRequest);
+    }
+
+
+    [Fact]
+    public async Task PTCertificationExamples_Case_5_13_2()
+    {
+        var receiptRequest = PTCertificationExamples.Case_5_13_2_ProForma();
+        await ValidateMyData(receiptRequest);
+    }
 }

@@ -24,8 +24,15 @@ public class Line
     [XmlElement(ElementName = "UnitOfMeasure")]
     public required string UnitOfMeasure { get; set; }
 
-    [XmlElement(ElementName = "UnitPrice")]
+    [XmlIgnore()]
     public required decimal UnitPrice { get; set; }
+
+    [XmlElement("UnitPrice", IsNullable = false)]
+    public string UnitPriceProperty
+    {
+        get => UnitPrice.ToString("F6", CultureInfo.InvariantCulture);
+        set => UnitPrice = decimal.Parse(value.ToString());
+    }
 
     [XmlIgnore]
     public decimal? TaxBase { get; set; }
@@ -70,9 +77,9 @@ public class Line
     public decimal? DebitAmount { get; set; }
 
     [XmlElement("DebitAmount", IsNullable = false)]
-    public object DebitAmountProperty
+    public string DebitAmountProperty
     {
-        get => DebitAmount;
+        get => DebitAmount?.ToString("F6", CultureInfo.InvariantCulture);
         set
         {
             if (value == null)
@@ -90,9 +97,9 @@ public class Line
     public decimal? CreditAmount { get; set; }
 
     [XmlElement("CreditAmount", IsNullable = false)]
-    public object CreditAmountProperty
+    public string CreditAmountProperty
     {
-        get => CreditAmount;
+        get => CreditAmount?.ToString("F6", CultureInfo.InvariantCulture);
         set
         {
             if (value == null)

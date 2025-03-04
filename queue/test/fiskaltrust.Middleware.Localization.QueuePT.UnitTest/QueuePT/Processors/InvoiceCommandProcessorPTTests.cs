@@ -5,12 +5,16 @@ using fiskaltrust.Middleware.Localization.v2;
 using FluentAssertions;
 using Xunit;
 using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
+using Moq;
+using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Storage.PT;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processors;
 
 public class InvoiceCommandProcessorPTTests
 {
-    private readonly InvoiceCommandProcessorPT _sut = new InvoiceCommandProcessorPT();
+    private readonly InvoiceCommandProcessorPT _sut = new InvoiceCommandProcessorPT(Mock.Of<IPTSSCD>(), new ftQueuePT(), new ftSignaturCreationUnitPT(), Mock.Of<IMiddlewareQueueItemRepository>());
 
     [Theory]
     [InlineData(ReceiptCase.InvoiceUnknown0x1000)]

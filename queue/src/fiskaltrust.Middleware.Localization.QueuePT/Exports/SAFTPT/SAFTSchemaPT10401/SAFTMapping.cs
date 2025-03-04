@@ -80,7 +80,8 @@ public static class SAFTMapping
             actualReceiptRequests = actualReceiptRequests.Take(-to).ToList();
         }
         actualReceiptRequests = actualReceiptRequests.OrderBy(x => x.receiptRequest.cbReceiptMoment).ToList();
-        var invoices = actualReceiptRequests.Select(x => SAFTMapping.GetInvoiceForReceiptRequest(x)).Where(x => x != null).ToList();
+        var invoices = actualReceiptRequests.Where(x => !x.receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004)).Select(x => SAFTMapping.GetInvoiceForReceiptRequest(x)).Where(x => x != null).ToList();
+        var workingDocuments= actualReceiptRequests.Where(x => x.receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004)).Select(x => SAFTMapping.GetWorkDocumentForReceiptRequest(x)).Where(x => x != null).ToList();
         return new AuditFile
         {
             Header = GetHeader(accountMasterData),
@@ -98,6 +99,13 @@ public static class SAFTMapping
                     TotalDebit = invoices.SelectMany(x => x!.Line).Sum(x => x.DebitAmount ?? 0.0m),
                     TotalCredit = invoices.SelectMany(x => x!.Line).Sum(x => x.CreditAmount ?? 0.0m),
                     Invoice = invoices!
+                },
+                WorkingDocuments = new WorkingDocuments
+                {
+                    NumberOfEntries = workingDocuments.Count,
+                    TotalDebit = workingDocuments.SelectMany(x => x!.Line).Sum(x => x.DebitAmount ?? 0.0m),
+                    TotalCredit = workingDocuments.SelectMany(x => x!.Line).Sum(x => x.CreditAmount ?? 0.0m),
+                    WorkDocument = workingDocuments!
                 }
             }
         };
@@ -316,6 +324,57 @@ public static class SAFTMapping
         };
     }
 
+    public static WorkDocument? GetWorkDocumentForReceiptRequest((ReceiptRequest receiptRequest, ReceiptResponse receiptResponse) receipt)
+    {
+        var receiptRequest = receipt.receiptRequest;
+        var lines = GetGroupedChargeItems(receiptRequest).Select(x => GetLine(receiptRequest, receipt.receiptResponse, x)).ToList();
+        if (lines.Count == 0)
+        {
+            return null;
+        }
+
+        var taxable = receiptRequest.cbChargeItems.Sum(x => x.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund) ? x.VATAmount.GetValueOrDefault() * -1 : x.VATAmount.GetValueOrDefault());
+        var grossAmount = receiptRequest.cbChargeItems.Sum(x => x.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund) ? x.Amount * -1 : x.Amount);
+        var hashSignature = receipt.receiptResponse.ftSignatures.Where(x => x.ftSignatureType.IsType(SignatureTypePT.Hash)).FirstOrDefault();
+        var atcudSignature = receipt.receiptResponse.ftSignatures.Where(x => x.ftSignatureType.IsType(SignatureTypePT.ATCUD)).FirstOrDefault();
+        var netAmount = grossAmount - taxable;
+        var invoiceType = GetInvoiceType(receiptRequest);
+        if (hashSignature == null || atcudSignature == null)
+        {
+            return null;
+        }
+        var customer = GetCustomerData(receiptRequest);
+        var workDocument = new WorkDocument
+        {
+            DocumentNumber = receipt.receiptResponse.ftReceiptIdentification,
+            ATCUD = atcudSignature.Data,
+            DocumentStatus = new WorkDocumentStatus
+            {
+                WorkStatus = "N",
+                WorkStatusDate = receiptRequest.cbReceiptMoment,
+                SourceID = JsonSerializer.Serialize(receiptRequest.cbUser),
+                SourceBilling = "P",
+            },
+            Hash = hashSignature.Data,
+            HashControl = 1,
+            Period = receiptRequest.cbReceiptMoment.Month,
+            WorkDate = receiptRequest.cbReceiptMoment,
+            WorkType = GetWorkType(receiptRequest),
+            SourceID = JsonSerializer.Serialize(receiptRequest.cbUser),
+            SystemEntryDate = receiptRequest.cbReceiptMoment,
+            Line = lines,
+            CustomerID = customer.CustomerID,
+            DocumentTotals = new WorkDocumentTotals
+            {
+                TaxPayable = Helpers.CreateTwoDigitMonetaryValue(taxable),
+                NetTotal = Helpers.CreateTwoDigitMonetaryValue(netAmount),
+                GrossTotal = Helpers.CreateTwoDigitMonetaryValue(grossAmount),
+            }
+        };
+        return workDocument;
+    }
+
+
     public static Invoice? GetInvoiceForReceiptRequest((ReceiptRequest receiptRequest, ReceiptResponse receiptResponse) receipt)
     {
         var receiptRequest = receipt.receiptRequest;
@@ -394,6 +453,15 @@ public static class SAFTMapping
             PaymentMechanism = GetPaymentMecahnism(payItem),
         };
     }
+
+    private static string GetWorkType(ReceiptRequest receiptRequest)
+    {
+        return receiptRequest.ftReceiptCase.Case() switch
+        {
+            _ => "PF"
+        };
+    }
+
 
     private static string GetInvoiceType(ReceiptRequest receiptRequest)
     {

@@ -7,12 +7,16 @@ using fiskaltrust.storage.V0;
 using FluentAssertions;
 using Xunit;
 using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
+using Moq;
+using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Storage.PT;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processors;
 
 public class ProtocolCommandProcessorPTTests
 {
-    private readonly ProtocolCommandProcessorPT _sut = new ProtocolCommandProcessorPT();
+    private readonly ProtocolCommandProcessorPT _sut = new ProtocolCommandProcessorPT(Mock.Of<IPTSSCD>(), new ftQueuePT(), new ftSignaturCreationUnitPT(), Mock.Of<IMiddlewareQueueItemRepository>());
 
     [Theory]
     [InlineData(ReceiptCase.ProtocolUnspecified0x3000)]

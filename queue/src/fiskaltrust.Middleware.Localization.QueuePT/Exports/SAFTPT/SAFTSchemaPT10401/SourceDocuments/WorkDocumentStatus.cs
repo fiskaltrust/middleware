@@ -16,7 +16,7 @@ public class WorkDocumentStatus
     [XmlElement(ElementName = "WorkStatusDate")]
     public string WorkStatusDateString
     {
-        get { return WorkStatusDate.ToString("yyyy-MM-ddTThh:mm:ss"); }
+        get { return WorkStatusDate.ToString("yyyy-MM-ddThh:mm:ss"); }
         set { WorkStatusDate = DateTime.Parse(value); }
     }
 
