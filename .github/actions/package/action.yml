@@ -6,9 +6,6 @@ inputs:
   project:
     required: true
     type: string  
-  v1Args:
-    default: ''
-    type: string
 
 runs:
   using: "composite"
@@ -19,7 +16,7 @@ runs:
 
     - name: Publish v1 Nuget packages
       shell: pwsh
-      run: dotnet pack "${{ inputs.path }}/${{ inputs.project }}/${{ inputs.project }}.csproj" --no-restore --configuration Release --output ./publish/package-v1-${{ inputs.project }} ${{ inputs.v1Args }}
+      run: dotnet pack "${{ inputs.path }}/${{ inputs.project }}/${{ inputs.project }}.csproj" --no-restore --configuration Release --output ./publish/package-v1-${{ inputs.project }}
 
     - name: Upload v1 Package
       uses: actions/upload-artifact@v4

@@ -69,9 +69,9 @@
     </ItemGroup>
 
     <ItemGroup>
-      <None Update="..\fiskaltrust.Middleware.Storage.SQLite\Migrations\001_Init.sqlite3">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
+        <None Update="..\fiskaltrust.Middleware.Storage.SQLite\Migrations\001_Init.sqlite3">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
     </ItemGroup>
 
     <Target DependsOnTargets="ResolveReferences" Name="CopyProjectReferencesToPackage">
@@ -100,5 +100,42 @@
         <Copy SourceFiles="@(SQLITE_WIN_X86)" DestinationFolder="$(TargetDir)\runtimes\win-x86\%(RecursiveDir)" SkipUnchangedFiles="true" />
         <Copy SourceFiles="@(SQLITE_OSX_X64)" DestinationFolder="$(TargetDir)\runtimes\osx-x64\%(RecursiveDir)" SkipUnchangedFiles="true" />
     </Target>
+
+    <ItemGroup>
+        <None Include="bin\Release\net461\publish\**\*.config" Pack="true" PackagePath="lib\net461" />
+        <None Include="bin\Release\net461\publish\**\*.exe" Pack="true" PackagePath="lib\net461" />
+        <None Include="bin\Release\net461\publish\**\*.dll" Pack="true" PackagePath="lib\net461" />
+        <None Include="bin\Release\net461\publish\Migrations\*.*" Pack="true" PackagePath="lib\net461\Migrations" />
+        <None Include="bin\Release\net461\x64\SQLite.Interop.dll" Pack="true" PackagePath="lib\net461\x64" />
+        <None Include="bin\Release\net461\x86\SQLite.Interop.dll" Pack="true" PackagePath="lib\net461\x86" />
+
+        <None Include="bin\Release\netstandard2.0\publish\**\*.config" Pack="true" PackagePath="lib\netstandard2.0" />
+        <None Include="bin\Release\netstandard2.0\publish\**\*.exe" Pack="true" PackagePath="lib\netstandard2.0" />
+        <None Include="bin\Release\netstandard2.0\publish\**\*.dll" Pack="true" PackagePath="lib\netstandard2.0" />
+        <None Include="bin\Release\netstandard2.0\publish\Migrations\*.*" Pack="true" PackagePath="lib\netstandard2.0\Migrations" />
+
+        <None Include="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Contracts.dll" Pack="true" PackagePath="lib\netstandard2.1" />
+        <None Include="bin\Release\netstandard2.1\publish\fiskaltrust.Interface.Tagging.dll" Pack="true" PackagePath="lib\netstandard2.1" />
+        <None Include="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Localization.QueueDE.dll" Pack="true" PackagePath="lib\netstandard2.1" />
+        <None Include="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Localization.QueueDEFAULT.dll" Pack="true" PackagePath="lib\netstandard2.1" />
+        <None Include="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Localization.QueueME.dll" Pack="true" PackagePath="lib\netstandard2.1" />
+        <None Include="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Localization.QueueAT.dll" Pack="true" PackagePath="lib\netstandard2.1" />
+        <None Include="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Localization.QueueFR.dll" Pack="true" PackagePath="lib\netstandard2.1" />
+        <None Include="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Localization.QueueIT.dll" Pack="true" PackagePath="lib\netstandard2.1" />
+        <None Include="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Localization.QueueES.dll" Pack="true" PackagePath="lib\netstandard2.1" />
+        <None Include="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Queue.dll" Pack="true" PackagePath="lib\netstandard2.1" />
+        <None Include="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Queue.SQLite.dll" Pack="true" PackagePath="lib\netstandard2.1" />
+        <None Include="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.QueueSynchronizer.dll" Pack="true" PackagePath="lib\netstandard2.1" />
+        <None Include="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Storage.Base.dll" Pack="true" PackagePath="lib\netstandard2.1" />
+        <None Include="bin\Release\netstandard2.1\publish\fiskaltrust.Middleware.Storage.SQLite.dll" Pack="true" PackagePath="lib\netstandard2.1" />
+
+        <None Include="bin\Release\netstandard2.1\publish\Migrations\*.*" Pack="true" PackagePath="lib\netstandard2.1\Migrations" />
+
+        <None Include="bin\Release\netstandard2.0\runtimes\**\*.*" Pack="true" PackagePath="runtimes" />
+
+        <None Include="fiskaltrust.Middleware.Queue.SQLite.targets" Pack="true" PackagePath="build\fiskaltrust.Middleware.Queue.SQLite.targets" />
+        <None Include="bin\Release\netstandard2.0\publish\Migrations\*.*" Pack="true" PackagePath="contentFiles\Migrations" />
+        <None Include="bin\Release\netstandard2.0\publish\LICENSES\**" Pack="true" PackagePath="LICENSES" />
+    </ItemGroup>
 
 </Project>

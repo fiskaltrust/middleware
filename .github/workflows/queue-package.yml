@@ -57,14 +57,6 @@ jobs:
           password: '${{ secrets.SIGNING_CERT_PASSWORD }}'
 
       - uses: ./.github/actions/package
-        if: inputs.package == 'fiskaltrust.Middleware.Queue.SQLite'
-        with:
-          path: queue/src
-          project: ${{ inputs.package }}
-          v1Args: /p:NuspecFile=.nuspec
-
-      - uses: ./.github/actions/package
-        if: inputs.package != 'fiskaltrust.Middleware.Queue.SQLite'
         with:
           path: queue/src
           project: ${{ inputs.package }}
