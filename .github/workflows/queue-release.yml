@@ -39,6 +39,9 @@ jobs:
           Write-Output "package=fiskaltrust.Middleware.Queue.$package" >> "$GITHUB_OUTPUT"
 
   acceptance-tests:
+    concurrency:
+      group: queue-acceptance-tests
+      cancel-in-progress: true
     needs: [meta, tests]
     secrets: inherit
     uses: ./.github/workflows/queue-acceptance-tests.yml

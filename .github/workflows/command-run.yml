@@ -9,6 +9,8 @@ permissions:
 
 jobs:
   queue-acceptance-tests:
+    concurrency:
+      group: queue-acceptance-tests
     if: github.event.client_payload.slash_command.args.unnamed.arg1 == 'queue' && github.event.client_payload.slash_command.args.unnamed.arg2 == 'acceptance-tests'
     uses: ./.github/workflows/queue-acceptance-tests.yml
     secrets: inherit
