@@ -20,7 +20,7 @@ concurrency:
   group: queue-acceptance-tests
 
 jobs:
-  acceptance-test:
+  storage-acceptance-test:
     name: Acceptance Tests
     runs-on: windows-latest
     timeout-minutes: 60
@@ -34,8 +34,6 @@ jobs:
           - fiskaltrust.Middleware.Storage.SQLite.AcceptanceTest
           - fiskaltrust.Middleware.Storage.MySQL.AcceptanceTest
           - fiskaltrust.Middleware.Storage.InMemory.AcceptanceTest
-          - fiskaltrust.Middleware.QueueSynchronizer.AcceptanceTest
-          - fiskaltrust.Middleware.Queue.AcceptanceTest
     steps:
       - uses: actions/checkout@v4
         if: inputs.only == '' || inputs.only == matrix.project
@@ -53,10 +51,34 @@ jobs:
           CONNECTIONSTRING_POSTGRESQL_TESTS: ${{ secrets.CONNECTIONSTRING_POSTGRESQL_TESTS }}
           CONNECTIONSTRING_MYSQL_TESTS: ${{ secrets.CONNECTIONSTRING_MYSQL_TESTS }}
 
+  queue-acceptance-test:
+    name: Acceptance Tests
+    runs-on: windows-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        project:
+          - fiskaltrust.Middleware.QueueSynchronizer.AcceptanceTest
+          - fiskaltrust.Middleware.Queue.AcceptanceTest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.commit }}
+
+      - name: ${{ matrix.project }} Acceptance Tests
+        uses: ./.github/actions/test
+        with:
+          directory: queue/test
+          pattern: ${{ matrix.project }}
+        env:
+          CONNECTIONSTRING_AZURE_STORAGE_TESTS: ${{ secrets.CONNECTIONSTRING_AZURE_STORAGE_TESTS }}
+          CONNECTIONSTRING_POSTGRESQL_TESTS: ${{ secrets.CONNECTIONSTRING_POSTGRESQL_TESTS }}
+          CONNECTIONSTRING_MYSQL_TESTS: ${{ secrets.CONNECTIONSTRING_MYSQL_TESTS }}
+
   publish-test-results:
     name: Publish Tests Results
-    needs:
-      - acceptance-test
+    needs: [ queue-acceptance-test, storage-acceptance-test ]
     runs-on: ubuntu-latest
     permissions:
       checks: write
