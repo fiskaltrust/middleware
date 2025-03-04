@@ -21,6 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       package: ${{ steps.meta.outputs.package }}
+      queue: ${{ steps.meta.outputs.queue }}
     steps:
       - id: meta
         shell: pwsh
@@ -36,22 +37,23 @@ jobs:
             "postgresql" { "PostgreSQL" }
             "sqlite" { "SQLite" }
           }
+          Write-Output "queue=$package"
+          Write-Output "queue=$package" >> $env:GITHUB_OUTPUT
           Write-Output "package=fiskaltrust.Middleware.Queue.$package"
           Write-Output "package=fiskaltrust.Middleware.Queue.$package" >> $env:GITHUB_OUTPUT
 
-  # acceptance-tests:
-  #   concurrency:
-  #     group: queue-acceptance-tests
-  #     cancel-in-progress: true
-  #   needs: [meta, tests]
-  #   secrets: inherit
-  #   uses: ./.github/workflows/queue-acceptance-tests.yml
-  #   with:
-  #     only: ${{ needs.meta.outputs.package }}
+  acceptance-tests:
+    concurrency:
+      group: queue-acceptance-tests
+      cancel-in-progress: true
+    needs: [meta, tests]
+    secrets: inherit
+    uses: ./.github/workflows/queue-acceptance-tests.yml
+    with:
+      only: fiskaltrust.Middleware.Storage.${{ needs.meta.outputs.queue }}.AcceptanceTest
 
   package:
-    needs: [meta, tests]
-  # needs: [meta, tests, acceptance-tests]
+    needs: [meta, tests, acceptance-tests]
     secrets: inherit
     uses: ./.github/workflows/queue-package.yml
     with:
