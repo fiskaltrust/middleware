@@ -25,7 +25,7 @@ jobs:
       - id: meta
         shell: pwsh
         run: |
-          if(!${{ github.ref }} -match "queue/([^/]*)/v(.*)") {
+          if(!("${{ github.ref }}" -match "queue/([^/]*)/v(.*)")) {
             throw "Invalid tag format"
           }
           $package = switch($matches[1]) {
