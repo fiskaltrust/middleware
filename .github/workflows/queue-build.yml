@@ -20,7 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.commit }} 
+          ref: ${{ inputs.commit }}
           fetch-depth: 0
           filter: tree:0
 
@@ -70,4 +70,6 @@ jobs:
         uses: EnricoMi/publish-unit-test-result-action@v2
         with:
           check_name: Queue Test Results
+          comment_mode: always
           files: "artifacts/**/*.trx"
+          commit: ${{ inputs.commit }}
