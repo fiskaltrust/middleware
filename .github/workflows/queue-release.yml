@@ -37,7 +37,7 @@ jobs:
             "sqlite" { "SQLite" }
           }
           Write-Output "package=fiskaltrust.Middleware.Queue.$package"
-          Write-Output "package=fiskaltrust.Middleware.Queue.$package" >> "$GITHUB_OUTPUT"
+          Write-Output "package=fiskaltrust.Middleware.Queue.$package" >> $env:GITHUB_OUTPUT
 
   acceptance-tests:
     concurrency:
