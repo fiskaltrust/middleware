@@ -58,20 +58,10 @@ jobs:
     uses: ./.github/workflows/queue-package.yml
     with:
       package: ${{ needs.meta.outputs.package }}
-
-  sandbox:
-    needs: [meta, package]
-    secrets: inherit
-    permissions:
-      id-token: write
-      contents: read
-    uses: ./.github/workflows/deploy.yml
-    with:
-      package: ${{ needs.meta.outputs.package }}
-      environment: sandbox
+      deploySandbox: true
 
   production:
-    needs: [meta, package, sandbox]
+    needs: [meta, package]
     secrets: inherit
     permissions:
       id-token: write

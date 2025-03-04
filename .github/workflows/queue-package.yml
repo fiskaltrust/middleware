@@ -13,7 +13,7 @@ on:
           - fiskaltrust.Middleware.Queue.MySQL
           - fiskaltrust.Middleware.Queue.PostgreSQL
           - fiskaltrust.Middleware.Queue.SQLite
-      deploy:
+      deploySandbox:
         type: boolean
         default: false
 
@@ -25,6 +25,9 @@ on:
       commit:
         type: string
         required: false
+      deploySandbox:
+        type: boolean
+        default: false
 
 jobs:
   package:

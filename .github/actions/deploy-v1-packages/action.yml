@@ -23,6 +23,14 @@ inputs:
   clientId:
     required: true
     type: string
+  environment:
+    required: false
+    type: string
+    default: sandbox
+  packageCacheSecret:
+    required: false
+    type: string
+    default: ''
 
 runs:
   using: "composite"
@@ -40,3 +48,17 @@ runs:
         azcliversion: latest
         inlineScript: |
           az storage blob upload-batch --account-name ${{ inputs.storageAccountName }} --auth-mode login -d "packages" -s "${{ inputs.directory }}" --pattern "${{ inputs.package }}.*.nupkg"
+    
+    - run: |
+        if("${{ secrets.environment }}" -eq "sandbox") {
+          $sandbox = "-sandbox"
+        }
+        for($i = 0;$i -lt 10;$i++) {
+          Invoke-WebRequest -Method POST -Headers @{"fiskaltrust" = $env:PACKAGE_CACHE_SECRET} "https://packages$sandbox.fiskaltrust.cloud/refreshcache"
+        }
+      shell: pwsh
+      run-if: inputs.packageCacheSecret != ''
+      env:
+        PACKAGE_CACHE_SECRET: ${{ inputs.packageCacheSecret }}
+      name: Refresh package cache
+      continue-on-error: true
