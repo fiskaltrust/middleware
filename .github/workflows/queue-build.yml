@@ -27,6 +27,7 @@ jobs:
       - uses: ./.github/actions/build
         with:
           solution: queue/fiskaltrust.Middleware.sln
+          configuration: Debug
 
       - name: Unit Tests
         uses: ./.github/actions/test
