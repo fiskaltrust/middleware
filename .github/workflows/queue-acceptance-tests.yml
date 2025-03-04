@@ -13,6 +13,8 @@ on:
   push:
     branches:
       - main
+    tags-ignore:
+      - 'queue/**/v*'
 
 jobs:
   acceptance-test:
