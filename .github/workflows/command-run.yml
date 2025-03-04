@@ -38,6 +38,9 @@ jobs:
           comment-id: ${{ github.event.client_payload.github.payload.comment.id }}
           reactions: hooray
           reactions-edit-mode: replace
+          edit-mode: replace
+          body: |
+            /${{ github.event.client_payload.slash_command.command }} ${{ github.event.client_payload.slash_command.args.all }}
 
   failure:
     needs:
