@@ -30,7 +30,7 @@ public class SourceDocuments
     /// <summary>
     /// Receipts issued after the entry into force of this structure should be exported on this table.
     /// </summary>
-    //[XmlElement(ElementName = "Payments.")]
-    //public object? Payments. { get; set; }
+    [XmlElement(ElementName = "Payments")]
+    public object? Payments { get; set; }
 }
 
