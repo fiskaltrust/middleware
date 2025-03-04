@@ -36,6 +36,7 @@ jobs:
             "postgresql" { "PostgreSQL" }
             "sqlite" { "SQLite" }
           }
+          Write-Output "package=fiskaltrust.Middleware.Queue.$package"
           Write-Output "package=fiskaltrust.Middleware.Queue.$package" >> "$GITHUB_OUTPUT"
 
   acceptance-tests:

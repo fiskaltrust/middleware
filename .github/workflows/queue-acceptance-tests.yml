@@ -16,10 +16,11 @@ on:
     tags-ignore:
       - 'queue/**/v*'
 
+concurrency:
+  group: queue-acceptance-tests
+
 jobs:
   acceptance-test:
-    concurrency:
-      group: queue-acceptance-tests
     name: Acceptance Tests
     runs-on: windows-latest
     timeout-minutes: 60
