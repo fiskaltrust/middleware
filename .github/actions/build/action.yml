@@ -8,7 +8,7 @@ inputs:
     default: Release
   useMsBuild:
     type: bool
-    default false
+    default: false
 
 runs:
   using: "composite"
@@ -24,12 +24,12 @@ runs:
       shell: pwsh
       
     - name: Build
-      if: "!inputs.useMsBuild"
+      if: !inputs.useMsBuild
       run: dotnet build "${{ inputs.pattern }}" --configuration ${{ inputs.configuration }} --no-restore
       shell: pwsh
 
     - name: Build
-      if: "inputs.useMsBuild"
+      if: inputs.useMsBuild
       run: msbuild ${{ inputs.pattern }} /p:Configuration=${{ inputs.configuration }} /p:Platform="Any CPU" /p:BuildProjectReferences=true
       shell: pwsh
       
