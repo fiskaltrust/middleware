@@ -1,0 +1,34 @@
+name: SCU.DE Package
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        type: choice
+        required: true
+        options:
+          - fiskaltrust.Middleware.SCU.DE.CryptoVision
+          - fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
+          - fiskaltrust.Middleware.SCU.DE.DieboldNixdorf
+          - fiskaltrust.Middleware.SCU.DE.Epson
+          - fiskaltrust.Middleware.SCU.DE.FiskalyCertified
+          - fiskaltrust.Middleware.SCU.DE.InMemory
+          - fiskaltrust.Middleware.SCU.DE.Swissbit
+          - fiskaltrust.Middleware.SCU.DE.SwissbitCloud
+          - fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
+      deploySandbox:
+        type: boolean
+        default: false
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  package:
+    secrets: inherit
+    uses: ./.github/workflows/package.yml
+    with:
+      pattern: ${{ inputs.package }}
+      directory: scu-de/src
+      deploySandbox: ${{ inputs.deploySandbox}}
