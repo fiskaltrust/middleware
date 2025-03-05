@@ -7,7 +7,7 @@ inputs:
     type: string
     default: Release
   useMsBuild:
-    type: bool
+    type: boolean
     default: false
 
 runs:
