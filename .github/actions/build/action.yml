@@ -7,8 +7,8 @@ inputs:
     type: string
     default: Release
   useMsBuild:
+    required: false
     type: boolean
-    default: false
 
 runs:
   using: "composite"
