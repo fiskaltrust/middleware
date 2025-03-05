@@ -498,7 +498,18 @@ public static class SAFTMapping
         };
 
         var unitPrice = 0m;
-        var netLinePrice = chargeItemData.Amount + chargeItem.modifiers.Sum(x => x.Amount) + chargeItem.modifiers.Sum(x => x.VATAmount ?? 0.0m) - chargeItem.chargeItem.VATAmount ?? 0.0m;
+        var grossAmount = chargeItemData.Amount;
+        var vatAmount = chargeItem.chargeItem.VATAmount ?? 0.0m;
+        var netAmount = grossAmount - vatAmount;
+
+        var grossAmountModifiers = chargeItem.modifiers.Sum(x => x.Amount);
+        var vatAmountModifiers = chargeItem.modifiers.Sum(x => x.VATAmount ?? 0.0m);
+        var netAmountModifiers = grossAmountModifiers - vatAmountModifiers;
+        if(netAmountModifiers < 0)
+        {
+            netAmountModifiers *= -1;
+        }
+        var netLinePrice = netAmount - netAmountModifiers;
         var quantity = chargeItemData.Quantity;
         if (chargeItem.chargeItem.ftChargeItemCase.IsFlag(ChargeItemCaseFlags.Refund))
         {
@@ -542,6 +553,16 @@ public static class SAFTMapping
         else
         {
             line.CreditAmount = Helpers.CreateMonetaryValue(netLinePrice);
+        }
+
+        if (GetInvoiceType(receiptRequest) == "FT" && !string.IsNullOrEmpty(receiptRequest.cbPreviousReceiptReference))
+        {
+            var referencedReceiptReference = ((JsonElement) receiptResponse.ftStateData!).GetProperty("ReferencedReceiptResponse").Deserialize<ReceiptResponse>();
+            line.OrderReferences = new OrderReferences
+            {
+                OriginatingON = referencedReceiptReference!.ftReceiptIdentification,
+                OrderDate = referencedReceiptReference!.ftReceiptMoment
+            };
         }
 
         if (chargeItem.modifiers.Count > 0)

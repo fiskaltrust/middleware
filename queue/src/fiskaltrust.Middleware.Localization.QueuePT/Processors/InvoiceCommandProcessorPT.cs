@@ -77,6 +77,32 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignat
             _queuePT.LastHash = hash;
             return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
         }
+        else if (!string.IsNullOrEmpty(request.ReceiptRequest.cbPreviousReceiptReference))
+        {
+            var receiptReference = await LoadReceiptReferencesToResponse(request.ReceiptRequest, request.ReceiptResponse);
+            var series = StaticNumeratorStorage.InvoiceSeries;
+            series.Numerator++;
+
+            var (response, hash) = await _sscd.ProcessReceiptAsync(new ProcessRequest
+            {
+                ReceiptRequest = request.ReceiptRequest,
+                ReceiptResponse = request.ReceiptResponse,
+            }, series.LastHash);
+
+            response.ReceiptResponse.ftReceiptIdentification = series.Identifier + "/" + series.Numerator!.ToString()!.PadLeft(4, '0');
+            var printHash = new StringBuilder().Append(hash[0]).Append(hash[10]).Append(hash[20]).Append(hash[30]).ToString();
+            var qrCode = PortugalReceiptCalculations.CreateInvoiceQRCode(printHash, _queuePT.IssuerTIN, _queuePT.TaxRegion, series.ATCUD + "-" + series.Numerator, request.ReceiptRequest, response.ReceiptResponse);
+            AddSignatures(series, response, hash, printHash, qrCode);
+            response.ReceiptResponse.AddSignatureItem(new SignatureItem
+            {
+                Caption = $"Pro Forma Referencia {receiptReference.ftReceiptIdentification}",
+                Data = $"",
+                ftSignatureFormat = SignatureFormat.Text,
+                ftSignatureType = SignatureTypePT.ReferenceForCreditNote.As<SignatureType>(),
+            });
+            _queuePT.LastHash = hash;
+            return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+        }
         else
         {
             var series = StaticNumeratorStorage.InvoiceSeries;

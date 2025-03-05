@@ -47,8 +47,16 @@ public class PaymentDocument
     [XmlElement(ElementName = "SourceID")]
     public required string SourceID { get; set; }
 
-    [XmlElement(ElementName = "SystemEntryDate")]
+    [XmlIgnore()]
     public required DateTime SystemEntryDate { get; set; }
+
+#pragma warning disable
+    [XmlElement(ElementName = "SystemEntryDate")]
+    public string SystemEntryDateString
+    {
+        get { return SystemEntryDate.ToString("yyyy-MM-ddThh:mm:ss"); }
+        set { SystemEntryDate = DateTime.Parse(value); }
+    }
 
     [XmlElement(ElementName = "CustomerID")]
     public required string CustomerID { get; set; }

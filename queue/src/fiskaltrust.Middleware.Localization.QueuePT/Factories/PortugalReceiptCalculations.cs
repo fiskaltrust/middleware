@@ -62,7 +62,7 @@ public static class PortugalReceiptCalculations
             GrossTotal = request.cbChargeItems.Sum(x => Math.Abs(x.Amount)),
             Hash = qrCodeHash,
             SoftwareCertificateNumber = CertificationPosSystem.SoftwareCertificateNumber,
-            OtherInformation = "ftQueueId=" + receiptResponse.ftQueueID + ";ftQueueItemId=" + receiptResponse.ftQueueItemID
+            //OtherInformation = "ftQueueId=" + receiptResponse.ftQueueID + ";ftQueueItemId=" + receiptResponse.ftQueueItemID
         }.GenerateQRCode();
     }
 
