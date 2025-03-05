@@ -19,6 +19,26 @@ runs:
           6.0.x
           8.0.x
 
+    - name: Set up JDK 17
+      if: "inputs.xamarin"
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Setup Android SDK
+      if: "inputs.xamarin"
+      uses: android-actions/setup-android@v3
+  
+    - name: Add msbuild to PATH
+      if: "inputs.xamarin"
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Install Xamarin
+      if: "inputs.xamarin"
+      run: boots --stable Xamarin.Android
+      shell: pwsh
+
     - name: Restore
       run: dotnet restore "${{ inputs.pattern }}"
       shell: pwsh
@@ -30,6 +50,6 @@ runs:
 
     - name: Build
       if: "inputs.xamarin"
-      run: dotnet build "${{ inputs.pattern }}" --configuration ${{ inputs.configuration }} --no-restore -t:InstallAndroidDependencies
+      run: msbuild ${{ inputs.pattern }} /p:Configuration=${{ inputs.configuration }} /p:Platform="Any CPU" /p:BuildProjectReferences=true
       shell: pwsh
       
