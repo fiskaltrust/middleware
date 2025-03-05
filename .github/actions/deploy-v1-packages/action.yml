@@ -50,7 +50,7 @@ runs:
           az storage blob upload-batch --account-name ${{ inputs.storageAccountName }} --auth-mode login -d "packages" -s "${{ inputs.directory }}" --pattern "${{ inputs.package }}.*.nupkg"
     
     - run: |
-        if("${{ secrets.environment }}" -eq "sandbox") {
+        if("${{ inputs.environment }}" -eq "sandbox") {
           $sandbox = "-sandbox"
         }
         for($i = 0;$i -lt 10;$i++) {
