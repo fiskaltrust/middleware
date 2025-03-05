@@ -57,7 +57,7 @@ runs:
           Invoke-WebRequest -Method POST -Headers @{"fiskaltrust" = $env:PACKAGE_CACHE_SECRET} "https://packages$sandbox.fiskaltrust.cloud/refreshcache"
         }
       shell: pwsh
-      run-if: inputs.packageCacheSecret != ''
+      if: inputs.packageCacheSecret != ''
       env:
         PACKAGE_CACHE_SECRET: ${{ inputs.packageCacheSecret }}
       name: Refresh package cache
