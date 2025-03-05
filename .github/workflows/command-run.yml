@@ -1,4 +1,4 @@
-name: Run Command
+name: Command Run
 on:
   repository_dispatch:
     types: [run-command]
@@ -24,12 +24,45 @@ jobs:
     with:
       commit: ${{ github.event.client_payload.pull_request.head.sha }}
   
+  scu-at-build:
+    if: github.event.client_payload.slash_command.args.unnamed.arg1 == 'scu-at' && (github.event.client_payload.slash_command.args.unnamed.arg2 == 'ci' || github.event.client_payload.slash_command.args.unnamed.arg2 == 'build')
+    uses: ./.github/workflows/scu-at-build.yml
+    secrets: inherit
+    with:
+      commit: ${{ github.event.client_payload.pull_request.head.sha }}
+
+
+  scu-de-build:
+    if: github.event.client_payload.slash_command.args.unnamed.arg1 == 'scu-de' && (github.event.client_payload.slash_command.args.unnamed.arg2 == 'ci' || github.event.client_payload.slash_command.args.unnamed.arg2 == 'build')
+    uses: ./.github/workflows/scu-de-build.yml
+    secrets: inherit
+    with:
+      commit: ${{ github.event.client_payload.pull_request.head.sha }}
+
+  scu-es-build:
+    if: github.event.client_payload.slash_command.args.unnamed.arg1 == 'scu-es' && (github.event.client_payload.slash_command.args.unnamed.arg2 == 'ci' || github.event.client_payload.slash_command.args.unnamed.arg2 == 'build')
+    uses: ./.github/workflows/scu-es-build.yml
+    secrets: inherit
+    with:
+      commit: ${{ github.event.client_payload.pull_request.head.sha }}
+    
+  scu-it-build:
+    if: github.event.client_payload.slash_command.args.unnamed.arg1 == 'scu-it' && (github.event.client_payload.slash_command.args.unnamed.arg2 == 'ci' || github.event.client_payload.slash_command.args.unnamed.arg2 == 'build')
+    uses: ./.github/workflows/scu-it-build.yml
+    secrets: inherit
+    with:
+      commit: ${{ github.event.client_payload.pull_request.head.sha }}
+
   success:
     needs:
       - queue-acceptance-tests
       - queue-build
+      - scu-at-build
+      - scu-de-build
+      - scu-es-build
+      - scu-it-build
     runs-on: ubuntu-latest
-    if: success('queue-acceptance-tests') || success('queue-build')
+    if: !failure()
     steps:
       - name: Add reaction
         uses: peter-evans/create-or-update-comment@v4

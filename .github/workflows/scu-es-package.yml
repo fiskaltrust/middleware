@@ -1,4 +1,4 @@
-name: Queue Package
+name: SCU.ES Package
 
 on:
   workflow_dispatch:
@@ -7,12 +7,8 @@ on:
         type: choice
         required: true
         options:
-          - fiskaltrust.Middleware.Queue.AzureTableStorage
-          - fiskaltrust.Middleware.Queue.EF
-          - fiskaltrust.Middleware.Queue.InMemory
-          - fiskaltrust.Middleware.Queue.MySQL
-          - fiskaltrust.Middleware.Queue.PostgreSQL
-          - fiskaltrust.Middleware.Queue.SQLite
+          - fiskaltrust.Middleware.SCU.ES.TicketBAI
+          - fiskaltrust.Middleware.SCU.ES.VeriFactu
       deploySandbox:
         type: boolean
         default: false
@@ -24,9 +20,8 @@ permissions:
 jobs:
   package:
     secrets: inherit
-
     uses: ./.github/workflows/package.yml
     with:
       pattern: ${{ inputs.package }}
-      directory: queue/src
+      directory: scu-es/src
       deploySandbox: ${{ inputs.deploySandbox}}

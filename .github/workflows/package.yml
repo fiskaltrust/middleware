@@ -1,0 +1,57 @@
+name: Package
+
+on:
+  workflow_call:
+    inputs:
+      pattern:
+        type: string
+        required: true
+      directory:
+        type: string
+        required: true
+      commit:
+        type: string
+        required: false
+      deploySandbox:
+        type: boolean
+        default: false
+
+jobs:
+  package:
+    name: Package
+    runs-on:  windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          filter: tree:0
+          ref: ${{ inputs.commit }}
+
+      - uses: ./.github/actions/build
+        with:
+          pattern: ${{ inputs.directory }}/${{ inputs.pattern }}/${{ inputs.pattern }}.csproj
+          configuration: Release
+
+      - uses: ./.github/actions/sign
+        with:
+          path: ${{ inputs.directory }}
+          certificate: '${{ secrets.SIGNING_CERTIFICATE }}'
+          password: '${{ secrets.SIGNING_CERT_PASSWORD }}'
+
+      - uses: ./.github/actions/package
+        with:
+          path: ${{ inputs.directory }}
+          project: ${{ inputs.pattern }}
+  
+  deploy:
+    if: inputs.deploySandbox
+    needs: [package]
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/deploy.yml
+    with:
+      package: ${{ inputs.pattern }}
+      environment: sandbox
