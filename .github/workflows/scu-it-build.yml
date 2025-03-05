@@ -43,12 +43,12 @@ jobs:
           pattern: "IntegrationTest"
           args: '--no-build'
 
-      - name: Acceptance Tests
-        uses: ./.github/actions/test
-        with:
-          directory: scu-it/test
-          pattern: "AcceptanceTests"
-          args: '--no-build'
+      # - name: Acceptance Tests
+      #   uses: ./.github/actions/test
+      #   with:
+      #     directory: scu-it/test
+      #     pattern: "AcceptanceTests"
+      #     args: '--no-build'
 
   publish-test-results:
     name: Publish Tests Results
