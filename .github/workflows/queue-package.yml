@@ -58,7 +58,7 @@ jobs:
           project: ${{ inputs.package }}
   
   deploy:
-    if: inputs.deploy
+    if: inputs.deploySandbox
     needs: [package]
     secrets: inherit
     permissions:
