@@ -34,6 +34,11 @@ runs:
       if: "inputs.xamarin"
       uses: microsoft/setup-msbuild@v2
 
+    - name: Install boots
+      if: "inputs.xamarin"
+      run: dotnet tool install --global boots
+      shell: pwsh
+
     - name: Install Xamarin
       if: "inputs.xamarin"
       run: boots --stable Xamarin.Android
