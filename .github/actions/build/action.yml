@@ -44,7 +44,7 @@ runs:
       shell: pwsh
       
     - name: Build
-      if: "!inputs.xamarin"
+      if: "inputs.xamarin"
       run: dotnet build "${{ inputs.pattern }}" --configuration ${{ inputs.configuration }} --no-restore
       shell: pwsh
 

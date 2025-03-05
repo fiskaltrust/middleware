@@ -32,4 +32,3 @@ jobs:
       pattern: ${{ inputs.package }}
       directory: scu-de/src
       deploySandbox: ${{ inputs.deploySandbox}}
-      xamarin: true

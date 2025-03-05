@@ -15,9 +15,6 @@ on:
       deploySandbox:
         type: boolean
         default: false
-      xamarin:
-        type: boolean
-        default: false
 
 jobs:
   package:
@@ -35,7 +32,6 @@ jobs:
         with:
           pattern: ${{ inputs.directory }}/${{ inputs.pattern }}/${{ inputs.pattern }}.csproj
           configuration: Release
-          xamarin: ${{ inputs.xamarin }}
 
       - uses: ./.github/actions/sign
         with:
