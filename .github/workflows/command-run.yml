@@ -62,7 +62,7 @@ jobs:
       - scu-es-build
       - scu-it-build
     runs-on: ubuntu-latest
-    if: !failure()
+    if: (!failure())
     steps:
       - name: Add reaction
         uses: peter-evans/create-or-update-comment@v4

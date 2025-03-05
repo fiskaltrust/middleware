@@ -83,7 +83,7 @@ jobs:
 
   package:
     needs: [meta, test-queue, test-queue-acceptance, test-scu-at, test-scu-de, test-scu-es, test-scu-it]
-    if: !failure()
+    if: (!failure())
     secrets: inherit
     uses: ./.github/workflows/package.yml
     with:

@@ -63,7 +63,7 @@ jobs:
       - scu-es-package
       - scu-it-package
     runs-on: ubuntu-latest
-    if: !failure() && github.event.client_payload.slash_command.command == 'deploy'
+    if: (!failure()) && github.event.client_payload.slash_command.command == 'deploy'
     steps:
       - name: Add reaction
         uses: peter-evans/create-or-update-comment@v4
@@ -78,7 +78,7 @@ jobs:
             [![](https://badgen.net/static/${{ github.event.client_payload.slash_command.command }}%20${{ github.run_id }}/approve/yellow)](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
     
   queue-deploy:
-    if: !failure() && github.event.client_payload.slash_command.command == 'deploy'
+    if: (!failure()) && github.event.client_payload.slash_command.command == 'deploy'
     needs:
       - queue-package
       - scu-at-package
