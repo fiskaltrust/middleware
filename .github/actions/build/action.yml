@@ -30,6 +30,6 @@ runs:
 
     - name: Build
       if: "inputs.useMsBuild"
-      run: msbuild ${{ inputs.pattern }} /p:Configuration=${{ inputs.configuration }} /p:Platform="Any CPU" /p:BuildProjectReferences=true
+      run: msbuild ${{ inputs.pattern }} /p:Configuration=${{ inputs.configuration }} /p:Platform="Any CPU" /p:BuildProjectReferences=true  /t:Rebuild
       shell: pwsh
       
