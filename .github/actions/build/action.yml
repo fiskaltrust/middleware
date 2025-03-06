@@ -1,11 +1,12 @@
 name: 'Build'
 inputs:
-  solution:
+  pattern:
     required: true
     type: string
   configuration:
     type: string
     default: Release
+
 runs:
   using: "composite"
   steps:
@@ -16,9 +17,11 @@ runs:
           8.0.x
 
     - name: Restore
-      run: dotnet restore "${{ inputs.solution }}"
+      run: dotnet restore "${{ inputs.pattern }}"
       shell: pwsh
       
     - name: Build
-      run: dotnet build "${{ inputs.solution }}" --configuration ${{ inputs.configuration }} --no-restore
+      run: dotnet build "${{ inputs.pattern }}" --configuration ${{ inputs.configuration }} --no-restore
       shell: pwsh
+
+      

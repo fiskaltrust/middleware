@@ -1,4 +1,4 @@
-name: Queue CI
+name: SCU.ES CI
 
 on:
   workflow_dispatch:
@@ -10,7 +10,7 @@ on:
   pull_request:
     paths:
       - .github/workflows/**
-      - queue/**
+      - scu-es/**
 
 jobs:
   test:
@@ -26,30 +26,23 @@ jobs:
 
       - uses: ./.github/actions/build
         with:
-          pattern: queue/fiskaltrust.Middleware.sln
+          pattern: scu-es/fiskaltrust.Middleware.SCU.ES.sln
           configuration: Debug
 
       - name: Unit Tests
         uses: ./.github/actions/test
         with:
-          directory: queue/test
+          directory: scu-es/test
           pattern: "UnitTest"
           args: '--no-build'
-        env:
-          CONNECTIONSTRING_AZURE_STORAGE_TESTS: ${{ secrets.CONNECTIONSTRING_AZURE_STORAGE_TESTS }}
-          CONNECTIONSTRING_POSTGRESQL_TESTS: ${{ secrets.CONNECTIONSTRING_POSTGRESQL_TESTS }}
-          CONNECTIONSTRING_MYSQL_TESTS: ${{ secrets.CONNECTIONSTRING_MYSQL_TESTS }}
 
       - name: Integration Tests
         uses: ./.github/actions/test
         with:
-          directory: queue/test
+          directory: scu-es/test
           pattern: "IntegrationTest"
           args: '--no-build'
-        env:
-          CONNECTIONSTRING_AZURE_STORAGE_TESTS: ${{ secrets.CONNECTIONSTRING_AZURE_STORAGE_TESTS }}
-          CONNECTIONSTRING_POSTGRESQL_TESTS: ${{ secrets.CONNECTIONSTRING_POSTGRESQL_TESTS }}
-          CONNECTIONSTRING_MYSQL_TESTS: ${{ secrets.CONNECTIONSTRING_MYSQL_TESTS }}
+
 
   publish-test-results:
     name: Publish Tests Results
@@ -69,7 +62,7 @@ jobs:
       - name: Publish Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2
         with:
-          check_name: Queue Test Results
+          check_name: SCU.ES Test Results
           comment_mode: always
           files: "artifacts/**/*.trx"
           commit: ${{ inputs.commit }}
