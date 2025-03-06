@@ -47,6 +47,8 @@ jobs:
       package: ${{ steps.meta.outputs.package }}
       directory: ${{ steps.meta.outputs.directory }}
     steps:
+      - uses: actions/checkout@v4
+
       - id: meta
         shell: pwsh
         run: |
