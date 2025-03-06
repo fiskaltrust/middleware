@@ -2,6 +2,7 @@ name: 'Queue Release'
 on:
   push:
     tags:
+      - queue/**/v*
       - scu-at/**/v*
       - scu-de/**/v*
       - scu-es/**/v*
