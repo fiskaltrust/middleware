@@ -18,6 +18,10 @@ jobs:
       package: ${{ steps.meta.outputs.package }}
       directory: ${{ steps.meta.outputs.directory }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.client_payload.pull_request.head.sha }}
+
       - id: meta
         shell: pwsh
         run: |
