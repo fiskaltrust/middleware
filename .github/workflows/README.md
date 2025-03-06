@@ -25,5 +25,5 @@
 
 ## Deploy (`deploy.yml`)
 
-- manually (via Queue Package)
+- manually (via Package)
 - from `/deploy <queue|scu-at|scu-de|scu-es|scu-it> <PACKAGE>` comment
