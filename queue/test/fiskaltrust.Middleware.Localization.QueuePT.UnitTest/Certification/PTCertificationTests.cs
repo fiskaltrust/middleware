@@ -131,19 +131,19 @@ public class PTCertificationTests
         {
             Directory.CreateDirectory(base_path);
         }
-        File.WriteAllText($"{base_path}\\{casename}.receiptrequest.json", JsonSerializer.Serialize(receiptRequest, new JsonSerializerOptions
+        File.WriteAllText($"{base_path}/{casename}.receiptrequest.json", JsonSerializer.Serialize(receiptRequest, new JsonSerializerOptions
         {
             WriteIndented = true
         }));
-        File.WriteAllText($"{base_path}\\{casename}.receiptresponse.json", JsonSerializer.Serialize(receiptResponse, new JsonSerializerOptions
+        File.WriteAllText($"{base_path}/{casename}.receiptresponse.json", JsonSerializer.Serialize(receiptResponse, new JsonSerializerOptions
         {
             WriteIndented = true
         }));
 
 
-        File.WriteAllBytes($"{base_path}\\{casename}.receipt.pdf", await pdfdata.Content.ReadAsByteArrayAsync());
-        File.WriteAllBytes($"{base_path}\\{casename}.receipt.png", await pngdata.Content.ReadAsByteArrayAsync());
-        File.WriteAllText($"{base_path}\\{casename}_saft.xml", xmlData);
+        File.WriteAllBytes($"{base_path}/{casename}.receipt.pdf", await pdfdata.Content.ReadAsByteArrayAsync());
+        File.WriteAllBytes($"{base_path}/{casename}.receipt.png", await pngdata.Content.ReadAsByteArrayAsync());
+        File.WriteAllText($"{base_path}/{casename}_saft.xml", xmlData);
     }
 
     [Fact]
@@ -159,7 +159,7 @@ public class PTCertificationTests
     [Fact]
     public async Task PTCertificationExamplesAll()
     {
-        var targetFolder = "C:\\Users\\stefa\\OneDrive\\Desktop\\Portugal_Registration\\Examples_finalized";
+        var targetFolder = "/Users/stefan.kert/Desktop/Sources/PT_Certification";
 
         var receiptRequest = PTCertificationExamples.Case_5_1();
         await ExecuteMiddleware(receiptRequest, targetFolder, caller: "Case_5_1");

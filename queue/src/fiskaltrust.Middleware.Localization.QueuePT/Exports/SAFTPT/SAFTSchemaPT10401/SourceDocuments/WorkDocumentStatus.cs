@@ -16,7 +16,7 @@ public class WorkDocumentStatus
     [XmlElement(ElementName = "WorkStatusDate")]
     public string WorkStatusDateString
     {
-        get { return WorkStatusDate.ToString("yyyy-MM-ddThh:mm:ss"); }
+        get { return WorkStatusDate.ToString("yyyy-MM-ddTHH:mm:ss"); }
         set { WorkStatusDate = DateTime.Parse(value); }
     }
 
@@ -32,4 +32,3 @@ public class WorkDocumentStatus
 
 //*
 // - sign is not allowed in the field;
-

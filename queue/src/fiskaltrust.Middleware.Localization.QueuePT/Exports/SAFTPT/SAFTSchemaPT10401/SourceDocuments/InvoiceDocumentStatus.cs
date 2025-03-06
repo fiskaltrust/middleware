@@ -16,7 +16,7 @@ public class InvoiceDocumentStatus
     [XmlElement(ElementName = "InvoiceStatusDate")]
     public string InvoiceStatusDateString
     {
-        get { return InvoiceStatusDate.ToString("yyyy-MM-ddThh:mm:ss"); }
+        get { return InvoiceStatusDate.ToString("yyyy-MM-ddTHH:mm:ss"); }
         set { InvoiceStatusDate = DateTime.Parse(value); }
     }
 

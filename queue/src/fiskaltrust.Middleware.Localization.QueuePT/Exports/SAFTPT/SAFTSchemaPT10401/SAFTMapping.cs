@@ -567,7 +567,7 @@ public static class SAFTMapping
 
         if (chargeItem.modifiers.Count > 0)
         {
-            line.SettlementAmount = chargeItem.modifiers.Sum(x => Math.Abs(x.Amount));
+            line.SettlementAmount = netAmountModifiers;
         }
         if (((long) chargeItemData.ftChargeItemCase & (long) 0xFF00) > 0x0000)
         {

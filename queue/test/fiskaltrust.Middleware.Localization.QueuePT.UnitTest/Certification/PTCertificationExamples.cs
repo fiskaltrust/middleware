@@ -236,11 +236,19 @@ public static class PTCertificationExamples
                     Quantity = 1,
                     Amount = chargeItems.Sum(x => x.Amount),
                     Description = "Cash",
-                    ftPayItemCase = (PayItemCase) 0x5054_2000_0000_0001,
+                    ftPayItemCase = (PayItemCase) 0x5054_2000_0000_1001,
                 }
             ],
             ftPosSystemId = Guid.NewGuid(),
-            ftReceiptCase = (ReceiptCase) 0x5054_2000_0000_0001
+            ftReceiptCase = (ReceiptCase) 0x5054_2000_0000_0001,
+            cbCustomer = new MiddlewareCustomer
+            {
+                CustomerVATId = CUSOMTER_VATNUMBER,
+                CustomerCity = "Lissbon",
+                CustomerZip = "1050-189",
+                CustomerStreet = "Demo street",
+                CustomerName = "Nuno Cazeiro"
+            }
         };
     }
 

@@ -46,7 +46,7 @@ public class WorkDocument
     [XmlElement(ElementName = "SystemEntryDate")]
     public string SystemEntryDateString
     {
-        get { return SystemEntryDate.ToString("yyyy-MM-ddThh:mm:ss"); }
+        get { return SystemEntryDate.ToString("yyyy-MM-ddTHH:mm:ss"); }
         set { SystemEntryDate = DateTime.Parse(value); }
     }
 

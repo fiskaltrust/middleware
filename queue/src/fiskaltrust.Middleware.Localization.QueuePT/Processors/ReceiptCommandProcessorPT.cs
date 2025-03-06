@@ -70,7 +70,7 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignat
             response.ReceiptResponse.AddSignatureItem(new SignatureItem
             {
                 Caption = $"Referencia {receiptReference.ftReceiptIdentification}",
-                Data = $"Rasão: Devolução",
+                Data = $"Razão: Devolução",
                 ftSignatureFormat = SignatureFormat.Text,
                 ftSignatureType = SignatureTypePT.ReferenceForCreditNote.As<SignatureType>(),
             });
@@ -97,14 +97,7 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignat
 
     private static void AddSignatures(NumberSeries series, ProcessResponse response, string hash, string printHash, string qrCode)
     {
-        response.ReceiptResponse.AddSignatureItem(new SignatureItem
-        {
-            Caption = "ATCUD",
-            Data = series.ATCUD + "-" + series.Numerator,
-            ftSignatureFormat = SignatureFormat.Text,
-            ftSignatureType = SignatureTypePT.ATCUD.As<SignatureType>(),
-        });
-        response.ReceiptResponse.AddSignatureItem(new SignatureItem
+       response.ReceiptResponse.AddSignatureItem(new SignatureItem
         {
             Caption = "Hash",
             Data = hash,
@@ -117,6 +110,13 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignat
             Data = $"No {CertificationPosSystem.SoftwareCertificateNumber}/AT",
             ftSignatureFormat = SignatureFormat.Text,
             ftSignatureType = SignatureTypePT.CertificationNo.As<SignatureType>(),
+        });
+        response.ReceiptResponse.AddSignatureItem(new SignatureItem
+        {
+            Caption = "",
+            Data = "ATCUD: " + series.ATCUD + "-" + series.Numerator,
+            ftSignatureFormat = SignatureFormat.Text,
+            ftSignatureType = SignatureTypePT.ATCUD.As<SignatureType>(),
         });
         response.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreatePTQRCode(qrCode));
     }

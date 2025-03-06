@@ -16,7 +16,7 @@ public class PaymentDocumentStatus
     [XmlElement(ElementName = "PaymentStatusDate")]
     public string WorkStatPaymentStatusDateString
     {
-        get { return PaymentStatusDate.ToString("yyyy-MM-ddThh:mm:ss"); }
+        get { return PaymentStatusDate.ToString("yyyy-MM-ddTHH:mm:ss"); }
         set { PaymentStatusDate = DateTime.Parse(value); }
     }
 
