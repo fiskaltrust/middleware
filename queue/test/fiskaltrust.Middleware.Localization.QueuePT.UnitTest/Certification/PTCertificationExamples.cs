@@ -66,7 +66,7 @@ public static class PTCertificationExamples
             {
                 CustomerVATId = CUSOMTER_VATNUMBER,
                 CustomerCity = "Lissbon",
-                CustomerZip = "1020",
+                CustomerZip = "1050-189",
                 CustomerStreet = "Demo street",
                 CustomerName = "Nuno Cazeiro"
             }
@@ -83,7 +83,35 @@ public static class PTCertificationExamples
     public static ReceiptRequest Case_5_3()
     {
         // A proforma/table check.
-        throw new NotImplementedException();
+        var chargeItems = new List<ChargeItem>
+        {
+            new ChargeItem
+            {
+                Position = 1,
+                Amount = 150m,
+                VATRate = PTVATRates.Normal,
+                VATAmount = VATHelpers.CalculateVAT(150m, PTVATRates.Normal),
+                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0013,
+                Quantity = 1,
+                Description = "Line item 1"
+            }
+        };
+
+        return new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            cbReceiptAmount = chargeItems.Sum(x => x.Amount),
+            cbReceiptMoment = DateTime.UtcNow,
+            cbReceiptReference = Guid.NewGuid().ToString(),
+            cbChargeItems = chargeItems,
+            cbPayItems =
+            [
+
+            ],
+            cbUser = 1,
+            ftPosSystemId = Guid.NewGuid(),
+            ftReceiptCase = (ReceiptCase) 0x5054_2000_0000_3004
+        };
     }
 
     public static ReceiptRequest Case_5_4()
@@ -134,10 +162,10 @@ public static class PTCertificationExamples
             cbCustomer = new MiddlewareCustomer
             {
                 CustomerVATId = CUSOMTER_VATNUMBER,
-                CustomerCity = "Salzburg",
-                CustomerZip = "5020",
-                CustomerStreet = "Alpenstraße 99/2.OG/02",
-                CustomerName = "fiskaltrust consulting gmbh"
+                CustomerCity = "Lissbon",
+                CustomerZip = "1050-189",
+                CustomerStreet = "Demo street",
+                CustomerName = "Nuno Cazeiro"
             }
         };
     }
@@ -325,10 +353,10 @@ public static class PTCertificationExamples
             ftReceiptCase = (ReceiptCase) 0x5054_2000_0000_0001,
             cbCustomer = new MiddlewareCustomer
             {
-                CustomerCity = "Salzburg",
-                CustomerZip = "5020",
-                CustomerStreet = "Alpenstraße 99/2.OG/02",
-                CustomerName = "fiskaltrust consulting gmbh"
+                CustomerCity = "Lissbon",
+                CustomerZip = "1050-189",
+                CustomerStreet = "Demo street",
+                CustomerName = "Nuno Cazeiro"
             }
         };
     }
@@ -373,10 +401,10 @@ public static class PTCertificationExamples
             ftReceiptCase = (ReceiptCase) 0x5054_2000_0000_0001,
             cbCustomer = new MiddlewareCustomer
             {
-                CustomerCity = "Salzburg",
-                CustomerZip = "5020",
-                CustomerStreet = "Alpenstraße 99/2.OG/02",
-                CustomerName = "fiskaltrust consulting gmbh"
+                CustomerCity = "Lissbon",
+                CustomerZip = "1050-189",
+                CustomerStreet = "Demo street",
+                CustomerName = "Nuno Cazeiro"
             }
         };
     }
@@ -390,7 +418,35 @@ public static class PTCertificationExamples
     public static ReceiptRequest Case_5_12()
     {
         // A proforma or proposal.
-        throw new Exception("Not implemented");
+        var chargeItems = new List<ChargeItem>
+        {
+            new ChargeItem
+            {
+                Position = 1,
+                Amount = 150m,
+                VATRate = PTVATRates.Normal,
+                VATAmount = VATHelpers.CalculateVAT(150m, PTVATRates.Normal),
+                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0013,
+                Quantity = 1,
+                Description = "Line item 1"
+            }
+        };
+
+        return new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            cbReceiptAmount = chargeItems.Sum(x => x.Amount),
+            cbReceiptMoment = DateTime.UtcNow,
+            cbReceiptReference = Guid.NewGuid().ToString(),
+            cbChargeItems = chargeItems,
+            cbPayItems =
+            [
+
+            ],
+            cbUser = 1,
+            ftPosSystemId = Guid.NewGuid(),
+            ftReceiptCase = (ReceiptCase) 0x5054_2000_0000_3004
+        };
     }
 
     public static ReceiptRequest Case_5_13()
@@ -441,48 +497,42 @@ public static class PTCertificationExamples
             ftReceiptCase = (ReceiptCase) 0x5054_2000_0000_1001,
             cbCustomer = new MiddlewareCustomer
             {
-                CustomerCity = "Salzburg",
-                CustomerZip = "5020",
-                CustomerStreet = "Alpenstraße 99/2.OG/02",
-                CustomerName = "fiskaltrust consulting gmbh"
+                CustomerVATId = CUSOMTER_VATNUMBER,
+                CustomerCity = "Lissbon",
+                CustomerZip = "1050-189",
+                CustomerStreet = "Demo street",
+                CustomerName = "Nuno Cazeiro"
             }
         };
     }
 
-    public static ReceiptRequest Case_5_13_2_ProForma()
+    public static ReceiptRequest Case_5_13_2_Payment()
     {
-        var chargeItems = new List<ChargeItem>
-        {
-            new ChargeItem
-            {
-                Position = 1,
-                Amount = 150m,
-                VATRate = PTVATRates.Normal,
-                VATAmount = VATHelpers.CalculateVAT(150m, PTVATRates.Normal),
-                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0013,
-                Quantity = 1,
-                Description = "Line item 1"
-            }
-        };
-
         return new ReceiptRequest
         {
             cbTerminalID = "1",
-            cbReceiptAmount = chargeItems.Sum(x => x.Amount),
+            cbReceiptAmount = 0,
             cbReceiptMoment = DateTime.UtcNow,
             cbReceiptReference = Guid.NewGuid().ToString(),
-            cbChargeItems = chargeItems,
+            cbChargeItems = [],
             cbPayItems =
             [
-
+                new PayItem
+                {
+                    Position = 1,
+                    Quantity = 1,
+                    Amount = 50,
+                    Description = "Cash",
+                    ftPayItemCase = (PayItemCase) 0x5054_2000_0000_0001,
+                }
             ],
             cbUser = 1,
             ftPosSystemId = Guid.NewGuid(),
-            ftReceiptCase = (ReceiptCase) 0x5054_2000_0000_3004
+            ftReceiptCase = (ReceiptCase) 0x5054_2000_0000_0002
         };
     }
 
-    public static ReceiptRequest Case_5_13_1_Invoice_OnProForma(string cbPreviousReceiptReference)
+    public static ReceiptRequest Case_5_4(string cbPreviousReceiptReference)
     {
         var chargeItems = new List<ChargeItem>
         {
@@ -521,10 +571,11 @@ public static class PTCertificationExamples
             ftReceiptCase = (ReceiptCase) 0x5054_2000_0000_1001,
             cbCustomer = new MiddlewareCustomer
             {
-                CustomerCity = "Salzburg",
-                CustomerZip = "5020",
-                CustomerStreet = "Alpenstraße 99/2.OG/02",
-                CustomerName = "fiskaltrust consulting gmbh"
+                CustomerVATId = CUSOMTER_VATNUMBER,
+                CustomerCity = "Lissbon",
+                CustomerZip = "1050-189",
+                CustomerStreet = "Demo street",
+                CustomerName = "Nuno Cazeiro"
             },
             cbPreviousReceiptReference = cbPreviousReceiptReference
         };

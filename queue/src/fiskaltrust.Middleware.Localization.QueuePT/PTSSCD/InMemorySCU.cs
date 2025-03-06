@@ -47,6 +47,7 @@ public class InMemorySCU : IPTSSCD
                $"{element.Hash}";
     }
 
+#pragma warning disable
     public async Task<(ProcessResponse, string)> ProcessReceiptAsync(ProcessRequest request, string? lastHash)
     {
         var rsa = RSA.Create();

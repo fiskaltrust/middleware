@@ -44,7 +44,6 @@ public class StaticNumeratorStorage
         ReloadSeries(StaticNumeratorStorage.SimplifiedInvoiceSeries, queueItems);
         ReloadSeries(StaticNumeratorStorage.CreditNoteSeries, queueItems);
         ReloadSeries(StaticNumeratorStorage.InvoiceSeries, queueItems);
-        ReloadSeries(StaticNumeratorStorage.ProFormaSeries, queueItems);
     }
 
     private static void ReloadSeries(NumberSeries series, List<ftQueueItem> queueItems)
