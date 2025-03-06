@@ -28,7 +28,6 @@ jobs:
         with:
           pattern: scu-de/fiskaltrust.Middleware.SCU.DE.sln
           configuration: Debug
-          xamarin: true
 
       - name: Unit Tests
         uses: ./.github/actions/test
