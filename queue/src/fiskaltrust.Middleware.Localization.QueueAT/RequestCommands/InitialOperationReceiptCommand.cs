@@ -45,7 +45,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                 _logger.LogInformation(alreadyActiveActionJournal.Message);
                 var actionJournal = new List<ftActionJournal> { alreadyActiveActionJournal };
 
-                var (receiptIdentification, ftStateData, isBackupScuUsed, signatureItems, journalAt) = await SignReceiptAsync(queueAT, request, response.ftReceiptIdentification, response.ftReceiptMoment, queueItem.ftQueueItemId, isZeroReceipt: true);
+                var (receiptIdentification, ftStateData, isBackupScuUsed, signatureItems, journalAt, _) = await SignReceiptAsync(queueAT, request, response.ftReceiptIdentification, response.ftReceiptMoment, queueItem.ftQueueItemId, isZeroReceipt: true);
                 response.ftSignatures = response.ftSignatures.Concat(signatureItems).ToArray();
                 response.ftReceiptIdentification = receiptIdentification;
                 response.ftStateData = ftStateData;
@@ -125,7 +125,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
             actionJournals.Add(aj);
 
 
-            var (receiptIdentification, ftStateData, isBackupScuUsed, signatureItems, journalAT) = await SignReceiptAsync(queueAT, request, response.ftReceiptIdentification, response.ftReceiptMoment, queueItem.ftQueueItemId, isZeroReceipt: true);
+            var (receiptIdentification, ftStateData, isBackupScuUsed, signatureItems, journalAT, isSigned) = await SignReceiptAsync(queueAT, request, response.ftReceiptIdentification, response.ftReceiptMoment, queueItem.ftQueueItemId, isZeroReceipt: true);
             response.ftSignatures = response.ftSignatures.Concat(signatureItems).ToArray();
             response.ftReceiptIdentification = receiptIdentification;
             response.ftStateData = ftStateData;
@@ -134,7 +134,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                 response.ftState |= 0x80;
             }
 
-            if (journalAT != null)
+            if (isSigned)
             {
                 // Receipt successfully signed, activate Queue
                 queue.StartMoment = DateTime.UtcNow;
