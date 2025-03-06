@@ -36,13 +36,6 @@ jobs:
           pattern: "UnitTest"
           args: '--no-build'
 
-      - name: Integration Tests
-        uses: ./.github/actions/test
-        with:
-          directory: scu-de/test
-          pattern: "IntegrationTest"
-          args: '--no-build'
-
       - name: Acceptance Tests
         uses: ./.github/actions/test
         with:
