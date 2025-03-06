@@ -14,7 +14,7 @@ on:
     branches:
       - main
     tags-ignore:
-      - 'queue/**/v*'
+      - '*/**/v*'
     paths:
       - 'queue/**'
 
