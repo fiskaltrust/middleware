@@ -1,14 +1,14 @@
-## Queue CI (`queue-build.yml`)
+## CI (`<queue|scu-at|scu-de|scu-es|scu-it>-build.yml`)
 
 - on push
-  - paths: `queue/**`
+  - paths: `<queue|scu-at|scu-de|scu-es|scu-it>/**`
 - manually
-- from `/run queue ci` comment
+- from `/run <queue|scu-at|scu-de|scu-es|scu-it> ci` comment
 
-## Queue Package (`queue-package.yml`)
+## Package (`package.yml`)
 
 - manually
-- from `/package queue <QUEUE>` comment
+- from `/package <queue|scu-at|scu-de|scu-es|scu-it> <PACKAGE>` comment
 
 ## Queue Acceptance Tests (`queue-acceptance-tests.yml`)
 
@@ -18,12 +18,12 @@
 - manually
 - from `/run queue acceptance-tests` comment
 
-## Queue Release (`queue-release.yml`)
+## Release (`release.yml`)
 
 - on push
-  - tags: `queue/**/v*`
+  - tags: `<queue|scu-at|scu-de|scu-es|scu-it>/**/v*`
 
 ## Deploy (`deploy.yml`)
 
 - manually (via Queue Package)
-- from `/deploy queue <QUEUE>` comment
+- from `/deploy <queue|scu-at|scu-de|scu-es|scu-it> <PACKAGE>` comment
