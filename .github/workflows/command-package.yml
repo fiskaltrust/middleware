@@ -12,7 +12,7 @@ permissions:
 jobs:
   meta:
     needs: []
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     outputs:
       project: ${{ steps.meta.outputs.project }}
       package: ${{ steps.meta.outputs.package }}
