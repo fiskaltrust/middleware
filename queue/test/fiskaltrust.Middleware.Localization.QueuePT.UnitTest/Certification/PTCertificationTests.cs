@@ -113,12 +113,14 @@ public class PTCertificationTests
         return await response.Content.ReadFromJsonAsync<IssueResponse>();
     }
 
-    public async Task StoreDataAsync(string folder, string casename, long ticks,  ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
+    public async Task StoreDataAsync(string folder, string casename, long ticks, ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
     {
         var result = await SendIssueAsync(receiptRequest, receiptResponse);
 
         var pdfdata = await new HttpClient().GetAsync(result?.DocumentURL + "?format=pdf");
+        var pdfcopydata = await new HttpClient().GetAsync(result?.DocumentURL + "?format=pdf&copy=true");
         var pngdata = await new HttpClient().GetAsync(result?.DocumentURL + "?format=png");
+        var pngcopydata = await new HttpClient().GetAsync(result?.DocumentURL + "?format=png&copy=true");
 
         var xmlData = await _journalMethod(JsonSerializer.Serialize(new ifPOS.v1.JournalRequest
         {
@@ -142,7 +144,9 @@ public class PTCertificationTests
 
 
         File.WriteAllBytes($"{base_path}/{casename}.receipt.pdf", await pdfdata.Content.ReadAsByteArrayAsync());
+        File.WriteAllBytes($"{base_path}/{casename}.receipt.copy.pdf", await pdfcopydata.Content.ReadAsByteArrayAsync());
         File.WriteAllBytes($"{base_path}/{casename}.receipt.png", await pngdata.Content.ReadAsByteArrayAsync());
+        File.WriteAllBytes($"{base_path}/{casename}.receipt.copy.png", await pngcopydata.Content.ReadAsByteArrayAsync());
         File.WriteAllText($"{base_path}/{casename}_saft.xml", xmlData);
     }
 
@@ -159,9 +163,13 @@ public class PTCertificationTests
     [Fact]
     public async Task PTCertificationExamplesAll()
     {
-        var targetFolder = "/Users/stefan.kert/Desktop/Sources/PT_Certification";
+        //var targetFolder = "/Users/stefan.kert/Desktop/Sources/PT_Certification";
+        var targetFolder = "C:\\Users\\stefa\\OneDrive\\Desktop\\Portugal_Registration\\Examples_Final";
 
-        var receiptRequest = PTCertificationExamples.Case_5_1();
+        var receiptRequest = PTCertificationExamples.Case_5_9();
+        await ExecuteMiddleware(receiptRequest, targetFolder, caller: "Case_5_9");
+
+        receiptRequest = PTCertificationExamples.Case_5_1();
         await ExecuteMiddleware(receiptRequest, targetFolder, caller: "Case_5_1");
 
         receiptRequest = PTCertificationExamples.Case_5_3();
@@ -174,13 +182,11 @@ public class PTCertificationTests
         await ExecuteMiddleware(receiptRequest, targetFolder, caller: "Case_5_5");
 
         receiptRequest = PTCertificationExamples.Case_5_6();
+        var _56receipt = receiptRequest;
         await ExecuteMiddleware(receiptRequest, targetFolder, caller: "Case_5_6");
 
         receiptRequest = PTCertificationExamples.Case_5_7();
         await ExecuteMiddleware(receiptRequest, targetFolder, caller: "Case_5_7");
-
-        receiptRequest = PTCertificationExamples.Case_5_9();
-        await ExecuteMiddleware(receiptRequest, targetFolder, caller: "Case_5_9");
 
         receiptRequest = PTCertificationExamples.Case_5_10();
         await ExecuteMiddleware(receiptRequest, targetFolder, caller: "Case_5_10");
@@ -188,11 +194,8 @@ public class PTCertificationTests
         receiptRequest = PTCertificationExamples.Case_5_12();
         await ExecuteMiddleware(receiptRequest, targetFolder, caller: "Case_5_12");
 
-        //receiptRequest = PTCertificationExamples.Case_5_13();
-        //await ExecuteMiddleware(receiptRequest, targetFolder, caller: "Case_5_13");
-
-        receiptRequest = PTCertificationExamples.Case_5_13_1_Invoice();
-        await ExecuteMiddleware(receiptRequest, targetFolder, caller: "Case_5_13_1");
+        receiptRequest = PTCertificationExamples.Case_5_13_2_Payment(_56receipt.cbReceiptReference);
+        await ExecuteMiddleware(receiptRequest, targetFolder, caller: "Case_5_13");
 
         var xmlData = await _journalMethod(JsonSerializer.Serialize(new ifPOS.v1.JournalRequest
         {
@@ -302,11 +305,13 @@ public class PTCertificationTests
         await ValidateMyData(receiptRequest);
     }
 
-
     [Fact]
     public async Task PTCertificationExamples_Case_5_13_2()
     {
-        var receiptRequest = PTCertificationExamples.Case_5_13_2_Payment();
+        var receiptRequest = PTCertificationExamples.Case_5_6();
+        var _56receipt = receiptRequest;
+        await ExecuteMiddleware(receiptRequest, "", caller: "Case_5_6");
+        receiptRequest = PTCertificationExamples.Case_5_13_2_Payment(_56receipt.cbReceiptReference);
         await ValidateMyData(receiptRequest);
     }
 }

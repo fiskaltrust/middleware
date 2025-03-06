@@ -14,7 +14,7 @@ public class PaymentDocumentStatus
 
 #pragma warning disable
     [XmlElement(ElementName = "PaymentStatusDate")]
-    public string WorkStatPaymentStatusDateString
+    public string PaymentStatusDateString
     {
         get { return PaymentStatusDate.ToString("yyyy-MM-ddTHH:mm:ss"); }
         set { PaymentStatusDate = DateTime.Parse(value); }
@@ -26,7 +26,7 @@ public class PaymentDocumentStatus
     [XmlElement(ElementName = "SourceID")]
     public required string SourceID { get; set; }
 
-    [XmlElement(ElementName = "SourceBilling")]
+    [XmlElement(ElementName = "SourcePayment")]
     public required string SourcePayment { get; set; }
 }
 

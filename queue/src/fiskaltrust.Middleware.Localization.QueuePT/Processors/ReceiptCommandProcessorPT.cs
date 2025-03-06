@@ -123,19 +123,46 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignat
 
     public async Task<ProcessCommandResponse> PaymentTransfer0x0002Async(ProcessCommandRequest request)
     {
-        var series = StaticNumeratorStorage.SimplifiedInvoiceSeries;
-        series.Numerator++;
-        var (response, hash) = await _sscd.ProcessReceiptAsync(new ProcessRequest
+        if (!string.IsNullOrEmpty(request.ReceiptRequest.cbPreviousReceiptReference))
         {
-            ReceiptRequest = request.ReceiptRequest,
-            ReceiptResponse = request.ReceiptResponse,
-        }, series.LastHash);
-        response.ReceiptResponse.ftReceiptIdentification = series.Identifier + "/" + series.Numerator!.ToString()!.PadLeft(4, '0');
-        var printHash = new StringBuilder().Append(hash[0]).Append(hash[10]).Append(hash[20]).Append(hash[30]).ToString();
-        var qrCode = PortugalReceiptCalculations.CreateSimplifiedInvoiceQRCode(printHash, _queuePT.IssuerTIN, _queuePT.TaxRegion, series.ATCUD + "-" + series.Numerator, request.ReceiptRequest, response.ReceiptResponse);
-        AddSignatures(series, response, hash, printHash, qrCode);
-        series.LastHash = hash;
-        return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+            var receiptReference = await LoadReceiptReferencesToResponse(request.ReceiptRequest, request.ReceiptResponse);
+            var series = StaticNumeratorStorage.PaymentSeries;
+            series.Numerator++;
+            var (response, hash) = await _sscd.ProcessReceiptAsync(new ProcessRequest
+            {
+                ReceiptRequest = request.ReceiptRequest,
+                ReceiptResponse = request.ReceiptResponse,
+            }, series.LastHash);
+            response.ReceiptResponse.ftReceiptIdentification = series.Identifier + "/" + series.Numerator!.ToString()!.PadLeft(4, '0');
+            var printHash = new StringBuilder().Append(hash[0]).Append(hash[10]).Append(hash[20]).Append(hash[30]).ToString();
+            var qrCode = PortugalReceiptCalculations.CreateRGQRCode(printHash, _queuePT.IssuerTIN, _queuePT.TaxRegion, series.ATCUD + "-" + series.Numerator, request.ReceiptRequest, response.ReceiptResponse);
+            AddSignatures(series, response, hash, printHash, qrCode);
+            response.ReceiptResponse.AddSignatureItem(new SignatureItem
+            {
+                Caption = $"Origem: Proforma {receiptReference.ftReceiptIdentification}",
+                Data = $"",
+                ftSignatureFormat = SignatureFormat.Text,
+                ftSignatureType = SignatureTypePT.ReferenceForCreditNote.As<SignatureType>(),
+            });
+            series.LastHash = hash;
+            return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+        }
+        else
+        {
+            var series = StaticNumeratorStorage.PaymentSeries;
+            series.Numerator++;
+            var (response, hash) = await _sscd.ProcessReceiptAsync(new ProcessRequest
+            {
+                ReceiptRequest = request.ReceiptRequest,
+                ReceiptResponse = request.ReceiptResponse,
+            }, series.LastHash);
+            response.ReceiptResponse.ftReceiptIdentification = series.Identifier + "/" + series.Numerator!.ToString()!.PadLeft(4, '0');
+            var printHash = new StringBuilder().Append(hash[0]).Append(hash[10]).Append(hash[20]).Append(hash[30]).ToString();
+            var qrCode = PortugalReceiptCalculations.CreateRGQRCode(printHash, _queuePT.IssuerTIN, _queuePT.TaxRegion, series.ATCUD + "-" + series.Numerator, request.ReceiptRequest, response.ReceiptResponse);
+            AddSignatures(series, response, hash, printHash, qrCode);
+            series.LastHash = hash;
+            return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+        }
     }
 
     public async Task<ProcessCommandResponse> PointOfSaleReceiptWithoutObligation0x0003Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);

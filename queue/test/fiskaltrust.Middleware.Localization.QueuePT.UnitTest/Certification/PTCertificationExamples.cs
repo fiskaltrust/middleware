@@ -240,7 +240,7 @@ public static class PTCertificationExamples
                 }
             ],
             ftPosSystemId = Guid.NewGuid(),
-            ftReceiptCase = (ReceiptCase) 0x5054_2000_0000_0001,
+            ftReceiptCase = (ReceiptCase) 0x5054_2000_0000_1001,
             cbCustomer = new MiddlewareCustomer
             {
                 CustomerVATId = CUSOMTER_VATNUMBER,
@@ -342,7 +342,7 @@ public static class PTCertificationExamples
         {
             cbTerminalID = "1",
             cbReceiptAmount = chargeItems.Sum(x => x.Amount),
-            cbReceiptMoment = new DateTime(2025, 03, 03, 06, 00, 00, DateTimeKind.Utc),
+            cbReceiptMoment = new DateTime(2025, 03, 06, 07, 34, 12, DateTimeKind.Utc),
             cbReceiptReference = Guid.NewGuid().ToString(),
             cbChargeItems = chargeItems,
             cbPayItems =
@@ -410,9 +410,9 @@ public static class PTCertificationExamples
             cbCustomer = new MiddlewareCustomer
             {
                 CustomerCity = "Lissbon",
-                CustomerZip = "1050-189",
+                CustomerZip = "1050-190",
                 CustomerStreet = "Demo street",
-                CustomerName = "Nuno Cazeiro"
+                CustomerName = "Stefan Kert"
             }
         };
     }
@@ -514,7 +514,7 @@ public static class PTCertificationExamples
         };
     }
 
-    public static ReceiptRequest Case_5_13_2_Payment()
+    public static ReceiptRequest Case_5_13_2_Payment(string receiptReference)
     {
         return new ReceiptRequest
         {
@@ -529,14 +529,15 @@ public static class PTCertificationExamples
                 {
                     Position = 1,
                     Quantity = 1,
-                    Amount = 50,
+                    Amount = 187.5m,
                     Description = "Cash",
                     ftPayItemCase = (PayItemCase) 0x5054_2000_0000_0001,
                 }
             ],
             cbUser = 1,
             ftPosSystemId = Guid.NewGuid(),
-            ftReceiptCase = (ReceiptCase) 0x5054_2000_0000_0002
+            ftReceiptCase = (ReceiptCase) 0x5054_2000_0000_0002,
+            cbPreviousReceiptReference = receiptReference
         };
     }
 
