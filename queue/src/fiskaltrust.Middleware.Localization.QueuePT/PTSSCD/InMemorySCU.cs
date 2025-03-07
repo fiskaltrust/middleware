@@ -26,13 +26,13 @@ public class InMemorySCU : IPTSSCD
         _signaturCreationUnitPT = signaturCreationUnitPT;
     }
 
-    public PTInvoiceElement GetPTInvoiceElementFromReceiptRequest(ReceiptRequest receipt, string? lastHash)
+    public PTInvoiceElement GetPTInvoiceElementFromReceiptRequest(ReceiptRequest receipt, string invoiceNo, string? lastHash)
     {
         return new PTInvoiceElement
         {
             InvoiceDate = receipt.cbReceiptMoment,
-            SystemEntryDate = receipt.cbReceiptMoment, // wrong
-            InvoiceNo = receipt.cbReceiptReference ?? "", // wrong
+            SystemEntryDate = DateTime.UtcNow, // wrong
+            InvoiceNo = invoiceNo, // wrong
             GrossTotal = receipt.cbChargeItems.Sum(x => x.Amount),
             Hash = lastHash ?? ""
         };
@@ -48,11 +48,11 @@ public class InMemorySCU : IPTSSCD
     }
 
 #pragma warning disable
-    public async Task<(ProcessResponse, string)> ProcessReceiptAsync(ProcessRequest request, string? lastHash)
+    public async Task<(ProcessResponse, string)> ProcessReceiptAsync(ProcessRequest request, string invoiceNo, string? lastHash)
     {
         var rsa = RSA.Create();
         rsa.ImportFromPem(_signaturCreationUnitPT.PrivateKey);
-        var hash1 = GetHashForItem(GetPTInvoiceElementFromReceiptRequest(request.ReceiptRequest, lastHash ?? ""));
+        var hash1 = GetHashForItem(GetPTInvoiceElementFromReceiptRequest(request.ReceiptRequest, invoiceNo, lastHash ?? ""));
         var signature1 = rsa.SignData(Encoding.UTF8.GetBytes(hash1), HashAlgorithmName.SHA1, RSASignaturePadding.Pkcs1);
         return await Task.FromResult((new ProcessResponse
         {
