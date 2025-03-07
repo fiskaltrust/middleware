@@ -1,6 +1,0 @@
-{
-  "version": "1.3.35",
-  "releaseBranches": [
-    "^refs/tags/scu-me/fiscalizationservice/v\\d+(?:\\.\\d+)*(?:-.*)?$"
-  ]
-}

@@ -1,6 +1,0 @@
-{
-  "version": "1.3.42",
-  "releaseBranches": [
-    "^refs/tags/scu-at/inmemory/v\\d+(?:\\.\\d+)*(?:-.*)?$"
-  ]
-}
