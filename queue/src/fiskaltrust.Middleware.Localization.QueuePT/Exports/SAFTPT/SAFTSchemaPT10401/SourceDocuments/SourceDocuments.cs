@@ -1,4 +1,5 @@
 ﻿using System.Xml.Serialization;
+using fiskaltrust.Middleware.Localization.QueuePT.Exports.SAFTPT.SAFTSchemaPT10401.SourceDocuments.PaymentDocumentModels;
 
 namespace fiskaltrust.SAFT.CLI.SAFTSchemaPT10401;
 
@@ -31,6 +32,6 @@ public class SourceDocuments
     /// Receipts issued after the entry into force of this structure should be exported on this table.
     /// </summary>
     [XmlElement(ElementName = "Payments")]
-    public object? Payments { get; set; }
+    public Payments? Payments { get; set; }
 }
 

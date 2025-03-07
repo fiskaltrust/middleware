@@ -22,7 +22,7 @@ public class PaymentDocument
     [XmlIgnore()]
     public required DateTime TransactionDate { get; set; }
 
-    [XmlElement(ElementName = "WorkDate")]
+    [XmlElement(ElementName = "TransactionDate")]
     public string TransactionDateString
     {
         get { return TransactionDate.ToString("yyyy-MM-dd"); }
@@ -33,10 +33,10 @@ public class PaymentDocument
     public required string PaymentType { get; set; }
 
     [XmlElement(ElementName = "Description")]
-    public required string Description { get; set; }
+    public string? Description { get; set; }
 
     [XmlElement(ElementName = "SystemID")]
-    public required string SystemID { get; set; }
+    public string? SystemID { get; set; }
 
     [XmlElement(ElementName = "DocumentStatus")]
     public required PaymentDocumentStatus DocumentStatus { get; set; }
@@ -54,7 +54,7 @@ public class PaymentDocument
     [XmlElement(ElementName = "SystemEntryDate")]
     public string SystemEntryDateString
     {
-        get { return SystemEntryDate.ToString("yyyy-MM-ddThh:mm:ss"); }
+        get { return SystemEntryDate.ToString("yyyy-MM-ddTHH:mm:ss"); }
         set { SystemEntryDate = DateTime.Parse(value); }
     }
 
@@ -62,8 +62,8 @@ public class PaymentDocument
     public required string CustomerID { get; set; }
 
     [XmlElement(ElementName = "Line")]
-    public required List<Line> Line { get; set; }
+    public required List<PaymentLine> Line { get; set; }
 
     [XmlElement(ElementName = "DocumentTotals")]
-    public PaymentSettlement? DocumentTotals { get; set; }
+    public PaymentTotals? DocumentTotals { get; set; }
 }

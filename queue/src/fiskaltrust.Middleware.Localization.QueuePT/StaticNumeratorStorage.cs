@@ -38,6 +38,13 @@ public class StaticNumeratorStorage
         Identifier = "PF ft2024"
     };
 
+    public static NumberSeries PaymentSeries { get; set; } = new NumberSeries
+    {
+        TypeCode = "RG",
+        ATCUD = "FSSJ34S",
+        Identifier = "RG ft2024"
+    };
+
     public static async Task LoadStorageNumbers(IMiddlewareQueueItemRepository middlewareQueueItemRepository)
     {
         var queueItems = (await middlewareQueueItemRepository.GetAsync()).OrderByDescending(x => x.ftQueueRow).ToList();
@@ -45,6 +52,7 @@ public class StaticNumeratorStorage
         ReloadSeries(StaticNumeratorStorage.CreditNoteSeries, queueItems);
         ReloadSeries(StaticNumeratorStorage.InvoiceSeries, queueItems);
         ReloadSeries(StaticNumeratorStorage.ProFormaSeries, queueItems);
+        ReloadSeries(StaticNumeratorStorage.PaymentSeries, queueItems);
     }
 
     private static void ReloadSeries(NumberSeries series, List<ftQueueItem> queueItems)

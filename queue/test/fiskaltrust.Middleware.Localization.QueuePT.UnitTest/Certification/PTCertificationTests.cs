@@ -60,7 +60,7 @@ public class PTCertificationTests
     private async Task ValidateMyData(ReceiptRequest receiptRequest, [CallerMemberName] string caller = "")
     {
         using var scope = new AssertionScope();
-        await ExecuteMiddleware(receiptRequest, caller);
+        await ExecuteMiddleware(receiptRequest, "C:\\Users\\stefa\\OneDrive\\Desktop\\Portugal_Registration\\Examples", caller);
     }
 
     public PTCertificationTests()
@@ -72,10 +72,10 @@ public class PTCertificationTests
     }
 
 #pragma warning disable
-    private async Task ExecuteMiddleware(ReceiptRequest receiptRequest, string caller)
+    private async Task ExecuteMiddleware(ReceiptRequest receiptRequest, string basePath, string caller)
     {
         var (ticks, receiptResponse) = await ExecuteSign(receiptRequest);
-        await StoreDataAsync(caller, caller, ticks, receiptRequest, receiptResponse);
+        await StoreDataAsync(Path.Combine(basePath, caller), caller, ticks, receiptRequest, receiptResponse);
     }
 
     private async Task<(long ticks, ReceiptResponse receiptResponse)> ExecuteSign(ReceiptRequest receiptRequest)
@@ -113,12 +113,14 @@ public class PTCertificationTests
         return await response.Content.ReadFromJsonAsync<IssueResponse>();
     }
 
-    public async Task StoreDataAsync(string folder, string casename, long ticks,  ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
+    public async Task StoreDataAsync(string folder, string casename, long ticks, ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
     {
         var result = await SendIssueAsync(receiptRequest, receiptResponse);
 
         var pdfdata = await new HttpClient().GetAsync(result?.DocumentURL + "?format=pdf");
+        var pdfcopydata = await new HttpClient().GetAsync(result?.DocumentURL + "?format=pdf&copy=true");
         var pngdata = await new HttpClient().GetAsync(result?.DocumentURL + "?format=png");
+        var pngcopydata = await new HttpClient().GetAsync(result?.DocumentURL + "?format=png&copy=true");
 
         var xmlData = await _journalMethod(JsonSerializer.Serialize(new ifPOS.v1.JournalRequest
         {
@@ -126,54 +128,26 @@ public class PTCertificationTests
             From = ticks
         }));
 
-        var base_path = Path.Combine("C:\\Users\\stefa\\OneDrive\\Desktop\\Portugal_Registration\\Examples", folder);
+        var base_path = Path.Combine(folder);
         if (!Directory.Exists(base_path))
         {
             Directory.CreateDirectory(base_path);
         }
-        File.WriteAllText($"{base_path}\\{casename}.receiptrequest.json", JsonSerializer.Serialize(receiptRequest, new JsonSerializerOptions
+        File.WriteAllText($"{base_path}/{casename}.receiptrequest.json", JsonSerializer.Serialize(receiptRequest, new JsonSerializerOptions
         {
             WriteIndented = true
         }));
-        File.WriteAllText($"{base_path}\\{casename}.receiptresponse.json", JsonSerializer.Serialize(receiptResponse, new JsonSerializerOptions
+        File.WriteAllText($"{base_path}/{casename}.receiptresponse.json", JsonSerializer.Serialize(receiptResponse, new JsonSerializerOptions
         {
             WriteIndented = true
         }));
 
 
-        File.WriteAllBytes($"{base_path}\\{casename}.receipt.pdf", await pdfdata.Content.ReadAsByteArrayAsync());
-        File.WriteAllBytes($"{base_path}\\{casename}.receipt.png", await pngdata.Content.ReadAsByteArrayAsync());
-        File.WriteAllText($"{base_path}\\{casename}_saft.xml", xmlData);
-    }
-
-    [Fact]
-    public async Task PTCertificationExamples_Case_5_1()
-    {
-        var receiptRequest = PTCertificationExamples.Case_5_1();
-        await ValidateMyData(receiptRequest);
-    }
-
-    //[Fact]
-    public async Task PTCertificationExamples_Case_5_2()
-    {
-        var receiptRequest = PTCertificationExamples.Case_5_1();
-        var (ticks, receiptResponse) = await ExecuteSign(receiptRequest);
-        var cancellationRequest = PTCertificationExamples.Case_5_2(receiptRequest.cbReceiptReference);
-        await ValidateMyData(cancellationRequest);
-    }
-
-    //[Fact]
-    public async Task PTCertificationExamples_Case_5_3()
-    {
-        var receiptRequest = PTCertificationExamples.Case_5_3();
-        await ValidateMyData(receiptRequest);
-    }
-
-    //[Fact]
-    public async Task PTCertificationExamples_Case_5_4()
-    {
-        var receiptRequest = PTCertificationExamples.Case_5_4();
-        await ValidateMyData(receiptRequest);
+        File.WriteAllBytes($"{base_path}/{casename}.receipt.pdf", await pdfdata.Content.ReadAsByteArrayAsync());
+        File.WriteAllBytes($"{base_path}/{casename}.receipt.copy.pdf", await pdfcopydata.Content.ReadAsByteArrayAsync());
+        File.WriteAllBytes($"{base_path}/{casename}.receipt.png", await pngdata.Content.ReadAsByteArrayAsync());
+        File.WriteAllBytes($"{base_path}/{casename}.receipt.copy.png", await pngcopydata.Content.ReadAsByteArrayAsync());
+        File.WriteAllText($"{base_path}/{casename}_saft.xml", xmlData);
     }
 
     [Fact]
@@ -186,6 +160,78 @@ public class PTCertificationTests
         }));
     }
 
+    [Fact]
+    public async Task PTCertificationExamplesAll()
+    {
+        //var targetFolder = "/Users/stefan.kert/Desktop/Sources/PT_Certification";
+        var targetFolder = "C:\\Users\\stefa\\OneDrive\\Desktop\\Portugal_Registration\\Examples_Final";
+
+        var receiptRequest = PTCertificationExamples.Case_5_9();
+        await ExecuteMiddleware(receiptRequest, targetFolder, caller: "Case_5_9");
+
+        receiptRequest = PTCertificationExamples.Case_5_1();
+        await ExecuteMiddleware(receiptRequest, targetFolder, caller: "Case_5_1");
+
+        receiptRequest = PTCertificationExamples.Case_5_3();
+        await ExecuteMiddleware(receiptRequest, targetFolder, caller: "Case_5_3");
+
+        receiptRequest = PTCertificationExamples.Case_5_4(receiptRequest.cbReceiptReference);
+        await ExecuteMiddleware(receiptRequest, targetFolder, caller: "Case_5_4");
+
+        receiptRequest = PTCertificationExamples.Case_5_5(receiptRequest.cbReceiptReference);
+        await ExecuteMiddleware(receiptRequest, targetFolder, caller: "Case_5_5");
+
+        receiptRequest = PTCertificationExamples.Case_5_6();
+        var _56receipt = receiptRequest;
+        await ExecuteMiddleware(receiptRequest, targetFolder, caller: "Case_5_6");
+
+        receiptRequest = PTCertificationExamples.Case_5_7();
+        await ExecuteMiddleware(receiptRequest, targetFolder, caller: "Case_5_7");
+
+        receiptRequest = PTCertificationExamples.Case_5_10();
+        await ExecuteMiddleware(receiptRequest, targetFolder, caller: "Case_5_10");
+
+        receiptRequest = PTCertificationExamples.Case_5_12();
+        await ExecuteMiddleware(receiptRequest, targetFolder, caller: "Case_5_12");
+
+        receiptRequest = PTCertificationExamples.Case_5_13_2_Payment(_56receipt.cbReceiptReference);
+        await ExecuteMiddleware(receiptRequest, targetFolder, caller: "Case_5_13");
+
+        var xmlData = await _journalMethod(JsonSerializer.Serialize(new ifPOS.v1.JournalRequest
+        {
+            ftJournalType = 0x5054_2000_0000_0001
+        }));
+        File.WriteAllText($"{targetFolder}\\SAFT_journal.xml", xmlData);
+    }
+
+    [Fact]
+    public async Task PTCertificationExamples_Case_5_1()
+    {
+        var receiptRequest = PTCertificationExamples.Case_5_1();
+        await ValidateMyData(receiptRequest);
+    }
+
+    //[Fact]
+    public async Task PTCertificationExamples_Case_5_2()
+    {
+        throw new NotImplementedException();
+    }
+
+    [Fact]
+    public async Task PTCertificationExamples_Case_5_3()
+    {
+        var receiptRequest = PTCertificationExamples.Case_5_3();
+        await ValidateMyData(receiptRequest);
+    }
+
+    [Fact]
+    public async Task PTCertificationExamples_Case_5_4()
+    {
+        var receiptRequest = PTCertificationExamples.Case_5_3();
+        var (ticks, receiptResponse) = await ExecuteSign(receiptRequest);
+        var invoiceRequest = PTCertificationExamples.Case_5_4(receiptRequest.cbReceiptReference);
+        await ValidateMyData(invoiceRequest);
+    }
 
     [Fact]
     public async Task PTCertificationExamples_Case_5_5()
@@ -238,17 +284,17 @@ public class PTCertificationTests
         await ValidateMyData(receiptRequest);
     }
 
-    //[Fact]
+    [Fact]
     public async Task PTCertificationExamples_Case_5_12()
     {
         var receiptRequest = PTCertificationExamples.Case_5_12();
         await ValidateMyData(receiptRequest);
     }
 
-    //[Fact]
+    [Fact]
     public async Task PTCertificationExamples_Case_5_13()
     {
-        var receiptRequest = PTCertificationExamples.Case_5_13();
+        var receiptRequest = PTCertificationExamples.Case_5_3();
         await ValidateMyData(receiptRequest);
     }
 
@@ -259,21 +305,13 @@ public class PTCertificationTests
         await ValidateMyData(receiptRequest);
     }
 
-
     [Fact]
     public async Task PTCertificationExamples_Case_5_13_2()
     {
-        var receiptRequest = PTCertificationExamples.Case_5_13_2_ProForma();
+        var receiptRequest = PTCertificationExamples.Case_5_6();
+        var _56receipt = receiptRequest;
+        await ExecuteMiddleware(receiptRequest, "", caller: "Case_5_6");
+        receiptRequest = PTCertificationExamples.Case_5_13_2_Payment(_56receipt.cbReceiptReference);
         await ValidateMyData(receiptRequest);
-    }
-
-
-    [Fact]
-    public async Task PTCertificationExamples_Case_5_13_2_InvoiceBasedOnProForma()
-    {
-        var receiptRequest = PTCertificationExamples.Case_5_13_2_ProForma();
-        var (ticks, receiptResponse) = await ExecuteSign(receiptRequest);
-        var invoiceRequest = PTCertificationExamples.Case_5_13_1_Invoice_OnProForma(receiptRequest.cbReceiptReference);
-        await ValidateMyData(invoiceRequest);
     }
 }

@@ -6,7 +6,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.Exports.SAFTPT.SAFTSchemaP
 public class PaymentMethod
 {
     [XmlElement(ElementName = "PaymentMechanism")]
-    public required string PaymentMechanism { get; set; }
+    public string? PaymentMechanism { get; set; }
 
     [XmlElement(ElementName = "PaymentAmount")]
     public required decimal PaymentAmount { get; set; }
@@ -14,7 +14,8 @@ public class PaymentMethod
     [XmlIgnore()]
     public required DateTime PaymentDate { get; set; }
 
-    [XmlElement(ElementName = "WorkDate")]
+#pragma warning disable
+    [XmlElement(ElementName = "PaymentDate")]
     public string PaymentDateeString
     {
         get { return PaymentDate.ToString("yyyy-MM-dd"); }

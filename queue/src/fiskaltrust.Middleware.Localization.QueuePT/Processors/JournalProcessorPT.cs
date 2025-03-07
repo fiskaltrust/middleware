@@ -25,7 +25,7 @@ public class JournalProcessorPT : IJournalProcessor
             AccountId = Guid.NewGuid(),
             AccountName = "FISKALTRUST CONSULTING GMBH - SUCURSAL EM",
             Street = "AV DA REPUBLICA N 35 4 ANDAR",
-            Zip = "1050 - 186",
+            Zip = "1050-189",
             City = "Lisboa",
             Country = "PT",
             TaxId = "980833310"
