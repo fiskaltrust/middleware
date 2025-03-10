@@ -107,7 +107,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
         }
 #pragma warning restore IDE0060
 
-        protected async Task<(string receiptIdentification, string ftStateData, bool isBackupScuUsed, List<SignaturItem> signatureItems, ftJournalAT journalAT)> SignReceiptAsync(ftQueueAT queueAT, ReceiptRequest receiptRequest, string ftReceiptIdentification, DateTime ftReceiptMoment, Guid ftQueueItemId, bool isZeroReceipt = false)
+        protected async Task<(string receiptIdentification, string ftStateData, bool isBackupScuUsed, List<SignaturItem> signatureItems, ftJournalAT journalAT, bool isSigned)> SignReceiptAsync(ftQueueAT queueAT, ReceiptRequest receiptRequest, string ftReceiptIdentification, DateTime ftReceiptMoment, Guid ftQueueItemId, bool isZeroReceipt = false)
         {
             var signatures = new List<SignaturItem>();
             string ftStateData = null;
@@ -536,8 +536,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                                 continue;
                             }
 
-                            isBackupScuUsed = scu.IsBackup();
-                                
+                            isBackupScuUsed = scu.IsBackup();                                
 
                             try
                             {
@@ -581,10 +580,9 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                                 queueAT.LastSignatureZDA = zda;
                                 queueAT.LastSignatureCertificateSerialNumber = certificateSerialNumber;
 
-
                                 signatures.Add(new SignaturItem() { Caption = "www.fiskaltrust.at", Data = $"{jwsPayload}_{Convert.ToBase64String(jwsSignature.SignedData)}", ftSignatureFormat = (long) SignaturItem.Formats.QR_Code, ftSignatureType = (long) SignaturItem.Types.AT_RKSV });
 
-                                return (receiptIdentification, ftStateData, isBackupScuUsed, signatures, journalAT);
+                                return (receiptIdentification, ftStateData, isBackupScuUsed, signatures, journalAT, isSigned: true);
                             }
                             catch (Exception ex)
                             {
@@ -596,6 +594,11 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                     } while (retry++ < _queueATConfiguration.ScuMaxRetries);
                 }
 
+                if (string.IsNullOrWhiteSpace(queueAT.LastSignatureZDA) || string.IsNullOrWhiteSpace(queueAT.LastSignatureCertificateSerialNumber))
+                {
+                    _logger.LogError($"No SCU reachable and previous certificate serial number invalid ({queueAT.LastSignatureZDA} 0x{queueAT.LastSignatureCertificateSerialNumber})");
+                    return (ftReceiptIdentification, ftStateData, isBackupScuUsed, signatures, null, isSigned: false);
+                }
 
                 if (queueAT.SSCDFailCount == 0)
                 {
@@ -633,11 +636,11 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 
                 signatures.Add(new SignaturItem() { Caption = $"Sicherheitseinrichtung ausgefallen", Data = $"{failedReceiptJwsPayload}_{Convert.ToBase64String(ConversionHelper.FromBase64UrlString(SSCD_JWS_SIGNATURE_FAILED))}", ftSignatureFormat = (long) SignaturItem.Formats.QR_Code, ftSignatureType = (long) SignaturItem.Types.AT_RKSV });
 
-                return (receiptIdentification, ftStateData, isBackupScuUsed, signatures, journalAT);
+                return (receiptIdentification, ftStateData, isBackupScuUsed, signatures, journalAT, isSigned: false);
             }
             else
             {
-                return (ftReceiptIdentification, ftStateData, isBackupScuUsed, signatures, null);
+                return (ftReceiptIdentification, ftStateData, isBackupScuUsed, signatures, null, isSigned: false);
             }
         }
 
