@@ -8,13 +8,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="MinVer" Version="6.0.0">
-            <PrivateAssets>all</PrivateAssets>
-            <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
-        </PackageReference>
-    </ItemGroup>
-
-    <ItemGroup>
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="3.1.4" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="3.1.4" />
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="3.1.4" />
@@ -28,11 +21,10 @@
         <PackageReference Include="System.Linq.Async" Version="4.1.1" />
         <PackageReference Include="SharpCompress" Version="0.28.2" />
         <PackageReference Include="CsvHelper" Version="15.0.5" />
-    </ItemGroup>
-
-    <ItemGroup Condition="'$(TargetFramework)' != 'netstandard2.1'">
-        <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="1.1.1" />
-        <PackageReference Include="System.ValueTuple" Version="4.5.0" />
+        <PackageReference Include="MinVer" Version="6.0.0">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+        </PackageReference>
     </ItemGroup>
 
     <ItemGroup Condition="'$(TargetFramework)' == 'net461'">
@@ -80,7 +72,7 @@
         </ItemGroup>
     </Target>
 
-    <Target Name="CopyNativeSqliteFiles" AfterTargets="Build" Condition="'$(TargetFramework)' == 'netstandard2.0' or '$(TargetFramework)' == 'netstandard2.1'">
+    <Target Name="CopyNativeSqliteFiles" AfterTargets="Build" Condition="'$(TargetFramework)' == 'netstandard2.0'">
         <ItemGroup>
             <SQLITE_LINUX_X64 Include="$(PkgSQLitePCLRaw_lib_e_sqlite3)\runtimes\linux-x64\**\*.*" />
             <SQLITE_LINUX_X86 Include="$(PkgSQLitePCLRaw_lib_e_sqlite3)\runtimes\linux-x86\**\*.*" />
@@ -117,7 +109,6 @@
     
         <Content Include="fiskaltrust.Middleware.Queue.SQLite.targets" Pack="true" PackagePath="build" />
         <Content Include="bin\Release\netstandard2.0\publish\Migrations\*.*" Pack="true" PackagePath="contentFiles\Migrations" />
-
       </ItemGroup>
 
 </Project>
