@@ -76,7 +76,6 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/queue/')
     concurrency:
       group: queue-acceptance-tests
-      cancel-in-progress: true
     needs: [meta, test-queue]
     secrets: inherit
     uses: ./.github/workflows/queue-acceptance-tests.yml
