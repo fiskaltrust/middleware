@@ -17,11 +17,12 @@ runs:
     - name: Publish v1 Nuget packages
       shell: pwsh
       run: |
+        $args = ""
         if(Test-Path "${{ inputs.path }}/${{ inputs.project }}/.nuspec") {
-          dotnet pack "${{ inputs.path }}/${{ inputs.project }}/${{ inputs.project }}.csproj" --no-restore --configuration Release --output ./publish/package-v1-${{ inputs.project }} /p:NuspecFile="${{ inputs.path }}/${{ inputs.project }}/.nuspec"
-        } else {
-          dotnet pack "${{ inputs.path }}/${{ inputs.project }}/${{ inputs.project }}.csproj" --no-restore --configuration Release --output ./publish/package-v1-${{ inputs.project }}
+          $args += "/p:NuspecFile=.nuspec"
         }
+
+        dotnet pack "${{ inputs.path }}/${{ inputs.project }}/${{ inputs.project }}.csproj" --no-restore --configuration Release --output ./publish/package-v1-${{ inputs.project }} $args
 
 
     - name: Upload v1 Package
