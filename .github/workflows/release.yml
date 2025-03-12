@@ -73,7 +73,8 @@ jobs:
           Write-Output "project=$project" >> $env:GITHUB_OUTPUT
 
   test-queue-acceptance:
-    if: startsWith(github.ref, 'refs/tags/queue/')
+    if: (!always())
+    # if: startsWith(github.ref, 'refs/tags/queue/')
     concurrency:
       group: queue-acceptance-tests
       cancel-in-progress: true
