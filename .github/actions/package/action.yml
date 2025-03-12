@@ -36,15 +36,14 @@ runs:
           exit 1
         }
 
-        $xml = New-Object XML
-        $xml.Load($nuspecFile)
-        $element =  $xml.SelectSingleNode("/package/metadata/version")
-        $element.InnerText = $version
-        $xml.Save($nuspecFile)
-
-        Write-Host $(Get-Content -Path $nuspecFile)
         $args = ""
         if(Test-Path $nuspecFile) {
+          $xml = New-Object XML
+          $xml.Load($nuspecFile)
+          $element =  $xml.SelectSingleNode("/package/metadata/version")
+          $element.InnerText = $version
+          $xml.Save($nuspecFile)
+
           $args += "/p:NuspecFile=.nuspec"
         }
 
