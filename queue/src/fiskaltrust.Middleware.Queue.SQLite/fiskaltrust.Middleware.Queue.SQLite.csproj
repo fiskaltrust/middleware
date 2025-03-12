@@ -25,7 +25,6 @@
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.7.0" />
     </ItemGroup>
 
     <ItemGroup Condition="'$(TargetFramework)' == 'net461'">
@@ -93,23 +92,5 @@
         <Copy SourceFiles="@(SQLITE_WIN_X86)" DestinationFolder="$(TargetDir)\runtimes\win-x86\%(RecursiveDir)" SkipUnchangedFiles="true" />
         <Copy SourceFiles="@(SQLITE_OSX_X64)" DestinationFolder="$(TargetDir)\runtimes\osx-x64\%(RecursiveDir)" SkipUnchangedFiles="true" />
     </Target>
-
-
-    <ItemGroup>
-        <Content Include="bin\Release\net461\publish\**\*.config" Pack="true" PackagePath="lib\net461" />
-        <Content Include="bin\Release\net461\publish\**\*.exe" Pack="true" PackagePath="lib\net461" />
-        <Content Include="bin\Release\net461\publish\**\*.dll" Pack="true" PackagePath="lib\net461" />
-        <Content Include="bin\Release\net461\x64\SQLite.Interop.dll" Pack="true" PackagePath="lib\net461\x64" />
-        <Content Include="bin\Release\net461\x86\SQLite.Interop.dll" Pack="true" PackagePath="lib\net461\x86" />
-    
-        <Content Include="bin\Release\netstandard2.0\publish\**\*.config" Pack="true" PackagePath="lib\netstandard2.0" />
-        <Content Include="bin\Release\netstandard2.0\publish\**\*.exe" Pack="true" PackagePath="lib\netstandard2.0" />
-        <Content Include="bin\Release\netstandard2.0\publish\**\*.dll" Pack="true" PackagePath="lib\netstandard2.0" />
-    
-        <Content Include="bin\Release\netstandard2.0\runtimes\**\*.*" Pack="true" PackagePath="runtimes" />
-    
-        <Content Include="fiskaltrust.Middleware.Queue.SQLite.targets" Pack="true" PackagePath="build" />
-        <Content Include="bin\Release\netstandard2.0\publish\Migrations\*.*" Pack="true" PackagePath="contentFiles\Migrations" />
-      </ItemGroup>
 
 </Project>
