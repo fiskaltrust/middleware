@@ -16,7 +16,39 @@ runs:
 
     - name: Publish v1 Nuget packages
       shell: pwsh
-      run: dotnet pack "${{ inputs.path }}/${{ inputs.project }}/${{ inputs.project }}.csproj" --no-restore --configuration Release --output ./publish/package-v1-${{ inputs.project }}
+      run: |
+        $version = ""
+
+        $csprojFile = "${{ inputs.path }}/${{ inputs.project }}/${{ inputs.project }}.csproj"
+        $nuspecFile = "${{ inputs.path }}/${{ inputs.project }}/.nuspec"
+
+        [xml]$csprojContent = Get-Content -Path $csprojFile
+        foreach ($propertyGroup in $csprojContent.Project.PropertyGroup) {
+          if ($propertyGroup.MinVerTagPrefix) {
+            $version = minver --verbosity error -t $($propertyGroup.MinVerTagPrefix) -p ci
+            break
+          }
+        }
+
+        Write-Host "Version: $version"
+        if($version -eq "") {
+          Write-Error "Version not found"
+          exit 1
+        }
+
+        $args = ""
+        if(Test-Path $nuspecFile) {
+          $xml = New-Object XML
+          $xml.Load($nuspecFile)
+          $element =  $xml.SelectSingleNode("/package/metadata/version")
+          $element.InnerText = $version
+          $xml.Save($nuspecFile)
+
+          $args += "/p:NuspecFile=.nuspec"
+        }
+
+        dotnet pack "${{ inputs.path }}/${{ inputs.project }}/${{ inputs.project }}.csproj" --no-restore --configuration Release --output ./publish/package-v1-${{ inputs.project }} $args
+
 
     - name: Upload v1 Package
       uses: actions/upload-artifact@v4
