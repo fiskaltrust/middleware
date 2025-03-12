@@ -27,6 +27,10 @@
         </PackageReference>
     </ItemGroup>
 
+    <ItemGroup>
+        <Reference Include="System.Reflection.Emit" />
+    </ItemGroup>
+
     <ItemGroup Condition="'$(TargetFramework)' == 'net461'">
         <PackageReference Include="BouncyCastle" version="1.7.0" />
         <PackageReference Include="System.Data.SQLite" Version="1.0.116" />
