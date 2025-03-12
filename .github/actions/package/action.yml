@@ -16,7 +16,13 @@ runs:
 
     - name: Publish v1 Nuget packages
       shell: pwsh
-      run: dotnet pack "${{ inputs.path }}/${{ inputs.project }}/${{ inputs.project }}.csproj" --no-restore --configuration Release --output ./publish/package-v1-${{ inputs.project }}
+      run: |
+        if(Test-Path "${{ inputs.path }}/${{ inputs.project }}/.nuspec") {
+          dotnet pack "${{ inputs.path }}/${{ inputs.project }}/${{ inputs.project }}.csproj" --no-restore --configuration Release --output ./publish/package-v1-${{ inputs.project }} /p:NuspecFile="${{ inputs.path }}/${{ inputs.project }}/.nuspec"
+        } else {
+          dotnet pack "${{ inputs.path }}/${{ inputs.project }}/${{ inputs.project }}.csproj" --no-restore --configuration Release --output ./publish/package-v1-${{ inputs.project }}
+        }
+
 
     - name: Upload v1 Package
       uses: actions/upload-artifact@v4
