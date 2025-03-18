@@ -26,7 +26,10 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE
         {
             if (receiptRequest.cbCustomer != null)
             {
-                return JsonSerializer.Deserialize<MiddlewareCustomer>(JsonSerializer.Serialize(receiptRequest.cbCustomer));
+                return JsonSerializer.Deserialize<MiddlewareCustomer>(JsonSerializer.Serialize(receiptRequest.cbCustomer), new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
             }
             return null;
         }

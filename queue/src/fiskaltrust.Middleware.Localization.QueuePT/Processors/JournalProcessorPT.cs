@@ -1,4 +1,5 @@
-﻿using System.Xml.Serialization;
+﻿using System.Text;
+using System.Xml.Serialization;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Interface;
@@ -40,14 +41,10 @@ public class JournalProcessorPT : IJournalProcessor
         {
             queueItems = (await _storageProvider.GetMiddlewareQueueItemRepository().GetAsync()).ToList();
         }
-        var data = SAFTMapping.CreateAuditFile(masterData, queueItems, (int) request.To);
-        using var memoryStream = new MemoryStream();
-        var serializer = new XmlSerializer(typeof(AuditFile));
-        serializer.Serialize(memoryStream, data);
-        memoryStream.Position = 0;
+        var data = SAFTMapping.SerializeAuditFile(masterData, queueItems, (int) request.To);
         yield return new JournalResponse
         {
-            Chunk = memoryStream.ToArray().ToList()
+            Chunk = Encoding.UTF8.GetBytes(data).ToArray().ToList()
         };
     }
 }

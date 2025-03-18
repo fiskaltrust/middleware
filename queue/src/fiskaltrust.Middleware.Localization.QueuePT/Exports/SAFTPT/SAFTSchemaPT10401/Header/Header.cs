@@ -113,9 +113,9 @@ public class Header
 
     [XmlElement(ElementName = "StartDate")]
     public string StartDateString
-    {
-        get { return StartDate.ToString("yyyy-MM-dd"); }
-        set { StartDate = DateTime.Parse(value); }
+    { 
+        get => StartDate.ToString("yyyy-MM-dd"); 
+        set => StartDate = DateTime.Parse(value);
     }
 
     /// <summary>
@@ -129,9 +129,9 @@ public class Header
 
     [XmlElement(ElementName = "EndDate")]
     public string EndDateString
-    {
-        get { return EndDate.ToString("yyyy-MM-dd"); }
-        set { EndDate = DateTime.Parse(value); }
+    { 
+        get => EndDate.ToString("yyyy-MM-dd"); 
+        set => EndDate = DateTime.Parse(value);
     }
 
     /// <summary>
@@ -156,9 +156,9 @@ public class Header
 
     [XmlElement(ElementName = "DateCreated")]
     public string DateCreatedString
-    {
-        get { return DateCreated.ToString("yyyy-MM-dd"); }
-        set { DateCreated = DateTime.Parse(value); }
+    { get => DateCreated.ToString("yyyy-MM-dd");
+
+        set => DateCreated = DateTime.Parse(value);
     }
 
     /// <summary>

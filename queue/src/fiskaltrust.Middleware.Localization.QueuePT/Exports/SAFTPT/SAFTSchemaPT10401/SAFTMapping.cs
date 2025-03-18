@@ -1,6 +1,8 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Xml.Serialization;
+using System.Xml;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueuePT.Exports.SAFTPT;
 using fiskaltrust.Middleware.Localization.QueuePT.Exports.SAFTPT.SAFTSchemaPT10401.SourceDocuments.PaymentDocumentModels;
@@ -15,7 +17,7 @@ public static class CertificationPosSystem
 {
     public const string ProductCompanyTaxID = "980833310";
     public const string SoftwareCertificateNumber = "9999";
-    public const string ProductID = "fiskaltrust/fiskaltrust.CloudCashBox";
+    public const string ProductID = "fiskaltrust.CloudCashBox/FISKALTRUST CONSULTING GMBH - Sucursal em Portugal";
     public const string ProductVersion = "2.0";
 }
 
@@ -70,6 +72,23 @@ public static class SAFTMapping
             }
         };
         return customer;
+    }
+
+    public static string SerializeAuditFile(AccountMasterData accountMasterData, List<ftQueueItem> queueItems, int to)
+    {
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        var data = SAFTMapping.CreateAuditFile(accountMasterData, queueItems, to);
+        using var memoryStream = new MemoryStream();
+        var settings = new XmlWriterSettings
+        {
+            Encoding = Encoding.GetEncoding("windows-1252"),
+            Indent = true
+        };
+        var serializer = new XmlSerializer(typeof(AuditFile));
+        using var writer = XmlWriter.Create(memoryStream, settings);
+        serializer.Serialize(writer, data);
+        memoryStream.Position = 0;
+        return Encoding.UTF8.GetString(memoryStream.ToArray());
     }
 
     public static AuditFile CreateAuditFile(AccountMasterData accountMasterData, List<ftQueueItem> queueItems, int to)
@@ -127,7 +146,7 @@ public static class SAFTMapping
             return new Product
             {
                 ProductType = GetProductType(x),
-                ProductCode = x.ProductNumber ?? Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(x.Description))),
+                ProductCode = x.ProductNumber ?? Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(x.Description + x.Amount + x.VATRate))),
                 ProductGroup = x.ProductGroup,
                 ProductDescription = x.Description,
                 ProductNumberCode = x.ProductNumber ?? Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(x.Description))),
@@ -137,18 +156,7 @@ public static class SAFTMapping
 
     private static TaxTable GetTaxTable(List<(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)> receipt)
     {
-        var lines = receipt.SelectMany(x => GetGroupedChargeItems(x.receiptRequest).Select(c => GetLine(x.receiptRequest, x.receiptResponse, c)));
-        var taxTableEntries = lines.Select(x => new TaxTableEntry
-        {
-            TaxType = x.Tax.TaxType,
-            TaxCountryRegion = x.Tax.TaxCountryRegion,
-            TaxCode = x.Tax.TaxCode,
-            Description = "",
-            TaxPercentage = x.Tax.TaxPercentage
-        }).DistinctBy(x => x.TaxCode).ToList();
-        return new TaxTable
-        {
-            TaxTableEntry = [
+        var staticTaxes = new List<TaxTableEntry> {
                     new TaxTableEntry
                 {
                     TaxType = "IS",
@@ -296,9 +304,15 @@ public static class SAFTMapping
                     TaxCode = "RED",
                     Description = "Taxa Reduzida",
                     TaxPercentage = 5.000000m,
-                },
-            ],
+                }
         };
+        var lines = receipt.SelectMany(x => GetGroupedChargeItems(x.receiptRequest).Select(c => GetLine(x.receiptRequest, x.receiptResponse, c)));
+        var taxTableEntries = lines.Select(x => staticTaxes.Single(t => t.TaxType == x.Tax.TaxType && t.TaxCountryRegion == x.Tax.TaxCountryRegion && t.TaxCode == x.Tax.TaxCode && t.TaxPercentage == x.Tax.TaxPercentage)).DistinctBy(x => x.TaxCode).ToList();
+        return new TaxTable
+        {
+            TaxTableEntry = taxTableEntries
+        };
+
     }
 
     public static Header GetHeader(AccountMasterData accountMasterData)
