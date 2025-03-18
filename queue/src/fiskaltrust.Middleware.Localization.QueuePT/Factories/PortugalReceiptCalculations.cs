@@ -71,8 +71,8 @@ public static class PortugalReceiptCalculations
     {
         var taxGroups = request.cbChargeItems.GroupBy(GetIVATAxCode);
         var normalChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "NOR").ToList();
-        var reducedChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "RED").ToList();
-        var intermediateChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "INT").ToList();
+        var reducedChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "INT").ToList();
+        var intermediateChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "RED").ToList();
         var exemptChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "ISE").ToList();
 
         var customer = SAFTMapping.GetCustomerData(request);
