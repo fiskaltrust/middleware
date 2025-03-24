@@ -40,7 +40,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
         private readonly FccAdminApiProvider _fccAdminApiProvider;
         private string _fccDirectory;
         private Version _version;
-
+        private readonly Task _fccInitializingTask;
         private TseInfo _lastTseInfo;
 
         public DeutscheFiskalSCU(ILogger<DeutscheFiskalSCU> logger, DeutscheFiskalSCUConfiguration configuration, IFccInitializationService fccInitializationService,
@@ -59,11 +59,11 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
 
             if (string.IsNullOrEmpty(_configuration.FccUri))
             {
-                StartLocalFCC();
+                _fccInitializingTask = StartLocalFCC();
             }
         }
 
-        private async void StartLocalFCC()
+        private async Task StartLocalFCC()
         {
             try
             {
@@ -236,6 +236,10 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
         {
             try
             {
+                if (!_fccInitializingTask.IsCompleted)
+                {
+                    await _fccInitializingTask;
+                }
                 await StartFccIfNotRunning();
 
                 var clients = await _fccAdminApiProvider.GetClientsAsync();
