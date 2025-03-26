@@ -8,11 +8,17 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.Certification;
 public static class PTVATRates
 {
     public const decimal Discounted1 = 6;
+    public const long Discounted1Case = 0x5054_2000_0000_0011;
     public const decimal Discounted2 = 13;
+    public const long Discounted2Case = 0x5054_2000_0000_0012;
     public const decimal Normal = 23;
+    public const long NormalCase = 0x5054_2000_0000_0013;
     public const decimal ParkingVatRate = 13;
+    public const long ParkingVatRateCase = 0x5054_2000_0000_0016;
     public const decimal NotTaxable = 0;
+    public const long NotTaxableCase = 0x5054_2000_0000_0018;
     public const decimal ZeroRate = 0;
+    public const long ZeroRateCase = 0x5054_2000_0000_0017;
 }
 
 public static class VATHelpers
@@ -35,7 +41,7 @@ public static class PTCertificationExamples
                     Amount = 100,
                     VATRate = PTVATRates.Normal,
                     VATAmount = VATHelpers.CalculateVAT(100, PTVATRates.Normal),
-                    ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0013,
+                    ftChargeItemCase = (ChargeItemCase) PTVATRates.NormalCase,
                     Quantity = 1,
                     Description = "Line item 1"
                 }
@@ -55,7 +61,7 @@ public static class PTCertificationExamples
                     Position = 1,
                     Quantity = 1,
                     Amount = chargeItems.Sum(x => x.Amount),
-                    Description = "Cash",
+                    Description = "Numerario",
                     ftPayItemCase = (PayItemCase) 0x5054_2000_0000_0001,
                 }
             ],
@@ -91,7 +97,7 @@ public static class PTCertificationExamples
                 Amount = 150m,
                 VATRate = PTVATRates.Normal,
                 VATAmount = VATHelpers.CalculateVAT(150m, PTVATRates.Normal),
-                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0013,
+                ftChargeItemCase =  (ChargeItemCase) PTVATRates.NormalCase,
                 Quantity = 1,
                 Description = "Line item 1"
             }
@@ -131,7 +137,7 @@ public static class PTCertificationExamples
                     Amount = -100,
                     VATRate = PTVATRates.Normal,
                     VATAmount = VATHelpers.CalculateVAT(-100, PTVATRates.Normal),
-                    ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0002_0013,
+                    ftChargeItemCase = (ChargeItemCase) PTVATRates.NormalCase,
                     Quantity = -1,
                     Description = "Line item 1"
                 }
@@ -152,7 +158,7 @@ public static class PTCertificationExamples
                     Position = 1,
                     Quantity = 1,
                     Amount = chargeItems.Sum(x => x.Amount),
-                    Description = "Cash",
+                    Description = "Numerario",
                     ftPayItemCase = (PayItemCase) 0x5054_2000_0002_0001,
                 }
             ],
@@ -185,7 +191,7 @@ public static class PTCertificationExamples
                 Amount = 100,
                 VATRate = PTVATRates.Discounted1,
                 VATAmount = VATHelpers.CalculateVAT(100, PTVATRates.Discounted1),
-                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0011,
+                ftChargeItemCase = (ChargeItemCase) PTVATRates.Discounted1Case,
                 Quantity = 1,
                 Description = "Line item 1"
             },
@@ -205,7 +211,7 @@ public static class PTCertificationExamples
                 Amount = 25,
                 VATRate = PTVATRates.Discounted2,
                 VATAmount = VATHelpers.CalculateVAT(25, PTVATRates.Discounted2),
-                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0011,
+                ftChargeItemCase = (ChargeItemCase) PTVATRates.Discounted2Case,
                 Quantity = 1,
                 Description = "Line item 1"
             },
@@ -215,7 +221,7 @@ public static class PTCertificationExamples
                 Amount = 12.5m,
                 VATRate = PTVATRates.Normal,
                 VATAmount = VATHelpers.CalculateVAT(12.5m, PTVATRates.Normal),
-                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0013,
+                ftChargeItemCase = (ChargeItemCase) PTVATRates.NormalCase,
                 Quantity = 1,
                 Description = "Line item 1"
             }
@@ -235,7 +241,7 @@ public static class PTCertificationExamples
                     Position = 1,
                     Quantity = 1,
                     Amount = chargeItems.Sum(x => x.Amount),
-                    Description = "Cash",
+                    Description = "Numerario",
                     ftPayItemCase = (PayItemCase) 0x5054_2000_0000_1001,
                 }
             ],
@@ -266,7 +272,7 @@ public static class PTCertificationExamples
                 Amount = 100 * 0.55m,
                 VATRate = PTVATRates.Normal,
                 VATAmount = VATHelpers.CalculateVAT(100 * 0.55m, PTVATRates.Normal),
-                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0013,
+                ftChargeItemCase = (ChargeItemCase) PTVATRates.NormalCase,
                 Quantity = 100,
                 Description = "Line item 1"
             },
@@ -276,7 +282,7 @@ public static class PTCertificationExamples
                 Amount = -(100 * 0.55m) * 0.088m,
                 VATRate = PTVATRates.Normal,
                 VATAmount = VATHelpers.CalculateVAT(-(100 * 0.55m) * 0.088m, PTVATRates.Normal),
-                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0004_0013,
+                ftChargeItemCase = (ChargeItemCase) PTVATRates.NormalCase,
                 Quantity = 1,
                 Description = "Discount Line item 1"
             },
@@ -286,7 +292,7 @@ public static class PTCertificationExamples
                 Amount = 12.5m,
                 VATRate = PTVATRates.Normal,
                 VATAmount = VATHelpers.CalculateVAT(12.5m, PTVATRates.Normal),
-                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0013,
+                ftChargeItemCase = (ChargeItemCase) PTVATRates.NormalCase,
                 Quantity = 1,
                 Description = "Line item 1"
             }
@@ -306,7 +312,7 @@ public static class PTCertificationExamples
                     Position = 1,
                     Quantity = 1,
                     Amount = chargeItems.Sum(x => x.Amount),
-                    Description = "Cash",
+                    Description = "Numerario",
                     ftPayItemCase = (PayItemCase) 0x5054_2000_0000_0001,
                 }
             ],
@@ -332,7 +338,7 @@ public static class PTCertificationExamples
                 Amount = 0.50m,
                 VATRate = PTVATRates.Normal,
                 VATAmount = VATHelpers.CalculateVAT(0.50m, PTVATRates.Normal),
-                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0013,
+                ftChargeItemCase = (ChargeItemCase) PTVATRates.NormalCase,
                 Quantity = 1,
                 Description = "Line item 1"
             }
@@ -352,7 +358,7 @@ public static class PTCertificationExamples
                     Position = 1,
                     Quantity = 1,
                     Amount = chargeItems.Sum(x => x.Amount),
-                    Description = "Cash",
+                    Description = "Numerario",
                     ftPayItemCase = (PayItemCase) 0x5054_2000_0000_0001,
                 }
             ],
@@ -380,7 +386,7 @@ public static class PTCertificationExamples
                 Amount = 150m,
                 VATRate = PTVATRates.Normal,
                 VATAmount = VATHelpers.CalculateVAT(150m, PTVATRates.Normal),
-                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0013,
+                ftChargeItemCase = (ChargeItemCase) PTVATRates.NormalCase,
                 Quantity = 1,
                 Description = "Line item 1"
             }
@@ -400,7 +406,7 @@ public static class PTCertificationExamples
                     Position = 1,
                     Quantity = 1,
                     Amount = chargeItems.Sum(x => x.Amount),
-                    Description = "Cash",
+                    Description = "Numerario",
                     ftPayItemCase = (PayItemCase) 0x5054_2000_0000_0001,
                 }
             ],
@@ -434,7 +440,7 @@ public static class PTCertificationExamples
                 Amount = 150m,
                 VATRate = PTVATRates.Normal,
                 VATAmount = VATHelpers.CalculateVAT(150m, PTVATRates.Normal),
-                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0013,
+                ftChargeItemCase = (ChargeItemCase) PTVATRates.NormalCase,
                 Quantity = 1,
                 Description = "Line item 1"
             }
@@ -476,7 +482,7 @@ public static class PTCertificationExamples
                 Amount = 150m,
                 VATRate = PTVATRates.Normal,
                 VATAmount = VATHelpers.CalculateVAT(150m, PTVATRates.Normal),
-                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0013,
+                ftChargeItemCase = (ChargeItemCase) PTVATRates.NormalCase,
                 Quantity = 1,
                 Description = "Line item 1"
             }
@@ -496,7 +502,7 @@ public static class PTCertificationExamples
                     Position = 1,
                     Quantity = 1,
                     Amount = chargeItems.Sum(x => x.Amount),
-                    Description = "Cash",
+                    Description = "Numerario",
                     ftPayItemCase = (PayItemCase) 0x5054_2000_0000_0001,
                 }
             ],
@@ -530,7 +536,7 @@ public static class PTCertificationExamples
                     Position = 1,
                     Quantity = 1,
                     Amount = 187.5m,
-                    Description = "Cash",
+                    Description = "Numerario",
                     ftPayItemCase = (PayItemCase) 0x5054_2000_0000_0001,
                 }
             ],
@@ -551,7 +557,7 @@ public static class PTCertificationExamples
                 Amount = 150m,
                 VATRate = PTVATRates.Normal,
                 VATAmount = VATHelpers.CalculateVAT(150m, PTVATRates.Normal),
-                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0013,
+                ftChargeItemCase = (ChargeItemCase) PTVATRates.NormalCase,
                 Quantity = 1,
                 Description = "Line item 1"
             }
@@ -571,7 +577,7 @@ public static class PTCertificationExamples
                     Position = 1,
                     Quantity = 1,
                     Amount = chargeItems.Sum(x => x.Amount),
-                    Description = "Cash",
+                    Description = "Numerario",
                     ftPayItemCase = (PayItemCase) 0x5054_2000_0000_0001,
                 }
             ],
