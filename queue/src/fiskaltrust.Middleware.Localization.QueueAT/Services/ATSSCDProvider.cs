@@ -128,12 +128,16 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.Services
         {
             try
             {
+#pragma warning disable CS0618
                 var certResponse = client.Certificate();
-                var certificate = new X509CertificateParser().ReadCertificate(certResponse.Certificate);
+#pragma warning restore
+                var certificate = new X509CertificateParser().ReadCertificate(certResponse);
                 var certificateSerial = certificate?.SerialNumber?.ToString(16);
 
-                var zdaResponse = client.Zda();
-                scu.ZDA = zdaResponse.ZDA;
+#pragma warning disable CS0618
+                var zdaResponse = client.ZDA();
+#pragma warning restore
+                scu.ZDA = zdaResponse;
                 scu.SN = certificateSerial != null ? $"0x{certificateSerial}" : null;
                 scu.CertificateBase64 = Convert.ToBase64String(certificate.GetEncoded());
 

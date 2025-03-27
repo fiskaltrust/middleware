@@ -161,7 +161,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                         13.0m => 0x2,
                         20.0m => 0x3,
                         0.0m => 0x5,
-                        _ => (long)0x4,
+                        _ => (long) 0x4,
                     };
                 }
             }
@@ -275,12 +275,12 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 
                 if (_middlewareConfiguration.IsSandbox && queueAT.SignAll)
                 {
-                    signatures.Add(new SignaturItem() { Caption = "Sign-All-Mode", Data = $"Sign: {requiresSigning} Counter:{requiresCounting}", ftSignatureFormat = (long)SignaturItem.Formats.Text, ftSignatureType = (long)SignaturItem.Types.AT_Unknown });
+                    signatures.Add(new SignaturItem() { Caption = "Sign-All-Mode", Data = $"Sign: {requiresSigning} Counter:{requiresCounting}", ftSignatureFormat = (long) SignaturItem.Formats.Text, ftSignatureType = (long) SignaturItem.Types.AT_Unknown });
                 }
 
                 if (_middlewareConfiguration.IsSandbox && isZeroReceipt)
                 {
-                    signatures.Add(new SignaturItem() { Caption = "Zero-Receipt", Data = $"Sign: {requiresSigning} Counter:{requiresCounting}", ftSignatureFormat = (long)SignaturItem.Formats.Text, ftSignatureType = (long)SignaturItem.Types.AT_Unknown });
+                    signatures.Add(new SignaturItem() { Caption = "Zero-Receipt", Data = $"Sign: {requiresSigning} Counter:{requiresCounting}", ftSignatureFormat = (long) SignaturItem.Formats.Text, ftSignatureType = (long) SignaturItem.Types.AT_Unknown });
                 }
             }
             else
@@ -333,7 +333,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 
                 if (_middlewareConfiguration.IsSandbox)
                 {
-                    signatures.Add(new SignaturItem() { Caption = $"Decision {decisionNumerical}", Data = $"Sign: {requiresSigning} Counter:{requiresCounting}", ftSignatureFormat = (long)SignaturItem.Formats.Text, ftSignatureType = (long)SignaturItem.Types.AT_Unknown });
+                    signatures.Add(new SignaturItem() { Caption = $"Decision {decisionNumerical}", Data = $"Sign: {requiresSigning} Counter:{requiresCounting}", ftSignatureFormat = (long) SignaturItem.Formats.Text, ftSignatureType = (long) SignaturItem.Types.AT_Unknown });
                 }
 
                 decision.Number = decisionNumerical;
@@ -381,7 +381,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 
                             if (_middlewareConfiguration.IsSandbox)
                             {
-                                signatures.Add(new SignaturItem() { Caption = $"Exception A1", Data = $"Sign: {requiresSigning} Counter:{requiresCounting}", ftSignatureFormat = (long)SignaturItem.Formats.Text, ftSignatureType = (long)SignaturItem.Types.AT_Unknown });
+                                signatures.Add(new SignaturItem() { Caption = $"Exception A1", Data = $"Sign: {requiresSigning} Counter:{requiresCounting}", ftSignatureFormat = (long) SignaturItem.Formats.Text, ftSignatureType = (long) SignaturItem.Types.AT_Unknown });
                             }
                         }
                     }
@@ -401,7 +401,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 
                     if (_middlewareConfiguration.IsSandbox)
                     {
-                        signatures.Add(new SignaturItem() { Caption = $"Exception A2", Data = $"Sign: {requiresSigning} Counter:{requiresCounting}", ftSignatureFormat = (long)SignaturItem.Formats.Text, ftSignatureType = (long)SignaturItem.Types.AT_Unknown });
+                        signatures.Add(new SignaturItem() { Caption = $"Exception A2", Data = $"Sign: {requiresSigning} Counter:{requiresCounting}", ftSignatureFormat = (long) SignaturItem.Formats.Text, ftSignatureType = (long) SignaturItem.Types.AT_Unknown });
                     }
                 }
 
@@ -420,7 +420,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 
                     if (_middlewareConfiguration.IsSandbox)
                     {
-                        signatures.Add(new SignaturItem() { Caption = $"Exception A3", Data = $"Sign: {requiresSigning} Counter:{requiresCounting}", ftSignatureFormat = (long)SignaturItem.Formats.Text, ftSignatureType = (long)SignaturItem.Types.AT_Unknown });
+                        signatures.Add(new SignaturItem() { Caption = $"Exception A3", Data = $"Sign: {requiresSigning} Counter:{requiresCounting}", ftSignatureFormat = (long) SignaturItem.Formats.Text, ftSignatureType = (long) SignaturItem.Types.AT_Unknown });
                     }
                 }
 
@@ -439,7 +439,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 
                     if (_middlewareConfiguration.IsSandbox)
                     {
-                        signatures.Add(new SignaturItem() { Caption = $"Exception A4", Data = $"Sign: {requiresSigning} Counter:{requiresCounting}", ftSignatureFormat = (long)SignaturItem.Formats.Text, ftSignatureType = (long)SignaturItem.Types.AT_Unknown });
+                        signatures.Add(new SignaturItem() { Caption = $"Exception A4", Data = $"Sign: {requiresSigning} Counter:{requiresCounting}", ftSignatureFormat = (long) SignaturItem.Formats.Text, ftSignatureType = (long) SignaturItem.Types.AT_Unknown });
                     }
                 }
 
@@ -479,7 +479,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 
                 if (_middlewareConfiguration.IsSandbox)
                 {
-                    signatures.Add(new SignaturItem() { Caption = $"Counter Add", Data = $"{totalizer}", ftSignatureFormat = (long)SignaturItem.Formats.Text, ftSignatureType = (long)SignaturItem.Types.AT_Unknown });
+                    signatures.Add(new SignaturItem() { Caption = $"Counter Add", Data = $"{totalizer}", ftSignatureFormat = (long) SignaturItem.Formats.Text, ftSignatureType = (long) SignaturItem.Types.AT_Unknown });
                 }
             }
 
@@ -540,9 +540,11 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 
                             try
                             {
-                                var zda = sscd.Zda().ZDA;
+#pragma warning disable CS0618
+                                var zda = sscd.ZDA();
                                 var certResponse = sscd.Certificate();
-                                var cert = new X509CertificateParser().ReadCertificate(certResponse.Certificate);
+#pragma warning restore
+                                var cert = new X509CertificateParser().ReadCertificate(certResponse);
                                 var certificateSerialNumber = cert.SerialNumber.ToString(16);
 
                                 var sb2 = new StringBuilder();
@@ -568,10 +570,10 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                                 journalAT.JWSPayloadBase64url = ConversionHelper.ToBase64UrlString(Encoding.UTF8.GetBytes(jwsPayload));
                                 var jwsDataToSign = Encoding.UTF8.GetBytes($"{journalAT.JWSHeaderBase64url}.{journalAT.JWSPayloadBase64url}");
 
-
+#pragma warning disable CS0618
                                 var jwsSignature = sscd.Sign(jwsDataToSign);
-
-                                journalAT.JWSSignatureBase64url = ConversionHelper.ToBase64UrlString(jwsSignature.SignedData);
+#pragma warning restore
+                                journalAT.JWSSignatureBase64url = ConversionHelper.ToBase64UrlString(jwsSignature);
                                 journalAT.ftSignaturCreationUnitId = scu.ftSignaturCreationUnitATId;
 
                                 queueAT.ftCashNumerator = cashNumerator;
@@ -580,7 +582,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                                 queueAT.LastSignatureZDA = zda;
                                 queueAT.LastSignatureCertificateSerialNumber = certificateSerialNumber;
 
-                                signatures.Add(new SignaturItem() { Caption = "www.fiskaltrust.at", Data = $"{jwsPayload}_{Convert.ToBase64String(jwsSignature.SignedData)}", ftSignatureFormat = (long)SignaturItem.Formats.QR_Code, ftSignatureType = (long)SignaturItem.Types.AT_RKSV });
+                                signatures.Add(new SignaturItem() { Caption = "www.fiskaltrust.at", Data = $"{jwsPayload}_{Convert.ToBase64String(jwsSignature)}", ftSignatureFormat = (long) SignaturItem.Formats.QR_Code, ftSignatureType = (long) SignaturItem.Types.AT_RKSV });
 
                                 return (receiptIdentification, ftStateData, isBackupScuUsed, signatures, journalAT, isSigned: true);
                             }
@@ -634,7 +636,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                 queueAT.ftCashTotalizer += Math.Round(totalizer, 2);
                 queueAT.LastSignatureHash = CreateLastReceiptSignature($"{journalAT.JWSHeaderBase64url}.{journalAT.JWSPayloadBase64url}.{journalAT.JWSSignatureBase64url}");
 
-                signatures.Add(new SignaturItem() { Caption = $"Sicherheitseinrichtung ausgefallen", Data = $"{failedReceiptJwsPayload}_{Convert.ToBase64String(ConversionHelper.FromBase64UrlString(SSCD_JWS_SIGNATURE_FAILED))}", ftSignatureFormat = (long)SignaturItem.Formats.QR_Code, ftSignatureType = (long)SignaturItem.Types.AT_RKSV });
+                signatures.Add(new SignaturItem() { Caption = $"Sicherheitseinrichtung ausgefallen", Data = $"{failedReceiptJwsPayload}_{Convert.ToBase64String(ConversionHelper.FromBase64UrlString(SSCD_JWS_SIGNATURE_FAILED))}", ftSignatureFormat = (long) SignaturItem.Formats.QR_Code, ftSignatureType = (long) SignaturItem.Types.AT_RKSV });
 
                 return (receiptIdentification, ftStateData, isBackupScuUsed, signatures, journalAT, isSigned: false);
             }
@@ -671,8 +673,8 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                         {
                             Caption = item.Message,
                             Data = JsonConvert.SerializeObject(new { ActionJournalId = item.ftActionJournalId, Type = item.Type, Data = qrData }),
-                            ftSignatureFormat = (long)SignaturItem.Formats.AZTEC,
-                            ftSignatureType = (long)SignaturItem.Types.AT_FinanzOnline
+                            ftSignatureFormat = (long) SignaturItem.Formats.AZTEC,
+                            ftSignatureType = (long) SignaturItem.Types.AT_FinanzOnline
                         };
                     }
                     else if (type == nameof(FonDeactivateQueue))
@@ -692,8 +694,8 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                         {
                             Caption = item.Message,
                             Data = JsonConvert.SerializeObject(new { ActionJournalId = item.ftActionJournalId, Type = item.Type, Data = qrData }),
-                            ftSignatureFormat = (long)SignaturItem.Formats.AZTEC,
-                            ftSignatureType = (long)SignaturItem.Types.AT_FinanzOnline
+                            ftSignatureFormat = (long) SignaturItem.Formats.AZTEC,
+                            ftSignatureType = (long) SignaturItem.Types.AT_FinanzOnline
                         };
                     }
                     else if (type == nameof(FonActivateSCU))
@@ -713,8 +715,8 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                         {
                             Caption = item.Message,
                             Data = JsonConvert.SerializeObject(new { ActionJournalId = item.ftActionJournalId, Type = item.Type, Data = qrData }),
-                            ftSignatureFormat = (long)SignaturItem.Formats.AZTEC,
-                            ftSignatureType = (long)SignaturItem.Types.AT_FinanzOnline
+                            ftSignatureFormat = (long) SignaturItem.Formats.AZTEC,
+                            ftSignatureType = (long) SignaturItem.Types.AT_FinanzOnline
                         };
                     }
                     else if (type == nameof(FonDeactivateSCU))
@@ -734,8 +736,8 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                         {
                             Caption = item.Message,
                             Data = JsonConvert.SerializeObject(new { ActionJournalId = item.ftActionJournalId, Type = item.Type, Data = qrData }),
-                            ftSignatureFormat = (long)SignaturItem.Formats.AZTEC,
-                            ftSignatureType = (long)SignaturItem.Types.AT_FinanzOnline
+                            ftSignatureFormat = (long) SignaturItem.Formats.AZTEC,
+                            ftSignatureType = (long) SignaturItem.Types.AT_FinanzOnline
                         };
                     }
                     else if (type == nameof(FonVerifySignature))
@@ -753,8 +755,8 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                         {
                             Caption = item.Message,
                             Data = JsonConvert.SerializeObject(new { ActionJournalId = item.ftActionJournalId, Type = item.Type, Data = qrData }),
-                            ftSignatureFormat = (long)SignaturItem.Formats.AZTEC,
-                            ftSignatureType = (long)SignaturItem.Types.AT_FinanzOnline
+                            ftSignatureFormat = (long) SignaturItem.Formats.AZTEC,
+                            ftSignatureType = (long) SignaturItem.Types.AT_FinanzOnline
                         };
                     }
                     else
@@ -763,8 +765,8 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                         {
                             Caption = item.Message,
                             Data = item.DataJson,
-                            ftSignatureFormat = (long)SignaturItem.Formats.AZTEC,
-                            ftSignatureType = (long)SignaturItem.Types.AT_Unknown
+                            ftSignatureFormat = (long) SignaturItem.Formats.AZTEC,
+                            ftSignatureType = (long) SignaturItem.Types.AT_Unknown
                         };
                     }
                 }
@@ -774,8 +776,8 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                     {
                         Caption = item.Message,
                         Data = item.DataJson,
-                        ftSignatureFormat = (long)SignaturItem.Formats.AZTEC,
-                        ftSignatureType = (long)SignaturItem.Types.AT_Unknown
+                        ftSignatureFormat = (long) SignaturItem.Formats.AZTEC,
+                        ftSignatureType = (long) SignaturItem.Types.AT_Unknown
                     };
                 }
             }
