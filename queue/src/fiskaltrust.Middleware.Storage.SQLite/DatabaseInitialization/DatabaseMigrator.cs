@@ -84,6 +84,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite.DatabaseInitialization
                     {
                         throw;
                     }
+                    await SetCurrentVersionAsync(connection, Path.GetFileNameWithoutExtension(migrationScript)).ConfigureAwait(false);
                 }
                 _logger.LogDebug($"Applying the migration script was successful. Set current version to {Path.GetFileNameWithoutExtension(migrationScript)}.");
 
