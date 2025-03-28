@@ -14,7 +14,7 @@ using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 {
-    internal class ZeroReceiptCommand : RequestCommand
+    public class ZeroReceiptCommand : RequestCommand
     {
         private readonly IReadOnlyQueueItemRepository _queueItemRepository;
 
@@ -120,7 +120,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
             }
             var notificationSignatures = CreateNotificationSignatures(actionJournals);
             response.ftSignatures = response.ftSignatures.Extend(signatureItems).Extend(notificationSignatures);
-            
+
             return new RequestCommandResponse
             {
                 ReceiptResponse = response,
