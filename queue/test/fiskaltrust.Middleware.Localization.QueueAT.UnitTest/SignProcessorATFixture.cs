@@ -29,8 +29,8 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.UnitTest
     public class SignProcessorATFixture
     {
         private const string CERT_PASSWORD = "password";
-        public Guid cashBoxId { get;} = Guid.Parse("6caa852c-4230-4496-83c0-1597eee7084e");
-        public Guid queueId { get;} = Guid.Parse("ef9764af-1102-41e8-b901-eb89d45cde1c");
+        public Guid cashBoxId { get; } = Guid.Parse("6caa852c-4230-4496-83c0-1597eee7084e");
+        public Guid queueId { get; } = Guid.Parse("ef9764af-1102-41e8-b901-eb89d45cde1c");
         public ftQueue queue { get; private set; }
         public ftQueueAT queueAT { get; private set; }
         public ftQueueAT queueATNotSignAll { get; private set; }
@@ -85,8 +85,9 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.UnitTest
         {
             var sscd = new Mock<IATSSCD>();
             sscd.Setup(x => x.ZdaAsync()).ReturnsAsync(new ZdaResponse() { ZDA = zda });
-            sscd.Setup(x => x.SignAsync(It.IsAny<SignRequest>())).ReturnsAsync(new SignResponse() { SignedData = new byte[] { 0x01, 0x02, 0x03 } });
-            sscd.Setup(x => x.CertificateAsync()).ReturnsAsync(new CertificateResponse { Certificate = _certificate });
+            sscd.Setup(x => x.ZDA()).Returns(zda);
+            sscd.Setup(x => x.Sign(It.IsAny<byte[]>())).Returns(new byte[] { 0x01, 0x02, 0x03 });
+            sscd.Setup(x => x.Certificate()).Returns(_certificate);
             var sscdProvider = new Mock<IATSSCDProvider>();
             sscdProvider.Setup(x => x.GetCurrentlyActiveInstanceAsync()).ReturnsAsync((_signaturCreationUnitAT, sscd.Object, 0));
             var scus = new List<ftSignaturCreationUnitAT>

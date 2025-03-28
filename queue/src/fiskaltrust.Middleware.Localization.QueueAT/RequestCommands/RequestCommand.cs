@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -479,7 +480,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 
                 if (_middlewareConfiguration.IsSandbox)
                 {
-                    signatures.Add(new SignaturItem() { Caption = $"Counter Add", Data = $"{totalizer}", ftSignatureFormat = (long) SignaturItem.Formats.Text, ftSignatureType = (long) SignaturItem.Types.AT_Unknown });
+                    signatures.Add(new SignaturItem() { Caption = $"Counter Add", Data = $"{totalizer.ToString(CultureInfo.InvariantCulture)}", ftSignatureFormat = (long) SignaturItem.Formats.Text, ftSignatureType = (long) SignaturItem.Types.AT_Unknown });
                 }
             }
 
