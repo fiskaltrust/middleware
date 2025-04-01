@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reflection;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Queue.Bootstrapper;
 using fiskaltrust.Middleware.Storage.InMemory;
@@ -19,6 +20,11 @@ namespace fiskaltrust.Middleware.Queue.InMemory
 
             var storageBootStrapper = new InMemoryStorageBootstrapper(Id, Configuration, logger);
             storageBootStrapper.ConfigureStorageServices(serviceCollection);
+
+            var assemblyName = typeof(PosBootstrapper).Assembly.GetName();
+            var version = typeof(PosBootstrapper).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion.Split(new char[] { '+', '-' })[0];
+            assemblyName.Version = System.Version.TryParse(version, out var result) ? result : assemblyName.Version;
+            Configuration.Add("assemblyname", assemblyName);
 
             var queueBootstrapper = new QueueBootstrapper(Id, Configuration);
             queueBootstrapper.ConfigureServices(serviceCollection);

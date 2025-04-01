@@ -20,8 +20,8 @@ namespace fiskaltrust.Middleware.Queue.Test.Launcher
 {
     public static class Program
     {
-        private static readonly string _cashBoxId = "";
-        private static readonly string _accessToken = "";
+        private static readonly string _cashBoxId = "f17819b7-4975-4f6b-8068-08978bf62d50";
+        private static readonly string _accessToken = "BIdRt2+2vHnvAcNNq6pvOUS30JSm8Kk/PI2R9sPBRcwffZ9INIPktlsSKsx92wXD/5/Me6sgqj4AwHghb8ys9hQ=";
         private static readonly string _localization = "DE";
 
         public static void Main(string configurationFilePath = "", string serviceFolder = @"C:\ProgramData\fiskaltrust\service")

@@ -29,7 +29,7 @@ namespace fiskaltrust.Middleware.Queue.SQLite
 
             var assemblyName = typeof(PosBootstrapper).Assembly.GetName();
             var version = typeof(PosBootstrapper).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion.Split(new char[] { '+', '-' })[0];
-            assemblyName.Version = System.Version.TryParse(version, out Version result) ? result : assemblyName.Version;
+            assemblyName.Version = System.Version.TryParse(version, out var result) ? result : assemblyName.Version;
             Configuration.Add("assemblyname", assemblyName);
 
             var queueBootstrapper = new QueueBootstrapper(Id, Configuration);
