@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reflection;
 
 namespace fiskaltrust.Middleware.Contracts.Models
 {
@@ -14,6 +15,7 @@ namespace fiskaltrust.Middleware.Contracts.Models
         public bool IsSandbox { get; set; }
         public string ServiceFolder { get; set; }
         public Action<string> OnMessage { get; set; }
+        public AssemblyName AssemblyName { get; set; }
         public Dictionary<string, object> Configuration { get; set; }
         public Dictionary<string, bool> PreviewFeatures { get; set; }
     }

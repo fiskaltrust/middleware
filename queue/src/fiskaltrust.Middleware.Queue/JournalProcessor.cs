@@ -95,8 +95,8 @@ namespace fiskaltrust.Middleware.Queue
                         {
                             Chunk = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(new
                                 {
-                                    Assembly = typeof(JournalProcessor).Assembly.GetName().FullName,
-                                    Version = typeof(JournalProcessor).Assembly.GetName().Version
+                                    Assembly = _middlewareConfiguration.AssemblyName.FullName,
+                                    Version = _middlewareConfiguration.AssemblyName.Version
                                 }
                             )).ToList()
                         }
