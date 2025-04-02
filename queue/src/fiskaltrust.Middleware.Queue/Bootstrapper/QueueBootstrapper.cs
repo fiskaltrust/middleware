@@ -41,7 +41,7 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
                 QueueId = _activeQueueId,
                 IsSandbox = _configuration.TryGetValue("sandbox", out var sandbox) && bool.TryParse(sandbox.ToString(), out var sandboxBool) && sandboxBool,
                 ServiceFolder = _configuration.TryGetValue("servicefolder", out var val) ? val.ToString() : GetServiceFolder(),
-                AssemblyName = _configuration.TryGetValue("assemblyname", out var assemblyName) ? (AssemblyName)assemblyName : null,
+                AssemblyInfo = _configuration.TryGetValue("assemblyinfo", out var assemblyInfo) ? (AssemblyInfo)assemblyInfo : null,
                 Configuration = _configuration,
                 PreviewFeatures = GetPreviewFeatures(_configuration),
                 AllowUnsafeScuSwitch = _configuration.TryGetValue("AllowUnsafeScuSwitch", out var allowUnsafeScuSwitch) && bool.TryParse(allowUnsafeScuSwitch.ToString(), out var allowUnsafeScuSwitchBool) && allowUnsafeScuSwitchBool,
