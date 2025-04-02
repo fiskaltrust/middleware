@@ -19,9 +19,4 @@ namespace fiskaltrust.Middleware.Contracts.Models
         public Dictionary<string, object> Configuration { get; set; }
         public Dictionary<string, bool> PreviewFeatures { get; set; }
     }
-    public class AssemblyInfo
-    {
-        public String Name { get; set; }
-        public Version Version { get; set; }
-    }
 }
