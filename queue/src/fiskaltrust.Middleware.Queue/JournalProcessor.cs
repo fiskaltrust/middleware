@@ -15,6 +15,7 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using fiskaltrust.Interface.Tagging;
 using fiskaltrust.Interface.Tagging.Models.Extensions;
+using System.Reflection;
 
 namespace fiskaltrust.Middleware.Queue
 {
@@ -74,7 +75,6 @@ namespace fiskaltrust.Middleware.Queue
                     }
                     return _marketSpecificJournalProcessor.ProcessAsync(request);
                 }
-
                 return request.ftJournalType switch
                 {
                     (long) JournalTypes.ActionJournal => ToJournalResponseAsync(GetEntitiesAsync(_actionJournalRepository, request), request.MaxChunkSize),
@@ -93,12 +93,7 @@ namespace fiskaltrust.Middleware.Queue
                     _ => new List<JournalResponse> {
                         new JournalResponse
                         {
-                            Chunk = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(new
-                                {
-                                    Assembly = _middlewareConfiguration.AssemblyInfo?.Name,
-                                    Version = _middlewareConfiguration.AssemblyInfo?.Version
-                                }
-                            )).ToList()
+                            Chunk = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(GetVersion())).ToList()                            
                         }
                 }.ToAsyncEnumerable()
                 };
@@ -120,6 +115,23 @@ namespace fiskaltrust.Middleware.Queue
             }
         }
 
+        private object GetVersion()
+        {
+            var assemblyName = _middlewareConfiguration.AssemblyType?.Assembly.GetName();
+            var versionAttribute = _middlewareConfiguration.AssemblyType?.Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion.Split(new char[] { '+', '-' })[0];
+            var version = Version.TryParse(versionAttribute, out var result)
+                ? new Version(result.Major, result.Minor, result.Build, 0) 
+                : new Version(assemblyName.Version.Major, assemblyName.Version.Minor, assemblyName.Version.Build, 0);
+            assemblyName.Version = version;
+            return new
+            {
+                Assembly = assemblyName.FullName,
+                Version = version
+
+            };
+
+
+        }
         private async Task<object> GetConfiguration()
         {
             return new

@@ -15,7 +15,7 @@ namespace fiskaltrust.Middleware.Contracts.Models
         public bool IsSandbox { get; set; }
         public string ServiceFolder { get; set; }
         public Action<string> OnMessage { get; set; }
-        public AssemblyInfo AssemblyInfo { get; set; }
+        public Type AssemblyType { get; set; }
         public Dictionary<string, object> Configuration { get; set; }
         public Dictionary<string, bool> PreviewFeatures { get; set; }
     }
