@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Reflection;
 using fiskaltrust.Middleware.Abstractions;
-using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Queue.Bootstrapper;
 using fiskaltrust.Middleware.Storage.Ef;
 using fiskaltrust.Middleware.Storage.EF;
