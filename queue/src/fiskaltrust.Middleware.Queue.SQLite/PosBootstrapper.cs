@@ -8,7 +8,6 @@ using fiskaltrust.Middleware.Storage.SQLite;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using System.Linq;
 
 namespace fiskaltrust.Middleware.Queue.SQLite
 {
