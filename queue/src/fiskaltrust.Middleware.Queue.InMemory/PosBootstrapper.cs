@@ -23,9 +23,9 @@ namespace fiskaltrust.Middleware.Queue.InMemory
             storageBootStrapper.ConfigureStorageServices(serviceCollection);
 
             var assemblyName = typeof(PosBootstrapper).Assembly.GetName();
-            //var versionAttribute = typeof(PosBootstrapper).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion.Split(new char[] { '+', '-' })[0];
-            //var version = Version.TryParse(versionAttribute, out var result) ? new Version(result.Major, result.Minor, result.Build, 0) : new Version(assemblyName.Version.Major, assemblyName.Version.Minor, assemblyName.Version.Build, 0);
-            //assemblyName.Version = version;
+            var versionAttribute = typeof(PosBootstrapper).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion.Split(new char[] { '+', '-' })[0];
+            var version = Version.TryParse(versionAttribute, out var result) ? new Version(result.Major, result.Minor, result.Build, 0) : new Version(assemblyName.Version.Major, assemblyName.Version.Minor, assemblyName.Version.Build, 0);
+            assemblyName.Version = version;
             Configuration.Add("assemblyinfo", new AssemblyInfo { Name = assemblyName.FullName, Version = new Version() });
 
             var queueBootstrapper = new QueueBootstrapper(Id, Configuration);
