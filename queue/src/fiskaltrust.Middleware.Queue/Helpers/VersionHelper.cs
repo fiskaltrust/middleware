@@ -7,7 +7,7 @@ public static class VersionHelper
 {
     public static string GetCurrentMiddlewareVersion(Type assemblyType)
     {
-        var assemblyName = assemblyType.Assembly.GetName();
+        var assemblyName = assemblyType?.Assembly.GetName();
         var versionAttribute = assemblyType?.Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion.Split(new char[] { '+', '-' })[0];
         var version = Version.TryParse(versionAttribute, out var result)
             ? new Version(result.Major, result.Minor, result.Build, 0)
