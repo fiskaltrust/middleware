@@ -127,10 +127,7 @@ namespace fiskaltrust.Middleware.Queue
             {
                 Assembly = assemblyName.FullName,
                 Version = version
-
             };
-
-
         }
         private async Task<object> GetConfiguration()
         {
