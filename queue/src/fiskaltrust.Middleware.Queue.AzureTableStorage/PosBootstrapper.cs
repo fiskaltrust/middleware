@@ -23,6 +23,8 @@ namespace fiskaltrust.Middleware.Queue.AzureTableStorage
             var storageBootStrapper = new AzureTableStorageBootstrapper(Id, Configuration, storageConfiguration, logger);
             storageBootStrapper.ConfigureStorageServices(serviceCollection);
 
+            Configuration.Add("assemblytype", typeof(PosBootstrapper));
+
             var queueBootstrapper = new QueueBootstrapper(Id, Configuration);
             queueBootstrapper.ConfigureServices(serviceCollection);
         }
