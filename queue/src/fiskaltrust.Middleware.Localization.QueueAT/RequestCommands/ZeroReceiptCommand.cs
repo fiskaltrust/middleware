@@ -14,7 +14,7 @@ using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 {
-    internal class ZeroReceiptCommand : RequestCommand
+    public class ZeroReceiptCommand : RequestCommand
     {
         private readonly IReadOnlyQueueItemRepository _queueItemRepository;
 
@@ -38,7 +38,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                 CreateActionJournal(queue, queueItem, $"QueueItem {queueItem.ftQueueItemId} requests zero receipt of Queue {queueAT.ftQueueATId}")
             };
 
-            var (receiptIdentification, ftStateData, _, signatureItems, journalAT) = await SignReceiptAsync(queueAT, request, response.ftReceiptIdentification, response.ftReceiptMoment, queueItem.ftQueueItemId, isZeroReceipt: true);
+            var (receiptIdentification, ftStateData, _, signatureItems, journalAT, isSigned) = await SignReceiptAsync(queueAT, request, response.ftReceiptIdentification, response.ftReceiptMoment, queueItem.ftQueueItemId, isZeroReceipt: true);
             response.ftReceiptIdentification = receiptIdentification;
             response.ftStateData = ftStateData;
 
@@ -62,7 +62,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
             }
 
             // Recover from failed mode
-            if (journalAT != null && queueAT.UsedFailedCount > 0)
+            if (isSigned && queueAT.UsedFailedCount > 0)
             {
                 var fromReceipt = await GetReceiptIdentificationFromQueueItem(queueAT.UsedFailedQueueItemId.Value);
                 var toReceipt = response.ftReceiptIdentification;
@@ -88,7 +88,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
             }
 
             // Recover from SSCD failed mode
-            if (journalAT != null && queueAT.SSCDFailCount > 0)
+            if (isSigned && queueAT.SSCDFailCount > 0)
             {
                 var fromReceipt = await GetReceiptIdentificationFromQueueItem(queueAT.SSCDFailQueueItemId.Value);
                 var toReceipt = response.ftReceiptIdentification;
@@ -120,7 +120,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
             }
             var notificationSignatures = CreateNotificationSignatures(actionJournals);
             response.ftSignatures = response.ftSignatures.Extend(signatureItems).Extend(notificationSignatures);
-            
+
             return new RequestCommandResponse
             {
                 ReceiptResponse = response,

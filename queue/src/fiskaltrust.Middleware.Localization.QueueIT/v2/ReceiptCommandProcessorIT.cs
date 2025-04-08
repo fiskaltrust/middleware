@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.it;
@@ -57,12 +58,15 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
 
         public async Task<ProcessCommandResponse> PointOfSaleReceipt0x0001Async(ProcessCommandRequest request)
         {
+            var (queue, queueIt, receiptRequest, receiptResponse, queueItem) = request;
             if (request.ReceiptRequest.IsVoid() || request.ReceiptRequest.IsRefund())
             {
-                await LoadReceiptReferencesToResponse(request.ReceiptRequest, request.QueueItem, request.ReceiptResponse);
+                receiptResponse = await MiddlewareStorageHelpers.LoadReceiptReferencesToResponse(_queueItemRepository, receiptRequest, queueItem, receiptResponse);
+                if (receiptResponse.HasFailed())
+                {
+                    return new ProcessCommandResponse(receiptResponse, new List<ftActionJournal>());
+                }
             }
-
-            var (queue, queueIt, receiptRequest, receiptResponse, queueItem) = request;
 
             var result = await _itSSCDProvider.ProcessReceiptAsync(new ProcessRequest
             {
@@ -104,47 +108,5 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
         public async Task<ProcessCommandResponse> ECommerce0x0004Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
 
         public async Task<ProcessCommandResponse> Protocol0x0005Async(ProcessCommandRequest request) => await PointOfSaleReceipt0x0001Async(request);
-
-        private async Task LoadReceiptReferencesToResponse(ReceiptRequest request, ftQueueItem queueItem, ReceiptResponse receiptResponse)
-        {
-            var queueItems = _queueItemRepository.GetByReceiptReferenceAsync(request.cbPreviousReceiptReference, request.cbTerminalID);
-            // What should we do in this case? Cannot really proceed with the storno but we
-            await foreach (var existingQueueItem in queueItems)
-            {
-                var referencedResponse = JsonConvert.DeserializeObject<ReceiptResponse>(existingQueueItem.response);
-                var documentNumber = referencedResponse.GetSignaturItem(SignatureTypesIT.RTDocumentNumber).Data;
-                var zNumber = referencedResponse.GetSignaturItem(SignatureTypesIT.RTZNumber).Data;
-                var documentMoment = referencedResponse.GetSignaturItem(SignatureTypesIT.RTDocumentMoment)?.Data;
-                documentMoment ??= queueItem.cbReceiptMoment.ToString("yyyy-MM-dd");
-                var signatures = new List<SignaturItem>();
-                signatures.AddRange(receiptResponse.ftSignatures);
-                signatures.AddRange(new List<SignaturItem>
-                    {
-                        new SignaturItem
-                        {
-                            Caption = "<reference-z-number>",
-                            Data = zNumber.ToString(),
-                            ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                            ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceZNumber
-                        },
-                        new SignaturItem
-                        {
-                            Caption = "<reference-doc-number>",
-                            Data = documentNumber.ToString(),
-                            ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                            ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentNumber
-                        },
-                        new SignaturItem
-                        {
-                            Caption = "<reference-timestamp>",
-                            Data = documentMoment,
-                            ftSignatureFormat = (long) SignaturItem.Formats.Text,
-                            ftSignatureType = Cases.BASE_STATE | (long) SignatureTypesIT.RTReferenceDocumentMoment
-                        },
-                    });
-                receiptResponse.ftSignatures = signatures.ToArray();
-                break;
-            }
-        }
     }
 }

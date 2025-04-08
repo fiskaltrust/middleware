@@ -35,7 +35,9 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.RequestCommands
 
                 response.ftSignatures = response.ftSignatures.Extend(signatureItem);
 
-                return Task.FromResult<(ReceiptResponse, ftJournalFR, List<ftActionJournal>)>((response, journalFR, new()));
+                var actionJournal = ActionJournalFactory.Create(queue, queueItem, "Log requested", PayloadFactory.GetGrandTotalPayload(request, response, queueFR, signaturCreationUnitFR, queueFR.GLastHash));
+
+                return Task.FromResult<(ReceiptResponse, ftJournalFR, List<ftActionJournal>)>((response, journalFR, new() { actionJournal }));
             }
         }
 

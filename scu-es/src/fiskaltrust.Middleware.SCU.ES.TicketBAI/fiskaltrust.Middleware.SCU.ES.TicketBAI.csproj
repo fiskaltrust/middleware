@@ -5,6 +5,7 @@
         <TargetFrameworks>net6;net8</TargetFrameworks>
         <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);CopyProjectReferencesToPackage</TargetsForTfmSpecificBuildOutput>
         <Nullable>enable</Nullable>
+        <MinVerTagPrefix>scu-es/ticketbai/v</MinVerTagPrefix>
     </PropertyGroup>
 
     <ItemGroup>
@@ -15,6 +16,10 @@
         <PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
         <PackageReference Include="System.Security.Cryptography.Xml" Version="9.0.0" />
         <PackageReference Include="FirmaXadesNetCore" Version="1.1.0" />
+        <PackageReference Include="MinVer" Version="6.0.0">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+        </PackageReference>
     </ItemGroup>
 
     <Target DependsOnTargets="ResolveReferences" Name="CopyProjectReferencesToPackage">

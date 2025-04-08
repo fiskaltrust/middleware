@@ -19,7 +19,6 @@ namespace fiskaltrust.Interface.Tagging
                 0x4652000000000000 => new CaseConverterFR(),
                 _ => throw new Exception("The recieved code is not valid")
             };
-            ;
         }
     }
 }

@@ -15,6 +15,7 @@ using Moq;
 using Newtonsoft.Json;
 using Xunit;
 using FluentAssertions;
+using ftJournalFRCopyPayload = fiskaltrust.Middleware.Contracts.Models.FR.ftJournalFRCopyPayload;
 
 namespace fiskaltrust.Middleware.Localization.QueueFR.UnitTest
 {

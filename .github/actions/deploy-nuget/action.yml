@@ -1,0 +1,19 @@
+name: 'Deploy Nuget'
+
+inputs:
+  directory:
+    required: true
+    type: string
+  feed:
+    required: true
+    type: string
+  pat:
+    required: true
+    type: string
+
+runs:
+  using: "composite"
+  steps:
+    - name:
+      shell: pwsh
+      run: dotnet nuget push "${{ inputs.directory }}/*.nuget" -s "${{ inputs.feed }}" -k ${{ inputs.pat }}

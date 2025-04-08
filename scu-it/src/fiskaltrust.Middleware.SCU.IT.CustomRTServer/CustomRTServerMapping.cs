@@ -342,7 +342,7 @@ public static class CustomRTServerMapping
         0x06 => DocumentItemPaymentIds.SCONTO_A_PAGARE,
         0x07 => DocumentItemPaymentIds.ELETTRONICO,
         0x08 => DocumentItemPaymentIds.SCONTO_A_PAGARE,
-        0x09 => DocumentItemPaymentIds.ELETTRONICO,
+        0x09 => DocumentItemPaymentIds.NON_RISCOSSO_FATTURE,
         0x0A => DocumentItemPaymentIds.ELETTRONICO,
         0x0B => DocumentItemPaymentIds.ELETTRONICO,
         0x0C => DocumentItemPaymentIds.CONTANTE,

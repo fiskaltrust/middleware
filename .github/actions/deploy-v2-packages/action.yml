@@ -1,0 +1,42 @@
+name: 'Deploy v2 Packages'
+
+permissions:
+  id-token: write
+  contents: read
+
+inputs:
+  directory:
+    required: true
+    type: string
+  package:
+    required: true
+    type: string
+  storageAccountName:
+    required: true
+    type: string
+  tenantId:
+    required: true
+    type: string
+  subscriptionId:
+    required: true
+    type: string
+  clientId:
+    required: true
+    type: string
+
+runs:
+  using: "composite"
+  steps:
+    - name: Azure login
+      uses: azure/login@v2
+      with:
+        client-id: ${{ inputs.clientId }}
+        tenant-id: ${{ inputs.tenantId }}
+        subscription-id: ${{ inputs.subscriptionId }}
+
+    - name: Azure CLI script
+      uses: azure/cli@v2
+      with:
+        azcliversion: latest
+        inlineScript: |
+          az storage blob upload-batch --account-name ${{ inputs.storageAccountName }} --auth-mode login -d "packages" --destination-path "undefined/${{ inputs.package }}/" -s "${{ inputs.directory }}" --pattern "*.zip*"

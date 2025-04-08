@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using fiskaltrust.Middleware.Abstractions;
-using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Queue.Bootstrapper;
 using fiskaltrust.Middleware.Storage.Ef;
 using fiskaltrust.Middleware.Storage.EF;
@@ -25,6 +24,8 @@ namespace fiskaltrust.Middleware.Queue.EF
 
             var storageBootStrapper = new EfStorageBootstrapper(Id, Configuration, storageConfiguration, logger);
             storageBootStrapper.ConfigureStorageServices(serviceCollection);
+
+            Configuration.Add("assemblytype", typeof(PosBootstrapper));
 
             var queueBootstrapper = new QueueBootstrapper(Id, Configuration);
             queueBootstrapper.ConfigureServices(serviceCollection);

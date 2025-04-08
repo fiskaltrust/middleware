@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 {
-    internal class DisabledQueueReceiptCommand : RequestCommand
+    public class DisabledQueueReceiptCommand : RequestCommand
     {
         public override string ReceiptName => "Disabled-queue receipt";
 

@@ -1,0 +1,32 @@
+name: Queue Package
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        type: choice
+        required: true
+        options:
+          - fiskaltrust.Middleware.Queue.AzureTableStorage
+          - fiskaltrust.Middleware.Queue.EF
+          - fiskaltrust.Middleware.Queue.InMemory
+          - fiskaltrust.Middleware.Queue.MySQL
+          - fiskaltrust.Middleware.Queue.PostgreSQL
+          - fiskaltrust.Middleware.Queue.SQLite
+      deploySandbox:
+        type: boolean
+        default: false
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  package:
+    secrets: inherit
+
+    uses: ./.github/workflows/package.yml
+    with:
+      pattern: ${{ inputs.package }}
+      directory: queue/src
+      deploySandbox: ${{ inputs.deploySandbox}}

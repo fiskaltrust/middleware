@@ -36,7 +36,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
             var entity = MapToAzureEntity(storageEntity);
             await _tableClient.UpsertEntityAsync(entity, TableUpdateMode.Replace);
         }
-        public async Task<TStorageEntity> RemoveAsync(TKey key)
+        public virtual async Task<TStorageEntity> RemoveAsync(TKey key)
         {
             var entity = await RetrieveAsync(key).ConfigureAwait(false);
             if (entity != null)
@@ -55,7 +55,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
 
         protected abstract TAzureEntity MapToAzureEntity(TStorageEntity entity);
 
-        private async Task<TAzureEntity> RetrieveAsync(TKey id)
+        protected async Task<TAzureEntity> RetrieveAsync(TKey id)
         {
             var result = _tableClient.QueryAsync<TAzureEntity>(x => x.RowKey == id.ToString());
             return await result.FirstOrDefaultAsync();

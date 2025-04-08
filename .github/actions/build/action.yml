@@ -1,0 +1,27 @@
+name: 'Build'
+inputs:
+  pattern:
+    required: true
+    type: string
+  configuration:
+    type: string
+    default: Release
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: |
+          6.0.x
+          8.0.x
+
+    - name: Restore
+      run: dotnet restore "${{ inputs.pattern }}"
+      shell: pwsh
+      
+    - name: Build
+      run: dotnet build "${{ inputs.pattern }}" --configuration ${{ inputs.configuration }} --no-restore
+      shell: pwsh
+
+      

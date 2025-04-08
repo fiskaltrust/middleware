@@ -1,0 +1,64 @@
+name: 'Deploy v1 Packages'
+
+permissions:
+  id-token: write
+  contents: read
+
+inputs:
+  directory:
+    required: true
+    type: string
+  package:
+    required: true
+    type: string
+  storageAccountName:
+    required: true
+    type: string
+  tenantId:
+    required: true
+    type: string
+  subscriptionId:
+    required: true
+    type: string
+  clientId:
+    required: true
+    type: string
+  environment:
+    required: false
+    type: string
+    default: sandbox
+  packageCacheSecret:
+    required: false
+    type: string
+    default: ''
+
+runs:
+  using: "composite"
+  steps:
+    - name: Azure login
+      uses: azure/login@v2
+      with:
+        client-id: ${{ inputs.clientId }}
+        tenant-id: ${{ inputs.tenantId }}
+        subscription-id: ${{ inputs.subscriptionId }}
+
+    - name: Azure CLI script
+      uses: azure/cli@v2
+      with:
+        azcliversion: latest
+        inlineScript: |
+          az storage blob upload-batch --account-name ${{ inputs.storageAccountName }} --auth-mode login -d "packages" -s "${{ inputs.directory }}" --pattern "${{ inputs.package }}.*.nupkg"
+    
+    - run: |
+        if("${{ inputs.environment }}" -eq "sandbox") {
+          $sandbox = "-sandbox"
+        }
+        for($i = 0;$i -lt 10;$i++) {
+          Invoke-WebRequest -Method POST -Headers @{"fiskaltrust" = $env:PACKAGE_CACHE_SECRET} "https://packages$sandbox.fiskaltrust.cloud/refreshcache"
+        }
+      shell: pwsh
+      if: inputs.packageCacheSecret != ''
+      env:
+        PACKAGE_CACHE_SECRET: ${{ inputs.packageCacheSecret }}
+      name: Refresh package cache
+      continue-on-error: true

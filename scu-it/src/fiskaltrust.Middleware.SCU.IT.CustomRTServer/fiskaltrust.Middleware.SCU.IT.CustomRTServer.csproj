@@ -5,6 +5,7 @@
         <TargetFrameworks>netstandard2.0;net461;net6</TargetFrameworks>
         <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);CopyProjectReferencesToPackage</TargetsForTfmSpecificBuildOutput>
         <Nullable>enable</Nullable>
+        <MinVerTagPrefix>scu-it/customrtserver/v</MinVerTagPrefix>
     </PropertyGroup>
 
     <ItemGroup>
@@ -13,6 +14,10 @@
         <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="3.1.4" />
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="3.1.4" />
         <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+        <PackageReference Include="MinVer" Version="6.0.0">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+        </PackageReference>
     </ItemGroup>
 
     <Target DependsOnTargets="ResolveReferences" Name="CopyProjectReferencesToPackage">

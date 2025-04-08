@@ -24,7 +24,13 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                 .Replace("<NotExistingOnEpsonAdjMsg>\r\n", "")
                 .Replace("</NotExistingOnEpsonAdjMsg>\r\n", "")
                 .Replace("<NotExistingOnEpsonTotalMsg>\r\n", "")
-                .Replace("</NotExistingOnEpsonTotalMsg>\r\n", "");
+                .Replace("</NotExistingOnEpsonTotalMsg>\r\n", "")
+                .Replace("<NotExistingOnEpsonItemMsg>", "")
+                .Replace("</NotExistingOnEpsonItemMsg>", "")
+                .Replace("<NotExistingOnEpsonAdjMsg>", "")
+                .Replace("</NotExistingOnEpsonAdjMsg>", "")
+                .Replace("<NotExistingOnEpsonTotalMsg>", "")
+                .Replace("</NotExistingOnEpsonTotalMsg>", "");
         }
 
         public static T? DeserializeToSoapEnvelope<T>(Stream content) where T : class

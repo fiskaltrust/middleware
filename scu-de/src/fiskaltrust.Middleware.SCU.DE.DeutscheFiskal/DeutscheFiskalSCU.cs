@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1.de;
 using fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Communication;
@@ -39,7 +40,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
         private readonly FccAdminApiProvider _fccAdminApiProvider;
         private string _fccDirectory;
         private Version _version;
-
+        private readonly Task _fccInitializingTask;
         private TseInfo _lastTseInfo;
 
         public DeutscheFiskalSCU(ILogger<DeutscheFiskalSCU> logger, DeutscheFiskalSCUConfiguration configuration, IFccInitializationService fccInitializationService,
@@ -58,11 +59,11 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
 
             if (string.IsNullOrEmpty(_configuration.FccUri))
             {
-                StartLocalFCC();
+                _fccInitializingTask = StartLocalFCC();
             }
         }
 
-        private void StartLocalFCC()
+        private async Task StartLocalFCC()
         {
             try
             {
@@ -73,11 +74,13 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
 
                 if (!_fccDownloadService.IsInstalled(_fccDirectory))
                 {
-                    if (_fccDownloadService.DownloadFccAsync(_fccDirectory, null).Result)
+                    if (!_fccDownloadService.IsDownloaded(_fccDirectory))
                     {
-                        _fccInitializationService.Initialize(_fccDirectory);
-                        _version = new Version(_configuration.FccVersion);
+                        await _fccDownloadService.DownloadFccAsync(_fccDirectory, null);
                     }
+                    _fccInitializationService.Initialize(_fccDirectory);
+                    _version = new Version(_configuration.FccVersion);
+
                 }
                 else if (!_fccDownloadService.IsLatestVersion(_fccDirectory, new Version(_configuration.FccVersion)))
                 {
@@ -233,6 +236,10 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
         {
             try
             {
+                if (!_fccInitializingTask.IsCompleted)
+                {
+                    await _fccInitializingTask;
+                }
                 await StartFccIfNotRunning();
 
                 var clients = await _fccAdminApiProvider.GetClientsAsync();
@@ -244,12 +251,15 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal
                 // TODO check how many items are returned by selfCheckResult.KeyInfos and how they behave
                 var activeKey = selfCheckResult.keyInfos.FirstOrDefault(x => x.state == KeyState.Active) ?? selfCheckResult.keyInfos.First();
 
+                var cert = new X509Certificate2(Convert.FromBase64String(tssDetails.LeafCertificate));
+                var certificatePublicKeyBase64 = Convert.ToBase64String(cert.GetPublicKey());
+
                 _lastTseInfo = new TseInfo
                 {
                     CurrentNumberOfClients = clients.Count,
                     CurrentNumberOfStartedTransactions = fccInfo.CurrentNumberOfTransactions,
                     SerialNumberOctet = tssDetails.SerialNumberHex,
-                    PublicKeyBase64 = tssDetails.PublicKey,
+                    PublicKeyBase64 = certificatePublicKeyBase64,
                     FirmwareIdentification = JsonConvert.SerializeObject(new Dictionary<string, string> { { "fccVersion", selfCheckResult.fccVersion }, { "localClientVersion", selfCheckResult.localClientVersion }, { "remoteCspVersion", selfCheckResult.remoteCspVersion } }),
                     CertificationIdentification = GetCertificationIdentification(),
                     MaxNumberOfClients = fccInfo.MaxNumberClients,

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using fiskaltrust.Middleware.Abstractions;
-using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Queue.Bootstrapper;
 using fiskaltrust.Middleware.Storage.SQLite;
 using Microsoft.Extensions.DependencyInjection;
@@ -24,6 +23,8 @@ namespace fiskaltrust.Middleware.Queue.SQLite
 
             var storageBootStrapper = new SQLiteStorageBootstrapper(Id, Configuration, storageConfiguration, logger);
             storageBootStrapper.ConfigureStorageServices(serviceCollection);
+
+            Configuration.Add("assemblytype", typeof(PosBootstrapper));
 
             var queueBootstrapper = new QueueBootstrapper(Id, Configuration);
             queueBootstrapper.ConfigureServices(serviceCollection);

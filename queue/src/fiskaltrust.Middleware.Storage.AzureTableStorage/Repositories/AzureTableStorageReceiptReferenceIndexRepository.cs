@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Azure.Data.Tables;
+using fiskaltrust.Middleware.Storage.AzureTableStorage.Helpers;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.TableEntities;
 using fiskaltrust.storage.V0;
 
@@ -19,30 +20,6 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
     {
         public string cbReceiptReference { get; set; }
         public Guid ftQueueItemId { get; set; }
-    }
-
-    internal static class ConversionHelper
-    {
-        public static string ToBase64UrlString(byte[] bytes)
-        {
-            var base64 = Convert.ToBase64String(bytes);
-            return base64.TrimEnd('=').Replace('+', '-').Replace('/', '_');
-        }
-
-        public static byte[] FromBase64UrlString(string base64urlString)
-        {
-            var base64 = base64urlString.Replace('_', '/').Replace('-', '+');
-            switch (base64.Length % 4)
-            {
-                case 2:
-                    base64 += "==";
-                    break;
-                case 3:
-                    base64 += "=";
-                    break;
-            }
-            return Convert.FromBase64String(base64);
-        }
     }
 
     public class AzureTableStorageReceiptReferenceIndexRepository : BaseAzureTableStorageRepository<string, ReceiptReferenceIndexTable, ReceiptReferenceIndex>

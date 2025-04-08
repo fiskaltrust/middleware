@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 using fiskaltrust.Middleware.Contracts.Models.Transactions;
+using ftJournalFRCopyPayload = fiskaltrust.Middleware.Contracts.Models.FR.ftJournalFRCopyPayload;
 
 namespace fiskaltrust.Middleware.Storage.EFCore
 {

@@ -1,0 +1,26 @@
+name: Slash Command Dispatch
+
+on:
+  issue_comment:
+    types: [created]
+  
+permissions:
+  issues: write
+  pull-requests: write
+  checks: write
+
+jobs:
+  slashCommandDispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Slash Command Dispatch
+        uses: peter-evans/slash-command-dispatch@v4
+        with:
+          token: ${{ secrets.SLASH_COMMAND }}
+          reaction-token: ${{ secrets.GITHUB_TOKEN }}
+          issue-type: pull-request
+          permission: write
+          commands: |
+            run
+            package
+            deploy

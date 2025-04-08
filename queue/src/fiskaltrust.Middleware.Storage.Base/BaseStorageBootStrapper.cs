@@ -12,6 +12,7 @@ using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using ftJournalFRCopyPayload = fiskaltrust.Middleware.Contracts.Models.FR.ftJournalFRCopyPayload;
 
 namespace fiskaltrust.Middleware.Storage.Base
 {

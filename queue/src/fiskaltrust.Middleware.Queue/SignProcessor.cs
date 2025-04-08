@@ -9,6 +9,7 @@ using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Queue.Extensions;
+using fiskaltrust.Middleware.Queue.Helpers;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -29,6 +30,7 @@ namespace fiskaltrust.Middleware.Queue
         private readonly Guid _cashBoxId = Guid.Empty;
         private readonly bool _isSandbox;
         private readonly int _receiptRequestMode = 0;
+        private readonly Type _assemblyType;
         private readonly SignatureFactory _signatureFactory;
         private readonly ReceiptConverter _receiptConverter;
         //private readonly Action<string> _onMessage;
@@ -55,6 +57,7 @@ namespace fiskaltrust.Middleware.Queue
             _cashBoxId = configuration.CashBoxId;
             _isSandbox = configuration.IsSandbox;
             _receiptRequestMode = configuration.ReceiptRequestMode;
+            _assemblyType = configuration.AssemblyType;
             //_onMessage = configuration.OnMessage;
             _signatureFactory = new SignatureFactory();
             _receiptConverter = receiptConverter;
@@ -135,7 +138,8 @@ namespace fiskaltrust.Middleware.Queue
                 cbReceiptMoment = data.cbReceiptMoment,
                 cbTerminalID = data.cbTerminalID,
                 cbReceiptReference = data.cbReceiptReference,
-                ftQueueRow = ++queue.ftQueuedRow
+                ftQueueRow = ++queue.ftQueuedRow,
+                ProcessingVersion = VersionHelper.GetCurrentMiddlewareVersion(_assemblyType)
             };
             if (queueItem.ftQueueTimeout == 0)
             {

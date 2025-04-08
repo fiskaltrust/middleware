@@ -13,7 +13,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddSingleton(sp => QueueATConfiguration.FromMiddlewareConfiguration(sp.GetRequiredService<MiddlewareConfiguration>()));
-            
+
             services.AddScoped<IATSSCDProvider, ATSSCDProvider>();
             services.AddScoped<IRequestCommandFactory, RequestCommandFactory>();
             services.AddScoped<IExportService, ExportService>();
@@ -29,7 +29,6 @@ namespace fiskaltrust.Middleware.Localization.QueueAT
             services.AddScoped<PosReceiptCommand>();
             services.AddScoped<YearlyClosingReceiptCommand>();
             services.AddScoped<ZeroReceiptCommand>();
-
         }
     }
 }

@@ -4,6 +4,7 @@
         <Description>The fiskaltrust Middleware Queue with an Entity Framework storage provider for SQL Server databases.</Description>
         <TargetFrameworks>net461;net6</TargetFrameworks>
         <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);CopyProjectReferencesToPackage</TargetsForTfmSpecificBuildOutput>
+        <MinVerTagPrefix>queue/ef/v</MinVerTagPrefix>
     </PropertyGroup>
 
     <ItemGroup>
@@ -17,12 +18,16 @@
         <PackageReference Include="fiskaltrust.storage.serialization" Version="1.3.1" />
         <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="1.1.1" />
         <PackageReference Include="System.ValueTuple" Version="4.5.0" />
-        <PackageReference Include="fiskaltrust.Exports.DSFinVK" Version="1.6.5" />
+        <PackageReference Include="fiskaltrust.Exports.DSFinVK" Version="1.6.7" />
         <PackageReference Include="fiskaltrust.Exports.TAR" Version="1.1.2" />
         <PackageReference Include="EntityFramework" Version="6.4.4" />
         <PackageReference Include="SharpCompress" Version="0.28.2" />
         <PackageReference Include="System.Text.Encoding.CodePages" Version="5.0.0" />
         <PackageReference Include="CsvHelper" Version="15.0.5" />
+        <PackageReference Include="MinVer" Version="6.0.0">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+        </PackageReference>
     </ItemGroup>
 
     <ItemGroup Condition="'$(TargetFramework)' == 'net461'">

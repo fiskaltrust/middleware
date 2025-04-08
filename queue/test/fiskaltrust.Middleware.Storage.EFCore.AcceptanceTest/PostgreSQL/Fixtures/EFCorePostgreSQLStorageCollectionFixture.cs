@@ -24,7 +24,7 @@ namespace fiskaltrust.Middleware.Storage.EFCore.AcceptanceTest.PostgreSQL.Fixtur
             var optionsBuilder = new DbContextOptionsBuilder<PostgreSQLMiddlewareDbContext>();
             optionsBuilder.UseNpgsql(string.Format(DatabaseConnectionString, DatabaseName));
             EFCorePostgreSQLStorageBootstrapper.Update(optionsBuilder.Options, QueueId, Mock.Of<ILogger<IMiddlewareBootstrapper>>());
-         
+
         }
         public PostgreSQLMiddlewareDbContext CreateContext()
         {
@@ -51,9 +51,13 @@ namespace fiskaltrust.Middleware.Storage.EFCore.AcceptanceTest.PostgreSQL.Fixtur
         }
         public void Dispose()
         {
-            foreach(var context in contextes)
+            foreach (var context in contextes)
             {
-                context.Database.EnsureDeleted();
+                try
+                {
+                    context.Database.EnsureDeleted();
+                }
+                catch { }
                 context.Dispose();
             }
         }

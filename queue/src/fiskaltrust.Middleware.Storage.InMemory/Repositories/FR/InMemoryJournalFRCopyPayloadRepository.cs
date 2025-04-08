@@ -6,6 +6,7 @@ using fiskaltrust.Middleware.Contracts.Models.FR;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Contracts.Repositories.FR;
 using fiskaltrust.storage.V0;
+using ftJournalFRCopyPayload = fiskaltrust.Middleware.Contracts.Models.FR.ftJournalFRCopyPayload;
 
 namespace fiskaltrust.Middleware.Storage.InMemory.Repositories.FR
 {

@@ -1135,6 +1135,9 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("ProcessingVersion")
+                        .HasColumnType("text");
+
                     b.Property<long>("TimeStamp")
                         .HasColumnType("bigint");
 
@@ -1184,6 +1187,8 @@ namespace fiskaltrust.Middleware.Storage.EFCore.PostgreSQL.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("ftQueueItemId");
+
+                    b.HasIndex("ProcessingVersion");
 
                     b.HasIndex("TimeStamp");
 

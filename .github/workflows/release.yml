@@ -1,0 +1,106 @@
+name: 'Release'
+on:
+  push:
+    tags:
+      - queue/**/v*
+      - scu-at/**/v*
+      - scu-de/**/v*
+      - scu-es/**/v*
+      - scu-it/**/v*
+
+permissions:
+  checks: write
+  pull-requests: write
+  id-token: write
+  contents: read
+
+jobs:
+  test-queue:
+    if: startsWith(github.ref, 'refs/tags/queue/')
+    uses: ./.github/workflows/queue-build.yml
+    secrets: inherit
+
+  test-scu-at:
+    if: startsWith(github.ref, 'refs/tags/scu-at/')
+    uses: ./.github/workflows/scu-at-build.yml
+    secrets: inherit
+
+  test-scu-de:
+    if: startsWith(github.ref, 'refs/tags/scu-de/')
+    uses: ./.github/workflows/scu-de-build.yml
+    secrets: inherit
+
+  test-scu-es:
+    if: startsWith(github.ref, 'refs/tags/scu-es/')
+    uses: ./.github/workflows/scu-es-build.yml
+    secrets: inherit
+
+  test-scu-it:
+    if: startsWith(github.ref, 'refs/tags/scu-it/')
+    uses: ./.github/workflows/scu-it-build.yml
+    secrets: inherit
+
+  meta:
+    needs: []
+    runs-on: windows-latest
+    outputs:
+      project: ${{ steps.meta.outputs.project }}
+      package: ${{ steps.meta.outputs.package }}
+      directory: ${{ steps.meta.outputs.directory }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: meta
+        shell: pwsh
+        run: |
+          if(!("${{ github.ref }}" -match "refs/tags/([a-z-]+)/([^/]+)/v.*")) {
+            throw "Invalid tag format"
+          }
+          $directory = $matches[1]
+          $package = $matches[2]
+          Write-Output "package=$package"
+          Write-Output "package=$package" >> $env:GITHUB_OUTPUT
+          Write-Output "directory=$directory/src"
+          Write-Output "directory=$directory/src" >> $env:GITHUB_OUTPUT
+          $prefix = ""
+          if($directory -eq "queue") {
+            $prefix = "fiskaltrust.Middleware.Queue"
+          } elseif($directory -match "scu-([a-z]{2})") {
+            $prefix = "fiskaltrust.Middleware.SCU.$($matches[1].ToUpper())"
+          }
+          $project = $(Get-Item "$directory/src/$prefix.$package").Name
+          Write-Output "project=$project"
+          Write-Output "project=$project" >> $env:GITHUB_OUTPUT
+
+  test-queue-acceptance:
+    if: startsWith(github.ref, 'refs/tags/queue/')
+    concurrency:
+      group: queue-acceptance-tests
+    needs: [meta, test-queue]
+    secrets: inherit
+    uses: ./.github/workflows/queue-acceptance-tests.yml
+    with:
+      only: fiskaltrust.Middleware.Storage.${{ needs.meta.outputs.package }}.AcceptanceTest
+
+
+  package:
+    needs: [meta, test-queue, test-queue-acceptance, test-scu-at, test-scu-de, test-scu-es, test-scu-it]
+    if: (!failure())
+    secrets: inherit
+    uses: ./.github/workflows/package.yml
+    with:
+      pattern: ${{ needs.meta.outputs.project }}
+      directory: ${{ needs.meta.outputs.directory }}
+      deploySandbox: true
+
+  production:
+    needs: [meta, package]
+    if: (!failure())
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/deploy.yml
+    with:
+      package: ${{ needs.meta.outputs.project }}
+      environment: production
