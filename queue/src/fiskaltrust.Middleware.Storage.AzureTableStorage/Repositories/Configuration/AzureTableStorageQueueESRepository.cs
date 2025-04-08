@@ -4,6 +4,7 @@ using Azure.Data.Tables;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.TableEntities.Configuration;
 using fiskaltrust.Middleware.Storage.ES;
 using fiskaltrust.storage.V0;
+using ftQueueES = fiskaltrust.Middleware.Storage.ES.ftQueueES;
 
 namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.Configuration
 {

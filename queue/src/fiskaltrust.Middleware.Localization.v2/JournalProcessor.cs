@@ -10,6 +10,8 @@ using fiskaltrust.Middleware.Storage.PT;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using ftQueueES = fiskaltrust.Middleware.Storage.ES.ftQueueES;
+using ftSignaturCreationUnitES = fiskaltrust.Middleware.Storage.ES.ftSignaturCreationUnitES;
 
 namespace fiskaltrust.Middleware.Localization.v2;
 
