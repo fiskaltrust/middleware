@@ -58,7 +58,6 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
                 {
                     _logger.LogWarning($"Port {fccPort} is already in use. Please choose a different port for FCC.");
                 }
-                throw new Exception($"Port {fccPort} is already in use. Please choose a different port for FCC.");
             }
             catch { }
            
