@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using System.Net.NetworkInformation;
 using fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Constants;
 using fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Exceptions;
 using fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Helpers;
@@ -12,7 +14,6 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
     public class DeutscheFiskalFccInitializationService : IFccInitializationService
     {
         private const string FIREWALL_RULE_NAME = "fiskaltrust.Middleware FCC";
-
         private readonly DeutscheFiskalSCUConfiguration _configuration;
         private readonly ILogger<DeutscheFiskalFccInitializationService> _logger;
         private readonly FirewallHelper _firewallHelper;
@@ -41,14 +42,26 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
             var heapMem = GetHeapMemory();
 
             var arguments = $"-cp \"{jarPath}\" {heapMem} de.fiskal.connector.init.InitializationCLIApplication --fcc_target_environment STABLE --fcc_id {_configuration.FccId} --fcc_secret {_configuration.FccSecret}";
+            var fccPort = DeutscheFiskalConstants.DefaultPort;
+
             if (_configuration.FccPort.HasValue)
             {
+                fccPort = _configuration.FccPort.Value;
                 arguments += $" --fcc_server_port {_configuration.FccPort.Value}";
             }
+
+            var ipProperties = IPGlobalProperties.GetIPGlobalProperties();
+            var tcpEndPoints = ipProperties.GetActiveTcpListeners();
+
+            if (tcpEndPoints.Any(ep => ep.Port == fccPort))
+            {
+                _logger.LogWarning($"Port {fccPort} is already in use. Please choose a different port for FCC.");
+            }
+
             if (!string.IsNullOrEmpty(_configuration.ProxyServer))
             {
                 arguments += GetProxyArguments(_configuration);
-            }
+            }          
             RunJavaProcess(fccDirectory, javaPath, arguments);
             _logger.LogInformation("Succesfully initialized FCC from {FccPath}.", fccDirectory);
         }
