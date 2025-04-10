@@ -14,6 +14,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
     public class DeutscheFiskalFccInitializationService : IFccInitializationService
     {
         private const string FIREWALL_RULE_NAME = "fiskaltrust.Middleware FCC";
+
         private readonly DeutscheFiskalSCUConfiguration _configuration;
         private readonly ILogger<DeutscheFiskalFccInitializationService> _logger;
         private readonly FirewallHelper _firewallHelper;
@@ -61,7 +62,7 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
             if (!string.IsNullOrEmpty(_configuration.ProxyServer))
             {
                 arguments += GetProxyArguments(_configuration);
-            }          
+            }    
             RunJavaProcess(fccDirectory, javaPath, arguments);
             _logger.LogInformation("Succesfully initialized FCC from {FccPath}.", fccDirectory);
         }
