@@ -50,14 +50,18 @@ namespace fiskaltrust.Middleware.SCU.DE.DeutscheFiskal.Services
                 fccPort = _configuration.FccPort.Value;
                 arguments += $" --fcc_server_port {_configuration.FccPort.Value}";
             }
-
-            var ipProperties = IPGlobalProperties.GetIPGlobalProperties();
-            var tcpEndPoints = ipProperties.GetActiveTcpListeners();
-
-            if (tcpEndPoints.Any(ep => ep.Port == fccPort))
+            try
             {
-                _logger.LogWarning($"Port {fccPort} is already in use. Please choose a different port for FCC.");
+                var ipProperties = IPGlobalProperties.GetIPGlobalProperties();
+                var tcpEndPoints = ipProperties.GetActiveTcpListeners();
+                if (tcpEndPoints.Any(ep => ep.Port == fccPort))
+                {
+                    _logger.LogWarning($"Port {fccPort} is already in use. Please choose a different port for FCC.");
+                }
+                throw new Exception($"Port {fccPort} is already in use. Please choose a different port for FCC.");
             }
+            catch { }
+           
 
             if (!string.IsNullOrEmpty(_configuration.ProxyServer))
             {
