@@ -420,12 +420,34 @@ public class AADEFactory
         var customer = receiptRequest.GetCustomerOrNull();
         if (receiptRequest.HasGreeceCountryCode())
         {
-            inv.counterpart = new PartyType
+            if (customer?.CustomerVATId?.StartsWith("EL") == true)
             {
-                vatNumber = customer?.CustomerVATId,
-                country = CountryType.GR,
-                branch = 0,
-            };
+                inv.counterpart = new PartyType
+                {
+                    vatNumber = customer?.CustomerVATId.Replace("EL", ""),
+                    country = CountryType.GR,
+                    branch = 0,
+                };
+            }
+            else if (customer?.CustomerVATId?.StartsWith("GR") == true)
+            {
+                inv.counterpart = new PartyType
+                {
+                    vatNumber = customer?.CustomerVATId.Replace("GR", ""),
+                    country = CountryType.GR,
+                    branch = 0,
+                };
+            }
+            else
+            {
+                inv.counterpart = new PartyType
+                {
+                    vatNumber = customer?.CustomerVATId,
+                    country = CountryType.GR,
+                    branch = 0,
+                };
+            }
+
             if (receiptRequest.ftReceiptCase.Case() == ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003 || inv.invoiceHeader.invoiceType == InvoiceType.Item14 || inv.invoiceHeader.invoiceType == InvoiceType.Item71)
             {
                 inv.counterpart.address = new AddressType
