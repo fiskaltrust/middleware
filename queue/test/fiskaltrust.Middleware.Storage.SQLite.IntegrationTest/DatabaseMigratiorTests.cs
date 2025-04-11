@@ -31,10 +31,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite.IntegrationTest
             var databaseMigrator = new DatabaseMigrator(new SqliteConnectionFactory(), 30 * 60, path, new Dictionary<string, object>(), Mock.Of<ILogger<IMiddlewareBootstrapper>>());
             await databaseMigrator.MigrateAsync();
 
-            if (File.Exists(path))
-            {
-                File.Delete(path);
-            }
+            File.Delete(path);
         }
 
         [Fact]
@@ -58,10 +55,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite.IntegrationTest
                 tables.Should().Contain("OpenTransaction");
             }
 
-            if (File.Exists(path))
-            {
-                File.Delete(path);
-            }
+            File.Delete(path);
         }
 
         [Fact]
