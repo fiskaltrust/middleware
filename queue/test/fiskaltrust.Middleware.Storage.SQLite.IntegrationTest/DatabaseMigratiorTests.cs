@@ -31,7 +31,10 @@ namespace fiskaltrust.Middleware.Storage.SQLite.IntegrationTest
             var databaseMigrator = new DatabaseMigrator(new SqliteConnectionFactory(), 30 * 60, path, new Dictionary<string, object>(), Mock.Of<ILogger<IMiddlewareBootstrapper>>());
             await databaseMigrator.MigrateAsync();
 
-            File.Delete(path);
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
         }
 
         [Fact]
@@ -55,14 +58,17 @@ namespace fiskaltrust.Middleware.Storage.SQLite.IntegrationTest
                 tables.Should().Contain("OpenTransaction");
             }
 
-            File.Delete(path);
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
         }
 
         [Fact]
         public async Task PerformMigrations_SetWALModeON_WALModeON()
         {
             const string path = "waldb.sqlite";
-      
+
             if (File.Exists(path))
             {
                 File.Delete(path);
