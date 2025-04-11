@@ -5,7 +5,7 @@
         public string TseSerialNumber { get; set; }
         public string TseAccessToken { get; set; }
         public bool EnableTarFileExport { get; set; } = true;
-        public virtual string CertificationId { get; set; } = "TBD";
+        public virtual string CertificationId { get; set; } = "BSI-K-TR-0612-2024";
         public bool DisplayCertificationIdAddition { get; set; } = false;
         public string CertificationIdAddition { get; set; }
         public string ApiEndpoint {
