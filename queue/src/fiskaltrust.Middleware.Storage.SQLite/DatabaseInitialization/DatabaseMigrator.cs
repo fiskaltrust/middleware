@@ -93,7 +93,6 @@ namespace fiskaltrust.Middleware.Storage.SQLite.DatabaseInitialization
                     newlyAppliedMigrations.Add(BaseStorageBootStrapper.Migrations.JournalFRCopyPayload);
                 }
             }
-            connection.Close();
             return newlyAppliedMigrations;
         }
         private async Task<bool> IsLegacyDatabaseAsync(IDbConnection connection)

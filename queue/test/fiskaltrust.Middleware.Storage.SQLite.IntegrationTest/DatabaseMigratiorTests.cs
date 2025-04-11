@@ -31,6 +31,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite.IntegrationTest
             var databaseMigrator = new DatabaseMigrator(new SqliteConnectionFactory(), 30 * 60, path, new Dictionary<string, object>(), Mock.Of<ILogger<IMiddlewareBootstrapper>>());
             await databaseMigrator.MigrateAsync();
 
+            GC.Collect();
             File.Delete(path);
         }
 
@@ -54,7 +55,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite.IntegrationTest
                 tables.Should().Contain("FailedStartTransaction");
                 tables.Should().Contain("OpenTransaction");
             }
-
+            GC.Collect();
             File.Delete(path);
         }
 
