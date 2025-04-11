@@ -2,6 +2,17 @@ name: Queue Acceptance Tests
 
 on:
   workflow_dispatch:
+    inputs:
+      only:
+        type: choice
+        options:
+          - fiskaltrust.Middleware.Storage.AzureTableStorage.AcceptanceTest
+          - fiskaltrust.Middleware.Storage.EF.AcceptanceTest
+          - fiskaltrust.Middleware.Storage.EFCore.AcceptanceTest
+          - fiskaltrust.Middleware.Storage.SQLite.AcceptanceTest
+          - fiskaltrust.Middleware.Storage.MySQL.AcceptanceTest
+          - fiskaltrust.Middleware.Storage.InMemory.AcceptanceTest
+        required: false
   workflow_call:
     inputs:
       commit:
