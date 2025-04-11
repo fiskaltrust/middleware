@@ -34,7 +34,7 @@
 
     <ItemGroup Condition="'$(TargetFramework)' == 'net461'">
         <PackageReference Include="BouncyCastle" version="1.7.0" />
-        <PackageReference Include="System.Data.SQLite" Version="11.0.119" />
+        <PackageReference Include="System.Data.SQLite" Version="1.0.119" />
         <PackageReference Include="System.Data.SQLite.Core" version="1.0.119" />
         <PackageReference Include="System.Data.SQLite.EF6" version="1.0.119" />
         <PackageReference Include="System.Data.SQLite.Linq" version="1.0.119" />
