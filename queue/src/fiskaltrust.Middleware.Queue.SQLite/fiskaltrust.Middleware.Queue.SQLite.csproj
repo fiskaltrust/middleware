@@ -42,8 +42,8 @@
 
     <ItemGroup Condition="'$(TargetFramework)' != 'net461'">
         <PackageReference Include="Portable.BouncyCastle" version="1.8.1.2" />
-        <PackageReference Include="Microsoft.Data.Sqlite" Version="3.1.4" />
-        <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="2.0.3" GeneratePathProperty="true" />
+        <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.4" />
+        <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="2.1.11" GeneratePathProperty="true" />
     </ItemGroup>
 
     <ItemGroup>
@@ -65,12 +65,6 @@
         </None>
     </ItemGroup>
 
-    <ItemGroup>
-      <None Update="..\fiskaltrust.Middleware.Storage.SQLite\Migrations\001_Init.sqlite3">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
-    </ItemGroup>
-
     <Target DependsOnTargets="ResolveReferences" Name="CopyProjectReferencesToPackage">
         <ItemGroup>
             <BuildOutputInPackage Include="@(ReferenceCopyLocalPaths-&gt;WithMetadataValue('ReferenceSourceTarget', 'ProjectReference'))" />
@@ -87,6 +81,7 @@
             <SQLITE_WIN_X64 Include="$(PkgSQLitePCLRaw_lib_e_sqlite3)\runtimes\win-x64\**\*.*" />
             <SQLITE_WIN_X86 Include="$(PkgSQLitePCLRaw_lib_e_sqlite3)\runtimes\win-x86\**\*.*" />
             <SQLITE_OSX_X64 Include="$(PkgSQLitePCLRaw_lib_e_sqlite3)\runtimes\osx-x64\**\*.*" />
+            <SQLITE_OSX_ARM64 Include="$(PkgSQLitePCLRaw_lib_e_sqlite3)\runtimes\osx-arm64\**\*.*" />
         </ItemGroup>
         <Copy SourceFiles="@(SQLITE_LINUX_X64)" DestinationFolder="$(TargetDir)\runtimes\linux-x64\%(RecursiveDir)" SkipUnchangedFiles="true" />
         <Copy SourceFiles="@(SQLITE_LINUX_X86)" DestinationFolder="$(TargetDir)\runtimes\linux-x86\%(RecursiveDir)" SkipUnchangedFiles="true" />
@@ -96,6 +91,7 @@
         <Copy SourceFiles="@(SQLITE_WIN_X64)" DestinationFolder="$(TargetDir)\runtimes\win-x64\%(RecursiveDir)" SkipUnchangedFiles="true" />
         <Copy SourceFiles="@(SQLITE_WIN_X86)" DestinationFolder="$(TargetDir)\runtimes\win-x86\%(RecursiveDir)" SkipUnchangedFiles="true" />
         <Copy SourceFiles="@(SQLITE_OSX_X64)" DestinationFolder="$(TargetDir)\runtimes\osx-x64\%(RecursiveDir)" SkipUnchangedFiles="true" />
+        <Copy SourceFiles="@(SQLITE_OSX_ARM64)" DestinationFolder="$(TargetDir)\runtimes\osx-arm64\%(RecursiveDir)" SkipUnchangedFiles="true" />
     </Target>
 
 </Project>
