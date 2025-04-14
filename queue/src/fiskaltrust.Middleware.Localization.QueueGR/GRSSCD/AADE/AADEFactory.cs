@@ -295,7 +295,7 @@ public class AADEFactory
             if (x.ftChargeItemCaseData != null)
             {
                 var chargeItem = JsonSerializer.Deserialize<WithHoldingChargeItem>(JsonSerializer.Serialize(x.ftChargeItemCaseData));
-                if (chargeItem != null)
+                if (chargeItem != null && chargeItem.WithHoldingAmount != default && chargeItem.WithHoldingAmount != default)
                 {
                     invoiceRow.withheldAmountSpecified = true;
                     invoiceRow.withheldAmount = chargeItem.WithHoldingAmount;
