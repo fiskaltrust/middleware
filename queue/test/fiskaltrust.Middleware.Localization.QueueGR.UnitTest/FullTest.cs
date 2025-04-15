@@ -3,6 +3,7 @@ using System.Text.Json;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.v2.Configuration;
 using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
+using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Xunit;
 
@@ -47,6 +48,19 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             var bootstrapper = new QueueGRBootstrapper(queue.Id, new LoggerFactory(), queue.Configuration ?? new Dictionary<string, object>());
             return (bootstrapper, cashBoxId);
         }
+
+        [Fact]
+        public async Task Example_RetailSales_Tests2()
+        {
+            (var bootstrapper, var cashBoxId) = await InitializeQueueGRBootstrapperAsync();
+            var signMethod = bootstrapper.RegisterForSign();
+            var receiptRequest = Examples.A1_WithDiscountCase();
+            receiptRequest.ftCashBoxID = cashBoxId;
+            var exampleCashSalesResponse = await signMethod(System.Text.Json.JsonSerializer.Serialize(receiptRequest));
+            var d = System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesResponse)!;
+            d.ftState.IsState(State.Success).Should().BeTrue(string.Join(Environment.NewLine, d.ftSignatures.Select(x => x.Data)));
+        }
+
 
         [Fact]
         public async Task Example_RetailSales_Tests()
