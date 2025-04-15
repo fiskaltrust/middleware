@@ -309,7 +309,7 @@ public class AADEFactory
             }
             if(grouped.modifiers.Count > 0)
             {
-                invoiceRow.deductionsAmount = grouped.modifiers.Sum(x => x.Amount);
+                invoiceRow.deductionsAmount = grouped.modifiers.Sum(x => x.Amount) * -1;
                 invoiceRow.deductionsAmountSpecified = true;
                 invoiceRow.discountOption = true;
                 invoiceRow.discountOptionSpecified = true;
