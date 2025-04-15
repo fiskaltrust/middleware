@@ -4,6 +4,7 @@ public enum ChargeItemCaseFlags : long
 {
     Void = 0x0001_0000,
     Refund = 0x0002_0000,
+    ExtraOrDiscount = 0x0004_0000,
 }
 
 public static class ChargeItemCaseFlagsExt

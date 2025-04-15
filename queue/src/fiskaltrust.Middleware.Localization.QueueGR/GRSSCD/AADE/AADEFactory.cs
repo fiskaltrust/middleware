@@ -14,6 +14,7 @@ using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
+using fiskaltrust.Middleware.Localization.QueueGR.Extensions; 
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE;
 
@@ -173,8 +174,12 @@ public class AADEFactory
 
     private static List<InvoiceRowType> GetInvoiceDetails(ReceiptRequest receiptRequest)
     {
-        return receiptRequest.cbChargeItems.Select(x =>
+        var chargeItems = receiptRequest.GetGroupedChargeItems();
+
+        return chargeItems.Select(grouped =>
         {
+            var x = grouped.chargeItem;
+
             var vatAmount = x.GetVATAmount();
             var invoiceRow = new InvoiceRowType
             {
@@ -183,8 +188,7 @@ public class AADEFactory
                 vatAmount = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -vatAmount : vatAmount,
                 netValue = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? (-x.Amount - -vatAmount) : x.Amount - vatAmount,
                 vatCategory = AADEMappings.GetVATCategory(x),
-            };
-
+            };           
             if (x.ftChargeItemCase.IsNatureOfVat(ChargeItemCaseNatureOfVatGR.ExtemptEndOfClimateCrises))
             {
                 invoiceRow.netValue = 0;
@@ -302,6 +306,13 @@ public class AADEFactory
                     invoiceRow.withheldPercentCategory = 3;
                     invoiceRow.withheldPercentCategorySpecified = true;
                 }
+            }
+            if(grouped.modifiers.Count > 0)
+            {
+                invoiceRow.deductionsAmount = grouped.modifiers.Sum(x => x.Amount);
+                invoiceRow.deductionsAmountSpecified = true;
+                invoiceRow.discountOption = true;
+                invoiceRow.discountOptionSpecified = true;
             }
             return invoiceRow;
         }).ToList();
