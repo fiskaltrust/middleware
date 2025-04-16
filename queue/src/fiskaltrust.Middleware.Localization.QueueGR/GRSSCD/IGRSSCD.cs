@@ -4,9 +4,9 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD;
 
 public interface IGRSSCD
 {
-    Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request);
+    public Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request);
 
-    Task<GRSSCDInfo> GetInfoAsync();
+    public Task<GRSSCDInfo> GetInfoAsync();
 }
 
 public class ProcessRequest

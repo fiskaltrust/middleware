@@ -15,6 +15,7 @@ using FluentAssertions.Execution;
 using Moq;
 using Xunit;
 using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
+using fiskaltrust.storage.V0.MasterData;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processors
 {
@@ -90,7 +91,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
 
             var configMock = new Mock<IConfigurationRepository>();
             configMock.Setup(x => x.InsertOrUpdateQueueAsync(It.IsAny<ftQueue>())).Returns(Task.CompletedTask);
-            var sut = new ReceiptCommandProcessorGR(new MyDataApiClient("", "", false), queuePT, signaturCreationUnitPT);
+            var sut = new ReceiptCommandProcessorGR(new MyDataApiClient("", "", false, new MasterDataConfiguration(), true), queuePT, signaturCreationUnitPT);
 
             var receiptRequest = new ReceiptRequest
             {
