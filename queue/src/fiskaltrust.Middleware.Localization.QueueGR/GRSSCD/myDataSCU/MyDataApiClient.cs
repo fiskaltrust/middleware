@@ -18,7 +18,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.myDataSCU;
 public class MyDataApiClient : IGRSSCD
 {
     private readonly HttpClient _httpClient;
-    private readonly string _prodBaseUrl = "https://mydataapi.aade.gr/";
+    private readonly string _prodBaseUrl = "https://mydatapi.aade.gr/";
     private readonly string _devBaseUrl = "https://mydataapidev.aade.gr/";
 
     private readonly bool _iseinvoiceProvider;
