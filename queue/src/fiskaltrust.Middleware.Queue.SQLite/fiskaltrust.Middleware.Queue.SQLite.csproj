@@ -43,7 +43,6 @@
     <ItemGroup Condition="'$(TargetFramework)' != 'net461'">
         <PackageReference Include="Portable.BouncyCastle" version="1.8.1.2" />
         <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.4" />
-        <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="2.1.11" GeneratePathProperty="true" />
     </ItemGroup>
 
     <ItemGroup>
@@ -69,29 +68,6 @@
         <ItemGroup>
             <BuildOutputInPackage Include="@(ReferenceCopyLocalPaths-&gt;WithMetadataValue('ReferenceSourceTarget', 'ProjectReference'))" />
         </ItemGroup>
-    </Target>
-
-    <Target Name="CopyNativeSqliteFiles" AfterTargets="Build" Condition="'$(TargetFramework)' == 'netstandard2.0' or '$(TargetFramework)' == 'netstandard2.1'">
-        <ItemGroup>
-            <SQLITE_LINUX_X64 Include="$(PkgSQLitePCLRaw_lib_e_sqlite3)\runtimes\linux-x64\**\*.*" />
-            <SQLITE_LINUX_X86 Include="$(PkgSQLitePCLRaw_lib_e_sqlite3)\runtimes\linux-x86\**\*.*" />
-            <SQLITE_LINUX_ARM64 Include="$(PkgSQLitePCLRaw_lib_e_sqlite3)\runtimes\linux-arm64\**\*.*" />
-            <SQLITE_LINUX_ARM Include="$(PkgSQLitePCLRaw_lib_e_sqlite3)\runtimes\linux-arm\**\*.*" />
-            <SQLITE_LINUX_ARMEL Include="$(PkgSQLitePCLRaw_lib_e_sqlite3)\runtimes\linux-armel\**\*.*" />
-            <SQLITE_WIN_X64 Include="$(PkgSQLitePCLRaw_lib_e_sqlite3)\runtimes\win-x64\**\*.*" />
-            <SQLITE_WIN_X86 Include="$(PkgSQLitePCLRaw_lib_e_sqlite3)\runtimes\win-x86\**\*.*" />
-            <SQLITE_OSX_X64 Include="$(PkgSQLitePCLRaw_lib_e_sqlite3)\runtimes\osx-x64\**\*.*" />
-            <SQLITE_OSX_ARM64 Include="$(PkgSQLitePCLRaw_lib_e_sqlite3)\runtimes\osx-arm64\**\*.*" />
-        </ItemGroup>
-        <Copy SourceFiles="@(SQLITE_LINUX_X64)" DestinationFolder="$(TargetDir)\runtimes\linux-x64\%(RecursiveDir)" SkipUnchangedFiles="true" />
-        <Copy SourceFiles="@(SQLITE_LINUX_X86)" DestinationFolder="$(TargetDir)\runtimes\linux-x86\%(RecursiveDir)" SkipUnchangedFiles="true" />
-        <Copy SourceFiles="@(SQLITE_LINUX_ARM64)" DestinationFolder="$(TargetDir)\runtimes\linux-arm64\%(RecursiveDir)" SkipUnchangedFiles="true" />
-        <Copy SourceFiles="@(SQLITE_LINUX_ARM)" DestinationFolder="$(TargetDir)\runtimes\linux-arm\%(RecursiveDir)" SkipUnchangedFiles="true" />
-        <Copy SourceFiles="@(SQLITE_LINUX_ARMEL)" DestinationFolder="$(TargetDir)\runtimes\linux-armel\%(RecursiveDir)" SkipUnchangedFiles="true" />
-        <Copy SourceFiles="@(SQLITE_WIN_X64)" DestinationFolder="$(TargetDir)\runtimes\win-x64\%(RecursiveDir)" SkipUnchangedFiles="true" />
-        <Copy SourceFiles="@(SQLITE_WIN_X86)" DestinationFolder="$(TargetDir)\runtimes\win-x86\%(RecursiveDir)" SkipUnchangedFiles="true" />
-        <Copy SourceFiles="@(SQLITE_OSX_X64)" DestinationFolder="$(TargetDir)\runtimes\osx-x64\%(RecursiveDir)" SkipUnchangedFiles="true" />
-        <Copy SourceFiles="@(SQLITE_OSX_ARM64)" DestinationFolder="$(TargetDir)\runtimes\osx-arm64\%(RecursiveDir)" SkipUnchangedFiles="true" />
     </Target>
 
 </Project>
