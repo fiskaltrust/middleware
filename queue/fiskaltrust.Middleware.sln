@@ -127,10 +127,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.Loca
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.Localization.QueueIT.UnitTest", "test\fiskaltrust.Middleware.Localization.QueueIT.UnitTest\fiskaltrust.Middleware.Localization.QueueIT.UnitTest.csproj", "{5FAB9D88-4B90-4DF0-B1B7-1F50DF7CFCA4}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.Localization.QueueDEFAULT", "src\fiskaltrust.Middleware.Localization.QueueDEFAULT\fiskaltrust.Middleware.Localization.QueueDEFAULT.csproj", "{3C0310D9-EC55-4115-A2D5-0DC8C1246645}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.Localization.QueueDEFAULT.UnitTest", "test\fiskaltrust.Middleware.Localization.QueueDEFAULT.UnitTest\fiskaltrust.Middleware.Localization.QueueDEFAULT.UnitTest.csproj", "{04B32BB6-2E1D-400F-B7B2-2638483B0825}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.Localization.QueueFR.IntegrationTest", "test\fiskaltrust.Middleware.Localization.QueueFR.IntegrationTest\fiskaltrust.Middleware.Localization.QueueFR.IntegrationTest.csproj", "{7F52D143-9179-4FCF-9DC7-B5F1681BD22A}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.Storage.AzureTableStorage.UnitTest", "test\fiskaltrust.Middleware.Storage.AzureTableStorage.UnitTest\fiskaltrust.Middleware.Storage.AzureTableStorage.UnitTest.csproj", "{EEDA285C-82F8-4E6D-AAFA-9E42D3C4F0E6}"

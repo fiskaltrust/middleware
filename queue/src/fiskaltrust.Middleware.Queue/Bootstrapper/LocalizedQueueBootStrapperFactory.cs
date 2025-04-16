@@ -4,7 +4,7 @@ using System.Linq;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Localization.QueueAT;
 using fiskaltrust.Middleware.Localization.QueueDE;
-using fiskaltrust.Middleware.Localization.QueueDEFAULT;
+
 using fiskaltrust.Middleware.Localization.QueueIT;
 using fiskaltrust.Middleware.Localization.QueueFR;
 using fiskaltrust.Middleware.Localization.QueueME;
@@ -26,7 +26,6 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
                 "FR" => new QueueFRBootstrapper(),
                 "IT" => new QueueITBootstrapper(),
                 "ME" => new QueueMeBootstrapper(),
-                "DEFAULT" => new QueueDEFAULTBootstrapper(middlewareConfiguration),
                 _ => throw new ArgumentException($"Unkown country code: {countyCode}"),
 
             };
