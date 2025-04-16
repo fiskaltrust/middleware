@@ -6,7 +6,7 @@ using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using Microsoft.Extensions.Logging;
 using Xunit;
 
-namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest;
+namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest;
 
 public class FullTest()
 {
