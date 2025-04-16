@@ -20,16 +20,6 @@ public class JournalProcessorGR : IJournalProcessor
 
     public async IAsyncEnumerable<JournalResponse> ProcessAsync(JournalRequest request)
     {
-        var masterData = new AccountMasterData
-        {
-            AccountId = Guid.NewGuid(),
-            AccountName = "fiskaltrust ",
-            Street = "TEST STRET",
-            Zip = "1111-2222",
-            City = "Test",
-            Country = "PT",
-            TaxId = "199999999"
-        };
         var queueItems = new List<ftQueueItem>();
         if (request.From > 0)
         {
@@ -39,6 +29,7 @@ public class JournalProcessorGR : IJournalProcessor
         {
             queueItems = (await _storageProvider.GetMiddlewareQueueItemRepository().GetAsync()).ToList();
         }
+
         var aadFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
         {
             Account = new storage.V0.MasterData.AccountMasterData
