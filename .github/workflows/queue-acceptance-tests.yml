@@ -2,6 +2,18 @@ name: Queue Acceptance Tests
 
 on:
   workflow_dispatch:
+    inputs:
+      only:
+        type: choice
+        options:
+          - ' '
+          - fiskaltrust.Middleware.Storage.AzureTableStorage.AcceptanceTest
+          - fiskaltrust.Middleware.Storage.EF.AcceptanceTest
+          - fiskaltrust.Middleware.Storage.EFCore.AcceptanceTest
+          - fiskaltrust.Middleware.Storage.SQLite.AcceptanceTest
+          - fiskaltrust.Middleware.Storage.MySQL.AcceptanceTest
+          - fiskaltrust.Middleware.Storage.InMemory.AcceptanceTest
+        required: false
   workflow_call:
     inputs:
       commit:
@@ -38,12 +50,12 @@ jobs:
           - fiskaltrust.Middleware.Storage.InMemory.AcceptanceTest
     steps:
       - uses: actions/checkout@v4
-        if: inputs.only == '' || inputs.only == matrix.project
+        if: inputs.only == '' || inputs.only == ' ' || inputs.only == matrix.project
         with:
           ref: ${{ inputs.commit }}
 
       - name: ${{ matrix.project }} Acceptance Tests
-        if: inputs.only == '' || inputs.only == matrix.project
+        if: inputs.only == '' || inputs.only == ' ' || inputs.only == matrix.project
         uses: ./.github/actions/test
         with:
           directory: queue/test

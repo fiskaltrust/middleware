@@ -16,6 +16,7 @@ jobs:
     secrets: inherit
     with:
       commit: ${{ github.event.client_payload.pull_request.head.sha }}
+      only: ${{ github.event.client_payload.slash_command.args.unnamed.arg3 && format('fiskaltrust.Middleware.Storage.{0}.AcceptanceTest', github.event.client_payload.slash_command.args.unnamed.arg3) || '' }}
 
   queue-build:
     if: github.event.client_payload.slash_command.args.unnamed.arg1 == 'queue' && (github.event.client_payload.slash_command.args.unnamed.arg2 == 'ci' || github.event.client_payload.slash_command.args.unnamed.arg2 == 'build')
