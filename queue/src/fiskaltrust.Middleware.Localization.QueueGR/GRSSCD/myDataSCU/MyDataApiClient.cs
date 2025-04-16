@@ -152,7 +152,7 @@ public class MyDataApiClient : IGRSSCD
                     {
                         if (_isproduction)
                         {
-                            request.ReceiptResponse.AddSignatureItem(CreateGRQRCode($"https://viva.receipts.com/{request.ReceiptResponse.ftQueueID}/{request.ReceiptResponse.ftQueueItemID}"));
+                            request.ReceiptResponse.AddSignatureItem(CreateGRQRCode($"https://receipts.viva.com/{request.ReceiptResponse.ftQueueID}/{request.ReceiptResponse.ftQueueItemID}"));
                         }
                         else
                         {

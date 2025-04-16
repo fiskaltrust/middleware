@@ -507,9 +507,18 @@ public class AADEFactory
 
     private PartyType CreateIssuer()
     {
+        var issuerVat = _masterDataConfiguration.Account.VatId;
+        if (issuerVat?.StartsWith("EL") == true)
+        {
+            issuerVat = issuerVat.Replace("EL", "");
+        }
+        else if (issuerVat?.StartsWith("GR") == true)
+        {
+            issuerVat = issuerVat.Replace("GR", "");
+        }
         return new PartyType
         {
-            vatNumber = _masterDataConfiguration.Account.VatId,
+            vatNumber = issuerVat,
             country = CountryType.GR,
             branch = 0,
         };
