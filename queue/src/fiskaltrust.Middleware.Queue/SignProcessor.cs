@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.Interface.Tagging;
-using fiskaltrust.Interface.Tagging.Models.Extensions;
 using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Repositories;
@@ -32,7 +30,6 @@ namespace fiskaltrust.Middleware.Queue
         private readonly int _receiptRequestMode = 0;
         private readonly Type _assemblyType;
         private readonly SignatureFactory _signatureFactory;
-        private readonly ReceiptConverter _receiptConverter;
         //private readonly Action<string> _onMessage;
 
         public SignProcessor(
@@ -43,8 +40,7 @@ namespace fiskaltrust.Middleware.Queue
             IMiddlewareActionJournalRepository actionJournalRepository,
             ICryptoHelper cryptoHelper,
             IMarketSpecificSignProcessor countrySpecificSignProcessor,
-            MiddlewareConfiguration configuration,
-            ReceiptConverter receiptConverter)
+            MiddlewareConfiguration configuration)
         {
             _logger = logger;
             _configurationRepository = configurationRepository ?? throw new ArgumentNullException(nameof(configurationRepository));
@@ -60,7 +56,6 @@ namespace fiskaltrust.Middleware.Queue
             _assemblyType = configuration.AssemblyType;
             //_onMessage = configuration.OnMessage;
             _signatureFactory = new SignatureFactory();
-            _receiptConverter = receiptConverter;
         }
 
         public async Task<ReceiptResponse> ProcessAsync(ReceiptRequest request)
@@ -166,17 +161,7 @@ namespace fiskaltrust.Middleware.Queue
                 Exception exception = null;
                 try
                 {
-                    var dataToV1ExceptItaly = data;
-                    if (!data.IsCountryIT() && data.IsVersionV2())
-                    {
-                        _receiptConverter.ConvertRequestToV1(dataToV1ExceptItaly);
-                        (receiptResponse, countrySpecificActionJournals) = await _countrySpecificSignProcessor.ProcessAsync(dataToV1ExceptItaly, queue, queueItem).ConfigureAwait(false);
-                        _receiptConverter.ConvertResponseToV2(receiptResponse);
-                    }
-                    else
-                    {
-                        (receiptResponse, countrySpecificActionJournals) = await _countrySpecificSignProcessor.ProcessAsync(dataToV1ExceptItaly, queue, queueItem).ConfigureAwait(false);
-                    }
+                    (receiptResponse, countrySpecificActionJournals) = await _countrySpecificSignProcessor.ProcessAsync(data, queue, queueItem).ConfigureAwait(false);
                 }
                 catch (Exception e)
                 {
