@@ -507,7 +507,7 @@ public class AADEFactory
 
     private PartyType CreateIssuer()
     {
-        var issuerVat = _masterDataConfiguration.Account.VatId;
+        var issuerVat = _masterDataConfiguration.Account.VatId ?? "112545020";
         if (issuerVat?.StartsWith("EL") == true)
         {
             issuerVat = issuerVat.Replace("EL", "");
