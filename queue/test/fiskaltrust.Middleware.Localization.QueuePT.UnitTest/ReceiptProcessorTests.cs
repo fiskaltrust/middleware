@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 
-namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest;
+namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest;
 
 public class ReceiptProcessorTests
 {

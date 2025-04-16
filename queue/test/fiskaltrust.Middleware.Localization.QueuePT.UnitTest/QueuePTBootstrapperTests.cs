@@ -6,7 +6,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Xunit;
 
-namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest;
+namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest;
 
 public class QueuePTBootstrapperTests
 {
@@ -40,7 +40,7 @@ public class QueuePTBootstrapperTests
                 { "storageaccountname", "test" },
                 { "init_ftQueue", Newtonsoft.Json.JsonConvert.SerializeObject(new List<ftQueue> { new ftQueue { ftQueueId = queueId, ftCashBoxId = cashBoxId } }) }
             });
-        
+
         var signMethod = bootstrapper.RegisterForSign();
 
         var signResult = await signMethod(JsonSerializer.Serialize(new ReceiptRequest
