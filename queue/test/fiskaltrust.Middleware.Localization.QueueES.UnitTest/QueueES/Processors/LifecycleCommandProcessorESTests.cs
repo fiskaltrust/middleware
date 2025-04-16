@@ -34,7 +34,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             var queue = TestHelpers.CreateQueue();
             var queueItem = TestHelpers.CreateQueueItem();
 
-            var signaturCreationUnitES = new ftSignaturCreationUnitES
+            var signaturCreationUnitES = new Storage.ES.ftSignaturCreationUnitES
             {
 
             };
@@ -101,7 +101,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             var queue = TestHelpers.CreateQueue();
             var queueItem = TestHelpers.CreateQueueItem();
 
-            var signaturCreationUnitES = new ftSignaturCreationUnitES
+            var signaturCreationUnitES = new Storage.ES.ftSignaturCreationUnitES
             {
 
             };
@@ -192,7 +192,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
 
             var queueItem = TestHelpers.CreateQueueItem();
 
-            var signaturCreationUnitES = new ftSignaturCreationUnitES
+            var signaturCreationUnitES = new Storage.ES.ftSignaturCreationUnitES
             {
 
             };
@@ -281,7 +281,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             var queue = TestHelpers.CreateQueue();
             var queueItem = TestHelpers.CreateQueueItem();
 
-            var signaturCreationUnitES = new ftSignaturCreationUnitES
+            var signaturCreationUnitES = new Storage.ES.ftSignaturCreationUnitES
             {
 
             };
@@ -325,7 +325,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             var queue = TestHelpers.CreateQueue();
             var queueItem = TestHelpers.CreateQueueItem();
 
-            var signaturCreationUnitES = new ftSignaturCreationUnitES
+            var signaturCreationUnitES = new Storage.ES.ftSignaturCreationUnitES
             {
 
             };

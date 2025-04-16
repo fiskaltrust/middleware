@@ -201,11 +201,11 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             previousQueueItem.request = JsonSerializer.Serialize(previousReceiptRequest);
             previousQueueItem.response = JsonSerializer.Serialize(previousReceiptResponse);
 
-            var queueES = new ftQueueES()
+            var queueES = new Storage.ES.ftQueueES()
             {
                 SSCDSignQueueItemId = previousQueueItem.ftQueueItemId
             };
-            var signaturCreationUnitES = new ftSignaturCreationUnitES
+            var signaturCreationUnitES = new Storage.ES.ftSignaturCreationUnitES
             {
 
             };

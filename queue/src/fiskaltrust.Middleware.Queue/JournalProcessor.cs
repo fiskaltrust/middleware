@@ -93,7 +93,7 @@ namespace fiskaltrust.Middleware.Queue
                     _ => new List<JournalResponse> {
                         new JournalResponse
                         {
-                            Chunk = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(GetVersion())).ToList()                            
+                            Chunk = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(GetVersion())).ToList()
                         }
                 }.ToAsyncEnumerable()
                 };
@@ -120,7 +120,7 @@ namespace fiskaltrust.Middleware.Queue
             var assemblyName = _middlewareConfiguration.AssemblyType?.Assembly.GetName();
             var versionAttribute = _middlewareConfiguration.AssemblyType?.Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion.Split(new char[] { '+', '-' })[0];
             var version = Version.TryParse(versionAttribute, out var result)
-                ? new Version(result.Major, result.Minor, result.Build, 0) 
+                ? new Version(result.Major, result.Minor, result.Build, 0)
                 : new Version(assemblyName.Version.Major, assemblyName.Version.Minor, assemblyName.Version.Build, 0);
             assemblyName.Version = version;
             return new
