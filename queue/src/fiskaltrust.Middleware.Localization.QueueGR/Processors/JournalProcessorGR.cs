@@ -12,10 +12,12 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.Processors;
 public class JournalProcessorGR : IJournalProcessor
 {
     private readonly IStorageProvider _storageProvider;
+    private readonly MasterDataConfiguration _masterDataConfiguration;
 
-    public JournalProcessorGR(IStorageProvider storageProvider)
+    public JournalProcessorGR(IStorageProvider storageProvider, MasterDataConfiguration masterDataConfiguration)
     {
         _storageProvider = storageProvider;
+        _masterDataConfiguration = masterDataConfiguration;
     }
 
     public async IAsyncEnumerable<JournalResponse> ProcessAsync(JournalRequest request)
@@ -30,13 +32,7 @@ public class JournalProcessorGR : IJournalProcessor
             queueItems = (await _storageProvider.GetMiddlewareQueueItemRepository().GetAsync()).ToList();
         }
 
-        var aadFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
-        {
-            Account = new storage.V0.MasterData.AccountMasterData
-            {
-                VatId = "112545020"
-            }
-        });
+        var aadFactory = new AADEFactory(_masterDataConfiguration);
         using var memoryStream = new MemoryStream();
         var invoiecDoc = aadFactory.MapToInvoicesDoc(queueItems.ToList());
         if(request.To == -1)

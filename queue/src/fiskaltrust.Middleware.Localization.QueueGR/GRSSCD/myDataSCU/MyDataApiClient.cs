@@ -48,10 +48,20 @@ public class MyDataApiClient : IGRSSCD
         _masterDataConfiguration = masterDataConfiguration;
         _aadeoffline = aadeoffline;
         _isproduction = isproduction;
-        _httpClient = new HttpClient()
+        if(_isproduction)
         {
-            BaseAddress = new Uri(_devBaseUrl)
-        };
+            _httpClient = new HttpClient()
+            {
+                BaseAddress = new Uri(_prodBaseUrl)
+            };
+        }
+        else
+        {
+            _httpClient = new HttpClient()
+            {
+                BaseAddress = new Uri(_devBaseUrl)
+            };
+        }
         _httpClient.DefaultRequestHeaders.Add("aade-user-id", username);
         _httpClient.DefaultRequestHeaders.Add("ocp-apim-subscription-key", subscriptionKey);
     }
