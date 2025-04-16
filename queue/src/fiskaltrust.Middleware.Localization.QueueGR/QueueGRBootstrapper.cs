@@ -6,7 +6,9 @@ using fiskaltrust.Middleware.Localization.v2.Configuration;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Storage;
 using fiskaltrust.Middleware.Storage.GR;
+using fiskaltrust.storage.V0.MasterData;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR;
 
@@ -19,7 +21,7 @@ public class QueueGRBootstrapper : IV2QueueBootstrapper
         var middlewareConfiguration = MiddlewareConfigurationFactory.CreateMiddlewareConfiguration(id, configuration);
         var queueGR = Newtonsoft.Json.JsonConvert.DeserializeObject<List<ftQueueGR>>(configuration["init_ftQueueGR"]!.ToString()!).First();
         var signaturCreationUnitGR = new ftSignaturCreationUnitGR();
-        var grSSCD = MyDataApiClient.CreateClient(configuration);
+        var grSSCD = MyDataApiClient.CreateClient(configuration, GetFromConfig(configuration) ?? new MasterDataConfiguration { });
         //var storageProvider = new AzureStorageProvider(loggerFactory, id, Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonSerializer.Serialize(configuration)));
         var storageProvider = new AzureStorageProvider(loggerFactory, id, configuration);
         var queueStorageProvider = new QueueStorageProvider(id, storageProvider);
@@ -33,6 +35,12 @@ public class QueueGRBootstrapper : IV2QueueBootstrapper
             Configuration = configuration,
         };
     }
+
+    public MasterDataConfiguration? GetFromConfig(Dictionary<string, object> configuration)
+    {
+        return configuration.ContainsKey("init_masterData") ? JsonConvert.DeserializeObject<MasterDataConfiguration>(configuration["init_masterData"].ToString()!) : null;
+    }
+
 
     public Func<string, Task<string>> RegisterForSign()
     {
