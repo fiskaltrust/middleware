@@ -17,9 +17,9 @@ using Xunit;
 using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using fiskaltrust.storage.V0.MasterData;
 
-namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processors
+namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.QueueGR.Processors
 {
-    public class ReceiptCommandProcessorPTTests
+    public class ReceiptCommandProcessorGRTests
     {
         private readonly ReceiptCommandProcessorGR _sut = new ReceiptCommandProcessorGR(Mock.Of<IGRSSCD>(), new ftQueueGR(), new ftSignaturCreationUnitGR());
 

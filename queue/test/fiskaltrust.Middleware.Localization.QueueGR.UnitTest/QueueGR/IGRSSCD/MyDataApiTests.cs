@@ -4,7 +4,7 @@ using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.myDataSCU;
 using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using Xunit;
 
-namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.QueueGR.IGRSSCD
+namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.QueueGR
 {
     public class MyDataApiTests
     {

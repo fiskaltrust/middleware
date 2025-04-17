@@ -6,7 +6,7 @@ using FluentAssertions;
 using Xunit;
 using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 
-namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processors
+namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.QueueGR.Processors
 {
     public class ProtocolCommandProcessorGRTests
     {

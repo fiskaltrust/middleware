@@ -1,7 +1,7 @@
 ﻿using System;
 using fiskaltrust.storage.V0;
 
-namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processors
+namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.QueueGR.Processors
 {
     public static class TestHelpers
     {
