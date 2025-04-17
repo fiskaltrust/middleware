@@ -24,7 +24,6 @@
     <ProjectReference Include="..\fiskaltrust.Middleware.Localization.v2\fiskaltrust.Middleware.Localization.v2.csproj" />
     <ProjectReference Include="..\fiskaltrust.Middleware.Storage.AzureTableStorage\fiskaltrust.Middleware.Storage.AzureTableStorage.csproj" />
     <ProjectReference Include="..\fiskaltrust.Middleware.Storage\fiskaltrust.Middleware.Storage.csproj" />
-    <ProjectReference Include="..\fiskaltrust.Interface.Tagging\fiskaltrust.Interface.Tagging.csproj" />
     <ProjectReference Include="..\..\..\scu-es\src\fiskaltrust.Middleware.SCU.ES.TicketBAI\fiskaltrust.Middleware.SCU.ES.TicketBAI.csproj" />
   </ItemGroup>
 </Project>
