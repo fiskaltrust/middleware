@@ -8,6 +8,7 @@ using Xunit;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest;
 
+[Trait("only", "local")]
 public class FullTest()
 {
     public async Task<ftCashBoxConfiguration> GetConfigurationAsync(Guid cashBoxId, string accessToken)

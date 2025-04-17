@@ -9,6 +9,7 @@ using Xunit;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
 {
+    [Trait("only", "local")]
     public class FullTest()
     {
         public async Task<ftCashBoxConfiguration> GetConfigurationAsync(Guid cashBoxId, string accessToken)
@@ -50,7 +51,6 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
         }
 
         [Fact]
-        [Trait("only", "local")]
         public async Task Example_RetailSales_Tests2()
         {
             (var bootstrapper, var cashBoxId) = await InitializeQueueGRBootstrapperAsync();
@@ -64,7 +64,6 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
 
 
         [Fact]
-        [Trait("only", "local")]
         public async Task Example_RetailSales_Tests()
         {
             (var bootstrapper, var cashBoxId) = await InitializeQueueGRBootstrapperAsync();
@@ -75,7 +74,6 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
         }
 
         [Fact]
-        [Trait("only", "local")]
         public async Task Example_RetailSales_Error2_Tests()
         {
             (var bootstrapper, var cashBoxId) = await InitializeQueueGRBootstrapperAsync();
@@ -87,7 +85,6 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
         }
 
         [Fact]
-        [Trait("only", "local")]
         public async Task Example_RetailSales_LateSigning_Tests()
         {
             (var bootstrapper, var cashBoxId) = await InitializeQueueGRBootstrapperAsync();
@@ -100,7 +97,6 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
         }
 
         [Fact]
-        [Trait("only", "local")]
         public async Task Example_SalesInvoice_1_1_Tests()
         {
             (var bootstrapper, var cashBoxId) = await InitializeQueueGRBootstrapperAsync();
@@ -112,7 +108,6 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
         }
 
         [Fact]
-        [Trait("only", "local")]
         public async Task Example_SalesInvoice_1_1_Tests_nowithholding()
         {
             (var bootstrapper, var cashBoxId) = await InitializeQueueGRBootstrapperAsync();
@@ -124,7 +119,6 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
         }
 
         [Fact]
-        [Trait("only", "local")]
         public async Task Example_POSReceipt_Tests()
         {
             (var bootstrapper, var cashBoxId) = await InitializeQueueGRBootstrapperAsync();
@@ -136,7 +130,6 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
         }
 
         [Fact]
-        [Trait("only", "local")]
         public async Task Example_POSReceipt_Testss_A11_1_Online_100()
         {
             var cashBoxId = Guid.Parse("e117e4b5-88ea-4511-a134-e5408f3cfd4c");
@@ -155,7 +148,6 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
         }
 
         [Fact]
-        [Trait("only", "local")]
         public async Task Example_POSReceipt_Testss_A11_1_Online_100_App2App()
         {
             var cashBoxId = Guid.Parse("e117e4b5-88ea-4511-a134-e5408f3cfd4c");
