@@ -13,6 +13,7 @@ using Xunit.Abstractions;
 namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.Certification;
 
 [Collection("Sequential")]
+[Trait("only", "local")]
 public class PTCertificationTests
 {
     private readonly Func<string, Task<string>> _signMethod;

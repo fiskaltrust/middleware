@@ -16,6 +16,7 @@ using Xunit.Abstractions;
 namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
 {
 
+    [Trait("only", "local")]
     public class AADECertificationTestsSelfPricing
     {
         private readonly ITestOutputHelper _output;

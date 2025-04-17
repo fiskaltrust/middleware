@@ -8,6 +8,7 @@ using Xunit;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
 {
+    [Trait("only", "local")]
     public class AADEFactoryTests
     {
         [Theory]
@@ -55,7 +56,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             for (var i = 0; i < 10000; i++)
             {
                 var dta = GetUid($"094036033-2024-11-07-{i}-8.2-0-62840");
-                if(dta == "908E133E5B9677D438A3BBF388BD9967670E735D")
+                if (dta == "908E133E5B9677D438A3BBF388BD9967670E735D")
                 {
 
                 }

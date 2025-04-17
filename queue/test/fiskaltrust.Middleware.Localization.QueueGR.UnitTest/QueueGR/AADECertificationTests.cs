@@ -20,6 +20,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
         public const string CASHBOX_CERTIFICATION_ID = "";
         public const string CASHBOX_CERTIFICATION_ACCESSTOKEN = "";
     }
+    [Trait("only", "local")]
     public class AADECertificationTests
     {
         private readonly ITestOutputHelper _output;

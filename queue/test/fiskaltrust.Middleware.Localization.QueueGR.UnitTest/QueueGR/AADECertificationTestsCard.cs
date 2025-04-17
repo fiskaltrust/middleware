@@ -37,6 +37,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
     }
 
 
+    [Trait("only", "local")]
     public class AADECertificationTestsCard
     {
         private readonly ITestOutputHelper _output;
