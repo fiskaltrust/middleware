@@ -92,6 +92,8 @@ private async Task<IEnumerable<SignaturItem>> CloseOpenTransactionsOnTseAsync(IE
 It goes through all open transactions on the TSE and closes them on the TSE (`_transactionFactory.PerformFinishTransactionRequestAsync`).
 Then it removes the open transaction from the Queue if it was also open there (`_openTransactionRepo.RemoveAsync`).
 
+If a transaction is marked open in the Queue in the `OpenTransactionRepository` but already closed on the TSE this must not lead to an exception when the Queue later wants to close this transaction.
+
 # Drawbacks
 
 ## Latency
