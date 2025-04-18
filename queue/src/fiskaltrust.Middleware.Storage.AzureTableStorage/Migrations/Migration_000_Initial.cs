@@ -41,6 +41,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Migrations
             await _tableServiceClient.CreateTableIfNotExistsAsync(GetTableName(AzureTableStorageQueueRepository.TABLE_NAME));
             await _tableServiceClient.CreateTableIfNotExistsAsync(GetTableName(AzureTableStorageQueueATRepository.TABLE_NAME));
             await _tableServiceClient.CreateTableIfNotExistsAsync(GetTableName(AzureTableStorageQueueDERepository.TABLE_NAME));
+            await _tableServiceClient.CreateTableIfNotExistsAsync(GetTableName(AzureTableStorageQueueESRepository.TABLE_NAME));
             await _tableServiceClient.CreateTableIfNotExistsAsync(GetTableName(AzureTableStorageQueueFRRepository.TABLE_NAME));
             await _tableServiceClient.CreateTableIfNotExistsAsync(GetTableName(AzureTableStorageQueueITRepository.TABLE_NAME));
             await _tableServiceClient.CreateTableIfNotExistsAsync(GetTableName(AzureTableStorageQueueMERepository.TABLE_NAME));

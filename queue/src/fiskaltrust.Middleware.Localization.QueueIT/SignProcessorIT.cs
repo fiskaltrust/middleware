@@ -13,14 +13,14 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
     public class SignProcessorIT
     {
         protected readonly IConfigurationRepository _configurationRepository;
-        private readonly LifecyclCommandProcessorIT _lifecyclCommandProcessorIT;
+        private readonly LifecycleCommandProcessorIT _lifecyclCommandProcessorIT;
         private readonly ReceiptCommandProcessorIT _receiptCommandProcessorIT;
         private readonly DailyOperationsCommandProcessorIT _dailyOperationsCommandProcessorIT;
         private readonly InvoiceCommandProcessorIT _invoiceCommandProcessorIT;
         private readonly ProtocolCommandProcessorIT _protocolCommandProcessorIT;
         private readonly ILogger<SignProcessorIT> _logger;
 
-        public SignProcessorIT(ILogger<SignProcessorIT> logger, IConfigurationRepository configurationRepository, LifecyclCommandProcessorIT lifecyclCommandProcessorIT, ReceiptCommandProcessorIT receiptCommandProcessorIT, DailyOperationsCommandProcessorIT dailyOperationsCommandProcessorIT, InvoiceCommandProcessorIT invoiceCommandProcessorIT, ProtocolCommandProcessorIT protocolCommandProcessorIT)
+        public SignProcessorIT(ILogger<SignProcessorIT> logger, IConfigurationRepository configurationRepository, LifecycleCommandProcessorIT lifecyclCommandProcessorIT, ReceiptCommandProcessorIT receiptCommandProcessorIT, DailyOperationsCommandProcessorIT dailyOperationsCommandProcessorIT, InvoiceCommandProcessorIT invoiceCommandProcessorIT, ProtocolCommandProcessorIT protocolCommandProcessorIT)
         {
             _configurationRepository = configurationRepository;
             _lifecyclCommandProcessorIT = lifecyclCommandProcessorIT;

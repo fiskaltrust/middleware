@@ -34,7 +34,7 @@ jobs:
         with:
           directory: queue/test
           pattern: "UnitTest"
-          args: '--no-build'
+          args: '--no-build --filter only!=local'
         env:
           CONNECTIONSTRING_AZURE_STORAGE_TESTS: ${{ secrets.CONNECTIONSTRING_AZURE_STORAGE_TESTS }}
           CONNECTIONSTRING_POSTGRESQL_TESTS: ${{ secrets.CONNECTIONSTRING_POSTGRESQL_TESTS }}
@@ -45,7 +45,7 @@ jobs:
         with:
           directory: queue/test
           pattern: "IntegrationTest"
-          args: '--no-build'
+          args: '--no-build --filter only!=local'
         env:
           CONNECTIONSTRING_AZURE_STORAGE_TESTS: ${{ secrets.CONNECTIONSTRING_AZURE_STORAGE_TESTS }}
           CONNECTIONSTRING_POSTGRESQL_TESTS: ${{ secrets.CONNECTIONSTRING_POSTGRESQL_TESTS }}

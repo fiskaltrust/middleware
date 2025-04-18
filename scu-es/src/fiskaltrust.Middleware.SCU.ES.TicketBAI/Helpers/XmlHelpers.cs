@@ -30,16 +30,23 @@ namespace fiskaltrust.Middleware.SCU.ES.TicketBAI.Helpers
         {
             var namespaceUri = "urn:ticketbai:emision";
             var prefix = "t";
-            var doc = new XmlDocument();
-            var nav = doc.CreateNavigator();
-            using (var w = nav!.AppendChild())
+            var settings = new XmlWriterSettings
+            {
+                OmitXmlDeclaration = true,
+                ConformanceLevel = ConformanceLevel.Document,
+                Encoding = Encoding.UTF8
+            };
+
+            var stringBuilder = new StringBuilder();
+            using (var writer = XmlWriter.Create(stringBuilder, settings))
             {
                 var namespaces = new XmlSerializerNamespaces();
                 namespaces.Add(prefix, namespaceUri);
-                var ser = new XmlSerializer(typeof(T));
-                ser.Serialize(w, request, namespaces);
+                var serializer = new XmlSerializer(typeof(T));
+                serializer.Serialize(writer, request, namespaces);
             }
-            return doc.OuterXml;
+
+            return stringBuilder.ToString();
         }
 
         public static string SignXmlContentWithXades(string xml, string policyIdentifier, string policyDigest, X509Certificate2 certificate)

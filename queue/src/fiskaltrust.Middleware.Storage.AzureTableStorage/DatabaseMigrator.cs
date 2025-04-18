@@ -5,7 +5,6 @@ using Azure.Data.Tables;
 using Azure.Storage.Blobs;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.Migrations;
-using fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -33,7 +32,8 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage
             _migrations = new IAzureTableStorageMigration[]
             {
                 new Migration_000_Initial(_tableServiceClient, blobServiceClient, queueConfiguration),
-                new Migration_001_TableNameFix(_tableServiceClient, queueConfiguration)
+                new Migration_001_TableNameFix(_tableServiceClient, queueConfiguration),
+                new Migration_002_QueueES(_tableServiceClient, queueConfiguration)
             };
         }
 

@@ -16,7 +16,7 @@ namespace fiskaltrust.Middleware.Localization.QueueIT
                 .AddScoped<IMarketSpecificJournalProcessor, JournalProcessorIT>()
                 .AddScoped<ReceiptCommandProcessorIT>()
                 .AddScoped<ProtocolCommandProcessorIT>()
-                .AddScoped<LifecyclCommandProcessorIT>()
+                .AddScoped<LifecycleCommandProcessorIT>()
                 .AddScoped<InvoiceCommandProcessorIT>()
                 .AddScoped<DailyOperationsCommandProcessorIT>()
                 .AddSingleton(sp => QueueITConfiguration.FromMiddlewareConfiguration(sp.GetRequiredService<MiddlewareConfiguration>()))
