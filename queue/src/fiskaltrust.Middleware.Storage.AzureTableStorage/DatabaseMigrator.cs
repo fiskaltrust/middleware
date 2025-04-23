@@ -33,7 +33,8 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage
             {
                 new Migration_000_Initial(_tableServiceClient, blobServiceClient, queueConfiguration),
                 new Migration_001_TableNameFix(_tableServiceClient, queueConfiguration),
-                new Migration_002_QueueES(_tableServiceClient, queueConfiguration)
+                new Migration_002_QueueES(_tableServiceClient, queueConfiguration),
+                new Migration_003_QueueEU(_tableServiceClient, queueConfiguration)
             };
         }
 
