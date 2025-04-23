@@ -112,7 +112,9 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage
             services.AddSingleton(_blobServiceClient);
 
             services.AddSingleton<IConfigurationRepository>(_configurationRepository);
+            services.AddSingleton<storage.V0.IConfigurationRepository>(_configurationRepository);
             services.AddSingleton<IReadOnlyConfigurationRepository>(_configurationRepository);
+            services.AddSingleton<storage.V0.IReadOnlyConfigurationRepository>(_configurationRepository);
 
             services.AddSingleton<IQueueItemRepository, AzureTableStorageQueueItemRepository>();
             services.AddScoped<IMiddlewareQueueItemRepository, AzureTableStorageQueueItemRepository>();
