@@ -17,6 +17,7 @@ public interface IReadOnlyConfigurationRepository
     public Task<IEnumerable<ftQueueES>> GetQueueESListAsync();
     public Task<IEnumerable<ftQueueEU>> GetQueueEUListAsync();
 
+    public Task<ftQueueES> GetQueueESAsync(Guid queueEUId);
     public Task<ftQueueEU> GetQueueEUAsync(Guid queueEUId);
 
 }

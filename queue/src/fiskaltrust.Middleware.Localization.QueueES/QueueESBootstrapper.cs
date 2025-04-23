@@ -33,7 +33,7 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
         var masterDataService = new MasterDataService(configuration, storageProvider);
         storageProvider.Initialized.Wait();
         var masterData = masterDataService.GetCurrentDataAsync().Result; // put this in an async scu init process
-        var queueESRepository = (IConfigurationRepository)storageProvider.GetConfigurationRepository();
+        var queueESRepository = (Storage.IConfigurationRepository)storageProvider.GetConfigurationRepository();
         var queueES = queueESRepository.GetQueueESAsync(id).Result;
         if (queueES is null)
         {

@@ -94,7 +94,7 @@ public class ReceiptCommandProcessorPTTests
             SoftwareCertificateNumber = "9999",
         };
 
-        var configMock = new Mock<IConfigurationRepository>();
+        var configMock = new Mock<storage.V0.IConfigurationRepository>();
         configMock.Setup(x => x.InsertOrUpdateQueueAsync(It.IsAny<ftQueue>())).Returns(Task.CompletedTask);
 
         var queueItemRepository = new Mock<IMiddlewareQueueItemRepository>();
