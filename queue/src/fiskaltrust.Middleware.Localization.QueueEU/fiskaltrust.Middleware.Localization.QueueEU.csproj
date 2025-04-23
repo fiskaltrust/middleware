@@ -1,0 +1,28 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8</TargetFrameworks>
+    <LangVersion>Latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="fiskaltrust.Middleware.Abstractions" Version="1.3.3" />
+    <PackageReference Include="fiskaltrust.storage.encryption" Version="1.3.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="3.1.4" />
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+    <PackageReference Include="fiskaltrust.storage.serialization" Version="1.3.1" />
+    <PackageReference Include="System.Linq.Async" Version="4.1.1" />
+    <PackageReference Include="FirmaXadesNetCore" Version="1.1.0" />
+    <PackageReference Include="System.ServiceModel.Http" Version="8.1.0" />
+    <PackageReference Include="System.ServiceModel.Primitives" Version="8.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\fiskaltrust.Middleware.Contracts\fiskaltrust.Middleware.Contracts.csproj" />
+    <ProjectReference Include="..\fiskaltrust.Middleware.Localization.v2\fiskaltrust.Middleware.Localization.v2.csproj" />
+    <ProjectReference Include="..\fiskaltrust.Middleware.Storage.AzureTableStorage\fiskaltrust.Middleware.Storage.AzureTableStorage.csproj" />
+    <ProjectReference Include="..\fiskaltrust.Middleware.Storage\fiskaltrust.Middleware.Storage.csproj" />
+  </ItemGroup>
+</Project>
