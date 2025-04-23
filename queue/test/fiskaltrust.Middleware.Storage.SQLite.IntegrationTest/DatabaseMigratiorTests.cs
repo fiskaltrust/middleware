@@ -54,7 +54,6 @@ namespace fiskaltrust.Middleware.Storage.SQLite.IntegrationTest
                 tables.Should().Contain("FailedStartTransaction");
                 tables.Should().Contain("OpenTransaction");
             }
-
             File.Delete(path);
         }
 
@@ -62,7 +61,7 @@ namespace fiskaltrust.Middleware.Storage.SQLite.IntegrationTest
         public async Task PerformMigrations_SetWALModeON_WALModeON()
         {
             const string path = "waldb.sqlite";
-      
+
             if (File.Exists(path))
             {
                 File.Delete(path);

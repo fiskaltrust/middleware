@@ -18,12 +18,14 @@ namespace fiskaltrust.Middleware.Storage.SQLite.Connection
 #if NETSTANDARD || NET6_0_OR_GREATER
             var builder = new Microsoft.Data.Sqlite.SqliteConnectionStringBuilder
             {
-                DataSource = path
+                DataSource = path,
+                Pooling = false
             };
 #else
             var builder = new System.Data.SQLite.SQLiteConnectionStringBuilder
             {
                 DataSource = path,
+                Pooling = false,
                 Version = 3
             };
 #endif
