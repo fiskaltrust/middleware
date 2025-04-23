@@ -9,11 +9,11 @@ using fiskaltrust.Api.POS.Models.ifPOS.v2;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.Processors;
 
-public class ReceiptCommandProcessorES(IESSSCD sscd, Storage.ES.IConfigurationRepository configurationRepository, IReadOnlyQueueItemRepository queueItemRepository) : IReceiptCommandProcessor
+public class ReceiptCommandProcessorES(IESSSCD sscd, Storage.IConfigurationRepository configurationRepository, IReadOnlyQueueItemRepository queueItemRepository) : IReceiptCommandProcessor
 {
 #pragma warning disable
     private readonly IESSSCD _sscd = sscd;
-    private readonly Storage.ES.IConfigurationRepository _configurationRepository = configurationRepository;
+    private readonly Storage.IConfigurationRepository _configurationRepository = configurationRepository;
     private readonly IReadOnlyQueueItemRepository _queueItemRepository = queueItemRepository;
 #pragma warning restore
 
@@ -35,7 +35,7 @@ public class ReceiptCommandProcessorES(IESSSCD sscd, Storage.ES.IConfigurationRe
             case ReceiptCase.Protocol0x0005:
                 return await Protocol0x0005Async(request);
         }
-        request.ReceiptResponse.SetReceiptResponseError(ErrorMessages.UnknownReceiptCase((long) request.ReceiptRequest.ftReceiptCase));
+        request.ReceiptResponse.SetReceiptResponseError(ErrorMessages.UnknownReceiptCase((long)request.ReceiptRequest.ftReceiptCase));
         return new ProcessCommandResponse(request.ReceiptResponse, []);
     }
 
