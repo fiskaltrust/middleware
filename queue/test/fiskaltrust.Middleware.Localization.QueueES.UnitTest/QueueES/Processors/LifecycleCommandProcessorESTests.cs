@@ -16,13 +16,14 @@ using fiskaltrust.Middleware.Localization.QueueES.ESSSCD;
 using fiskaltrust.Middleware.Storage.ES;
 using fiskaltrust.storage.V0.MasterData;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processors
 {
     public class LifecycleCommandProcessorESTests
     {
         private readonly Fixture _fixture = new Fixture();
-        private readonly LifecycleCommandProcessorES _sut = new(Mock.Of<ILocalizedQueueStorageProvider>());
+        private readonly ReceiptProcessor _sut = new ReceiptProcessor(Mock.Of<ILogger<ReceiptProcessor>>(), new LifecycleCommandProcessorES(Mock.Of<ILocalizedQueueStorageProvider>()), null!, null!, null!, null!);
 
         [Theory]
         [InlineData(ReceiptCase.InitialOperationReceipt0x4001)]
@@ -43,7 +44,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
 
             var configMock = new Mock<ILocalizedQueueStorageProvider>();
             configMock.Setup(x => x.ActivateQueueAsync()).Returns(Task.CompletedTask);
-            var sut = new LifecycleCommandProcessorES(configMock.Object);
+            var sut = new ReceiptProcessor(Mock.Of<ILogger<ReceiptProcessor>>(), new LifecycleCommandProcessorES(configMock.Object), null!, null!, null!, null!);
 
             var receiptRequest = new ReceiptRequest
             {
@@ -60,9 +61,8 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
                 ftReceiptIdentification = "0#0",
                 ftReceiptMoment = DateTime.UtcNow,
             };
-            var request = new ProcessCommandRequest(queue, receiptRequest, receiptResponse);
 
-            var result = await sut.ProcessReceiptAsync(request);
+            var result = await sut.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
 
             result.receiptResponse.Should().Be(receiptResponse);
             result.receiptResponse.ftState.Should().NotBe(0x4752_2000_EEEE_EEEE);
@@ -88,9 +88,8 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
                 ftReceiptIdentification = "receiptIdentification",
                 ftReceiptMoment = DateTime.UtcNow,
             };
-            var request = new ProcessCommandRequest(queue, receiptRequest, receiptResponse);
 
-            var result = await _sut.ProcessReceiptAsync(request);
+            var result = await _sut.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
             result.receiptResponse.Should().Be(receiptResponse);
             result.receiptResponse.ftState.Should().Be(0x4752_2000_EEEE_EEEE);
         }

@@ -13,7 +13,6 @@ public class LifecycleCommandProcessorPT(IConfigurationRepository configurationR
     private readonly IConfigurationRepository _configurationRepository = configurationRepository;
 #pragma warning restore 
 
-
     public async Task<ProcessCommandResponse> InitialOperationReceipt0x4001Async(ProcessCommandRequest request)
     {
         var (queue, receiptRequest, receiptResponse) = request;

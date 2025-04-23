@@ -23,6 +23,7 @@ using System.Text;
 using fiskaltrust.Middleware.Localization.QueueES.Interface;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueES.Models.Cases;
+using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processors
 {
@@ -55,7 +56,8 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             );
         }
 
-        private readonly ReceiptCommandProcessorES _sut = new ReceiptCommandProcessorES(Mock.Of<IESSSCD>(), Mock.Of<Storage.IConfigurationRepository>(), Mock.Of<IQueueItemRepository>());
+        private readonly ReceiptProcessor _sut = new(Mock.Of<ILogger<ReceiptProcessor>>(), null!, new ReceiptCommandProcessorES(Mock.Of<IESSSCD>(), Mock.Of<Storage.IConfigurationRepository>(), Mock.Of<IQueueItemRepository>()), null!, null!, null!);
+
 
         [Theory]
         [InlineData(ReceiptCase.PaymentTransfer0x0002)]
@@ -80,8 +82,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
                 ftReceiptIdentification = "receiptIdentification",
                 ftReceiptMoment = DateTime.UtcNow,
             };
-            var request = new ProcessCommandRequest(queue, receiptRequest, receiptResponse);
-            var result = await _sut.ProcessReceiptAsync(request);
+            var result = await _sut.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
 
             result.receiptResponse.Should().Be(receiptResponse);
             result.receiptResponse.ftState.Should().Be(0x4553_2000_0000_0000);
@@ -106,8 +107,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
                 ftReceiptIdentification = "receiptIdentification",
                 ftReceiptMoment = DateTime.UtcNow,
             };
-            var request = new ProcessCommandRequest(queue, receiptRequest, receiptResponse);
-            var result = await _sut.ProcessReceiptAsync(request);
+            var result = await _sut.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
             result.receiptResponse.Should().Be(receiptResponse);
             result.receiptResponse.ftState.Should().Be(0x4553_2000_EEEE_EEEE);
         }

@@ -5,13 +5,15 @@ using fiskaltrust.Middleware.Localization.v2;
 using FluentAssertions;
 using Xunit;
 using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
+using Moq;
+using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.QueueGR.Processors
 {
     public class ProtocolCommandProcessorGRTests
     {
 #pragma warning disable
-        private readonly ProtocolCommandProcessorGR _sut = new(null, null, null);
+        private readonly ReceiptProcessor _sut = new(Mock.Of<ILogger<ReceiptProcessor>>(), null!, null!, null!, null!, new ProtocolCommandProcessorGR(null, null, null));
 
         [Theory]
         [InlineData(ReceiptCase.ProtocolUnspecified0x3000)]
@@ -38,9 +40,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.QueueGR.Processor
                 ftReceiptIdentification = "receiptIdentification",
                 ftReceiptMoment = DateTime.UtcNow,
             };
-            var request = new ProcessCommandRequest(queue, receiptRequest, receiptResponse);
-
-            var result = await _sut.ProcessReceiptAsync(request);
+            var result = await _sut.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
 
             result.receiptResponse.Should().Be(receiptResponse);
             result.receiptResponse.ftState.Should().Be(0x4752_2000_0000_0000);
@@ -65,9 +65,8 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.QueueGR.Processor
                 ftReceiptIdentification = "receiptIdentification",
                 ftReceiptMoment = DateTime.UtcNow,
             };
-            var request = new ProcessCommandRequest(queue, receiptRequest, receiptResponse);
+            var result = await _sut.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
 
-            var result = await _sut.ProcessReceiptAsync(request);
             result.receiptResponse.Should().Be(receiptResponse);
             result.receiptResponse.ftState.Should().Be(0x4752_2000_EEEE_EEEE);
         }

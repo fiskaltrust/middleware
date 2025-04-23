@@ -33,7 +33,7 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
         var masterDataService = new MasterDataService(configuration, storageProvider);
         storageProvider.Initialized.Wait();
         var masterData = masterDataService.GetCurrentDataAsync().Result; // put this in an async scu init process
-        var queueESRepository = (Storage.IConfigurationRepository)storageProvider.GetConfigurationRepository();
+        var queueESRepository = (IConfigurationRepository) storageProvider.GetConfigurationRepository();
         var queueES = queueESRepository.GetQueueESAsync(id).Result;
         if (queueES is null)
         {
@@ -64,7 +64,7 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
                         scuConfiguration.Configuration!["certificatePassword"].ToString()),
                 EmisorApellidosNombreRazonSocial = masterData.Account.AccountName,
                 EmisorNif = masterData.Account.VatId,
-                TicketBaiTerritory = (SCU.ES.TicketBAI.TicketBaiTerritory)Enum.Parse(typeof(SCU.ES.TicketBAI.TicketBaiTerritory), scuConfiguration.Configuration["territory"].ToString()!)
+                TicketBaiTerritory = (SCU.ES.TicketBAI.TicketBaiTerritory) Enum.Parse(typeof(SCU.ES.TicketBAI.TicketBaiTerritory), scuConfiguration.Configuration["territory"].ToString()!)
             });
         }
         else
@@ -79,7 +79,7 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
             ),
             new ReceiptCommandProcessorES(
                 esSSCD,
-                (IConfigurationRepository)storageProvider.GetConfigurationRepository(),
+                (IConfigurationRepository) storageProvider.GetConfigurationRepository(),
                 storageProvider.GetMiddlewareQueueItemRepository()
             ),
             new DailyOperationsCommandProcessorES(
