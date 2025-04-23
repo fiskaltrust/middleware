@@ -1,10 +1,13 @@
 using System.Threading.Tasks;
-namespace fiskaltrust.Middleware.Storage.ES;
+using fiskaltrust.Middleware.Storage.ES;
+using fiskaltrust.Middleware.Storage.EU;
+namespace fiskaltrust.Middleware.Storage;
 
 public interface IConfigurationRepository : IReadOnlyConfigurationRepository
 {
-    Task InsertOrUpdateSignaturCreationUnitESAsync(ftSignaturCreationUnitES scu);
+    public Task InsertOrUpdateSignaturCreationUnitESAsync(ftSignaturCreationUnitES scu);
 
-    Task InsertOrUpdateQueueESAsync(ftQueueES queue);
+    public Task InsertOrUpdateQueueESAsync(ftQueueES queue);
+    public Task InsertOrUpdateQueueEUAsync(ftQueueEU queue);
 
 }

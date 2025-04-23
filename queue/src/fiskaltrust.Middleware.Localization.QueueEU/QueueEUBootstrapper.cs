@@ -8,6 +8,8 @@ using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.MasterData;
 using fiskaltrust.Middleware.Localization.v2.Storage;
 using fiskaltrust.Middleware.Storage.AzureTableStorage;
+using fiskaltrust.Middleware.Storage.EU;
+using fiskaltrust.Middleware.Storage;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 using Microsoft.Extensions.Logging;
@@ -28,6 +30,14 @@ public class QueueEUBootstrapper : IV2QueueBootstrapper
 
         storageProvider.Initialized.Wait();
 
+        var configurationRepository = (Storage.IConfigurationRepository) storageProvider.GetConfigurationRepository();
+        var queueEU = configurationRepository.GetQueueEUAsync(id).Result;
+        if (queueEU is null)
+        {
+            queueEU = Newtonsoft.Json.JsonConvert.DeserializeObject<List<ftQueueEU>>(configuration["init_ftQueueEU"]!.ToString()!).First();
+            configurationRepository.InsertOrUpdateQueueEUAsync(queueEU);
+        }
+
         var signProcessorEU = new ReceiptProcessor(
             loggerFactory.CreateLogger<ReceiptProcessor>(),
             new LifecycleCommandProcessorEU(
@@ -38,7 +48,7 @@ public class QueueEUBootstrapper : IV2QueueBootstrapper
             new InvoiceCommandProcessorEU(),
             new ProtocolCommandProcessorEU()
         );
-        var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, signProcessorEU.ProcessAsync, id.ToString(), middlewareConfiguration);
+        var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, signProcessorEU.ProcessAsync, queueEU.CashBoxIdentification, middlewareConfiguration);
         var journalProcessor = new JournalProcessor(storageProvider, new JournalProcessorEU(), configuration, loggerFactory.CreateLogger<JournalProcessor>());
         _queue = new Queue(signProcessor, journalProcessor, loggerFactory)
         {

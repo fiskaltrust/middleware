@@ -7,13 +7,14 @@ using fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.Configuratio
 
 namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
 {
-    public class AzureTableStorageConfigurationRepository : IConfigurationRepository, ES.IConfigurationRepository
+    public class AzureTableStorageConfigurationRepository : storage.V0.IConfigurationRepository, IConfigurationRepository
     {
         private readonly AzureTableStorageCashBoxRepository _cashBoxRepository;
         private readonly AzureTableStorageQueueRepository _queueRepository;
         private readonly AzureTableStorageQueueATRepository _queueATRepository;
         private readonly AzureTableStorageQueueDERepository _queueDERepository;
         private readonly AzureTableStorageQueueESRepository _queueESRepository;
+        private readonly AzureTableStorageQueueEURepository _queueEURepository;
         private readonly AzureTableStorageQueueFRRepository _queueFRRepository;
         private readonly AzureTableStorageQueueITRepository _queueITRepository;
         private readonly AzureTableStorageQueueMERepository _queueMERepository;
@@ -32,6 +33,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
             _queueATRepository = new AzureTableStorageQueueATRepository(queueConfig, tableServiceClient);
             _queueDERepository = new AzureTableStorageQueueDERepository(queueConfig, tableServiceClient);
             _queueESRepository = new AzureTableStorageQueueESRepository(queueConfig, tableServiceClient);
+            _queueEURepository = new AzureTableStorageQueueEURepository(queueConfig, tableServiceClient);
             _queueFRRepository = new AzureTableStorageQueueFRRepository(queueConfig, tableServiceClient);
             _queueITRepository = new AzureTableStorageQueueITRepository(queueConfig, tableServiceClient);
             _queueMERepository = new AzureTableStorageQueueMERepository(queueConfig, tableServiceClient);
@@ -100,10 +102,14 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories
         public Task<ES.ftSignaturCreationUnitES> GetSignaturCreationUnitESAsync(Guid signaturCreationUnitESId) => throw new NotImplementedException();
         public Task<IEnumerable<ES.ftQueueES>> GetQueueESListAsync() => _queueESRepository.GetAsync();
         public Task<ES.ftQueueES> GetQueueESAsync(Guid queueESId) => _queueESRepository.GetAsync(queueESId);
-        Task<IEnumerable<ftSignaturCreationUnitES>> IReadOnlyConfigurationRepository.GetSignaturCreationUnitESListAsync() => throw new NotImplementedException();
-        Task<ftSignaturCreationUnitES> IReadOnlyConfigurationRepository.GetSignaturCreationUnitESAsync(Guid signaturCreationUnitESId) => throw new NotImplementedException();
-        Task<IEnumerable<ftQueueES>> IReadOnlyConfigurationRepository.GetQueueESListAsync() => throw new NotImplementedException();
-        Task<ftQueueES> IReadOnlyConfigurationRepository.GetQueueESAsync(Guid queueESId) => throw new NotImplementedException();
+        public Task InsertOrUpdateQueueEUAsync(EU.ftQueueEU queue) => _queueEURepository.InsertOrUpdateAsync(queue);
+        public Task<IEnumerable<EU.ftQueueEU>> GetQueueEUListAsync() => _queueEURepository.GetAsync();
+        public Task<EU.ftQueueEU> GetQueueEUAsync(Guid queueEUId) => _queueEURepository.GetAsync(queueEUId);
+
+        Task<IEnumerable<ftSignaturCreationUnitES>> storage.V0.IReadOnlyConfigurationRepository.GetSignaturCreationUnitESListAsync() => throw new NotImplementedException();
+        Task<ftSignaturCreationUnitES> storage.V0.IReadOnlyConfigurationRepository.GetSignaturCreationUnitESAsync(Guid signaturCreationUnitESId) => throw new NotImplementedException();
+        Task<IEnumerable<ftQueueES>> storage.V0.IReadOnlyConfigurationRepository.GetQueueESListAsync() => throw new NotImplementedException();
+        Task<ftQueueES> storage.V0.IReadOnlyConfigurationRepository.GetQueueESAsync(Guid queueESId) => throw new NotImplementedException();
     }
 }
 
