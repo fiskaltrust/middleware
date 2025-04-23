@@ -10,32 +10,9 @@ using fiskaltrust.Api.POS.Models.ifPOS.v2;
 
 namespace fiskaltrust.Middleware.Localization.QueueEU.Processors;
 
-public class LifecycleCommandProcessorEU : ILifecycleCommandProcessor
+public class LifecycleCommandProcessorEU(ILocalizedQueueStorageProvider queueStorageProvider) : ILifecycleCommandProcessor
 {
-    private readonly ILocalizedQueueStorageProvider _queueStorageProvider;
-
-    public LifecycleCommandProcessorEU(ILocalizedQueueStorageProvider queueStorageProvider)
-    {
-        _queueStorageProvider = queueStorageProvider;
-    }
-
-    public async Task<ProcessCommandResponse> ProcessReceiptAsync(ProcessCommandRequest request)
-    {
-        var receiptCase = request.ReceiptRequest.ftReceiptCase.Case();
-        switch (receiptCase)
-        {
-            case ReceiptCase.InitialOperationReceipt0x4001:
-                return await InitialOperationReceipt0x4001Async(request);
-            case ReceiptCase.OutOfOperationReceipt0x4002:
-                return await OutOfOperationReceipt0x4002Async(request);
-            case ReceiptCase.InitSCUSwitch0x4011:
-                return await InitSCUSwitch0x4011Async(request);
-            case ReceiptCase.FinishSCUSwitch0x4012:
-                return await FinishSCUSwitch0x4012Async(request);
-        }
-        request.ReceiptResponse.SetReceiptResponseError(ErrorMessages.UnknownReceiptCase((long) request.ReceiptRequest.ftReceiptCase));
-        return new ProcessCommandResponse(request.ReceiptResponse, []);
-    }
+    private readonly ILocalizedQueueStorageProvider _queueStorageProvider = queueStorageProvider;
 
     public async Task<ProcessCommandResponse> InitialOperationReceipt0x4001Async(ProcessCommandRequest request)
     {
