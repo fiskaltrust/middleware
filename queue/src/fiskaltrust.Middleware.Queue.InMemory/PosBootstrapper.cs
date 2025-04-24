@@ -20,9 +20,7 @@ namespace fiskaltrust.Middleware.Queue.InMemory
             var storageBootStrapper = new InMemoryStorageBootstrapper(Id, Configuration, logger);
             storageBootStrapper.ConfigureStorageServices(serviceCollection);
 
-            Configuration.Add("assemblytype", typeof(PosBootstrapper));
-
-            var queueBootstrapper = new QueueBootstrapper(Id, Configuration);
+            var queueBootstrapper = new QueueBootstrapper(Id, Configuration, typeof(PosBootstrapper));
             queueBootstrapper.ConfigureServices(serviceCollection);
         }
     }

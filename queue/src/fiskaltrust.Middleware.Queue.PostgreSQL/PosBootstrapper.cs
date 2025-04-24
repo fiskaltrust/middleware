@@ -24,9 +24,7 @@ namespace fiskaltrust.Middleware.Queue.PostgreSQL
             var storageBootStrapper = new EFCorePostgreSQLStorageBootstrapper(Id, Configuration, storageConfiguration, logger);
             storageBootStrapper.ConfigureStorageServices(serviceCollection);
 
-            Configuration.Add("assemblytype", typeof(PosBootstrapper));
-
-            var queueBootstrapper = new QueueBootstrapper(Id, Configuration);
+            var queueBootstrapper = new QueueBootstrapper(Id, Configuration, typeof(PosBootstrapper));
             queueBootstrapper.ConfigureServices(serviceCollection);
         }
     }

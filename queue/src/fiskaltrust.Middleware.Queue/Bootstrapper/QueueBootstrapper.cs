@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
@@ -23,11 +24,15 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
     {
         private readonly Dictionary<string, object> _configuration;
         private readonly Guid _activeQueueId;
+        private readonly string _assemblyName;
+        private readonly Version _assemblyVersion;
+        private readonly string _processingVersion;
 
-        public QueueBootstrapper(Guid queueId, Dictionary<string, object> configuration)
+        public QueueBootstrapper(Guid queueId, Dictionary<string, object> configuration, Type assemblyType)
         {
             _configuration = configuration;
             _activeQueueId = queueId;
+            (_assemblyName, _assemblyVersion, _processingVersion) = GetVersion(assemblyType);
         }
 
         public void ConfigureServices(IServiceCollection services)
@@ -38,7 +43,9 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
                 QueueId = _activeQueueId,
                 IsSandbox = _configuration.TryGetValue("sandbox", out var sandbox) && bool.TryParse(sandbox.ToString(), out var sandboxBool) && sandboxBool,
                 ServiceFolder = _configuration.TryGetValue("servicefolder", out var val) ? val.ToString() : GetServiceFolder(),
-                AssemblyType = _configuration.TryGetValue("assemblytype", out var assemblyType) ? (Type) assemblyType : null,
+                ProcessingVersion = _processingVersion,
+                AssemblyVersion = _assemblyVersion,
+                AssemblyName = _assemblyName,
                 Configuration = _configuration,
                 PreviewFeatures = GetPreviewFeatures(_configuration),
                 AllowUnsafeScuSwitch = _configuration.TryGetValue("AllowUnsafeScuSwitch", out var allowUnsafeScuSwitch) && bool.TryParse(allowUnsafeScuSwitch.ToString(), out var allowUnsafeScuSwitchBool) && allowUnsafeScuSwitchBool,
@@ -129,5 +136,18 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
         }
 
         private static string GetServiceFolder() => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "fiskaltrust", "service");
+
+        private (string name, Version version, string processingVersion) GetVersion(Type assemblyType)
+        {
+            var assemblyName = assemblyType.Assembly.GetName();
+            var fileAttribute = assemblyType.Assembly.GetCustomAttribute<AssemblyFileVersionAttribute>().Version;
+            var processingVersion = assemblyType.Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion;
+            var version = Version.TryParse(fileAttribute, out var result)
+                ? new Version(result.Major, result.Minor, result.Build, 0)
+                : new Version(assemblyName.Version.Major, assemblyName.Version.Minor, assemblyName.Version.Build, 0);
+            assemblyName.Version = version;
+            return (assemblyName.FullName, version, processingVersion);
+        }
     }
 }
+
