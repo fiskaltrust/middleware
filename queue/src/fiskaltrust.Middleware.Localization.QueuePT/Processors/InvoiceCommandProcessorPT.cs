@@ -15,21 +15,21 @@ using fiskaltrust.Middleware.Storage.PT;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Processors;
 
-public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignaturCreationUnitPT signaturCreationUnitPT, IMiddlewareQueueItemRepository readOnlyQueueItemRepository) : IInvoiceCommandProcessor
+public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignaturCreationUnitPT signaturCreationUnitPT, IMiddlewareQueueItemRepository readOnlyQueueItemRepository) : ProcessorPreparation, IInvoiceCommandProcessor
 {
     private readonly IPTSSCD _sscd = sscd;
     private readonly ftQueuePT _queuePT = queuePT;
 #pragma warning disable
     private readonly ftSignaturCreationUnitPT _signaturCreationUnitPT = signaturCreationUnitPT;
-    private readonly IMiddlewareQueueItemRepository _readOnlyQueueItemRepository = readOnlyQueueItemRepository;
+    protected override IMiddlewareQueueItemRepository _readOnlyQueueItemRepository { get; init; } = readOnlyQueueItemRepository;
 
-    public async Task<ProcessCommandResponse> InvoiceUnknown0x1000Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+    public Task<ProcessCommandResponse> InvoiceUnknown0x1000Async(ProcessCommandRequest request) => WithPreparations(request, async () => new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>()));
 
-    public async Task<ProcessCommandResponse> InvoiceB2B0x1002Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+    public Task<ProcessCommandResponse> InvoiceB2B0x1002Async(ProcessCommandRequest request) => WithPreparations(request, async () => new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>()));
 
-    public async Task<ProcessCommandResponse> InvoiceB2G0x1003Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+    public Task<ProcessCommandResponse> InvoiceB2G0x1003Async(ProcessCommandRequest request) => WithPreparations(request, async () => new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>()));
 
-    public async Task<ProcessCommandResponse> InvoiceB2C0x1001Async(ProcessCommandRequest request)
+    public Task<ProcessCommandResponse> InvoiceB2C0x1001Async(ProcessCommandRequest request) => WithPreparations(request, async () =>
     {
         if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
         {
@@ -99,7 +99,7 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignat
             series.LastHash = hash;
             return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
         }
-    }
+    });
 
     private async Task<ReceiptResponse> LoadReceiptReferencesToResponse(ReceiptRequest request, ReceiptResponse receiptResponse)
     {

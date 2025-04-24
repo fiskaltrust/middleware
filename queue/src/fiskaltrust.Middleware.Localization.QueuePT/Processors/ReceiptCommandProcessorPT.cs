@@ -15,17 +15,17 @@ using fiskaltrust.SAFT.CLI.SAFTSchemaPT10401;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Processors;
 
-public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignaturCreationUnitPT signaturCreationUnitPT, IMiddlewareQueueItemRepository readOnlyQueueItemRepository) : IReceiptCommandProcessor
+public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignaturCreationUnitPT signaturCreationUnitPT, IMiddlewareQueueItemRepository readOnlyQueueItemRepository) : ProcessorPreparation, IReceiptCommandProcessor
 {
     private readonly IPTSSCD _sscd = sscd;
     private readonly ftQueuePT _queuePT = queuePT;
 #pragma warning disable
     private readonly ftSignaturCreationUnitPT _signaturCreationUnitPT = signaturCreationUnitPT;
-    private readonly IMiddlewareQueueItemRepository _readOnlyQueueItemRepository = readOnlyQueueItemRepository;
+    protected override IMiddlewareQueueItemRepository _readOnlyQueueItemRepository { get; init; } = readOnlyQueueItemRepository;
 
-    public async Task<ProcessCommandResponse> UnknownReceipt0x0000Async(ProcessCommandRequest request) => await PointOfSaleReceipt0x0001Async(request);
+    public Task<ProcessCommandResponse> UnknownReceipt0x0000Async(ProcessCommandRequest request) => WithPreparations(request, () => PointOfSaleReceipt0x0001Async(request));
 
-    public async Task<ProcessCommandResponse> PointOfSaleReceipt0x0001Async(ProcessCommandRequest request)
+    public Task<ProcessCommandResponse> PointOfSaleReceipt0x0001Async(ProcessCommandRequest request) => WithPreparations(request, async () =>
     {
         if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
         {
@@ -69,7 +69,7 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignat
             series.LastHash = hash;
             return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
         }
-    }
+    });
 
     private static void AddSignatures(NumberSeries series, ProcessResponse response, string hash, string printHash, string qrCode)
     {
@@ -97,7 +97,7 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignat
         response.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreatePTQRCode(qrCode));
     }
 
-    public async Task<ProcessCommandResponse> PaymentTransfer0x0002Async(ProcessCommandRequest request)
+    public Task<ProcessCommandResponse> PaymentTransfer0x0002Async(ProcessCommandRequest request) => WithPreparations(request, async () =>
     {
         if (!string.IsNullOrEmpty(request.ReceiptRequest.cbPreviousReceiptReference))
         {
@@ -141,13 +141,13 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignat
             series.LastHash = hash;
             return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
         }
-    }
+    });
 
-    public async Task<ProcessCommandResponse> PointOfSaleReceiptWithoutObligation0x0003Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+    public Task<ProcessCommandResponse> PointOfSaleReceiptWithoutObligation0x0003Async(ProcessCommandRequest request) => WithPreparations(request, async () => new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>()));
 
-    public async Task<ProcessCommandResponse> ECommerce0x0004Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+    public Task<ProcessCommandResponse> ECommerce0x0004Async(ProcessCommandRequest request) => WithPreparations(request, async () => new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>()));
 
-    public async Task<ProcessCommandResponse> Protocol0x0005Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+    public Task<ProcessCommandResponse> Protocol0x0005Async(ProcessCommandRequest request) => WithPreparations(request, async () => new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>()));
 
     private async Task<ReceiptResponse> LoadReceiptReferencesToResponse(ReceiptRequest request, ReceiptResponse receiptResponse)
     {
