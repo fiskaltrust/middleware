@@ -52,7 +52,7 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
             };
             var serviceCollection = new ServiceCollection();
 
-            var sut = new QueueBootstrapper(queueId, config);
+            var sut = new QueueBootstrapper(queueId, config, typeof(QueueBootstrapper));
             sut.ConfigureServices(serviceCollection);
 
             serviceCollection.Should().HaveCount(36);

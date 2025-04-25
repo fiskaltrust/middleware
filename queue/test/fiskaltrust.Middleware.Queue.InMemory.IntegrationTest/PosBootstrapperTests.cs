@@ -86,7 +86,7 @@ namespace fiskaltrust.Middleware.Queue.InMemory.IntegrationTest
 
             var serviceCollection = new ServiceCollection();
 
-            var queueBootstrapper = new QueueBootstrapper(values.ftQueues[0].Id, dictionary);
+            var queueBootstrapper = new QueueBootstrapper(values.ftQueues[0].Id, dictionary, typeof(QueueBootstrapper));
             queueBootstrapper.ConfigureServices(serviceCollection);
 
 
