@@ -112,7 +112,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             {
                 Configuration = configuration,
                 CashBoxId = CASHBOXID,
-                QueueId = QUEUEID
+                QueueId = QUEUEID,
+                ProcessingVersion = "test"
             };
 
             IMasterDataService masterDataService;

@@ -65,7 +65,8 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
                 QueueId = queueId,
                 CashBoxId = cashboxId,
                 ReceiptRequestMode = receiptRequestMode,
-                Configuration = new() { { "init_ftQueue", JsonConvert.SerializeObject(new List<ftQueue>() { queue }) } }
+                Configuration = new() { { "init_ftQueue", JsonConvert.SerializeObject(new List<ftQueue>() { queue }) } },
+                ProcessingVersion = "test"
             };
 
 
@@ -129,7 +130,8 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
                 QueueId = queueId,
                 CashBoxId = cashboxId,
                 ReceiptRequestMode = receiptRequestMode,
-                Configuration = new() { { "init_ftQueue", JsonConvert.SerializeObject(new List<ftQueue>() { queue }) } }
+                Configuration = new() { { "init_ftQueue", JsonConvert.SerializeObject(new List<ftQueue>() { queue }) } },
+                ProcessingVersion = "test"
             };
 
             marketSpecificJournalProcessorMock.Setup(x => x.ProcessAsync(request)).Returns(new List<JournalResponse>() { new JournalResponse { Chunk = new() } }.ToAsyncEnumerable());

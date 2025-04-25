@@ -127,7 +127,7 @@ namespace fiskaltrust.Middleware.Queue
                 cbTerminalID = data.cbTerminalID,
                 cbReceiptReference = data.cbReceiptReference,
                 ftQueueRow = ++queue.ftQueuedRow,
-                ProcessingVersion = _middlewareConfiguration.ProcessingVersion.ToString()
+                ProcessingVersion = _middlewareConfiguration.ProcessingVersion
             };
             if (queueItem.ftQueueTimeout == 0)
             {

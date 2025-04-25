@@ -64,7 +64,11 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                 CreateftActionJournal(queue.ftQueueId, queueItem.ftQueueItemId, 0)
             });
 
-            var config = new MiddlewareConfiguration { Configuration = new Dictionary<string, object>() };
+            var config = new MiddlewareConfiguration
+            {
+                Configuration = new Dictionary<string, object>(),
+                ProcessingVersion = "test"
+            };
             var sut = RequestCommandFactoryHelper.ConstructSignProcessor(Mock.Of<ILogger<SignProcessorDE>>(), _fixture.CreateConfigurationRepository(false, null, null, true, true), journalRepositoryMock.Object,
                 actionJournalRepositoryMock.Object, _fixture.DeSSCDProvider, new DSFinVKTransactionPayloadFactory(Mock.Of<ILogger<DSFinVKTransactionPayloadFactory>>()), new InMemoryFailedFinishTransactionRepository(),
                 new InMemoryFailedStartTransactionRepository(), new InMemoryOpenTransactionRepository(), Mock.Of<IMasterDataService>(), config,

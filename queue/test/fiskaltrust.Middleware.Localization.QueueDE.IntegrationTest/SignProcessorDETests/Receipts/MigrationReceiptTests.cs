@@ -50,7 +50,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             {
                 Configuration = new Dictionary<string, object>(),
                 CashBoxId = _fixture.CASHBOXID,
-                QueueId = _fixture.QUEUEID
+                QueueId = _fixture.QUEUEID,
+                ProcessingVersion = "test"
             };
             var signProcessorDE = RequestCommandFactoryHelper.ConstructSignProcessor(Mock.Of<ILogger<SignProcessorDE>>(), configRepo, journalRepository,
                 actionJournalRepository, _fixture.DeSSCDProvider, new DSFinVKTransactionPayloadFactory(Mock.Of<ILogger<DSFinVKTransactionPayloadFactory>>()), new InMemoryFailedFinishTransactionRepository(),

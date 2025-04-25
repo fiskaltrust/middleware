@@ -52,7 +52,8 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.UnitTest
                 Configuration = new Dictionary<string, object>()
                 {
                     { "EnableMonthlyExport", false }
-                }
+                },
+                ProcessingVersion = "test"
             };
             queueATConfiguration = QueueATConfiguration.FromMiddlewareConfiguration(middlewareConfiguration);
             logger = new Mock<ILogger<RequestCommand>>().Object;

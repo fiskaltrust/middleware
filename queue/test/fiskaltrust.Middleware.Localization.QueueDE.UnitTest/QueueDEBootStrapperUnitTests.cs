@@ -39,7 +39,11 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
                 { "init_ftQueue", JsonConvert.SerializeObject(queues) }
             };
 
-            var queueDEBootStrapper = LocalizedQueueBootStrapperFactory.GetBootstrapperForLocalizedQueue(queueId, new MiddlewareConfiguration { Configuration = config });
+            var queueDEBootStrapper = LocalizedQueueBootStrapperFactory.GetBootstrapperForLocalizedQueue(queueId, new MiddlewareConfiguration
+            {
+                Configuration = config,
+                ProcessingVersion = "test"
+            });
             queueDEBootStrapper.Should().BeOfType(typeof(QueueDEBootstrapper));
             queueDEBootStrapper.GetType().Should().Implement(typeof(ILocalizedQueueBootstrapper));
         }

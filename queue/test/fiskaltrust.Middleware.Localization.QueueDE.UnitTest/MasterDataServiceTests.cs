@@ -37,7 +37,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
             var posSystemMasterDataRepoMock = new Mock<IMasterDataRepository<PosSystemMasterData>>(MockBehavior.Strict);
             posSystemMasterDataRepoMock.Setup(x => x.GetAsync()).ReturnsAsync(posSystemMasterData);
 
-            var sut = new MasterDataService(new MiddlewareConfiguration(), accountMasterDataRepoMock.Object, outletMasterDataRepoMock.Object, 
+            var sut = new MasterDataService(new MiddlewareConfiguration(), accountMasterDataRepoMock.Object, outletMasterDataRepoMock.Object,
                 posSystemMasterDataRepoMock.Object, agencyMasterDataRepoMock.Object);
 
             var actualConfiguration = await sut.GetCurrentDataAsync();
@@ -149,7 +149,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
                 Configuration = new Dictionary<string, object>
                 {
                     {"init_masterData", JsonConvert.SerializeObject(masterData) }
-                }
+                },
+                ProcessingVersion = "test"
             };
             return mwConfig;
         }
@@ -180,7 +181,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
 
             var sut = new MasterDataService(mwConfig, accountMasterDataRepoMock.Object, outletMasterDataRepoMock.Object,
                 posSystemMasterDataRepoMock.Object, agencyMasterDataRepoMock.Object);
-            var masterData  = sut.GetFromConfig();
+            var masterData = sut.GetFromConfig();
 
             masterData.Account.Should().BeEquivalentTo(confAccountMasterData);
             masterData.Outlet.Should().BeEquivalentTo(confOutletMasterData);
@@ -203,7 +204,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
 
             accountMasterDataRepoMock.Setup(x => x.GetAsync()).ReturnsAsync(Enumerable.Empty<AccountMasterData>);
             var outletMasterDataRepoMock = new Mock<IMasterDataRepository<OutletMasterData>>(MockBehavior.Strict);
-            outletMasterDataRepoMock.Setup(x => x.GetAsync()).ReturnsAsync( Enumerable.Empty<OutletMasterData> );
+            outletMasterDataRepoMock.Setup(x => x.GetAsync()).ReturnsAsync(Enumerable.Empty<OutletMasterData>);
             var agencyMasterDataRepoMock = new Mock<IMasterDataRepository<AgencyMasterData>>(MockBehavior.Strict);
             agencyMasterDataRepoMock.Setup(x => x.GetAsync()).ReturnsAsync(Enumerable.Empty<AgencyMasterData>);
             var posSystemMasterDataRepoMock = new Mock<IMasterDataRepository<PosSystemMasterData>>(MockBehavior.Strict);

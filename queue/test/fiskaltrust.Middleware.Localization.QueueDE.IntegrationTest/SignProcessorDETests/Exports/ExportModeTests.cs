@@ -91,7 +91,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                     { nameof(QueueDEConfiguration.TarFileExportMode), TarFileExportMode.Erased },
                 },
                 QueueId = queue.ftQueueId,
-                ServiceFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString())
+                ServiceFolder = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString()),
+                ProcessingVersion = "test"
             };
             var configurationRepository = _fixture.CreateConfigurationRepository();
 

@@ -34,7 +34,8 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.IntegrationTest.RequestCom
             var archiveProcessor = new Mock<IArchiveProcessor>();
             var middlewareconfig = new MiddlewareConfiguration
             {
-                Configuration = new System.Collections.Generic.Dictionary<string, object>()
+                Configuration = new System.Collections.Generic.Dictionary<string, object>(),
+                ProcessingVersion = "test"
             };
             middlewareconfig.Configuration.Add("frarchiveexport", false);
             var logger = new Mock<ILogger<ArchiveCommand>>();
@@ -75,13 +76,14 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.IntegrationTest.RequestCom
             var journalRepository = new InMemoryReceiptJournalRepository();
 
             await journalRepository.InsertAsync(new ftReceiptJournal() { ftReceiptJournalId = Guid.NewGuid(), ftQueueItemId = item1.ftQueueItemId, ftReceiptNumber = 1 });
-            await journalRepository.InsertAsync( new ftReceiptJournal() { ftReceiptJournalId = Guid.NewGuid(), ftQueueItemId = item2.ftQueueItemId, ftReceiptNumber =2 });
+            await journalRepository.InsertAsync(new ftReceiptJournal() { ftReceiptJournalId = Guid.NewGuid(), ftQueueItemId = item2.ftQueueItemId, ftReceiptNumber = 2 });
 
             var journalFRRepository = new InMemoryJournalFRRepository();
             var archiveProcessor = new Mock<IArchiveProcessor>();
             var middlewareconfig = new MiddlewareConfiguration
             {
-                Configuration = new System.Collections.Generic.Dictionary<string, object>()
+                Configuration = new System.Collections.Generic.Dictionary<string, object>(),
+                ProcessingVersion = "test"
             };
             middlewareconfig.Configuration.Add("frarchiveexport", false);
             var logger = new Mock<ILogger<ArchiveCommand>>();
@@ -117,7 +119,8 @@ namespace fiskaltrust.Middleware.Localization.QueueFR.IntegrationTest.RequestCom
             var archiveProcessor = new Mock<IArchiveProcessor>();
             var middlewareconfig = new MiddlewareConfiguration
             {
-                Configuration = new System.Collections.Generic.Dictionary<string, object>()
+                Configuration = new System.Collections.Generic.Dictionary<string, object>(),
+                ProcessingVersion = "test"
             };
             middlewareconfig.Configuration.Add("frarchiveexport", false);
             var logger = new Mock<ILogger<ArchiveCommand>>();

@@ -48,7 +48,8 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
                 QueueId = queueId,
                 CashBoxId = cashBoxId,
                 ServiceFolder = "C:/",
-                Configuration = config
+                Configuration = config,
+                ProcessingVersion = "test"
             };
             var serviceCollection = new ServiceCollection();
 

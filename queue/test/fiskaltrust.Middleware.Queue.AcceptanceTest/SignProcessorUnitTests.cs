@@ -58,7 +58,8 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
             {
                 QueueId = queueId,
                 CashBoxId = cashboxId,
-                ReceiptRequestMode = receiptRequestMode
+                ReceiptRequestMode = receiptRequestMode,
+                ProcessingVersion = "test"
             };
 
             string previousReceiptHash = null;
@@ -104,6 +105,7 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
             {
                 QueueId = queueId,
                 CashBoxId = cashboxId,
+                ProcessingVersion = "test"
             };
 
             var configurationRepository = new Mock<IConfigurationRepository>(MockBehavior.Strict);
