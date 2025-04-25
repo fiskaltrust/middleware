@@ -117,10 +117,14 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
 
             var journalRepositoryMock = new Mock<IMiddlewareJournalDERepository>(MockBehavior.Strict);
             var actionJournalRepositoryMock = new Mock<IMiddlewareActionJournalRepository>(MockBehavior.Strict);
-            var config = new MiddlewareConfiguration { Configuration = new Dictionary<string, object>() };
-            var sut = RequestCommandFactoryHelper.ConstructSignProcessor(loggerMock.Object, configurationRepository.Object, journalRepositoryMock.Object, actionJournalRepositoryMock.Object, 
-                deSSCDProviderMock.Object, transactionPayloadFactory.Object, new InMemoryFailedFinishTransactionRepository(), new InMemoryFailedStartTransactionRepository(), 
-                new InMemoryOpenTransactionRepository(), Mock.Of<IMasterDataService>(), config, new InMemoryQueueItemRepository(), 
+            var config = new MiddlewareConfiguration
+            {
+                Configuration = new Dictionary<string, object>(),
+                ProcessingVersion = "test"
+            };
+            var sut = RequestCommandFactoryHelper.ConstructSignProcessor(loggerMock.Object, configurationRepository.Object, journalRepositoryMock.Object, actionJournalRepositoryMock.Object,
+                deSSCDProviderMock.Object, transactionPayloadFactory.Object, new InMemoryFailedFinishTransactionRepository(), new InMemoryFailedStartTransactionRepository(),
+                new InMemoryOpenTransactionRepository(), Mock.Of<IMasterDataService>(), config, new InMemoryQueueItemRepository(),
                 new SignatureFactoryDE(QueueDEConfiguration.FromMiddlewareConfiguration(Mock.Of<ILogger<QueueDEConfiguration>>(), config)));
 
             var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
@@ -198,9 +202,13 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
 
             var journalRepositoryMock = new Mock<IMiddlewareJournalDERepository>(MockBehavior.Strict);
             var actionJournalRepositoryMock = new Mock<IMiddlewareActionJournalRepository>(MockBehavior.Strict);
-            var config = new MiddlewareConfiguration { Configuration = new Dictionary<string, object>() };
-            var sut = RequestCommandFactoryHelper.ConstructSignProcessor(loggerMock.Object, configurationRepository.Object, journalRepositoryMock.Object, actionJournalRepositoryMock.Object, 
-                deSSCDProviderMock.Object, transactionPayloadFactory.Object, new InMemoryFailedFinishTransactionRepository(), new InMemoryFailedStartTransactionRepository(), 
+            var config = new MiddlewareConfiguration
+            {
+                Configuration = new Dictionary<string, object>(),
+                ProcessingVersion = "test"
+            };
+            var sut = RequestCommandFactoryHelper.ConstructSignProcessor(loggerMock.Object, configurationRepository.Object, journalRepositoryMock.Object, actionJournalRepositoryMock.Object,
+                deSSCDProviderMock.Object, transactionPayloadFactory.Object, new InMemoryFailedFinishTransactionRepository(), new InMemoryFailedStartTransactionRepository(),
                 new InMemoryOpenTransactionRepository(), Mock.Of<IMasterDataService>(), config, new InMemoryQueueItemRepository(),
                 new SignatureFactoryDE(QueueDEConfiguration.FromMiddlewareConfiguration(Mock.Of<ILogger<QueueDEConfiguration>>(), config)));
 
@@ -289,7 +297,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
             configurationRepository.Setup(x => x.GetQueueAsync(queue.ftQueueId)).ReturnsAsync(queue);
             configurationRepository.Setup(x => x.GetQueueDEAsync(queue.ftQueueId)).ReturnsAsync(queueDE);
             configurationRepository.Setup(x => x.InsertOrUpdateQueueDEAsync(queueDE)).Returns(Task.CompletedTask);
-            
+
             desscdClient.Setup(x => x.GetTseInfoAsync()).ReturnsAsync(new TseInfo { CertificationIdentification = "BSI-TK-0000-0000" });
             desscdClient.Setup(x => x.StartTransactionAsync(It.Is<StartTransactionRequest>(req => req.ClientId == queueDE.CashBoxIdentification && string.IsNullOrEmpty(req.ProcessDataBase64) && string.IsNullOrEmpty(req.ProcessType)))).ReturnsAsync(startTransactionResponse);
             desscdClient.Setup(x => x.FinishTransactionAsync(It.Is<FinishTransactionRequest>(req => Match(req, queueDE, "Kassenbeleg-V1", "payload", finishResultResponse.TransactionNumber)))).ReturnsAsync(finishResultResponse);
@@ -300,9 +308,13 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
 
             var journalRepositoryMock = new Mock<IMiddlewareJournalDERepository>(MockBehavior.Strict);
             var actionJournalRepositoryMock = new Mock<IMiddlewareActionJournalRepository>(MockBehavior.Strict);
-            var config = new MiddlewareConfiguration { Configuration = new Dictionary<string, object>() };
-            var sut = RequestCommandFactoryHelper.ConstructSignProcessor(loggerMock.Object, configurationRepository.Object, journalRepositoryMock.Object, actionJournalRepositoryMock.Object, 
-                deSSCDProviderMock.Object, transactionPayloadFactory.Object, new InMemoryFailedFinishTransactionRepository(), new InMemoryFailedStartTransactionRepository(), 
+            var config = new MiddlewareConfiguration
+            {
+                Configuration = new Dictionary<string, object>(),
+                ProcessingVersion = "test"
+            };
+            var sut = RequestCommandFactoryHelper.ConstructSignProcessor(loggerMock.Object, configurationRepository.Object, journalRepositoryMock.Object, actionJournalRepositoryMock.Object,
+                deSSCDProviderMock.Object, transactionPayloadFactory.Object, new InMemoryFailedFinishTransactionRepository(), new InMemoryFailedStartTransactionRepository(),
                 new InMemoryOpenTransactionRepository(), Mock.Of<IMasterDataService>(), config, new InMemoryQueueItemRepository(),
                 new SignatureFactoryDE(QueueDEConfiguration.FromMiddlewareConfiguration(Mock.Of<ILogger<QueueDEConfiguration>>(), config)));
 
@@ -405,9 +417,13 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
 
             var journalRepositoryMock = new Mock<IMiddlewareJournalDERepository>(MockBehavior.Strict);
             var actionJournalRepositoryMock = new Mock<IMiddlewareActionJournalRepository>(MockBehavior.Strict);
-            var config = new MiddlewareConfiguration { Configuration = new Dictionary<string, object>() };
-            var sut = RequestCommandFactoryHelper.ConstructSignProcessor(loggerMock.Object, configurationRepository.Object, journalRepositoryMock.Object, actionJournalRepositoryMock.Object, 
-                deSSCDProviderMock.Object, transactionPayloadFactory.Object, new InMemoryFailedFinishTransactionRepository(), new InMemoryFailedStartTransactionRepository(), 
+            var config = new MiddlewareConfiguration
+            {
+                Configuration = new Dictionary<string, object>(),
+                ProcessingVersion = "test"
+            };
+            var sut = RequestCommandFactoryHelper.ConstructSignProcessor(loggerMock.Object, configurationRepository.Object, journalRepositoryMock.Object, actionJournalRepositoryMock.Object,
+                deSSCDProviderMock.Object, transactionPayloadFactory.Object, new InMemoryFailedFinishTransactionRepository(), new InMemoryFailedStartTransactionRepository(),
                 new InMemoryOpenTransactionRepository(), Mock.Of<IMasterDataService>(), config, new InMemoryQueueItemRepository(),
                 new SignatureFactoryDE(QueueDEConfiguration.FromMiddlewareConfiguration(Mock.Of<ILogger<QueueDEConfiguration>>(), config)));
 

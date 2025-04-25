@@ -37,14 +37,15 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.UnitTest
                 Configuration = new System.Collections.Generic.Dictionary<string, object>
                 {
                     { "init_ftSignaturCreationUnitIT", "[{\"Url\":\"https://faker\"}]" }
-                }
+                },
+                ProcessingVersion = "test"
             });
 
             var bootstrapper = new QueueITBootstrapper();
             bootstrapper.ConfigureServices(serviceCollection);
 
             serviceCollection.BuildServiceProvider().GetRequiredService<IMarketSpecificSignProcessor>();
-        }  
+        }
     }
 
 }

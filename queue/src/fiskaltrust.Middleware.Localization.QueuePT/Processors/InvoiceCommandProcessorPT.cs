@@ -15,41 +15,21 @@ using fiskaltrust.Middleware.Storage.PT;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Processors;
 
-public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignaturCreationUnitPT signaturCreationUnitPT, IMiddlewareQueueItemRepository readOnlyQueueItemRepository) : IInvoiceCommandProcessor
+public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignaturCreationUnitPT signaturCreationUnitPT, IMiddlewareQueueItemRepository readOnlyQueueItemRepository) : ProcessorPreparation, IInvoiceCommandProcessor
 {
     private readonly IPTSSCD _sscd = sscd;
     private readonly ftQueuePT _queuePT = queuePT;
 #pragma warning disable
     private readonly ftSignaturCreationUnitPT _signaturCreationUnitPT = signaturCreationUnitPT;
-    private readonly IMiddlewareQueueItemRepository _readOnlyQueueItemRepository = readOnlyQueueItemRepository;
+    protected override IMiddlewareQueueItemRepository _readOnlyQueueItemRepository { get; init; } = readOnlyQueueItemRepository;
 
-    public async Task<ProcessCommandResponse> ProcessReceiptAsync(ProcessCommandRequest request)
-    {
-        await StaticNumeratorStorage.LoadStorageNumbers(_readOnlyQueueItemRepository);
-        ReceiptRequestValidatorPT.ValidateReceiptOrThrow(request.ReceiptRequest);
-        var receiptCase = request.ReceiptRequest.ftReceiptCase.Case();
-        switch (receiptCase)
-        {
-            case ReceiptCase.InvoiceUnknown0x1000:
-                return await InvoiceUnknown0x1000Async(request);
-            case ReceiptCase.InvoiceB2C0x1001:
-                return await InvoiceB2C0x1001Async(request);
-            case ReceiptCase.InvoiceB2B0x1002:
-                return await InvoiceB2B0x1002Async(request);
-            case ReceiptCase.InvoiceB2G0x1003:
-                return await InvoiceB2G0x1003Async(request);
-        }
-        request.ReceiptResponse.SetReceiptResponseError(ErrorMessages.UnknownReceiptCase((long) request.ReceiptRequest.ftReceiptCase));
-        return new ProcessCommandResponse(request.ReceiptResponse, []);
-    }
+    public Task<ProcessCommandResponse> InvoiceUnknown0x1000Async(ProcessCommandRequest request) => WithPreparations(request, async () => new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>()));
 
-    public async Task<ProcessCommandResponse> InvoiceUnknown0x1000Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+    public Task<ProcessCommandResponse> InvoiceB2B0x1002Async(ProcessCommandRequest request) => WithPreparations(request, async () => new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>()));
 
-    public async Task<ProcessCommandResponse> InvoiceB2B0x1002Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+    public Task<ProcessCommandResponse> InvoiceB2G0x1003Async(ProcessCommandRequest request) => WithPreparations(request, async () => new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>()));
 
-    public async Task<ProcessCommandResponse> InvoiceB2G0x1003Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
-
-    public async Task<ProcessCommandResponse> InvoiceB2C0x1001Async(ProcessCommandRequest request)
+    public Task<ProcessCommandResponse> InvoiceB2C0x1001Async(ProcessCommandRequest request) => WithPreparations(request, async () =>
     {
         if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
         {
@@ -105,7 +85,8 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignat
         {
             var series = StaticNumeratorStorage.InvoiceSeries;
             series.Numerator++;
-            var invoiceNo = series.Identifier + "/" + series.Numerator!.ToString()!.PadLeft(4, '0'); ;
+            var invoiceNo = series.Identifier + "/" + series.Numerator!.ToString()!.PadLeft(4, '0');
+            ;
             var (response, hash) = await _sscd.ProcessReceiptAsync(new ProcessRequest
             {
                 ReceiptRequest = request.ReceiptRequest,
@@ -118,7 +99,7 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignat
             series.LastHash = hash;
             return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
         }
-    }
+    });
 
     private async Task<ReceiptResponse> LoadReceiptReferencesToResponse(ReceiptRequest request, ReceiptResponse receiptResponse)
     {
@@ -142,7 +123,7 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignat
 
     private static void AddSignatures(NumberSeries series, ProcessResponse response, string hash, string printHash, string qrCode)
     {
-       response.ReceiptResponse.AddSignatureItem(new SignatureItem
+        response.ReceiptResponse.AddSignatureItem(new SignatureItem
         {
             Caption = "Hash",
             Data = hash,

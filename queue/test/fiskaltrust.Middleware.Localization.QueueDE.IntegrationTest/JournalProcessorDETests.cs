@@ -47,7 +47,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest
 
             var mwConfiguration = new MiddlewareConfiguration
             {
-                Configuration = new Dictionary<string, object>()
+                Configuration = new Dictionary<string, object>(),
+                ProcessingVersion = "test"
             };
 
             var tarFileCleanupService = Mock.Of<ITarFileCleanupService>();

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Models;
@@ -17,7 +16,6 @@ using Moq;
 using fiskaltrust.Middleware.Queue;
 using Xunit;
 using fiskaltrust.Middleware.Contracts.Interfaces;
-using fiskaltrust.Interface.Tagging;
 using Newtonsoft.Json;
 using fiskaltrust.Middleware.Localization.QueueDE.Models;
 using System.Linq;
@@ -52,7 +50,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             {
                 Configuration = new Dictionary<string, object>(),
                 CashBoxId = _fixture.CASHBOXID,
-                QueueId = _fixture.QUEUEID
+                QueueId = _fixture.QUEUEID,
+                ProcessingVersion = "test"
             };
             var signProcessorDE = RequestCommandFactoryHelper.ConstructSignProcessor(Mock.Of<ILogger<SignProcessorDE>>(), configRepo, journalRepository,
                 actionJournalRepository, _fixture.DeSSCDProvider, new DSFinVKTransactionPayloadFactory(Mock.Of<ILogger<DSFinVKTransactionPayloadFactory>>()), new InMemoryFailedFinishTransactionRepository(),
@@ -60,7 +59,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                 queueItemRepository, new SignatureFactoryDE(QueueDEConfiguration.FromMiddlewareConfiguration(Mock.Of<ILogger<QueueDEConfiguration>>(), config)));
 
             var signProcessor = new SignProcessor(Mock.Of<ILogger<SignProcessor>>(), configRepo, queueItemRepository, receiptJournalRepository,
-                             actionJournalRepository, Mock.Of<ICryptoHelper>(), signProcessorDE, config, Mock.Of<ReceiptConverter>());
+                             actionJournalRepository, Mock.Of<ICryptoHelper>(), signProcessorDE, config);
 
             var receiptResponse = await signProcessor.ProcessAsync(request);
 
@@ -72,7 +71,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
 
             var migrationState = JsonConvert.DeserializeObject<MigrationState>(actionjournal.DataJson);
             var ajCount = await actionJournalRepository.CountAsync().ConfigureAwait(false);
-            migrationState.ActionJournalCount.Should().Be(ajCount-1);
+            migrationState.ActionJournalCount.Should().Be(ajCount - 1);
             var qCount = await queueItemRepository.CountAsync().ConfigureAwait(false);
             migrationState.QueueItemCount = qCount;
             var rjCount = await receiptJournalRepository.CountAsync().ConfigureAwait(false);
@@ -98,7 +97,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
 
         private Func<Task> CallSignProcessor_ExpectException(SignProcessor signProcessor, ReceiptRequest receiptRequest)
         {
-              return async () => { var receiptResponse = await signProcessor.ProcessAsync(receiptRequest); };
+            return async () => { var receiptResponse = await signProcessor.ProcessAsync(receiptRequest); };
         }
     }
 }

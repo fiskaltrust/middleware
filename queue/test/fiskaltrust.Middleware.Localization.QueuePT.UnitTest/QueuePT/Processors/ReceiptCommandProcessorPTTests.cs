@@ -15,12 +15,13 @@ using Moq;
 using Xunit;
 using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processors;
 
 public class ReceiptCommandProcessorPTTests
 {
-    private readonly ReceiptCommandProcessorPT _sut = new ReceiptCommandProcessorPT(Mock.Of<IPTSSCD>(), new ftQueuePT(), new ftSignaturCreationUnitPT(), Mock.Of<IMiddlewareQueueItemRepository>());
+    private readonly ReceiptProcessor _sut = new(Mock.Of<ILogger<ReceiptProcessor>>(), null!, new ReceiptCommandProcessorPT(Mock.Of<IPTSSCD>(), new ftQueuePT(), new ftSignaturCreationUnitPT(), Mock.Of<IMiddlewareQueueItemRepository>()), null!, null!, null!);
 
     [Theory]
     [InlineData(ReceiptCase.PaymentTransfer0x0002, Skip = "broken")]
@@ -43,9 +44,7 @@ public class ReceiptCommandProcessorPTTests
             ftReceiptIdentification = "receiptIdentification",
             ftReceiptMoment = DateTime.UtcNow,
         };
-        var request = new ProcessCommandRequest(new ftQueue { }, receiptRequest, receiptResponse);
-
-        var result = await _sut.ProcessReceiptAsync(request);
+        var result = await _sut.ProcessAsync(receiptRequest, receiptResponse, new ftQueue { }, new ftQueueItem { });
 
         result.receiptResponse.Should().Be(receiptResponse);
         result.receiptResponse.ftState.Should().Be(0x5054_2000_0000_0000);
@@ -68,9 +67,8 @@ public class ReceiptCommandProcessorPTTests
             ftReceiptIdentification = "receiptIdentification",
             ftReceiptMoment = DateTime.UtcNow,
         };
-        var request = new ProcessCommandRequest(new ftQueue { }, receiptRequest, receiptResponse);
+        var result = await _sut.ProcessAsync(receiptRequest, receiptResponse, new ftQueue { }, new ftQueueItem { });
 
-        var result = await _sut.ProcessReceiptAsync(request);
         result.receiptResponse.Should().Be(receiptResponse);
         result.receiptResponse.ftState.Should().Be(0x5054_2000_EEEE_EEEE);
     }
@@ -94,7 +92,7 @@ public class ReceiptCommandProcessorPTTests
             SoftwareCertificateNumber = "9999",
         };
 
-        var configMock = new Mock<IConfigurationRepository>();
+        var configMock = new Mock<storage.V0.IConfigurationRepository>();
         configMock.Setup(x => x.InsertOrUpdateQueueAsync(It.IsAny<ftQueue>())).Returns(Task.CompletedTask);
 
         var queueItemRepository = new Mock<IMiddlewareQueueItemRepository>();

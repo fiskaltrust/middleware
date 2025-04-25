@@ -11,12 +11,13 @@ using fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
 using Moq;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Storage.PT;
+using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processors;
 
 public class ProtocolCommandProcessorPTTests
 {
-    private readonly ProtocolCommandProcessorPT _sut = new ProtocolCommandProcessorPT(Mock.Of<IPTSSCD>(), new ftQueuePT(), new ftSignaturCreationUnitPT(), Mock.Of<IMiddlewareQueueItemRepository>());
+    private readonly ReceiptProcessor _sut = new(Mock.Of<ILogger<ReceiptProcessor>>(), null!, null!, null!, null!, new ProtocolCommandProcessorPT(Mock.Of<IPTSSCD>(), new ftQueuePT(), new ftSignaturCreationUnitPT(), Mock.Of<IMiddlewareQueueItemRepository>()));
 
     [Theory]
     [InlineData(ReceiptCase.ProtocolUnspecified0x3000)]
@@ -41,9 +42,7 @@ public class ProtocolCommandProcessorPTTests
             ftReceiptIdentification = "receiptIdentification",
             ftReceiptMoment = DateTime.UtcNow,
         };
-        var request = new ProcessCommandRequest(new ftQueue { }, receiptRequest, receiptResponse);
-
-        var result = await _sut.ProcessReceiptAsync(request);
+        var result = await _sut.ProcessAsync(receiptRequest, receiptResponse, new ftQueue { }, new ftQueueItem { });
 
         result.receiptResponse.Should().Be(receiptResponse);
         result.receiptResponse.ftState.Should().Be(0x5054_2000_0000_0000);
@@ -66,9 +65,8 @@ public class ProtocolCommandProcessorPTTests
             ftReceiptIdentification = "receiptIdentification",
             ftReceiptMoment = DateTime.UtcNow,
         };
-        var request = new ProcessCommandRequest(new ftQueue { }, receiptRequest, receiptResponse);
+        var result = await _sut.ProcessAsync(receiptRequest, receiptResponse, new ftQueue { }, new ftQueueItem { });
 
-        var result = await _sut.ProcessReceiptAsync(request);
         result.receiptResponse.Should().Be(receiptResponse);
         result.receiptResponse.ftState.Should().Be(0x5054_2000_EEEE_EEEE);
     }

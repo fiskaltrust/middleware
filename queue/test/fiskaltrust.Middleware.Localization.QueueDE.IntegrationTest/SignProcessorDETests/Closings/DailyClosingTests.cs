@@ -66,15 +66,21 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             };
             journalRepositoryMock.Setup(x => x.InsertAsync(It.IsAny<ftJournalDE>())).CallBase().Verifiable();
             var actionJournalRepositoryMock = new Mock<IMiddlewareActionJournalRepository>(MockBehavior.Strict);
-            var config = new MiddlewareConfiguration { Configuration = new Dictionary<string, object>(), QueueId = queue.ftQueueId, ServiceFolder = Directory.GetCurrentDirectory() };
+            var config = new MiddlewareConfiguration
+            {
+                Configuration = new Dictionary<string, object>(),
+                QueueId = queue.ftQueueId,
+                ServiceFolder = Directory.GetCurrentDirectory(),
+                ProcessingVersion = "test"
+            };
 
 
             var tarFileCleanupService = new TarFileCleanupService(Mock.Of<ILogger<TarFileCleanupService>>(), journalRepositoryMock.Object, config, QueueDEConfiguration.FromMiddlewareConfiguration(Mock.Of<ILogger<QueueDEConfiguration>>(), config));
             var sut = RequestCommandFactoryHelper.ConstructSignProcessor(Mock.Of<ILogger<SignProcessorDE>>(), _fixture.CreateConfigurationRepository(), journalRepositoryMock.Object, actionJournalRepositoryMock.Object,
                 _fixture.DeSSCDProvider, new DSFinVKTransactionPayloadFactory(Mock.Of<ILogger<DSFinVKTransactionPayloadFactory>>()), new InMemoryFailedFinishTransactionRepository(), new InMemoryFailedStartTransactionRepository(),
                 _fixture.openTransactionRepository, Mock.Of<IMasterDataService>(), config, new InMemoryQueueItemRepository(), new SignatureFactoryDE(QueueDEConfiguration.FromMiddlewareConfiguration(Mock.Of<ILogger<QueueDEConfiguration>>(), config)), tarFileCleanupService);
-            
-            
+
+
             var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
 
             receiptResponse.Should().BeEquivalentTo(expectedResponse, x => x.Excluding(x => x.ftReceiptMoment));
@@ -107,7 +113,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             var receiptRequest = TestObjectFactory.GetReceipt(Path.Combine("Data", "DailyClosingReceipt"));
             receiptRequest.ftReceiptCase = 0x4445000110000007;
             var signProcessor = _fixture.CreateSignProcessorForSignProcessorDE(false, DateTime.Now.AddHours(-1), null, null, false, true);
-            var response =  signProcessor.ProcessAsync(receiptRequest).Result;
+            var response = signProcessor.ProcessAsync(receiptRequest).Result;
             var isFailedMode = (response.ftState & 0x0000_0000_0000_0002) > 0x0000;
             isFailedMode.Should().BeTrue();
         }

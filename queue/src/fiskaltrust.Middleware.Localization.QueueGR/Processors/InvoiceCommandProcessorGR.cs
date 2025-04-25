@@ -16,26 +16,6 @@ public class InvoiceCommandProcessorGR(IGRSSCD sscd, ftQueueGR queueGR, ftSignat
     private readonly ftSignaturCreationUnitGR _signaturCreationUnitGR = signaturCreationUnitGR;
 #pragma warning restore
 
-    public async Task<ProcessCommandResponse> ProcessReceiptAsync(ProcessCommandRequest request)
-    {
-        var receiptCase = request.ReceiptRequest.ftReceiptCase.Case();
-        switch (receiptCase)
-        {
-            case ReceiptCase.InvoiceUnknown0x1000:
-                return await InvoiceUnknown0x1000Async(request);
-            case ReceiptCase.InvoiceB2C0x1001:
-                return await InvoiceB2C0x1001Async(request);
-            case ReceiptCase.InvoiceB2B0x1002:
-                return await InvoiceB2B0x1002Async(request);
-            case ReceiptCase.InvoiceB2G0x1003:
-                return await InvoiceB2G0x1003Async(request);
-            case (ReceiptCase) 0x1004: // TODO
-                return await InvoiceUnknown0x1000Async(request);
-        }
-        request.ReceiptResponse.SetReceiptResponseError(ErrorMessages.UnknownReceiptCase((long) request.ReceiptRequest.ftReceiptCase));
-        return new ProcessCommandResponse(request.ReceiptResponse, []);
-    }
-
     public async Task<ProcessCommandResponse> InvoiceUnknown0x1000Async(ProcessCommandRequest request)
     {
         var response = await _sscd.ProcessReceiptAsync(new ProcessRequest

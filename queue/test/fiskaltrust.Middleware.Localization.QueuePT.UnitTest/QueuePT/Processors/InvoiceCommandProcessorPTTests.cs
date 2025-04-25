@@ -9,12 +9,13 @@ using fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
 using Moq;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Storage.PT;
+using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processors;
 
 public class InvoiceCommandProcessorPTTests
 {
-    private readonly InvoiceCommandProcessorPT _sut = new InvoiceCommandProcessorPT(Mock.Of<IPTSSCD>(), new ftQueuePT(), new ftSignaturCreationUnitPT(), Mock.Of<IMiddlewareQueueItemRepository>());
+    private readonly ReceiptProcessor _sut = new(Mock.Of<ILogger<ReceiptProcessor>>(), null!, null!, null!, new InvoiceCommandProcessorPT(Mock.Of<IPTSSCD>(), new ftQueuePT(), new ftSignaturCreationUnitPT(), Mock.Of<IMiddlewareQueueItemRepository>()), null!);
 
     [Theory]
     [InlineData(ReceiptCase.InvoiceUnknown0x1000)]
@@ -39,9 +40,8 @@ public class InvoiceCommandProcessorPTTests
             ftReceiptIdentification = "receiptIdentification",
             ftReceiptMoment = DateTime.UtcNow,
         };
-        var request = new ProcessCommandRequest(queue, receiptRequest, receiptResponse);
+        var result = await _sut.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
 
-        var result = await _sut.ProcessReceiptAsync(request);
         result.receiptResponse.Should().Be(receiptResponse);
         result.receiptResponse.ftState.Should().Be(0x5054_2000_0000_0000);
     }
@@ -65,9 +65,8 @@ public class InvoiceCommandProcessorPTTests
             ftReceiptIdentification = "receiptIdentification",
             ftReceiptMoment = DateTime.UtcNow,
         };
-        var request = new ProcessCommandRequest(queue, receiptRequest, receiptResponse);
+        var result = await _sut.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
 
-        var result = await _sut.ProcessReceiptAsync(request);
         result.receiptResponse.Should().Be(receiptResponse);
         result.receiptResponse.ftState.Should().Be(0x5054_2000_EEEE_EEEE);
     }

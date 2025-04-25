@@ -20,7 +20,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
     {
         private readonly string _tar01FileBase64 = "UEsDBBQAAAAIABtmXFGRutY7ZQAAAAAMAAAIAAAAbXVqby50YXLt08EJgDAMheGM0gnkJbZkHPEgXgRBIzi+iqgTWArNd8klkEv+aR47bmw3+g8YUFXC7ZsPFuJWY4Qg8bWnKQkFUAbbav1CyHKrQDasFs4nCEyuQlf/UlL/bfT+M3r7F3LOOVeRA1BLAQI/ABQAAAAIABtmXFGRutY7ZQAAAAAMAAAIACQAAAAAAAAAIAAAAAAAAABtdWpvLnRhcgoAIAAAAAAAAQAYAOJQjk4grdYBAsHDXyCt1gH3TnNOIK3WAVBLBQYAAAAAAQABAFoAAACLAAAAAAA=";
         private readonly string _tar02FileBase64 = "UEsDBBQAAAAIAKlmXFGXplRPagAAAAAMAAAIAAAAaGFzby50YXLt08EJgDAMQNGM0gkkqWkzjngQL4KgERxfpVQnsBSad8klkEP4Ou06LOscOj0V/oGEKCKAyTcz8kC9MCN7YXr2ORI4hAKOXccNsMitCj3/d/f/XQDToNx/rKX/gKl/b/2X8PYfwRhjTEMuUEsBAj8AFAAAAAgAqWZcUZemVE9qAAAAAAwAAAgAJAAAAAAAAAAgAAAAAAAAAGhhc28udGFyCgAgAAAAAAABABgAkolZ7CCt1gGzSFbxIK3WAarzPOwgrdYBUEsFBgAAAAABAAEAWgAAAJAAAAAAAA==";
-        
+
         [Fact]
         public async Task ProcessAsync_ShouldStreamByte_WhenTarFileIsRequested()
         {
@@ -44,7 +44,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
             {
                 QueueId = Guid.NewGuid(),
                 ServiceFolder = @".\",
-                Configuration = new Dictionary<string, object>()
+                Configuration = new Dictionary<string, object>(),
+                ProcessingVersion = "test"
             };
 
             var middlewareRepo = new Mock<IMiddlewareRepository<ftJournalDE>>();
@@ -90,7 +91,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
             {
                 QueueId = Guid.NewGuid(),
                 ServiceFolder = @".\",
-                Configuration = new Dictionary<string, object>()
+                Configuration = new Dictionary<string, object>(),
+                ProcessingVersion = "test"
             };
 
             var middlewareRepo = new Mock<IMiddlewareRepository<ftJournalDE>>();
@@ -136,7 +138,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
             {
                 QueueId = Guid.NewGuid(),
                 ServiceFolder = @".\",
-                Configuration = new Dictionary<string, object>()
+                Configuration = new Dictionary<string, object>(),
+                ProcessingVersion = "test"
             };
 
             var middlewareRepo = new Mock<IMiddlewareRepository<ftJournalDE>>();
@@ -165,7 +168,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
             var configurationRepositoryMock = new Mock<IReadOnlyConfigurationRepository>(MockBehavior.Strict);
             var journalDERepository = new Mock<IMiddlewareJournalDERepository>(MockBehavior.Strict);
 
-            var journals = new List<ftJournalDE>() {};
+            var journals = new List<ftJournalDE>() { };
 
             journalDERepository.Setup(x => x.GetAsync()).ReturnsAsync(journals);
 
@@ -173,7 +176,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.UnitTest
             {
                 QueueId = Guid.NewGuid(),
                 ServiceFolder = @".\",
-                Configuration = new Dictionary<string, object>()
+                Configuration = new Dictionary<string, object>(),
+                ProcessingVersion = "test"
             };
 
             var middlewareRepo = new Mock<IMiddlewareRepository<ftJournalDE>>();

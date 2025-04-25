@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.Interface.Tagging;
 using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Repositories;
@@ -32,7 +31,6 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
             var journalFRRepositoryMock = new Mock<IMiddlewareJournalFRRepository>(MockBehavior.Strict);
             var journalMERepositoryMock = new Mock<IMiddlewareRepository<ftJournalME>>(MockBehavior.Strict);
             var marketSpecificJournalProcessorMock = new Mock<IMarketSpecificJournalProcessor>(MockBehavior.Strict);
-            var journalConverter = new Mock<JournalConverter>(MockBehavior.Strict);
             var queueId = Guid.NewGuid();
             var cashboxId = Guid.NewGuid();
             var receiptRequestMode = 0;
@@ -67,7 +65,8 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
                 QueueId = queueId,
                 CashBoxId = cashboxId,
                 ReceiptRequestMode = receiptRequestMode,
-                Configuration = new() { { "init_ftQueue", JsonConvert.SerializeObject(new List<ftQueue>() { queue }) } }
+                Configuration = new() { { "init_ftQueue", JsonConvert.SerializeObject(new List<ftQueue>() { queue }) } },
+                ProcessingVersion = "test"
             };
 
 
@@ -75,10 +74,10 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
             receiptJournalRepositoryMock.Setup(x => x.InsertAsync(It.IsAny<ftReceiptJournal>())).Returns(Task.CompletedTask);
             configMock.Setup(x => x.InsertOrUpdateQueueAsync(queue)).Returns(Task.CompletedTask);
 
-            var sut = new JournalProcessor(configMock.Object, queueItemRepositoryMock.Object, receiptJournalRepositoryMock.Object, actionJournalRepositoryMock.Object, journalATRepositoryMock.Object, journalDERepositoryMock.Object, journalFRRepositoryMock.Object, journalMERepositoryMock.Object, marketSpecificJournalProcessorMock.Object, loggergMock.Object, configuration, journalConverter.Object);
+            var sut = new JournalProcessor(configMock.Object, queueItemRepositoryMock.Object, receiptJournalRepositoryMock.Object, actionJournalRepositoryMock.Object, journalATRepositoryMock.Object, journalDERepositoryMock.Object, journalFRRepositoryMock.Object, journalMERepositoryMock.Object, marketSpecificJournalProcessorMock.Object, loggergMock.Object, configuration);
 
 
-            await foreach(var chunk in sut.ProcessAsync(request))
+            await foreach (var chunk in sut.ProcessAsync(request))
             {
 
             }
@@ -97,7 +96,6 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
             var journalFRRepositoryMock = new Mock<IMiddlewareJournalFRRepository>(MockBehavior.Strict);
             var journalMERepositoryMock = new Mock<IMiddlewareRepository<ftJournalME>>(MockBehavior.Strict);
             var marketSpecificJournalProcessorMock = new Mock<IMarketSpecificJournalProcessor>(MockBehavior.Strict);
-            var journalConverter = new Mock<JournalConverter>(MockBehavior.Strict);
             var queueId = Guid.NewGuid();
             var cashboxId = Guid.NewGuid();
             var receiptRequestMode = 0;
@@ -132,14 +130,15 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
                 QueueId = queueId,
                 CashBoxId = cashboxId,
                 ReceiptRequestMode = receiptRequestMode,
-                Configuration = new() { { "init_ftQueue", JsonConvert.SerializeObject(new List<ftQueue>() { queue }) } }
+                Configuration = new() { { "init_ftQueue", JsonConvert.SerializeObject(new List<ftQueue>() { queue }) } },
+                ProcessingVersion = "test"
             };
 
             marketSpecificJournalProcessorMock.Setup(x => x.ProcessAsync(request)).Returns(new List<JournalResponse>() { new JournalResponse { Chunk = new() } }.ToAsyncEnumerable());
             receiptJournalRepositoryMock.Setup(x => x.InsertAsync(It.IsAny<ftReceiptJournal>())).Returns(Task.CompletedTask);
             configMock.Setup(x => x.InsertOrUpdateQueueAsync(queue)).Returns(Task.CompletedTask);
 
-            var sut = new JournalProcessor(configMock.Object, queueItemRepositoryMock.Object, receiptJournalRepositoryMock.Object, actionJournalRepositoryMock.Object, journalATRepositoryMock.Object, journalDERepositoryMock.Object, journalFRRepositoryMock.Object, journalMERepositoryMock.Object, marketSpecificJournalProcessorMock.Object, loggergMock.Object, configuration, journalConverter.Object);
+            var sut = new JournalProcessor(configMock.Object, queueItemRepositoryMock.Object, receiptJournalRepositoryMock.Object, actionJournalRepositoryMock.Object, journalATRepositoryMock.Object, journalDERepositoryMock.Object, journalFRRepositoryMock.Object, journalMERepositoryMock.Object, marketSpecificJournalProcessorMock.Object, loggergMock.Object, configuration);
 
             var action = () => sut.ProcessAsync(request);
 

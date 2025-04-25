@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.Interface.Tagging;
-using fiskaltrust.Interface.Tagging.Models.Extensions;
 using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Repositories;
@@ -26,13 +24,9 @@ namespace fiskaltrust.Middleware.Queue
         private readonly IMiddlewareReceiptJournalRepository _receiptJournalRepository;
         private readonly IMiddlewareActionJournalRepository _actionJournalRepository;
         private readonly ICryptoHelper _cryptoHelper;
-        private readonly Guid _queueId = Guid.Empty;
-        private readonly Guid _cashBoxId = Guid.Empty;
-        private readonly bool _isSandbox;
-        private readonly int _receiptRequestMode = 0;
-        private readonly Type _assemblyType;
+
+        private readonly MiddlewareConfiguration _middlewareConfiguration;
         private readonly SignatureFactory _signatureFactory;
-        private readonly ReceiptConverter _receiptConverter;
         //private readonly Action<string> _onMessage;
 
         public SignProcessor(
@@ -43,8 +37,7 @@ namespace fiskaltrust.Middleware.Queue
             IMiddlewareActionJournalRepository actionJournalRepository,
             ICryptoHelper cryptoHelper,
             IMarketSpecificSignProcessor countrySpecificSignProcessor,
-            MiddlewareConfiguration configuration,
-            ReceiptConverter receiptConverter)
+            MiddlewareConfiguration middlewareConfiguration)
         {
             _logger = logger;
             _configurationRepository = configurationRepository ?? throw new ArgumentNullException(nameof(configurationRepository));
@@ -53,14 +46,9 @@ namespace fiskaltrust.Middleware.Queue
             _receiptJournalRepository = receiptJournalRepository;
             _actionJournalRepository = actionJournalRepository;
             _cryptoHelper = cryptoHelper;
-            _queueId = configuration.QueueId;
-            _cashBoxId = configuration.CashBoxId;
-            _isSandbox = configuration.IsSandbox;
-            _receiptRequestMode = configuration.ReceiptRequestMode;
-            _assemblyType = configuration.AssemblyType;
+            _middlewareConfiguration = middlewareConfiguration;
             //_onMessage = configuration.OnMessage;
             _signatureFactory = new SignatureFactory();
-            _receiptConverter = receiptConverter;
         }
 
         public async Task<ReceiptResponse> ProcessAsync(ReceiptRequest request)
@@ -76,12 +64,12 @@ namespace fiskaltrust.Middleware.Queue
                 {
                     throw new InvalidCastException($"Cannot parse CashBoxId {request.ftCashBoxID}");
                 }
-                if (dataCashBoxId != _cashBoxId)
+                if (dataCashBoxId != _middlewareConfiguration.CashBoxId)
                 {
                     throw new Exception("Provided CashBoxId does not match current CashBoxId");
                 }
 
-                var queue = await _configurationRepository.GetQueueAsync(_queueId).ConfigureAwait(false);
+                var queue = await _configurationRepository.GetQueueAsync(_middlewareConfiguration.QueueId).ConfigureAwait(false);
 
                 return await InternalSign(queue, request).ConfigureAwait(false);
             }
@@ -102,7 +90,7 @@ namespace fiskaltrust.Middleware.Queue
                     var foundQueueItem = await GetExistingQueueItemOrNullAsync(data).ConfigureAwait(false);
                     if (foundQueueItem != null)
                     {
-                        var message = $"Queue {_queueId} found cbReceiptReference \"{foundQueueItem.cbReceiptReference}\"";
+                        var message = $"Queue {_middlewareConfiguration.QueueId} found cbReceiptReference \"{foundQueueItem.cbReceiptReference}\"";
                         _logger.LogWarning(message);
                         await CreateActionJournalAsync(message, "", foundQueueItem.ftQueueItemId).ConfigureAwait(false);
                         return JsonConvert.DeserializeObject<ReceiptResponse>(foundQueueItem.response);
@@ -110,13 +98,13 @@ namespace fiskaltrust.Middleware.Queue
                 }
                 catch (Exception x)
                 {
-                    var message = $"Queue {_queueId} problem on receitrequest";
+                    var message = $"Queue {_middlewareConfiguration.QueueId} problem on receitrequest";
                     _logger.LogError(x, message);
                     await CreateActionJournalAsync(message, "", null).ConfigureAwait(false);
                 }
 
 
-                if (_receiptRequestMode == 1)
+                if (_middlewareConfiguration.ReceiptRequestMode == 1)
                 {
                     //try to sign, remove receiptrequest-flag
                     data.ftReceiptCase -= 0x0000800000000000L;
@@ -139,7 +127,7 @@ namespace fiskaltrust.Middleware.Queue
                 cbTerminalID = data.cbTerminalID,
                 cbReceiptReference = data.cbReceiptReference,
                 ftQueueRow = ++queue.ftQueuedRow,
-                ProcessingVersion = VersionHelper.GetCurrentMiddlewareVersion(_assemblyType)
+                ProcessingVersion = _middlewareConfiguration.ProcessingVersion
             };
             if (queueItem.ftQueueTimeout == 0)
             {
@@ -166,17 +154,7 @@ namespace fiskaltrust.Middleware.Queue
                 Exception exception = null;
                 try
                 {
-                    var dataToV1ExceptItaly = data;
-                    if (!data.IsCountryIT() && data.IsVersionV2())
-                    {
-                        _receiptConverter.ConvertRequestToV1(dataToV1ExceptItaly);
-                        (receiptResponse, countrySpecificActionJournals) = await _countrySpecificSignProcessor.ProcessAsync(dataToV1ExceptItaly, queue, queueItem).ConfigureAwait(false);
-                        _receiptConverter.ConvertResponseToV2(receiptResponse);
-                    }
-                    else
-                    {
-                        (receiptResponse, countrySpecificActionJournals) = await _countrySpecificSignProcessor.ProcessAsync(dataToV1ExceptItaly, queue, queueItem).ConfigureAwait(false);
-                    }
+                    (receiptResponse, countrySpecificActionJournals) = await _countrySpecificSignProcessor.ProcessAsync(data, queue, queueItem).ConfigureAwait(false);
                 }
                 catch (Exception e)
                 {
@@ -207,9 +185,9 @@ namespace fiskaltrust.Middleware.Queue
 
                 actionjournals.AddRange(countrySpecificActionJournals);
 
-                if (_isSandbox)
+                if (_middlewareConfiguration.IsSandbox)
                 {
-                    receiptResponse.ftSignatures = receiptResponse.ftSignatures.Concat(_signatureFactory.CreateSandboxSignature(_queueId));
+                    receiptResponse.ftSignatures = receiptResponse.ftSignatures.Concat(_signatureFactory.CreateSandboxSignature(_middlewareConfiguration.QueueId));
                 }
 
                 queueItem.response = JsonConvert.SerializeObject(receiptResponse);
@@ -300,7 +278,7 @@ namespace fiskaltrust.Middleware.Queue
             var actionJournal = new ftActionJournal
             {
                 ftActionJournalId = Guid.NewGuid(),
-                ftQueueId = _queueId,
+                ftQueueId = _middlewareConfiguration.QueueId,
                 ftQueueItemId = queueItemId.GetValueOrDefault(),
                 Message = message,
                 Priority = 0,

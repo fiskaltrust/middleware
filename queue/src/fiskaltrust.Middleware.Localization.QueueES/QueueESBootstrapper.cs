@@ -11,6 +11,7 @@ using fiskaltrust.Middleware.Localization.v2.MasterData;
 using fiskaltrust.Middleware.Localization.v2.Storage;
 using fiskaltrust.Middleware.Storage.AzureTableStorage;
 using fiskaltrust.Middleware.Storage.ES;
+using fiskaltrust.Middleware.Storage;
 using fiskaltrust.storage.V0.MasterData;
 using Microsoft.Extensions.Logging;
 

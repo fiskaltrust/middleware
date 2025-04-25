@@ -96,6 +96,7 @@ public class JournalProcessor : IJournalProcessor
             QueueATList = await _configurationRepository.GetQueueATListAsync().ConfigureAwait(false),
             QueueDEList = await _configurationRepository.GetQueueDEListAsync().ConfigureAwait(false),
             QueueESList = GetConfigurationFromDictionary<ftQueueES>("init_ftQueueES"),
+            QueueEUList = GetConfigurationFromDictionary<ftQueueES>("init_ftQueueEU"),
             QueueFRList = await _configurationRepository.GetQueueFRListAsync().ConfigureAwait(false),
             QueueGRList = GetConfigurationFromDictionary<ftQueueGR>("init_ftQueueGR"),
             QueueITList = await _configurationRepository.GetQueueITListAsync().ConfigureAwait(false),

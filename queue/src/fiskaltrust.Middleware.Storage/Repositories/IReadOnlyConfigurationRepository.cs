@@ -2,18 +2,22 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using fiskaltrust.Middleware.Storage.ES;
+using fiskaltrust.Middleware.Storage.EU;
 
-namespace fiskaltrust.Middleware.Storage.ES;
+namespace fiskaltrust.Middleware.Storage;
 
 public interface IReadOnlyConfigurationRepository
 {
-    Task<IEnumerable<ftSignaturCreationUnitES>> GetSignaturCreationUnitESListAsync();
+    public Task<IEnumerable<ftSignaturCreationUnitES>> GetSignaturCreationUnitESListAsync();
 
-    Task<ftSignaturCreationUnitES> GetSignaturCreationUnitESAsync(Guid signaturCreationUnitESId);
+    public Task<ftSignaturCreationUnitES> GetSignaturCreationUnitESAsync(Guid signaturCreationUnitESId);
 
 
-    Task<IEnumerable<ftQueueES>> GetQueueESListAsync();
+    public Task<IEnumerable<ftQueueES>> GetQueueESListAsync();
+    public Task<IEnumerable<ftQueueEU>> GetQueueEUListAsync();
 
-    Task<ftQueueES> GetQueueESAsync(Guid queueESId);
+    public Task<ftQueueES> GetQueueESAsync(Guid queueEUId);
+    public Task<ftQueueEU> GetQueueEUAsync(Guid queueEUId);
 
 }

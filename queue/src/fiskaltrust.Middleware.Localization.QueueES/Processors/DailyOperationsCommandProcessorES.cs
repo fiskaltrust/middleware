@@ -16,27 +16,7 @@ public class DailyOperationsCommandProcessorES(IESSSCD sscd, IQueueStorageProvid
     private readonly IESSSCD _sscd = sscd;
     private readonly IQueueStorageProvider _queueStorageProvider = queueStorageProvider;
 #pragma warning restore
-    public async Task<ProcessCommandResponse> ProcessReceiptAsync(ProcessCommandRequest request)
-    {
-        var receiptCase = request.ReceiptRequest.ftReceiptCase.Case();
-        switch (receiptCase)
-        {
-            case ReceiptCase.ZeroReceipt0x2000:
-                return await ZeroReceipt0x2000Async(request);
-            case ReceiptCase.OneReceipt0x2001:
-                return await OneReceipt0x2001Async(request);
-            case ReceiptCase.ShiftClosing0x2010:
-                return await ShiftClosing0x2010Async(request);
-            case ReceiptCase.DailyClosing0x2011:
-                return await DailyClosing0x2011Async(request);
-            case ReceiptCase.MonthlyClosing0x2012:
-                return await MonthlyClosing0x2012Async(request);
-            case ReceiptCase.YearlyClosing0x2013:
-                return await YearlyClosing0x2013Async(request);
-        }
-        request.ReceiptResponse.SetReceiptResponseError(ErrorMessages.UnknownReceiptCase((long) request.ReceiptRequest.ftReceiptCase));
-        return new ProcessCommandResponse(request.ReceiptResponse, []);
-    }
+
     public async Task<ProcessCommandResponse> ZeroReceipt0x2000Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>()));
 
     public async Task<ProcessCommandResponse> OneReceipt0x2001Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>()));

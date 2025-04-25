@@ -86,11 +86,11 @@ namespace fiskaltrust.Middleware.Queue.InMemory.IntegrationTest
 
             var serviceCollection = new ServiceCollection();
 
-            var queueBootstrapper = new QueueBootstrapper(values.ftQueues[0].Id, dictionary);
+            var queueBootstrapper = new QueueBootstrapper(values.ftQueues[0].Id, dictionary, typeof(QueueBootstrapper));
             queueBootstrapper.ConfigureServices(serviceCollection);
 
 
-            serviceCollection.Count.Should().Be(38);
+            serviceCollection.Count.Should().Be(36);
 
             CheckServiceType(serviceCollection, typeof(ICryptoHelper)).Should().BeTrue();
             CheckServiceType(serviceCollection, typeof(ISignProcessor)).Should().BeTrue();
@@ -165,7 +165,12 @@ namespace fiskaltrust.Middleware.Queue.InMemory.IntegrationTest
                 { "init_ftQueue", JsonConvert.SerializeObject(values.ftQueues[0].Configuration.init_ftQueue) }
             };
 
-            var businessLogicFactoryBoostrapper = LocalizedQueueBootStrapperFactory.GetBootstrapperForLocalizedQueue(values.ftQueues[0].Configuration.init_ftQueue[0].ftQueueId, new MiddlewareConfiguration { Configuration = config, PreviewFeatures = new() });
+            var businessLogicFactoryBoostrapper = LocalizedQueueBootStrapperFactory.GetBootstrapperForLocalizedQueue(values.ftQueues[0].Configuration.init_ftQueue[0].ftQueueId, new MiddlewareConfiguration
+            {
+                Configuration = config,
+                PreviewFeatures = new(),
+                ProcessingVersion = "test"
+            });
             businessLogicFactoryBoostrapper.Should().BeOfType(typeof(QueueDEBootstrapper));
         }
     }

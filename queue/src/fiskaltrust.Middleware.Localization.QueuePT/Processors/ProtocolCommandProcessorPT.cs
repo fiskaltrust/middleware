@@ -15,47 +15,23 @@ using System.Text.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Processors;
 
-public class ProtocolCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignaturCreationUnitPT signaturCreationUnitPT, IMiddlewareQueueItemRepository readOnlyQueueItemRepository) : IProtocolCommandProcessor
+public class ProtocolCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignaturCreationUnitPT signaturCreationUnitPT, IMiddlewareQueueItemRepository readOnlyQueueItemRepository) : ProcessorPreparation, IProtocolCommandProcessor
 {
     private readonly IPTSSCD _sscd = sscd;
     private readonly ftQueuePT _queuePT = queuePT;
 #pragma warning disable
     private readonly ftSignaturCreationUnitPT _signaturCreationUnitPT = signaturCreationUnitPT;
-    private readonly IMiddlewareQueueItemRepository _readOnlyQueueItemRepository = readOnlyQueueItemRepository;
+    protected override IMiddlewareQueueItemRepository _readOnlyQueueItemRepository { get; init; } = readOnlyQueueItemRepository;
 
-    public async Task<ProcessCommandResponse> ProcessReceiptAsync(ProcessCommandRequest request)
-    {
-        await StaticNumeratorStorage.LoadStorageNumbers(_readOnlyQueueItemRepository);
-        ReceiptRequestValidatorPT.ValidateReceiptOrThrow(request.ReceiptRequest);
-        var receiptCase = request.ReceiptRequest.ftReceiptCase.Case();
-        switch (receiptCase)
-        {
-            case ReceiptCase.ProtocolUnspecified0x3000:
-                return await ProtocolUnspecified0x3000Async(request);
-            case ReceiptCase.ProtocolTechnicalEvent0x3001:
-                return await ProtocolTechnicalEvent0x3001Async(request);
-            case ReceiptCase.ProtocolAccountingEvent0x3002:
-                return await ProtocolAccountingEvent0x3002Async(request);
-            case ReceiptCase.InternalUsageMaterialConsumption0x3003:
-                return await InternalUsageMaterialConsumption0x3003Async(request);
-            case ReceiptCase.Order0x3004:
-                return await Order0x3004Async(request);
-            case ReceiptCase.CopyReceiptPrintExistingReceipt0x3010:
-                return await CopyReceiptPrintExistingReceipt0x3010Async(request);
-        }
-        request.ReceiptResponse.SetReceiptResponseError(ErrorMessages.UnknownReceiptCase((long) request.ReceiptRequest.ftReceiptCase));
-        return new ProcessCommandResponse(request.ReceiptResponse, []);
-    }
+    public Task<ProcessCommandResponse> ProtocolUnspecified0x3000Async(ProcessCommandRequest request) => WithPreparations(request, async () => new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>()));
 
-    public async Task<ProcessCommandResponse> ProtocolUnspecified0x3000Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+    public Task<ProcessCommandResponse> ProtocolTechnicalEvent0x3001Async(ProcessCommandRequest request) => WithPreparations(request, async () => new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>()));
 
-    public async Task<ProcessCommandResponse> ProtocolTechnicalEvent0x3001Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+    public Task<ProcessCommandResponse> ProtocolAccountingEvent0x3002Async(ProcessCommandRequest request) => WithPreparations(request, async () => new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>()));
 
-    public async Task<ProcessCommandResponse> ProtocolAccountingEvent0x3002Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+    public Task<ProcessCommandResponse> InternalUsageMaterialConsumption0x3003Async(ProcessCommandRequest request) => WithPreparations(request, async () => new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>()));
 
-    public async Task<ProcessCommandResponse> InternalUsageMaterialConsumption0x3003Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
-
-    public async Task<ProcessCommandResponse> Order0x3004Async(ProcessCommandRequest request)
+    public Task<ProcessCommandResponse> Order0x3004Async(ProcessCommandRequest request) => WithPreparations(request, async () =>
     {
         var series = StaticNumeratorStorage.ProFormaSeries;
         series.Numerator++;
@@ -71,11 +47,11 @@ public class ProtocolCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSigna
         AddSignatures(series, response, hash, printHash, qrCode);
         series.LastHash = hash;
         return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
-    }
+    });
 
     private static void AddSignatures(NumberSeries series, ProcessResponse response, string hash, string printHash, string qrCode)
     {
-       response.ReceiptResponse.AddSignatureItem(new SignatureItem
+        response.ReceiptResponse.AddSignatureItem(new SignatureItem
         {
             Caption = "Hash",
             Data = hash,
@@ -99,5 +75,5 @@ public class ProtocolCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSigna
         response.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreatePTQRCode(qrCode));
     }
 
-    public async Task<ProcessCommandResponse> CopyReceiptPrintExistingReceipt0x3010Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+    public Task<ProcessCommandResponse> CopyReceiptPrintExistingReceipt0x3010Async(ProcessCommandRequest request) => WithPreparations(request, async () => new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>()));
 }

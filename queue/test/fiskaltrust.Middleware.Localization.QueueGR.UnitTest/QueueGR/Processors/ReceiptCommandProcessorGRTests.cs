@@ -16,12 +16,13 @@ using Moq;
 using Xunit;
 using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using fiskaltrust.storage.V0.MasterData;
+using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.QueueGR.Processors
 {
     public class ReceiptCommandProcessorGRTests
     {
-        private readonly ReceiptCommandProcessorGR _sut = new ReceiptCommandProcessorGR(Mock.Of<IGRSSCD>(), new ftQueueGR(), new ftSignaturCreationUnitGR());
+        private readonly ReceiptProcessor _sut = new(Mock.Of<ILogger<ReceiptProcessor>>(), null!, new ReceiptCommandProcessorGR(Mock.Of<IGRSSCD>(), new ftQueueGR(), new ftSignaturCreationUnitGR()), null!, null!, null!);
 
         [Theory]
         [InlineData(ReceiptCase.PaymentTransfer0x0002, Skip = "broken")]
@@ -46,8 +47,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.QueueGR.Processor
                 ftReceiptIdentification = "receiptIdentification",
                 ftReceiptMoment = DateTime.UtcNow,
             };
-            var request = new ProcessCommandRequest(queue, receiptRequest, receiptResponse);
-            var result = await _sut.ProcessReceiptAsync(request);
+            var result = await _sut.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
 
             result.receiptResponse.Should().Be(receiptResponse);
             result.receiptResponse.ftState.Should().Be(0x4752_2000_0000_0000);
@@ -72,8 +72,8 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.QueueGR.Processor
                 ftReceiptIdentification = "receiptIdentification",
                 ftReceiptMoment = DateTime.UtcNow,
             };
-            var request = new ProcessCommandRequest(queue, receiptRequest, receiptResponse);
-            var result = await _sut.ProcessReceiptAsync(request);
+            var result = await _sut.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
+
             result.receiptResponse.Should().Be(receiptResponse);
             result.receiptResponse.ftState.Should().Be(0x4752_2000_EEEE_EEEE);
         }
@@ -89,7 +89,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.QueueGR.Processor
 
             };
 
-            var configMock = new Mock<IConfigurationRepository>();
+            var configMock = new Mock<storage.V0.IConfigurationRepository>();
             configMock.Setup(x => x.InsertOrUpdateQueueAsync(It.IsAny<ftQueue>())).Returns(Task.CompletedTask);
             var sut = new ReceiptCommandProcessorGR(new MyDataApiClient("", "", false, new MasterDataConfiguration(), true), queuePT, signaturCreationUnitPT);
 

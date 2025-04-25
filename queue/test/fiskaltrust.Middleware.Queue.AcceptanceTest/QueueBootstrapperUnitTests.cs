@@ -48,14 +48,15 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
                 QueueId = queueId,
                 CashBoxId = cashBoxId,
                 ServiceFolder = "C:/",
-                Configuration = config
+                Configuration = config,
+                ProcessingVersion = "test"
             };
             var serviceCollection = new ServiceCollection();
 
-            var sut = new QueueBootstrapper(queueId, config);
+            var sut = new QueueBootstrapper(queueId, config, typeof(QueueBootstrapper));
             sut.ConfigureServices(serviceCollection);
 
-            serviceCollection.Should().HaveCount(38);
+            serviceCollection.Should().HaveCount(36);
 
             var cryptoHelper = new ServiceDescriptor(typeof(ICryptoHelper), typeof(CryptoHelper), ServiceLifetime.Scoped);
             var signProcessorDecorator = new ServiceDescriptor(typeof(ISignProcessor), x => new LocalQueueSynchronizationDecorator(x.GetRequiredService<ISignProcessor>(), x.GetRequiredService<ILogger<LocalQueueSynchronizationDecorator>>()), ServiceLifetime.Scoped);

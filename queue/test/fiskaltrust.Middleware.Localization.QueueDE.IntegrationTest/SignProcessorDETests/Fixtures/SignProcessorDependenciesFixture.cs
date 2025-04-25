@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
-using fiskaltrust.Interface.Tagging;
 using fiskaltrust.Middleware.Contracts.Data;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Models.Transactions;
@@ -98,12 +97,12 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                     ModeConfigurationJson = $"{{\"SourceScuId\": \"{_signaturCreationUnitDEId}\"}}"
 
                 }).ConfigureAwait(false);
-                
+
 
                 return repo;
             }).Result;
         }
-        public SignProcessor CreateSignProcessorForSignProcessorDE(bool queueInFailedMode, DateTime? startMoment = null, DateTime? stopMoment = null, Dictionary<string, object> configs = null, 
+        public SignProcessor CreateSignProcessorForSignProcessorDE(bool queueInFailedMode, DateTime? startMoment = null, DateTime? stopMoment = null, Dictionary<string, object> configs = null,
             bool masterdataUpdate = false, bool openTrans = false, bool sourceIsScuSwitch = false, bool targetIsScuSwitch = false, bool queueDECreationUnitIsNull = false)
         {
             InMemorySCU.OpenTans = openTrans;
@@ -113,7 +112,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             {
                 Configuration = configuration,
                 CashBoxId = CASHBOXID,
-                QueueId = QUEUEID
+                QueueId = QUEUEID,
+                ProcessingVersion = "test"
             };
 
             IMasterDataService masterDataService;
@@ -132,7 +132,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                 failedStartTransactionRepository, openTransactionRepository, masterDataService, config,
                 queueItemRepository, new SignatureFactoryDE(QueueDEConfiguration.FromMiddlewareConfiguration(Mock.Of<ILogger<QueueDEConfiguration>>(), config)));
             var signProcessor = new SignProcessor(Mock.Of<ILogger<SignProcessor>>(), configurationRepository, queueItemRepository, receiptJournalRepository,
-                actionJournalRepository, new CryptoHelper(), signProcessorDE, config, new Mock<ReceiptConverter>().Object);
+                actionJournalRepository, new CryptoHelper(), signProcessorDE, config);
             return signProcessor;
         }
         public async Task AddOpenOrders(string receiptReference, int transnr) => await openTransactionRepository.InsertAsync(new OpenTransaction { cbReceiptReference = receiptReference, StartMoment = DateTime.UtcNow.AddHours(-12), StartTransactionSignatureBase64 = "somebase64==", TransactionNumber = transnr });
