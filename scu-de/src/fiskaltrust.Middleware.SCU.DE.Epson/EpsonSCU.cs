@@ -28,7 +28,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Epson
         private string _publicKey;
         private string _tseSerialNumber;
         private string _signatureAlgorithm;
-        private const string _logTimeFormat = "UnixTime"; // 2020-05-29 SKE: We can use this as hardcoded value, because the time for DiboldTSE is always Unix 
+        private const string _logTimeFormat = "unixtime"; // 2020-05-29 SKE: We can use this as hardcoded value, because the time for DiboldTSE is always Unix 
         private const string _noExport = "noexport-";
         private const long _blockSize = 512;
 
@@ -155,7 +155,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Epson
                 await UpdateTimeAsync();
                 await AuthenticateClientAsync(request.ClientId);
 
-                var result = await _transactionCommandProvider.UpdateTransactionAsync((long) request.TransactionNumber, request.ClientId, request.ProcessDataBase64, request.ProcessType);
+                var result = await _transactionCommandProvider.UpdateTransactionAsync((long)request.TransactionNumber, request.ClientId, request.ProcessDataBase64, request.ProcessType);
                 return new UpdateTransactionResponse
                 {
                     TransactionNumber = request.TransactionNumber,
@@ -190,7 +190,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Epson
                 await UpdateTimeAsync();
                 await AuthenticateClientAsync(request.ClientId);
 
-                var result = await _transactionCommandProvider.FinishTransactionAsync((long) request.TransactionNumber, request.ClientId, request.ProcessDataBase64, request.ProcessType);
+                var result = await _transactionCommandProvider.FinishTransactionAsync((long)request.TransactionNumber, request.ClientId, request.ProcessDataBase64, request.ProcessType);
                 StartTransactionTimeStampCache.TryRemove(request.TransactionNumber, out var startTransactionTimeStamp);
                 return new FinishTransactionResponse
                 {
@@ -206,7 +206,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Epson
                     {
                         PublicKeyBase64 = _publicKey,
                         SignatureAlgorithm = _signatureAlgorithm,
-                        SignatureCounter = (ulong) result.SignatureCounter,
+                        SignatureCounter = (ulong)result.SignatureCounter,
                         SignatureBase64 = result.Signature
                     },
                 };
@@ -398,7 +398,7 @@ namespace fiskaltrust.Middleware.SCU.DE.Epson
 
                         if ((tempStream.Length - exportStateData.ReadPointer) < chunkSize)
                         {
-                            chunkSize = (int) tempStream.Length - exportStateData.ReadPointer;
+                            chunkSize = (int)tempStream.Length - exportStateData.ReadPointer;
                         }
                         var buffer = new byte[chunkSize];
                         var len = await tempStream.ReadAsync(buffer, 0, buffer.Length);
@@ -525,9 +525,9 @@ namespace fiskaltrust.Middleware.SCU.DE.Epson
                     PublicKeyBase64 = _publicKey,
                     SignatureAlgorithm = _signatureAlgorithm,
                     LogTimeFormat = _logTimeFormat,
-                    MaxLogMemorySize = (long) storageInfo.TseInformation.TseCapacity * _blockSize,
+                    MaxLogMemorySize = (long)storageInfo.TseInformation.TseCapacity * _blockSize,
                     CurrentNumberOfSignatures = storageInfo.TseInformation.CreatedSignatures,
-                    CurrentLogMemorySize = (long) storageInfo.TseInformation.TseCurrentSize * _blockSize,
+                    CurrentLogMemorySize = (long)storageInfo.TseInformation.TseCurrentSize * _blockSize,
                     FirmwareIdentification = BitConverter.GetBytes(storageInfo.TseInformation.SoftwareVersion).ToOctetString(),
                     CurrentClientIds = registeredClientIds,
                     CertificationIdentification = storageInfo.TseInformation.TseDescription,
