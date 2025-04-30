@@ -65,7 +65,7 @@ public class QueueStorageProvider : IQueueStorageProvider
             ftQueueRow = await IncrementQueueRow(),
             country = receiptRequest.ftReceiptCase.Country(),
             version = "v2",
-            request = System.Text.Json.JsonSerializer.Serialize(receiptRequest, jsonSerializerOptions),
+            request = JsonSerializer.Serialize(receiptRequest, jsonSerializerOptions),
         };
         if (queueItem.ftQueueTimeout == 0)
         {
@@ -103,11 +103,12 @@ public class QueueStorageProvider : IQueueStorageProvider
     {
         _cachedQueue ??= await GetQueueAsync();       
         var queue = _cachedQueue;
+
         var jsonSerializerOptions = new JsonSerializerOptions
         {
             Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
         };
-        queueItem.response = System.Text.Json.JsonSerializer.Serialize(receiptResponse, jsonSerializerOptions);
+        queueItem.response = JsonSerializer.Serialize(receiptResponse, jsonSerializerOptions);
         queueItem.responseHash = _cryptoHelper.GenerateBase64Hash(queueItem.response);
         queueItem.ftDoneMoment = DateTime.UtcNow;
         queue.ftCurrentRow++;
