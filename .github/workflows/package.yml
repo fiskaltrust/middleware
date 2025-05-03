@@ -38,6 +38,7 @@ jobs:
           path: ${{ inputs.directory }}
           certificate: '${{ secrets.SIGNING_CERTIFICATE }}'
           password: '${{ secrets.SIGNING_CERT_PASSWORD }}'
+          filter: 'fiskaltrust.*.dll'
 
       - run: |
           dotnet publish --configuration Release --no-restore -f net461
