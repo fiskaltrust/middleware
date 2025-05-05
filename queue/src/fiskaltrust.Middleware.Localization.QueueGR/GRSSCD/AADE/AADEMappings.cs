@@ -213,6 +213,10 @@ public static class AADEMappings
     {
         if (receiptRequest.ftReceiptCase.IsType(ReceiptCaseType.Receipt))
         {
+            if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
+            {
+                return InvoiceType.Item114;
+            }
 
             if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003))
             {
@@ -223,11 +227,6 @@ public static class AADEMappings
                 return InvoiceType.Item31;
             }
 
-            if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Protocol0x0005))
-            {
-                return InvoiceType.Item114;
-            }
-
             if (receiptRequest.cbChargeItems.All(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.NotOwnSales)))
             {
                 if (receiptRequest.cbChargeItems.Any(x => x.ftChargeItemCase.IsNatureOfVat(ChargeItemCaseNatureOfVatGR.ExtemptEndOfClimateCrises)))
@@ -236,10 +235,6 @@ public static class AADEMappings
                 }
 
                 return InvoiceType.Item115;
-            }
-            else if (receiptRequest.cbReceiptAmount < 100m)
-            {
-                return InvoiceType.Item113;
             }
             else if (receiptRequest.HasOnlyServiceItems())
             {
@@ -253,7 +248,7 @@ public static class AADEMappings
 
         if (receiptRequest.ftReceiptCase.IsType(ReceiptCaseType.Invoice))
         {
-            if (receiptRequest.ftReceiptCase.Case() == (ReceiptCase) 0x1004) // TODO
+            if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
             {
                 return !string.IsNullOrEmpty(receiptRequest.cbPreviousReceiptReference) ? InvoiceType.Item51 : InvoiceType.Item52;
             }
@@ -324,14 +319,14 @@ public static class AADEMappings
         {
             switch (receiptRequest.ftReceiptCase.Case())
             {
-                case ReceiptCase.InternalUsageMaterialConsumption0x3003:
-                    return receiptRequest.HasOnlyServiceItems() ? InvoiceType.Item62 : InvoiceType.Item61;
+                //case ReceiptCase.InternalUsageMaterialConsumption0x3003:
+                //    return receiptRequest.HasOnlyServiceItems() ? InvoiceType.Item62 : InvoiceType.Item61;
                 case ReceiptCase.Order0x3004:
-                    return receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? InvoiceType.Item85 : InvoiceType.Item84;
-                case (ReceiptCase) 0x3005: // TODO
-                    return InvoiceType.Item81;
-                case (ReceiptCase) 0x3006: // TODO
-                    return InvoiceType.Item71;
+                    return InvoiceType.Item86;
+                //case (ReceiptCase) 0x3005: // TODO
+                //    return InvoiceType.Item81;
+                //case (ReceiptCase) 0x3006: // TODO
+                //    return InvoiceType.Item71;
             }
         }
         throw new Exception("Unknown type of receipt " + receiptRequest.ftReceiptCase.ToString("x"));

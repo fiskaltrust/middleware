@@ -38,6 +38,16 @@ public class AADEFactory
         {
             throw new Exception("The sum of the charge items must be equal to the sum of the pay items.");
         }
+
+        if(receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void))
+        {
+            throw new Exception("The Voiding of documents is not supported. Please use refund.");
+        }
+
+        if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.IsSelfPricingOperation))
+        {
+            throw new Exception("SelfPricing is not supported.");
+        }
     }
 
     public InvoicesDoc MapToInvoicesDoc(List<ftQueueItem> queueItems)
@@ -121,18 +131,6 @@ public class AADEFactory
         var identification = long.Parse(receiptResponse.ftReceiptIdentification.Replace("ft", "").Split("#")[0], System.Globalization.NumberStyles.HexNumber);
         var paymentMethods = GetPayments(receiptRequest);
         var issuer = CreateIssuer();
-        //if (receiptRequest.IsSelfPricingOperation())
-        //{
-
-        //    var customer = receiptRequest.GetCustomerOrNull();
-        //    issuer = new PartyType
-        //    {
-        //        vatNumber = customer?.CustomerVATId,
-        //        country = CountryType.GR,
-        //        branch = 0,
-        //    };
-        //}
-
         var inv = new AadeBookInvoiceType
         {
             issuer = issuer,
@@ -143,8 +141,6 @@ public class AADEFactory
                 aa = identification.ToString(),
                 issueDate = receiptRequest.cbReceiptMoment,
                 invoiceType = AADEMappings.GetInvoiceType(receiptRequest),
-                selfPricing = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.IsSelfPricingOperation),
-                selfPricingSpecified = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.IsSelfPricingOperation),
                 currency = CurrencyType.EUR,
                 currencySpecified = true
             },
