@@ -46,7 +46,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             var accessToken = "BBNu3xCxDz9VKOTQJQATmCzj1zQRjeE25DW/F8hcqsk/Uc5hHc4m1lEgd2QDsWLpa6MRDHz+vLlQs0hCprWt9XY=";
             var configuration = await GetConfigurationAsync(cashBoxId, accessToken);
             var queue = configuration.ftQueues?.First() ?? throw new Exception($"The configuration for {cashBoxId} is empty and therefore not valid.");
-            var bootstrapper = new QueueGRBootstrapper(queue.Id, new LoggerFactory(), queue.Configuration ?? new Dictionary<string, object>());
+            var bootstrapper = new QueueGRBootstrapper(queue.Id, new LoggerFactory(), queue.Configuration ?? new Dictionary<string, object>(), null!);
             return (bootstrapper, cashBoxId);
         }
 
@@ -144,11 +144,8 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
         [Fact]
         public async Task Example_POSReceipt_Testss_A11_1_Online_100()
         {
-            var cashBoxId = Guid.Parse("e117e4b5-88ea-4511-a134-e5408f3cfd4c");
-            var accessToken = "BBNu3xCxDz9VKOTQJQATmCzj1zQRjeE25DW/F8hcqsk/Uc5hHc4m1lEgd2QDsWLpa6MRDHz+vLlQs0hCprWt9XY=";
-            var configuration = await GetConfigurationAsync(cashBoxId, accessToken);
-            var queue = configuration.ftQueues?.First() ?? throw new Exception($"The configuration for {cashBoxId} is empty and therefore not valid.");
-            var bootstrapper = new QueueGRBootstrapper(queue.Id, new LoggerFactory(), queue.Configuration ?? new Dictionary<string, object>());
+            var (cashBoxId, queue) = await GetQueue();
+            var bootstrapper = new QueueGRBootstrapper(queue.Id, new LoggerFactory(), queue.Configuration ?? new Dictionary<string, object>(), null!);
             var signMethod = bootstrapper.RegisterForSign();
 
             var ticks = DateTime.UtcNow.Ticks;
@@ -162,11 +159,8 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
         [Fact]
         public async Task Example_POSReceipt_Testss_A11_1_Online_100_App2App()
         {
-            var cashBoxId = Guid.Parse("e117e4b5-88ea-4511-a134-e5408f3cfd4c");
-            var accessToken = "BBNu3xCxDz9VKOTQJQATmCzj1zQRjeE25DW/F8hcqsk/Uc5hHc4m1lEgd2QDsWLpa6MRDHz+vLlQs0hCprWt9XY=";
-            var configuration = await GetConfigurationAsync(cashBoxId, accessToken);
-            var queue = configuration.ftQueues?.First() ?? throw new Exception($"The configuration for {cashBoxId} is empty and therefore not valid.");
-            var bootstrapper = new QueueGRBootstrapper(queue.Id, new LoggerFactory(), queue.Configuration ?? new Dictionary<string, object>());
+            var (cashBoxId, queue) = await GetQueue();
+            var bootstrapper = new QueueGRBootstrapper(queue.Id, new LoggerFactory(), queue.Configuration ?? new Dictionary<string, object>(), null!);
             var signMethod = bootstrapper.RegisterForSign();
 
             var ticks = DateTime.UtcNow.Ticks;
@@ -177,6 +171,14 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             await StoreDataAsync("A11_1_Online_100", "A11_1_Online_100", ticks, bootstrapper, receiptRequest, System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesResponse)!);
         }
 
+        private async Task<(Guid cashBoxId, PackageConfiguration queue)> GetQueue()
+        {
+            var cashBoxId = Guid.Parse("e117e4b5-88ea-4511-a134-e5408f3cfd4c");
+            var accessToken = "BBNu3xCxDz9VKOTQJQATmCzj1zQRjeE25DW/F8hcqsk/Uc5hHc4m1lEgd2QDsWLpa6MRDHz+vLlQs0hCprWt9XY=";
+            var configuration = await GetConfigurationAsync(cashBoxId, accessToken);
+            var queue = configuration.ftQueues?.First() ?? throw new Exception($"The configuration for {cashBoxId} is empty and therefore not valid.");
+            return (cashBoxId, queue);
+        }
 
         public async Task StoreDataAsync(string folder, string casename, long ticks, QueueGRBootstrapper bootstrapper, ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
         {

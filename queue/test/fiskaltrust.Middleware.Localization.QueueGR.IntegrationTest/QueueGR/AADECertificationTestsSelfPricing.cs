@@ -56,7 +56,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             var accessToken = Constants.CASHBOX_CERTIFICATION_ACCESSTOKEN;
             var configuration = await GetConfigurationAsync(cashBoxId, accessToken);
             var queue = configuration.ftQueues?.First() ?? throw new Exception($"The configuration for {cashBoxId} is empty and therefore not valid.");
-            var bootstrapper = new QueueGRBootstrapper(queue.Id, new LoggerFactory(), queue.Configuration ?? new Dictionary<string, object>());
+            var bootstrapper = new QueueGRBootstrapper(queue.Id, new LoggerFactory(), queue.Configuration ?? new Dictionary<string, object>(), null!);
             return (bootstrapper, cashBoxId);
         }
 
