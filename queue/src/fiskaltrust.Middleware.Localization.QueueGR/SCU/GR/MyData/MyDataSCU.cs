@@ -11,41 +11,22 @@ using fiskaltrust.storage.V0.MasterData;
 #pragma warning disable
 namespace fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData;
 
-public class MyDataApiClient : IGRSSCD
+public class MyDataSCU : IGRSSCD
 {
     private readonly HttpClient _httpClient;
     private readonly string _prodBaseUrl = "https://mydatapi.aade.gr/";
     private readonly string _devBaseUrl = "https://mydataapidev.aade.gr/";
-
-    private readonly bool _isproduction;
+    private readonly string _receiptBaseAddress;
     private readonly MasterDataConfiguration _masterDataConfiguration;
 
-    public static MyDataApiClient CreateClient(Dictionary<string, object> configuration, MasterDataConfiguration masterDataConfiguration)
+    public MyDataSCU(string username, string subscriptionKey, string baseAddress, string receiptBaseAddress, MasterDataConfiguration masterDataConfiguration)
     {
-        var isproduction = false;
-        if (configuration.TryGetValue("production", out var production) && bool.TryParse(production?.ToString(), out isproduction))
-        { }
-        return new MyDataApiClient(configuration["aade-user-id"].ToString(), configuration["ocp-apim-subscription-key"].ToString(), masterDataConfiguration, isproduction);
-    }
-
-    public MyDataApiClient(string username, string subscriptionKey, MasterDataConfiguration masterDataConfiguration, bool isproduction)
-    {
+        _receiptBaseAddress = receiptBaseAddress;
         _masterDataConfiguration = masterDataConfiguration;
-        _isproduction = isproduction;
-        if(_isproduction)
+        _httpClient = new HttpClient()
         {
-            _httpClient = new HttpClient()
-            {
-                BaseAddress = new Uri(_prodBaseUrl)
-            };
-        }
-        else
-        {
-            _httpClient = new HttpClient()
-            {
-                BaseAddress = new Uri(_devBaseUrl)
-            };
-        }
+            BaseAddress = new Uri(baseAddress)
+        };
         _httpClient.DefaultRequestHeaders.Add("aade-user-id", username);
         _httpClient.DefaultRequestHeaders.Add("ocp-apim-subscription-key", subscriptionKey);
     }
@@ -116,14 +97,7 @@ public class MyDataApiClient : IGRSSCD
                             });
                         }
                     }
-                    if (_isproduction)
-                    {
-                        request.ReceiptResponse.AddSignatureItem(CreateGRQRCode($"https://receipts.viva.com/{request.ReceiptResponse.ftQueueID}/{request.ReceiptResponse.ftQueueItemID}"));
-                    }
-                    else
-                    {
-                        request.ReceiptResponse.AddSignatureItem(CreateGRQRCode($"https://receipts-sandbox.fiskaltrust.eu/{request.ReceiptResponse.ftQueueID}/{request.ReceiptResponse.ftQueueItemID}"));
-                    }
+                    request.ReceiptResponse.AddSignatureItem(CreateGRQRCode($"{_receiptBaseAddress}/{request.ReceiptResponse.ftQueueID}/{request.ReceiptResponse.ftQueueItemID}"));
                     request.ReceiptResponse.ftReceiptIdentification += $"{doc.invoice[0].invoiceHeader.series}-{doc.invoice[0].invoiceHeader.aa}";
                     request.ReceiptResponse.AddSignatureItem(new SignatureItem
                     {

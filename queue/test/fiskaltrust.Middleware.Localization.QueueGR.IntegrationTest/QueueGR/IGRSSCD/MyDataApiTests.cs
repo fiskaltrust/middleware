@@ -65,7 +65,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.QueueGR
                 ftReceiptMoment = DateTime.UtcNow
             };
 
-            var sut = new MyDataApiClient("user11111111", "41291863a36d552c4d7fc8195d427dd3", new storage.V0.MasterData.MasterDataConfiguration { }, false);
+            var sut = new MyDataSCU("user11111111", "41291863a36d552c4d7fc8195d427dd3", "https://mydataapidev.aade.gr/", "https://receipts-sandbox.fiskaltrust.eu", new storage.V0.MasterData.MasterDataConfiguration { });
             // var payload = sut.GenerateInvoicePayload(receiptRequest, receiptResponse);
 
 
