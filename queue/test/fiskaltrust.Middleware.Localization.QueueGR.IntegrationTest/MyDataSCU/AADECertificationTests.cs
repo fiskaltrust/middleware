@@ -5,7 +5,7 @@ using System.Text.Json;
 using System.Xml.Serialization;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData;
-using fiskaltrust.Middleware.Localization.v2.Configuration;
+using fiskaltrust.Middleware.Localization.QueueGR.UnitTest;
 using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using FluentAssertions;
 using FluentAssertions.Execution;
@@ -13,56 +13,14 @@ using Microsoft.Extensions.Logging;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
+namespace fiskaltrust.Middleware.Localization.QueueGR.IntegrationTest.MyDataSCU
 {
-    public static class Constants
-    {
-        public const string CASHBOX_CERTIFICATION_ID = "";
-        public const string CASHBOX_CERTIFICATION_ACCESSTOKEN = "";
-    }
+
     [Trait("only", "local")]
     public class AADECertificationTests
     {
         private readonly ITestOutputHelper _output;
         private readonly AADEFactory _aadeFactory;
-
-        public async Task<ftCashBoxConfiguration> GetConfigurationAsync(Guid cashBoxId, string accessToken)
-        {
-            using (var httpClient = new HttpClient())
-            {
-                httpClient.BaseAddress = new Uri("https://helipad-sandbox.fiskaltrust.cloud");
-                httpClient.DefaultRequestHeaders.Clear();
-                httpClient.DefaultRequestHeaders.Add("cashboxid", cashBoxId.ToString());
-                httpClient.DefaultRequestHeaders.Add("accesstoken", accessToken);
-                var result = await httpClient.GetAsync("api/configuration");
-                var content = await result.Content.ReadAsStringAsync();
-                if (result.IsSuccessStatusCode)
-                {
-                    if (string.IsNullOrEmpty(content))
-                    {
-                        throw new Exception($"The configuration for {cashBoxId} is empty and therefore not valid.");
-                    }
-
-                    var configuration = Newtonsoft.Json.JsonConvert.DeserializeObject<ftCashBoxConfiguration>(content) ?? throw new Exception($"The configuration for {cashBoxId} is empty and therefore not valid.");
-                    configuration.TimeStamp = DateTime.UtcNow.Ticks;
-                    return configuration;
-                }
-                else
-                {
-                    throw new Exception($"{content}");
-                }
-            }
-        }
-
-        public async Task<(QueueGRBootstrapper bootstrapper, Guid cashBoxId)> InitializeQueueGRBootstrapperAsync()
-        {
-            var cashBoxId = Guid.Parse(Constants.CASHBOX_CERTIFICATION_ID);
-            var accessToken = Constants.CASHBOX_CERTIFICATION_ACCESSTOKEN;
-            var configuration = await GetConfigurationAsync(cashBoxId, accessToken);
-            var queue = configuration.ftQueues?.First() ?? throw new Exception($"The configuration for {cashBoxId} is empty and therefore not valid.");
-            var bootstrapper = new QueueGRBootstrapper(queue.Id, new LoggerFactory(), queue.Configuration ?? new Dictionary<string, object>(), null!);
-            return (bootstrapper, cashBoxId);
-        }
 
         public AADECertificationTests(ITestOutputHelper output)
         {
@@ -146,7 +104,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             invoiceDoc.invoice[0].invoiceSummary.incomeClassification.Should().BeEmpty();
             var xml = _aadeFactory.GenerateInvoicePayload(invoiceDoc);
             await SendToMayData(xml);
-            System.Console.WriteLine(caller);
+            Console.WriteLine(caller);
             await ExecuteMiddleware(receiptRequest, caller);
         }
 
@@ -160,7 +118,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             var xml = _aadeFactory.GenerateInvoicePayload(invoiceDoc);
             await SendToMayData(xml);
 
-            System.Console.WriteLine(caller);
+            Console.WriteLine(caller);
             //await ExecuteMiddleware(receiptRequest, caller);
         }
 
@@ -173,19 +131,19 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             invoiceDoc.invoice[0].invoiceSummary.incomeClassification[0].classificationType.Should().Be(expectedValueType);
             var xml = _aadeFactory.GenerateInvoicePayload(invoiceDoc);
             await SendToMayData(xml);
-            System.Console.WriteLine(caller);
+            Console.WriteLine(caller);
             await ExecuteMiddleware(receiptRequest, caller);
         }
 
 #pragma warning disable
         private async Task ExecuteMiddleware(ReceiptRequest receiptRequest, string caller)
         {
-            (var bootstrapper, var cashBoxId) = await InitializeQueueGRBootstrapperAsync();
+            (var bootstrapper, var cashBoxId) = await Initialization.InitializeQueueGRBootstrapperAsync();
             receiptRequest.ftCashBoxID = cashBoxId;
             var signMethod = bootstrapper.RegisterForSign();
             var ticks = DateTime.UtcNow.Ticks;
             var exampleCashSalesResponse = await signMethod(JsonSerializer.Serialize(receiptRequest));
-            await StoreDataAsync(caller, caller, ticks, bootstrapper, receiptRequest, System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesResponse)!);
+            await StoreDataAsync(caller, caller, ticks, bootstrapper, receiptRequest, JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesResponse)!);
         }
 
         private async Task<IssueResponse?> SendIssueAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
@@ -214,7 +172,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             var pngdata = await new HttpClient().GetAsync(result?.DocumentURL + "?format=png");
 
             var journalMethod = bootstrapper.RegisterForJournal();
-            var xmlData = await journalMethod(System.Text.Json.JsonSerializer.Serialize(new ifPOS.v1.JournalRequest
+            var xmlData = await journalMethod(JsonSerializer.Serialize(new ifPOS.v1.JournalRequest
             {
                 ftJournalType = 0x4752_2000_0000_0001,
                 From = ticks
@@ -236,9 +194,9 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
         [Fact]
         public async void JOurnal()
         {
-            (var bootstrapper, var cashBoxId) = await InitializeQueueGRBootstrapperAsync();
+            (var bootstrapper, var cashBoxId) = await Initialization.InitializeQueueGRBootstrapperAsync();
             var journalMethod = bootstrapper.RegisterForJournal();
-            var xmlData = await journalMethod(System.Text.Json.JsonSerializer.Serialize(new ifPOS.v1.JournalRequest
+            var xmlData = await journalMethod(JsonSerializer.Serialize(new ifPOS.v1.JournalRequest
             {
                 ftJournalType = 0x4752_2000_0000_0001,
                 From = 0

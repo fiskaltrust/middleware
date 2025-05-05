@@ -279,17 +279,17 @@ public static class AADEMappings
                     return InvoiceType.Item24;
                 }
 
-                if (receiptRequest.HasEUCountryCode())
+                if (receiptRequest.HasGreeceCountryCode())
+                {
+                    return InvoiceType.Item21;
+                }
+                else if (receiptRequest.HasEUCountryCode())
                 {
                     return InvoiceType.Item22;
                 }
-                else if (receiptRequest.HasNonEUCountryCode())
-                {
-                    return InvoiceType.Item23;
-                }
                 else
                 {
-                    return InvoiceType.Item21;
+                    return InvoiceType.Item23;
                 }
             }
             else

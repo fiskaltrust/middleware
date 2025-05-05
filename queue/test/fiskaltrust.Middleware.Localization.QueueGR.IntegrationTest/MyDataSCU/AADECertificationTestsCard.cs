@@ -1,85 +1,24 @@
-﻿using System.Linq.Expressions;
-using System.Net.Http.Json;
+﻿using System.Net.Http.Json;
 using System.Runtime.CompilerServices;
-using System.Runtime.Serialization;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Xml.Serialization;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData;
-using fiskaltrust.Middleware.Localization.v2.Configuration;
+using fiskaltrust.Middleware.Localization.QueueGR.UnitTest;
 using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using FluentAssertions;
 using FluentAssertions.Execution;
-using Microsoft.Extensions.Logging;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
+namespace fiskaltrust.Middleware.Localization.QueueGR.IntegrationTest.MyDataSCU
 {
-    public class PayResponse
-    {
-        [JsonPropertyName("Protocol")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
-        [DataMember(EmitDefaultValue = true, IsRequired = true)]
-        public required string Protocol { get; set; }
-
-        [JsonPropertyName("ftQueueID")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
-        [DataMember(EmitDefaultValue = true, IsRequired = true)]
-        public Guid ftQueueId { get; set; }
-
-        [JsonPropertyName("ftPayItems")]
-        [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
-        [DataMember(EmitDefaultValue = true, IsRequired = true)]
-        public required List<PayItem> ftPayItems { get; set; }
-    }
-
-
     [Trait("only", "local")]
     public class AADECertificationTestsCard
     {
         private readonly ITestOutputHelper _output;
         private readonly AADEFactory _aadeFactory;
-
-        public async Task<ftCashBoxConfiguration> GetConfigurationAsync(Guid cashBoxId, string accessToken)
-        {
-            using (var httpClient = new HttpClient())
-            {
-                httpClient.BaseAddress = new Uri("https://helipad-sandbox.fiskaltrust.cloud");
-                httpClient.DefaultRequestHeaders.Clear();
-                httpClient.DefaultRequestHeaders.Add("cashboxid", cashBoxId.ToString());
-                httpClient.DefaultRequestHeaders.Add("accesstoken", accessToken);
-                var result = await httpClient.GetAsync("api/configuration");
-                var content = await result.Content.ReadAsStringAsync();
-                if (result.IsSuccessStatusCode)
-                {
-                    if (string.IsNullOrEmpty(content))
-                    {
-                        throw new Exception($"The configuration for {cashBoxId} is empty and therefore not valid.");
-                    }
-
-                    var configuration = Newtonsoft.Json.JsonConvert.DeserializeObject<ftCashBoxConfiguration>(content) ?? throw new Exception($"The configuration for {cashBoxId} is empty and therefore not valid.");
-                    configuration.TimeStamp = DateTime.UtcNow.Ticks;
-                    return configuration;
-                }
-                else
-                {
-                    throw new Exception($"{content}");
-                }
-            }
-        }
-
-        public async Task<(QueueGRBootstrapper bootstrapper, Guid cashBoxId)> InitializeQueueGRBootstrapperAsync()
-        {
-            var cashBoxId = Guid.Parse(Constants.CASHBOX_CERTIFICATION_ID);
-            var accessToken = Constants.CASHBOX_CERTIFICATION_ACCESSTOKEN;
-            var configuration = await GetConfigurationAsync(cashBoxId, accessToken);
-            var queue = configuration.ftQueues?.First() ?? throw new Exception($"The configuration for {cashBoxId} is empty and therefore not valid.");
-            var bootstrapper = new QueueGRBootstrapper(queue.Id, new LoggerFactory(), queue.Configuration ?? new Dictionary<string, object>(), null!);
-            return (bootstrapper, cashBoxId);
-        }
 
         public AADECertificationTestsCard(ITestOutputHelper output)
         {
@@ -184,138 +123,23 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
 #pragma warning disable
         private async Task ExecuteMiddleware(ReceiptRequest receiptRequest, string caller)
         {
-            (var bootstrapper, var cashBoxId) = await InitializeQueueGRBootstrapperAsync();
+            (var bootstrapper, var cashBoxId) = await Initialization.InitializeQueueGRBootstrapperAsync();
             receiptRequest.ftCashBoxID = cashBoxId;
             var signMethod = bootstrapper.RegisterForSign();
             var ticks = DateTime.UtcNow.Ticks;
             var exampleCashSalesResponse = await signMethod(JsonSerializer.Serialize(receiptRequest));
-            await StoreDataAsync(caller, caller, ticks, bootstrapper, receiptRequest, System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesResponse)!);
-        }
-
-        private async Task<IssueResponse?> SendIssueAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
-        {
-
-            receiptRequest.cbReceiptAmount = Math.Abs(receiptRequest.cbReceiptAmount ?? 0.0m);
-            foreach (var chargeItem in receiptRequest.cbChargeItems)
-            {
-                chargeItem.Amount = Math.Abs(chargeItem.Amount);
-            }
-            foreach (var payItem in receiptRequest.cbPayItems)
-            {
-                payItem.Amount = Math.Abs(payItem.Amount);
-            }
-
-            var client = new HttpClient();
-            var request = new HttpRequestMessage(HttpMethod.Post, "https://possystem-api-sandbox.fiskaltrust.eu/v2/issue");
-            var cashBoxId = Guid.Parse(Constants.CASHBOX_CERTIFICATION_ID);
-            var accessToken = Constants.CASHBOX_CERTIFICATION_ACCESSTOKEN;
-            request.Headers.Add("x-cashbox-id", cashBoxId.ToString());
-            request.Headers.Add("x-cashbox-accesstoken", accessToken);
-            var data = JsonSerializer.Serialize(new
-            {
-                ReceiptRequest = receiptRequest,
-                ReceiptResponse = receiptResponse
-            });
-            request.Headers.Add("x-operation-id", Guid.NewGuid().ToString());
-            var content = new StringContent(data, null, "application/json");
-            request.Content = content;
-            var response = await client.SendAsync(request);
-            return await response.Content.ReadFromJsonAsync<IssueResponse>();
-        }
-
-
-        private async Task<PayResponse?> SendRefundRequest(string operationId, PayItem payItem)
-        {
-            var client = new HttpClient();
-            var request = new HttpRequestMessage(HttpMethod.Post, "https://possystem-api-sandbox.fiskaltrust.eu/v2/pay");
-            var cashBoxId = Guid.Parse(Constants.CASHBOX_CERTIFICATION_ID);
-            var accessToken = Constants.CASHBOX_CERTIFICATION_ACCESSTOKEN;
-            request.Headers.Add("x-cashbox-id", cashBoxId.ToString());
-            request.Headers.Add("x-cashbox-accesstoken", accessToken);
-            request.Headers.Add("x-operation-id", Guid.NewGuid().ToString());
-            var content = new StringContent("{\r\n   " +
-                "\"Action\": \"refund\"," +
-                "\"Protocol\": \"viva_eft_pos\"," +
-                "\"cbPayItem\": {" +
-                    $"\"{nameof(PayItem.MoneyBarcode)}\": \"{operationId}\",\r\n        " +
-                    $"\"Position\": {payItem.Position},\r\n        " +
-                    $"\"Quantity\": {payItem.Quantity},\r\n        " +
-                    $"\"Description\": \"{payItem.Description}\",\r\n        " +
-                    $"\"Amount\": {Math.Abs(payItem.Amount)},\r\n        " +
-                    $"\"ftPayItemCase\": {payItem.ftPayItemCase}\r\n    " +
-                    "},\r\n    \"cbTerminalId\": \"16009303\"\r\n}", null, "application/json");
-            request.Content = content;
-            var response = await client.SendAsync(request);
-            if (!response.IsSuccessStatusCode)
-            {
-                throw new Exception(await response.Content.ReadAsStringAsync());
-            }
-            return await response.Content.ReadFromJsonAsync<PayResponse>();
-        }
-
-        private async Task<(PayResponse?, string sessionid)> SendPayRequestGetOperationId(PayItem payItem)
-        {
-            var operationId = Guid.NewGuid().ToString();
-            var client = new HttpClient();
-            var request = new HttpRequestMessage(HttpMethod.Post, "https://possystem-api-sandbox.fiskaltrust.eu/v2/pay");
-            var cashBoxId = Guid.Parse(Constants.CASHBOX_CERTIFICATION_ID);
-            var accessToken = Constants.CASHBOX_CERTIFICATION_ACCESSTOKEN;
-            request.Headers.Add("x-cashbox-id", cashBoxId.ToString());
-            request.Headers.Add("x-cashbox-accesstoken", accessToken);
-            request.Headers.Add("x-operation-id", operationId);
-            var content = new StringContent("{\r\n   " +
-                "\"Action\": \"payment\"," +
-                "\"Protocol\": \"viva_eft_pos\"," +
-                "\"cbPayItem\": {" +
-                    $"\"Position\": {payItem.Position},\r\n        " +
-                    $"\"Quantity\": {payItem.Quantity},\r\n        " +
-                    $"\"Description\": \"{payItem.Description}\",\r\n        " +
-                    $"\"Amount\": {Math.Abs(payItem.Amount)},\r\n        " +
-                    $"\"ftPayItemCase\": {payItem.ftPayItemCase}\r\n    " +
-                    "},\r\n    \"cbTerminalId\": \"16009303\"\r\n}", null, "application/json");
-            request.Content = content;
-            var response = await client.SendAsync(request);
-            return (await response.Content.ReadFromJsonAsync<PayResponse>(), operationId);
-        }
-
-
-        private async Task<PayResponse?> SendPayRequest(PayItem payItem)
-        {
-            var client = new HttpClient();
-            var request = new HttpRequestMessage(HttpMethod.Post, "https://possystem-api-sandbox.fiskaltrust.eu/v2/pay");
-            var cashBoxId = Guid.Parse(Constants.CASHBOX_CERTIFICATION_ID);
-            var accessToken = Constants.CASHBOX_CERTIFICATION_ACCESSTOKEN;
-            request.Headers.Add("x-cashbox-id", cashBoxId.ToString());
-            request.Headers.Add("x-cashbox-accesstoken", accessToken);
-            request.Headers.Add("x-operation-id", Guid.NewGuid().ToString());
-            var content = new StringContent("{\r\n   " +
-                "\"Action\": \"payment\"," +
-                "\"Protocol\": \"viva_eft_pos_instore\"," +
-                "\"cbPayItem\": {" +
-                    $"\"Position\": {payItem.Position},\r\n        " +
-                    $"\"Quantity\": {payItem.Quantity},\r\n        " +
-                    $"\"Description\": \"{payItem.Description}\",\r\n        " +
-                    $"\"Amount\": {Math.Abs(payItem.Amount)},\r\n        " +
-                    $"\"ftPayItemCase\": {payItem.ftPayItemCase}\r\n    " +
-                    "},\r\n    \"cbTerminalId\": \"16009303\"\r\n}", null, "application/json");
-            request.Content = content;
-            var response = await client.SendAsync(request);
-            if (!response.IsSuccessStatusCode)
-            {
-                throw new Exception(await response.Content.ReadAsStringAsync());
-            }
-            return await response.Content.ReadFromJsonAsync<PayResponse>();
+            await StoreDataAsync(caller, caller, ticks, bootstrapper, receiptRequest, JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesResponse)!);
         }
 
 
         public async Task StoreDataAsync(string folder, string casename, long ticks, QueueGRBootstrapper bootstrapper, ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
         {
-            var result = await SendIssueAsync(receiptRequest, receiptResponse);
+            var result = await Initialization.SendIssueAsync(receiptRequest, receiptResponse);
             var pdfdata = await new HttpClient().GetAsync(result?.DocumentURL + "?format=pdf");
             var pngdata = await new HttpClient().GetAsync(result?.DocumentURL + "?format=png");
 
             var journalMethod = bootstrapper.RegisterForJournal();
-            var xmlData = await journalMethod(System.Text.Json.JsonSerializer.Serialize(new ifPOS.v1.JournalRequest
+            var xmlData = await journalMethod(JsonSerializer.Serialize(new ifPOS.v1.JournalRequest
             {
                 ftJournalType = 0x4752_2000_0000_0001,
                 From = ticks
@@ -388,7 +212,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             //invoiceDoc.invoice[0].invoiceSummary.incomeClassification[0].classificationType.Should().Be(IncomeClassificationValueType.E3_561_001);
             //var xml = _aadeFactory.GenerateInvoicePayload(invoiceDoc);
             //await SendToMayData(xml);
-            var payment = await SendPayRequest(creditnote.cbPayItems[0]);
+            var payment = await Initialization.SendPayRequest(creditnote.cbPayItems[0]);
             creditnote.cbPayItems[0] = payment!.ftPayItems[0];
             await ExecuteMiddleware(creditnote, "AADECertificationExamples_A1_5_5p1");
         }
@@ -404,7 +228,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
         public async Task AADECertificationExamples_A1_8_8p4()
         {
             var receiptRequest = AADECertificationExamplesCard.A1_8_8p4();
-            var payment = await SendPayRequest(receiptRequest.cbPayItems[0]);
+            var payment = await Initialization.SendPayRequest(receiptRequest.cbPayItems[0]);
             receiptRequest.cbPayItems[0] = payment!.ftPayItems[0];
             await ValidateMyData(receiptRequest, InvoiceType.Item84, IncomeClassificationCategoryType.category1_95);
         }
@@ -413,9 +237,9 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
         public async Task AADECertificationExamples_A1_8_8p5()
         {
             var receiptRequest = AADECertificationExamplesCard.A1_8_8p5();
-            var payment = await SendPayRequestGetOperationId(receiptRequest.cbPayItems[0]);
+            var payment = await Initialization.SendPayRequestGetOperationId(receiptRequest.cbPayItems[0]);
 
-            var refund = await SendRefundRequest(payment.sessionid, receiptRequest.cbPayItems[0]);
+            var refund = await Initialization.SendRefundRequest(payment.sessionid, receiptRequest.cbPayItems[0]);
             receiptRequest.cbPayItems[0] = refund!.ftPayItems[0];
             receiptRequest.cbPayItems[0].Amount = -receiptRequest.cbPayItems[0].Amount;
             await ValidateMyData(receiptRequest, InvoiceType.Item85, IncomeClassificationCategoryType.category1_95);
