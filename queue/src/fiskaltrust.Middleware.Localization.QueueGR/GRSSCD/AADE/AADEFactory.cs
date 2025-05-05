@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Web;
@@ -7,14 +6,11 @@ using System.Xml.Serialization;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE.Models;
 using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.myDataSCU;
-using fiskaltrust.Middleware.Localization.QueueGR.Interface;
 using fiskaltrust.Middleware.Localization.QueueGR.Models.Cases;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
-using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
-using fiskaltrust.Middleware.Localization.QueueGR.Extensions; 
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE;
 
@@ -47,6 +43,11 @@ public class AADEFactory
         if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.IsSelfPricingOperation))
         {
             throw new Exception("SelfPricing is not supported.");
+        }
+
+        if (AADEMappings.RequiresCustomerInfo(AADEMappings.GetInvoiceType(receiptRequest)) && !receiptRequest.ContainsCustomerInfo())
+        {
+            throw new Exception("Customer info is required for this invoice type");
         }
     }
 
@@ -82,7 +83,6 @@ public class AADEFactory
     public InvoicesDoc MapToInvoicesDoc(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
     {
         ValidateReceiptRequest(receiptRequest);
-
         var inv = CreateInvoiceDocType(receiptRequest, receiptResponse);
         var doc = new InvoicesDoc
         {
@@ -137,7 +137,7 @@ public class AADEFactory
             paymentMethods = [.. paymentMethods],
             invoiceHeader = new InvoiceHeaderType
             {
-                series = "0",
+                series = receiptResponse.ftCashBoxIdentification,
                 aa = identification.ToString(),
                 issueDate = receiptRequest.cbReceiptMoment,
                 invoiceType = AADEMappings.GetInvoiceType(receiptRequest),
@@ -163,7 +163,10 @@ public class AADEFactory
         {
             inv.invoiceHeader.correlatedInvoices = [long.Parse(receiptRequest.cbPreviousReceiptReference)];
         }
-        AddCounterpart(receiptRequest, inv);
+        if (receiptRequest.ContainsCustomerInfo())
+        {
+            AddCounterpart(receiptRequest, inv);
+        }
         SetValuesIfExistent(receiptRequest, receiptResponse, inv);
         return inv;
     }
@@ -358,9 +361,7 @@ public class AADEFactory
     private static List<PaymentMethodDetailType> GetPayments(ReceiptRequest receiptRequest)
     {
         // what is payitemcase 99?
-        return receiptRequest.cbPayItems
-            .Where(x => (int) x.ftPayItemCase.Case() != 0x99)
-            .Where(x => !(x.ftPayItemCase.IsCase(PayItemCase.Grant) && x.ftPayItemCase.IsFlag(PayItemCaseFlags.Tip)) && !(x.ftPayItemCase.IsCase(PayItemCase.DebitCardPayment) && x.ftPayItemCase.IsFlag(PayItemCaseFlags.Tip))).Select(x =>
+        return receiptRequest.cbPayItems.Where(x => !(x.ftPayItemCase.IsCase(PayItemCase.Grant) && x.ftPayItemCase.IsFlag(PayItemCaseFlags.Tip)) && !(x.ftPayItemCase.IsCase(PayItemCase.DebitCardPayment) && x.ftPayItemCase.IsFlag(PayItemCaseFlags.Tip))).Select(x =>
         {
             var payment = new PaymentMethodDetailType
             {
@@ -415,15 +416,6 @@ public class AADEFactory
 
     private void AddCounterpart(ReceiptRequest receiptRequest, AadeBookInvoiceType inv)
     {
-        if (!receiptRequest.ContainsCustomerInfo())
-        {
-            if (AADEMappings.RequiresCustomerInfo(inv.invoiceHeader.invoiceType))
-            {
-                throw new Exception("Customer info is required for this invoice type");
-            }
-            return;
-        }
-
         var customer = receiptRequest.GetCustomerOrNull();
         if (receiptRequest.HasGreeceCountryCode())
         {
@@ -467,37 +459,11 @@ public class AADEFactory
         }
         else if (receiptRequest.HasEUCountryCode())
         {
-
-            inv.counterpart = new PartyType
-            {
-                vatNumber = customer?.CustomerVATId,
-                country = customer?.CustomerCountry == "GR" ? CountryType.GR : CountryType.AT,
-                name = customer?.CustomerName,
-                address = new AddressType
-                {
-                    //number = "0",
-                    street = customer?.CustomerStreet,
-                    city = customer?.CustomerCity,
-                    postalCode = customer?.CustomerZip
-                },
-                branch = 0,
-            };
+            throw new Exception("Inter-Community invoices are not supported");
         }
         else if (receiptRequest.HasNonEUCountryCode())
         {
-            inv.counterpart = new PartyType
-            {
-                vatNumber = customer?.CustomerVATId,
-                country = CountryType.GB,
-                name = customer?.CustomerName,
-                address = new AddressType
-                {
-                    street = customer?.CustomerStreet?.Replace(", United Kingdom", ""),
-                    city = customer?.CustomerCity?.Replace(", United Kingdom", ""),
-                    postalCode = customer?.CustomerZip
-                },
-                branch = 0,
-            };
+            throw new Exception("Intra-Community invoices are not supported");
         }
     }
 

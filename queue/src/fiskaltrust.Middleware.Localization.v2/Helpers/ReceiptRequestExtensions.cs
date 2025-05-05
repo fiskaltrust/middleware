@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace fiskaltrust.Middleware.Localization.QueueGR.Extensions;
+namespace fiskaltrust.Middleware.Localization.v2.Helpers;
 
 public static class ReceiptRequestExtensions
 {

@@ -1,9 +1,6 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
-using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
-using fiskaltrust.SAFT.CLI;
 using FluentAssertions;
-using Microsoft.Extensions.Logging;
 using Xunit;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest

@@ -1,6 +1,5 @@
 ﻿using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
-using fiskaltrust.SAFT.CLI;
 
 public static class Examples
 {
@@ -65,6 +64,42 @@ public static class Examples
                 customerCity = "Αθηνών",
                 customerCountry = "GR",
             }
+        };
+    }
+
+    public static ReceiptRequest A2_ReceiptRefund()
+    {
+        return new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptAmount = -99,
+            cbReceiptMoment = DateTime.UtcNow,
+            cbReceiptReference = Guid.NewGuid().ToString(),
+            cbChargeItems =
+            [
+                new ChargeItem
+                {
+                    Position = 1,
+                    Amount = -99,
+                    VATRate = -24,
+                    VATAmount = -decimal.Round(99 / (100M + 24) * 24, 2, MidpointRounding.ToEven),
+                    ftChargeItemCase = ((ChargeItemCase) 0x4752_2000_0000_0013).WithFlag(ChargeItemCaseFlags.Refund),
+                    Quantity = 1,
+                    Description = "Line item 1"
+                }
+            ],
+            cbPayItems =
+            [
+                new PayItem
+                {
+                    Amount = -99,
+                    Description = "Μετρητά",
+                    ftPayItemCase = ((PayItemCase) 0x4752_2000_0000_1001).WithFlag(PayItemCaseFlags.Refund),
+                }
+            ],
+            ftPosSystemId = Guid.NewGuid(),
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0001).WithFlag(ReceiptCaseFlags.Refund),
         };
     }
 }

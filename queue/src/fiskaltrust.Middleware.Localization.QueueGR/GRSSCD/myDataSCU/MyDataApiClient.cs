@@ -21,32 +21,20 @@ public class MyDataApiClient : IGRSSCD
     private readonly string _prodBaseUrl = "https://mydatapi.aade.gr/";
     private readonly string _devBaseUrl = "https://mydataapidev.aade.gr/";
 
-    private readonly bool _iseinvoiceProvider;
     private readonly bool _isproduction;
     private readonly MasterDataConfiguration _masterDataConfiguration;
-    private readonly bool _aadeoffline;
 
     public static MyDataApiClient CreateClient(Dictionary<string, object> configuration, MasterDataConfiguration masterDataConfiguration)
     {
-        var iseinvoiceProvider = false;
-        if (configuration.TryGetValue("iseinvoiceProvider", out var data) && bool.TryParse(data?.ToString(), out iseinvoiceProvider))
-        { }
-
         var isproduction = false;
         if (configuration.TryGetValue("production", out var production) && bool.TryParse(production?.ToString(), out isproduction))
         { }
-
-        var aadeoffline = false;
-        if (configuration.TryGetValue("aadeoffline", out var aadeofflinedata) && bool.TryParse(aadeofflinedata?.ToString(), out aadeoffline))
-        { }
-        return new MyDataApiClient(configuration["aade-user-id"].ToString(), configuration["ocp-apim-subscription-key"].ToString(), iseinvoiceProvider, masterDataConfiguration, isproduction, aadeoffline);
+        return new MyDataApiClient(configuration["aade-user-id"].ToString(), configuration["ocp-apim-subscription-key"].ToString(), masterDataConfiguration, isproduction);
     }
 
-    public MyDataApiClient(string username, string subscriptionKey, bool iseinvoiceProvider, MasterDataConfiguration masterDataConfiguration, bool isproduction,  bool aadeoffline = false)
+    public MyDataApiClient(string username, string subscriptionKey, MasterDataConfiguration masterDataConfiguration, bool isproduction)
     {
-        _iseinvoiceProvider = iseinvoiceProvider;
         _masterDataConfiguration = masterDataConfiguration;
-        _aadeoffline = aadeoffline;
         _isproduction = isproduction;
         if(_isproduction)
         {
@@ -90,23 +78,7 @@ public class MyDataApiClient : IGRSSCD
         }
 
         var payload = aadFactory.GenerateInvoicePayload(doc);
-        var path = _iseinvoiceProvider ? "/myDataProvider/SendInvoices" : "/SendReceipts";
-        if(_aadeoffline)
-        {
-            request.ReceiptResponse.AddSignatureItem(new SignatureItem
-            {
-                Data = $"Απώλεια Διασύνδεσης Παρόχου – ΑΑΔΕ",
-                Caption = "Transmission Failure_2",
-                ftSignatureFormat = SignatureFormat.Text,
-                ftSignatureType = SignatureTypeGR.MyDataInfo.As<SignatureType>()
-            });
-            return new ProcessResponse
-            {
-                ReceiptResponse = request.ReceiptResponse
-            };
-        }
-
-        var response = await _httpClient.PostAsync(path, new StringContent(payload, Encoding.UTF8, "application/xml"));
+        var response = await _httpClient.PostAsync("/myDataProvider/SendInvoices", new StringContent(payload, Encoding.UTF8, "application/xml"));
         var content = await response.Content.ReadAsStringAsync();
         if ((int) response.StatusCode >= 500)
         {
@@ -148,20 +120,15 @@ public class MyDataApiClient : IGRSSCD
                             });
                         }
                     }
-                    if (_iseinvoiceProvider)
+                    if (_isproduction)
                     {
-                        if (_isproduction)
-                        {
-                            request.ReceiptResponse.AddSignatureItem(CreateGRQRCode($"https://receipts.viva.com/{request.ReceiptResponse.ftQueueID}/{request.ReceiptResponse.ftQueueItemID}"));
-                        }
-                        else
-                        {
-                            request.ReceiptResponse.AddSignatureItem(CreateGRQRCode($"https://receipts-sandbox.fiskaltrust.eu/{request.ReceiptResponse.ftQueueID}/{request.ReceiptResponse.ftQueueItemID}"));
-                        }
+                        request.ReceiptResponse.AddSignatureItem(CreateGRQRCode($"https://receipts.viva.com/{request.ReceiptResponse.ftQueueID}/{request.ReceiptResponse.ftQueueItemID}"));
                     }
-
+                    else
+                    {
+                        request.ReceiptResponse.AddSignatureItem(CreateGRQRCode($"https://receipts-sandbox.fiskaltrust.eu/{request.ReceiptResponse.ftQueueID}/{request.ReceiptResponse.ftQueueItemID}"));
+                    }
                     request.ReceiptResponse.ftReceiptIdentification += $"{doc.invoice[0].invoiceHeader.series}-{doc.invoice[0].invoiceHeader.aa}";
-
                     request.ReceiptResponse.AddSignatureItem(new SignatureItem
                     {
                         Data = $"{doc.invoice[0].issuer.vatNumber}|{doc.invoice[0].invoiceHeader.issueDate.ToString("dd/MM/yyyy")}|{doc.invoice[0].issuer.branch}|{doc.invoice[0].invoiceHeader.invoiceType}|{doc.invoice[0].invoiceHeader.series}|{doc.invoice[0].invoiceHeader.aa}",

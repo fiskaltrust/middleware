@@ -62,6 +62,18 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             d.ftState.IsState(State.Success).Should().BeTrue(string.Join(Environment.NewLine, d.ftSignatures.Select(x => x.Data)));
         }
 
+        [Fact]
+        public async Task Example_RetailSales_TestsRefund()
+        {
+            (var bootstrapper, var cashBoxId) = await InitializeQueueGRBootstrapperAsync();
+            var signMethod = bootstrapper.RegisterForSign();
+            var receiptRequest = Examples.A2_ReceiptRefund();
+            receiptRequest.ftCashBoxID = cashBoxId;
+            var exampleCashSalesResponse = await signMethod(System.Text.Json.JsonSerializer.Serialize(receiptRequest));
+            var d = System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesResponse)!;
+            d.ftState.IsState(State.Success).Should().BeTrue(string.Join(Environment.NewLine, d.ftSignatures.Select(x => x.Data)));
+        }
+
 
         [Fact]
         public async Task Example_RetailSales_Tests()
