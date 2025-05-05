@@ -10,7 +10,7 @@ using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0;
 using System.Linq;
 
-namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.QueueGR.Processors;
+namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.Processors;
 
 public class InvoiceCommandProcessorGRTests
 {

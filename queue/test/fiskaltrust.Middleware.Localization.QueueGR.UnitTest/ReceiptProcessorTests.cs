@@ -12,16 +12,17 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
 
     public class ReceiptProcessorTests
     {
-        [Fact(Skip = "broken")]
+        [Fact]
         public async Task ReceiptProcessor_ThrowException_ReturnErrorResponse()
         {
             var receiptRequest = new ReceiptRequest
             {
-                ftReceiptCase = (ReceiptCase) 0x5054_2000_0000_0000
+                ftCashBoxID = Guid.NewGuid(),
+                ftReceiptCase = (ReceiptCase) 0x4752_2000_0000_0000
             };
             var receiptResponse = new ReceiptResponse
             {
-                ftState = (State) 0x5054_2000_0000_0000,
+                ftState = (State) 0x4752_2000_0000_0000,
                 ftCashBoxIdentification = "cashBoxIdentification",
                 ftQueueID = Guid.NewGuid(),
                 ftQueueItemID = Guid.NewGuid(),
@@ -36,11 +37,11 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             result.receiptResponse.Should().Be(receiptResponse);
             result.receiptResponse.ftState.Should().Be(0x4752_2000_EEEE_EEEE);
             result.receiptResponse.ftSignatures.Should().HaveCount(1);
-            result.receiptResponse.ftSignatures[0].ftSignatureType.Should().Be(0x5054_2000_0000_3000);
+            result.receiptResponse.ftSignatures[0].ftSignatureType.Should().Be(0x4752_2000_0000_3000);
             result.receiptResponse.ftSignatures[0].Caption.Should().Be("FAILURE");
         }
 
-        [Fact(Skip = "broken")]
+        [Fact]
         public async Task ReceiptProcessor_ReturnNotSupported_ReturnErrorResponse()
         {
             var receiptRequest = new ReceiptRequest
@@ -64,7 +65,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             result.receiptResponse.Should().Be(receiptResponse);
             result.receiptResponse.ftState.Should().Be(0x4752_2000_EEEE_EEEE);
             result.receiptResponse.ftSignatures.Should().HaveCount(1);
-            result.receiptResponse.ftSignatures[0].ftSignatureType.Should().Be(0x5054_2000_0000_3000);
+            result.receiptResponse.ftSignatures[0].ftSignatureType.Should().Be(0x4752_2000_0000_3000);
             result.receiptResponse.ftSignatures[0].Caption.Should().Be("FAILURE");
         }
     }

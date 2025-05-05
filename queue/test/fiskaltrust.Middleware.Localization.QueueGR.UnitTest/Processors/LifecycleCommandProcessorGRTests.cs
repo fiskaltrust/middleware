@@ -12,7 +12,7 @@ using Xunit;
 using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using Microsoft.Extensions.Logging;
 
-namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.QueueGR.Processors;
+namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.Processors;
 
 public class LifecycleCommandProcessorGRTests
 {

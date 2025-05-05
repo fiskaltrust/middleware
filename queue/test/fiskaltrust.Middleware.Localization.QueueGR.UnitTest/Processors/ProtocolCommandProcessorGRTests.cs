@@ -8,7 +8,7 @@ using Moq;
 using Microsoft.Extensions.Logging;
 using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD;
 
-namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.QueueGR.Processors;
+namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.Processors;
 
 public class ProtocolCommandProcessorGRTests
 {
