@@ -79,18 +79,6 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
 
         private static string GetOversizedBinary(this TableEntity entity, string property)
         {
-
-            // using (var input = new System.IO.MemoryStream(data))
-            // {
-            //     using (var gzip = new System.IO.Compression.DeflateStream(input, System.IO.Compression.CompressionMode.Decompress))
-            //     {
-            //         using (var sr = new System.IO.StreamReader(gzip, Encoding.UTF8))
-            //         {
-            //             prop.SetValue(Item, JsonConvert.DeserializeObject(sr.ReadToEnd()));
-
-            //         }
-            //     }
-            // }
             using (var input = new MemoryStream())
             {
                 for (var i = 0; entity.ContainsKey(string.Format(OVERSIZED_MARKER, property, i)); i++)
