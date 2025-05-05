@@ -4,14 +4,14 @@ using System.Text.Json;
 using System.Web;
 using System.Xml.Serialization;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
-using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE.Models;
 using fiskaltrust.Middleware.Localization.QueueGR.Models.Cases;
+using fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData.Models;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 
-namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE;
+namespace fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData;
 
 public class AADEFactory
 {
@@ -21,7 +21,6 @@ public class AADEFactory
     {
         _masterDataConfiguration = masterDataConfiguration;
     }
-
 
     public InvoicesDoc MapToInvoicesDoc(List<ftQueueItem> queueItems)
     {
@@ -157,7 +156,7 @@ public class AADEFactory
                 quantity = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -x.Quantity : x.Quantity,
                 lineNumber = (int) x.Position,
                 vatAmount = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -vatAmount : vatAmount,
-                netValue = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? (-x.Amount - -vatAmount) : x.Amount - vatAmount,
+                netValue = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -x.Amount - -vatAmount : x.Amount - vatAmount,
                 vatCategory = AADEMappings.GetVATCategory(x),
             };           
             if (x.ftChargeItemCase.IsNatureOfVat(ChargeItemCaseNatureOfVatGR.ExtemptEndOfClimateCrises))
@@ -454,7 +453,7 @@ public class AADEFactory
         {
             vatNumber = issuerVat,
             country = CountryType.GR,
-            branch = 0,
+            branch = 0
         };
     }
 

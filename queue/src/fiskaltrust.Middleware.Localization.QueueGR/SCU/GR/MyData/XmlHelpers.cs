@@ -1,6 +1,6 @@
 ﻿using System.Xml.Serialization;
 
-namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE;
+namespace fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData;
 
 public static class XmlHelpers
 {

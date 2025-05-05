@@ -1,4 +1,4 @@
-﻿namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE.Models
+﻿namespace fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData.Models
 {
     public class WithHoldingChargeItem
     {

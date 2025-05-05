@@ -1,13 +1,6 @@
 ﻿#pragma warning disable
-using fiskaltrust;
-using fiskaltrust.Middleware;
-using fiskaltrust.Middleware.Localization;
-using fiskaltrust.Middleware.Localization.QueueGR;
-using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD;
-using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE.Models;
-using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.myDataSCU;
 
-namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE.Models;
+namespace fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData.Models;
 
 public class MyDataVatCategory
 {

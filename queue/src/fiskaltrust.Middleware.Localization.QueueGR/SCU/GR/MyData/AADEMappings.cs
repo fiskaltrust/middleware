@@ -1,17 +1,17 @@
 ﻿using fiskaltrust.Api.POS.Models.ifPOS.v2;
-using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE.Models;
 using fiskaltrust.Middleware.Localization.QueueGR.Models.Cases;
+using fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData.Models;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 
-namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE;
+namespace fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData;
 
 public static class AADEMappings
 {
     public static IncomeClassificationType GetIncomeClassificationType(ReceiptRequest receiptRequest, ChargeItem chargeItem)
     {
         var vatAmount = chargeItem.GetVATAmount();
-        var netAmount = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? (-chargeItem.Amount - -vatAmount) : chargeItem.Amount - vatAmount;
+        var netAmount = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -chargeItem.Amount - -vatAmount : chargeItem.Amount - vatAmount;
         if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004))
         {
             return new IncomeClassificationType
@@ -24,8 +24,8 @@ public static class AADEMappings
         return new IncomeClassificationType
         {
             amount = netAmount,
-            classificationCategory = AADEMappings.GetIncomeClassificationCategoryType(receiptRequest, chargeItem),
-            classificationType = AADEMappings.GetIncomeClassificationValueType(receiptRequest, chargeItem),
+            classificationCategory = GetIncomeClassificationCategoryType(receiptRequest, chargeItem),
+            classificationType = GetIncomeClassificationValueType(receiptRequest, chargeItem),
             classificationTypeSpecified = true
         };
     }
