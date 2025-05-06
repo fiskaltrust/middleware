@@ -9,6 +9,9 @@ inputs:
   password:
     required: true
     type: string
+  filter:
+    required: true
+    type: string
 
 runs:
   using: "composite"
@@ -17,7 +20,7 @@ runs:
       id: filter_files_for_codesigning
       shell: pwsh
       run: |
-        $files = Get-ChildItem -Path "${{ inputs.path }}" -Filter "fiskaltrust.*.dll" -Recurse | Select-Object -ExpandProperty FullName
+        $files = Get-ChildItem -Path "${{ inputs.path }}" -Filter "${{ inputs.filter }}" -Recurse | Select-Object -ExpandProperty FullName
         
         # Multiline outputs required a unique delimiter
         $EOF = -join (1..15 | ForEach {[char]((48..57)+(65..90)+(97..122) | Get-Random)})

@@ -1,4 +1,5 @@
-﻿using fiskaltrust.Api.POS.Models.ifPOS.v2;
+﻿using System.Text.Json;
+using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
@@ -48,7 +49,10 @@ public class QueueStorageProvider : IQueueStorageProvider
     public async Task<ftQueueItem> ReserveNextQueueItem(ReceiptRequest receiptRequest)
     {
         _cachedQueue ??= await GetQueueAsync();
-
+        var jsonSerializerOptions = new JsonSerializerOptions
+        {
+            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        };
         var queueItem = new ftQueueItem
         {
             ftQueueItemId = Guid.NewGuid(),
@@ -61,7 +65,7 @@ public class QueueStorageProvider : IQueueStorageProvider
             ftQueueRow = await IncrementQueueRow(),
             country = receiptRequest.ftReceiptCase.Country(),
             version = "v2",
-            request = System.Text.Json.JsonSerializer.Serialize(receiptRequest),
+            request = JsonSerializer.Serialize(receiptRequest, jsonSerializerOptions),
         };
         if (queueItem.ftQueueTimeout == 0)
         {
@@ -97,9 +101,14 @@ public class QueueStorageProvider : IQueueStorageProvider
 
     public async Task FinishQueueItem(ftQueueItem queueItem, ReceiptResponse receiptResponse)
     {
-        _cachedQueue ??= await GetQueueAsync();
+        _cachedQueue ??= await GetQueueAsync();       
         var queue = _cachedQueue;
-        queueItem.response = System.Text.Json.JsonSerializer.Serialize(receiptResponse);
+
+        var jsonSerializerOptions = new JsonSerializerOptions
+        {
+            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        };
+        queueItem.response = JsonSerializer.Serialize(receiptResponse, jsonSerializerOptions);
         queueItem.responseHash = _cryptoHelper.GenerateBase64Hash(queueItem.response);
         queueItem.ftDoneMoment = DateTime.UtcNow;
         queue.ftCurrentRow++;

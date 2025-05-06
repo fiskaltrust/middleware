@@ -39,7 +39,10 @@ namespace fiskaltrust.Middleware.Localization.v2
             {
                 var request = JsonSerializer.Deserialize<ReceiptRequest>(message) ?? throw new ArgumentException($"Invalid message format. The body for the message {message} could not be serialized.");
                 var response = await _signProcessor.ProcessAsync(request);
-                return JsonSerializer.Serialize(response);
+                return JsonSerializer.Serialize(response, new JsonSerializerOptions
+                {
+                    Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+                });
             };
         }
 
