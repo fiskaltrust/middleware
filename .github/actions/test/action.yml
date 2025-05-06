@@ -35,6 +35,6 @@ runs:
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ inputs.pattern }}-test-results
+        name: ${{ inputs.pattern }}-${{ github.job }}-test-results
         path: '${{ inputs.directory }}/**/*.trx'
         
