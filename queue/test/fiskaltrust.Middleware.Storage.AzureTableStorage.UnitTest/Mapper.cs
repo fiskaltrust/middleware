@@ -119,6 +119,32 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Tests.Mapping
         }
 
         [Fact]
+        public void GetOversized_ShouldReturnConcatenatedValue_WhenValueIsOversizedAndStoredAsString()
+        {
+            // Arrange
+            var entity = new TableEntity();
+            var property = "PropertyName";
+            var random = new Random(42); // Seeded RNG for reproducibility
+            var value = string.Concat(Enumerable.Range(0, 64_000).Select(_ =>
+                random.Next(0, 2) == 0
+                    ? (char) random.Next('A', 'Z' + 1)
+                    : (char) random.Next('0', '9' + 1))); // Random alphanumeric oversized value
+
+
+            foreach (var (i, chunk) in value.Chunk(32_000).Select((x, i) => (i, x)).Reverse())
+            {
+                var chunkProperty = $"{property}_oversize_{i}";
+                entity[chunkProperty] = chunk;
+            }
+
+            // Act
+            var result = Mapper.GetOversized(entity, property);
+
+            // Assert
+            result.Should().Be(value);
+        }
+
+        [Fact]
         public void SetAndGetOversized_ShouldReturnValue_WhenValueIsNotOversized()
         {
             // Arrange
