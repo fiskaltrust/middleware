@@ -12,31 +12,47 @@ using fiskaltrust.Middleware.Storage.AzureTableStorage.TableEntities;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.TableEntities.Configuration;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.TableEntities.MasterData;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories;
+using System.Collections.Generic;
+using System.IO;
 
 namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
 {
     public static class Mapper
     {
-        // 64KiB, roughly 32K characters
+        private const int MAX_COLUMN_BYTES = 64_000;
         private const int MAX_STRING_CHARS = 32_000;
 
-        private const string OVERSIZED_MARKER = "oversize";
+        private const string OVERSIZED_MARKER = "{0}_oversize_{1}";
 
         public static void SetOversized(this TableEntity entity, string property, string value)
         {
-            var currentRequestChunk = 0;
-            var chunks = value.Chunk(MAX_STRING_CHARS);
-
-            if (chunks.Count() == 1)
+            if (value is null)
             {
-                entity.Add($"{property}", chunks.First());
+                return;
+            }
+            if (value.Length < MAX_STRING_CHARS)
+            {
+                entity.Add($"{property}", value);
             }
             else
             {
-                foreach (var chunk in chunks)
+                byte[] bytes;
+
+                using (var output = new MemoryStream())
                 {
-                    entity.Add($"{property}_{OVERSIZED_MARKER}_{currentRequestChunk}", chunk);
-                    currentRequestChunk++;
+                    using (var gzip = new System.IO.Compression.DeflateStream(output, System.IO.Compression.CompressionMode.Compress))
+                    using (var sw = new StreamWriter(gzip, Encoding.UTF8))
+                    {
+                        sw.Write(value);
+                    }
+                    bytes = output.ToArray();
+                }
+
+                var chunks = bytes.Chunk(MAX_COLUMN_BYTES);
+
+                foreach (var (chunk, i) in chunks.Select((chunk, i) => (chunk, i)))
+                {
+                    entity.Add(string.Format(OVERSIZED_MARKER, property, i), chunk.Array);
                 }
             }
         }
@@ -50,14 +66,42 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             }
             else
             {
-                var marker = $"{property}_{OVERSIZED_MARKER}_{{0}}";
-                var reqSb = new StringBuilder();
-                for (var i = 0; entity.ContainsKey(string.Format(marker, i)); i++)
+                if (entity[string.Format(OVERSIZED_MARKER, property, 0)].GetType() == typeof(string))
                 {
-                    reqSb.Append(entity[string.Format(marker, i)]);
+                    return entity.GetOversizedString(property);
                 }
-                return reqSb.ToString();
+                else
+                {
+                    return entity.GetOversizedBinary(property);
+                }
             }
+        }
+
+        private static string GetOversizedBinary(this TableEntity entity, string property)
+        {
+            using (var input = new MemoryStream())
+            {
+                for (var i = 0; entity.ContainsKey(string.Format(OVERSIZED_MARKER, property, i)); i++)
+                {
+                    entity.GetBinaryData(string.Format(OVERSIZED_MARKER, property, i)).ToStream().CopyTo(input);
+                }
+                input.Position = 0;
+                using (var gzip = new System.IO.Compression.DeflateStream(input, System.IO.Compression.CompressionMode.Decompress))
+                using (var sr = new StreamReader(gzip, Encoding.UTF8))
+                {
+                    return sr.ReadToEnd();
+                }
+            }
+        }
+
+        private static string GetOversizedString(this TableEntity entity, string property)
+        {
+            var stringBuilder = new StringBuilder();
+            for (var i = 0; entity.ContainsKey(string.Format(OVERSIZED_MARKER, property, i)); i++)
+            {
+                stringBuilder.Append(entity.GetString(string.Format(OVERSIZED_MARKER, property, i)));
+            }
+            return stringBuilder.ToString();
         }
 
         public static string GetHashString(long value)

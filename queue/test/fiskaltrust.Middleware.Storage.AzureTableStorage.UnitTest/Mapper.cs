@@ -5,6 +5,8 @@ using System;
 using System.Linq;
 using Xunit;
 using Azure.Data.Tables;
+using System.IO;
+using System.IO.Compression;
 
 namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Tests.Mapping
 {
@@ -27,12 +29,33 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Tests.Mapping
         }
 
         [Fact]
+        public void SetOversized_ShouldNotSetMultipleProperties_WhenValueIsOversizedButCompressable()
+        {
+            // Arrange
+            var entity = new TableEntity();
+            var property = "PropertyName";
+            var value = new string('A', 128_000); // Oversized value
+
+            // Act
+            Mapper.SetOversized(entity, property, value);
+
+            // Assert
+            var chunkProperty = $"{property}_oversize_";
+            entity.Should().ContainKey(chunkProperty + "0");
+            entity.Should().NotContainKey(chunkProperty + "1");
+        }
+
+        [Fact]
         public void SetOversized_ShouldSetMultipleProperties_WhenValueIsOversized()
         {
             // Arrange
             var entity = new TableEntity();
             var property = "PropertyName";
-            var value = new string('A', 64_000); // Oversized value
+            var random = new Random(42); // Seeded RNG for reproducibility
+            var value = string.Concat(Enumerable.Range(0, 128_000).Select(_ =>
+                random.Next(0, 2) == 0
+                    ? (char) random.Next('A', 'Z' + 1)
+                    : (char) random.Next('0', '9' + 1))); // Random alphanumeric oversized value
 
             // Act
             Mapper.SetOversized(entity, property, value);
@@ -40,12 +63,10 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Tests.Mapping
             // Assert
             var expectedChunks = value.Chunk(32_000).ToList();
             var chunkCount = expectedChunks.Count;
-            for (var i = 0; i < chunkCount; i++)
-            {
-                var chunkProperty = $"{property}_oversize_{i}";
-                entity.Should().ContainKey(chunkProperty);
-                entity[chunkProperty].Should().Be(expectedChunks[i]);
-            }
+            var chunkProperty = $"{property}_oversize_";
+            entity.Should().ContainKey(chunkProperty + "0");
+            entity.Should().ContainKey(chunkProperty + "1");
+            entity.Should().NotContainKey(chunkProperty + "2");
         }
 
         [Fact]
@@ -70,38 +91,99 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Tests.Mapping
             // Arrange
             var entity = new TableEntity();
             var property = "PropertyName";
-            var chunks = new[]
+            var random = new Random(42); // Seeded RNG for reproducibility
+            var value = string.Concat(Enumerable.Range(0, 128_000).Select(_ =>
+                random.Next(0, 2) == 0
+                    ? (char) random.Next('A', 'Z' + 1)
+                    : (char) random.Next('0', '9' + 1))); // Random alphanumeric oversized value
+
+            using var memoryStream = new MemoryStream();
+            using (var gzipStream = new DeflateStream(memoryStream, CompressionMode.Compress))
+            using (var writer = new StreamWriter(gzipStream))
             {
-                "This is the first chunk",
-                "This is the second chunk",
-                "This is the third chunk",
-                "This is the fourth chunk",
-                "This is the fifth chunk",
-                "This is the sixth chunk",
-                "This is the seventh chunk",
-                "This is the eighth chunk",
-                "This is the ninth chunk",
-                "This is the tenth chunk",
-                "This is the eleventh chunk",
-                "This is the twelfth chunk",
-                "This is the thirteenth chunk",
-                "This is the fourteenth chunk",
-                "This is the fifteenth chunk",
-                "This is the sixteenth chunk",
-                "This is the seventeenth chunk",
-            };
-            var chunkCount = chunks.Length;
-            foreach (var (i, chunk) in chunks.Select((x, i) => (i, x)).Reverse())
+                writer.Write(value);
+            }
+            var compressed = memoryStream.ToArray();
+
+            foreach (var (i, chunk) in compressed.Chunk(64_000).Select((x, i) => (i, x)).Reverse())
             {
                 var chunkProperty = $"{property}_oversize_{i}";
-                entity[chunkProperty] = chunks[i];
+                entity[chunkProperty] = chunk.Array;
             }
 
             // Act
             var result = Mapper.GetOversized(entity, property);
 
             // Assert
-            result.Should().Be(string.Concat(chunks));
+            result.Should().Be(value);
+        }
+
+        [Fact]
+        public void GetOversized_ShouldReturnConcatenatedValue_WhenValueIsOversizedAndStoredAsString()
+        {
+            // Arrange
+            var entity = new TableEntity();
+            var property = "PropertyName";
+            var random = new Random(42); // Seeded RNG for reproducibility
+            var value = string.Concat(Enumerable.Range(0, 64_000).Select(_ =>
+                random.Next(0, 2) == 0
+                    ? (char) random.Next('A', 'Z' + 1)
+                    : (char) random.Next('0', '9' + 1))); // Random alphanumeric oversized value
+
+
+            foreach (var (i, chunk) in value.Chunk(32_000).Select((x, i) => (i, x)).Reverse())
+            {
+                var chunkProperty = $"{property}_oversize_{i}";
+                entity[chunkProperty] = chunk;
+            }
+
+            // Act
+            var result = Mapper.GetOversized(entity, property);
+
+            // Assert
+            result.Should().Be(value);
+        }
+
+        [Fact]
+        public void SetAndGetOversized_ShouldReturnValue_WhenValueIsNotOversized()
+        {
+            // Arrange
+            var entity = new TableEntity();
+            var property = "PropertyName";
+            var random = new Random(42); // Seeded RNG for reproducibility
+            var value = string.Concat(Enumerable.Range(0, 30_000).Select(_ =>
+                random.Next(0, 2) == 0
+                    ? (char) random.Next('A', 'Z' + 1)
+                    : (char) random.Next('0', '9' + 1))); // Random alphanumeric oversized value
+
+            // Act
+            Mapper.SetOversized(entity, property, value);
+            var result = Mapper.GetOversized(entity, property);
+
+            // Assert
+            result.Should().Be(value);
+        }
+
+
+        [Fact]
+        public void SetAndGetOversized_ShouldReturnValue_WhenValueIsOversized()
+        {
+            // Arrange
+            var entity = new TableEntity();
+            var property = "PropertyName";
+            var random = new Random(42); // Seeded RNG for reproducibility
+            var value = string.Concat(Enumerable.Range(0, 128_000).Select(_ =>
+                random.Next(0, 2) == 0
+                    ? (char) random.Next('A', 'Z' + 1)
+                    : (char) random.Next('0', '9' + 1))); // Random alphanumeric oversized value
+
+
+            // Act
+            Mapper.SetOversized(entity, property, value);
+            var result = Mapper.GetOversized(entity, property);
+
+            // Assert
+            result.Should().Be(value);
         }
 
         [Fact]
