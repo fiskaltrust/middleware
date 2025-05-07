@@ -106,6 +106,13 @@ public class MyDataSCU : IGRSSCD
                         ftSignatureFormat = SignatureFormat.Text,
                         ftSignatureType = SignatureTypeGR.MyDataInfo.As<SignatureType>()
                     });
+                    request.ReceiptResponse.AddSignatureItem(new SignatureItem
+                    {
+                        Data = $"2024_12_126VIVA_001_ Viva Fiscal_V1_23122024",
+                        Caption = "www.viva.com",
+                        ftSignatureFormat = SignatureFormat.Text,
+                        ftSignatureType = SignatureTypeGR.MyDataInfo.As<SignatureType>()
+                    });
                 }
                 else
                 {
