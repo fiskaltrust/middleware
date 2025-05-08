@@ -129,6 +129,31 @@ public class AADEFactory
                 expensesClassification = [.. expensesClassificationGroups],
             }
         };
+
+        if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Protocol0x0005))
+        {
+            var result = receiptRequest.GetCustomerOrNull();
+            if(result != null)
+            {
+                inv.invoiceHeader.otherDeliveryNoteHeader = new OtherDeliveryNoteHeaderType
+                {
+                    deliveryAddress = new AddressType
+                    {
+                        street = result.CustomerStreet,
+                        city = result.CustomerCity,
+                        postalCode = result.CustomerZip
+                    },
+                    loadingAddress = new AddressType
+                    {
+                        street = _masterDataConfiguration.Outlet.Street,
+                        city = _masterDataConfiguration.Outlet.City,
+                        postalCode =  _masterDataConfiguration.Outlet.Zip,
+                        number = _masterDataConfiguration.Outlet.LocationId,
+                    }
+                };
+            }
+        }
+
         inv.invoiceSummary.totalGrossValue = inv.invoiceSummary.totalNetValue + inv.invoiceSummary.totalVatAmount - inv.invoiceSummary.totalWithheldAmount + inv.invoiceSummary.totalFeesAmount + inv.invoiceSummary.totalStampDutyAmount + inv.invoiceSummary.totalOtherTaxesAmount - inv.invoiceSummary.totalDeductionsAmount;
         if (!string.IsNullOrEmpty(receiptRequest.cbPreviousReceiptReference))
         {

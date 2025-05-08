@@ -217,6 +217,11 @@ public static class AADEMappings
                 return InvoiceType.Item114;
             }
 
+            if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Protocol0x0005))
+            {
+                return InvoiceType.Item93;
+            }
+
             if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003))
             {
                 if (!string.IsNullOrEmpty(receiptRequest.ftReceiptCaseData?.ToString()))
