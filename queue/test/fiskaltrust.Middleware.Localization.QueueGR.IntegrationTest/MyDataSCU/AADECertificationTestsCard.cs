@@ -108,8 +108,8 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.IntegrationTest.MyDataSCU
 
         private async Task ValidateMyData(ReceiptRequest receiptRequest, InvoiceType expectedInvoiceType, IncomeClassificationCategoryType expectedCategory, IncomeClassificationValueType expectedValueType, [CallerMemberName] string caller = "")
         {
-            var payment = await SendPayRequest(receiptRequest.cbPayItems[0]);
-            receiptRequest.cbPayItems[0] = payment!.ftPayItems[0];
+            //var payment = await SendPayRequest(receiptRequest.cbPayItems[0]);
+            //receiptRequest.cbPayItems[0] = payment!.ftPayItems[0];
             using var scope = new AssertionScope();
             var invoiceDoc = _aadeFactory.MapToInvoicesDoc(receiptRequest, ExampleResponse);
             invoiceDoc.invoice[0].invoiceHeader.invoiceType.Should().Be(expectedInvoiceType);

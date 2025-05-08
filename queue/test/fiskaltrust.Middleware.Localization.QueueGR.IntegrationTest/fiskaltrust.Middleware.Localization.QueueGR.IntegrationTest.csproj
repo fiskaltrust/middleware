@@ -25,4 +25,10 @@
         <ProjectReference Include="..\..\src\fiskaltrust.Middleware.Localization.QueueGR\fiskaltrust.Middleware.Localization.QueueGR.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <None Update="Examples\Request.json">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+
 </Project>

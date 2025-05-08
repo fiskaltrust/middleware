@@ -121,6 +121,9 @@ public class MyDataSCU : IGRSSCD
                     {
                         AADEError = data.statusCode,
                         Errors = errors.ToList()
+                    }, options: new JsonSerializerOptions
+                    {
+                        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
                     }));
                 }
             }

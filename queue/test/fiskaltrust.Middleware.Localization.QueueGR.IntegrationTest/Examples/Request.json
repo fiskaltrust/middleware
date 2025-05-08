@@ -1,0 +1,60 @@
+{
+  "ftCashBoxID": "31f3defc-275d-4b6e-9f3f-fa09d64c1bb4",
+  "cbTerminalID": "",
+  "ftPosSystemId": "7b5955e3-4944-4ff3-8df9-46166b70132a",
+  "cbReceiptReference": "11-1746472874809",
+  "cbArea": "0",
+  "cbUser": "Chef",
+  "cbCustomer": null,
+  "ftReceiptCase": 5139205309155246081,
+  "cbChargeItems": [
+    {
+      "Amount": 9.5,
+      "Description": "Pepperoni Pizza",
+      "ProductNumber": "002",
+      "Quantity": 1,
+      "VATRate": 24,
+      "ftChargeItemCase": 5139205309155246099,
+      "Moment": "2025-05-08T14:34:26.251Z",
+      "Position": 1,
+      "VATAmount": 1.84,
+      "Unit": "kg"
+    },
+    {
+      "Amount": 9,
+      "Description": "Cheeseburger",
+      "ProductNumber": "006",
+      "Quantity": 1,
+      "VATRate": 13,
+      "ftChargeItemCase": 5139205309155246097,
+      "Moment": "2025-05-08T14:34:26.859Z",
+      "Position": 2,
+      "VATAmount": 1.0353982300884956,
+      "Unit": "kg"
+    },
+    {
+      "Amount": 3.5,
+      "Description": "French Fries",
+      "ProductNumber": "007",
+      "Quantity": 1,
+      "VATRate": 24,
+      "ftChargeItemCase": 5139205309155246099,
+      "Moment": "2025-05-08T14:34:27.307Z",
+      "Position": 3,
+      "VATAmount": 0.68,
+      "Unit": "kg"
+    }
+  ],
+  "cbPayItems": [
+    {
+      "Position": 1,
+      "Quantity": 1,
+      "Moment": "2025-05-08T14:34:36.739Z",
+      "Description": "Cash",
+      "Amount": 22,
+      "ftPayItemCase": 5139205309155246081
+    }
+  ],
+  "cbReceiptAmount": 22,
+  "cbReceiptMoment": "2025-05-08T14:34:37.651Z"
+}

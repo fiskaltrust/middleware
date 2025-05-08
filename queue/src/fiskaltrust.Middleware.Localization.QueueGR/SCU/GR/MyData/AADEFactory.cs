@@ -53,7 +53,20 @@ public class AADEFactory
 
     public InvoicesDoc MapToInvoicesDoc(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
     {
+        foreach (var chargeItem in receiptRequest.cbChargeItems)
+        {
+            chargeItem.Amount = Math.Round(chargeItem.Amount, 2);
+            chargeItem.VATAmount = Math.Round(chargeItem.VATAmount ?? 0.00m, 2);
+            chargeItem.Quantity = Math.Round(chargeItem.Quantity, 2);
+        }
+
+        foreach (var payItem in receiptRequest.cbPayItems)
+        {
+            payItem.Amount = Math.Round(payItem.Amount, 2);
+            payItem.Quantity = Math.Round(payItem.Quantity, 2);
+        }
         MyDataAADEValidation.ValidateReceiptRequest(receiptRequest);
+  
         var inv = CreateInvoiceDocType(receiptRequest, receiptResponse);
         var doc = new InvoicesDoc
         {

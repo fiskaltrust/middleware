@@ -39,5 +39,10 @@ public class ProtocolCommandProcessorGR(IGRSSCD sscd, ftQueueGR queueGR, ftSigna
         return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
     }
 
+    public async Task<ProcessCommandResponse> Pay0x3005Async(ProcessCommandRequest request)
+    {
+        return await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+    }
+
     public async Task<ProcessCommandResponse> CopyReceiptPrintExistingReceipt0x3010Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
 }

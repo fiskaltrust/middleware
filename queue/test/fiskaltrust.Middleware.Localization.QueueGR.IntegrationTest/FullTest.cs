@@ -1,8 +1,10 @@
 ﻿using System.Net.Http.Json;
 using System.Text.Json;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
+using fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData;
 using fiskaltrust.Middleware.Localization.v2.Configuration;
 using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
+using fiskaltrust.storage.V0.MasterData;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Xunit;
@@ -46,7 +48,14 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             var accessToken = "BBNu3xCxDz9VKOTQJQATmCzj1zQRjeE25DW/F8hcqsk/Uc5hHc4m1lEgd2QDsWLpa6MRDHz+vLlQs0hCprWt9XY=";
             var configuration = await GetConfigurationAsync(cashBoxId, accessToken);
             var queue = configuration.ftQueues?.First() ?? throw new Exception($"The configuration for {cashBoxId} is empty and therefore not valid.");
-            var bootstrapper = new QueueGRBootstrapper(queue.Id, new LoggerFactory(), queue.Configuration ?? new Dictionary<string, object>(), null!);
+            var myDataSCU = new MyDataSCU("", "", "https://mydataapidev.aade.gr/", "https://receipts-sandbox.fiskaltrust.eu", new MasterDataConfiguration
+            {
+                Account = new AccountMasterData
+                {
+                    VatId = "112545020"
+                },
+            });
+            var bootstrapper = new QueueGRBootstrapper(queue.Id, new LoggerFactory(), queue.Configuration ?? new Dictionary<string, object>(), myDataSCU);
             return (bootstrapper, cashBoxId);
         }
 
@@ -56,6 +65,19 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             (var bootstrapper, var cashBoxId) = await InitializeQueueGRBootstrapperAsync();
             var signMethod = bootstrapper.RegisterForSign();
             var receiptRequest = Examples.A1_WithDiscountCase();
+            receiptRequest.ftCashBoxID = cashBoxId;
+            var exampleCashSalesResponse = await signMethod(System.Text.Json.JsonSerializer.Serialize(receiptRequest));
+            var d = System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesResponse)!;
+            d.ftState.IsState(State.Success).Should().BeTrue(string.Join(Environment.NewLine, d.ftSignatures.Select(x => x.Data)));
+        }
+
+
+        [Fact]
+        public async Task ExampleRquests_()
+        {
+            (var bootstrapper, var cashBoxId) = await InitializeQueueGRBootstrapperAsync();
+            var signMethod = bootstrapper.RegisterForSign();
+            var receiptRequest = JsonSerializer.Deserialize<ReceiptRequest>(File.ReadAllText("C:\\GitHub\\middleware\\queue\\test\\fiskaltrust.Middleware.Localization.QueueGR.IntegrationTest\\Examples\\Request.json"))!;
             receiptRequest.ftCashBoxID = cashBoxId;
             var exampleCashSalesResponse = await signMethod(System.Text.Json.JsonSerializer.Serialize(receiptRequest));
             var d = System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesResponse)!;
