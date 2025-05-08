@@ -26,7 +26,10 @@
     </ItemGroup>
 
     <ItemGroup>
-      <None Update="Examples\Request.json">
+      <None Update="Examples\MutliChargeItems.json">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="Examples\MultiAfterCommaDigits.json">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
     </ItemGroup>

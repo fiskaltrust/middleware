@@ -14,6 +14,14 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
     [Trait("only", "local")]
     public class FullTest()
     {
+        private MyDataSCU _myDataSCU = new MyDataSCU("", "", "https://mydataapidev.aade.gr/", "https://receipts-sandbox.fiskaltrust.eu", new MasterDataConfiguration
+        {
+            Account = new AccountMasterData
+            {
+                VatId = "112545020"
+            },
+        });
+
         public async Task<ftCashBoxConfiguration> GetConfigurationAsync(Guid cashBoxId, string accessToken)
         {
             using (var httpClient = new HttpClient())
@@ -48,14 +56,8 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             var accessToken = "BBNu3xCxDz9VKOTQJQATmCzj1zQRjeE25DW/F8hcqsk/Uc5hHc4m1lEgd2QDsWLpa6MRDHz+vLlQs0hCprWt9XY=";
             var configuration = await GetConfigurationAsync(cashBoxId, accessToken);
             var queue = configuration.ftQueues?.First() ?? throw new Exception($"The configuration for {cashBoxId} is empty and therefore not valid.");
-            var myDataSCU = new MyDataSCU("", "", "https://mydataapidev.aade.gr/", "https://receipts-sandbox.fiskaltrust.eu", new MasterDataConfiguration
-            {
-                Account = new AccountMasterData
-                {
-                    VatId = "112545020"
-                },
-            });
-            var bootstrapper = new QueueGRBootstrapper(queue.Id, new LoggerFactory(), queue.Configuration ?? new Dictionary<string, object>(), myDataSCU);
+
+            var bootstrapper = new QueueGRBootstrapper(queue.Id, new LoggerFactory(), queue.Configuration ?? new Dictionary<string, object>(), _myDataSCU);
             return (bootstrapper, cashBoxId);
         }
 
@@ -77,12 +79,64 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
         {
             (var bootstrapper, var cashBoxId) = await InitializeQueueGRBootstrapperAsync();
             var signMethod = bootstrapper.RegisterForSign();
-            var receiptRequest = JsonSerializer.Deserialize<ReceiptRequest>(File.ReadAllText("C:\\GitHub\\middleware\\queue\\test\\fiskaltrust.Middleware.Localization.QueueGR.IntegrationTest\\Examples\\Request.json"))!;
+            var receiptRequest = JsonSerializer.Deserialize<ReceiptRequest>(File.ReadAllText("C:\\GitHub\\middleware\\queue\\test\\fiskaltrust.Middleware.Localization.QueueGR.IntegrationTest\\Examples\\MultiAfterCommaDigits.json"))!;
             receiptRequest.ftCashBoxID = cashBoxId;
             var exampleCashSalesResponse = await signMethod(System.Text.Json.JsonSerializer.Serialize(receiptRequest));
             var d = System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesResponse)!;
+
+            var xml = new AADEFactory(new MasterDataConfiguration
+            {
+                Account = new AccountMasterData
+                {
+                    VatId = "112545020"
+                },
+            }).MapToInvoicesDoc(receiptRequest, new ReceiptResponse
+            {
+                ftCashBoxIdentification = cashBoxId.ToString(),
+                ftQueueID = Guid.NewGuid(),
+                ftQueueItemID = Guid.NewGuid(),
+                ftQueueRow = 1,
+                ftReceiptIdentification = "ft#123-1233",
+                ftReceiptMoment = DateTime.UtcNow,
+                ftState = 0
+            });
             d.ftState.IsState(State.Success).Should().BeTrue(string.Join(Environment.NewLine, d.ftSignatures.Select(x => x.Data)));
         }
+
+
+        [Fact]
+        public async Task ExampleRquests_MutliChargeItems()
+        {
+            (var bootstrapper, var cashBoxId) = await InitializeQueueGRBootstrapperAsync();
+            var signMethod = bootstrapper.RegisterForSign();
+            var receiptRequest = JsonSerializer.Deserialize<ReceiptRequest>(File.ReadAllText("C:\\GitHub\\middleware\\queue\\test\\fiskaltrust.Middleware.Localization.QueueGR.IntegrationTest\\Examples\\MutliChargeItems.json"))!;
+            receiptRequest.ftCashBoxID = cashBoxId;
+            var exampleCashSalesResponse = await signMethod(System.Text.Json.JsonSerializer.Serialize(receiptRequest));
+            var d = System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesResponse)!;
+            var aadeFactory = new AADEFactory(new MasterDataConfiguration
+            {
+                Account = new AccountMasterData
+                {
+                    VatId = "112545020"
+                },
+            });
+
+            var xml = aadeFactory.MapToInvoicesDoc(receiptRequest, new ReceiptResponse
+            {
+                ftCashBoxIdentification = cashBoxId.ToString(),
+                ftQueueID = Guid.NewGuid(),
+                ftQueueItemID = Guid.NewGuid(),
+                ftQueueRow = 1,
+                ftReceiptIdentification = "ft123#1233",
+                ftReceiptMoment = DateTime.UtcNow,
+                ftState = 0
+            });
+
+            var data = aadeFactory.GenerateInvoicePayload(xml); 
+
+            d.ftState.IsState(State.Success).Should().BeTrue(string.Join(Environment.NewLine, d.ftSignatures.Select(x => x.Data)));
+        }
+
 
         [Fact]
         public async Task Example_RetailSales_TestsRefund()
