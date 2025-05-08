@@ -54,8 +54,8 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Tests.Mapping
             var random = new Random(42); // Seeded RNG for reproducibility
             var value = string.Concat(Enumerable.Range(0, 128_000).Select(_ =>
                 random.Next(0, 2) == 0
-                    ? (char) random.Next('A', 'Z' + 1)
-                    : (char) random.Next('0', '9' + 1))); // Random alphanumeric oversized value
+                    ? (char)random.Next('A', 'Z' + 1)
+                    : (char)random.Next('0', '9' + 1))); // Random alphanumeric oversized value
 
             // Act
             Mapper.SetOversized(entity, property, value);
@@ -94,8 +94,8 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Tests.Mapping
             var random = new Random(42); // Seeded RNG for reproducibility
             var value = string.Concat(Enumerable.Range(0, 128_000).Select(_ =>
                 random.Next(0, 2) == 0
-                    ? (char) random.Next('A', 'Z' + 1)
-                    : (char) random.Next('0', '9' + 1))); // Random alphanumeric oversized value
+                    ? (char)random.Next('A', 'Z' + 1)
+                    : (char)random.Next('0', '9' + 1))); // Random alphanumeric oversized value
 
             using var memoryStream = new MemoryStream();
             using (var gzipStream = new DeflateStream(memoryStream, CompressionMode.Compress))
@@ -127,8 +127,8 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Tests.Mapping
             var random = new Random(42); // Seeded RNG for reproducibility
             var value = string.Concat(Enumerable.Range(0, 64_000).Select(_ =>
                 random.Next(0, 2) == 0
-                    ? (char) random.Next('A', 'Z' + 1)
-                    : (char) random.Next('0', '9' + 1))); // Random alphanumeric oversized value
+                    ? (char)random.Next('A', 'Z' + 1)
+                    : (char)random.Next('0', '9' + 1))); // Random alphanumeric oversized value
 
 
             foreach (var (i, chunk) in value.Chunk(32_000).Select((x, i) => (i, x)).Reverse())
@@ -153,8 +153,8 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Tests.Mapping
             var random = new Random(42); // Seeded RNG for reproducibility
             var value = string.Concat(Enumerable.Range(0, 30_000).Select(_ =>
                 random.Next(0, 2) == 0
-                    ? (char) random.Next('A', 'Z' + 1)
-                    : (char) random.Next('0', '9' + 1))); // Random alphanumeric oversized value
+                    ? (char)random.Next('A', 'Z' + 1)
+                    : (char)random.Next('0', '9' + 1))); // Random alphanumeric oversized value
 
             // Act
             Mapper.SetOversized(entity, property, value);
@@ -174,8 +174,8 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Tests.Mapping
             var random = new Random(42); // Seeded RNG for reproducibility
             var value = string.Concat(Enumerable.Range(0, 128_000).Select(_ =>
                 random.Next(0, 2) == 0
-                    ? (char) random.Next('A', 'Z' + 1)
-                    : (char) random.Next('0', '9' + 1))); // Random alphanumeric oversized value
+                    ? (char)random.Next('A', 'Z' + 1)
+                    : (char)random.Next('0', '9' + 1))); // Random alphanumeric oversized value
 
 
             // Act
@@ -184,6 +184,20 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Tests.Mapping
 
             // Assert
             result.Should().Be(value);
+        }
+
+        [Fact]
+        public void GetOversized_ShouldReturnNull_WhenValueIsNotSet()
+        {
+            // Arrange
+            var entity = new TableEntity();
+            var property = "PropertyName";
+
+            // Act
+            var result = Mapper.GetOversized(entity, property);
+
+            // Assert
+            result.Should().BeNull();
         }
 
         [Fact]

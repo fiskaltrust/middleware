@@ -66,13 +66,20 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping
             }
             else
             {
-                if (entity[string.Format(OVERSIZED_MARKER, property, 0)].GetType() == typeof(string))
+                if (entity.TryGetValue(string.Format(OVERSIZED_MARKER, property, 0), out var oversized))
                 {
-                    return entity.GetOversizedString(property);
+                    if (oversized.GetType() == typeof(string))
+                    {
+                        return entity.GetOversizedString(property);
+                    }
+                    else
+                    {
+                        return entity.GetOversizedBinary(property);
+                    }
                 }
                 else
                 {
-                    return entity.GetOversizedBinary(property);
+                    return null;
                 }
             }
         }
