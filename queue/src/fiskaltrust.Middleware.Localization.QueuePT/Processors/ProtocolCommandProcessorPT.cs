@@ -49,6 +49,8 @@ public class ProtocolCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSigna
         return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
     });
 
+    public async Task<ProcessCommandResponse> Pay0x3005Async(ProcessCommandRequest request) => throw new NotImplementedException();
+
     private static void AddSignatures(NumberSeries series, ProcessResponse response, string hash, string printHash, string qrCode)
     {
         response.ReceiptResponse.AddSignatureItem(new SignatureItem

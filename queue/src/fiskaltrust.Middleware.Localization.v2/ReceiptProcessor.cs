@@ -82,7 +82,7 @@ public class ReceiptProcessor : IReceiptProcessor
                     ReceiptCase.ProtocolAccountingEvent0x3002 => await _protocolCommandProcessor.ProtocolAccountingEvent0x3002Async(processCommandRequest),
                     ReceiptCase.InternalUsageMaterialConsumption0x3003 => await _protocolCommandProcessor.InternalUsageMaterialConsumption0x3003Async(processCommandRequest),
                     ReceiptCase.Order0x3004 => await _protocolCommandProcessor.Order0x3004Async(processCommandRequest),
-                    ReceiptCase.Pay0x3005 => await _protocolCommandProcessor.Pay(processCommandRequest),
+                    ReceiptCase.Pay0x3005 => await _protocolCommandProcessor.Pay0x3005Async(processCommandRequest),
                     ReceiptCase.CopyReceiptPrintExistingReceipt0x3010 => await _protocolCommandProcessor.CopyReceiptPrintExistingReceipt0x3010Async(processCommandRequest),
                     _ => null
                 };
