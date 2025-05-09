@@ -10,6 +10,9 @@ inputs:
   args:
     default: ''
     type: string
+  artifactName:
+    required: false
+    type: string
 
 runs:
   using: "composite"
@@ -35,6 +38,6 @@ runs:
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ inputs.pattern }}-test-results
+        name: ${{ inputs.artifactName || format('{0}-test-results', inputs.pattern) }} 
         path: '${{ inputs.directory }}/**/*.trx'
         
