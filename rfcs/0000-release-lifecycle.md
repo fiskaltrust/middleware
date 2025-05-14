@@ -5,11 +5,23 @@
 
 # Summary
 
+This RFC proposes to change the middleware release process from developers pushing release out to the market teams pulling them in.  
+This is done by spliting it into two phases.
+First, the **deployment phase** handled by the developers where the middleware is built and deployed to the servers but not yet publicly available.  
+And second, the **release phase** handled by the market teams where the release visibility is managed and the release is made public.
+
 > One paragraph explanation of the feature.
 
 # Motivation
 
-> Why are we doing this? What use cases does it support? What is the expected outcome?
+The current release process is lacking a few things which this RFC aims so solve.
+
+* The possibility to End2End test a release before it being made public.
+* The possibility to release something for internal testing that should not be made public.
+* The possibility to release versions certain customers only.
+* The possibility of prerelease versions that are not automatically used in production.
+* The possibility for the market teams to greenlight releases.
+* The possibility for broken releases to be "unreleased".
 
 # Guide-level explanation
 
@@ -34,7 +46,7 @@ A staggered rollout and rollbacks are possible.
 At the end of the release phase the artifacts are listed and downloadable on all servers.  
 The customer success teams are responsible for handling this part of the release process.
 
-## Deployment
+## Deployment Phase
 
 ### Versions
 
@@ -57,7 +69,7 @@ Two prerelease identifiers are allowed:
 | nuget-package  | nuget feed               |                                                                                   | ❌                       |
 | zip-package    | packages server          |                                                                                   | ❌                       |
 
-## Release
+## Release Phase
 
 ### States
 
@@ -82,9 +94,14 @@ In production the default state is _Unlisted_.
 A release can be set to _Published_ for all or just for some markets or accounts. 
 A release can only be _Yanked_ everywhere at once.
 
-### Unlisted
+### Admins
 
-how to select unlisted releases
+Unlisted releases are listed when logged in with an admin account.
+
+### Prerelease Versions
+
+PreRelease versions only visible if you have checked the "Show PreReleases" checkmark in the portal version selection interface.  
+They are not selected by default when creating new component in the portal and they are not used by automatic processes such as templates.
 
 > Explain the proposal as if it was already included in the middleware and you were teaching it to a PosCreator. That generally means:
 > 
@@ -96,7 +113,7 @@ how to select unlisted releases
 
 # Reference-level explanation
 
-Check where 1.3 version stuff is hardcoded.
+TODO: Check where 1.3 version stuff is hardcoded.
 
 > This is the technical portion of the RFC.
 > Try to capture the broad implementation strategy,

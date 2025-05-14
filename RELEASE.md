@@ -51,6 +51,11 @@ First the relevant github Milestone is maintained.
 All relevant issues and all PRs since the last release are added to the milestone and they are given the needed `queue-*` and `scu-*` labels. 
 PRs or issues that have a customer facing impact get the `meta-needs-release-notes` and if needed the `meta-needs-migration-guide` label.
 
+### Call for Release Notes
+
+A call for release notes comments goes out to the developers.
+Every developer creates a comment with the release notes for it on the relevant PRs or issues that are tagged with `meta-needs-release-notes` they implemented.
+
 ### Deploy Pre Release Versions to Sandbox
 
 `-rcX` tags for the new version are created (The `Set as a pre-release` Checkbox is checked if created through github releases). 
@@ -60,6 +65,7 @@ This triggers the release pipeline where the Sandbox deployment is approved and 
 
 A PR with the release notes for the new version is created in the [release-notes](https://github.com/fiskaltrust/release-notes) repo. 
 All items in the release Milestone with the `meta-needs-release-notes` label have a related a section in the release notes and the relevant issue or PR is linked. 
+The release notes PR is compiled from the release notes comments from the developers.
 
 ### Internal Release Notes Review
 
