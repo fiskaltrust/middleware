@@ -6,7 +6,7 @@
 
 This repo contains the code for the fiskaltrust.Middleware versions >= 1.3.x.
 
-New Middleware is relesed semi regularly as a new version (E.g. `v1.3.68`, `v1.3.69`, `v1.3.71`, ...). 
+New Middleware is released semi regularly as a new version (E.g. `v1.3.68`, `v1.3.69`, `v1.3.71`, ...). 
 When a new release is done only the Middleware packages that have changes are released. 
 All released packages will have the same new version. 
 This can lead to gaps in the versions for some components that don't have changes in a certain release which is totally acceptable.
