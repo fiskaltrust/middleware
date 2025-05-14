@@ -49,7 +49,7 @@ This section describes how a regular new Middleware (E.g. `v1.3.71`) release is 
 
 First the relevant github Milestone is maintained. 
 All relevant issues and all PRs since the last release are added to the milestone and they are given the needed `queue-*` and `scu-*` labels. 
-PRs or issues that have a customer facing impact get the `meta-needs-release-notes` and if needed the `meta-neets-migration-guide` label.
+PRs or issues that have a customer facing impact get the `meta-needs-release-notes` and if needed the `meta-needs-migration-guide` label.
 
 ### Deploy Pre Release Versions to Sandbox
 
