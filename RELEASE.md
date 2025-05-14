@@ -63,7 +63,8 @@ All items in the release Milestone with the `meta-needs-release-notes` label hav
 
 ### Internal Release Notes Review
 
-The release notes are given to the market lead engineers for review.
+The release notes are given to the market lead engineers for review. 
+A post in the releases channel is made.
 
 ### Feature Tests
 
