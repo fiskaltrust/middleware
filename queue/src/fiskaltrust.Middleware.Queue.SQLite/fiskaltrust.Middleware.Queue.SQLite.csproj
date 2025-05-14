@@ -42,6 +42,7 @@
 
     <ItemGroup Condition="'$(TargetFramework)' != 'net461'">
         <PackageReference Include="Portable.BouncyCastle" version="1.8.1.2" />
+        <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="2.1.11" GeneratePathProperty="true" />
         <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.4" />
     </ItemGroup>
 
