@@ -1,8 +1,5 @@
-﻿using fiskaltrust.Middleware.Localization.QueueGR.Interface;
-using fiskaltrust.Middleware.Localization.v2.Interface;
-using fiskaltrust.Middleware.Localization.v2;
+﻿using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.storage.V0;
-using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD;
 using fiskaltrust.Middleware.Storage.GR;
 
@@ -40,6 +37,11 @@ public class ProtocolCommandProcessorGR(IGRSSCD sscd, ftQueueGR queueGR, ftSigna
             ReceiptResponse = request.ReceiptResponse,
         });
         return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+    }
+
+    public async Task<ProcessCommandResponse> Pay0x3005Async(ProcessCommandRequest request)
+    {
+        return await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
     }
 
     public async Task<ProcessCommandResponse> CopyReceiptPrintExistingReceipt0x3010Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);

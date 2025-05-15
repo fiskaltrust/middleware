@@ -9,5 +9,6 @@ public interface IProtocolCommandProcessor
     public Task<ProcessCommandResponse> ProtocolAccountingEvent0x3002Async(ProcessCommandRequest request);
     public Task<ProcessCommandResponse> InternalUsageMaterialConsumption0x3003Async(ProcessCommandRequest request);
     public Task<ProcessCommandResponse> Order0x3004Async(ProcessCommandRequest request);
+    public Task<ProcessCommandResponse> Pay0x3005Async(ProcessCommandRequest request);
     public Task<ProcessCommandResponse> CopyReceiptPrintExistingReceipt0x3010Async(ProcessCommandRequest request);
 }

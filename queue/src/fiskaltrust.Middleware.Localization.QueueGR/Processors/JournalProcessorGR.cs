@@ -1,6 +1,6 @@
 ﻿using System.Xml.Serialization;
 using fiskaltrust.ifPOS.v1;
-using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD.AADE;
+using fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.storage.V0;

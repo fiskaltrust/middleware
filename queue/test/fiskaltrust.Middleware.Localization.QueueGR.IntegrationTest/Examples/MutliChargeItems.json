@@ -1,0 +1,128 @@
+{
+  "ftCashBoxID": "31f3defc-275d-4b6e-9f3f-fa09d64c1bb4",
+  "cbTerminalID": "",
+  "ftPosSystemId": "7b5955e3-4944-4ff3-8df9-46166b70132a",
+  "cbReceiptReference": "13-1746472874809",
+  "cbArea": "0",
+  "cbUser": "Chef",
+  "cbCustomer": null,
+  "ftReceiptCase": 5139205309155246081,
+  "cbChargeItems": [
+    {
+      "Amount": 3.5,
+      "Description": "French Fries",
+      "ProductNumber": "007",
+      "Quantity": 1,
+      "VATRate": 24,
+      "ftChargeItemCase": 5139205309155246099,
+      "Moment": "2025-05-08T15:23:44.373Z",
+      "Position": 1,
+      "VATAmount": 0.68,
+      "Unit": "kg"
+    },
+    {
+      "Amount": 5,
+      "Description": "Tiramisu",
+      "ProductNumber": "008",
+      "Quantity": 1,
+      "VATRate": 24,
+      "ftChargeItemCase": 5139205309155246099,
+      "Moment": "2025-05-08T15:23:44.844Z",
+      "Position": 2,
+      "VATAmount": 0.97,
+      "Unit": "kg"
+    },
+    {
+      "Amount": 8,
+      "Description": "Grilled Chicken Sandwich",
+      "ProductNumber": "004",
+      "Quantity": 1,
+      "VATRate": 24,
+      "ftChargeItemCase": 5139205309155246099,
+      "Moment": "2025-05-08T15:23:45.134Z",
+      "Position": 3,
+      "VATAmount": 1.55,
+      "Unit": "kg"
+    },
+    {
+      "Amount": 7,
+      "Description": "Caesar Salad",
+      "ProductNumber": "003",
+      "Quantity": 1,
+      "VATRate": 24,
+      "ftChargeItemCase": 5139205309155246099,
+      "Moment": "2025-05-08T15:23:45.684Z",
+      "Position": 4,
+      "VATAmount": 1.35,
+      "Unit": "kg"
+    },
+    {
+      "Amount": 9.5,
+      "Description": "Pepperoni Pizza",
+      "ProductNumber": "002",
+      "Quantity": 1,
+      "VATRate": 24,
+      "ftChargeItemCase": 5139205309155246099,
+      "Moment": "2025-05-08T15:23:45.980Z",
+      "Position": 5,
+      "VATAmount": 1.84,
+      "Unit": "kg"
+    },
+    {
+      "Amount": 9,
+      "Description": "Cheeseburger",
+      "ProductNumber": "006",
+      "Quantity": 1,
+      "VATRate": 24,
+      "ftChargeItemCase": 5139205309155246099,
+      "Moment": "2025-05-08T15:23:46.324Z",
+      "Position": 6,
+      "VATAmount": 1.74,
+      "Unit": "kg"
+    },
+    {
+      "Amount": 10,
+      "Description": "Spaghetti Carbonara",
+      "ProductNumber": "005",
+      "Quantity": 1,
+      "VATRate": 24,
+      "ftChargeItemCase": 5139205309155246099,
+      "Moment": "2025-05-08T15:23:46.596Z",
+      "Position": 7,
+      "VATAmount": 1.94,
+      "Unit": "kg"
+    },
+    {
+      "Amount": 45,
+      "Description": "Electrician",
+      "ProductNumber": "008",
+      "Quantity": 1,
+      "VATRate": 13,
+      "ftChargeItemCase": 5139205309155246114,
+      "Moment": "2025-05-08T15:23:50.133Z",
+      "Position": 8,
+      "VATAmount": 5.176991150442478,
+      "Unit": "kg"
+    }
+  ],
+  "cbPayItems": [
+    {
+      "Position": 1,
+      "Quantity": 1,
+      "Moment": "2025-05-08T15:23:48.940Z",
+      "Description": "Cash",
+      "Amount": 52,
+      "ftPayItemCase": 5139205309155246081
+    },
+    {
+      "Position": 2,
+      "Quantity": 1,
+      "Moment": "2025-05-08T15:24:08.196Z",
+      "Description": "Cash",
+      "Amount": 45,
+      "ftPayItemCase": 5139205309155246081
+    }
+  ],
+  "cbReceiptAmount": 97,
+  "cbReceiptMoment": "2025-05-08T18:25:07.574Z"
+}
