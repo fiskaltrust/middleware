@@ -60,17 +60,14 @@ public class MyDataSCU : IGRSSCD
         if ((int) response.StatusCode >= 500)
         {
             // todo should we relaly return this?
-            request.ReceiptResponse.AddSignatureItem(new SignatureItem
-            {
-                Data = $"Απώλεια Διασύνδεσης Παρόχου – ΑΑΔΕ",
-                Caption = "Transmission Failure_2",
-                ftSignatureFormat = SignatureFormat.Text,
-                ftSignatureType = SignatureTypeGR.MyDataInfo.As<SignatureType>()
-            });
-            return new ProcessResponse
-            {
-                ReceiptResponse = request.ReceiptResponse
-            };
+            //request.ReceiptResponse.AddSignatureItem(new SignatureItem
+            //{
+            //    Data = $"Απώλεια Διασύνδεσης Παρόχου – ΑΑΔΕ",
+            //    Caption = "Transmission Failure_2",
+            //    ftSignatureFormat = SignatureFormat.Text,
+            //    ftSignatureType = SignatureTypeGR.MyDataInfo.As<SignatureType>()
+            //});
+            throw new Exception("Error while sending the request to MyData API. Please check the logs for more details.");
         }
         if (response.IsSuccessStatusCode)
         {

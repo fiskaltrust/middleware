@@ -479,6 +479,11 @@ public class AADEFactory
     private PartyType CreateIssuer()
     {
         var issuerVat = _masterDataConfiguration?.Account?.VatId ?? "112545020";
+        var branch = 0;
+        if (!string.IsNullOrEmpty(_masterDataConfiguration?.Outlet?.LocationId) && int.TryParse(_masterDataConfiguration?.Outlet?.LocationId, out var locationId))
+        {
+            branch = locationId;
+        }
         if (issuerVat?.StartsWith("EL") == true)
         {
             issuerVat = issuerVat.Replace("EL", "");
@@ -491,7 +496,7 @@ public class AADEFactory
         {
             vatNumber = issuerVat,
             country = CountryType.GR,
-            branch = 0
+            branch = branch
         };
     }
 
