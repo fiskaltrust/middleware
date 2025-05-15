@@ -1,7 +1,7 @@
-- Feature Name: (fill me in with a unique ident, `release_lifecycle`)
-- Start Date: (fill me in with today's date, 2025-05-08)
-- RFC PR: [fiskaltrust/middleware#0000](https://github.com/fiskaltrust/middleware/pull/0000)
-- Tracking Issue: [fiskaltrust/middleware#0000](https://github.com/fiskaltrust/middleware/issues/0000)
+- Feature Name: `release_lifecycle`
+- Start Date: 2025-05-08
+- RFC PR: [fiskaltrust/middleware#441](https://github.com/fiskaltrust/middleware/pull/441)
+- Tracking Issue: [fiskaltrust/engineering#777](https://github.com/fiskaltrust/engineering/issues/777)
 
 # Summary
 
