@@ -66,7 +66,7 @@ public class AADEFactory
             payItem.Quantity = Math.Round(payItem.Quantity, 2);
         }
         MyDataAADEValidation.ValidateReceiptRequest(receiptRequest);
-  
+
         var inv = CreateInvoiceDocType(receiptRequest, receiptResponse);
         var doc = new InvoicesDoc
         {
@@ -146,7 +146,7 @@ public class AADEFactory
         if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Protocol0x0005))
         {
             var result = receiptRequest.GetCustomerOrNull();
-            if(result != null)
+            if (result != null)
             {
                 inv.invoiceHeader.otherDeliveryNoteHeader = new OtherDeliveryNoteHeaderType
                 {
@@ -160,7 +160,7 @@ public class AADEFactory
                     {
                         street = _masterDataConfiguration.Outlet.Street,
                         city = _masterDataConfiguration.Outlet.City,
-                        postalCode =  _masterDataConfiguration.Outlet.Zip,
+                        postalCode = _masterDataConfiguration.Outlet.Zip,
                         number = _masterDataConfiguration.Outlet.LocationId,
                     }
                 };
@@ -196,7 +196,7 @@ public class AADEFactory
                 vatAmount = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -vatAmount : vatAmount,
                 netValue = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -x.Amount - -vatAmount : x.Amount - vatAmount,
                 vatCategory = AADEMappings.GetVATCategory(x),
-            };           
+            };
             if (x.ftChargeItemCase.IsNatureOfVat(ChargeItemCaseNatureOfVatGR.ExtemptEndOfClimateCrises))
             {
                 invoiceRow.netValue = 0;
@@ -315,7 +315,7 @@ public class AADEFactory
                     invoiceRow.withheldPercentCategorySpecified = true;
                 }
             }
-            if(grouped.modifiers.Count > 0)
+            if (grouped.modifiers.Count > 0)
             {
                 invoiceRow.deductionsAmount = grouped.modifiers.Sum(x => x.Amount) * -1;
                 invoiceRow.deductionsAmountSpecified = true;
@@ -417,6 +417,40 @@ public class AADEFactory
                             SigningAuthor = "viva.com", // need to be filled??
                         };
                     }
+                }
+                else
+                {
+                    try
+                    {
+                        var payItemCaseDataJson = JsonSerializer.Serialize(x.ftPayItemCaseData);
+                        using var jsonDoc = JsonDocument.Parse(payItemCaseDataJson);
+                        if (jsonDoc.RootElement.TryGetProperty("aadeSignatureData", out var aadeSignatureDataElement))
+                        {
+                            if (aadeSignatureDataElement.TryGetProperty("aadeProviderSignature", out var aadeProviderSignatureElement) && aadeProviderSignatureElement.ValueKind == JsonValueKind.String)
+                            {
+
+                                payment.ProvidersSignature = new ProviderSignatureType
+                                {
+                                    Signature = aadeProviderSignatureElement.GetString(),
+                                    SigningAuthor = "viva.com"
+                                };
+                            }
+
+                            if (aadeSignatureDataElement.TryGetProperty("aadeTransactionId", out var aadeTransactionIdElement) && aadeTransactionIdElement.ValueKind == JsonValueKind.String)
+                            {
+                                payment.transactionId = aadeTransactionIdElement.GetString();
+                            }
+                        }
+                    }
+                    catch { }
+                }
+            }
+
+            if (payment.type == MyDataPaymentMethods.PosEPos)
+            {
+                if (string.IsNullOrEmpty(payment.transactionId))
+                {
+                    throw new Exception("Either the aadeTransactionId has not been provided for one or more card payment(s).");
                 }
             }
             return payment;
