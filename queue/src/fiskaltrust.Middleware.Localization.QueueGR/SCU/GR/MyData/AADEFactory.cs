@@ -46,7 +46,7 @@ public class AADEFactory
         }).ToList();
         var doc = new InvoicesDoc
         {
-            invoice = actualReceiptRequests.Select(x => CreateInvoiceDocType(x.receiptRequest, x.receiptResponse)).ToArray()
+            invoice = actualReceiptRequests.Select(x => CreateInvoiceDocType(x.receiptRequest, x.receiptResponse, false)).ToArray()
         };
         return doc;
     }
@@ -67,7 +67,7 @@ public class AADEFactory
         }
         MyDataAADEValidation.ValidateReceiptRequest(receiptRequest);
 
-        var inv = CreateInvoiceDocType(receiptRequest, receiptResponse);
+        var inv = CreateInvoiceDocType(receiptRequest, receiptResponse, true);
         var doc = new InvoicesDoc
         {
             invoice = [inv]
@@ -75,7 +75,7 @@ public class AADEFactory
         return doc;
     }
 
-    private AadeBookInvoiceType CreateInvoiceDocType(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
+    private AadeBookInvoiceType CreateInvoiceDocType(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, bool failOnMissingData)
     {
         var invoiceDetails = GetInvoiceDetails(receiptRequest);
         var incomeClassificationGroups = invoiceDetails.Where(x => x.incomeClassification != null).SelectMany(x => x.incomeClassification).Where(x => x.classificationTypeSpecified).GroupBy(x => (x.classificationCategory, x.classificationType)).Select(x => new IncomeClassificationType
@@ -113,7 +113,7 @@ public class AADEFactory
         }).ToList());
 
         var identification = long.Parse(receiptResponse.ftReceiptIdentification.Replace("ft", "").Split("#")[0], System.Globalization.NumberStyles.HexNumber);
-        var paymentMethods = GetPayments(receiptRequest);
+        var paymentMethods = GetPayments(receiptRequest, failOnMissingData);
         var issuer = CreateIssuer();
         var inv = new AadeBookInvoiceType
         {
@@ -367,7 +367,7 @@ public class AADEFactory
         }
     }
 
-    private static List<PaymentMethodDetailType> GetPayments(ReceiptRequest receiptRequest)
+    private static List<PaymentMethodDetailType> GetPayments(ReceiptRequest receiptRequest, bool failOnMissingData)
     {
         // what is payitemcase 99?
         return receiptRequest.cbPayItems.Where(x => !(x.ftPayItemCase.IsCase(PayItemCase.Grant) && x.ftPayItemCase.IsFlag(PayItemCaseFlags.Tip)) && !(x.ftPayItemCase.IsCase(PayItemCase.DebitCardPayment) && x.ftPayItemCase.IsFlag(PayItemCaseFlags.Tip))).Select(x =>
@@ -448,7 +448,7 @@ public class AADEFactory
 
             if (payment.type == MyDataPaymentMethods.PosEPos)
             {
-                if (string.IsNullOrEmpty(payment.transactionId))
+                if (failOnMissingData && string.IsNullOrEmpty(payment.transactionId))
                 {
                     throw new Exception("Either the aadeTransactionId has not been provided for one or more card payment(s).");
                 }
