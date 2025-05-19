@@ -96,7 +96,7 @@ namespace fiskaltrust.Api.POS.Models.ifPOS.v2
         [JsonPropertyName("Protocol")]
         [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
         [DataMember(EmitDefaultValue = true, IsRequired = true)]
-        public required string Protocol { get; set; }
+        public string Protocol { get; set; }
 
         [JsonPropertyName("ProtocolVersion")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
@@ -106,7 +106,7 @@ namespace fiskaltrust.Api.POS.Models.ifPOS.v2
         [JsonPropertyName("Action")]
         [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
         [DataMember(EmitDefaultValue = true, IsRequired = true)]
-        public required string Action { get; set; }
+        public string Action { get; set; }
 
         [JsonPropertyName("ProtocolRequest")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
