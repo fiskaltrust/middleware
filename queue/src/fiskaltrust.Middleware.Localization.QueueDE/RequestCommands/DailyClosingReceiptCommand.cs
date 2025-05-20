@@ -7,7 +7,6 @@ using fiskaltrust.storage.V0;
 using fiskaltrust.Middleware.Localization.QueueDE.Extensions;
 using Microsoft.Extensions.Logging;
 using fiskaltrust.Middleware.Contracts.Models.Transactions;
-using fiskaltrust.ifPOS.v1.de;
 using System.Linq;
 using Newtonsoft.Json;
 using fiskaltrust.Middleware.Localization.QueueDE.Services;
@@ -88,6 +87,19 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                     await _openTransactionRepo.RemoveAsync(openTransaction.cbReceiptReference).ConfigureAwait(false);
                 }
                 _logger.LogTrace("DailyClosingReceiptCommand.ExecuteAsync Section openTransactions [exit].");
+
+
+                //remove all transactions on the tse to enable full tar deletion
+                if (request.HasCloseOpenTransactionsOnTseFlag())
+                {
+                    var tseinfo = await _deSSCDProvider.Instance.GetTseInfoAsync().ConfigureAwait(false);
+                    foreach (var openTransactionNumber in tseinfo.CurrentStartedTransactionNumbers)
+                    {
+                        (var openProcessType, var openPayload) = _transactionPayloadFactory.CreateAutomaticallyCanceledReceiptPayload();
+                        var finishResult = await _transactionFactory.PerformFinishTransactionRequestAsync(openProcessType, openPayload, queueItem.ftQueueItemId, queueDE.CashBoxIdentification, openTransactionNumber).ConfigureAwait(false);
+                        openSignatures.AddRange(_signatureFactory.GetSignaturesForFinishTransaction(finishResult));
+                    }
+                }
 
                 var processReceiptResponse = await ProcessReceiptAsync(request.cbReceiptReference, processType, payload, queueItem, queueDE).ConfigureAwait(false);
                 queueDE.DailyClosingNumber++;

@@ -40,6 +40,12 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Extensions
         {
             return ((receiptRequest.ftReceiptCase & 0x0000_0000_1000_0000) > 0x0000);
         }
+
+        public static bool HasCloseOpenTransactionsOnTseFlag(this ReceiptRequest receiptRequest)
+        {
+            return ((receiptRequest.ftReceiptCase & 0x0000_0002_0000_0000) > 0x0000);
+        }
+
         public static bool IsTseInfoRequest(this ReceiptRequest receiptRequest)
         {
             return ((receiptRequest.ftReceiptCase & 0x0000_0000_0080_0000) > 0x0000);
