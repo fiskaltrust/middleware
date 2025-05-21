@@ -445,14 +445,6 @@ public class AADEFactory
                     catch { }
                 }
             }
-
-            if (payment.type == MyDataPaymentMethods.PosEPos)
-            {
-                if (failOnMissingData && string.IsNullOrEmpty(payment.transactionId))
-                {
-                    throw new Exception("Either the aadeTransactionId has not been provided for one or more card payment(s).");
-                }
-            }
             return payment;
         }).ToList();
     }
