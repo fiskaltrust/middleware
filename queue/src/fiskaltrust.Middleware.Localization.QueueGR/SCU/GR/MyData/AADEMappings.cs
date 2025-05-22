@@ -257,18 +257,6 @@ public static class AADEMappings
                 return !string.IsNullOrEmpty(receiptRequest.cbPreviousReceiptReference) ? InvoiceType.Item51 : InvoiceType.Item52;
             }
 
-            if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.InvoiceB2C0x1001) && !receiptRequest.ContainsCustomerInfo())
-            {
-                // in this case we don't know the customer so we cannot add the VAT. The invoice is handled as a Μη Αντικριζόμενα operation ( non facing)
-                if (receiptRequest.cbChargeItems.All(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.OtherService)))
-                {
-                    return InvoiceType.Item112;
-                }
-                else
-                {
-                    return InvoiceType.Item111;
-                }
-            }
             if (receiptRequest.cbChargeItems.Any(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable)))
             {
                 return InvoiceType.Item15;
