@@ -445,6 +445,10 @@ public class AADEFactory
                     catch { }
                 }
             }
+            else if (failOnMissingData)
+            {
+                throw new Exception($"Missing ftPayItemCaseData for PayItem \"{x.Description}\" with case {x.ftPayItemCase}");
+            }
             return payment;
         }).ToList();
     }
