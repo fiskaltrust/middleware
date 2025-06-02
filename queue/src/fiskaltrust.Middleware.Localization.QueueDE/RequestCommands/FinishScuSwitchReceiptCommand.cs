@@ -50,13 +50,9 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
             var ajs = await _actionJournalRepository.GetAsync().ConfigureAwait(false);
             var lastInitiateSwitchJournal = ajs.OrderBy(x => x.Moment).LastOrDefault(x => x.Type == $"{0x4445000000000003:X}-{nameof(InitiateSCUSwitch)}");
-            var initiateSwitchNotification = !string.IsNullOrEmpty(lastInitiateSwitchJournal.DataJson)
+            var initiateSwitchNotification = (!string.IsNullOrEmpty(lastInitiateSwitchJournal.DataJson)
                 ? JsonConvert.DeserializeObject<InitiateSCUSwitch>(lastInitiateSwitchJournal.DataJson)
-                : null;
-            if (initiateSwitchNotification == null)
-            {
-                throw new Exception($"The SCU switch must be initiated with a initiate-scu-switch receipt. See https://link.fiskaltrust.cloud/market-de/scu-switch for more details.");
-            }
+                : null) ?? throw new Exception($"The SCU switch must be initiated with a initiate-scu-switch receipt. See https://link.fiskaltrust.cloud/market-de/scu-switch for more details.");
 
             queueDE.ftSignaturCreationUnitDEId = initiateSwitchNotification.TargetSCUId;
             await _configurationRepository.InsertOrUpdateQueueDEAsync(queueDE).ConfigureAwait(false);
@@ -91,7 +87,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                         new SignaturItem()
                         {
                             ftSignatureType = typeNumber,
-                            ftSignatureFormat = (long) ifPOS.v0.SignaturItem.Formats.AZTEC,
+                            ftSignatureFormat = (long) fiskaltrust.ifPOS.v0.SignaturItem.Formats.AZTEC,
                             Caption = $"SCU mit Queue verbunden. Kassenseriennummer: {clientId}, TSE-Seriennummer: {serialnumberOctet}, Queue-ID: {queue.ftQueueId}, SCU-ID: {initiateSwitchNotification.TargetSCUId}",
                             Data = JsonConvert.SerializeObject(notification)
                         }
