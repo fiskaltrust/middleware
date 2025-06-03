@@ -118,7 +118,6 @@ public class AADEFactory
         var inv = new AadeBookInvoiceType
         {
             issuer = issuer,
-            paymentMethods = [.. paymentMethods],
             invoiceHeader = new InvoiceHeaderType
             {
                 series = receiptResponse.ftCashBoxIdentification,
@@ -143,19 +142,25 @@ public class AADEFactory
             }
         };
 
+        if (paymentMethods?.Count > 0)
+        {
+            inv.paymentMethods = [.. paymentMethods];
+        }
+
         if (receiptRequest.cbPreviousReceiptReference != null && receiptReferences?.Count > 0)
         {
-            inv.invoiceHeader.correlatedInvoices = receiptReferences.Select(x => GetInvoiceMark(x.Item2)).ToArray();
+            if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PointOfSaleReceipt0x0001))
+            {
+                inv.invoiceHeader.multipleConnectedMarks = receiptReferences.Select(x => GetInvoiceMark(x.Item2)).ToArray();
+            }
+            else
+            {
+                inv.invoiceHeader.correlatedInvoices = receiptReferences.Select(x => GetInvoiceMark(x.Item2)).ToArray();
+            }
         }
 
         if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004))
         {
-            var (cbPreviousReceiptReferenceString, cbPreviousReceiptReferenceArray) = receiptRequest.GetPreviousReceiptReferenceStringOrArray();
-            if (cbPreviousReceiptReferenceArray != null && cbPreviousReceiptReferenceArray.Count > 0)
-            {
-                inv.invoiceHeader.correlatedInvoices = cbPreviousReceiptReferenceArray.Select(x => long.Parse(x)).ToArray();
-            }
-
             inv.invoiceHeader.tableAA = receiptRequest.cbArea?.ToString();
         }
 
@@ -205,11 +210,21 @@ public class AADEFactory
             var invoiceRow = new InvoiceRowType
             {
                 quantity = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -x.Quantity : x.Quantity,
+                quantitySpecified = true,
                 lineNumber = (int) x.Position,
                 vatAmount = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -vatAmount : vatAmount,
                 netValue = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -x.Amount - -vatAmount : x.Amount - vatAmount,
                 vatCategory = AADEMappings.GetVATCategory(x),
             };
+
+            if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004))
+            {
+                // Todo change
+                invoiceRow.itemDescr = x.Description;
+                invoiceRow.measurementUnit = 1;
+                invoiceRow.measurementUnitSpecified = true;
+            }
+
             if (x.ftChargeItemCase.IsNatureOfVat(ChargeItemCaseNatureOfVatGR.ExtemptEndOfClimateCrises))
             {
                 invoiceRow.netValue = 0;

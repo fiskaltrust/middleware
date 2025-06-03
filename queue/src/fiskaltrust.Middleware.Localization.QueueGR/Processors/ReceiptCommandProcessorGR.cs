@@ -102,13 +102,6 @@ public class ReceiptCommandProcessorGR(IGRSSCD sscd, ftQueueGR queueGR, ftSignat
     private async Task<List<(ReceiptRequest, ReceiptResponse)>> LoadReceiptReferencesToResponse(ReceiptRequest request, ReceiptResponse receiptResponse)
     {
         var (cbPreviousReceiptReferenceString, cbPreviousReceiptReferenceArray) = request.GetPreviousReceiptReferenceStringOrArray();
-        if (cbPreviousReceiptReferenceArray != null)
-        {
-            throw new Exception($"cbPreviousReceiptReferenceArray is not supported for Invoices in GR. Please use cbPreviousReceiptReference as a string.");
-        }
-
-
-
         if (cbPreviousReceiptReferenceString != null)
         {
             return [await LoadReceiptReferencesToResponse(request, receiptResponse, cbPreviousReceiptReferenceString)];

@@ -73,7 +73,7 @@ public static class ReceiptExamples
             cbPayItems = payItems,
             ftCashBoxID = cashBoxId,
             ftPosSystemId = Guid.NewGuid(),
-            ftReceiptCase = (ReceiptCase) 0x4752_2000_0000_3004
+            ftReceiptCase = (ReceiptCase) 0x4752_2000_0000_0001
         };
         return receiptRequest;
     }
@@ -327,6 +327,39 @@ public static class ReceiptExamples
             ftReceiptCase = (ReceiptCase) 0x4752_2000_0000_0001 // posreceipt
         };
     }
+
+    public static ReceiptRequest Example_SalesInvoice_8_6(Guid cashBoxId)
+    {
+        var chargeItems = new List<ChargeItem> {
+                    CreateGoodNormalVATRateItem(description: "Product 1", amount: 89.20m, quantity: 1),
+                    CreateGoodNormalVATRateItem(description: "Product 2", amount: 23.43m, quantity: 1)
+                };
+
+        var i = 1;
+        foreach (var chargeItem in chargeItems)
+        {
+            chargeItem.Position = i++;
+            // Set fraction
+            chargeItem.Amount = decimal.Round(chargeItem.Amount, 2, MidpointRounding.AwayFromZero);
+            chargeItem.VATAmount = decimal.Round(chargeItem.VATAmount ?? 0.0m, 2, MidpointRounding.AwayFromZero);
+        }
+        var receiptRequest = new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            cbArea = "22",
+            Currency = Currency.EUR,
+            cbReceiptAmount = chargeItems.Sum(x => x.Amount),
+            cbReceiptMoment = DateTime.UtcNow,
+            cbReceiptReference = Guid.NewGuid().ToString(),
+            cbChargeItems = chargeItems,
+            cbPayItems = [],
+            ftCashBoxID = cashBoxId,
+            ftPosSystemId = Guid.NewGuid(),
+            ftReceiptCase = (ReceiptCase) 0x4752_2000_0000_3004,
+        };
+        return receiptRequest;
+    }
+
 
     public static ReceiptRequest Example_RetailSales_100App2APp(Guid cashBoxId)
     {

@@ -131,7 +131,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
                 ftState = 0
             });
 
-            var data = aadeFactory.GenerateInvoicePayload(xml); 
+            var data = aadeFactory.GenerateInvoicePayload(xml);
 
             d.ftState.IsState(State.Success).Should().BeTrue(string.Join(Environment.NewLine, d.ftSignatures.Select(x => x.Data)));
         }
@@ -192,6 +192,66 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             var receiptRequest = ReceiptExamples.Example_SalesInvoice_1_1(cashBoxId);
             var exampleCashSalesResponse = await signMethod(JsonSerializer.Serialize(receiptRequest));
             await StoreDataAsync("A1_1", "A1_1", ticks, bootstrapper, receiptRequest, System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesResponse)!);
+        }
+
+        [Fact]
+        public async Task Example_SalesInvoice_8_6_Tests()
+        {
+            (var bootstrapper, var cashBoxId) = await InitializeQueueGRBootstrapperAsync();
+            var signMethod = bootstrapper.RegisterForSign();
+            var ticks = DateTime.UtcNow.Ticks;
+            var receiptRequest = ReceiptExamples.Example_SalesInvoice_8_6(cashBoxId);
+            var exampleCashSalesResponse = await signMethod(JsonSerializer.Serialize(receiptRequest));
+            await StoreDataAsync("A8_6", "A8_6", ticks, bootstrapper, receiptRequest, System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesResponse)!);
+        }
+
+
+        [Fact]
+        public async Task Example_SalesInvoice_86_Sequence_Tests()
+        {
+            (var bootstrapper, var cashBoxId) = await InitializeQueueGRBootstrapperAsync();
+            var signMethod = bootstrapper.RegisterForSign();
+            var receiptReferences = new List<string>();
+            var chargeItems = new List<ChargeItem>();
+            for (var i = 0; i < 10; i++)
+            {
+                var receiptRequest = ReceiptExamples.Example_SalesInvoice_8_6(cashBoxId);
+                receiptRequest.cbReceiptReference = Guid.NewGuid().ToString();
+                receiptReferences.Add(receiptRequest.cbReceiptReference!);
+                chargeItems.AddRange(receiptRequest.cbChargeItems);
+                _ = await signMethod(JsonSerializer.Serialize(receiptRequest));
+            }
+
+            // adapt the positions in the chargeitems to be strictly upcounting
+            for (var i = 0; i < chargeItems.Count; i++)
+            {
+                chargeItems[i].Position = i + 1;
+            }
+
+            var receipt = new ReceiptRequest
+            {
+                Currency = Currency.EUR,
+                cbReceiptAmount = chargeItems.Sum(x => x.Amount),
+                cbReceiptMoment = DateTime.UtcNow,
+                cbReceiptReference = Guid.NewGuid().ToString(),
+                cbChargeItems = chargeItems,
+                cbPayItems =
+                [
+                    new PayItem
+                    {
+                        Amount = chargeItems.Sum(x => x.Amount),
+                        Description = "Card",
+                        ftPayItemCase = (PayItemCase) (0x4752_2000_0000_0000 | (long) PayItemCase.CashPayment),
+                    }
+                ],
+                ftCashBoxID = cashBoxId,
+                ftPosSystemId = Guid.NewGuid(),
+                cbTerminalID = "1",
+                cbPreviousReceiptReference = receiptReferences,
+                ftReceiptCase = (ReceiptCase) 0x4752_2000_0000_0001 // posreceipt
+            };
+            var exampleCashSalesResponse = await signMethod(JsonSerializer.Serialize(receipt));
+            var data = System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesResponse)!;
         }
 
         [Fact]
@@ -267,9 +327,9 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
                 ftJournalType = 0x4752_2000_0000_0001,
                 From = ticks
             }));
-            Directory.CreateDirectory("C:\\temp\\viva_examples\\" + folder);
-            File.WriteAllBytes($"C:\\temp\\viva_examples\\{folder}\\{casename}.receipt.pdf", await pdfdata.Content.ReadAsByteArrayAsync());
-            File.WriteAllText($"C:\\temp\\viva_examples\\{folder}\\{casename}_aade.xml", xmlData);
+            Directory.CreateDirectory(folder);
+            File.WriteAllBytes($"{folder}\\{casename}.receipt.pdf", await pdfdata.Content.ReadAsByteArrayAsync());
+            File.WriteAllText($"{folder}\\{casename}_aade.xml", xmlData);
         }
 
         private async Task<IssueResponse?> SendIssueAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
