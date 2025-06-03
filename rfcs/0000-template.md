@@ -1,7 +1,8 @@
-- Feature Name: (fill me in with a unique ident, `my_feature`)
-- Start Date: (fill me in with today's date, YYYY-MM-DD)
+- Feature Name: (fill me in with a unique ident. e.g. `my_feature`)
+- Start Date: (fill me in with today's date. e.g. YYYY-MM-DD)
 - RFC PR: [fiskaltrust/middleware#0000](https://github.com/fiskaltrust/middleware/pull/0000)
 - Tracking Issue: [fiskaltrust/middleware#0000](https://github.com/fiskaltrust/middleware/issues/0000)
+- Markets: (fill me in with the markets that this feature applies to. e.g. `XX`,`YY`)
 
 # Summary
 

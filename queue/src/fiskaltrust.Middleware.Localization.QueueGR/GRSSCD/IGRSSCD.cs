@@ -9,6 +9,10 @@ public interface IGRSSCD
     public Task<GRSSCDInfo> GetInfoAsync();
 }
 
+public class GRSSCDInfo
+{
+}
+
 public class ProcessRequest
 {
     public required ReceiptRequest ReceiptRequest { get; set; }
