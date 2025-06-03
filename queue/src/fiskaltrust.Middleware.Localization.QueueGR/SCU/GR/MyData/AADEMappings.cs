@@ -192,19 +192,13 @@ public static class AADEMappings
         {
             return IncomeClassificationCategoryType.category1_6;
         }
-
-        if (receiptRequest.ftReceiptCase.Case() == (ReceiptCase) 0x3005) // TODO
-        {
-            return IncomeClassificationCategoryType.category1_5;
-        }
-
         return chargeItem.ftChargeItemCase.TypeOfService() switch
         {
-            ChargeItemCaseTypeOfService.UnknownService => IncomeClassificationCategoryType.category1_2,
-            ChargeItemCaseTypeOfService.Delivery => IncomeClassificationCategoryType.category1_2,
+            ChargeItemCaseTypeOfService.UnknownService => IncomeClassificationCategoryType.category1_1,
+            ChargeItemCaseTypeOfService.Delivery => IncomeClassificationCategoryType.category1_1,
             ChargeItemCaseTypeOfService.OtherService => IncomeClassificationCategoryType.category1_3,
             ChargeItemCaseTypeOfService.NotOwnSales => IncomeClassificationCategoryType.category1_7,
-            _ => IncomeClassificationCategoryType.category1_2,
+            _ => throw new Exception($"The ChargeItem type {chargeItem.ftChargeItemCase.TypeOfService()} is not supported for IncomeClassificationCategoryType."),
         };
     }
 
