@@ -14,7 +14,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
     [Trait("only", "local")]
     public class FullTest()
     {
-        private MyDataSCU _myDataSCU = new MyDataSCU("", "", "https://mydataapidev.aade.gr/", "https://receipts-sandbox.fiskaltrust.eu", new MasterDataConfiguration
+        private readonly MyDataSCU _myDataSCU = new MyDataSCU("", "", "https://mydataapidev.aade.gr/", "https://receipts-sandbox.fiskaltrust.eu", new MasterDataConfiguration
         {
             Account = new AccountMasterData
             {
@@ -72,7 +72,6 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             var d = System.Text.Json.JsonSerializer.Deserialize<ReceiptResponse>(exampleCashSalesResponse)!;
             d.ftState.IsState(State.Success).Should().BeTrue(string.Join(Environment.NewLine, d.ftSignatures.Select(x => x.Data)));
         }
-
 
         [Fact]
         public async Task ExampleRquests_()
