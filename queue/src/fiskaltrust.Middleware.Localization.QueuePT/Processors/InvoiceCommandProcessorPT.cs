@@ -12,6 +12,7 @@ using fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
 using System.Text.Json;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Storage.PT;
+using fiskaltrust.Middleware.Localization.v2.Helpers;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Processors;
 
@@ -56,7 +57,7 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignat
             _queuePT.LastHash = hash;
             return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
         }
-        else if (!string.IsNullOrEmpty(request.ReceiptRequest.cbPreviousReceiptReference))
+        else if (request.ReceiptRequest.cbPreviousReceiptReference != null)
         {
             var receiptReference = await LoadReceiptReferencesToResponse(request.ReceiptRequest, request.ReceiptResponse);
             var series = StaticNumeratorStorage.InvoiceSeries;
@@ -103,7 +104,13 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignat
 
     private async Task<ReceiptResponse> LoadReceiptReferencesToResponse(ReceiptRequest request, ReceiptResponse receiptResponse)
     {
-        var queueItems = _readOnlyQueueItemRepository.GetByReceiptReferenceAsync(request.cbPreviousReceiptReference, request.cbTerminalID);
+        var data = request.GetPreviousReceiptReferenceStringOrArray();
+        if (data.cbPreviousReceiptReferenceArray != null)
+        {
+            throw new Exception($"cbPreviousReceiptReferenceArray is not supported in PT. Please use cbPreviousReceiptReference as a string.");
+        }
+
+        var queueItems = _readOnlyQueueItemRepository.GetByReceiptReferenceAsync(data.cbPreviousReceiptReferenceString, request.cbTerminalID);
         await foreach (var existingQueueItem in queueItems)
         {
             if (string.IsNullOrEmpty(existingQueueItem.response))

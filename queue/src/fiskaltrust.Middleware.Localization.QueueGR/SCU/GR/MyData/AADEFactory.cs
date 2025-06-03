@@ -51,7 +51,7 @@ public class AADEFactory
         return doc;
     }
 
-    public InvoicesDoc MapToInvoicesDoc(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
+    public InvoicesDoc MapToInvoicesDoc(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, List<(ReceiptRequest, ReceiptResponse)>? receiptReferences = null)
     {
         foreach (var chargeItem in receiptRequest.cbChargeItems)
         {
@@ -67,7 +67,7 @@ public class AADEFactory
         }
         MyDataAADEValidation.ValidateReceiptRequest(receiptRequest);
 
-        var inv = CreateInvoiceDocType(receiptRequest, receiptResponse);
+        var inv = CreateInvoiceDocType(receiptRequest, receiptResponse, receiptReferences);
         var doc = new InvoicesDoc
         {
             invoice = [inv]
@@ -75,7 +75,7 @@ public class AADEFactory
         return doc;
     }
 
-    private AadeBookInvoiceType CreateInvoiceDocType(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
+    private AadeBookInvoiceType CreateInvoiceDocType(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, List<(ReceiptRequest, ReceiptResponse)>? receiptReferences = null)
     {
         var invoiceDetails = GetInvoiceDetails(receiptRequest);
         var incomeClassificationGroups = invoiceDetails.Where(x => x.incomeClassification != null).SelectMany(x => x.incomeClassification).Where(x => x.classificationTypeSpecified).GroupBy(x => (x.classificationCategory, x.classificationType)).Select(x => new IncomeClassificationType
@@ -143,6 +143,22 @@ public class AADEFactory
             }
         };
 
+        if (receiptRequest.cbPreviousReceiptReference != null && receiptReferences?.Count > 0)
+        {
+            inv.invoiceHeader.correlatedInvoices = receiptReferences.Select(x => GetInvoiceMark(x.Item2)).ToArray();
+        }
+
+        if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004))
+        {
+            var (cbPreviousReceiptReferenceString, cbPreviousReceiptReferenceArray) = receiptRequest.GetPreviousReceiptReferenceStringOrArray();
+            if (cbPreviousReceiptReferenceArray != null && cbPreviousReceiptReferenceArray.Count > 0)
+            {
+                inv.invoiceHeader.correlatedInvoices = cbPreviousReceiptReferenceArray.Select(x => long.Parse(x)).ToArray();
+            }
+
+            inv.invoiceHeader.tableAA = receiptRequest.cbArea?.ToString();
+        }
+
         if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Protocol0x0005))
         {
             var result = receiptRequest.GetCustomerOrNull();
@@ -168,10 +184,7 @@ public class AADEFactory
         }
 
         inv.invoiceSummary.totalGrossValue = inv.invoiceSummary.totalNetValue + inv.invoiceSummary.totalVatAmount - inv.invoiceSummary.totalWithheldAmount + inv.invoiceSummary.totalFeesAmount + inv.invoiceSummary.totalStampDutyAmount + inv.invoiceSummary.totalOtherTaxesAmount - inv.invoiceSummary.totalDeductionsAmount;
-        if (!string.IsNullOrEmpty(receiptRequest.cbPreviousReceiptReference))
-        {
-            inv.invoiceHeader.correlatedInvoices = [long.Parse(receiptRequest.cbPreviousReceiptReference)];
-        }
+
         if (receiptRequest.ContainsCustomerInfo())
         {
             AddCounterpart(receiptRequest, inv);
@@ -366,6 +379,24 @@ public class AADEFactory
             }
         }
     }
+
+    private static long GetInvoiceMark(ReceiptResponse receiptResponse)
+    {
+        if (receiptResponse.ftSignatures.Count > 0)
+        {
+            var invoiceMarkText = receiptResponse.ftSignatures.FirstOrDefault(x => x.Caption == "invoiceMark")?.Data;
+            if (long.TryParse(invoiceMarkText, out var invoiceMark))
+            {
+                return invoiceMark;
+            }
+            else
+            {
+                return -1;
+            }
+        }
+        return -1;
+    }
+
 
     private static List<PaymentMethodDetailType> GetPayments(ReceiptRequest receiptRequest)
     {

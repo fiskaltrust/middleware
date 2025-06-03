@@ -222,6 +222,11 @@ public static class AADEMappings
                 return InvoiceType.Item93;
             }
 
+            if(receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002))
+            {
+                return receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? InvoiceType.Item85 : InvoiceType.Item84;
+            }
+
             if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003))
             {
                 if (!string.IsNullOrEmpty(receiptRequest.ftReceiptCaseData?.ToString()))
@@ -254,7 +259,7 @@ public static class AADEMappings
         {
             if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
             {
-                return !string.IsNullOrEmpty(receiptRequest.cbPreviousReceiptReference) ? InvoiceType.Item51 : InvoiceType.Item52;
+                return receiptRequest.cbPreviousReceiptReference != null ? InvoiceType.Item51 : InvoiceType.Item52;
             }
 
             if (receiptRequest.cbChargeItems.Any(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable)))
@@ -267,7 +272,7 @@ public static class AADEMappings
             }
             else if (receiptRequest.ftReceiptCase.IsType(ReceiptCaseType.Invoice) && receiptRequest.cbChargeItems.All(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.OtherService)))
             {
-                if (!string.IsNullOrEmpty(receiptRequest.cbPreviousReceiptReference))
+                if (receiptRequest.cbPreviousReceiptReference != null)
                 {
                     return InvoiceType.Item24;
                 }
@@ -287,7 +292,7 @@ public static class AADEMappings
             }
             else
             {
-                if (!string.IsNullOrEmpty(receiptRequest.cbPreviousReceiptReference))
+                if (receiptRequest.cbPreviousReceiptReference != null)
                 {
                     return InvoiceType.Item16;
                 }
@@ -348,12 +353,12 @@ public static class AADEMappings
         PayItemCase.VoucherPaymentCouponVoucherByMoneyValue => -1,
         PayItemCase.OnlinePayment => MyDataPaymentMethods.WebBanking,
         PayItemCase.LoyaltyProgramCustomerCardPayment => -1,
-        PayItemCase.AccountsReceivable => -1,
+        PayItemCase.AccountsReceivable => MyDataPaymentMethods.OnCredit,
         PayItemCase.SEPATransfer => -1,
         PayItemCase.OtherBankTransfer => -1,
         PayItemCase.TransferToCashbookVaultOwnerEmployee => -1,
         PayItemCase.InternalMaterialConsumption => -1,
-        PayItemCase.Grant => MyDataPaymentMethods.OnCredit,
+        PayItemCase.Grant => -1,
         PayItemCase.TicketRestaurant => -1,
         PayItemCase c => throw new Exception($"The Payment type {c} of PayItem with the case {payItem.ftPayItemCase} is not supported."),
     };
