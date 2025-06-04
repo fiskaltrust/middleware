@@ -335,13 +335,10 @@ public static class ReceiptExamples
                     CreateGoodNormalVATRateItem(description: "Product 2", amount: 23.43m, quantity: 1)
                 };
 
-        var i = 1;
         foreach (var chargeItem in chargeItems)
         {
-            chargeItem.Position = i++;
             // Set fraction
             chargeItem.Amount = decimal.Round(chargeItem.Amount, 2, MidpointRounding.AwayFromZero);
-            chargeItem.VATAmount = decimal.Round(chargeItem.VATAmount ?? 0.0m, 2, MidpointRounding.AwayFromZero);
         }
         var receiptRequest = new ReceiptRequest
         {

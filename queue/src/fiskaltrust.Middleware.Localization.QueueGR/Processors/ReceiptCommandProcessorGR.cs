@@ -119,6 +119,7 @@ public class ReceiptCommandProcessorGR(IGRSSCD sscd, ftQueueGR queueGR, ftSignat
         return [];
     }
 
+#pragma warning disable
     private async Task<(ReceiptRequest, ReceiptResponse)> LoadReceiptReferencesToResponse(ReceiptRequest request, ReceiptResponse receiptResponse, string cbPreviousReceiptReferenceString)
     {
         var queueItems = _readOnlyQueueItemRepository.GetByReceiptReferenceAsync(cbPreviousReceiptReferenceString, request.cbTerminalID);
@@ -133,17 +134,14 @@ public class ReceiptCommandProcessorGR(IGRSSCD sscd, ftQueueGR queueGR, ftSignat
             var referencedResponse = JsonSerializer.Deserialize<ReceiptResponse>(existingQueueItem.response);
             if (referencedResponse != null && referencedRequest != null)
             {
-                receiptResponse.ftStateData = new
-                {
-                    ReferencedReceiptResponse = referencedResponse
-                };
+
                 return (referencedRequest, referencedResponse);
             }
             else
             {
-                throw new Exception($"Could not find a reference for the cbPreviousReceiptReference '{request.cbPreviousReceiptReference}' sent via the request.");
+                throw new Exception($"Could not find a reference for the cbPreviousReceiptReference '{cbPreviousReceiptReferenceString}' sent via the request.");
             }
         }
-        throw new Exception($"Could not find a reference for the cbPreviousReceiptReference '{request.cbPreviousReceiptReference}' sent via the request.");
+        throw new Exception($"Could not find a reference for the cbPreviousReceiptReference '{cbPreviousReceiptReferenceString}' sent via the request.");
     }
 }

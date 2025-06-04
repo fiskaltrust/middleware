@@ -97,8 +97,30 @@ public class MyDataSCU : IGRSSCD
                             });
                         }
                     }
+
                     request.ReceiptResponse.AddSignatureItem(CreateGRQRCode($"{_receiptBaseAddress}/{request.ReceiptResponse.ftQueueID}/{request.ReceiptResponse.ftQueueItemID}"));
                     request.ReceiptResponse.ftReceiptIdentification += $"{doc.invoice[0].invoiceHeader.series}-{doc.invoice[0].invoiceHeader.aa}";
+                    if (request.ReceiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004))
+                    {
+                        request.ReceiptResponse.AddSignatureItem(new SignatureItem
+                        {
+                            Data = $"ΤΟ ΠΑΡΟΝ ΕΙΝΑΙ ΠΛΗΡΟΦΟΡΙΑΚΟ ΣΤΟΙΧΕΙΟ ΚΑΙ ΔΕΝ ΑΠΟΤΕΛΕΙ ΝΟΜΙΜΗ ΦΟΡΟΛΟΓΙΚΗ ΑΠΟΔΕΙΞΗ/ΤΙΜΟΛΟΓΙΟ. THE PRESENT DOCUMENT IS ISSUED ONLY FOR INFORMATION PURPOSES AND DOES NOT STAND FOR A VALID TAX RECEIPT/INVOICE",
+                            Caption = "",
+                            ftSignatureFormat = SignatureFormat.Text,
+                            ftSignatureType = SignatureTypeGR.MyDataInfo.As<SignatureType>()
+                        });
+                    }
+
+                    if (doc.invoice[0].invoiceHeader.multipleConnectedMarks?.Length > 0)
+                    {
+                        request.ReceiptResponse.AddSignatureItem(new SignatureItem
+                        {
+                            Data = string.Join(",", doc.invoice[0].invoiceHeader.multipleConnectedMarks),
+                            Caption = "",
+                            ftSignatureFormat = SignatureFormat.Text,
+                            ftSignatureType = SignatureTypeGR.MyDataInfo.As<SignatureType>()
+                        });
+                    }
                     request.ReceiptResponse.AddSignatureItem(new SignatureItem
                     {
                         Data = $"{doc.invoice[0].issuer.vatNumber}|{doc.invoice[0].invoiceHeader.issueDate.ToString("dd/MM/yyyy")}|{doc.invoice[0].issuer.branch}|{doc.invoice[0].invoiceHeader.invoiceType}|{doc.invoice[0].invoiceHeader.series}|{doc.invoice[0].invoiceHeader.aa}",

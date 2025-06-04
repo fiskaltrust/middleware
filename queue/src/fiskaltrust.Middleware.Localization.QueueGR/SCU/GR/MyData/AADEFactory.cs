@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using System.Web;
 using System.Xml.Serialization;
+using Azure.Core;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueueGR.Models.Cases;
 using fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData.Models;
@@ -201,7 +202,7 @@ public class AADEFactory
     private static List<InvoiceRowType> GetInvoiceDetails(ReceiptRequest receiptRequest)
     {
         var chargeItems = receiptRequest.GetGroupedChargeItems();
-
+        var nextPosition = 1;
         return chargeItems.Select(grouped =>
         {
             var x = grouped.chargeItem;
@@ -210,12 +211,25 @@ public class AADEFactory
             var invoiceRow = new InvoiceRowType
             {
                 quantity = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -x.Quantity : x.Quantity,
-                quantitySpecified = true,
                 lineNumber = (int) x.Position,
                 vatAmount = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -vatAmount : vatAmount,
                 netValue = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -x.Amount - -vatAmount : x.Amount - vatAmount,
                 vatCategory = AADEMappings.GetVATCategory(x),
             };
+
+            if (AADEMappings.GetInvoiceType(receiptRequest) == InvoiceType.Item86)
+            {
+                invoiceRow.quantitySpecified = true;
+            }
+
+            if (((int) x.Position) == 0)
+            {
+                invoiceRow.lineNumber = nextPosition++;
+            }
+            else
+            {
+                nextPosition = (int) x.Position + 1;
+            }
 
             if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004))
             {
