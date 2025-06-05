@@ -101,7 +101,7 @@ public class JournalProcessorPTTests
         };
         storageProvider.Setup(x => x.GetMiddlewareQueueItemRepository().GetAsync()).ReturnsAsync(queueItems);
         var processor = new JournalProcessorPT(storageProvider.Object);
-        var result = processor.ProcessAsync(new ifPOS.v1.JournalRequest());
+        var result = processor.ProcessAsync(new ifPOS.v2.JournalRequest());
         var journalResponse = await result.ToListAsync();
         var data = Encoding.UTF8.GetString(journalResponse.SelectMany(x => x.Chunk).ToArray());
     }

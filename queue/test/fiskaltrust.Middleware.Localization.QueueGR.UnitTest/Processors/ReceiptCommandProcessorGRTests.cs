@@ -6,7 +6,6 @@ using FluentAssertions;
 using Moq;
 using Xunit;
 using fiskaltrust.ifPOS.v2.Cases;
-using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.Processors;

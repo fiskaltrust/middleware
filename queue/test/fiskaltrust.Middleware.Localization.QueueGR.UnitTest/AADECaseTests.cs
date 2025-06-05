@@ -8,7 +8,6 @@ using fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData;
 using fiskaltrust.Middleware.Localization.QueueGR.UnitTest;
 using fiskaltrust.Middleware.Localization.v2.Models;
 using fiskaltrust.ifPOS.v2.Cases;
-using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using FluentAssertions;
 using FluentAssertions.Execution;
 using Xunit;

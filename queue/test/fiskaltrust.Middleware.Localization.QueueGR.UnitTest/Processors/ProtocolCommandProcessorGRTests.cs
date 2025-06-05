@@ -7,7 +7,6 @@ using fiskaltrust.ifPOS.v2.Cases;
 using Moq;
 using Microsoft.Extensions.Logging;
 using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD;
-using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.Processors;
 

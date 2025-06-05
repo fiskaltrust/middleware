@@ -9,7 +9,6 @@ using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.storage.V0;
 using System.Linq;
-using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.Processors;
 
