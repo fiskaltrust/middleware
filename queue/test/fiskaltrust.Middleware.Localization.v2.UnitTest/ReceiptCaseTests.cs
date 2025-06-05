@@ -1,5 +1,5 @@
 using AutoFixture;
-using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2.Cases;
 using FluentAssertions;
 using Xunit;
 
@@ -54,7 +54,7 @@ public class ReceiptCaseTests
 
             var result = receiptCase.WithFlag(receiptCaseFlag);
 
-            result.IsFlag(receiptCaseFlag).Should().BeTrue();
+            fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlagsExt.IsFlag(result, receiptCaseFlag).Should().BeTrue();
         }
     }
 

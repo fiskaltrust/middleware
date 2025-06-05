@@ -1,12 +1,12 @@
 ﻿using System.Threading.Tasks;
-using fiskaltrust.Api.POS.Models.ifPOS.v2;
+using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueuePT.Processors;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
 using Xunit;
-using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
 using Moq;
 using fiskaltrust.Middleware.Contracts.Repositories;

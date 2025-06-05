@@ -5,10 +5,10 @@ using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Storage.PT;
 using fiskaltrust.storage.V0;
-using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
 using System.Text.Json;
-using fiskaltrust.Api.POS.Models.ifPOS.v2;
+using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using System.Text;
 using fiskaltrust.SAFT.CLI.SAFTSchemaPT10401;
@@ -27,8 +27,7 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignat
 
     public Task<ProcessCommandResponse> PointOfSaleReceipt0x0001Async(ProcessCommandRequest request) => WithPreparations(request, async () =>
     {
-        if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
-        {
+        if (ReceiptCaseFlagsExt.IsFlag(request.ReceiptRequest.ftReceiptCase, ReceiptCaseFlags.Refund))        {
             var receiptReference = await LoadReceiptReferencesToResponse(request.ReceiptRequest, request.ReceiptResponse);
             var series = StaticNumeratorStorage.CreditNoteSeries;
             series.Numerator++;

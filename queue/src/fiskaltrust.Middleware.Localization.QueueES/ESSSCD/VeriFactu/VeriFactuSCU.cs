@@ -3,15 +3,15 @@ using System.ServiceModel;
 using System.Text;
 using System.Text.Json;
 using System.Xml;
-using fiskaltrust.Api.POS.Models.ifPOS.v2;
+using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueES.Models.Cases;
 using fiskaltrust.Middleware.Localization.QueueES.Exports;
 using fiskaltrust.Middleware.Localization.QueueES.Factories;
 using fiskaltrust.Middleware.Localization.QueueES.Interface;
 using fiskaltrust.Middleware.Localization.v2.Configuration;
-using fiskaltrust.Middleware.Localization.v2.Interface;
-using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.Localization.v2.Interface;         
 using fiskaltrust.Middleware.SCU.ES.Helpers;
 using fiskaltrust.Middleware.SCU.ES.Models;
 using fiskaltrust.Middleware.SCU.ES.Soap;
@@ -49,7 +49,7 @@ public class VeriFactuSCU : IESSSCD
 
         ReceiptResponse receiptResponse;
 
-        if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void))
+        if (ReceiptCaseFlagsExt.IsFlag(request.ReceiptRequest.ftReceiptCase, ReceiptCaseFlags.Void))
         {
             if (request.PreviousReceiptRequest is null || request.PreviousReceiptResponse is null)
             {
@@ -131,7 +131,7 @@ public class VeriFactuSCU : IESSSCD
         });
         request.ReceiptResponse.AddSignatureItem(new SignatureItem
         {
-            Caption = $"IDEmisorFactura{(request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void) ? "Anulada" : null)}",
+            Caption = $"IDEmisorFactura{(ReceiptCaseFlagsExt.IsFlag(request.ReceiptRequest.ftReceiptCase, ReceiptCaseFlags.Void) ? "Anulada" : null)}",
             Data = idEmisorFactura,
             ftSignatureFormat = SignatureFormat.Text,
             ftSignatureType = SignatureTypeES.NIF.As<SignatureType>()

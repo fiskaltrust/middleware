@@ -3,11 +3,11 @@ using System.Text;
 using System.Text.Json;
 using System.Xml.Serialization;
 using System.Xml;
-using fiskaltrust.Api.POS.Models.ifPOS.v2;
+using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueuePT.Exports.SAFTPT;
 using fiskaltrust.Middleware.Localization.QueuePT.Exports.SAFTPT.SAFTSchemaPT10401.SourceDocuments.PaymentDocumentModels;
 using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
-using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 
@@ -235,7 +235,7 @@ public static class SAFTMapping
                     TaxCountryRegion = "PT",
                     TaxCode = "RED",
                     Description = "Taxa Reduzida",
-                    TaxPercentage = 6.000000m,
+                    TaxPercentage = 6.000000m,  
                 },
 
 
@@ -563,8 +563,7 @@ public static class SAFTMapping
 
     private static string GetInvoiceType(ReceiptRequest receiptRequest)
     {
-        if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PointOfSaleReceipt0x0001) && receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
-        {
+if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PointOfSaleReceipt0x0001) && ReceiptCaseFlagsExt.IsFlag(receiptRequest.ftReceiptCase, ReceiptCaseFlags.Refund))        {
             return "NC";
         }
 

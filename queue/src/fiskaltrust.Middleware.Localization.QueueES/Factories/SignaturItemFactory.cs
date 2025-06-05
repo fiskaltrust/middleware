@@ -1,7 +1,7 @@
 ﻿using System.Web;
-using fiskaltrust.Api.POS.Models.ifPOS.v2;
+using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueueES.Models.Cases;
-using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.SCU.ES.Models;
 using fiskaltrust.storage.V0;
 
@@ -15,7 +15,6 @@ public static class SignaturItemFactory
         {
             ftSignatureFormat = SignatureFormat.Text,
             ftSignatureType = SignatureTypeES.InitialOperationReceipt.As<SignatureType>().WithFlag(SignatureTypeFlags.ArchivingRequired).WithCategory(SignatureTypeCategory.Information),
-            Caption = $"Initial-operation receipt",
             Data = $"Queue-ID: {queue.ftQueueId}"
         };
     }

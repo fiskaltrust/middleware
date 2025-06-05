@@ -21,7 +21,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
     internal class ZeroReceiptCommand : RequestCommand
     {
         public override string ReceiptName => "Zero receipt";
-        public ZeroReceiptCommand(ILogger<RequestCommand> logger, SignatureFactoryDE signatureFactory, IDESSCDProvider deSSCDProvider, 
+        public ZeroReceiptCommand(ILogger<RequestCommand> logger, SignatureFactoryDE signatureFactory, IDESSCDProvider deSSCDProvider,
             ITransactionPayloadFactory transactionPayloadFactory, IReadOnlyQueueItemRepository queueItemRepository,
             IConfigurationRepository configurationRepository, IJournalDERepository journalDERepository, MiddlewareConfiguration middlewareConfiguration,
             IPersistentTransactionRepository<FailedStartTransaction> failedStartTransactionRepo, IPersistentTransactionRepository<FailedFinishTransaction> failedFinishTransactionRepo,
@@ -96,7 +96,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                             new SignaturItem()
                             {
                                 ftSignatureType = 0x4445_0000_0000_0002,
-                                ftSignatureFormat = (long) ifPOS.v0.SignaturItem.Formats.Text,
+                                ftSignatureFormat = (long) fiskaltrust.ifPOS.v0.SignaturItem.Formats.Text,
                                 Caption = caption,
                                 Data = data
                             }
@@ -133,7 +133,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                             new SignaturItem()
                             {
                                 ftSignatureType = 0x4445_0000_0000_0002,
-                                ftSignatureFormat = (long) ifPOS.v0.SignaturItem.Formats.Text,
+                                ftSignatureFormat = (long) fiskaltrust.ifPOS.v0.SignaturItem.Formats.Text,
                                 Caption = caption,
                                 Data = data
                             }

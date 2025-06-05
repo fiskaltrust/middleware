@@ -1,6 +1,6 @@
 ﻿using System.Net.Http.Json;
 using System.Text.Json;
-using fiskaltrust.Api.POS.Models.ifPOS.v2;
+using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueueGR.UnitTest;
 using fiskaltrust.Middleware.Localization.v2.Configuration;
 using Microsoft.Extensions.Logging;
