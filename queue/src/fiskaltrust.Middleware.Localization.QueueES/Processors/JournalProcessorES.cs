@@ -8,6 +8,7 @@ using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Storage.ES;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
+using JournalRequest = fiskaltrust.ifPOS.v2.JournalRequest;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Processors;
 

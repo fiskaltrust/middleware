@@ -1,9 +1,9 @@
 ﻿using System.Net.Http.Json;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
-using fiskaltrust.Api.POS.Models.ifPOS.v2;
+using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.v2.Configuration;
-using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2.Cases;
 using FluentAssertions;
 using FluentAssertions.Execution;
 using Microsoft.Extensions.Logging;
@@ -18,7 +18,7 @@ public class PTCertificationTests
 {
     private readonly Func<string, Task<string>> _signMethod;
     private readonly Func<string, Task<string>> _journalMethod;
-    private readonly Guid _cashboxid;
+    private readonly Guid _cashboxid;   
 
     public async Task<ftCashBoxConfiguration> GetConfigurationAsync(Guid cashBoxId, string accessToken)
     {

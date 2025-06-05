@@ -52,7 +52,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Update="fiskaltrust.interface" Version="1.3.72-ci3-25147-82718" />
+    <PackageReference Update="fiskaltrust.interface" Version="1.3.72-ci5-25155-82808" />
   </ItemGroup>
 
 </Project>

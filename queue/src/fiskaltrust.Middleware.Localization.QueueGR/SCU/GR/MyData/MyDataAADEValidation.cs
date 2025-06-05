@@ -1,7 +1,7 @@
-﻿using fiskaltrust.Api.POS.Models.ifPOS.v2;
+﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueueGR.Models.Cases;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
-using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2.Cases;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData;
 
@@ -19,13 +19,13 @@ public class MyDataAADEValidation
             throw new Exception("The sum of the charge items must be equal to the sum of the pay items.");
         }
 
-        if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void))
+        if (fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlagsExt.IsFlag(receiptRequest.ftReceiptCase, fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlags.Void))
         {
             throw new Exception("The Voiding of documents is not supported. Please use refund.");
         }
 
-        if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.IsSelfPricingOperation))
-        {
+        if (fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlagsGRExt.IsFlag(receiptRequest.ftReceiptCase, (fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlags)fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlagsGR.IsSelfPricingOperation))
+        {        
             throw new Exception("SelfPricing is not supported.");
         }
 
