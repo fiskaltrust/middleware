@@ -19,6 +19,6 @@
             <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
         </PackageReference>
         <PackageReference Include="fiskaltrust.storage" Version="1.3.66" NoWarn="NU5104" />
-        <PackageReference Include="fiskaltrust.interface" Version="1.3.72-ci5-25156-82876" NoWarn="NU5104" />
+        <PackageReference Include="fiskaltrust.interface" Version="1.3.72-ci5-25156-82881" NoWarn="NU5104" />
     </ItemGroup>
 </Project>
