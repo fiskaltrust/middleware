@@ -348,7 +348,10 @@ public class AADEFactory
             }
             if (x.ftChargeItemCaseData != null)
             {
-                var chargeItem = JsonSerializer.Deserialize<WithHoldingChargeItem>(JsonSerializer.Serialize(x.ftChargeItemCaseData));
+                var chargeItem = JsonSerializer.Deserialize<WithHoldingChargeItem>(JsonSerializer.Serialize(x.ftChargeItemCaseData), new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
                 if (chargeItem != null && chargeItem.WithHoldingAmount != default && chargeItem.WithHoldingAmount != default)
                 {
                     invoiceRow.withheldAmountSpecified = true;
@@ -447,10 +450,16 @@ public class AADEFactory
 
             if (x.ftPayItemCaseData != null)
             {
-                var providerData = JsonSerializer.Deserialize<GenericPaymentPayload>(JsonSerializer.Serialize(x.ftPayItemCaseData));
+                var providerData = JsonSerializer.Deserialize<GenericPaymentPayload>(JsonSerializer.Serialize(x.ftPayItemCaseData), new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
                 if (providerData != null && providerData.Provider != null && providerData.Provider.ProtocolRequest is JsonElement dat && dat.ValueKind == JsonValueKind.String)
                 {
-                    var app2AppApi = JsonSerializer.Deserialize<PayItemCaseDataApp2App>(JsonSerializer.Serialize(x.ftPayItemCaseData))!;
+                    var app2AppApi = JsonSerializer.Deserialize<PayItemCaseDataApp2App>(JsonSerializer.Serialize(x.ftPayItemCaseData), new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    })!;
                     if (app2AppApi.Provider is PayItemCaseProviderVivaWalletApp2APp vivaAppToApp)
                     {
                         var requestUri = HttpUtility.ParseQueryString(new Uri(vivaAppToApp.ProtocolRequest).Query);
@@ -466,7 +475,10 @@ public class AADEFactory
                 }
                 else if (providerData != null && providerData.Provider != null && providerData.Provider.ProtocolRequest is JsonElement datS && datS.ValueKind == JsonValueKind.Object)
                 {
-                    var providerCloudRestApi = JsonSerializer.Deserialize<PayItemCaseDataCloudApi>(JsonSerializer.Serialize(x.ftPayItemCaseData))!;
+                    var providerCloudRestApi = JsonSerializer.Deserialize<PayItemCaseDataCloudApi>(JsonSerializer.Serialize(x.ftPayItemCaseData), new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    })!;
                     if (providerCloudRestApi.Provider is PayItemCaseProviderVivaWallet vivaPayment)
                     {
 
