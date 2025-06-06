@@ -62,7 +62,7 @@ public class ReceiptRequest
     [JsonPropertyName("cbPreviousReceiptReference")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     [DataMember(Order = 110, EmitDefaultValue = false, IsRequired = false)]
-    public string? cbPreviousReceiptReference { get; set; }
+    public object? cbPreviousReceiptReference { get; set; }
 
     [JsonPropertyName("cbReceiptAmount")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]

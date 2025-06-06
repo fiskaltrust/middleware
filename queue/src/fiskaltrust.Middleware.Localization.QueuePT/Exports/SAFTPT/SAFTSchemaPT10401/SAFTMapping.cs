@@ -452,7 +452,7 @@ public static class SAFTMapping
             }
         };
 
-        if (GetPaymentType(receiptRequest) == "RG" && !string.IsNullOrEmpty(receiptRequest.cbPreviousReceiptReference))
+        if (GetPaymentType(receiptRequest) == "RG" && receiptRequest.cbPreviousReceiptReference != null)
         {
             var referencedReceiptReference = ((JsonElement) receipt.receiptResponse.ftStateData!).GetProperty("ReferencedReceiptResponse").Deserialize<ReceiptResponse>();
             workDocument.Line[0].SourceDocumentID = new SourceDocument
@@ -653,7 +653,7 @@ public static class SAFTMapping
             line.CreditAmount = Helpers.CreateMonetaryValue(netLinePrice);
         }
 
-        if (GetInvoiceType(receiptRequest) == "FT" && !string.IsNullOrEmpty(receiptRequest.cbPreviousReceiptReference))
+        if (GetInvoiceType(receiptRequest) == "FT" && receiptRequest.cbPreviousReceiptReference != null)
         {
             var referencedReceiptReference = ((JsonElement) receiptResponse.ftStateData!).GetProperty("ReferencedReceiptResponse").Deserialize<ReceiptResponse>();
             line.OrderReferences = new OrderReferences

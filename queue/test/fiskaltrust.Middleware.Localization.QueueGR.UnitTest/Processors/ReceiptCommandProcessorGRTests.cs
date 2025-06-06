@@ -7,6 +7,7 @@ using Moq;
 using Xunit;
 using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using Microsoft.Extensions.Logging;
+using fiskaltrust.Middleware.Contracts.Repositories;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.Processors;
 
@@ -39,13 +40,13 @@ public class ReceiptCommandProcessorGRTests
             ftReceiptMoment = DateTime.UtcNow,
         };
         var grSSCDMock = new Mock<IGRSSCD>();
-        grSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>()))
+        grSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>(), null))
             .ReturnsAsync(new ProcessResponse
             {
                 ReceiptResponse = receiptResponse,
             });
 
-        var receiptCommandProcessor = new ReceiptCommandProcessorGR(grSSCDMock.Object, queueGR, scuGR);
+        var receiptCommandProcessor = new ReceiptCommandProcessorGR(grSSCDMock.Object, queueGR, scuGR, Mock.Of<IMiddlewareQueueItemRepository>());
         var receiptProcessor = new ReceiptProcessor(Mock.Of<ILogger<ReceiptProcessor>>(), null!, receiptCommandProcessor, null!, null!, null!);
         var result = await receiptProcessor.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
 
@@ -75,7 +76,7 @@ public class ReceiptCommandProcessorGRTests
             ftReceiptMoment = DateTime.UtcNow,
         };
         var grSSCDMock = new Mock<IGRSSCD>();
-        var receiptCommandProcessor = new ReceiptCommandProcessorGR(grSSCDMock.Object, queueGR, scuGR);
+        var receiptCommandProcessor = new ReceiptCommandProcessorGR(grSSCDMock.Object, queueGR, scuGR, Mock.Of<IMiddlewareQueueItemRepository>());
         var receiptProcessor = new ReceiptProcessor(Mock.Of<ILogger<ReceiptProcessor>>(), null!, receiptCommandProcessor, null!, null!, null!);
         var result = await receiptProcessor.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
 
