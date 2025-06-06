@@ -192,19 +192,13 @@ public static class AADEMappings
         {
             return IncomeClassificationCategoryType.category1_6;
         }
-
-        if (receiptRequest.ftReceiptCase.Case() == (ReceiptCase) 0x3005) // TODO
-        {
-            return IncomeClassificationCategoryType.category1_5;
-        }
-
         return chargeItem.ftChargeItemCase.TypeOfService() switch
         {
-            ChargeItemCaseTypeOfService.UnknownService => IncomeClassificationCategoryType.category1_2,
-            ChargeItemCaseTypeOfService.Delivery => IncomeClassificationCategoryType.category1_2,
+            ChargeItemCaseTypeOfService.UnknownService => IncomeClassificationCategoryType.category1_1,
+            ChargeItemCaseTypeOfService.Delivery => IncomeClassificationCategoryType.category1_1,
             ChargeItemCaseTypeOfService.OtherService => IncomeClassificationCategoryType.category1_3,
             ChargeItemCaseTypeOfService.NotOwnSales => IncomeClassificationCategoryType.category1_7,
-            _ => IncomeClassificationCategoryType.category1_2,
+            _ => throw new Exception($"The ChargeItem type {chargeItem.ftChargeItemCase.TypeOfService()} is not supported for IncomeClassificationCategoryType."),
         };
     }
 
@@ -220,6 +214,11 @@ public static class AADEMappings
             if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Protocol0x0005))
             {
                 return InvoiceType.Item93;
+            }
+
+            if(receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002))
+            {
+                return receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? InvoiceType.Item85 : InvoiceType.Item84;
             }
 
             if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003))
@@ -254,7 +253,7 @@ public static class AADEMappings
         {
             if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
             {
-                return !string.IsNullOrEmpty(receiptRequest.cbPreviousReceiptReference) ? InvoiceType.Item51 : InvoiceType.Item52;
+                return receiptRequest.cbPreviousReceiptReference != null ? InvoiceType.Item51 : InvoiceType.Item52;
             }
 
             if (receiptRequest.cbChargeItems.Any(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable)))
@@ -267,7 +266,7 @@ public static class AADEMappings
             }
             else if (receiptRequest.ftReceiptCase.IsType(ReceiptCaseType.Invoice) && receiptRequest.cbChargeItems.All(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.OtherService)))
             {
-                if (!string.IsNullOrEmpty(receiptRequest.cbPreviousReceiptReference))
+                if (receiptRequest.cbPreviousReceiptReference != null)
                 {
                     return InvoiceType.Item24;
                 }
@@ -287,7 +286,7 @@ public static class AADEMappings
             }
             else
             {
-                if (!string.IsNullOrEmpty(receiptRequest.cbPreviousReceiptReference))
+                if (receiptRequest.cbPreviousReceiptReference != null)
                 {
                     return InvoiceType.Item16;
                 }
@@ -348,12 +347,12 @@ public static class AADEMappings
         PayItemCase.VoucherPaymentCouponVoucherByMoneyValue => -1,
         PayItemCase.OnlinePayment => MyDataPaymentMethods.WebBanking,
         PayItemCase.LoyaltyProgramCustomerCardPayment => -1,
-        PayItemCase.AccountsReceivable => -1,
+        PayItemCase.AccountsReceivable => MyDataPaymentMethods.OnCredit,
         PayItemCase.SEPATransfer => -1,
         PayItemCase.OtherBankTransfer => -1,
         PayItemCase.TransferToCashbookVaultOwnerEmployee => -1,
         PayItemCase.InternalMaterialConsumption => -1,
-        PayItemCase.Grant => MyDataPaymentMethods.OnCredit,
+        PayItemCase.Grant => -1,
         PayItemCase.TicketRestaurant => -1,
         PayItemCase c => throw new Exception($"The Payment type {c} of PayItem with the case {payItem.ftPayItemCase} is not supported."),
     };
@@ -363,7 +362,7 @@ public static class AADEMappings
         return invoiceType switch
         {
             InvoiceType.Item11 or InvoiceType.Item12 or InvoiceType.Item13 or InvoiceType.Item14 or InvoiceType.Item15 or InvoiceType.Item16 or InvoiceType.Item21 or InvoiceType.Item22 or InvoiceType.Item23 or InvoiceType.Item24 or InvoiceType.Item51 or InvoiceType.Item52 or InvoiceType.Item31 or InvoiceType.Item32 or InvoiceType.Item61 or InvoiceType.Item62 or InvoiceType.Item71 or InvoiceType.Item81 => true,
-            InvoiceType.Item82 or InvoiceType.Item84 or InvoiceType.Item85 or InvoiceType.Item111 or InvoiceType.Item112 or InvoiceType.Item113 or InvoiceType.Item114 or InvoiceType.Item115 => false,
+            InvoiceType.Item82 or InvoiceType.Item84 or InvoiceType.Item86 or InvoiceType.Item85 or InvoiceType.Item111 or InvoiceType.Item112 or InvoiceType.Item113 or InvoiceType.Item114 or InvoiceType.Item115 => false,
             _ => throw new NotSupportedException($"The invoice type '{invoiceType.GetXmlEnumAttributeValueFromEnum()}' is not supported"),
         };
     }

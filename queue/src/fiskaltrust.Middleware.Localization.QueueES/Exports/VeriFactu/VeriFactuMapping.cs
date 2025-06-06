@@ -105,10 +105,15 @@ public class VeriFactuMapping
 
     public async Task<RegistroFacturacionAnulacion> CreateRegistroFacturacionAnulacionAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, ReceiptRequest previousReceiptRequest, ReceiptResponse previousReceiptResponse)
     {
-        var previousQueueItems = _queueItemRepository.GetByReceiptReferenceAsync(receiptRequest.cbPreviousReceiptReference);
+        var (cbPreviousReceiptReferenceString, cbPreviousReceiptReferenceArray) = receiptRequest.GetPreviousReceiptReferenceStringOrArray();
+        if (cbPreviousReceiptReferenceArray != null)
+        {
+            throw new Exception($"cbPreviousReceiptReferenceArray is not supported in PT. Please use cbPreviousReceiptReference as a string.");
+        }
+        var previousQueueItems = _queueItemRepository.GetByReceiptReferenceAsync(cbPreviousReceiptReferenceString);
         if (await previousQueueItems.IsEmptyAsync())
         {
-            throw new Exception($"Receipt with cbReceiptReference {receiptRequest.cbPreviousReceiptReference} not found.");
+            throw new Exception($"Receipt with cbReceiptReference {cbPreviousReceiptReferenceString} not found.");
         }
 
         var voidedQueueItem = await previousQueueItems.SingleOrDefaultAsync() ?? throw new Exception($"Multiple receipts with cbReceiptReference {receiptRequest.cbPreviousReceiptReference} found.");
@@ -252,14 +257,22 @@ public class VeriFactuMapping
             return PrimerRegistroCadena.S;
         }
 
+
+
         var previousHash = previousReceiptResponse.ftSignatures.First(x => x.ftSignatureType.IsType(SignatureTypeES.Huella)).Data;
 
         if (previousReceiptRequest is not null && previousReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void))
         {
-            var previousQueueItems = _queueItemRepository.GetByReceiptReferenceAsync(previousReceiptRequest.cbPreviousReceiptReference);
+            var (cbPreviousReceiptReferenceString, cbPreviousReceiptReferenceArray) = previousReceiptRequest.GetPreviousReceiptReferenceStringOrArray();
+            if (cbPreviousReceiptReferenceArray != null)
+            {
+                throw new Exception($"cbPreviousReceiptReferenceArray is not supported in PT. Please use cbPreviousReceiptReference as a string.");
+            }
+
+            var previousQueueItems = _queueItemRepository.GetByReceiptReferenceAsync(cbPreviousReceiptReferenceString);
             if (await previousQueueItems.IsEmptyAsync())
             {
-                throw new Exception($"Receipt with cbReceiptReference {previousReceiptRequest.cbPreviousReceiptReference} not found.");
+                throw new Exception($"Receipt with cbReceiptReference {cbPreviousReceiptReferenceString} not found.");
             }
 
             var voidedQueueItem = await previousQueueItems.SingleOrDefaultAsync() ?? throw new Exception($"Multiple receipts with cbReceiptReference {previousReceiptRequest.cbPreviousReceiptReference} found.");
