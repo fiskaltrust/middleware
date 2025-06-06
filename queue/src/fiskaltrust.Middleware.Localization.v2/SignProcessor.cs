@@ -117,7 +117,7 @@ public class SignProcessor : ISignProcessor
 
                 await _queueStorageProvider.FinishQueueItem(queueItem, receiptResponse);
 
-                OpenTelemetry.Trace.Tracer.CurrentSpanspan.SetAttribute("middleware.queue.ReceiptResponse.ftState", $"0x{receiptResponse.ftState:X}");
+                System.Diagnostics.Activity.Current?.AddTag("middleware.queue.ReceiptResponse.ftState", $"0x{receiptResponse.ftState:X}");
 
                 if (receiptResponse.ftState.IsState(State.Error))
                 {
@@ -158,7 +158,7 @@ public class SignProcessor : ISignProcessor
             cbReceiptReference = receiptRequest.cbReceiptReference,
             ftCashBoxIdentification = _cashBoxIdentification,
             ftReceiptMoment = DateTime.UtcNow,
-            ftState = (State)((ulong)receiptRequest.ftReceiptCase & 0xFFFF_F000_0000_0000),
+            ftState = (State) ((ulong) receiptRequest.ftReceiptCase & 0xFFFF_F000_0000_0000),
             ftReceiptIdentification = "",
         };
     }

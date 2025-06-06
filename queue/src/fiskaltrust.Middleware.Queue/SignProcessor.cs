@@ -73,7 +73,7 @@ namespace fiskaltrust.Middleware.Queue
 
                 var response = await InternalSign(queue, request).ConfigureAwait(false);
 
-                OpenTelemetry.Trace.Tracer.CurrentSpanspan.SetAttribute("middleware.queue.ReceiptResponse.ftState", $"0x{response.ftState:X}");
+                System.Diagnostics.Activity.Current?.AddTag("middleware.queue.ReceiptResponse.ftState", $"0x{response.ftState:X}");
 
                 return response;
             }
@@ -182,7 +182,7 @@ namespace fiskaltrust.Middleware.Queue
                                 Data = e.ToString()
                             }
                         },
-                        ftState = (long)(((ulong)data.ftReceiptCase & 0xFFFF_0000_0000_0000) | 0x2000_EEEE_EEEE)
+                        ftState = (long) (((ulong) data.ftReceiptCase & 0xFFFF_0000_0000_0000) | 0x2000_EEEE_EEEE)
                     };
                 }
                 _logger.LogTrace("SignProcessor.InternalSign: Country specific SignProcessor finished.");
