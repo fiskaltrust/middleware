@@ -38,7 +38,7 @@ public static class PortugalReceiptCalculations
         var intermediateChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "INT").ToList();
         var exemptChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "ISE").ToList();
 
-        var customer = SAFTMapping.GetCustomerData(request);
+        var customer = new SaftExporter().GetCustomerData(request);
         var customerTIN = customer.CustomerTaxID;
         var customerCountry = customer.BillingAddress.Country;
         return new PTQrCode
@@ -75,7 +75,7 @@ public static class PortugalReceiptCalculations
         var intermediateChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "INT").ToList();
         var exemptChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "ISE").ToList();
 
-        var customer = SAFTMapping.GetCustomerData(request);
+        var customer = new SaftExporter().GetCustomerData(request);
         var customerTIN = customer.CustomerTaxID;
         var customerCountry = customer.BillingAddress.Country;
         return new PTQrCode
@@ -112,7 +112,7 @@ public static class PortugalReceiptCalculations
         var intermediateChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "INT").ToList();
         var exemptChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "ISE").ToList();
 
-        var customer = SAFTMapping.GetCustomerData(request);
+        var customer = new SaftExporter().GetCustomerData(request);
         var customerTIN = customer.CustomerTaxID;
         var customerCountry = customer.BillingAddress.Country;
         return new PTQrCode
@@ -149,7 +149,7 @@ public static class PortugalReceiptCalculations
         var intermediateChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "INT").ToList();
         var exemptChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "ISE").ToList();
 
-        var customer = SAFTMapping.GetCustomerData(request);
+        var customer = new SaftExporter().GetCustomerData(request);
         var customerTIN = customer.CustomerTaxID;
         var customerCountry = customer.BillingAddress.Country;
         return new PTQrCode
@@ -186,7 +186,7 @@ public static class PortugalReceiptCalculations
         var intermediateChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "INT").ToList();
         var exemptChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "ISE").ToList();
 
-        var customer = SAFTMapping.GetCustomerData(request);
+        var customer = new SaftExporter().GetCustomerData(request);
         var customerTIN = customer.CustomerTaxID;
         var customerCountry = customer.BillingAddress.Country;
         return new PTQrCode

@@ -20,7 +20,7 @@ public class SAFTTests
     [Fact]
     public void AuditFile_Encoding_ShouldBe_Windows1252()
     {
-        var data = SAFTMapping.SerializeAuditFile(new storage.V0.MasterData.AccountMasterData
+        var data = new SaftExporter().SerializeAuditFile(new storage.V0.MasterData.AccountMasterData
         {
             TaxId = "999"
         }, [], 0);
@@ -30,7 +30,7 @@ public class SAFTTests
     [Fact]
     public void AuditFile_ProductId_ShouldBe_Correct()
     {
-        var data = SAFTMapping.CreateAuditFile(new storage.V0.MasterData.AccountMasterData
+        var data = new SaftExporter().CreateAuditFile(new storage.V0.MasterData.AccountMasterData
         {
             TaxId = "999"
         }, [], 0);
@@ -40,7 +40,7 @@ public class SAFTTests
     [Fact]
     public void AuditFile_TaxTable_ShouldBeEmptys()
     {
-        var data = SAFTMapping.CreateAuditFile(new storage.V0.MasterData.AccountMasterData
+        var data = new SaftExporter().CreateAuditFile(new storage.V0.MasterData.AccountMasterData
         {
             TaxId = "999"
         }, [], 0);
@@ -140,7 +140,7 @@ public class SAFTTests
             },
             ftState = (State) 5788286605450018816
         };
-        var data = SAFTMapping.CreateAuditFile(new storage.V0.MasterData.AccountMasterData
+        var data = new SaftExporter().CreateAuditFile(new storage.V0.MasterData.AccountMasterData
         {
             TaxId = "999"
         }, [new ftQueueItem {
@@ -259,7 +259,7 @@ public class SAFTTests
             },
             ftState = (State) 5788286605450018816
         };
-        var data = SAFTMapping.CreateAuditFile(new storage.V0.MasterData.AccountMasterData
+        var data = new SaftExporter().CreateAuditFile(new storage.V0.MasterData.AccountMasterData
         {
             TaxId = "999"
         }, [new ftQueueItem {

@@ -61,7 +61,7 @@ public class PTCertificationTests
     private async Task ValidateMyData(ReceiptRequest receiptRequest, [CallerMemberName] string caller = "")
     {
         using var scope = new AssertionScope();
-        await ExecuteMiddleware(receiptRequest, "C:\\Users\\stefa\\OneDrive\\Desktop\\Portugal_Registration\\Examples", caller);
+        await ExecuteMiddleware(receiptRequest, "C:\\GitHub\\market-pt\\doc\\certification\\businesscases", caller);
     }
 
     public PTCertificationTests()
@@ -164,8 +164,9 @@ public class PTCertificationTests
     [Fact]
     public async Task PTCertificationExamplesAll()
     {
+        var timestamp = DateTime.UtcNow.Ticks;
         //var targetFolder = "/Users/stefan.kert/Desktop/Sources/PT_Certification";
-        var targetFolder = "C:\\Users\\stefa\\OneDrive\\Desktop\\Portugal_Registration\\Examples_Final";
+        var targetFolder = "C:\\GitHub\\market-pt\\doc\\certification\\Submissions\\2025-06";
 
         var receiptRequest = PTCertificationExamples.Case_5_9();
         await ExecuteMiddleware(receiptRequest, targetFolder, caller: "Case_5_9");
@@ -200,7 +201,8 @@ public class PTCertificationTests
 
         var xmlData = await _journalMethod(JsonSerializer.Serialize(new ifPOS.v1.JournalRequest
         {
-            ftJournalType = 0x5054_2000_0000_0001
+            ftJournalType = 0x5054_2000_0000_0001,
+            From = timestamp
         }));
         File.WriteAllText($"{targetFolder}\\SAFT_journal.xml", xmlData);
     }

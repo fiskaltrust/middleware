@@ -14,6 +14,7 @@ public enum SignatureTypePT : long
     HashPrint = 0x5054_2000_0000_0013,
     CertificationNo = 0x5054_2000_0000_0014,
     ReferenceForCreditNote = 0x5054_2000_0000_0015,
+    PTAdditional = 0x5054_2000_0000_0016
     // TBD define signaturetypes => interface ??
 }
 

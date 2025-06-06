@@ -96,6 +96,13 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignat
             ftSignatureType = SignatureTypePT.ATCUD.As<SignatureType>(),
         });
         response.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreatePTQRCode(qrCode));
+        response.ReceiptResponse.AddSignatureItem(new SignatureItem
+        {
+            Caption = "",
+            Data = "IVA incluido",
+            ftSignatureFormat = SignatureFormat.Text,
+            ftSignatureType = SignatureTypePT.PTAdditional.As<SignatureType>(),
+        });
     }
 
     public Task<ProcessCommandResponse> PaymentTransfer0x0002Async(ProcessCommandRequest request) => WithPreparations(request, async () =>
@@ -117,7 +124,7 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignat
             AddSignatures(series, response, hash, printHash, qrCode);
             response.ReceiptResponse.AddSignatureItem(new SignatureItem
             {
-                Caption = $"Origem: Fattura {receiptReference.ftReceiptIdentification}",
+                Caption = $"Origem: {receiptReference.ftReceiptIdentification}",
                 Data = $"",
                 ftSignatureFormat = SignatureFormat.Text,
                 ftSignatureType = SignatureTypePT.ReferenceForCreditNote.As<SignatureType>(),
