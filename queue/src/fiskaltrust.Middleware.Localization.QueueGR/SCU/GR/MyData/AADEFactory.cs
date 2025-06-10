@@ -26,7 +26,7 @@ public class AADEFactory
     public InvoicesDoc MapToInvoicesDoc(List<ftQueueItem> queueItems)
     {
         var receiptRequests = queueItems.Where(x => !string.IsNullOrEmpty(x.request) && !string.IsNullOrEmpty(x.response)).Select(x => (receiptRequest: JsonSerializer.Deserialize<ReceiptRequest>(x.request)!, receiptResponse: JsonSerializer.Deserialize<ReceiptResponse>(x.response))).ToList();
-        var actualReceiptRequests = receiptRequests.Where(x => x.receiptResponse != null && ((long)  x.receiptResponse.ftState & 0xFF) == 0x00).Cast<(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)>().ToList();
+        var actualReceiptRequests = receiptRequests.Where(x => x.receiptResponse != null && ((long)x.receiptResponse.ftState & 0xFF) == 0x00).Cast<(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)>().ToList();
         actualReceiptRequests = actualReceiptRequests.Where(x =>
         {
             var mark = x.receiptResponse.ftSignatures.FirstOrDefault(x => x.Caption == "invoiceMark")?.Data;
@@ -64,7 +64,7 @@ public class AADEFactory
         foreach (var payItem in receiptRequest.cbPayItems)
         {
             payItem.Amount = Math.Round(payItem.Amount, 2);
-            payItem.Quantity = Math.Round(payItem.Quantity ?? 0m, 2);
+            payItem.Quantity = Math.Round(payItem.Quantity, 2);
         }
         MyDataAADEValidation.ValidateReceiptRequest(receiptRequest);
 
@@ -192,9 +192,10 @@ public class AADEFactory
             var vatAmount = x.GetVATAmount();
             var invoiceRow = new InvoiceRowType
             {
-                quantity = fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlagsExt.IsFlag(receiptRequest.ftReceiptCase, ReceiptCaseFlags.Refund) ? -x.Quantity : x.Quantity,                lineNumber = (int) x.Position,
-                vatAmount = fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlagsExt.IsFlag(receiptRequest.ftReceiptCase,ReceiptCaseFlags.Refund) ? -vatAmount : vatAmount,
-                netValue = fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlagsExt.IsFlag(receiptRequest.ftReceiptCase,ReceiptCaseFlags.Refund) ? -x.Amount - -vatAmount : x.Amount - vatAmount,
+                quantity = fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlagsExt.IsFlag(receiptRequest.ftReceiptCase, ReceiptCaseFlags.Refund) ? -x.Quantity : x.Quantity,
+                lineNumber = (int)x.Position,
+                vatAmount = fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlagsExt.IsFlag(receiptRequest.ftReceiptCase, ReceiptCaseFlags.Refund) ? -vatAmount : vatAmount,
+                netValue = fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlagsExt.IsFlag(receiptRequest.ftReceiptCase, ReceiptCaseFlags.Refund) ? -x.Amount - -vatAmount : x.Amount - vatAmount,
                 vatCategory = AADEMappings.GetVATCategory(x),
             };
             if (x.ftChargeItemCase.IsNatureOfVat(ChargeItemCaseNatureOfVatGR.ExtemptEndOfClimateCrises))
@@ -207,7 +208,8 @@ public class AADEFactory
                 invoiceRow.incomeClassification = [];
                 invoiceRow.vatCategory = 8;
             }
-            else if (fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlagsGRExt.IsFlag(receiptRequest.ftReceiptCase, (fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlags)fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlagsGR.IsSelfPricingOperation))            {                       
+            else if (fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlagsGRExt.IsFlag(receiptRequest.ftReceiptCase, (fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlags)fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlagsGR.IsSelfPricingOperation))
+            {
                 if (invoiceRow.vatCategory == MyDataVatCategory.ExcludingVat)
                 {
                     invoiceRow.vatExemptionCategorySpecified = true;
@@ -346,7 +348,7 @@ public class AADEFactory
                 invoiceMark = -1;
             }
 
-            if (fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlagsExt.IsFlag(receiptRequest.ftReceiptCase,ReceiptCaseFlags.LateSigning))
+            if (fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlagsExt.IsFlag(receiptRequest.ftReceiptCase, ReceiptCaseFlags.LateSigning))
             {
                 inv.transmissionFailureSpecified = true;
                 inv.transmissionFailure = 1;
@@ -374,7 +376,7 @@ public class AADEFactory
             var payment = new PaymentMethodDetailType
             {
                 type = AADEMappings.GetPaymentType(x),
-                amount = fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlagsExt.IsFlag(receiptRequest.ftReceiptCase,ReceiptCaseFlags.Refund) ? -x.Amount : x.Amount,
+                amount = fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlagsExt.IsFlag(receiptRequest.ftReceiptCase, ReceiptCaseFlags.Refund) ? -x.Amount : x.Amount,
                 paymentMethodInfo = x.Description,
             };
             var tipPayment = receiptRequest.cbPayItems.FirstOrDefault(x => x.ftPayItemCase.IsFlag(PayItemCaseFlags.Tip));
