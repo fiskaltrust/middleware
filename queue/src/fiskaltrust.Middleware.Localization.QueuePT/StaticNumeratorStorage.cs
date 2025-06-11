@@ -2,6 +2,7 @@
 using System.Text.Json;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
 using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using fiskaltrust.storage.V0;
 using Microsoft.Win32.SafeHandles;
@@ -81,8 +82,15 @@ public class StaticNumeratorStorage
                 if (lastReceiptResponse.ftReceiptIdentification.StartsWith(series.Identifier))
                 {
                     series.Numerator = int.Parse(lastReceiptResponse.ftReceiptIdentification.Split("/")[1]);
+                    var lastSignature = lastReceiptResponse.ftSignatures.FirstOrDefault(x => x.ftSignatureType == SignatureTypePT.Hash.As<SignatureType>());
+                    if (lastSignature != null)
+                    {
+                        series.LastHash = lastSignature.Data;
+                    }
                     break;
                 }
+
+      
             }
             if (series.Numerator == null)
             {

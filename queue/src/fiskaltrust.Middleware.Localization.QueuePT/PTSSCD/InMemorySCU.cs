@@ -31,7 +31,7 @@ public class InMemorySCU : IPTSSCD
         return new PTInvoiceElement
         {
             InvoiceDate = receipt.cbReceiptMoment,
-            SystemEntryDate = DateTime.UtcNow, // wrong
+            SystemEntryDate = receipt.cbReceiptMoment,
             InvoiceNo = invoiceNo, // wrong
             GrossTotal = receipt.cbChargeItems.Sum(x => x.Amount),
             Hash = lastHash ?? ""
