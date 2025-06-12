@@ -1,5 +1,5 @@
-﻿using fiskaltrust.Api.POS.Models.ifPOS.v2;
-using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
+﻿using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.SAFT.CLI;
 using fiskaltrust.SAFT.CLI.SAFTSchemaPT10401;
 
@@ -32,7 +32,7 @@ public static class PTCertificationExamples
 
     public static ReceiptRequest Case_5_1()
     {
-        // Simplified invoice with customer identification with NIF (VAT number)
+        // Simplified invoice with customer identification with NIF (VAT number)    
         var chargeItems = new List<ChargeItem>
         {
                 new ChargeItem

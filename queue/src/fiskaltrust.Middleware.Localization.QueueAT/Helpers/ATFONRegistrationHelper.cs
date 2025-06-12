@@ -7,7 +7,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.Helpers
 {
     public static class ATFONRegistrationHelper
     {
-        private static readonly string _fonSignatureType = $"0x{ifPOS.v0.SignaturItem.Types.AT_FinanzOnline:x}";
+        private static readonly string _fonSignatureType = $"0x{fiskaltrust.ifPOS.v0.SignaturItem.Types.AT_FinanzOnline:x}";
 
         public static ftActionJournal CreateQueueActivationJournal(ftQueue queue, ftQueueAT queueAT, ftQueueItem queueItem, ftJournalAT journalAT, bool isStartReceipt = true)
         {

@@ -1,8 +1,8 @@
 ﻿using System.Text.Json;
-using fiskaltrust.Api.POS.Models.ifPOS.v2;
+using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueuePT;
 using fiskaltrust.Middleware.Localization.v2.Configuration;
-using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2.Cases;
 using Microsoft.Extensions.Logging;
 using Xunit;
 

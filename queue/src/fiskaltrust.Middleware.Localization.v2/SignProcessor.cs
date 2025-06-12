@@ -1,8 +1,8 @@
-﻿using fiskaltrust.Api.POS.Models.ifPOS.v2;
+﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.v2.Configuration;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
-using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.v2.Storage;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
@@ -47,7 +47,7 @@ public class SignProcessor : ISignProcessor
                 throw new Exception("Provided CashBoxId does not match current CashBoxId");
             }
 
-            if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.ReceiptRequested))
+            if (fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlagsExt.IsFlag(receiptRequest.ftReceiptCase, fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlags.ReceiptRequested))
             {
                 ReceiptResponse? receiptResponseFound = null;
                 try

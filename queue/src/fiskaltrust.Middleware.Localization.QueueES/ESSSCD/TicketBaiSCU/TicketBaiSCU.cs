@@ -3,7 +3,7 @@ using System.ServiceModel;
 using System.Text;
 using System.Text.Json;
 using System.Xml;
-using fiskaltrust.Api.POS.Models.ifPOS.v2;
+using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueES.Exports;
 using fiskaltrust.Middleware.Localization.QueueES.Factories;
@@ -17,7 +17,7 @@ using fiskaltrust.Middleware.Storage.ES;
 using fiskaltrust.storage.V0.MasterData;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI;
 using Microsoft.Extensions.Logging;
-using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueueES.Models.Cases;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.ESSSCD;
@@ -52,7 +52,7 @@ public class TicketBaiSCU : IESSSCD
             }).ToList()
         };
 
-        var submitResponse = request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)
+        var submitResponse = ReceiptCaseFlagsExt.IsFlag(request.ReceiptRequest.ftReceiptCase, ReceiptCaseFlags.Void)
             ? await _scu.CancelInvoiceAsync(submitInvoiceRequest)
             : await _scu.SubmitInvoiceAsync(submitInvoiceRequest);
 

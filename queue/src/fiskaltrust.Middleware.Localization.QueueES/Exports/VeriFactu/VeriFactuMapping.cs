@@ -6,14 +6,14 @@ using System.Text.RegularExpressions;
 using System.Web;
 using System.Xml;
 using System.Xml.Serialization;
-using fiskaltrust.Api.POS.Models.ifPOS.v2;
+using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueES.Models.Cases;
 using fiskaltrust.Middleware.Localization.QueueES.Helpers;
 using fiskaltrust.Middleware.Localization.QueueES.Interface;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
-using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.SCU.ES.Helpers;
 using fiskaltrust.Middleware.SCU.ES.Models;
 using fiskaltrust.storage.V0;
@@ -75,7 +75,7 @@ public class VeriFactuMapping
             {
                 continue;
             }
-            if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void))
+            if (ReceiptCaseFlagsExt.IsFlag(receiptRequest.ftReceiptCase, ReceiptCaseFlags.Void))
             {
                 if (previousReceiptRequest is null || previousReceiptResponse is null)
                 {
@@ -254,7 +254,7 @@ public class VeriFactuMapping
 
         var previousHash = previousReceiptResponse.ftSignatures.First(x => x.ftSignatureType.IsType(SignatureTypeES.Huella)).Data;
 
-        if (previousReceiptRequest is not null && previousReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void))
+        if (previousReceiptRequest is not null && ReceiptCaseFlagsExt.IsFlag(previousReceiptRequest.ftReceiptCase, ReceiptCaseFlags.Void))
         {
             var previousQueueItems = _queueItemRepository.GetByReceiptReferenceAsync(previousReceiptRequest.cbPreviousReceiptReference);
             if (await previousQueueItems.IsEmptyAsync())

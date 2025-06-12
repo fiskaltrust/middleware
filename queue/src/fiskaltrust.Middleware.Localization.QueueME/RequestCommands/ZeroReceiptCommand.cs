@@ -71,7 +71,7 @@ namespace fiskaltrust.Middleware.Localization.QueueME.RequestCommands
                     new()
                     {
                         ftSignatureType = 0x4D45_0000_0000_0002,
-                        ftSignatureFormat = (long) ifPOS.v0.SignaturItem.Formats.Text,
+                        ftSignatureFormat = (long) fiskaltrust.ifPOS.v0.SignaturItem.Formats.Text,
                         Caption = caption,
                         Data = data
                     }

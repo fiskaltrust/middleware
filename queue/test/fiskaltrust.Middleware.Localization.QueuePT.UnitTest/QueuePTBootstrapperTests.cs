@@ -1,5 +1,5 @@
 ﻿using System.Text.Json;
-using fiskaltrust.Api.POS.Models.ifPOS.v2;
+using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueuePT;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
