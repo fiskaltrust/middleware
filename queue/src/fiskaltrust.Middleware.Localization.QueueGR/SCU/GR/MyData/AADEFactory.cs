@@ -249,6 +249,10 @@ public class AADEFactory
                 invoiceRow.incomeClassification = [];
                 invoiceRow.vatCategory = 8;
             }
+            else if (x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Voucher))
+            {
+                invoiceRow.recType = 6;
+            }
             else if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.IsSelfPricingOperation))
             {
                 if (invoiceRow.vatCategory == MyDataVatCategory.ExcludingVat)
