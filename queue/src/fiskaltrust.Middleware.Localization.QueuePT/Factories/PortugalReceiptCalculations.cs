@@ -2,7 +2,6 @@
 using fiskaltrust.Middleware.Localization.QueuePT.Models;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.ifPOS.v2.Cases;
-using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Storage.PT;
 using fiskaltrust.SAFT.CLI.SAFTSchemaPT10401;
 using Org.BouncyCastle.Asn1.Ocsp;

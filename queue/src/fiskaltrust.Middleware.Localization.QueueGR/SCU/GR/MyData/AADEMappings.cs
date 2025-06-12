@@ -3,7 +3,6 @@ using fiskaltrust.Middleware.Localization.QueueGR.Models.Cases;
 using fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData.Models;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.ifPOS.v2.Cases;
-using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using ChargeItemCaseTypeOfService = fiskaltrust.ifPOS.v2.Cases.ChargeItemCaseTypeOfService;
 using ChargeItemCaseTypeOfServiceExt = fiskaltrust.ifPOS.v2.Cases.ChargeItemCaseTypeOfServiceExt;
 using ReceiptCaseExt = fiskaltrust.ifPOS.v2.Cases.ReceiptCaseExt;
@@ -89,8 +88,8 @@ public static class AADEMappings
 
         if (ChargeItemCaseTypeOfServiceExt.IsTypeOfService(chargeItem.ftChargeItemCase, ChargeItemCaseTypeOfService.NotOwnSales))
         {
-        if (receiptRequest.ftReceiptCase.IsType(fiskaltrust.ifPOS.v2.Cases.ReceiptCaseType.Receipt))
-        {
+            if (receiptRequest.ftReceiptCase.IsType(fiskaltrust.ifPOS.v2.Cases.ReceiptCaseType.Receipt))
+            {
                 if (chargeItem.ftChargeItemCase.IsNatureOfVat(ChargeItemCaseNatureOfVatGR.ExtemptEndOfClimateCrises))
                 {
                     return IncomeClassificationValueType.E3_881_001;
@@ -127,7 +126,8 @@ public static class AADEMappings
             }
         }
 
-        if (receiptRequest.ftReceiptCase.IsType(fiskaltrust.ifPOS.v2.Cases.ReceiptCaseType.Invoice))        {
+        if (receiptRequest.ftReceiptCase.IsType(fiskaltrust.ifPOS.v2.Cases.ReceiptCaseType.Invoice))
+        {
             if (receiptRequest.HasGreeceCountryCode())
             {
                 return ChargeItemCaseTypeOfServiceExt.TypeOfService(chargeItem.ftChargeItemCase) switch
@@ -215,7 +215,8 @@ public static class AADEMappings
 
     public static InvoiceType GetInvoiceType(ReceiptRequest receiptRequest)
     {
-        if (receiptRequest.ftReceiptCase.IsType(fiskaltrust.ifPOS.v2.Cases.ReceiptCaseType.Receipt))        {
+        if (receiptRequest.ftReceiptCase.IsType(fiskaltrust.ifPOS.v2.Cases.ReceiptCaseType.Receipt))
+        {
             if (ReceiptCaseFlagsGRExt.IsFlag(receiptRequest.ftReceiptCase, ReceiptCaseFlags.Refund))
             {
                 return InvoiceType.Item114;
@@ -255,7 +256,7 @@ public static class AADEMappings
         }
 
         if (receiptRequest.ftReceiptCase.IsType(fiskaltrust.ifPOS.v2.Cases.ReceiptCaseType.Invoice))
-        {        
+        {
             if (ReceiptCaseFlagsGRExt.IsFlag(receiptRequest.ftReceiptCase, ReceiptCaseFlags.Refund))
             {
                 return !string.IsNullOrEmpty(receiptRequest.cbPreviousReceiptReference) ? InvoiceType.Item51 : InvoiceType.Item52;
@@ -269,7 +270,7 @@ public static class AADEMappings
             {
                 return InvoiceType.Item14;
             }
-        else if (receiptRequest.ftReceiptCase.IsType(fiskaltrust.ifPOS.v2.Cases.ReceiptCaseType.Invoice) && receiptRequest.cbChargeItems.All(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.OtherService)))
+            else if (receiptRequest.ftReceiptCase.IsType(fiskaltrust.ifPOS.v2.Cases.ReceiptCaseType.Invoice) && receiptRequest.cbChargeItems.All(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.OtherService)))
             {
                 if (!string.IsNullOrEmpty(receiptRequest.cbPreviousReceiptReference))
                 {
@@ -311,25 +312,25 @@ public static class AADEMappings
             }
         }
 
-    if (receiptRequest.ftReceiptCase.IsType(fiskaltrust.ifPOS.v2.Cases.ReceiptCaseType.Log))
-        {        
+        if (receiptRequest.ftReceiptCase.IsType(fiskaltrust.ifPOS.v2.Cases.ReceiptCaseType.Log))
+        {
             switch (ReceiptCaseExt.Case(receiptRequest.ftReceiptCase))
             {
                 //case ReceiptCase.InternalUsageMaterialConsumption0x3003:
                 //    return receiptRequest.HasOnlyServiceItems() ? InvoiceType.Item62 : InvoiceType.Item61;
                 case ReceiptCase.Order0x3004:
                     return InvoiceType.Item86;
-                //case (ReceiptCase) 0x3005: // TODO
-                //    return InvoiceType.Item81;
-                //case (ReceiptCase) 0x3006: // TODO
-                //    return InvoiceType.Item71;
+                    //case (ReceiptCase) 0x3005: // TODO
+                    //    return InvoiceType.Item81;
+                    //case (ReceiptCase) 0x3006: // TODO
+                    //    return InvoiceType.Item71;
             }
         }
         throw new Exception("Unknown type of receipt " + receiptRequest.ftReceiptCase.ToString("x"));
     }
 
     public static int GetVATCategory(ChargeItem chargeItem) => fiskaltrust.ifPOS.v2.Cases.ChargeItemCaseExt.Vat(chargeItem.ftChargeItemCase) switch
-    {    
+    {
         ChargeItemCase.NormalVatRate => MyDataVatCategory.VatRate24, // Normal 24%
         ChargeItemCase.DiscountedVatRate1 => MyDataVatCategory.VatRate13, // Discounted-1 13&
         ChargeItemCase.DiscountedVatRate2 => MyDataVatCategory.VatRate6, // Discounted-2 6%
@@ -342,7 +343,7 @@ public static class AADEMappings
     };
 
     public static int GetPaymentType(PayItem payItem) => fiskaltrust.ifPOS.v2.Cases.PayItemCaseExt.Case(payItem.ftPayItemCase) switch
-    {    
+    {
         PayItemCase.UnknownPaymentType => MyDataPaymentMethods.Cash,
         PayItemCase.CashPayment => MyDataPaymentMethods.Cash,
         PayItemCase.NonCash => MyDataPaymentMethods.Cash,
