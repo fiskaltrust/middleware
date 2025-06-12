@@ -55,6 +55,26 @@ public static class ReceiptRequestExtensions
         return null;
     }
 
+    public static (string? cbPreviousReceiptReferenceString, List<string>? cbPreviousReceiptReferenceArray) GetPreviousReceiptReferenceStringOrArray(this ReceiptRequest receiptRequest)
+    {
+        if (receiptRequest.cbPreviousReceiptReference is JsonElement cbPreviousReceiptReferenceElem)
+        {
+            if (cbPreviousReceiptReferenceElem.ValueKind == JsonValueKind.String)
+            {
+                return (cbPreviousReceiptReferenceElem.Deserialize<string>(), null);
+            }
+            else if (cbPreviousReceiptReferenceElem.ValueKind == JsonValueKind.Array)
+            {
+                return (null, cbPreviousReceiptReferenceElem.Deserialize<List<string>>());
+            }
+        }
+        if (receiptRequest.cbPreviousReceiptReference is not null && receiptRequest.cbPreviousReceiptReference is string cbPreviousReceiptReferenceString)
+        {
+            return (cbPreviousReceiptReferenceString, null);
+        }
+        return (null, null);
+    }
+
     public static bool HasGreeceCountryCode(this ReceiptRequest receiptRequest)
     {
         return ((ulong) receiptRequest.ftReceiptCase & 0xFFFF_0000_0000_0000) == 0x4752_0000_0000_0000;
