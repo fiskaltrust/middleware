@@ -206,6 +206,11 @@ public static class AADEMappings
     {
         if (receiptRequest.ftReceiptCase.IsType(ReceiptCaseType.Receipt))
         {
+            if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002))
+            {
+                return receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? InvoiceType.Item85 : InvoiceType.Item84;
+            }
+
             if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
             {
                 return InvoiceType.Item114;
@@ -214,11 +219,6 @@ public static class AADEMappings
             if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Protocol0x0005))
             {
                 return InvoiceType.Item93;
-            }
-
-            if(receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002))
-            {
-                return receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? InvoiceType.Item85 : InvoiceType.Item84;
             }
 
             if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003))
