@@ -476,6 +476,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 // Migration receipt executes a daily closing as well
                 (true, 0x0019) => (0x4445_0000_0800_0007, "Daily-closing receipt was processed, and a master data update was performed."),  
                 (false, 0x0019) => (0x4445_0000_0000_0007, "Daily-closing receipt was processed."),
+                (true, 0x0004) => (0x4445_0000_0800_0007, "Daily-closing receipt was processed, and a master data update was performed."),
+                (false, 0x0004) => (0x4445_0000_0000_0007, "Daily-closing receipt was processed."),
                 _ => throw new ArgumentException($"ReceiptCase {request.ftReceiptCase:X} is not supported for master data update.")
             };
             _logger.LogTrace("RequestCommand.UpdateMasterData [exit].");
