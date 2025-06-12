@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO.Compression;
 using System.IO;
 using System.Linq;
@@ -14,7 +13,6 @@ using fiskaltrust.Middleware.SCU.ES.TicketBAI.Helpers;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI.Models;
 using fiskaltrust.Middleware.SCU.ES.TicketBAI.Territories;
 using Microsoft.Extensions.Logging;
-using System.Xml;
 
 #pragma warning disable IDE0052
 
@@ -57,7 +55,73 @@ public class TicketBaiSCU : IESSSCD
         _ticketBaiFactory = new TicketBaiFactory(configuration);
     }
 
-    public async Task<SubmitResponse> SubmitInvoiceAsync(SubmitInvoiceRequest request)
+    public async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request)
+    {
+        var submitInvoiceRequest = new SubmitInvoiceRequest
+        {
+            ftCashBoxIdentification = request.ReceiptResponse.ftCashBoxIdentification,
+            InvoiceMoment = request.ReceiptResponse.ftReceiptMoment,
+            InvoiceNumber = request.ReceiptRequest.cbReceiptReference!, // QUESTION
+            LastInvoiceMoment = request.PreviousReceiptResponse?.ftReceiptMoment,
+            LastInvoiceNumber = request.PreviousReceiptRequest?.cbReceiptReference,
+            LastInvoiceSignature = request.PreviousReceiptResponse?.ftSignatures?.First(x => x.ftSignatureType.IsType(SignatureTypeES.Signature)).Data,
+            Series = "",
+            InvoiceLine = request.ReceiptRequest.cbChargeItems.Select(c => new InvoiceLine
+            {
+                Amount = c.Amount,
+                Description = c.Description,
+                Quantity = c.Quantity,
+                VATAmount = c.VATAmount ?? (c.Amount * c.VATRate),
+                VATRate = c.VATRate
+            }).ToList()
+        };
+
+        var submitResponse = request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)
+            ? await CancelInvoiceAsync(submitInvoiceRequest)
+            : await SubmitInvoiceAsync(submitInvoiceRequest);
+
+        if (!submitResponse.Succeeded)
+        {
+            throw new AggregateException(submitResponse.ResultMessages.Select(r => new Exception($"{r.code}: {r.message}")));
+        }
+
+        request.ReceiptResponse.AddSignatureItem(new SignatureItem()
+        {
+            Caption = "[www.fiskaltrust.es]",
+            Data = submitResponse.QrCode!.ToString(),
+            ftSignatureFormat = SignatureFormat.QRCode,
+            ftSignatureType = SignatureTypeES.Url.As<SignatureType>()
+        });
+
+        request.ReceiptResponse.AddSignatureItem(new SignatureItem()
+        {
+            Caption = "Signature",
+            Data = submitResponse.ShortSignatureValue!,
+            ftSignatureFormat = SignatureFormat.Base64,
+            ftSignatureType = SignatureTypeES.Signature.As<SignatureType>()
+        });
+
+        foreach (var message in submitResponse.ResultMessages)
+        {
+            request.ReceiptResponse.AddSignatureItem(new SignatureItem()
+            {
+                Caption = $"Codigo {message.code}",
+                Data = message.message,
+                ftSignatureFormat = SignatureFormat.Text,
+                ftSignatureType = SignatureType.Unknown.WithCategory(SignatureTypeCategory.Information)
+            });
+        }
+
+        return new ProcessResponse
+        {
+            ReceiptResponse = request.ReceiptResponse
+        };
+    }
+
+    public Task<ESSSCDInfo> GetInfoAsync() => throw new NotImplementedException();
+
+
+    private async Task<SubmitResponse> SubmitInvoiceAsync(SubmitInvoiceRequest request)
     {
         var ticketBaiRequest = _ticketBaiFactory.ConvertTo(request);
         if (_configuration.TicketBaiTerritory == TicketBaiTerritory.Bizkaia)
@@ -125,7 +189,7 @@ public class TicketBaiSCU : IESSSCD
         }
     }
 
-    public byte[] Compress(string data)
+    private byte[] Compress(string data)
     {
         var bytes = Encoding.UTF8.GetBytes(data);
         using (var compressedStream = new MemoryStream())
@@ -139,7 +203,7 @@ public class TicketBaiSCU : IESSSCD
         }
     }
 
-    public async Task<SubmitResponse> CancelInvoiceAsync(SubmitInvoiceRequest request)
+    private async Task<SubmitResponse> CancelInvoiceAsync(SubmitInvoiceRequest request)
     {
         var ticketBaiRequest = _ticketBaiFactory.ConvertTo(request);
         var xml = XmlHelpers.GetXMLIncludingNamespace(ticketBaiRequest);
@@ -155,7 +219,7 @@ public class TicketBaiSCU : IESSSCD
         return result;
     }
 
-    public Uri GetQrCodeUri(TicketBaiRequest ticketBaiRequest, TicketBaiResponse ticketBaiResponse)
+    private Uri GetQrCodeUri(TicketBaiRequest ticketBaiRequest, TicketBaiResponse ticketBaiResponse)
     {
         var crc8 = new CRC8Calculator();
         var url = $"{_qrCodeBaseAddress}?{IdentifierUrl(ticketBaiResponse.Salida.IdentificadorTBAI, ticketBaiRequest)}";
@@ -166,7 +230,7 @@ public class TicketBaiSCU : IESSSCD
 
     private string IdentifierUrl(string ticketBaiIdentifier, TicketBaiRequest ticketBaiRequest) => $"id={HttpUtility.UrlEncode(ticketBaiIdentifier)}&s={HttpUtility.UrlEncode(ticketBaiRequest.Factura.CabeceraFactura.SerieFactura)}&nf={HttpUtility.UrlEncode(ticketBaiRequest.Factura.CabeceraFactura.NumFactura)}&i={HttpUtility.UrlEncode(ticketBaiRequest.Factura.DatosFactura.ImporteTotalFactura)}";
 
-    public SubmitResponse GetResponseFromContent(string responseContent, TicketBaiRequest ticketBaiRequest)
+    private SubmitResponse GetResponseFromContent(string responseContent, TicketBaiRequest ticketBaiRequest)
     {
         var ticketBaiResponse = XmlHelpers.ParseXML<TicketBaiResponse>(responseContent) ?? throw new Exception("Something horrible has happened");
         if (ticketBaiResponse.Salida.Estado == "00")
