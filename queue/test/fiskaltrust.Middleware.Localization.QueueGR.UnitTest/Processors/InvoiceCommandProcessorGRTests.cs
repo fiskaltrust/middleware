@@ -81,7 +81,7 @@ public class InvoiceCommandProcessorGRTests
                 ReceiptResponse = receiptResponse,
             });
         var middlewareQueueItemRepositoryMock = new Mock<IMiddlewareQueueItemRepository>();
-        middlewareQueueItemRepositoryMock.Setup(x => x.GetByReceiptReferenceAsync(receiptRequest.cbPreviousReceiptReference, receiptRequest.cbTerminalID))
+        middlewareQueueItemRepositoryMock.Setup(x => x.GetByReceiptReferenceAsync(receiptRequest.cbPreviousReceiptReference.SingleValue, receiptRequest.cbTerminalID))
             .Returns(new List<ftQueueItem> { queueItem }.ToAsyncEnumerable());
 
         var invoiceCommandProcessor = new InvoiceCommandProcessorGR(grSSCDMock.Object, queueGR, scuGR, middlewareQueueItemRepositoryMock.Object);
