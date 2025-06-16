@@ -1,8 +1,10 @@
 ﻿using System.Text.Json;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueuePT;
+using fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
 using fiskaltrust.Middleware.Localization.v2.Configuration;
 using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.Storage.PT;
 using Microsoft.Extensions.Logging;
 using Xunit;
 
@@ -45,10 +47,20 @@ public class FullTest()
         var cashBoxId = Guid.Parse("3b88c673-025c-4358-ab7f-4234e4c1a068");
         var accessToken = "BPYu7kfJa64JcdbAdF9/AJNNHjxQpqRMQu0QKTwcN8tar9hoYH89fE/AztAiOo8u/Prr+h96DhMqcp1TEzlelR8=";
 
+        //signaturCreationUnitPT.PrivateKey = ""; 
         var configuration = await GetConfigurationAsync(cashBoxId, accessToken);
-        var queue = configuration.ftQueues?.First() ?? throw new Exception($"The configuration for {cashBoxId} is empty and therefore not valid.");
 
-        var bootstrapper = new QueuePTBootstrapper(queue.Id, new LoggerFactory(), queue.Configuration ?? new Dictionary<string, object>());
+        var queue = configuration.ftQueues?.First() ?? throw new Exception($"The configuration for {cashBoxId} is empty and therefore not valid.");
+        var signaturCreationUnitPT = Newtonsoft.Json.JsonConvert.DeserializeObject<List<ftSignaturCreationUnitPT>>(queue!.Configuration!["init_ftSignaturCreationUnitPT"]!.ToString()!).First();
+        var ptSSCD = new InMemorySCU(signaturCreationUnitPT);
+        signaturCreationUnitPT = new ftSignaturCreationUnitPT
+        {
+            ftSignaturCreationUnitPTId = signaturCreationUnitPT.ftSignaturCreationUnitPTId,
+            SoftwareCertificateNumber = "9999",
+            PrivateKey = ""
+        };
+
+        var bootstrapper = new QueuePTBootstrapper(queue.Id, new LoggerFactory(), queue.Configuration ?? new Dictionary<string, object>(), ptSSCD);
         var signMethod = bootstrapper.RegisterForSign();
 
         //var initialOperationRequest = InitialOperation(cashBoxId);

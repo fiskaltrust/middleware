@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueuePT;
+using fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
@@ -20,7 +21,7 @@ public class QueuePTBootstrapperTests
             {
                 { "storageaccountname", "test" },
                 { "init_ftQueue", Newtonsoft.Json.JsonConvert.SerializeObject(new List<ftQueue> { new ftQueue { ftQueueId = queueId, ftCashBoxId = cashBoxId } }) }
-            });
+            }, new InMemorySCU(new Storage.PT.ftSignaturCreationUnitPT()));
         _ = bootstrapper.RegisterForSign();
 
         //var signResult = await signMethod(JsonSerializer.Serialize(new ReceiptRequest
@@ -39,7 +40,7 @@ public class QueuePTBootstrapperTests
             {
                 { "storageaccountname", "test" },
                 { "init_ftQueue", Newtonsoft.Json.JsonConvert.SerializeObject(new List<ftQueue> { new ftQueue { ftQueueId = queueId, ftCashBoxId = cashBoxId } }) }
-            });
+            }, new InMemorySCU(new Storage.PT.ftSignaturCreationUnitPT()));
 
         var signMethod = bootstrapper.RegisterForSign();
 
