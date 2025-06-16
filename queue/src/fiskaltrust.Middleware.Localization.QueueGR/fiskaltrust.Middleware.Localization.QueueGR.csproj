@@ -10,7 +10,7 @@
     <ItemGroup>
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="3.1.4" />
         <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
-        <PackageReference Update="fiskaltrust.interface" Version="1.3.73-ci-25162-82977" />
+        <PackageReference Update="fiskaltrust.interface" Version="1.3.73-rc1-25167-83099" />
     </ItemGroup>
 
     <ItemGroup>
