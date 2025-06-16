@@ -20,7 +20,7 @@ public class InvoiceCommandProcessorGR(IGRSSCD sscd, ftQueueGR queueGR, ftSignat
 
     public async Task<ProcessCommandResponse> InvoiceUnknown0x1000Async(ProcessCommandRequest request)
     {
-        if (ReceiptCaseFlagsExt.IsFlag(request.ReceiptRequest.ftReceiptCase, ReceiptCaseFlags.Refund) && !string.IsNullOrEmpty(request.ReceiptRequest.cbPreviousReceiptReference))
+        if (ReceiptCaseFlagsExt.IsFlag(request.ReceiptRequest.ftReceiptCase, ReceiptCaseFlags.Refund) && request.ReceiptRequest.cbPreviousReceiptReference is not null)
         {
             var receiptReference = await LoadReceiptReferencesToResponse(request.ReceiptRequest, request.ReceiptResponse);
             var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
@@ -49,7 +49,11 @@ public class InvoiceCommandProcessorGR(IGRSSCD sscd, ftQueueGR queueGR, ftSignat
 
     private async Task<ReceiptResponse> LoadReceiptReferencesToResponse(ReceiptRequest request, ReceiptResponse receiptResponse)
     {
-        var queueItems = _readOnlyQueueItemRepository.GetByReceiptReferenceAsync(request.cbPreviousReceiptReference, request.cbTerminalID);
+        if (request.cbPreviousReceiptReference?.IsGroup ?? false)
+        {
+            throw new NotSupportedException("Groping of invoices is not supported yet.");
+        }
+        var queueItems = _readOnlyQueueItemRepository.GetByReceiptReferenceAsync(request.cbPreviousReceiptReference?.SingleValue, request.cbTerminalID);
         await foreach (var existingQueueItem in queueItems)
         {
             if (string.IsNullOrEmpty(existingQueueItem.response))

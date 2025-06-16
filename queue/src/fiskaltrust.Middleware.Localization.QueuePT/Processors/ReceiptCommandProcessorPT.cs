@@ -27,7 +27,8 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignat
 
     public Task<ProcessCommandResponse> PointOfSaleReceipt0x0001Async(ProcessCommandRequest request) => WithPreparations(request, async () =>
     {
-        if (ReceiptCaseFlagsExt.IsFlag(request.ReceiptRequest.ftReceiptCase, ReceiptCaseFlags.Refund))        {
+        if (ReceiptCaseFlagsExt.IsFlag(request.ReceiptRequest.ftReceiptCase, ReceiptCaseFlags.Refund))
+        {
             var receiptReference = await LoadReceiptReferencesToResponse(request.ReceiptRequest, request.ReceiptResponse);
             var series = StaticNumeratorStorage.CreditNoteSeries;
             series.Numerator++;
@@ -98,32 +99,7 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignat
 
     public Task<ProcessCommandResponse> PaymentTransfer0x0002Async(ProcessCommandRequest request) => WithPreparations(request, async () =>
     {
-        if (!string.IsNullOrEmpty(request.ReceiptRequest.cbPreviousReceiptReference))
-        {
-            var receiptReference = await LoadReceiptReferencesToResponse(request.ReceiptRequest, request.ReceiptResponse);
-            var series = StaticNumeratorStorage.PaymentSeries;
-            series.Numerator++;
-            var invoiceNo = series.Identifier + "/" + series.Numerator!.ToString()!.PadLeft(4, '0');
-            var (response, hash) = await _sscd.ProcessReceiptAsync(new ProcessRequest
-            {
-                ReceiptRequest = request.ReceiptRequest,
-                ReceiptResponse = request.ReceiptResponse,
-            }, invoiceNo, series.LastHash);
-            response.ReceiptResponse.ftReceiptIdentification = invoiceNo;
-            var printHash = new StringBuilder().Append(hash[0]).Append(hash[10]).Append(hash[20]).Append(hash[30]).ToString();
-            var qrCode = PortugalReceiptCalculations.CreateRGQRCode(printHash, _queuePT.IssuerTIN, _queuePT.TaxRegion, series.ATCUD + "-" + series.Numerator, request.ReceiptRequest, response.ReceiptResponse);
-            AddSignatures(series, response, hash, printHash, qrCode);
-            response.ReceiptResponse.AddSignatureItem(new SignatureItem
-            {
-                Caption = $"Origem: Fattura {receiptReference.ftReceiptIdentification}",
-                Data = $"",
-                ftSignatureFormat = SignatureFormat.Text,
-                ftSignatureType = SignatureTypePT.ReferenceForCreditNote.As<SignatureType>(),
-            });
-            series.LastHash = hash;
-            return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
-        }
-        else
+        if (request.ReceiptRequest.cbPreviousReceiptReference is null)
         {
             var series = StaticNumeratorStorage.PaymentSeries;
             series.Numerator++;
@@ -140,6 +116,35 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignat
             series.LastHash = hash;
             return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
         }
+
+        return await request.ReceiptRequest.cbPreviousReceiptReference.MatchAsync(
+            async single =>
+            {
+                var receiptReference = await LoadReceiptReferencesToResponse(request.ReceiptRequest, request.ReceiptResponse);
+                var series = StaticNumeratorStorage.PaymentSeries;
+                series.Numerator++;
+                var invoiceNo = series.Identifier + "/" + series.Numerator!.ToString()!.PadLeft(4, '0');
+                var (response, hash) = await _sscd.ProcessReceiptAsync(new ProcessRequest
+                {
+                    ReceiptRequest = request.ReceiptRequest,
+                    ReceiptResponse = request.ReceiptResponse,
+                }, invoiceNo, series.LastHash);
+                response.ReceiptResponse.ftReceiptIdentification = invoiceNo;
+                var printHash = new StringBuilder().Append(hash[0]).Append(hash[10]).Append(hash[20]).Append(hash[30]).ToString();
+                var qrCode = PortugalReceiptCalculations.CreateRGQRCode(printHash, _queuePT.IssuerTIN, _queuePT.TaxRegion, series.ATCUD + "-" + series.Numerator, request.ReceiptRequest, response.ReceiptResponse);
+                AddSignatures(series, response, hash, printHash, qrCode);
+                response.ReceiptResponse.AddSignatureItem(new SignatureItem
+                {
+                    Caption = $"Origem: Fattura {receiptReference.ftReceiptIdentification}",
+                    Data = $"",
+                    ftSignatureFormat = SignatureFormat.Text,
+                    ftSignatureType = SignatureTypePT.ReferenceForCreditNote.As<SignatureType>(),
+                });
+                series.LastHash = hash;
+                return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+            },
+            async _ => throw new NotSupportedException("Groping of payment transfers is not supported yet.")
+        );
     });
 
     public Task<ProcessCommandResponse> PointOfSaleReceiptWithoutObligation0x0003Async(ProcessCommandRequest request) => WithPreparations(request, async () => new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>()));
@@ -150,7 +155,11 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignat
 
     private async Task<ReceiptResponse> LoadReceiptReferencesToResponse(ReceiptRequest request, ReceiptResponse receiptResponse)
     {
-        var queueItems = _readOnlyQueueItemRepository.GetByReceiptReferenceAsync(request.cbPreviousReceiptReference, request.cbTerminalID);
+        if (request.cbPreviousReceiptReference.IsGroup)
+        {
+            throw new NotSupportedException("Groping of payment transfers is not supported yet.");
+        }
+        var queueItems = _readOnlyQueueItemRepository.GetByReceiptReferenceAsync(request.cbPreviousReceiptReference.SingleValue, request.cbTerminalID);
         await foreach (var existingQueueItem in queueItems)
         {
             if (string.IsNullOrEmpty(existingQueueItem.response))

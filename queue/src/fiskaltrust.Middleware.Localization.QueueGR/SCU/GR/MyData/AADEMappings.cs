@@ -259,7 +259,7 @@ public static class AADEMappings
         {
             if (ReceiptCaseFlagsGRExt.IsFlag(receiptRequest.ftReceiptCase, ReceiptCaseFlags.Refund))
             {
-                return !string.IsNullOrEmpty(receiptRequest.cbPreviousReceiptReference) ? InvoiceType.Item51 : InvoiceType.Item52;
+                return receiptRequest.cbPreviousReceiptReference is not null ? InvoiceType.Item51 : InvoiceType.Item52;
             }
 
             if (receiptRequest.cbChargeItems.Any(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable)))
@@ -272,7 +272,7 @@ public static class AADEMappings
             }
             else if (receiptRequest.ftReceiptCase.IsType(fiskaltrust.ifPOS.v2.Cases.ReceiptCaseType.Invoice) && receiptRequest.cbChargeItems.All(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.OtherService)))
             {
-                if (!string.IsNullOrEmpty(receiptRequest.cbPreviousReceiptReference))
+                if (receiptRequest.cbPreviousReceiptReference is not null)
                 {
                     return InvoiceType.Item24;
                 }
@@ -292,7 +292,7 @@ public static class AADEMappings
             }
             else
             {
-                if (!string.IsNullOrEmpty(receiptRequest.cbPreviousReceiptReference))
+                if (receiptRequest.cbPreviousReceiptReference is not null)
                 {
                     return InvoiceType.Item16;
                 }

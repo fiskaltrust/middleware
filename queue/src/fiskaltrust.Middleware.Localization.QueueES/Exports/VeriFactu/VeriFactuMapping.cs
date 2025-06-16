@@ -105,7 +105,15 @@ public class VeriFactuMapping
 
     public async Task<RegistroFacturacionAnulacion> CreateRegistroFacturacionAnulacionAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, ReceiptRequest previousReceiptRequest, ReceiptResponse previousReceiptResponse)
     {
-        var previousQueueItems = _queueItemRepository.GetByReceiptReferenceAsync(receiptRequest.cbPreviousReceiptReference);
+        if (receiptRequest.cbPreviousReceiptReference is null)
+        {
+            throw new Exception("cbPreviousReceiptReference is required for voiding a receipt.");
+        }
+        if (receiptRequest.cbPreviousReceiptReference.IsGroup)
+        {
+            throw new NotSupportedException("Groping of receipts is not supported.");
+        }
+        var previousQueueItems = _queueItemRepository.GetByReceiptReferenceAsync(receiptRequest.cbPreviousReceiptReference.SingleValue);
         if (await previousQueueItems.IsEmptyAsync())
         {
             throw new Exception($"Receipt with cbReceiptReference {receiptRequest.cbPreviousReceiptReference} not found.");
@@ -256,7 +264,15 @@ public class VeriFactuMapping
 
         if (previousReceiptRequest is not null && ReceiptCaseFlagsExt.IsFlag(previousReceiptRequest.ftReceiptCase, ReceiptCaseFlags.Void))
         {
-            var previousQueueItems = _queueItemRepository.GetByReceiptReferenceAsync(previousReceiptRequest.cbPreviousReceiptReference);
+            if (previousReceiptRequest.cbPreviousReceiptReference is null)
+            {
+                throw new Exception("cbPreviousReceiptReference is required for voiding a receipt.");
+            }
+            if (previousReceiptRequest.cbPreviousReceiptReference.IsGroup)
+            {
+                throw new NotSupportedException("Groping of receipts is not supported.");
+            }
+            var previousQueueItems = _queueItemRepository.GetByReceiptReferenceAsync(previousReceiptRequest.cbPreviousReceiptReference.SingleValue);
             if (await previousQueueItems.IsEmptyAsync())
             {
                 throw new Exception($"Receipt with cbReceiptReference {previousReceiptRequest.cbPreviousReceiptReference} not found.");

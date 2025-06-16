@@ -17,7 +17,7 @@
     <PackageReference Include="FirmaXadesNetCore" Version="1.1.0" />
     <PackageReference Include="System.ServiceModel.Http" Version="8.1.0" />
     <PackageReference Include="System.ServiceModel.Primitives" Version="8.1.0" />
-    <PackageReference Update="fiskaltrust.interface" Version="1.3.73-rc1-25167-83099" />
+    <PackageReference Update="fiskaltrust.interface" Version="1.3.73-rc1-25167-83106" />
   </ItemGroup>
 
   <ItemGroup>

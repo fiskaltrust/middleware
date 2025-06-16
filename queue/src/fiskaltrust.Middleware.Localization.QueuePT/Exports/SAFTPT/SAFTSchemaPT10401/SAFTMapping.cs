@@ -235,7 +235,7 @@ public static class SAFTMapping
                     TaxCountryRegion = "PT",
                     TaxCode = "RED",
                     Description = "Taxa Reduzida",
-                    TaxPercentage = 6.000000m,  
+                    TaxPercentage = 6.000000m,
                 },
 
 
@@ -452,7 +452,7 @@ public static class SAFTMapping
             }
         };
 
-        if (GetPaymentType(receiptRequest) == "RG" && !string.IsNullOrEmpty(receiptRequest.cbPreviousReceiptReference))
+        if (GetPaymentType(receiptRequest) == "RG" && receiptRequest.cbPreviousReceiptReference is not null)
         {
             var referencedReceiptReference = ((JsonElement) receipt.receiptResponse.ftStateData!).GetProperty("ReferencedReceiptResponse").Deserialize<ReceiptResponse>();
             workDocument.Line[0].SourceDocumentID = new SourceDocument
@@ -563,7 +563,8 @@ public static class SAFTMapping
 
     private static string GetInvoiceType(ReceiptRequest receiptRequest)
     {
-if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PointOfSaleReceipt0x0001) && ReceiptCaseFlagsExt.IsFlag(receiptRequest.ftReceiptCase, ReceiptCaseFlags.Refund))        {
+        if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PointOfSaleReceipt0x0001) && ReceiptCaseFlagsExt.IsFlag(receiptRequest.ftReceiptCase, ReceiptCaseFlags.Refund))
+        {
             return "NC";
         }
 
@@ -652,7 +653,7 @@ if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PointOfSaleReceipt0x0001) &&
             line.CreditAmount = Helpers.CreateMonetaryValue(netLinePrice);
         }
 
-        if (GetInvoiceType(receiptRequest) == "FT" && !string.IsNullOrEmpty(receiptRequest.cbPreviousReceiptReference))
+        if (GetInvoiceType(receiptRequest) == "FT" && receiptRequest.cbPreviousReceiptReference is not null)
         {
             var referencedReceiptReference = ((JsonElement) receiptResponse.ftStateData!).GetProperty("ReferencedReceiptResponse").Deserialize<ReceiptResponse>();
             line.OrderReferences = new OrderReferences

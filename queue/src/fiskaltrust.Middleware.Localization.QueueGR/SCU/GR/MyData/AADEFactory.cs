@@ -26,7 +26,7 @@ public class AADEFactory
     public InvoicesDoc MapToInvoicesDoc(List<ftQueueItem> queueItems)
     {
         var receiptRequests = queueItems.Where(x => !string.IsNullOrEmpty(x.request) && !string.IsNullOrEmpty(x.response)).Select(x => (receiptRequest: JsonSerializer.Deserialize<ReceiptRequest>(x.request)!, receiptResponse: JsonSerializer.Deserialize<ReceiptResponse>(x.response))).ToList();
-        var actualReceiptRequests = receiptRequests.Where(x => x.receiptResponse != null && ((long)x.receiptResponse.ftState & 0xFF) == 0x00).Cast<(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)>().ToList();
+        var actualReceiptRequests = receiptRequests.Where(x => x.receiptResponse != null && ((long) x.receiptResponse.ftState & 0xFF) == 0x00).Cast<(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)>().ToList();
         actualReceiptRequests = actualReceiptRequests.Where(x =>
         {
             var mark = x.receiptResponse.ftSignatures.FirstOrDefault(x => x.Caption == "invoiceMark")?.Data;
@@ -169,9 +169,12 @@ public class AADEFactory
         }
 
         inv.invoiceSummary.totalGrossValue = inv.invoiceSummary.totalNetValue + inv.invoiceSummary.totalVatAmount - inv.invoiceSummary.totalWithheldAmount + inv.invoiceSummary.totalFeesAmount + inv.invoiceSummary.totalStampDutyAmount + inv.invoiceSummary.totalOtherTaxesAmount - inv.invoiceSummary.totalDeductionsAmount;
-        if (!string.IsNullOrEmpty(receiptRequest.cbPreviousReceiptReference))
+        if (receiptRequest.cbPreviousReceiptReference is not null)
         {
-            inv.invoiceHeader.correlatedInvoices = [long.Parse(receiptRequest.cbPreviousReceiptReference)];
+            inv.invoiceHeader.correlatedInvoices = receiptRequest.cbPreviousReceiptReference.Match(
+                single => [long.Parse(single)],
+                group => group.Select(g => long.Parse(g)).ToArray()
+            );
         }
         if (receiptRequest.ContainsCustomerInfo())
         {
@@ -193,7 +196,7 @@ public class AADEFactory
             var invoiceRow = new InvoiceRowType
             {
                 quantity = fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlagsExt.IsFlag(receiptRequest.ftReceiptCase, ReceiptCaseFlags.Refund) ? -x.Quantity : x.Quantity,
-                lineNumber = (int)x.Position,
+                lineNumber = (int) x.Position,
                 vatAmount = fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlagsExt.IsFlag(receiptRequest.ftReceiptCase, ReceiptCaseFlags.Refund) ? -vatAmount : vatAmount,
                 netValue = fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlagsExt.IsFlag(receiptRequest.ftReceiptCase, ReceiptCaseFlags.Refund) ? -x.Amount - -vatAmount : x.Amount - vatAmount,
                 vatCategory = AADEMappings.GetVATCategory(x),
@@ -208,7 +211,7 @@ public class AADEFactory
                 invoiceRow.incomeClassification = [];
                 invoiceRow.vatCategory = 8;
             }
-            else if (fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlagsGRExt.IsFlag(receiptRequest.ftReceiptCase, (fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlags)fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlagsGR.IsSelfPricingOperation))
+            else if (fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlagsGRExt.IsFlag(receiptRequest.ftReceiptCase, (ReceiptCaseFlags) fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlagsGR.IsSelfPricingOperation))
             {
                 if (invoiceRow.vatCategory == MyDataVatCategory.ExcludingVat)
                 {
