@@ -61,6 +61,7 @@ public static class ReceiptCaseHelper
 
     public static bool IsReceiptRequest(this ReceiptRequest receiptRequest) => (receiptRequest.ftReceiptCase & 0x0000_0000_8000_0000) > 0x0000;
     public static Customer? GetCustomer(this ReceiptRequest receiptRequest) => GetValueOrNull<Customer>(receiptRequest?.cbCustomer);
+    public static ReceiptCaseLotteryData? GetLotteryData(this ReceiptRequest receiptRequest) => GetValueOrNull<ReceiptCaseLotteryData>(receiptRequest?.cbCustomer);
 
     private static T? GetValueOrNull<T>(string? data) where T : class
     {
