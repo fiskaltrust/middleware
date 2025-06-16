@@ -100,12 +100,12 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
 
             if (request.ReceiptRequest.IsMonthlyClosing())
             {
-                return ProcessResponseHelpers.CreateResponse(request.ReceiptResponse, new List<SignaturItem>());
+                return Helpers.CreateResponse(await PerformDailyCosing(request.ReceiptResponse));
             }
 
             if (request.ReceiptRequest.IsYearlyClosing())
             {
-                return ProcessResponseHelpers.CreateResponse(request.ReceiptResponse, new List<SignaturItem>());
+                return Helpers.CreateResponse(await PerformDailyCosing(request.ReceiptResponse));
             }
    
             if (request.ReceiptRequest.IsReprint())
