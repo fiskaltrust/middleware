@@ -20,5 +20,5 @@ public class ReceiptCaseLotteryData
 
 public class servizi_lotteriadegliscontrini_gov_it
 {
-    public string? codice_lotto { get; set; }
+    public string? codicelotteria { get; set; }
 }
