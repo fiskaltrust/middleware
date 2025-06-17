@@ -111,7 +111,7 @@ public class VeriFactuMapping
         }
         if (receiptRequest.cbPreviousReceiptReference.IsGroup)
         {
-            throw new NotSupportedException("Groping of receipts is not supported.");
+            throw new NotSupportedException("Grouping of receipts is not supported.");
         }
         var previousQueueItems = _queueItemRepository.GetByReceiptReferenceAsync(receiptRequest.cbPreviousReceiptReference.SingleValue);
         if (await previousQueueItems.IsEmptyAsync())
