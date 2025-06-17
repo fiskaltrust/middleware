@@ -18,7 +18,7 @@ using fiskaltrust.Middleware.Localization.QueueDE.MasterData;
 
 namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 {
-    internal class OutOfOperationReceiptCommand : DailyClosingReceiptCommand
+    internal class OutOfOperationReceiptCommand : RequestCommand
     {
         public override string ReceiptName => "Out-of-operation receipt";
 
@@ -37,7 +37,10 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             ThrowIfTraining(request);
 
 
-            var dailyClosingResponse = await base.ExecuteAsync(queue, queueDE, request, queueItem);
+            if (!request.IsTseTarDownloadBypass())
+            {
+                await PerformTarFileExportAsync(queueItem, queue, queueDE, erase: true).ConfigureAwait(false);
+            }
 
             var (processType, payload) = _transactionPayloadFactory.CreateReceiptPayload(request);
             var receiptResponse = CreateReceiptResponse(request, queueItem, queueDE);
@@ -146,8 +149,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
             queue.StopMoment = DateTime.UtcNow;
             _logger.LogTrace("OutOfOperationReceiptCommand.ExecuteAsync [exit].");
-            actionJournals.AddRange(dailyClosingResponse.ActionJournals);
-            signatures.AddRange(dailyClosingResponse.Signatures);
             return new RequestCommandResponse()
             {
                 ActionJournals = actionJournals,
