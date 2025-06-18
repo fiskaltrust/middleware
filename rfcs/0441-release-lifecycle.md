@@ -12,7 +12,7 @@ And second, the **release phase** handled by the market teams where the release 
 
 # Motivation
 
-The current release process is lacking a few things which this RFC aims so solve.
+The current release process is lacking a few things which this RFC aims to solve.
 
 * The possibility to End2End test a release before it being made public.
 * The possibility to release something for internal testing that should not be made public.
