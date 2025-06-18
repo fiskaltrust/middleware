@@ -331,7 +331,7 @@ public static class AADEMappings
         ChargeItemCase.SuperReducedVatRate1 => MyDataVatCategory.VatRate17, // Super reduced 1 17%
         ChargeItemCase.SuperReducedVatRate2 => MyDataVatCategory.VatRate9, // Super reduced 2 9%
         ChargeItemCase.ParkingVatRate => MyDataVatCategory.VatRate4, // Parking VAT 4%
-        ChargeItemCase.NotTaxable => MyDataVatCategory.RegistrationsWithoutVat, // Not Taxable
+        ChargeItemCase.NotTaxable => MyDataVatCategory.ExcludingVat, // Not Taxable
         ChargeItemCase.ZeroVatRate => MyDataVatCategory.ExcludingVat, // Zero
         ChargeItemCase c => throw new Exception($"The VAT type {c} of ChargeItem with the case {chargeItem.ftChargeItemCase} is not supported."),
     };
