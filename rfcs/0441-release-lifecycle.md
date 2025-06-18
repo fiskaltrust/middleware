@@ -69,7 +69,6 @@ Two prerelease identifiers are allowed:
 | nuget package    | sandbox packages v1 server         |                                                                                   | ❌                                                                                                          |
 | nuget package    | production packages v1 server      |                                                                                   | ❌                                                                                                          |
 | zip package      | sandbox packages v2 server         |                                                                                   | ❌                                                                                                          |
-| zip package      | sandbox packages v2 server         |                                                                                   | ❌                                                                                                          |
 
 ## Release Phase
 
@@ -124,7 +123,7 @@ The releases are grouped by version in the table.
 The release can be published for whole group or separatley for for single packages (when it's not the same for all packages a `-` is shown in the group checkbox).  
 Overrides for markets and accounts can be set.
 The release can be yanked through a separate confirmation dialog. It's then yanked in sandbox _and_ production.
-![](./assets/0000-release-lifecycle-ui-mockup.svg)
+![](./assets/0441-release-lifecycle-ui-mockup.svg)
 (this is just a ui mockup to demonstrate the functionality ux and layout will be designed properly when implementing the RFC)
 
 # Reference-level explanation
