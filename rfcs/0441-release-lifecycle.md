@@ -36,7 +36,7 @@ The middleware development team is responsible for handling this part of the rel
 
 The **release phase** is performed in the portal admin interface.  
 It's purpose is to manage the publishing (releasing) of the artifacts that were deployed in the previous phase.  
-At the begining of this phase the relesae (collection of artifacts related to a middleware version) is deployed on the servers but unlisted and not downloadable.  
+At the beginning of this phase the release (collection of artifacts related to a middleware version) is deployed on the servers but unlisted and not downloadable.  
 In the admin release console in the portal the release can be reviewed, approved, and published.  
 A release can have complex visibility states for different environments (sandbox, production and the different markets).  
 A staggered rollout and rollbacks are possible.  
