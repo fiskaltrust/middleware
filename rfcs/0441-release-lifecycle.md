@@ -110,7 +110,7 @@ When showing the version of a package we can link directly to the github reposit
 
 ### Admins
 
-Admins have access to the Relese Coonsole in the portal where the release states can be managed.  
+Admins have access to the Release Console in the portal where the release states can be managed.  
 The release state of all packages is overwritten to _Published_ for all admin accounts.
 
 ### Release Console
