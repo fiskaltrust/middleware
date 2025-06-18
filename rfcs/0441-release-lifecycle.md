@@ -6,7 +6,7 @@
 # Summary
 
 This RFC proposes to change the middleware release process from developers pushing release out to the market teams pulling them in.  
-This is done by spliting it into two phases.
+This is done by splitting it into two phases.
 First, the **deployment phase** handled by the developers where the middleware is built and deployed to the servers but not yet publicly available.  
 And second, the **release phase** handled by the market teams where the release visibility is managed and the release is made public.
 
