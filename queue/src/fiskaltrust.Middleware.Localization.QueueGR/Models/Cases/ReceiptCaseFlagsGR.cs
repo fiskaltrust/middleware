@@ -10,5 +10,5 @@ public enum ReceiptCaseFlagsGR : long
 public static class ReceiptCaseFlagsGRExt
 {
     public static ReceiptCase WithFlag(this ReceiptCase self, ReceiptCaseFlagsGR flag) => (ReceiptCase) ((long) self | (long) flag);
-    public static bool IsFlag(this ReceiptCase self, ReceiptCaseFlags flag) => ((long) self & (long) flag) == (long) flag;
+    public static bool IsFlag(this ReceiptCase self, ReceiptCaseFlagsGR flag) => ((long) self & (long) flag) == (long) flag;
 }
