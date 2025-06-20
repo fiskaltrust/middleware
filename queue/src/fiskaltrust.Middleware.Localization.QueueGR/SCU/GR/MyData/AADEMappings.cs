@@ -86,7 +86,7 @@ public static class AADEMappings
             return IncomeClassificationValueType.E3_595;
         }
 
-        if (chargeItem.ftChargeItemCase, ChargeItemCaseTypeOfService.NotOwnSales.IsIsTypeOfService())
+        if (chargeItem.ftChargeItemCase.IsIsTypeOfService(ChargeItemCaseTypeOfService.NotOwnSales))
         {
             if (receiptRequest.ftReceiptCase.IsType(fiskaltrust.ifPOS.v2.Cases.ReceiptCaseType.Receipt))
             {

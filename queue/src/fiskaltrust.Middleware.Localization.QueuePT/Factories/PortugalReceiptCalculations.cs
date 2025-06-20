@@ -215,7 +215,7 @@ public static class PortugalReceiptCalculations
         }.GenerateQRCode();
     }
 
-    public static string GetIVATAxCode(ChargeItem chargeItem) => fiskaltrust.ifPOS.v2.Cases.chargeItem.ftChargeItemCase.IsVat() switch
+    public static string GetIVATAxCode(ChargeItem chargeItem) => chargeItem.ftChargeItemCase switch
     {
         ChargeItemCase.UnknownService => "",
         ChargeItemCase.DiscountedVatRate1 => "RED",
