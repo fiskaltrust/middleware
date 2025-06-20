@@ -1,6 +1,5 @@
-﻿using fiskaltrust.ifPOS.v1;
+﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.v2.Interface;
-using EchoRequest = fiskaltrust.ifPOS.v2.EchoRequest;
 
 namespace fiskaltrust.Middleware.Localization.v2;
 

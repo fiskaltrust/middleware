@@ -3,11 +3,6 @@ using fiskaltrust.Middleware.Localization.QueueGR.Models.Cases;
 using fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData.Models;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.ifPOS.v2.Cases;
-using ChargeItemCaseTypeOfService = fiskaltrust.ifPOS.v2.Cases.ChargeItemCaseTypeOfService;
-using ChargeItemCaseTypeOfServiceExt = fiskaltrust.ifPOS.v2.Cases.ChargeItemCaseTypeOfServiceExt;
-using ReceiptCaseExt = fiskaltrust.ifPOS.v2.Cases.ReceiptCaseExt;
-using ReceiptCaseFlags = fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlags;
-using ReceiptCaseFlagsGRExt = fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlagsGRExt;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData;
 

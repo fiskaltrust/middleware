@@ -1,5 +1,5 @@
 ﻿using System.Text;
-using fiskaltrust.ifPOS.v1;
+using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Contracts.Constants;
 using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Contracts.Repositories;
@@ -12,13 +12,12 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using ftQueueES = fiskaltrust.Middleware.Storage.ES.ftQueueES;
 using ftSignaturCreationUnitES = fiskaltrust.Middleware.Storage.ES.ftSignaturCreationUnitES;
-using JournalRequest = fiskaltrust.ifPOS.v2.JournalRequest;
 
 namespace fiskaltrust.Middleware.Localization.v2;
 
 public interface IJournalProcessor
 {
-    IAsyncEnumerable<JournalResponse> ProcessAsync(ifPOS.v2.JournalRequest request);
+    IAsyncEnumerable<JournalResponse> ProcessAsync(JournalRequest request);
 }
 
 public class JournalProcessor : IJournalProcessor
@@ -46,7 +45,7 @@ public class JournalProcessor : IJournalProcessor
         _logger = logger;
     }
 
-    public IAsyncEnumerable<JournalResponse> ProcessAsync(ifPOS.v2.JournalRequest request)
+    public IAsyncEnumerable<JournalResponse> ProcessAsync(JournalRequest request)
     {
         try
         {
