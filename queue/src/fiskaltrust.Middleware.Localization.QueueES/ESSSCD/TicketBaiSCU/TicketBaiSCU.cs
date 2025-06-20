@@ -52,7 +52,7 @@ public class TicketBaiSCU : IESSSCD
             }).ToList()
         };
 
-        var submitResponse = ReceiptCaseFlagsExt.IsFlag(request.ReceiptRequest.ftReceiptCase, ReceiptCaseFlags.Void)
+        var submitResponse = request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void)
             ? await _scu.CancelInvoiceAsync(submitInvoiceRequest)
             : await _scu.SubmitInvoiceAsync(submitInvoiceRequest);
 

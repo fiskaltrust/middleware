@@ -108,7 +108,7 @@ public class ChargeItemCaseTests
 
             var result = chargeItemCase.WithNatureOfVat(natureOfVat);
 
-            ChargeItemCaseNatureOfVatESExt.NatureOfVat(result).Should().Be(natureOfVat);
+            result.IsNatureOfVat().Should().Be(natureOfVat);
             result.IsNatureOfVat(natureOfVat).Should().BeTrue();
         }
     }
@@ -123,7 +123,7 @@ public class ChargeItemCaseTests
 
             var result = chargeItemCase.WithNatureOfVat(natureOfVat);
 
-            ChargeItemCaseNatureOfVatGRExt.NatureOfVat(result).Should().Be(natureOfVat);
+            result.IsNatureOfVat().Should().Be(natureOfVat);
             result.IsNatureOfVat(natureOfVat).Should().BeTrue();
         }
     }
@@ -138,7 +138,7 @@ public class ChargeItemCaseTests
 
             var result = chargeItemCase.WithNatureOfVat(natureOfVat);
 
-            ChargeItemCaseNatureOfVatPTExt.NatureOfVat(result).Should().Be(natureOfVat);
+            result.IsNatureOfVat().Should().Be(natureOfVat);
             result.IsNatureOfVat(natureOfVat).Should().BeTrue();
         }
     }

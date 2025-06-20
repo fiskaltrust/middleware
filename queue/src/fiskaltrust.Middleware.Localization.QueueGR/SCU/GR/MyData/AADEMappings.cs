@@ -16,8 +16,8 @@ public static class AADEMappings
     public static IncomeClassificationType GetIncomeClassificationType(ReceiptRequest receiptRequest, ChargeItem chargeItem)
     {
         var vatAmount = chargeItem.GetVATAmount();
-        var netAmount = ReceiptCaseFlagsGRExt.IsFlag(receiptRequest.ftReceiptCase, ReceiptCaseFlags.Refund) ? -chargeItem.Amount - -vatAmount : chargeItem.Amount - vatAmount;
-        if (ReceiptCaseExt.IsCase(receiptRequest.ftReceiptCase, ReceiptCase.Order0x3004))
+        var netAmount = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -chargeItem.Amount - -vatAmount : chargeItem.Amount - vatAmount;
+        if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004))
         {
             return new IncomeClassificationType
             {
@@ -73,20 +73,20 @@ public static class AADEMappings
     /// </summary>
     public static IncomeClassificationValueType GetIncomeClassificationValueType(ReceiptRequest receiptRequest, ChargeItem chargeItem)
     {
-        if (ReceiptCaseExt.IsCase(receiptRequest.ftReceiptCase, ReceiptCase.Protocol0x0005))
+        if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Protocol0x0005))
         {
             return IncomeClassificationValueType.E3_561_001;
         }
-        if (ReceiptCaseExt.Case(receiptRequest.ftReceiptCase) == (ReceiptCase) 0x3005) // TODO
+        if (receiptRequest.ftReceiptCase.IsCase() == (ReceiptCase) 0x3005) // TODO
         {
             return IncomeClassificationValueType.E3_562;
         }
-        if (ReceiptCaseExt.IsCase(receiptRequest.ftReceiptCase, ReceiptCase.InternalUsageMaterialConsumption0x3003))
+        if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.InternalUsageMaterialConsumption0x3003))
         {
             return IncomeClassificationValueType.E3_595;
         }
 
-        if (ChargeItemCaseTypeOfServiceExt.IsTypeOfService(chargeItem.ftChargeItemCase, ChargeItemCaseTypeOfService.NotOwnSales))
+        if (chargeItem.ftChargeItemCase, ChargeItemCaseTypeOfService.NotOwnSales.IsIsTypeOfService())
         {
             if (receiptRequest.ftReceiptCase.IsType(fiskaltrust.ifPOS.v2.Cases.ReceiptCaseType.Receipt))
             {
@@ -130,7 +130,7 @@ public static class AADEMappings
         {
             if (receiptRequest.HasGreeceCountryCode())
             {
-                return ChargeItemCaseTypeOfServiceExt.TypeOfService(chargeItem.ftChargeItemCase) switch
+                return chargeItem.ftChargeItemCase.IsTypeOfService() switch
                 {
                     ChargeItemCaseTypeOfService.UnknownService => IncomeClassificationValueType.E3_561_001,
                     ChargeItemCaseTypeOfService.Delivery => IncomeClassificationValueType.E3_561_001,
@@ -149,7 +149,7 @@ public static class AADEMappings
         }
         else if (receiptRequest.ftReceiptCase.IsType(fiskaltrust.ifPOS.v2.Cases.ReceiptCaseType.Receipt))
         {
-            return ChargeItemCaseTypeOfServiceExt.TypeOfService(chargeItem.ftChargeItemCase) switch
+            return chargeItem.ftChargeItemCase.IsTypeOfService() switch
             {
                 ChargeItemCaseTypeOfService.UnknownService => IncomeClassificationValueType.E3_561_003,
                 ChargeItemCaseTypeOfService.Delivery => IncomeClassificationValueType.E3_561_003,
@@ -158,15 +158,15 @@ public static class AADEMappings
             };
         }
 
-        if (ReceiptCaseExt.Case(receiptRequest.ftReceiptCase) == (ReceiptCase) 0x3006) // TODO
+        if (receiptRequest.ftReceiptCase.IsCase() == (ReceiptCase) 0x3006) // TODO
         {
-            return ChargeItemCaseTypeOfServiceExt.TypeOfService(chargeItem.ftChargeItemCase) switch
+            return chargeItem.ftChargeItemCase.IsTypeOfService() switch
             {
                 ChargeItemCaseTypeOfService.UnknownService => IncomeClassificationValueType.E3_561_001,
                 _ => IncomeClassificationValueType.E3_561_007,
             };
         }
-        return ChargeItemCaseTypeOfServiceExt.TypeOfService(chargeItem.ftChargeItemCase) switch
+        return chargeItem.ftChargeItemCase.IsTypeOfService() switch
         {
             ChargeItemCaseTypeOfService.UnknownService => IncomeClassificationValueType.E3_561_003,
             ChargeItemCaseTypeOfService.Delivery => IncomeClassificationValueType.E3_561_003,
@@ -193,17 +193,17 @@ public static class AADEMappings
     /// </summary>
     public static IncomeClassificationCategoryType GetIncomeClassificationCategoryType(ReceiptRequest receiptRequest, ChargeItem chargeItem)
     {
-        if (ReceiptCaseExt.IsCase(receiptRequest.ftReceiptCase, ReceiptCase.InternalUsageMaterialConsumption0x3003))
+        if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.InternalUsageMaterialConsumption0x3003))
         {
             return IncomeClassificationCategoryType.category1_6;
         }
 
-        if (ReceiptCaseExt.Case(receiptRequest.ftReceiptCase) == (ReceiptCase) 0x3005) // TODO
+        if (receiptRequest.ftReceiptCase.IsCase() == (ReceiptCase) 0x3005) // TODO
         {
             return IncomeClassificationCategoryType.category1_5;
         }
 
-        return ChargeItemCaseTypeOfServiceExt.TypeOfService(chargeItem.ftChargeItemCase) switch
+        return chargeItem.ftChargeItemCase.IsTypeOfService() switch
         {
             ChargeItemCaseTypeOfService.UnknownService => IncomeClassificationCategoryType.category1_2,
             ChargeItemCaseTypeOfService.Delivery => IncomeClassificationCategoryType.category1_2,
@@ -217,17 +217,17 @@ public static class AADEMappings
     {
         if (receiptRequest.ftReceiptCase.IsType(fiskaltrust.ifPOS.v2.Cases.ReceiptCaseType.Receipt))
         {
-            if (ReceiptCaseFlagsGRExt.IsFlag(receiptRequest.ftReceiptCase, ReceiptCaseFlags.Refund))
+            if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
             {
                 return InvoiceType.Item114;
             }
 
-            if (ReceiptCaseExt.IsCase(receiptRequest.ftReceiptCase, ReceiptCase.Protocol0x0005))
+            if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Protocol0x0005))
             {
                 return InvoiceType.Item93;
             }
 
-            if (ReceiptCaseExt.IsCase(receiptRequest.ftReceiptCase, ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003))
+            if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003))
             {
                 if (!string.IsNullOrEmpty(receiptRequest.ftReceiptCaseData?.ToString()))
                 {
@@ -257,7 +257,7 @@ public static class AADEMappings
 
         if (receiptRequest.ftReceiptCase.IsType(fiskaltrust.ifPOS.v2.Cases.ReceiptCaseType.Invoice))
         {
-            if (ReceiptCaseFlagsGRExt.IsFlag(receiptRequest.ftReceiptCase, ReceiptCaseFlags.Refund))
+            if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
             {
                 return receiptRequest.cbPreviousReceiptReference is not null ? InvoiceType.Item51 : InvoiceType.Item52;
             }
@@ -314,7 +314,7 @@ public static class AADEMappings
 
         if (receiptRequest.ftReceiptCase.IsType(fiskaltrust.ifPOS.v2.Cases.ReceiptCaseType.Log))
         {
-            switch (ReceiptCaseExt.Case(receiptRequest.ftReceiptCase))
+            switch (receiptRequest.ftReceiptCase.IsCase())
             {
                 //case ReceiptCase.InternalUsageMaterialConsumption0x3003:
                 //    return receiptRequest.HasOnlyServiceItems() ? InvoiceType.Item62 : InvoiceType.Item61;
@@ -329,7 +329,7 @@ public static class AADEMappings
         throw new Exception("Unknown type of receipt " + receiptRequest.ftReceiptCase.ToString("x"));
     }
 
-    public static int GetVATCategory(ChargeItem chargeItem) => fiskaltrust.ifPOS.v2.Cases.ChargeItemCaseExt.Vat(chargeItem.ftChargeItemCase) switch
+    public static int GetVATCategory(ChargeItem chargeItem) => fiskaltrust.ifPOS.v2.Cases.chargeItem.ftChargeItemCase.IsVat() switch
     {
         ChargeItemCase.NormalVatRate => MyDataVatCategory.VatRate24, // Normal 24%
         ChargeItemCase.DiscountedVatRate1 => MyDataVatCategory.VatRate13, // Discounted-1 13&
@@ -342,7 +342,7 @@ public static class AADEMappings
         ChargeItemCase c => throw new Exception($"The VAT type {c} of ChargeItem with the case {chargeItem.ftChargeItemCase} is not supported."),
     };
 
-    public static int GetPaymentType(PayItem payItem) => fiskaltrust.ifPOS.v2.Cases.PayItemCaseExt.Case(payItem.ftPayItemCase) switch
+    public static int GetPaymentType(PayItem payItem) => fiskaltrust.ifPOS.v2.Cases.payItem.ftPayItemCase.IsCase() switch
     {
         PayItemCase.UnknownPaymentType => MyDataPaymentMethods.Cash,
         PayItemCase.CashPayment => MyDataPaymentMethods.Cash,

@@ -27,7 +27,7 @@ public class SignatureTypeTests
 
             var result = signatureType.WithType(signatureTypeCase);
 
-            SignatureTypeESExt.Type(result).Should().Be((SignatureTypeES) ((long) signatureTypeCase & 0xFFFF));
+            result.IsType().Should().Be((SignatureTypeES) ((long) signatureTypeCase & 0xFFFF));
             result.IsType(signatureTypeCase).Should().BeTrue();
         }
     }
@@ -42,7 +42,7 @@ public class SignatureTypeTests
 
             var result = signatureType.WithType(signatureTypeCase);
 
-            SignatureTypeGRExt.Type(result).Should().Be((SignatureTypeGR) ((long) signatureTypeCase & 0xFFFF));
+            result.IsType().Should().Be((SignatureTypeGR) ((long) signatureTypeCase & 0xFFFF));
             result.IsType(signatureTypeCase).Should().BeTrue();
         }
     }
@@ -57,7 +57,7 @@ public class SignatureTypeTests
 
             var result = signatureType.WithType(signatureTypeCase);
 
-            SignatureTypePTExt.Type(result).Should().Be((SignatureTypePT) ((long) signatureTypeCase & 0xFFFF));
+            result.IsType().Should().Be((SignatureTypePT) ((long) signatureTypeCase & 0xFFFF));
             result.IsType(signatureTypeCase).Should().BeTrue();
         }
     }

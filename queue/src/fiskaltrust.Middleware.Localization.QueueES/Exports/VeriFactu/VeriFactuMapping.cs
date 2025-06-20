@@ -75,7 +75,7 @@ public class VeriFactuMapping
             {
                 continue;
             }
-            if (ReceiptCaseFlagsExt.IsFlag(receiptRequest.ftReceiptCase, ReceiptCaseFlags.Void))
+            if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void))
             {
                 if (previousReceiptRequest is null || previousReceiptResponse is null)
                 {
@@ -262,7 +262,7 @@ public class VeriFactuMapping
 
         var previousHash = previousReceiptResponse.ftSignatures.First(x => x.ftSignatureType.IsType(SignatureTypeES.Huella)).Data;
 
-        if (previousReceiptRequest is not null && ReceiptCaseFlagsExt.IsFlag(previousReceiptRequest.ftReceiptCase, ReceiptCaseFlags.Void))
+        if (previousReceiptRequest is not null && previousReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void))
         {
             if (previousReceiptRequest.cbPreviousReceiptReference is null)
             {

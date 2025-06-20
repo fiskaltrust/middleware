@@ -563,7 +563,7 @@ public static class SAFTMapping
 
     private static string GetInvoiceType(ReceiptRequest receiptRequest)
     {
-        if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PointOfSaleReceipt0x0001) && ReceiptCaseFlagsExt.IsFlag(receiptRequest.ftReceiptCase, ReceiptCaseFlags.Refund))
+        if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PointOfSaleReceipt0x0001) && receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
         {
             return "NC";
         }

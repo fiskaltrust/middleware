@@ -20,7 +20,7 @@ public class InvoiceCommandProcessorGR(IGRSSCD sscd, ftQueueGR queueGR, ftSignat
 
     public async Task<ProcessCommandResponse> InvoiceUnknown0x1000Async(ProcessCommandRequest request)
     {
-        if (ReceiptCaseFlagsExt.IsFlag(request.ReceiptRequest.ftReceiptCase, ReceiptCaseFlags.Refund) && request.ReceiptRequest.cbPreviousReceiptReference is not null)
+        if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) && request.ReceiptRequest.cbPreviousReceiptReference is not null)
         {
             var receiptReference = await LoadReceiptReferencesToResponse(request.ReceiptRequest, request.ReceiptResponse);
             var response = await _sscd.ProcessReceiptAsync(new ProcessRequest

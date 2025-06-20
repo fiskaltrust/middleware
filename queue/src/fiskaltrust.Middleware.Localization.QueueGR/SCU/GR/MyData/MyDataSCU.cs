@@ -38,7 +38,7 @@ public class MyDataSCU : IGRSSCD
     {
         var aadFactory = new AADEFactory(_masterDataConfiguration);
         var doc = aadFactory.MapToInvoicesDoc(request.ReceiptRequest, request.ReceiptResponse);
-        if (ReceiptCaseFlagsGRExt.IsFlag(request.ReceiptRequest.ftReceiptCase, ReceiptCaseFlags.LateSigning))
+        if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.LateSigning))
         {
             foreach (var item in doc.invoice)
             {

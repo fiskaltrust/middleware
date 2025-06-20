@@ -19,13 +19,13 @@ public class MyDataAADEValidation
             throw new Exception("The sum of the charge items must be equal to the sum of the pay items.");
         }
 
-        if (fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlagsExt.IsFlag(receiptRequest.ftReceiptCase, fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlags.Void))
+        if (fiskaltrust.ifPOS.v2.Cases.receiptRequest.ftReceiptCase.IsFlag(fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlags.Void))
         {
             throw new Exception("The Voiding of documents is not supported. Please use refund.");
         }
 
-        if (fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlagsGRExt.IsFlag(receiptRequest.ftReceiptCase, (fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlags)fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlagsGR.IsSelfPricingOperation))
-        {        
+        if (fiskaltrust.ifPOS.v2.Cases.receiptRequest.ftReceiptCase.IsFlag((fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlags) fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlagsGR.IsSelfPricingOperation))
+        {
             throw new Exception("SelfPricing is not supported.");
         }
 

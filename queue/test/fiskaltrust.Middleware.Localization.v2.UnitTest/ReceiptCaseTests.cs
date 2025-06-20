@@ -54,7 +54,7 @@ public class ReceiptCaseTests
 
             var result = receiptCase.WithFlag(receiptCaseFlag);
 
-            fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlagsExt.IsFlag(result, receiptCaseFlag).Should().BeTrue();
+            fiskaltrust.ifPOS.v2.Cases.result.IsFlag(receiptCaseFlag).Should().BeTrue();
         }
     }
 

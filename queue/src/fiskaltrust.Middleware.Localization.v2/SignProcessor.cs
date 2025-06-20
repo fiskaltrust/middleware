@@ -47,7 +47,7 @@ public class SignProcessor : ISignProcessor
                 throw new Exception("Provided CashBoxId does not match current CashBoxId");
             }
 
-            if (fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlagsExt.IsFlag(receiptRequest.ftReceiptCase, fiskaltrust.ifPOS.v2.Cases.ReceiptCaseFlags.ReceiptRequested))
+            if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.ReceiptRequested))
             {
                 ReceiptResponse? receiptResponseFound = null;
                 try

@@ -7,7 +7,7 @@ public class ReceiptRequestValidatorPT
 {
     public static void ValidateReceiptOrThrow(ReceiptRequest receiptRequest)
     {
-        if (ReceiptCaseFlagsExt.IsFlag(receiptRequest.ftReceiptCase, ReceiptCaseFlags.Void))
+        if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void))
         {
             throw new Exception("Void is not supported");
         }
