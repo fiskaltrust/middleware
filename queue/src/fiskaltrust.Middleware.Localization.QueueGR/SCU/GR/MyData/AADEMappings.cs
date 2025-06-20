@@ -73,7 +73,7 @@ public static class AADEMappings
     /// </summary>
     public static IncomeClassificationValueType GetIncomeClassificationValueType(ReceiptRequest receiptRequest, ChargeItem chargeItem)
     {
-        if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Protocol0x0005))
+        if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.DeliveryNote0x0005))
         {
             return IncomeClassificationValueType.E3_561_001;
         }
@@ -222,7 +222,7 @@ public static class AADEMappings
                 return InvoiceType.Item114;
             }
 
-            if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Protocol0x0005))
+            if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.DeliveryNote0x0005))
             {
                 return InvoiceType.Item93;
             }

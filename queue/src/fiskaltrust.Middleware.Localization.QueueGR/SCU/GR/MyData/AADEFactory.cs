@@ -144,7 +144,7 @@ public class AADEFactory
             }
         };
 
-        if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Protocol0x0005))
+        if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.DeliveryNote0x0005))
         {
             var result = receiptRequest.GetCustomerOrNull();
             if (result != null)

@@ -63,7 +63,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
         [InlineData(ReceiptCase.PaymentTransfer0x0002)]
         [InlineData(ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003)]
         [InlineData(ReceiptCase.ECommerce0x0004)]
-        [InlineData(ReceiptCase.Protocol0x0005)]
+        [InlineData(ReceiptCase.DeliveryNote0x0005)]
         public async Task ProcessReceiptAsync_ShouldReturnEmptyList(ReceiptCase receiptCase)
         {
             var queue = TestHelpers.CreateQueue();

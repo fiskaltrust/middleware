@@ -62,7 +62,7 @@ public class ReceiptCommandProcessorGR(IGRSSCD sscd, ftQueueGR queueGR, ftSignat
         return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
     }
 
-    public async Task<ProcessCommandResponse> Protocol0x0005Async(ProcessCommandRequest request)
+    public async Task<ProcessCommandResponse> DeliveryNote0x0005Async(ProcessCommandRequest request)
     {
         var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
         {

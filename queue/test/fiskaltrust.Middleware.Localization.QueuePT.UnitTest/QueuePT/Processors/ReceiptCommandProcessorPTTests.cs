@@ -27,7 +27,7 @@ public class ReceiptCommandProcessorPTTests
     [InlineData(ReceiptCase.PaymentTransfer0x0002, Skip = "broken")]
     [InlineData(ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003)]
     [InlineData(ReceiptCase.ECommerce0x0004)]
-    [InlineData(ReceiptCase.Protocol0x0005)]
+    [InlineData(ReceiptCase.DeliveryNote0x0005)]
     public async Task ProcessReceiptAsync_ShouldReturnEmptyList(ReceiptCase receiptCase)
     {
         var receiptRequest = new ReceiptRequest

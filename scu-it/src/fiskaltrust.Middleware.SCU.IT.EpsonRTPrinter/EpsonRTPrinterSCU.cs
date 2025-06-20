@@ -103,20 +103,20 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
                 return await ProcessPerformReprint(request);
             }
 
-            if (receiptCase == (long) ITReceiptCases.ProtocolUnspecified0x3000 &&  ((request.ReceiptRequest.ftReceiptCase & 0x0000_0002_0000_0000) != 0))
+            if (receiptCase == (long)ITReceiptCases.ProtocolUnspecified0x3000 && ((request.ReceiptRequest.ftReceiptCase & 0x0000_0002_0000_0000) != 0))
             {
                 return await ProcessUnspecifiedProtocolReceipt(request);
             }
 
-            if (receiptCase == (long) ITReceiptCases.Protocol0x0005)
+            if (receiptCase == (long)ITReceiptCases.DeliveryNote0x0005)
             {
                 return Helpers.CreateResponse(await PerformProtocolReceiptAsync(request.ReceiptRequest, request.ReceiptResponse));
             }
 
             switch (receiptCase)
             {
-                case (long) ITReceiptCases.UnknownReceipt0x0000:
-                case (long) ITReceiptCases.PointOfSaleReceipt0x0001:
+                case (long)ITReceiptCases.UnknownReceipt0x0000:
+                case (long)ITReceiptCases.PointOfSaleReceipt0x0001:
                     return Helpers.CreateResponse(await PerformClassicReceiptAsync(request.ReceiptRequest, request.ReceiptResponse));
             }
             request.ReceiptResponse.SetReceiptResponseErrored($"The given receiptcase 0x{receiptCase.ToString("X")} is not supported by Epson RT Printer.");
@@ -460,7 +460,7 @@ public sealed class EpsonRTPrinterSCU : LegacySCU
         var content = EpsonCommandFactory.CreateRefundRequestContent(_configuration, request.ReceiptRequest, long.Parse(referenceDocNumber), long.Parse(referenceZNumber), DateTime.Parse(referenceDateTime), _serialnr);
         try
         {
-           var data = SoapSerializer.Serialize(content);
+            var data = SoapSerializer.Serialize(content);
             _logger.LogDebug("Request content ({receiptreference}): {content}", request.ReceiptRequest.cbReceiptReference, SoapSerializer.Serialize(data));
             var response = await _httpClient.SendCommandAsync(data);
 

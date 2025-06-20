@@ -575,7 +575,7 @@ public static class SAFTMapping
             ReceiptCase.PaymentTransfer0x0002 => "FS",
             ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003 => "FS",
             ReceiptCase.ECommerce0x0004 => "FS",
-            ReceiptCase.Protocol0x0005 => "FS", // no invoicetype.. workign document?
+            ReceiptCase.DeliveryNote0x0005 => "FS", // no invoicetype.. workign document?
             ReceiptCase.InvoiceUnknown0x1000 => "FT",
             ReceiptCase.InvoiceB2C0x1001 => "FT",
             ReceiptCase.InvoiceB2B0x1002 => "FT",

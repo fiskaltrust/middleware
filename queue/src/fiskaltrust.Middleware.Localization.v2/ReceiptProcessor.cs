@@ -68,7 +68,7 @@ public class ReceiptProcessor : IReceiptProcessor
                     ReceiptCase.PaymentTransfer0x0002 => await _receiptCommandProcessor.PaymentTransfer0x0002Async(processCommandRequest),
                     ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003 => await _receiptCommandProcessor.PointOfSaleReceiptWithoutObligation0x0003Async(processCommandRequest),
                     ReceiptCase.ECommerce0x0004 => await _receiptCommandProcessor.ECommerce0x0004Async(processCommandRequest),
-                    ReceiptCase.Protocol0x0005 => await _receiptCommandProcessor.Protocol0x0005Async(processCommandRequest),
+                    ReceiptCase.DeliveryNote0x0005 => await _receiptCommandProcessor.DeliveryNote0x0005Async(processCommandRequest),
                     _ => null
                 };
             }
