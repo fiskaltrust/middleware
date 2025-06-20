@@ -59,7 +59,7 @@ public class LifecycleCommandProcessorPTTests
 
         var receiptRequest = new ReceiptRequest
         {
-            ftReceiptCase = (ReceiptCase) (-1)
+            ftReceiptCase = (ReceiptCase) 0
         };
         var receiptResponse = new ReceiptResponse
         {
