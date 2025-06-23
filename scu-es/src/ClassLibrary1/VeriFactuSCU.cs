@@ -3,8 +3,6 @@ using System.ServiceModel;
 using System.Text;
 using System.Text.Json;
 using System.Xml;
-
-using fiskaltrust.Middleware.SCU.ES.Helpers;
 using fiskaltrust.Middleware.SCU.ES.Soap;
 using fiskaltrust.storage.V0.MasterData;
 using fiskaltrust.Middleware.SCU.ES.VeriFactu.Mapping;
@@ -13,9 +11,9 @@ using fiskaltrust.Middleware.SCU.ES.VerifactuSCU;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v1.es;
+using fiskaltrust.Middleware.SCU.ES.VeriFactu.Helpers;
 
-namespace fiskaltrust.Middleware.Localization.QueueES.ESSSCD;
-
+namespace fiskaltrust.Middleware.SCU.ES.Verifactu;
 public class VeriFactuSCU : IESSSCD
 {
     private readonly VeriFactuSCUConfiguration _configuration;

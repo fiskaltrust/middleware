@@ -1,6 +1,6 @@
-using System.Globalization;
+﻿using System.Globalization;
 
-namespace fiskaltrust.Middleware.Localization.QueueES.Helpers;
+namespace fiskaltrust.Middleware.SCU.ES.VeriFactu.Helpers;
 
 public static class DecimalHelpers
 {

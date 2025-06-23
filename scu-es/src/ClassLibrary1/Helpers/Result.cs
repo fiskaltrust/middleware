@@ -1,6 +1,6 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 
-namespace fiskaltrust.Middleware.SCU.ES.Helpers;
+namespace fiskaltrust.Middleware.SCU.ES.VeriFactu.Helpers;
 
 public record Result<T, E>
 {

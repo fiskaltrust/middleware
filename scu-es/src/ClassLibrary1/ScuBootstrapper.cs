@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using fiskaltrust.ifPOS.v1.es;
 using fiskaltrust.Middleware.Abstractions;
-using fiskaltrust.Middleware.SCU.ES.VerifactuSCU;
+using fiskaltrust.Middleware.SCU.ES.Verifactu;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace fiskaltrust.Middleware.SCU.ES.TicketBAI;
