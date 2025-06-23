@@ -1,5 +1,4 @@
-using System.Xml.Serialization;
-using fiskaltrust.Middleware.SCU.ES.Helpers;
+﻿using System.Xml.Serialization;
 
 namespace fiskaltrust.Middleware.SCU.ES.Soap;
 

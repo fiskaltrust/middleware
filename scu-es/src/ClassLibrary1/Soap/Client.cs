@@ -5,10 +5,9 @@ using System.Text;
 using System.Xml;
 using System.Xml.Linq;
 using System.Xml.Serialization;
-using fiskaltrust.Middleware.SCU.ES.Helpers;
+using fiskaltrust.Middleware.SCU.ES.Models;
 using fiskaltrust.Middleware.SCU.ES.VeriFactu.Helpers;
 using fiskaltrust.Middleware.SCU.ES.VeriFactu.Mapping;
-using fiskaltrust.Middleware.SCU.ES.VeriFactu.Mapping.Models;
 
 namespace fiskaltrust.Middleware.SCU.ES.Soap;
 

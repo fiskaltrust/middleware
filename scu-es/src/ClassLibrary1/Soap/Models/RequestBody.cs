@@ -1,5 +1,5 @@
 ﻿using System.Xml.Serialization;
-using fiskaltrust.Middleware.SCU.ES.VeriFactu.Mapping.Models;
+using fiskaltrust.Middleware.SCU.ES.Models;
 
 namespace fiskaltrust.Middleware.SCU.ES.Soap;
 
