@@ -6,12 +6,13 @@ using System.Xml;
 using fiskaltrust.Middleware.SCU.ES.Soap;
 using fiskaltrust.storage.V0.MasterData;
 using fiskaltrust.Middleware.SCU.ES.VeriFactu.Mapping;
-using fiskaltrust.Middleware.SCU.ES.VeriFactu.Mapping.Models;
-using fiskaltrust.Middleware.SCU.ES.VerifactuSCU;
+using fiskaltrust.Middleware.SCU.ES.VeriFactu.Helpers;
+using fiskaltrust.ifPOS.v2.es;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
-using fiskaltrust.ifPOS.v1.es;
-using fiskaltrust.Middleware.SCU.ES.VeriFactu.Helpers;
+using fiskaltrust.ifPOS.v2.es.Cases;
+using fiskaltrust.Middleware.SCU.ES.Models;
+using fiskaltrust.Middleware.SCU.ES.VeriFactu.Factories;
 
 namespace fiskaltrust.Middleware.SCU.ES.Verifactu;
 public class VeriFactuSCU : IESSSCD
@@ -20,7 +21,7 @@ public class VeriFactuSCU : IESSSCD
 
     private readonly VeriFactuMapping _veriFactuMapping;
 
-    public VeriFactuSCU(ftSignaturCreationUnitES _, MasterDataConfiguration masterData, VeriFactuSCUConfiguration configuration, IMiddlewareQueueItemRepository queueItemRepository)
+    public VeriFactuSCU(MasterDataConfiguration masterData, VeriFactuSCUConfiguration configuration, IMiddlewareQueueItemRepository queueItemRepository)
     {
         _configuration = configuration;
         _veriFactuMapping = new VeriFactuMapping(masterData, queueItemRepository, configuration.Certificate);
