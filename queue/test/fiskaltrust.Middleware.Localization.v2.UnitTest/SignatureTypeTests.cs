@@ -27,7 +27,7 @@ public class SignatureTypeTests
 
             var result = signatureType.WithType(signatureTypeCase);
 
-            result.IsType().Should().Be((SignatureTypeES) ((long) signatureTypeCase & 0xFFFF));
+            SignatureTypeESExt.Type(result).Should().Be((SignatureTypeES) ((long) signatureTypeCase & 0xFFFF));
             result.IsType(signatureTypeCase).Should().BeTrue();
         }
     }
@@ -42,7 +42,7 @@ public class SignatureTypeTests
 
             var result = signatureType.WithType(signatureTypeCase);
 
-            result.IsType().Should().Be((SignatureTypeGR) ((long) signatureTypeCase & 0xFFFF));
+            SignatureTypeGRExt.Type(result).Should().Be((SignatureTypeGR) ((long) signatureTypeCase & 0xFFFF));
             result.IsType(signatureTypeCase).Should().BeTrue();
         }
     }
@@ -57,7 +57,7 @@ public class SignatureTypeTests
 
             var result = signatureType.WithType(signatureTypeCase);
 
-            result.IsType().Should().Be((SignatureTypePT) ((long) signatureTypeCase & 0xFFFF));
+            SignatureTypePTExt.Type(result).Should().Be((SignatureTypePT) ((long) signatureTypeCase & 0xFFFF));
             result.IsType(signatureTypeCase).Should().BeTrue();
         }
     }
@@ -106,7 +106,7 @@ public class SignatureTypeTests
     [Fact]
     public void FuzzTest_WithCountry()
     {
-        foreach (var (country, code) in new List<(string, long)> {
+        foreach (var (country, code) in new List<(string, ulong)> {
             ("AT", 0x4154),
             ("DE", 0x4445),
             ("FR", 0x4652),

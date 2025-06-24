@@ -73,7 +73,7 @@ public class PayItemCaseTests
     [Fact]
     public void FuzzTest_WithCountry()
     {
-        foreach (var (country, code) in new List<(string, long)> {
+        foreach (var (country, code) in new List<(string, ulong)> {
             ("AT", 0x4154),
             ("DE", 0x4445),
             ("FR", 0x4652),
