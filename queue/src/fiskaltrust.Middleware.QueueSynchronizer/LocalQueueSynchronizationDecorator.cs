@@ -75,12 +75,12 @@ namespace fiskaltrust.Middleware.QueueSynchronizer
 #else
     using System.Threading;
     using System.Threading.Tasks.Dataflow;
-
+    using System.Diagnostics;
     public sealed class LocalQueueSynchronizationDecorator : ISignProcessor, IDisposable
     {
         private readonly ISignProcessor _signProcessor;
         private readonly ILogger<LocalQueueSynchronizationDecorator> _logger;
-        private readonly ActionBlock<(ReceiptRequest request, TaskCompletionSource<ReceiptResponse> tcs)> _processor;
+        private readonly ActionBlock<(ReceiptRequest request, Activity activity, TaskCompletionSource<ReceiptResponse> tcs)> _processor;
         private volatile bool _disposed = false;
 
         public LocalQueueSynchronizationDecorator(ISignProcessor signProcessor, ILogger<LocalQueueSynchronizationDecorator> logger)
@@ -88,19 +88,26 @@ namespace fiskaltrust.Middleware.QueueSynchronizer
             _signProcessor = signProcessor;
             _logger = logger;
 
-            _processor = new(async task => {
+            _processor = new(async task =>
+            {
+                var currentActivity = Activity.Current;
                 try
                 {
-                    if(_disposed) {
+                    if (_disposed)
+                    {
                         throw new ObjectDisposedException(nameof(ISignProcessor), "Queue has already been disposed.");
                     }
+                    Activity.Current = task.activity;
                     var response = await _signProcessor.ProcessAsync(task.request).ConfigureAwait(false);
-
                     task.tcs.SetResult(response);
                 }
                 catch (Exception ex)
                 {
                     task.tcs.SetException(ex);
+                }
+                finally
+                {
+                    System.Diagnostics.Activity.Current = currentActivity;
                 }
             },
             new ExecutionDataflowBlockOptions
@@ -109,12 +116,12 @@ namespace fiskaltrust.Middleware.QueueSynchronizer
             });
         }
 
-    public Task<ReceiptResponse> ProcessAsync(ReceiptRequest request)
-    {
-        var tcs = new TaskCompletionSource<ReceiptResponse>();
-        _processor.Post((request, tcs));
-        return tcs.Task;
-    }
+        public Task<ReceiptResponse> ProcessAsync(ReceiptRequest request)
+        {
+            var tcs = new TaskCompletionSource<ReceiptResponse>();
+            _processor.Post((request, Activity.Current, tcs));
+            return tcs.Task;
+        }
 
         public void Dispose()
         {
