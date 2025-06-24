@@ -110,7 +110,7 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignat
     {
         if (request.cbPreviousReceiptReference?.IsGroup ?? false)
         {
-            throw new NotSupportedException("Groping of invoices is not supported yet.");
+            throw new NotSupportedException("Grouping of invoices is not supported yet.");
         }
         var queueItems = _readOnlyQueueItemRepository.GetByReceiptReferenceAsync(request.cbPreviousReceiptReference?.SingleValue, request.cbTerminalID);
         await foreach (var existingQueueItem in queueItems)
