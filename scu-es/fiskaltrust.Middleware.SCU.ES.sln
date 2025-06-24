@@ -11,7 +11,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.SCU.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.SCU.ES.TicketBAI", "src\fiskaltrust.Middleware.SCU.ES.TicketBAI\fiskaltrust.Middleware.SCU.ES.TicketBAI.csproj", "{3F25D98C-93D7-4D1F-8A4A-5DCEA1EC8D95}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fiskaltrust.Middleware.SCU.ES.VeriFactu", "src\ClassLibrary1\fiskaltrust.Middleware.SCU.ES.VeriFactu.csproj", "{1BABBCE2-46FA-87E2-2A57-F68F1535AB64}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fiskaltrust.Middleware.SCU.ES.VeriFactu", "src\fiskaltrust.Middleware.SCU.ES.VeriFactu\fiskaltrust.Middleware.SCU.ES.VeriFactu.csproj", "{1BABBCE2-46FA-87E2-2A57-F68F1535AB64}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
