@@ -52,8 +52,7 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
                     Certificate = new X509Certificate2(
                         Convert.FromBase64String(scuConfiguration.Configuration!["certificate"].ToString()!),
                         scuConfiguration.Configuration!["certificatePassword"].ToString())
-                },
-                storageProvider.GetMiddlewareQueueItemRepository());
+                });
         }
         else if (scuConfiguration.Package == "fiskaltrust.Middleware.SCU.ES.TicketBAI")
         {

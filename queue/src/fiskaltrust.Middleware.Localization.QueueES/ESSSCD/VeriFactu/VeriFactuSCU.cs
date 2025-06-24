@@ -37,10 +37,10 @@ public class VeriFactuSCU : IESSSCD
 
     private readonly VeriFactuMapping _veriFactuMapping;
 
-    public VeriFactuSCU(ftSignaturCreationUnitES _, MasterDataConfiguration masterData, VeriFactuSCUConfiguration configuration, IMiddlewareQueueItemRepository queueItemRepository)
+    public VeriFactuSCU(ftSignaturCreationUnitES _, MasterDataConfiguration masterData, VeriFactuSCUConfiguration configuration)
     {
         _configuration = configuration;
-        _veriFactuMapping = new VeriFactuMapping(masterData, queueItemRepository, configuration.Certificate);
+        _veriFactuMapping = new VeriFactuMapping(masterData, configuration.Certificate);
     }
 
     public async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request)
@@ -56,7 +56,12 @@ public class VeriFactuSCU : IESSSCD
                 throw new Exception("There needs to be a previous receipt in the chain to perform a void");
             }
 
-            var journalES = await _veriFactuMapping.CreateRegistroFacturacionAnulacionAsync(request.ReceiptRequest, request.ReceiptResponse, request.PreviousReceiptRequest, request.PreviousReceiptResponse);
+            if (request.ReferencedReceiptRequest is null || request.ReferencedReceiptResponse is null)
+            {
+                throw new Exception("There needs to be a referenced receipt to perform a void");
+            }
+
+            var journalES = _veriFactuMapping.CreateRegistroFacturacionAnulacion(request.ReceiptRequest, request.ReceiptResponse, request.PreviousReceiptResponse, request.ReferencedReceiptRequest, request.ReferencedReceiptResponse);
 
             var envelope = new Envelope<RequestBody>
             {
@@ -76,7 +81,7 @@ public class VeriFactuSCU : IESSSCD
         }
         else
         {
-            var journalES = await _veriFactuMapping.CreateRegistroFacturacionAltaAsync(request.ReceiptRequest, request.ReceiptResponse, request.PreviousReceiptRequest, request.PreviousReceiptResponse);
+            var journalES = _veriFactuMapping.CreateRegistroFacturacionAlta(request.ReceiptRequest, request.ReceiptResponse, request.PreviousReceiptRequest, request.PreviousReceiptResponse);
 
             var envelope = new Envelope<RequestBody>
             {

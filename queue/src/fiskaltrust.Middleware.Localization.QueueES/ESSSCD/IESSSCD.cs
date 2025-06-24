@@ -18,6 +18,8 @@ public class ProcessRequest
     public required ReceiptResponse ReceiptResponse { get; set; }
     public required ReceiptRequest? PreviousReceiptRequest { get; set; }
     public required ReceiptResponse? PreviousReceiptResponse { get; set; }
+    public required ReceiptRequest? ReferencedReceiptRequest { get; set; }
+    public required ReceiptResponse? ReferencedReceiptResponse { get; set; }
 }
 
 public class ProcessResponse

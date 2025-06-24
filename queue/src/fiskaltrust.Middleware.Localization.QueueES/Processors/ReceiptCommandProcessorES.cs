@@ -6,15 +6,16 @@ using fiskaltrust.storage.V0;
 using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
 using System.Text.Json;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
+using fiskaltrust.Middleware.Contracts.Repositories;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.Processors;
 
-public class ReceiptCommandProcessorES(IESSSCD sscd, Storage.IConfigurationRepository configurationRepository, IReadOnlyQueueItemRepository queueItemRepository) : IReceiptCommandProcessor
+public class ReceiptCommandProcessorES(IESSSCD sscd, Storage.IConfigurationRepository configurationRepository, IMiddlewareQueueItemRepository queueItemRepository) : IReceiptCommandProcessor
 {
 #pragma warning disable
     private readonly IESSSCD _sscd = sscd;
     private readonly Storage.IConfigurationRepository _configurationRepository = configurationRepository;
-    private readonly IReadOnlyQueueItemRepository _queueItemRepository = queueItemRepository;
+    private readonly IMiddlewareQueueItemRepository _queueItemRepository = queueItemRepository;
 #pragma warning restore
 
     public async Task<ProcessCommandResponse> UnknownReceipt0x0000Async(ProcessCommandRequest request) => await PointOfSaleReceipt0x0001Async(request);
@@ -37,12 +38,20 @@ public class ReceiptCommandProcessorES(IESSSCD sscd, Storage.IConfigurationRepos
             }
         }
 
+        ftQueueItem? referencedQueueItem = null;
+        if (!string.IsNullOrEmpty(request.ReceiptRequest.cbPreviousReceiptReference))
+        {
+            referencedQueueItem = await queueItemRepository.GetByReceiptReferenceAsync(request.ReceiptRequest.cbPreviousReceiptReference).SingleOrDefaultAsync() ?? throw new Exception($"Referenced queue item with cbPreviousReceiptReference {request.ReceiptRequest.cbPreviousReceiptReference} not found.");
+        }
+
         var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
         {
             ReceiptRequest = request.ReceiptRequest,
             ReceiptResponse = request.ReceiptResponse,
             PreviousReceiptRequest = previousQueueItem is null ? null : JsonSerializer.Deserialize<ReceiptRequest>(previousQueueItem.request)!, // handle null case?
             PreviousReceiptResponse = previousQueueItem is null ? null : JsonSerializer.Deserialize<ReceiptResponse>(previousQueueItem.response)!,
+            ReferencedReceiptRequest = referencedQueueItem is null ? null : JsonSerializer.Deserialize<ReceiptRequest>(referencedQueueItem.request)!, // handle null case?
+            ReferencedReceiptResponse = referencedQueueItem is null ? null : JsonSerializer.Deserialize<ReceiptResponse>(referencedQueueItem.response)!,
         });
 
         queueES.SSCDSignQueueItemId = response.ReceiptResponse.ftQueueItemID;

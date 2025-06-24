@@ -21,12 +21,12 @@ public class JournalProcessorES : IJournalProcessor
     {
         _receiptJournalRepository = receiptJournalRepository;
         _queueItemRepository = queueItemRepository;
-        _veriFactuMapping = new VeriFactuMapping(masterData, queueItemRepository);
+        _veriFactuMapping = new VeriFactuMapping(masterData);
     }
 
     public async IAsyncEnumerable<JournalResponse> ProcessAsync(JournalRequest request)
     {
-        var veriFactu = await _veriFactuMapping.CreateRegFactuSistemaFacturacionAsync(_receiptJournalRepository.GetEntriesOnOrAfterTimeStampAsync(0).SelectAwait(async x => await _queueItemRepository.GetAsync(x.ftQueueItemId)));
+        var veriFactu = await _veriFactuMapping.CreateRegFactuSistemaFacturacionAsync(_receiptJournalRepository.GetEntriesOnOrAfterTimeStampAsync(0).SelectAwait(async x => await _queueItemRepository.GetAsync(x.ftQueueItemId)), _queueItemRepository);
         yield return new JournalResponse
         {
             Chunk = Encoding.UTF8.GetBytes(veriFactu.XmlSerialize()).ToList()
