@@ -73,8 +73,10 @@ namespace fiskaltrust.Middleware.Queue
 
                 var response = await InternalSign(queue, request).ConfigureAwait(false);
 
+#if NET6_0_OR_GREATER
                 System.Diagnostics.Activity.Current?.AddTag("queue.ReceiptResponse.ftState", $"0x{response.ftState:X}");
                 System.Diagnostics.Activity.Current?.AddTag("queue.id", queue.ftQueueId);
+#endif
 
                 return response;
             }

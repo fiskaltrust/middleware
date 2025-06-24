@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
@@ -75,7 +76,6 @@ namespace fiskaltrust.Middleware.QueueSynchronizer
 #else
     using System.Threading;
     using System.Threading.Tasks.Dataflow;
-    using System.Diagnostics;
     public sealed class LocalQueueSynchronizationDecorator : ISignProcessor, IDisposable
     {
         private readonly ISignProcessor _signProcessor;
