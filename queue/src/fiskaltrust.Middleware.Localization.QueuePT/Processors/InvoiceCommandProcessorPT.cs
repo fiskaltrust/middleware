@@ -102,7 +102,7 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignat
                 _queuePT.LastHash = hash;
                 return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
             },
-            async _ => throw new NotSupportedException("Groping of invoices is not supported yet.")
+            async _ => throw new NotSupportedException("Grouping of invoices is not supported yet.")
     );
     });
 
