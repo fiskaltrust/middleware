@@ -79,7 +79,7 @@ namespace fiskaltrust.Middleware.SCU.ES.Helpers
                 Signer = new Signer(certificate)
             };
 
-            var byteArray = Encoding.ASCII.GetBytes(xml);
+            var byteArray = Encoding.UTF8.GetBytes(xml);
             var stream = new MemoryStream(byteArray);
             var signedXmlBytes = xadesService.Sign(stream, parameters).GetDocumentBytes();
             return Encoding.UTF8.GetString(signedXmlBytes, 0, signedXmlBytes.Length);
