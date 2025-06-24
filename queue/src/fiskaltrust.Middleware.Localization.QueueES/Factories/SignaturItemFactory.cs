@@ -15,6 +15,7 @@ public static class SignaturItemFactory
         {
             ftSignatureFormat = SignatureFormat.Text,
             ftSignatureType = SignatureTypeES.InitialOperationReceipt.As<SignatureType>().WithFlag(SignatureTypeFlags.ArchivingRequired).WithCategory(SignatureTypeCategory.Information),
+            Caption = $"Initial-operation receipt",
             Data = $"Queue-ID: {queue.ftQueueId}"
         };
     }
