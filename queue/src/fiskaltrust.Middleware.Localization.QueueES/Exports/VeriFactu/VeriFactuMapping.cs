@@ -79,11 +79,8 @@ public class VeriFactuMapping
                 {
                     throw new Exception("cbPreviousReceiptReference is required for voiding a receipt.");
                 }
-                if (!receiptRequest.cbPreviousReceiptReference.IsSingle)
-                {
-                    throw new NotSupportedException("Grouping of receipts is not supported.");
-                }
-                var referencedQueueItem = await queueItemRepository.GetByReceiptReferenceAsync(receiptRequest.cbPreviousReceiptReference.SingleValue).SingleOrDefaultAsync() ?? throw new Exception($"Referenced queue item with cbPreviousReceiptReference {receiptRequest.cbPreviousReceiptReference.SingleValue} not found.");
+
+                var referencedQueueItem = await queueItemRepository.GetByReceiptReferenceAsync(receiptRequest.cbPreviousReceiptReference).SingleOrDefaultAsync() ?? throw new Exception($"Referenced queue item with cbPreviousReceiptReference {receiptRequest.cbPreviousReceiptReference} not found.");
 
                 var referencedReceiptRequest = JsonSerializer.Deserialize<ReceiptRequest>(referencedQueueItem.request)!;
                 var referencedReceiptResponse = JsonSerializer.Deserialize<ReceiptResponse>(referencedQueueItem.response)!;
@@ -114,10 +111,6 @@ public class VeriFactuMapping
         if (receiptRequest.cbPreviousReceiptReference is null)
         {
             throw new Exception("cbPreviousReceiptReference is required for voiding a receipt.");
-        }
-        if (receiptRequest.cbPreviousReceiptReference.IsGroup)
-        {
-            throw new NotSupportedException("Grouping of receipts is not supported.");
         }
 
         var registroFacturacionAnulacion = new RegistroFacturacionAnulacion
