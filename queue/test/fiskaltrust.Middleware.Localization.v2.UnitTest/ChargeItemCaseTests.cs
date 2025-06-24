@@ -62,7 +62,7 @@ public class ChargeItemCaseTests
     [Fact]
     public void FuzzTest_WithCountry()
     {
-        foreach (var (country, code) in new List<(string, long)> {
+        foreach (var (country, code) in new List<(string, ulong)> {
             ("AT", 0x4154),
             ("DE", 0x4445),
             ("FR", 0x4652),
@@ -108,7 +108,7 @@ public class ChargeItemCaseTests
 
             var result = chargeItemCase.WithNatureOfVat(natureOfVat);
 
-            result.IsNatureOfVat().Should().Be(natureOfVat);
+            ChargeItemCaseNatureOfVatESExt.NatureOfVat(result).Should().Be(natureOfVat);
             result.IsNatureOfVat(natureOfVat).Should().BeTrue();
         }
     }
@@ -123,7 +123,7 @@ public class ChargeItemCaseTests
 
             var result = chargeItemCase.WithNatureOfVat(natureOfVat);
 
-            result.IsNatureOfVat().Should().Be(natureOfVat);
+            ChargeItemCaseNatureOfVatGRExt.NatureOfVat(result).Should().Be(natureOfVat);
             result.IsNatureOfVat(natureOfVat).Should().BeTrue();
         }
     }
@@ -138,7 +138,7 @@ public class ChargeItemCaseTests
 
             var result = chargeItemCase.WithNatureOfVat(natureOfVat);
 
-            result.IsNatureOfVat().Should().Be(natureOfVat);
+            ChargeItemCaseNatureOfVatPTExt.NatureOfVat(result).Should().Be(natureOfVat);
             result.IsNatureOfVat(natureOfVat).Should().BeTrue();
         }
     }
