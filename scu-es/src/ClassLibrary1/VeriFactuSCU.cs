@@ -3,27 +3,31 @@ using System.ServiceModel;
 using System.Text;
 using System.Text.Json;
 using System.Xml;
-using fiskaltrust.Middleware.SCU.ES.Soap;
-using fiskaltrust.storage.V0.MasterData;
-using fiskaltrust.Middleware.SCU.ES.VeriFactu.Mapping;
-using fiskaltrust.Middleware.SCU.ES.VeriFactu.Helpers;
-using fiskaltrust.ifPOS.v2.es;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2.es;
 using fiskaltrust.ifPOS.v2.es.Cases;
+using fiskaltrust.Middleware.SCU.ES.Helpers;
 using fiskaltrust.Middleware.SCU.ES.Models;
+using fiskaltrust.Middleware.SCU.ES.Soap;
+using fiskaltrust.Middleware.SCU.ES.VeriFactu;
+using fiskaltrust.Middleware.SCU.ES.VeriFactu.Helpers;
+using fiskaltrust.storage.serialization.V0;
+using fiskaltrust.storage.V0;
+using fiskaltrust.storage.V0.MasterData;
 
-namespace fiskaltrust.Middleware.SCU.ES.Verifactu;
+namespace fiskaltrust.Middleware.SCU.ES.VeriFactu;
+
 public class VeriFactuSCU : IESSSCD
 {
     private readonly VeriFactuSCUConfiguration _configuration;
 
     private readonly VeriFactuMapping _veriFactuMapping;
 
-    public VeriFactuSCU(MasterDataConfiguration masterData, VeriFactuSCUConfiguration configuration, IMiddlewareQueueItemRepository queueItemRepository)
+    public VeriFactuSCU(ftSignaturCreationUnitES _, MasterDataConfiguration masterData, VeriFactuSCUConfiguration configuration)
     {
         _configuration = configuration;
-        _veriFactuMapping = new VeriFactuMapping(masterData, queueItemRepository, configuration.Certificate);
+        _veriFactuMapping = new VeriFactuMapping(masterData, configuration.Certificate);
     }
 
     public async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request)
@@ -39,7 +43,12 @@ public class VeriFactuSCU : IESSSCD
                 throw new Exception("There needs to be a previous receipt in the chain to perform a void");
             }
 
-            var journalES = await _veriFactuMapping.CreateRegistroFacturacionAnulacionAsync(request.ReceiptRequest, request.ReceiptResponse, request.PreviousReceiptRequest, request.PreviousReceiptResponse);
+            if (request.ReferencedReceiptRequest is null || request.ReferencedReceiptResponse is null)
+            {
+                throw new Exception("There needs to be a referenced receipt to perform a void");
+            }
+
+            var journalES = _veriFactuMapping.CreateRegistroFacturacionAnulacion(request.ReceiptRequest, request.ReceiptResponse, request.PreviousReceiptResponse, request.ReferencedReceiptRequest, request.ReferencedReceiptResponse);
 
             var envelope = new Envelope<RequestBody>
             {
@@ -59,7 +68,7 @@ public class VeriFactuSCU : IESSSCD
         }
         else
         {
-            var journalES = await _veriFactuMapping.CreateRegistroFacturacionAltaAsync(request.ReceiptRequest, request.ReceiptResponse, request.PreviousReceiptRequest, request.PreviousReceiptResponse);
+            var journalES = _veriFactuMapping.CreateRegistroFacturacionAlta(request.ReceiptRequest, request.ReceiptResponse, request.PreviousReceiptRequest, request.PreviousReceiptResponse);
 
             var envelope = new Envelope<RequestBody>
             {

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 
-namespace fiskaltrust.Middleware.SCU.ES.Verifactu
+namespace fiskaltrust.Middleware.SCU.ES.VeriFactu
 {
     public class VeriFactuSCUConfiguration
     {

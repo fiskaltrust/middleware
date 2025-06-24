@@ -2,10 +2,9 @@
 using System.Collections.Generic;
 using fiskaltrust.ifPOS.v2.es;
 using fiskaltrust.Middleware.Abstractions;
-using fiskaltrust.Middleware.SCU.ES.Verifactu;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace fiskaltrust.Middleware.SCU.ES.TicketBAI;
+namespace fiskaltrust.Middleware.SCU.ES.VeriFactu;
 
 public class ScuBootstrapper : IMiddlewareBootstrapper
 {
