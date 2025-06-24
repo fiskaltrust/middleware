@@ -20,16 +20,20 @@ public class Client : IClient
 {
     private HttpClient _httpClient { get; }
 
-    public Client(Uri uri, X509Certificate2 certificate)
+    public Client(HttpClient httpClient)
     {
-        var requestHandler = new HttpClientHandler();
-        requestHandler.ClientCertificates.Add(certificate);
-        _httpClient = new HttpClient(requestHandler)
-        {
-            BaseAddress = uri,
-        };
-        _httpClient.DefaultRequestHeaders.Add("AcceptCharset", "utf-8");
+        _httpClient = httpClient;
     }
+    //public Client(Uri uri, X509Certificate2 certificate)
+    //{
+    //    var requestHandler = new HttpClientHandler();
+    //    requestHandler.ClientCertificates.Add(certificate);
+    //    _httpClient = new HttpClient(requestHandler)
+    //    {
+    //        BaseAddress = uri,
+    //    };
+    //    _httpClient.DefaultRequestHeaders.Add("AcceptCharset", "utf-8");
+    //}
 
     public async Task<Result<RespuestaRegFactuSistemaFacturacion, Error>> SendAsync(Envelope<RequestBody> envelope)
     {

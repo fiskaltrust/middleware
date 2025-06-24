@@ -1,4 +1,5 @@
-﻿using System.Security.Cryptography.X509Certificates;
+﻿using System.Net.Http;
+using System.Security.Cryptography.X509Certificates;
 using System.ServiceModel;
 using System.Text;
 using System.Text.Json;
@@ -21,13 +22,14 @@ namespace fiskaltrust.Middleware.SCU.ES.VeriFactu;
 public class VeriFactuSCU : IESSSCD
 {
     private readonly VeriFactuSCUConfiguration _configuration;
-
+    private readonly IClient _client;
     private readonly VeriFactuMapping _veriFactuMapping;
 
-    public VeriFactuSCU(ftSignaturCreationUnitES _, MasterDataConfiguration masterData, VeriFactuSCUConfiguration configuration)
+    public VeriFactuSCU(IClient client, MasterDataConfiguration masterData, VeriFactuSCUConfiguration configuration)
     {
         _configuration = configuration;
         _veriFactuMapping = new VeriFactuMapping(masterData, configuration.Certificate);
+        _client = client;
     }
 
     public async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request)
@@ -59,7 +61,7 @@ public class VeriFactuSCU : IESSSCD
             };
 
             receiptResponse = CreateResponse(
-                await new Client(new Uri(_configuration.BaseUrl), _configuration.Certificate).SendAsync(envelope),
+                await _client.SendAsync(envelope),
                 request,
                 journalES.IDFactura.NumSerieFacturaAnulada,
                 journalES.Huella,
@@ -79,7 +81,7 @@ public class VeriFactuSCU : IESSSCD
             };
 
             receiptResponse = CreateResponse(
-                await new Client(new Uri(_configuration.BaseUrl), _configuration.Certificate).SendAsync(envelope),
+                await _client.SendAsync(envelope),
                 request,
                 journalES.IDFactura.NumSerieFactura,
                 journalES.Huella,
