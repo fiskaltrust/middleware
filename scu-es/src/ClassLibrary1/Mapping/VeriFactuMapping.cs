@@ -52,60 +52,6 @@ public class VeriFactuMapping
         };
     }
 
-    public async Task<RegFactuSistemaFacturacion> CreateRegFactuSistemaFacturacionAsync(IAsyncEnumerable<ftQueueItem> queueItems, IMiddlewareQueueItemRepository queueItemRepository)
-    {
-        var registroFactura = new List<RegistroFactura>();
-        ReceiptRequest? previousReceiptRequest = null;
-        ReceiptResponse? previousReceiptResponse = null;
-
-        await foreach (var queueItem in queueItems)
-        {
-            var receiptRequest = JsonSerializer.Deserialize<ReceiptRequest>(queueItem.request)!;
-            var receiptResponse = JsonSerializer.Deserialize<ReceiptResponse>(queueItem.response)!;
-            if (!(receiptResponse.ftSignatures.Any(x => x.ftSignatureType.IsType(SignatureTypeES.Huella)) && receiptResponse.ftSignatures.Any(x => x.ftSignatureType.IsType(SignatureTypeES.Url))))
-            {
-                continue;
-            }
-            if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void))
-            {
-                if (previousReceiptRequest is null || previousReceiptResponse is null)
-                {
-                    throw new Exception("There needs to be a previous receipt in the chain to perform a void");
-                }
-                if (receiptRequest.cbPreviousReceiptReference is null)
-                {
-                    throw new Exception("cbPreviousReceiptReference is required for voiding a receipt.");
-                }
-                if (!receiptRequest.cbPreviousReceiptReference.IsSingle)
-                {
-                    throw new NotSupportedException("Grouping of receipts is not supported.");
-                }
-                var referencedQueueItem = await queueItemRepository.GetByReceiptReferenceAsync(receiptRequest.cbPreviousReceiptReference.SingleValue).SingleOrDefaultAsync() ?? throw new Exception($"Referenced queue item with cbPreviousReceiptReference {receiptRequest.cbPreviousReceiptReference.SingleValue} not found.");
-
-                var referencedReceiptRequest = JsonSerializer.Deserialize<ReceiptRequest>(referencedQueueItem.request)!;
-                var referencedReceiptResponse = JsonSerializer.Deserialize<ReceiptResponse>(referencedQueueItem.response)!;
-                registroFactura.Add(
-                    new RegistroFactura
-                    {
-                        Item = CreateRegistroFacturacionAnulacion(receiptRequest, receiptResponse, previousReceiptResponse, referencedReceiptRequest, referencedReceiptResponse)
-                    });
-            }
-            else
-            {
-                registroFactura.Add(
-                    new RegistroFactura
-                    {
-                        Item = CreateRegistroFacturacionAlta(receiptRequest, receiptResponse, previousReceiptRequest, previousReceiptResponse)
-                    });
-            }
-
-            previousReceiptRequest = receiptRequest;
-            previousReceiptResponse = receiptResponse;
-        }
-
-        return CreateRegFactuSistemaFacturacion(registroFactura);
-    }
-
     public RegistroFacturacionAnulacion CreateRegistroFacturacionAnulacion(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, ReceiptResponse previousReceiptResponse, ReceiptRequest referencedReceiptRequest, ReceiptResponse referencedReceiptResponse)
     {
         if (receiptRequest.cbPreviousReceiptReference is null)
