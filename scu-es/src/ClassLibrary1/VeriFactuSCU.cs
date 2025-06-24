@@ -12,7 +12,6 @@ using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.es.Cases;
 using fiskaltrust.Middleware.SCU.ES.Models;
-using fiskaltrust.Middleware.SCU.ES.VeriFactu.Factories;
 
 namespace fiskaltrust.Middleware.SCU.ES.Verifactu;
 public class VeriFactuSCU : IESSSCD
@@ -76,7 +75,7 @@ public class VeriFactuSCU : IESSSCD
                 journalES.IDFactura.NumSerieFactura,
                 journalES.Huella,
                 journalES.IDFactura.IDEmisorFactura,
-                SignaturItemFactory.CreateVeriFactuQRCode(_configuration.QRCodeBaseUrl + "/wlpl/TIKE-CONT/ValidarQR", journalES)
+                SignaturItemHelper.CreateVeriFactuQRCode(_configuration.QRCodeBaseUrl + "/wlpl/TIKE-CONT/ValidarQR", journalES)
             );
         }
 

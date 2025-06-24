@@ -6,14 +6,15 @@ using System.Text.RegularExpressions;
 using System.Web;
 using System.Xml;
 using System.Xml.Serialization;
-using fiskaltrust.Middleware.SCU.ES.Helpers;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
-using Microsoft.VisualBasic;
-using Version = fiskaltrust.Middleware.SCU.ES.VeriFactu.Mapping.Models.Version;
-using fiskaltrust.Middleware.SCU.ES.VeriFactu.Mapping.Models;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.SCU.ES.Models;
+using fiskaltrust.ifPOS.v2.es.Cases;
+using fiskaltrust.Middleware.SCU.ES.Helpers;
+using fiskaltrust.Middleware.SCU.ES.VeriFactu.Helpers;
+using Version = fiskaltrust.Middleware.SCU.ES.Models.Version;
 
 namespace fiskaltrust.Middleware.SCU.ES.VeriFactu.Mapping;
 
