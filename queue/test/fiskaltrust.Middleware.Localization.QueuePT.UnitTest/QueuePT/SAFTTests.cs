@@ -4,10 +4,10 @@ using System.Text;
 using System.Text.Json;
 using System.Xml;
 using System.Xml.Serialization;
-using fiskaltrust.Api.POS.Models.ifPOS.v2;
+using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueuePT.Exports.SAFTPT;
 using fiskaltrust.Middleware.Localization.QueuePT.UnitTest.Certification;
-using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.SAFT.CLI.SAFTSchemaPT10401;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
@@ -40,7 +40,7 @@ public class SAFTTests
     [Fact]
     public void AuditFile_TaxTable_ShouldBeEmptys()
     {
-        var data = SAFTMapping.CreateAuditFile(new storage.V0.MasterData.AccountMasterData
+        var data = SAFTMapping.CreateAuditFile(new storage.V0.MasterData.AccountMasterData  
         {
             TaxId = "999"
         }, [], 0);

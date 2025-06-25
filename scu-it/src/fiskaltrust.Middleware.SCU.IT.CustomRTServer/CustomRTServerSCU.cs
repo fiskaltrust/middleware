@@ -115,10 +115,10 @@ public sealed class CustomRTServerSCU : LegacySCU
 
             switch (receiptCase)
             {
-                case (long) ITReceiptCases.UnknownReceipt0x0000:
-                case (long) ITReceiptCases.PointOfSaleReceipt0x0001:
-                case (long) ITReceiptCases.PaymentTransfer0x0002:
-                case (long) ITReceiptCases.Protocol0x0005:
+                case (long)ITReceiptCases.UnknownReceipt0x0000:
+                case (long)ITReceiptCases.PointOfSaleReceipt0x0001:
+                case (long)ITReceiptCases.PaymentTransfer0x0002:
+                case (long)ITReceiptCases.DeliveryNote0x0005:
                     (var commercialDocument, var fiscalDocument) = CustomRTServerMapping.GenerateFiscalDocument(request.ReceiptRequest, cashuuid);
                     var signatures = await ProcessFiscalDocumentAsync(request.ReceiptResponse, cashuuid, commercialDocument, fiscalDocument);
                     return ProcessResponseHelpers.CreateResponse(request.ReceiptResponse, signatures);
@@ -381,7 +381,7 @@ public sealed class CustomRTServerSCU : LegacySCU
             {
                 Caption = "rt-server-dailyclosing-warning",
                 Data = $"[{string.Join(",", warnings.ToArray())}]",
-                ftSignatureFormat = (long) SignaturItem.Formats.Text,
+                ftSignatureFormat = (long)SignaturItem.Formats.Text,
                 ftSignatureType = 0x4954_2000_0000_2000
             });
         }

@@ -6,14 +6,14 @@ using System.Text.RegularExpressions;
 using System.Web;
 using System.Xml;
 using System.Xml.Serialization;
-using fiskaltrust.Api.POS.Models.ifPOS.v2;
+using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueES.Models.Cases;
 using fiskaltrust.Middleware.Localization.QueueES.Helpers;
 using fiskaltrust.Middleware.Localization.QueueES.Interface;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
-using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.SCU.ES.Helpers;
 using fiskaltrust.Middleware.SCU.ES.Models;
 using fiskaltrust.storage.V0;
@@ -105,7 +105,15 @@ public class VeriFactuMapping
 
     public async Task<RegistroFacturacionAnulacion> CreateRegistroFacturacionAnulacionAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, ReceiptRequest previousReceiptRequest, ReceiptResponse previousReceiptResponse)
     {
-        var previousQueueItems = _queueItemRepository.GetByReceiptReferenceAsync(receiptRequest.cbPreviousReceiptReference);
+        if (receiptRequest.cbPreviousReceiptReference is null)
+        {
+            throw new Exception("cbPreviousReceiptReference is required for voiding a receipt.");
+        }
+        if (receiptRequest.cbPreviousReceiptReference.IsGroup)
+        {
+            throw new NotSupportedException("Grouping of receipts is not supported.");
+        }
+        var previousQueueItems = _queueItemRepository.GetByReceiptReferenceAsync(receiptRequest.cbPreviousReceiptReference.SingleValue);
         if (await previousQueueItems.IsEmptyAsync())
         {
             throw new Exception($"Receipt with cbReceiptReference {receiptRequest.cbPreviousReceiptReference} not found.");
@@ -256,7 +264,15 @@ public class VeriFactuMapping
 
         if (previousReceiptRequest is not null && previousReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void))
         {
-            var previousQueueItems = _queueItemRepository.GetByReceiptReferenceAsync(previousReceiptRequest.cbPreviousReceiptReference);
+            if (previousReceiptRequest.cbPreviousReceiptReference is null)
+            {
+                throw new Exception("cbPreviousReceiptReference is required for voiding a receipt.");
+            }
+            if (previousReceiptRequest.cbPreviousReceiptReference.IsGroup)
+            {
+                throw new NotSupportedException("Grouping of receipts is not supported.");
+            }
+            var previousQueueItems = _queueItemRepository.GetByReceiptReferenceAsync(previousReceiptRequest.cbPreviousReceiptReference.SingleValue);
             if (await previousQueueItems.IsEmptyAsync())
             {
                 throw new Exception($"Receipt with cbReceiptReference {previousReceiptRequest.cbPreviousReceiptReference} not found.");

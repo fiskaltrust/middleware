@@ -92,15 +92,15 @@ public sealed class CustomRTPrinterSCU : LegacySCU
             //    return await ProcessPerformReprint(request);
             //}
 
-            //if (receiptCase == (long) ITReceiptCases.Protocol0x0005)
+            //if (receiptCase == (long) ITReceiptCases.DeliveryNote0x0005)
             //{
             //    return CreateResponse(await PerformProtocolReceiptAsync(request.ReceiptRequest, request.ReceiptResponse));
             //}
 
             switch (receiptCase)
             {
-                case (long) ITReceiptCases.UnknownReceipt0x0000:
-                case (long) ITReceiptCases.PointOfSaleReceipt0x0001:
+                case (long)ITReceiptCases.UnknownReceipt0x0000:
+                case (long)ITReceiptCases.PointOfSaleReceipt0x0001:
                     return CreateResponse(await PerformClassicReceiptAsync(request.ReceiptRequest, request.ReceiptResponse));
             }
             request.ReceiptResponse.SetReceiptResponseErrored($"The given receiptcase 0x{receiptCase.ToString("X")} is not supported by Custom RT Printer.");
@@ -143,7 +143,7 @@ public sealed class CustomRTPrinterSCU : LegacySCU
     {
         try
         {
-   
+
 
             var fiscalRecordes = receiptRequest.cbChargeItems.Select(c => new PrintRecItem
             {

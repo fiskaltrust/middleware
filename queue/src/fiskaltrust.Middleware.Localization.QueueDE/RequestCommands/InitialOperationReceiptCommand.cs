@@ -64,7 +64,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                             new SignaturItem()
                             {
                                 ftSignatureType = typeNumber,
-                                ftSignatureFormat = (long) ifPOS.v0.SignaturItem.Formats.AZTEC,
+                                ftSignatureFormat = (long) fiskaltrust.ifPOS.v0.SignaturItem.Formats.AZTEC,
                                 Caption = $"In-Betriebnahme-Beleg. Kassenseriennummer: {clientId}, TSE-Seriennummer: {serialnumberOctet}, Queue-ID: {queue.ftQueueId}",
                                 Data = JsonConvert.SerializeObject(notification)
                             }
