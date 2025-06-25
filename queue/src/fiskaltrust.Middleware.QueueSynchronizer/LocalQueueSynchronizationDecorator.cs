@@ -78,9 +78,10 @@ namespace fiskaltrust.Middleware.QueueSynchronizer
     using System.Threading.Tasks.Dataflow;
     public sealed class LocalQueueSynchronizationDecorator : ISignProcessor, IDisposable
     {
+#nullable enable
         private readonly ISignProcessor _signProcessor;
         private readonly ILogger<LocalQueueSynchronizationDecorator> _logger;
-        private readonly ActionBlock<(ReceiptRequest request, Activity activity, TaskCompletionSource<ReceiptResponse> tcs)> _processor;
+        private readonly ActionBlock<(ReceiptRequest request, Activity? activity, TaskCompletionSource<ReceiptResponse> tcs)> _processor;
         private volatile bool _disposed = false;
 
         public LocalQueueSynchronizationDecorator(ISignProcessor signProcessor, ILogger<LocalQueueSynchronizationDecorator> logger)
