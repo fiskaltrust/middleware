@@ -5,8 +5,6 @@ using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.SCU.ES.Soap;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using static Org.BouncyCastle.Math.EC.ECCurve;
-
 namespace fiskaltrust.Middleware.SCU.ES.VeriFactu;
 
 public class ScuBootstrapper : IMiddlewareBootstrapper
