@@ -24,7 +24,7 @@ public class ReceiptCommandProcessorGR(IGRSSCD sscd, ftQueueGR queueGR, ftSignat
 
     public async Task<ProcessCommandResponse> PointOfSaleReceipt0x0001Async(ProcessCommandRequest request)
     {
-        if (request.ReceiptRequest.cbPreviousReceiptReference != null)
+        if (request.ReceiptRequest.cbPreviousReceiptReference is not null)
         {
             var receiptReferences = await LoadReceiptReferencesToResponse(request.ReceiptRequest, request.ReceiptResponse);
             var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
@@ -34,12 +34,15 @@ public class ReceiptCommandProcessorGR(IGRSSCD sscd, ftQueueGR queueGR, ftSignat
             }, receiptReferences);
             return new ProcessCommandResponse(response.ReceiptResponse, []);
         }
-        var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
+        else
         {
-            ReceiptRequest = request.ReceiptRequest,
-            ReceiptResponse = request.ReceiptResponse,
-        });
-        return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+            var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
+            {
+                ReceiptRequest = request.ReceiptRequest,
+                ReceiptResponse = request.ReceiptResponse,
+            });
+            return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+        }
     }
 
     public async Task<ProcessCommandResponse> PaymentTransfer0x0002Async(ProcessCommandRequest request)
@@ -98,15 +101,14 @@ public class ReceiptCommandProcessorGR(IGRSSCD sscd, ftQueueGR queueGR, ftSignat
 
     private async Task<List<(ReceiptRequest, ReceiptResponse)>> LoadReceiptReferencesToResponse(ReceiptRequest request, ReceiptResponse receiptResponse)
     {
-        var (cbPreviousReceiptReferenceString, cbPreviousReceiptReferenceArray) = request.GetPreviousReceiptReferenceStringOrArray();
-        if (cbPreviousReceiptReferenceString != null)
+        if (request.cbPreviousReceiptReference?.IsSingle ?? false)
         {
-            return [await LoadReceiptReferencesToResponse(request, receiptResponse, cbPreviousReceiptReferenceString)];
+            return [await LoadReceiptReferencesToResponse(request, receiptResponse, request.cbPreviousReceiptReference?.SingleValue?.ToString() ?? "")];
         }
-        if (cbPreviousReceiptReferenceArray != null)
+        if (request.cbPreviousReceiptReference?.IsGroup ?? false)
         {
             var references = new List<(ReceiptRequest, ReceiptResponse)>();
-            foreach (var reference in cbPreviousReceiptReferenceArray)
+            foreach (var reference in request.cbPreviousReceiptReference.GroupValue ?? [])
             {
                 var item = await LoadReceiptReferencesToResponse(request, receiptResponse, reference);
                 references.Add(item);
