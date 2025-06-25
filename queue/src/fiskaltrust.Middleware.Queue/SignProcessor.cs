@@ -74,7 +74,14 @@ namespace fiskaltrust.Middleware.Queue
                 var response = await InternalSign(queue, request).ConfigureAwait(false);
 
 #if NET6_0_OR_GREATER
-                System.Diagnostics.Activity.Current?.AddTag("queue.ReceiptResponse.ftState", $"0x{response.ftState:X}");
+                if (response != null)
+                {
+                    System.Diagnostics.Activity.Current?.AddTag("queue.ReceiptResponse.ftState", $"0x{response.ftState:X}");
+                }
+                else
+                {
+                    System.Diagnostics.Activity.Current?.AddTag("queue.ReceiptResponse.ftState", $"null");
+                }
                 System.Diagnostics.Activity.Current?.AddTag("queue.id", queue.ftQueueId);
 #endif
 
@@ -185,7 +192,7 @@ namespace fiskaltrust.Middleware.Queue
                                 Data = e.ToString()
                             }
                         },
-                        ftState = (long)(((ulong)data.ftReceiptCase & 0xFFFF_0000_0000_0000) | 0x2000_EEEE_EEEE)
+                        ftState = (long) (((ulong) data.ftReceiptCase & 0xFFFF_0000_0000_0000) | 0x2000_EEEE_EEEE)
                     };
                 }
                 _logger.LogTrace("SignProcessor.InternalSign: Country specific SignProcessor finished.");
