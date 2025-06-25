@@ -1,4 +1,4 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
@@ -116,7 +116,7 @@ public class VeriFactuMapping
         var previousQueueItems = _queueItemRepository.GetByReceiptReferenceAsync(receiptRequest.cbPreviousReceiptReference.SingleValue);
         if (await previousQueueItems.IsEmptyAsync())
         {
-            throw new Exception($"Receipt with cbReceiptReference {cbPreviousReceiptReferenceString} not found.");
+            throw new Exception($"Receipt with cbReceiptReference {receiptRequest.cbPreviousReceiptReference.SingleValue} not found.");
         }
 
         var voidedQueueItem = await previousQueueItems.SingleOrDefaultAsync() ?? throw new Exception($"Multiple receipts with cbReceiptReference {receiptRequest.cbPreviousReceiptReference} found.");
@@ -277,7 +277,7 @@ public class VeriFactuMapping
             var previousQueueItems = _queueItemRepository.GetByReceiptReferenceAsync(previousReceiptRequest.cbPreviousReceiptReference.SingleValue);
             if (await previousQueueItems.IsEmptyAsync())
             {
-                throw new Exception($"Receipt with cbReceiptReference {cbPreviousReceiptReferenceString} not found.");
+                throw new Exception($"Receipt with cbReceiptReference {previousReceiptRequest.cbPreviousReceiptReference.SingleValue} not found.");
             }
 
             var voidedQueueItem = await previousQueueItems.SingleOrDefaultAsync() ?? throw new Exception($"Multiple receipts with cbReceiptReference {previousReceiptRequest.cbPreviousReceiptReference} found.");
