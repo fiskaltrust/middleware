@@ -13,7 +13,6 @@ using fiskaltrust.Middleware.SCU.ES.Models;
 using fiskaltrust.Middleware.SCU.ES.Soap;
 using fiskaltrust.Middleware.SCU.ES.VeriFactu;
 using fiskaltrust.Middleware.SCU.ES.VeriFactu.Helpers;
-using fiskaltrust.storage.serialization.V0;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 
