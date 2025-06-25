@@ -52,7 +52,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 ? JsonConvert.DeserializeAnonymousType(lastDailyClosingJournal.DataJson, new { ftReceiptNumerator = 0L }).ftReceiptNumerator
                 : -1;
 
-            if (!request.IsInitiateScuSwitchReceiptForce() && !_middlewareConfiguration.AllowUnsafeScuSwitch && ( lastDailyClosingJournal == null || lastDailyClosingNumerator != queue.ftReceiptNumerator))
+            if (!request.IsInitiateScuSwitchReceiptForce() && !_middlewareConfiguration.AllowUnsafeScuSwitch && (lastDailyClosingJournal == null || lastDailyClosingNumerator != queue.ftReceiptNumerator))
             {
                 var reachable = false;
                 try
@@ -119,7 +119,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                     new SignaturItem()
                     {
                         ftSignatureType = typeNumber,
-                        ftSignatureFormat = (long) ifPOS.v0.SignaturItem.Formats.AZTEC,
+                        ftSignatureFormat = (long) fiskaltrust.ifPOS.v0.SignaturItem.Formats.AZTEC,
                         Caption = $"SCU von Queue getrennt. Kassenseriennummer: {clientId}, TSE-Seriennummer: {serialnumberOctet}, Queue-ID: {queue.ftQueueId}, SCU-ID: {sourceScu.ftSignaturCreationUnitDEId}",
                         Data = JsonConvert.SerializeObject(notification)
                     }

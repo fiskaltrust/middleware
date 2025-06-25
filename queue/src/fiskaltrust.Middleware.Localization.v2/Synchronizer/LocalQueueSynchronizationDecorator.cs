@@ -1,8 +1,8 @@
 ﻿using System.Runtime.ExceptionServices;
 using System.Threading.Channels;
-using fiskaltrust.Api.POS.Models.ifPOS.v2;
+using fiskaltrust.ifPOS.v2;
+using fiskaltrust.Middleware.Localization.v2.Interface;
 using Microsoft.Extensions.Logging;
-using ISignProcessor = fiskaltrust.Middleware.Localization.v2.Interface.ISignProcessor;
 
 namespace fiskaltrust.Middleware.Localization.v2.Synchronizer
 {

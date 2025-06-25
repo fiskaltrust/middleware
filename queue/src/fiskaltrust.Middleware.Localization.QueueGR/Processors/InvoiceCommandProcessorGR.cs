@@ -2,11 +2,10 @@
 using fiskaltrust.storage.V0;
 using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD;
 using fiskaltrust.Middleware.Storage.GR;
-using fiskaltrust.Api.POS.Models.ifPOS.v2;
+using fiskaltrust.ifPOS.v2;
 using System.Text.Json;
 using fiskaltrust.Middleware.Contracts.Repositories;
-using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
-using fiskaltrust.Middleware.Localization.v2.Helpers;
+using fiskaltrust.ifPOS.v2.Cases;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.Processors;
 
@@ -21,7 +20,7 @@ public class InvoiceCommandProcessorGR(IGRSSCD sscd, ftQueueGR queueGR, ftSignat
 
     public async Task<ProcessCommandResponse> InvoiceUnknown0x1000Async(ProcessCommandRequest request)
     {
-        if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) && request.ReceiptRequest.cbPreviousReceiptReference != null)
+        if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) && request.ReceiptRequest.cbPreviousReceiptReference is not null)
         {
             var receiptReference = await LoadReceiptReferencesToResponse(request.ReceiptRequest, request.ReceiptResponse);
             var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
@@ -50,13 +49,11 @@ public class InvoiceCommandProcessorGR(IGRSSCD sscd, ftQueueGR queueGR, ftSignat
 
     private async Task<ReceiptResponse> LoadReceiptReferencesToResponse(ReceiptRequest request, ReceiptResponse receiptResponse)
     {
-        var (cbPreviousReceiptReferenceString, cbPreviousReceiptReferenceArray) = request.GetPreviousReceiptReferenceStringOrArray();
-        if (cbPreviousReceiptReferenceArray != null)
+        if (request.cbPreviousReceiptReference?.IsGroup ?? false)
         {
-            throw new Exception($"cbPreviousReceiptReferenceArray is not supported for Invoices in GR. Please use cbPreviousReceiptReference as a string.");
+            throw new NotSupportedException("Grouping of invoices is not supported yet.");
         }
-
-        var queueItems = _readOnlyQueueItemRepository.GetByReceiptReferenceAsync(cbPreviousReceiptReferenceString, request.cbTerminalID);
+        var queueItems = _readOnlyQueueItemRepository.GetByReceiptReferenceAsync(request.cbPreviousReceiptReference?.SingleValue, request.cbTerminalID);
         await foreach (var existingQueueItem in queueItems)
         {
             if (string.IsNullOrEmpty(existingQueueItem.response))

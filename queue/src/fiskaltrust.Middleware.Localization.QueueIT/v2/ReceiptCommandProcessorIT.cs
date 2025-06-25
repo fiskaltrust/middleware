@@ -47,8 +47,8 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
             if (receiptCase == (int) ReceiptCases.ECommerce0x0004)
                 return await ECommerce0x0004Async(request);
 
-            if (receiptCase == (int) ReceiptCases.Protocol0x0005)
-                return await Protocol0x0005Async(request);
+            if (receiptCase == (int) ReceiptCases.DeliveryNote0x0005)
+                return await DeliveryNote0x0005Async(request);
 
             request.ReceiptResponse.SetReceiptResponseError($"The given ftReceiptCase 0x{request.ReceiptRequest.ftReceiptCase:x} is not supported. Please refer to docs.fiskaltrust.cloud for supported cases.");
             return new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>());
@@ -107,6 +107,6 @@ namespace fiskaltrust.Middleware.Localization.QueueIT.v2
 
         public async Task<ProcessCommandResponse> ECommerce0x0004Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
 
-        public async Task<ProcessCommandResponse> Protocol0x0005Async(ProcessCommandRequest request) => await PointOfSaleReceipt0x0001Async(request);
+        public async Task<ProcessCommandResponse> DeliveryNote0x0005Async(ProcessCommandRequest request) => await PointOfSaleReceipt0x0001Async(request);
     }
 }

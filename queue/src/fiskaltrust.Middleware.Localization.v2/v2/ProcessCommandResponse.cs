@@ -1,5 +1,5 @@
 ﻿using System.Collections.Generic;
-using fiskaltrust.Api.POS.Models.ifPOS.v2;
+using fiskaltrust.ifPOS.v2;
 using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.v2;

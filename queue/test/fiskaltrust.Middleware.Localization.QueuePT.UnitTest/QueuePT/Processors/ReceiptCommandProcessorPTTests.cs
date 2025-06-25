@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
-using fiskaltrust.Api.POS.Models.ifPOS.v2;
+using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueuePT.Processors;
 using fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
 using fiskaltrust.Middleware.Localization.v2.Interface;
@@ -13,7 +13,7 @@ using FluentAssertions;
 using FluentAssertions.Execution;
 using Moq;
 using Xunit;
-using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using Microsoft.Extensions.Logging;
 
@@ -27,7 +27,7 @@ public class ReceiptCommandProcessorPTTests
     [InlineData(ReceiptCase.PaymentTransfer0x0002, Skip = "broken")]
     [InlineData(ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003)]
     [InlineData(ReceiptCase.ECommerce0x0004)]
-    [InlineData(ReceiptCase.Protocol0x0005)]
+    [InlineData(ReceiptCase.DeliveryNote0x0005)]
     public async Task ProcessReceiptAsync_ShouldReturnEmptyList(ReceiptCase receiptCase)
     {
         var receiptRequest = new ReceiptRequest
@@ -55,7 +55,7 @@ public class ReceiptCommandProcessorPTTests
     {
         var receiptRequest = new ReceiptRequest
         {
-            ftReceiptCase = (ReceiptCase) (-1)
+            ftReceiptCase = (ReceiptCase) 0
         };
         var receiptResponse = new ReceiptResponse
         {

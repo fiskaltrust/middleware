@@ -1,9 +1,9 @@
-﻿using fiskaltrust.Api.POS.Models.ifPOS.v2;
+﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueueGR.Processors;
 using fiskaltrust.Middleware.Localization.v2;
 using FluentAssertions;
 using Xunit;
-using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2.Cases;
 using Moq;
 using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD;
 using fiskaltrust.Middleware.Contracts.Repositories;
@@ -81,7 +81,7 @@ public class InvoiceCommandProcessorGRTests
                 ReceiptResponse = receiptResponse,
             });
         var middlewareQueueItemRepositoryMock = new Mock<IMiddlewareQueueItemRepository>();
-        middlewareQueueItemRepositoryMock.Setup(x => x.GetByReceiptReferenceAsync(receiptRequest.cbPreviousReceiptReference as string, receiptRequest.cbTerminalID))
+        middlewareQueueItemRepositoryMock.Setup(x => x.GetByReceiptReferenceAsync(receiptRequest.cbPreviousReceiptReference.SingleValue, receiptRequest.cbTerminalID))
             .Returns(new List<ftQueueItem> { queueItem }.ToAsyncEnumerable());
 
         var invoiceCommandProcessor = new InvoiceCommandProcessorGR(grSSCDMock.Object, queueGR, scuGR, middlewareQueueItemRepositoryMock.Object);

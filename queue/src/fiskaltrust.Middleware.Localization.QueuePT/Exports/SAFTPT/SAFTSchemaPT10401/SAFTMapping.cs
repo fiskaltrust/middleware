@@ -3,11 +3,11 @@ using System.Text;
 using System.Text.Json;
 using System.Xml.Serialization;
 using System.Xml;
-using fiskaltrust.Api.POS.Models.ifPOS.v2;
+using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueuePT.Exports.SAFTPT;
 using fiskaltrust.Middleware.Localization.QueuePT.Exports.SAFTPT.SAFTSchemaPT10401.SourceDocuments.PaymentDocumentModels;
 using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
-using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 
@@ -452,7 +452,7 @@ public static class SAFTMapping
             }
         };
 
-        if (GetPaymentType(receiptRequest) == "RG" && receiptRequest.cbPreviousReceiptReference != null)
+        if (GetPaymentType(receiptRequest) == "RG" && receiptRequest.cbPreviousReceiptReference is not null)
         {
             var referencedReceiptReference = ((JsonElement) receipt.receiptResponse.ftStateData!).GetProperty("ReferencedReceiptResponse").Deserialize<ReceiptResponse>();
             workDocument.Line[0].SourceDocumentID = new SourceDocument
@@ -575,7 +575,7 @@ public static class SAFTMapping
             ReceiptCase.PaymentTransfer0x0002 => "FS",
             ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003 => "FS",
             ReceiptCase.ECommerce0x0004 => "FS",
-            ReceiptCase.Protocol0x0005 => "FS", // no invoicetype.. workign document?
+            ReceiptCase.DeliveryNote0x0005 => "FS", // no invoicetype.. workign document?
             ReceiptCase.InvoiceUnknown0x1000 => "FT",
             ReceiptCase.InvoiceB2C0x1001 => "FT",
             ReceiptCase.InvoiceB2B0x1002 => "FT",
@@ -653,7 +653,7 @@ public static class SAFTMapping
             line.CreditAmount = Helpers.CreateMonetaryValue(netLinePrice);
         }
 
-        if (GetInvoiceType(receiptRequest) == "FT" && receiptRequest.cbPreviousReceiptReference != null)
+        if (GetInvoiceType(receiptRequest) == "FT" && receiptRequest.cbPreviousReceiptReference is not null)
         {
             var referencedReceiptReference = ((JsonElement) receiptResponse.ftStateData!).GetProperty("ReferencedReceiptResponse").Deserialize<ReceiptResponse>();
             line.OrderReferences = new OrderReferences

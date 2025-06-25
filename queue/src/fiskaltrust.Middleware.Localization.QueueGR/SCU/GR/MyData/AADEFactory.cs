@@ -8,7 +8,8 @@ using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueueGR.Models.Cases;
 using fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData.Models;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
-using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 
@@ -190,7 +191,13 @@ public class AADEFactory
         }
 
         inv.invoiceSummary.totalGrossValue = inv.invoiceSummary.totalNetValue + inv.invoiceSummary.totalVatAmount - inv.invoiceSummary.totalWithheldAmount + inv.invoiceSummary.totalFeesAmount + inv.invoiceSummary.totalStampDutyAmount + inv.invoiceSummary.totalOtherTaxesAmount - inv.invoiceSummary.totalDeductionsAmount;
-
+        if (receiptRequest.cbPreviousReceiptReference is not null)
+        {
+            inv.invoiceHeader.correlatedInvoices = receiptRequest.cbPreviousReceiptReference.Match(
+                single => [long.Parse(single)],
+                group => group.Select(g => long.Parse(g)).ToArray()
+            );
+        }
         if (receiptRequest.ContainsCustomerInfo())
         {
             AddCounterpart(receiptRequest, inv);
