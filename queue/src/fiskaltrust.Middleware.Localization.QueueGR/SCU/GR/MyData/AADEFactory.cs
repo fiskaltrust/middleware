@@ -58,7 +58,7 @@ public class AADEFactory
         foreach (var chargeItem in receiptRequest.cbChargeItems)
         {
             chargeItem.Amount = Math.Round(chargeItem.Amount, 2);
-            chargeItem.VATAmount = Math.Round(chargeItem.VATAmount ?? 0.00m, 2);
+            chargeItem.VATAmount = Math.Round(chargeItem.GetVATAmount(), 2);
             chargeItem.Quantity = Math.Round(chargeItem.Quantity, 2);
         }
 
