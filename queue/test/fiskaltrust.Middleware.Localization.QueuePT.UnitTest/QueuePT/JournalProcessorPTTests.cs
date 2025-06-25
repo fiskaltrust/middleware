@@ -1,11 +1,11 @@
 ﻿using System.Text;
 using System.Text.Json;
-using fiskaltrust.Api.POS.Models.ifPOS.v2;
+using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueuePT.Interface;
 using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
 using fiskaltrust.Middleware.Localization.QueuePT.Processors;
 using fiskaltrust.Middleware.Localization.v2.Interface;
-using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.storage.V0;
 using Moq;
 using Xunit;
@@ -101,7 +101,7 @@ public class JournalProcessorPTTests
         };
         storageProvider.Setup(x => x.GetMiddlewareQueueItemRepository().GetAsync()).ReturnsAsync(queueItems);
         var processor = new JournalProcessorPT(storageProvider.Object);
-        var result = processor.ProcessAsync(new ifPOS.v1.JournalRequest());
+        var result = processor.ProcessAsync(new ifPOS.v2.JournalRequest());
         var journalResponse = await result.ToListAsync();
         var data = Encoding.UTF8.GetString(journalResponse.SelectMany(x => x.Chunk).ToArray());
     }

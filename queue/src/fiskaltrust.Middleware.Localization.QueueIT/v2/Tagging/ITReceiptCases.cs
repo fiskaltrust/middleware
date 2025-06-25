@@ -7,7 +7,7 @@
         PaymentTransfer0x0002 = 0x0002,
         PointOfSaleReceiptWithoutObligation0x0003 = 0x0003,
         ECommerce0x0004 = 0x0004,
-        Protocol0x0005 = 0x0005,
+        DeliveryNote0x0005 = 0x0005,
 
         InvoiceUnknown0x1000 = 0x1000,
         InvoiceB2C0x1001 = 0x1001,

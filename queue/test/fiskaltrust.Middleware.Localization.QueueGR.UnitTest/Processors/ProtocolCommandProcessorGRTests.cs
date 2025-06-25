@@ -1,9 +1,9 @@
-﻿using fiskaltrust.Api.POS.Models.ifPOS.v2;
+﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueueGR.Processors;
 using fiskaltrust.Middleware.Localization.v2;
 using FluentAssertions;
 using Xunit;
-using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2.Cases;
 using Moq;
 using Microsoft.Extensions.Logging;
 using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD;
@@ -64,7 +64,7 @@ public class ProtocolCommandProcessorGRTests
         var queueItem = TestHelpers.CreateQueueItem();
         var receiptRequest = new ReceiptRequest
         {
-            ftReceiptCase = (ReceiptCase) (-1)
+            ftReceiptCase = (ReceiptCase) 0
         };
         var receiptResponse = new ReceiptResponse
         {

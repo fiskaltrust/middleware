@@ -1,4 +1,4 @@
-﻿using fiskaltrust.ifPOS.v1;
+﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 
 namespace fiskaltrust.Middleware.Localization.v2;

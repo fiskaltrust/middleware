@@ -1,6 +1,5 @@
 ﻿using System.Text;
 using System.Text.Json;
-using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Synchronizer;
 using Microsoft.Extensions.Logging;
@@ -27,7 +26,7 @@ namespace fiskaltrust.Middleware.Localization.v2
         {
             return async (message) =>
             {
-                var request = JsonSerializer.Deserialize<ifPOS.v1.EchoRequest>(message) ?? throw new ArgumentException($"Invalid message format. The body for the message {message} could not be serialized.");
+                var request = JsonSerializer.Deserialize<fiskaltrust.ifPOS.v2.EchoRequest>(message) ?? throw new ArgumentException($"Invalid message format. The body for the message {message} could not be serialized.");
                 var response = await _echoProcessor.ProcessAsync(request);
                 return JsonSerializer.Serialize(response);
             };
@@ -37,7 +36,7 @@ namespace fiskaltrust.Middleware.Localization.v2
         {
             return async (message) =>
             {
-                var request = JsonSerializer.Deserialize<ReceiptRequest>(message) ?? throw new ArgumentException($"Invalid message format. The body for the message {message} could not be serialized.");
+                var request = JsonSerializer.Deserialize<fiskaltrust.ifPOS.v2.ReceiptRequest>(message) ?? throw new ArgumentException($"Invalid message format. The body for the message {message} could not be serialized.");
                 var response = await _signProcessor.ProcessAsync(request);
                 return JsonSerializer.Serialize(response, new JsonSerializerOptions
                 {
@@ -50,7 +49,7 @@ namespace fiskaltrust.Middleware.Localization.v2
         {
             return async (message) =>
             {
-                var request = JsonSerializer.Deserialize<ifPOS.v1.JournalRequest>(message) ?? throw new ArgumentException($"Invalid message format. The body for the message {message} could not be serialized.");
+                var request = JsonSerializer.Deserialize<fiskaltrust.ifPOS.v2.JournalRequest>(message) ?? throw new ArgumentException($"Invalid message format. The body for the message {message} could not be serialized.");
                 var response = await _journalProcessor.ProcessAsync(request).ToListAsync();
                 var responsePayload = response.SelectMany(x => x.Chunk).ToArray();
                 return Encoding.UTF8.GetString(responsePayload);

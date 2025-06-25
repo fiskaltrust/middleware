@@ -130,7 +130,7 @@
 //         {
 //             yield return new object[] { ReceiptCases.UnknownReceipt0x0000 };
 //             yield return new object[] { ReceiptCases.PointOfSaleReceipt0x0001 };
-//             yield return new object[] { ReceiptCases.Protocol0x0005 };
+//             yield return new object[] { ReceiptCases.DeliveryNote0x0005 };
 //         }
 
 //         [Theory]
@@ -261,7 +261,7 @@
 
 //             var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(zeroReceipt);
 //             var sut = GetDefaultSUT(_queueStarted, itSSCDMock.Object);
-   
+
 //             var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, _queueStarted, new ftQueueItem { });
 //             receiptResponse.ftState.Should().Be(0x4954_2000_EEEE_EEEE, $"{receiptResponse.ftState:x}");
 //             actionJournals.Should().HaveCount(0);

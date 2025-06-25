@@ -1,8 +1,8 @@
-﻿using fiskaltrust.Api.POS.Models.ifPOS.v2;
+﻿using fiskaltrust.ifPOS.v2;
 using System.Text;
 using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD;
 using fiskaltrust.Middleware.Localization.v2;
-using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Storage.GR;
 using fiskaltrust.storage.V0;
 
@@ -24,7 +24,6 @@ public class ReceiptCommandProcessorGR(IGRSSCD sscd, ftQueueGR queueGR, ftSignat
         {
             // TODO Handle refund
         }
-
         var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
         {
             ReceiptRequest = request.ReceiptRequest,
@@ -63,7 +62,7 @@ public class ReceiptCommandProcessorGR(IGRSSCD sscd, ftQueueGR queueGR, ftSignat
         return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
     }
 
-    public async Task<ProcessCommandResponse> Protocol0x0005Async(ProcessCommandRequest request)
+    public async Task<ProcessCommandResponse> DeliveryNote0x0005Async(ProcessCommandRequest request)
     {
         var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
         {
