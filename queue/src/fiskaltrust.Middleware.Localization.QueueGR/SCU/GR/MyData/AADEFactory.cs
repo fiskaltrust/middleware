@@ -166,7 +166,7 @@ public class AADEFactory
             inv.invoiceHeader.tableAA = receiptRequest.cbArea?.ToString();
         }
 
-        if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Protocol0x0005))
+        if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.DeliveryNote0x0005))
         {
             var result = receiptRequest.GetCustomerOrNull();
             if (result != null)
@@ -480,7 +480,7 @@ public class AADEFactory
                         payment.ProvidersSignature = new ProviderSignatureType
                         {
                             Signature = requestUri["aadeProviderSignature"],
-                            SigningAuthor = "viva.com", // need to be filled??
+                            SigningAuthor = "126"
                         };
                     }
                 }
@@ -497,7 +497,7 @@ public class AADEFactory
                         payment.ProvidersSignature = new ProviderSignatureType
                         {
                             Signature = vivaPayment.ProtocolRequest?.aadeProviderSignature,
-                            SigningAuthor = "viva.com", // need to be filled??
+                            SigningAuthor = "126"
                         };
                     }
                 }
@@ -515,7 +515,7 @@ public class AADEFactory
                                 payment.ProvidersSignature = new ProviderSignatureType
                                 {
                                     Signature = aadeProviderSignatureElement.GetString(),
-                                    SigningAuthor = "viva.com"
+                                    SigningAuthor = "126"
                                 };
                             }
 
