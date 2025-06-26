@@ -101,9 +101,14 @@ public class ReceiptCommandProcessorGR(IGRSSCD sscd, ftQueueGR queueGR, ftSignat
 
     private async Task<List<(ReceiptRequest, ReceiptResponse)>> LoadReceiptReferencesToResponse(ReceiptRequest request, ReceiptResponse receiptResponse)
     {
-        return request.cbPreviousReceiptReference.Match(
-            single => [await LoadReceiptReferencesToResponse(request, receiptResponse, single)],
-            group => {
+        if(request.cbPreviousReceiptReference is null)
+        {
+            return new List<(ReceiptRequest, ReceiptResponse)>();
+        }
+
+        return await request.cbPreviousReceiptReference.MatchAsync(
+            async single => [await LoadReceiptReferencesToResponse(request, receiptResponse, single)],
+            async group => {
                 var references = new List<(ReceiptRequest, ReceiptResponse)>();
                 foreach (var reference in group)
                 {
