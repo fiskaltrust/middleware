@@ -37,7 +37,7 @@ public class InvoiceCommandProcessorGRTests
         };
 
         var grSSCDMock = new Mock<IGRSSCD>(MockBehavior.Strict);
-        grSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>()))
+        grSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>(), null))
             .ReturnsAsync(new ProcessResponse
             {
                 ReceiptResponse = receiptResponse,
@@ -75,7 +75,7 @@ public class InvoiceCommandProcessorGRTests
         };
 
         var grSSCDMock = new Mock<IGRSSCD>(MockBehavior.Strict);
-        grSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>()))
+        grSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>(), null))
             .ReturnsAsync(new ProcessResponse
             {
                 ReceiptResponse = receiptResponse,
@@ -114,7 +114,7 @@ public class InvoiceCommandProcessorGRTests
         };
 
         var grSSCDMock = new Mock<IGRSSCD>(MockBehavior.Strict);
-        grSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>()))
+        grSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>(), null))
             .ReturnsAsync(new ProcessResponse
             {
                 ReceiptResponse = receiptResponse,
@@ -151,7 +151,7 @@ public class InvoiceCommandProcessorGRTests
         };
 
         var grSSCDMock = new Mock<IGRSSCD>(MockBehavior.Strict);
-        grSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>()))
+        grSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>(), null))
             .ReturnsAsync(new ProcessResponse
             {
                 ReceiptResponse = receiptResponse,
@@ -188,7 +188,7 @@ public class InvoiceCommandProcessorGRTests
         };
 
         var grSSCDMock = new Mock<IGRSSCD>(MockBehavior.Strict);
-        grSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>()))
+        grSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>(), null))
             .ReturnsAsync(new ProcessResponse
             {
                 ReceiptResponse = receiptResponse,
@@ -225,7 +225,7 @@ public class InvoiceCommandProcessorGRTests
         };
 
         var grSSCDMock = new Mock<IGRSSCD>(MockBehavior.Strict);
-        grSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>()))
+        grSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>(), null))
             .ReturnsAsync(new ProcessResponse
             {
                 ReceiptResponse = receiptResponse,

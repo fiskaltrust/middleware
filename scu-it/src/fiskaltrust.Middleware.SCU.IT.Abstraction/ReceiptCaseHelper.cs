@@ -13,6 +13,10 @@ public static class ReceiptCaseHelper
 
     public static bool IsDailyClosing(this ReceiptRequest request) => (request.ftReceiptCase & 0x0000_0000_0000_FFFF) == (long) ITReceiptCases.DailyClosing0x2011;
 
+    public static bool IsMonthlyClosing(this ReceiptRequest request) => (request.ftReceiptCase & 0x0000_0000_0000_FFFF) == (long) ITReceiptCases.MonthlyClosing0x2012;
+
+    public static bool IsYearlyClosing(this ReceiptRequest request) => (request.ftReceiptCase & 0x0000_0000_0000_FFFF) == (long) ITReceiptCases.YearlyClosing0x2013;
+
     public static bool IsReprint(this ReceiptRequest request) => (request.ftReceiptCase & 0x0000_0000_0000_FFFF) == (long) ITReceiptCases.Reprint0x3010;
 
     public static bool IsZeroReceipt(this ReceiptRequest request) => (request.ftReceiptCase & 0x0000_0000_0000_FFFF) == (long) ITReceiptCases.ZeroReceipt0x2000;
@@ -61,6 +65,7 @@ public static class ReceiptCaseHelper
 
     public static bool IsReceiptRequest(this ReceiptRequest receiptRequest) => (receiptRequest.ftReceiptCase & 0x0000_0000_8000_0000) > 0x0000;
     public static Customer? GetCustomer(this ReceiptRequest receiptRequest) => GetValueOrNull<Customer>(receiptRequest?.cbCustomer);
+    public static ReceiptCaseLotteryData? GetLotteryData(this ReceiptRequest receiptRequest) => GetValueOrNull<ReceiptCaseLotteryData>(receiptRequest?.ftReceiptCaseData);
 
     private static T? GetValueOrNull<T>(string? data) where T : class
     {

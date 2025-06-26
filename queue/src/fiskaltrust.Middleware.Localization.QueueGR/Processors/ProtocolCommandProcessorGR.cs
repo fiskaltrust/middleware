@@ -1,17 +1,12 @@
 ﻿using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.storage.V0;
 using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD;
-using fiskaltrust.Middleware.Storage.GR;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.Processors;
 
-public class ProtocolCommandProcessorGR(IGRSSCD sscd, ftQueueGR queueGR, ftSignaturCreationUnitGR signaturCreationUnitGR) : IProtocolCommandProcessor
+public class ProtocolCommandProcessorGR(IGRSSCD sscd) : IProtocolCommandProcessor
 {
-#pragma warning disable
     private readonly IGRSSCD _sscd = sscd;
-    private readonly ftQueueGR _queueGR = queueGR;
-    private readonly ftSignaturCreationUnitGR _signaturCreationUnitGR = signaturCreationUnitGR;
-#pragma warning restore
 
     public async Task<ProcessCommandResponse> ProtocolUnspecified0x3000Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
 

@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using System.Web;
 using System.Xml.Serialization;
+using Azure.Core;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueueGR.Models.Cases;
 using fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData.Models;
@@ -16,6 +17,8 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData;
 
 public class AADEFactory
 {
+    private const string VIVA_FISCAL_PROVIDER_ID = "126";
+
     private readonly MasterDataConfiguration _masterDataConfiguration;
 
     public AADEFactory(MasterDataConfiguration masterDataConfiguration)
@@ -52,12 +55,12 @@ public class AADEFactory
         return doc;
     }
 
-    public InvoicesDoc MapToInvoicesDoc(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
+    public InvoicesDoc MapToInvoicesDoc(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, List<(ReceiptRequest, ReceiptResponse)>? receiptReferences = null)
     {
         foreach (var chargeItem in receiptRequest.cbChargeItems)
         {
             chargeItem.Amount = Math.Round(chargeItem.Amount, 2);
-            chargeItem.VATAmount = Math.Round(chargeItem.VATAmount ?? 0.00m, 2);
+            chargeItem.VATAmount = Math.Round(chargeItem.GetVATAmount(), 2);
             chargeItem.Quantity = Math.Round(chargeItem.Quantity, 2);
         }
 
@@ -68,7 +71,7 @@ public class AADEFactory
         }
         MyDataAADEValidation.ValidateReceiptRequest(receiptRequest);
 
-        var inv = CreateInvoiceDocType(receiptRequest, receiptResponse);
+        var inv = CreateInvoiceDocType(receiptRequest, receiptResponse, receiptReferences);
         var doc = new InvoicesDoc
         {
             invoice = [inv]
@@ -76,7 +79,7 @@ public class AADEFactory
         return doc;
     }
 
-    private AadeBookInvoiceType CreateInvoiceDocType(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)
+    private AadeBookInvoiceType CreateInvoiceDocType(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, List<(ReceiptRequest, ReceiptResponse)>? receiptReferences = null)
     {
         var invoiceDetails = GetInvoiceDetails(receiptRequest);
         var incomeClassificationGroups = invoiceDetails.Where(x => x.incomeClassification != null).SelectMany(x => x.incomeClassification).Where(x => x.classificationTypeSpecified).GroupBy(x => (x.classificationCategory, x.classificationType)).Select(x => new IncomeClassificationType
@@ -119,7 +122,6 @@ public class AADEFactory
         var inv = new AadeBookInvoiceType
         {
             issuer = issuer,
-            paymentMethods = [.. paymentMethods],
             invoiceHeader = new InvoiceHeaderType
             {
                 series = receiptResponse.ftCashBoxIdentification,
@@ -143,6 +145,28 @@ public class AADEFactory
                 expensesClassification = [.. expensesClassificationGroups],
             }
         };
+
+        if (paymentMethods?.Count > 0)
+        {
+            inv.paymentMethods = [.. paymentMethods];
+        }
+
+        if (receiptRequest.cbPreviousReceiptReference != null && receiptReferences?.Count > 0)
+        {
+            if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PointOfSaleReceipt0x0001))
+            {
+                inv.invoiceHeader.multipleConnectedMarks = receiptReferences.Select(x => GetInvoiceMark(x.Item2)).ToArray();
+            }
+            else
+            {
+                inv.invoiceHeader.correlatedInvoices = receiptReferences.Select(x => GetInvoiceMark(x.Item2)).ToArray();
+            }
+        }
+
+        if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004))
+        {
+            inv.invoiceHeader.tableAA = receiptRequest.cbArea?.ToString();
+        }
 
         if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.DeliveryNote0x0005))
         {
@@ -187,7 +211,7 @@ public class AADEFactory
     private static List<InvoiceRowType> GetInvoiceDetails(ReceiptRequest receiptRequest)
     {
         var chargeItems = receiptRequest.GetGroupedChargeItems();
-
+        var nextPosition = 1;
         return chargeItems.Select(grouped =>
         {
             var x = grouped.chargeItem;
@@ -201,6 +225,29 @@ public class AADEFactory
                 netValue = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -x.Amount - -vatAmount : x.Amount - vatAmount,
                 vatCategory = AADEMappings.GetVATCategory(x),
             };
+
+            if (AADEMappings.GetInvoiceType(receiptRequest) == InvoiceType.Item86)
+            {
+                invoiceRow.quantitySpecified = true;
+            }
+
+            if (((int) x.Position) == 0)
+            {
+                invoiceRow.lineNumber = nextPosition++;
+            }
+            else
+            {
+                nextPosition = (int) x.Position + 1;
+            }
+
+            if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004))
+            {
+                // Todo change
+                invoiceRow.itemDescr = x.Description;
+                invoiceRow.measurementUnit = 1;
+                invoiceRow.measurementUnitSpecified = true;
+            }
+
             if (x.ftChargeItemCase.IsNatureOfVat(ChargeItemCaseNatureOfVatGR.ExtemptEndOfClimateCrises))
             {
                 invoiceRow.netValue = 0;
@@ -210,6 +257,10 @@ public class AADEFactory
                 invoiceRow.otherTaxesPercentCategorySpecified = true;
                 invoiceRow.incomeClassification = [];
                 invoiceRow.vatCategory = 8;
+            }
+            else if (x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Voucher))
+            {
+                invoiceRow.recType = 6;
             }
             else if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.IsSelfPricingOperation))
             {
@@ -310,7 +361,10 @@ public class AADEFactory
             }
             if (x.ftChargeItemCaseData != null)
             {
-                var chargeItem = JsonSerializer.Deserialize<WithHoldingChargeItem>(JsonSerializer.Serialize(x.ftChargeItemCaseData));
+                var chargeItem = JsonSerializer.Deserialize<WithHoldingChargeItem>(JsonSerializer.Serialize(x.ftChargeItemCaseData), new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
                 if (chargeItem != null && chargeItem.WithHoldingAmount != default && chargeItem.WithHoldingAmount != default)
                 {
                     invoiceRow.withheldAmountSpecified = true;
@@ -371,6 +425,24 @@ public class AADEFactory
         }
     }
 
+    private static long GetInvoiceMark(ReceiptResponse receiptResponse)
+    {
+        if (receiptResponse.ftSignatures.Count > 0)
+        {
+            var invoiceMarkText = receiptResponse.ftSignatures.FirstOrDefault(x => x.Caption == "invoiceMark")?.Data;
+            if (long.TryParse(invoiceMarkText, out var invoiceMark))
+            {
+                return invoiceMark;
+            }
+            else
+            {
+                return -1;
+            }
+        }
+        return -1;
+    }
+
+
     private static List<PaymentMethodDetailType> GetPayments(ReceiptRequest receiptRequest)
     {
         // what is payitemcase 99?
@@ -391,10 +463,16 @@ public class AADEFactory
 
             if (x.ftPayItemCaseData != null)
             {
-                var providerData = JsonSerializer.Deserialize<GenericPaymentPayload>(JsonSerializer.Serialize(x.ftPayItemCaseData));
+                var providerData = JsonSerializer.Deserialize<GenericPaymentPayload>(JsonSerializer.Serialize(x.ftPayItemCaseData), new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
                 if (providerData != null && providerData.Provider != null && providerData.Provider.ProtocolRequest is JsonElement dat && dat.ValueKind == JsonValueKind.String)
                 {
-                    var app2AppApi = JsonSerializer.Deserialize<PayItemCaseDataApp2App>(JsonSerializer.Serialize(x.ftPayItemCaseData))!;
+                    var app2AppApi = JsonSerializer.Deserialize<PayItemCaseDataApp2App>(JsonSerializer.Serialize(x.ftPayItemCaseData), new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    })!;
                     if (app2AppApi.Provider is PayItemCaseProviderVivaWalletApp2APp vivaAppToApp)
                     {
                         var requestUri = HttpUtility.ParseQueryString(new Uri(vivaAppToApp.ProtocolRequest).Query);
@@ -404,13 +482,16 @@ public class AADEFactory
                         payment.ProvidersSignature = new ProviderSignatureType
                         {
                             Signature = requestUri["aadeProviderSignature"],
-                            SigningAuthor = "viva.com", // need to be filled??
+                            SigningAuthor = VIVA_FISCAL_PROVIDER_ID
                         };
                     }
                 }
                 else if (providerData != null && providerData.Provider != null && providerData.Provider.ProtocolRequest is JsonElement datS && datS.ValueKind == JsonValueKind.Object)
                 {
-                    var providerCloudRestApi = JsonSerializer.Deserialize<PayItemCaseDataCloudApi>(JsonSerializer.Serialize(x.ftPayItemCaseData))!;
+                    var providerCloudRestApi = JsonSerializer.Deserialize<PayItemCaseDataCloudApi>(JsonSerializer.Serialize(x.ftPayItemCaseData), new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    })!;
                     if (providerCloudRestApi.Provider is PayItemCaseProviderVivaWallet vivaPayment)
                     {
 
@@ -418,7 +499,7 @@ public class AADEFactory
                         payment.ProvidersSignature = new ProviderSignatureType
                         {
                             Signature = vivaPayment.ProtocolRequest?.aadeProviderSignature,
-                            SigningAuthor = "viva.com", // need to be filled??
+                            SigningAuthor = VIVA_FISCAL_PROVIDER_ID
                         };
                     }
                 }
@@ -436,7 +517,7 @@ public class AADEFactory
                                 payment.ProvidersSignature = new ProviderSignatureType
                                 {
                                     Signature = aadeProviderSignatureElement.GetString(),
-                                    SigningAuthor = "viva.com"
+                                    SigningAuthor = VIVA_FISCAL_PROVIDER_ID
                                 };
                             }
 
