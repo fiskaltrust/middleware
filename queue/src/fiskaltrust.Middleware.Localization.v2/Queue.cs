@@ -17,7 +17,7 @@ namespace fiskaltrust.Middleware.Localization.v2
 
         public Queue(ISignProcessor signProcessor, IJournalProcessor journalProcessor, ILoggerFactory loggerFactory)
         {
-            _signProcessor = new LocalQueueSynchronizationDecorator(signProcessor, loggerFactory.CreateLogger<LocalQueueSynchronizationDecorator>());
+            _signProcessor = new LocalQueueSynchronizationDecorator(signProcessor);
             _journalProcessor = journalProcessor;
             _echoProcessor = new EchoProcessor();
         }

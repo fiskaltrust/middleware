@@ -3,86 +3,62 @@ using System.Threading.Channels;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using Microsoft.Extensions.Logging;
+using ISignProcessor = fiskaltrust.Middleware.Localization.v2.Interface.ISignProcessor;
+using System.Threading;
+using System.Threading.Tasks.Dataflow;
+using System.Diagnostics;
 
 namespace fiskaltrust.Middleware.Localization.v2.Synchronizer
 {
     public sealed class LocalQueueSynchronizationDecorator : ISignProcessor, IDisposable
     {
         private readonly ISignProcessor _signProcessor;
-        private readonly ILogger<LocalQueueSynchronizationDecorator> _logger;
-        private readonly Channel<(ReceiptRequest request, ChannelWriter<SynchronizedResult>)> _channel;
+        private readonly ActionBlock<(ReceiptRequest request, Activity? activity, TaskCompletionSource<ReceiptResponse?> tcs)> _processor;
         private volatile bool _disposed = false;
 
-        public LocalQueueSynchronizationDecorator(ISignProcessor signProcessor, ILogger<LocalQueueSynchronizationDecorator> logger)
+        public LocalQueueSynchronizationDecorator(ISignProcessor signProcessor)
         {
             _signProcessor = signProcessor;
-            _logger = logger;
-            _channel = Channel.CreateUnbounded<(ReceiptRequest, ChannelWriter<SynchronizedResult>)>();
 
-            _ = Task.Run(ProcessReceipts);
-        }
-
-        public async Task<ReceiptResponse?> ProcessAsync(ReceiptRequest receiptRequest)
-        {
-            _logger.LogTrace("LocalQueueSynchronizationDecorator.ProcessAsync called.");
-            var responseChannel = Channel.CreateBounded<SynchronizedResult>(1);
-
-            if (!await _channel.Writer.WaitToWriteAsync())
+            _processor = new(async task =>
             {
-                throw new ObjectDisposedException(nameof(ISignProcessor), "Queue was already disposed");
-            }
-
-            await _channel.Writer.WriteAsync((receiptRequest, responseChannel.Writer));
-
-            _logger.LogTrace("LocalQueueSynchronizationDecorator.ProcessAsync: Waiting until result is available.");
-            var synchronizedResult = await responseChannel.Reader.ReadAsync();
-
-            _logger.LogTrace("LocalQueueSynchronizationDecorator.ProcessAsync: Got receipt result.");
-            synchronizedResult.ExceptionDispatchInfo?.Throw();
-
-            return await Task.FromResult(synchronizedResult.Response).ConfigureAwait(false);
-        }
-
-        private async Task ProcessReceipts()
-        {
-            while (true)
-            {
-                if (!await _channel.Reader.WaitToReadAsync())
-                {
-                    break;
-                }
-
-                var (request, responseChannel) = await _channel.Reader.ReadAsync();
-
-                _logger.LogTrace("LocalQueueSynchronizationDecorator.ProcessReceipts: Processing a new receipt.");
-                var synchronizedResult = new SynchronizedResult();
-
+                var currentActivity = Activity.Current;
                 try
                 {
                     if (_disposed)
                     {
-                        throw new ObjectDisposedException(nameof(ISignProcessor), "Queue was already disposed");
+                        throw new ObjectDisposedException(nameof(ISignProcessor), "Queue has already been disposed.");
                     }
-
-                    var response = await _signProcessor.ProcessAsync(request).ConfigureAwait(false);
-                    synchronizedResult.Response = response;
+                    Activity.Current = task.activity;
+                    var response = await _signProcessor.ProcessAsync(task.request).ConfigureAwait(false);
+                    task.tcs.SetResult(response);
                 }
                 catch (Exception ex)
                 {
-                    synchronizedResult.ExceptionDispatchInfo = ExceptionDispatchInfo.Capture(ex);
+                    task.tcs.SetException(ex);
                 }
                 finally
                 {
-                    await responseChannel.WriteAsync(synchronizedResult);
-                    responseChannel.Complete();
+                    Activity.Current = currentActivity;
                 }
-            }
+            },
+            new ExecutionDataflowBlockOptions
+            {
+                MaxDegreeOfParallelism = 1 // Sequential processing
+            });
+        }
+
+        public Task<ReceiptResponse?> ProcessAsync(ReceiptRequest request)
+        {
+            var tcs = new TaskCompletionSource<ReceiptResponse?>();
+            _processor.Post((request, Activity.Current, tcs));
+            return tcs.Task;
         }
 
         public void Dispose()
         {
             _disposed = true;
-            _channel.Writer.Complete();
+            _processor.Complete();
         }
     }
 }
