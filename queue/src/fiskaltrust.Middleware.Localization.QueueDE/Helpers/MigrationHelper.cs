@@ -45,6 +45,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Helpers
             await actionJournalRepository.InsertAsync(actionJournal).ConfigureAwait(false);
         }
 
+        // We should try to get rid of this method in CloudCashBox since it slows us down
+        // this performs multiple reads everytime and will never be true.
         public static bool IsMigrationInProgress(IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareActionJournalRepository actionJournalRepository)
         {
             var queueItem = queueItemRepository.GetLastQueueItemAsync().Result;

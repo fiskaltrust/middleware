@@ -102,7 +102,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage
             await PersistMasterDataAsync(baseStorageConfig, _configurationRepository,
                 new AzureTableStorageAccountMasterDataRepository(_queueConfiguration, _tableServiceClient), new AzureTableStorageOutletMasterDataRepository(_queueConfiguration, _tableServiceClient),
                 new AzureTableStorageAgencyMasterDataRepository(_queueConfiguration, _tableServiceClient), new AzureTableStoragePosSystemMasterDataRepository(_queueConfiguration, _tableServiceClient)).ConfigureAwait(false);
-            await PersistConfigurationAsync(baseStorageConfig, _configurationRepository, _logger).ConfigureAwait(false);
+            await PersistConfigurationParallelAsync(baseStorageConfig, _configurationRepository, _logger).ConfigureAwait(false);
         }
 
         private void AddRepositories(IServiceCollection services)

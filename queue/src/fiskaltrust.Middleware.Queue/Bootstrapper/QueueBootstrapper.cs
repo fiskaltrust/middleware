@@ -68,11 +68,12 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
 
         private static async Task CreateConfigurationActionJournalAsync(MiddlewareConfiguration middlewareConfiguration, IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareActionJournalRepository actionJournalRepository)
         {
-
-            if (MigrationHelper.IsMigrationInProgress(queueItemRepository, actionJournalRepository))
-            {
-                return;
-            }
+            // TODO - We should find another way for performing the migration
+            // In cloud interfaces it maybe makes no sense to check this so we can skip it?
+            //if (MigrationHelper.IsMigrationInProgress(queueItemRepository, actionJournalRepository))
+            //{
+            //    return;
+            //}
             var configuration = new Dictionary<string, object>
             {
                 { "MachineName", Environment.MachineName },

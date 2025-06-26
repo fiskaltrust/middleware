@@ -104,7 +104,7 @@ public class AzureStorageProvider : BaseStorageBootStrapper, IStorageProvider
             await PersistMasterDataAsync(baseStorageConfig, configurationRepository,
                 new AzureTableStorageAccountMasterDataRepository(_queueConfiguration, _tableServiceClient), new AzureTableStorageOutletMasterDataRepository(_queueConfiguration, _tableServiceClient),
                 new AzureTableStorageAgencyMasterDataRepository(_queueConfiguration, _tableServiceClient), new AzureTableStoragePosSystemMasterDataRepository(_queueConfiguration, _tableServiceClient)).ConfigureAwait(false);
-            await PersistConfigurationAsync(baseStorageConfig, configurationRepository, _logger).ConfigureAwait(false);
+            await PersistConfigurationParallelAsync(baseStorageConfig, configurationRepository, _logger).ConfigureAwait(false);
             _initializedCompletionSource.SetResult();
         }
         catch (Exception e)

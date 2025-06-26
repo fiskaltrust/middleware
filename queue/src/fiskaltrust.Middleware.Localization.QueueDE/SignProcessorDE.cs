@@ -38,7 +38,9 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             _transactionPayloadFactory = transactionPayloadFactory;
             _requestCommandFactory = requestCommandFactory;
             _logger = logger;
-            _migrationDone = MigrationHelper.IsMigrationInProgress(queueItemRepository, actionJournalRepository);
+            // TODO - We should find another way for performing the migration
+            // In cloud interfaces it maybe makes no sense to check this so we can skip it?
+            // _migrationDone = MigrationHelper.IsMigrationInProgress(queueItemRepository, actionJournalRepository);
         }
 
         public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ftQueue queue, ftQueueItem queueItem)
