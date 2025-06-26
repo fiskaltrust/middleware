@@ -17,6 +17,8 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData;
 
 public class AADEFactory
 {
+    private const string VIVA_FISCAL_PROVIDER_ID = "126";
+
     private readonly MasterDataConfiguration _masterDataConfiguration;
 
     public AADEFactory(MasterDataConfiguration masterDataConfiguration)
@@ -480,7 +482,7 @@ public class AADEFactory
                         payment.ProvidersSignature = new ProviderSignatureType
                         {
                             Signature = requestUri["aadeProviderSignature"],
-                            SigningAuthor = "126"
+                            SigningAuthor = VIVA_FISCAL_PROVIDER_ID
                         };
                     }
                 }
@@ -497,7 +499,7 @@ public class AADEFactory
                         payment.ProvidersSignature = new ProviderSignatureType
                         {
                             Signature = vivaPayment.ProtocolRequest?.aadeProviderSignature,
-                            SigningAuthor = "126"
+                            SigningAuthor = VIVA_FISCAL_PROVIDER_ID
                         };
                     }
                 }
@@ -515,7 +517,7 @@ public class AADEFactory
                                 payment.ProvidersSignature = new ProviderSignatureType
                                 {
                                     Signature = aadeProviderSignatureElement.GetString(),
-                                    SigningAuthor = "126"
+                                    SigningAuthor = VIVA_FISCAL_PROVIDER_ID
                                 };
                             }
 
