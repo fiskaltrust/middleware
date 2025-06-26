@@ -36,6 +36,12 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             ThrowIfNoImplicitFlow(request);
             ThrowIfTraining(request);
 
+
+            if (!request.IsTseTarDownloadBypass())
+            {
+                await PerformTarFileExportAsync(queueItem, queue, queueDE, erase: true).ConfigureAwait(false);
+            }
+
             var (processType, payload) = _transactionPayloadFactory.CreateReceiptPayload(request);
             var receiptResponse = CreateReceiptResponse(request, queueItem, queueDE);
 
