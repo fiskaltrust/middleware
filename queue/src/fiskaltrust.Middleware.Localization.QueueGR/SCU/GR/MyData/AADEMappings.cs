@@ -348,7 +348,7 @@ public static class AADEMappings
         PayItemCase.OnlinePayment => MyDataPaymentMethods.WebBanking,
         PayItemCase.LoyaltyProgramCustomerCardPayment => -1,
         PayItemCase.AccountsReceivable => MyDataPaymentMethods.OnCredit,
-        PayItemCase.SEPATransfer => -1,
+        PayItemCase.SEPATransfer =>  payItem.Description?.ToUpper() == "IRIS" ? MyDataPaymentMethods.IrisDirectPayments : -1,
         PayItemCase.OtherBankTransfer => -1,
         PayItemCase.TransferToCashbookVaultOwnerEmployee => -1,
         PayItemCase.InternalMaterialConsumption => -1,
