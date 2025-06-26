@@ -13,6 +13,13 @@ namespace fiskaltrust.Middleware.SCU.ES.VeriFactu
         public X509Certificate2 Certificate { get; set; } = null!;
 
         public static VeriFactuSCUConfiguration FromConfiguration(Dictionary<string, object> configuration)
-            => JsonSerializer.Deserialize<VeriFactuSCUConfiguration>(JsonSerializer.Serialize(configuration)) ?? new VeriFactuSCUConfiguration();
+        {
+            return new VeriFactuSCUConfiguration
+            {
+                BaseUrl = configuration["BaseUrl"].ToString()!,
+                QRCodeBaseUrl = configuration["QRCodeBaseUrl"].ToString()!,
+                Certificate = (X509Certificate2)configuration["Certificate"]!
+            };
+        }
     }
 }

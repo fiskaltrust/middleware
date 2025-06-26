@@ -5,6 +5,9 @@ using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.SCU.ES.Soap;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using fiskaltrust.storage.V0.MasterData;
+using System.Security.Cryptography.X509Certificates;
+
 namespace fiskaltrust.Middleware.SCU.ES.VeriFactu;
 
 public class ScuBootstrapper : IMiddlewareBootstrapper
@@ -17,17 +20,19 @@ public class ScuBootstrapper : IMiddlewareBootstrapper
         services.AddSingleton(VeriFactuSCUConfiguration.FromConfiguration(Configuration));
         services.AddHttpClient<IClient, Client>((sp, client) =>
         {
-            var config = sp.GetRequiredService<IOptions<VeriFactuSCUConfiguration>>().Value;
+            var config = sp.GetRequiredService<VeriFactuSCUConfiguration>();
             client.BaseAddress = new Uri(config.BaseUrl);
             client.DefaultRequestHeaders.Add("AcceptCharset", "utf-8");
         }).ConfigurePrimaryHttpMessageHandler(sp =>
         {
-            var config = sp.GetRequiredService<IOptions<VeriFactuSCUConfiguration>>().Value;
+            var config = sp.GetRequiredService<VeriFactuSCUConfiguration>();
             var handler = new HttpClientHandler();
             handler.ClientCertificates.Add(config.Certificate);
+            //handler.ClientCertificates.Add((X509Certificate2)Configuration["Certificate"]);
             return handler;
         });
+        services.AddScoped<MasterDataConfiguration>();
         services.AddScoped<IESSSCD, VeriFactuSCU>();
-
     }
+   
 }
