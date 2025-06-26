@@ -101,21 +101,19 @@ public class ReceiptCommandProcessorGR(IGRSSCD sscd, ftQueueGR queueGR, ftSignat
 
     private async Task<List<(ReceiptRequest, ReceiptResponse)>> LoadReceiptReferencesToResponse(ReceiptRequest request, ReceiptResponse receiptResponse)
     {
-        if (request.cbPreviousReceiptReference?.IsSingle ?? false)
-        {
-            return [await LoadReceiptReferencesToResponse(request, receiptResponse, request.cbPreviousReceiptReference?.SingleValue?.ToString() ?? "")];
-        }
-        if (request.cbPreviousReceiptReference?.IsGroup ?? false)
-        {
-            var references = new List<(ReceiptRequest, ReceiptResponse)>();
-            foreach (var reference in request.cbPreviousReceiptReference.GroupValue ?? [])
-            {
-                var item = await LoadReceiptReferencesToResponse(request, receiptResponse, reference);
-                references.Add(item);
+        return request.cbPreviousReceiptReference.Match(
+            single => [await LoadReceiptReferencesToResponse(request, receiptResponse, single)],
+            group => {
+                var references = new List<(ReceiptRequest, ReceiptResponse)>();
+                foreach (var reference in group)
+                {
+                    var item = await LoadReceiptReferencesToResponse(request, receiptResponse, reference);
+                    references.Add(item);
+                }
+                return references;
             }
-            return references;
-        }
-        return [];
+        );
+
     }
 
 #pragma warning disable
