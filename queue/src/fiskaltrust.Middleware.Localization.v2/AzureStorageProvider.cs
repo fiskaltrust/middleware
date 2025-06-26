@@ -100,11 +100,13 @@ public class AzureStorageProvider : BaseStorageBootStrapper, IStorageProvider
 
             var configurationRepository = new AzureTableStorageConfigurationRepository(_queueConfiguration, _tableServiceClient);
             var baseStorageConfig = ParseStorageConfiguration(_configuration);
-
-            await PersistMasterDataAsync(baseStorageConfig, configurationRepository,
-                new AzureTableStorageAccountMasterDataRepository(_queueConfiguration, _tableServiceClient), new AzureTableStorageOutletMasterDataRepository(_queueConfiguration, _tableServiceClient),
-                new AzureTableStorageAgencyMasterDataRepository(_queueConfiguration, _tableServiceClient), new AzureTableStoragePosSystemMasterDataRepository(_queueConfiguration, _tableServiceClient)).ConfigureAwait(false);
-            await PersistConfigurationParallelAsync(baseStorageConfig, configurationRepository, _logger).ConfigureAwait(false);
+            var cashBoxes = await configurationRepository.GetCashBoxListAsync().ConfigureAwait(false);
+            if (!cashBoxes.Any()) // TODO: is this condition right?
+            {
+                await PersistMasterDataAsync(baseStorageConfig, new AzureTableStorageAccountMasterDataRepository(_queueConfiguration, _tableServiceClient), new AzureTableStorageOutletMasterDataRepository(_queueConfiguration, _tableServiceClient), new AzureTableStorageAgencyMasterDataRepository(_queueConfiguration, _tableServiceClient), new AzureTableStoragePosSystemMasterDataRepository(_queueConfiguration, _tableServiceClient)).ConfigureAwait(false);
+            }
+            var dbCashBox = cashBoxes.FirstOrDefault(x => x.ftCashBoxId == baseStorageConfig.CashBox.ftCashBoxId);
+            await PersistConfigurationParallelAsync(baseStorageConfig, dbCashBox, configurationRepository, _logger).ConfigureAwait(false);
             _initializedCompletionSource.SetResult();
         }
         catch (Exception e)
