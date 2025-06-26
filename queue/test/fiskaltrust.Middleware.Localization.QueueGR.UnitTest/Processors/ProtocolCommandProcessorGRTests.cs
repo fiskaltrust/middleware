@@ -48,7 +48,7 @@ public class ProtocolCommandProcessorGRTests
                 ReceiptResponse = receiptResponse,
             });
 
-        var protocolCommandProcessorGR = new ProtocolCommandProcessorGR(grSSCDMock.Object, queueGR, scuGR, Mock.Of<IMiddlewareQueueItemRepository>());
+        var protocolCommandProcessorGR = new ProtocolCommandProcessorGR(grSSCDMock.Object);
         var receiptProcessor = new ReceiptProcessor(Mock.Of<ILogger<ReceiptProcessor>>(), null!, null!, null!, null!, protocolCommandProcessorGR);
         var result = await receiptProcessor.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
 
@@ -84,7 +84,7 @@ public class ProtocolCommandProcessorGRTests
                 ReceiptResponse = receiptResponse,
             });
 
-        var protocolCommandProcessorGR = new ProtocolCommandProcessorGR(grSSCDMock.Object, queueGR, scuGR, Mock.Of<IMiddlewareQueueItemRepository>());
+        var protocolCommandProcessorGR = new ProtocolCommandProcessorGR(grSSCDMock.Object);
         var receiptProcessor = new ReceiptProcessor(Mock.Of<ILogger<ReceiptProcessor>>(), null!, null!, null!, null!, protocolCommandProcessorGR);
         var result = await receiptProcessor.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
 
