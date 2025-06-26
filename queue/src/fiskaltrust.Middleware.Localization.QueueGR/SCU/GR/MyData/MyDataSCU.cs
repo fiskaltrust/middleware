@@ -44,14 +44,7 @@ public class MyDataSCU : IGRSSCD
                 item.transmissionFailureSpecified = true;
                 item.transmissionFailure = 1;
             }
-
-            request.ReceiptResponse.AddSignatureItem(new SignatureItem
-            {
-                Data = $"Απώλεια Διασύνδεσης Οντότητας - Παρόχου",
-                Caption = "Transmission Failure_1",
-                ftSignatureFormat = SignatureFormat.Text,
-                ftSignatureType = SignatureTypeGR.MyDataInfo.As<SignatureType>()
-            });
+            SignatureItemFactoryGR.AddTransmissionFailure1Signature(request);
         }
 
         var payload = aadFactory.GenerateInvoicePayload(doc);
@@ -71,7 +64,6 @@ public class MyDataSCU : IGRSSCD
         }
 
         // TODO in case of a payment transfer with a cbpreviousreceipterference we will update the invoice
-
         if (response.IsSuccessStatusCode)
         {
             var ersult = GetResponse(content);
@@ -84,7 +76,7 @@ public class MyDataSCU : IGRSSCD
                     {
                         if (data.ItemsElementName[i] == ItemsChoiceType.qrUrl)
                         {
-                            request.ReceiptResponse.AddSignatureItem(CreateGRQRCode(data.Items[i].ToString()));
+                            request.ReceiptResponse.AddSignatureItem(SignatureItemFactoryGR.CreateGRQRCode(data.Items[i].ToString()));
                         }
                         else
                         {
@@ -98,43 +90,19 @@ public class MyDataSCU : IGRSSCD
                         }
                     }
 
-                    request.ReceiptResponse.AddSignatureItem(CreateGRQRCode($"{_receiptBaseAddress}/{request.ReceiptResponse.ftQueueID}/{request.ReceiptResponse.ftQueueItemID}"));
+                    request.ReceiptResponse.AddSignatureItem(SignatureItemFactoryGR.CreateGRQRCode($"{_receiptBaseAddress}/{request.ReceiptResponse.ftQueueID}/{request.ReceiptResponse.ftQueueItemID}"));
                     request.ReceiptResponse.ftReceiptIdentification += $"{doc.invoice[0].invoiceHeader.series}-{doc.invoice[0].invoiceHeader.aa}";
                     if (request.ReceiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004))
                     {
-                        request.ReceiptResponse.AddSignatureItem(new SignatureItem
-                        {
-                            Data = $"ΤΟ ΠΑΡΟΝ ΕΙΝΑΙ ΠΛΗΡΟΦΟΡΙΑΚΟ ΣΤΟΙΧΕΙΟ ΚΑΙ ΔΕΝ ΑΠΟΤΕΛΕΙ ΝΟΜΙΜΗ ΦΟΡΟΛΟΓΙΚΗ ΑΠΟΔΕΙΞΗ/ΤΙΜΟΛΟΓΙΟ. THE PRESENT DOCUMENT IS ISSUED ONLY FOR INFORMATION PURPOSES AND DOES NOT STAND FOR A VALID TAX RECEIPT/INVOICE",
-                            Caption = "",
-                            ftSignatureFormat = SignatureFormat.Text,
-                            ftSignatureType = SignatureTypeGR.MyDataInfo.As<SignatureType>()
-                        });
+                        SignatureItemFactoryGR.AddOrderReceiptSignature(request);
                     }
 
                     if (doc.invoice[0].invoiceHeader.multipleConnectedMarks?.Length > 0)
                     {
-                        request.ReceiptResponse.AddSignatureItem(new SignatureItem
-                        {
-                            Data = string.Join(",", doc.invoice[0].invoiceHeader.multipleConnectedMarks),
-                            Caption = "",
-                            ftSignatureFormat = SignatureFormat.Text,
-                            ftSignatureType = SignatureTypeGR.MyDataInfo.As<SignatureType>()
-                        });
+                        SignatureItemFactoryGR.AddMarksForConnectedMarks(request, doc);
                     }
-                    request.ReceiptResponse.AddSignatureItem(new SignatureItem
-                    {
-                        Data = $"{doc.invoice[0].issuer.vatNumber}|{doc.invoice[0].invoiceHeader.issueDate.ToString("dd/MM/yyyy")}|{doc.invoice[0].issuer.branch}|{doc.invoice[0].invoiceHeader.invoiceType}|{doc.invoice[0].invoiceHeader.series}|{doc.invoice[0].invoiceHeader.aa}",
-                        Caption = "Μοναδικός αριθμός παραστατικού",
-                        ftSignatureFormat = SignatureFormat.Text,
-                        ftSignatureType = SignatureTypeGR.MyDataInfo.As<SignatureType>()
-                    });
-                    request.ReceiptResponse.AddSignatureItem(new SignatureItem
-                    {
-                        Data = $"2024_12_126VIVA_001_ Viva Fiscal_V1_23122024",
-                        Caption = "www.viva.com",
-                        ftSignatureFormat = SignatureFormat.Text,
-                        ftSignatureType = SignatureTypeGR.MyDataInfo.As<SignatureType>()
-                    });
+                    SignatureItemFactoryGR.AddInvoiceSignature(request, doc);
+                    SignatureItemFactoryGR.AddVivaFiscalProviderSignature(request);
                 }
                 else
                 {
@@ -166,22 +134,13 @@ public class MyDataSCU : IGRSSCD
         };
     }
 
+
     public class AADEEErrorResponse
     {
         public string AADEError { get; set; }
         public List<ErrorType> Errors { get; set; }
     }
 
-    public static SignatureItem CreateGRQRCode(string qrCode)
-    {
-        return new SignatureItem()
-        {
-            Caption = "[www.fiskaltrust.gr]",
-            Data = qrCode,
-            ftSignatureFormat = SignatureFormat.QRCode,
-            ftSignatureType = SignatureTypeGR.PosReceipt.As<SignatureType>()
-        };
-    }
 
     public ResponseDoc GetResponse(string xmlContent)
     {
