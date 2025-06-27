@@ -101,7 +101,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage
             var baseStorageConfig = ParseStorageConfiguration(_configuration);
 
             var cashBoxes = await _configurationRepository.GetCashBoxListAsync().ConfigureAwait(false);
-            if (!cashBoxes.Any()) // TODO: is this condition right?
+            if (!cashBoxes.Any()) 
             {
                 await PersistMasterDataAsync(baseStorageConfig, new AzureTableStorageAccountMasterDataRepository(_queueConfiguration, _tableServiceClient), new AzureTableStorageOutletMasterDataRepository(_queueConfiguration, _tableServiceClient), new AzureTableStorageAgencyMasterDataRepository(_queueConfiguration, _tableServiceClient), new AzureTableStoragePosSystemMasterDataRepository(_queueConfiguration, _tableServiceClient)).ConfigureAwait(false);
             }
