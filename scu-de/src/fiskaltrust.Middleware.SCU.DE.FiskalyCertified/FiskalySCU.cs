@@ -137,14 +137,22 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
         {
             try
             {
-                var clientDto = await _fiskalyApiProvider.GetClientsAsync(_configuration.TssId).ConfigureAwait(false);
-                var tssResult = await _fiskalyApiProvider.GetTseByIdAsync(_configuration.TssId);
+                var clientsTask = _fiskalyApiProvider.GetClientsAsync(_configuration.TssId);
+                var tssResultTask = _fiskalyApiProvider.GetTseByIdAsync(_configuration.TssId);
+                var startedTransactionsTask = _fiskalyApiProvider.GetStartedTransactionsAsync(_configuration.TssId);
+                await Task.WhenAll(clientsTask, tssResultTask, startedTransactionsTask);
+
+                var clientDto = await clientsTask;
+                var tssResult = await tssResultTask;
+
                 if (tssResult.State.Equals("DELETED") && tssResult.Env.Equals("TEST"))
                 {
                     throw new FiskalyException("The specified TSE is in 'DELETED' state. Fiskaly automatically deletes all v2 test TSEs each Sunday, which can lead to this behavior; " +
                         "please produce a new TSE for test purposes. Production TSEs are not affected by these regular cleanups.");
                 }
-                var startedTransactions = await _fiskalyApiProvider.GetStartedTransactionsAsync(_configuration.TssId);
+
+                // Only start this API call after we've confirmed the TSE is valid
+                var startedTransactions = await startedTransactionsTask;
                 var serial = tssResult.SerialNumber;
 
                 return new TseInfo

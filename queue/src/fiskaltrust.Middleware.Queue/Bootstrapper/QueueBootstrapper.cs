@@ -68,11 +68,11 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
 
         private static async Task CreateConfigurationActionJournalAsync(MiddlewareConfiguration middlewareConfiguration, IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareActionJournalRepository actionJournalRepository)
         {
-
-            if (MigrationHelper.IsMigrationInProgress(queueItemRepository, actionJournalRepository))
+            if(!middlewareConfiguration.IsCloudCashBox && MigrationHelper.IsMigrationInProgress(queueItemRepository, actionJournalRepository))
             {
                 return;
             }
+
             var configuration = new Dictionary<string, object>
             {
                 { "MachineName", Environment.MachineName },

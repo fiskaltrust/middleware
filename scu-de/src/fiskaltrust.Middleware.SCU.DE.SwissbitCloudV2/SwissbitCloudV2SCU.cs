@@ -119,9 +119,15 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
         {
             try
             {
-                var clientDto = await _swissbitCloudV2Provider.GetClientsAsync().ConfigureAwait(false);
-                var tseResult = await _swissbitCloudV2Provider.GetTseStatusAsync();
-                var startedTransactions = await _swissbitCloudV2Provider.GetStartedTransactionsAsync();
+                var clientDtoTask = _swissbitCloudV2Provider.GetClientsAsync();
+                var tseResultTask =  _swissbitCloudV2Provider.GetTseStatusAsync();
+                var startedTransactionsTask =  _swissbitCloudV2Provider.GetStartedTransactionsAsync();
+                
+                await Task.WhenAll(clientDtoTask, tseResultTask, startedTransactionsTask).ConfigureAwait(false);
+
+                var clientDto = await clientDtoTask;
+                var tseResult = await tseResultTask;
+                var startedTransactions = await startedTransactionsTask;
 
                 var bytes = Encoding.ASCII.GetBytes(tseResult.CertificateChain);
                 var cert = new X509Certificate2(bytes);
