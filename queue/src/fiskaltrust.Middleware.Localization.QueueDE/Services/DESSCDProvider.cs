@@ -87,7 +87,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.Services
                 _instance = _clientFactory.CreateClient(config);
                 try
                 {
-                    // TODO can we make this async?
                     var tseInfo = await _instance.GetTseInfoAsync().ConfigureAwait(false);
                     signaturCreationUnitDE.TseInfoJson = JsonConvert.SerializeObject(tseInfo);
                     await _configurationRepository.InsertOrUpdateSignaturCreationUnitDEAsync(signaturCreationUnitDE).ConfigureAwait(false);
