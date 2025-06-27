@@ -18,13 +18,11 @@ namespace fiskaltrust.Middleware.SCU.ES.VeriFactu;
 
 public class VeriFactuMapping
 {
-    private readonly MasterDataConfiguration _masterData;
-    private readonly X509Certificate2? _certificate;
-
-    public VeriFactuMapping(MasterDataConfiguration masterData, X509Certificate2? certificate = null)
+    //private readonly X509Certificate2? _certificate;
+    private readonly VeriFactuSCUConfiguration _veriFactuSCUConfiguration;
+    public VeriFactuMapping(VeriFactuSCUConfiguration configuration)
     {
-        _masterData = masterData;
-        _certificate = certificate;
+        _veriFactuSCUConfiguration = configuration;
     }
 
     public RegFactuSistemaFacturacion CreateRegFactuSistemaFacturacion(RegistroFacturacionAnulacion registroFacturacionAnulacion) => CreateRegFactuSistemaFacturacion(new RegistroFactura { Item = registroFacturacionAnulacion });
@@ -39,8 +37,8 @@ public class VeriFactuMapping
                 // "Name and company name of the person responsible for issuing the invoices."
                 // Not sure how this needs to be formated. Maybe we'll need some extra fields in the master data?
                 // Should this be the AccountName, or OutletName or sth from the Agencies?
-                NombreRazon = _masterData.Account.AccountName,
-                NIF = _masterData.Account.VatId
+                NombreRazon = _veriFactuSCUConfiguration.NombreRazonEmisor,
+                NIF = _veriFactuSCUConfiguration.Nif
             },
 
         };
@@ -102,7 +100,7 @@ public class VeriFactuMapping
 
         registroFacturacionAnulacion.Huella = registroFacturacionAnulacion.GetHuella();
 
-        return _certificate is null ? registroFacturacionAnulacion : XmlHelpers.Deserialize<RegistroFacturacionAnulacion>(XmlHelpers.SignXmlContentWithXades(XmlHelpers.GetXMLIncludingNamespace(registroFacturacionAnulacion, "sf", "RegistroFacturacionAlta"), _certificate))!;
+        return _veriFactuSCUConfiguration.Certificate is null ? registroFacturacionAnulacion : XmlHelpers.Deserialize<RegistroFacturacionAnulacion>(XmlHelpers.SignXmlContentWithXades(XmlHelpers.GetXMLIncludingNamespace(registroFacturacionAnulacion, "sf", "RegistroFacturacionAlta"), _veriFactuSCUConfiguration.Certificate))!;
     }
 
     public RegistroFacturacionAlta CreateRegistroFacturacionAlta(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, ReceiptRequest? previousReceiptRequest, ReceiptResponse? previousReceiptResponse)
@@ -112,7 +110,7 @@ public class VeriFactuMapping
             IDVersion = Version.Item10,
             IDFactura = new IDFactura
             {
-                IDEmisorFactura = _masterData.Account.VatId,
+                IDEmisorFactura = _veriFactuSCUConfiguration.Nif,
                 NumSerieFactura = receiptResponse.ftReceiptIdentification.Split('#')[1],
                 FechaExpedicionFactura = receiptRequest.cbReceiptMoment.ToString("dd-MM-yyy")
             },
@@ -120,7 +118,7 @@ public class VeriFactuMapping
             // "Name and business name of the person required to issue the invoice."
             // Not sure how this needs to be formated. Maybe we'll need some extra fields in the master data?
             // Should this be the AccountName, or OutletName or sth from the Agencies?
-            NombreRazonEmisor = _masterData.Account.AccountName,
+            NombreRazonEmisor = _veriFactuSCUConfiguration.NombreRazonEmisor,
             TipoFactura = receiptRequest.ftReceiptCase.GetType() switch
             {
                 _ => ClaveTipoFactura.F2, // QUESTION: is simplified invoice correct?
@@ -189,7 +187,7 @@ public class VeriFactuMapping
 
         registroFacturacionAlta.Huella = registroFacturacionAlta.GetHuella();
 
-        return _certificate is null ? registroFacturacionAlta : XmlHelpers.Deserialize<RegistroFacturacionAlta>(XmlHelpers.SignXmlContentWithXades(XmlHelpers.GetXMLIncludingNamespace(registroFacturacionAlta, "sf", "RegistroFacturacionAlta"), _certificate))!;
+        return _veriFactuSCUConfiguration.Certificate is null ? registroFacturacionAlta : XmlHelpers.Deserialize<RegistroFacturacionAlta>(XmlHelpers.SignXmlContentWithXades(XmlHelpers.GetXMLIncludingNamespace(registroFacturacionAlta, "sf", "RegistroFacturacionAlta"), _veriFactuSCUConfiguration.Certificate))!;
     }
 
     private object GetEncadenamientoFacturaAnteriorAlta(ReceiptRequest? previousReceiptRequest, ReceiptResponse? previousReceiptResponse)

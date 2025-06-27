@@ -24,10 +24,10 @@ public class VeriFactuSCU : IESSSCD
     private readonly IClient _client;
     private readonly VeriFactuMapping _veriFactuMapping;
 
-    public VeriFactuSCU(IClient client, MasterDataConfiguration masterData, VeriFactuSCUConfiguration configuration)
+    public VeriFactuSCU(IClient client, VeriFactuSCUConfiguration configuration)
     {
         _configuration = configuration;
-        _veriFactuMapping = new VeriFactuMapping(masterData, configuration.Certificate);
+        _veriFactuMapping = new VeriFactuMapping(configuration);
         _client = client;
     }
 
