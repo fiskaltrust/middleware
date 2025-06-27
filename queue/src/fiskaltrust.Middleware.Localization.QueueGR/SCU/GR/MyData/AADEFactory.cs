@@ -262,6 +262,11 @@ public class AADEFactory
             {
                 invoiceRow.recType = 6;
             }
+            else if (x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Voucher) && x.ftChargeItemCase.IsVat(ChargeItemCase.NotTaxable))
+            {
+                invoiceRow.vatExemptionCategorySpecified = true;
+                invoiceRow.vatExemptionCategory = 27;
+            }
             else if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.IsSelfPricingOperation))
             {
                 if (invoiceRow.vatCategory == MyDataVatCategory.ExcludingVat)
