@@ -34,7 +34,6 @@ jobs:
       inputs:
         updateBuildNumber: true
         semverVersion: 'v1'
-      workingDirectory: 'storage'
   
     - powershell: |   
         $nugetFeed = if ($Env:BUILD_SOURCEBRANCH.StartsWith("refs/tags/storage/v")) { "release" } else { "dev" }
