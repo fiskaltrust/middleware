@@ -35,14 +35,14 @@ jobs:
         semverVersion: 'v1'
   
     - powershell: |   
-        $nugetFeed = if ($Env:BUILD_SOURCEBRANCH.StartsWith("refs/tags/v")) { "release" } else { "dev" }
+        $nugetFeed = if ($Env:BUILD_SOURCEBRANCH.StartsWith("refs/tags/storage/v")) { "release" } else { "dev" }
         Write-Host "##vso[task.setvariable variable=NuGetFeed;]$nugetFeed"
       displayName: Set NuGet feed
 
     - task: DotNetCoreCLI@2
       inputs:
         command: 'restore'
-        projects: '*.sln'
+        projects: 'storage/*.sln'
         vstsFeed: '$(NuGetFeed)'
         verbosityRestore: 'minimal'
         arguments: '--configuration Release'
@@ -51,14 +51,14 @@ jobs:
     - task: DotNetCoreCLI@2
       inputs:
         command: 'build'
-        projects: '*.sln'
+        projects: 'storage/*.sln'
         arguments: '--configuration Release'
       displayName: 'Build'
 
     - task: DotNetCoreCLI@2
       inputs:
         command: 'test'
-        projects: '**/*.UnitTest.csproj'
+        projects: 'storage/**/*.UnitTest.csproj'
         arguments: '--configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:Include=[fiskaltrust.*]*'
       displayName: 'Run unit tests'
       
@@ -68,11 +68,11 @@ jobs:
         secureFileId: 'codesigning.pfx'
         signCertPassword: '$(Code_Signing_Password)'
         filePaths: |
-         src/**/*.dll
+         storage/src/**/*.dll
 
     - script: |
         dotnet tool install -g dotnet-reportgenerator-globaltool
-        reportgenerator -reports:$(Build.SourcesDirectory)/test/**/coverage.opencover.xml -targetdir:$(Build.SourcesDirectory)/CodeCoverage -reporttypes:"Cobertura;HTMLInline;HTMLChart"
+        reportgenerator -reports:$(Build.SourcesDirectory)/storage/test/**/coverage.opencover.xml -targetdir:$(Build.SourcesDirectory)/CodeCoverage -reporttypes:"Cobertura;HTMLInline;HTMLChart"
       displayName: Create Code coverage report
       workingDirectory: '/'
 
@@ -83,13 +83,13 @@ jobs:
         summaryFileLocation: '$(Build.SourcesDirectory)/CodeCoverage/Cobertura.xml'
         reportDirectory: '$(Build.SourcesDirectory)/CodeCoverage'
 
-    - script: dotnet pack src/fiskaltrust.storage/fiskaltrust.storage.csproj --no-build --output $(Build.ArtifactStagingDirectory)/fiskaltrust.storage --configuration $(buildConfiguration)
+    - script: dotnet pack storage/src/fiskaltrust.storage/fiskaltrust.storage.csproj --no-build --output $(Build.ArtifactStagingDirectory)/fiskaltrust.storage --configuration $(buildConfiguration)
       displayName: 'dotnet pack storage'
 
-    - script: dotnet pack src/fiskaltrust.storage.serialization/fiskaltrust.storage.serialization.csproj --no-build --output $(Build.ArtifactStagingDirectory)/fiskaltrust.storage.serialization --configuration $(buildConfiguration)
+    - script: dotnet pack storage/src/fiskaltrust.storage.serialization/fiskaltrust.storage.serialization.csproj --no-build --output $(Build.ArtifactStagingDirectory)/fiskaltrust.storage.serialization --configuration $(buildConfiguration)
       displayName: 'dotnet pack storage serialization'
 
-    - script: dotnet pack src/fiskaltrust.storage.encryption/fiskaltrust.storage.encryption.csproj --no-build --output $(Build.ArtifactStagingDirectory)/fiskaltrust.storage.encryption --configuration $(buildConfiguration)
+    - script: dotnet pack storage/src/fiskaltrust.storage.encryption/fiskaltrust.storage.encryption.csproj --no-build --output $(Build.ArtifactStagingDirectory)/fiskaltrust.storage.encryption --configuration $(buildConfiguration)
       displayName: 'dotnet pack storage encryption'
         
     - task: PublishBuildArtifacts@1
