@@ -79,14 +79,14 @@ public class VeriFactuMapping
             // Is this fiskaltrust or the dealer/creator
             SistemaInformatico = new SistemaInformatico
             {
-                NombreRazon = "Thomas Steininger", // add real name here... and maybe get that from the config
+                NombreRazon = _veriFactuSCUConfiguration.NombreRazonEmisor,
                 NombreSistemaInformatico = "fiskaltrust.Middleware",
                 // Identification code given by the producing person or entity to its computerised invoicing system (RIS) which, once installed, constitutes the RIS used.
                 // It should distinguish it from any other possible different RIS produced by the same producing person or entity.
                 // The possible restrictions to its values shall be detailed in the corresponding documentation in the AEAT electronic office (validations document...).
                 IdSistemaInformatico = "00", // alphanumeric(2)
                 // VatId of producing company. We don't have that right now.
-                Item = "M0291081Q",
+                Item = _veriFactuSCUConfiguration.Nif,
                 Version = "1.0.0", // version
                 NumeroInstalacion = receiptResponse.ftCashBoxIdentification,
                 TipoUsoPosibleSoloVerifactu = Booleano.N,
@@ -105,28 +105,28 @@ public class VeriFactuMapping
 
     public RegistroFacturacionAlta CreateRegistroFacturacionAlta(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, ReceiptRequest? previousReceiptRequest, ReceiptResponse? previousReceiptResponse)
     {
-        var registroFacturacionAlta = new RegistroFacturacionAlta
+      
+        // {
+        var IDVersion = Version.Item10;
+        var IDFactura = new IDFactura
         {
-            IDVersion = Version.Item10,
-            IDFactura = new IDFactura
-            {
-                IDEmisorFactura = _veriFactuSCUConfiguration.Nif,
-                NumSerieFactura = receiptResponse.ftReceiptIdentification.Split('#')[1],
-                FechaExpedicionFactura = receiptRequest.cbReceiptMoment.ToString("dd-MM-yyy")
-            },
+            IDEmisorFactura = _veriFactuSCUConfiguration.Nif,
+            NumSerieFactura = receiptResponse.ftReceiptIdentification.Split('#')[1],
+            FechaExpedicionFactura = receiptRequest.cbReceiptMoment.ToString("dd-MM-yyy")
+        };
 
-            // "Name and business name of the person required to issue the invoice."
-            // Not sure how this needs to be formated. Maybe we'll need some extra fields in the master data?
-            // Should this be the AccountName, or OutletName or sth from the Agencies?
-            NombreRazonEmisor = _veriFactuSCUConfiguration.NombreRazonEmisor,
-            TipoFactura = receiptRequest.ftReceiptCase.GetType() switch
-            {
-                _ => ClaveTipoFactura.F2, // QUESTION: is simplified invoice correct?
-                // _ => throw new Exception($"Invalid receipt case {receiptRequest.ftReceiptCase}")
-            },
-            DescripcionOperacion = "test", // TODO: add descrpiton?,
+        // "Name and business name of the person required to issue the invoice."
+        // Not sure how this needs to be formated. Maybe we'll need some extra fields in the master data?
+        // Should this be the AccountName, or OutletName or sth from the Agencies?
+        var NombreRazonEmisor = _veriFactuSCUConfiguration.NombreRazonEmisor;
+        var TipoFactura = receiptRequest.ftReceiptCase.GetType() switch
+        {
+            _ => ClaveTipoFactura.F2, // QUESTION: is simplified invoice correct?
+                                      // _ => throw new Exception($"Invalid receipt case {receiptRequest.ftReceiptCase}")
+        };
+        var DescripcionOperacion = "test"; // TODO: add descrpiton?,
             // FacturaSinIdentifDestinatarioArt61d = Booleano.S, // TODO: do we need this art. 61d?
-            Desglose = receiptRequest.cbChargeItems.Select(chargeItem => new Detalle
+            var Desglose = receiptRequest.cbChargeItems.Select(chargeItem => new Detalle
             {
                 // 01 Value added tax (VAT)
                 // 02 Tax on Production, Services and Imports (IPSI) for Ceuta and Melilla
@@ -155,36 +155,49 @@ public class VeriFactuMapping
                 },
                 TipoImpositivo = chargeItem.VATRate.ToVeriFactuNumber(),
                 CuotaRepercutida = (chargeItem.VATAmount ?? chargeItem.Amount * chargeItem.VATRate).ToVeriFactuNumber()
-            }).ToArray(),
-            CuotaTotal = receiptRequest.cbChargeItems.Sum(chargeItem => chargeItem.GetVATAmount()).ToVeriFactuNumber(),
-            ImporteTotal = (receiptRequest.cbReceiptAmount ?? receiptRequest.cbChargeItems.Sum(chargeItem => chargeItem.Amount)).ToVeriFactuNumber(),
-            Encadenamiento = new RegistroFacturacionAltaEncadenamiento
+            }).ToArray();
+        var CuotaTotal = receiptRequest.cbChargeItems.Sum(chargeItem => chargeItem.GetVATAmount()).ToVeriFactuNumber();
+            var ImporteTotal = (receiptRequest.cbReceiptAmount ?? receiptRequest.cbChargeItems.Sum(chargeItem => chargeItem.Amount)).ToVeriFactuNumber();
+            var Encadenamiento = new RegistroFacturacionAltaEncadenamiento
             {
                 Item = GetEncadenamientoFacturaAnteriorAlta(previousReceiptRequest, previousReceiptResponse)
-            },
-            // Which PosSystem from the list should we take? In DE we just take the first one...
-            // Is this fiskaltrust or the dealer/creator
-            SistemaInformatico = new SistemaInformatico
-            {
-                NombreRazon = "Thomas Steininger", // add real name here... and maybe get that from the config
-                NombreSistemaInformatico = "fiskaltrust.Middleware",
-                // Identification code given by the producing person or entity to its computerised invoicing system (RIS) which, once installed, constitutes the RIS used.
-                // It should distinguish it from any other possible different RIS produced by the same producing person or entity.
-                // The possible restrictions to its values shall be detailed in the corresponding documentation in the AEAT electronic office (validations document...).
-                IdSistemaInformatico = "00", // alphanumeric(2)
-                // VatId of producing company. We don't have that right now.
-                Item = "M0291081Q",
-                Version = "1.0.0", // version
-                NumeroInstalacion = receiptResponse.ftCashBoxIdentification,
-                TipoUsoPosibleSoloVerifactu = Booleano.N,
-                TipoUsoPosibleMultiOT = Booleano.N,
-                IndicadorMultiplesOT = Booleano.N
-            },
-            FechaHoraHusoGenRegistro = TimeZoneInfo.ConvertTimeBySystemTimeZoneId(new DateTimeOffset(receiptResponse.ftReceiptMoment, TimeSpan.Zero), "Europe/Madrid"),
+            };
+        // Which PosSystem from the list should we take? In DE we just take the first one...
+        // Is this fiskaltrust or the dealer/creator
+        var SistemaInformatico = new SistemaInformatico
+        {
+            NombreRazon = _veriFactuSCUConfiguration.NombreRazonEmisor, 
+            NombreSistemaInformatico = "fiskaltrust.Middleware",
+            // Identification code given by the producing person or entity to its computerised invoicing system (RIS) which, once installed, constitutes the RIS used.
+            // It should distinguish it from any other possible different RIS produced by the same producing person or entity.
+            // The possible restrictions to its values shall be detailed in the corresponding documentation in the AEAT electronic office (validations document...).
+            IdSistemaInformatico = "00", // alphanumeric(2)
+                                         // VatId of producing company. We don't have that right now.
+            Item = _veriFactuSCUConfiguration.Nif,
+            Version = "1.0.0", // version
+            NumeroInstalacion = receiptResponse.ftCashBoxIdentification,
+            TipoUsoPosibleSoloVerifactu = Booleano.N,
+            TipoUsoPosibleMultiOT = Booleano.N,
+            IndicadorMultiplesOT = Booleano.N
+        };
+        var FechaHoraHusoGenRegistro = TimeZoneInfo.ConvertTimeBySystemTimeZoneId(new DateTimeOffset(receiptResponse.ftReceiptMoment, TimeSpan.Zero), "Europe/Madrid");
+        //};
+        var registroFacturacionAlta = new RegistroFacturacionAlta
+        {
+            IDVersion = IDVersion,
+            IDFactura = IDFactura,
+            NombreRazonEmisor = NombreRazonEmisor,
+            TipoFactura = TipoFactura,            
+            DescripcionOperacion = DescripcionOperacion,
+            Desglose = Desglose,
+            CuotaTotal = CuotaTotal,
+            ImporteTotal = ImporteTotal,
+            Encadenamiento = Encadenamiento,
+            SistemaInformatico = SistemaInformatico,
+            FechaHoraHusoGenRegistro = FechaHoraHusoGenRegistro,
             TipoHuella = TipoHuella.Item01,
             Huella = null!
         };
-
         registroFacturacionAlta.Huella = registroFacturacionAlta.GetHuella();
 
         return _veriFactuSCUConfiguration.Certificate is null ? registroFacturacionAlta : XmlHelpers.Deserialize<RegistroFacturacionAlta>(XmlHelpers.SignXmlContentWithXades(XmlHelpers.GetXMLIncludingNamespace(registroFacturacionAlta, "sf", "RegistroFacturacionAlta"), _veriFactuSCUConfiguration.Certificate))!;
