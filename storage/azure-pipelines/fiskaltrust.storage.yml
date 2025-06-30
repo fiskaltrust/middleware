@@ -33,7 +33,7 @@ jobs:
       inputs:
         updateBuildNumber: true
         semverVersion: 'v1'
-        versionFile: 'storage/version.json'
+        filePath: 'storage/version.json'
   
     - powershell: |   
         $nugetFeed = if ($Env:BUILD_SOURCEBRANCH.StartsWith("refs/tags/storage/v")) { "release" } else { "dev" }
