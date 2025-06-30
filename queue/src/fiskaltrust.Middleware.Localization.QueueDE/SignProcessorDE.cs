@@ -41,7 +41,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             _requestCommandFactory = requestCommandFactory;
             _logger = logger;
             // For CloudCashBox, we do not need to check for migration status
-            if (!middlewareConfiguration.IsCloudCashBox)
+            if (middlewareConfiguration.LauncherEnvironment != "cloud")
             {
                 _migrationDone = MigrationHelper.IsMigrationInProgress(queueItemRepository, actionJournalRepository);
             }

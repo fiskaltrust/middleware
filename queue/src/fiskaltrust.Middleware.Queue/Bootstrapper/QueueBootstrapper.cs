@@ -48,6 +48,7 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
                 AssemblyName = _assemblyName,
                 Configuration = _configuration,
                 PreviewFeatures = GetPreviewFeatures(_configuration),
+                LauncherEnvironment =  _configuration.FirstOrDefault(x => x.Key == "launcherenvironment").Value?.ToString() ?? null,
                 AllowUnsafeScuSwitch = _configuration.TryGetValue("AllowUnsafeScuSwitch", out var allowUnsafeScuSwitch) && bool.TryParse(allowUnsafeScuSwitch.ToString(), out var allowUnsafeScuSwitchBool) && allowUnsafeScuSwitchBool,
             };
 
@@ -68,7 +69,7 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
 
         private static async Task CreateConfigurationActionJournalAsync(MiddlewareConfiguration middlewareConfiguration, IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareActionJournalRepository actionJournalRepository)
         {
-            if(!middlewareConfiguration.IsCloudCashBox && MigrationHelper.IsMigrationInProgress(queueItemRepository, actionJournalRepository))
+            if((middlewareConfiguration.LauncherEnvironment != "cloud") && MigrationHelper.IsMigrationInProgress(queueItemRepository, actionJournalRepository))
             {
                 return;
             }

@@ -19,6 +19,6 @@ namespace fiskaltrust.Middleware.Contracts.Models
         public Version AssemblyVersion { get; set; }
         public Dictionary<string, object> Configuration { get; set; }
         public Dictionary<string, bool> PreviewFeatures { get; set; }
-        public bool IsCloudCashBox { get; set; }
+        public string LauncherEnvironment { get; set; }
     }
 }
