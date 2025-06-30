@@ -29,11 +29,17 @@ jobs:
     pool:
       vmImage: $(vmImageName)
     steps:
+    - script: copy storage\version.json version.json
+      displayName: 'Copy version.json for yavt task'
+      
     - task: yavt@1
       displayName: 'Update version'
       inputs:
         updateBuildNumber: true
         semverVersion: 'v1'
+        
+    - script: del version.json
+      displayName: 'Clean up copied version.json'
   
     - powershell: |   
         $nugetFeed = if ($Env:BUILD_SOURCEBRANCH.StartsWith("refs/tags/storage/v")) { "release" } else { "dev" }
