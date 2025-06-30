@@ -105,29 +105,29 @@ public class VeriFactuMapping
 
     public RegistroFacturacionAlta CreateRegistroFacturacionAlta(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, ReceiptRequest? previousReceiptRequest, ReceiptResponse? previousReceiptResponse)
     {
-      
-        // {
-        var IDVersion = Version.Item10;
-        var IDFactura = new IDFactura
+        var registroFacturacionAlta = new RegistroFacturacionAlta
+        {
+         IDVersion = Version.Item10,
+         IDFactura = new IDFactura
         {
             IDEmisorFactura = _veriFactuSCUConfiguration.Nif,
             NumSerieFactura = receiptResponse.ftReceiptIdentification.Split('#')[1],
             FechaExpedicionFactura = receiptRequest.cbReceiptMoment.ToString("dd-MM-yyy")
-        };
+        },
 
         // "Name and business name of the person required to issue the invoice."
         // Not sure how this needs to be formated. Maybe we'll need some extra fields in the master data?
         // Should this be the AccountName, or OutletName or sth from the Agencies?
-        var NombreRazonEmisor = _veriFactuSCUConfiguration.NombreRazonEmisor;
-        var TipoFactura = receiptRequest.ftReceiptCase.GetType() switch
+        NombreRazonEmisor = _veriFactuSCUConfiguration.NombreRazonEmisor,
+        TipoFactura = receiptRequest.ftReceiptCase.GetType() switch
         {
             _ => ClaveTipoFactura.F2, // QUESTION: is simplified invoice correct?
                                       // _ => throw new Exception($"Invalid receipt case {receiptRequest.ftReceiptCase}")
-        };
-        var DescripcionOperacion = "test"; // TODO: add descrpiton?,
+        },
+        DescripcionOperacion = "test", // TODO: add descrpiton?,
             // FacturaSinIdentifDestinatarioArt61d = Booleano.S, // TODO: do we need this art. 61d?
-            var Desglose = receiptRequest.cbChargeItems.Select(chargeItem => new Detalle
-            {
+        Desglose = receiptRequest.cbChargeItems.Select(chargeItem => new Detalle
+          {
                 // 01 Value added tax (VAT)
                 // 02 Tax on Production, Services and Imports (IPSI) for Ceuta and Melilla
                 // 03 Canary Islands Indirect General Tax (IGIC)
@@ -155,16 +155,16 @@ public class VeriFactuMapping
                 },
                 TipoImpositivo = chargeItem.VATRate.ToVeriFactuNumber(),
                 CuotaRepercutida = (chargeItem.VATAmount ?? chargeItem.Amount * chargeItem.VATRate).ToVeriFactuNumber()
-            }).ToArray();
-        var CuotaTotal = receiptRequest.cbChargeItems.Sum(chargeItem => chargeItem.GetVATAmount()).ToVeriFactuNumber();
-            var ImporteTotal = (receiptRequest.cbReceiptAmount ?? receiptRequest.cbChargeItems.Sum(chargeItem => chargeItem.Amount)).ToVeriFactuNumber();
-            var Encadenamiento = new RegistroFacturacionAltaEncadenamiento
+            }).ToArray(),
+        CuotaTotal = receiptRequest.cbChargeItems.Sum(chargeItem => chargeItem.GetVATAmount()).ToVeriFactuNumber(),
+             ImporteTotal = (receiptRequest.cbReceiptAmount ?? receiptRequest.cbChargeItems.Sum(chargeItem => chargeItem.Amount)).ToVeriFactuNumber(),
+             Encadenamiento = new RegistroFacturacionAltaEncadenamiento
             {
                 Item = GetEncadenamientoFacturaAnteriorAlta(previousReceiptRequest, previousReceiptResponse)
-            };
+            },
         // Which PosSystem from the list should we take? In DE we just take the first one...
         // Is this fiskaltrust or the dealer/creator
-        var SistemaInformatico = new SistemaInformatico
+        SistemaInformatico = new SistemaInformatico
         {
             NombreRazon = _veriFactuSCUConfiguration.NombreRazonEmisor, 
             NombreSistemaInformatico = "fiskaltrust.Middleware",
@@ -179,25 +179,12 @@ public class VeriFactuMapping
             TipoUsoPosibleSoloVerifactu = Booleano.N,
             TipoUsoPosibleMultiOT = Booleano.N,
             IndicadorMultiplesOT = Booleano.N
-        };
-        var FechaHoraHusoGenRegistro = TimeZoneInfo.ConvertTimeBySystemTimeZoneId(new DateTimeOffset(receiptResponse.ftReceiptMoment, TimeSpan.Zero), "Europe/Madrid");
-        //};
-        var registroFacturacionAlta = new RegistroFacturacionAlta
-        {
-            IDVersion = IDVersion,
-            IDFactura = IDFactura,
-            NombreRazonEmisor = NombreRazonEmisor,
-            TipoFactura = TipoFactura,            
-            DescripcionOperacion = DescripcionOperacion,
-            Desglose = Desglose,
-            CuotaTotal = CuotaTotal,
-            ImporteTotal = ImporteTotal,
-            Encadenamiento = Encadenamiento,
-            SistemaInformatico = SistemaInformatico,
-            FechaHoraHusoGenRegistro = FechaHoraHusoGenRegistro,
+        },
+        FechaHoraHusoGenRegistro = TimeZoneInfo.ConvertTimeBySystemTimeZoneId(new DateTimeOffset(receiptResponse.ftReceiptMoment, TimeSpan.Zero), "Europe/Madrid"),
             TipoHuella = TipoHuella.Item01,
             Huella = null!
         };
+        
         registroFacturacionAlta.Huella = registroFacturacionAlta.GetHuella();
 
         return _veriFactuSCUConfiguration.Certificate is null ? registroFacturacionAlta : XmlHelpers.Deserialize<RegistroFacturacionAlta>(XmlHelpers.SignXmlContentWithXades(XmlHelpers.GetXMLIncludingNamespace(registroFacturacionAlta, "sf", "RegistroFacturacionAlta"), _veriFactuSCUConfiguration.Certificate))!;
