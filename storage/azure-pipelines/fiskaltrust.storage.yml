@@ -29,12 +29,13 @@ jobs:
     pool:
       vmImage: $(vmImageName)
     steps:
-  - task: yavt@1
-    inputs:
-      updateBuildNumber: true
-      semverVersion: 'v1'
-    workingDirectory: 'storage'
-
+    - task: yavt@1
+      displayName: 'Update version'
+      inputs:
+        updateBuildNumber: true
+        semverVersion: 'v1'
+      workingDirectory: 'storage'
+  
     - powershell: |   
         $nugetFeed = if ($Env:BUILD_SOURCEBRANCH.StartsWith("refs/tags/storage/v")) { "release" } else { "dev" }
         Write-Host "##vso[task.setvariable variable=NuGetFeed;]$nugetFeed"
