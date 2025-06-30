@@ -48,7 +48,7 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
                 AssemblyName = _assemblyName,
                 Configuration = _configuration,
                 PreviewFeatures = GetPreviewFeatures(_configuration),
-                LauncherEnvironment =  _configuration.FirstOrDefault(x => x.Key == "launcherenvironment").Value?.ToString() ?? null,
+                LauncherEnvironment =  _configuration.FirstOrDefault(x => x.Key?.ToLower() == "launcherenvironment").Value?.ToString() ?? null,
                 AllowUnsafeScuSwitch = _configuration.TryGetValue("AllowUnsafeScuSwitch", out var allowUnsafeScuSwitch) && bool.TryParse(allowUnsafeScuSwitch.ToString(), out var allowUnsafeScuSwitchBool) && allowUnsafeScuSwitchBool,
             };
 
