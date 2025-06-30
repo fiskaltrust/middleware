@@ -82,6 +82,7 @@ namespace fiskaltrust.Middleware.Queue
                 {
                     System.Diagnostics.Activity.Current?.AddTag("queue.ReceiptResponse.ftState", $"null");
                 }
+                System.Diagnostics.Activity.Current?.AddTag("queue.ReceiptRequest.ftReceiptCase", $"0x{request.ftReceiptCase:X}");
                 System.Diagnostics.Activity.Current?.AddTag("queue.id", queue.ftQueueId);
 #endif
 
