@@ -19,5 +19,13 @@ namespace fiskaltrust.Middleware.Contracts.Models
         public Version AssemblyVersion { get; set; }
         public Dictionary<string, object> Configuration { get; set; }
         public Dictionary<string, bool> PreviewFeatures { get; set; }
+        public string LauncherEnvironment { get; set; }
+    }
+
+    public static class LauncherEnvironments
+    {
+        public const string Local = "local";
+        public const string Debug = "debug";
+        public const string Cloud = "cloud";
     }
 }

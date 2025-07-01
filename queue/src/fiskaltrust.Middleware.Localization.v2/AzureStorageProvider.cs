@@ -51,8 +51,13 @@ public class AzureStorageProvider : BaseStorageBootStrapper, IStorageProvider
             {
                 throw new Exception($"The value for the queue parameter storageaccountname '{_tableStorageConfiguration.StorageAccountName}' is not valid.", e);
             }
+#if DEBUG
             _tableServiceClient = new TableServiceClient(tableUri, new ChainedTokenCredential(new VisualStudioCredential(), new AzureCliCredential(), new DefaultAzureCredential()));
             _blobServiceClient = new BlobServiceClient(blobUri, new ChainedTokenCredential(new VisualStudioCredential(), new AzureCliCredential(), new DefaultAzureCredential()));
+#else
+            _tableServiceClient = new TableServiceClient(tableUri, new DefaultAzureCredential());
+            _blobServiceClient = new BlobServiceClient(blobUri, new DefaultAzureCredential());
+#endif
         }
         else if (!string.IsNullOrEmpty(_tableStorageConfiguration.ConnectionString))
         {
@@ -100,11 +105,13 @@ public class AzureStorageProvider : BaseStorageBootStrapper, IStorageProvider
 
             var configurationRepository = new AzureTableStorageConfigurationRepository(_queueConfiguration, _tableServiceClient);
             var baseStorageConfig = ParseStorageConfiguration(_configuration);
-
-            await PersistMasterDataAsync(baseStorageConfig, configurationRepository,
-                new AzureTableStorageAccountMasterDataRepository(_queueConfiguration, _tableServiceClient), new AzureTableStorageOutletMasterDataRepository(_queueConfiguration, _tableServiceClient),
-                new AzureTableStorageAgencyMasterDataRepository(_queueConfiguration, _tableServiceClient), new AzureTableStoragePosSystemMasterDataRepository(_queueConfiguration, _tableServiceClient)).ConfigureAwait(false);
-            await PersistConfigurationAsync(baseStorageConfig, configurationRepository, _logger).ConfigureAwait(false);
+            var cashBoxes = (await configurationRepository.GetCashBoxListAsync().ConfigureAwait(false)).ToList();
+            if (cashBoxes.Count == 0)
+            {
+                await ForcePersistMasterDataAsync(baseStorageConfig, new AzureTableStorageAccountMasterDataRepository(_queueConfiguration, _tableServiceClient), new AzureTableStorageOutletMasterDataRepository(_queueConfiguration, _tableServiceClient), new AzureTableStorageAgencyMasterDataRepository(_queueConfiguration, _tableServiceClient), new AzureTableStoragePosSystemMasterDataRepository(_queueConfiguration, _tableServiceClient)).ConfigureAwait(false);
+            }
+            var dbCashBox = cashBoxes.FirstOrDefault(x => x.ftCashBoxId == baseStorageConfig.CashBox.ftCashBoxId);
+            await PersistConfigurationParallelAsync(baseStorageConfig, dbCashBox, configurationRepository, _logger).ConfigureAwait(false);
             _initializedCompletionSource.SetResult();
         }
         catch (Exception e)
