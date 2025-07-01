@@ -23,7 +23,7 @@ namespace fiskaltrust.Middleware.SCU.ES.VeriFactu
                 QRCodeBaseUrl = configuration["QRCodeBaseUrl"].ToString()!,
                 Certificate = new X509Certificate2(
                         Convert.FromBase64String(configuration!["CertificateBase64"].ToString()!),
-                        configuration!["certificatePassword"].ToString()!),
+                        configuration!["CertificatePassword"].ToString()!),
                 Nif = configuration["Nif"].ToString()!,
                 NombreRazonEmisor = configuration["NombreRazonEmisor"].ToString()!,
             };
