@@ -193,13 +193,7 @@ public class AADEFactory
         }
 
         inv.invoiceSummary.totalGrossValue = inv.invoiceSummary.totalNetValue + inv.invoiceSummary.totalVatAmount - inv.invoiceSummary.totalWithheldAmount + inv.invoiceSummary.totalFeesAmount + inv.invoiceSummary.totalStampDutyAmount + inv.invoiceSummary.totalOtherTaxesAmount - inv.invoiceSummary.totalDeductionsAmount;
-        if (receiptRequest.cbPreviousReceiptReference is not null)
-        {
-            inv.invoiceHeader.correlatedInvoices = receiptRequest.cbPreviousReceiptReference.Match(
-                single => [long.Parse(single)],
-                group => group.Select(g => long.Parse(g)).ToArray()
-            );
-        }
+
         if (receiptRequest.ContainsCustomerInfo())
         {
             AddCounterpart(receiptRequest, inv);
@@ -257,6 +251,11 @@ public class AADEFactory
                 invoiceRow.otherTaxesPercentCategorySpecified = true;
                 invoiceRow.incomeClassification = [];
                 invoiceRow.vatCategory = 8;
+            }
+            else if (x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Voucher) && x.ftChargeItemCase.IsVat(ChargeItemCase.NotTaxable))
+            {
+                invoiceRow.vatExemptionCategorySpecified = true;
+                invoiceRow.vatExemptionCategory = 27;
             }
             else if (x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Voucher))
             {
