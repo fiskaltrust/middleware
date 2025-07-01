@@ -48,6 +48,7 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
                 AssemblyName = _assemblyName,
                 Configuration = _configuration,
                 PreviewFeatures = GetPreviewFeatures(_configuration),
+                // Key handling is based on this condition to ensure that we are handling it case insensitive
                 LauncherEnvironment =  _configuration.FirstOrDefault(x => x.Key?.ToLower() == "launcherenvironment").Value?.ToString() ?? null,
                 AllowUnsafeScuSwitch = _configuration.TryGetValue("AllowUnsafeScuSwitch", out var allowUnsafeScuSwitch) && bool.TryParse(allowUnsafeScuSwitch.ToString(), out var allowUnsafeScuSwitchBool) && allowUnsafeScuSwitchBool,
             };
@@ -69,7 +70,7 @@ namespace fiskaltrust.Middleware.Queue.Bootstrapper
 
         private static async Task CreateConfigurationActionJournalAsync(MiddlewareConfiguration middlewareConfiguration, IMiddlewareQueueItemRepository queueItemRepository, IMiddlewareActionJournalRepository actionJournalRepository)
         {
-            if((middlewareConfiguration.LauncherEnvironment != "cloud") && MigrationHelper.IsMigrationInProgress(queueItemRepository, actionJournalRepository))
+            if((middlewareConfiguration.LauncherEnvironment != LauncherEnvironments.Cloud) && MigrationHelper.IsMigrationInProgress(queueItemRepository, actionJournalRepository))
             {
                 return;
             }
