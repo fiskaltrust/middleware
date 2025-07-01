@@ -38,7 +38,7 @@ namespace fiskaltrust.Middleware.Storage.Base
             };
         }
 
-        public async Task PersistMasterDataAsync(StorageBaseInitConfiguration config, 
+        public async Task ForcePersistMasterDataAsync(StorageBaseInitConfiguration config, 
     IMasterDataRepository<AccountMasterData> accountMasterDataRepo, IMasterDataRepository<OutletMasterData> outletMasterDataRepo,
     IMasterDataRepository<AgencyMasterData> agencyMasterDataRepo, IMasterDataRepository<PosSystemMasterData> posSystemMasterDataRepo)
         {
