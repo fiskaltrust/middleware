@@ -258,6 +258,11 @@ public class AADEFactory
                 invoiceRow.incomeClassification = [];
                 invoiceRow.vatCategory = 8;
             }
+            else if (x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Voucher) && x.ftChargeItemCase.IsVat(ChargeItemCase.NotTaxable))
+            {
+                invoiceRow.vatExemptionCategorySpecified = true;
+                invoiceRow.vatExemptionCategory = 27;
+            }
             else if (x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Voucher))
             {
                 invoiceRow.recType = 6;
