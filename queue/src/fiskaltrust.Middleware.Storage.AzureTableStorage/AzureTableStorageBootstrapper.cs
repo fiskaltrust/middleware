@@ -100,8 +100,8 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage
             _configurationRepository = new AzureTableStorageConfigurationRepository(_queueConfiguration, _tableServiceClient);
             var baseStorageConfig = ParseStorageConfiguration(_configuration);
 
-            var cashBoxes = await _configurationRepository.GetCashBoxListAsync().ConfigureAwait(false);
-            if (!cashBoxes.Any()) 
+            var cashBoxes = (await _configurationRepository.GetCashBoxListAsync().ConfigureAwait(false)).ToList();
+            if (cashBoxes.Count == 0) 
             {
                 await PersistMasterDataAsync(baseStorageConfig, new AzureTableStorageAccountMasterDataRepository(_queueConfiguration, _tableServiceClient), new AzureTableStorageOutletMasterDataRepository(_queueConfiguration, _tableServiceClient), new AzureTableStorageAgencyMasterDataRepository(_queueConfiguration, _tableServiceClient), new AzureTableStoragePosSystemMasterDataRepository(_queueConfiguration, _tableServiceClient)).ConfigureAwait(false);
             }
