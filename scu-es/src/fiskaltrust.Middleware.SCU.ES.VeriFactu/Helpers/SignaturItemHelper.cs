@@ -3,7 +3,6 @@ using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.es.Cases;
 using fiskaltrust.Middleware.SCU.ES.Models;
-using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.SCU.ES.VeriFactu.Helpers;
 

@@ -10,8 +10,6 @@ using fiskaltrust.ifPOS.v2.es.Cases;
 using fiskaltrust.Middleware.SCU.ES.Helpers;
 using fiskaltrust.Middleware.SCU.ES.Models;
 using fiskaltrust.Middleware.SCU.ES.VeriFactu.Helpers;
-using fiskaltrust.storage.V0;
-using fiskaltrust.storage.V0.MasterData;
 using Version = fiskaltrust.Middleware.SCU.ES.Models.Version;
 
 namespace fiskaltrust.Middleware.SCU.ES.VeriFactu;

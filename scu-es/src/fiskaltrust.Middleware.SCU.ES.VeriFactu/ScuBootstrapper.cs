@@ -5,7 +5,6 @@ using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.SCU.ES.Soap;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using fiskaltrust.storage.V0.MasterData;
 using System.Security.Cryptography.X509Certificates;
 
 namespace fiskaltrust.Middleware.SCU.ES.VeriFactu;
@@ -31,7 +30,6 @@ public class ScuBootstrapper : IMiddlewareBootstrapper
             //handler.ClientCertificates.Add((X509Certificate2)Configuration["Certificate"]);
             return handler;
         });
-        services.AddScoped<MasterDataConfiguration>();
         services.AddScoped<IESSSCD, VeriFactuSCU>();
     }
    
