@@ -1,7 +1,11 @@
-﻿using System.Security.Cryptography.X509Certificates;
+﻿using System;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
+using fiskaltrust.Middleware.Abstractions;
+using fiskaltrust.Middleware.Interface.Client.Http;
 using fiskaltrust.Middleware.Localization.QueueES.ESSSCD;
+using fiskaltrust.Middleware.Localization.QueueES.Models;
 using fiskaltrust.Middleware.Localization.QueueES.Processors;
 using fiskaltrust.Middleware.Localization.QueuePT.Processors;
 using fiskaltrust.Middleware.Localization.v2;
@@ -9,9 +13,9 @@ using fiskaltrust.Middleware.Localization.v2.Configuration;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.MasterData;
 using fiskaltrust.Middleware.Localization.v2.Storage;
+using fiskaltrust.Middleware.Storage;
 using fiskaltrust.Middleware.Storage.AzureTableStorage;
 using fiskaltrust.Middleware.Storage.ES;
-using fiskaltrust.Middleware.Storage;
 using fiskaltrust.storage.V0.MasterData;
 using Microsoft.Extensions.Logging;
 
@@ -22,7 +26,7 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
 {
     private readonly Queue _queue;
 
-    public QueueESBootstrapper(Guid id, ILoggerFactory loggerFactory, Dictionary<string, object> configuration, PackageConfiguration scuConfiguration)
+    public QueueESBootstrapper(Guid id, ILoggerFactory loggerFactory, IClientFactory<IESSSCD> clientFactory, Dictionary<string, object> configuration, PackageConfiguration scuConfiguration)
     {
         var middlewareConfiguration = MiddlewareConfigurationFactory.CreateMiddlewareConfiguration(id, configuration);
 
@@ -40,37 +44,25 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
             queueES = Newtonsoft.Json.JsonConvert.DeserializeObject<List<ftQueueES>>(configuration["init_ftQueueES"]!.ToString()!).First();
             queueESRepository.InsertOrUpdateQueueESAsync(queueES);
         }
-        IESSSCD esSSCD;
-        if (scuConfiguration.Package == "fiskaltrust.Middleware.SCU.ES.VeriFactu")
-        {
 
-            esSSCD = new VeriFactuSCU(
-                signaturCreationUnitES,
-                masterData,
-                new VeriFactuSCUConfiguration()
-                {
-                    Certificate = new X509Certificate2(
-                        Convert.FromBase64String(scuConfiguration.Configuration!["certificate"].ToString()!),
-                        scuConfiguration.Configuration!["certificatePassword"].ToString())
-                },
-                storageProvider.GetMiddlewareQueueItemRepository());
-        }
-        else if (scuConfiguration.Package == "fiskaltrust.Middleware.SCU.ES.TicketBAI")
+        var queueESConfiguration = QueueESConfiguration.FromMiddlewareConfiguration(middlewareConfiguration);
+        var url = scuConfiguration.Url?.First() ?? "";
+        var config = new ClientConfiguration
         {
-            esSSCD = new TicketBaiSCU(loggerFactory, signaturCreationUnitES, new SCU.ES.TicketBAI.TicketBaiSCUConfiguration
-            {
-                Certificate = new X509Certificate2(
-                        Convert.FromBase64String(scuConfiguration.Configuration!["certificate"].ToString()!),
-                        scuConfiguration.Configuration!["certificatePassword"].ToString()),
-                EmisorApellidosNombreRazonSocial = masterData.Account.AccountName,
-                EmisorNif = masterData.Account.VatId,
-                TicketBaiTerritory = (SCU.ES.TicketBAI.TicketBaiTerritory) Enum.Parse(typeof(SCU.ES.TicketBAI.TicketBaiTerritory), scuConfiguration.Configuration["territory"].ToString()!)
-            });
-        }
-        else
+            Url = scuConfiguration.Url?.FirstOrDefault(),
+            UrlType = new Uri(url.ToString()).Scheme
+        };
+
+        if (queueESConfiguration.ScuTimeoutMs.HasValue)
         {
-            throw new Exception("Unknown SCU package");
+            config.Timeout = TimeSpan.FromMilliseconds(queueESConfiguration.ScuTimeoutMs.Value);
         }
+        if (queueESConfiguration.ScuMaxRetries.HasValue)
+        {
+            config.RetryCount = queueESConfiguration.ScuMaxRetries.Value;
+        }
+        var esSSCD = clientFactory.CreateClient(config);
+
 
         var signProcessorES = new ReceiptProcessor(
             loggerFactory.CreateLogger<ReceiptProcessor>(),
