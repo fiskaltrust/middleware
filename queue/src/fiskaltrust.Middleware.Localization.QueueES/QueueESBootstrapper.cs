@@ -1,6 +1,4 @@
-﻿using System;
-using System.Security.Cryptography.X509Certificates;
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Interface.Client.Http;
