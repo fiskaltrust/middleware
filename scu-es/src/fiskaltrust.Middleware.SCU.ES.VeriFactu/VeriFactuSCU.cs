@@ -13,8 +13,6 @@ using fiskaltrust.Middleware.SCU.ES.Models;
 using fiskaltrust.Middleware.SCU.ES.Soap;
 using fiskaltrust.Middleware.SCU.ES.VeriFactu;
 using fiskaltrust.Middleware.SCU.ES.VeriFactu.Helpers;
-using fiskaltrust.storage.V0;
-using fiskaltrust.storage.V0.MasterData;
 
 namespace fiskaltrust.Middleware.SCU.ES.VeriFactu;
 
@@ -24,10 +22,10 @@ public class VeriFactuSCU : IESSSCD
     private readonly IClient _client;
     private readonly VeriFactuMapping _veriFactuMapping;
 
-    public VeriFactuSCU(IClient client, MasterDataConfiguration masterData, VeriFactuSCUConfiguration configuration)
+    public VeriFactuSCU(IClient client, VeriFactuSCUConfiguration configuration)
     {
         _configuration = configuration;
-        _veriFactuMapping = new VeriFactuMapping(masterData, configuration.Certificate);
+        _veriFactuMapping = new VeriFactuMapping(configuration);
         _client = client;
     }
 

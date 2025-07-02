@@ -11,8 +11,22 @@ namespace fiskaltrust.Middleware.SCU.ES.VeriFactu
         public string QRCodeBaseUrl { get; set; } = "https://prewww2.aeat.es";
 
         public X509Certificate2 Certificate { get; set; } = null!;
+        public string Nif { get; set; } = null!;
+
+        public string NombreRazonEmisor { get; set; } = null!; 
 
         public static VeriFactuSCUConfiguration FromConfiguration(Dictionary<string, object> configuration)
-            => JsonSerializer.Deserialize<VeriFactuSCUConfiguration>(JsonSerializer.Serialize(configuration)) ?? new VeriFactuSCUConfiguration();
+        {
+            return new VeriFactuSCUConfiguration
+            {
+                BaseUrl = configuration["BaseUrl"].ToString()!,
+                QRCodeBaseUrl = configuration["QRCodeBaseUrl"].ToString()!,
+                Certificate = new X509Certificate2(
+                        Convert.FromBase64String(configuration!["CertificateBase64"].ToString()!),
+                        configuration!["CertificatePassword"].ToString()!),
+                Nif = configuration["Nif"].ToString()!,
+                NombreRazonEmisor = configuration["NombreRazonEmisor"].ToString()!,
+            };
+        }
     }
 }
