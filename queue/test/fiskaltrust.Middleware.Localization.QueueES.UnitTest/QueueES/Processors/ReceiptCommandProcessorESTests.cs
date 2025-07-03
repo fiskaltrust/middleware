@@ -2,7 +2,6 @@
 using System.IO;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v2;
-using fiskaltrust.Middleware.Localization.QueueES.ESSSCD;
 using fiskaltrust.Middleware.Localization.QueueES.Processors;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2;
@@ -24,6 +23,7 @@ using fiskaltrust.Middleware.Localization.QueueES.Interface;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueES.Models.Cases;
 using Microsoft.Extensions.Logging;
+using fiskaltrust.ifPOS.v2.es;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processors
 {
