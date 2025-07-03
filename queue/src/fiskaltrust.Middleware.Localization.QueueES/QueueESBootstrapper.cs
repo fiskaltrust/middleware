@@ -1,7 +1,6 @@
 ﻿using System.Text;
 using System.Text.Json;
 using fiskaltrust.Middleware.Abstractions;
-using fiskaltrust.Middleware.Interface.Client.Http;
 using fiskaltrust.Middleware.Localization.QueueES.ESSSCD;
 using fiskaltrust.Middleware.Localization.QueueES.Models;
 using fiskaltrust.Middleware.Localization.QueueES.Processors;
