@@ -1,7 +1,7 @@
 ﻿using System.Text;
 using System.Text.Json;
+using fiskaltrust.ifPOS.v2.es;
 using fiskaltrust.Middleware.Abstractions;
-using fiskaltrust.Middleware.Localization.QueueES.ESSSCD;
 using fiskaltrust.Middleware.Localization.QueueES.Models;
 using fiskaltrust.Middleware.Localization.QueueES.Processors;
 using fiskaltrust.Middleware.Localization.QueuePT.Processors;
