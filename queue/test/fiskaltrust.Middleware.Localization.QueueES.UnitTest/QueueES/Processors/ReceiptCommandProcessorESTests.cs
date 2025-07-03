@@ -1,29 +1,30 @@
 ﻿using System;
 using System.IO;
+using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
+using AutoFixture;
 using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2.es;
+using fiskaltrust.Middleware.Contracts.Factories;
+using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Localization.QueueES.Interface;
+using fiskaltrust.Middleware.Localization.QueueES.Models;
+using fiskaltrust.Middleware.Localization.QueueES.Models.Cases;
 using fiskaltrust.Middleware.Localization.QueueES.Processors;
-using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2;
+using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.Middleware.Localization.v2.Storage;
 using fiskaltrust.Middleware.Storage;
 using fiskaltrust.Middleware.Storage.ES;
 using fiskaltrust.storage.V0;
+using fiskaltrust.storage.V0.MasterData;
 using FluentAssertions;
 using FluentAssertions.Execution;
+using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
-using fiskaltrust.ifPOS.v2.Cases;
-using fiskaltrust.storage.V0.MasterData;
-using AutoFixture;
-using fiskaltrust.Middleware.Localization.v2.Storage;
-using System.Text.Json;
-using fiskaltrust.Middleware.Contracts.Factories;
-using System.Text;
-using fiskaltrust.Middleware.Localization.QueueES.Interface;
-using fiskaltrust.Middleware.Contracts.Repositories;
-using fiskaltrust.Middleware.Localization.QueueES.Models.Cases;
-using Microsoft.Extensions.Logging;
-using fiskaltrust.ifPOS.v2.es;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processors
 {
@@ -219,9 +220,9 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             configurationRepositoryMock.Setup(x => x.GetQueueESAsync(queue.ftQueueId)).ReturnsAsync(queueES);
             var queueItemRepositoryMock = new Mock<IQueueItemRepository>();
             queueItemRepositoryMock.Setup(x => x.GetAsync(previousQueueItem.ftQueueItemId)).ReturnsAsync(previousQueueItem);
-
-            var config = new VeriFactuSCUConfiguration();
-            var sut = new ReceiptCommandProcessorES(new VeriFactuSCU(signaturCreationUnitES, masterDataConfiguration, config, Mock.Of<IMiddlewareQueueItemRepository>()), configurationRepositoryMock.Object, queueItemRepositoryMock.Object);
+            var scuMock = new Mock<IESSSCD>();
+            //var config = new VeriFactuSCUConfiguration();
+            var sut = new ReceiptCommandProcessorES(scuMock.Object, configurationRepositoryMock.Object, queueItemRepositoryMock.Object);
 
             var receiptRequest = new ReceiptRequest
             {
