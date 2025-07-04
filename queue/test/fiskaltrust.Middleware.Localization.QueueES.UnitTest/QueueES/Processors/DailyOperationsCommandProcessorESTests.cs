@@ -7,9 +7,10 @@ using FluentAssertions;
 using Xunit;
 using fiskaltrust.ifPOS.v2.Cases;
 using Moq;
-using fiskaltrust.Middleware.Localization.QueueES.ESSSCD;
+
 using fiskaltrust.Middleware.Localization.v2.Storage;
 using Microsoft.Extensions.Logging;
+using fiskaltrust.ifPOS.v2.es;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processors
 {

@@ -1,11 +1,15 @@
 ﻿using System.Text.Json;
+using Azure.Core;
 using fiskaltrust.ifPOS.v2;
-using fiskaltrust.Middleware.Localization.QueueES.Models.Cases;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2.es;
+using fiskaltrust.Middleware.Abstractions;
+using fiskaltrust.Middleware.Localization.QueueES.Models.Cases;
 using fiskaltrust.storage.serialization.V0;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
+using Moq;
 using Newtonsoft.Json;
 using Xunit;
 
@@ -51,8 +55,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
             var configuration = await GetConfigurationAsync(cashBoxId, accessToken);
             var queue = configuration.ftQueues.First();
             var scu = configuration.ftSignaturCreationDevices.First();
-
-            var bootstrapper = new QueueESBootstrapper(queue.Id, new LoggerFactory(), queue.Configuration, new v2.Configuration.PackageConfiguration
+            var bootstrapper = new QueueESBootstrapper(queue.Id, new LoggerFactory(), Mock.Of<IClientFactory<IESSSCD>>() , queue.Configuration, new v2.Configuration.PackageConfiguration
             {
                 Configuration = scu.Configuration,
                 Id = scu.Id,
@@ -134,7 +137,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
             var queue = configuration.ftQueues.First();
             var scu = configuration.ftSignaturCreationDevices.First();
 
-            var bootstrapper = new QueueESBootstrapper(queue.Id, new LoggerFactory(), queue.Configuration, new v2.Configuration.PackageConfiguration
+            var bootstrapper = new QueueESBootstrapper(queue.Id, new LoggerFactory(), Mock.Of<IClientFactory<IESSSCD>>(), queue.Configuration, new v2.Configuration.PackageConfiguration
             {
                 Configuration = scu.Configuration,
                 Id = scu.Id,
@@ -207,7 +210,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
             var queue = configuration.ftQueues.First();
             var scu = configuration.ftSignaturCreationDevices.First();
 
-            var bootstrapper = new QueueESBootstrapper(queue.Id, new LoggerFactory(), queue.Configuration, new v2.Configuration.PackageConfiguration
+            var bootstrapper = new QueueESBootstrapper(queue.Id, new LoggerFactory(), Mock.Of<IClientFactory<IESSSCD>>(), queue.Configuration, new v2.Configuration.PackageConfiguration
             {
                 Configuration = scu.Configuration,
                 Id = scu.Id,
