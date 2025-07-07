@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Interfaces;
+using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueDE.Extensions;
 using fiskaltrust.Middleware.Localization.QueueDE.Helpers;
@@ -31,6 +32,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             IMiddlewareActionJournalRepository actionJournalRepository,
             ITransactionPayloadFactory transactionPayloadFactory,
             IRequestCommandFactory requestCommandFactory,
+            MiddlewareConfiguration middlewareConfiguration,
             ILogger<SignProcessorDE> logger)
         {
             _configurationRepository = configurationRepository;
@@ -38,7 +40,11 @@ namespace fiskaltrust.Middleware.Localization.QueueDE
             _transactionPayloadFactory = transactionPayloadFactory;
             _requestCommandFactory = requestCommandFactory;
             _logger = logger;
-            _migrationDone = MigrationHelper.IsMigrationInProgress(queueItemRepository, actionJournalRepository);
+            // For CloudCashBox, we do not need to check for migration status
+            if (middlewareConfiguration.LauncherEnvironment != LauncherEnvironments.Cloud)
+            {
+                _migrationDone = MigrationHelper.IsMigrationInProgress(queueItemRepository, actionJournalRepository);
+            }
         }
 
         public async Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)> ProcessAsync(ReceiptRequest request, ftQueue queue, ftQueueItem queueItem)

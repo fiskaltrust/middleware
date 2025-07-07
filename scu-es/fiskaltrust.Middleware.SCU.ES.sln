@@ -11,6 +11,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.SCU.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fiskaltrust.Middleware.SCU.ES.TicketBAI", "src\fiskaltrust.Middleware.SCU.ES.TicketBAI\fiskaltrust.Middleware.SCU.ES.TicketBAI.csproj", "{3F25D98C-93D7-4D1F-8A4A-5DCEA1EC8D95}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fiskaltrust.Middleware.SCU.ES.VeriFactu", "src\fiskaltrust.Middleware.SCU.ES.VeriFactu\fiskaltrust.Middleware.SCU.ES.VeriFactu.csproj", "{1BABBCE2-46FA-87E2-2A57-F68F1535AB64}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -25,6 +27,10 @@ Global
 		{3F25D98C-93D7-4D1F-8A4A-5DCEA1EC8D95}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3F25D98C-93D7-4D1F-8A4A-5DCEA1EC8D95}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3F25D98C-93D7-4D1F-8A4A-5DCEA1EC8D95}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1BABBCE2-46FA-87E2-2A57-F68F1535AB64}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1BABBCE2-46FA-87E2-2A57-F68F1535AB64}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1BABBCE2-46FA-87E2-2A57-F68F1535AB64}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1BABBCE2-46FA-87E2-2A57-F68F1535AB64}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -32,6 +38,7 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{3BE93F7F-01C4-4D40-9FA9-D21ED3D865F9} = {24EBAB5D-64B6-431D-B557-241FB778B87E}
 		{3F25D98C-93D7-4D1F-8A4A-5DCEA1EC8D95} = {A053DEC3-4CA1-4312-8799-7EE53BB09C15}
+		{1BABBCE2-46FA-87E2-2A57-F68F1535AB64} = {A053DEC3-4CA1-4312-8799-7EE53BB09C15}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {A26D59AC-A4D4-454A-BD07-30BB2A11DD58}

@@ -11,3 +11,14 @@ public class Customer
     public string? CustomerCountry { get; set; }
     public string? CustomerVATId { get; set; }
 }
+
+
+public class ReceiptCaseLotteryData
+{
+    public servizi_lotteriadegliscontrini_gov_it? servizi_lotteriadegliscontrini_gov_it { get; set; }
+}
+
+public class servizi_lotteriadegliscontrini_gov_it
+{
+    public string? codicelotteria { get; set; }
+}

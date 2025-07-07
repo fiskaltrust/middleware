@@ -1,7 +1,7 @@
-﻿using fiskaltrust.Api.POS.Models.ifPOS.v2;
+﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueueGR.Models.Cases;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
-using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2.Cases;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData;
 
@@ -14,7 +14,7 @@ public class MyDataAADEValidation
             throw new Exception("It is not allowed to mix agency and non agency receipts.");
         }
 
-        if (receiptRequest.cbChargeItems.Sum(x => x.Amount) != receiptRequest.cbPayItems.Sum(x => x.Amount))
+        if (!receiptRequest.ftReceiptCase.IsType(ReceiptCaseType.Log) && receiptRequest.cbChargeItems.Sum(x => x.Amount) != receiptRequest.cbPayItems.Sum(x => x.Amount))
         {
             throw new Exception("The sum of the charge items must be equal to the sum of the pay items.");
         }

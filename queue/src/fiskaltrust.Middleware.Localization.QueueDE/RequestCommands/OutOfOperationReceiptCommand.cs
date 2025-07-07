@@ -22,9 +22,9 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
     {
         public override string ReceiptName => "Out-of-operation receipt";
 
-        public OutOfOperationReceiptCommand(ILogger<RequestCommand> logger, SignatureFactoryDE signatureFactory, IDESSCDProvider deSSCDProvider, 
-            ITransactionPayloadFactory transactionPayloadFactory, IReadOnlyQueueItemRepository queueItemRepository, IConfigurationRepository configurationRepository, 
-            IJournalDERepository journalDERepository, MiddlewareConfiguration middlewareConfiguration, IPersistentTransactionRepository<FailedStartTransaction> failedStartTransactionRepo, 
+        public OutOfOperationReceiptCommand(ILogger<RequestCommand> logger, SignatureFactoryDE signatureFactory, IDESSCDProvider deSSCDProvider,
+            ITransactionPayloadFactory transactionPayloadFactory, IReadOnlyQueueItemRepository queueItemRepository, IConfigurationRepository configurationRepository,
+            IJournalDERepository journalDERepository, MiddlewareConfiguration middlewareConfiguration, IPersistentTransactionRepository<FailedStartTransaction> failedStartTransactionRepo,
             IPersistentTransactionRepository<FailedFinishTransaction> failedFinishTransactionRepo, IPersistentTransactionRepository<OpenTransaction> openTransactionRepo, ITarFileCleanupService tarFileCleanupService, QueueDEConfiguration queueDEConfiguration, IMasterDataService masterDataService)
             : base(logger, signatureFactory, deSSCDProvider, transactionPayloadFactory, queueItemRepository, configurationRepository, journalDERepository,
                   middlewareConfiguration, failedStartTransactionRepo, failedFinishTransactionRepo, openTransactionRepo, tarFileCleanupService, queueDEConfiguration, masterDataService)
@@ -35,6 +35,12 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             _logger.LogTrace("OutOfOperationReceiptCommand.ExecuteAsync [enter].");
             ThrowIfNoImplicitFlow(request);
             ThrowIfTraining(request);
+
+
+            if (!request.IsTseTarDownloadBypass())
+            {
+                await PerformTarFileExportAsync(queueItem, queue, queueDE, erase: true).ConfigureAwait(false);
+            }
 
             var (processType, payload) = _transactionPayloadFactory.CreateReceiptPayload(request);
             var receiptResponse = CreateReceiptResponse(request, queueItem, queueDE);
@@ -74,7 +80,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                     new SignaturItem()
                     {
                         ftSignatureType = typeNumber,
-                        ftSignatureFormat = (long) ifPOS.v0.SignaturItem.Formats.AZTEC,
+                        ftSignatureFormat = (long) fiskaltrust.ifPOS.v0.SignaturItem.Formats.AZTEC,
                         Caption = $"Außer-Betriebnahme-Beleg. Kassenseriennummer: {clientId}, TSE-Seriennummer: {serialnumberOctet}, Queue-ID: {queue.ftQueueId}",
                         Data = JsonConvert.SerializeObject(notification)
                     }

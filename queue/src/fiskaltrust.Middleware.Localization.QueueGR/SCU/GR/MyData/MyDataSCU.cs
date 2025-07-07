@@ -1,11 +1,11 @@
 ﻿using System.Text;
 using System.Text.Json;
 using System.Xml.Serialization;
-using fiskaltrust.Api.POS.Models.ifPOS.v2;
+using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD;
 using fiskaltrust.Middleware.Localization.QueueGR.Models.Cases;
 using fiskaltrust.Middleware.Localization.v2.Interface;
-using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.storage.V0.MasterData;
 
 #pragma warning disable
@@ -33,10 +33,10 @@ public class MyDataSCU : IGRSSCD
 
     public async Task<GRSSCDInfo> GetInfoAsync() => await Task.FromResult(new GRSSCDInfo());
 
-    public async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request)
+    public async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request, List<(ReceiptRequest, ReceiptResponse)>? receiptReferences = null)
     {
         var aadFactory = new AADEFactory(_masterDataConfiguration);
-        var doc = aadFactory.MapToInvoicesDoc(request.ReceiptRequest, request.ReceiptResponse);
+        var doc = aadFactory.MapToInvoicesDoc(request.ReceiptRequest, request.ReceiptResponse, receiptReferences);
         if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.LateSigning))
         {
             foreach (var item in doc.invoice)
@@ -44,14 +44,7 @@ public class MyDataSCU : IGRSSCD
                 item.transmissionFailureSpecified = true;
                 item.transmissionFailure = 1;
             }
-
-            request.ReceiptResponse.AddSignatureItem(new SignatureItem
-            {
-                Data = $"Απώλεια Διασύνδεσης Οντότητας - Παρόχου",
-                Caption = "Transmission Failure_1",
-                ftSignatureFormat = SignatureFormat.Text,
-                ftSignatureType = SignatureTypeGR.MyDataInfo.As<SignatureType>()
-            });
+            SignatureItemFactoryGR.AddTransmissionFailure1Signature(request);
         }
 
         var payload = aadFactory.GenerateInvoicePayload(doc);
@@ -69,6 +62,8 @@ public class MyDataSCU : IGRSSCD
             //});
             throw new Exception("Error while sending the request to MyData API. Please check the logs for more details.");
         }
+
+        // TODO in case of a payment transfer with a cbpreviousreceipterference we will update the invoice
         if (response.IsSuccessStatusCode)
         {
             var ersult = GetResponse(content);
@@ -81,7 +76,10 @@ public class MyDataSCU : IGRSSCD
                     {
                         if (data.ItemsElementName[i] == ItemsChoiceType.qrUrl)
                         {
-                            request.ReceiptResponse.AddSignatureItem(CreateGRQRCode(data.Items[i].ToString()));
+                            continue;
+                            // In the latest API Version mydata returns a QR Code. We don't need it since we are printing our own QR Code. In case
+                            // of ERP API based integrations we will still want this to be added.
+                            // request.ReceiptResponse.AddSignatureItem(SignatureItemFactoryGR.CreateGRQRCode(data.Items[i].ToString()));
                         }
                         else
                         {
@@ -94,22 +92,20 @@ public class MyDataSCU : IGRSSCD
                             });
                         }
                     }
-                    request.ReceiptResponse.AddSignatureItem(CreateGRQRCode($"{_receiptBaseAddress}/{request.ReceiptResponse.ftQueueID}/{request.ReceiptResponse.ftQueueItemID}"));
+
+                    request.ReceiptResponse.AddSignatureItem(SignatureItemFactoryGR.CreateGRQRCode($"{_receiptBaseAddress}/{request.ReceiptResponse.ftQueueID}/{request.ReceiptResponse.ftQueueItemID}"));
                     request.ReceiptResponse.ftReceiptIdentification += $"{doc.invoice[0].invoiceHeader.series}-{doc.invoice[0].invoiceHeader.aa}";
-                    request.ReceiptResponse.AddSignatureItem(new SignatureItem
+                    if (request.ReceiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004))
                     {
-                        Data = $"{doc.invoice[0].issuer.vatNumber}|{doc.invoice[0].invoiceHeader.issueDate.ToString("dd/MM/yyyy")}|{doc.invoice[0].issuer.branch}|{doc.invoice[0].invoiceHeader.invoiceType}|{doc.invoice[0].invoiceHeader.series}|{doc.invoice[0].invoiceHeader.aa}",
-                        Caption = "Μοναδικός αριιθμός παραστατικού",
-                        ftSignatureFormat = SignatureFormat.Text,
-                        ftSignatureType = SignatureTypeGR.MyDataInfo.As<SignatureType>()
-                    });
-                    request.ReceiptResponse.AddSignatureItem(new SignatureItem
+                        SignatureItemFactoryGR.AddOrderReceiptSignature(request);
+                    }
+
+                    if (doc.invoice[0].invoiceHeader.multipleConnectedMarks?.Length > 0)
                     {
-                        Data = $"2024_12_126VIVA_001_ Viva Fiscal_V1_23122024",
-                        Caption = "www.viva.com",
-                        ftSignatureFormat = SignatureFormat.Text,
-                        ftSignatureType = SignatureTypeGR.MyDataInfo.As<SignatureType>()
-                    });
+                        SignatureItemFactoryGR.AddMarksForConnectedMarks(request, doc);
+                    }
+                    SignatureItemFactoryGR.AddInvoiceSignature(request, doc);
+                    SignatureItemFactoryGR.AddVivaFiscalProviderSignature(request);
                 }
                 else
                 {
@@ -141,22 +137,13 @@ public class MyDataSCU : IGRSSCD
         };
     }
 
+
     public class AADEEErrorResponse
     {
         public string AADEError { get; set; }
         public List<ErrorType> Errors { get; set; }
     }
 
-    public static SignatureItem CreateGRQRCode(string qrCode)
-    {
-        return new SignatureItem()
-        {
-            Caption = "[www.fiskaltrust.gr]",
-            Data = qrCode,
-            ftSignatureFormat = SignatureFormat.QRCode,
-            ftSignatureType = SignatureTypeGR.PosReceipt.As<SignatureType>()
-        };
-    }
 
     public ResponseDoc GetResponse(string xmlContent)
     {

@@ -328,6 +328,15 @@ namespace fiskaltrust.Middleware.SCU.IT.EpsonRTPrinter.Utilities
                     }
                 }
             }
+
+            var lotteryData = receiptRequest.GetLotteryData();
+            if (!string.IsNullOrEmpty(lotteryData?.servizi_lotteriadegliscontrini_gov_it?.codicelotteria))
+            {
+                fiscalReceipt.LotteryID = new LotteryID
+                {
+                    Code = lotteryData.servizi_lotteriadegliscontrini_gov_it.codicelotteria
+                };
+            }
             AddTrailerLines(configuration, receiptRequest, fiscalReceipt);
             return fiscalReceipt;
         }

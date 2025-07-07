@@ -1,8 +1,8 @@
-﻿using fiskaltrust.Api.POS.Models.ifPOS.v2;
+﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.v2.Configuration;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
-using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.v2.Storage;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
@@ -112,10 +112,14 @@ public class SignProcessor : ISignProcessor
                 }
                 if (_isSandbox)
                 {
-                    receiptResponse.ftSignatures.Add(SignatureFactory.CreateSandboxSignature(_queueId));
+                    receiptResponse.AddSignatureItem(SignatureFactory.CreateSandboxSignature(_queueId));
                 }
 
                 await _queueStorageProvider.FinishQueueItem(queueItem, receiptResponse);
+
+                System.Diagnostics.Activity.Current?.AddTag("queue.ReceiptResponse.ftState", $"0x{receiptResponse.ftState:X}");
+                System.Diagnostics.Activity.Current?.AddTag("queue.ReceiptRequest.ftReceiptCase", $"0x{receiptRequest.ftReceiptCase:X}");
+                System.Diagnostics.Activity.Current?.AddTag("queue.id", _queueId);
 
                 if (receiptResponse.ftState.IsState(State.Error))
                 {

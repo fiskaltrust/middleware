@@ -1,10 +1,10 @@
-﻿using fiskaltrust.Api.POS.Models.ifPOS.v2;
+﻿using fiskaltrust.ifPOS.v2;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.GRSSCD;
 
 public interface IGRSSCD
 {
-    public Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request);
+    public Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request, List<(ReceiptRequest, ReceiptResponse)>? receiptReferences = null);
 
     public Task<GRSSCDInfo> GetInfoAsync();
 }

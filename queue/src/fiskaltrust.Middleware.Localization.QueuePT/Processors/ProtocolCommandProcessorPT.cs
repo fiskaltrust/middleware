@@ -2,8 +2,8 @@
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.storage.V0;
-using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
-using fiskaltrust.Api.POS.Models.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueuePT.Factories;
 using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
 using fiskaltrust.SAFT.CLI.SAFTSchemaPT10401;

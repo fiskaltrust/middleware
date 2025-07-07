@@ -71,7 +71,22 @@ namespace fiskaltrust.Middleware.Queue
 
                 var queue = await _configurationRepository.GetQueueAsync(_middlewareConfiguration.QueueId).ConfigureAwait(false);
 
-                return await InternalSign(queue, request).ConfigureAwait(false);
+                var response = await InternalSign(queue, request).ConfigureAwait(false);
+
+#if NET6_0_OR_GREATER
+                if (response != null)
+                {
+                    System.Diagnostics.Activity.Current?.AddTag("queue.ReceiptResponse.ftState", $"0x{response.ftState:X}");
+                }
+                else
+                {
+                    System.Diagnostics.Activity.Current?.AddTag("queue.ReceiptResponse.ftState", $"null");
+                }
+                System.Diagnostics.Activity.Current?.AddTag("queue.ReceiptRequest.ftReceiptCase", $"0x{request.ftReceiptCase:X}");
+                System.Diagnostics.Activity.Current?.AddTag("queue.id", queue.ftQueueId);
+#endif
+
+                return response;
             }
             catch (Exception ex)
             {

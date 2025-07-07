@@ -38,6 +38,34 @@ namespace fiskaltrust.Middleware.Storage.Base
             };
         }
 
+        public async Task ForcePersistMasterDataAsync(StorageBaseInitConfiguration config, 
+    IMasterDataRepository<AccountMasterData> accountMasterDataRepo, IMasterDataRepository<OutletMasterData> outletMasterDataRepo,
+    IMasterDataRepository<AgencyMasterData> agencyMasterDataRepo, IMasterDataRepository<PosSystemMasterData> posSystemMasterDataRepo)
+        {
+            if (config.MasterData?.Account != null)
+            {
+                await accountMasterDataRepo.CreateAsync(config.MasterData.Account).ConfigureAwait(false);
+            }
+            if (config.MasterData?.Outlet != null)
+            {
+                await outletMasterDataRepo.CreateAsync(config.MasterData.Outlet).ConfigureAwait(false);
+            }
+            if (config.MasterData?.Agencies != null)
+            {
+                foreach (var agency in config.MasterData.Agencies)
+                {
+                    await agencyMasterDataRepo.CreateAsync(agency).ConfigureAwait(false);
+                }
+            }
+            if (config.MasterData?.PosSystems != null)
+            {
+                foreach (var posSystem in config.MasterData.PosSystems)
+                {
+                    await posSystemMasterDataRepo.CreateAsync(posSystem).ConfigureAwait(false);
+                }
+            }
+        }
+
         public async Task PersistMasterDataAsync(StorageBaseInitConfiguration config, IConfigurationRepository configurationRepository,
             IMasterDataRepository<AccountMasterData> accountMasterDataRepo, IMasterDataRepository<OutletMasterData> outletMasterDataRepo,
             IMasterDataRepository<AgencyMasterData> agencyMasterDataRepo, IMasterDataRepository<PosSystemMasterData> posSystemMasterDataRepo)
@@ -98,12 +126,32 @@ namespace fiskaltrust.Middleware.Storage.Base
             }
         }
 
+        public async Task PersistConfigurationParallelAsync(StorageBaseInitConfiguration config, ftCashBox dbCashBox, IConfigurationRepository configurationRepository, ILogger<IMiddlewareBootstrapper> logger)
+        {
+            var enforceUpdateUserDefinedConfig = dbCashBox != null && dbCashBox.TimeStamp < config.CashBox.TimeStamp;
+            var tasks = new List<Task> {
+                InitCashBoxIfNecessaryAsync(config, configurationRepository, dbCashBox),
+                InitFtQueueAsync(config.Queues, configurationRepository),
+                InitQueueATAsync(config.QueuesAT, configurationRepository),
+                InitQueueDEAsync(config.QueuesDE, configurationRepository, logger),
+                InitQueueFRAsync(config.QueuesFR, configurationRepository),
+                InitQueueMEAsync(config.QueuesME, configurationRepository),
+                InitQueueITAsync(config.QueuesIT, configurationRepository),
+                InitSignaturCreationUnitATAsync(config.SignaturCreationUnitsAT, configurationRepository),
+                InitSignaturCreationUnitFRAsync(config.SignaturCreationUnitsFR, configurationRepository),
+                InitSignaturCreationUnitDEAsync(config.SignaturCreationUnitsDE, configurationRepository, enforceUpdateUserDefinedConfig),
+                InitSignaturCreationUnitMEAsync(config.SignaturCreationUnitsME, configurationRepository),
+                InitSignaturCreationUnitITAsync(config.SignaturCreationUnitsIT, configurationRepository, enforceUpdateUserDefinedConfig),
+            };
+            await Task.WhenAll(tasks);
+        }
+
         public async Task PersistConfigurationAsync(StorageBaseInitConfiguration config, IConfigurationRepository configurationRepository, ILogger<IMiddlewareBootstrapper> logger)
         {
             var dbCashBox = await configurationRepository.GetCashBoxAsync(config.CashBox.ftCashBoxId).ConfigureAwait(false);
             var enforceUpdateUserDefinedConfig = dbCashBox != null && dbCashBox.TimeStamp < config.CashBox.TimeStamp;
 
-            await InitCashBoxAsync(config.CashBox, configurationRepository).ConfigureAwait(false);
+            await InitCashBoxIfNecessaryAsync(config, configurationRepository, dbCashBox).ConfigureAwait(false);
             await InitFtQueueAsync(config.Queues, configurationRepository).ConfigureAwait(false);
             await InitQueueATAsync(config.QueuesAT, configurationRepository).ConfigureAwait(false);
             await InitQueueDEAsync(config.QueuesDE, configurationRepository, logger).ConfigureAwait(false);
@@ -131,12 +179,11 @@ namespace fiskaltrust.Middleware.Storage.Base
             return parameter;
         }
 
-        private async Task InitCashBoxAsync(ftCashBox cashBox, IConfigurationRepository configurationRepository)
+        private static async Task InitCashBoxIfNecessaryAsync(StorageBaseInitConfiguration config, IConfigurationRepository configurationRepository, ftCashBox dbCashBox)
         {
-            var db_cb = await configurationRepository.GetCashBoxAsync(cashBox.ftCashBoxId).ConfigureAwait(false);
-            if (db_cb == null || db_cb.TimeStamp < cashBox.TimeStamp)
+            if (dbCashBox == null || dbCashBox.TimeStamp < config.CashBox.TimeStamp)
             {
-                await configurationRepository.InsertOrUpdateCashBoxAsync(cashBox).ConfigureAwait(false);
+                await configurationRepository.InsertOrUpdateCashBoxAsync(config.CashBox).ConfigureAwait(false);
             }
         }
 
@@ -423,7 +470,7 @@ namespace fiskaltrust.Middleware.Storage.Base
                         changed = true;
                         db_scu.Url = item.Url;
                     }
- 
+
                     if (changed)
                     {
                         db_scu.TimeStamp = item.TimeStamp;

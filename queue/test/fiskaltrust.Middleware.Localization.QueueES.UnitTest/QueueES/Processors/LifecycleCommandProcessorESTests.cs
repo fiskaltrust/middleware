@@ -1,4 +1,4 @@
-﻿using fiskaltrust.Api.POS.Models.ifPOS.v2;
+﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueueES.Models;
 using fiskaltrust.Middleware.Localization.QueueES.Processors;
 using fiskaltrust.Middleware.Localization.v2.Interface;
@@ -11,7 +11,7 @@ using Moq;
 using Newtonsoft.Json;
 using Xunit;
 using AutoFixture;
-using fiskaltrust.Middleware.Localization.v2.Models.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueueES.ESSSCD;
 using fiskaltrust.Middleware.Storage.ES;
 using fiskaltrust.storage.V0.MasterData;
@@ -76,7 +76,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
 
             var receiptRequest = new ReceiptRequest
             {
-                ftReceiptCase = (ReceiptCase) (-1)
+                ftReceiptCase = (ReceiptCase) 0
             };
             var receiptResponse = new ReceiptResponse
             {
