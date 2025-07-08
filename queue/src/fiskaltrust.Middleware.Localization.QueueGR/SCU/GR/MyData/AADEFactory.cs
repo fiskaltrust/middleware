@@ -151,15 +151,15 @@ public class AADEFactory
             inv.paymentMethods = [.. paymentMethods];
         }
 
-        if (receiptRequest.cbPreviousReceiptReference != null && receiptReferences?.Count > 0)
+        if (receiptRequest.cbPreviousReceiptReference is not null && receiptReferences?.Count > 0)
         {
-            if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PointOfSaleReceipt0x0001))
+            if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
             {
-                inv.invoiceHeader.multipleConnectedMarks = receiptReferences.Select(x => GetInvoiceMark(x.Item2)).ToArray();
+                inv.invoiceHeader.correlatedInvoices = receiptReferences.Select(x => GetInvoiceMark(x.Item2)).ToArray();
             }
             else
             {
-                inv.invoiceHeader.correlatedInvoices = receiptReferences.Select(x => GetInvoiceMark(x.Item2)).ToArray();
+                inv.invoiceHeader.multipleConnectedMarks = receiptReferences.Select(x => GetInvoiceMark(x.Item2)).ToArray();
             }
         }
 

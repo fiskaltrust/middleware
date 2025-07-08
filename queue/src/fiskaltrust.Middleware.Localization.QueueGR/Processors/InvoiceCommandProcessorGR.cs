@@ -22,12 +22,12 @@ public class InvoiceCommandProcessorGR(IGRSSCD sscd, ftQueueGR queueGR, ftSignat
     {
         if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) && request.ReceiptRequest.cbPreviousReceiptReference is not null)
         {
-            var receiptReference = await LoadReceiptReferencesToResponse(request.ReceiptRequest, request.ReceiptResponse);
+            var receiptReferences = await LoadReceiptReferencesToResponse(request.ReceiptRequest, request.ReceiptResponse);
             var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
             {
                 ReceiptRequest = request.ReceiptRequest,
-                ReceiptResponse = receiptReference,
-            });
+                ReceiptResponse = request.ReceiptResponse,
+            }, receiptReferences);
             return new ProcessCommandResponse(response.ReceiptResponse, []);
         }
         else
@@ -47,13 +47,32 @@ public class InvoiceCommandProcessorGR(IGRSSCD sscd, ftQueueGR queueGR, ftSignat
 
     public async Task<ProcessCommandResponse> InvoiceB2G0x1003Async(ProcessCommandRequest request) => await InvoiceUnknown0x1000Async(request);
 
-    private async Task<ReceiptResponse> LoadReceiptReferencesToResponse(ReceiptRequest request, ReceiptResponse receiptResponse)
+    private async Task<List<(ReceiptRequest, ReceiptResponse)>> LoadReceiptReferencesToResponse(ReceiptRequest request, ReceiptResponse receiptResponse)
     {
-        if (request.cbPreviousReceiptReference?.IsGroup ?? false)
+        if (request.cbPreviousReceiptReference is null)
         {
-            throw new NotSupportedException("Grouping of invoices is not supported yet.");
+            return new List<(ReceiptRequest, ReceiptResponse)>();
         }
-        var queueItems = _readOnlyQueueItemRepository.GetByReceiptReferenceAsync(request.cbPreviousReceiptReference?.SingleValue, request.cbTerminalID);
+
+        return await request.cbPreviousReceiptReference.MatchAsync(
+            async single => [await LoadReceiptReferencesToResponse(request, receiptResponse, single)],
+            async group => {
+                var references = new List<(ReceiptRequest, ReceiptResponse)>();
+                foreach (var reference in group)
+                {
+                    var item = await LoadReceiptReferencesToResponse(request, receiptResponse, reference);
+                    references.Add(item);
+                }
+                return references;
+            }
+        );
+
+    }
+
+#pragma warning disable
+    private async Task<(ReceiptRequest, ReceiptResponse)> LoadReceiptReferencesToResponse(ReceiptRequest request, ReceiptResponse receiptResponse, string cbPreviousReceiptReferenceString)
+    {
+        var queueItems = _readOnlyQueueItemRepository.GetByReceiptReferenceAsync(cbPreviousReceiptReferenceString, request.cbTerminalID);
         await foreach (var existingQueueItem in queueItems)
         {
             if (string.IsNullOrEmpty(existingQueueItem.response))
@@ -61,20 +80,18 @@ public class InvoiceCommandProcessorGR(IGRSSCD sscd, ftQueueGR queueGR, ftSignat
                 continue;
             }
 
+            var referencedRequest = JsonSerializer.Deserialize<ReceiptRequest>(existingQueueItem.request);
             var referencedResponse = JsonSerializer.Deserialize<ReceiptResponse>(existingQueueItem.response);
-            if (referencedResponse != null)
+            if (referencedResponse != null && referencedRequest != null)
             {
-                receiptResponse.ftStateData = new
-                {
-                    ReferencedReceiptResponse = referencedResponse
-                };
-                return referencedResponse;
+
+                return (referencedRequest, referencedResponse);
             }
             else
             {
-                throw new Exception($"Could not find a reference for the cbPreviousReceiptReference '{request.cbPreviousReceiptReference}' sent via the request.");
+                throw new Exception($"Could not find a reference for the cbPreviousReceiptReference '{cbPreviousReceiptReferenceString}' sent via the request.");
             }
         }
-        throw new Exception($"Could not find a reference for the cbPreviousReceiptReference '{request.cbPreviousReceiptReference}' sent via the request.");
+        throw new Exception($"Could not find a reference for the cbPreviousReceiptReference '{cbPreviousReceiptReferenceString}' sent via the request.");
     }
 }
