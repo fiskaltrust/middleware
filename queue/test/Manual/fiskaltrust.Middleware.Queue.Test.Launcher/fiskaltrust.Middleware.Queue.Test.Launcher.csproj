@@ -49,6 +49,8 @@
     <ProjectReference Include="..\..\..\src\fiskaltrust.Middleware.Queue.MySQL\fiskaltrust.Middleware.Queue.MySQL.csproj" />
     <ProjectReference Include="..\..\..\src\fiskaltrust.Middleware.Queue.AzureTableStorage\fiskaltrust.Middleware.Queue.AzureTableStorage.csproj" />
     <ProjectReference Include="..\..\..\src\fiskaltrust.Middleware.Queue.SQLite\fiskaltrust.Middleware.Queue.SQLite.csproj" />
+
+    <ProjectReference Update="..\..\..\..\storage\src\fiskaltrust.storage\fiskaltrust.storage.csproj" />
   </ItemGroup>
 
   <ItemGroup>
