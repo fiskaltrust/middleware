@@ -23,7 +23,7 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
 {
     private readonly Queue _queue;
 
-    public QueueESBootstrapper(Guid id, ILoggerFactory loggerFactory, IClientFactory<IESSSCD> clientFactory, Dictionary<string, object> configuration, PackageConfiguration scuConfiguration)
+    public QueueESBootstrapper(Guid id, ILoggerFactory loggerFactory, IClientFactory<IESSSCD> clientFactory, Dictionary<string, object> configuration)
     {
         var middlewareConfiguration = MiddlewareConfigurationFactory.CreateMiddlewareConfiguration(id, configuration);
 
@@ -43,11 +43,10 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
         }
 
         var queueESConfiguration = QueueESConfiguration.FromMiddlewareConfiguration(middlewareConfiguration);
-        var url = scuConfiguration.Url?.First() ?? "";
         var config = new ClientConfiguration
         {
-            Url = scuConfiguration.Url?.FirstOrDefault(),
-            UrlType = new Uri(url.ToString()).Scheme
+            Url = queueESConfiguration.ScuUrl,//"rest://signing-sandbox.fiskaltrust.es/verifactu/",//,
+            UrlType = new Uri(queueESConfiguration.ScuUrl).Scheme
         };
 
         if (queueESConfiguration.ScuTimeoutMs.HasValue)

@@ -54,15 +54,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
 
             var configuration = await GetConfigurationAsync(cashBoxId, accessToken);
             var queue = configuration.ftQueues.First();
-            var scu = configuration.ftSignaturCreationDevices.First();
-            var bootstrapper = new QueueESBootstrapper(queue.Id, new LoggerFactory(), Mock.Of<IClientFactory<IESSSCD>>() , queue.Configuration, new v2.Configuration.PackageConfiguration
-            {
-                Configuration = scu.Configuration,
-                Id = scu.Id,
-                Package = scu.Package,
-                Url = scu.Url.ToList(),
-                Version = scu.Version
-            });
+            var bootstrapper = new QueueESBootstrapper(queue.Id, new LoggerFactory(), Mock.Of<IClientFactory<IESSSCD>>() , queue.Configuration);
             var signMethod = bootstrapper.RegisterForSign();
             var journalMethod = bootstrapper.RegisterForJournal();
             {
@@ -137,14 +129,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
             var queue = configuration.ftQueues.First();
             var scu = configuration.ftSignaturCreationDevices.First();
 
-            var bootstrapper = new QueueESBootstrapper(queue.Id, new LoggerFactory(), Mock.Of<IClientFactory<IESSSCD>>(), queue.Configuration, new v2.Configuration.PackageConfiguration
-            {
-                Configuration = scu.Configuration,
-                Id = scu.Id,
-                Package = scu.Package,
-                Url = scu.Url.ToList(),
-                Version = scu.Version
-            });
+            var bootstrapper = new QueueESBootstrapper(queue.Id, new LoggerFactory(), Mock.Of<IClientFactory<IESSSCD>>(), queue.Configuration);
             var signMethod = bootstrapper.RegisterForSign();
             var journalMethod = bootstrapper.RegisterForJournal();
             {
@@ -210,14 +195,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
             var queue = configuration.ftQueues.First();
             var scu = configuration.ftSignaturCreationDevices.First();
 
-            var bootstrapper = new QueueESBootstrapper(queue.Id, new LoggerFactory(), Mock.Of<IClientFactory<IESSSCD>>(), queue.Configuration, new v2.Configuration.PackageConfiguration
-            {
-                Configuration = scu.Configuration,
-                Id = scu.Id,
-                Package = scu.Package,
-                Url = scu.Url.ToList(),
-                Version = scu.Version
-            });
+            var bootstrapper = new QueueESBootstrapper(queue.Id, new LoggerFactory(), Mock.Of<IClientFactory<IESSSCD>>(), queue.Configuration);
             var signMethod = bootstrapper.RegisterForSign();
             var journalMethod = bootstrapper.RegisterForJournal();
             {
