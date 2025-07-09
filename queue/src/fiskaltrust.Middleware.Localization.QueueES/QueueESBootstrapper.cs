@@ -48,6 +48,11 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
         }
 
         var signaturCreationUnitES = queueESRepository.GetSignaturCreationUnitESAsync(queueES.ftSignaturCreationUnitESId.Value).Result;
+        if (signaturCreationUnitES is null)
+        {
+            signaturCreationUnitES = Newtonsoft.Json.JsonConvert.DeserializeObject<List<ftSignaturCreationUnitES>>(configuration["init_ftSignaturCreationUnitES"]!.ToString()!).First();
+            queueESRepository.InsertOrUpdateSignaturCreationUnitESAsync(signaturCreationUnitES);
+        }
         var uri = GetUriForSignaturCreationUnit(signaturCreationUnitES);
         var config = new ClientConfiguration
         {
