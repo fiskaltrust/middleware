@@ -14,7 +14,6 @@ using fiskaltrust.Middleware.Localization.QueueDE.Transactions;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Localization.QueueDE.MasterData;
 using fiskaltrust.Middleware.Contracts.Data;
-using fiskaltrust.ifPOS.v1.de;
 
 namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 {
@@ -83,24 +82,8 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 foreach (var openTransaction in openTransactions)
                 {
                     (var openProcessType, var openPayload) = _transactionPayloadFactory.CreateAutomaticallyCanceledReceiptPayload();
-                    FinishTransactionResponse finishResult = null;
-                    try
-                    {
-                        finishResult = await _transactionFactory.PerformFinishTransactionRequestAsync(openProcessType, openPayload, queueItem.ftQueueItemId, queueDE.CashBoxIdentification, (ulong) openTransaction.TransactionNumber).ConfigureAwait(false);
-                    }
-                    catch (Exception ex)
-                    {
-                        var tseInfo = await _deSSCDProvider.Instance.GetTseInfoAsync();
-                        if (tseInfo.CurrentStartedTransactionNumbers.Contains((ulong) openTransaction.TransactionNumber))
-                        {
-                            throw;
-                        }
-                        _logger.LogWarning(ex, "The transaction {TransactionNumber} with cbReceiptReference {cbReceiptReference} is not open on the TSE anymore. Transaction has been removed from Open Transactions.", openTransaction.TransactionNumber, openTransaction.cbReceiptReference);
-                    }
-                    if (finishResult is not null)
-                    {
-                        openSignatures.AddRange(_signatureFactory.GetSignaturesForFinishTransaction(finishResult));
-                    }
+                    var finishResult = await _transactionFactory.PerformFinishTransactionRequestAsync(openProcessType, openPayload, queueItem.ftQueueItemId, queueDE.CashBoxIdentification, (ulong) openTransaction.TransactionNumber).ConfigureAwait(false);
+                    openSignatures.AddRange(_signatureFactory.GetSignaturesForFinishTransaction(finishResult));
                     await _openTransactionRepo.RemoveAsync(openTransaction.cbReceiptReference).ConfigureAwait(false);
                 }
                 _logger.LogTrace("DailyClosingReceiptCommand.ExecuteAsync Section openTransactions [exit].");
@@ -146,12 +129,12 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             catch (Exception ex) when (ex.GetType().Name == RETRYPOLICYEXCEPTION_NAME)
             {
                 _logger.LogDebug(ex, "TSE not reachable.");
-                return await ProcessSSCDFailedReceiptRequest(request, queueItem, queue, queueDE, actionJournals).ConfigureAwait(false);
+                return await ProcessSSCDFailedReceiptRequest(request, queueItem, queue, queueDE,actionJournals).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
                 _logger.LogCritical(ex, "An exception occured while processing this request.");
-                return await ProcessSSCDFailedReceiptRequest(request, queueItem, queue, queueDE, actionJournals).ConfigureAwait(false);
+                return await ProcessSSCDFailedReceiptRequest(request, queueItem, queue, queueDE,actionJournals).ConfigureAwait(false);
             }
             finally
             {
