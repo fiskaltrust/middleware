@@ -227,9 +227,26 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                     if (await _openTransactionRepo.ExistsAsync(failedFinishTransaction.cbReceiptReference).ConfigureAwait(false))
                     {
                         var openTransaction = (OpenTransaction) await _openTransactionRepo.GetAsync(failedFinishTransaction.cbReceiptReference).ConfigureAwait(false);
-                        var finishTransactionResult = await _transactionFactory.PerformFinishTransactionRequestAsync(failedProcessType, failedPayload, failedFinishTransaction.ftQueueItemId, failedFinishTransaction.CashBoxIdentification, (ulong) openTransaction.TransactionNumber, true).ConfigureAwait(false);
+                        FinishTransactionResponse finishTransactionResult = null;
+                        try
+                        {
+                            finishTransactionResult = await _transactionFactory.PerformFinishTransactionRequestAsync(failedProcessType, failedPayload, failedFinishTransaction.ftQueueItemId, failedFinishTransaction.CashBoxIdentification, (ulong) openTransaction.TransactionNumber, true).ConfigureAwait(false);
+                        }
+                        catch (Exception ex)
+                        {
+                            var tseInfo = await _deSSCDProvider.Instance.GetTseInfoAsync();
+                            if (tseInfo.CurrentStartedTransactionNumbers.Contains((ulong) openTransaction.TransactionNumber))
+                            {
+                                throw;
+                            }
+                            _logger.LogWarning(ex, "The transaction {TransactionNumber} with cbReceiptReference {cbReceiptReference} is not open on the TSE anymore. Transaction has been removed from Open Transactions.", openTransaction.TransactionNumber, openTransaction.cbReceiptReference);
+                        }
+
                         await _openTransactionRepo.RemoveAsync(failedFinishTransaction.cbReceiptReference).ConfigureAwait(false);
-                        signatures.AddRange(_signatureFactory.GetSignaturesForTransaction(openTransaction.StartTransactionSignatureBase64, finishTransactionResult, await GetCertificationIdentificationAsync().ConfigureAwait(false)));
+                        if (finishTransactionResult is not null)
+                        {
+                            signatures.AddRange(_signatureFactory.GetSignaturesForTransaction(openTransaction.StartTransactionSignatureBase64, finishTransactionResult, await GetCertificationIdentificationAsync().ConfigureAwait(false)));
+                        }
                         _logger.LogDebug($"Finished TSE-Transaction: {finishTransactionResult.TransactionNumber}, TSE-Signature: {finishTransactionResult.SignatureData.SignatureBase64}");
                     }
                     _logger.LogDebug($"Finished SSCDFail-Transaction: {failedFinishTransaction.cbReceiptReference}, ProcessType: {failedProcessType}, Payload: {failedPayload}");
