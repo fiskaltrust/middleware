@@ -9,7 +9,6 @@ using fiskaltrust.storage.serialization.V0;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
-using Moq;
 using Newtonsoft.Json;
 using Xunit;
 
@@ -54,7 +53,8 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
 
             var configuration = await GetConfigurationAsync(cashBoxId, accessToken);
             var queue = configuration.ftQueues.First();
-            var bootstrapper = new QueueESBootstrapper(queue.Id, new LoggerFactory(), Mock.Of<IClientFactory<IESSSCD>>() , queue.Configuration);
+            var clientFactory = new ESSSCDClientFactory(cashBoxId, accessToken);
+            var bootstrapper = new QueueESBootstrapper(queue.Id, new LoggerFactory(), clientFactory, queue.Configuration);
             var signMethod = bootstrapper.RegisterForSign();
             var journalMethod = bootstrapper.RegisterForJournal();
             {
@@ -128,8 +128,8 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
             var configuration = await GetConfigurationAsync(cashBoxId, accessToken);
             var queue = configuration.ftQueues.First();
             var scu = configuration.ftSignaturCreationDevices.First();
-
-            var bootstrapper = new QueueESBootstrapper(queue.Id, new LoggerFactory(), Mock.Of<IClientFactory<IESSSCD>>(), queue.Configuration);
+            var clientFactory = new ESSSCDClientFactory(cashBoxId, accessToken);
+            var bootstrapper = new QueueESBootstrapper(queue.Id, new LoggerFactory(), clientFactory, queue.Configuration);
             var signMethod = bootstrapper.RegisterForSign();
             var journalMethod = bootstrapper.RegisterForJournal();
             {
@@ -194,8 +194,8 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest
             var configuration = await GetConfigurationAsync(cashBoxId, accessToken);
             var queue = configuration.ftQueues.First();
             var scu = configuration.ftSignaturCreationDevices.First();
-
-            var bootstrapper = new QueueESBootstrapper(queue.Id, new LoggerFactory(), Mock.Of<IClientFactory<IESSSCD>>(), queue.Configuration);
+            var clientFactory = new ESSSCDClientFactory(cashBoxId, accessToken);
+            var bootstrapper = new QueueESBootstrapper(queue.Id, new LoggerFactory(), clientFactory, queue.Configuration);
             var signMethod = bootstrapper.RegisterForSign();
             var journalMethod = bootstrapper.RegisterForJournal();
             {
