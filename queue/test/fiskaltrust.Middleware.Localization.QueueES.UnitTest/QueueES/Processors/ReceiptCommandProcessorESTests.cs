@@ -113,7 +113,8 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             result.receiptResponse.ftState.Should().Be(0x4553_2000_EEEE_EEEE);
         }
 
-        [Fact(Skip = "Make client mockable")]
+        [Fact]
+        //(Skip = "Make client mockable")
         public async Task PointOfSaleReceipt0x0001Async_Should_Return_QRCodeInSignatures()
         {
             var queue = TestHelpers.CreateQueue();

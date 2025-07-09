@@ -8,5 +8,6 @@ namespace fiskaltrust.Middleware.Storage.ES
 
         public long TimeStamp { get; set; }
         public string Url { get; set; }
+        public string InfoJson { get; set; }
     }
 }
