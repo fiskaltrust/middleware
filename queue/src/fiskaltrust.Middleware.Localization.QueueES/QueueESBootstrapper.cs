@@ -15,6 +15,7 @@ using fiskaltrust.Middleware.Storage.AzureTableStorage;
 using fiskaltrust.Middleware.Storage.ES;
 using fiskaltrust.storage.V0.MasterData;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueueES;
 
@@ -27,7 +28,6 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
     {
         var middlewareConfiguration = MiddlewareConfigurationFactory.CreateMiddlewareConfiguration(id, configuration);
 
-        var signaturCreationUnitES = new ftSignaturCreationUnitES();
         var storageProvider = new AzureStorageProvider(loggerFactory, id, configuration);
         var queueStorageProvider = new QueueStorageProvider(id, storageProvider);
 
@@ -42,13 +42,24 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
             queueESRepository.InsertOrUpdateQueueESAsync(queueES);
         }
 
-        var queueESConfiguration = QueueESConfiguration.FromMiddlewareConfiguration(middlewareConfiguration);
+        if (!queueES.ftSignaturCreationUnitESId.HasValue)
+        {
+           throw new ArgumentException($"Configuration must contain 'SignaturCreationUnitESId'  parameter.");
+        }
+
+        var signaturCreationUnitES = queueESRepository.GetSignaturCreationUnitESAsync(queueES.ftSignaturCreationUnitESId.Value).Result;
+        var uri = GetUriForSignaturCreationUnit(signaturCreationUnitES);
         var config = new ClientConfiguration
         {
-            Url = queueESConfiguration.ScuUrl,//"rest://signing-sandbox.fiskaltrust.es/verifactu/",//,
-            UrlType = new Uri(queueESConfiguration.ScuUrl).Scheme
+            Url = uri.ToString(),
+            UrlType = uri.Scheme
         };
 
+
+
+
+        var queueESConfiguration = QueueESConfiguration.FromMiddlewareConfiguration(middlewareConfiguration);
+       
         if (queueESConfiguration.ScuTimeoutMs.HasValue)
         {
             config.Timeout = TimeSpan.FromMilliseconds(queueESConfiguration.ScuTimeoutMs.Value);
@@ -84,7 +95,21 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
             Configuration = configuration,
         };
     }
+    private static Uri GetUriForSignaturCreationUnit(ftSignaturCreationUnitES signaturCreationUnitES)
+    {
+        var url = signaturCreationUnitES.Url;
+        try
+        {
+            var urls = JsonConvert.DeserializeObject<string[]>(url);
+            var httpsUrl = urls.FirstOrDefault(x => x.StartsWith("https://"));
+            url = httpsUrl ?? throw new ArgumentException($"Configuration must contain 'SCU/Url'  parameter.");
+        }
+        catch {
+            throw new ArgumentException($"Configuration must contain 'SCU/Url'  parameter.");
+        }
 
+        return new Uri(url);
+    }
     public Func<string, Task<string>> RegisterForSign()
     {
         return _queue.RegisterForSign();
