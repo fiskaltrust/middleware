@@ -25,8 +25,8 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
         Task RequestExportAsync(Guid tssId, ExportTransactionsWithTransactionNumberDto exportRequest, Guid exportId);
         Task RequestExportAsync(Guid tssId, ExportTransactionsWithDatesDto exportRequest, Guid exportId);
         Task SetExportMetadataAsync(Guid tssId, Guid exportId, long? fromTransactionNumber, long toTransactionNumber);
-        Task StoreDownloadResultAsync(Guid tssId, Guid exportId);
-        Task StoreDownloadSplitResultAsync(Guid tssId, SplitExportStateData splitExportStateData);
+        Task StoreDownloadResultAsync(Guid tssId, Guid exportId, string tempPath);
+        Task StoreDownloadSplitResultAsync(Guid tssId, SplitExportStateData splitExportStateData, string tempPath);
         Task PatchTseMetadataAsync(Guid tssId, Dictionary<string, object> metadata);
         Task DisableClientAsync(Guid tssId, string serialNumber, Guid clientId);
     }

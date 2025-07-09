@@ -188,7 +188,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
             }
         }
 
-        public async Task StoreDownloadResultAsync(Guid tssId, Guid exportId)
+        public async Task StoreDownloadResultAsync(Guid tssId, Guid exportId, string tempPath)
         {
             var exportStateInformation = await WaitUntilExportFinished(tssId, exportId);
             var contentStream = await GetExportByExportStateAsync(exportStateInformation);
@@ -197,7 +197,8 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
             contentStream.CopyTo(fileStream);
         }
 
-        public async Task StoreDownloadSplitResultAsync(Guid tssId, SplitExportStateData splitExportStateData)
+        public async Task StoreDownloadSplitResultAsync(Guid tssId, SplitExportStateData splitExportStateData,
+            string tempPath)
         {
             var exportStateInformation = await WaitUntilExportFinished(tssId, splitExportStateData.ExportId);
             var result = await GetExportByExportStateAsync(exportStateInformation);

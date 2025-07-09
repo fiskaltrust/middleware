@@ -404,7 +404,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
         {
             try
             {
-                await _fiskalyApiProvider.StoreDownloadResultAsync(_configuration.TssId, exportId);
+                await _fiskalyApiProvider.StoreDownloadResultAsync(_configuration.TssId, exportId, GetTempPath(exportId.ToString()));
                 SetExportState(exportId, ExportState.Succeeded);
             }
             catch (WebException)
@@ -432,7 +432,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
             {
                 if (splitExportStateData.ExportStateData.State != ExportState.Succeeded)
                 {
-                    await _fiskalyApiProvider.StoreDownloadSplitResultAsync(_configuration.TssId, splitExportStateData);
+                    await _fiskalyApiProvider.StoreDownloadSplitResultAsync(_configuration.TssId, splitExportStateData, GetTempPath(splitExportStateData.ParentExportId.ToString()));
                 }
                 var export = _splitExports.FirstOrDefault(x => x.Key== splitExportStateData.ParentExportId);
                 if (export.Value != null)
@@ -565,7 +565,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
                 {
                     throw new FiskalyException("The export failed to start. It needs to be retriggered");
                 }
-                var tempFileName = request.TokenId;
+                var tempFileName = GetTempPath(request.TokenId);
                 var exportId = Guid.Parse(request.TokenId);
                 if (_splitExports.ContainsKey(exportId))
                 {
@@ -665,7 +665,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
                     IsValid = true
                 };
             }
-            var tempFileName = request.TokenId;
+            var tempFileName = GetTempPath(request.TokenId);
             try
             {
                 var sessionResponse = new EndExportSessionResponse
@@ -792,5 +792,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
                 throw;
             }
         }
+        
+        private string GetTempPath(string exportId) => Path.Combine(Path.GetTempPath(), exportId);
     }
 }
