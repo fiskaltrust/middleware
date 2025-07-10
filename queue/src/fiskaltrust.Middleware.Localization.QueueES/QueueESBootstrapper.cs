@@ -24,7 +24,7 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
 {
     private readonly Queue _queue;
 
-    public QueueESBootstrapper(Guid id, ILoggerFactory loggerFactory, Dictionary<string, object> configuration, IESSSCD essscd)
+    public QueueESBootstrapper(Guid id, ILoggerFactory loggerFactory, IClientFactory<IESSSCD> clientFactory, Dictionary<string, object> configuration)
     {
         var middlewareConfiguration = MiddlewareConfigurationFactory.CreateMiddlewareConfiguration(id, configuration);
 
@@ -34,8 +34,34 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
         var masterDataService = new MasterDataService(configuration, storageProvider);
         storageProvider.Initialized.Wait();
         var masterData = masterDataService.GetCurrentDataAsync().Result; // put this in an async scu init process
-        var queueESRepository = storageProvider.GetConfigurationRepository();
-        var queueES = queueESRepository.GetQueueESAsync(id).Result;
+        var queueES = JsonConvert.DeserializeObject<List<ftQueueES>>(configuration["init_ftQueueES"]!.ToString()!).First();
+
+        Console.WriteLine(configuration["init_ftQueueES"].ToString());
+        if (!queueES.ftSignaturCreationUnitESId.HasValue)
+        {
+            throw new ArgumentException($"Configuration must contain 'SignaturCreationUnitESId' parameter.");
+        }
+
+        var signaturCreationUnitES = JsonConvert.DeserializeObject<List<ftSignaturCreationUnitES>>(configuration["init_ftSignaturCreationUnitES"]!.ToString()!).First(x => x.ftSignaturCreationUnitESId == queueES.ftSignaturCreationUnitESId.Value);
+        Console.WriteLine(configuration["init_ftSignaturCreationUnitES"].ToString());
+
+        var config = new ClientConfiguration
+        {
+            Url = signaturCreationUnitES.Url.ToString(),
+        };
+
+        var queueESConfiguration = QueueESConfiguration.FromMiddlewareConfiguration(middlewareConfiguration);
+
+        if (queueESConfiguration.ScuTimeoutMs.HasValue)
+        {
+            config.Timeout = TimeSpan.FromMilliseconds(queueESConfiguration.ScuTimeoutMs.Value);
+        }
+        if (queueESConfiguration.ScuMaxRetries.HasValue)
+        {
+            config.RetryCount = queueESConfiguration.ScuMaxRetries.Value;
+        }
+        var esSSCD = clientFactory.CreateClient(config);
+
 
         var signProcessorES = new ReceiptProcessor(
             loggerFactory.CreateLogger<ReceiptProcessor>(),
@@ -43,12 +69,12 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
                 queueStorageProvider
             ),
             new ReceiptCommandProcessorES(
-                essscd,
-                (IConfigurationRepository) storageProvider.GetConfigurationRepository(),
+                esSSCD,
+                storageProvider.GetConfigurationRepository(),
                 storageProvider.GetMiddlewareQueueItemRepository()
             ),
             new DailyOperationsCommandProcessorES(
-                essscd,
+                esSSCD,
                 queueStorageProvider),
             new InvoiceCommandProcessorES(),
             new ProtocolCommandProcessorES()
