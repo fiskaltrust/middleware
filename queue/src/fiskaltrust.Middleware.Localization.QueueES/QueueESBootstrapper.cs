@@ -24,7 +24,7 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
 {
     private readonly Queue _queue;
 
-    public QueueESBootstrapper(Guid id, ILoggerFactory loggerFactory, IClientFactory<IESSSCD> clientFactory, Dictionary<string, object> configuration)
+    public QueueESBootstrapper(Guid id, ILoggerFactory loggerFactory, Dictionary<string, object> configuration, IESSSCD essscd)
     {
         var middlewareConfiguration = MiddlewareConfigurationFactory.CreateMiddlewareConfiguration(id, configuration);
 
@@ -34,47 +34,8 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
         var masterDataService = new MasterDataService(configuration, storageProvider);
         storageProvider.Initialized.Wait();
         var masterData = masterDataService.GetCurrentDataAsync().Result; // put this in an async scu init process
-        var queueESRepository = (IConfigurationRepository) storageProvider.GetConfigurationRepository();
+        var queueESRepository = storageProvider.GetConfigurationRepository();
         var queueES = queueESRepository.GetQueueESAsync(id).Result;
-        if (queueES is null)
-        {
-            queueES = Newtonsoft.Json.JsonConvert.DeserializeObject<List<ftQueueES>>(configuration["init_ftQueueES"]!.ToString()!).First();
-            queueESRepository.InsertOrUpdateQueueESAsync(queueES);
-        }
-
-        if (!queueES.ftSignaturCreationUnitESId.HasValue)
-        {
-            throw new ArgumentException($"Configuration must contain 'SignaturCreationUnitESId'  parameter.");
-        }
-
-        var signaturCreationUnitES = queueESRepository.GetSignaturCreationUnitESAsync(queueES.ftSignaturCreationUnitESId.Value).Result;
-        if (signaturCreationUnitES is null)
-        {
-            signaturCreationUnitES = Newtonsoft.Json.JsonConvert.DeserializeObject<List<ftSignaturCreationUnitES>>(configuration["init_ftSignaturCreationUnitES"]!.ToString()!).First();
-            queueESRepository.InsertOrUpdateSignaturCreationUnitESAsync(signaturCreationUnitES);
-        }
-        var uri = GetUriForSignaturCreationUnit(signaturCreationUnitES);
-        var config = new ClientConfiguration
-        {
-            Url = uri.ToString(),
-            UrlType = uri.Scheme
-        };
-
-
-
-
-        var queueESConfiguration = QueueESConfiguration.FromMiddlewareConfiguration(middlewareConfiguration);
-
-        if (queueESConfiguration.ScuTimeoutMs.HasValue)
-        {
-            config.Timeout = TimeSpan.FromMilliseconds(queueESConfiguration.ScuTimeoutMs.Value);
-        }
-        if (queueESConfiguration.ScuMaxRetries.HasValue)
-        {
-            config.RetryCount = queueESConfiguration.ScuMaxRetries.Value;
-        }
-        var esSSCD = clientFactory.CreateClient(config);
-
 
         var signProcessorES = new ReceiptProcessor(
             loggerFactory.CreateLogger<ReceiptProcessor>(),
@@ -82,12 +43,12 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
                 queueStorageProvider
             ),
             new ReceiptCommandProcessorES(
-                esSSCD,
+                essscd,
                 (IConfigurationRepository) storageProvider.GetConfigurationRepository(),
                 storageProvider.GetMiddlewareQueueItemRepository()
             ),
             new DailyOperationsCommandProcessorES(
-                esSSCD,
+                essscd,
                 queueStorageProvider),
             new InvoiceCommandProcessorES(),
             new ProtocolCommandProcessorES()
@@ -100,22 +61,7 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
             Configuration = configuration,
         };
     }
-    private static Uri GetUriForSignaturCreationUnit(ftSignaturCreationUnitES signaturCreationUnitES)
-    {
-        var url = signaturCreationUnitES.Url;
-        try
-        {
-            var urls = JsonConvert.DeserializeObject<string[]>(url);
-            var httpsUrl = urls.FirstOrDefault(x => x.StartsWith("https://"));
-            url = httpsUrl ?? throw new ArgumentException($"Configuration must contain 'SCU/Url'  parameter.");
-        }
-        catch
-        {
-            throw new ArgumentException($"Configuration must contain 'SCU/Url'  parameter.");
-        }
 
-        return new Uri(url);
-    }
     public Func<string, Task<string>> RegisterForSign()
     {
         return _queue.RegisterForSign();
