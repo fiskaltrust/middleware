@@ -8,6 +8,7 @@ using Xunit;
 using fiskaltrust.ifPOS.v2.Cases;
 using Microsoft.Extensions.Logging;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.Processors;
 

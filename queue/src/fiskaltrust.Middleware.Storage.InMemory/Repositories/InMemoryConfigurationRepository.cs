@@ -29,6 +29,7 @@ namespace fiskaltrust.Middleware.Storage.InMemory.Repositories
             _queueRepository = new InMemoryQueueRepository();
             _queueATRepository = new InMemoryQueueATRepository();
             _queueDERepository = new InMemoryQueueDERepository();
+            _queueESRepository = new InMemoryQueueESRepository();
             _queueFRRepository = new InMemoryQueueFRRepository();
             _queueITRepository = new InMemoryQueueITRepository();
             _queueMERepository = new InMemoryQueueMERepository();
