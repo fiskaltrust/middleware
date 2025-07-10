@@ -22,8 +22,8 @@ public class ReceiptCommandProcessorGRTests
     public async Task ProcessReceiptAsync_ShouldReturnEmptyList(ReceiptCase receiptCase)
     {
         var queue = TestHelpers.CreateQueue();
-        var queueGR = new Storage.GR.ftQueueGR();
-        var scuGR = new Storage.GR.ftSignaturCreationUnitGR();
+        var queueGR = new ftQueueGR();
+        var scuGR = new ftSignaturCreationUnitGR();
         var queueItem = TestHelpers.CreateQueueItem();
         var receiptRequest = new ReceiptRequest
         {
@@ -58,8 +58,8 @@ public class ReceiptCommandProcessorGRTests
     public async Task ProcessReceiptAsync_ShouldReturnError()
     {
         var queue = TestHelpers.CreateQueue();
-        var queueGR = new Storage.GR.ftQueueGR();
-        var scuGR = new Storage.GR.ftSignaturCreationUnitGR();
+        var queueGR = new ftQueueGR();
+        var scuGR = new ftSignaturCreationUnitGR();
         var queueItem = TestHelpers.CreateQueueItem();
         var receiptRequest = new ReceiptRequest
         {

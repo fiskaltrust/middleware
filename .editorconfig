@@ -160,9 +160,9 @@ dotnet_naming_symbols.constant_fields.applicable_kinds   = field
 dotnet_naming_symbols.constant_fields.required_modifiers = const
 
 # IDE0052: Remove unread private members
-dotnet_diagnostic.IDE0052.severity = error
+dotnet_diagnostic.IDE0052.severity = warning
 # IDE0001: Simplify Names
-dotnet_diagnostic.IDE0001.severity = error
+dotnet_diagnostic.IDE0001.severity = warning
 
 # CA1034: Nested types should not be visible
 dotnet_diagnostic.CA1034.severity = suggestion
@@ -241,3 +241,8 @@ dotnet_diagnostic.IDE0057.severity = suggestion
 
 dotnet_diagnostic.CA1014.severity = none
 dotnet_diagnostic.NU5104.severity = suggestion
+
+dotnet_diagnostic.IDE0040.severity = suggestion
+
+# Default severity for analyzer diagnostics with category 'Style'
+dotnet_analyzer_diagnostic.category-Style.severity = suggestion

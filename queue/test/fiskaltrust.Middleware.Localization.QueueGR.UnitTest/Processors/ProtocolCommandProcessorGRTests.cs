@@ -8,6 +8,7 @@ using Moq;
 using Microsoft.Extensions.Logging;
 using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.Processors;
 
@@ -23,8 +24,8 @@ public class ProtocolCommandProcessorGRTests
     public async Task ProcessReceiptAsync_ShouldReturnEmptyList(ReceiptCase receiptCase)
     {
         var queue = TestHelpers.CreateQueue();
-        var queueGR = new Storage.GR.ftQueueGR();
-        var scuGR = new Storage.GR.ftSignaturCreationUnitGR();
+        var queueGR = new ftQueueGR();
+        var scuGR = new ftSignaturCreationUnitGR();
         var queueItem = TestHelpers.CreateQueueItem();
         var receiptRequest = new ReceiptRequest
         {
@@ -60,8 +61,8 @@ public class ProtocolCommandProcessorGRTests
     public async Task ProcessReceiptAsync_ShouldReturnError()
     {
         var queue = TestHelpers.CreateQueue();
-        var queueGR = new Storage.GR.ftQueueGR();
-        var scuGR = new Storage.GR.ftSignaturCreationUnitGR();
+        var queueGR = new ftQueueGR();
+        var scuGR = new ftSignaturCreationUnitGR();
         var queueItem = TestHelpers.CreateQueueItem();
         var receiptRequest = new ReceiptRequest
         {

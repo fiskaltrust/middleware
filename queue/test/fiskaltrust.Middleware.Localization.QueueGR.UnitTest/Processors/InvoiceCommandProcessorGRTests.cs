@@ -18,8 +18,8 @@ public class InvoiceCommandProcessorGRTests
     public async Task InvoiceUnknown0x1000Async_ShouldReturnEmptyList()
     {
         var queue = TestHelpers.CreateQueue();
-        var queueGR = new Storage.GR.ftQueueGR();
-        var scuGR = new Storage.GR.ftSignaturCreationUnitGR();
+        var queueGR = new ftQueueGR();
+        var scuGR = new ftSignaturCreationUnitGR();
         var queueItem = TestHelpers.CreateQueueItem();
         var receiptRequest = new ReceiptRequest
         {
@@ -55,8 +55,8 @@ public class InvoiceCommandProcessorGRTests
     public async Task InvoiceUnknown0x1000Async_RefundFlag_WithReferencedRefund_ShouldLoadQueueItem_ShouldReturnEmptyList()
     {
         var queue = TestHelpers.CreateQueue();
-        var queueGR = new Storage.GR.ftQueueGR();
-        var scuGR = new Storage.GR.ftSignaturCreationUnitGR();
+        var queueGR = new ftQueueGR();
+        var scuGR = new ftSignaturCreationUnitGR();
         var queueItem = TestHelpers.CreateQueueItem();
         var receiptRequest = new ReceiptRequest
         {
@@ -95,8 +95,8 @@ public class InvoiceCommandProcessorGRTests
     public async Task InvoiceUnknown0x1000Async_RefundFlag_WithUnreferencedRefund_ShouldNotLoadQueueItem_ShouldReturnEmptyList()
     {
         var queue = TestHelpers.CreateQueue();
-        var queueGR = new Storage.GR.ftQueueGR();
-        var scuGR = new Storage.GR.ftSignaturCreationUnitGR();
+        var queueGR = new ftQueueGR();
+        var scuGR = new ftSignaturCreationUnitGR();
         var queueItem = TestHelpers.CreateQueueItem();
         var receiptRequest = new ReceiptRequest
         {
@@ -132,8 +132,8 @@ public class InvoiceCommandProcessorGRTests
     public async Task InvoiceB2C0x1001Async_ShouldReturnEmptyList()
     {
         var queue = TestHelpers.CreateQueue();
-        var queueGR = new Storage.GR.ftQueueGR();
-        var scuGR = new Storage.GR.ftSignaturCreationUnitGR();
+        var queueGR = new ftQueueGR();
+        var scuGR = new ftSignaturCreationUnitGR();
         var queueItem = TestHelpers.CreateQueueItem();
         var receiptRequest = new ReceiptRequest
         {
@@ -169,8 +169,8 @@ public class InvoiceCommandProcessorGRTests
     public async Task InvoiceB2B0x1002Async_ShouldReturnEmptyList()
     {
         var queue = TestHelpers.CreateQueue();
-        var queueGR = new Storage.GR.ftQueueGR();
-        var scuGR = new Storage.GR.ftSignaturCreationUnitGR();
+        var queueGR = new ftQueueGR();
+        var scuGR = new ftSignaturCreationUnitGR();
         var queueItem = TestHelpers.CreateQueueItem();
         var receiptRequest = new ReceiptRequest
         {
@@ -206,8 +206,8 @@ public class InvoiceCommandProcessorGRTests
     public async Task InvoiceB2G0x1003Async_ShouldReturnEmptyList()
     {
         var queue = TestHelpers.CreateQueue();
-        var queueGR = new Storage.GR.ftQueueGR();
-        var scuGR = new Storage.GR.ftSignaturCreationUnitGR();
+        var queueGR = new ftQueueGR();
+        var scuGR = new ftSignaturCreationUnitGR();
         var queueItem = TestHelpers.CreateQueueItem();
         var receiptRequest = new ReceiptRequest
         {

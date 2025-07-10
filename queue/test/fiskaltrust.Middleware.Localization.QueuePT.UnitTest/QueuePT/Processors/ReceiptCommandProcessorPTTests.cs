@@ -7,7 +7,6 @@ using fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Storage;
-using fiskaltrust.Middleware.Storage.PT;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
 using FluentAssertions.Execution;
@@ -92,7 +91,7 @@ public class ReceiptCommandProcessorPTTests
             SoftwareCertificateNumber = "9999",
         };
 
-        var configMock = new Mock<storage.V0.IConfigurationRepository>();
+        var configMock = new Mock<IConfigurationRepository>();
         configMock.Setup(x => x.InsertOrUpdateQueueAsync(It.IsAny<ftQueue>())).Returns(Task.CompletedTask);
 
         var queueItemRepository = new Mock<IMiddlewareQueueItemRepository>();

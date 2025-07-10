@@ -13,7 +13,6 @@ using Xunit;
 using AutoFixture;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueueES.ESSSCD;
-using fiskaltrust.Middleware.Storage.ES;
 using fiskaltrust.storage.V0.MasterData;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using Microsoft.Extensions.Logging;
@@ -35,7 +34,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             var queue = TestHelpers.CreateQueue();
             var queueItem = TestHelpers.CreateQueueItem();
 
-            var signaturCreationUnitES = new Storage.ES.ftSignaturCreationUnitES
+            var signaturCreationUnitES = new ftSignaturCreationUnitES
             {
 
             };
@@ -100,7 +99,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             var queue = TestHelpers.CreateQueue();
             var queueItem = TestHelpers.CreateQueueItem();
 
-            var signaturCreationUnitES = new Storage.ES.ftSignaturCreationUnitES
+            var signaturCreationUnitES = new ftSignaturCreationUnitES
             {
 
             };
@@ -191,7 +190,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
 
             var queueItem = TestHelpers.CreateQueueItem();
 
-            var signaturCreationUnitES = new Storage.ES.ftSignaturCreationUnitES
+            var signaturCreationUnitES = new ftSignaturCreationUnitES
             {
 
             };
@@ -280,7 +279,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             var queue = TestHelpers.CreateQueue();
             var queueItem = TestHelpers.CreateQueueItem();
 
-            var signaturCreationUnitES = new Storage.ES.ftSignaturCreationUnitES
+            var signaturCreationUnitES = new ftSignaturCreationUnitES
             {
 
             };
@@ -324,7 +323,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             var queue = TestHelpers.CreateQueue();
             var queueItem = TestHelpers.CreateQueueItem();
 
-            var signaturCreationUnitES = new Storage.ES.ftSignaturCreationUnitES
+            var signaturCreationUnitES = new ftSignaturCreationUnitES
             {
 
             };
