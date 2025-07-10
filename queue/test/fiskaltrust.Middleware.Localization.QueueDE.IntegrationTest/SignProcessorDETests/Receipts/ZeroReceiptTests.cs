@@ -126,7 +126,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             var receiptRequest = TestObjectFactory.GetReceipt(Path.Combine("Data", "ZeroReceipt", "SelfTest"));
             receiptRequest.cbReceiptReference = "R101NotonTse";
             receiptRequest.ftReceiptCase = 0x4445000121000002;
-            var signProcessor = _fixture.CreateSignProcessorForSignProcessorDE(true, DateTime.Now.AddHours(-1), null, null, false, true, true);
+            var signProcessor = _fixture.CreateSignProcessorForSignProcessorDE(true, DateTime.Now.AddHours(-1), openTrans: new ulong[] { 1, 2 }, sourceIsScuSwitch: true);
             var queueItemId = Guid.NewGuid();
             await _fixture.failedFinishTransactionRepository.InsertOrUpdateTransactionAsync(new FailedFinishTransaction
             {
@@ -219,7 +219,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
         private SignProcessorDE GetSUT()
         {
             var journalRepositoryMock = new Mock<IMiddlewareJournalDERepository>(MockBehavior.Strict);
-            _fixture.InMemorySCU.OpenTans = false;
+            _fixture.InMemorySCU.OpenTans = null;
             var actionJournalRepositoryMock = new Mock<IMiddlewareActionJournalRepository>(MockBehavior.Strict);
             var config = new MiddlewareConfiguration
             {

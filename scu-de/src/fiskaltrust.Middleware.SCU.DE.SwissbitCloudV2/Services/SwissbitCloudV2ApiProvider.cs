@@ -10,6 +10,7 @@ using Newtonsoft.Json;
 using System.Net.Http.Headers;
 using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Helpers;
 using Microsoft.Extensions.Logging;
+using fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Exceptions;
 
 
 namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
@@ -39,39 +40,45 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
             var jsonPayload = JsonConvert.SerializeObject(transactionRequest, _serializerSettings);
 
             var response = await _httpClient.PostAsync($"/api/v1/tse/{transactionType}", new StringContent(jsonPayload, Encoding.UTF8, "application/json"));
+            await EnsureSuccessStatusCodeAsync(response, $"Transaction {transactionType}");
             var responseContent = await response.Content.ReadAsStringAsync();
-            
+
             return JsonConvert.DeserializeObject<TransactionResponseDto>(responseContent);
         }
 
         public async Task<List<string>> GetClientsAsync()
         {
             var response = await _httpClient.GetAsync($"/api/v1/tse/clients");
+            await EnsureSuccessStatusCodeAsync(response, "GetClients");
             var responseContent = await response.Content.ReadAsStringAsync();
-            
+
             return JsonConvert.DeserializeObject<List<string>>(responseContent);
         }
+
         public async Task<TseDto> GetTseStatusAsync()
         {
             var response = await _httpClient.GetAsync($"/api/v1/tse");
+            await EnsureSuccessStatusCodeAsync(response, "GetTseStatus");
             var responseContent = await response.Content.ReadAsStringAsync();
-            
+
             return JsonConvert.DeserializeObject<TseDto>(responseContent);
         }
 
         public async Task<TseDto> DisableTseAsync()
         {
-            await _httpClient.PostAsync("/api/v1/tse/disableSecureElement", new StringContent("", Encoding.UTF8, "application/json"));
-            
+            var response = await _httpClient.PostAsync("/api/v1/tse/disableSecureElement", new StringContent("", Encoding.UTF8, "application/json"));
+            await EnsureSuccessStatusCodeAsync(response, "DisableTse");
+
             return await GetTseStatusAsync();
         }
 
         public async Task<List<int>> GetStartedTransactionsAsync()
         {
             var response = await _httpClient.GetAsync($"/api/v1/tse/transactions");
+            await EnsureSuccessStatusCodeAsync(response, "GetStartedTransactions");
             var responseContent = await response.Content.ReadAsStringAsync();
-           
-            return JsonConvert.DeserializeObject<List<int>>(responseContent);           
+
+            return JsonConvert.DeserializeObject<List<int>>(responseContent);
         }
 
         public async Task CreateClientAsync(ClientDto client)
@@ -79,15 +86,16 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
             var clientDto = new ClientDto { ClientId = client.ClientId };
             var jsonPayload = JsonConvert.SerializeObject(clientDto, _serializerSettings);
 
-            await _httpClient.PostAsync($"/api/v1/tse/registerClient", new StringContent(jsonPayload, Encoding.UTF8, "application/json"));
-            
+            var response = await _httpClient.PostAsync($"/api/v1/tse/registerClient", new StringContent(jsonPayload, Encoding.UTF8, "application/json"));
+            await EnsureSuccessStatusCodeAsync(response, "CreateClient");
         }
 
         public async Task DeregisterClientAsync(ClientDto client)
         {
             var jsonPayload = JsonConvert.SerializeObject(client, _serializerSettings);
 
-            await _httpClient.PostAsync($"/api/v1/tse/deregisterClient", new StringContent(jsonPayload, Encoding.UTF8, "application/json"));            
+            var response = await _httpClient.PostAsync($"/api/v1/tse/deregisterClient", new StringContent(jsonPayload, Encoding.UTF8, "application/json"));
+            await EnsureSuccessStatusCodeAsync(response, "DeregisterClient");
         }
 
         public async Task<ExportDto> StartExportAsync()
@@ -99,6 +107,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
                 return openExports[0];
             }
             var response = await _httpClient.PostAsync($"/api/v1/tse/export", null).ConfigureAwait(false);
+            await EnsureSuccessStatusCodeAsync(response, "StartExport");
 
             return JsonConvert.DeserializeObject<ExportDto>(await response.Content.ReadAsStringAsync());
         }
@@ -106,13 +115,14 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
         public async Task<List<ExportDto>> GetExportsAsync()
         {
             var response = await _httpClient.GetAsync($"/api/v1/tse/export").ConfigureAwait(false);
+            await EnsureSuccessStatusCodeAsync(response, "GetExports");
 
             return JsonConvert.DeserializeObject<List<ExportDto>>(await response.Content.ReadAsStringAsync());
         }
 
         public async Task StoreDownloadResultAsync(ExportDto exportDto)
         {
-            if(string.IsNullOrEmpty(exportDto.DownloadUrl))
+            if (string.IsNullOrEmpty(exportDto.DownloadUrl))
             {
                 exportDto = await WaitUntilExportFinishedAsync(exportDto.Id);
             }
@@ -130,24 +140,39 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
             exportClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(credentials));
 
             var response = await exportClient.GetAsync($"{exportDto.DownloadUrl}");
-          
+            await EnsureSuccessStatusCodeAsync(response, "GetExportFromResponseUrl");
+
             return await response.Content.ReadAsStreamAsync();
         }
 
         public async Task<ExportDto> GetExportStateResponseByIdAsync(string exportId)
         {
             var response = await _httpClient.GetAsync($"/api/v1/tse/export/{exportId}");
+            await EnsureSuccessStatusCodeAsync(response, "GetExportStateResponseById");
             var responseContent = await response.Content.ReadAsStringAsync();
-            
+
             return JsonConvert.DeserializeObject<ExportDto>(responseContent);
         }
 
         public async Task<ExportDto> DeleteExportByIdAsync(string exportId)
         {
             var response = await _httpClient.DeleteAsync($"/api/v1/tse/export/{exportId}");
+            await EnsureSuccessStatusCodeAsync(response, "DeleteExportById");
             var responseContent = await response.Content.ReadAsStringAsync();
-           
+
             return JsonConvert.DeserializeObject<ExportDto>(responseContent);
+        }
+
+        private async Task EnsureSuccessStatusCodeAsync(HttpResponseMessage response, string operation)
+        {
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                throw new SwissbitCloudV2Exception(
+                    $"HTTP request failed for operation '{operation}'. Status: {response.StatusCode}, Content: {errorContent}",
+                    (int) response.StatusCode,
+                    operation);
+            }
         }
 
         private async Task<ExportDto> WaitUntilExportFinishedAsync(string exportId)
@@ -175,6 +200,6 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Services
         }
 
         public void Dispose() => _httpClient?.Dispose();
-       
+
     }
 }

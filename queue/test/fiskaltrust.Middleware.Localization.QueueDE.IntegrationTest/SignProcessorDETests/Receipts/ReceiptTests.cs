@@ -46,7 +46,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
         }
         private Func<Task> CallSignProcessor_ExpectException(ReceiptRequest receiptRequest, bool sourceIsScuSwitch = false, bool targetIsScuSwitch = false)
         {
-            var signProcessor = _fixture.CreateSignProcessorForSignProcessorDE(false, DateTime.Now.AddHours(-1), null, null, false, false, sourceIsScuSwitch, targetIsScuSwitch);
+            var signProcessor = _fixture.CreateSignProcessorForSignProcessorDE(false, DateTime.Now.AddHours(-1), sourceIsScuSwitch: sourceIsScuSwitch, targetIsScuSwitch: targetIsScuSwitch);
             return async () => { var receiptResponse = await signProcessor.ProcessAsync(receiptRequest); };
         }
     }

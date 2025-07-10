@@ -61,23 +61,23 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             services.AddSingleton(_ => journalDERepository);
             services.AddSingleton(_ => queueItemRepository as IReadOnlyQueueItemRepository);
             services.AddSingleton(_ => actionJournalRepository as IActionJournalRepository);
-          
 
-            if(tarFileCleanupService == null)
+
+            if (tarFileCleanupService == null)
             {
                 tarFileCleanupService = Mock.Of<ITarFileCleanupService>();
             }
 
             services.AddSingleton(tarFileCleanupService);
 
-            var signProcessor =  new SignProcessorDE(
+            var signProcessor = new SignProcessorDE(
                 configurationRepository,
                 journalDERepository,
                 queueItemRepository,
                 actionJournalRepository,
                 transactionPayloadFactory,
                 new RequestCommandFactory(services.BuildServiceProvider()),
-                null,
+                middlewareConfiguration,
                 logger
             );
 

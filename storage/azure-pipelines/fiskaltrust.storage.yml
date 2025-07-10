@@ -1,0 +1,100 @@
+resources:
+- repo: self
+
+trigger:
+  batch: true
+  branches:
+    include:
+    - master
+    - refs/tags/storage/v*
+
+pr: 
+  branches:
+    include:
+    - master
+
+variables:
+- group: 'Code Signing Certificates'
+- name: BuildConfiguration
+  value: release
+- name: BuildPlatform
+  value: any cpu
+- name: Solution
+  value: 'fiskaltrust.storage.sln'
+- name: vmImageName 
+  value: 'windows-latest'
+
+jobs:
+  - job: Build 
+    pool:
+      vmImage: $(vmImageName)
+    steps:
+    - task: yavt@1
+      displayName: 'Update version'
+      inputs:
+        mode: 'Multi'   
+        updateBuildNumber: true
+        semverVersion: 'v1'
+  
+    - powershell: |   
+        $nugetFeed = if ($Env:BUILD_SOURCEBRANCH.StartsWith("refs/tags/storage/v")) { "release" } else { "dev" }
+        Write-Host "##vso[task.setvariable variable=NuGetFeed;]$nugetFeed"
+      displayName: Set NuGet feed
+
+    - task: DotNetCoreCLI@2
+      inputs:
+        command: 'restore'
+        projects: 'storage/*.sln'
+        vstsFeed: '$(NuGetFeed)'
+        verbosityRestore: 'minimal'
+        arguments: '--configuration Release'
+      displayName: 'Restore'
+
+    - task: DotNetCoreCLI@2
+      inputs:
+        command: 'build'
+        projects: 'storage/*.sln'
+        arguments: '--configuration Release'
+      displayName: 'Build'
+
+    - task: DotNetCoreCLI@2
+      inputs:
+        command: 'test'
+        projects: 'storage/**/*.UnitTest.csproj'
+        arguments: '--configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:Include=[fiskaltrust.*]*'
+      displayName: 'Run unit tests'
+      
+    - task: codesigning@2
+      displayName: 'Code Signing '
+      inputs:
+        secureFileId: 'codesigning.pfx'
+        signCertPassword: '$(Code_Signing_Password)'
+        filePaths: |
+         storage/src/**/*.dll
+
+    - script: |
+        dotnet tool install -g dotnet-reportgenerator-globaltool
+        reportgenerator -reports:$(Build.SourcesDirectory)/storage/test/**/coverage.opencover.xml -targetdir:$(Build.SourcesDirectory)/CodeCoverage -reporttypes:"Cobertura;HTMLInline;HTMLChart"
+      displayName: Create Code coverage report
+      workingDirectory: '/'
+
+    - task: PublishCodeCoverageResults@1
+      displayName: 'Publish code coverage'
+      inputs:
+        codeCoverageTool: Cobertura
+        summaryFileLocation: '$(Build.SourcesDirectory)/CodeCoverage/Cobertura.xml'
+        reportDirectory: '$(Build.SourcesDirectory)/CodeCoverage'
+
+    - script: dotnet pack storage/src/fiskaltrust.storage/fiskaltrust.storage.csproj --no-build --output $(Build.ArtifactStagingDirectory)/fiskaltrust.storage --configuration $(buildConfiguration)
+      displayName: 'dotnet pack storage'
+
+    - script: dotnet pack storage/src/fiskaltrust.storage.serialization/fiskaltrust.storage.serialization.csproj --no-build --output $(Build.ArtifactStagingDirectory)/fiskaltrust.storage.serialization --configuration $(buildConfiguration)
+      displayName: 'dotnet pack storage serialization'
+
+    - script: dotnet pack storage/src/fiskaltrust.storage.encryption/fiskaltrust.storage.encryption.csproj --no-build --output $(Build.ArtifactStagingDirectory)/fiskaltrust.storage.encryption --configuration $(buildConfiguration)
+      displayName: 'dotnet pack storage encryption'
+        
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish Artifact: drop'
+      inputs:
+        PathtoPublish: '$(build.artifactstagingdirectory)'
