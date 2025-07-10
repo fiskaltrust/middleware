@@ -96,6 +96,8 @@ namespace fiskaltrust.Middleware.Storage.EFCore.Repositories
         public Task<ftSignaturCreationUnitES> GetSignaturCreationUnitESAsync() => throw new NotImplementedException();
         public Task<IEnumerable<ftSignaturCreationUnitES>> GetSignaturCreationUnitESListAsync() => throw new NotImplementedException();
         public Task InsertOrUpdateSignaturCreationUnitESAsync(ftSignaturCreationUnitES scu) => throw new NotImplementedException();
-
+        public Task InsertOrUpdateQueueEUAsync(ftQueueEU queue) => throw new NotImplementedException();
+        public Task<IEnumerable<ftQueueEU>> GetQueueEUListAsync() => throw new NotImplementedException();
+        public Task<ftQueueEU> GetQueueEUAsync(Guid queueEUId) => throw new NotImplementedException();
     }
 }

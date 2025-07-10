@@ -15,8 +15,8 @@ using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.SCU.ES.Helpers;
 using fiskaltrust.Middleware.SCU.ES.Models;
 using fiskaltrust.Middleware.SCU.ES.Soap;
-using fiskaltrust.Middleware.Storage.ES;
 using fiskaltrust.storage.V0.MasterData;
+using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.ESSSCD;
 

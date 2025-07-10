@@ -4,14 +4,9 @@ using fiskaltrust.Middleware.Contracts.Constants;
 using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.v2.Interface;
-using fiskaltrust.Middleware.Storage.ES;
-using fiskaltrust.Middleware.Storage.GR;
-using fiskaltrust.Middleware.Storage.PT;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using ftQueueES = fiskaltrust.Middleware.Storage.ES.ftQueueES;
-using ftSignaturCreationUnitES = fiskaltrust.Middleware.Storage.ES.ftSignaturCreationUnitES;
 
 namespace fiskaltrust.Middleware.Localization.v2;
 
@@ -22,7 +17,7 @@ public interface IJournalProcessor
 
 public class JournalProcessor : IJournalProcessor
 {
-    private readonly storage.V0.IReadOnlyConfigurationRepository _configurationRepository;
+    private readonly IReadOnlyConfigurationRepository _configurationRepository;
     private readonly IMiddlewareRepository<ftQueueItem> _queueItemRepository;
     private readonly IMiddlewareRepository<ftReceiptJournal> _receiptJournalRepository;
     private readonly IMiddlewareRepository<ftActionJournal> _actionJournalRepository;

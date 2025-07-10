@@ -15,6 +15,7 @@ namespace fiskaltrust.storage.V0
         Task InsertOrUpdateQueueATAsync(ftQueueAT queue);
         Task InsertOrUpdateQueueDEAsync(ftQueueDE queue);
         Task InsertOrUpdateQueueESAsync(ftQueueES queue);
+        Task InsertOrUpdateQueueEUAsync(ftQueueEU queue);
         Task InsertOrUpdateQueueFRAsync(ftQueueFR queue);
         Task InsertOrUpdateQueueITAsync(ftQueueIT queue);
         Task InsertOrUpdateQueueMEAsync(ftQueueME queue);

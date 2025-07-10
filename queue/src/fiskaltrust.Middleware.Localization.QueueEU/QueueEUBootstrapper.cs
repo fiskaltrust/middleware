@@ -8,7 +8,6 @@ using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.MasterData;
 using fiskaltrust.Middleware.Localization.v2.Storage;
 using fiskaltrust.Middleware.Storage.AzureTableStorage;
-using fiskaltrust.Middleware.Storage.EU;
 using fiskaltrust.Middleware.Storage;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
@@ -30,7 +29,7 @@ public class QueueEUBootstrapper : IV2QueueBootstrapper
 
         storageProvider.Initialized.Wait();
 
-        var configurationRepository = (Storage.IConfigurationRepository) storageProvider.GetConfigurationRepository();
+        var configurationRepository = storageProvider.GetConfigurationRepository();
         var queueEU = configurationRepository.GetQueueEUAsync(id).Result;
         if (queueEU is null)
         {

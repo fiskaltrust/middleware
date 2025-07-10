@@ -4,7 +4,6 @@ using Azure.Data.Tables;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.Mapping;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.TableEntities.Configuration;
 using fiskaltrust.storage.V0;
-using ftSignaturCreationUnitES = fiskaltrust.Middleware.Storage.ES.ftSignaturCreationUnitES;
 
 namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.Configuration
 {

@@ -2,7 +2,7 @@
 
 namespace fiskaltrust.storage.V0
 {
-    public class ftQueueES : QueueLocalization, ICountrySpecificQueue
+    public class ftQueueES : QueueLocalization
     {
         public Guid ftQueueId => ftQueueESId;
 
@@ -15,6 +15,8 @@ namespace fiskaltrust.storage.V0
         public string LastHash { get; set; }
 
         public string CashBoxIdentification { get; set; }
+
+        public Guid? SSCDSignQueueItemId { get; set; }
 
         public int SSCDFailCount { get; set; }
 

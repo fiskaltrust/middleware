@@ -5,7 +5,7 @@ using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Configuration;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Storage;
-using fiskaltrust.Middleware.Storage.PT;
+using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT;

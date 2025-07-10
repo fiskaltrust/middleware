@@ -3,7 +3,6 @@ using System.Text;
 using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.ifPOS.v2.Cases;
-using fiskaltrust.Middleware.Storage.GR;
 using fiskaltrust.storage.V0;
 using System.Text.Json;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
@@ -101,14 +100,15 @@ public class ReceiptCommandProcessorGR(IGRSSCD sscd, ftQueueGR queueGR, ftSignat
 
     private async Task<List<(ReceiptRequest, ReceiptResponse)>> LoadReceiptReferencesToResponse(ReceiptRequest request, ReceiptResponse receiptResponse)
     {
-        if(request.cbPreviousReceiptReference is null)
+        if (request.cbPreviousReceiptReference is null)
         {
             return new List<(ReceiptRequest, ReceiptResponse)>();
         }
 
         return await request.cbPreviousReceiptReference.MatchAsync(
             async single => [await LoadReceiptReferencesToResponse(request, receiptResponse, single)],
-            async group => {
+            async group =>
+            {
                 var references = new List<(ReceiptRequest, ReceiptResponse)>();
                 foreach (var reference in group)
                 {

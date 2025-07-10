@@ -9,7 +9,6 @@ using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
 using fiskaltrust.SAFT.CLI.SAFTSchemaPT10401;
 using System.Text;
 using fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
-using fiskaltrust.Middleware.Storage.PT;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using System.Text.Json;
 

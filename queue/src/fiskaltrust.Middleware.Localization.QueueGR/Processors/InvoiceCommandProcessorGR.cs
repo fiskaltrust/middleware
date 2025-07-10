@@ -1,7 +1,6 @@
 ﻿using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.storage.V0;
 using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD;
-using fiskaltrust.Middleware.Storage.GR;
 using fiskaltrust.ifPOS.v2;
 using System.Text.Json;
 using fiskaltrust.Middleware.Contracts.Repositories;

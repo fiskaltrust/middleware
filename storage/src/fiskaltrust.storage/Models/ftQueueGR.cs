@@ -1,20 +1,18 @@
 ﻿using System;
 
-namespace fiskaltrust.Middleware.Storage.ES
+namespace fiskaltrust.storage.V0
 {
-    public class ftQueueES
+    public class ftQueueGR
     {
-        public Guid ftQueueESId { get; set; }
+        public Guid ftQueueGRId { get; set; }
 
-        public Guid? ftSignaturCreationUnitESId { get; set; }
+        public Guid? ftSignaturCreationUnitGRId { get; set; }
 
         public string LastHash { get; set; }
 
         public string LastSignature { get; set; }
 
         public string CashBoxIdentification { get; set; }
-
-        public Guid? SSCDSignQueueItemId { get; set; }
 
         public int SSCDFailCount { get; set; }
 

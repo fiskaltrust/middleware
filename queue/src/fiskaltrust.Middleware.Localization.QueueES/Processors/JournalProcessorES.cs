@@ -5,7 +5,6 @@ using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueES.Exports;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Interface;
-using fiskaltrust.Middleware.Storage.ES;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 

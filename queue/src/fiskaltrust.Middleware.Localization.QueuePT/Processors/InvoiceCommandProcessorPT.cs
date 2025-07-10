@@ -11,7 +11,6 @@ using System.Text;
 using fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
 using System.Text.Json;
 using fiskaltrust.Middleware.Contracts.Repositories;
-using fiskaltrust.Middleware.Storage.PT;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Processors;

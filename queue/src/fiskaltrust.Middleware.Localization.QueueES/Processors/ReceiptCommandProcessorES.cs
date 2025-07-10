@@ -9,11 +9,11 @@ using fiskaltrust.ifPOS.v2.es;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.Processors;
 
-public class ReceiptCommandProcessorES(IESSSCD sscd, Storage.IConfigurationRepository configurationRepository, IReadOnlyQueueItemRepository queueItemRepository) : IReceiptCommandProcessor
+public class ReceiptCommandProcessorES(IESSSCD sscd, IConfigurationRepository configurationRepository, IReadOnlyQueueItemRepository queueItemRepository) : IReceiptCommandProcessor
 {
 #pragma warning disable
     private readonly IESSSCD _sscd = sscd;
-    private readonly Storage.IConfigurationRepository _configurationRepository = configurationRepository;
+    private readonly IConfigurationRepository _configurationRepository = configurationRepository;
     private readonly IReadOnlyQueueItemRepository _queueItemRepository = queueItemRepository;
 #pragma warning restore
 

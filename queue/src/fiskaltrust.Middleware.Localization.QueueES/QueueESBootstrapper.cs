@@ -12,7 +12,7 @@ using fiskaltrust.Middleware.Localization.v2.MasterData;
 using fiskaltrust.Middleware.Localization.v2.Storage;
 using fiskaltrust.Middleware.Storage;
 using fiskaltrust.Middleware.Storage.AzureTableStorage;
-using fiskaltrust.Middleware.Storage.ES;
+using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -44,7 +44,7 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
 
         if (!queueES.ftSignaturCreationUnitESId.HasValue)
         {
-           throw new ArgumentException($"Configuration must contain 'SignaturCreationUnitESId'  parameter.");
+            throw new ArgumentException($"Configuration must contain 'SignaturCreationUnitESId'  parameter.");
         }
 
         var signaturCreationUnitES = queueESRepository.GetSignaturCreationUnitESAsync(queueES.ftSignaturCreationUnitESId.Value).Result;
@@ -64,7 +64,7 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
 
 
         var queueESConfiguration = QueueESConfiguration.FromMiddlewareConfiguration(middlewareConfiguration);
-       
+
         if (queueESConfiguration.ScuTimeoutMs.HasValue)
         {
             config.Timeout = TimeSpan.FromMilliseconds(queueESConfiguration.ScuTimeoutMs.Value);
@@ -109,7 +109,8 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
             var httpsUrl = urls.FirstOrDefault(x => x.StartsWith("https://"));
             url = httpsUrl ?? throw new ArgumentException($"Configuration must contain 'SCU/Url'  parameter.");
         }
-        catch {
+        catch
+        {
             throw new ArgumentException($"Configuration must contain 'SCU/Url'  parameter.");
         }
 
