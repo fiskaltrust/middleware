@@ -47,7 +47,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                     : openTransactions;
                 foreach (var openTransaction in openTransactionsNotExistingOnTse)
                 {
-                    _logger.LogWarning($"The Middleware database contained the started transaction {openTransaction.TransactionNumber}, which is not marked as open on the TSE. As the ftReceiptCaseFlag '0x0000000020000000' was set, the reference to the open transaction was removed from the database.");
+                    _logger.LogWarning($"The Middleware database contained the started transaction {openTransaction.TransactionNumber}, which is not marked as open on the TSE. The reference to the open transaction was removed from the database.");
                     await _openTransactionRepo.RemoveAsync(openTransaction.cbReceiptReference).ConfigureAwait(false);
 
                     actionJournals.Add(
