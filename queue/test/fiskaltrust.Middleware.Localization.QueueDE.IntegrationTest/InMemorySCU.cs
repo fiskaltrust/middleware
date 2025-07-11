@@ -10,7 +10,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest
         private HashSet<string> _registeredClients { get; set; } = new HashSet<string>();
         private TseState _tseState = new TseState() { CurrentState = TseStates.Uninitialized };
         public bool ShouldFail { get; set; } = false;
-        public bool OpenTans { get; set; } = false;
+        public IEnumerable<ulong> OpenTans { get; set; } = null;
         public DateTime? LastSelfTest { get; private set; }
         public DateTime? LastErase { get; private set; }
 
@@ -35,7 +35,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest
         {
             CertificationIdentification = "BSI-TK-0000-0000",
             CurrentState = _tseState.CurrentState,
-            CurrentStartedTransactionNumbers = OpenTans ? new ulong[] { 1, 2 } : null
+            CurrentStartedTransactionNumbers = OpenTans
         });
 
         public async Task<TseState> SetTseStateAsync(TseState state)

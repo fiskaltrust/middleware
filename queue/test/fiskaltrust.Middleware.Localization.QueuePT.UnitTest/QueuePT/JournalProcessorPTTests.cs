@@ -9,6 +9,8 @@ using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.storage.V0;
 using Moq;
 using Xunit;
+using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Localization.v2.Helpers;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT;
 
@@ -18,6 +20,7 @@ public class JournalProcessorPTTests
     public async Task JournalProcessorPT_ShouldReturnJournalResponse()
     {
         var storageProvider = new Mock<IStorageProvider>();
+        var middlewareQueueItemRepositoryMock = new Mock<IMiddlewareQueueItemRepository>();
         var queueItems = new List<ftQueueItem>
         {
             new ftQueueItem
@@ -99,7 +102,8 @@ public class JournalProcessorPTTests
                 }),
             }
         };
-        storageProvider.Setup(x => x.GetMiddlewareQueueItemRepository().GetAsync()).ReturnsAsync(queueItems);
+        middlewareQueueItemRepositoryMock.Setup(x => x.GetAsync()).ReturnsAsync(queueItems);
+        storageProvider.Setup(x => x.CreateMiddlewareQueueItemRepository()).Returns(new AsyncLazy<IMiddlewareQueueItemRepository>(() => Task.FromResult(middlewareQueueItemRepositoryMock.Object)));
         var processor = new JournalProcessorPT(storageProvider.Object);
         var result = processor.ProcessAsync(new JournalRequest());
         var journalResponse = await result.ToListAsync();

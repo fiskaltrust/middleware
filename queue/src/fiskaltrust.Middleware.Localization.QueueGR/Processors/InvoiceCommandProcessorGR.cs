@@ -1,21 +1,19 @@
 ﻿using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.storage.V0;
 using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD;
-using fiskaltrust.Middleware.Storage.GR;
 using fiskaltrust.ifPOS.v2;
 using System.Text.Json;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.Localization.v2.Helpers;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.Processors;
 
-public class InvoiceCommandProcessorGR(IGRSSCD sscd, ftQueueGR queueGR, ftSignaturCreationUnitGR signaturCreationUnitGR, IMiddlewareQueueItemRepository readOnlyQueueItemRepository) : IInvoiceCommandProcessor
+public class InvoiceCommandProcessorGR(IGRSSCD sscd, AsyncLazy<IMiddlewareQueueItemRepository> readOnlyQueueItemRepository) : IInvoiceCommandProcessor
 {
 #pragma warning disable
     private readonly IGRSSCD _sscd = sscd;
-    private readonly ftQueueGR _queueGR = queueGR;
-    private readonly ftSignaturCreationUnitGR _signaturCreationUnitGR = signaturCreationUnitGR;
-    private readonly IMiddlewareQueueItemRepository _readOnlyQueueItemRepository = readOnlyQueueItemRepository;
+    private readonly AsyncLazy<IMiddlewareQueueItemRepository> _readOnlyQueueItemRepository = readOnlyQueueItemRepository;
 #pragma warning restore
 
     public async Task<ProcessCommandResponse> InvoiceUnknown0x1000Async(ProcessCommandRequest request)

@@ -2,9 +2,7 @@
 using System.Threading.Tasks;
 using Azure.Data.Tables;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.TableEntities.Configuration;
-using fiskaltrust.Middleware.Storage.EU;
 using fiskaltrust.storage.V0;
-using ftQueueEU = fiskaltrust.Middleware.Storage.EU.ftQueueEU;
 
 namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.Configuration
 {

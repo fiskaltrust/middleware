@@ -5,6 +5,7 @@ using Azure.Identity;
 using Azure.Storage.Blobs;
 using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Storage.AzureTableStorage;
 using fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories;
@@ -87,15 +88,47 @@ public class AzureStorageProvider : BaseStorageBootStrapper, IStorageProvider
         Task.Run(() => InitAsync());
     }
 
-    public IConfigurationRepository GetConfigurationRepository() => new AzureTableStorageConfigurationRepository(_queueConfiguration, _tableServiceClient);
-    public IMiddlewareActionJournalRepository GetMiddlewareActionJournalRepository() => new AzureTableStorageActionJournalRepository(_queueConfiguration, _tableServiceClient);
-    public IMiddlewareQueueItemRepository GetMiddlewareQueueItemRepository() => new AzureTableStorageQueueItemRepository(_queueConfiguration, _tableServiceClient, new AzureTableStorageReceiptReferenceIndexRepository(_queueConfiguration, _tableServiceClient));
-    public IMiddlewareReceiptJournalRepository GetMiddlewareReceiptJournalRepository() => new AzureTableStorageReceiptJournalRepository(_queueConfiguration, _tableServiceClient);
+    public AsyncLazy<IConfigurationRepository> CreateConfigurationRepository() => new(async () =>
+        {
+            await Initialized;
+            return new AzureTableStorageConfigurationRepository(_queueConfiguration, _tableServiceClient);
+        });
+    public AsyncLazy<IMiddlewareActionJournalRepository> CreateMiddlewareActionJournalRepository() => new(async () =>
+        {
+            await Initialized;
+            return new AzureTableStorageActionJournalRepository(_queueConfiguration, _tableServiceClient);
+        });
+    public AsyncLazy<IMiddlewareQueueItemRepository> CreateMiddlewareQueueItemRepository() => new(async () =>
+        {
+            await Initialized;
+            return new AzureTableStorageQueueItemRepository(_queueConfiguration, _tableServiceClient, new AzureTableStorageReceiptReferenceIndexRepository(_queueConfiguration, _tableServiceClient));
+        });
+    public AsyncLazy<IMiddlewareReceiptJournalRepository> CreateMiddlewareReceiptJournalRepository() => new(async () =>
+        {
+            await Initialized;
+            return new AzureTableStorageReceiptJournalRepository(_queueConfiguration, _tableServiceClient);
+        });
+    public AsyncLazy<IMasterDataRepository<AccountMasterData>> CreateAccountMasterDataRepository() => new(async () =>
+        {
+            await Initialized;
+            return new AzureTableStorageAccountMasterDataRepository(_queueConfiguration, _tableServiceClient);
+        });
+    public AsyncLazy<IMasterDataRepository<OutletMasterData>> CreateOutletMasterDataRepository() => new(async () =>
+        {
+            await Initialized;
+            return new AzureTableStorageOutletMasterDataRepository(_queueConfiguration, _tableServiceClient);
+        });
+    public AsyncLazy<IMasterDataRepository<PosSystemMasterData>> CreatePosSystemMasterDataRepository() => new(async () =>
+        {
+            await Initialized;
+            return new AzureTableStoragePosSystemMasterDataRepository(_queueConfiguration, _tableServiceClient);
+        });
+    public AsyncLazy<IMasterDataRepository<AgencyMasterData>> CreateAgencyMasterDataRepository() => new(async () =>
+        {
+            await Initialized;
+            return new AzureTableStorageAgencyMasterDataRepository(_queueConfiguration, _tableServiceClient);
+        });
 
-    public IMasterDataRepository<AccountMasterData> GetAccountMasterDataRepository() => new AzureTableStorageAccountMasterDataRepository(_queueConfiguration, _tableServiceClient);
-    public IMasterDataRepository<OutletMasterData> GetOutletMasterDataRepository() => new AzureTableStorageOutletMasterDataRepository(_queueConfiguration, _tableServiceClient);
-    public IMasterDataRepository<PosSystemMasterData> GetPosSystemMasterDataRepository() => new AzureTableStoragePosSystemMasterDataRepository(_queueConfiguration, _tableServiceClient);
-    public IMasterDataRepository<AgencyMasterData> GetAgencyMasterDataRepository() => new AzureTableStorageAgencyMasterDataRepository(_queueConfiguration, _tableServiceClient);
     public async Task InitAsync()
     {
         try

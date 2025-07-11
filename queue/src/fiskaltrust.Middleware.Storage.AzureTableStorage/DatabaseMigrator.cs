@@ -35,7 +35,8 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage
                 new Migration_000_Initial(_tableServiceClient, blobServiceClient, queueConfiguration),
                 new Migration_001_TableNameFix(_tableServiceClient, queueConfiguration),
                 new Migration_002_QueueES(_tableServiceClient, queueConfiguration),
-                new Migration_003_QueueEU(_tableServiceClient, queueConfiguration)
+                new Migration_003_QueueEU(_tableServiceClient, queueConfiguration),
+                new Migration_004_SignaturCreationUnitES(_tableServiceClient, queueConfiguration),
             };
         }
 
@@ -49,7 +50,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage
                 MigratedFrom1_2 = currentMigrationTableEntity?.GetBoolean(nameof(MigratedFrom1_2)) ?? false;
                 await ExecuteMigrationsAsync(_migrations.Where(x => x.Version > currentMigration));
             }
-            catch 
+            catch
             {
                 if (!await MigrationTableExists())
                 {

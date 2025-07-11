@@ -8,6 +8,7 @@ using Xunit;
 using fiskaltrust.ifPOS.v2.Cases;
 using Microsoft.Extensions.Logging;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.Processors;
 
@@ -22,8 +23,8 @@ public class ReceiptCommandProcessorGRTests
     public async Task ProcessReceiptAsync_ShouldReturnEmptyList(ReceiptCase receiptCase)
     {
         var queue = TestHelpers.CreateQueue();
-        var queueGR = new Storage.GR.ftQueueGR();
-        var scuGR = new Storage.GR.ftSignaturCreationUnitGR();
+        var queueGR = new ftQueueGR();
+        var scuGR = new ftSignaturCreationUnitGR();
         var queueItem = TestHelpers.CreateQueueItem();
         var receiptRequest = new ReceiptRequest
         {
@@ -46,7 +47,7 @@ public class ReceiptCommandProcessorGRTests
                 ReceiptResponse = receiptResponse,
             });
 
-        var receiptCommandProcessor = new ReceiptCommandProcessorGR(grSSCDMock.Object, queueGR, scuGR, Mock.Of<IMiddlewareQueueItemRepository>());
+        var receiptCommandProcessor = new ReceiptCommandProcessorGR(grSSCDMock.Object, new(() => Task.FromResult(Mock.Of<IMiddlewareQueueItemRepository>())));
         var receiptProcessor = new ReceiptProcessor(Mock.Of<ILogger<ReceiptProcessor>>(), null!, receiptCommandProcessor, null!, null!, null!);
         var result = await receiptProcessor.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
 
@@ -58,8 +59,8 @@ public class ReceiptCommandProcessorGRTests
     public async Task ProcessReceiptAsync_ShouldReturnError()
     {
         var queue = TestHelpers.CreateQueue();
-        var queueGR = new Storage.GR.ftQueueGR();
-        var scuGR = new Storage.GR.ftSignaturCreationUnitGR();
+        var queueGR = new ftQueueGR();
+        var scuGR = new ftSignaturCreationUnitGR();
         var queueItem = TestHelpers.CreateQueueItem();
         var receiptRequest = new ReceiptRequest
         {
@@ -76,7 +77,7 @@ public class ReceiptCommandProcessorGRTests
             ftReceiptMoment = DateTime.UtcNow,
         };
         var grSSCDMock = new Mock<IGRSSCD>();
-        var receiptCommandProcessor = new ReceiptCommandProcessorGR(grSSCDMock.Object, queueGR, scuGR, Mock.Of<IMiddlewareQueueItemRepository>());
+        var receiptCommandProcessor = new ReceiptCommandProcessorGR(grSSCDMock.Object, new(() => Task.FromResult(Mock.Of<IMiddlewareQueueItemRepository>())));
         var receiptProcessor = new ReceiptProcessor(Mock.Of<ILogger<ReceiptProcessor>>(), null!, receiptCommandProcessor, null!, null!, null!);
         var result = await receiptProcessor.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
 

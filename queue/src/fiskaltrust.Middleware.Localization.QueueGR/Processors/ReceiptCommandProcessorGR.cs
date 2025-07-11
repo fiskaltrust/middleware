@@ -3,7 +3,6 @@ using System.Text;
 using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.ifPOS.v2.Cases;
-using fiskaltrust.Middleware.Storage.GR;
 using fiskaltrust.storage.V0;
 using System.Text.Json;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
@@ -11,13 +10,11 @@ using fiskaltrust.Middleware.Contracts.Repositories;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.Processors;
 
-public class ReceiptCommandProcessorGR(IGRSSCD sscd, ftQueueGR queueGR, ftSignaturCreationUnitGR signaturCreationUnitGR, IMiddlewareQueueItemRepository readOnlyQueueItemRepository) : IReceiptCommandProcessor
+public class ReceiptCommandProcessorGR(IGRSSCD sscd, AsyncLazy<IMiddlewareQueueItemRepository> readOnlyQueueItemRepository) : IReceiptCommandProcessor
 {
 #pragma warning disable
     private readonly IGRSSCD _sscd = sscd;
-    private readonly ftQueueGR _queueGR = queueGR;
-    private readonly ftSignaturCreationUnitGR _signaturCreationUnitGR = signaturCreationUnitGR;
-    private readonly IMiddlewareQueueItemRepository _readOnlyQueueItemRepository = readOnlyQueueItemRepository;
+    private readonly AsyncLazy<IMiddlewareQueueItemRepository> _readOnlyQueueItemRepository = readOnlyQueueItemRepository;
 #pragma warning restore
 
     public async Task<ProcessCommandResponse> UnknownReceipt0x0000Async(ProcessCommandRequest request) => await PointOfSaleReceipt0x0001Async(request);
@@ -101,14 +98,15 @@ public class ReceiptCommandProcessorGR(IGRSSCD sscd, ftQueueGR queueGR, ftSignat
 
     private async Task<List<(ReceiptRequest, ReceiptResponse)>> LoadReceiptReferencesToResponse(ReceiptRequest request, ReceiptResponse receiptResponse)
     {
-        if(request.cbPreviousReceiptReference is null)
+        if (request.cbPreviousReceiptReference is null)
         {
             return new List<(ReceiptRequest, ReceiptResponse)>();
         }
 
         return await request.cbPreviousReceiptReference.MatchAsync(
             async single => [await LoadReceiptReferencesToResponse(request, receiptResponse, single)],
-            async group => {
+            async group =>
+            {
                 var references = new List<(ReceiptRequest, ReceiptResponse)>();
                 foreach (var reference in group)
                 {
@@ -124,7 +122,7 @@ public class ReceiptCommandProcessorGR(IGRSSCD sscd, ftQueueGR queueGR, ftSignat
 #pragma warning disable
     private async Task<(ReceiptRequest, ReceiptResponse)> LoadReceiptReferencesToResponse(ReceiptRequest request, ReceiptResponse receiptResponse, string cbPreviousReceiptReferenceString)
     {
-        var queueItems = _readOnlyQueueItemRepository.GetByReceiptReferenceAsync(cbPreviousReceiptReferenceString, request.cbTerminalID);
+        var queueItems = (await _readOnlyQueueItemRepository.Value).GetByReceiptReferenceAsync(cbPreviousReceiptReferenceString, request.cbTerminalID);
         await foreach (var existingQueueItem in queueItems)
         {
             if (string.IsNullOrEmpty(existingQueueItem.response))
