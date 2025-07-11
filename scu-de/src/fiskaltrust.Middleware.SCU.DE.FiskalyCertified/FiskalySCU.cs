@@ -12,6 +12,7 @@ using fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Exceptions;
 using fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers;
 using fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Models;
 using fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services;
+using fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser.Tar;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -404,7 +405,15 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
         {
             try
             {
-                await _fiskalyApiProvider.StoreDownloadResultAsync(_configuration.TssId, exportId, GetTempPath(exportId.ToString()));
+                var contentStream = await _fiskalyApiProvider.StoreDownloadResultAsync(_configuration.TssId, exportId);
+        
+                var tempPath = GetTempPath(exportId.ToString());
+                using (var fileStream = File.Create(tempPath))
+                {
+                    await contentStream.CopyToAsync(fileStream);
+                }
+                contentStream.Dispose();
+        
                 SetExportState(exportId, ExportState.Succeeded);
             }
             catch (WebException)
@@ -419,7 +428,6 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
             }
             catch (Exception ex)
             {
-
                 _logger.LogError(ex, "Failed to execute {Operation} - ExportId: {ExportId}", nameof(CacheExportAsync), exportId);
                 SetExportState(exportId, ExportState.Failed, ex);
             }
@@ -432,7 +440,13 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified
             {
                 if (splitExportStateData.ExportStateData.State != ExportState.Succeeded)
                 {
-                    await _fiskalyApiProvider.StoreDownloadSplitResultAsync(_configuration.TssId, splitExportStateData, GetTempPath(splitExportStateData.ParentExportId.ToString()));
+                    var tempPath = GetTempPath(splitExportStateData.ParentExportId.ToString());
+                    using var stream = await _fiskalyApiProvider.StoreDownloadSplitResultAsync(_configuration.TssId, splitExportStateData, tempPath);
+            
+                    if (splitExportStateData.ExportStateData.State == ExportState.Succeeded)
+                    {
+                        TarFileHelper.AppendTarStreamToTarFile(tempPath, stream);
+                    }
                 }
                 var export = _splitExports.FirstOrDefault(x => x.Key== splitExportStateData.ParentExportId);
                 if (export.Value != null)

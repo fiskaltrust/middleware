@@ -9,7 +9,6 @@ using fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Exceptions;
 using fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Models;
 using Newtonsoft.Json;
 using fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Helpers;
-using fiskaltrust.Middleware.SCU.DE.Helpers.TLVLogParser.Tar;
 
 namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
 {
@@ -188,30 +187,27 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
             }
         }
 
-        public async Task StoreDownloadResultAsync(Guid tssId, Guid exportId, string tempPath)
+        public async Task<Stream> StoreDownloadResultAsync(Guid tssId, Guid exportId)
         {
             var exportStateInformation = await WaitUntilExportFinished(tssId, exportId);
-            var contentStream = await GetExportByExportStateAsync(exportStateInformation);
-
-            using var fileStream = File.Create(exportId.ToString());
-            contentStream.CopyTo(fileStream);
+            return await GetExportByExportStateAsync(exportStateInformation);
         }
 
-        public async Task StoreDownloadSplitResultAsync(Guid tssId, SplitExportStateData splitExportStateData,
-            string tempPath)
+        public async Task<Stream> StoreDownloadSplitResultAsync(Guid tssId, SplitExportStateData splitExportStateData, string tempPath)
         {
             var exportStateInformation = await WaitUntilExportFinished(tssId, splitExportStateData.ExportId);
-            var result = await GetExportByExportStateAsync(exportStateInformation);
-
+            var stream = await GetExportByExportStateAsync(exportStateInformation);
+    
             if (exportStateInformation.State == "COMPLETED")
             {
-                TarFileHelper.AppendTarStreamToTarFile(splitExportStateData.ParentExportId.ToString(), result);
                 splitExportStateData.ExportStateData.State = ExportState.Succeeded;
             }
             else
             {
-                splitExportStateData.ExportStateData.State = ExportState.Failed ;
+                splitExportStateData.ExportStateData.State = ExportState.Failed;
             }
+    
+            return stream;
         }
 
         private async Task<ExportStateInformationDto> WaitUntilExportFinished(Guid tssId, Guid exportId)
