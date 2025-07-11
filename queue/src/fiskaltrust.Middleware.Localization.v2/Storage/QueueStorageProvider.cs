@@ -27,7 +27,7 @@ public class QueueStorageProvider : IQueueStorageProvider
         _cachedQueue ??= await GetQueueAsync();
         var queue = _cachedQueue;
         queue.StartMoment = DateTime.UtcNow;
-        await (await _storageProvider.ConfigurationRepository.Value).InsertOrUpdateQueueAsync(queue).ConfigureAwait(false);
+        await (await _storageProvider.CreateConfigurationRepository()).InsertOrUpdateQueueAsync(queue).ConfigureAwait(false);
     }
 
     public async Task DeactivateQueueAsync()
@@ -35,7 +35,7 @@ public class QueueStorageProvider : IQueueStorageProvider
         _cachedQueue ??= await GetQueueAsync();
         var queue = _cachedQueue;
         queue.StopMoment = DateTime.UtcNow;
-        await (await _storageProvider.ConfigurationRepository.Value).InsertOrUpdateQueueAsync(queue).ConfigureAwait(false);
+        await (await _storageProvider.CreateConfigurationRepository()).InsertOrUpdateQueueAsync(queue).ConfigureAwait(false);
     }
 
     public async Task<ftQueueItem> ReserveNextQueueItem(ReceiptRequest receiptRequest)
@@ -64,7 +64,7 @@ public class QueueStorageProvider : IQueueStorageProvider
             queueItem.ftQueueTimeout = 15000;
         }
         queueItem.requestHash = _cryptoHelper.GenerateBase64Hash(queueItem.request);
-        await (await _storageProvider.MiddlewareQueueItemRepository.Value).InsertOrUpdateAsync(queueItem).ConfigureAwait(false);
+        await (await _storageProvider.CreateMiddlewareQueueItemRepository()).InsertOrUpdateAsync(queueItem).ConfigureAwait(false);
         return queueItem;
     }
 
@@ -87,7 +87,7 @@ public class QueueStorageProvider : IQueueStorageProvider
         {
             throw new Exception("Storage provider is not initialized yet.");
         }
-        _cachedQueue ??= await (await _storageProvider.ConfigurationRepository.Value).GetQueueAsync(_queueId);
+        _cachedQueue ??= await (await _storageProvider.CreateConfigurationRepository()).GetQueueAsync(_queueId);
         return _cachedQueue;
     }
 
@@ -104,8 +104,8 @@ public class QueueStorageProvider : IQueueStorageProvider
         queueItem.responseHash = _cryptoHelper.GenerateBase64Hash(queueItem.response);
         queueItem.ftDoneMoment = DateTime.UtcNow;
         queue.ftCurrentRow++;
-        await (await _storageProvider.MiddlewareQueueItemRepository.Value).InsertOrUpdateAsync(queueItem).ConfigureAwait(false);
-        await (await _storageProvider.ConfigurationRepository.Value).InsertOrUpdateQueueAsync(queue).ConfigureAwait(false);
+        await (await _storageProvider.CreateMiddlewareQueueItemRepository()).InsertOrUpdateAsync(queueItem).ConfigureAwait(false);
+        await (await _storageProvider.CreateConfigurationRepository()).InsertOrUpdateQueueAsync(queue).ConfigureAwait(false);
         _cachedQueue = queue;
     }
 
@@ -114,7 +114,7 @@ public class QueueStorageProvider : IQueueStorageProvider
         _cachedQueue ??= await GetQueueAsync();
         var queue = _cachedQueue;
         ++queue.ftQueuedRow;
-        await (await _storageProvider.ConfigurationRepository.Value).InsertOrUpdateQueueAsync(queue).ConfigureAwait(false);
+        await (await _storageProvider.CreateConfigurationRepository()).InsertOrUpdateQueueAsync(queue).ConfigureAwait(false);
         _cachedQueue = queue;
         return _cachedQueue.ftQueuedRow;
     }
@@ -141,17 +141,17 @@ public class QueueStorageProvider : IQueueStorageProvider
             receiptjournal.ftReceiptTotal = (receiptrequest?.cbChargeItems?.Sum(ci => ci.Amount)).GetValueOrDefault();
         }
         receiptjournal.ftReceiptHash = _cryptoHelper.GenerateBase64ChainHash(queue.ftReceiptHash, receiptjournal, queueItem);
-        await (await _storageProvider.MiddlewareReceiptJournalRepository.Value).InsertAsync(receiptjournal).ConfigureAwait(false);
+        await (await _storageProvider.CreateMiddlewareReceiptJournalRepository()).InsertAsync(receiptjournal).ConfigureAwait(false);
         queue.ftReceiptHash = receiptjournal.ftReceiptHash;
         queue.ftReceiptTotalizer += receiptjournal.ftReceiptTotal;
-        await (await _storageProvider.ConfigurationRepository.Value).InsertOrUpdateQueueAsync(queue).ConfigureAwait(false);
+        await (await _storageProvider.CreateConfigurationRepository()).InsertOrUpdateQueueAsync(queue).ConfigureAwait(false);
         _cachedQueue = queue;
         return receiptjournal;
     }
 
     public async Task CreateActionJournalAsync(string message, string type, Guid? queueItemId)
     {
-        _cachedQueue ??= await (await _storageProvider.ConfigurationRepository.Value).GetQueueAsync(_queueId);
+        _cachedQueue ??= await (await _storageProvider.CreateConfigurationRepository()).GetQueueAsync(_queueId);
         var actionJournal = new ftActionJournal
         {
             ftActionJournalId = Guid.NewGuid(),
@@ -162,18 +162,18 @@ public class QueueStorageProvider : IQueueStorageProvider
             Type = type,
             Moment = DateTime.UtcNow
         };
-        await (await _storageProvider.MiddlewareActionJournalRepository.Value).InsertAsync(actionJournal).ConfigureAwait(false);
+        await (await _storageProvider.CreateMiddlewareActionJournalRepository()).InsertAsync(actionJournal).ConfigureAwait(false);
     }
 
     public async Task CreateActionJournalAsync(ftActionJournal actionJournal)
     {
-        _cachedQueue ??= await (await _storageProvider.ConfigurationRepository.Value).GetQueueAsync(_queueId);
-        await (await _storageProvider.MiddlewareActionJournalRepository.Value).InsertAsync(actionJournal).ConfigureAwait(false);
+        _cachedQueue ??= await (await _storageProvider.CreateConfigurationRepository()).GetQueueAsync(_queueId);
+        await (await _storageProvider.CreateMiddlewareActionJournalRepository()).InsertAsync(actionJournal).ConfigureAwait(false);
     }
 
     public async Task<ftQueueItem?> GetExistingQueueItemOrNullAsync(ReceiptRequest data)
     {
-        var queueItems = (await (await _storageProvider.MiddlewareQueueItemRepository.Value).GetByReceiptReferenceAsync(data.cbReceiptReference, data.cbTerminalID).ToListAsync().ConfigureAwait(false)).OrderByDescending(x => x.TimeStamp);
+        var queueItems = (await (await _storageProvider.CreateMiddlewareQueueItemRepository()).GetByReceiptReferenceAsync(data.cbReceiptReference, data.cbTerminalID).ToListAsync().ConfigureAwait(false)).OrderByDescending(x => x.TimeStamp);
         foreach (var existingQueueItem in queueItems)
         {
             if (!existingQueueItem.IsReceiptRequestFinished())

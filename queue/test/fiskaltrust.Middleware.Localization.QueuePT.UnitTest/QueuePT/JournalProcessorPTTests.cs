@@ -10,6 +10,7 @@ using fiskaltrust.storage.V0;
 using Moq;
 using Xunit;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Localization.v2.Helpers;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT;
 
@@ -102,7 +103,7 @@ public class JournalProcessorPTTests
             }
         };
         middlewareQueueItemRepositoryMock.Setup(x => x.GetAsync()).ReturnsAsync(queueItems);
-        storageProvider.Setup(x => x.MiddlewareQueueItemRepository).Returns(new Lazy<Task<IMiddlewareQueueItemRepository>>(() => Task.FromResult(middlewareQueueItemRepositoryMock.Object)));
+        storageProvider.Setup(x => x.CreateMiddlewareQueueItemRepository()).Returns(new AsyncLazy<IMiddlewareQueueItemRepository>(() => Task.FromResult(middlewareQueueItemRepositoryMock.Object)));
         var processor = new JournalProcessorPT(storageProvider.Object);
         var result = processor.ProcessAsync(new JournalRequest());
         var journalResponse = await result.ToListAsync();

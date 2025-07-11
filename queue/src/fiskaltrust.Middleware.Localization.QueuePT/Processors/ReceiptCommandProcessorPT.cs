@@ -15,12 +15,12 @@ using fiskaltrust.Middleware.Localization.v2.Helpers;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Processors;
 
-public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, Lazy<Task<IMiddlewareQueueItemRepository>> readOnlyQueueItemRepository) : ProcessorPreparation, IReceiptCommandProcessor
+public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLazy<IMiddlewareQueueItemRepository> readOnlyQueueItemRepository) : ProcessorPreparation, IReceiptCommandProcessor
 {
     private readonly IPTSSCD _sscd = sscd;
 #pragma warning disable
     private readonly ftQueuePT _queuePT = queuePT;
-    protected override Lazy<Task<IMiddlewareQueueItemRepository>> _readOnlyQueueItemRepository { get; init; } = readOnlyQueueItemRepository;
+    protected override AsyncLazy<IMiddlewareQueueItemRepository> _readOnlyQueueItemRepository { get; init; } = readOnlyQueueItemRepository;
 
     public Task<ProcessCommandResponse> UnknownReceipt0x0000Async(ProcessCommandRequest request) => WithPreparations(request, () => PointOfSaleReceipt0x0001Async(request));
 
@@ -158,7 +158,7 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, Lazy<Tas
         {
             throw new NotSupportedException("Grouping of payment transfers is not supported yet.");
         }
-        var queueItems = (await _readOnlyQueueItemRepository.Value).GetByReceiptReferenceAsync(request.cbPreviousReceiptReference.SingleValue, request.cbTerminalID);
+        var queueItems = (await _readOnlyQueueItemRepository).GetByReceiptReferenceAsync(request.cbPreviousReceiptReference.SingleValue, request.cbTerminalID);
         await foreach (var existingQueueItem in queueItems)
         {
             if (string.IsNullOrEmpty(existingQueueItem.response))

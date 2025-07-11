@@ -4,13 +4,14 @@ using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.storage.V0;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.Localization.v2.Helpers;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Processors;
 
-public class LifecycleCommandProcessorPT(Lazy<Task<IConfigurationRepository>> configurationRepository) : ILifecycleCommandProcessor
+public class LifecycleCommandProcessorPT(AsyncLazy<IConfigurationRepository> configurationRepository) : ILifecycleCommandProcessor
 {
 #pragma warning disable 
-    private readonly Lazy<Task<IConfigurationRepository>> _configurationRepository = configurationRepository;
+    private readonly AsyncLazy<IConfigurationRepository> _configurationRepository = configurationRepository;
 #pragma warning restore 
 
     public async Task<ProcessCommandResponse> InitialOperationReceipt0x4001Async(ProcessCommandRequest request)
@@ -18,7 +19,7 @@ public class LifecycleCommandProcessorPT(Lazy<Task<IConfigurationRepository>> co
         var (queue, receiptRequest, receiptResponse) = request;
         var actionJournal = ftActionJournalFactory.CreateInitialOperationActionJournal(receiptRequest, receiptResponse);
         queue.StartMoment = DateTime.UtcNow;
-        await (await _configurationRepository.Value).InsertOrUpdateQueueAsync(queue).ConfigureAwait(false);
+        await (await _configurationRepository).InsertOrUpdateQueueAsync(queue).ConfigureAwait(false);
         receiptResponse.AddSignatureItem(SignaturItemFactory.CreateInitialOperationSignature(queue));
         return new ProcessCommandResponse(receiptResponse, [actionJournal]);
     }
@@ -27,7 +28,7 @@ public class LifecycleCommandProcessorPT(Lazy<Task<IConfigurationRepository>> co
     {
         var (queue, receiptRequest, receiptResponse) = request;
         queue.StopMoment = DateTime.UtcNow;
-        await (await _configurationRepository.Value).InsertOrUpdateQueueAsync(queue);
+        await (await _configurationRepository).InsertOrUpdateQueueAsync(queue);
         var actionJournal = ftActionJournalFactory.CreateOutOfOperationActionJournal(receiptRequest, receiptResponse);
         receiptResponse.AddSignatureItem(SignaturItemFactory.CreateOutOfOperationSignature(queue));
         receiptResponse.MarkAsDisabled();

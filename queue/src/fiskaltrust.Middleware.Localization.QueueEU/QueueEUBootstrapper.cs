@@ -12,6 +12,7 @@ using fiskaltrust.Middleware.Storage;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 using Microsoft.Extensions.Logging;
+using fiskaltrust.Middleware.Localization.v2.Helpers;
 
 namespace fiskaltrust.Middleware.Localization.QueueEU;
 
@@ -27,7 +28,7 @@ public class QueueEUBootstrapper : IV2QueueBootstrapper
         var storageProvider = new AzureStorageProvider(loggerFactory, id, configuration);
         var queueStorageProvider = new QueueStorageProvider(id, storageProvider);
 
-        var cashBoxIdentification = new Lazy<Task<string>>(async () => (await (await storageProvider.ConfigurationRepository.Value).GetQueueESAsync(id)).CashBoxIdentification);
+        var cashBoxIdentification = new AsyncLazy<string>(async () => (await (await storageProvider.CreateConfigurationRepository()).GetQueueESAsync(id)).CashBoxIdentification);
 
         var signProcessorEU = new ReceiptProcessor(
             loggerFactory.CreateLogger<ReceiptProcessor>(),

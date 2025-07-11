@@ -10,11 +10,11 @@ using fiskaltrust.Middleware.Contracts.Repositories;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.Processors;
 
-public class ReceiptCommandProcessorGR(IGRSSCD sscd, Lazy<Task<IMiddlewareQueueItemRepository>> readOnlyQueueItemRepository) : IReceiptCommandProcessor
+public class ReceiptCommandProcessorGR(IGRSSCD sscd, AsyncLazy<IMiddlewareQueueItemRepository> readOnlyQueueItemRepository) : IReceiptCommandProcessor
 {
 #pragma warning disable
     private readonly IGRSSCD _sscd = sscd;
-    private readonly Lazy<Task<IMiddlewareQueueItemRepository>> _readOnlyQueueItemRepository = readOnlyQueueItemRepository;
+    private readonly AsyncLazy<IMiddlewareQueueItemRepository> _readOnlyQueueItemRepository = readOnlyQueueItemRepository;
 #pragma warning restore
 
     public async Task<ProcessCommandResponse> UnknownReceipt0x0000Async(ProcessCommandRequest request) => await PointOfSaleReceipt0x0001Async(request);

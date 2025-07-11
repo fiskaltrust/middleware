@@ -6,13 +6,14 @@ using fiskaltrust.Middleware.Localization.v2.Storage;
 using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.es;
+using fiskaltrust.Middleware.Localization.v2.Helpers;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.Processors;
 
-public class DailyOperationsCommandProcessorES(Lazy<Task<IESSSCD>> essscd, IQueueStorageProvider queueStorageProvider) : IDailyOperationsCommandProcessor
+public class DailyOperationsCommandProcessorES(AsyncLazy<IESSSCD> essscd, IQueueStorageProvider queueStorageProvider) : IDailyOperationsCommandProcessor
 {
 #pragma warning disable
-    private readonly Lazy<Task<IESSSCD>> _essscd = essscd;
+    private readonly AsyncLazy<IESSSCD> _essscd = essscd;
     private readonly IQueueStorageProvider _queueStorageProvider = queueStorageProvider;
 #pragma warning restore
 

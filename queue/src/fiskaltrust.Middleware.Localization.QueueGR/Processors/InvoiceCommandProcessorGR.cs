@@ -5,14 +5,15 @@ using fiskaltrust.ifPOS.v2;
 using System.Text.Json;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.Localization.v2.Helpers;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.Processors;
 
-public class InvoiceCommandProcessorGR(IGRSSCD sscd, Lazy<Task<IMiddlewareQueueItemRepository>> readOnlyQueueItemRepository) : IInvoiceCommandProcessor
+public class InvoiceCommandProcessorGR(IGRSSCD sscd, AsyncLazy<IMiddlewareQueueItemRepository> readOnlyQueueItemRepository) : IInvoiceCommandProcessor
 {
 #pragma warning disable
     private readonly IGRSSCD _sscd = sscd;
-    private readonly Lazy<Task<IMiddlewareQueueItemRepository>> _readOnlyQueueItemRepository = readOnlyQueueItemRepository;
+    private readonly AsyncLazy<IMiddlewareQueueItemRepository> _readOnlyQueueItemRepository = readOnlyQueueItemRepository;
 #pragma warning restore
 
     public async Task<ProcessCommandResponse> InvoiceUnknown0x1000Async(ProcessCommandRequest request)
@@ -50,7 +51,7 @@ public class InvoiceCommandProcessorGR(IGRSSCD sscd, Lazy<Task<IMiddlewareQueueI
         {
             throw new NotSupportedException("Grouping of invoices is not supported yet.");
         }
-        var queueItems = (await _readOnlyQueueItemRepository.Value).GetByReceiptReferenceAsync(request.cbPreviousReceiptReference?.SingleValue, request.cbTerminalID);
+        var queueItems = (await _readOnlyQueueItemRepository).GetByReceiptReferenceAsync(request.cbPreviousReceiptReference?.SingleValue, request.cbTerminalID);
         await foreach (var existingQueueItem in queueItems)
         {
             if (string.IsNullOrEmpty(existingQueueItem.response))

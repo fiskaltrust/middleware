@@ -13,7 +13,7 @@ public class SignProcessor : ISignProcessor
 {
     private readonly ILogger<SignProcessor> _logger;
     private readonly Func<ReceiptRequest, ReceiptResponse, ftQueue, ftQueueItem, Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)>> _processRequest;
-    private readonly Lazy<Task<string>> _cashBoxIdentification;
+    private readonly AsyncLazy<string> _cashBoxIdentification;
     private readonly Guid _queueId = Guid.Empty;
     private readonly Guid _cashBoxId = Guid.Empty;
     private readonly bool _isSandbox;
@@ -24,7 +24,7 @@ public class SignProcessor : ISignProcessor
         ILogger<SignProcessor> logger,
         QueueStorageProvider queueStorageProvider,
         Func<ReceiptRequest, ReceiptResponse, ftQueue, ftQueueItem, Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)>> processRequest,
-        Lazy<Task<string>> cashBoxIdentification,
+        AsyncLazy<string> cashBoxIdentification,
         MiddlewareConfiguration configuration)
     {
         _logger = logger;
@@ -91,7 +91,7 @@ public class SignProcessor : ISignProcessor
             {
                 var queueItem = await _queueStorageProvider.ReserveNextQueueItem(receiptRequest);
                 queueItem.ftWorkMoment = DateTime.UtcNow;
-                var receiptResponse = CreateReceiptResponse(receiptRequest, queueItem, await _cashBoxIdentification.Value.ConfigureAwait(false));
+                var receiptResponse = CreateReceiptResponse(receiptRequest, queueItem, await _cashBoxIdentification);
                 receiptResponse.ftReceiptIdentification = $"ft{await _queueStorageProvider.GetReceiptNumerator():X}#";
                 List<ftActionJournal> countrySpecificActionJournals;
                 try

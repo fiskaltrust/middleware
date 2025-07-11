@@ -7,7 +7,7 @@ using fiskaltrust.Middleware.Localization.QueueES.Models;
 using fiskaltrust.Middleware.Localization.QueueES.Processors;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Configuration;
-using fiskaltrust.Middleware.Localization.v2.Extensions;
+using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.MasterData;
 using fiskaltrust.Middleware.Localization.v2.Storage;
@@ -35,11 +35,11 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
 
         var masterDataService = new MasterDataService(configuration, storageProvider);
 
-        var cashBoxIdentification = new Lazy<Task<string>>(async () => (await (await storageProvider.ConfigurationRepository.Value).GetQueueESAsync(id)).CashBoxIdentification);
+        var cashBoxIdentification = new AsyncLazy<string>(async () => (await (await storageProvider.CreateConfigurationRepository()).GetQueueESAsync(id)).CashBoxIdentification);
 
-        var essscd = new Lazy<Task<IESSSCD>>(async () =>
+        var essscd = new AsyncLazy<IESSSCD>(async () =>
         {
-            var configurationRepository = await storageProvider.ConfigurationRepository.Value;
+            var configurationRepository = await storageProvider.CreateConfigurationRepository();
             var queue = await configurationRepository.GetQueueESAsync(id);
             var scu = await configurationRepository.GetSignaturCreationUnitESAsync(queue.ftSignaturCreationUnitESId);
             return clientFactory.CreateClient(new ClientConfiguration
@@ -57,8 +57,8 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
             ),
             new ReceiptCommandProcessorES(
                 essscd,
-                storageProvider.ConfigurationRepository,
-                storageProvider.MiddlewareQueueItemRepository.Cast<IMiddlewareQueueItemRepository, IReadOnlyQueueItemRepository>()
+                storageProvider.CreateConfigurationRepository(),
+                storageProvider.CreateMiddlewareQueueItemRepository().Cast<IMiddlewareQueueItemRepository, IReadOnlyQueueItemRepository>()
             ),
             new DailyOperationsCommandProcessorES(
                 essscd,
@@ -67,7 +67,7 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
             new ProtocolCommandProcessorES()
         );
         var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, signProcessorES.ProcessAsync, cashBoxIdentification, middlewareConfiguration);
-        var journalProcessor = new JournalProcessor(storageProvider, new JournalProcessorES(storageProvider.MiddlewareReceiptJournalRepository, storageProvider.MiddlewareQueueItemRepository, masterDataService), configuration, loggerFactory.CreateLogger<JournalProcessor>());
+        var journalProcessor = new JournalProcessor(storageProvider, new JournalProcessorES(storageProvider.CreateMiddlewareReceiptJournalRepository(), storageProvider.CreateMiddlewareQueueItemRepository(), masterDataService), configuration, loggerFactory.CreateLogger<JournalProcessor>());
         _queue = new Queue(signProcessor, journalProcessor, loggerFactory)
         {
             Id = id,
