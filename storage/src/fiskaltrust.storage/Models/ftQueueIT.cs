@@ -2,7 +2,7 @@
 
 namespace fiskaltrust.storage.V0
 {
-    public class ftQueueIT : QueueLocalization, ICountrySpecificQueue
+    public class ftQueueIT : QueueLocalization
     {
         public Guid ftQueueId => ftQueueITId;
 

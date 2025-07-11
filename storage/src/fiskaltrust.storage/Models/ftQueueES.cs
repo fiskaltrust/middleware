@@ -2,19 +2,21 @@
 
 namespace fiskaltrust.storage.V0
 {
-    public class ftQueueES : QueueLocalization, ICountrySpecificQueue
+    public class ftQueueES : QueueLocalization
     {
         public Guid ftQueueId => ftQueueESId;
 
-        public Guid? ftSignaturCreationUnitId => ftSignaturCreationUnitESId;
+        public Guid ftSignaturCreationUnitId => ftSignaturCreationUnitESId;
 
         public Guid ftQueueESId { get; set; }
 
-        public Guid? ftSignaturCreationUnitESId { get; set; }
+        public Guid ftSignaturCreationUnitESId { get; set; }
 
         public string LastHash { get; set; }
 
         public string CashBoxIdentification { get; set; }
+
+        public Guid? SSCDSignQueueItemId { get; set; }
 
         public int SSCDFailCount { get; set; }
 

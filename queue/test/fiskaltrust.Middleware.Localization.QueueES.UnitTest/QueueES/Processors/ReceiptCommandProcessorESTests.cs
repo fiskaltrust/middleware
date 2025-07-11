@@ -1,29 +1,29 @@
 ﻿using System;
 using System.IO;
+using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
+using AutoFixture;
 using fiskaltrust.ifPOS.v2;
-using fiskaltrust.Middleware.Localization.QueueES.ESSSCD;
+using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.ifPOS.v2.es;
+using fiskaltrust.Middleware.Contracts.Factories;
+using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Localization.QueueES.Interface;
+using fiskaltrust.Middleware.Localization.QueueES.Models;
+using fiskaltrust.Middleware.Localization.QueueES.Models.Cases;
 using fiskaltrust.Middleware.Localization.QueueES.Processors;
-using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2;
+using fiskaltrust.Middleware.Localization.v2.Interface;
+using fiskaltrust.Middleware.Localization.v2.Storage;
 using fiskaltrust.Middleware.Storage;
-using fiskaltrust.Middleware.Storage.ES;
 using fiskaltrust.storage.V0;
+using fiskaltrust.storage.V0.MasterData;
 using FluentAssertions;
 using FluentAssertions.Execution;
+using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
-using fiskaltrust.ifPOS.v2.Cases;
-using fiskaltrust.storage.V0.MasterData;
-using AutoFixture;
-using fiskaltrust.Middleware.Localization.v2.Storage;
-using System.Text.Json;
-using fiskaltrust.Middleware.Contracts.Factories;
-using System.Text;
-using fiskaltrust.Middleware.Localization.QueueES.Interface;
-using fiskaltrust.Middleware.Contracts.Repositories;
-using fiskaltrust.Middleware.Localization.QueueES.Models.Cases;
-using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processors
 {
@@ -56,7 +56,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             );
         }
 
-        private readonly ReceiptProcessor _sut = new(Mock.Of<ILogger<ReceiptProcessor>>(), null!, new ReceiptCommandProcessorES(Mock.Of<IESSSCD>(), Mock.Of<Storage.IConfigurationRepository>(), Mock.Of<IQueueItemRepository>()), null!, null!, null!);
+        private readonly ReceiptProcessor _sut = new(Mock.Of<ILogger<ReceiptProcessor>>(), null!, new ReceiptCommandProcessorES(new(() => Task.FromResult(Mock.Of<IESSSCD>())), new(() => Task.FromResult(Mock.Of<IConfigurationRepository>())), new(() => Task.FromResult(Mock.Of<IReadOnlyQueueItemRepository>()))), null!, null!, null!);
 
 
         [Theory]
@@ -201,11 +201,11 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             previousQueueItem.request = JsonSerializer.Serialize(previousReceiptRequest);
             previousQueueItem.response = JsonSerializer.Serialize(previousReceiptResponse);
 
-            var queueES = new Storage.ES.ftQueueES()
+            var queueES = new ftQueueES()
             {
                 SSCDSignQueueItemId = previousQueueItem.ftQueueItemId
             };
-            var signaturCreationUnitES = new Storage.ES.ftSignaturCreationUnitES
+            var signaturCreationUnitES = new ftSignaturCreationUnitES
             {
 
             };
@@ -213,15 +213,14 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             var masterDataConfiguration = _fixture.Create<MasterDataConfiguration>();
             masterDataConfiguration.Outlet.VatId = "VATTEST";
 
-            var configMock = new Mock<storage.V0.IConfigurationRepository>();
+            var configMock = new Mock<IConfigurationRepository>();
             configMock.Setup(x => x.InsertOrUpdateQueueAsync(It.IsAny<ftQueue>())).Returns(Task.CompletedTask);
-            var configurationRepositoryMock = new Mock<Storage.IConfigurationRepository>();
+            var configurationRepositoryMock = new Mock<IConfigurationRepository>();
             configurationRepositoryMock.Setup(x => x.GetQueueESAsync(queue.ftQueueId)).ReturnsAsync(queueES);
             var queueItemRepositoryMock = new Mock<IQueueItemRepository>();
             queueItemRepositoryMock.Setup(x => x.GetAsync(previousQueueItem.ftQueueItemId)).ReturnsAsync(previousQueueItem);
-
-            var config = new VeriFactuSCUConfiguration();
-            var sut = new ReceiptCommandProcessorES(new VeriFactuSCU(signaturCreationUnitES, masterDataConfiguration, config, Mock.Of<IMiddlewareQueueItemRepository>()), configurationRepositoryMock.Object, queueItemRepositoryMock.Object);
+            //var config = new VeriFactuSCUConfiguration();
+            var sut = new ReceiptCommandProcessorES(new(() => Task.FromResult(Mock.Of<IESSSCD>())), new(() => Task.FromResult(configurationRepositoryMock.Object)), new(() => Task.FromResult((IReadOnlyQueueItemRepository) queueItemRepositoryMock.Object)));
 
             var receiptRequest = new ReceiptRequest
             {

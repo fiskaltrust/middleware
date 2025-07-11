@@ -36,8 +36,11 @@ namespace fiskaltrust.storage.V0
         Task<IEnumerable<ftQueueDE>> GetQueueDEListAsync();
         Task<ftQueueDE> GetQueueDEAsync(Guid queueDEId);
 
+        Task<IEnumerable<ftQueueEU>> GetQueueEUListAsync();
+        Task<ftQueueEU> GetQueueEUAsync(Guid queueEUId);
+
         Task<IEnumerable<ftQueueES>> GetQueueESListAsync();
-        Task<ftQueueES> GetQueueESAsync(Guid queueESId);
+        Task<ftQueueES> GetQueueESAsync(Guid queueEUId);
 
         Task<IEnumerable<ftQueueFR>> GetQueueFRListAsync();
         Task<ftQueueFR> GetQueueFRAsync(Guid queueFRId);

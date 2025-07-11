@@ -97,5 +97,8 @@ namespace fiskaltrust.Middleware.Storage.EF.Repositories
         public async Task<ftSignaturCreationUnitME> GetSignaturCreationUnitMEAsync(Guid signaturCreationUnitDEId) => await _signaturCreationUnitMERepository.GetAsync(signaturCreationUnitDEId).ConfigureAwait(false);
         public async Task<IEnumerable<ftSignaturCreationUnitME>> GetSignaturCreationUnitMEListAsync() => await _signaturCreationUnitMERepository.GetAsync().ConfigureAwait(false);
         public async Task InsertOrUpdateSignaturCreationUnitMEAsync(ftSignaturCreationUnitME scu) => await _signaturCreationUnitMERepository.InsertOrUpdateAsync(scu).ConfigureAwait(false);
-  }
+        public Task InsertOrUpdateQueueEUAsync(ftQueueEU queue) => throw new NotImplementedException();
+        public Task<IEnumerable<ftQueueEU>> GetQueueEUListAsync() => throw new NotImplementedException();
+        public Task<ftQueueEU> GetQueueEUAsync(Guid queueEUId) => throw new NotImplementedException();
+    }
 }

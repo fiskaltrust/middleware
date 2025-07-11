@@ -8,11 +8,11 @@ using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.MasterData;
 using fiskaltrust.Middleware.Localization.v2.Storage;
 using fiskaltrust.Middleware.Storage.AzureTableStorage;
-using fiskaltrust.Middleware.Storage.EU;
 using fiskaltrust.Middleware.Storage;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 using Microsoft.Extensions.Logging;
+using fiskaltrust.Middleware.Localization.v2.Helpers;
 
 namespace fiskaltrust.Middleware.Localization.QueueEU;
 
@@ -28,15 +28,7 @@ public class QueueEUBootstrapper : IV2QueueBootstrapper
         var storageProvider = new AzureStorageProvider(loggerFactory, id, configuration);
         var queueStorageProvider = new QueueStorageProvider(id, storageProvider);
 
-        storageProvider.Initialized.Wait();
-
-        var configurationRepository = (Storage.IConfigurationRepository) storageProvider.GetConfigurationRepository();
-        var queueEU = configurationRepository.GetQueueEUAsync(id).Result;
-        if (queueEU is null)
-        {
-            queueEU = Newtonsoft.Json.JsonConvert.DeserializeObject<List<ftQueueEU>>(configuration["init_ftQueueEU"]!.ToString()!).First();
-            configurationRepository.InsertOrUpdateQueueEUAsync(queueEU);
-        }
+        var cashBoxIdentification = new AsyncLazy<string>(async () => (await (await storageProvider.CreateConfigurationRepository()).GetQueueESAsync(id)).CashBoxIdentification);
 
         var signProcessorEU = new ReceiptProcessor(
             loggerFactory.CreateLogger<ReceiptProcessor>(),
@@ -48,7 +40,7 @@ public class QueueEUBootstrapper : IV2QueueBootstrapper
             new InvoiceCommandProcessorEU(),
             new ProtocolCommandProcessorEU()
         );
-        var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, signProcessorEU.ProcessAsync, queueEU.CashBoxIdentification, middlewareConfiguration);
+        var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, signProcessorEU.ProcessAsync, cashBoxIdentification, middlewareConfiguration);
         var journalProcessor = new JournalProcessor(storageProvider, new JournalProcessorEU(), configuration, loggerFactory.CreateLogger<JournalProcessor>());
         _queue = new Queue(signProcessor, journalProcessor, loggerFactory)
         {

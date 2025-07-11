@@ -101,7 +101,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage
             var baseStorageConfig = ParseStorageConfiguration(_configuration);
 
             var cashBoxes = (await _configurationRepository.GetCashBoxListAsync().ConfigureAwait(false)).ToList();
-            if (cashBoxes.Count == 0) 
+            if (cashBoxes.Count == 0)
             {
                 await ForcePersistMasterDataAsync(baseStorageConfig, new AzureTableStorageAccountMasterDataRepository(_queueConfiguration, _tableServiceClient), new AzureTableStorageOutletMasterDataRepository(_queueConfiguration, _tableServiceClient), new AzureTableStorageAgencyMasterDataRepository(_queueConfiguration, _tableServiceClient), new AzureTableStoragePosSystemMasterDataRepository(_queueConfiguration, _tableServiceClient)).ConfigureAwait(false);
             }
@@ -117,9 +117,9 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage
             services.AddSingleton(_blobServiceClient);
 
             services.AddSingleton<IConfigurationRepository>(_configurationRepository);
-            services.AddSingleton<storage.V0.IConfigurationRepository>(_configurationRepository);
+            services.AddSingleton<IConfigurationRepository>(_configurationRepository);
             services.AddSingleton<IReadOnlyConfigurationRepository>(_configurationRepository);
-            services.AddSingleton<storage.V0.IReadOnlyConfigurationRepository>(_configurationRepository);
+            services.AddSingleton<IReadOnlyConfigurationRepository>(_configurationRepository);
 
             services.AddSingleton<IQueueItemRepository, AzureTableStorageQueueItemRepository>();
             services.AddScoped<IMiddlewareQueueItemRepository, AzureTableStorageQueueItemRepository>();

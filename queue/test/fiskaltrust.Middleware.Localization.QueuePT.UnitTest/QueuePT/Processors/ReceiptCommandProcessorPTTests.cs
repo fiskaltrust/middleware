@@ -7,7 +7,6 @@ using fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Storage;
-using fiskaltrust.Middleware.Storage.PT;
 using fiskaltrust.storage.V0;
 using FluentAssertions;
 using FluentAssertions.Execution;
@@ -21,7 +20,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
 
 public class ReceiptCommandProcessorPTTests
 {
-    private readonly ReceiptProcessor _sut = new(Mock.Of<ILogger<ReceiptProcessor>>(), null!, new ReceiptCommandProcessorPT(Mock.Of<IPTSSCD>(), new ftQueuePT(), new ftSignaturCreationUnitPT(), Mock.Of<IMiddlewareQueueItemRepository>()), null!, null!, null!);
+    private readonly ReceiptProcessor _sut = new(Mock.Of<ILogger<ReceiptProcessor>>(), null!, new ReceiptCommandProcessorPT(Mock.Of<IPTSSCD>(), new ftQueuePT(), new(() => Task.FromResult(Mock.Of<IMiddlewareQueueItemRepository>()))), null!, null!, null!);
 
     [Theory]
     [InlineData(ReceiptCase.PaymentTransfer0x0002, Skip = "broken")]
@@ -92,12 +91,12 @@ public class ReceiptCommandProcessorPTTests
             SoftwareCertificateNumber = "9999",
         };
 
-        var configMock = new Mock<storage.V0.IConfigurationRepository>();
+        var configMock = new Mock<IConfigurationRepository>();
         configMock.Setup(x => x.InsertOrUpdateQueueAsync(It.IsAny<ftQueue>())).Returns(Task.CompletedTask);
 
         var queueItemRepository = new Mock<IMiddlewareQueueItemRepository>();
 
-        var sut = new ReceiptCommandProcessorPT(new InMemorySCU(signaturCreationUnitPT), queuePT, signaturCreationUnitPT, queueItemRepository.Object);
+        var sut = new ReceiptCommandProcessorPT(new InMemorySCU(signaturCreationUnitPT), queuePT, new(() => Task.FromResult(queueItemRepository.Object)));
 
         var receiptRequest = new ReceiptRequest
         {
