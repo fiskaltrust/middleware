@@ -47,7 +47,7 @@ public class ReceiptCommandProcessorGRTests
                 ReceiptResponse = receiptResponse,
             });
 
-        var receiptCommandProcessor = new ReceiptCommandProcessorGR(grSSCDMock.Object, queueGR, scuGR, Mock.Of<IMiddlewareQueueItemRepository>());
+        var receiptCommandProcessor = new ReceiptCommandProcessorGR(grSSCDMock.Object, new(() => Task.FromResult(Mock.Of<IMiddlewareQueueItemRepository>())));
         var receiptProcessor = new ReceiptProcessor(Mock.Of<ILogger<ReceiptProcessor>>(), null!, receiptCommandProcessor, null!, null!, null!);
         var result = await receiptProcessor.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
 
@@ -77,7 +77,7 @@ public class ReceiptCommandProcessorGRTests
             ftReceiptMoment = DateTime.UtcNow,
         };
         var grSSCDMock = new Mock<IGRSSCD>();
-        var receiptCommandProcessor = new ReceiptCommandProcessorGR(grSSCDMock.Object, queueGR, scuGR, Mock.Of<IMiddlewareQueueItemRepository>());
+        var receiptCommandProcessor = new ReceiptCommandProcessorGR(grSSCDMock.Object, new(() => Task.FromResult(Mock.Of<IMiddlewareQueueItemRepository>())));
         var receiptProcessor = new ReceiptProcessor(Mock.Of<ILogger<ReceiptProcessor>>(), null!, receiptCommandProcessor, null!, null!, null!);
         var result = await receiptProcessor.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
 

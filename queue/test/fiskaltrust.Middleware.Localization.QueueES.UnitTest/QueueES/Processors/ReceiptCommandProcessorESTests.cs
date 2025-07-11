@@ -56,7 +56,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             );
         }
 
-        private readonly ReceiptProcessor _sut = new(Mock.Of<ILogger<ReceiptProcessor>>(), null!, new ReceiptCommandProcessorES(Mock.Of<IESSSCD>(), Mock.Of<IConfigurationRepository>(), Mock.Of<IQueueItemRepository>()), null!, null!, null!);
+        private readonly ReceiptProcessor _sut = new(Mock.Of<ILogger<ReceiptProcessor>>(), null!, new ReceiptCommandProcessorES(new(() => Task.FromResult(Mock.Of<IESSSCD>())), new(() => Task.FromResult(Mock.Of<IConfigurationRepository>())), new(() => Task.FromResult(Mock.Of<IReadOnlyQueueItemRepository>()))), null!, null!, null!);
 
 
         [Theory]
@@ -219,9 +219,8 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             configurationRepositoryMock.Setup(x => x.GetQueueESAsync(queue.ftQueueId)).ReturnsAsync(queueES);
             var queueItemRepositoryMock = new Mock<IQueueItemRepository>();
             queueItemRepositoryMock.Setup(x => x.GetAsync(previousQueueItem.ftQueueItemId)).ReturnsAsync(previousQueueItem);
-            var scuMock = new Mock<IESSSCD>();
             //var config = new VeriFactuSCUConfiguration();
-            var sut = new ReceiptCommandProcessorES(scuMock.Object, configurationRepositoryMock.Object, queueItemRepositoryMock.Object);
+            var sut = new ReceiptCommandProcessorES(new(() => Task.FromResult(Mock.Of<IESSSCD>())), new(() => Task.FromResult(configurationRepositoryMock.Object)), new(() => Task.FromResult((IReadOnlyQueueItemRepository) queueItemRepositoryMock.Object)));
 
             var receiptRequest = new ReceiptRequest
             {

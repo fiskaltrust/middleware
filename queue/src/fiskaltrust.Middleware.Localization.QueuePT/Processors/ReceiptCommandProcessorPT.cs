@@ -15,13 +15,12 @@ using fiskaltrust.Middleware.Localization.v2.Helpers;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Processors;
 
-public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignaturCreationUnitPT signaturCreationUnitPT, IMiddlewareQueueItemRepository readOnlyQueueItemRepository) : ProcessorPreparation, IReceiptCommandProcessor
+public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLazy<IMiddlewareQueueItemRepository> readOnlyQueueItemRepository) : ProcessorPreparation, IReceiptCommandProcessor
 {
     private readonly IPTSSCD _sscd = sscd;
-    private readonly ftQueuePT _queuePT = queuePT;
 #pragma warning disable
-    private readonly ftSignaturCreationUnitPT _signaturCreationUnitPT = signaturCreationUnitPT;
-    protected override IMiddlewareQueueItemRepository _readOnlyQueueItemRepository { get; init; } = readOnlyQueueItemRepository;
+    private readonly ftQueuePT _queuePT = queuePT;
+    protected override AsyncLazy<IMiddlewareQueueItemRepository> _readOnlyQueueItemRepository { get; init; } = readOnlyQueueItemRepository;
 
     public Task<ProcessCommandResponse> UnknownReceipt0x0000Async(ProcessCommandRequest request) => WithPreparations(request, () => PointOfSaleReceipt0x0001Async(request));
 
@@ -49,7 +48,7 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignat
                 ftSignatureFormat = SignatureFormat.Text,
                 ftSignatureType = SignatureTypePT.ReferenceForCreditNote.As<SignatureType>(),
             });
-            _queuePT.LastHash = hash;
+            series.LastHash = hash;
             return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
         }
         else
@@ -159,7 +158,7 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignat
         {
             throw new NotSupportedException("Grouping of payment transfers is not supported yet.");
         }
-        var queueItems = _readOnlyQueueItemRepository.GetByReceiptReferenceAsync(request.cbPreviousReceiptReference.SingleValue, request.cbTerminalID);
+        var queueItems = (await _readOnlyQueueItemRepository).GetByReceiptReferenceAsync(request.cbPreviousReceiptReference.SingleValue, request.cbTerminalID);
         await foreach (var existingQueueItem in queueItems)
         {
             if (string.IsNullOrEmpty(existingQueueItem.response))

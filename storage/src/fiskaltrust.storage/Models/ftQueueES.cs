@@ -6,11 +6,11 @@ namespace fiskaltrust.storage.V0
     {
         public Guid ftQueueId => ftQueueESId;
 
-        public Guid? ftSignaturCreationUnitId => ftSignaturCreationUnitESId;
+        public Guid ftSignaturCreationUnitId => ftSignaturCreationUnitESId;
 
         public Guid ftQueueESId { get; set; }
 
-        public Guid? ftSignaturCreationUnitESId { get; set; }
+        public Guid ftSignaturCreationUnitESId { get; set; }
 
         public string LastHash { get; set; }
 

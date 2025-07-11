@@ -40,7 +40,7 @@ namespace fiskaltrust.Middleware.Storage.Base
             };
         }
 
-        public async Task ForcePersistMasterDataAsync(StorageBaseInitConfiguration config, 
+        public async Task ForcePersistMasterDataAsync(StorageBaseInitConfiguration config,
     IMasterDataRepository<AccountMasterData> accountMasterDataRepo, IMasterDataRepository<OutletMasterData> outletMasterDataRepo,
     IMasterDataRepository<AgencyMasterData> agencyMasterDataRepo, IMasterDataRepository<PosSystemMasterData> posSystemMasterDataRepo)
         {
@@ -136,14 +136,14 @@ namespace fiskaltrust.Middleware.Storage.Base
                 InitFtQueueAsync(config.Queues, configurationRepository),
                 InitQueueATAsync(config.QueuesAT, configurationRepository),
                 InitQueueDEAsync(config.QueuesDE, configurationRepository, logger),
-                //InitQueueESAsync(config.QueuesES, configurationRepository),
+                InitQueueESAsync(config.QueuesES, configurationRepository),
                 InitQueueFRAsync(config.QueuesFR, configurationRepository),
                 InitQueueMEAsync(config.QueuesME, configurationRepository),
                 InitQueueITAsync(config.QueuesIT, configurationRepository),
                 InitSignaturCreationUnitATAsync(config.SignaturCreationUnitsAT, configurationRepository),
                 InitSignaturCreationUnitFRAsync(config.SignaturCreationUnitsFR, configurationRepository),
                 InitSignaturCreationUnitDEAsync(config.SignaturCreationUnitsDE, configurationRepository, enforceUpdateUserDefinedConfig),
-                //InitSignaturCreationUnitESAsync(config.SignaturCreationUnitsES, configurationRepository),
+                InitSignaturCreationUnitESAsync(config.SignaturCreationUnitsES, configurationRepository),
                 InitSignaturCreationUnitMEAsync(config.SignaturCreationUnitsME, configurationRepository),
                 InitSignaturCreationUnitITAsync(config.SignaturCreationUnitsIT, configurationRepository, enforceUpdateUserDefinedConfig),
             };
@@ -307,7 +307,7 @@ namespace fiskaltrust.Middleware.Storage.Base
                 if (dbQueueEs == null)
                 {
                     await configurationRepository.InsertOrUpdateQueueESAsync(item).ConfigureAwait(false);
-                }               
+                }
             }
         }
         private async Task InitQueueMEAsync(List<ftQueueME> queuesME, IConfigurationRepository configurationRepository)

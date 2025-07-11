@@ -23,8 +23,9 @@ public class QueuePTBootstrapper : IV2QueueBootstrapper
         //signaturCreationUnitPT.PrivateKey = ""; 
         var ptSSCD = new InMemorySCU(signaturCreationUnitPT);
         var queueStorageProvider = new QueueStorageProvider(id, storageProvider);
-        var signProcessorPT = new ReceiptProcessor(loggerFactory.CreateLogger<ReceiptProcessor>(), new LifecycleCommandProcessorPT(storageProvider.GetConfigurationRepository()), new ReceiptCommandProcessorPT(ptSSCD, queuePT, signaturCreationUnitPT, storageProvider.GetMiddlewareQueueItemRepository()), new DailyOperationsCommandProcessorPT(), new InvoiceCommandProcessorPT(ptSSCD, queuePT, signaturCreationUnitPT, storageProvider.GetMiddlewareQueueItemRepository()), new ProtocolCommandProcessorPT(ptSSCD, queuePT, signaturCreationUnitPT, storageProvider.GetMiddlewareQueueItemRepository()));
-        var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, signProcessorPT.ProcessAsync, queuePT.CashBoxIdentification, middlewareConfiguration);
+
+        var signProcessorPT = new ReceiptProcessor(loggerFactory.CreateLogger<ReceiptProcessor>(), new LifecycleCommandProcessorPT(storageProvider.CreateConfigurationRepository()), new ReceiptCommandProcessorPT(ptSSCD, queuePT, storageProvider.CreateMiddlewareQueueItemRepository()), new DailyOperationsCommandProcessorPT(), new InvoiceCommandProcessorPT(ptSSCD, queuePT, signaturCreationUnitPT, storageProvider.CreateMiddlewareQueueItemRepository()), new ProtocolCommandProcessorPT(ptSSCD, queuePT, signaturCreationUnitPT, storageProvider.CreateMiddlewareQueueItemRepository()));
+        var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, signProcessorPT.ProcessAsync, new(() => Task.FromResult(queuePT.CashBoxIdentification)), middlewareConfiguration);
         var journalProcessor = new JournalProcessor(storageProvider, new JournalProcessorPT(storageProvider), configuration, loggerFactory.CreateLogger<JournalProcessor>());
         _queue = new Queue(signProcessor, journalProcessor, loggerFactory)
         {
