@@ -7,10 +7,10 @@ using fiskaltrust.ifPOS.v2.Cases;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Processors;
 
-public class LifecycleCommandProcessorPT(IConfigurationRepository configurationRepository) : ILifecycleCommandProcessor
+public class LifecycleCommandProcessorPT(Lazy<Task<IConfigurationRepository>> configurationRepository) : ILifecycleCommandProcessor
 {
 #pragma warning disable 
-    private readonly IConfigurationRepository _configurationRepository = configurationRepository;
+    private readonly Lazy<Task<IConfigurationRepository>> _configurationRepository = configurationRepository;
 #pragma warning restore 
 
     public async Task<ProcessCommandResponse> InitialOperationReceipt0x4001Async(ProcessCommandRequest request)
@@ -18,7 +18,7 @@ public class LifecycleCommandProcessorPT(IConfigurationRepository configurationR
         var (queue, receiptRequest, receiptResponse) = request;
         var actionJournal = ftActionJournalFactory.CreateInitialOperationActionJournal(receiptRequest, receiptResponse);
         queue.StartMoment = DateTime.UtcNow;
-        await _configurationRepository.InsertOrUpdateQueueAsync(queue).ConfigureAwait(false);
+        await (await _configurationRepository.Value).InsertOrUpdateQueueAsync(queue).ConfigureAwait(false);
         receiptResponse.AddSignatureItem(SignaturItemFactory.CreateInitialOperationSignature(queue));
         return new ProcessCommandResponse(receiptResponse, [actionJournal]);
     }
@@ -27,7 +27,7 @@ public class LifecycleCommandProcessorPT(IConfigurationRepository configurationR
     {
         var (queue, receiptRequest, receiptResponse) = request;
         queue.StopMoment = DateTime.UtcNow;
-        await _configurationRepository.InsertOrUpdateQueueAsync(queue);
+        await (await _configurationRepository.Value).InsertOrUpdateQueueAsync(queue);
         var actionJournal = ftActionJournalFactory.CreateOutOfOperationActionJournal(receiptRequest, receiptResponse);
         receiptResponse.AddSignatureItem(SignaturItemFactory.CreateOutOfOperationSignature(queue));
         receiptResponse.MarkAsDisabled();

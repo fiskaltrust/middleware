@@ -5,23 +5,25 @@ using fiskaltrust.ifPOS.v2.Cases;
 using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.es;
+using fiskaltrust.Middleware.Localization.QueueES.Services;
+using fiskaltrust.Middleware.Localization.QueueES.Services.Interface;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.Processors;
 
-public class ReceiptCommandProcessorES(IESSSCD sscd, IConfigurationRepository configurationRepository, IReadOnlyQueueItemRepository queueItemRepository) : IReceiptCommandProcessor
+public class ReceiptCommandProcessorES(IESSSCDProvider essscdProvider, Lazy<Task<IConfigurationRepository>> configurationRepository, Lazy<Task<IReadOnlyQueueItemRepository>> queueItemRepository) : IReceiptCommandProcessor
 {
 #pragma warning disable
-    private readonly IESSSCD _sscd = sscd;
-    private readonly IConfigurationRepository _configurationRepository = configurationRepository;
-    private readonly IReadOnlyQueueItemRepository _queueItemRepository = queueItemRepository;
+    private readonly IESSSCDProvider _essscdProvider = essscdProvider;
+    private readonly Lazy<Task<IConfigurationRepository>> _configurationRepository = configurationRepository;
+    private readonly Lazy<Task<IReadOnlyQueueItemRepository>> _queueItemRepository = queueItemRepository;
 #pragma warning restore
 
     public async Task<ProcessCommandResponse> UnknownReceipt0x0000Async(ProcessCommandRequest request) => await PointOfSaleReceipt0x0001Async(request);
 
     public async Task<ProcessCommandResponse> PointOfSaleReceipt0x0001Async(ProcessCommandRequest request)
     {
-        var queueES = await _configurationRepository.GetQueueESAsync(request.queue.ftQueueId);
-        var previousQueueItem = queueES.SSCDSignQueueItemId is not null ? await _queueItemRepository.GetAsync(queueES.SSCDSignQueueItemId.Value) : null;
+        var queueES = await (await _configurationRepository.Value).GetQueueESAsync(request.queue.ftQueueId);
+        var previousQueueItem = queueES.SSCDSignQueueItemId is not null ? await (await _queueItemRepository.Value).GetAsync(queueES.SSCDSignQueueItemId.Value) : null;
 
         if (previousQueueItem is not null)
         {
@@ -36,7 +38,7 @@ public class ReceiptCommandProcessorES(IESSSCD sscd, IConfigurationRepository co
             }
         }
 
-        var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
+        var response = await (await _essscdProvider.GetAsync()).ProcessReceiptAsync(new ProcessRequest
         {
             ReceiptRequest = request.ReceiptRequest,
             ReceiptResponse = request.ReceiptResponse,
@@ -45,7 +47,7 @@ public class ReceiptCommandProcessorES(IESSSCD sscd, IConfigurationRepository co
         });
 
         queueES.SSCDSignQueueItemId = response.ReceiptResponse.ftQueueItemID;
-        await _configurationRepository.InsertOrUpdateQueueESAsync(queueES);
+        await (await _configurationRepository.Value).InsertOrUpdateQueueESAsync(queueES);
 
         return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
     }

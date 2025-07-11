@@ -44,7 +44,7 @@ public class InvoiceCommandProcessorGRTests
             });
         var middlewareQueueItemRepositoryMock = new Mock<IMiddlewareQueueItemRepository>(MockBehavior.Strict);
 
-        var invoiceCommandProcessor = new InvoiceCommandProcessorGR(grSSCDMock.Object, queueGR, scuGR, middlewareQueueItemRepositoryMock.Object);
+        var invoiceCommandProcessor = new InvoiceCommandProcessorGR(grSSCDMock.Object, new(() => Task.FromResult(middlewareQueueItemRepositoryMock.Object)));
         var result = await invoiceCommandProcessor.InvoiceUnknown0x1000Async(new ProcessCommandRequest(queue, receiptRequest, receiptResponse));
 
         result.receiptResponse.Should().Be(receiptResponse);
@@ -84,7 +84,7 @@ public class InvoiceCommandProcessorGRTests
         middlewareQueueItemRepositoryMock.Setup(x => x.GetByReceiptReferenceAsync(receiptRequest.cbPreviousReceiptReference.SingleValue, receiptRequest.cbTerminalID))
             .Returns(new List<ftQueueItem> { queueItem }.ToAsyncEnumerable());
 
-        var invoiceCommandProcessor = new InvoiceCommandProcessorGR(grSSCDMock.Object, queueGR, scuGR, middlewareQueueItemRepositoryMock.Object);
+        var invoiceCommandProcessor = new InvoiceCommandProcessorGR(grSSCDMock.Object, new(() => Task.FromResult(middlewareQueueItemRepositoryMock.Object)));
         var result = await invoiceCommandProcessor.InvoiceUnknown0x1000Async(new ProcessCommandRequest(queue, receiptRequest, receiptResponse));
 
         result.receiptResponse.Should().Be(receiptResponse);
@@ -121,7 +121,7 @@ public class InvoiceCommandProcessorGRTests
             });
         var middlewareQueueItemRepositoryMock = new Mock<IMiddlewareQueueItemRepository>(MockBehavior.Strict);
 
-        var invoiceCommandProcessor = new InvoiceCommandProcessorGR(grSSCDMock.Object, queueGR, scuGR, middlewareQueueItemRepositoryMock.Object);
+        var invoiceCommandProcessor = new InvoiceCommandProcessorGR(grSSCDMock.Object, new(() => Task.FromResult(middlewareQueueItemRepositoryMock.Object)));
         var result = await invoiceCommandProcessor.InvoiceUnknown0x1000Async(new ProcessCommandRequest(queue, receiptRequest, receiptResponse));
 
         result.receiptResponse.Should().Be(receiptResponse);
@@ -158,7 +158,7 @@ public class InvoiceCommandProcessorGRTests
             });
         var middlewareQueueItemRepositoryMock = new Mock<IMiddlewareQueueItemRepository>(MockBehavior.Strict);
 
-        var invoiceCommandProcessor = new InvoiceCommandProcessorGR(grSSCDMock.Object, queueGR, scuGR, middlewareQueueItemRepositoryMock.Object);
+        var invoiceCommandProcessor = new InvoiceCommandProcessorGR(grSSCDMock.Object, new(() => Task.FromResult(middlewareQueueItemRepositoryMock.Object)));
         var result = await invoiceCommandProcessor.InvoiceB2C0x1001Async(new ProcessCommandRequest(queue, receiptRequest, receiptResponse));
 
         result.receiptResponse.Should().Be(receiptResponse);
@@ -195,7 +195,7 @@ public class InvoiceCommandProcessorGRTests
             });
         var middlewareQueueItemRepositoryMock = new Mock<IMiddlewareQueueItemRepository>(MockBehavior.Strict);
 
-        var invoiceCommandProcessor = new InvoiceCommandProcessorGR(grSSCDMock.Object, queueGR, scuGR, middlewareQueueItemRepositoryMock.Object);
+        var invoiceCommandProcessor = new InvoiceCommandProcessorGR(grSSCDMock.Object, new(() => Task.FromResult(middlewareQueueItemRepositoryMock.Object)));
         var result = await invoiceCommandProcessor.InvoiceB2B0x1002Async(new ProcessCommandRequest(queue, receiptRequest, receiptResponse));
 
         result.receiptResponse.Should().Be(receiptResponse);
@@ -232,7 +232,7 @@ public class InvoiceCommandProcessorGRTests
             });
         var middlewareQueueItemRepositoryMock = new Mock<IMiddlewareQueueItemRepository>(MockBehavior.Strict);
 
-        var invoiceCommandProcessor = new InvoiceCommandProcessorGR(grSSCDMock.Object, queueGR, scuGR, middlewareQueueItemRepositoryMock.Object);
+        var invoiceCommandProcessor = new InvoiceCommandProcessorGR(grSSCDMock.Object, new(() => Task.FromResult(middlewareQueueItemRepositoryMock.Object)));
         var result = await invoiceCommandProcessor.InvoiceB2G0x1003Async(new ProcessCommandRequest(queue, receiptRequest, receiptResponse));
 
         result.receiptResponse.Should().Be(receiptResponse);

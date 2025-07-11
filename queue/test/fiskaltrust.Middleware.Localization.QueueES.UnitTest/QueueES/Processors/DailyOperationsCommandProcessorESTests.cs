@@ -11,12 +11,14 @@ using Moq;
 using fiskaltrust.Middleware.Localization.v2.Storage;
 using Microsoft.Extensions.Logging;
 using fiskaltrust.ifPOS.v2.es;
+using fiskaltrust.Middleware.Localization.QueueES.Services;
+using fiskaltrust.Middleware.Localization.QueueES.Services.Interface;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processors
 {
     public class DailyOperationsCommandProcessorESTests
     {
-        private readonly ReceiptProcessor _sut = new(Mock.Of<ILogger<ReceiptProcessor>>(), null!, null!, new DailyOperationsCommandProcessorES(Mock.Of<IESSSCD>(), Mock.Of<IQueueStorageProvider>()), null!, null!);
+        private readonly ReceiptProcessor _sut = new(Mock.Of<ILogger<ReceiptProcessor>>(), null!, null!, new DailyOperationsCommandProcessorES(Mock.Of<IESSSCDProvider>(), Mock.Of<IQueueStorageProvider>()), null!, null!);
 
         [Theory]
         [InlineData(ReceiptCase.ZeroReceipt0x2000)]

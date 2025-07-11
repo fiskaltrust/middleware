@@ -27,15 +27,7 @@ public class QueueEUBootstrapper : IV2QueueBootstrapper
         var storageProvider = new AzureStorageProvider(loggerFactory, id, configuration);
         var queueStorageProvider = new QueueStorageProvider(id, storageProvider);
 
-        storageProvider.Initialized.Wait();
-
-        var configurationRepository = storageProvider.GetConfigurationRepository();
-        var queueEU = configurationRepository.GetQueueEUAsync(id).Result;
-        if (queueEU is null)
-        {
-            queueEU = Newtonsoft.Json.JsonConvert.DeserializeObject<List<ftQueueEU>>(configuration["init_ftQueueEU"]!.ToString()!).First();
-            configurationRepository.InsertOrUpdateQueueEUAsync(queueEU);
-        }
+        var cashBoxIdentification = new Lazy<Task<string>>(async () => (await (await storageProvider.ConfigurationRepository.Value).GetQueueESAsync(id)).CashBoxIdentification);
 
         var signProcessorEU = new ReceiptProcessor(
             loggerFactory.CreateLogger<ReceiptProcessor>(),
@@ -47,7 +39,7 @@ public class QueueEUBootstrapper : IV2QueueBootstrapper
             new InvoiceCommandProcessorEU(),
             new ProtocolCommandProcessorEU()
         );
-        var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, signProcessorEU.ProcessAsync, queueEU.CashBoxIdentification, middlewareConfiguration);
+        var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, signProcessorEU.ProcessAsync, cashBoxIdentification, middlewareConfiguration);
         var journalProcessor = new JournalProcessor(storageProvider, new JournalProcessorEU(), configuration, loggerFactory.CreateLogger<JournalProcessor>());
         _queue = new Queue(signProcessor, journalProcessor, loggerFactory)
         {

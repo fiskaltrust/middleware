@@ -34,11 +34,11 @@ public class JournalProcessorPT : IJournalProcessor
         List<ftQueueItem> queueItems;
         if (request.From > 0)
         {
-            queueItems = _storageProvider.GetMiddlewareQueueItemRepository().GetEntriesOnOrAfterTimeStampAsync(request.From).ToBlockingEnumerable().ToList();
+            queueItems = (await _storageProvider.MiddlewareQueueItemRepository.Value).GetEntriesOnOrAfterTimeStampAsync(request.From).ToBlockingEnumerable().ToList();
         }
         else
         {
-            queueItems = (await _storageProvider.GetMiddlewareQueueItemRepository().GetAsync()).ToList();
+            queueItems = (await (await _storageProvider.MiddlewareQueueItemRepository.Value).GetAsync()).ToList();
         }
         var data = SAFTMapping.SerializeAuditFile(masterData, queueItems, (int) request.To);
         yield return new JournalResponse

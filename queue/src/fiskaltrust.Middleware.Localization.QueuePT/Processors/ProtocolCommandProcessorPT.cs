@@ -14,13 +14,13 @@ using System.Text.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Processors;
 
-public class ProtocolCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignaturCreationUnitPT signaturCreationUnitPT, IMiddlewareQueueItemRepository readOnlyQueueItemRepository) : ProcessorPreparation, IProtocolCommandProcessor
+public class ProtocolCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignaturCreationUnitPT signaturCreationUnitPT, Lazy<Task<IMiddlewareQueueItemRepository>> readOnlyQueueItemRepository) : ProcessorPreparation, IProtocolCommandProcessor
 {
     private readonly IPTSSCD _sscd = sscd;
     private readonly ftQueuePT _queuePT = queuePT;
 #pragma warning disable
     private readonly ftSignaturCreationUnitPT _signaturCreationUnitPT = signaturCreationUnitPT;
-    protected override IMiddlewareQueueItemRepository _readOnlyQueueItemRepository { get; init; } = readOnlyQueueItemRepository;
+    protected override Lazy<Task<IMiddlewareQueueItemRepository>> _readOnlyQueueItemRepository { get; init; } = readOnlyQueueItemRepository;
 
     public Task<ProcessCommandResponse> ProtocolUnspecified0x3000Async(ProcessCommandRequest request) => WithPreparations(request, async () => new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>()));
 

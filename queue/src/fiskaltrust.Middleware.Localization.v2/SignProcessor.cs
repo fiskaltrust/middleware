@@ -13,7 +13,7 @@ public class SignProcessor : ISignProcessor
 {
     private readonly ILogger<SignProcessor> _logger;
     private readonly Func<ReceiptRequest, ReceiptResponse, ftQueue, ftQueueItem, Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)>> _processRequest;
-    private readonly string _cashBoxIdentification;
+    private readonly Lazy<Task<string>> _cashBoxIdentification;
     private readonly Guid _queueId = Guid.Empty;
     private readonly Guid _cashBoxId = Guid.Empty;
     private readonly bool _isSandbox;
@@ -24,7 +24,7 @@ public class SignProcessor : ISignProcessor
         ILogger<SignProcessor> logger,
         QueueStorageProvider queueStorageProvider,
         Func<ReceiptRequest, ReceiptResponse, ftQueue, ftQueueItem, Task<(ReceiptResponse receiptResponse, List<ftActionJournal> actionJournals)>> processRequest,
-        string cashBoxIdentification,
+        Lazy<Task<string>> cashBoxIdentification,
         MiddlewareConfiguration configuration)
     {
         _logger = logger;
@@ -91,7 +91,7 @@ public class SignProcessor : ISignProcessor
             {
                 var queueItem = await _queueStorageProvider.ReserveNextQueueItem(receiptRequest);
                 queueItem.ftWorkMoment = DateTime.UtcNow;
-                var receiptResponse = CreateReceiptResponse(receiptRequest, queueItem);
+                var receiptResponse = CreateReceiptResponse(receiptRequest, queueItem, await _cashBoxIdentification.Value.ConfigureAwait(false));
                 receiptResponse.ftReceiptIdentification = $"ft{await _queueStorageProvider.GetReceiptNumerator():X}#";
                 List<ftActionJournal> countrySpecificActionJournals;
                 try
@@ -148,7 +148,7 @@ public class SignProcessor : ISignProcessor
         }
     }
 
-    private ReceiptResponse CreateReceiptResponse(ReceiptRequest receiptRequest, ftQueueItem queueItem)
+    private ReceiptResponse CreateReceiptResponse(ReceiptRequest receiptRequest, ftQueueItem queueItem, string cashBoxIdentification)
     {
         return new ReceiptResponse
         {
@@ -158,7 +158,7 @@ public class SignProcessor : ISignProcessor
             ftQueueRow = queueItem.ftQueueRow,
             cbTerminalID = receiptRequest.cbTerminalID,
             cbReceiptReference = receiptRequest.cbReceiptReference,
-            ftCashBoxIdentification = _cashBoxIdentification,
+            ftCashBoxIdentification = cashBoxIdentification,
             ftReceiptMoment = DateTime.UtcNow,
             ftState = (State) ((ulong) receiptRequest.ftReceiptCase & 0xFFFF_F000_0000_0000),
             ftReceiptIdentification = "",

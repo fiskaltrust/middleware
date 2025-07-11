@@ -16,7 +16,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
 
 public class ProtocolCommandProcessorPTTests
 {
-    private readonly ReceiptProcessor _sut = new(Mock.Of<ILogger<ReceiptProcessor>>(), null!, null!, null!, null!, new ProtocolCommandProcessorPT(Mock.Of<IPTSSCD>(), new ftQueuePT(), new ftSignaturCreationUnitPT(), Mock.Of<IMiddlewareQueueItemRepository>()));
+    private readonly ReceiptProcessor _sut = new(Mock.Of<ILogger<ReceiptProcessor>>(), null!, null!, null!, null!, new ProtocolCommandProcessorPT(Mock.Of<IPTSSCD>(), new ftQueuePT(), new ftSignaturCreationUnitPT(), new(() => Task.FromResult(Mock.Of<IMiddlewareQueueItemRepository>()))));
 
     [Theory]
     [InlineData(ReceiptCase.ProtocolUnspecified0x3000)]

@@ -3,6 +3,7 @@ using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Contracts.Constants;
 using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Localization.v2.Extensions;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
@@ -17,10 +18,10 @@ public interface IJournalProcessor
 
 public class JournalProcessor : IJournalProcessor
 {
-    private readonly IReadOnlyConfigurationRepository _configurationRepository;
-    private readonly IMiddlewareRepository<ftQueueItem> _queueItemRepository;
-    private readonly IMiddlewareRepository<ftReceiptJournal> _receiptJournalRepository;
-    private readonly IMiddlewareRepository<ftActionJournal> _actionJournalRepository;
+    private readonly Lazy<Task<IReadOnlyConfigurationRepository>> _configurationRepository;
+    private readonly Lazy<Task<IMiddlewareRepository<ftQueueItem>>> _queueItemRepository;
+    private readonly Lazy<Task<IMiddlewareRepository<ftReceiptJournal>>> _receiptJournalRepository;
+    private readonly Lazy<Task<IMiddlewareRepository<ftActionJournal>>> _actionJournalRepository;
     private readonly IJournalProcessor _marketSpecificJournalProcessor;
     private readonly ILogger<JournalProcessor> _logger;
     private readonly Dictionary<string, object> _configuration;
@@ -31,79 +32,89 @@ public class JournalProcessor : IJournalProcessor
         Dictionary<string, object> configuration,
         ILogger<JournalProcessor> logger)
     {
-        _configurationRepository = storageProvider.GetConfigurationRepository();
-        _queueItemRepository = storageProvider.GetMiddlewareQueueItemRepository();
-        _receiptJournalRepository = storageProvider.GetMiddlewareReceiptJournalRepository();
-        _actionJournalRepository = storageProvider.GetMiddlewareActionJournalRepository();
+        _configurationRepository = storageProvider.ConfigurationRepository.Cast<IConfigurationRepository, IReadOnlyConfigurationRepository>();
+        _queueItemRepository = storageProvider.MiddlewareQueueItemRepository.Cast<IMiddlewareQueueItemRepository, IMiddlewareRepository<ftQueueItem>>();
+        _receiptJournalRepository = storageProvider.MiddlewareReceiptJournalRepository.Cast<IMiddlewareReceiptJournalRepository, IMiddlewareRepository<ftReceiptJournal>>();
+        _actionJournalRepository = storageProvider.MiddlewareActionJournalRepository.Cast<IMiddlewareActionJournalRepository, IMiddlewareRepository<ftActionJournal>>();
         _marketSpecificJournalProcessor = marketSpecificJournalProcessor;
         _configuration = configuration;
         _logger = logger;
     }
 
-    public IAsyncEnumerable<JournalResponse> ProcessAsync(JournalRequest request)
+    public async IAsyncEnumerable<JournalResponse> ProcessAsync(JournalRequest request)
     {
+        IAsyncEnumerable<JournalResponse> responses;
+
         try
         {
             if ((0xFFFF000000000000 & (ulong) request.ftJournalType) != 0)
             {
-                return _marketSpecificJournalProcessor.ProcessAsync(request);
+                responses = _marketSpecificJournalProcessor.ProcessAsync(request);
             }
-
-            return request.ftJournalType switch
+            else
             {
-                (long) JournalTypes.ActionJournal => ToJournalResponseAsync(GetEntitiesAsync(_actionJournalRepository, request), request.MaxChunkSize),
-                (long) JournalTypes.ReceiptJournal => ToJournalResponseAsync(GetEntitiesAsync(_receiptJournalRepository, request), request.MaxChunkSize),
-                (long) JournalTypes.QueueItem => ToJournalResponseAsync(GetEntitiesAsync(_queueItemRepository, request), request.MaxChunkSize),
-                (long) JournalTypes.Configuration => new List<JournalResponse> {
-                new JournalResponse
+                responses = request.ftJournalType switch
                 {
-                    Chunk = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(GetConfiguration().Result)).ToList()
-                }
-            }.ToAsyncEnumerable(),
-                _ => new List<JournalResponse> {
+                    (long) JournalTypes.ActionJournal => ToJournalResponseAsync(GetEntitiesAsync(await _actionJournalRepository.Value, request), request.MaxChunkSize),
+                    (long) JournalTypes.ReceiptJournal => ToJournalResponseAsync(GetEntitiesAsync(await _receiptJournalRepository.Value, request), request.MaxChunkSize),
+                    (long) JournalTypes.QueueItem => ToJournalResponseAsync(GetEntitiesAsync(await _queueItemRepository.Value, request), request.MaxChunkSize),
+                    (long) JournalTypes.Configuration => new List<JournalResponse> {
                     new JournalResponse
                     {
-                        Chunk = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(new
-                            {
-                                Assembly = typeof(JournalProcessor).Assembly.GetName().FullName,
-                                typeof(JournalProcessor).Assembly.GetName().Version
-                            }
-                        )).ToList()
+                        Chunk = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(GetConfiguration().Result)).ToList()
                     }
-            }.ToAsyncEnumerable()
-            };
+                }.ToAsyncEnumerable(),
+                    _ => new List<JournalResponse> {
+                        new JournalResponse
+                        {
+                            Chunk = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(new
+                                {
+                                    Assembly = typeof(JournalProcessor).Assembly.GetName().FullName,
+                                    typeof(JournalProcessor).Assembly.GetName().Version
+                                }
+                            )).ToList()
+                        }
+                }.ToAsyncEnumerable()
+                };
+            }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "An error occured while processing the Journal request.");
             throw;
         }
+
+        await foreach (var response in responses)
+        {
+            yield return response;
+        }
     }
 
     private async Task<object> GetConfiguration()
     {
+        var configurationRepository = await _configurationRepository.Value;
         return new
         {
             Assembly = typeof(JournalProcessor).Assembly.GetName().FullName,
             typeof(JournalProcessor).Assembly.GetName().Version,
-            CashBoxList = await _configurationRepository.GetCashBoxListAsync().ConfigureAwait(false),
-            QueueList = await _configurationRepository.GetQueueListAsync().ConfigureAwait(false),
-            QueueATList = await _configurationRepository.GetQueueATListAsync().ConfigureAwait(false),
-            QueueDEList = await _configurationRepository.GetQueueDEListAsync().ConfigureAwait(false),
+            CashBoxList = await configurationRepository.GetCashBoxListAsync().ConfigureAwait(false),
+            QueueList = await configurationRepository.GetQueueListAsync().ConfigureAwait(false),
+            QueueATList = await configurationRepository.GetQueueATListAsync().ConfigureAwait(false),
+            QueueDEList = await configurationRepository.GetQueueDEListAsync().ConfigureAwait(false),
             QueueESList = GetConfigurationFromDictionary<ftQueueES>("init_ftQueueES"),
             QueueEUList = GetConfigurationFromDictionary<ftQueueES>("init_ftQueueEU"),
-            QueueFRList = await _configurationRepository.GetQueueFRListAsync().ConfigureAwait(false),
+            QueueFRList = await configurationRepository.GetQueueFRListAsync().ConfigureAwait(false),
             QueueGRList = GetConfigurationFromDictionary<ftQueueGR>("init_ftQueueGR"),
-            QueueITList = await _configurationRepository.GetQueueITListAsync().ConfigureAwait(false),
-            QueueMEList = await _configurationRepository.GetQueueMEListAsync().ConfigureAwait(false),
+            QueueITList = await configurationRepository.GetQueueITListAsync().ConfigureAwait(false),
+            QueueMEList = await configurationRepository.GetQueueMEListAsync().ConfigureAwait(false),
             QueuePTList = GetConfigurationFromDictionary<ftQueuePT>("init_ftQueuePT"),
-            SignaturCreationUnitATList = await _configurationRepository.GetSignaturCreationUnitATListAsync().ConfigureAwait(false),
-            SignaturCreationUnitDEList = await _configurationRepository.GetSignaturCreationUnitDEListAsync().ConfigureAwait(false),
+            SignaturCreationUnitATList = await configurationRepository.GetSignaturCreationUnitATListAsync().ConfigureAwait(false),
+            SignaturCreationUnitDEList = await configurationRepository.GetSignaturCreationUnitDEListAsync().ConfigureAwait(false),
             SignaturCreationUnitESList = GetConfigurationFromDictionary<ftSignaturCreationUnitES>("init_ftSignaturCreationUnitES"),
-            SignaturCreationUnitFRList = await _configurationRepository.GetSignaturCreationUnitFRListAsync().ConfigureAwait(false),
+            SignaturCreationUnitFRList = await configurationRepository.GetSignaturCreationUnitFRListAsync().ConfigureAwait(false),
             SignaturCreationUnitGRList = GetConfigurationFromDictionary<ftSignaturCreationUnitGR>("init_ftSignaturCreationUnitGR"),
-            SignaturCreationUnitITList = await _configurationRepository.GetSignaturCreationUnitITListAsync().ConfigureAwait(false),
-            SignaturCreationUnitMEList = await _configurationRepository.GetSignaturCreationUnitMEListAsync().ConfigureAwait(false),
+            SignaturCreationUnitITList = await configurationRepository.GetSignaturCreationUnitITListAsync().ConfigureAwait(false),
+            SignaturCreationUnitMEList = await configurationRepository.GetSignaturCreationUnitMEListAsync().ConfigureAwait(false),
             SignaturCreationUnitPTList = GetConfigurationFromDictionary<ftSignaturCreationUnitPT>("init_ftSignaturCreationUnitPT"),
         };
     }
