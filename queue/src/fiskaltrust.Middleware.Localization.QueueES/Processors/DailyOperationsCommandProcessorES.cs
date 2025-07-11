@@ -6,8 +6,6 @@ using fiskaltrust.Middleware.Localization.v2.Storage;
 using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.es;
-using fiskaltrust.Middleware.Localization.QueueES.Services;
-using fiskaltrust.Middleware.Localization.QueueES.Services.Interface;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.Processors;
 

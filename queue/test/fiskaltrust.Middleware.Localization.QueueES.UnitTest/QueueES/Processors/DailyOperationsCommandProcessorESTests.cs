@@ -11,8 +11,6 @@ using Moq;
 using fiskaltrust.Middleware.Localization.v2.Storage;
 using Microsoft.Extensions.Logging;
 using fiskaltrust.ifPOS.v2.es;
-using fiskaltrust.Middleware.Localization.QueueES.Services;
-using fiskaltrust.Middleware.Localization.QueueES.Services.Interface;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processors
 {

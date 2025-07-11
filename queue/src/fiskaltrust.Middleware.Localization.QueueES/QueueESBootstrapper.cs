@@ -5,8 +5,6 @@ using fiskaltrust.Middleware.Abstractions;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.QueueES.Models;
 using fiskaltrust.Middleware.Localization.QueueES.Processors;
-using fiskaltrust.Middleware.Localization.QueueES.Services;
-using fiskaltrust.Middleware.Localization.QueuePT.Processors;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Configuration;
 using fiskaltrust.Middleware.Localization.v2.Extensions;

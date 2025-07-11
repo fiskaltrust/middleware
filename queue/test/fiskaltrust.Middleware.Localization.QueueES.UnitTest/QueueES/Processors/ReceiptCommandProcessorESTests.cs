@@ -13,7 +13,6 @@ using fiskaltrust.Middleware.Localization.QueueES.Interface;
 using fiskaltrust.Middleware.Localization.QueueES.Models;
 using fiskaltrust.Middleware.Localization.QueueES.Models.Cases;
 using fiskaltrust.Middleware.Localization.QueueES.Processors;
-using fiskaltrust.Middleware.Localization.QueueES.Services.Interface;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Storage;

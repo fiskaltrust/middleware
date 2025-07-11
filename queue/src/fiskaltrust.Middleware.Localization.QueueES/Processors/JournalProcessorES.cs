@@ -10,7 +10,7 @@ using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 using Microsoft.Identity.Client;
 
-namespace fiskaltrust.Middleware.Localization.QueuePT.Processors;
+namespace fiskaltrust.Middleware.Localization.QueueES.Processors;
 
 public class JournalProcessorES : IJournalProcessor
 {

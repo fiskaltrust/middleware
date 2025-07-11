@@ -60,34 +60,4 @@ public class MasterDataService : IMasterDataService
             ? JsonConvert.DeserializeObject<MasterDataConfiguration>(_configuration[CONFIG_KEY].ToString()!)
             : null;
     }
-
-    public async Task PersistConfigurationAsync()
-    {
-        if (!_configuration.ContainsKey(CONFIG_KEY) || string.IsNullOrEmpty(_configuration[CONFIG_KEY]?.ToString()))
-        {
-            return;
-        }
-
-        var masterdata = JsonConvert.DeserializeObject<MasterDataConfiguration>(_configuration[CONFIG_KEY].ToString()!);
-        if (masterdata != null)
-        {
-            await (await _accountMasterDataRepository.Value).ClearAsync().ConfigureAwait(false);
-            await (await _accountMasterDataRepository.Value).CreateAsync(masterdata.Account).ConfigureAwait(false);
-
-            await (await _outletMasterDataRepository.Value).ClearAsync().ConfigureAwait(false);
-            await (await _outletMasterDataRepository.Value).CreateAsync(masterdata.Outlet).ConfigureAwait(false);
-
-            await (await _agencyMasterDataRepository.Value).ClearAsync().ConfigureAwait(false);
-            foreach (var agency in masterdata.Agencies ?? Enumerable.Empty<AgencyMasterData>())
-            {
-                await (await _agencyMasterDataRepository.Value).CreateAsync(agency).ConfigureAwait(false);
-            }
-
-            await (await _posSystemMasterDataRepository.Value).ClearAsync().ConfigureAwait(false);
-            foreach (var posSystem in masterdata.PosSystems ?? Enumerable.Empty<PosSystemMasterData>())
-            {
-                await (await _posSystemMasterDataRepository.Value).CreateAsync(posSystem).ConfigureAwait(false);
-            }
-        }
-    }
 }
