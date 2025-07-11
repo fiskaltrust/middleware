@@ -18,7 +18,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
 {
     public class DailyOperationsCommandProcessorESTests
     {
-        private readonly ReceiptProcessor _sut = new(Mock.Of<ILogger<ReceiptProcessor>>(), null!, null!, new DailyOperationsCommandProcessorES(Mock.Of<IESSSCDProvider>(), Mock.Of<IQueueStorageProvider>()), null!, null!);
+        private readonly ReceiptProcessor _sut = new(Mock.Of<ILogger<ReceiptProcessor>>(), null!, null!, new DailyOperationsCommandProcessorES(new(() => Task.FromResult(Mock.Of<IESSSCD>())), Mock.Of<IQueueStorageProvider>()), null!, null!);
 
         [Theory]
         [InlineData(ReceiptCase.ZeroReceipt0x2000)]

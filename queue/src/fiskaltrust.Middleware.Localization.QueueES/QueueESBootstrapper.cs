@@ -39,7 +39,18 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
 
         var cashBoxIdentification = new Lazy<Task<string>>(async () => (await (await storageProvider.ConfigurationRepository.Value).GetQueueESAsync(id)).CashBoxIdentification);
 
-        var essscdProvider = new ESSSCDProvider(clientFactory, storageProvider, id, queueESConfiguration);
+        var essscd = new Lazy<Task<IESSSCD>>(async () =>
+        {
+            var configurationRepository = await storageProvider.ConfigurationRepository.Value;
+            var queue = await configurationRepository.GetQueueESAsync(id);
+            var scu = await configurationRepository.GetSignaturCreationUnitESAsync(queue.ftSignaturCreationUnitESId);
+            return clientFactory.CreateClient(new ClientConfiguration
+            {
+                Timeout = queueESConfiguration.ScuTimeoutMs.HasValue ? TimeSpan.FromMilliseconds(queueESConfiguration.ScuTimeoutMs.Value) : TimeSpan.FromSeconds(15),
+                RetryCount = queueESConfiguration.ScuMaxRetries.HasValue ? queueESConfiguration.ScuMaxRetries.Value : null,
+                Url = scu.Url
+            });
+        });
 
         var signProcessorES = new ReceiptProcessor(
             loggerFactory.CreateLogger<ReceiptProcessor>(),
@@ -47,12 +58,12 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
                 queueStorageProvider
             ),
             new ReceiptCommandProcessorES(
-                essscdProvider,
+                essscd,
                 storageProvider.ConfigurationRepository,
                 storageProvider.MiddlewareQueueItemRepository.Cast<IMiddlewareQueueItemRepository, IReadOnlyQueueItemRepository>()
             ),
             new DailyOperationsCommandProcessorES(
-                essscdProvider,
+                essscd,
                 queueStorageProvider),
             new InvoiceCommandProcessorES(),
             new ProtocolCommandProcessorES()

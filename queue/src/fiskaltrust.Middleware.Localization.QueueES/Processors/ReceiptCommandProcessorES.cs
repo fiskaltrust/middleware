@@ -10,10 +10,10 @@ using fiskaltrust.Middleware.Localization.QueueES.Services.Interface;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.Processors;
 
-public class ReceiptCommandProcessorES(IESSSCDProvider essscdProvider, Lazy<Task<IConfigurationRepository>> configurationRepository, Lazy<Task<IReadOnlyQueueItemRepository>> queueItemRepository) : IReceiptCommandProcessor
+public class ReceiptCommandProcessorES(Lazy<Task<IESSSCD>> essscd, Lazy<Task<IConfigurationRepository>> configurationRepository, Lazy<Task<IReadOnlyQueueItemRepository>> queueItemRepository) : IReceiptCommandProcessor
 {
 #pragma warning disable
-    private readonly IESSSCDProvider _essscdProvider = essscdProvider;
+    private readonly Lazy<Task<IESSSCD>> _essscd = essscd;
     private readonly Lazy<Task<IConfigurationRepository>> _configurationRepository = configurationRepository;
     private readonly Lazy<Task<IReadOnlyQueueItemRepository>> _queueItemRepository = queueItemRepository;
 #pragma warning restore
@@ -38,7 +38,7 @@ public class ReceiptCommandProcessorES(IESSSCDProvider essscdProvider, Lazy<Task
             }
         }
 
-        var response = await (await _essscdProvider.GetAsync()).ProcessReceiptAsync(new ProcessRequest
+        var response = await (await _essscd.Value).ProcessReceiptAsync(new ProcessRequest
         {
             ReceiptRequest = request.ReceiptRequest,
             ReceiptResponse = request.ReceiptResponse,

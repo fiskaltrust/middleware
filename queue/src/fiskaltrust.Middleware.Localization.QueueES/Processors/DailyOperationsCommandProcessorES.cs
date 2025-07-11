@@ -11,10 +11,10 @@ using fiskaltrust.Middleware.Localization.QueueES.Services.Interface;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.Processors;
 
-public class DailyOperationsCommandProcessorES(IESSSCDProvider essscdProvider, IQueueStorageProvider queueStorageProvider) : IDailyOperationsCommandProcessor
+public class DailyOperationsCommandProcessorES(Lazy<Task<IESSSCD>> essscd, IQueueStorageProvider queueStorageProvider) : IDailyOperationsCommandProcessor
 {
 #pragma warning disable
-    private readonly IESSSCDProvider _essscdProvider = essscdProvider;
+    private readonly Lazy<Task<IESSSCD>> _essscd = essscd;
     private readonly IQueueStorageProvider _queueStorageProvider = queueStorageProvider;
 #pragma warning restore
 
