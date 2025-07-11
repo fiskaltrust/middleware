@@ -8,10 +8,10 @@ The fiskaltrust hexcodes follow a specific 64-bit structure for Greek localizati
 
 ```
 0x4752_2000_0000_0000
-  ^^^^                Country Code (GR = 0x4752)
-       ^^^^           Version (v2 = 0x2000)
-            ^^^^      Flags/Nature/Service Type
-                 ^^^^ Base Case
+  └┴┴┤ └┴┴┤ └┴┴┤ └┴┴┴ BaseCase
+     │    │    ╰───── Flags/Nature/Service Type
+     │    ╰────────── Version (v2 = 0x2000)
+     ╰─────────────── Country Code (GR = 0x4752)
 ```
 
 ### Country Code
