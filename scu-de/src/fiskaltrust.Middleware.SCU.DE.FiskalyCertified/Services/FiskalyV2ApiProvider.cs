@@ -143,7 +143,7 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
                 {"end_transaction_number", toTransactionNumber.ToString() }
             };
             var jsonPayload = JsonConvert.SerializeObject(metadata, new JsonSerializerSettings { DefaultValueHandling = DefaultValueHandling.Ignore });
-            var response = await _httpClient.SendAsync(new HttpMethod("PATCH"), $"tss/{tssId}/export/{exportId}/metadata",jsonPayload);
+            var response = await _httpClient.SendAsync(new HttpMethod("PATCH"), $"tss/{tssId}/export/{exportId}/metadata", jsonPayload);
             if (!response.IsSuccessStatusCode)
             {
                 var responseContent = await response.Content.ReadAsStringAsync();
@@ -193,22 +193,24 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
             return await GetExportByExportStateAsync(exportStateInformation);
         }
 
-        public async Task<Stream> StoreDownloadSplitResultAsync(Guid tssId, SplitExportStateData splitExportStateData, string tempPath)
+#nullable enable
+        public async Task<Stream?> StoreDownloadSplitResultAsync(Guid tssId, SplitExportStateData splitExportStateData)
         {
             var exportStateInformation = await WaitUntilExportFinished(tssId, splitExportStateData.ExportId);
             var stream = await GetExportByExportStateAsync(exportStateInformation);
-    
+
             if (exportStateInformation.State == "COMPLETED")
             {
                 splitExportStateData.ExportStateData.State = ExportState.Succeeded;
+                return stream;
             }
             else
             {
                 splitExportStateData.ExportStateData.State = ExportState.Failed;
+                return null;
             }
-    
-            return stream;
         }
+#nullable disable
 
         private async Task<ExportStateInformationDto> WaitUntilExportFinished(Guid tssId, Guid exportId)
         {
