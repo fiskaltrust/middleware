@@ -5,11 +5,11 @@ using System.Text;
 using System.Xml;
 using System.Xml.Linq;
 using System.Xml.Serialization;
-using fiskaltrust.Middleware.SCU.ES.Models;
+using fiskaltrust.Middleware.SCU.ES.VeriFactuModels;
 using fiskaltrust.Middleware.SCU.ES.VeriFactu;
 using fiskaltrust.Middleware.SCU.ES.VeriFactu.Helpers;
 
-namespace fiskaltrust.Middleware.SCU.ES.Soap;
+namespace fiskaltrust.Middleware.SCU.ES.VeriFactuSoap;
 
 public interface IClient
 {
@@ -42,7 +42,7 @@ public class Client : IClient
         var serializer = new XmlSerializer(typeof(Envelope<ResponseBody>));
         try
         {
-            content = (Envelope<ResponseBody>) serializer.Deserialize(contentSteam)!;
+            content = (Envelope<ResponseBody>)serializer.Deserialize(contentSteam)!;
         }
         catch (Exception ex)
         {

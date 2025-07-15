@@ -1,7 +1,7 @@
 ﻿using System.Security.Cryptography.X509Certificates;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
-using fiskaltrust.Middleware.SCU.ES.Models;
+using fiskaltrust.Middleware.SCU.ES.VeriFactuModels;
 using fiskaltrust.storage.V0.MasterData;
 using FluentAssertions;
 using FluentAssertions.Execution;
@@ -11,11 +11,11 @@ using System.Threading.Tasks;
 using System.IO;
 using System;
 using fiskaltrust.Middleware.SCU.ES.VeriFactu;
-using fiskaltrust.Middleware.SCU.ES.Soap;
+using fiskaltrust.Middleware.SCU.ES.VeriFactuSoap;
 using System.Net.Http;
 using System.Linq;
 
-namespace fiskaltrust.Middleware.SCU.ES.UnitTest
+namespace fiskaltrust.Middleware.SCU.ES.VeriFactuUnitTest
 {
     public class VeriFactuTest()
     {
@@ -39,7 +39,7 @@ namespace fiskaltrust.Middleware.SCU.ES.UnitTest
                 ftCashBoxIdentification = Guid.NewGuid().ToString(),
                 ftReceiptIdentification = $"0#0/{receiptRequest.cbReceiptReference}",
                 ftReceiptMoment = DateTime.UtcNow,
-                ftState = (State) 0x4752_2000_0000_0000,
+                ftState = (State)0x4752_2000_0000_0000,
             };
 
             var veriFactuMapping = new VeriFactuMapping(veriFactuSCUConfiguration);
@@ -93,7 +93,7 @@ namespace fiskaltrust.Middleware.SCU.ES.UnitTest
                 ftCashBoxIdentification = Guid.NewGuid().ToString(),
                 ftReceiptIdentification = $"0#0/{receiptRequest.cbReceiptReference}",
                 ftReceiptMoment = DateTime.UtcNow,
-                ftState = (State) 0x4752_2000_0000_0000,
+                ftState = (State)0x4752_2000_0000_0000,
             };
 
             var veriFactuMapping = new VeriFactuMapping(veriFactuSCUConfiguration);
@@ -130,7 +130,7 @@ namespace fiskaltrust.Middleware.SCU.ES.UnitTest
             return new ReceiptRequest
             {
                 ftCashBoxID = cashBoxId,
-                ftReceiptCase = (ReceiptCase) 0x4752_2000_0000_0000,
+                ftReceiptCase = (ReceiptCase)0x4752_2000_0000_0000,
                 cbTerminalID = "1",
                 cbReceiptReference = Guid.NewGuid().ToString(),
                 cbReceiptMoment = DateTime.UtcNow,
