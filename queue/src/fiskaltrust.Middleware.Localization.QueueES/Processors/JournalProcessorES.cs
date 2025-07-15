@@ -28,10 +28,5 @@ public class JournalProcessorES : IJournalProcessor
     public IAsyncEnumerable<JournalResponse> ProcessAsync(JournalRequest request)
     {
         throw new NotImplementedException();
-        // var veriFactu = await new VeriFactuMapping(await _masterDataService.GetCurrentDataAsync(), await _queueItemRepository).CreateRegFactuSistemaFacturacionAsync((await _receiptJournalRepository).GetEntriesOnOrAfterTimeStampAsync(0).SelectAwait(async x => await (await _queueItemRepository).GetAsync(x.ftQueueItemId)));
-        // yield return new JournalResponse
-        // {
-        //     Chunk = Encoding.UTF8.GetBytes(veriFactu.XmlSerialize()).ToList()
-        // };
     }
 }
