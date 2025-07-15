@@ -27,10 +27,9 @@ public class ScuBootstrapper : IMiddlewareBootstrapper
             var config = sp.GetRequiredService<VeriFactuSCUConfiguration>();
             var handler = new HttpClientHandler();
             handler.ClientCertificates.Add(config.Certificate);
-            //handler.ClientCertificates.Add((X509Certificate2)Configuration["Certificate"]);
             return handler;
         });
         services.AddScoped<IESSSCD, VeriFactuSCU>();
     }
-   
+
 }

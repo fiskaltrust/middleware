@@ -64,7 +64,7 @@
 				</annotation>
 			</element>
 			<element name="Operacion" type="sf:OperacionType"/>
-			<element name="RefExterna" type="sf:TextMax70Type" minOccurs="0"/>
+			<element name="RefExterna" type="sf:TextMax60Type" minOccurs="0"/>
 			<element name="EstadoRegistro" type="sfR:EstadoRegistroType">
 				<annotation>
 					<documentation xml:lang="es"> 

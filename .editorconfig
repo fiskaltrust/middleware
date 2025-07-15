@@ -242,7 +242,8 @@ dotnet_diagnostic.IDE0057.severity = suggestion
 dotnet_diagnostic.CA1014.severity = none
 dotnet_diagnostic.NU5104.severity = suggestion
 
-dotnet_diagnostic.IDE0040.severity = suggestion
+dotnet_diagnostic.IDE0040.severity = warning
+
 
 # Default severity for analyzer diagnostics with category 'Style'
 dotnet_analyzer_diagnostic.category-Style.severity = suggestion
