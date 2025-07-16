@@ -1,4 +1,6 @@
-﻿using System.Text;
+﻿using System.IO.Pipelines;
+using System.Net.Mime;
+using System.Text;
 using System.Text.Json;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.Synchronizer;
@@ -45,14 +47,12 @@ namespace fiskaltrust.Middleware.Localization.v2
             };
         }
 
-        public Func<string, Task<string>> RegisterForJournal()
+        public Func<string, Task<(ContentType, PipeReader)>> RegisterForJournal()
         {
             return async (message) =>
             {
                 var request = JsonSerializer.Deserialize<ifPOS.v2.JournalRequest>(message) ?? throw new ArgumentException($"Invalid message format. The body for the message {message} could not be serialized.");
-                var response = await _journalProcessor.ProcessAsync(request).ToListAsync();
-                var responsePayload = response.SelectMany(x => x.Chunk).ToArray();
-                return Encoding.UTF8.GetString(responsePayload);
+                return await _journalProcessor.ProcessAsync(request);
             };
         }
     }

@@ -7,13 +7,14 @@ namespace fiskaltrust.Middleware.Localization.v2.Interface;
 
 public interface IStorageProvider
 {
-    public Task Initialized { get; }
-    public AsyncLazy<IConfigurationRepository> CreateConfigurationRepository();
-    public AsyncLazy<IMiddlewareQueueItemRepository> CreateMiddlewareQueueItemRepository();
-    public AsyncLazy<IMiddlewareReceiptJournalRepository> CreateMiddlewareReceiptJournalRepository();
-    public AsyncLazy<IMiddlewareActionJournalRepository> CreateMiddlewareActionJournalRepository();
-    public AsyncLazy<IMasterDataRepository<AccountMasterData>> CreateAccountMasterDataRepository();
-    public AsyncLazy<IMasterDataRepository<OutletMasterData>> CreateOutletMasterDataRepository();
-    public AsyncLazy<IMasterDataRepository<PosSystemMasterData>> CreatePosSystemMasterDataRepository();
-    public AsyncLazy<IMasterDataRepository<AgencyMasterData>> CreateAgencyMasterDataRepository();
+    Task Initialized { get; }
+    AsyncLazy<IConfigurationRepository> CreateConfigurationRepository();
+    AsyncLazy<IMiddlewareQueueItemRepository> CreateMiddlewareQueueItemRepository();
+    AsyncLazy<IMiddlewareReceiptJournalRepository> CreateMiddlewareReceiptJournalRepository();
+    AsyncLazy<IMiddlewareActionJournalRepository> CreateMiddlewareActionJournalRepository();
+    AsyncLazy<IMiddlewareRepository<ftJournalES>> CreateMiddlewareJournalESRepository();
+    AsyncLazy<IMasterDataRepository<AccountMasterData>> CreateAccountMasterDataRepository();
+    AsyncLazy<IMasterDataRepository<OutletMasterData>> CreateOutletMasterDataRepository();
+    AsyncLazy<IMasterDataRepository<PosSystemMasterData>> CreatePosSystemMasterDataRepository();
+    AsyncLazy<IMasterDataRepository<AgencyMasterData>> CreateAgencyMasterDataRepository();
 }

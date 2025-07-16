@@ -8,6 +8,7 @@ using fiskaltrust.storage.V0.MasterData;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Xunit;
+using System.Text;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
 {
@@ -329,7 +330,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             }));
             Directory.CreateDirectory(folder);
             File.WriteAllBytes($"{folder}\\{casename}.receipt.pdf", await pdfdata.Content.ReadAsByteArrayAsync());
-            File.WriteAllText($"{folder}\\{casename}_aade.xml", xmlData);
+            File.WriteAllText($"{folder}\\{casename}_aade.xml", (xmlData.contentType.CharSet is null ? Encoding.Default : Encoding.GetEncoding(xmlData.contentType.CharSet!)).GetString((await xmlData.reader.ReadAsync()).Buffer));
         }
 
         private async Task<IssueResponse?> SendIssueAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)

@@ -8,7 +8,7 @@ public class AsyncLazy<T>
 
     public AsyncLazy(Func<Task<T>> value)
     {
-        _value = new Lazy<Task<T>>(value);
+        _value = new Lazy<Task<T>>(Task.Run(value));
     }
 
     public Task<T> Value => _value.Value;

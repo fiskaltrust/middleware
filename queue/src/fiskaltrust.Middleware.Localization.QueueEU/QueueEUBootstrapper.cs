@@ -13,6 +13,8 @@ using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 using Microsoft.Extensions.Logging;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
+using System.Net.Mime;
+using System.IO.Pipelines;
 
 namespace fiskaltrust.Middleware.Localization.QueueEU;
 
@@ -59,7 +61,7 @@ public class QueueEUBootstrapper : IV2QueueBootstrapper
         return _queue.RegisterForEcho();
     }
 
-    public Func<string, Task<string>> RegisterForJournal()
+    public Func<string, Task<(ContentType contentType, PipeReader reader)>> RegisterForJournal()
     {
         return _queue.RegisterForJournal();
     }

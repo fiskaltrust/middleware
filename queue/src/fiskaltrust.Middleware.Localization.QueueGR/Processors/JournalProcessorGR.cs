@@ -1,4 +1,7 @@
-﻿using System.Xml.Serialization;
+﻿using System.IO.Pipelines;
+using System.Net.Mime;
+using System.Text;
+using System.Xml.Serialization;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData;
 using fiskaltrust.Middleware.Localization.v2;
@@ -20,7 +23,7 @@ public class JournalProcessorGR : IJournalProcessor
         _masterDataConfiguration = masterDataConfiguration;
     }
 
-    public async IAsyncEnumerable<JournalResponse> ProcessAsync(JournalRequest request)
+    public async Task<(ContentType, PipeReader)> ProcessAsync(JournalRequest request)
     {
         var queueItems = new List<ftQueueItem>();
         if (request.From > 0)
@@ -34,17 +37,15 @@ public class JournalProcessorGR : IJournalProcessor
 
         var aadFactory = new AADEFactory(_masterDataConfiguration);
         using var memoryStream = new MemoryStream();
-        var invoiecDoc = aadFactory.MapToInvoicesDoc(queueItems.ToList());
+        var invoiceDoc = aadFactory.MapToInvoicesDoc(queueItems.ToList());
         if (request.To == -1)
         {
-            invoiecDoc.invoice = invoiecDoc.invoice.OrderByDescending(x => x.mark).Take(1).ToArray();
+            invoiceDoc.invoice = invoiceDoc.invoice.OrderByDescending(x => x.mark).Take(1).ToArray();
         }
         var xmlSerializer = new XmlSerializer(typeof(InvoicesDoc));
-        xmlSerializer.Serialize(memoryStream, invoiecDoc);
+        xmlSerializer.Serialize(memoryStream, invoiceDoc);
         memoryStream.Position = 0;
-        yield return new JournalResponse
-        {
-            Chunk = memoryStream.ToArray().ToList()
-        };
+
+        return (new ContentType(MediaTypeNames.Application.Xml), PipeReader.Create(memoryStream));
     }
 }

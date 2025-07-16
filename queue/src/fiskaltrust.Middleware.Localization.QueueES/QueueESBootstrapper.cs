@@ -1,4 +1,6 @@
-﻿using System.Text;
+﻿using System.IO.Pipelines;
+using System.Net.Mime;
+using System.Text;
 using System.Text.Json;
 using fiskaltrust.ifPOS.v2.es;
 using fiskaltrust.Middleware.Abstractions;
@@ -11,10 +13,7 @@ using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2.MasterData;
 using fiskaltrust.Middleware.Localization.v2.Storage;
-using fiskaltrust.Middleware.Storage;
-using fiskaltrust.Middleware.Storage.AzureTableStorage;
 using fiskaltrust.storage.V0;
-using fiskaltrust.storage.V0.MasterData;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -67,7 +66,7 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
             new ProtocolCommandProcessorES()
         );
         var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, signProcessorES.ProcessAsync, cashBoxIdentification, middlewareConfiguration);
-        var journalProcessor = new JournalProcessor(storageProvider, new JournalProcessorES(storageProvider.CreateMiddlewareReceiptJournalRepository(), storageProvider.CreateMiddlewareQueueItemRepository(), masterDataService), configuration, loggerFactory.CreateLogger<JournalProcessor>());
+        var journalProcessor = new JournalProcessor(storageProvider, new JournalProcessorES(loggerFactory.CreateLogger<JournalProcessorES>(), storageProvider.CreateMiddlewareJournalESRepository()), configuration, loggerFactory.CreateLogger<JournalProcessor>());
         _queue = new Queue(signProcessor, journalProcessor, loggerFactory)
         {
             Id = id,
@@ -85,7 +84,7 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
         return _queue.RegisterForEcho();
     }
 
-    public Func<string, Task<string>> RegisterForJournal()
+    public Func<string, Task<(ContentType contentType, PipeReader reader)>> RegisterForJournal()
     {
         return _queue.RegisterForJournal();
     }
