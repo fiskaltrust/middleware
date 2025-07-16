@@ -9,7 +9,6 @@ on:
           - ' '
           - fiskaltrust.Middleware.Storage.AzureTableStorage.AcceptanceTest
           - fiskaltrust.Middleware.Storage.EF.AcceptanceTest
-          - fiskaltrust.Middleware.Storage.EFCore.AcceptanceTest
           - fiskaltrust.Middleware.Storage.SQLite.AcceptanceTest
           - fiskaltrust.Middleware.Storage.MySQL.AcceptanceTest
           - fiskaltrust.Middleware.Storage.InMemory.AcceptanceTest
@@ -44,7 +43,6 @@ jobs:
         project:
           - fiskaltrust.Middleware.Storage.AzureTableStorage.AcceptanceTest
           - fiskaltrust.Middleware.Storage.EF.AcceptanceTest
-          - fiskaltrust.Middleware.Storage.EFCore.AcceptanceTest
           - fiskaltrust.Middleware.Storage.SQLite.AcceptanceTest
           - fiskaltrust.Middleware.Storage.MySQL.AcceptanceTest
           - fiskaltrust.Middleware.Storage.InMemory.AcceptanceTest
@@ -62,7 +60,6 @@ jobs:
           pattern: ${{ matrix.project }}
         env:
           CONNECTIONSTRING_AZURE_STORAGE_TESTS: ${{ secrets.CONNECTIONSTRING_AZURE_STORAGE_TESTS }}
-          CONNECTIONSTRING_POSTGRESQL_TESTS: ${{ secrets.CONNECTIONSTRING_POSTGRESQL_TESTS }}
           CONNECTIONSTRING_MYSQL_TESTS: ${{ secrets.CONNECTIONSTRING_MYSQL_TESTS }}
 
   queue-acceptance-test:
