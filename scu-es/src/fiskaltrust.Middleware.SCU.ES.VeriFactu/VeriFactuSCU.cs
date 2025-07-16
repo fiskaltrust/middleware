@@ -141,4 +141,5 @@ public class VeriFactuSCU : IESSSCD
     }
 
     public Task<ESSSCDInfo> GetInfoAsync() => throw new NotImplementedException();
+    public async Task<EchoResponse> EchoAsync(EchoRequest echoRequest) => await Task.FromResult(new EchoResponse { Message = echoRequest.Message }).ConfigureAwait(false);
 }
