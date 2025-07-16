@@ -3,6 +3,7 @@ using System.IO.Pipelines;
 using System.Net.Mime;
 using System.Text;
 using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Contracts.Constants;
 using fiskaltrust.Middleware.Contracts.Interfaces;
 using fiskaltrust.Middleware.Contracts.Repositories;
@@ -51,7 +52,7 @@ public class JournalProcessor : IJournalProcessor
 
         try
         {
-            if ((0xFFFF000000000000 & (ulong) request.ftJournalType) != 0)
+            if (request.ftJournalType.Case() != 0)
             {
                 (contentType, response) = await _marketSpecificJournalProcessor.ProcessAsync(request);
             }
@@ -61,10 +62,10 @@ public class JournalProcessor : IJournalProcessor
 
                 response = request.ftJournalType switch
                 {
-                    (long) JournalTypes.ActionJournal => ToJournalResponse(GetEntitiesAsync(await _actionJournalRepository, request)),
-                    (long) JournalTypes.ReceiptJournal => ToJournalResponse(GetEntitiesAsync(await _receiptJournalRepository, request)),
-                    (long) JournalTypes.QueueItem => ToJournalResponse(GetEntitiesAsync(await _queueItemRepository, request)),
-                    (long) JournalTypes.Configuration => PipeReader.Create(new ReadOnlySequence<byte>(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(await GetConfigurationAsync())))),
+                    JournalType.ActionJournal => ToJournalResponse(GetEntitiesAsync(await _actionJournalRepository, request)),
+                    JournalType.ReceiptJournal => ToJournalResponse(GetEntitiesAsync(await _receiptJournalRepository, request)),
+                    JournalType.QueueItem => ToJournalResponse(GetEntitiesAsync(await _queueItemRepository, request)),
+                    JournalType.Configuration => PipeReader.Create(new ReadOnlySequence<byte>(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(await GetConfigurationAsync())))),
                     _ => PipeReader.Create(new ReadOnlySequence<byte>(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(new
                     {
                         Assembly = typeof(JournalProcessor).Assembly.GetName().FullName,
@@ -159,17 +160,17 @@ public class JournalProcessor : IJournalProcessor
 
     private IAsyncEnumerable<T> GetEntitiesAsync<T>(IMiddlewareRepository<T> repository, JournalRequest request)
     {
-        if (request.To < 0)
+        if (request.Take.HasValue)
         {
-            return repository.GetEntriesOnOrAfterTimeStampAsync(request.From, take: (int) -request.To);
+            return repository.GetEntriesOnOrAfterTimeStampAsync(request.From?.Ticks ?? 0, take: (int) -request.Take.Value);
         }
-        else if (request.To == 0)
+        else if (request.To is null)
         {
-            return repository.GetEntriesOnOrAfterTimeStampAsync(request.From);
+            return repository.GetEntriesOnOrAfterTimeStampAsync(request.From?.Ticks ?? 0);
         }
         else
         {
-            return repository.GetByTimeStampRangeAsync(request.From, request.To);
+            return repository.GetByTimeStampRangeAsync(request.From?.Ticks ?? 0, request.To?.Ticks ?? 0);
         }
     }
 }

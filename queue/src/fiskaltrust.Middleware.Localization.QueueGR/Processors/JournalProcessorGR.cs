@@ -26,9 +26,9 @@ public class JournalProcessorGR : IJournalProcessor
     public async Task<(ContentType, PipeReader)> ProcessAsync(JournalRequest request)
     {
         var queueItems = new List<ftQueueItem>();
-        if (request.From > 0)
+        if (request.From.HasValue && request.From.Value.Ticks > 0)
         {
-            queueItems = ((await _storageProvider.CreateMiddlewareQueueItemRepository()).GetEntriesOnOrAfterTimeStampAsync(request.From).ToBlockingEnumerable()).ToList();
+            queueItems = ((await _storageProvider.CreateMiddlewareQueueItemRepository()).GetEntriesOnOrAfterTimeStampAsync(request.From.Value.Ticks).ToBlockingEnumerable()).ToList();
         }
         else
         {
@@ -38,9 +38,9 @@ public class JournalProcessorGR : IJournalProcessor
         var aadFactory = new AADEFactory(_masterDataConfiguration);
         using var memoryStream = new MemoryStream();
         var invoiceDoc = aadFactory.MapToInvoicesDoc(queueItems.ToList());
-        if (request.To == -1)
+        if (request.Take.HasValue)
         {
-            invoiceDoc.invoice = invoiceDoc.invoice.OrderByDescending(x => x.mark).Take(1).ToArray();
+            invoiceDoc.invoice = invoiceDoc.invoice.OrderBy(x => x.mark * Math.Sign(request.Take.Value)).Take((int) request.Take.Value).ToArray();
         }
         var xmlSerializer = new XmlSerializer(typeof(InvoicesDoc));
         xmlSerializer.Serialize(memoryStream, invoiceDoc);
