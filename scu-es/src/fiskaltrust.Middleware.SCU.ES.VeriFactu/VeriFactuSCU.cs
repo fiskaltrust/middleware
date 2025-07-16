@@ -8,9 +8,9 @@ using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.es;
 using fiskaltrust.ifPOS.v2.es.Cases;
-using fiskaltrust.Middleware.SCU.ES.Helpers;
-using fiskaltrust.Middleware.SCU.ES.Models;
-using fiskaltrust.Middleware.SCU.ES.Soap;
+using fiskaltrust.Middleware.SCU.ES.VeriFactuHelpers;
+using fiskaltrust.Middleware.SCU.ES.VeriFactuModels;
+using fiskaltrust.Middleware.SCU.ES.VeriFactuSoap;
 using fiskaltrust.Middleware.SCU.ES.VeriFactu;
 using fiskaltrust.Middleware.SCU.ES.VeriFactu.Helpers;
 
