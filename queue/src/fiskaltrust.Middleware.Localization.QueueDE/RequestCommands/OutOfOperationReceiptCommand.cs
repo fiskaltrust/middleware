@@ -36,12 +36,6 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             ThrowIfNoImplicitFlow(request);
             ThrowIfTraining(request);
 
-
-            if (!request.IsTseTarDownloadBypass())
-            {
-                await PerformTarFileExportAsync(queueItem, queue, queueDE, erase: true).ConfigureAwait(false);
-            }
-
             var (processType, payload) = _transactionPayloadFactory.CreateReceiptPayload(request);
             var receiptResponse = CreateReceiptResponse(request, queueItem, queueDE);
 
@@ -56,7 +50,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
             try
             {
-                (var returnedTransactionNumber, var returnedSignatures, var clientId, var signatureAlgorithm, var publicKeyBase64, var returnedSerialnumberOctet) = await ProcessOutOfOperationReceiptAsync(request.cbReceiptReference, processType, payload, queueItem, queueDE, request.IsModifyClientIdOnlyRequest()).ConfigureAwait(false);
+                (var returnedTransactionNumber, var returnedSignatures, var clientId, var signatureAlgorithm, var publicKeyBase64, var returnedSerialnumberOctet) = await ProcessOutOfOperationReceiptAsync(request.cbReceiptReference, processType, payload, queueItem, queue, queueDE, request.IsModifyClientIdOnlyRequest(), !request.IsTseTarDownloadBypass()).ConfigureAwait(false);
                 signatures = returnedSignatures;
                 transactionNumber = returnedTransactionNumber;
                 serialnumberOctet = returnedSerialnumberOctet;
