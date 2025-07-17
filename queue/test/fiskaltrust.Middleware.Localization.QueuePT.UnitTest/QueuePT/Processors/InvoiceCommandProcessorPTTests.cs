@@ -8,14 +8,14 @@ using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
 using Moq;
 using fiskaltrust.Middleware.Contracts.Repositories;
-using fiskaltrust.Middleware.Storage.PT;
 using Microsoft.Extensions.Logging;
+using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processors;
 
 public class InvoiceCommandProcessorPTTests
 {
-    private readonly ReceiptProcessor _sut = new(Mock.Of<ILogger<ReceiptProcessor>>(), null!, null!, null!, new InvoiceCommandProcessorPT(Mock.Of<IPTSSCD>(), new ftQueuePT(), new ftSignaturCreationUnitPT(), Mock.Of<IMiddlewareQueueItemRepository>()), null!);
+    private readonly ReceiptProcessor _sut = new(Mock.Of<ILogger<ReceiptProcessor>>(), null!, null!, null!, new InvoiceCommandProcessorPT(Mock.Of<IPTSSCD>(), new ftQueuePT(), new ftSignaturCreationUnitPT(), new(() => Task.FromResult(Mock.Of<IMiddlewareQueueItemRepository>()))), null!);
 
     [Theory]
     [InlineData(ReceiptCase.InvoiceUnknown0x1000)]

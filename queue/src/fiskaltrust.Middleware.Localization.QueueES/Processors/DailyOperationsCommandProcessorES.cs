@@ -1,19 +1,19 @@
-﻿using fiskaltrust.Middleware.Localization.QueueES.Interface;
-using fiskaltrust.Middleware.Localization.v2.Interface;
+﻿using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.storage.V0;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.v2.Storage;
-using fiskaltrust.Middleware.Localization.QueueES.ESSSCD;
 using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.es;
+using fiskaltrust.Middleware.Localization.v2.Helpers;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.Processors;
 
-public class DailyOperationsCommandProcessorES(IESSSCD sscd, IQueueStorageProvider queueStorageProvider) : IDailyOperationsCommandProcessor
+public class DailyOperationsCommandProcessorES(AsyncLazy<IESSSCD> essscd, IQueueStorageProvider queueStorageProvider) : IDailyOperationsCommandProcessor
 {
 #pragma warning disable
-    private readonly IESSSCD _sscd = sscd;
+    private readonly AsyncLazy<IESSSCD> _essscd = essscd;
     private readonly IQueueStorageProvider _queueStorageProvider = queueStorageProvider;
 #pragma warning restore
 

@@ -5,7 +5,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.TableEntities.Configu
     public class AzureTableStorageFtQueueES : BaseTableEntity
     {
         public Guid ftQueueESId { get; set; }
-        public Guid? ftSignaturCreationUnitESId { get; set; }
+        public Guid ftSignaturCreationUnitESId { get; set; }
         public string LastHash { get; set; }
         public string CashBoxIdentification { get; set; }
 

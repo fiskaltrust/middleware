@@ -60,7 +60,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
         {
             var signProcessor = _fixture.CreateSignProcessorForSignProcessorDE(false);
             var receiptRequest = _receiptTests.GetReceipt("StartTransactionReceipt", "FailExpliOpenTransExists", 0x4445000000000001);
-            
+
             var receiptResponse = await signProcessor.ProcessAsync(receiptRequest);
             var actionMessage = string.Format("QueueId {0} was not activated or already deactivated", _fixture.QUEUEID);
             await ReceiptTestResults.IsResponseValidAsync(_fixture, receiptResponse, receiptRequest, actionMessage
@@ -69,11 +69,10 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
         [Fact]
         public async Task QueueAktiv_DisabledScuReceiptRequest_ValidResult()
         {
-            var signProcessor = _fixture.CreateSignProcessorForSignProcessorDE(false, DateTime.Now.AddHours(-1),null, null,
-            false, false, false, false, true);
+            var signProcessor = _fixture.CreateSignProcessorForSignProcessorDE(false, DateTime.Now.AddHours(-1), openTrans: new ulong[] { 1, 2 }, queueDECreationUnitIsNull: true);
             var receiptRequest = _receiptTests.GetReceipt("StartTransactionReceipt", "DisabledScuReceiptRequest", 0x4445000000000001);
             var receiptResponse = await signProcessor.ProcessAsync(receiptRequest);
-            await ReceiptTestResults.IsResponseValidAsync(_fixture, receiptResponse, receiptRequest, "SCU switching process initiated, but not yet finished.", 
+            await ReceiptTestResults.IsResponseValidAsync(_fixture, receiptResponse, receiptRequest, "SCU switching process initiated, but not yet finished.",
                 0x4445000000000100, 0, false).ConfigureAwait(false);
         }
         private async Task ProcessAsyncQueueFailedModeAsync(ReceiptRequest receiptRequest)

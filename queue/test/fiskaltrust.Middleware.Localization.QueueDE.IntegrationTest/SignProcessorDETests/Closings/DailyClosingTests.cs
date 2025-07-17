@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Models;
@@ -74,6 +76,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
                 ProcessingVersion = "test"
             };
 
+            _fixture.InMemorySCU.OpenTans = (await _fixture.openTransactionRepository.GetAsync()).Select(x => (ulong) x.TransactionNumber);
 
             var tarFileCleanupService = new TarFileCleanupService(Mock.Of<ILogger<TarFileCleanupService>>(), journalRepositoryMock.Object, config, QueueDEConfiguration.FromMiddlewareConfiguration(Mock.Of<ILogger<QueueDEConfiguration>>(), config));
             var sut = RequestCommandFactoryHelper.ConstructSignProcessor(Mock.Of<ILogger<SignProcessorDE>>(), _fixture.CreateConfigurationRepository(), journalRepositoryMock.Object, actionJournalRepositoryMock.Object,
@@ -89,16 +92,69 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
         }
 
         [Fact]
+        public async Task SignProcessor_DailyClosingReceipt_ShouldFinishAllOpenTransactionsAndCloseTheOnesNotOpenOnTse()
+        {
+            var receiptRequest = JsonConvert.DeserializeObject<ReceiptRequest>(File.ReadAllText(Path.Combine("Data", "DailyClosingReceipt", "Request.json")));
+            var expectedResponse = JsonConvert.DeserializeObject<ReceiptResponse>(File.ReadAllText(Path.Combine("Data", "DailyClosingReceipt", "Response.json")));
+
+            var queueItem = new ftQueueItem
+            {
+                cbReceiptMoment = receiptRequest.cbReceiptMoment,
+                cbReceiptReference = receiptRequest.cbReceiptReference,
+                cbTerminalID = receiptRequest.cbTerminalID,
+                country = "DE",
+                ftQueueId = Guid.Parse(receiptRequest.ftQueueID),
+                ftQueueItemId = Guid.Parse(expectedResponse.ftQueueItemID),
+                ftQueueRow = expectedResponse.ftQueueRow,
+                request = JsonConvert.SerializeObject(receiptRequest),
+                requestHash = "test request hash"
+            };
+            var queue = new ftQueue
+            {
+                ftQueueId = Guid.Parse(receiptRequest.ftQueueID),
+                StartMoment = DateTime.UtcNow
+            };
+
+            await AddOpenOrdersAsync();
+
+            var journalRepositoryMock = new Mock<InMemoryJournalDERepository>()
+            {
+                CallBase = true
+            };
+            journalRepositoryMock.Setup(x => x.InsertAsync(It.IsAny<ftJournalDE>())).CallBase().Verifiable();
+            var actionJournalRepositoryMock = new Mock<IMiddlewareActionJournalRepository>(MockBehavior.Strict);
+            var config = new MiddlewareConfiguration
+            {
+                Configuration = new Dictionary<string, object>(),
+                QueueId = queue.ftQueueId,
+                ServiceFolder = Directory.GetCurrentDirectory(),
+                ProcessingVersion = "test"
+            };
+
+            var tarFileCleanupService = new TarFileCleanupService(Mock.Of<ILogger<TarFileCleanupService>>(), journalRepositoryMock.Object, config, QueueDEConfiguration.FromMiddlewareConfiguration(Mock.Of<ILogger<QueueDEConfiguration>>(), config));
+            var sut = RequestCommandFactoryHelper.ConstructSignProcessor(Mock.Of<ILogger<SignProcessorDE>>(), _fixture.CreateConfigurationRepository(), journalRepositoryMock.Object, actionJournalRepositoryMock.Object,
+                _fixture.DeSSCDProvider, new DSFinVKTransactionPayloadFactory(Mock.Of<ILogger<DSFinVKTransactionPayloadFactory>>()), new InMemoryFailedFinishTransactionRepository(), new InMemoryFailedStartTransactionRepository(),
+                _fixture.openTransactionRepository, Mock.Of<IMasterDataService>(), config, _fixture.queueItemRepository, new SignatureFactoryDE(QueueDEConfiguration.FromMiddlewareConfiguration(Mock.Of<ILogger<QueueDEConfiguration>>(), config)), tarFileCleanupService);
+
+            var transactionsToRemove = (await _fixture.openTransactionRepository.GetAsync()).Select(x => $"Removed open transaction {x.TransactionNumber} from the database, which was not open on the TSE anymore.").ToArray();
+            var (receiptResponse, actionJournals) = await sut.ProcessAsync(receiptRequest, queue, queueItem);
+
+            actionJournals.Select(x => x.Message).Should().ContainInOrder(transactionsToRemove);
+            receiptResponse.Should().BeEquivalentTo(expectedResponse, x => x.Excluding(x => x.ftReceiptMoment).Excluding(x => x.ftSignatures));
+            (await _fixture.openTransactionRepository.GetAsync()).Should().BeEmpty();
+            journalRepositoryMock.Verify();
+        }
+
+        [Fact]
         public async Task SignProcessor_DailyClosingReceipt_ShouldFinishAllOpenTransactionsThatAreNotOnTse()
         {
-            var signProcessor = _fixture.CreateSignProcessorForSignProcessorDE(false, DateTime.Now.AddHours(-1), null, null, false, true);
+            var signProcessor = _fixture.CreateSignProcessorForSignProcessorDE(false, DateTime.Now.AddHours(-1), openTrans: new ulong[] { 1, 2 });
             await AddOpenOrdersAsync();
             var receiptRequest = TestObjectFactory.GetReceipt(Path.Combine("Data", "DailyClosingReceipt"));
             receiptRequest.ftReceiptCase = 0x4445000120000007;
             var response = await signProcessor.ProcessAsync(receiptRequest);
             (await _fixture.openTransactionRepository.GetAsync()).Should().BeEmpty();
             await ReceiptTestResults.IsResponseValidAsync(_fixture, response, receiptRequest, "Removed open transaction 3 from the database, which was not open on the TSE anymore.");
-
         }
         [Fact]
         public async Task DailyClosing_MasterDataChange_CheckAccountOutlet() => await _closingTests.ClosingTests_MasterDataChange_CheckAccountOutlet("DailyClosingReceipt", $"Daily-Closing receipt was processed, and a master data update was performed.", 0x4445000108000007).ConfigureAwait(false);
@@ -112,7 +168,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             await AddOpenOrdersAsync();
             var receiptRequest = TestObjectFactory.GetReceipt(Path.Combine("Data", "DailyClosingReceipt"));
             receiptRequest.ftReceiptCase = 0x4445000110000007;
-            var signProcessor = _fixture.CreateSignProcessorForSignProcessorDE(false, DateTime.Now.AddHours(-1), null, null, false, true);
+            var signProcessor = _fixture.CreateSignProcessorForSignProcessorDE(false, DateTime.Now.AddHours(-1), openTrans: new ulong[] { 1, 2 });
             var response = signProcessor.ProcessAsync(receiptRequest).Result;
             var isFailedMode = (response.ftState & 0x0000_0000_0000_0002) > 0x0000;
             isFailedMode.Should().BeTrue();

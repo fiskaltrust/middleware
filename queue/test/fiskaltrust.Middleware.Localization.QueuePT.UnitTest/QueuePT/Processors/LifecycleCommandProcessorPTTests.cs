@@ -18,7 +18,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processor
 
 public class LifecycleCommandProcessorPTTests
 {
-    private readonly ReceiptProcessor _sut = new(Mock.Of<ILogger<ReceiptProcessor>>(), new LifecycleCommandProcessorPT(Mock.Of<IConfigurationRepository>()), null!, null!, null!, null!);
+    private readonly ReceiptProcessor _sut = new(Mock.Of<ILogger<ReceiptProcessor>>(), new LifecycleCommandProcessorPT(new(() => Task.FromResult(Mock.Of<IConfigurationRepository>()))), null!, null!, null!, null!);
 
     [Theory]
     [InlineData(ReceiptCase.InitialOperationReceipt0x4001)]
@@ -85,7 +85,7 @@ public class LifecycleCommandProcessorPTTests
 
         var configMock = new Mock<IConfigurationRepository>();
         configMock.Setup(x => x.InsertOrUpdateQueueAsync(It.IsAny<ftQueue>())).Returns(Task.CompletedTask);
-        var sut = new LifecycleCommandProcessorPT(configMock.Object);
+        var sut = new LifecycleCommandProcessorPT(new(() => Task.FromResult(configMock.Object)));
 
         var receiptRequest = new ReceiptRequest
         {
@@ -168,7 +168,7 @@ public class LifecycleCommandProcessorPTTests
 
         var configMock = new Mock<IConfigurationRepository>();
         configMock.Setup(x => x.InsertOrUpdateQueueAsync(It.IsAny<ftQueue>())).Returns(Task.CompletedTask);
-        var sut = new LifecycleCommandProcessorPT(configMock.Object);
+        var sut = new LifecycleCommandProcessorPT(new(() => Task.FromResult(configMock.Object)));
 
         var receiptRequest = new ReceiptRequest
         {
@@ -248,7 +248,7 @@ public class LifecycleCommandProcessorPTTests
 
         var configMock = new Mock<IConfigurationRepository>();
         configMock.Setup(x => x.InsertOrUpdateQueueAsync(It.IsAny<ftQueue>())).Returns(Task.CompletedTask);
-        var sut = new LifecycleCommandProcessorPT(configMock.Object);
+        var sut = new LifecycleCommandProcessorPT(new(() => Task.FromResult(configMock.Object)));
 
         var receiptRequest = new ReceiptRequest
         {
@@ -282,7 +282,7 @@ public class LifecycleCommandProcessorPTTests
 
         var configMock = new Mock<IConfigurationRepository>();
         configMock.Setup(x => x.InsertOrUpdateQueueAsync(It.IsAny<ftQueue>())).Returns(Task.CompletedTask);
-        var sut = new LifecycleCommandProcessorPT(configMock.Object);
+        var sut = new LifecycleCommandProcessorPT(new(() => Task.FromResult(configMock.Object)));
 
         var receiptRequest = new ReceiptRequest
         {

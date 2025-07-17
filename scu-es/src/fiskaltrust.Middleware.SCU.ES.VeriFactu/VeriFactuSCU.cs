@@ -8,13 +8,11 @@ using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.es;
 using fiskaltrust.ifPOS.v2.es.Cases;
-using fiskaltrust.Middleware.SCU.ES.Helpers;
-using fiskaltrust.Middleware.SCU.ES.Models;
-using fiskaltrust.Middleware.SCU.ES.Soap;
+using fiskaltrust.Middleware.SCU.ES.VeriFactuHelpers;
+using fiskaltrust.Middleware.SCU.ES.VeriFactuModels;
+using fiskaltrust.Middleware.SCU.ES.VeriFactuSoap;
 using fiskaltrust.Middleware.SCU.ES.VeriFactu;
 using fiskaltrust.Middleware.SCU.ES.VeriFactu.Helpers;
-using fiskaltrust.storage.V0;
-using fiskaltrust.storage.V0.MasterData;
 
 namespace fiskaltrust.Middleware.SCU.ES.VeriFactu;
 
@@ -24,10 +22,10 @@ public class VeriFactuSCU : IESSSCD
     private readonly IClient _client;
     private readonly VeriFactuMapping _veriFactuMapping;
 
-    public VeriFactuSCU(IClient client, MasterDataConfiguration masterData, VeriFactuSCUConfiguration configuration)
+    public VeriFactuSCU(IClient client, VeriFactuSCUConfiguration configuration)
     {
         _configuration = configuration;
-        _veriFactuMapping = new VeriFactuMapping(masterData, configuration.Certificate);
+        _veriFactuMapping = new VeriFactuMapping(configuration);
         _client = client;
     }
 
@@ -143,4 +141,5 @@ public class VeriFactuSCU : IESSSCD
     }
 
     public Task<ESSSCDInfo> GetInfoAsync() => throw new NotImplementedException();
+    public async Task<EchoResponse> EchoAsync(EchoRequest echoRequest) => await Task.FromResult(new EchoResponse { Message = echoRequest.Message }).ConfigureAwait(false);
 }

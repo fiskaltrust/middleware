@@ -25,11 +25,11 @@ public class JournalProcessorGR : IJournalProcessor
         var queueItems = new List<ftQueueItem>();
         if (request.From > 0)
         {
-            queueItems = (_storageProvider.GetMiddlewareQueueItemRepository().GetEntriesOnOrAfterTimeStampAsync(request.From).ToBlockingEnumerable()).ToList();
+            queueItems = ((await _storageProvider.CreateMiddlewareQueueItemRepository()).GetEntriesOnOrAfterTimeStampAsync(request.From).ToBlockingEnumerable()).ToList();
         }
         else
         {
-            queueItems = (await _storageProvider.GetMiddlewareQueueItemRepository().GetAsync()).ToList();
+            queueItems = (await (await _storageProvider.CreateMiddlewareQueueItemRepository()).GetAsync()).ToList();
         }
 
         var aadFactory = new AADEFactory(_masterDataConfiguration);

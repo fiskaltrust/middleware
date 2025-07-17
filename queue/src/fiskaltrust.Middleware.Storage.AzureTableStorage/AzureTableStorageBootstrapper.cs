@@ -22,6 +22,7 @@ using fiskaltrust.storage.V0.MasterData;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using fiskaltrust.storage.encryption.V0;
+using System.Linq;
 
 namespace fiskaltrust.Middleware.Storage.AzureTableStorage
 {
@@ -99,10 +100,14 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage
             _configurationRepository = new AzureTableStorageConfigurationRepository(_queueConfiguration, _tableServiceClient);
             var baseStorageConfig = ParseStorageConfiguration(_configuration);
 
-            await PersistMasterDataAsync(baseStorageConfig, _configurationRepository,
-                new AzureTableStorageAccountMasterDataRepository(_queueConfiguration, _tableServiceClient), new AzureTableStorageOutletMasterDataRepository(_queueConfiguration, _tableServiceClient),
-                new AzureTableStorageAgencyMasterDataRepository(_queueConfiguration, _tableServiceClient), new AzureTableStoragePosSystemMasterDataRepository(_queueConfiguration, _tableServiceClient)).ConfigureAwait(false);
-            await PersistConfigurationAsync(baseStorageConfig, _configurationRepository, _logger).ConfigureAwait(false);
+            var cashBoxes = (await _configurationRepository.GetCashBoxListAsync().ConfigureAwait(false)).ToList();
+            if (cashBoxes.Count == 0)
+            {
+                await ForcePersistMasterDataAsync(baseStorageConfig, new AzureTableStorageAccountMasterDataRepository(_queueConfiguration, _tableServiceClient), new AzureTableStorageOutletMasterDataRepository(_queueConfiguration, _tableServiceClient), new AzureTableStorageAgencyMasterDataRepository(_queueConfiguration, _tableServiceClient), new AzureTableStoragePosSystemMasterDataRepository(_queueConfiguration, _tableServiceClient)).ConfigureAwait(false);
+            }
+
+            var dbCashBox = cashBoxes.FirstOrDefault(x => x.ftCashBoxId == baseStorageConfig.CashBox.ftCashBoxId);
+            await PersistConfigurationParallelAsync(baseStorageConfig, dbCashBox, _configurationRepository, _logger).ConfigureAwait(false);
         }
 
         private void AddRepositories(IServiceCollection services)
@@ -112,9 +117,9 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage
             services.AddSingleton(_blobServiceClient);
 
             services.AddSingleton<IConfigurationRepository>(_configurationRepository);
-            services.AddSingleton<storage.V0.IConfigurationRepository>(_configurationRepository);
+            services.AddSingleton<IConfigurationRepository>(_configurationRepository);
             services.AddSingleton<IReadOnlyConfigurationRepository>(_configurationRepository);
-            services.AddSingleton<storage.V0.IReadOnlyConfigurationRepository>(_configurationRepository);
+            services.AddSingleton<IReadOnlyConfigurationRepository>(_configurationRepository);
 
             services.AddSingleton<IQueueItemRepository, AzureTableStorageQueueItemRepository>();
             services.AddScoped<IMiddlewareQueueItemRepository, AzureTableStorageQueueItemRepository>();

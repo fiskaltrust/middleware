@@ -94,7 +94,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             var actionJournal = CreateftActionJournal($"{0x4445000000000003:X}-{nameof(InitiateSCUSwitch)}", _fixture.QUEUEID, queueItem.ftQueueItemId, initiateSCUSwitchJson);
             await _fixture.actionJournalRepository.InsertAsync(actionJournal);
 
-            var signProcessor = _fixture.CreateSignProcessorForSignProcessorDE(false, DateTime.Now.AddHours(-1), null, null, false, false, true, true, true);
+            var signProcessor = _fixture.CreateSignProcessorForSignProcessorDE(false, DateTime.Now.AddHours(-1), sourceIsScuSwitch: true, targetIsScuSwitch: true, queueDECreationUnitIsNull: true);
             var receiptRequest = _receiptTests.GetReceipt("InitiateScuSwitchReceipt", "InitiateScuSwitchNoImplFlow", 0x4445000100000018);
             var receiptResponse = await signProcessor.ProcessAsync(receiptRequest);
             var signaturNotification = receiptResponse.ftSignatures.Where(x => x.ftSignatureType.Equals(0x4445000000000003)).LastOrDefault();

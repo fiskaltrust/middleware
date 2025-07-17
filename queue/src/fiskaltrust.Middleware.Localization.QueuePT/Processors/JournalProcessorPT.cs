@@ -3,7 +3,6 @@ using System.Xml.Serialization;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Interface;
-using fiskaltrust.Middleware.Storage.PT;
 using fiskaltrust.SAFT.CLI.SAFTSchemaPT10401;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
@@ -35,11 +34,11 @@ public class JournalProcessorPT : IJournalProcessor
         List<ftQueueItem> queueItems;
         if (request.From > 0)
         {
-            queueItems = _storageProvider.GetMiddlewareQueueItemRepository().GetEntriesOnOrAfterTimeStampAsync(request.From).ToBlockingEnumerable().ToList();
+            queueItems = (await _storageProvider.CreateMiddlewareQueueItemRepository()).GetEntriesOnOrAfterTimeStampAsync(request.From).ToBlockingEnumerable().ToList();
         }
         else
         {
-            queueItems = (await _storageProvider.GetMiddlewareQueueItemRepository().GetAsync()).ToList();
+            queueItems = (await (await _storageProvider.CreateMiddlewareQueueItemRepository()).GetAsync()).ToList();
         }
         var data = SAFTMapping.SerializeAuditFile(masterData, queueItems, (int) request.To);
         yield return new JournalResponse

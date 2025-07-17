@@ -1,0 +1,9 @@
+############################### 
+# C# code style settings      # 
+############################### 
+[*.cs] 
+csharp_style_unused_value_expression_statement_preference = discard_variable:silent
+csharp_style_unused_value_assignment_preference = discard_variable:silent
+
+# CA1707: Identifiers should not contain underscores
+dotnet_diagnostic.CA1707.severity = silent

@@ -85,11 +85,6 @@ public static class AADEMappings
         {
             if (receiptRequest.ftReceiptCase.IsType(fiskaltrust.ifPOS.v2.Cases.ReceiptCaseType.Receipt))
             {
-                if (chargeItem.ftChargeItemCase.IsNatureOfVat(ChargeItemCaseNatureOfVatGR.ExtemptEndOfClimateCrises))
-                {
-                    return IncomeClassificationValueType.E3_881_001;
-                }
-
                 if (receiptRequest.HasGreeceCountryCode())
                 {
                     return IncomeClassificationValueType.E3_881_002;
@@ -232,11 +227,6 @@ public static class AADEMappings
 
             if (receiptRequest.cbChargeItems.All(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.NotOwnSales)))
             {
-                if (receiptRequest.cbChargeItems.Any(x => x.ftChargeItemCase.IsNatureOfVat(ChargeItemCaseNatureOfVatGR.ExtemptEndOfClimateCrises)))
-                {
-                    return InvoiceType.Item82;
-                }
-
                 return InvoiceType.Item115;
             }
             else if (receiptRequest.HasOnlyServiceItems())
@@ -364,6 +354,45 @@ public static class AADEMappings
             InvoiceType.Item11 or InvoiceType.Item12 or InvoiceType.Item13 or InvoiceType.Item14 or InvoiceType.Item15 or InvoiceType.Item16 or InvoiceType.Item21 or InvoiceType.Item22 or InvoiceType.Item23 or InvoiceType.Item24 or InvoiceType.Item51 or InvoiceType.Item52 or InvoiceType.Item31 or InvoiceType.Item32 or InvoiceType.Item61 or InvoiceType.Item62 or InvoiceType.Item71 or InvoiceType.Item81 => true,
             InvoiceType.Item82 or InvoiceType.Item84 or InvoiceType.Item86 or InvoiceType.Item85 or InvoiceType.Item111 or InvoiceType.Item112 or InvoiceType.Item113 or InvoiceType.Item114 or InvoiceType.Item115 => false,
             _ => throw new NotSupportedException($"The invoice type '{invoiceType.GetXmlEnumAttributeValueFromEnum()}' is not supported"),
+        };
+    }
+
+    /// <summary>
+    /// Maps ChargeItemCase Nature of VAT to MyData VAT exemption category.
+    /// Based on the Greek tax regulations and AADE requirements.
+    /// </summary>
+    /// <param name="chargeItem">The charge item to evaluate</param>
+    /// <returns>The VAT exemption category number, or null if no exemption applies</returns>
+    public static int? GetVatExemptionCategory(ChargeItem chargeItem)
+    {
+        var natureOfVat = chargeItem.ftChargeItemCase.NatureOfVat();
+        return natureOfVat switch
+        {
+            // Not Taxable (10)
+            ChargeItemCaseNatureOfVatGR.NotTaxableIntraCommunitySupplies => MyDataVatExemptionCategory.IntraCommunitySupplies,
+            ChargeItemCaseNatureOfVatGR.NotTaxableExportOutsideEU => MyDataVatExemptionCategory.ExportOutsideEU,
+            ChargeItemCaseNatureOfVatGR.NotTaxableTaxFreeRetail => MyDataVatExemptionCategory.TaxFreeRetailNonEU,
+            ChargeItemCaseNatureOfVatGR.NotTaxableArticle39a => MyDataVatExemptionCategory.Article39aSpecialRegime,
+            ChargeItemCaseNatureOfVatGR.NotTaxableArticle19 => MyDataVatExemptionCategory.BottleRecyclingTicketsNewspapers,
+            ChargeItemCaseNatureOfVatGR.NotTaxableArticle22 => MyDataVatExemptionCategory.MedicalInsuranceBankServices,
+            
+            // Not Subject (20)
+
+            // Exempt (30)
+            ChargeItemCaseNatureOfVatGR.ExemptArticle43TravelAgencies => MyDataVatExemptionCategory.TravelAgencies,
+            ChargeItemCaseNatureOfVatGR.ExemptArticle25CustomsRegimes => MyDataVatExemptionCategory.SpecialCustomsRegimes,
+            ChargeItemCaseNatureOfVatGR.ExemptArticle39SmallBusinesses => MyDataVatExemptionCategory.SmallBusinesses,
+            
+            // VAT paid in other EU country (60)
+            ChargeItemCaseNatureOfVatGR.VatPaidOtherEUArticle13 => MyDataVatExemptionCategory.GoodsOutsideGreece,
+            ChargeItemCaseNatureOfVatGR.VatPaidOtherEUArticle14 => MyDataVatExemptionCategory.ServicesOutsideGreece,
+            
+            // Excluded (80)
+            ChargeItemCaseNatureOfVatGR.ExcludedArticle2And3 => MyDataVatExemptionCategory.GeneralExemption,
+            ChargeItemCaseNatureOfVatGR.ExcludedArticle5BusinessTransfer => MyDataVatExemptionCategory.BusinessAssetsTransfer,
+            ChargeItemCaseNatureOfVatGR.ExcludedArticle26TaxWarehouses => MyDataVatExemptionCategory.TaxWarehouses,
+            ChargeItemCaseNatureOfVatGR.ExcludedArticle27Diplomatic => MyDataVatExemptionCategory.DiplomaticConsularNATO,
+            _ => null // Unknown nature, no exemption category
         };
     }
 }

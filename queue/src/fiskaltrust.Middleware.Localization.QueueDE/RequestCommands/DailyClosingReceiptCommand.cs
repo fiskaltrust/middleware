@@ -40,37 +40,34 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             {
                 var openTransactions = (await _openTransactionRepo.GetAsync().ConfigureAwait(false)).ToList();
 
-                if (request.IsRemoveOpenTransactionsWhichAreNotOnTse())
+                _logger.LogTrace("DailyClosingReceiptCommand.ExecuteAsync Section RemoveOpenTransactionsWhichAreNotOnTse [enter].");
+                var tseInfo = await _deSSCDProvider.Instance.GetTseInfoAsync().ConfigureAwait(false);
+                var openTransactionsNotExistingOnTse = tseInfo.CurrentStartedTransactionNumbers != null
+                    ? openTransactions.Where(ot => ot != null && !tseInfo.CurrentStartedTransactionNumbers.Contains((ulong) ((OpenTransaction) ot).TransactionNumber))
+                    : openTransactions;
+                foreach (var openTransaction in openTransactionsNotExistingOnTse)
                 {
-                    _logger.LogTrace("DailyClosingReceiptCommand.ExecuteAsync Section RemoveOpenTransactionsWhichAreNotOnTse [enter].");
-                    var tseInfo = await _deSSCDProvider.Instance.GetTseInfoAsync().ConfigureAwait(false);
-                    var openTransactionsNotExistingOnTse = tseInfo.CurrentStartedTransactionNumbers != null
-                        ? openTransactions.Where(ot => ot != null && !tseInfo.CurrentStartedTransactionNumbers.Contains((ulong) ((OpenTransaction) ot).TransactionNumber))
-                        : openTransactions;
-                    foreach (var openTransaction in openTransactionsNotExistingOnTse)
-                    {
-                        _logger.LogWarning($"The Middleware database contained the started transaction {openTransaction.TransactionNumber}, which is not marked as open on the TSE. As the ftReceiptCaseFlag '0x0000000020000000' was set, the reference to the open transaction was removed from the database.");
-                        await _openTransactionRepo.RemoveAsync(openTransaction.cbReceiptReference).ConfigureAwait(false);
+                    _logger.LogWarning($"The Middleware database contained the started transaction {openTransaction.TransactionNumber}, which is not marked as open on the TSE. The reference to the open transaction was removed from the database.");
+                    await _openTransactionRepo.RemoveAsync(openTransaction.cbReceiptReference).ConfigureAwait(false);
 
-                        actionJournals.Add(
-                            new ftActionJournal
-                            {
-                                ftActionJournalId = Guid.NewGuid(),
-                                ftQueueId = queueItem.ftQueueId,
-                                ftQueueItemId = queueItem.ftQueueItemId,
-                                Moment = DateTime.UtcNow,
-                                Priority = -1,
-                                TimeStamp = 0,
-                                Message = $"Removed open transaction {openTransaction.TransactionNumber} from the database, which was not open on the TSE anymore.",
-                                Type = $"{0x4445_0000_2000_0000:X}-{nameof(OpenTransaction)}",
-                                DataJson = JsonConvert.SerializeObject(openTransaction)
-                            }
-                        );
-                    }
-
-                    openTransactions = (await _openTransactionRepo.GetAsync().ConfigureAwait(false)).ToList();
-                    _logger.LogTrace("DailyClosingReceiptCommand.ExecuteAsync Section RemoveOpenTransactionsWhichAreNotOnTse [exit].");
+                    actionJournals.Add(
+                        new ftActionJournal
+                        {
+                            ftActionJournalId = Guid.NewGuid(),
+                            ftQueueId = queueItem.ftQueueId,
+                            ftQueueItemId = queueItem.ftQueueItemId,
+                            Moment = DateTime.UtcNow,
+                            Priority = -1,
+                            TimeStamp = 0,
+                            Message = $"Removed open transaction {openTransaction.TransactionNumber} from the database, which was not open on the TSE anymore.",
+                            Type = $"{0x4445_0000_2000_0000:X}-{nameof(OpenTransaction)}",
+                            DataJson = JsonConvert.SerializeObject(openTransaction)
+                        }
+                    );
                 }
+
+                openTransactions = (await _openTransactionRepo.GetAsync().ConfigureAwait(false)).ToList();
+                _logger.LogTrace("DailyClosingReceiptCommand.ExecuteAsync Section RemoveOpenTransactionsWhichAreNotOnTse [exit].");
 
                 if (request.HasFailOnOpenTransactionsFlag() && openTransactions.Any())
                 {
@@ -129,12 +126,12 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             catch (Exception ex) when (ex.GetType().Name == RETRYPOLICYEXCEPTION_NAME)
             {
                 _logger.LogDebug(ex, "TSE not reachable.");
-                return await ProcessSSCDFailedReceiptRequest(request, queueItem, queue, queueDE,actionJournals).ConfigureAwait(false);
+                return await ProcessSSCDFailedReceiptRequest(request, queueItem, queue, queueDE, actionJournals).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
                 _logger.LogCritical(ex, "An exception occured while processing this request.");
-                return await ProcessSSCDFailedReceiptRequest(request, queueItem, queue, queueDE,actionJournals).ConfigureAwait(false);
+                return await ProcessSSCDFailedReceiptRequest(request, queueItem, queue, queueDE, actionJournals).ConfigureAwait(false);
             }
             finally
             {

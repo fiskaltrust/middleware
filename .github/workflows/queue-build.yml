@@ -37,7 +37,6 @@ jobs:
           args: '--no-build --filter only!=local'
         env:
           CONNECTIONSTRING_AZURE_STORAGE_TESTS: ${{ secrets.CONNECTIONSTRING_AZURE_STORAGE_TESTS }}
-          CONNECTIONSTRING_POSTGRESQL_TESTS: ${{ secrets.CONNECTIONSTRING_POSTGRESQL_TESTS }}
           CONNECTIONSTRING_MYSQL_TESTS: ${{ secrets.CONNECTIONSTRING_MYSQL_TESTS }}
 
       - name: Integration Tests
@@ -48,7 +47,6 @@ jobs:
           args: '--no-build --filter only!=local'
         env:
           CONNECTIONSTRING_AZURE_STORAGE_TESTS: ${{ secrets.CONNECTIONSTRING_AZURE_STORAGE_TESTS }}
-          CONNECTIONSTRING_POSTGRESQL_TESTS: ${{ secrets.CONNECTIONSTRING_POSTGRESQL_TESTS }}
           CONNECTIONSTRING_MYSQL_TESTS: ${{ secrets.CONNECTIONSTRING_MYSQL_TESTS }}
 
   publish-test-results:

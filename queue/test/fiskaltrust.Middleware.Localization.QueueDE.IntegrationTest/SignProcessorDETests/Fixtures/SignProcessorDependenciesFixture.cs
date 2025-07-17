@@ -103,7 +103,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.IntegrationTest.SignProces
             }).Result;
         }
         public SignProcessor CreateSignProcessorForSignProcessorDE(bool queueInFailedMode, DateTime? startMoment = null, DateTime? stopMoment = null, Dictionary<string, object> configs = null,
-            bool masterdataUpdate = false, bool openTrans = false, bool sourceIsScuSwitch = false, bool targetIsScuSwitch = false, bool queueDECreationUnitIsNull = false)
+            bool masterdataUpdate = false, IEnumerable<ulong> openTrans = null, bool sourceIsScuSwitch = false, bool targetIsScuSwitch = false, bool queueDECreationUnitIsNull = false)
         {
             InMemorySCU.OpenTans = openTrans;
             var journalRepositoryMock = new Mock<IMiddlewareJournalDERepository>(MockBehavior.Strict);

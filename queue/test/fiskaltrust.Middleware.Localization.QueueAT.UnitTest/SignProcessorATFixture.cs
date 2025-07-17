@@ -39,7 +39,6 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.UnitTest
         public ILogger<RequestCommand> logger;
         public IConfigurationRepository configurationRepository;
         private ftSignaturCreationUnitAT _signaturCreationUnitAT;
-        private readonly AsymmetricKeyParameter _key;
         private readonly byte[] _certificate;
 
         public SignProcessorATFixture()
@@ -74,7 +73,6 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.UnitTest
 
                     if (cert.SigAlgOid.Equals("1.2.840.10045.4.3.2"))
                     {
-                        _key = key;
                         _certificate = cert.GetEncoded();
                         return;
                     }

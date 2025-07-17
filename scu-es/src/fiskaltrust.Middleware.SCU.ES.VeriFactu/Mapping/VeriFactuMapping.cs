@@ -7,24 +7,20 @@ using System.Xml.Serialization;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.es.Cases;
-using fiskaltrust.Middleware.SCU.ES.Helpers;
-using fiskaltrust.Middleware.SCU.ES.Models;
+using fiskaltrust.Middleware.SCU.ES.VeriFactuHelpers;
+using fiskaltrust.Middleware.SCU.ES.VeriFactuModels;
 using fiskaltrust.Middleware.SCU.ES.VeriFactu.Helpers;
-using fiskaltrust.storage.V0;
-using fiskaltrust.storage.V0.MasterData;
-using Version = fiskaltrust.Middleware.SCU.ES.Models.Version;
+using Version = fiskaltrust.Middleware.SCU.ES.VeriFactuModels.Version;
 
 namespace fiskaltrust.Middleware.SCU.ES.VeriFactu;
 
 public class VeriFactuMapping
 {
-    private readonly MasterDataConfiguration _masterData;
-    private readonly X509Certificate2? _certificate;
-
-    public VeriFactuMapping(MasterDataConfiguration masterData, X509Certificate2? certificate = null)
+    //private readonly X509Certificate2? _certificate;
+    private readonly VeriFactuSCUConfiguration _veriFactuSCUConfiguration;
+    public VeriFactuMapping(VeriFactuSCUConfiguration configuration)
     {
-        _masterData = masterData;
-        _certificate = certificate;
+        _veriFactuSCUConfiguration = configuration;
     }
 
     public RegFactuSistemaFacturacion CreateRegFactuSistemaFacturacion(RegistroFacturacionAnulacion registroFacturacionAnulacion) => CreateRegFactuSistemaFacturacion(new RegistroFactura { Item = registroFacturacionAnulacion });
@@ -39,8 +35,8 @@ public class VeriFactuMapping
                 // "Name and company name of the person responsible for issuing the invoices."
                 // Not sure how this needs to be formated. Maybe we'll need some extra fields in the master data?
                 // Should this be the AccountName, or OutletName or sth from the Agencies?
-                NombreRazon = _masterData.Account.AccountName,
-                NIF = _masterData.Account.VatId
+                NombreRazon = _veriFactuSCUConfiguration.NombreRazonEmisor,
+                NIF = _veriFactuSCUConfiguration.Nif
             },
 
         };
@@ -81,14 +77,14 @@ public class VeriFactuMapping
             // Is this fiskaltrust or the dealer/creator
             SistemaInformatico = new SistemaInformatico
             {
-                NombreRazon = "Thomas Steininger", // add real name here... and maybe get that from the config
+                NombreRazon = _veriFactuSCUConfiguration.NombreRazonEmisor,
                 NombreSistemaInformatico = "fiskaltrust.Middleware",
                 // Identification code given by the producing person or entity to its computerised invoicing system (RIS) which, once installed, constitutes the RIS used.
                 // It should distinguish it from any other possible different RIS produced by the same producing person or entity.
                 // The possible restrictions to its values shall be detailed in the corresponding documentation in the AEAT electronic office (validations document...).
                 IdSistemaInformatico = "00", // alphanumeric(2)
                 // VatId of producing company. We don't have that right now.
-                Item = "M0291081Q",
+                Item = _veriFactuSCUConfiguration.Nif,
                 Version = "1.0.0", // version
                 NumeroInstalacion = receiptResponse.ftCashBoxIdentification,
                 TipoUsoPosibleSoloVerifactu = Booleano.N,
@@ -102,7 +98,7 @@ public class VeriFactuMapping
 
         registroFacturacionAnulacion.Huella = registroFacturacionAnulacion.GetHuella();
 
-        return _certificate is null ? registroFacturacionAnulacion : XmlHelpers.Deserialize<RegistroFacturacionAnulacion>(XmlHelpers.SignXmlContentWithXades(XmlHelpers.GetXMLIncludingNamespace(registroFacturacionAnulacion, "sf", "RegistroFacturacionAlta"), _certificate))!;
+        return _veriFactuSCUConfiguration.Certificate is null ? registroFacturacionAnulacion : XmlHelpers.Deserialize<RegistroFacturacionAnulacion>(XmlHelpers.SignXmlContentWithXades(XmlHelpers.GetXMLIncludingNamespace(registroFacturacionAnulacion, "sf", "RegistroFacturacionAlta"), _veriFactuSCUConfiguration.Certificate))!;
     }
 
     public RegistroFacturacionAlta CreateRegistroFacturacionAlta(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, ReceiptRequest? previousReceiptRequest, ReceiptResponse? previousReceiptResponse)
@@ -112,7 +108,7 @@ public class VeriFactuMapping
             IDVersion = Version.Item10,
             IDFactura = new IDFactura
             {
-                IDEmisorFactura = _masterData.Account.VatId,
+                IDEmisorFactura = _veriFactuSCUConfiguration.Nif,
                 NumSerieFactura = receiptResponse.ftReceiptIdentification.Split('#')[1],
                 FechaExpedicionFactura = receiptRequest.cbReceiptMoment.ToString("dd-MM-yyy")
             },
@@ -120,14 +116,14 @@ public class VeriFactuMapping
             // "Name and business name of the person required to issue the invoice."
             // Not sure how this needs to be formated. Maybe we'll need some extra fields in the master data?
             // Should this be the AccountName, or OutletName or sth from the Agencies?
-            NombreRazonEmisor = _masterData.Account.AccountName,
+            NombreRazonEmisor = _veriFactuSCUConfiguration.NombreRazonEmisor,
             TipoFactura = receiptRequest.ftReceiptCase.GetType() switch
             {
                 _ => ClaveTipoFactura.F2, // QUESTION: is simplified invoice correct?
-                // _ => throw new Exception($"Invalid receipt case {receiptRequest.ftReceiptCase}")
+                                          // _ => throw new Exception($"Invalid receipt case {receiptRequest.ftReceiptCase}")
             },
             DescripcionOperacion = "test", // TODO: add descrpiton?,
-            // FacturaSinIdentifDestinatarioArt61d = Booleano.S, // TODO: do we need this art. 61d?
+                                           // FacturaSinIdentifDestinatarioArt61d = Booleano.S, // TODO: do we need this art. 61d?
             Desglose = receiptRequest.cbChargeItems.Select(chargeItem => new Detalle
             {
                 // 01 Value added tax (VAT)
@@ -168,14 +164,14 @@ public class VeriFactuMapping
             // Is this fiskaltrust or the dealer/creator
             SistemaInformatico = new SistemaInformatico
             {
-                NombreRazon = "Thomas Steininger", // add real name here... and maybe get that from the config
+                NombreRazon = _veriFactuSCUConfiguration.NombreRazonEmisor,
                 NombreSistemaInformatico = "fiskaltrust.Middleware",
                 // Identification code given by the producing person or entity to its computerised invoicing system (RIS) which, once installed, constitutes the RIS used.
                 // It should distinguish it from any other possible different RIS produced by the same producing person or entity.
                 // The possible restrictions to its values shall be detailed in the corresponding documentation in the AEAT electronic office (validations document...).
                 IdSistemaInformatico = "00", // alphanumeric(2)
-                // VatId of producing company. We don't have that right now.
-                Item = "M0291081Q",
+                                             // VatId of producing company. We don't have that right now.
+                Item = _veriFactuSCUConfiguration.Nif,
                 Version = "1.0.0", // version
                 NumeroInstalacion = receiptResponse.ftCashBoxIdentification,
                 TipoUsoPosibleSoloVerifactu = Booleano.N,
@@ -189,7 +185,7 @@ public class VeriFactuMapping
 
         registroFacturacionAlta.Huella = registroFacturacionAlta.GetHuella();
 
-        return _certificate is null ? registroFacturacionAlta : XmlHelpers.Deserialize<RegistroFacturacionAlta>(XmlHelpers.SignXmlContentWithXades(XmlHelpers.GetXMLIncludingNamespace(registroFacturacionAlta, "sf", "RegistroFacturacionAlta"), _certificate))!;
+        return _veriFactuSCUConfiguration.Certificate is null ? registroFacturacionAlta : XmlHelpers.Deserialize<RegistroFacturacionAlta>(XmlHelpers.SignXmlContentWithXades(XmlHelpers.GetXMLIncludingNamespace(registroFacturacionAlta, "sf", "RegistroFacturacionAlta"), _veriFactuSCUConfiguration.Certificate))!;
     }
 
     private object GetEncadenamientoFacturaAnteriorAlta(ReceiptRequest? previousReceiptRequest, ReceiptResponse? previousReceiptResponse)

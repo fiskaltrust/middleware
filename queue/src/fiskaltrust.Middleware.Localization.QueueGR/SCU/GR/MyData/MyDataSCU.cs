@@ -76,7 +76,10 @@ public class MyDataSCU : IGRSSCD
                     {
                         if (data.ItemsElementName[i] == ItemsChoiceType.qrUrl)
                         {
-                            request.ReceiptResponse.AddSignatureItem(SignatureItemFactoryGR.CreateGRQRCode(data.Items[i].ToString()));
+                            continue;
+                            // In the latest API Version mydata returns a QR Code. We don't need it since we are printing our own QR Code. In case
+                            // of ERP API based integrations we will still want this to be added.
+                            // request.ReceiptResponse.AddSignatureItem(SignatureItemFactoryGR.CreateGRQRCode(data.Items[i].ToString()));
                         }
                         else
                         {
