@@ -17,6 +17,8 @@ using fiskaltrust.Middleware.Localization.QueueDE.Transactions;
 using fiskaltrust.storage.V0;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using Org.BouncyCastle.Asn1.Ocsp;
+
 namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 {
     public abstract class RequestCommand

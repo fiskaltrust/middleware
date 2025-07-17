@@ -12,9 +12,9 @@ namespace fiskaltrust.Middleware.SCU.DE.Test.Launcher
 {
     public static class Program
     {
-        private static readonly bool useHelipad = true;
-        private static readonly string cashBoxId = "0814794f-c417-49d5-8b25-80097d7b4ddd";
-        private static readonly string accessToken = "BN+0ibJxjS0QBp8MptYwRNRtRfrF8A+C9POXUxJmbCWFkI9P1n/3lmQUx5YiF+SSfkJ4a8eYOuNS4BTWZOMMi0w=";
+        private static readonly bool useHelipad = false;
+        private static readonly string cashBoxId = "";
+        private static readonly string accessToken = "";
         private static readonly string fccDirectory = "";
 
         private static readonly string configurationFilePath = "";
