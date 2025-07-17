@@ -51,14 +51,12 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             try
             {
                 (var returnedTransactionNumber, var returnedSignatures, var clientId, var signatureAlgorithm, var publicKeyBase64, var returnedSerialnumberOctet) = await ProcessOutOfOperationReceiptAsync(
-                    request.cbReceiptReference,
                     processType,
                     payload,
                     queueItem,
                     queue,
                     queueDE,
-                    isClientIdOnlyRequest: request.IsModifyClientIdOnlyRequest(),
-                    isTarExport: !request.IsTseTarDownloadBypass()
+                    request
                 ).ConfigureAwait(false);
                 signatures = returnedSignatures;
                 transactionNumber = returnedTransactionNumber;
