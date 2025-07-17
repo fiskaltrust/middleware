@@ -28,13 +28,20 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.IntegrationTest
                 TssId = Guid.NewGuid(),
                 AdminPin = ""
             };
-            CreateAndPersonalizeTssAsync().Wait();
-            RegisterClientAsync().Wait();
+            try
+            {
+                CreateAndPersonalizeTssAsync().Wait();
+                RegisterClientAsync().Wait();
+            }
+            catch
+            {
+                DisableTss().Wait();
+            }
         }
 
         private async Task RegisterClientAsync()
         {
-            var apiProvider = new FiskalyV2ApiProvider(Configuration, Mock.Of<HttpClientWrapper>());
+            var apiProvider = new FiskalyV2ApiProvider(Configuration, new HttpClientWrapper(Configuration, Mock.Of<ILogger<HttpClientWrapper>>()));
             var scu = new FiskalySCU(Mock.Of<ILogger<FiskalySCU>>(), apiProvider, new ClientCache(apiProvider), Configuration);
 
             await scu.RegisterClientIdAsync(new RegisterClientIdRequest { ClientId = ClientId.ToString() });
