@@ -324,6 +324,56 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.IntegrationTest
             result.CurrentState.Should().Be(tseState.CurrentState);
         }
         
+        [Fact]
+        [Trait("TseCategory", "Cloud")]
+        public async Task ExportDataAsync_Should_Use_SystemTempFolder_ForExportFiles()
+        {
+            var sut = GetSut();
+            var clientId = _testFixture.ClientId.ToString();
+            
+            var startRequest = CreateStartTransactionRequest(clientId);
+            var startResult = await sut.StartTransactionAsync(startRequest);
+            
+            var finishRequest = CreateFinishTransactionRequest(startResult.TransactionNumber, clientId);
+            await sut.FinishTransactionAsync(finishRequest);
+            
+            var exportSession = await sut.StartExportSessionAsync(new StartExportSessionRequest
+            {
+                ClientId = clientId
+            });
+            
+            ExportDataResponse exportDataResponse;
+            var maxRetries = 30;
+            var retryCount = 0;
+            
+            do
+            {
+                await Task.Delay(1000);
+                exportDataResponse = await sut.ExportDataAsync(new ExportDataRequest
+                {
+                    TokenId = exportSession.TokenId,
+                    MaxChunkSize = 1024
+                });
+                retryCount++;
+            } while (!exportDataResponse.TotalTarFileSizeAvailable && retryCount < maxRetries);
+            
+            exportDataResponse.TotalTarFileSizeAvailable.Should().BeTrue("Export should have completed");
+            
+            var expectedTempPath = Path.Combine(Path.GetTempPath(), exportSession.TokenId);
+            File.Exists(expectedTempPath).Should().BeTrue($"Export file should exist at {expectedTempPath}");
+            
+            var fileInfo = new FileInfo(expectedTempPath);
+            fileInfo.DirectoryName.Should().StartWith(Path.GetTempPath().TrimEnd(Path.DirectorySeparatorChar));
+            
+            await sut.EndExportSessionAsync(new EndExportSessionRequest
+            {
+                TokenId = exportSession.TokenId,
+                Erase = false
+            });
+            
+            File.Exists(expectedTempPath).Should().BeFalse("Export file should be deleted after ending session");
+        }
+        
         private FiskalySCU GetSut()
         {
             var apiProvider = new FiskalyV2ApiProvider(_testFixture.Configuration, new HttpClientWrapper(_testFixture.Configuration, Mock.Of<ILogger<HttpClientWrapper>>()));
