@@ -196,7 +196,11 @@ public class AADEFactory
 
         if (receiptRequest.ContainsCustomerInfo())
         {
-            AddCounterpart(receiptRequest, inv);
+            var counterpart = GetCounterPart(receiptRequest);
+            if (counterpart != null)
+            {
+                inv.counterpart = counterpart;
+            }
         }
         SetValuesIfExistent(receiptRequest, receiptResponse, inv);
         return inv;
@@ -535,56 +539,62 @@ public class AADEFactory
         }).ToList();
     }
 
-    private void AddCounterpart(ReceiptRequest receiptRequest, AadeBookInvoiceType inv)
+    public static PartyType? GetCounterPart(ReceiptRequest receiptRequest)
     {
         var customer = receiptRequest.GetCustomerOrNull();
-        if (receiptRequest.HasGreeceCountryCode())
+        if (customer == null)
         {
-            if (customer?.CustomerVATId?.StartsWith("EL") == true)
-            {
-                inv.counterpart = new PartyType
-                {
-                    vatNumber = customer?.CustomerVATId.Replace("EL", ""),
-                    country = CountryType.GR,
-                    branch = 0,
-                };
-            }
-            else if (customer?.CustomerVATId?.StartsWith("GR") == true)
-            {
-                inv.counterpart = new PartyType
-                {
-                    vatNumber = customer?.CustomerVATId.Replace("GR", ""),
-                    country = CountryType.GR,
-                    branch = 0,
-                };
-            }
-            else
-            {
-                inv.counterpart = new PartyType
-                {
-                    vatNumber = customer?.CustomerVATId,
-                    country = CountryType.GR,
-                    branch = 0,
-                };
-            }
+            return null;
+        }
 
-            if (receiptRequest.ftReceiptCase.Case() == ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003 || inv.invoiceHeader.invoiceType == InvoiceType.Item14 || inv.invoiceHeader.invoiceType == InvoiceType.Item71)
+        if (!CountryTypeMapper.TryParseCountryCode(customer.CustomerCountry ?? "", out var countryType))
+        {
+            return null;
+        }
+
+
+        if (customer?.CustomerVATId?.StartsWith("EL") == true && countryType == CountryType.GR)
+        {
+            return new PartyType
             {
-                inv.counterpart.address = new AddressType
+                vatNumber = customer?.CustomerVATId.Replace("EL", ""),
+                country = CountryType.GR,
+                branch = 0,
+            };
+        }
+        else if (customer?.CustomerVATId?.StartsWith("GR") == true && countryType == CountryType.GR)
+        {
+            return new PartyType
+            {
+                vatNumber = customer?.CustomerVATId.Replace("GR", ""),
+                country = CountryType.GR,
+                branch = 0,
+            };
+        }
+        else if (customer?.CustomerCountry == "GR" && countryType == CountryType.GR)
+        {
+            return new PartyType
+            {
+                vatNumber = customer?.CustomerVATId,
+                country = CountryType.GR,
+                branch = 0,
+            };
+        }
+        else
+        {
+            return new PartyType
+            {
+                vatNumber = customer?.CustomerVATId,
+                country = countryType,
+                branch = 0,
+                address = new AddressType
                 {
                     street = customer?.CustomerStreet,
                     city = customer?.CustomerCity,
                     postalCode = customer?.CustomerZip
-                };
-            }
-        }
-        else if (receiptRequest.HasEUCountryCode())
-        {
-            throw new Exception("Inter-Community invoices are not supported");
-        }
-        else if (receiptRequest.HasNonEUCountryCode())
-        {
-            throw new Exception("Intra-Community invoices are not supported");
+                },
+                name = customer?.CustomerName,
+            };
         }
     }
 

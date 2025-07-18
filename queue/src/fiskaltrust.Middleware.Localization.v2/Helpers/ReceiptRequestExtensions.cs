@@ -54,14 +54,4 @@ public static class ReceiptRequestExtensions
         }
         return null;
     }
-
-    public static bool HasGreeceCountryCode(this ReceiptRequest receiptRequest)
-    {
-        return ((ulong) receiptRequest.ftReceiptCase & 0xFFFF_0000_0000_0000) == 0x4752_0000_0000_0000;
-    }
-
-    public static bool HasNonEUCountryCode(this ReceiptRequest receiptRequest)
-    {
-        return ((ulong) receiptRequest.ftReceiptCase & 0xFFFF_0000_0000_0000) == 0x0000_0000_0000_0000;
-    }
 }

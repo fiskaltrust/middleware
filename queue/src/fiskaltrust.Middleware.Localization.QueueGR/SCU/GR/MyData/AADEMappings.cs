@@ -85,7 +85,8 @@ public static class AADEMappings
         {
             if (receiptRequest.ftReceiptCase.IsType(fiskaltrust.ifPOS.v2.Cases.ReceiptCaseType.Receipt))
             {
-                if (receiptRequest.HasGreeceCountryCode())
+                var customer = receiptRequest.GetCustomerOrNull();
+                if (customer == null || customer.CustomerCountry == "GR")
                 {
                     return IncomeClassificationValueType.E3_881_002;
                 }
@@ -101,7 +102,8 @@ public static class AADEMappings
             }
             else
             {
-                if (receiptRequest.HasGreeceCountryCode())
+                var customer = receiptRequest.GetCustomerOrNull();
+                if (customer == null || customer.CustomerCountry == "GR")
                 {
                     return IncomeClassificationValueType.E3_881_001;
                 }
@@ -118,7 +120,8 @@ public static class AADEMappings
 
         if (receiptRequest.ftReceiptCase.IsType(fiskaltrust.ifPOS.v2.Cases.ReceiptCaseType.Invoice))
         {
-            if (receiptRequest.HasGreeceCountryCode())
+            var customer = receiptRequest.GetCustomerOrNull();
+            if (customer == null || customer.CustomerCountry == "GR")
             {
                 return chargeItem.ftChargeItemCase.TypeOfService() switch
                 {
@@ -261,7 +264,8 @@ public static class AADEMappings
                     return InvoiceType.Item24;
                 }
 
-                if (receiptRequest.HasGreeceCountryCode())
+                var customer = receiptRequest.GetCustomerOrNull();
+                if (customer == null || customer.CustomerCountry == "GR")
                 {
                     return InvoiceType.Item21;
                 }
@@ -281,7 +285,8 @@ public static class AADEMappings
                     return InvoiceType.Item16;
                 }
 
-                if (receiptRequest.HasGreeceCountryCode())
+                var customer = receiptRequest.GetCustomerOrNull();
+                if (customer == null || customer.CustomerCountry == "GR")
                 {
                     return InvoiceType.Item11;
                 }
@@ -338,7 +343,7 @@ public static class AADEMappings
         PayItemCase.OnlinePayment => MyDataPaymentMethods.WebBanking,
         PayItemCase.LoyaltyProgramCustomerCardPayment => -1,
         PayItemCase.AccountsReceivable => MyDataPaymentMethods.OnCredit,
-        PayItemCase.SEPATransfer =>  payItem.Description?.ToUpper() == "IRIS" ? MyDataPaymentMethods.IrisDirectPayments : -1,
+        PayItemCase.SEPATransfer => payItem.Description?.ToUpper() == "IRIS" ? MyDataPaymentMethods.IrisDirectPayments : -1,
         PayItemCase.OtherBankTransfer => -1,
         PayItemCase.TransferToCashbookVaultOwnerEmployee => -1,
         PayItemCase.InternalMaterialConsumption => -1,
@@ -375,18 +380,18 @@ public static class AADEMappings
             ChargeItemCaseNatureOfVatGR.NotTaxableArticle39a => MyDataVatExemptionCategory.Article39aSpecialRegime,
             ChargeItemCaseNatureOfVatGR.NotTaxableArticle19 => MyDataVatExemptionCategory.BottleRecyclingTicketsNewspapers,
             ChargeItemCaseNatureOfVatGR.NotTaxableArticle22 => MyDataVatExemptionCategory.MedicalInsuranceBankServices,
-            
+
             // Not Subject (20)
 
             // Exempt (30)
             ChargeItemCaseNatureOfVatGR.ExemptArticle43TravelAgencies => MyDataVatExemptionCategory.TravelAgencies,
             ChargeItemCaseNatureOfVatGR.ExemptArticle25CustomsRegimes => MyDataVatExemptionCategory.SpecialCustomsRegimes,
             ChargeItemCaseNatureOfVatGR.ExemptArticle39SmallBusinesses => MyDataVatExemptionCategory.SmallBusinesses,
-            
+
             // VAT paid in other EU country (60)
             ChargeItemCaseNatureOfVatGR.VatPaidOtherEUArticle13 => MyDataVatExemptionCategory.GoodsOutsideGreece,
             ChargeItemCaseNatureOfVatGR.VatPaidOtherEUArticle14 => MyDataVatExemptionCategory.ServicesOutsideGreece,
-            
+
             // Excluded (80)
             ChargeItemCaseNatureOfVatGR.ExcludedArticle2And3 => MyDataVatExemptionCategory.GeneralExemption,
             ChargeItemCaseNatureOfVatGR.ExcludedArticle5BusinessTransfer => MyDataVatExemptionCategory.BusinessAssetsTransfer,
