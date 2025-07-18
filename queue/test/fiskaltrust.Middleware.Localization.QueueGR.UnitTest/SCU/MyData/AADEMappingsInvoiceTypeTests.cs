@@ -33,6 +33,40 @@ public class AADEMappingsInvoiceTypeTests
             Description = description
         };
     }
+    
+    private ReceiptRequest CreateReceipt(ChargeItemCaseTypeOfService typeOfService = ChargeItemCaseTypeOfService.Delivery, bool isRefund = false, bool hasPreviousReceipt = false)
+    {
+        var receiptRequest = new ReceiptRequest
+        {
+            cbTerminalID = _baseRequest.cbTerminalID,
+            Currency = _baseRequest.Currency,
+            cbReceiptMoment = _baseRequest.cbReceiptMoment,
+            cbReceiptReference = _baseRequest.cbReceiptReference,
+            ftPosSystemId = _baseRequest.ftPosSystemId,
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.PointOfSaleReceipt0x0001)
+        };
+
+        if (isRefund)
+        {
+            receiptRequest.ftReceiptCase = receiptRequest.ftReceiptCase.WithFlag(ReceiptCaseFlags.Refund);
+        }
+
+        if (hasPreviousReceipt)
+        {
+            receiptRequest.cbPreviousReceiptReference = "PREV12345";
+        }
+
+        receiptRequest.cbChargeItems = [CreateChargeItem(1, isRefund ? -100 : 100, 24, "Test Item", typeOfService)];
+        receiptRequest.cbPayItems = [new PayItem
+        {
+            Position = 1,
+            Amount = isRefund ? -100 : 100,
+            ftPayItemCase = ((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.CashPayment),
+            Description = "Cash"
+        }];
+
+        return receiptRequest;
+    }
 
     private ReceiptRequest CreateB2BInvoice(string customerCountry, ChargeItemCaseTypeOfService typeOfService = ChargeItemCaseTypeOfService.Delivery, bool isRefund = false, bool hasPreviousReceipt = false)
     {
@@ -208,5 +242,82 @@ public class AADEMappingsInvoiceTypeTests
         var result = AADEMappings.GetInvoiceType(receiptRequest);
 
         result.Should().Be(InvoiceType.Item52);
+    }
+    
+    [Fact]
+    public void Item_11_1_GetInvoiceType_RetailReceipt_WithGoodsItems_ReturnsItem111()
+    {
+        var receiptRequest = CreateReceipt(ChargeItemCaseTypeOfService.Delivery);
+
+        var result = AADEMappings.GetInvoiceType(receiptRequest);
+
+        result.Should().Be(InvoiceType.Item111);
+    }
+
+    [Fact]
+    public void Item_11_1_GetInvoiceType_RetailReceipt_WithMixedItems_ReturnsItem111()
+    {
+        var receiptRequest = CreateReceipt(ChargeItemCaseTypeOfService.Delivery);
+        receiptRequest.cbChargeItems.Add(CreateChargeItem(2, 50, 24, "Service Item", ChargeItemCaseTypeOfService.OtherService));
+
+        var result = AADEMappings.GetInvoiceType(receiptRequest);
+
+        result.Should().Be(InvoiceType.Item111);
+    }
+    
+    [Fact]
+    public void Item_11_2_GetInvoiceType_RetailReceipt_WithOnlyServiceItems_ReturnsItem112()
+    {
+        var receiptRequest = CreateReceipt(ChargeItemCaseTypeOfService.OtherService);
+
+        var result = AADEMappings.GetInvoiceType(receiptRequest);
+
+        result.Should().Be(InvoiceType.Item112);
+    }
+    
+    [Fact]
+    public void Item_11_3_GetInvoiceType_DeliveryNote_ReturnsItem93()
+    {
+        var receiptRequest = new ReceiptRequest
+        {
+            cbTerminalID = _baseRequest.cbTerminalID,
+            Currency = _baseRequest.Currency,
+            cbReceiptMoment = _baseRequest.cbReceiptMoment,
+            cbReceiptReference = _baseRequest.cbReceiptReference,
+            ftPosSystemId = _baseRequest.ftPosSystemId,
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.DeliveryNote0x0005),
+            cbChargeItems = [CreateChargeItem(1, 100, 24, "Test Item", ChargeItemCaseTypeOfService.Delivery)],
+            cbPayItems = [new PayItem
+            {
+                Position = 1,
+                Amount = 100,
+                ftPayItemCase = ((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.CashPayment),
+                Description = "Cash"
+            }]
+        };
+
+        var result = AADEMappings.GetInvoiceType(receiptRequest);
+
+        result.Should().Be(InvoiceType.Item93);
+    }
+    
+    [Fact]
+    public void Item_11_4_GetInvoiceType_RetailReceipt_WithRefund_ReturnsItem114()
+    {
+        var receiptRequest = CreateReceipt(ChargeItemCaseTypeOfService.Delivery, isRefund: true);
+
+        var result = AADEMappings.GetInvoiceType(receiptRequest);
+
+        result.Should().Be(InvoiceType.Item114);
+    }
+    
+    [Fact]
+    public void Item_11_5_GetInvoiceType_RetailReceipt_WithAgencyItems_ReturnsItem115()
+    {
+        var receiptRequest = CreateReceipt(ChargeItemCaseTypeOfService.NotOwnSales);
+
+        var result = AADEMappings.GetInvoiceType(receiptRequest);
+
+        result.Should().Be(InvoiceType.Item115);
     }
 }
