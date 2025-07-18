@@ -85,43 +85,47 @@ public static class AADEMappings
         {
             if (receiptRequest.ftReceiptCase.IsType(fiskaltrust.ifPOS.v2.Cases.ReceiptCaseType.Receipt))
             {
-                var customer = receiptRequest.GetCustomerOrNull();
-                if (customer == null || customer.CustomerCountry == "GR")
-                {
-                    return IncomeClassificationValueType.E3_881_002;
-                }
-                else if (receiptRequest.HasEUCountryCode())
+                if (receiptRequest.GetCustomerCountryCategory() == CustomerCountryCategory.EU)
                 {
                     return IncomeClassificationValueType.E3_881_003;
                 }
-                else
+                else if (receiptRequest.GetCustomerCountryCategory() == CustomerCountryCategory.ThirdCountry)
                 {
                     return IncomeClassificationValueType.E3_881_004;
-
+                }
+                else
+                {
+                    return IncomeClassificationValueType.E3_881_002;
                 }
             }
             else
             {
-                var customer = receiptRequest.GetCustomerOrNull();
-                if (customer == null || customer.CustomerCountry == "GR")
-                {
-                    return IncomeClassificationValueType.E3_881_001;
-                }
-                else if (receiptRequest.HasEUCountryCode())
+                if (receiptRequest.GetCustomerCountryCategory() == CustomerCountryCategory.EU)
                 {
                     return IncomeClassificationValueType.E3_881_003;
                 }
-                else
+                else if (receiptRequest.GetCustomerCountryCategory() == CustomerCountryCategory.ThirdCountry)
                 {
                     throw new Exception("Agency business with non EU customer is not supported");
+                }
+                else
+                {
+                    return IncomeClassificationValueType.E3_881_001;
                 }
             }
         }
 
         if (receiptRequest.ftReceiptCase.IsType(fiskaltrust.ifPOS.v2.Cases.ReceiptCaseType.Invoice))
         {
-            var customer = receiptRequest.GetCustomerOrNull();
-            if (customer == null || customer.CustomerCountry == "GR")
+            if (receiptRequest.GetCustomerCountryCategory() == CustomerCountryCategory.EU)
+            {
+                return IncomeClassificationValueType.E3_561_005;
+            }
+            else if (receiptRequest.GetCustomerCountryCategory() == CustomerCountryCategory.ThirdCountry)
+            {
+                return IncomeClassificationValueType.E3_561_006;
+            }
+            else
             {
                 return chargeItem.ftChargeItemCase.TypeOfService() switch
                 {
@@ -130,14 +134,6 @@ public static class AADEMappings
                     ChargeItemCaseTypeOfService.OtherService => IncomeClassificationValueType.E3_561_001,
                     _ => IncomeClassificationValueType.E3_561_007,
                 };
-            }
-            else if (receiptRequest.HasEUCountryCode())
-            {
-                return IncomeClassificationValueType.E3_561_005;
-            }
-            else
-            {
-                return IncomeClassificationValueType.E3_561_006;
             }
         }
         else if (receiptRequest.ftReceiptCase.IsType(fiskaltrust.ifPOS.v2.Cases.ReceiptCaseType.Receipt))
@@ -265,17 +261,17 @@ public static class AADEMappings
                 }
 
                 var customer = receiptRequest.GetCustomerOrNull();
-                if (customer == null || customer.CustomerCountry == "GR")
-                {
-                    return InvoiceType.Item21;
-                }
-                else if (receiptRequest.HasEUCountryCode())
+                if (receiptRequest.GetCustomerCountryCategory() == CustomerCountryCategory.EU)
                 {
                     return InvoiceType.Item22;
                 }
-                else
+                else if (receiptRequest.GetCustomerCountryCategory() == CustomerCountryCategory.ThirdCountry)
                 {
                     return InvoiceType.Item23;
+                }
+                else
+                {
+                    return InvoiceType.Item21;
                 }
             }
             else
@@ -286,17 +282,17 @@ public static class AADEMappings
                 }
 
                 var customer = receiptRequest.GetCustomerOrNull();
-                if (customer == null || customer.CustomerCountry == "GR")
-                {
-                    return InvoiceType.Item11;
-                }
-                else if (receiptRequest.HasEUCountryCode())
+                if (receiptRequest.GetCustomerCountryCategory() == CustomerCountryCategory.EU)
                 {
                     return InvoiceType.Item12;
                 }
-                else
+                else if (receiptRequest.GetCustomerCountryCategory() == CustomerCountryCategory.ThirdCountry)
                 {
                     return InvoiceType.Item13;
+                }
+                else
+                {
+                    return InvoiceType.Item11;
                 }
             }
         }

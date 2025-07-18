@@ -73,13 +73,10 @@ public class AADEMappingsInvoiceTypeTests
     [Fact]
     public void Item_1_1_GetInvoiceType_B2BInvoice_WithGreekCustomer_ReturnsItem11()
     {
-        // Arrange
         var receiptRequest = CreateB2BInvoice("GR");
 
-        // Act
         var result = AADEMappings.GetInvoiceType(receiptRequest);
 
-        // Assert
         result.Should().Be(InvoiceType.Item11);
     }
 
@@ -91,13 +88,10 @@ public class AADEMappingsInvoiceTypeTests
     [InlineData("ES")]
     public void Item_1_2_GetInvoiceType_B2BInvoice_WithEUCustomer_ReturnsItem12(string country)
     {
-        // Arrange
         var receiptRequest = CreateB2BInvoice(country);
 
-        // Act
         var result = AADEMappings.GetInvoiceType(receiptRequest);
 
-        // Assert
         result.Should().Be(InvoiceType.Item12);
     }
 
@@ -109,65 +103,50 @@ public class AADEMappingsInvoiceTypeTests
     [InlineData("CN")]
     public void Item_1_3_GetInvoiceType_B2BInvoice_WithNonEUCustomer_ReturnsItem13(string country)
     {
-        // Arrange
         var receiptRequest = CreateB2BInvoice(country);
 
-        // Act
         var result = AADEMappings.GetInvoiceType(receiptRequest);
 
-        // Assert
         result.Should().Be(InvoiceType.Item13);
     }
 
     [Fact]
     public void Item_1_4_GetInvoiceType_B2BInvoice_WithNotOwnSalesItems_ReturnsItem14()
     {
-        // Arrange
         var receiptRequest = CreateB2BInvoice("GR", ChargeItemCaseTypeOfService.NotOwnSales);
 
-        // Act
         var result = AADEMappings.GetInvoiceType(receiptRequest);
 
-        // Assert
         result.Should().Be(InvoiceType.Item14);
     }
 
     [Fact]
     public void Item_1_5_GetInvoiceType_B2BInvoice_WithReceivableItems_ReturnsItem15()
     {
-        // Arrange
         var receiptRequest = CreateB2BInvoice("GR", ChargeItemCaseTypeOfService.Receivable);
 
-        // Act
         var result = AADEMappings.GetInvoiceType(receiptRequest);
 
-        // Assert
         result.Should().Be(InvoiceType.Item15);
     }
 
     [Fact]
     public void Item_1_6_GetInvoiceType_B2BInvoice_WithGreekCustomer_WithPreviousReceipt_ReturnsItem16()
     {
-        // Arrange
         var receiptRequest = CreateB2BInvoice("GR", hasPreviousReceipt: true);
 
-        // Act
         var result = AADEMappings.GetInvoiceType(receiptRequest);
 
-        // Assert
         result.Should().Be(InvoiceType.Item16);
     }
 
     [Fact]
     public void Item_2_1_GetInvoiceType_B2BInvoice_WithOtherServiceItems_WithGreekCustomer_ReturnsItem21()
     {
-        // Arrange
         var receiptRequest = CreateB2BInvoice("GR", ChargeItemCaseTypeOfService.OtherService);
 
-        // Act
         var result = AADEMappings.GetInvoiceType(receiptRequest);
 
-        // Assert
         result.Should().Be(InvoiceType.Item21);
     }
 
@@ -179,13 +158,10 @@ public class AADEMappingsInvoiceTypeTests
     [InlineData("ES")]
     public void Item_2_2_GetInvoiceType_B2BInvoice_WithOtherServiceItems_WithEUCustomer_ReturnsItem22(string country)
     {
-        // Arrange
         var receiptRequest = CreateB2BInvoice(country, ChargeItemCaseTypeOfService.OtherService);
 
-        // Act
         var result = AADEMappings.GetInvoiceType(receiptRequest);
 
-        // Assert
         result.Should().Be(InvoiceType.Item22);
     }
 
@@ -197,13 +173,10 @@ public class AADEMappingsInvoiceTypeTests
     [InlineData("CN")]
     public void Item_2_3_GetInvoiceType_B2BInvoice_WithOtherServiceItems_WithNonEUCustomer_ReturnsItem23(string country)
     {
-        // Arrange
         var receiptRequest = CreateB2BInvoice(country, ChargeItemCaseTypeOfService.OtherService);
 
-        // Act
         var result = AADEMappings.GetInvoiceType(receiptRequest);
 
-        // Assert
         result.Should().Be(InvoiceType.Item23);
     }
 
