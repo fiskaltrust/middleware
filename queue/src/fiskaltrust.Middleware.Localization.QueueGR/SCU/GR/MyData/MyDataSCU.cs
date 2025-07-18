@@ -7,9 +7,53 @@ using fiskaltrust.Middleware.Localization.QueueGR.Models.Cases;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.storage.V0.MasterData;
+using System.Runtime.Serialization;
+using System.Text.Json.Serialization;
 
 #pragma warning disable
 namespace fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData;
+
+public class MiddlewareState
+{
+    [JsonPropertyName("GR")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+    public MiddlewareQueueGRState GR { get; set; } = new MiddlewareQueueGRState();  
+}
+
+public class MiddlewareQueueGRState
+{
+    [JsonPropertyName("GovernmentApi")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+    public GovernmentApiData GovernmentApi { get; set; }
+}
+
+public class GovernmentApiData
+{
+    [JsonPropertyName("Protocol")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+    [DataMember(EmitDefaultValue = true, IsRequired = true)]
+    public required string Protocol { get; set; }
+
+    [JsonPropertyName("ProtocolVersion")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    [DataMember(EmitDefaultValue = false, IsRequired = false)]
+    public string? ProtocolVersion { get; set; }
+
+    [JsonPropertyName("Action")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+    [DataMember(EmitDefaultValue = true, IsRequired = true)]
+    public required string Action { get; set; }
+
+    [JsonPropertyName("ProtocolRequest")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [DataMember(EmitDefaultValue = false, IsRequired = false)]
+    public string ProtocolRequest { get; set; }
+
+    [JsonPropertyName("ProtocolResponse")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [DataMember(EmitDefaultValue = false, IsRequired = false)]
+    public string? ProtocolResponse { get; set; }
+}
 
 public class MyDataSCU : IGRSSCD
 {
@@ -50,6 +94,16 @@ public class MyDataSCU : IGRSSCD
         var payload = aadFactory.GenerateInvoicePayload(doc);
         var response = await _httpClient.PostAsync("/myDataProvider/SendInvoices", new StringContent(payload, Encoding.UTF8, "application/xml"));
         var content = await response.Content.ReadAsStringAsync();
+
+        var governemntApiResponse = new GovernmentApiData
+        {
+            Protocol = "mydata",
+            ProtocolVersion = "1.0",
+            Action = response.RequestMessage.RequestUri.ToString(),
+            ProtocolRequest = payload,
+            ProtocolResponse = content
+        };
+
         if ((int) response.StatusCode >= 500)
         {
             // todo should we relaly return this?
@@ -130,6 +184,16 @@ public class MyDataSCU : IGRSSCD
             request.ReceiptResponse.SetReceiptResponseError(content);
         }
 
+        if(request.ReceiptResponse.ftStateData == null)
+        {
+            request.ReceiptResponse.ftStateData = new MiddlewareState
+            {
+                GR = new MiddlewareQueueGRState
+                {
+                    GovernmentApi = governemntApiResponse
+                }
+            };
+        }
 
         return new ProcessResponse
         {
