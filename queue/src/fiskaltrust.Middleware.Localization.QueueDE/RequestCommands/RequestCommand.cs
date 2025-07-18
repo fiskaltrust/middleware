@@ -425,7 +425,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
                 }
                 catch { }
                 await _deSSCDProvider.Instance.UnregisterClientIdAsync(new UnregisterClientIdRequest { ClientId = queueDE.CashBoxIdentification }).ConfigureAwait(false);
-                if (request.IsModifyClientIdOnlyRequest())
+                if (!request.IsModifyClientIdOnlyRequest())
                 {
                     await _deSSCDProvider.Instance.SetTseStateAsync(new TseState { CurrentState = TseStates.Terminated }).ConfigureAwait(false);
                 }
