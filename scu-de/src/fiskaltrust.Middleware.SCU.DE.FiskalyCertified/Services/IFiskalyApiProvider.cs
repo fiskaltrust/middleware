@@ -7,6 +7,8 @@ using fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Models;
 
 namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
 {
+
+#nullable enable
     public interface IFiskalyApiProvider
     {
         Task CreateClientAsync(Guid tssId, string serialNumber, Guid clientId);
@@ -25,8 +27,8 @@ namespace fiskaltrust.Middleware.SCU.DE.FiskalyCertified.Services
         Task RequestExportAsync(Guid tssId, ExportTransactionsWithTransactionNumberDto exportRequest, Guid exportId);
         Task RequestExportAsync(Guid tssId, ExportTransactionsWithDatesDto exportRequest, Guid exportId);
         Task SetExportMetadataAsync(Guid tssId, Guid exportId, long? fromTransactionNumber, long toTransactionNumber);
-        Task StoreDownloadResultAsync(Guid tssId, Guid exportId);
-        Task StoreDownloadSplitResultAsync(Guid tssId, SplitExportStateData splitExportStateData);
+        Task<Stream> StoreDownloadResultAsync(Guid tssId, Guid exportId);
+        Task<Stream?> StoreDownloadSplitResultAsync(Guid tssId, SplitExportStateData splitExportStateData);
         Task PatchTseMetadataAsync(Guid tssId, Dictionary<string, object> metadata);
         Task DisableClientAsync(Guid tssId, string serialNumber, Guid clientId);
     }
