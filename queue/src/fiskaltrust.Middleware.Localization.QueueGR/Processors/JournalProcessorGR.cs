@@ -1,4 +1,7 @@
-﻿using System.Xml.Serialization;
+﻿using System.IO.Pipelines;
+using System.Net.Mime;
+using System.Text;
+using System.Xml.Serialization;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData;
 using fiskaltrust.Middleware.Localization.v2;
@@ -20,12 +23,12 @@ public class JournalProcessorGR : IJournalProcessor
         _masterDataConfiguration = masterDataConfiguration;
     }
 
-    public async IAsyncEnumerable<JournalResponse> ProcessAsync(JournalRequest request)
+    public async Task<(ContentType, PipeReader)> ProcessAsync(JournalRequest request)
     {
         var queueItems = new List<ftQueueItem>();
-        if (request.From > 0)
+        if (request.From.HasValue && request.From.Value.Ticks > 0)
         {
-            queueItems = ((await _storageProvider.CreateMiddlewareQueueItemRepository()).GetEntriesOnOrAfterTimeStampAsync(request.From).ToBlockingEnumerable()).ToList();
+            queueItems = ((await _storageProvider.CreateMiddlewareQueueItemRepository()).GetEntriesOnOrAfterTimeStampAsync(request.From.Value.Ticks).ToBlockingEnumerable()).ToList();
         }
         else
         {
@@ -34,17 +37,15 @@ public class JournalProcessorGR : IJournalProcessor
 
         var aadFactory = new AADEFactory(_masterDataConfiguration);
         using var memoryStream = new MemoryStream();
-        var invoiecDoc = aadFactory.MapToInvoicesDoc(queueItems.ToList());
-        if (request.To == -1)
+        var invoiceDoc = aadFactory.MapToInvoicesDoc(queueItems.ToList());
+        if (request.Take.HasValue)
         {
-            invoiecDoc.invoice = invoiecDoc.invoice.OrderByDescending(x => x.mark).Take(1).ToArray();
+            invoiceDoc.invoice = invoiceDoc.invoice.OrderBy(x => x.mark * Math.Sign(request.Take.Value)).Take((int) request.Take.Value).ToArray();
         }
         var xmlSerializer = new XmlSerializer(typeof(InvoicesDoc));
-        xmlSerializer.Serialize(memoryStream, invoiecDoc);
+        xmlSerializer.Serialize(memoryStream, invoiceDoc);
         memoryStream.Position = 0;
-        yield return new JournalResponse
-        {
-            Chunk = memoryStream.ToArray().ToList()
-        };
+
+        return (new ContentType(MediaTypeNames.Application.Xml), PipeReader.Create(memoryStream));
     }
 }

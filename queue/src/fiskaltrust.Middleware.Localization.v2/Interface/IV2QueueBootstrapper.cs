@@ -1,4 +1,7 @@
-﻿namespace fiskaltrust.Middleware.Localization.v2.Interface;
+﻿using System.IO.Pipelines;
+using System.Net.Mime;
+
+namespace fiskaltrust.Middleware.Localization.v2.Interface;
 
 public interface IV2QueueBootstrapper
 {
@@ -6,5 +9,5 @@ public interface IV2QueueBootstrapper
 
     Func<string, Task<string>> RegisterForEcho();
 
-    Func<string, Task<string>> RegisterForJournal();
+    public Func<string, Task<(ContentType contentType, PipeReader reader)>> RegisterForJournal();
 }

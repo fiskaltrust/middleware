@@ -16,7 +16,6 @@ namespace fiskaltrust.Middleware.SCU.ES.VeriFactu;
 
 public class VeriFactuMapping
 {
-    //private readonly X509Certificate2? _certificate;
     private readonly VeriFactuSCUConfiguration _veriFactuSCUConfiguration;
     public VeriFactuMapping(VeriFactuSCUConfiguration configuration)
     {

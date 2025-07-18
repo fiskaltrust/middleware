@@ -1,4 +1,6 @@
-﻿using System.Security.Cryptography;
+﻿using System.IO.Pipelines;
+using System.Net.Mime;
+using System.Security.Cryptography;
 using fiskaltrust.Middleware.Localization.QueuePT.Processors;
 using fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
 using fiskaltrust.Middleware.Localization.v2;
@@ -44,7 +46,7 @@ public class QueuePTBootstrapper : IV2QueueBootstrapper
         return _queue.RegisterForEcho();
     }
 
-    public Func<string, Task<string>> RegisterForJournal()
+    public Func<string, Task<(ContentType contentType, PipeReader reader)>> RegisterForJournal()
     {
         return _queue.RegisterForJournal();
     }

@@ -9,6 +9,9 @@ using FluentAssertions.Execution;
 using Microsoft.Extensions.Logging;
 using Xunit;
 using Xunit.Abstractions;
+using System.Net.Mime;
+using System.IO.Pipelines;
+using System.Text;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.Certification;
 
@@ -17,8 +20,8 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.Certification;
 public class PTCertificationTests
 {
     private readonly Func<string, Task<string>> _signMethod;
-    private readonly Func<string, Task<string>> _journalMethod;
-    private readonly Guid _cashboxid;   
+    private readonly Func<string, Task<(ContentType contentType, PipeReader reader)>> _journalMethod;
+    private readonly Guid _cashboxid;
 
     public async Task<ftCashBoxConfiguration> GetConfigurationAsync(Guid cashBoxId, string accessToken)
     {
@@ -148,7 +151,7 @@ public class PTCertificationTests
         File.WriteAllBytes($"{base_path}/{casename}.receipt.copy.pdf", await pdfcopydata.Content.ReadAsByteArrayAsync());
         File.WriteAllBytes($"{base_path}/{casename}.receipt.png", await pngdata.Content.ReadAsByteArrayAsync());
         File.WriteAllBytes($"{base_path}/{casename}.receipt.copy.png", await pngcopydata.Content.ReadAsByteArrayAsync());
-        File.WriteAllText($"{base_path}/{casename}_saft.xml", xmlData);
+        File.WriteAllText($"{base_path}/{casename}_saft.xml", (xmlData.contentType.CharSet is null ? Encoding.Default : Encoding.GetEncoding(xmlData.contentType.CharSet!)).GetString((await xmlData.reader.ReadAsync()).Buffer));
     }
 
     [Fact]
@@ -202,7 +205,7 @@ public class PTCertificationTests
         {
             ftJournalType = 0x5054_2000_0000_0001
         }));
-        File.WriteAllText($"{targetFolder}\\SAFT_journal.xml", xmlData);
+        File.WriteAllText($"{targetFolder}\\SAFT_journal.xml", (xmlData.contentType.CharSet is null ? Encoding.Default : Encoding.GetEncoding(xmlData.contentType.CharSet!)).GetString((await xmlData.reader.ReadAsync()).Buffer));
     }
 
     [Fact]
