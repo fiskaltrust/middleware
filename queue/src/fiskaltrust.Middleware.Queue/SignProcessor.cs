@@ -108,7 +108,15 @@ namespace fiskaltrust.Middleware.Queue
                         var message = $"Queue {_middlewareConfiguration.QueueId} found cbReceiptReference \"{foundQueueItem.cbReceiptReference}\"";
                         _logger.LogWarning(message);
                         await CreateActionJournalAsync(message, "", foundQueueItem.ftQueueItemId).ConfigureAwait(false);
-                        return JsonConvert.DeserializeObject<ReceiptResponse>(foundQueueItem.response);
+                        var response = JsonConvert.DeserializeObject<ReceiptResponse>(foundQueueItem.response);
+                        if ((response.ftState & 0xFFFF_FFFF) == 0xEEEE_EEEE && (data.ftReceiptCase & 0xF000_0000_0000) != 0x2000_0000_0000)
+                        {
+                            return null;
+                        }
+                        else
+                        { 
+                            return response;
+                        }                                
                     }
                 }
                 catch (Exception x)
