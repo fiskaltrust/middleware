@@ -228,7 +228,7 @@ namespace fiskaltrust.Middleware.Queue
                     var errorMessage = "An error occurred during receipt processing, resulting in ftState = 0xEEEE_EEEE.";
                     await CreateActionJournalAsync(errorMessage, $"{receiptResponse.ftState:X}", queueItem.ftQueueItemId).ConfigureAwait(false);
 
-                    if (data.IsV2())
+                    if (!data.IsV2())
                     {
                         throw exception;
                     }
