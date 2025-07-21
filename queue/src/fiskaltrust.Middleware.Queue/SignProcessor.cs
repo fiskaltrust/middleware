@@ -223,12 +223,12 @@ namespace fiskaltrust.Middleware.Queue
                 _logger.LogTrace("SignProcessor.InternalSign: Updating Queue in database.");
                 await _configurationRepository.InsertOrUpdateQueueAsync(queue).ConfigureAwait(false);
 
-                if ((receiptResponse.ftState & 0xFFFF_FFFF) == 0xEEEE_EEEE)
+                if (receiptResponse.IsFailed())
                 {
                     var errorMessage = "An error occurred during receipt processing, resulting in ftState = 0xEEEE_EEEE.";
                     await CreateActionJournalAsync(errorMessage, $"{receiptResponse.ftState:X}", queueItem.ftQueueItemId).ConfigureAwait(false);
 
-                    if ((data.ftReceiptCase & 0xF000_0000_0000) != 0x2000_0000_0000)
+                    if (data.IsV2())
                     {
                         throw exception;
                     }
