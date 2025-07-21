@@ -114,7 +114,7 @@ namespace fiskaltrust.Middleware.Queue
                             return null;
                         }
                         else
-                        { 
+                        {
                             return response;
                         }                                
                     }
