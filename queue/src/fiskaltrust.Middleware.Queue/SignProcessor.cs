@@ -109,7 +109,7 @@ namespace fiskaltrust.Middleware.Queue
                         _logger.LogWarning(message);
                         await CreateActionJournalAsync(message, "", foundQueueItem.ftQueueItemId).ConfigureAwait(false);
                         var response = JsonConvert.DeserializeObject<ReceiptResponse>(foundQueueItem.response);
-                        if ((response.ftState & 0xFFFF_FFFF) == 0xEEEE_EEEE && (data.ftReceiptCase & 0xF000_0000_0000) != 0x2000_0000_0000)
+                        if (response.IsFailed() && !data.IsV2())
                         {
                             return null;
                         }
