@@ -2,6 +2,7 @@
 using System.Net.Mime;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.Json;
 using System.Xml.Serialization;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
@@ -20,12 +21,10 @@ namespace fiskaltrust.Middleware.Localization.QueueES.Processors;
 
 public class JournalProcessorES : IJournalProcessor
 {
-    private readonly ILogger<JournalProcessorES> _logger;
     private readonly AsyncLazy<IMiddlewareRepository<ftJournalES>> _journalESRepository;
 
-    public JournalProcessorES(ILogger<JournalProcessorES> logger, AsyncLazy<IMiddlewareRepository<ftJournalES>> journalESRepository)
+    public JournalProcessorES(AsyncLazy<IMiddlewareRepository<ftJournalES>> journalESRepository)
     {
-        _logger = logger;
         _journalESRepository = journalESRepository;
     }
 
@@ -42,23 +41,23 @@ public class JournalProcessorES : IJournalProcessor
     private async Task<(ContentType, PipeReader)> ProcessVeriFactuAsync(JournalRequest request)
     {
         Pipe response = new();
-        var journalESs = (await _journalESRepository).GetByTimeStampRangeAsync(request.From?.Ticks ?? 0, request.To?.Ticks ?? 0);
+        var journalESs = (await _journalESRepository).GetByTimeStampRangeAsync(request.From, request.To);
+
+        await foreach (var journalES in journalESs)
+        {
+            if (Enum.TryParse<JournalESType>(journalES.JournalType, out var journalType) && journalType == JournalESType.VeriFactu)
+            {
+                await response.Writer.WriteAsync(Encoding.UTF8.GetBytes(journalES.Data));
+                await response.Writer.WriteAsync(Encoding.UTF8.GetBytes(","));
+            }
+        }
 
         _ = Task.Run(async () =>
         {
             try
             {
-                await foreach (var journalES in journalESs)
-                {
-                    if (Enum.TryParse<JournalESType>(journalES.JournalType, out var journalType) && journalType == JournalESType.VeriFactu)
-                    {
-                        await response.Writer.WriteAsync(Encoding.UTF8.GetBytes(journalES.RequestData));
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error processing journal request");
+                await response.Writer.WriteAsync(Encoding.UTF8.GetBytes("["));
+
             }
             finally
             {

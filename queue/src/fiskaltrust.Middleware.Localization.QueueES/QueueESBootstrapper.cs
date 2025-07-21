@@ -57,7 +57,7 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
             new ReceiptCommandProcessorES(
                 essscd,
                 storageProvider.CreateConfigurationRepository(),
-                storageProvider.CreateMiddlewareQueueItemRepository().Cast<IMiddlewareQueueItemRepository, IReadOnlyQueueItemRepository>()
+                storageProvider.CreateMiddlewareQueueItemRepository()
             ),
             new DailyOperationsCommandProcessorES(
                 essscd,
@@ -66,7 +66,7 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
             new ProtocolCommandProcessorES()
         );
         var signProcessor = new SignProcessor(loggerFactory.CreateLogger<SignProcessor>(), queueStorageProvider, signProcessorES.ProcessAsync, cashBoxIdentification, middlewareConfiguration);
-        var journalProcessor = new JournalProcessor(storageProvider, new JournalProcessorES(loggerFactory.CreateLogger<JournalProcessorES>(), storageProvider.CreateMiddlewareJournalESRepository()), configuration, loggerFactory.CreateLogger<JournalProcessor>());
+        var journalProcessor = new JournalProcessor(storageProvider, new JournalProcessorES(storageProvider.CreateMiddlewareJournalESRepository()), configuration, loggerFactory.CreateLogger<JournalProcessor>());
         _queue = new Queue(signProcessor, journalProcessor, loggerFactory)
         {
             Id = id,

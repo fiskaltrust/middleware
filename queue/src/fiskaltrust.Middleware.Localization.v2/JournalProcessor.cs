@@ -17,10 +17,11 @@ namespace fiskaltrust.Middleware.Localization.v2;
 
 public interface IJournalProcessor
 {
-    Task<(ContentType contentType, PipeReader reader)> ProcessAsync(JournalRequest request);
+    Task<(ContentType contentType, IAsyncEnumerable<byte> reader)> ProcessAsync(JournalRequest request);
 }
 
-public class JournalProcessor : IJournalProcessor
+
+public class JournalProcessor
 {
     private readonly AsyncLazy<IReadOnlyConfigurationRepository> _configurationRepository;
     private readonly AsyncLazy<IMiddlewareRepository<ftQueueItem>> _queueItemRepository;
@@ -160,17 +161,17 @@ public class JournalProcessor : IJournalProcessor
 
     private IAsyncEnumerable<T> GetEntitiesAsync<T>(IMiddlewareRepository<T> repository, JournalRequest request)
     {
-        if (request.Take.HasValue)
+        if (request.To < 0)
         {
-            return repository.GetEntriesOnOrAfterTimeStampAsync(request.From?.Ticks ?? 0, take: (int) -request.Take.Value);
+            return repository.GetEntriesOnOrAfterTimeStampAsync(request.From, take: (int) -request.To);
         }
-        else if (request.To is null)
+        else if (request.To == 0)
         {
-            return repository.GetEntriesOnOrAfterTimeStampAsync(request.From?.Ticks ?? 0);
+            return repository.GetEntriesOnOrAfterTimeStampAsync(request.From);
         }
         else
         {
-            return repository.GetByTimeStampRangeAsync(request.From?.Ticks ?? 0, request.To?.Ticks ?? 0);
+            return repository.GetByTimeStampRangeAsync(request.From, request.To);
         }
     }
 }

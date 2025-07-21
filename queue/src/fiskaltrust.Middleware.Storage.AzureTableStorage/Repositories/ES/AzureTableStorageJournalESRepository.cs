@@ -33,14 +33,11 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.ES
                 { nameof(ftJournalES.ftQueueId), src.ftQueueId},
                 { nameof(ftJournalES.ftQueueItemId), src.ftQueueItemId},
                 { nameof(ftJournalES.JournalType), src.JournalType},
-                { nameof(ftJournalES.RequestData), src.RequestData},
-                { nameof(ftJournalES.ResponseData), src.ResponseData},
                 { nameof(ftJournalES.Number), src.Number},
                 { nameof(ftJournalES.TimeStamp), src.TimeStamp},
             };
 
-            entity.SetOversized(nameof(ftJournalES.RequestData), src.RequestData);
-            entity.SetOversized(nameof(ftJournalES.ResponseData), src.ResponseData);
+            entity.SetOversized(nameof(ftJournalES.Data), src.Data);
 
             return entity;
         }
@@ -58,8 +55,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.ES
                 ftQueueId = src.GetGuid(nameof(ftJournalES.ftQueueId)).GetValueOrDefault(),
                 ftQueueItemId = src.GetGuid(nameof(ftJournalES.ftQueueItemId)).GetValueOrDefault(),
                 JournalType = src.GetString(nameof(ftJournalES.JournalType)),
-                RequestData = src.GetOversized(nameof(ftJournalES.RequestData)),
-                ResponseData = src.GetOversized(nameof(ftJournalES.ResponseData)),
+                Data = src.GetOversized(nameof(ftJournalES.Data)),
                 TimeStamp = src.GetInt64(nameof(ftQueueItem.TimeStamp)).GetValueOrDefault(),
             };
         }
