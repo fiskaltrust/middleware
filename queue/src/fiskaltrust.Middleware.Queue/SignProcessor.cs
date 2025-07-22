@@ -98,7 +98,7 @@ namespace fiskaltrust.Middleware.Queue
         private async Task<ReceiptResponse> InternalSign(ftQueue queue, ReceiptRequest data)
         {
             _logger.LogTrace("SignProcessor.InternalSign called.");
-            if ((data.ftReceiptCase & 0x0000800000000000L) > 0)
+            if ((data.ftReceiptCase & 0x0000800000000000L) > 0) 
             {
                 try
                 {
@@ -109,7 +109,7 @@ namespace fiskaltrust.Middleware.Queue
                         _logger.LogWarning(message);
                         await CreateActionJournalAsync(message, "", foundQueueItem.ftQueueItemId).ConfigureAwait(false);
                         var response = JsonConvert.DeserializeObject<ReceiptResponse>(foundQueueItem.response);
-                        if (response.IsError() && !data.IsV2())
+                        if (response.IsError()) // this if(data.ftReceiptCase & 0x0000800000000000L>0) is valid only for V1
                         {
                             return null;
                         }

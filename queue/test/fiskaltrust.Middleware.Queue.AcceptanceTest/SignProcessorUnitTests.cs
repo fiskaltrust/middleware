@@ -175,19 +175,7 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
             var response = await sut.ProcessAsync(request);
             response.Should().BeNull();           
         }
-        [Fact]
-        public async Task RequestPreviousReceipt_WithV2RequestAndFtStateError_ShouldReturnResponse()
-        {
-            var (request, configuration, queueItemRepository) = SetupTestEnvironment(
-                ftReceiptCase: 0x0000A00000000000L, // V2 tagging 
-                ftState: 0xEEEE_EEEE);
-
-            var sut = CreateSignProcessor(queueItemRepository, configuration);
-
-            var response = await sut.ProcessAsync(request);
-            response.Should().NotBeNull();
-        }
-
+     
         [Fact]
         public async Task RequestPreviousReceipt_WithNonErrorFtState_ShouldReturnResponseRegardlessOfTagging()
         {
