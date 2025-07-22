@@ -109,7 +109,7 @@ namespace fiskaltrust.Middleware.Queue
                         _logger.LogWarning(message);
                         await CreateActionJournalAsync(message, "", foundQueueItem.ftQueueItemId).ConfigureAwait(false);
                         var response = JsonConvert.DeserializeObject<ReceiptResponse>(foundQueueItem.response);
-                        if (response.IsFailed() && !data.IsV2())
+                        if (response.IsError() && !data.IsV2())
                         {
                             return null;
                         }
@@ -177,7 +177,8 @@ namespace fiskaltrust.Middleware.Queue
                 Exception exception = null;
                 try
                 {
-                    (receiptResponse, countrySpecificActionJournals) = await _countrySpecificSignProcessor.ProcessAsync(data, queue, queueItem).ConfigureAwait(false);
+                    throw new Exception();
+                   // (receiptResponse, countrySpecificActionJournals) = await _countrySpecificSignProcessor.ProcessAsync(data, queue, queueItem).ConfigureAwait(false);
                 }
                 catch (Exception e)
                 {
@@ -223,7 +224,7 @@ namespace fiskaltrust.Middleware.Queue
                 _logger.LogTrace("SignProcessor.InternalSign: Updating Queue in database.");
                 await _configurationRepository.InsertOrUpdateQueueAsync(queue).ConfigureAwait(false);
 
-                if (receiptResponse.IsFailed())
+                if (receiptResponse.IsError())
                 {
                     var errorMessage = "An error occurred during receipt processing, resulting in ftState = 0xEEEE_EEEE.";
                     await CreateActionJournalAsync(errorMessage, $"{receiptResponse.ftState:X}", queueItem.ftQueueItemId).ConfigureAwait(false);

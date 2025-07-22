@@ -5,6 +5,6 @@ namespace fiskaltrust.Middleware.Queue.Extensions
 {
     public static class ReceiptResponseExtensions
     {
-        public static bool IsFailed(this ReceiptResponse receiptResponse) => (receiptResponse.ftState & 0xFFFF_FFFF) == 0xEEEE_EEEE;
+        public static bool IsError(this ReceiptResponse receiptResponse) => (receiptResponse.ftState & 0xFFFF_FFFF) == 0xEEEE_EEEE;
     }
 }

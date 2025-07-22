@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.Middleware.Contracts.Interfaces;
@@ -161,5 +163,97 @@ namespace fiskaltrust.Middleware.Queue.AcceptanceTest
             process.Should().Throw<Exception>().WithMessage("MyException");
             queueItemRepository.Verify();
         }
+        [Fact]
+        public async Task RequestPreviousReceipt_WithV1RequestAndFtStateError_ShouldReturnNull()
+        {
+            var (request, configuration, queueItemRepository) = SetupTestEnvironment(
+            ftReceiptCase: 0x0000800000000000L, // V1 tagging
+            ftState: 0xEEEE_EEEE);
+
+            var sut = CreateSignProcessor(queueItemRepository, configuration);
+
+            var response = await sut.ProcessAsync(request);
+            response.Should().BeNull();           
+        }
+        [Fact]
+        public async Task RequestPreviousReceipt_WithV2RequestAndFtStateError_ShouldReturnResponse()
+        {
+            var (request, configuration, queueItemRepository) = SetupTestEnvironment(
+                ftReceiptCase: 0x0000A00000000000L, // V2 tagging 
+                ftState: 0xEEEE_EEEE);
+
+            var sut = CreateSignProcessor(queueItemRepository, configuration);
+
+            var response = await sut.ProcessAsync(request);
+            response.Should().NotBeNull();
+        }
+
+        [Fact]
+        public async Task RequestPreviousReceipt_WithNonErrorFtState_ShouldReturnResponseRegardlessOfTagging()
+        {
+            var (request, configuration, queueItemRepository) = SetupTestEnvironment(
+                 ftReceiptCase: 0x0000800000000000L, // V1 tagging
+                 ftState: 0x0000_EEEE);
+
+            var sut = CreateSignProcessor(queueItemRepository, configuration);
+
+            var response = await sut.ProcessAsync(request);
+            response.Should().NotBeNull();
+        }
+
+        private static (ReceiptRequest request, MiddlewareConfiguration config, Mock<IMiddlewareQueueItemRepository> repo) SetupTestEnvironment(long ftReceiptCase, long ftState)
+        {
+            var queueId = Guid.NewGuid();
+            var cashboxId = Guid.NewGuid();
+
+            var request = new ReceiptRequest
+            {
+                ftReceiptCase = ftReceiptCase,
+                ftCashBoxID = cashboxId.ToString(),
+                ftQueueID = queueId.ToString(),
+                cbTerminalID = "MyTerminalId",
+                cbReceiptReference = "MycbReceiptReference"
+            };
+
+            var responseObject = new ReceiptResponse { ftState = ftState };
+
+            var queueItem = new ftQueueItem
+            {
+                ftQueueItemId = Guid.NewGuid(),
+                request = JsonConvert.SerializeObject(request),
+                response = JsonConvert.SerializeObject(responseObject),
+                ftDoneMoment = DateTime.UtcNow,
+                responseHash = "responseHash"
+            };
+
+            var repo = new Mock<IMiddlewareQueueItemRepository>(MockBehavior.Strict);
+            repo.Setup(r => r.GetByReceiptReferenceAsync(request.cbReceiptReference, request.cbTerminalID))
+                .Returns(new List<ftQueueItem> { queueItem }.ToAsyncEnumerable());
+
+            var config = new MiddlewareConfiguration
+            {
+                QueueId = queueId,
+                CashBoxId = cashboxId,
+                ProcessingVersion = "test"
+            };
+
+            return (request, config, repo);
+        }
+
+        private static SignProcessor CreateSignProcessor(
+            Mock<IMiddlewareQueueItemRepository> repo,
+            MiddlewareConfiguration config)
+        {
+            return new SignProcessor(
+                Mock.Of<ILogger<SignProcessor>>(),
+                Mock.Of<IConfigurationRepository>(),
+                repo.Object,
+                Mock.Of<IMiddlewareReceiptJournalRepository>(),
+                Mock.Of<IMiddlewareActionJournalRepository>(),
+                Mock.Of<ICryptoHelper>(),
+                Mock.Of<IMarketSpecificSignProcessor>(),
+                config);
+        }
+
     }
 }
