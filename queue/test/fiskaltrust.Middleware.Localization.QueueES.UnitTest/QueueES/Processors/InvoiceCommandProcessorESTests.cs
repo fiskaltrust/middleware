@@ -11,7 +11,7 @@ using Moq;
 using Castle.Core.Logging;
 using Microsoft.Extensions.Logging;
 
-namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processors
+namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.Processors
 {
     public class InvoiceCommandProcessorESTests
     {

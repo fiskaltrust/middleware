@@ -16,7 +16,7 @@ using fiskaltrust.storage.V0.MasterData;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using Microsoft.Extensions.Logging;
 
-namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processors
+namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.Processors
 {
     public class LifecycleCommandProcessorESTests
     {

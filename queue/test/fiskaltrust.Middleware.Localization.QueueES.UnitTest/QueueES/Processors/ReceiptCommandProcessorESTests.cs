@@ -25,7 +25,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 
-namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processors
+namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.Processors
 {
     public class ReceiptCommandProcessorESTests
     {
