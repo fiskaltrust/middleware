@@ -1,5 +1,4 @@
 ﻿using fiskaltrust.ifPOS.v1;
-using fiskaltrust.ifPOS.v1.it;
 
 namespace fiskaltrust.Middleware.Queue.Extensions
 {
