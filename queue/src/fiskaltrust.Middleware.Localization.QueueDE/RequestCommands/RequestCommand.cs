@@ -5,8 +5,8 @@ using System.IO.Compression;
 using System.Threading.Tasks;
 using fiskaltrust.ifPOS.v1;
 using fiskaltrust.ifPOS.v1.de;
-using fiskaltrust.Middleware.Contracts.Extensions;
 using fiskaltrust.Middleware.Contracts.Data;
+using fiskaltrust.Middleware.Contracts.Extensions;
 using fiskaltrust.Middleware.Contracts.Models;
 using fiskaltrust.Middleware.Contracts.Models.Transactions;
 using fiskaltrust.Middleware.Localization.QueueDE.Extensions;
@@ -406,18 +406,26 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
             return (processReceiptResponse.TransactionNumber, processReceiptResponse.Signatures, processReceiptResponse.ClientId, processReceiptResponse.SignatureAlgorithm, processReceiptResponse.PublicKeyBase64, processReceiptResponse.SerialNumberOctet);
         }
 
-        protected async Task<(ulong transactionNumber, List<SignaturItem> signatures, string clientId, string signatureAlgorithm, string publicKeyBase64, string serialNumberOctet)> ProcessOutOfOperationReceiptAsync(string transactionIdentifier, string processType, string payload, ftQueueItem queueItem, ftQueueDE queueDE, bool isClientIdOnlyRequest)
+        protected async Task<(ulong transactionNumber, List<SignaturItem> signatures, string clientId, string signatureAlgorithm, string publicKeyBase64, string serialNumberOctet)> ProcessOutOfOperationReceiptAsync(string processType, string payload, ftQueueItem queueItem, ftQueue queue, ftQueueDE queueDE, ReceiptRequest request)
         {
             _logger.LogTrace("RequestCommand.ProcessOutOfOperationReceiptAsync [enter].");
             try
             {
-                var processReceiptResponse = await ProcessReceiptAsync(transactionIdentifier, processType, payload, queueItem, queueDE);
+                var processReceiptResponse = await ProcessReceiptAsync(request.cbReceiptReference, processType, payload, queueItem, queueDE);
                 return (processReceiptResponse.TransactionNumber, processReceiptResponse.Signatures, processReceiptResponse.ClientId, processReceiptResponse.SignatureAlgorithm, processReceiptResponse.PublicKeyBase64, processReceiptResponse.SerialNumberOctet);
             }
             finally
             {
+                try
+                {
+                    if (!request.IsTseTarDownloadBypass())
+                    {
+                        await PerformTarFileExportAsync(queueItem, queue, queueDE, erase: true).ConfigureAwait(false);
+                    }
+                }
+                catch { }
                 await _deSSCDProvider.Instance.UnregisterClientIdAsync(new UnregisterClientIdRequest { ClientId = queueDE.CashBoxIdentification }).ConfigureAwait(false);
-                if (!isClientIdOnlyRequest)
+                if (!request.IsModifyClientIdOnlyRequest())
                 {
                     await _deSSCDProvider.Instance.SetTseStateAsync(new TseState { CurrentState = TseStates.Terminated }).ConfigureAwait(false);
                 }
