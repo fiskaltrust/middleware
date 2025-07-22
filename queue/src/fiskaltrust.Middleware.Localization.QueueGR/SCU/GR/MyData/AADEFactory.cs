@@ -255,12 +255,15 @@ public class AADEFactory
                 }
                 else
                 {
-                    invoiceRow.vatExemptionCategorySpecified = true;
                     var exemptionCategory = AADEMappings.GetVatExemptionCategory(x);
                     if (exemptionCategory.HasValue)
                     {
                         invoiceRow.vatExemptionCategorySpecified = true;
                         invoiceRow.vatExemptionCategory = exemptionCategory.Value;
+                    }
+                    else if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002))
+                    {
+                        // We do not need to specific the exempt category since it is just a payment transfer
                     }
                     else
                     {
