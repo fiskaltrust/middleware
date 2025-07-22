@@ -1,4 +1,4 @@
-#pragma warning disable
+﻿#pragma warning disable
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData.Models;
 
@@ -73,12 +73,22 @@ public static class MyDataVatExemptionCategory
     /// Article 39a - Special regime of payment of tax from receiver.
     /// </summary>
     public const int Article39aSpecialRegime = 16;
-    
+
+    /// <summary>
+    /// Article54 The delivery, intra-Community acquisition and im-port of investment gold, including in-vestment gold for which there are certificates, by type or by type or which is the sub-ject of a transac-tion between gold accounts, includ-ing, in particular, gold loans and swaps, with a right of ownership or claim to invest-ment gold, as well as investment gold transactions with futures and for-ward contracts, which cause a change of owner-ship or claim to in-vestment gold,
+    /// </summary>
+    public const int Article54InterCommunityDeliveryReverseCharge = 19;
+
     /// <summary>
     /// Article 43 - Special regime for travel agencies.
     /// </summary>
     public const int TravelAgencies = 20;
-    
+
+    /// <summary>
+    /// Article 52 - Special taxa-tion regime for tax-able resellers who deliver second-hand goods and objects of artistic, collector's or ar-chaeological value
+    /// </summary>
+    public const int MarginScheme = 22;
+
     /// <summary>
     /// TAXFREE retail to non EU citizens.
     /// </summary>

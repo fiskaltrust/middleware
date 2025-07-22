@@ -384,6 +384,12 @@ public static class AADEMappings
             ChargeItemCaseNatureOfVatGR.ExemptArticle25CustomsRegimes => MyDataVatExemptionCategory.SpecialCustomsRegimes,
             ChargeItemCaseNatureOfVatGR.ExemptArticle39SmallBusinesses => MyDataVatExemptionCategory.SmallBusinesses,
 
+            // Margin Scheme (40)
+            ChargeItemCaseNatureOfVatGR.MarginSChemeTaxableResellers => MyDataVatExemptionCategory.MarginScheme,
+
+            // Reverse Charge (51)
+            ChargeItemCaseNatureOfVatGR.ReverseChargeIntraCommunityDeliveries => MyDataVatExemptionCategory.Article54InterCommunityDeliveryReverseCharge,
+
             // VAT paid in other EU country (60)
             ChargeItemCaseNatureOfVatGR.VatPaidOtherEUArticle13 => MyDataVatExemptionCategory.GoodsOutsideGreece,
             ChargeItemCaseNatureOfVatGR.VatPaidOtherEUArticle14 => MyDataVatExemptionCategory.ServicesOutsideGreece,
