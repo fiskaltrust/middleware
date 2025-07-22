@@ -53,7 +53,7 @@ public class JournalProcessor
 
         try
         {
-            if (request.ftJournalType.Case() != 0)
+            if (request.ftJournalType.Country() is not null)
             {
                 (contentType, response) = _marketSpecificJournalProcessor.ProcessAsync(request);
             }
@@ -63,9 +63,9 @@ public class JournalProcessor
 
                 response = request.ftJournalType switch
                 {
-                    JournalType.ActionJournal => ToBytes(GetEntitiesAsync(await _actionJournalRepository, request)),
-                    JournalType.ReceiptJournal => ToBytes(GetEntitiesAsync(await _receiptJournalRepository, request)),
-                    JournalType.QueueItem => ToBytes(GetEntitiesAsync(await _queueItemRepository, request)),
+                    JournalType.ActionJournal => GetFromEntitiesAsync(await _actionJournalRepository, request),
+                    JournalType.ReceiptJournal => GetFromEntitiesAsync(await _receiptJournalRepository, request),
+                    JournalType.QueueItem => GetFromEntitiesAsync(await _queueItemRepository, request),
                     JournalType.Configuration => new[] { Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(await GetConfigurationAsync())) }.ToAsyncEnumerable(),
                     _ => new[] {Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(new
                     {
@@ -84,26 +84,24 @@ public class JournalProcessor
         var tempFile = Path.GetTempFileName();
         try
         {
+            using var fileStream = new FileStream(tempFile, FileMode.Open, FileAccess.Write);
             await foreach (var journal in response)
             {
-                await File.WriteAllBytesAsync(tempFile, journal);
+                await fileStream.WriteAsync(journal);
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "An error occured while processing the Journal request.");
-            throw;
-        }
-        finally
-        {
             File.Delete(tempFile);
+            throw;
         }
 
         _ = Task.Run(async () =>
         {
             try
             {
-                var fileStream = new FileStream(tempFile, FileMode.Open, FileAccess.Read);
+                using var fileStream = new FileStream(tempFile, FileMode.Open, FileAccess.Read);
                 await fileStream.CopyToAsync(pipe.Writer.AsStream());
             }
             finally
@@ -127,8 +125,8 @@ public class JournalProcessor
             QueueList = await configurationRepository.GetQueueListAsync().ConfigureAwait(false),
             QueueATList = await configurationRepository.GetQueueATListAsync().ConfigureAwait(false),
             QueueDEList = await configurationRepository.GetQueueDEListAsync().ConfigureAwait(false),
-            QueueESList = GetConfigurationFromDictionary<ftQueueES>("init_ftQueueES"),
-            QueueEUList = GetConfigurationFromDictionary<ftQueueES>("init_ftQueueEU"),
+            QueueESList = await configurationRepository.GetQueueESListAsync().ConfigureAwait(false),
+            QueueEUList = await configurationRepository.GetQueueEUListAsync().ConfigureAwait(false),
             QueueFRList = await configurationRepository.GetQueueFRListAsync().ConfigureAwait(false),
             QueueGRList = GetConfigurationFromDictionary<ftQueueGR>("init_ftQueueGR"),
             QueueITList = await configurationRepository.GetQueueITListAsync().ConfigureAwait(false),
@@ -136,7 +134,7 @@ public class JournalProcessor
             QueuePTList = GetConfigurationFromDictionary<ftQueuePT>("init_ftQueuePT"),
             SignaturCreationUnitATList = await configurationRepository.GetSignaturCreationUnitATListAsync().ConfigureAwait(false),
             SignaturCreationUnitDEList = await configurationRepository.GetSignaturCreationUnitDEListAsync().ConfigureAwait(false),
-            SignaturCreationUnitESList = GetConfigurationFromDictionary<ftSignaturCreationUnitES>("init_ftSignaturCreationUnitES"),
+            SignaturCreationUnitESList = await configurationRepository.GetSignaturCreationUnitESListAsync().ConfigureAwait(false),
             SignaturCreationUnitFRList = await configurationRepository.GetSignaturCreationUnitFRListAsync().ConfigureAwait(false),
             SignaturCreationUnitGRList = GetConfigurationFromDictionary<ftSignaturCreationUnitGR>("init_ftSignaturCreationUnitGR"),
             SignaturCreationUnitITList = await configurationRepository.GetSignaturCreationUnitITListAsync().ConfigureAwait(false),
@@ -162,27 +160,31 @@ public class JournalProcessor
 
     }
 
-    private async IAsyncEnumerable<byte[]> ToBytes<T>(IAsyncEnumerable<T> asyncEnumerable)
+    private async IAsyncEnumerable<byte[]> GetFromEntitiesAsync<T>(IMiddlewareRepository<T> repository, JournalRequest request)
     {
-        await foreach (var journal in asyncEnumerable)
-        {
-            yield return Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(journal));
-        }
-    }
-
-    private IAsyncEnumerable<T> GetEntitiesAsync<T>(IMiddlewareRepository<T> repository, JournalRequest request)
-    {
+        IAsyncEnumerable<T> result;
         if (request.To < 0)
         {
-            return repository.GetEntriesOnOrAfterTimeStampAsync(request.From, take: (int) -request.To);
+            result = repository.GetEntriesOnOrAfterTimeStampAsync(request.From, take: (int) -request.To);
         }
         else if (request.To == 0)
         {
-            return repository.GetEntriesOnOrAfterTimeStampAsync(request.From);
+            result = repository.GetEntriesOnOrAfterTimeStampAsync(request.From);
         }
         else
         {
-            return repository.GetByTimeStampRangeAsync(request.From, request.To);
+            result = repository.GetByTimeStampRangeAsync(request.From, request.To);
         }
+
+        yield return Encoding.UTF8.GetBytes("[");
+        await foreach (var (i, journal) in result.Select((j, i) => (i, j)))
+        {
+            if (i != 0)
+            {
+                yield return Encoding.UTF8.GetBytes(",");
+            }
+            yield return Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(journal));
+        }
+        yield return Encoding.UTF8.GetBytes("]");
     }
 }
