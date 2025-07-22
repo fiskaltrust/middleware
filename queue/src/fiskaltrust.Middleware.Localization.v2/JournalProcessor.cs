@@ -17,7 +17,7 @@ namespace fiskaltrust.Middleware.Localization.v2;
 
 public interface IJournalProcessor
 {
-    Task<(ContentType contentType, IAsyncEnumerable<byte> reader)> ProcessAsync(JournalRequest request);
+    (ContentType contentType, IAsyncEnumerable<byte[]> result) ProcessAsync(JournalRequest request);
 }
 
 
@@ -49,13 +49,13 @@ public class JournalProcessor
     public async Task<(ContentType, PipeReader)> ProcessAsync(JournalRequest request)
     {
         ContentType contentType;
-        PipeReader response;
+        IAsyncEnumerable<byte[]> response;
 
         try
         {
             if (request.ftJournalType.Case() != 0)
             {
-                (contentType, response) = await _marketSpecificJournalProcessor.ProcessAsync(request);
+                (contentType, response) = _marketSpecificJournalProcessor.ProcessAsync(request);
             }
             else
             {
@@ -63,15 +63,15 @@ public class JournalProcessor
 
                 response = request.ftJournalType switch
                 {
-                    JournalType.ActionJournal => ToJournalResponse(GetEntitiesAsync(await _actionJournalRepository, request)),
-                    JournalType.ReceiptJournal => ToJournalResponse(GetEntitiesAsync(await _receiptJournalRepository, request)),
-                    JournalType.QueueItem => ToJournalResponse(GetEntitiesAsync(await _queueItemRepository, request)),
-                    JournalType.Configuration => PipeReader.Create(new ReadOnlySequence<byte>(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(await GetConfigurationAsync())))),
-                    _ => PipeReader.Create(new ReadOnlySequence<byte>(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(new
+                    JournalType.ActionJournal => ToBytes(GetEntitiesAsync(await _actionJournalRepository, request)),
+                    JournalType.ReceiptJournal => ToBytes(GetEntitiesAsync(await _receiptJournalRepository, request)),
+                    JournalType.QueueItem => ToBytes(GetEntitiesAsync(await _queueItemRepository, request)),
+                    JournalType.Configuration => new[] { Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(await GetConfigurationAsync())) }.ToAsyncEnumerable(),
+                    _ => new[] {Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(new
                     {
                         Assembly = typeof(JournalProcessor).Assembly.GetName().FullName,
                         typeof(JournalProcessor).Assembly.GetName().Version
-                    }))))
+                    }))}.ToAsyncEnumerable()
                 };
             }
         }
@@ -80,8 +80,40 @@ public class JournalProcessor
             _logger.LogError(ex, "An error occured while processing the Journal request.");
             throw;
         }
+        var pipe = new Pipe();
+        var tempFile = Path.GetTempFileName();
+        try
+        {
+            await foreach (var journal in response)
+            {
+                await File.WriteAllBytesAsync(tempFile, journal);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An error occured while processing the Journal request.");
+            throw;
+        }
+        finally
+        {
+            File.Delete(tempFile);
+        }
 
-        return (contentType, response);
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var fileStream = new FileStream(tempFile, FileMode.Open, FileAccess.Read);
+                await fileStream.CopyToAsync(pipe.Writer.AsStream());
+            }
+            finally
+            {
+                await pipe.Writer.CompleteAsync();
+                File.Delete(tempFile);
+            }
+        });
+
+        return (contentType, pipe.Reader);
     }
 
     private async Task<object> GetConfigurationAsync()
@@ -130,33 +162,12 @@ public class JournalProcessor
 
     }
 
-    private PipeReader ToJournalResponse<T>(IAsyncEnumerable<T> asyncEnumerable)
+    private async IAsyncEnumerable<byte[]> ToBytes<T>(IAsyncEnumerable<T> asyncEnumerable)
     {
-        Pipe response = new();
-
-        Task.Run(async () =>
+        await foreach (var journal in asyncEnumerable)
         {
-            try
-            {
-                await foreach (var journal in asyncEnumerable)
-                {
-                    try
-                    {
-                        await response.Writer.WriteAsync(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(journal)));
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "An error occurred while writing journal data to the response\n.");
-                    }
-                }
-            }
-            finally
-            {
-                await response.Writer.CompleteAsync();
-            }
-        });
-
-        return response.Reader;
+            yield return Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(journal));
+        }
     }
 
     private IAsyncEnumerable<T> GetEntitiesAsync<T>(IMiddlewareRepository<T> repository, JournalRequest request)

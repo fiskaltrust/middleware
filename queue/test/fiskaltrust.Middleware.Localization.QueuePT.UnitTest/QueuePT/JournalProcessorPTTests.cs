@@ -105,7 +105,9 @@ public class JournalProcessorPTTests
         middlewareQueueItemRepositoryMock.Setup(x => x.GetAsync()).ReturnsAsync(queueItems);
         storageProvider.Setup(x => x.CreateMiddlewareQueueItemRepository()).Returns(new AsyncLazy<IMiddlewareQueueItemRepository>(() => Task.FromResult(middlewareQueueItemRepositoryMock.Object)));
         var processor = new JournalProcessorPT(storageProvider.Object);
-        var result = await processor.ProcessAsync(new JournalRequest());
-        var data = (result.contentType.CharSet is null ? Encoding.Default : Encoding.GetEncoding(result.contentType.CharSet!)).GetString((await result.reader.ReadAsync()).Buffer);
+        var result = processor.ProcessAsync(new JournalRequest());
+        var byteArrays = await result.result.ToArrayAsync();
+        var flattenedBytes = byteArrays.SelectMany(x => x).ToArray();
+        var data = (result.contentType.CharSet is null ? Encoding.Default : Encoding.GetEncoding(result.contentType.CharSet!)).GetString(flattenedBytes);
     }
 }

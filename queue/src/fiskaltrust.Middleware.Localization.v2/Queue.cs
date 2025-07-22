@@ -11,13 +11,13 @@ namespace fiskaltrust.Middleware.Localization.v2
     public class Queue
     {
         private readonly ISignProcessor _signProcessor;
-        private readonly IJournalProcessor _journalProcessor;
+        private readonly JournalProcessor _journalProcessor;
         private readonly EchoProcessor _echoProcessor;
 
         public required Guid Id { get; set; }
         public required Dictionary<string, object> Configuration { get; set; }
 
-        public Queue(ISignProcessor signProcessor, IJournalProcessor journalProcessor, ILoggerFactory loggerFactory)
+        public Queue(ISignProcessor signProcessor, JournalProcessor journalProcessor, ILoggerFactory loggerFactory)
         {
             _signProcessor = new LocalQueueSynchronizationDecorator(signProcessor);
             _journalProcessor = journalProcessor;

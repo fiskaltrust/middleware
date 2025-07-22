@@ -77,6 +77,10 @@ public class ReceiptCommandProcessorES(AsyncLazy<IESSSCD> essscd, AsyncLazy<ICon
             });
             request.ReceiptRequest.ftReceiptCaseData = JsonSerializer.Deserialize<JsonElement>(jsonObject.ToJsonString());
         }
+        else
+        {
+
+        }
 
         var response = await (await _essscd).ProcessReceiptAsync(new ProcessRequest
         {

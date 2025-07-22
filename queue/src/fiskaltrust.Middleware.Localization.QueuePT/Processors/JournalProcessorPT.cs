@@ -21,7 +21,10 @@ public class JournalProcessorPT : IJournalProcessor
         _storageProvider = storageProvider;
     }
 
-    public async Task<(ContentType contentType, PipeReader reader)> ProcessAsync(JournalRequest request)
+    public (ContentType contentType, IAsyncEnumerable<byte[]> result) ProcessAsync(JournalRequest request)
+        => (new ContentType(MediaTypeNames.Application.Xml) { CharSet = Encoding.UTF8.WebName }, ProcessSAFTAsync(request));
+
+    public async IAsyncEnumerable<byte[]> ProcessSAFTAsync(JournalRequest request)
     {
         var masterData = new AccountMasterData
         {
@@ -44,6 +47,6 @@ public class JournalProcessorPT : IJournalProcessor
             queueItems = (await (await _storageProvider.CreateMiddlewareQueueItemRepository()).GetAsync()).ToList();
         }
         var data = SAFTMapping.SerializeAuditFile(masterData, queueItems, (int) request.To);
-        return (new ContentType(MediaTypeNames.Application.Xml) { CharSet = Encoding.UTF8.WebName }, PipeReader.Create(new ReadOnlySequence<byte>(Encoding.UTF8.GetBytes(data))));
+        yield return Encoding.UTF8.GetBytes(data);
     }
 }

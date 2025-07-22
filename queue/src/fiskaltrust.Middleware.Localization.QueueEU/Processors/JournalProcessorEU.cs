@@ -12,8 +12,5 @@ public class JournalProcessorEU : IJournalProcessor
     {
     }
 
-    public Task<(ContentType contentType, PipeReader reader)> ProcessAsync(JournalRequest request)
-    {
-        throw new NotImplementedException();
-    }
+    (ContentType contentType, IAsyncEnumerable<byte[]> result) IJournalProcessor.ProcessAsync(JournalRequest request) => throw new NotImplementedException();
 }

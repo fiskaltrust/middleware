@@ -23,7 +23,12 @@ public class JournalProcessorGR : IJournalProcessor
         _masterDataConfiguration = masterDataConfiguration;
     }
 
-    public async Task<(ContentType, PipeReader)> ProcessAsync(JournalRequest request)
+    public (ContentType, IAsyncEnumerable<byte[]>) ProcessAsync(JournalRequest request)
+    {
+        return (new ContentType(MediaTypeNames.Application.Xml), ProcessAADEAsync(request));
+    }
+
+    public async IAsyncEnumerable<byte[]> ProcessAADEAsync(JournalRequest request)
     {
         var queueItems = new List<ftQueueItem>();
         if (request.From > 0)
@@ -42,6 +47,7 @@ public class JournalProcessorGR : IJournalProcessor
         xmlSerializer.Serialize(memoryStream, invoiceDoc);
         memoryStream.Position = 0;
 
-        return (new ContentType(MediaTypeNames.Application.Xml), PipeReader.Create(memoryStream));
+        yield return memoryStream.ToArray();
     }
+
 }
