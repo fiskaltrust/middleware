@@ -184,16 +184,16 @@ public class MyDataSCU : IGRSSCD
             request.ReceiptResponse.SetReceiptResponseError(content);
         }
 
-        if(request.ReceiptResponse.ftStateData == null)
-        {
-            request.ReceiptResponse.ftStateData = new MiddlewareState
-            {
-                GR = new MiddlewareQueueGRState
-                {
-                    GovernmentApi = governemntApiResponse
-                }
-            };
-        }
+        // if(request.ReceiptResponse.ftStateData == null)
+        // {
+        //     request.ReceiptResponse.ftStateData = new MiddlewareState
+        //     {
+        //         GR = new MiddlewareQueueGRState
+        //         {
+        //             GovernmentApi = governemntApiResponse
+        //         }
+        //     };
+        // }
 
         return new ProcessResponse
         {
