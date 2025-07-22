@@ -177,8 +177,7 @@ namespace fiskaltrust.Middleware.Queue
                 Exception exception = null;
                 try
                 {
-                    throw new Exception();
-                   // (receiptResponse, countrySpecificActionJournals) = await _countrySpecificSignProcessor.ProcessAsync(data, queue, queueItem).ConfigureAwait(false);
+                    (receiptResponse, countrySpecificActionJournals) = await _countrySpecificSignProcessor.ProcessAsync(data, queue, queueItem).ConfigureAwait(false);
                 }
                 catch (Exception e)
                 {
