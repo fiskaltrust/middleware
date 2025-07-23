@@ -215,14 +215,14 @@ public static class AADEMappings
                 return InvoiceType.Item93;
             }
 
-            if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003))
-            {
-                if (!string.IsNullOrEmpty(receiptRequest.ftReceiptCaseData?.ToString()))
-                {
-                    return InvoiceType.Item32;
-                }
-                return InvoiceType.Item31;
-            }
+            //if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003))
+            //{
+            //    if (!string.IsNullOrEmpty(receiptRequest.ftReceiptCaseData?.ToString()))
+            //    {
+            //        return InvoiceType.Item32;
+            //    }
+            //    return InvoiceType.Item31;
+            //}
 
             if (receiptRequest.cbChargeItems.All(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.NotOwnSales)))
             {
@@ -311,6 +311,7 @@ public static class AADEMappings
                     //    return InvoiceType.Item71;
             }
         }
+    
         throw new Exception("Unknown type of receipt " + receiptRequest.ftReceiptCase.ToString("x"));
     }
 
