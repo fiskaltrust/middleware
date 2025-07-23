@@ -246,6 +246,8 @@ public class AADEFactory
                 {
                     invoiceRow.vatExemptionCategorySpecified = true;
                     invoiceRow.vatExemptionCategory = 27;
+                    invoiceRow.vatCategory = MyDataVatCategory.ExcludingVat;
+                    invoiceRow.recType = 6;
                 }
                 else
                 {
@@ -275,46 +277,39 @@ public class AADEFactory
                 invoiceRow.measurementUnitSpecified = true;
             }
 
-            if (x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Voucher))
+            if (receiptRequest.cbChargeItems.Any(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable)))
             {
-                invoiceRow.recType = 6;
-            }
-            else
-            {
-                // same as above
-                if (receiptRequest.cbChargeItems.Any(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable)))
+                if (receiptRequest.cbChargeItems.Any(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable) && !x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable)))
                 {
-                    if (receiptRequest.cbChargeItems.Any(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable) && !x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable)))
-                    {
-                        invoiceRow.invoiceDetailType = 2;
-                        invoiceRow.invoiceDetailTypeSpecified = true;
-                        invoiceRow.incomeClassification = [
-                            new IncomeClassificationType {
+                    invoiceRow.invoiceDetailType = 2;
+                    invoiceRow.invoiceDetailTypeSpecified = true;
+                    invoiceRow.incomeClassification = [
+                        new IncomeClassificationType {
                                             amount = invoiceRow.netValue,
                                             classificationCategory = AADEMappings.GetIncomeClassificationCategoryType(receiptRequest, x),
                                             classificationType = AADEMappings.GetIncomeClassificationValueType(receiptRequest, x),
                                             classificationTypeSpecified = true
                                         }
-                        ];
-                    }
-                    else if (x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable))
-                    {
-                        invoiceRow.invoiceDetailType = 1;
-                        invoiceRow.invoiceDetailTypeSpecified = true;
-                        invoiceRow.expensesClassification = [
-                            new ExpensesClassificationType {
+                    ];
+                }
+                else if (x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable))
+                {
+                    invoiceRow.invoiceDetailType = 1;
+                    invoiceRow.invoiceDetailTypeSpecified = true;
+                    invoiceRow.expensesClassification = [
+                        new ExpensesClassificationType {
                                                 amount = invoiceRow.netValue,
                                                 classificationCategorySpecified = true,
                                                 classificationCategory = ExpensesClassificationCategoryType.category2_9
                                             }
-                        ];
-                    }
-                }
-                else
-                {
-                    invoiceRow.incomeClassification = [AADEMappings.GetIncomeClassificationType(receiptRequest, x)];
+                    ];
                 }
             }
+            else
+            {
+                invoiceRow.incomeClassification = [AADEMappings.GetIncomeClassificationType(receiptRequest, x)];
+            }
+
             if (grouped.modifiers.Count > 0)
             {
                 invoiceRow.deductionsAmount = grouped.modifiers.Sum(x => x.Amount) * -1;
