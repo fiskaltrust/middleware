@@ -28,7 +28,7 @@ public class LifecycleCommandProcessorGR(ILocalizedQueueStorageProvider localize
         return new ProcessCommandResponse(receiptResponse, [actionJournal]);
     }
 
-    public async Task<ProcessCommandResponse> InitSCUSwitch0x4011Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, [])).ConfigureAwait(false);
+    public async Task<ProcessCommandResponse> InitSCUSwitch0x4011Async(ProcessCommandRequest request) => await GRFallBackOperations.NoOp(request);
 
-    public async Task<ProcessCommandResponse> FinishSCUSwitch0x4012Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, [])).ConfigureAwait(false);
+    public async Task<ProcessCommandResponse> FinishSCUSwitch0x4012Async(ProcessCommandRequest request) => await GRFallBackOperations.NoOp(request);
 }

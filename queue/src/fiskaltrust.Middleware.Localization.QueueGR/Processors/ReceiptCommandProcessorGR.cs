@@ -65,36 +65,11 @@ public class ReceiptCommandProcessorGR(IGRSSCD sscd, AsyncLazy<IMiddlewareQueueI
         }
     }
 
-    public async Task<ProcessCommandResponse> PointOfSaleReceiptWithoutObligation0x0003Async(ProcessCommandRequest request)
-    {
-        var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
-        {
-            ReceiptRequest = request.ReceiptRequest,
-            ReceiptResponse = request.ReceiptResponse,
-        });
-        return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
-    }
+    public Task<ProcessCommandResponse> PointOfSaleReceiptWithoutObligation0x0003Async(ProcessCommandRequest request) => GRFallBackOperations.NotSupported(request, "PointOfSaleReceiptWithoutObligation");
 
-    public async Task<ProcessCommandResponse> ECommerce0x0004Async(ProcessCommandRequest request)
-    {
-        var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
-        {
-            ReceiptRequest = request.ReceiptRequest,
-            ReceiptResponse = request.ReceiptResponse,
-        });
-        return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
-    }
+    public Task<ProcessCommandResponse> ECommerce0x0004Async(ProcessCommandRequest request) => GRFallBackOperations.NotSupported(request, "ECommerce");
 
-    public async Task<ProcessCommandResponse> DeliveryNote0x0005Async(ProcessCommandRequest request)
-    {
-        var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
-        {
-            ReceiptRequest = request.ReceiptRequest,
-            ReceiptResponse = request.ReceiptResponse,
-        });
-        return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
-    }
-
+    public Task<ProcessCommandResponse> DeliveryNote0x0005Async(ProcessCommandRequest request) => GRFallBackOperations.NotSupported(request, "DeliveryNote");
 
     private async Task<List<(ReceiptRequest, ReceiptResponse)>> LoadReceiptReferencesToResponse(ReceiptRequest request, ReceiptResponse receiptResponse)
     {
@@ -119,7 +94,6 @@ public class ReceiptCommandProcessorGR(IGRSSCD sscd, AsyncLazy<IMiddlewareQueueI
 
     }
 
-#pragma warning disable
     private async Task<(ReceiptRequest, ReceiptResponse)> LoadReceiptReferencesToResponse(ReceiptRequest request, ReceiptResponse receiptResponse, string cbPreviousReceiptReferenceString)
     {
         var queueItems = (await _readOnlyQueueItemRepository.Value).GetByReceiptReferenceAsync(cbPreviousReceiptReferenceString, request.cbTerminalID);
