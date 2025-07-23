@@ -14,7 +14,7 @@ public class ReceiptReferenceProvider
         _readOnlyQueueItemRepository = readOnlyQueueItemRepository;
     }
 
-    public async Task<List<(ReceiptRequest, ReceiptResponse)>> GetReceiptReferencesAsync(ProcessCommandRequest request)
+    public async Task<List<(ReceiptRequest, ReceiptResponse)>> GetReceiptReferencesIfNecessaryAsync(ProcessCommandRequest request)
     {
         List<(ReceiptRequest, ReceiptResponse)> receiptReferences = [];
         if (request.ReceiptRequest.cbPreviousReceiptReference is not null)
@@ -33,7 +33,8 @@ public class ReceiptReferenceProvider
 
         return await request.cbPreviousReceiptReference.MatchAsync(
             async single => [await LoadReceiptReferencesToResponse(request, receiptResponse, single)],
-            async group => {
+            async group =>
+            {
                 var references = new List<(ReceiptRequest, ReceiptResponse)>();
                 foreach (var reference in group)
                 {
@@ -48,7 +49,7 @@ public class ReceiptReferenceProvider
 
     private async Task<(ReceiptRequest, ReceiptResponse)> LoadReceiptReferencesToResponse(ReceiptRequest request, ReceiptResponse receiptResponse, string cbPreviousReceiptReferenceString)
     {
-        var queueItems = (await _readOnlyQueueItemRepository).GetByReceiptReferenceAsync(cbPreviousReceiptReferenceString, request.cbTerminalID);
+        var queueItems = (await _readOnlyQueueItemRepository.Value).GetByReceiptReferenceAsync(cbPreviousReceiptReferenceString, request.cbTerminalID);
         await foreach (var existingQueueItem in queueItems)
         {
             if (string.IsNullOrEmpty(existingQueueItem.response))
@@ -70,5 +71,4 @@ public class ReceiptReferenceProvider
         }
         throw new Exception($"Could not find a reference for the cbPreviousReceiptReference '{cbPreviousReceiptReferenceString}' sent via the request.");
     }
-
 }

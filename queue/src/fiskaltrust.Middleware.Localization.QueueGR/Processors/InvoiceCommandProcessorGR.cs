@@ -18,7 +18,7 @@ public class InvoiceCommandProcessorGR(IGRSSCD sscd, AsyncLazy<IMiddlewareQueueI
 
     public async Task<ProcessCommandResponse> InvoiceUnknown0x1000Async(ProcessCommandRequest request)
     {
-        var receiptReferences = await _receiptReferenceProvider.GetReceiptReferencesAsync(request);
+        var receiptReferences = await _receiptReferenceProvider.GetReceiptReferencesIfNecessaryAsync(request);
         var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
         {
             ReceiptRequest = request.ReceiptRequest,

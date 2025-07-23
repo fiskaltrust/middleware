@@ -49,7 +49,7 @@ public class ProtocolCommandProcessorGRTests
         };
 
         var grSSCDMock = new Mock<IGRSSCD>();
-        grSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>(), null))
+        grSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>(), new List<(ReceiptRequest, ReceiptResponse)>()))
             .ReturnsAsync(new ProcessResponse
             {
                 ReceiptResponse = scuResponse,
@@ -122,7 +122,7 @@ public class ProtocolCommandProcessorGRTests
         };
 
         var grSSCDMock = new Mock<IGRSSCD>();
-        grSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>(), null))
+        grSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>(), new List<(ReceiptRequest, ReceiptResponse)>()))
             .ReturnsAsync(new ProcessResponse
             {
                 ReceiptResponse = receiptResponse,
@@ -160,7 +160,7 @@ public class ProtocolCommandProcessorGRTests
             ftReceiptMoment = DateTime.UtcNow,
         };
         var grSSCDMock = new Mock<IGRSSCD>();
-        grSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>(), null))
+        grSSCDMock.Setup(x => x.ProcessReceiptAsync(It.IsAny<ProcessRequest>(), new List<(ReceiptRequest, ReceiptResponse)>()))
             .ReturnsAsync(new ProcessResponse
             {
                 ReceiptResponse = receiptResponse,

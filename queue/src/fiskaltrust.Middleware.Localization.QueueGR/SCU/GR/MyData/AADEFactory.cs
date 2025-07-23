@@ -12,8 +12,10 @@ using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
+using fiskaltrust.Middleware.SCU.GR.MyData.Models;
+using fiskaltrust.Middleware.SCU.GR.MyData.Helpers;
 
-namespace fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData;
+namespace fiskaltrust.Middleware.SCU.GR.MyData;
 
 public class AADEFactory
 {
@@ -221,8 +223,35 @@ public class AADEFactory
                 lineNumber = (int) x.Position,
                 vatAmount = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -vatAmount : vatAmount,
                 netValue = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -x.Amount - -vatAmount : x.Amount - vatAmount,
-                vatCategory = AADEMappings.GetVATCategory(x),
             };
+
+            if (x.ftChargeItemCase.NatureOfVat() != ChargeItemCaseNatureOfVatGR.UsualVatApplies)
+            {
+                // In cases of using exempt reasons we will have a zero VAT Rate
+                invoiceRow.vatCategory = MyDataVatCategory.ExcludingVat;
+                var exemptionCategory = AADEMappings.GetVatExemptionCategory(x);
+                if (exemptionCategory.HasValue)
+                {
+                    invoiceRow.vatExemptionCategorySpecified = true;
+                    invoiceRow.vatExemptionCategory = exemptionCategory.Value;
+                }
+                else
+                {
+                    throw new Exception($"The VAT exemption for the given Nature 0x{x.ftChargeItemCase.NatureOfVat():x}  is not supported.");
+                }
+            }
+            else
+            {
+                if (x.ftChargeItemCase.IsVat(ChargeItemCase.NotTaxable) && x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Voucher))
+                {
+                    invoiceRow.vatExemptionCategorySpecified = true;
+                    invoiceRow.vatExemptionCategory = 27;
+                }
+                else
+                {
+                    invoiceRow.vatCategory = AADEMappings.GetVATCategory(x);
+                }
+            }
 
             if (AADEMappings.GetInvoiceType(receiptRequest) == InvoiceType.Item86)
             {
@@ -240,96 +269,15 @@ public class AADEFactory
 
             if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004))
             {
-                // Todo change
                 invoiceRow.itemDescr = x.Description;
+                // Todo change
                 invoiceRow.measurementUnit = 1;
                 invoiceRow.measurementUnitSpecified = true;
             }
 
-            if (x.ftChargeItemCase.IsVat(ChargeItemCase.NotTaxable) || x.ftChargeItemCase.IsVat(ChargeItemCase.ZeroVatRate))
-            {
-                if (x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Voucher))
-                {
-                    invoiceRow.vatExemptionCategorySpecified = true;
-                    invoiceRow.vatExemptionCategory = 27;
-                }
-                else
-                {
-                    var exemptionCategory = AADEMappings.GetVatExemptionCategory(x);
-                    if (exemptionCategory.HasValue)
-                    {
-                        invoiceRow.vatExemptionCategorySpecified = true;
-                        invoiceRow.vatExemptionCategory = exemptionCategory.Value;
-                    }
-                    else if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002))
-                    {
-                        // We do not need to specific the exempt category since it is just a payment transfer
-                    }
-                    else
-                    {
-                        throw new Exception($"The VAT exemption for the given Nature 0x{x.ftChargeItemCase.NatureOfVat():x}  is not supported.");
-                    }
-                }
-            }
-            else if (x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Voucher))
+            if (x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Voucher))
             {
                 invoiceRow.recType = 6;
-            }
-            else if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlagsGR.IsSelfPricingOperation))
-            {
-                if (invoiceRow.vatCategory == MyDataVatCategory.ExcludingVat)
-                {
-                    invoiceRow.vatExemptionCategorySpecified = true;
-                    invoiceRow.vatExemptionCategory = MyDataVatExemptionCategory.GeneralExemption;
-                }
-
-                if (receiptRequest.cbChargeItems.Any(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable)))
-                {
-                    // original line as follows:
-                    // if (receiptRequest.cbChargeItems.Any(x => (x.ftChargeItemCase & 0xF0) == 0x90) && (x.ftChargeItemCase & 0xF0) != 0x90)
-                    // I've left the logic the same but I don't think it's meant that way. there are two different x that shadow each other.
-                    if (receiptRequest.cbChargeItems.Any(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable) && !x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable)))
-                    {
-                        invoiceRow.invoiceDetailType = 2;
-                        invoiceRow.invoiceDetailTypeSpecified = true;
-                        invoiceRow.incomeClassification = [];
-                        invoiceRow.expensesClassification = [
-                           new ExpensesClassificationType {
-                                                        amount = invoiceRow.netValue,
-                                                        classificationCategorySpecified = true,
-
-                                                        classificationCategory = ExpensesClassificationCategoryType.category2_9
-                                                    }
-                            ];
-                    }
-                    else if (x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable))
-                    {
-                        invoiceRow.invoiceDetailType = 1;
-                        invoiceRow.invoiceDetailTypeSpecified = true;
-                        invoiceRow.expensesClassification = [];
-                    }
-                }
-                else
-                {
-                    invoiceRow.expensesClassification = [
-                        new ExpensesClassificationType {
-                                                amount = invoiceRow.netValue,
-                                                classificationCategorySpecified = true,
-                                                classificationType = ExpensesClassificationTypeClassificationType.E3_102_001,
-                                                classificationTypeSpecified = true,
-                                                classificationCategory = ExpensesClassificationCategoryType.category2_1
-                                            },
-                        new ExpensesClassificationType {
-                                                amount = invoiceRow.netValue,
-                                                classificationType = ExpensesClassificationTypeClassificationType.VAT_361,
-                                                classificationTypeSpecified = true
-                                            },
-                    ];
-                }
-            }
-            else if (receiptRequest.ftReceiptCase.Case() == ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003)
-            {
-                invoiceRow.incomeClassification = [];
             }
             else
             {
@@ -365,20 +313,6 @@ public class AADEFactory
                 else
                 {
                     invoiceRow.incomeClassification = [AADEMappings.GetIncomeClassificationType(receiptRequest, x)];
-                }
-            }
-            if (x.ftChargeItemCaseData != null)
-            {
-                var chargeItem = JsonSerializer.Deserialize<WithHoldingChargeItem>(JsonSerializer.Serialize(x.ftChargeItemCaseData), new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                });
-                if (chargeItem != null && chargeItem.WithHoldingAmount != default && chargeItem.WithHoldingAmount != default)
-                {
-                    invoiceRow.withheldAmountSpecified = true;
-                    invoiceRow.withheldAmount = chargeItem.WithHoldingAmount;
-                    invoiceRow.withheldPercentCategory = 3;
-                    invoiceRow.withheldPercentCategorySpecified = true;
                 }
             }
             if (grouped.modifiers.Count > 0)
@@ -449,7 +383,6 @@ public class AADEFactory
         }
         return -1;
     }
-
 
     private static List<PaymentMethodDetailType> GetPayments(ReceiptRequest receiptRequest)
     {

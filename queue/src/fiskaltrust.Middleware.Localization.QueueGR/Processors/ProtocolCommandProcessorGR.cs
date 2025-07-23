@@ -22,7 +22,7 @@ public class ProtocolCommandProcessorGR(IGRSSCD sscd) : IProtocolCommandProcesso
         {
             ReceiptRequest = request.ReceiptRequest,
             ReceiptResponse = request.ReceiptResponse,
-        });
+        }, []);
         return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
     }
 

@@ -1,4 +1,4 @@
-﻿namespace fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData;
+﻿namespace fiskaltrust.Middleware.SCU.GR.MyData.Helpers;
 
 public static class CountryTypeMapper
 {

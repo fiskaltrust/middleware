@@ -1,6 +1,6 @@
 ﻿#pragma warning disable
 
-namespace fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData.Models;
+namespace fiskaltrust.Middleware.SCU.GR.MyData.Models;
 
 public class MyDataVatCategory
 {

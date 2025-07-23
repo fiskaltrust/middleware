@@ -84,7 +84,6 @@ public static class ReceiptExamples
         var chargeItems = new List<ChargeItem> {
                     CreateGoodNormalVATRateItem(description: "Product 1", amount: 89.20m, quantity: 1),
                     CreateGoodNormalVATRateItem(description: "Product 2", amount: 23.43m, quantity: 1),
-                    CreateServiceNormalVATRateItem_WithWithHoldingTax(description: "Service Provision 1", netAmount: 461.93m, quantity: 1),
                     CreateGoodDiscountedVATRateItem(description: "Merchandise Product 1", amount: 12.30m, quantity: 1),
                     CreateGoodDiscountedVATRateItem(description: "Merchandise Product 2", amount: 113.43m, quantity: 1),
                 };
@@ -451,27 +450,6 @@ public static class ReceiptExamples
         };
     }
 
-    public static ChargeItem CreateServiceNormalVATRateItem_WithWithHoldingTax(string description, decimal netAmount, decimal quantity)
-    {
-        var vatRate = 24m;
-        var withholdingAmount = decimal.Round(netAmount * (20m / 100m), 2, MidpointRounding.AwayFromZero);
-        var vatAmount = netAmount * (vatRate / 100);
-        var chargeItem = new ChargeItem
-        {
-            Amount = netAmount + vatAmount,
-            VATRate = vatRate,
-            VATAmount = vatAmount,
-            ftChargeItemCase = (ChargeItemCase) 0x4752_2000_0000_0023,
-            Quantity = quantity,
-            Description = description,
-            ftChargeItemCaseData = new WithHoldingChargeItem
-            {
-                WithHoldingPercentage = 20m,
-                WithHoldingAmount = withholdingAmount
-            }
-        };
-        return chargeItem;
-    }
 
     public static ChargeItem CreateServiceNormalVATRateItem(string description, decimal amount, decimal quantity)
     {

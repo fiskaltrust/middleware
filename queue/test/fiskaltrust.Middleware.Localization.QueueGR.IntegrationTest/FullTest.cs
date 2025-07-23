@@ -8,6 +8,7 @@ using fiskaltrust.storage.V0.MasterData;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Xunit;
+using fiskaltrust.Middleware.SCU.GR.MyData;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
 {
