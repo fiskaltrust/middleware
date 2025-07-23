@@ -1,11 +1,7 @@
-﻿using System.Text;
-using System.Xml.Serialization;
+﻿using System.IO.Pipelines;
+using System.Net.Mime;
 using fiskaltrust.ifPOS.v2;
-using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.v2;
-using fiskaltrust.Middleware.Localization.v2.Interface;
-using fiskaltrust.storage.V0;
-using fiskaltrust.storage.V0.MasterData;
 
 namespace fiskaltrust.Middleware.Localization.QueueEU.Processors;
 
@@ -16,7 +12,7 @@ public class JournalProcessorEU : IJournalProcessor
     {
     }
 
-    public IAsyncEnumerable<JournalResponse> ProcessAsync(JournalRequest request)
+    public Task<(ContentType contentType, PipeReader reader)> ProcessAsync(JournalRequest request)
     {
         throw new NotImplementedException();
     }

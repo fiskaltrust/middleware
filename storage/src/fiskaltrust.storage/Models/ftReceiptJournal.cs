@@ -16,7 +16,7 @@ namespace fiskaltrust.storage.V0
         //FK + UNIQUE INDEX
         public Guid ftQueueItemId { get; set; }
 
-        //sha256(previouseReceiptJournalHash + ftReceiptJournalId + ftReceiptMoment.Ticks + ftReceiptNumber + requestHash + responseHash)
+        //sha256(previousReceiptJournalHash + ftReceiptJournalId + ftReceiptMoment.Ticks + ftReceiptNumber + requestHash + responseHash)
         public string ftReceiptHash { get; set; }
 
         //public string request { get; set; }
