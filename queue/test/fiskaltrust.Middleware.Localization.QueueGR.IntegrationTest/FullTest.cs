@@ -121,7 +121,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
                 },
             });
 
-            var xml = aadeFactory.MapToInvoicesDoc(receiptRequest, new ReceiptResponse
+            (var invoiceDoc, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, new ReceiptResponse
             {
                 ftCashBoxIdentification = cashBoxId.ToString(),
                 ftQueueID = Guid.NewGuid(),
@@ -132,7 +132,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
                 ftState = 0
             });
 
-            var data = aadeFactory.GenerateInvoicePayload(xml);
+            var data = AADEFactory.GenerateInvoicePayload(invoiceDoc!);
 
             d.ftState.IsState(State.Success).Should().BeTrue(string.Join(Environment.NewLine, d.ftSignatures.Select(x => x.Data)));
         }

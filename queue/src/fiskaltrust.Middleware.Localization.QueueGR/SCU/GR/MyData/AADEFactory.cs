@@ -18,6 +18,11 @@ using System.Data;
 
 namespace fiskaltrust.Middleware.SCU.GR.MyData;
 
+public class AADEFactoryError
+{
+    public Exception Exception { get; set; } = null!;
+}
+
 public class AADEFactory
 {
     private const string VIVA_FISCAL_PROVIDER_ID = "126";
@@ -99,28 +104,38 @@ public class AADEFactory
         return doc;
     }
 
-    public InvoicesDoc MapToInvoicesDoc(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, List<(ReceiptRequest, ReceiptResponse)>? receiptReferences = null)
+    public (InvoicesDoc? invoiceDoc, AADEFactoryError? error) MapToInvoicesDoc(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, List<(ReceiptRequest, ReceiptResponse)>? receiptReferences = null)
     {
-        foreach (var chargeItem in receiptRequest.cbChargeItems)
+        try
         {
-            chargeItem.Amount = Math.Round(chargeItem.Amount, 2);
-            chargeItem.VATAmount = Math.Round(chargeItem.GetVATAmount(), 2);
-            chargeItem.Quantity = Math.Round(chargeItem.Quantity, 2);
-        }
+            foreach (var chargeItem in receiptRequest.cbChargeItems)
+            {
+                chargeItem.Amount = Math.Round(chargeItem.Amount, 2);
+                chargeItem.VATAmount = Math.Round(chargeItem.GetVATAmount(), 2);
+                chargeItem.Quantity = Math.Round(chargeItem.Quantity, 2);
+            }
 
-        foreach (var payItem in receiptRequest.cbPayItems)
-        {
-            payItem.Amount = Math.Round(payItem.Amount, 2);
-            payItem.Quantity = Math.Round(payItem.Quantity, 2);
-        }
-        MyDataAADEValidation.ValidateReceiptRequest(receiptRequest);
+            foreach (var payItem in receiptRequest.cbPayItems)
+            {
+                payItem.Amount = Math.Round(payItem.Amount, 2);
+                payItem.Quantity = Math.Round(payItem.Quantity, 2);
+            }
+            MyDataAADEValidation.ValidateReceiptRequest(receiptRequest);
 
-        var inv = CreateInvoiceDocType(receiptRequest, receiptResponse, receiptReferences);
-        var doc = new InvoicesDoc
+            var inv = CreateInvoiceDocType(receiptRequest, receiptResponse, receiptReferences);
+            var doc = new InvoicesDoc
+            {
+                invoice = [inv]
+            };
+            return (doc, null);
+        }
+        catch (Exception ex)
         {
-            invoice = [inv]
-        };
-        return doc;
+            return (null, new AADEFactoryError
+            {
+                Exception = ex
+            });
+        }
     }
 
     private AadeBookInvoiceType CreateInvoiceDocType(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, List<(ReceiptRequest, ReceiptResponse)>? receiptReferences = null)
@@ -168,7 +183,7 @@ public class AADEFactory
             issuer = issuer,
             invoiceHeader = new InvoiceHeaderType
             {
-                series = receiptResponse.ftCashBoxIdentification;,
+                series = receiptResponse.ftCashBoxIdentification,
                 aa = identification.ToString(),
                 issueDate = receiptRequest.cbReceiptMoment,
                 invoiceType = AADEMappings.GetInvoiceType(receiptRequest),

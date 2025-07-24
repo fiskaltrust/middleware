@@ -15,7 +15,7 @@ namespace fiskaltrust.Middleware.SCU.GR.MyData;
 public class ftReceiptCaseDataPayload
 {
     [JsonPropertyName("GR")]
-    public ftReceiptCaseDataGreekPayload? GR { get; set; } 
+    public ftReceiptCaseDataGreekPayload? GR { get; set; }
 }
 
 public class ftReceiptCaseDataGreekPayload
@@ -50,7 +50,27 @@ public class MyDataSCU : IGRSSCD
     public async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request, List<(ReceiptRequest, ReceiptResponse)>? receiptReferences = null)
     {
         var aadFactory = new AADEFactory(_masterDataConfiguration);
-        var doc = aadFactory.MapToInvoicesDoc(request.ReceiptRequest, request.ReceiptResponse, receiptReferences);
+        (var doc, var error) = aadFactory.MapToInvoicesDoc(request.ReceiptRequest, request.ReceiptResponse, receiptReferences);
+        if (doc == null)
+        {
+            if (error != null)
+            {
+                request.ReceiptResponse.SetReceiptResponseError(error.Exception.Message);
+                return new ProcessResponse
+                {
+                    ReceiptResponse = request.ReceiptResponse
+                };
+            }
+            else
+            {
+                request.ReceiptResponse.SetReceiptResponseError("Something went wrong while mapping the inbound data. Please check the inbound request.");
+                return new ProcessResponse
+                {
+                    ReceiptResponse = request.ReceiptResponse
+                };
+            }
+        }
+
         if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.LateSigning))
         {
             foreach (var item in doc.invoice)
@@ -182,13 +202,11 @@ public class MyDataSCU : IGRSSCD
         };
     }
 
-
     public class AADEEErrorResponse
     {
         public string? AADEError { get; set; }
         public List<ErrorType> Errors { get; set; } = new List<ErrorType>();
     }
-
 
     public ResponseDoc GetResponse(string xmlContent)
     {

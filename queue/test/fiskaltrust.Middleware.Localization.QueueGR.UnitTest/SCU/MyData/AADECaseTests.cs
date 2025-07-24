@@ -94,13 +94,13 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.IntegrationTest.MyDataSCU
         private void ValidateMyData(ReceiptRequest receiptRequest, InvoiceType expectedInvoiceType, IncomeClassificationCategoryType expectedCategory, IncomeClassificationValueType? expectedValueType)
         {
             using var scope = new AssertionScope();
-            var invoiceDoc = _aadeFactory.MapToInvoicesDoc(receiptRequest, ExampleResponse);
-            invoiceDoc.invoice[0].invoiceHeader.invoiceType.Should().Be(expectedInvoiceType);
-            invoiceDoc.invoice[0].invoiceSummary.incomeClassification[0].classificationCategory.Should().Be(expectedCategory);
+            (var invoiceDoc, var error) = _aadeFactory.MapToInvoicesDoc(receiptRequest, ExampleResponse);
+            invoiceDoc!.invoice[0].invoiceHeader.invoiceType.Should().Be(expectedInvoiceType);
+            invoiceDoc!.invoice[0].invoiceSummary.incomeClassification[0].classificationCategory.Should().Be(expectedCategory);
             if (expectedValueType != null)
             {
-                invoiceDoc.invoice[0].invoiceSummary.incomeClassification[0].classificationTypeSpecified.Should().BeTrue();
-                invoiceDoc.invoice[0].invoiceSummary.incomeClassification[0].classificationType.Should().Be(expectedValueType);
+                invoiceDoc!.invoice[0].invoiceSummary.incomeClassification[0].classificationTypeSpecified.Should().BeTrue();
+                invoiceDoc!.invoice[0].invoiceSummary.incomeClassification[0].classificationType.Should().Be(expectedValueType);
             }
         }
 
