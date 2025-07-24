@@ -35,7 +35,7 @@ public class JournalProcessorGR : IJournalProcessor
 
         var aadFactory = new AADEFactory(_masterDataConfiguration);
         using var memoryStream = new MemoryStream();
-        var invoiecDoc = aadFactory.MapToInvoicesDoc(queueItems.ToList());
+        var invoiecDoc = aadFactory.LoadInvoiceDocsFromQueueItems(queueItems.ToList());
         if (request.To == -1)
         {
             invoiecDoc.invoice = invoiecDoc.invoice.OrderByDescending(x => x.mark).Take(1).ToArray();

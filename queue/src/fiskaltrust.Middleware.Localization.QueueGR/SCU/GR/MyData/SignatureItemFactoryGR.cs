@@ -19,7 +19,6 @@ public static class SignatureItemFactoryGR
         });
     }
 
-
     public static void AddMarksForConnectedMarks(ProcessRequest request, InvoicesDoc doc)
     {
         request.ReceiptResponse.AddSignatureItem(new SignatureItem

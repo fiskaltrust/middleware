@@ -8,8 +8,24 @@ using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.storage.V0.MasterData;
 using fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData.Models;
+using System.Text.Json.Serialization;
 
 namespace fiskaltrust.Middleware.SCU.GR.MyData;
+
+public class ftReceiptCaseDataPayload
+{
+    [JsonPropertyName("GR")]
+    public ftReceiptCaseDataGreekPayload? GR { get; set; } 
+}
+
+public class ftReceiptCaseDataGreekPayload
+{
+    public string? MerchantVATID { get; set; }
+    public string? Series { get; set; }
+    public long? AA { get; set; }
+    public string? HashAlg { get; set; }
+    public string? HashPayload { get; set; }
+}
 
 public class MyDataSCU : IGRSSCD
 {
@@ -45,7 +61,7 @@ public class MyDataSCU : IGRSSCD
             SignatureItemFactoryGR.AddTransmissionFailure1Signature(request);
         }
 
-        var payload = aadFactory.GenerateInvoicePayload(doc);
+        var payload = AADEFactory.GenerateInvoicePayload(doc);
         var response = await _httpClient.PostAsync("/myDataProvider/SendInvoices", new StringContent(payload, Encoding.UTF8, "application/xml"));
         var content = await response.Content.ReadAsStringAsync();
 
