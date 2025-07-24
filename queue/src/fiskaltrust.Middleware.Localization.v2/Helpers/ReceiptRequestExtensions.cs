@@ -6,6 +6,28 @@ namespace fiskaltrust.Middleware.Localization.v2.Helpers;
 
 public static class ReceiptRequestExtensions
 {
+    public static bool TryDeserializeftReceiptCaseData<T>(this ReceiptRequest request, out T? result) where T : class
+    {
+        result = default;
+        try
+        {
+            if (request.ftReceiptCaseData is null)
+            {
+                return false;
+            }
+            result = JsonSerializer.Deserialize<T>(JsonSerializer.Serialize(request.ftReceiptCaseData), new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+            return result != null;
+        }
+        catch (Exception)
+        {
+            result = default;
+            return false;
+        }
+    }
+
     public static List<(ChargeItem chargeItem, List<ChargeItem> modifiers)> GetGroupedChargeItems(this ReceiptRequest receiptRequest)
     {
         var data = new List<(ChargeItem chargeItem, List<ChargeItem> modifiers)>();
