@@ -225,36 +225,6 @@ public class AADEFactory
                 netValue = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -x.Amount - -vatAmount : x.Amount - vatAmount,
             };
 
-            if (x.ftChargeItemCase.NatureOfVat() != ChargeItemCaseNatureOfVatGR.UsualVatApplies)
-            {
-                // In cases of using exempt reasons we will have a zero VAT Rate
-                invoiceRow.vatCategory = MyDataVatCategory.ExcludingVat;
-                var exemptionCategory = AADEMappings.GetVatExemptionCategory(x);
-                if (exemptionCategory.HasValue)
-                {
-                    invoiceRow.vatExemptionCategorySpecified = true;
-                    invoiceRow.vatExemptionCategory = exemptionCategory.Value;
-                }
-                else
-                {
-                    throw new Exception($"The VAT exemption for the given Nature 0x{x.ftChargeItemCase.NatureOfVat():x}  is not supported.");
-                }
-            }
-            else
-            {
-                if (x.ftChargeItemCase.IsVat(ChargeItemCase.NotTaxable) && x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Voucher))
-                {
-                    invoiceRow.vatExemptionCategorySpecified = true;
-                    invoiceRow.vatExemptionCategory = 27;
-                    invoiceRow.vatCategory = MyDataVatCategory.ExcludingVat;
-                    invoiceRow.recType = 6;
-                }
-                else
-                {
-                    invoiceRow.vatCategory = AADEMappings.GetVATCategory(x);
-                }
-            }
-
             if (AADEMappings.GetInvoiceType(receiptRequest) == InvoiceType.Item86)
             {
                 invoiceRow.quantitySpecified = true;
@@ -277,39 +247,74 @@ public class AADEFactory
                 invoiceRow.measurementUnitSpecified = true;
             }
 
-            if (receiptRequest.cbChargeItems.Any(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable)))
+            if (x.ftChargeItemCase.NatureOfVat() != ChargeItemCaseNatureOfVatGR.UsualVatApplies)
             {
-                if (receiptRequest.cbChargeItems.Any(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable) && !x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable)))
+                // In cases of using exempt reasons we will have a zero VAT Rate
+                invoiceRow.vatCategory = MyDataVatCategory.ExcludingVat;
+                var exemptionCategory = AADEMappings.GetVatExemptionCategory(x);
+                if (exemptionCategory.HasValue)
                 {
-                    invoiceRow.invoiceDetailType = 2;
-                    invoiceRow.invoiceDetailTypeSpecified = true;
-                    invoiceRow.incomeClassification = [
-                        new IncomeClassificationType {
+                    invoiceRow.vatExemptionCategorySpecified = true;
+                    invoiceRow.vatExemptionCategory = exemptionCategory.Value;
+                }
+                else
+                {
+                    throw new Exception($"The VAT exemption for the given Nature 0x{x.ftChargeItemCase.NatureOfVat():x}  is not supported.");
+                }
+            }
+            else
+            {
+                if (x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Voucher))
+                {
+                    if (x.ftChargeItemCase.IsVat(ChargeItemCase.NotTaxable))
+                    {
+                        invoiceRow.vatExemptionCategorySpecified = true;
+                        invoiceRow.vatExemptionCategory = 27;
+                        invoiceRow.vatCategory = MyDataVatCategory.ExcludingVat;
+                    }
+                    else
+                    {
+                        invoiceRow.recType = 6;
+                        invoiceRow.vatCategory = AADEMappings.GetVATCategory(x);
+                    }
+                }
+                else
+                {
+                    invoiceRow.vatCategory = AADEMappings.GetVATCategory(x);
+                    if (receiptRequest.cbChargeItems.Any(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable)))
+                    {
+                        if (receiptRequest.cbChargeItems.Any(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable) && !x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable)))
+                        {
+                            invoiceRow.invoiceDetailType = 2;
+                            invoiceRow.invoiceDetailTypeSpecified = true;
+                            invoiceRow.incomeClassification = [
+                                new IncomeClassificationType {
                                             amount = invoiceRow.netValue,
                                             classificationCategory = AADEMappings.GetIncomeClassificationCategoryType(receiptRequest, x),
                                             classificationType = AADEMappings.GetIncomeClassificationValueType(receiptRequest, x),
                                             classificationTypeSpecified = true
                                         }
-                    ];
-                }
-                else if (x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable))
-                {
-                    invoiceRow.invoiceDetailType = 1;
-                    invoiceRow.invoiceDetailTypeSpecified = true;
-                    invoiceRow.expensesClassification = [
-                        new ExpensesClassificationType {
+                            ];
+                        }
+                        else if (x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable))
+                        {
+                            invoiceRow.invoiceDetailType = 1;
+                            invoiceRow.invoiceDetailTypeSpecified = true;
+                            invoiceRow.expensesClassification = [
+                                new ExpensesClassificationType {
                                                 amount = invoiceRow.netValue,
                                                 classificationCategorySpecified = true,
                                                 classificationCategory = ExpensesClassificationCategoryType.category2_9
                                             }
-                    ];
+                            ];
+                        }
+                    }
+                    else
+                    {
+                        invoiceRow.incomeClassification = [AADEMappings.GetIncomeClassificationType(receiptRequest, x)];
+                    }
                 }
-            }
-            else
-            {
-                invoiceRow.incomeClassification = [AADEMappings.GetIncomeClassificationType(receiptRequest, x)];
-            }
-
+            }       
             if (grouped.modifiers.Count > 0)
             {
                 invoiceRow.deductionsAmount = grouped.modifiers.Sum(x => x.Amount) * -1;
