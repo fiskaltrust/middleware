@@ -109,11 +109,12 @@ public class AADEFactoryTests
             }
         };
 
+        var receiptMoment = DateTime.UtcNow;
         var receiptRequest = new ReceiptRequest
         {
             cbTerminalID = "1",
             Currency = Currency.EUR,
-            cbReceiptMoment = DateTime.UtcNow,
+            cbReceiptMoment = receiptMoment,
             cbReceiptReference = cbReceiptReference,
             ftPosSystemId = Guid.NewGuid(),
             cbChargeItems = chargeItems,
@@ -133,7 +134,7 @@ public class AADEFactoryTests
                     Series = series, // This should be defined
                     AA = aa,
                     HashAlg = "SHA256",
-                    HashPayload = merchantId + "-" + series + "-" + aa + "-" + cbReceiptReference + "-" + chargeItems.Sum(x => x.Amount)
+                    HashPayload = merchantId + "-" + series + "-" + aa + "-" + cbReceiptReference + "-" + receiptMoment + "-"  + chargeItems.Sum(x => x.Amount)
                 }
             },
             cbReceiptAmount = chargeItems.Sum(x => x.Amount),
