@@ -352,6 +352,7 @@ public class AADEFactory
                 }
                 else if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002))
                 {
+                    invoiceRow.vatCategory = MyDataVatCategory.RegistrationsWithoutVat;
                     invoiceRow.incomeClassification = [AADEMappings.GetIncomeClassificationType(receiptRequest, x)];
                 }
                 else
