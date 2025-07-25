@@ -1,5 +1,10 @@
-﻿using fiskaltrust.ifPOS.v2;
+﻿using System.Text.Json;
+using System.Text.Json.Serialization;
+using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData.Models;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
+using fiskaltrust.Middleware.SCU.GR.MyData;
 using FluentAssertions;
 using Xunit;
 
@@ -367,6 +372,65 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             result.Should().NotBeNull();
             result!.Status.Should().Be(Status.Active);
             result.Priority.Should().Be(Priority.Medium);
+        }
+
+
+        [Fact]
+        public void Test()
+        {
+            var receiptRequest = new ReceiptResponse();
+            receiptRequest.ftStateData = new MiddlewareState
+            {
+                cbPreviousReceiptReferences = new List<ReceiptReference>
+                {
+                         new ReceiptReference
+                        {
+                            ReceiptRequest = new ReceiptRequest
+                            {
+                                ftCashBoxID = Guid.NewGuid(),
+                                ftReceiptCase = (ReceiptCase)0x4752_2000_0000_0000,
+                                ftReceiptCaseData = new
+                                {
+                                    TestProperty = "TestValue"
+                                }
+                            },
+                            ReceiptResponse = new ReceiptResponse
+                            {
+                                ftState = (State)0x4752_2000_0000_0000,
+                                ftCashBoxIdentification = "cashBoxIdentification",
+                                ftQueueID = Guid.NewGuid(),
+                                ftQueueItemID = Guid.NewGuid(),
+                                ftQueueRow = 1,
+                                ftReceiptIdentification = "receiptIdentification",
+                                ftReceiptMoment = DateTime.UtcNow,
+                            }
+                    }
+                }
+            };
+            var json = JsonSerializer.Deserialize<MiddlewareSCUGRMyDataState>(JsonSerializer.Serialize(receiptRequest.ftStateData))!;
+            json.GR = new MiddlewareQueueGRState
+            {
+                GovernmentApi = new GovernmentApiData
+                {
+                    Action = "TestAction",
+                    Protocol = "TestProtocol",
+                    ProtocolRequest = "TestRequest",
+                    ProtocolResponse = "TestResponse",
+                }
+            };
+
+            var data = JsonSerializer.Serialize(json);
+        }
+
+        public class MiddlewareState
+        {
+            public List<ReceiptReference>? cbPreviousReceiptReferences { get; set; }
+        }
+
+        public class ReceiptReference
+        {
+            public ReceiptRequest? ReceiptRequest { get; set; }
+            public ReceiptResponse? ReceiptResponse { get; set; }
         }
 
     }

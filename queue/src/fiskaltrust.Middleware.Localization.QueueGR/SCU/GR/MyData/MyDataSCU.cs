@@ -187,7 +187,7 @@ public class MyDataSCU : IGRSSCD
 
         if (request.ReceiptResponse.ftStateData == null && request.ReceiptRequest.ftCashBoxID == Guid.Parse("31f3defc-275d-4b6e-9f3f-fa09d64c1bb4"))
         {
-            request.ReceiptResponse.ftStateData = new MiddlewareState
+            request.ReceiptResponse.ftStateData = new MiddlewareSCUGRMyDataState
             {
                 GR = new MiddlewareQueueGRState
                 {
