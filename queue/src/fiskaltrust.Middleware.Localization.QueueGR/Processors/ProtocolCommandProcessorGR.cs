@@ -8,21 +8,13 @@ public class ProtocolCommandProcessorGR(IGRSSCD sscd) : IProtocolCommandProcesso
 {
     private readonly IGRSSCD _sscd = sscd;
 
-    public async Task<ProcessCommandResponse> ProtocolUnspecified0x3000Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+    public async Task<ProcessCommandResponse> ProtocolUnspecified0x3000Async(ProcessCommandRequest request) => await GRFallBackOperations.NoOp(request);
 
-    public async Task<ProcessCommandResponse> ProtocolTechnicalEvent0x3001Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+    public async Task<ProcessCommandResponse> ProtocolTechnicalEvent0x3001Async(ProcessCommandRequest request) => await GRFallBackOperations.NoOp(request);
 
-    public async Task<ProcessCommandResponse> ProtocolAccountingEvent0x3002Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+    public async Task<ProcessCommandResponse> ProtocolAccountingEvent0x3002Async(ProcessCommandRequest request) => await GRFallBackOperations.NoOp(request);
 
-    public async Task<ProcessCommandResponse> InternalUsageMaterialConsumption0x3003Async(ProcessCommandRequest request)
-    {
-        var response = await _sscd.ProcessReceiptAsync(new ProcessRequest
-        {
-            ReceiptRequest = request.ReceiptRequest,
-            ReceiptResponse = request.ReceiptResponse,
-        });
-        return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
-    }
+    public Task<ProcessCommandResponse> InternalUsageMaterialConsumption0x3003Async(ProcessCommandRequest request) => GRFallBackOperations.NotSupported(request, "InternalUsageMaterialConsumption");
 
     public async Task<ProcessCommandResponse> Order0x3004Async(ProcessCommandRequest request)
     {
@@ -30,14 +22,11 @@ public class ProtocolCommandProcessorGR(IGRSSCD sscd) : IProtocolCommandProcesso
         {
             ReceiptRequest = request.ReceiptRequest,
             ReceiptResponse = request.ReceiptResponse,
-        });
+        }, []);
         return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
     }
 
-    public async Task<ProcessCommandResponse> Pay0x3005Async(ProcessCommandRequest request)
-    {
-        return await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
-    }
+    public async Task<ProcessCommandResponse> Pay0x3005Async(ProcessCommandRequest request) => await GRFallBackOperations.NoOp(request);
 
-    public async Task<ProcessCommandResponse> CopyReceiptPrintExistingReceipt0x3010Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+    public async Task<ProcessCommandResponse> CopyReceiptPrintExistingReceipt0x3010Async(ProcessCommandRequest request) => await GRFallBackOperations.NoOp(request);
 }

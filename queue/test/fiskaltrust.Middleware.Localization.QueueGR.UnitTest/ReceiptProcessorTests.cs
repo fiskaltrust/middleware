@@ -9,7 +9,6 @@ using Xunit;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
 {
-
     public class ReceiptProcessorTests
     {
         [Fact]

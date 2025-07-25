@@ -1,10 +1,10 @@
 ﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueueGR.Models.Cases;
-using fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData.Models;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.SCU.GR.MyData.Models;
 
-namespace fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData;
+namespace fiskaltrust.Middleware.SCU.GR.MyData;
 
 public static class AADEMappings
 {
@@ -12,7 +12,7 @@ public static class AADEMappings
     {
         var vatAmount = chargeItem.GetVATAmount();
         var netAmount = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -chargeItem.Amount - -vatAmount : chargeItem.Amount - vatAmount;
-        if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004))
+        if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004) || receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002))
         {
             return new IncomeClassificationType
             {
@@ -85,40 +85,47 @@ public static class AADEMappings
         {
             if (receiptRequest.ftReceiptCase.IsType(fiskaltrust.ifPOS.v2.Cases.ReceiptCaseType.Receipt))
             {
-                if (receiptRequest.HasGreeceCountryCode())
-                {
-                    return IncomeClassificationValueType.E3_881_002;
-                }
-                else if (receiptRequest.HasEUCountryCode())
+                if (receiptRequest.GetCustomerCountryCategory() == CustomerCountryCategory.EU)
                 {
                     return IncomeClassificationValueType.E3_881_003;
                 }
-                else
+                else if (receiptRequest.GetCustomerCountryCategory() == CustomerCountryCategory.ThirdCountry)
                 {
                     return IncomeClassificationValueType.E3_881_004;
-
+                }
+                else
+                {
+                    return IncomeClassificationValueType.E3_881_002;
                 }
             }
             else
             {
-                if (receiptRequest.HasGreeceCountryCode())
-                {
-                    return IncomeClassificationValueType.E3_881_001;
-                }
-                else if (receiptRequest.HasEUCountryCode())
+                if (receiptRequest.GetCustomerCountryCategory() == CustomerCountryCategory.EU)
                 {
                     return IncomeClassificationValueType.E3_881_003;
                 }
-                else
+                else if (receiptRequest.GetCustomerCountryCategory() == CustomerCountryCategory.ThirdCountry)
                 {
                     throw new Exception("Agency business with non EU customer is not supported");
+                }
+                else
+                {
+                    return IncomeClassificationValueType.E3_881_001;
                 }
             }
         }
 
         if (receiptRequest.ftReceiptCase.IsType(fiskaltrust.ifPOS.v2.Cases.ReceiptCaseType.Invoice))
         {
-            if (receiptRequest.HasGreeceCountryCode())
+            if (receiptRequest.GetCustomerCountryCategory() == CustomerCountryCategory.EU)
+            {
+                return IncomeClassificationValueType.E3_561_005;
+            }
+            else if (receiptRequest.GetCustomerCountryCategory() == CustomerCountryCategory.ThirdCountry)
+            {
+                return IncomeClassificationValueType.E3_561_006;
+            }
+            else
             {
                 return chargeItem.ftChargeItemCase.TypeOfService() switch
                 {
@@ -127,14 +134,6 @@ public static class AADEMappings
                     ChargeItemCaseTypeOfService.OtherService => IncomeClassificationValueType.E3_561_001,
                     _ => IncomeClassificationValueType.E3_561_007,
                 };
-            }
-            else if (receiptRequest.HasEUCountryCode())
-            {
-                return IncomeClassificationValueType.E3_561_005;
-            }
-            else
-            {
-                return IncomeClassificationValueType.E3_561_006;
             }
         }
         else if (receiptRequest.ftReceiptCase.IsType(fiskaltrust.ifPOS.v2.Cases.ReceiptCaseType.Receipt))
@@ -187,12 +186,12 @@ public static class AADEMappings
         {
             return IncomeClassificationCategoryType.category1_6;
         }
+
         return chargeItem.ftChargeItemCase.TypeOfService() switch
         {
             ChargeItemCaseTypeOfService.UnknownService => IncomeClassificationCategoryType.category1_1,
             ChargeItemCaseTypeOfService.Delivery => IncomeClassificationCategoryType.category1_1,
             ChargeItemCaseTypeOfService.OtherService => IncomeClassificationCategoryType.category1_3,
-            ChargeItemCaseTypeOfService.NotOwnSales => IncomeClassificationCategoryType.category1_7,
             _ => throw new Exception($"The ChargeItem type {chargeItem.ftChargeItemCase.TypeOfService()} is not supported for IncomeClassificationCategoryType."),
         };
     }
@@ -209,20 +208,6 @@ public static class AADEMappings
             if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
             {
                 return InvoiceType.Item114;
-            }
-
-            if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.DeliveryNote0x0005))
-            {
-                return InvoiceType.Item93;
-            }
-
-            if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003))
-            {
-                if (!string.IsNullOrEmpty(receiptRequest.ftReceiptCaseData?.ToString()))
-                {
-                    return InvoiceType.Item32;
-                }
-                return InvoiceType.Item31;
             }
 
             if (receiptRequest.cbChargeItems.All(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.NotOwnSales)))
@@ -246,52 +231,54 @@ public static class AADEMappings
                 return receiptRequest.cbPreviousReceiptReference is not null ? InvoiceType.Item51 : InvoiceType.Item52;
             }
 
-            if (receiptRequest.cbChargeItems.Any(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable)))
-            {
-                return InvoiceType.Item15;
-            }
-            if (receiptRequest.cbChargeItems.Any(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.NotOwnSales)))
-            {
-                return InvoiceType.Item14;
-            }
+            //if (receiptRequest.cbChargeItems.Any(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Receivable)))
+            //{
+            //    return InvoiceType.Item15;
+            //}
+            //if (receiptRequest.cbChargeItems.Any(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.NotOwnSales)))
+            //{
+            //    return InvoiceType.Item14;
+            //}
             else if (receiptRequest.ftReceiptCase.IsType(fiskaltrust.ifPOS.v2.Cases.ReceiptCaseType.Invoice) && receiptRequest.cbChargeItems.All(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.OtherService)))
             {
-                if (receiptRequest.cbPreviousReceiptReference is not null)
-                {
-                    return InvoiceType.Item24;
-                }
+                //if (receiptRequest.cbPreviousReceiptReference is not null)
+                //{
+                //    return InvoiceType.Item24;
+                //}
 
-                if (receiptRequest.HasGreeceCountryCode())
-                {
-                    return InvoiceType.Item21;
-                }
-                else if (receiptRequest.HasEUCountryCode())
+                var customer = receiptRequest.GetCustomerOrNull();
+                if (receiptRequest.GetCustomerCountryCategory() == CustomerCountryCategory.EU)
                 {
                     return InvoiceType.Item22;
                 }
-                else
+                else if (receiptRequest.GetCustomerCountryCategory() == CustomerCountryCategory.ThirdCountry)
                 {
                     return InvoiceType.Item23;
+                }
+                else
+                {
+                    return InvoiceType.Item21;
                 }
             }
             else
             {
-                if (receiptRequest.cbPreviousReceiptReference is not null)
-                {
-                    return InvoiceType.Item16;
-                }
+                //if (receiptRequest.cbPreviousReceiptReference is not null)
+                //{
+                //    return InvoiceType.Item16;
+                //}
 
-                if (receiptRequest.HasGreeceCountryCode())
-                {
-                    return InvoiceType.Item11;
-                }
-                else if (receiptRequest.HasEUCountryCode())
+                var customer = receiptRequest.GetCustomerOrNull();
+                if (receiptRequest.GetCustomerCountryCategory() == CustomerCountryCategory.EU)
                 {
                     return InvoiceType.Item12;
                 }
-                else
+                else if (receiptRequest.GetCustomerCountryCategory() == CustomerCountryCategory.ThirdCountry)
                 {
                     return InvoiceType.Item13;
+                }
+                else
+                {
+                    return InvoiceType.Item11;
                 }
             }
         }
@@ -310,6 +297,7 @@ public static class AADEMappings
                     //    return InvoiceType.Item71;
             }
         }
+    
         throw new Exception("Unknown type of receipt " + receiptRequest.ftReceiptCase.ToString("x"));
     }
 
@@ -321,8 +309,8 @@ public static class AADEMappings
         ChargeItemCase.SuperReducedVatRate1 => MyDataVatCategory.VatRate17, // Super reduced 1 17%
         ChargeItemCase.SuperReducedVatRate2 => MyDataVatCategory.VatRate9, // Super reduced 2 9%
         ChargeItemCase.ParkingVatRate => MyDataVatCategory.VatRate4, // Parking VAT 4%
-        ChargeItemCase.NotTaxable => MyDataVatCategory.ExcludingVat, // Not Taxable
         ChargeItemCase.ZeroVatRate => MyDataVatCategory.ExcludingVat, // Zero
+        ChargeItemCase.NotTaxable => MyDataVatCategory.RegistrationsWithoutVat, // Not Taxable
         ChargeItemCase c => throw new Exception($"The VAT type {c} of ChargeItem with the case {chargeItem.ftChargeItemCase} is not supported."),
     };
 
@@ -338,7 +326,7 @@ public static class AADEMappings
         PayItemCase.OnlinePayment => MyDataPaymentMethods.WebBanking,
         PayItemCase.LoyaltyProgramCustomerCardPayment => -1,
         PayItemCase.AccountsReceivable => MyDataPaymentMethods.OnCredit,
-        PayItemCase.SEPATransfer =>  payItem.Description?.ToUpper() == "IRIS" ? MyDataPaymentMethods.IrisDirectPayments : -1,
+        PayItemCase.SEPATransfer => payItem.Description?.ToUpper() == "IRIS" ? MyDataPaymentMethods.IrisDirectPayments : -1,
         PayItemCase.OtherBankTransfer => -1,
         PayItemCase.TransferToCashbookVaultOwnerEmployee => -1,
         PayItemCase.InternalMaterialConsumption => -1,
@@ -375,24 +363,31 @@ public static class AADEMappings
             ChargeItemCaseNatureOfVatGR.NotTaxableArticle39a => MyDataVatExemptionCategory.Article39aSpecialRegime,
             ChargeItemCaseNatureOfVatGR.NotTaxableArticle19 => MyDataVatExemptionCategory.BottleRecyclingTicketsNewspapers,
             ChargeItemCaseNatureOfVatGR.NotTaxableArticle22 => MyDataVatExemptionCategory.MedicalInsuranceBankServices,
-            
+
             // Not Subject (20)
 
             // Exempt (30)
             ChargeItemCaseNatureOfVatGR.ExemptArticle43TravelAgencies => MyDataVatExemptionCategory.TravelAgencies,
             ChargeItemCaseNatureOfVatGR.ExemptArticle25CustomsRegimes => MyDataVatExemptionCategory.SpecialCustomsRegimes,
             ChargeItemCaseNatureOfVatGR.ExemptArticle39SmallBusinesses => MyDataVatExemptionCategory.SmallBusinesses,
-            
+
+            // Margin Scheme (40)
+            ChargeItemCaseNatureOfVatGR.MarginSChemeTaxableResellers => MyDataVatExemptionCategory.MarginScheme,
+
+            // Reverse Charge (51)
+            ChargeItemCaseNatureOfVatGR.ReverseChargeIntraCommunityDeliveries => MyDataVatExemptionCategory.Article54InterCommunityDeliveryReverseCharge,
+
             // VAT paid in other EU country (60)
             ChargeItemCaseNatureOfVatGR.VatPaidOtherEUArticle13 => MyDataVatExemptionCategory.GoodsOutsideGreece,
             ChargeItemCaseNatureOfVatGR.VatPaidOtherEUArticle14 => MyDataVatExemptionCategory.ServicesOutsideGreece,
-            
+
             // Excluded (80)
             ChargeItemCaseNatureOfVatGR.ExcludedArticle2And3 => MyDataVatExemptionCategory.GeneralExemption,
             ChargeItemCaseNatureOfVatGR.ExcludedArticle5BusinessTransfer => MyDataVatExemptionCategory.BusinessAssetsTransfer,
             ChargeItemCaseNatureOfVatGR.ExcludedArticle26TaxWarehouses => MyDataVatExemptionCategory.TaxWarehouses,
             ChargeItemCaseNatureOfVatGR.ExcludedArticle27Diplomatic => MyDataVatExemptionCategory.DiplomaticConsularNATO,
-            _ => null // Unknown nature, no exemption category
+            ChargeItemCaseNatureOfVatGR.UsualVatApplies => null,
+            _ => throw new NotSupportedException($"The ChargeItemCase 0x{chargeItem.ftChargeItemCase:x} contains a not supported Nature NN.") // Unknown nature, no exemption category
         };
     }
 }

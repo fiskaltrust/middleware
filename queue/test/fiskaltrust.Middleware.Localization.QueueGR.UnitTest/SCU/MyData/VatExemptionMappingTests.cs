@@ -1,9 +1,10 @@
-using fiskaltrust.ifPOS.v2;
+﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueueGR.Models.Cases;
 using fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData;
 using fiskaltrust.ifPOS.v2.Cases;
 using FluentAssertions;
 using Xunit;
+using fiskaltrust.Middleware.SCU.GR.MyData;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
 {
@@ -17,7 +18,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
                 Amount = amount,
                 VATRate = vatRate,
                 VATAmount = decimal.Round(amount / (100M + vatRate) * vatRate, 2, MidpointRounding.ToEven),
-                ftChargeItemCase = ((ChargeItemCase)0x4752_2000_0000_0000).WithTypeOfService(chargeItemCaseTypeOfService).WithVat(chargeItemCase),
+                ftChargeItemCase = ((ChargeItemCase) 0x4752_2000_0000_0000).WithTypeOfService(chargeItemCaseTypeOfService).WithVat(chargeItemCase),
                 Quantity = 1,
                 Description = description
             };
@@ -36,6 +37,20 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             // Assert
             result.Should().BeNull();
         }
+
+        [Fact]
+        public void GetVatExemptionCategory_ForUnsupportedNature_ShouldThrowException()
+        {
+            // Arrange
+            var chargeItem = CreateChargeItem(1, 100, 24, "Test item", ChargeItemCaseTypeOfService.Delivery, ChargeItemCase.NormalVatRate);
+            chargeItem.ftChargeItemCase = (ChargeItemCase) (((ulong) chargeItem.ftChargeItemCase & 0xFFFF_FFFF_FFFF_00FF) | (ulong) 0x9900);
+
+            // Act
+            var action = () => AADEMappings.GetVatExemptionCategory(chargeItem);
+
+            action.Should().ThrowExactly<NotSupportedException>().WithMessage("The ChargeItemCase 0x4752200000009913 contains a not supported Nature NN.");
+        }
+
 
         [Theory]
         [InlineData(ChargeItemCaseNatureOfVatGR.NotTaxableIntraCommunitySupplies, 14)]
