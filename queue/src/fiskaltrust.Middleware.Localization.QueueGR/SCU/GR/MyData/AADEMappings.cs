@@ -12,7 +12,7 @@ public static class AADEMappings
     {
         var vatAmount = chargeItem.GetVATAmount();
         var netAmount = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -chargeItem.Amount - -vatAmount : chargeItem.Amount - vatAmount;
-        if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004))
+        if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004) || receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002))
         {
             return new IncomeClassificationType
             {
