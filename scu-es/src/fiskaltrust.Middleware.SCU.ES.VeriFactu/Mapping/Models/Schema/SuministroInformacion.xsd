@@ -104,7 +104,7 @@
 		<sequence>
 			<element name="IDVersion" type="sf:VersionType"/>
 			<element name="IDFactura" type="sf:IDFacturaExpedidaType"/>
-			<element name="RefExterna" type="sf:TextMax70Type" minOccurs="0"/>
+			<element name="RefExterna" type="sf:TextMax60Type" minOccurs="0"/>
 			<element name="NombreRazonEmisor" type="sf:TextMax120Type"/>
 			<element name="Subsanacion" type="sf:SubsanacionType" minOccurs="0"/>
 			<element name="RechazoPrevio" type="sf:RechazoPrevioType" minOccurs="0"/>
@@ -622,7 +622,7 @@
 	<!-- Cadena de 16 caracteres -->
 	<simpleType name="TextMax16Type">
 		<restriction base="string">
-			<maxLength value="15"/>
+			<maxLength value="16"/>
 		</restriction>
 	</simpleType>
 	<!-- Cadena de 25 caracteres -->
@@ -856,6 +856,20 @@
 	</simpleType>
 	<!-- Indicador que especifica que se ha finalizado la remisión de registros de facturación tras un requerimiento -->
 	<simpleType name="FinRequerimientoType">
+		<restriction base="string">
+			<enumeration value="S"/>
+			<enumeration value="N"/>
+		</restriction>
+	</simpleType>
+	<!--Indicador que especifica si se quiere obtener en la respuesta el bloque SistemaInformatico en la información del registro se facturacion. Si el Valor es S aumenta el tiempo de respuesta en la cosulta. Si se consulta por Destinatario el valor del campo MostrarSistemaInformatico debe valer 'N' o no estar cumplimentado -->
+	<simpleType name="MostrarSistemaInformaticoType">
+		<restriction base="string">
+			<enumeration value="S"/>
+			<enumeration value="N"/>
+		</restriction>
+	</simpleType>
+	<!--Indicador de la cosulta que especifica si se quiere recibir en la respuesta el campo NombreRazonEmisor en la información registro se facturacion. Si el Valor es S aumenta el tiempo de respuesta en la cosulta por detinatario -->
+	<simpleType name="MostrarNombreRazonEmisorType">
 		<restriction base="string">
 			<enumeration value="S"/>
 			<enumeration value="N"/>

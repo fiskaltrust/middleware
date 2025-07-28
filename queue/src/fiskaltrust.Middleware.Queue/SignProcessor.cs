@@ -98,7 +98,7 @@ namespace fiskaltrust.Middleware.Queue
         private async Task<ReceiptResponse> InternalSign(ftQueue queue, ReceiptRequest data)
         {
             _logger.LogTrace("SignProcessor.InternalSign called.");
-            if ((data.ftReceiptCase & 0x0000800000000000L) > 0)
+            if ((data.ftReceiptCase & 0x0000800000000000L) > 0) 
             {
                 try
                 {
@@ -108,7 +108,15 @@ namespace fiskaltrust.Middleware.Queue
                         var message = $"Queue {_middlewareConfiguration.QueueId} found cbReceiptReference \"{foundQueueItem.cbReceiptReference}\"";
                         _logger.LogWarning(message);
                         await CreateActionJournalAsync(message, "", foundQueueItem.ftQueueItemId).ConfigureAwait(false);
-                        return JsonConvert.DeserializeObject<ReceiptResponse>(foundQueueItem.response);
+                        var response = JsonConvert.DeserializeObject<ReceiptResponse>(foundQueueItem.response);
+                        if (response.IsError()) // this if(data.ftReceiptCase & 0x0000800000000000L>0) is valid only for V1
+                        {
+                            return null;
+                        }
+                        else
+                        {
+                            return response;
+                        }                                
                     }
                 }
                 catch (Exception x)
@@ -215,12 +223,12 @@ namespace fiskaltrust.Middleware.Queue
                 _logger.LogTrace("SignProcessor.InternalSign: Updating Queue in database.");
                 await _configurationRepository.InsertOrUpdateQueueAsync(queue).ConfigureAwait(false);
 
-                if ((receiptResponse.ftState & 0xFFFF_FFFF) == 0xEEEE_EEEE)
+                if (receiptResponse.IsError())
                 {
                     var errorMessage = "An error occurred during receipt processing, resulting in ftState = 0xEEEE_EEEE.";
                     await CreateActionJournalAsync(errorMessage, $"{receiptResponse.ftState:X}", queueItem.ftQueueItemId).ConfigureAwait(false);
 
-                    if ((data.ftReceiptCase & 0xF000_0000_0000) != 0x2000_0000_0000)
+                    if (!data.IsV2())
                     {
                         throw exception;
                     }

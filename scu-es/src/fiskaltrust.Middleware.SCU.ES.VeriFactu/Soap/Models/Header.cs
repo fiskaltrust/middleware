@@ -1,6 +1,6 @@
 using System.Xml.Serialization;
 
-namespace fiskaltrust.Middleware.SCU.ES.Soap;
+namespace fiskaltrust.Middleware.SCU.ES.VeriFactuSoap;
 
 [Serializable]
 [XmlRoot("Header")]

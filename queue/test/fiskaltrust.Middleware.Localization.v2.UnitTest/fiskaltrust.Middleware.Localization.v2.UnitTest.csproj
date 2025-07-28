@@ -9,18 +9,14 @@
 
     <ItemGroup>
         <PackageReference Include="Microsoft.Extensions.Logging" Version="3.1.4" />
-        <PackageReference Update="fiskaltrust.interface" Version="1.3.73-rc2-25175-83284" />
+        <PackageReference Update="fiskaltrust.interface" Version="1.3.73-rc5-25197-83747" />
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference
-            Include="..\..\src\fiskaltrust.Middleware.Localization.v2\fiskaltrust.Middleware.Localization.v2.csproj" />
-        <ProjectReference
-            Include="..\..\src\fiskaltrust.Middleware.Localization.QueueES\fiskaltrust.Middleware.Localization.QueueES.csproj" />
-        <ProjectReference
-            Include="..\..\src\fiskaltrust.Middleware.Localization.QueueGR\fiskaltrust.Middleware.Localization.QueueGR.csproj" />
-        <ProjectReference
-            Include="..\..\src\fiskaltrust.Middleware.Localization.QueuePT\fiskaltrust.Middleware.Localization.QueuePT.csproj" />
+        <ProjectReference Include="..\..\src\fiskaltrust.Middleware.Localization.v2\fiskaltrust.Middleware.Localization.v2.csproj" />
+        <ProjectReference Include="..\..\src\fiskaltrust.Middleware.Localization.QueueES\fiskaltrust.Middleware.Localization.QueueES.csproj" />
+        <ProjectReference Include="..\..\src\fiskaltrust.Middleware.Localization.QueueGR\fiskaltrust.Middleware.Localization.QueueGR.csproj" />
+        <ProjectReference Include="..\..\src\fiskaltrust.Middleware.Localization.QueuePT\fiskaltrust.Middleware.Localization.QueuePT.csproj" />
     </ItemGroup>
 
 </Project>

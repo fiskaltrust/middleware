@@ -95,7 +95,7 @@ namespace fiskaltrust.Middleware.Localization.QueueDE.RequestCommands
 
             try
             {
-                (var returnedTransactionNumber, var returnedSignatures, var clientId, var signatureAlgorithm, var publicKeyBase64, var retuenedSerialnumberOctet) = await ProcessOutOfOperationReceiptAsync(request.cbReceiptReference, processType, payload, queueItem, queueDE, request.IsModifyClientIdOnlyRequest()).ConfigureAwait(false);
+                (var returnedTransactionNumber, var returnedSignatures, var clientId, var signatureAlgorithm, var publicKeyBase64, var retuenedSerialnumberOctet) = await ProcessOutOfOperationReceiptAsync(processType, payload, queueItem, queue, queueDE, request).ConfigureAwait(false);
                 signatures = returnedSignatures;
                 transactionNumber = returnedTransactionNumber;
                 serialnumberOctet = retuenedSerialnumberOctet;
