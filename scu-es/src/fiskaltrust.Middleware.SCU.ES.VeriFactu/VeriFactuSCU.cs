@@ -13,6 +13,8 @@ using fiskaltrust.Middleware.SCU.ES.VeriFactuModels;
 using fiskaltrust.Middleware.SCU.ES.VeriFactuSoap;
 using fiskaltrust.Middleware.SCU.ES.VeriFactu;
 using fiskaltrust.Middleware.SCU.ES.VeriFactu.Helpers;
+using System.Text.Json.Serialization;
+using fiskaltrust.Middleware.SCU.ES.Models;
 
 namespace fiskaltrust.Middleware.SCU.ES.VeriFactu;
 
@@ -25,7 +27,7 @@ public class VeriFactuSCU : IESSSCD
     public VeriFactuSCU(IClient client, VeriFactuSCUConfiguration configuration)
     {
         _configuration = configuration;
-        _veriFactuMapping = new VeriFactuMapping(configuration);
+        _veriFactuMapping = new VeriFactuMapping(configuration, signXml: false);
         _client = client;
     }
 
@@ -35,11 +37,22 @@ public class VeriFactuSCU : IESSSCD
 
         ReceiptResponse receiptResponse;
 
+        if (request.ReceiptResponse.ftStateData is null)
+        {
+            throw new Exception("ftStateData must be present.");
+        }
+        var middlewareState = JsonSerializer.Deserialize<MiddlewareState>(((JsonElement) request.ReceiptResponse.ftStateData).GetRawText());
+        if (middlewareState is null || middlewareState.ES is null)
+        {
+            throw new Exception("ES state must be present in ftStateData.");
+        }
+        GovernmentAPI governmentAPI;
+
         if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void))
         {
-            if (request.PreviousReceiptRequest is null || request.PreviousReceiptResponse is null)
+            if (middlewareState.ES.LastReceipt is null)
             {
-                throw new Exception("There needs to be a previous receipt in the chain to perform a void");
+                throw new Exception("There needs to be a last receipt in the chain to perform a void");
             }
 
             if (request.ReferencedReceiptRequest is null || request.ReferencedReceiptResponse is null)
@@ -47,7 +60,7 @@ public class VeriFactuSCU : IESSSCD
                 throw new Exception("There needs to be a referenced receipt to perform a void");
             }
 
-            var journalES = _veriFactuMapping.CreateRegistroFacturacionAnulacion(request.ReceiptRequest, request.ReceiptResponse, request.PreviousReceiptResponse, request.ReferencedReceiptRequest, request.ReferencedReceiptResponse);
+            var journalES = _veriFactuMapping.CreateRegistroFacturacionAnulacion(request.ReceiptRequest, request.ReceiptResponse, middlewareState.ES.LastReceipt.Response, request.ReferencedReceiptRequest, request.ReferencedReceiptResponse);
 
             var envelope = new Envelope<RequestBody>
             {
@@ -56,9 +69,9 @@ public class VeriFactuSCU : IESSSCD
                     RegFactuSistemaFacturacion = _veriFactuMapping.CreateRegFactuSistemaFacturacion(journalES)
                 }
             };
-
+            (var response, governmentAPI) = await _client.SendAsync(envelope);
             receiptResponse = CreateResponse(
-                await _client.SendAsync(envelope),
+                response,
                 request,
                 journalES.IDFactura.NumSerieFacturaAnulada,
                 journalES.Huella,
@@ -67,7 +80,7 @@ public class VeriFactuSCU : IESSSCD
         }
         else
         {
-            var journalES = _veriFactuMapping.CreateRegistroFacturacionAlta(request.ReceiptRequest, request.ReceiptResponse, request.PreviousReceiptRequest, request.PreviousReceiptResponse);
+            var journalES = _veriFactuMapping.CreateRegistroFacturacionAlta(request.ReceiptRequest, request.ReceiptResponse, middlewareState.ES.LastReceipt?.Request, middlewareState.ES.LastReceipt?.Response);
 
             var envelope = new Envelope<RequestBody>
             {
@@ -77,8 +90,9 @@ public class VeriFactuSCU : IESSSCD
                 }
             };
 
+            (var response, governmentAPI) = await _client.SendAsync(envelope);
             receiptResponse = CreateResponse(
-                await _client.SendAsync(envelope),
+                response,
                 request,
                 journalES.IDFactura.NumSerieFactura,
                 journalES.Huella,
@@ -86,6 +100,9 @@ public class VeriFactuSCU : IESSSCD
                 SignaturItemHelper.CreateVeriFactuQRCode(_configuration.QRCodeBaseUrl + "/wlpl/TIKE-CONT/ValidarQR", journalES)
             );
         }
+
+        middlewareState.ES.GovernmentAPI = governmentAPI;
+        receiptResponse.ftStateData = middlewareState;
 
         return new ProcessResponse
         {

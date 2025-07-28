@@ -14,14 +14,14 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.Processors;
 
 public class JournalProcessorESTests
 {
-    private readonly Mock<IMiddlewareRepository<ftJournalES>> _journalESRepositoryMock;
-    private readonly AsyncLazy<IMiddlewareRepository<ftJournalES>> _journalESRepository;
+    private readonly Mock<IMiddlewareJournalESRepository> _journalESRepositoryMock;
+    private readonly AsyncLazy<IMiddlewareJournalESRepository> _journalESRepository;
     private readonly JournalProcessorES _journalProcessor;
 
     public JournalProcessorESTests()
     {
-        _journalESRepositoryMock = new Mock<IMiddlewareRepository<ftJournalES>>();
-        _journalESRepository = new AsyncLazy<IMiddlewareRepository<ftJournalES>>(() => Task.FromResult(_journalESRepositoryMock.Object));
+        _journalESRepositoryMock = new Mock<IMiddlewareJournalESRepository>();
+        _journalESRepository = new AsyncLazy<IMiddlewareJournalESRepository>(() => Task.FromResult(_journalESRepositoryMock.Object));
         _journalProcessor = new JournalProcessorES(_journalESRepository);
     }
 

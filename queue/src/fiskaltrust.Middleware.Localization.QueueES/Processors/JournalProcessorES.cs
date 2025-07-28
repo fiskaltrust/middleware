@@ -12,9 +12,9 @@ namespace fiskaltrust.Middleware.Localization.QueueES.Processors;
 
 public class JournalProcessorES : IJournalProcessor
 {
-    private readonly AsyncLazy<IMiddlewareRepository<ftJournalES>> _journalESRepository;
+    private readonly AsyncLazy<IMiddlewareJournalESRepository> _journalESRepository;
 
-    public JournalProcessorES(AsyncLazy<IMiddlewareRepository<ftJournalES>> journalESRepository)
+    public JournalProcessorES(AsyncLazy<IMiddlewareJournalESRepository> journalESRepository)
     {
         _journalESRepository = journalESRepository;
     }

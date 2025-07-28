@@ -9,7 +9,7 @@ using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Repositories.ES
 {
-    public class AzureTableStorageJournalESRepository : BaseAzureTableStorageRepository<Guid, TableEntity, ftJournalES>, IJournalESRepository, IMiddlewareRepository<ftJournalES>
+    public class AzureTableStorageJournalESRepository : BaseAzureTableStorageRepository<Guid, TableEntity, ftJournalES>, IJournalESRepository, IMiddlewareRepository<ftJournalES>, IMiddlewareJournalESRepository
     {
         public AzureTableStorageJournalESRepository(QueueConfiguration queueConfig, TableServiceClient tableServiceClient)
             : base(queueConfig, tableServiceClient, TABLE_NAME) { }

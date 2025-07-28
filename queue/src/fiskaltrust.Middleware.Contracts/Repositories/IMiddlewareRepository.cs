@@ -61,6 +61,10 @@ namespace fiskaltrust.Middleware.Contracts.Repositories
         IAsyncEnumerable<ftJournalFR> GetProcessedCopyReceiptsAsync();
     }
 
+    public interface IMiddlewareJournalESRepository : IJournalESRepository, IMiddlewareRepository<ftJournalES>
+    {
+    }
+
     public interface IMiddlewareJournalDERepository : IJournalDERepository
     {
         IAsyncEnumerable<ftJournalDE> GetByFileName(string fileName);

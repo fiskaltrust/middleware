@@ -116,7 +116,7 @@ public class AzureStorageProvider : BaseStorageBootStrapper, IStorageProvider
             return new AzureTableStorageAccountMasterDataRepository(_queueConfiguration, _tableServiceClient);
         });
 
-    public AsyncLazy<IMiddlewareRepository<ftJournalES>> CreateMiddlewareJournalESRepository() => new(async () =>
+    public AsyncLazy<IMiddlewareJournalESRepository> CreateMiddlewareJournalESRepository() => new(async () =>
         {
             await Initialized;
             return new AzureTableStorageJournalESRepository(_queueConfiguration, _tableServiceClient);

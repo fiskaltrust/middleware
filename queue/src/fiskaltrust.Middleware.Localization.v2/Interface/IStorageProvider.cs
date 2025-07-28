@@ -12,7 +12,7 @@ public interface IStorageProvider
     AsyncLazy<IMiddlewareQueueItemRepository> CreateMiddlewareQueueItemRepository();
     AsyncLazy<IMiddlewareReceiptJournalRepository> CreateMiddlewareReceiptJournalRepository();
     AsyncLazy<IMiddlewareActionJournalRepository> CreateMiddlewareActionJournalRepository();
-    AsyncLazy<IMiddlewareRepository<ftJournalES>> CreateMiddlewareJournalESRepository();
+    AsyncLazy<IMiddlewareJournalESRepository> CreateMiddlewareJournalESRepository();
     AsyncLazy<IMasterDataRepository<AccountMasterData>> CreateAccountMasterDataRepository();
     AsyncLazy<IMasterDataRepository<OutletMasterData>> CreateOutletMasterDataRepository();
     AsyncLazy<IMasterDataRepository<PosSystemMasterData>> CreatePosSystemMasterDataRepository();

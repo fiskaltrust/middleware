@@ -8,15 +8,18 @@ using fiskaltrust.ifPOS.v2.es;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
+using fiskaltrust.Middleware.Localization.QueueES.Models;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.Processors;
 
-public class ReceiptCommandProcessorES(AsyncLazy<IESSSCD> essscd, AsyncLazy<IConfigurationRepository> configurationRepository, AsyncLazy<IMiddlewareQueueItemRepository> queueItemRepository) : IReceiptCommandProcessor
+public class ReceiptCommandProcessorES(AsyncLazy<IESSSCD> essscd, AsyncLazy<IConfigurationRepository> configurationRepository, AsyncLazy<IMiddlewareQueueItemRepository> queueItemRepository, AsyncLazy<IMiddlewareJournalESRepository> journalESRepository) : IReceiptCommandProcessor
 {
 #pragma warning disable
     private readonly AsyncLazy<IESSSCD> _essscd = essscd;
     private readonly AsyncLazy<IConfigurationRepository> _configurationRepository = configurationRepository;
     private readonly AsyncLazy<IMiddlewareQueueItemRepository> _queueItemRepository = queueItemRepository;
+    private readonly AsyncLazy<IMiddlewareJournalESRepository> _journalESRepository = journalESRepository;
 #pragma warning restore
 
     public async Task<ProcessCommandResponse> UnknownReceipt0x0000Async(ProcessCommandRequest request) => await PointOfSaleReceipt0x0001Async(request);
@@ -25,18 +28,18 @@ public class ReceiptCommandProcessorES(AsyncLazy<IESSSCD> essscd, AsyncLazy<ICon
     {
         var queueItemRepository = await _queueItemRepository;
         var queueES = await (await _configurationRepository).GetQueueESAsync(request.queue.ftQueueId);
-        var previousQueueItem = queueES.SSCDSignQueueItemId is not null ? await queueItemRepository.GetAsync(queueES.SSCDSignQueueItemId.Value) : null;
+        var lastQueueItem = queueES.SSCDSignQueueItemId is not null ? await queueItemRepository.GetAsync(queueES.SSCDSignQueueItemId.Value) : null;
 
-        if (previousQueueItem is not null)
+        if (lastQueueItem is not null)
         {
-            if (previousQueueItem?.request is null)
+            if (lastQueueItem?.request is null)
             {
-                throw new Exception("Previous queue item request is null");
+                throw new Exception("Last queue item request is null");
             }
 
-            if (previousQueueItem?.request is null)
+            if (lastQueueItem?.request is null)
             {
-                throw new Exception("Previous queue item request is null");
+                throw new Exception("Last queue item request is null");
             }
         }
 
@@ -60,27 +63,22 @@ public class ReceiptCommandProcessorES(AsyncLazy<IESSSCD> essscd, AsyncLazy<ICon
             referencedQueueItem = referencedQueueItems.Single();
         }
 
-        if (request.ReceiptRequest.ftReceiptCaseData is not null)
+        if (request.ReceiptResponse.ftStateData is not null)
         {
-            var jsonNode = JsonNode.Parse(((JsonElement) request.ReceiptRequest.ftReceiptCaseData).GetRawText())!;
-            var jsonObject = jsonNode.GetValueKind() switch
-            {
-                JsonValueKind.String => JsonNode.Parse(jsonNode.GetValue<string>())!.AsObject(),
-                JsonValueKind.Object => jsonNode.AsObject(),
-                _ => throw new Exception("ftReceiptCaseData must be a string or an object.")
-            };
-
-            jsonObject["IESSSCD"] = JsonSerializer.SerializeToNode(new
-            {
-                LastReceiptRequest = previousQueueItem is null ? null : JsonSerializer.Deserialize<ReceiptRequest>(previousQueueItem.request)!,
-                LastReceiptResponse = previousQueueItem is null ? null : JsonSerializer.Deserialize<ReceiptResponse>(previousQueueItem.response)!,
-            });
-            request.ReceiptRequest.ftReceiptCaseData = JsonSerializer.Deserialize<JsonElement>(jsonObject.ToJsonString());
+            throw new Exception("ftStateData must be empty.");
         }
-        else
+
+        request.ReceiptResponse.ftStateData = new MiddlewareState
         {
-
-        }
+            ES = new MiddlewareQueueESState
+            {
+                LastReceipt = lastQueueItem is null ? null : new LastReceipt
+                {
+                    Request = JsonSerializer.Deserialize<ReceiptRequest>(lastQueueItem.request)!,
+                    Response = JsonSerializer.Deserialize<ReceiptResponse>(lastQueueItem.response)!,
+                }
+            }
+        };
 
         var response = await (await _essscd).ProcessReceiptAsync(new ProcessRequest
         {
@@ -88,6 +86,17 @@ public class ReceiptCommandProcessorES(AsyncLazy<IESSSCD> essscd, AsyncLazy<ICon
             ReceiptResponse = request.ReceiptResponse,
             ReferencedReceiptRequest = referencedQueueItem is null ? null : JsonSerializer.Deserialize<ReceiptRequest>(referencedQueueItem.request)!,
             ReferencedReceiptResponse = referencedQueueItem is null ? null : JsonSerializer.Deserialize<ReceiptResponse>(referencedQueueItem.response)!,
+        });
+
+        var responseStateData = JsonSerializer.Deserialize<MiddlewareState>(((JsonElement) response.ReceiptResponse.ftStateData!).GetRawText())!;
+        await (await _journalESRepository).InsertAsync(new ftJournalES
+        {
+            ftJournalESId = Guid.NewGuid(),
+            Number = response.ReceiptResponse.ftQueueRow,
+            Data = JsonSerializer.Serialize(responseStateData.ES!.GovernmentAPI),
+            JournalType = JournalESType.VeriFactu.ToString(),
+            ftQueueItemId = response.ReceiptResponse.ftQueueItemID,
+            ftQueueId = response.ReceiptResponse.ftQueueID,
         });
 
         queueES.SSCDSignQueueItemId = response.ReceiptResponse.ftQueueItemID;
