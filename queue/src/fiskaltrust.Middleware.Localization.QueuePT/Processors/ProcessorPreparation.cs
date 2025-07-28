@@ -1,4 +1,4 @@
-using fiskaltrust.Middleware.Contracts.Repositories;
+﻿using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 
@@ -12,7 +12,6 @@ public abstract class ProcessorPreparation
     {
         await StaticNumeratorStorage.LoadStorageNumbers(await _readOnlyQueueItemRepository);
         ReceiptRequestValidatorPT.ValidateReceiptOrThrow(request.ReceiptRequest);
-
         return await process();
     }
 }

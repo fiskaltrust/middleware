@@ -9,6 +9,8 @@ using FluentAssertions.Execution;
 using Microsoft.Extensions.Logging;
 using Xunit;
 using Xunit.Abstractions;
+using fiskaltrust.storage.V0;
+using fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.Certification;
 
@@ -54,7 +56,11 @@ public class PTCertificationTests
         var accessToken = Constants.CASHBOX_CERTIFICATION_ACCESSTOKEN;
         var configuration = await GetConfigurationAsync(cashBoxId, accessToken);
         var queue = configuration.ftQueues?.First() ?? throw new Exception($"The configuration for {cashBoxId} is empty and therefore not valid.");
-        var bootstrapper = new QueuePTBootstrapper(queue.Id, new LoggerFactory(), queue.Configuration ?? new Dictionary<string, object>());
+        var ptSSCD = new InMemorySCU(new ftSignaturCreationUnitPT
+        {
+
+        });
+        var bootstrapper = new QueuePTBootstrapper(queue.Id, new LoggerFactory(), queue.Configuration ?? new Dictionary<string, object>(), ptSSCD);
         return (bootstrapper, cashBoxId);
     }
 

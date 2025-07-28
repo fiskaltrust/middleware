@@ -5,6 +5,8 @@ using fiskaltrust.Middleware.Localization.v2.Configuration;
 using fiskaltrust.ifPOS.v2.Cases;
 using Microsoft.Extensions.Logging;
 using Xunit;
+using fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
+using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest;
 
@@ -47,8 +49,11 @@ public class FullTest()
 
         var configuration = await GetConfigurationAsync(cashBoxId, accessToken);
         var queue = configuration.ftQueues?.First() ?? throw new Exception($"The configuration for {cashBoxId} is empty and therefore not valid.");
+        var ptSSCD = new InMemorySCU(new ftSignaturCreationUnitPT
+        {
 
-        var bootstrapper = new QueuePTBootstrapper(queue.Id, new LoggerFactory(), queue.Configuration ?? new Dictionary<string, object>());
+        });
+        var bootstrapper = new QueuePTBootstrapper(queue.Id, new LoggerFactory(), queue.Configuration ?? new Dictionary<string, object>(), ptSSCD);
         var signMethod = bootstrapper.RegisterForSign();
 
         //var initialOperationRequest = InitialOperation(cashBoxId);

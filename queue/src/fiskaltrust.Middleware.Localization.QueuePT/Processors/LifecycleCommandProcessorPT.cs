@@ -10,9 +10,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.Processors;
 
 public class LifecycleCommandProcessorPT(AsyncLazy<IConfigurationRepository> configurationRepository) : ILifecycleCommandProcessor
 {
-#pragma warning disable 
     private readonly AsyncLazy<IConfigurationRepository> _configurationRepository = configurationRepository;
-#pragma warning restore 
 
     public async Task<ProcessCommandResponse> InitialOperationReceipt0x4001Async(ProcessCommandRequest request)
     {
@@ -35,7 +33,7 @@ public class LifecycleCommandProcessorPT(AsyncLazy<IConfigurationRepository> con
         return new ProcessCommandResponse(receiptResponse, [actionJournal]);
     }
 
-    public async Task<ProcessCommandResponse> InitSCUSwitch0x4011Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+    public async Task<ProcessCommandResponse> InitSCUSwitch0x4011Async(ProcessCommandRequest request) => await PTFallBackOperations.NoOp(request);
 
-    public async Task<ProcessCommandResponse> FinishSCUSwitch0x4012Async(ProcessCommandRequest request) => await Task.FromResult(new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+    public async Task<ProcessCommandResponse> FinishSCUSwitch0x4012Async(ProcessCommandRequest request) => await PTFallBackOperations.NoOp(request);
 }

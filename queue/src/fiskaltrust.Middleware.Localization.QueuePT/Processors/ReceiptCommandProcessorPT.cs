@@ -20,6 +20,8 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
     private readonly IPTSSCD _sscd = sscd;
 #pragma warning disable
     private readonly ftQueuePT _queuePT = queuePT;
+    private readonly ReceiptReferenceProvider _receiptReferenceProvider = new(readOnlyQueueItemRepository);
+
     protected override AsyncLazy<IMiddlewareQueueItemRepository> _readOnlyQueueItemRepository { get; init; } = readOnlyQueueItemRepository;
 
     public Task<ProcessCommandResponse> UnknownReceipt0x0000Async(ProcessCommandRequest request) => WithPreparations(request, () => PointOfSaleReceipt0x0001Async(request));
@@ -28,7 +30,16 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
     {
         if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
         {
-            var receiptReference = await LoadReceiptReferencesToResponse(request.ReceiptRequest, request.ReceiptResponse);
+            var receiptReferences = await _receiptReferenceProvider.GetReceiptReferencesIfNecessaryAsync(request);
+            if (receiptReferences.Count == 0)
+            {
+                throw new InvalidOperationException("Refund receipt must reference a previous receipt.");
+            }
+            if (receiptReferences.Count > 1)
+            {
+                throw new NotSupportedException("Grouping of refund receipts is not supported.");
+            }
+
             var series = StaticNumeratorStorage.CreditNoteSeries;
             series.Numerator++;
             var invoiceNo = series.Identifier + "/" + series.Numerator!.ToString()!.PadLeft(4, '0');
@@ -43,7 +54,7 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
             AddSignatures(series, response, hash, printHash, qrCode);
             response.ReceiptResponse.AddSignatureItem(new SignatureItem
             {
-                Caption = $"Referencia {receiptReference.ftReceiptIdentification}",
+                Caption = $"Referencia {receiptReferences[0].Item2.ftReceiptIdentification}",
                 Data = $"Razão: Devolução",
                 ftSignatureFormat = SignatureFormat.Text,
                 ftSignatureType = SignatureTypePT.ReferenceForCreditNote.As<SignatureType>(),
@@ -115,64 +126,46 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
             series.LastHash = hash;
             return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
         }
+        else
+        {
 
-        return await request.ReceiptRequest.cbPreviousReceiptReference.MatchAsync(
-            async single =>
+
+            var receiptReferences = await _receiptReferenceProvider.GetReceiptReferencesIfNecessaryAsync(request);
+            if (receiptReferences.Count == 0)
             {
-                var receiptReference = await LoadReceiptReferencesToResponse(request.ReceiptRequest, request.ReceiptResponse);
-                var series = StaticNumeratorStorage.PaymentSeries;
-                series.Numerator++;
-                var invoiceNo = series.Identifier + "/" + series.Numerator!.ToString()!.PadLeft(4, '0');
-                var (response, hash) = await _sscd.ProcessReceiptAsync(new ProcessRequest
-                {
-                    ReceiptRequest = request.ReceiptRequest,
-                    ReceiptResponse = request.ReceiptResponse,
-                }, invoiceNo, series.LastHash);
-                response.ReceiptResponse.ftReceiptIdentification = invoiceNo;
-                var printHash = new StringBuilder().Append(hash[0]).Append(hash[10]).Append(hash[20]).Append(hash[30]).ToString();
-                var qrCode = PortugalReceiptCalculations.CreateRGQRCode(printHash, _queuePT.IssuerTIN, _queuePT.TaxRegion, series.ATCUD + "-" + series.Numerator, request.ReceiptRequest, response.ReceiptResponse);
-                AddSignatures(series, response, hash, printHash, qrCode);
-                response.ReceiptResponse.AddSignatureItem(new SignatureItem
-                {
-                    Caption = $"Origem: Fattura {receiptReference.ftReceiptIdentification}",
-                    Data = $"",
-                    ftSignatureFormat = SignatureFormat.Text,
-                    ftSignatureType = SignatureTypePT.ReferenceForCreditNote.As<SignatureType>(),
-                });
-                series.LastHash = hash;
-                return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
-            },
-            async _ => throw new NotSupportedException("Groping of payment transfers is not supported yet.")
-        );
+                throw new InvalidOperationException("Refund receipt must reference a previous receipt.");
+            }
+            if (receiptReferences.Count > 1)
+            {
+                throw new NotSupportedException("Grouping of refund receipts is not supported.");
+            }
+            var series = StaticNumeratorStorage.PaymentSeries;
+            series.Numerator++;
+            var invoiceNo = series.Identifier + "/" + series.Numerator!.ToString()!.PadLeft(4, '0');
+            var (response, hash) = await _sscd.ProcessReceiptAsync(new ProcessRequest
+            {
+                ReceiptRequest = request.ReceiptRequest,
+                ReceiptResponse = request.ReceiptResponse,
+            }, invoiceNo, series.LastHash);
+            response.ReceiptResponse.ftReceiptIdentification = invoiceNo;
+            var printHash = new StringBuilder().Append(hash[0]).Append(hash[10]).Append(hash[20]).Append(hash[30]).ToString();
+            var qrCode = PortugalReceiptCalculations.CreateRGQRCode(printHash, _queuePT.IssuerTIN, _queuePT.TaxRegion, series.ATCUD + "-" + series.Numerator, request.ReceiptRequest, response.ReceiptResponse);
+            AddSignatures(series, response, hash, printHash, qrCode);
+            response.ReceiptResponse.AddSignatureItem(new SignatureItem
+            {
+                Caption = $"Origem: Fattura {receiptReferences[0].Item2.ftReceiptIdentification}",
+                Data = $"",
+                ftSignatureFormat = SignatureFormat.Text,
+                ftSignatureType = SignatureTypePT.ReferenceForCreditNote.As<SignatureType>(),
+            });
+            series.LastHash = hash;
+            return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
+        }
     });
 
-    public Task<ProcessCommandResponse> PointOfSaleReceiptWithoutObligation0x0003Async(ProcessCommandRequest request) => WithPreparations(request, async () => new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>()));
+    public async Task<ProcessCommandResponse> PointOfSaleReceiptWithoutObligation0x0003Async(ProcessCommandRequest request) => await PTFallBackOperations.NoOp(request);
 
-    public Task<ProcessCommandResponse> ECommerce0x0004Async(ProcessCommandRequest request) => WithPreparations(request, async () => new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>()));
+    public async Task<ProcessCommandResponse> ECommerce0x0004Async(ProcessCommandRequest request) => await PTFallBackOperations.NoOp(request);
 
-    public Task<ProcessCommandResponse> DeliveryNote0x0005Async(ProcessCommandRequest request) => WithPreparations(request, async () => new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>()));
-
-    private async Task<ReceiptResponse> LoadReceiptReferencesToResponse(ReceiptRequest request, ReceiptResponse receiptResponse)
-    {
-        if (request.cbPreviousReceiptReference.IsGroup)
-        {
-            throw new NotSupportedException("Grouping of payment transfers is not supported yet.");
-        }
-        var queueItems = (await _readOnlyQueueItemRepository).GetByReceiptReferenceAsync(request.cbPreviousReceiptReference.SingleValue, request.cbTerminalID);
-        await foreach (var existingQueueItem in queueItems)
-        {
-            if (string.IsNullOrEmpty(existingQueueItem.response))
-            {
-                continue;
-            }
-
-            var referencedResponse = JsonSerializer.Deserialize<ReceiptResponse>(existingQueueItem.response);
-            receiptResponse.ftStateData = new
-            {
-                ReferencedReceiptResponse = referencedResponse
-            };
-            return referencedResponse;
-        }
-        throw new Exception("No referenced receipt found");
-    }
+    public async Task<ProcessCommandResponse> DeliveryNote0x0005Async(ProcessCommandRequest request) => await PTFallBackOperations.NoOp(request);
 }
