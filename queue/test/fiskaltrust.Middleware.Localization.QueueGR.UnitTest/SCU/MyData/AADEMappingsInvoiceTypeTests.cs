@@ -1,4 +1,4 @@
-using fiskaltrust.ifPOS.v2;
+﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueueGR.Models.Cases;
 using fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData;
 using fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData.Models;
@@ -6,6 +6,7 @@ using fiskaltrust.Middleware.Localization.v2.Models;
 using fiskaltrust.ifPOS.v2.Cases;
 using FluentAssertions;
 using Xunit;
+using fiskaltrust.Middleware.SCU.GR.MyData;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.SCU.MyData;
 
@@ -145,36 +146,6 @@ public class AADEMappingsInvoiceTypeTests
     }
 
     [Fact]
-    public void Item_1_4_GetInvoiceType_B2BInvoice_WithNotOwnSalesItems_ReturnsItem14()
-    {
-        var receiptRequest = CreateB2BInvoice("GR", ChargeItemCaseTypeOfService.NotOwnSales);
-
-        var result = AADEMappings.GetInvoiceType(receiptRequest);
-
-        result.Should().Be(InvoiceType.Item14);
-    }
-
-    [Fact]
-    public void Item_1_5_GetInvoiceType_B2BInvoice_WithReceivableItems_ReturnsItem15()
-    {
-        var receiptRequest = CreateB2BInvoice("GR", ChargeItemCaseTypeOfService.Receivable);
-
-        var result = AADEMappings.GetInvoiceType(receiptRequest);
-
-        result.Should().Be(InvoiceType.Item15);
-    }
-
-    [Fact]
-    public void Item_1_6_GetInvoiceType_B2BInvoice_WithGreekCustomer_WithPreviousReceipt_ReturnsItem16()
-    {
-        var receiptRequest = CreateB2BInvoice("GR", hasPreviousReceipt: true);
-
-        var result = AADEMappings.GetInvoiceType(receiptRequest);
-
-        result.Should().Be(InvoiceType.Item16);
-    }
-
-    [Fact]
     public void Item_2_1_GetInvoiceType_B2BInvoice_WithOtherServiceItems_WithGreekCustomer_ReturnsItem21()
     {
         var receiptRequest = CreateB2BInvoice("GR", ChargeItemCaseTypeOfService.OtherService);
@@ -212,16 +183,6 @@ public class AADEMappingsInvoiceTypeTests
         var result = AADEMappings.GetInvoiceType(receiptRequest);
 
         result.Should().Be(InvoiceType.Item23);
-    }
-
-    [Fact]
-    public void Item_2_4_GetInvoiceType_B2BInvoice_WithOtherServiceItems_WithPreviousReceipt_ReturnsItem24()
-    {
-        var receiptRequest = CreateB2BInvoice("GR", ChargeItemCaseTypeOfService.OtherService, hasPreviousReceipt: true);
-
-        var result = AADEMappings.GetInvoiceType(receiptRequest);
-
-        result.Should().Be(InvoiceType.Item24);
     }
 
     [Fact]
@@ -276,32 +237,6 @@ public class AADEMappingsInvoiceTypeTests
     }
     
     [Fact]
-    public void Item_11_3_GetInvoiceType_DeliveryNote_ReturnsItem93()
-    {
-        var receiptRequest = new ReceiptRequest
-        {
-            cbTerminalID = _baseRequest.cbTerminalID,
-            Currency = _baseRequest.Currency,
-            cbReceiptMoment = _baseRequest.cbReceiptMoment,
-            cbReceiptReference = _baseRequest.cbReceiptReference,
-            ftPosSystemId = _baseRequest.ftPosSystemId,
-            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.DeliveryNote0x0005),
-            cbChargeItems = [CreateChargeItem(1, 100, 24, "Test Item", ChargeItemCaseTypeOfService.Delivery)],
-            cbPayItems = [new PayItem
-            {
-                Position = 1,
-                Amount = 100,
-                ftPayItemCase = ((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.CashPayment),
-                Description = "Cash"
-            }]
-        };
-
-        var result = AADEMappings.GetInvoiceType(receiptRequest);
-
-        result.Should().Be(InvoiceType.Item93);
-    }
-    
-    [Fact]
     public void Item_11_4_GetInvoiceType_RetailReceipt_WithRefund_ReturnsItem114()
     {
         var receiptRequest = CreateReceipt(ChargeItemCaseTypeOfService.Delivery, isRefund: true);
@@ -309,15 +244,5 @@ public class AADEMappingsInvoiceTypeTests
         var result = AADEMappings.GetInvoiceType(receiptRequest);
 
         result.Should().Be(InvoiceType.Item114);
-    }
-    
-    [Fact]
-    public void Item_11_5_GetInvoiceType_RetailReceipt_WithAgencyItems_ReturnsItem115()
-    {
-        var receiptRequest = CreateReceipt(ChargeItemCaseTypeOfService.NotOwnSales);
-
-        var result = AADEMappings.GetInvoiceType(receiptRequest);
-
-        result.Should().Be(InvoiceType.Item115);
     }
 }

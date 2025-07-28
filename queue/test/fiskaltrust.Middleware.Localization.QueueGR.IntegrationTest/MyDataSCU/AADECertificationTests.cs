@@ -12,6 +12,7 @@ using FluentAssertions.Execution;
 using Microsoft.Extensions.Logging;
 using Xunit;
 using Xunit.Abstractions;
+using fiskaltrust.Middleware.SCU.GR.MyData;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.IntegrationTest.MyDataSCU
 {
@@ -99,10 +100,10 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.IntegrationTest.MyDataSCU
         private async Task ValidateMyData(ReceiptRequest receiptRequest, InvoiceType expectedInvoiceType, [CallerMemberName] string caller = "")
         {
             using var scope = new AssertionScope();
-            var invoiceDoc = _aadeFactory.MapToInvoicesDoc(receiptRequest, ExampleResponse);
-            invoiceDoc.invoice[0].invoiceHeader.invoiceType.Should().Be(expectedInvoiceType);
-            invoiceDoc.invoice[0].invoiceSummary.incomeClassification.Should().BeEmpty();
-            var xml = _aadeFactory.GenerateInvoicePayload(invoiceDoc);
+            (var invoiceDoc, var error) = _aadeFactory.MapToInvoicesDoc(receiptRequest, ExampleResponse);
+            invoiceDoc!.invoice[0].invoiceHeader.invoiceType.Should().Be(expectedInvoiceType);
+            invoiceDoc!.invoice[0].invoiceSummary.incomeClassification.Should().BeEmpty();
+            var xml = AADEFactory.GenerateInvoicePayload(invoiceDoc!);
             await SendToMayData(xml);
             Console.WriteLine(caller);
             await ExecuteMiddleware(receiptRequest, caller);
@@ -111,11 +112,11 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.IntegrationTest.MyDataSCU
         private async Task ValidateMyData(ReceiptRequest receiptRequest, InvoiceType expectedInvoiceType, IncomeClassificationCategoryType expectedCategory, [CallerMemberName] string caller = "")
         {
             using var scope = new AssertionScope();
-            var invoiceDoc = _aadeFactory.MapToInvoicesDoc(receiptRequest, ExampleResponse);
-            invoiceDoc.invoice[0].invoiceHeader.invoiceType.Should().Be(expectedInvoiceType);
-            invoiceDoc.invoice[0].invoiceSummary.incomeClassification[0].classificationCategory.Should().Be(expectedCategory);
-            invoiceDoc.invoice[0].invoiceSummary.incomeClassification[0].classificationTypeSpecified.Should().BeFalse();
-            var xml = _aadeFactory.GenerateInvoicePayload(invoiceDoc);
+            (var invoiceDoc, var error) = _aadeFactory.MapToInvoicesDoc(receiptRequest, ExampleResponse);
+            invoiceDoc!.invoice[0].invoiceHeader.invoiceType.Should().Be(expectedInvoiceType);
+            invoiceDoc!.invoice[0].invoiceSummary.incomeClassification[0].classificationCategory.Should().Be(expectedCategory);
+            invoiceDoc!.invoice[0].invoiceSummary.incomeClassification[0].classificationTypeSpecified.Should().BeFalse();
+            var xml = AADEFactory.GenerateInvoicePayload(invoiceDoc!);
             await SendToMayData(xml);
 
             Console.WriteLine(caller);
@@ -125,11 +126,11 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.IntegrationTest.MyDataSCU
         private async Task ValidateMyData(ReceiptRequest receiptRequest, InvoiceType expectedInvoiceType, IncomeClassificationCategoryType expectedCategory, IncomeClassificationValueType expectedValueType, [CallerMemberName] string caller = "")
         {
             using var scope = new AssertionScope();
-            var invoiceDoc = _aadeFactory.MapToInvoicesDoc(receiptRequest, ExampleResponse);
-            invoiceDoc.invoice[0].invoiceHeader.invoiceType.Should().Be(expectedInvoiceType);
-            invoiceDoc.invoice[0].invoiceSummary.incomeClassification[0].classificationCategory.Should().Be(expectedCategory);
-            invoiceDoc.invoice[0].invoiceSummary.incomeClassification[0].classificationType.Should().Be(expectedValueType);
-            var xml = _aadeFactory.GenerateInvoicePayload(invoiceDoc);
+            (var invoiceDoc, var error) = _aadeFactory.MapToInvoicesDoc(receiptRequest, ExampleResponse);
+            invoiceDoc!.invoice[0].invoiceHeader.invoiceType.Should().Be(expectedInvoiceType);
+            invoiceDoc!.invoice[0].invoiceSummary.incomeClassification[0].classificationCategory.Should().Be(expectedCategory);
+            invoiceDoc!.invoice[0].invoiceSummary.incomeClassification[0].classificationType.Should().Be(expectedValueType);
+            var xml = AADEFactory.GenerateInvoicePayload(invoiceDoc!);
             await SendToMayData(xml);
             Console.WriteLine(caller);
             await ExecuteMiddleware(receiptRequest, caller);

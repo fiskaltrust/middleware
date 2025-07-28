@@ -7,59 +7,29 @@ using fiskaltrust.Middleware.Localization.QueueGR.Models.Cases;
 using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.storage.V0.MasterData;
-using System.Runtime.Serialization;
+using fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData.Models;
 using System.Text.Json.Serialization;
 
-#pragma warning disable
-namespace fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData;
+namespace fiskaltrust.Middleware.SCU.GR.MyData;
 
-public class MiddlewareState
+public class ftReceiptCaseDataPayload
 {
     [JsonPropertyName("GR")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
-    public MiddlewareQueueGRState GR { get; set; } = new MiddlewareQueueGRState();  
+    public ftReceiptCaseDataGreekPayload? GR { get; set; }
 }
 
-public class MiddlewareQueueGRState
+public class ftReceiptCaseDataGreekPayload
 {
-    [JsonPropertyName("GovernmentApi")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
-    public GovernmentApiData GovernmentApi { get; set; }
-}
-
-public class GovernmentApiData
-{
-    [JsonPropertyName("Protocol")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
-    [DataMember(EmitDefaultValue = true, IsRequired = true)]
-    public required string Protocol { get; set; }
-
-    [JsonPropertyName("ProtocolVersion")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    [DataMember(EmitDefaultValue = false, IsRequired = false)]
-    public string? ProtocolVersion { get; set; }
-
-    [JsonPropertyName("Action")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
-    [DataMember(EmitDefaultValue = true, IsRequired = true)]
-    public required string Action { get; set; }
-
-    [JsonPropertyName("ProtocolRequest")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    [DataMember(EmitDefaultValue = false, IsRequired = false)]
-    public string ProtocolRequest { get; set; }
-
-    [JsonPropertyName("ProtocolResponse")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    [DataMember(EmitDefaultValue = false, IsRequired = false)]
-    public string? ProtocolResponse { get; set; }
+    public string? MerchantVATID { get; set; }
+    public string? Series { get; set; }
+    public long? AA { get; set; }
+    public string? HashAlg { get; set; }
+    public string? HashPayload { get; set; }
 }
 
 public class MyDataSCU : IGRSSCD
 {
     private readonly HttpClient _httpClient;
-    private readonly string _prodBaseUrl = "https://mydatapi.aade.gr/";
-    private readonly string _devBaseUrl = "https://mydataapidev.aade.gr/";
     private readonly string _receiptBaseAddress;
     private readonly MasterDataConfiguration _masterDataConfiguration;
 
@@ -80,7 +50,27 @@ public class MyDataSCU : IGRSSCD
     public async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request, List<(ReceiptRequest, ReceiptResponse)>? receiptReferences = null)
     {
         var aadFactory = new AADEFactory(_masterDataConfiguration);
-        var doc = aadFactory.MapToInvoicesDoc(request.ReceiptRequest, request.ReceiptResponse, receiptReferences);
+        (var doc, var error) = aadFactory.MapToInvoicesDoc(request.ReceiptRequest, request.ReceiptResponse, receiptReferences);
+        if (doc == null)
+        {
+            if (error != null)
+            {
+                request.ReceiptResponse.SetReceiptResponseError(error.Exception.Message);
+                return new ProcessResponse
+                {
+                    ReceiptResponse = request.ReceiptResponse
+                };
+            }
+            else
+            {
+                request.ReceiptResponse.SetReceiptResponseError("Something went wrong while mapping the inbound data. Please check the inbound request.");
+                return new ProcessResponse
+                {
+                    ReceiptResponse = request.ReceiptResponse
+                };
+            }
+        }
+
         if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.LateSigning))
         {
             foreach (var item in doc.invoice)
@@ -91,7 +81,7 @@ public class MyDataSCU : IGRSSCD
             SignatureItemFactoryGR.AddTransmissionFailure1Signature(request);
         }
 
-        var payload = aadFactory.GenerateInvoicePayload(doc);
+        var payload = AADEFactory.GenerateInvoicePayload(doc);
         var response = await _httpClient.PostAsync("/myDataProvider/SendInvoices", new StringContent(payload, Encoding.UTF8, "application/xml"));
         var content = await response.Content.ReadAsStringAsync();
 
@@ -99,7 +89,7 @@ public class MyDataSCU : IGRSSCD
         {
             Protocol = "mydata",
             ProtocolVersion = "1.0",
-            Action = response.RequestMessage.RequestUri.ToString(),
+            Action = response.RequestMessage!.RequestUri!.ToString(),
             ProtocolRequest = payload,
             ProtocolResponse = content
         };
@@ -124,54 +114,65 @@ public class MyDataSCU : IGRSSCD
             if (ersult != null)
             {
                 var data = ersult.response[0];
-                if (data.statusCode.ToLower() == "success")
+                if (data == null || data.Items == null || data.ItemsElementName == null)
                 {
-                    for (var i = 0; i < data.ItemsElementName.Length; i++)
+                    request.ReceiptResponse.SetReceiptResponseError("Invalid response from MyData API.");
+                    return new ProcessResponse
                     {
-                        if (data.ItemsElementName[i] == ItemsChoiceType.qrUrl)
-                        {
-                            continue;
-                            // In the latest API Version mydata returns a QR Code. We don't need it since we are printing our own QR Code. In case
-                            // of ERP API based integrations we will still want this to be added.
-                            // request.ReceiptResponse.AddSignatureItem(SignatureItemFactoryGR.CreateGRQRCode(data.Items[i].ToString()));
-                        }
-                        else
-                        {
-                            request.ReceiptResponse.AddSignatureItem(new SignatureItem
-                            {
-                                Data = data.Items[i].ToString(),
-                                Caption = data.ItemsElementName[i].ToString(),
-                                ftSignatureFormat = SignatureFormat.Text,
-                                ftSignatureType = SignatureTypeGR.MyDataInfo.As<SignatureType>()
-                            });
-                        }
-                    }
-
-                    request.ReceiptResponse.AddSignatureItem(SignatureItemFactoryGR.CreateGRQRCode($"{_receiptBaseAddress}/{request.ReceiptResponse.ftQueueID}/{request.ReceiptResponse.ftQueueItemID}"));
-                    request.ReceiptResponse.ftReceiptIdentification += $"{doc.invoice[0].invoiceHeader.series}-{doc.invoice[0].invoiceHeader.aa}";
-                    if (request.ReceiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004))
-                    {
-                        SignatureItemFactoryGR.AddOrderReceiptSignature(request);
-                    }
-
-                    if (doc.invoice[0].invoiceHeader.multipleConnectedMarks?.Length > 0)
-                    {
-                        SignatureItemFactoryGR.AddMarksForConnectedMarks(request, doc);
-                    }
-                    SignatureItemFactoryGR.AddInvoiceSignature(request, doc);
-                    SignatureItemFactoryGR.AddVivaFiscalProviderSignature(request);
+                        ReceiptResponse = request.ReceiptResponse
+                    };
                 }
                 else
                 {
-                    var errors = data.Items.Cast<ResponseTypeErrors>().SelectMany(x => x.error);
-                    request.ReceiptResponse.SetReceiptResponseError(JsonSerializer.Serialize(new AADEEErrorResponse
+                    if (data.statusCode.ToLower() == "success")
                     {
-                        AADEError = data.statusCode,
-                        Errors = errors.ToList()
-                    }, options: new JsonSerializerOptions
+                        for (var i = 0; i < data.ItemsElementName.Length; i++)
+                        {
+                            if (data.ItemsElementName[i] == ItemsChoiceType.qrUrl)
+                            {
+                                continue;
+                                // In the latest API Version mydata returns a QR Code. We don't need it since we are printing our own QR Code. In case
+                                // of ERP API based integrations we will still want this to be added.
+                                // request.ReceiptResponse.AddSignatureItem(SignatureItemFactoryGR.CreateGRQRCode(data.Items[i].ToString()));
+                            }
+                            else
+                            {
+                                request.ReceiptResponse.AddSignatureItem(new SignatureItem
+                                {
+                                    Data = data.Items[i].ToString() ?? "",
+                                    Caption = data.ItemsElementName[i].ToString(),
+                                    ftSignatureFormat = SignatureFormat.Text,
+                                    ftSignatureType = SignatureTypeGR.MyDataInfo.As<SignatureType>()
+                                });
+                            }
+                        }
+
+                        request.ReceiptResponse.AddSignatureItem(SignatureItemFactoryGR.CreateGRQRCode($"{_receiptBaseAddress}/{request.ReceiptResponse.ftQueueID}/{request.ReceiptResponse.ftQueueItemID}"));
+                        request.ReceiptResponse.ftReceiptIdentification += $"{doc.invoice[0].invoiceHeader.series}-{doc.invoice[0].invoiceHeader.aa}";
+                        if (request.ReceiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004))
+                        {
+                            SignatureItemFactoryGR.AddOrderReceiptSignature(request);
+                        }
+
+                        if (doc.invoice[0].invoiceHeader.multipleConnectedMarks?.Length > 0)
+                        {
+                            SignatureItemFactoryGR.AddMarksForConnectedMarks(request, doc);
+                        }
+                        SignatureItemFactoryGR.AddInvoiceSignature(request, doc);
+                        SignatureItemFactoryGR.AddVivaFiscalProviderSignature(request);
+                    }
+                    else
                     {
-                        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-                    }));
+                        var errors = data.Items.Cast<ResponseTypeErrors>().SelectMany(x => x.error);
+                        request.ReceiptResponse.SetReceiptResponseError(JsonSerializer.Serialize(new AADEEErrorResponse
+                        {
+                            AADEError = data.statusCode,
+                            Errors = errors.ToList()
+                        }, options: new JsonSerializerOptions
+                        {
+                            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+                        }));
+                    }
                 }
             }
             else
@@ -184,16 +185,16 @@ public class MyDataSCU : IGRSSCD
             request.ReceiptResponse.SetReceiptResponseError(content);
         }
 
-        // if(request.ReceiptResponse.ftStateData == null)
-        // {
-        //     request.ReceiptResponse.ftStateData = new MiddlewareState
-        //     {
-        //         GR = new MiddlewareQueueGRState
-        //         {
-        //             GovernmentApi = governemntApiResponse
-        //         }
-        //     };
-        // }
+        if (request.ReceiptResponse.ftStateData == null && request.ReceiptRequest.ftCashBoxID == Guid.Parse("31f3defc-275d-4b6e-9f3f-fa09d64c1bb4"))
+        {
+            request.ReceiptResponse.ftStateData = new MiddlewareSCUGRMyDataState
+            {
+                GR = new MiddlewareQueueGRState
+                {
+                    GovernmentApi = governemntApiResponse
+                }
+            };
+        }
 
         return new ProcessResponse
         {
@@ -201,18 +202,16 @@ public class MyDataSCU : IGRSSCD
         };
     }
 
-
     public class AADEEErrorResponse
     {
-        public string AADEError { get; set; }
-        public List<ErrorType> Errors { get; set; }
+        public string? AADEError { get; set; }
+        public List<ErrorType> Errors { get; set; } = new List<ErrorType>();
     }
-
 
     public ResponseDoc GetResponse(string xmlContent)
     {
         var xmlSerializer = new XmlSerializer(typeof(ResponseDoc));
         using var stringReader = new StringReader(xmlContent);
-        return (ResponseDoc) xmlSerializer.Deserialize(stringReader);
+        return (ResponseDoc) xmlSerializer.Deserialize(stringReader)!;
     }
 }

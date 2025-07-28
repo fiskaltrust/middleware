@@ -1,6 +1,7 @@
-using fiskaltrust.ifPOS.v2;
+﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData;
 using fiskaltrust.Middleware.Localization.v2.Models;
+using fiskaltrust.Middleware.SCU.GR.MyData;
 using FluentAssertions;
 using Xunit;
 
