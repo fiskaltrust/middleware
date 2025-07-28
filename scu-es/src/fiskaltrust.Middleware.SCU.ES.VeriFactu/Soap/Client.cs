@@ -34,7 +34,8 @@ public class Client : IClient
         var governmentAPI = new GovernmentAPI
         {
             Request = requestString,
-            Response = await response.Content.ReadAsStringAsync()
+            Response = await response.Content.ReadAsStringAsync(),
+            Version = GovernmentAPIVersion.V0
         };
 
         if (!response.IsSuccessStatusCode || response.Content.Headers.ContentType?.MediaType == "text/html")

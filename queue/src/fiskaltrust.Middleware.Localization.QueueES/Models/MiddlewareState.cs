@@ -47,4 +47,8 @@ public class GovernmentAPI
     [JsonPropertyName("Response")]
     [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
     public required string Response { get; set; }
+
+    [JsonPropertyName("Version")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+    public required string Version { get; set; }
 }

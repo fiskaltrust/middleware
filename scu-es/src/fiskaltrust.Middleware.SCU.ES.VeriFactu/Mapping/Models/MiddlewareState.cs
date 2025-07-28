@@ -38,6 +38,12 @@ public class LastReceipt
     public required ReceiptResponse Response { get; set; }
 }
 
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum GovernmentAPIVersion
+{
+    V0
+}
+
 public class GovernmentAPI
 {
     [JsonPropertyName("Request")]
@@ -47,4 +53,9 @@ public class GovernmentAPI
     [JsonPropertyName("Response")]
     [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
     public required string Response { get; set; }
+
+    [JsonPropertyName("Version")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public required GovernmentAPIVersion Version { get; set; }
 }
