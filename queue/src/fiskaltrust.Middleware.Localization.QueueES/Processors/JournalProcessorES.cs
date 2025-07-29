@@ -23,7 +23,7 @@ public class JournalProcessorES : IJournalProcessor
     {
         if (request.ftJournalType == JournalTypeES.VeriFactu.As<JournalType>())
         {
-            return (new ContentType(MediaTypeNames.Application.Xml) { CharSet = Encoding.UTF8.WebName }, ProcessVeriFactuAsync(request));
+            return (new ContentType(MediaTypeNames.Application.Json) { CharSet = Encoding.UTF8.WebName }, ProcessVeriFactuAsync(request));
         }
 
         throw new Exception($"Unsupported journal type: {request.ftJournalType}");
@@ -31,13 +31,33 @@ public class JournalProcessorES : IJournalProcessor
 
     private async IAsyncEnumerable<byte[]> ProcessVeriFactuAsync(JournalRequest request)
     {
-        var journalESs = (await _journalESRepository).GetByTimeStampRangeAsync(request.From, request.To);
-        await foreach (var journalES in journalESs)
+        IAsyncEnumerable<ftJournalES> journalESs;
+        if (request.To == 0)
         {
+            journalESs = (await _journalESRepository).GetEntriesOnOrAfterTimeStampAsync(request.From);
+
+        }
+        else if (request.To < 0)
+        {
+            journalESs = (await _journalESRepository).GetEntriesOnOrAfterTimeStampAsync(request.From, -(int) request.To);
+        }
+        else
+        {
+            journalESs = (await _journalESRepository).GetByTimeStampRangeAsync(request.From, request.To);
+        }
+
+        yield return Encoding.UTF8.GetBytes("[");
+        await foreach (var (i, journalES) in journalESs.Select((j, i) => (i, j)))
+        {
+            if (i != 0)
+            {
+                yield return Encoding.UTF8.GetBytes(",");
+            }
             if (Enum.TryParse<JournalESType>(journalES.JournalType, out var journalType) && journalType == JournalESType.VeriFactu)
             {
                 yield return Encoding.UTF8.GetBytes(journalES.Data);
             }
         }
+        yield return Encoding.UTF8.GetBytes("]");
     }
 }
