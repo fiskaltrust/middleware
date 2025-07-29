@@ -46,7 +46,7 @@ public static class ftActionJournalFactory
         var notification = new DeactivateQueuePT
         {
             CashBoxId = request.ftCashBoxID!.Value,
-            QueueId = receiptResponse.ftQueueItemID,
+            QueueId = receiptResponse.ftQueueID,
             Moment = DateTime.UtcNow,
             IsStopReceipt = true,
             Version = "V0"

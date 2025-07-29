@@ -26,6 +26,7 @@ public class ReceiptRequestValidatorPTTests
             };
         var receiptRequest = new ReceiptRequest
         {
+
             cbTerminalID = "1",
             cbReceiptAmount = chargeItems.Sum(x => x.Amount),
             cbReceiptMoment = DateTime.UtcNow,
