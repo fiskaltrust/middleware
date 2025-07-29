@@ -1,7 +1,7 @@
 ﻿using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2;
 
-namespace fiskaltrust.Middleware.Localization.QueuePT;
+namespace fiskaltrust.Middleware.Localization.QueuePT.Helpers;
 
 public class ReceiptRequestValidatorPT
 {

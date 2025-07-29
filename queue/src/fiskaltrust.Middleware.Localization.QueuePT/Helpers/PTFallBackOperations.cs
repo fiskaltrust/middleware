@@ -2,7 +2,7 @@
 using fiskaltrust.storage.V0;
 using fiskaltrust.ifPOS.v2.Cases;
 
-namespace fiskaltrust.Middleware.Localization.QueuePT.Processors;
+namespace fiskaltrust.Middleware.Localization.QueuePT.Helpers;
 
 public static class PTFallBackOperations
 {

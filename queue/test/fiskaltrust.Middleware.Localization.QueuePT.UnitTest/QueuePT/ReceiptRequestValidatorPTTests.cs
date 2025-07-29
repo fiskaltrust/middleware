@@ -2,6 +2,7 @@
 using fiskaltrust.Middleware.Localization.QueuePT.UnitTest.Certification;
 using fiskaltrust.ifPOS.v2.Cases;
 using Xunit;
+using fiskaltrust.Middleware.Localization.QueuePT.Helpers;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT;
 

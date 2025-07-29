@@ -6,7 +6,7 @@ using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.storage.V0;
 using Microsoft.Win32.SafeHandles;
 
-namespace fiskaltrust.Middleware.Localization.QueuePT;
+namespace fiskaltrust.Middleware.Localization.QueuePT.Helpers;
 
 public class StaticNumeratorStorage
 {
@@ -48,11 +48,11 @@ public class StaticNumeratorStorage
     public static async Task LoadStorageNumbers(IMiddlewareQueueItemRepository middlewareQueueItemRepository)
     {
         var queueItems = (await middlewareQueueItemRepository.GetAsync()).OrderByDescending(x => x.ftQueueRow).ToList();
-        ReloadSeries(StaticNumeratorStorage.SimplifiedInvoiceSeries, queueItems);
-        ReloadSeries(StaticNumeratorStorage.CreditNoteSeries, queueItems);
-        ReloadSeries(StaticNumeratorStorage.InvoiceSeries, queueItems);
-        ReloadSeries(StaticNumeratorStorage.ProFormaSeries, queueItems);
-        ReloadSeries(StaticNumeratorStorage.PaymentSeries, queueItems);
+        ReloadSeries(SimplifiedInvoiceSeries, queueItems);
+        ReloadSeries(CreditNoteSeries, queueItems);
+        ReloadSeries(InvoiceSeries, queueItems);
+        ReloadSeries(ProFormaSeries, queueItems);
+        ReloadSeries(PaymentSeries, queueItems);
     }
 
     private static void ReloadSeries(NumberSeries series, List<ftQueueItem> queueItems)

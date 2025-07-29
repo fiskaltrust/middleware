@@ -12,6 +12,7 @@ using fiskaltrust.Middleware.Contracts.Repositories;
 using System.Text;
 using fiskaltrust.SAFT.CLI.SAFTSchemaPT10401;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
+using fiskaltrust.Middleware.Localization.QueuePT.Helpers;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Processors;
 
