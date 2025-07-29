@@ -40,6 +40,10 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
             {
                 throw new NotSupportedException("Grouping of refund receipts is not supported.");
             }
+            request.ReceiptResponse.ftStateData = new
+            {
+                ReferencedReceiptResponse = receiptReferences[0].Item2,
+            };
 
             var series = StaticNumeratorStorage.CreditNoteSeries;
             series.Numerator++;
@@ -129,8 +133,6 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
         }
         else
         {
-
-
             var receiptReferences = await _receiptReferenceProvider.GetReceiptReferencesIfNecessaryAsync(request);
             if (receiptReferences.Count == 0)
             {
@@ -140,6 +142,11 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
             {
                 throw new NotSupportedException("Grouping of refund receipts is not supported.");
             }
+            request.ReceiptResponse.ftStateData = new
+            {
+                ReferencedReceiptResponse = receiptReferences[0].Item2,
+            };
+
             var series = StaticNumeratorStorage.PaymentSeries;
             series.Numerator++;
             var invoiceNo = series.Identifier + "/" + series.Numerator!.ToString()!.PadLeft(4, '0');

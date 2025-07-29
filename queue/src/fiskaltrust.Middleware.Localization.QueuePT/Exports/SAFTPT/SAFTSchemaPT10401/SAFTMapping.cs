@@ -149,7 +149,7 @@ public static class SAFTMapping
                 ProductCode = x.ProductNumber ?? Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(x.Description + x.Amount + x.VATRate))),
                 ProductGroup = x.ProductGroup,
                 ProductDescription = x.Description,
-                ProductNumberCode = x.ProductNumber ?? Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(x.Description))),
+                ProductNumberCode = x.ProductNumber ?? Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(x.Description + x.Amount + x.VATRate))),
             };
         }).DistinctBy(x => x.ProductCode).ToList();
     }
@@ -627,7 +627,7 @@ public static class SAFTMapping
         var line = new Line
         {
             LineNumber = (long) chargeItemData.Position,
-            ProductCode = chargeItemData.ProductNumber ?? Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(chargeItemData.Description))),
+            ProductCode = chargeItemData.ProductNumber ?? Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(chargeItemData.Description + chargeItemData.Amount + chargeItemData.VATRate))),
             ProductDescription = chargeItemData.Description,
             Quantity = Helpers.CreateMonetaryValue(quantity),
             UnitOfMeasure = chargeItemData.Unit ?? "Unit",

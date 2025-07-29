@@ -43,6 +43,10 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
             {
                 throw new NotSupportedException("Grouping of refund receipts is not supported.");
             }
+            request.ReceiptResponse.ftStateData = new
+            {
+                ReferencedReceiptResponse = receiptReferences[0].Item2,
+            };
 
             var series = StaticNumeratorStorage.InvoiceSeries;
             series.Numerator++;
@@ -96,6 +100,11 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
             {
                 throw new NotSupportedException("Grouping of refund receipts is not supported.");
             }
+            request.ReceiptResponse.ftStateData = new
+            {
+                ReferencedReceiptResponse = receiptReferences[0].Item2,
+            };
+
             var series = StaticNumeratorStorage.InvoiceSeries;
             series.Numerator++;
             var invoiceNo = series.Identifier + "/" + series.Numerator!.ToString()!.PadLeft(4, '0');
