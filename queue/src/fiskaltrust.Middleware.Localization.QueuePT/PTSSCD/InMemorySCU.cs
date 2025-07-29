@@ -7,14 +7,8 @@ using Newtonsoft.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
 
-public class PTSSCDInfo
-{
-}
-
-public class InMemorySCUConfiguration
-{
-
-}
+public class PTSSCDInfo { }
+public class InMemorySCUConfiguration { }
 
 public class InMemorySCU : IPTSSCD
 {
@@ -46,7 +40,6 @@ public class InMemorySCU : IPTSSCD
                $"{element.Hash}";
     }
 
-#pragma warning disable
     public async Task<(ProcessResponse, string)> ProcessReceiptAsync(ProcessRequest request, string invoiceNo, string? lastHash)
     {
         var rsa = RSA.Create();
