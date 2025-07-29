@@ -13,35 +13,35 @@ public class StaticNumeratorStorage
     public static NumberSeries InvoiceSeries { get; set; } = new NumberSeries
     {
         TypeCode = "FT",
-        ATCUD = "G4QZMNK",
+        ATCUD = "G4QZMNKE",
         Identifier = "FT ft2024"
     };
 
     public static NumberSeries SimplifiedInvoiceSeries { get; set; } = new NumberSeries
     {
         TypeCode = "FS",
-        ATCUD = "XBPRP1M",
+        ATCUD = "XBPRP1MS",
         Identifier = "FS ft2024"
     };
 
     public static NumberSeries CreditNoteSeries { get; set; }= new NumberSeries
     {
         TypeCode = "NC",
-        ATCUD = "QRFQ68N",
+        ATCUD = "QRFQ68NC",
         Identifier = "NC ft2024"
     };
 
     public static NumberSeries ProFormaSeries { get; set; } = new NumberSeries
     {
         TypeCode = "PF",
-        ATCUD = "GGRS68N",
+        ATCUD = "GGRS68NF",
         Identifier = "PF ft2024"
     };
 
     public static NumberSeries PaymentSeries { get; set; } = new NumberSeries
     {
         TypeCode = "RG",
-        ATCUD = "FSSJ34S",
+        ATCUD = "FSSJ34SE",
         Identifier = "RG ft2024"
     };
 
@@ -81,8 +81,15 @@ public class StaticNumeratorStorage
                 if (lastReceiptResponse.ftReceiptIdentification.StartsWith(series.Identifier))
                 {
                     series.Numerator = int.Parse(lastReceiptResponse.ftReceiptIdentification.Split("/")[1]);
+                    var lastSignature = lastReceiptResponse.ftSignatures.FirstOrDefault(x => x.ftSignatureType == SignatureTypePT.Hash.As<SignatureType>());
+                    if (lastSignature != null)
+                    {
+                        series.LastHash = lastSignature.Data;
+                    }
                     break;
                 }
+
+      
             }
             if (series.Numerator == null)
             {

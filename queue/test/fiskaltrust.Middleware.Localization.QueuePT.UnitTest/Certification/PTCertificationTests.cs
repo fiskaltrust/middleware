@@ -102,6 +102,7 @@ public class PTCertificationTests
     [Fact]
     public async Task PTCertificationExamplesAll()
     {
+        var timestamp = DateTime.UtcNow.Ticks;
         //var targetFolder = "/Users/stefan.kert/Desktop/Sources/PT_Certification";
         var targetFolder = "C:\\Users\\stefa\\OneDrive\\Desktop\\Portugal_Registration\\20250729";
 
@@ -138,7 +139,8 @@ public class PTCertificationTests
 
         var xmlData = await _journalMethod(JsonSerializer.Serialize(new ifPOS.v1.JournalRequest
         {
-            ftJournalType = 0x5054_2000_0000_0001
+            ftJournalType = 0x5054_2000_0000_0001,
+            From = timestamp
         }));
         File.WriteAllText($"{targetFolder}\\SAFT_journal.xml", xmlData);
     }

@@ -137,7 +137,7 @@ public static class PTCertificationExamples
                     Amount = -100,
                     VATRate = PTVATRates.Normal,
                     VATAmount = VATHelpers.CalculateVAT(-100, PTVATRates.Normal),
-                    ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0002_0013,
+                    ftChargeItemCase = ((ChargeItemCase) PTVATRates.NormalCase).WithFlag(ChargeItemCaseFlags.Refund),
                     Quantity = -1,
                     Description = "Line item 1"
                 }
@@ -282,7 +282,7 @@ public static class PTCertificationExamples
                 Amount = -(100 * 0.55m) * 0.088m,
                 VATRate = PTVATRates.Normal,
                 VATAmount = VATHelpers.CalculateVAT(-(100 * 0.55m) * 0.088m, PTVATRates.Normal),
-                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0004_0013,
+                ftChargeItemCase = ((ChargeItemCase) PTVATRates.NormalCase).WithFlag(ChargeItemCaseFlags.ExtraOrDiscount),
                 Quantity = 1,
                 Description = "Discount Line item 1"
             },

@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueuePT;
+using fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
 using fiskaltrust.Middleware.Localization.v2.Configuration;
 using fiskaltrust.ifPOS.v2.Cases;
 using Microsoft.Extensions.Logging;
@@ -47,7 +48,9 @@ public class FullTest()
         var cashBoxId = Guid.Parse("3b88c673-025c-4358-ab7f-4234e4c1a068");
         var accessToken = "BPYu7kfJa64JcdbAdF9/AJNNHjxQpqRMQu0QKTwcN8tar9hoYH89fE/AztAiOo8u/Prr+h96DhMqcp1TEzlelR8=";
 
+        //signaturCreationUnitPT.PrivateKey = ""; 
         var configuration = await GetConfigurationAsync(cashBoxId, accessToken);
+
         var queue = configuration.ftQueues?.First() ?? throw new Exception($"The configuration for {cashBoxId} is empty and therefore not valid.");
         var ptSSCD = new InMemorySCU(new ftSignaturCreationUnitPT
         {

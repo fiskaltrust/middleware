@@ -1,4 +1,5 @@
-﻿using fiskaltrust.ifPOS.v2;
+﻿using System.Reflection.Metadata;
+using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueuePT.Models;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.ifPOS.v2.Cases;
@@ -31,13 +32,13 @@ public static class PortugalReceiptCalculations
 {
     public static string CreateCreditNoteQRCode(string qrCodeHash, string issuerTIN, string taxRegion, string atcud, ReceiptRequest request, ReceiptResponse receiptResponse)
     {
-        var taxGroups = request.cbChargeItems.GroupBy(GetIVATAxCode);
-        var normalChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "NOR").ToList();
-        var reducedChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "RED").ToList();
-        var intermediateChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "INT").ToList();
-        var exemptChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "ISE").ToList();
+        var taxGroups = request.cbChargeItems.GroupBy(PTMappings.GetIVATAxCode);
+        var normalChargeItems = request.cbChargeItems.Where(x => PTMappings.GetIVATAxCode(x) == "NOR").ToList();
+        var reducedChargeItems = request.cbChargeItems.Where(x => PTMappings.GetIVATAxCode(x) == "RED").ToList();
+        var intermediateChargeItems = request.cbChargeItems.Where(x => PTMappings.GetIVATAxCode(x) == "INT").ToList();
+        var exemptChargeItems = request.cbChargeItems.Where(x => PTMappings.GetIVATAxCode(x) == "ISE").ToList();
 
-        var customer = SAFTMapping.GetCustomerData(request);
+        var customer = new SaftExporter().GetCustomerData(request);
         var customerTIN = customer.CustomerTaxID;
         var customerCountry = customer.BillingAddress.Country;
         return new PTQrCode
@@ -68,13 +69,13 @@ public static class PortugalReceiptCalculations
 
     public static string CreateInvoiceQRCode(string qrCodeHash, string issuerTIN, string taxRegion, string atcud, ReceiptRequest request, ReceiptResponse receiptResponse)
     {
-        var taxGroups = request.cbChargeItems.GroupBy(GetIVATAxCode);
-        var normalChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "NOR").ToList();
-        var reducedChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "RED").ToList();
-        var intermediateChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "INT").ToList();
-        var exemptChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "ISE").ToList();
+        var taxGroups = request.cbChargeItems.GroupBy(PTMappings.GetIVATAxCode);
+        var normalChargeItems = request.cbChargeItems.Where(x => PTMappings.GetIVATAxCode(x) == "NOR").ToList();
+        var reducedChargeItems = request.cbChargeItems.Where(x => PTMappings.GetIVATAxCode(x) == "RED").ToList();
+        var intermediateChargeItems = request.cbChargeItems.Where(x => PTMappings.GetIVATAxCode(x) == "INT").ToList();
+        var exemptChargeItems = request.cbChargeItems.Where(x => PTMappings.GetIVATAxCode(x) == "ISE").ToList();
 
-        var customer = SAFTMapping.GetCustomerData(request);
+        var customer = new SaftExporter().GetCustomerData(request);
         var customerTIN = customer.CustomerTaxID;
         var customerCountry = customer.BillingAddress.Country;
         return new PTQrCode
@@ -105,13 +106,13 @@ public static class PortugalReceiptCalculations
 
     public static string CreateProFormaQRCode(string qrCodeHash, string issuerTIN, string taxRegion, string atcud, ReceiptRequest request, ReceiptResponse receiptResponse)
     {
-        var taxGroups = request.cbChargeItems.GroupBy(GetIVATAxCode);
-        var normalChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "NOR").ToList();
-        var reducedChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "RED").ToList();
-        var intermediateChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "INT").ToList();
-        var exemptChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "ISE").ToList();
+        var taxGroups = request.cbChargeItems.GroupBy(PTMappings.GetIVATAxCode);
+        var normalChargeItems = request.cbChargeItems.Where(x => PTMappings.GetIVATAxCode(x) == "NOR").ToList();
+        var reducedChargeItems = request.cbChargeItems.Where(x => PTMappings.GetIVATAxCode(x) == "RED").ToList();
+        var intermediateChargeItems = request.cbChargeItems.Where(x => PTMappings.GetIVATAxCode(x) == "INT").ToList();
+        var exemptChargeItems = request.cbChargeItems.Where(x => PTMappings.GetIVATAxCode(x) == "ISE").ToList();
 
-        var customer = SAFTMapping.GetCustomerData(request);
+        var customer = new SaftExporter().GetCustomerData(request);
         var customerTIN = customer.CustomerTaxID;
         var customerCountry = customer.BillingAddress.Country;
         return new PTQrCode
@@ -140,15 +141,16 @@ public static class PortugalReceiptCalculations
         }.GenerateQRCode();
     }
 
+#pragma warning disable
     public static string CreateRGQRCode(string qrCodeHash, string issuerTIN, string taxRegion, string atcud, ReceiptRequest request, ReceiptResponse receiptResponse)
     {
-        var taxGroups = request.cbChargeItems.GroupBy(GetIVATAxCode);
-        var normalChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "NOR").ToList();
-        var reducedChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "RED").ToList();
-        var intermediateChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "INT").ToList();
-        var exemptChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "ISE").ToList();
+        var taxGroups = request.cbChargeItems.GroupBy(PTMappings.GetIVATAxCode);
+        var normalChargeItems = request.cbChargeItems.Where(x => PTMappings.GetIVATAxCode(x) == "NOR").ToList();
+        var reducedChargeItems = request.cbChargeItems.Where(x => PTMappings.GetIVATAxCode(x) == "RED").ToList();
+        var intermediateChargeItems = request.cbChargeItems.Where(x => PTMappings.GetIVATAxCode(x) == "INT").ToList();
+        var exemptChargeItems = request.cbChargeItems.Where(x => PTMappings.GetIVATAxCode(x) == "ISE").ToList();
 
-        var customer = SAFTMapping.GetCustomerData(request);
+        var customer = new SaftExporter().GetCustomerData(request);
         var customerTIN = customer.CustomerTaxID;
         var customerCountry = customer.BillingAddress.Country;
         return new PTQrCode
@@ -161,7 +163,8 @@ public static class PortugalReceiptCalculations
             DocumentDate = request.cbReceiptMoment,
             UniqueIdentificationOfTheDocument = receiptResponse.ftReceiptIdentification,
             ATCUD = atcud,
-            TaxCountryRegion = taxRegion,
+            // Fill according to the technical notes of the TaxCountryRegion field of SAF-T (PT).In case of a document without an indication of the VAT rate, which must be shown in table 4.2, 4.3 or 4.4 of the SAF - T(PT), fill in with «0» (I1: 0).
+            TaxCountryRegion = "0",
             TaxableBasisOfVAT_ExemptRate = exemptChargeItems.Sum(x => x.Amount),
             TaxableBasisOfVAT_ReducedRate = reducedChargeItems.Sum(x => x.Amount - x.VATAmount ?? 0.0m),
             TotalVAT_ReducedRate = reducedChargeItems.Sum(x => x.VATAmount ?? 0.0m),
@@ -179,13 +182,13 @@ public static class PortugalReceiptCalculations
 
     public static string CreateSimplifiedInvoiceQRCode(string qrCodeHash, string issuerTIN, string taxRegion, string atcud, ReceiptRequest request, ReceiptResponse receiptResponse)
     {
-        var taxGroups = request.cbChargeItems.GroupBy(GetIVATAxCode);
-        var normalChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "NOR").ToList();
-        var reducedChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "RED").ToList();
-        var intermediateChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "INT").ToList();
-        var exemptChargeItems = request.cbChargeItems.Where(x => GetIVATAxCode(x) == "ISE").ToList();
+        var taxGroups = request.cbChargeItems.GroupBy(PTMappings.GetIVATAxCode);
+        var normalChargeItems = request.cbChargeItems.Where(x => PTMappings.GetIVATAxCode(x) == "NOR").ToList();
+        var reducedChargeItems = request.cbChargeItems.Where(x => PTMappings.GetIVATAxCode(x) == "RED").ToList();
+        var intermediateChargeItems = request.cbChargeItems.Where(x => PTMappings.GetIVATAxCode(x) == "INT").ToList();
+        var exemptChargeItems = request.cbChargeItems.Where(x => PTMappings.GetIVATAxCode(x) == "ISE").ToList();
 
-        var customer = SAFTMapping.GetCustomerData(request);
+        var customer = new SaftExporter().GetCustomerData(request);
         var customerTIN = customer.CustomerTaxID;
         var customerCountry = customer.BillingAddress.Country;
         return new PTQrCode
@@ -213,18 +216,4 @@ public static class PortugalReceiptCalculations
             OtherInformation = "ftQueueId=" + receiptResponse.ftQueueID + ";ftQueueItemId=" + receiptResponse.ftQueueItemID
         }.GenerateQRCode();
     }
-
-    public static string GetIVATAxCode(ChargeItem chargeItem) => chargeItem.ftChargeItemCase switch
-    {
-        ChargeItemCase.UnknownService => "",
-        ChargeItemCase.DiscountedVatRate1 => "RED",
-        ChargeItemCase.DiscountedVatRate2 => "",
-        ChargeItemCase.NormalVatRate => "NOR",
-        ChargeItemCase.SuperReducedVatRate1 => "",
-        ChargeItemCase.SuperReducedVatRate2 => "",
-        ChargeItemCase.ParkingVatRate => "INT",
-        ChargeItemCase.ZeroVatRate => "",
-        ChargeItemCase.NotTaxable => "ISE",
-        _ => ""
-    };
 }
