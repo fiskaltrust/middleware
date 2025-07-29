@@ -92,7 +92,7 @@ public class ReceiptCommandProcessorES(ILogger<ReceiptCommandProcessorES> logger
 
         try
         {
-            var responseStateData = JsonSerializer.Deserialize<MiddlewareState>(((JsonElement) response.ReceiptResponse.ftStateData!).GetRawText())!;
+            var responseStateData = JsonSerializer.Deserialize<MiddlewareState>(((JsonElement)response.ReceiptResponse.ftStateData!).GetRawText())!;
             await (await _journalESRepository).InsertAsync(new ftJournalES
             {
                 ftJournalESId = Guid.NewGuid(),
