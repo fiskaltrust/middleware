@@ -1,10 +1,10 @@
 ﻿using System.Reflection.Metadata;
-using fiskaltrust.Api.POS.Models.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueuePT.Models;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.SAFT.CLI.SAFTSchemaPT10401;
 using Org.BouncyCastle.Asn1.Ocsp;
+using fiskaltrust.ifPOS.v2;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Factories;
 

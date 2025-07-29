@@ -135,13 +135,6 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
             var printHash = new StringBuilder().Append(hash[0]).Append(hash[10]).Append(hash[20]).Append(hash[30]).ToString();
             var qrCode = PortugalReceiptCalculations.CreateRGQRCode(printHash, _queuePT.IssuerTIN, _queuePT.TaxRegion, series.ATCUD + "-" + series.Numerator, request.ReceiptRequest, response.ReceiptResponse);
             AddSignatures(series, response, hash, printHash, qrCode);
-            response.ReceiptResponse.AddSignatureItem(new SignatureItem
-            {
-                Caption = $"Origem: {receiptReference.ftReceiptIdentification}",
-                Data = $"",
-                ftSignatureFormat = SignatureFormat.Text,
-                ftSignatureType = SignatureTypePT.ReferenceForCreditNote.As<SignatureType>(),
-            });
             series.LastHash = hash;
             return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
         }
@@ -175,7 +168,7 @@ public class ReceiptCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
             AddSignatures(series, response, hash, printHash, qrCode);
             response.ReceiptResponse.AddSignatureItem(new SignatureItem
             {
-                Caption = $"Origem: Fattura {receiptReferences[0].Item2.ftReceiptIdentification}",
+                Caption = $"Origem: {receiptReferences[0].Item2.ftReceiptIdentification}",
                 Data = $"",
                 ftSignatureFormat = SignatureFormat.Text,
                 ftSignatureType = SignatureTypePT.ReferenceForCreditNote.As<SignatureType>(),

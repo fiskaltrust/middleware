@@ -1,5 +1,4 @@
-﻿using fiskaltrust.Api.POS.Models.ifPOS.v2;
-using fiskaltrust.ifPOS.v2;
+﻿using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
 
