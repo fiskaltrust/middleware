@@ -97,7 +97,7 @@ public static class PTCertificationExamples
                 Amount = 150m,
                 VATRate = PTVATRates.Normal,
                 VATAmount = VATHelpers.CalculateVAT(150m, PTVATRates.Normal),
-                ftChargeItemCase =  (ChargeItemCase) PTVATRates.NormalCase,
+                ftChargeItemCase =  (ChargeItemCase) 0x5054_2000_0000_0013,
                 Quantity = 1,
                 Description = "Line item 1"
             }
@@ -137,7 +137,7 @@ public static class PTCertificationExamples
                     Amount = -100,
                     VATRate = PTVATRates.Normal,
                     VATAmount = VATHelpers.CalculateVAT(-100, PTVATRates.Normal),
-                    ftChargeItemCase = (ChargeItemCase) PTVATRates.NormalCase,
+                    ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0002_0013,
                     Quantity = -1,
                     Description = "Line item 1"
                 }
@@ -191,7 +191,7 @@ public static class PTCertificationExamples
                 Amount = 100,
                 VATRate = PTVATRates.Discounted1,
                 VATAmount = VATHelpers.CalculateVAT(100, PTVATRates.Discounted1),
-                ftChargeItemCase = (ChargeItemCase) PTVATRates.Discounted1Case,
+                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0011,
                 Quantity = 1,
                 Description = "Line item 1"
             },
@@ -211,7 +211,7 @@ public static class PTCertificationExamples
                 Amount = 25,
                 VATRate = PTVATRates.Discounted2,
                 VATAmount = VATHelpers.CalculateVAT(25, PTVATRates.Discounted2),
-                ftChargeItemCase = (ChargeItemCase) PTVATRates.Discounted2Case,
+                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0012,
                 Quantity = 1,
                 Description = "Line item 1"
             },
@@ -221,7 +221,7 @@ public static class PTCertificationExamples
                 Amount = 12.5m,
                 VATRate = PTVATRates.Normal,
                 VATAmount = VATHelpers.CalculateVAT(12.5m, PTVATRates.Normal),
-                ftChargeItemCase = (ChargeItemCase) PTVATRates.NormalCase,
+                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0013,
                 Quantity = 1,
                 Description = "Line item 1"
             }
@@ -272,7 +272,7 @@ public static class PTCertificationExamples
                 Amount = 100 * 0.55m,
                 VATRate = PTVATRates.Normal,
                 VATAmount = VATHelpers.CalculateVAT(100 * 0.55m, PTVATRates.Normal),
-                ftChargeItemCase = (ChargeItemCase) PTVATRates.NormalCase,
+                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0013,
                 Quantity = 100,
                 Description = "Line item 1"
             },
@@ -282,7 +282,7 @@ public static class PTCertificationExamples
                 Amount = -(100 * 0.55m) * 0.088m,
                 VATRate = PTVATRates.Normal,
                 VATAmount = VATHelpers.CalculateVAT(-(100 * 0.55m) * 0.088m, PTVATRates.Normal),
-                ftChargeItemCase = (ChargeItemCase) PTVATRates.NormalCase,
+                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0004_0013,
                 Quantity = 1,
                 Description = "Discount Line item 1"
             },
@@ -292,7 +292,7 @@ public static class PTCertificationExamples
                 Amount = 12.5m,
                 VATRate = PTVATRates.Normal,
                 VATAmount = VATHelpers.CalculateVAT(12.5m, PTVATRates.Normal),
-                ftChargeItemCase = (ChargeItemCase) PTVATRates.NormalCase,
+                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0013,
                 Quantity = 1,
                 Description = "Line item 1"
             }
@@ -338,7 +338,7 @@ public static class PTCertificationExamples
                 Amount = 0.50m,
                 VATRate = PTVATRates.Normal,
                 VATAmount = VATHelpers.CalculateVAT(0.50m, PTVATRates.Normal),
-                ftChargeItemCase = (ChargeItemCase) PTVATRates.NormalCase,
+                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0013,
                 Quantity = 1,
                 Description = "Line item 1"
             }
@@ -386,7 +386,7 @@ public static class PTCertificationExamples
                 Amount = 150m,
                 VATRate = PTVATRates.Normal,
                 VATAmount = VATHelpers.CalculateVAT(150m, PTVATRates.Normal),
-                ftChargeItemCase = (ChargeItemCase) PTVATRates.NormalCase,
+                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0013,
                 Quantity = 1,
                 Description = "Line item 1"
             }
@@ -440,7 +440,7 @@ public static class PTCertificationExamples
                 Amount = 150m,
                 VATRate = PTVATRates.Normal,
                 VATAmount = VATHelpers.CalculateVAT(150m, PTVATRates.Normal),
-                ftChargeItemCase = (ChargeItemCase) PTVATRates.NormalCase,
+                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0013,
                 Quantity = 1,
                 Description = "Line item 1"
             }
@@ -482,7 +482,7 @@ public static class PTCertificationExamples
                 Amount = 150m,
                 VATRate = PTVATRates.Normal,
                 VATAmount = VATHelpers.CalculateVAT(150m, PTVATRates.Normal),
-                ftChargeItemCase = (ChargeItemCase) PTVATRates.NormalCase,
+                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0013,
                 Quantity = 1,
                 Description = "Line item 1"
             }
@@ -557,7 +557,7 @@ public static class PTCertificationExamples
                 Amount = 150m,
                 VATRate = PTVATRates.Normal,
                 VATAmount = VATHelpers.CalculateVAT(150m, PTVATRates.Normal),
-                ftChargeItemCase = (ChargeItemCase) PTVATRates.NormalCase,
+                ftChargeItemCase = (ChargeItemCase) 0x5054_2000_0000_0013,
                 Quantity = 1,
                 Description = "Line item 1"
             }
