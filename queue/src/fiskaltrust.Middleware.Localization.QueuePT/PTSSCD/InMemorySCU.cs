@@ -1,4 +1,5 @@
-﻿using System.Security.Cryptography;
+﻿using System.Globalization;
+using System.Security.Cryptography;
 using System.Text;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueuePT.Models;
@@ -36,7 +37,7 @@ public class InMemorySCU : IPTSSCD
         return $"{element.InvoiceDate:yyyy-MM-dd};" +
                $"{element.SystemEntryDate:yyyy-MM-ddTHH:mm:ss};" +
                $"{element.InvoiceNo};" +
-               $"{element.GrossTotal:0.00};" +
+               $"{element.GrossTotal.ToString("0.00", CultureInfo.InvariantCulture)};" +
                $"{element.Hash}";
     }
 
@@ -50,6 +51,14 @@ public class InMemorySCU : IPTSSCD
         {
             ReceiptResponse = request.ReceiptResponse,
         }, Convert.ToBase64String(signature1)));
+    }
+
+    public string SignData(string hash1)
+    {
+        var rsa = RSA.Create();
+        rsa.ImportFromPem(_signaturCreationUnitPT.PrivateKey);
+        var signature1 = rsa.SignData(Encoding.ASCII.GetBytes(hash1), HashAlgorithmName.SHA1, RSASignaturePadding.Pkcs1);
+        return Convert.ToBase64String(signature1);
     }
 
     public Task<PTSSCDInfo> GetInfoAsync() => throw new NotImplementedException();

@@ -48,7 +48,7 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
                 ReferencedReceiptResponse = receiptReferences[0].Item2,
             };
 
-            var series = StaticNumeratorStorage.InvoiceSeries;
+            var series = StaticNumeratorStorage.CreditNoteSeries;
             series.Numerator++;
             var invoiceNo = series.Identifier + "/" + series.Numerator!.ToString()!.PadLeft(4, '0');
             var (response, hash) = await _sscd.ProcessReceiptAsync(new ProcessRequest
