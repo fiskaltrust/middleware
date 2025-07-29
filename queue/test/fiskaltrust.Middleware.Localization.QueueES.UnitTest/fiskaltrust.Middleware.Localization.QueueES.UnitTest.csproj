@@ -15,7 +15,7 @@
         <PackageReference Include="Microsoft.Extensions.Logging.TraceSource" Version="3.1.4" />
         <PackageReference Update="fiskaltrust.interface" Version="1.3.73-rc5-25203-83883" />
         <PackageReference Include="fiskaltrust.Middleware.Interface.Client.Grpc" Version="1.3.73-rc4-25189-83614" />
-        <PackageReference Include="fiskaltrust.Middleware.Interface.Client.Http" Version="1.3.73-rc4" />
+        <PackageReference Include="fiskaltrust.Middleware.Interface.Client.Http" Version="1.3.73-rc5-25210-84030" />
         <PackageReference Include="fiskaltrust.Middleware.Interface.Client.Soap" Version="1.3.73-rc4-25189-83614" />
     </ItemGroup>
 

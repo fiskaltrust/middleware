@@ -10,12 +10,14 @@ using fiskaltrust.Middleware.Contracts.Repositories;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using fiskaltrust.Middleware.Localization.QueueES.Models;
+using Microsoft.Extensions.Logging;
 
 namespace fiskaltrust.Middleware.Localization.QueueES.Processors;
 
-public class ReceiptCommandProcessorES(AsyncLazy<IESSSCD> essscd, AsyncLazy<IConfigurationRepository> configurationRepository, AsyncLazy<IMiddlewareQueueItemRepository> queueItemRepository, AsyncLazy<IMiddlewareJournalESRepository> journalESRepository) : IReceiptCommandProcessor
+public class ReceiptCommandProcessorES(ILogger<ReceiptCommandProcessorES> logger, AsyncLazy<IESSSCD> essscd, AsyncLazy<IConfigurationRepository> configurationRepository, AsyncLazy<IMiddlewareQueueItemRepository> queueItemRepository, AsyncLazy<IMiddlewareJournalESRepository> journalESRepository) : IReceiptCommandProcessor
 {
 #pragma warning disable
+    private readonly ILogger<ReceiptCommandProcessorES> _logger = logger;
     private readonly AsyncLazy<IESSSCD> _essscd = essscd;
     private readonly AsyncLazy<IConfigurationRepository> _configurationRepository = configurationRepository;
     private readonly AsyncLazy<IMiddlewareQueueItemRepository> _queueItemRepository = queueItemRepository;
@@ -88,16 +90,23 @@ public class ReceiptCommandProcessorES(AsyncLazy<IESSSCD> essscd, AsyncLazy<ICon
             ReferencedReceiptResponse = referencedQueueItem is null ? null : JsonSerializer.Deserialize<ReceiptResponse>(referencedQueueItem.response)!,
         });
 
-        var responseStateData = JsonSerializer.Deserialize<MiddlewareState>(((JsonElement)response.ReceiptResponse.ftStateData!).GetRawText())!;
-        await (await _journalESRepository).InsertAsync(new ftJournalES
+        try
         {
-            ftJournalESId = Guid.NewGuid(),
-            Number = response.ReceiptResponse.ftQueueRow,
-            Data = JsonSerializer.Serialize(responseStateData.ES!.GovernmentAPI),
-            JournalType = JournalESType.VeriFactu.ToString(),
-            ftQueueItemId = response.ReceiptResponse.ftQueueItemID,
-            ftQueueId = response.ReceiptResponse.ftQueueID,
-        });
+            var responseStateData = JsonSerializer.Deserialize<MiddlewareState>(((JsonElement) response.ReceiptResponse.ftStateData!).GetRawText())!;
+            await (await _journalESRepository).InsertAsync(new ftJournalES
+            {
+                ftJournalESId = Guid.NewGuid(),
+                Number = response.ReceiptResponse.ftQueueRow,
+                Data = JsonSerializer.Serialize(responseStateData.ES!.GovernmentAPI),
+                JournalType = JournalESType.VeriFactu.ToString(),
+                ftQueueItemId = response.ReceiptResponse.ftQueueItemID,
+                ftQueueId = response.ReceiptResponse.ftQueueID,
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing receipt");
+        }
 
         queueES.SSCDSignQueueItemId = response.ReceiptResponse.ftQueueItemID;
         await (await _configurationRepository).InsertOrUpdateQueueESAsync(queueES);

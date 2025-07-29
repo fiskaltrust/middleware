@@ -55,6 +55,7 @@ public class QueueESBootstrapper : IV2QueueBootstrapper
                 queueStorageProvider
             ),
             new ReceiptCommandProcessorES(
+                loggerFactory.CreateLogger<ReceiptCommandProcessorES>(),
                 essscd,
                 storageProvider.CreateConfigurationRepository(),
                 storageProvider.CreateMiddlewareQueueItemRepository(),
