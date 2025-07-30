@@ -2,13 +2,13 @@
 using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
+using fiskaltrust.storage.V0;
 using FluentAssertions;
 using FluentAssertions.Execution;
 using Microsoft.Extensions.Logging;
 using Xunit;
 using Xunit.Abstractions;
-using fiskaltrust.storage.V0;
-using fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.Certification;
 
@@ -36,7 +36,8 @@ public class PTCertificationTests
         var queue = configuration.ftQueues?.First() ?? throw new Exception($"The configuration for {cashBoxId} is empty and therefore not valid.");
         var ptSSCD = new InMemorySCU(new ftSignaturCreationUnitPT
         {
-            
+            PrivateKey = File.ReadAllText("C:\\Users\\stefa\\OneDrive\\Desktop\\Portugal_Registration\\PrivateKey.pem"),
+
             SoftwareCertificateNumber = "9999"
         });
         var bootstrapper = new QueuePTBootstrapper(queue.Id, new LoggerFactory(), queue.Configuration ?? new Dictionary<string, object>(), ptSSCD);

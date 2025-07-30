@@ -42,7 +42,7 @@ public class SAFTMappingTests
                 ftReceiptMoment = DateTime.UtcNow,
             }),
         };
-        var auditFile = SAFTMapping.CreateAuditFile(new storage.V0.MasterData.AccountMasterData
+        var auditFile = new SaftExporter().CreateAuditFile(new storage.V0.MasterData.AccountMasterData
         {
             TaxId = "123456789",
         }, [queueItem], 0);
