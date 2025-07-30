@@ -1,4 +1,7 @@
-﻿using System.Text;
+﻿using System.Buffers;
+using System.IO.Pipelines;
+using System.Net.Mime;
+using System.Text;
 using System.Xml.Serialization;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.v2;
@@ -18,7 +21,10 @@ public class JournalProcessorPT : IJournalProcessor
         _storageProvider = storageProvider;
     }
 
-    public async IAsyncEnumerable<JournalResponse> ProcessAsync(JournalRequest request)
+    public (ContentType contentType, IAsyncEnumerable<byte[]> result) ProcessAsync(JournalRequest request)
+        => (new ContentType(MediaTypeNames.Application.Xml) { CharSet = Encoding.UTF8.WebName }, ProcessSAFTAsync(request));
+
+    public async IAsyncEnumerable<byte[]> ProcessSAFTAsync(JournalRequest request)
     {
         var masterData = new AccountMasterData
         {
@@ -41,9 +47,6 @@ public class JournalProcessorPT : IJournalProcessor
             queueItems = (await (await _storageProvider.CreateMiddlewareQueueItemRepository()).GetAsync()).ToList();
         }
         var data = SAFTMapping.SerializeAuditFile(masterData, queueItems, (int) request.To);
-        yield return new JournalResponse
-        {
-            Chunk = Encoding.UTF8.GetBytes(data).ToArray().ToList()
-        };
+        yield return Encoding.UTF8.GetBytes(data);
     }
 }

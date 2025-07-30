@@ -8,7 +8,7 @@ using fiskaltrust.ifPOS.v2.Cases;
 using Microsoft.Extensions.Logging;
 using Moq;
 
-namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processors
+namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.Processors
 {
     public class ProtocolCommandProcessorESTests
     {

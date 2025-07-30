@@ -157,7 +157,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.IntegrationTest.MyDataSCU
             }));
             File.WriteAllBytes(Path.Combine(folderPath, casename + ".receipt.pdf"), await pdfdata.Content.ReadAsByteArrayAsync());
             File.WriteAllBytes(Path.Combine(folderPath, casename + ".receipt.png"), await pngdata.Content.ReadAsByteArrayAsync());
-            File.WriteAllText(Path.Combine(folderPath, casename + "_aade.xml"), xmlData);
+            File.WriteAllText(Path.Combine(folderPath, casename + "_aade.xml"), (xmlData.contentType.CharSet is null ? Encoding.Default : Encoding.GetEncoding(xmlData.contentType.CharSet!)).GetString((await xmlData.reader.ReadAsync()).Buffer));
         }
 
         [Fact]

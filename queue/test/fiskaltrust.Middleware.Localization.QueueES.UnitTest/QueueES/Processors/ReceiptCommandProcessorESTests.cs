@@ -25,7 +25,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 
-namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processors
+namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.Processors
 {
     public class ReceiptCommandProcessorESTests
     {
@@ -62,7 +62,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             );
         }
 
-        private readonly ReceiptProcessor _sut = new(Mock.Of<ILogger<ReceiptProcessor>>(), null!, new ReceiptCommandProcessorES(new(() => Task.FromResult(Mock.Of<IESSSCD>())), new(() => Task.FromResult(Mock.Of<IConfigurationRepository>())), new(() => Task.FromResult(Mock.Of<IReadOnlyQueueItemRepository>()))), null!, null!, null!);
+        private readonly ReceiptProcessor _sut = new(Mock.Of<ILogger<ReceiptProcessor>>(), null!, new ReceiptCommandProcessorES(Mock.Of<ILogger<ReceiptCommandProcessorES>>(), new(() => Task.FromResult(Mock.Of<IESSSCD>())), new(() => Task.FromResult(Mock.Of<IConfigurationRepository>())), new(() => Task.FromResult(Mock.Of<IMiddlewareQueueItemRepository>())), new(() => Task.FromResult(Mock.Of<IMiddlewareJournalESRepository>()))), null!, null!, null!);
 
 
         [Theory]
@@ -80,7 +80,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             };
             var receiptResponse = new ReceiptResponse
             {
-                ftState = (State)0x4553_2000_0000_0000,
+                ftState = (State) 0x4553_2000_0000_0000,
                 ftCashBoxIdentification = "cashBoxIdentification",
                 ftQueueID = Guid.NewGuid(),
                 ftQueueItemID = Guid.NewGuid(),
@@ -101,11 +101,11 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             var queueItem = TestHelpers.CreateQueueItem();
             var receiptRequest = new ReceiptRequest
             {
-                ftReceiptCase = (ReceiptCase)0
+                ftReceiptCase = (ReceiptCase) 0
             };
             var receiptResponse = new ReceiptResponse
             {
-                ftState = (State)0x4553_2000_0000_0000,
+                ftState = (State) 0x4553_2000_0000_0000,
                 ftCashBoxIdentification = "cashBoxIdentification",
                 ftQueueID = Guid.NewGuid(),
                 ftQueueItemID = Guid.NewGuid(),
@@ -127,7 +127,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             var previousReceiptRequest = new ReceiptRequest
             {
                 ftCashBoxID = Guid.NewGuid(),
-                ftReceiptCase = (ReceiptCase)(0x4553_2000_0000_0000 | (long)ReceiptCase.InitialOperationReceipt0x4001),
+                ftReceiptCase = (ReceiptCase) (0x4553_2000_0000_0000 | (long) ReceiptCase.InitialOperationReceipt0x4001),
                 cbReceiptMoment = new DateTime(2019, 12, 31),
                 cbReceiptReference = "TEST",
                 cbChargeItems = [
@@ -171,7 +171,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             };
             var previousReceiptResponse = new ReceiptResponse
             {
-                ftState = (State)0x4553_2000_0000_0000,
+                ftState = (State) 0x4553_2000_0000_0000,
                 ftQueueID = queue.ftQueueId,
                 ftQueueItemID = queueItem.ftQueueItemId,
                 ftCashBoxIdentification = "cashBoxIdentification",
@@ -226,12 +226,12 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             var queueItemRepositoryMock = new Mock<IQueueItemRepository>();
             queueItemRepositoryMock.Setup(x => x.GetAsync(previousQueueItem.ftQueueItemId)).ReturnsAsync(previousQueueItem);
             //var config = new VeriFactuSCUConfiguration();
-            var sut = new ReceiptCommandProcessorES(new(() => Task.FromResult(Mock.Of<IESSSCD>())), new(() => Task.FromResult(configurationRepositoryMock.Object)), new(() => Task.FromResult((IReadOnlyQueueItemRepository)queueItemRepositoryMock.Object)));
+            var sut = new ReceiptCommandProcessorES(Mock.Of<ILogger<ReceiptCommandProcessorES>>(), new(() => Task.FromResult(Mock.Of<IESSSCD>())), new(() => Task.FromResult(configurationRepositoryMock.Object)), new(() => Task.FromResult((IMiddlewareQueueItemRepository) queueItemRepositoryMock.Object)), new(() => Task.FromResult(Mock.Of<IMiddlewareJournalESRepository>())));
 
             var receiptRequest = new ReceiptRequest
             {
                 ftCashBoxID = Guid.NewGuid(),
-                ftReceiptCase = (ReceiptCase)(0x4553_2000_0000_0000 | (long)ReceiptCase.InitialOperationReceipt0x4001),
+                ftReceiptCase = (ReceiptCase) (0x4553_2000_0000_0000 | (long) ReceiptCase.InitialOperationReceipt0x4001),
                 cbReceiptMoment = new DateTime(2019, 12, 31),
                 cbReceiptReference = "TEST",
                 cbChargeItems = [
@@ -275,7 +275,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             };
             var receiptResponse = new ReceiptResponse
             {
-                ftState = (State)0x4553_2000_0000_0000,
+                ftState = (State) 0x4553_2000_0000_0000,
                 ftQueueID = queue.ftQueueId,
                 ftQueueItemID = queueItem.ftQueueItemId,
                 ftCashBoxIdentification = "cashBoxIdentification",
@@ -297,7 +297,7 @@ namespace fiskaltrust.Middleware.Localization.QueueES.UnitTest.QueueES.Processor
             result.receiptResponse.ftState.Should().Be(0x4553_2000_0000_0000, because: $"ftState {result.receiptResponse.ftState:X} is different than expected.");
             var expectedSignaturItem = new SignatureItem
             {
-                ftSignatureType = (SignatureType)0x4553_2000_0000_0001,
+                ftSignatureType = (SignatureType) 0x4553_2000_0000_0001,
                 ftSignatureFormat = SignatureFormat.QRCode,
                 Caption = "[www.fiskaltrust.es]",
                 Data = "https://prewww2.aeat.es/wlpl/TIKE-CONT/ValidarQR?nif=VATTEST&numserie=1%2fTEST&fecha=31-12-2019&importe=182800.00"
