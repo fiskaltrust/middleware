@@ -64,7 +64,7 @@ public class AADEMappingsIncomeClassificationCategoryTypeTests
     }
 
     [Theory]
-    [InlineData(ChargeItemCaseTypeOfService.UnknownService, IncomeClassificationCategoryType.category1_1)]
+    [InlineData(ChargeItemCaseTypeOfService.UnknownService, IncomeClassificationCategoryType.category1_95)]
     [InlineData(ChargeItemCaseTypeOfService.Delivery, IncomeClassificationCategoryType.category1_1)]
     [InlineData(ChargeItemCaseTypeOfService.OtherService, IncomeClassificationCategoryType.category1_3)]
     public void GetIncomeClassificationCategoryType_WithDifferentServiceTypes_ReturnsExpectedCategory(ChargeItemCaseTypeOfService serviceType, IncomeClassificationCategoryType expectedCategory)
