@@ -33,13 +33,12 @@ public class ProtocolCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLa
         var series = StaticNumeratorStorage.ProFormaSeries;
         series.Numerator++;
         var receiptResponse = request.ReceiptResponse;
-        var invoiceNo = series.Identifier + "/" + series.Numerator!.ToString()!.PadLeft(4, '0');
-        receiptResponse.ftReceiptIdentification = invoiceNo;
+        receiptResponse.ftReceiptIdentification = series.Identifier + "/" + series.Numerator!.ToString()!.PadLeft(4, '0');
         var (response, hash) = await _sscd.ProcessReceiptAsync(new ProcessRequest
         {
             ReceiptRequest = request.ReceiptRequest,
             ReceiptResponse = receiptResponse,
-        }, invoiceNo, series.LastHash);
+        }, series.LastHash);
         var printHash = new StringBuilder().Append(hash[0]).Append(hash[10]).Append(hash[20]).Append(hash[30]).ToString();
         var qrCode = PortugalReceiptCalculations.CreateProFormaQRCode(printHash, _queuePT.IssuerTIN, series.ATCUD + "-" + series.Numerator, request.ReceiptRequest, response.ReceiptResponse);
         AddSignatures(series, response, hash, printHash, qrCode);

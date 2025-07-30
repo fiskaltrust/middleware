@@ -20,7 +20,7 @@ public class InMemorySCU : IPTSSCD
         _signaturCreationUnitPT = signaturCreationUnitPT;
     }
 
-    public PTInvoiceElement GetPTInvoiceElementFromReceiptRequest(ReceiptRequest receipt, ReceiptResponse receiptResponse)
+    public PTInvoiceElement GetPTInvoiceElementFromReceiptRequest(ReceiptRequest receipt, ReceiptResponse receiptResponse, string lastHash)
     {
         return new PTInvoiceElement
         {
@@ -41,7 +41,7 @@ public class InMemorySCU : IPTSSCD
                $"{element.Hash}";
     }
 
-    public async Task<(ProcessResponse, string)> ProcessReceiptAsync(ProcessRequest request, string invoiceNo, string? lastHash)
+    public async Task<(ProcessResponse, string)> ProcessReceiptAsync(ProcessRequest request,string? lastHash)
     {
         var rsa = RSA.Create();
         rsa.ImportFromPem(_signaturCreationUnitPT.PrivateKey);
