@@ -268,11 +268,11 @@ public class AADEFactory
 
             var totalAmount = receiptRequest.cbReceiptAmount ?? receiptRequest.cbChargeItems.Sum(x => x.Amount);
             //  #utf8([MerchantVATID]-[Series]-[given-AA]-[cbReceiptReference]-[cbReceiptMoment]-[TotalAmount])    
-            var hashPayloadExpected = data.GR.MerchantVATID + "-" + data.GR.Series + "-" + data.GR.AA + "-" + receiptRequest.cbReceiptReference + "-" + receiptRequest.cbReceiptMoment.ToString("o") + "-" + totalAmount;
+            var hashPayloadExpected = data.GR.MerchantVATID + "-" + data.GR.Series + "-" + data.GR.AA + "-" + receiptRequest.cbReceiptReference + "-" + receiptRequest.cbReceiptMoment.ToString("yyyy-MM-ddThh:mm:ssZ") + "-" + totalAmount;
             if (hashPayloadExpected != data.GR.HashPayload)
             {
                // TODO We need to check the payload but we need a fixed format.
-               //throw new Exception($"The HashPayload does not match the expected value. Expected: {hashPayloadExpected}, Actual: {data.GR.HashPayload}");
+               // throw new Exception($"The HashPayload does not match the expected value. Expected: {hashPayloadExpected}, Actual: {data.GR.HashPayload}");
             }
         }
 

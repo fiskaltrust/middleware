@@ -15,7 +15,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
     [Trait("only", "local")]
     public class FullTest()
     {
-        private readonly MyDataSCU _myDataSCU = new MyDataSCU("", "", "https://mydataapidev.aade.gr/", "https://receipts-sandbox.fiskaltrust.eu", new MasterDataConfiguration
+        private readonly MyDataSCU _myDataSCU = new MyDataSCU("", "", "https://mydataapidev.aade.gr/", "https://receipts-sandbox.fiskaltrust.eu", true, new MasterDataConfiguration
         {
             Account = new AccountMasterData
             {

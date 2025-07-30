@@ -49,15 +49,17 @@ public class AADEFactoryTests
         error!.Exception.Message.Should().Be("When using Handwritten receipts the Series must be provided in the ftReceiptCaseData payload.");
     }
 
-    [Fact(Skip = "This test is skipped because it is not applicable in the current context.")]
+    [Fact(Skip = "not applicable")]
     public void MapToInvoicesDoc_ShouldThrowException_IfHandwritten_FieldsAreDefined_HashPayloadShouldMatch()
     {
+        var dateTime = new DateTime(2025, 12, 15, 12, 13, 14, DateTimeKind.Utc);
+        var receiptReference = Guid.NewGuid().ToString();
         var receiptRequest = new ReceiptRequest
         {
             cbTerminalID = "1",
             Currency = Currency.EUR,
-            cbReceiptMoment = DateTime.UtcNow,
-            cbReceiptReference = Guid.NewGuid().ToString(),
+            cbReceiptMoment = dateTime,
+            cbReceiptReference = receiptReference,
             ftPosSystemId = Guid.NewGuid(),
             cbChargeItems = [],
             cbPayItems = [],
@@ -70,7 +72,7 @@ public class AADEFactoryTests
                     Series = "test", // This should be defined
                     AA = 123456789,
                     HashAlg = "SHA256",
-                    HashPayload = "asdf"
+                    HashPayload = $"WRONG HASHPAYLOAD"
                 }
             },
             cbReceiptAmount = 100,
@@ -96,6 +98,7 @@ public class AADEFactoryTests
     [Fact]
     public void MapToInvoicesDoc_ShouldThrowException_IfHandwritten_FieldsAreDefined_HashPayloadMatches_EverythingGreen()
     {
+        var dateTime = new DateTime(2025, 12, 15, 12, 13, 14, DateTimeKind.Utc);
         var merchantId = "Test";
         var series = "test";
         var aa = 1;
@@ -110,12 +113,11 @@ public class AADEFactoryTests
             }
         };
 
-        var receiptMoment = DateTime.UtcNow;
         var receiptRequest = new ReceiptRequest
         {
             cbTerminalID = "1",
             Currency = Currency.EUR,
-            cbReceiptMoment = receiptMoment,
+            cbReceiptMoment = dateTime,
             cbReceiptReference = cbReceiptReference,
             ftPosSystemId = Guid.NewGuid(),
             cbChargeItems = chargeItems,
@@ -135,7 +137,7 @@ public class AADEFactoryTests
                     Series = series, // This should be defined
                     AA = aa,
                     HashAlg = "SHA256",
-                    HashPayload = merchantId + "-" + series + "-" + aa + "-" + cbReceiptReference + "-" + receiptMoment + "-"  + chargeItems.Sum(x => x.Amount)
+                    HashPayload = merchantId + "-" + series + "-" + aa + "-" + cbReceiptReference + "-2025-12-15T12:13:14Z-" + chargeItems.Sum(x => x.Amount)
                 }
             },
             cbReceiptAmount = chargeItems.Sum(x => x.Amount),

@@ -9,6 +9,8 @@ using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.storage.V0.MasterData;
 using fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData.Models;
 using System.Text.Json.Serialization;
+using fiskaltrust.Middleware.Localization.v2.Helpers;
+using System.Security.Cryptography;
 
 namespace fiskaltrust.Middleware.SCU.GR.MyData;
 
@@ -31,11 +33,13 @@ public class MyDataSCU : IGRSSCD
 {
     private readonly HttpClient _httpClient;
     private readonly string _receiptBaseAddress;
+    readonly bool _sandbox;
     private readonly MasterDataConfiguration _masterDataConfiguration;
 
-    public MyDataSCU(string username, string subscriptionKey, string baseAddress, string receiptBaseAddress, MasterDataConfiguration masterDataConfiguration)
+    public MyDataSCU(string username, string subscriptionKey, string baseAddress, string receiptBaseAddress, bool sandbox, MasterDataConfiguration masterDataConfiguration)
     {
         _receiptBaseAddress = receiptBaseAddress;
+        _sandbox = sandbox;
         _masterDataConfiguration = masterDataConfiguration;
         _httpClient = new HttpClient()
         {
@@ -163,6 +167,12 @@ public class MyDataSCU : IGRSSCD
 
                         request.ReceiptResponse.AddSignatureItem(SignatureItemFactoryGR.CreateGRQRCode($"{_receiptBaseAddress}/{request.ReceiptResponse.ftQueueID}/{request.ReceiptResponse.ftQueueItemID}"));
                         request.ReceiptResponse.ftReceiptIdentification += $"{doc.invoice[0].invoiceHeader.series}-{doc.invoice[0].invoiceHeader.aa}";
+                        if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten) && request.ReceiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var receiptCaseDataPayload))
+                        {
+                            request.ReceiptResponse.ftReceiptIdentification = request.ReceiptResponse.ftReceiptIdentification.Replace("ft", "cb");
+                            var hash = SHA256.HashData(Encoding.UTF8.GetBytes(receiptCaseDataPayload.GR.MerchantVATID + "-" + receiptCaseDataPayload.GR.Series + "-" + receiptCaseDataPayload.GR.AA + "-" + request.ReceiptRequest.cbReceiptReference + "-" + request.ReceiptRequest.cbReceiptMoment.ToString("yyyy-MM-ddThh:mm:ssZ") + "-" + request.ReceiptRequest.cbChargeItems.Sum(x => x.Amount)));
+                            SignatureItemFactoryGR.AddHandwrittenReceiptSignature(request, EncodeToUrlSafeBase64(hash), _sandbox);
+                        }
                         if (request.ReceiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004))
                         {
                             SignatureItemFactoryGR.AddOrderReceiptSignature(request);
@@ -203,6 +213,15 @@ public class MyDataSCU : IGRSSCD
         {
             ReceiptResponse = request.ReceiptResponse
         };
+    }
+
+    public static string EncodeToUrlSafeBase64(byte[] bytes)
+    {
+        var base64 = Convert.ToBase64String(bytes)
+                        .TrimEnd('=')
+                        .Replace('+', '-')
+                        .Replace('/', '_');
+        return base64;
     }
 
     public class AADEEErrorResponse
