@@ -1,4 +1,6 @@
-﻿using System.Text.Json;
+﻿using System.IO.Pipelines;
+using System.Net.Mime;
+using System.Text.Json;
 using fiskaltrust.Middleware.Localization.QueueGR.GRSSCD;
 using fiskaltrust.Middleware.Localization.QueueGR.Processors;
 using fiskaltrust.Middleware.Localization.v2;
@@ -53,7 +55,7 @@ public class QueueGRBootstrapper : IV2QueueBootstrapper
         return _queue.RegisterForEcho();
     }
 
-    public Func<string, Task<string>> RegisterForJournal()
+    public Func<string, Task<(ContentType contentType, PipeReader reader)>> RegisterForJournal()
     {
         return _queue.RegisterForJournal();
     }

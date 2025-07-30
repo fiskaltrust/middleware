@@ -31,7 +31,7 @@ namespace fiskaltrust.Middleware.SCU.ES.VeriFactuHelpers
         {
             var serializer = new XmlSerializer(typeof(T));
 
-            return (T?)serializer.Deserialize(from.ToStream());
+            return (T?) serializer.Deserialize(from.ToStream());
         }
 
         public static string Serialize<T>(T from)

@@ -26,7 +26,7 @@ namespace fiskaltrust.Middleware.SCU.ES.VeriFactuUnitTest
             {
                 Nif = "M0291081Q",
                 NombreRazonEmisor = "Thomas Steininger",
-                Certificate = new X509Certificate2("TestCertificates/VeriFactu/Certificado_RPJ_A39200019_CERTIFICADO_ENTIDAD_PRUEBAS_4_Pre.pfx", "1234")
+                Certificate = new X509Certificate2("TestCertificates/VeriFactu/Certificado_RPJ_A39200019_CERTIFICADO_ENTIDAD_PRUEBAS_5_Pre.p12", "1234")
             };
 
             var receiptRequest = ExampleCashSales(Guid.NewGuid());
@@ -39,10 +39,10 @@ namespace fiskaltrust.Middleware.SCU.ES.VeriFactuUnitTest
                 ftCashBoxIdentification = Guid.NewGuid().ToString(),
                 ftReceiptIdentification = $"0#0/{receiptRequest.cbReceiptReference}",
                 ftReceiptMoment = DateTime.UtcNow,
-                ftState = (State)0x4752_2000_0000_0000,
+                ftState = (State) 0x4752_2000_0000_0000,
             };
 
-            var veriFactuMapping = new VeriFactuMapping(veriFactuSCUConfiguration);
+            var veriFactuMapping = new VeriFactuMapping(veriFactuSCUConfiguration, signXml: false);
             var journalES = veriFactuMapping.CreateRegistroFacturacionAlta(receiptRequest, receiptResponse, null, null);
 
             var requestHandler = new HttpClientHandler();
@@ -64,8 +64,7 @@ namespace fiskaltrust.Middleware.SCU.ES.VeriFactuUnitTest
             envelope.Body.RegFactuSistemaFacturacion.RegistroFactura.First().Item.As<RegistroFacturacionAlta>().Subsanacion = Booleano.S;
             envelope.Body.RegFactuSistemaFacturacion.RegistroFactura.First().Item.As<RegistroFacturacionAlta>().RechazoPrevio = RechazoPrevio.X;
 
-            var requestXml = envelope.XmlSerialize();
-            var response = await client.SendAsync(envelope);
+            var (response, governmentAPI) = await client.SendAsync(envelope);
 
             using var scope = new AssertionScope();
             response.IsOk.Should().BeTrue($"Response should not be error:\n{response.ErrValue?.ToString()}\n");
@@ -81,7 +80,7 @@ namespace fiskaltrust.Middleware.SCU.ES.VeriFactuUnitTest
             {
                 Nif = "M0291081Q",
                 NombreRazonEmisor = "Thomas Steininger",
-                Certificate = new X509Certificate2("TestCertificates/VeriFactu/Certificado_RPJ_A39200019_CERTIFICADO_ENTIDAD_PRUEBAS_4_Pre.pfx", "1234")
+                Certificate = new X509Certificate2("TestCertificates/VeriFactu/Certificado_RPJ_A39200019_CERTIFICADO_ENTIDAD_PRUEBAS_5_Pre.p12", "1234")
             };
 
             var receiptRequest = ExampleCashSales(Guid.NewGuid());
@@ -93,10 +92,10 @@ namespace fiskaltrust.Middleware.SCU.ES.VeriFactuUnitTest
                 ftCashBoxIdentification = Guid.NewGuid().ToString(),
                 ftReceiptIdentification = $"0#0/{receiptRequest.cbReceiptReference}",
                 ftReceiptMoment = DateTime.UtcNow,
-                ftState = (State)0x4752_2000_0000_0000,
+                ftState = (State) 0x4752_2000_0000_0000,
             };
 
-            var veriFactuMapping = new VeriFactuMapping(veriFactuSCUConfiguration);
+            var veriFactuMapping = new VeriFactuMapping(veriFactuSCUConfiguration, signXml: false);
             var journalES = veriFactuMapping.CreateRegistroFacturacionAlta(receiptRequest, receiptResponse, null, null);
 
             var requestHandler = new HttpClientHandler();
@@ -116,7 +115,7 @@ namespace fiskaltrust.Middleware.SCU.ES.VeriFactuUnitTest
                 }
             };
             var requestXml = envelope.XmlSerialize();
-            var response = await client.SendAsync(envelope);
+            var (response, governmentAPI) = await client.SendAsync(envelope);
 
             using var scope = new AssertionScope();
             response.IsOk.Should().BeTrue($"Response should not be error\n{response.ErrValue?.ToString()}\n");
@@ -130,7 +129,7 @@ namespace fiskaltrust.Middleware.SCU.ES.VeriFactuUnitTest
             return new ReceiptRequest
             {
                 ftCashBoxID = cashBoxId,
-                ftReceiptCase = (ReceiptCase)0x4752_2000_0000_0000,
+                ftReceiptCase = (ReceiptCase) 0x4752_2000_0000_0000,
                 cbTerminalID = "1",
                 cbReceiptReference = Guid.NewGuid().ToString(),
                 cbReceiptMoment = DateTime.UtcNow,

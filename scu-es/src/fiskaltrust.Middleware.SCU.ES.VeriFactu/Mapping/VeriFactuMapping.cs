@@ -16,11 +16,12 @@ namespace fiskaltrust.Middleware.SCU.ES.VeriFactu;
 
 public class VeriFactuMapping
 {
-    //private readonly X509Certificate2? _certificate;
     private readonly VeriFactuSCUConfiguration _veriFactuSCUConfiguration;
-    public VeriFactuMapping(VeriFactuSCUConfiguration configuration)
+    private readonly bool _signXml;
+    public VeriFactuMapping(VeriFactuSCUConfiguration configuration, bool signXml = true)
     {
         _veriFactuSCUConfiguration = configuration;
+        _signXml = signXml;
     }
 
     public RegFactuSistemaFacturacion CreateRegFactuSistemaFacturacion(RegistroFacturacionAnulacion registroFacturacionAnulacion) => CreateRegFactuSistemaFacturacion(new RegistroFactura { Item = registroFacturacionAnulacion });
@@ -48,7 +49,7 @@ public class VeriFactuMapping
         };
     }
 
-    public RegistroFacturacionAnulacion CreateRegistroFacturacionAnulacion(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, ReceiptResponse previousReceiptResponse, ReceiptRequest referencedReceiptRequest, ReceiptResponse referencedReceiptResponse)
+    public RegistroFacturacionAnulacion CreateRegistroFacturacionAnulacion(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, ReceiptResponse lastReceiptResponse, ReceiptRequest referencedReceiptRequest, ReceiptResponse referencedReceiptResponse)
     {
         if (receiptRequest.cbPreviousReceiptReference is null)
         {
@@ -71,7 +72,7 @@ public class VeriFactuMapping
             },
             Encadenamiento = new RegistroFacturacionAnulacionEncadenamiento
             {
-                Item = GetEncadenamientoFacturaAnteriorAnulacion(previousReceiptResponse, referencedReceiptRequest, referencedReceiptResponse)
+                Item = GetEncadenamientoFacturaAnteriorAnulacion(lastReceiptResponse, referencedReceiptRequest, referencedReceiptResponse)
             },
             // Which PosSystem from the list should we take? In DE we just take the first one...
             // Is this fiskaltrust or the dealer/creator
@@ -98,10 +99,10 @@ public class VeriFactuMapping
 
         registroFacturacionAnulacion.Huella = registroFacturacionAnulacion.GetHuella();
 
-        return _veriFactuSCUConfiguration.Certificate is null ? registroFacturacionAnulacion : XmlHelpers.Deserialize<RegistroFacturacionAnulacion>(XmlHelpers.SignXmlContentWithXades(XmlHelpers.GetXMLIncludingNamespace(registroFacturacionAnulacion, "sf", "RegistroFacturacionAlta"), _veriFactuSCUConfiguration.Certificate))!;
+        return (!_signXml || _veriFactuSCUConfiguration.Certificate is null) ? registroFacturacionAnulacion : XmlHelpers.Deserialize<RegistroFacturacionAnulacion>(XmlHelpers.SignXmlContentWithXades(XmlHelpers.GetXMLIncludingNamespace(registroFacturacionAnulacion, "sf", "RegistroFacturacionAlta"), _veriFactuSCUConfiguration.Certificate))!;
     }
 
-    public RegistroFacturacionAlta CreateRegistroFacturacionAlta(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, ReceiptRequest? previousReceiptRequest, ReceiptResponse? previousReceiptResponse)
+    public RegistroFacturacionAlta CreateRegistroFacturacionAlta(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse, ReceiptRequest? lastReceiptRequest, ReceiptResponse? lastReceiptResponse)
     {
         var registroFacturacionAlta = new RegistroFacturacionAlta
         {
@@ -158,7 +159,7 @@ public class VeriFactuMapping
             ImporteTotal = (receiptRequest.cbReceiptAmount ?? receiptRequest.cbChargeItems.Sum(chargeItem => chargeItem.Amount)).ToVeriFactuNumber(),
             Encadenamiento = new RegistroFacturacionAltaEncadenamiento
             {
-                Item = GetEncadenamientoFacturaAnteriorAlta(previousReceiptRequest, previousReceiptResponse)
+                Item = GetEncadenamientoFacturaAnteriorAlta(lastReceiptRequest, lastReceiptResponse)
             },
             // Which PosSystem from the list should we take? In DE we just take the first one...
             // Is this fiskaltrust or the dealer/creator
@@ -185,35 +186,35 @@ public class VeriFactuMapping
 
         registroFacturacionAlta.Huella = registroFacturacionAlta.GetHuella();
 
-        return _veriFactuSCUConfiguration.Certificate is null ? registroFacturacionAlta : XmlHelpers.Deserialize<RegistroFacturacionAlta>(XmlHelpers.SignXmlContentWithXades(XmlHelpers.GetXMLIncludingNamespace(registroFacturacionAlta, "sf", "RegistroFacturacionAlta"), _veriFactuSCUConfiguration.Certificate))!;
+        return (!_signXml || _veriFactuSCUConfiguration.Certificate is null) ? registroFacturacionAlta : XmlHelpers.Deserialize<RegistroFacturacionAlta>(XmlHelpers.SignXmlContentWithXades(XmlHelpers.GetXMLIncludingNamespace(registroFacturacionAlta, "sf", "RegistroFacturacionAlta"), _veriFactuSCUConfiguration.Certificate))!;
     }
 
-    private object GetEncadenamientoFacturaAnteriorAlta(ReceiptRequest? previousReceiptRequest, ReceiptResponse? previousReceiptResponse)
+    private object GetEncadenamientoFacturaAnteriorAlta(ReceiptRequest? lastReceiptRequest, ReceiptResponse? lastReceiptResponse)
     {
-        if (previousReceiptRequest is null || previousReceiptResponse is null)
+        if (lastReceiptRequest is null || lastReceiptResponse is null)
         {
             return PrimerRegistroCadena.S;
         }
 
         return new EncadenamientoFacturaAnterior
         {
-            IDEmisorFactura = previousReceiptResponse.ftSignatures.First(x => x.ftSignatureType.IsType(SignatureTypeES.NIF)).Data,
-            NumSerieFactura = previousReceiptResponse.ftReceiptIdentification.Split('#')[1],
-            FechaExpedicionFactura = previousReceiptRequest!.cbReceiptMoment.ToString("dd-MM-yyy"),
-            Huella = previousReceiptResponse.ftSignatures.First(x => x.ftSignatureType.IsType(SignatureTypeES.Huella)).Data
+            IDEmisorFactura = lastReceiptResponse.ftSignatures.First(x => x.ftSignatureType.IsType(SignatureTypeES.NIF)).Data,
+            NumSerieFactura = lastReceiptResponse.ftReceiptIdentification.Split('#')[1],
+            FechaExpedicionFactura = lastReceiptRequest!.cbReceiptMoment.ToString("dd-MM-yyy"),
+            Huella = lastReceiptResponse.ftSignatures.First(x => x.ftSignatureType.IsType(SignatureTypeES.Huella)).Data
         };
 
     }
 
 
-    private object GetEncadenamientoFacturaAnteriorAnulacion(ReceiptResponse previousReceiptResponse, ReceiptRequest referencedReceiptRequest, ReceiptResponse referencedReceiptResponse)
+    private object GetEncadenamientoFacturaAnteriorAnulacion(ReceiptResponse lastReceiptResponse, ReceiptRequest referencedReceiptRequest, ReceiptResponse referencedReceiptResponse)
     {
         return new EncadenamientoFacturaAnterior
         {
             IDEmisorFactura = referencedReceiptResponse.ftSignatures.First(x => x.ftSignatureType.IsType(SignatureTypeES.NIF)).Data,
             NumSerieFactura = referencedReceiptResponse.ftReceiptIdentification.Split('#')[1],
             FechaExpedicionFactura = referencedReceiptRequest!.cbReceiptMoment.ToString("dd-MM-yyy"),
-            Huella = previousReceiptResponse.ftSignatures.First(x => x.ftSignatureType.IsType(SignatureTypeES.Huella)).Data
+            Huella = lastReceiptResponse.ftSignatures.First(x => x.ftSignatureType.IsType(SignatureTypeES.Huella)).Data
         };
     }
 }

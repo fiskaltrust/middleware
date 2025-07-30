@@ -189,7 +189,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.IntegrationTest.MyDataSCU
             }));
             File.WriteAllBytes($"C:\\temp\\viva_aade_certification_examples\\{folder}\\{casename}.receipt.pdf", await pdfdata.Content.ReadAsByteArrayAsync());
             File.WriteAllBytes($"C:\\temp\\viva_aade_certification_examples\\{folder}\\{casename}.receipt.png", await pngdata.Content.ReadAsByteArrayAsync());
-            File.WriteAllText($"C:\\temp\\viva_aade_certification_examples\\{folder}\\{casename}_aade.xml", xmlData);
+            File.WriteAllText($"C:\\temp\\viva_aade_certification_examples\\{folder}\\{casename}_aade.xml", (xmlData.contentType.CharSet is null ? Encoding.Default : Encoding.GetEncoding(xmlData.contentType.CharSet!)).GetString((await xmlData.reader.ReadAsync()).Buffer));
         }
 
         [Fact]
