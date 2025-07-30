@@ -223,7 +223,7 @@ public static class AADEMappings
             {
                 return InvoiceType.Item115;
             }
-            else if (receiptRequest.HasOnlyServiceItems())
+            else if (receiptRequest.HasOnlyServiceItems() || receiptRequest.HasAtLeastOneServiceItemAndOnlyUnknowns())
             {
                 return InvoiceType.Item112;
             }

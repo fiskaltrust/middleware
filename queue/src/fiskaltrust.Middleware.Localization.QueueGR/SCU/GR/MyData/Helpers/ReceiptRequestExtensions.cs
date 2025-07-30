@@ -30,6 +30,11 @@ public static class ReceiptRequestExtensions
 {
     public static bool HasOnlyServiceItems(this ReceiptRequest receiptRequest) => receiptRequest.cbChargeItems.All(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.OtherService));
 
+    public static bool HasAtLeastOneServiceItemAndOnlyUnknowns(this ReceiptRequest receiptRequest) => 
+        receiptRequest.cbChargeItems.Count(receiptRequest => receiptRequest.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.OtherService)) > 0 &&
+        receiptRequest.cbChargeItems.All(x => x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.OtherService) || x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.UnknownService));
+
+
     /// <summary>
     /// Gets the customer's country category based on their country code
     /// </summary>

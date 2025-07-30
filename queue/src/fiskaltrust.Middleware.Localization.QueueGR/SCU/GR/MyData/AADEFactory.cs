@@ -1,20 +1,21 @@
-﻿using System.Security.Cryptography;
+﻿using System.Data;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Web;
+using System.Xml;
 using System.Xml.Serialization;
 using Azure.Core;
 using fiskaltrust.Api.POS.Models.ifPOS.v2;
+using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueueGR.Models.Cases;
 using fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData.Models;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
-using fiskaltrust.ifPOS.v2;
-using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.SCU.GR.MyData.Helpers;
+using fiskaltrust.Middleware.SCU.GR.MyData.Models;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
-using fiskaltrust.Middleware.SCU.GR.MyData.Models;
-using fiskaltrust.Middleware.SCU.GR.MyData.Helpers;
-using System.Data;
 
 namespace fiskaltrust.Middleware.SCU.GR.MyData;
 
@@ -599,9 +600,16 @@ public class AADEFactory
     public static string GenerateInvoicePayload(InvoicesDoc doc)
     {
         var xmlSerializer = new XmlSerializer(typeof(InvoicesDoc));
-        using var stringWriter = new StringWriter();
-        xmlSerializer.Serialize(stringWriter, doc);
-        var xmlContent = stringWriter.ToString();
-        return xmlContent;
+        var settings = new XmlWriterSettings
+        {
+            Indent = false,
+            NewLineHandling = NewLineHandling.None
+        };
+        using (var stringWriter = new StringWriter())
+        using (var xmlWriter = XmlWriter.Create(stringWriter, settings))
+        {
+            xmlSerializer.Serialize(xmlWriter, doc);
+            return stringWriter.ToString();
+        }
     }
 }

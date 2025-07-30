@@ -1,12 +1,13 @@
-﻿using fiskaltrust.ifPOS.v2;
+﻿using fiskaltrust.ifPOS.v1.it;
+using fiskaltrust.ifPOS.v2;
+using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueueGR.Models.Cases;
 using fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData;
 using fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData.Models;
 using fiskaltrust.Middleware.Localization.v2.Models;
-using fiskaltrust.ifPOS.v2.Cases;
+using fiskaltrust.Middleware.SCU.GR.MyData;
 using FluentAssertions;
 using Xunit;
-using fiskaltrust.Middleware.SCU.GR.MyData;
 
 namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest.SCU.MyData;
 
@@ -68,6 +69,41 @@ public class AADEMappingsInvoiceTypeTests
 
         return receiptRequest;
     }
+
+    private ReceiptRequest CreateReceipt(List<ChargeItem> chargeItems, bool isRefund = false, bool hasPreviousReceipt = false)
+    {
+        var receiptRequest = new ReceiptRequest
+        {
+            cbTerminalID = _baseRequest.cbTerminalID,
+            Currency = _baseRequest.Currency,
+            cbReceiptMoment = _baseRequest.cbReceiptMoment,
+            cbReceiptReference = _baseRequest.cbReceiptReference,
+            ftPosSystemId = _baseRequest.ftPosSystemId,
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.PointOfSaleReceipt0x0001)
+        };
+
+        if (isRefund)
+        {
+            receiptRequest.ftReceiptCase = receiptRequest.ftReceiptCase.WithFlag(ReceiptCaseFlags.Refund);
+        }
+
+        if (hasPreviousReceipt)
+        {
+            receiptRequest.cbPreviousReceiptReference = "PREV12345";
+        }
+
+        receiptRequest.cbChargeItems = chargeItems;
+        receiptRequest.cbPayItems = [new PayItem
+        {
+            Position = 1,
+            Amount = chargeItems.Sum(x => x.Amount),
+            ftPayItemCase = ((PayItemCase) 0x4752_2000_0000_0000).WithCase(PayItemCase.CashPayment),
+            Description = "Cash"
+        }];
+
+        return receiptRequest;
+    }
+
 
     private ReceiptRequest CreateB2BInvoice(string customerCountry, ChargeItemCaseTypeOfService typeOfService = ChargeItemCaseTypeOfService.Delivery, bool isRefund = false, bool hasPreviousReceipt = false)
     {
@@ -225,7 +261,30 @@ public class AADEMappingsInvoiceTypeTests
 
         result.Should().Be(InvoiceType.Item111);
     }
-    
+
+    [Fact]
+    public void Item_11_1_GetInvoiceType_RetailReceipt_WithDeliveryAndUnknowns_ReturnsItem111()
+    {
+        var receiptRequest = CreateReceipt(ChargeItemCaseTypeOfService.Delivery);
+        receiptRequest.cbChargeItems.Add(CreateChargeItem(2, 50, 24, "Service Item", ChargeItemCaseTypeOfService.UnknownService));
+
+        var result = AADEMappings.GetInvoiceType(receiptRequest);
+
+        result.Should().Be(InvoiceType.Item111);
+    }
+
+    [Fact]
+    public void Item_11_1_GetInvoiceType_RetailReceipt_WithMixedTypesAndUnknowns_ReturnsItem111()
+    {
+        var receiptRequest = CreateReceipt(ChargeItemCaseTypeOfService.CatalogService);
+        receiptRequest.cbChargeItems.Add(CreateChargeItem(2, 50, 24, "Service Item", ChargeItemCaseTypeOfService.Delivery));
+        receiptRequest.cbChargeItems.Add(CreateChargeItem(2, 50, 24, "Service Item", ChargeItemCaseTypeOfService.UnknownService));
+
+        var result = AADEMappings.GetInvoiceType(receiptRequest);
+
+        result.Should().Be(InvoiceType.Item111);
+    }
+
     [Fact]
     public void Item_11_2_GetInvoiceType_RetailReceipt_WithOnlyServiceItems_ReturnsItem112()
     {
@@ -235,7 +294,21 @@ public class AADEMappingsInvoiceTypeTests
 
         result.Should().Be(InvoiceType.Item112);
     }
-    
+
+    [Fact]
+    public void Item_11_2_GetInvoiceType_RetailReceipt_WithOnlyServiceItems_AndUnknown_ReturnsItem112()
+    {
+        var receiptRequest = CreateReceipt(new List<ChargeItem>
+        {
+             CreateChargeItem(1, 100, 24, "Test Item", ChargeItemCaseTypeOfService.OtherService),
+             CreateChargeItem(1, 100, 24, "Test Item", ChargeItemCaseTypeOfService.UnknownService)
+        });
+
+        var result = AADEMappings.GetInvoiceType(receiptRequest);
+
+        result.Should().Be(InvoiceType.Item112);
+    }
+
     [Fact]
     public void Item_11_4_GetInvoiceType_RetailReceipt_WithRefund_ReturnsItem114()
     {
