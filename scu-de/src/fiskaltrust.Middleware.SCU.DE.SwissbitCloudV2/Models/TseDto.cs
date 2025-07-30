@@ -63,5 +63,11 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2.Models
 
         [JsonProperty("metadata")]
         public string Metadata { get; set; }
+
+        [JsonProperty("signatureAlgorithm")]
+        public string SignatureAlgorithm { get; set; }
+
+        [JsonProperty("logTimeFormat")]
+        public string LogTimeFormat { get; set; }
     }
 }
