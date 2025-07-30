@@ -330,7 +330,7 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
             }));
             Directory.CreateDirectory(folder);
             File.WriteAllBytes($"{folder}\\{casename}.receipt.pdf", await pdfdata.Content.ReadAsByteArrayAsync());
-            File.WriteAllText($"{folder}\\{casename}_aade.xml", xmlData);
+            //File.WriteAllText($"{folder}\\{casename}_aade.xml", xmlData);
         }
 
         private async Task<IssueResponse?> SendIssueAsync(ReceiptRequest receiptRequest, ReceiptResponse receiptResponse)

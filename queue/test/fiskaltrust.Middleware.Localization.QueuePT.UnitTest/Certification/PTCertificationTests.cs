@@ -1,4 +1,6 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.IO.Pipelines;
+using System.Net.Mime;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
@@ -17,7 +19,7 @@ namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.Certification;
 public class PTCertificationTests
 {
     private readonly Func<string, Task<string>> _signMethod;
-    private readonly Func<string, Task<string>> _journalMethod;
+    private readonly Func<string, Task<(ContentType contentType, PipeReader reader)>> _journalMethod;
     private readonly Guid _cashboxid;
 
     public PTCertificationTests()
@@ -143,7 +145,7 @@ public class PTCertificationTests
             ftJournalType = 0x5054_2000_0000_0001,
             From = timestamp
         }));
-        File.WriteAllText($"{targetFolder}\\SAFT_journal.xml", xmlData);
+        //File.WriteAllText($"{targetFolder}\\SAFT_journal.xml", xmlData);
     }
 
     [Fact]
