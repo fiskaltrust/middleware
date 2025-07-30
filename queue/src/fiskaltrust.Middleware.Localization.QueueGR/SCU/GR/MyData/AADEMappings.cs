@@ -21,6 +21,15 @@ public static class AADEMappings
             };
         }
 
+        if (chargeItem.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.UnknownService))
+        {
+            return new IncomeClassificationType
+            {
+                amount = netAmount,
+                classificationCategory = IncomeClassificationCategoryType.category1_95
+            };
+        }
+
         return new IncomeClassificationType
         {
             amount = netAmount,

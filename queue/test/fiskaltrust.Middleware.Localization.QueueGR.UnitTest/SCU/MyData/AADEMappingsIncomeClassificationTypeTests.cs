@@ -181,9 +181,8 @@ public class AADEMappingsIncomeClassificationTypeTests
         // Assert
         result.Should().NotBeNull();
         result.amount.Should().Be(100); // 124 - 24 = 100 (net amount)
-        result.classificationCategory.Should().Be(IncomeClassificationCategoryType.category1_1); // Based on GetIncomeClassificationCategoryType
-        result.classificationType.Should().Be(IncomeClassificationValueType.E3_561_003); // Based on GetIncomeClassificationValueType for Receipt
-        result.classificationTypeSpecified.Should().BeTrue();
+        result.classificationCategory.Should().Be(IncomeClassificationCategoryType.category1_95); // Based on GetIncomeClassificationCategoryType
+        result.classificationTypeSpecified.Should().BeFalse();
     }
 
     [Fact]
@@ -363,9 +362,8 @@ public class AADEMappingsIncomeClassificationTypeTests
         // Assert
         result.Should().NotBeNull();
         result.amount.Should().Be(80); // 100 - 20 = 80
-        result.classificationCategory.Should().Be(IncomeClassificationCategoryType.category1_1);
-        result.classificationType.Should().Be(IncomeClassificationValueType.E3_562); // Based on Pay case
-        result.classificationTypeSpecified.Should().BeTrue();
+        result.classificationCategory.Should().Be(IncomeClassificationCategoryType.category1_95);
+        result.classificationTypeSpecified.Should().BeFalse();
     }
 
     [Theory]
