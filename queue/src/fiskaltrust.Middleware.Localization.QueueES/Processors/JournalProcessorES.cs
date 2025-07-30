@@ -47,16 +47,13 @@ public class JournalProcessorES : IJournalProcessor
         }
 
         yield return Encoding.UTF8.GetBytes("[");
-        await foreach (var (i, journalES) in journalESs.Select((j, i) => (i, j)))
+        await foreach (var (i, journalES) in journalESs.Where(journalES => Enum.TryParse<JournalESType>(journalES.JournalType, out var journalType) && journalType == JournalESType.VeriFactu).Select((j, i) => (i, j)))
         {
             if (i != 0)
             {
                 yield return Encoding.UTF8.GetBytes(",");
             }
-            if (Enum.TryParse<JournalESType>(journalES.JournalType, out var journalType) && journalType == JournalESType.VeriFactu)
-            {
-                yield return Encoding.UTF8.GetBytes(journalES.Data);
-            }
+            yield return Encoding.UTF8.GetBytes(journalES.Data);
         }
         yield return Encoding.UTF8.GetBytes("]");
     }

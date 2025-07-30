@@ -1,9 +1,11 @@
 using System.Net.Mime;
 using System.Text;
+using System.Text.Json;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2.es.Cases;
 using fiskaltrust.Middleware.Contracts.Repositories;
+using fiskaltrust.Middleware.Localization.QueueES.Models;
 using fiskaltrust.Middleware.Localization.QueueES.Processors;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.storage.V0;
@@ -26,7 +28,7 @@ public class JournalProcessorESTests
     }
 
     [Fact]
-    public async Task ProcessAsync_VeriFactuJournalType_ReturnsXmlContentType()
+    public async Task ProcessAsync_VeriFactuJournalType_ReturnsJsonContentType()
     {
         // Arrange
         var request = new JournalRequest
@@ -51,18 +53,18 @@ public class JournalProcessorESTests
 
         // Act
         var (contentType, result) = _journalProcessor.ProcessAsync(request);
-        var xmlData = await ReadDataAsync(result);
+        var jsonData = await ReadDataAsync(result);
 
         // Assert
-        Assert.Equal(MediaTypeNames.Application.Xml, contentType.MediaType);
+        Assert.Equal(MediaTypeNames.Application.Json, contentType.MediaType);
         Assert.Equal(Encoding.UTF8.WebName, contentType.CharSet);
         Assert.NotNull(result);
-        Assert.NotEmpty(xmlData);
+        Assert.NotEmpty(jsonData);
         _journalESRepositoryMock.Verify(x => x.GetByTimeStampRangeAsync(request.From, request.To), Times.Once);
     }
 
     [Fact]
-    public async Task ProcessAsync_VeriFactuJournalType_ReturnsCorrectXmlData()
+    public async Task ProcessAsync_VeriFactuJournalType_ReturnsCorrectJsonData()
     {
         // Arrange
         var request = new JournalRequest
@@ -72,14 +74,14 @@ public class JournalProcessorESTests
             To = 987654321
         };
 
-        var expectedXmlData = "<VeriFactu><TestData>Sample VeriFactu Data</TestData></VeriFactu>";
+        var expectedJsonData = JsonSerializer.Serialize(new GovernmentAPI { Request = "<VeriFactu><Valid>Request</Valid></VeriFactu>", Response = "<VeriFactu><Valid>Result</Valid></VeriFactu>", Version = "V0" });
         var veriFactuJournals = new List<ftJournalES>
         {
             new()
             {
                 ftJournalESId = Guid.NewGuid(),
                 JournalType = JournalESType.VeriFactu.ToString(),
-                Data = expectedXmlData
+                Data = expectedJsonData
             }
         }.ToAsyncEnumerable();
 
@@ -88,14 +90,14 @@ public class JournalProcessorESTests
 
         // Act
         var (contentType, result) = _journalProcessor.ProcessAsync(request);
-        var xmlData = await ReadDataAsync(result);
+        var jsonData = await ReadDataAsync(result);
 
         // Assert
-        Assert.Equal(expectedXmlData, xmlData);
+        Assert.Equal($"[{expectedJsonData}]", jsonData);
     }
 
     [Fact]
-    public async Task ProcessAsync_MultipleVeriFactuEntries_ReturnsAllXmlData()
+    public async Task ProcessAsync_MultipleVeriFactuEntries_ReturnsAllJsonData()
     {
         // Arrange
         var request = new JournalRequest
@@ -105,21 +107,21 @@ public class JournalProcessorESTests
             To = 987654321
         };
 
-        var xmlData1 = "<VeriFactu><Entry>1</Entry></VeriFactu>";
-        var xmlData2 = "<VeriFactu><Entry>2</Entry></VeriFactu>";
+        var jsonData1 = JsonSerializer.Serialize(new GovernmentAPI { Request = "<VeriFactu><Valid>Request1</Valid></VeriFactu>", Response = "<VeriFactu><Valid>Result1</Valid></VeriFactu>", Version = "V0" });
+        var jsonData2 = JsonSerializer.Serialize(new GovernmentAPI { Request = "<VeriFactu><Valid>Request2</Valid></VeriFactu>", Response = "<VeriFactu><Valid>Result2</Valid></VeriFactu>", Version = "V0" });
         var veriFactuJournals = new List<ftJournalES>
         {
             new()
             {
                 ftJournalESId = Guid.NewGuid(),
                 JournalType = JournalESType.VeriFactu.ToString(),
-                Data = xmlData1
+                Data = jsonData1
             },
             new()
             {
                 ftJournalESId = Guid.NewGuid(),
                 JournalType = JournalESType.VeriFactu.ToString(),
-                Data = xmlData2
+                Data = jsonData2
             }
         }.ToAsyncEnumerable();
 
@@ -128,11 +130,11 @@ public class JournalProcessorESTests
 
         // Act
         var (contentType, result) = _journalProcessor.ProcessAsync(request);
-        var xmlData = await ReadDataAsync(result);
+        var jsonData = await ReadDataAsync(result);
 
         // Assert
-        Assert.Contains(xmlData1, xmlData);
-        Assert.Contains(xmlData2, xmlData);
+        Assert.Contains(jsonData1, jsonData);
+        Assert.Contains(jsonData2, jsonData);
     }
 
     [Fact]
@@ -146,7 +148,7 @@ public class JournalProcessorESTests
             To = 987654321
         };
 
-        var veriFactuData = "<VeriFactu><ValidData>Should be included</ValidData></VeriFactu>";
+        var veriFactuData = JsonSerializer.Serialize(new GovernmentAPI { Request = "<VeriFactu><Valid>Request</Valid></VeriFactu>", Response = "<VeriFactu><Valid>Result</Valid></VeriFactu>", Version = "V0" });
         var otherData = "<Other><InvalidData>Should be excluded</InvalidData></Other>";
         var journals = new List<ftJournalES>
         {
@@ -169,11 +171,11 @@ public class JournalProcessorESTests
 
         // Act
         var (contentType, result) = _journalProcessor.ProcessAsync(request);
-        var xmlData = await ReadDataAsync(result);
+        var jsonData = await ReadDataAsync(result);
 
         // Assert
-        Assert.Contains(veriFactuData, xmlData);
-        Assert.DoesNotContain(otherData, xmlData);
+        Assert.Contains(veriFactuData, jsonData);
+        Assert.DoesNotContain(otherData, jsonData);
     }
 
     [Fact]
@@ -202,10 +204,10 @@ public class JournalProcessorESTests
 
         // Act
         var (contentType, result) = _journalProcessor.ProcessAsync(request);
-        var xmlData = await ReadDataAsync(result);
+        var jsonData = await ReadDataAsync(result);
 
         // Assert
-        Assert.Equal(string.Empty, xmlData);
+        Assert.Equal("[]", jsonData);
     }
 
     [Fact]
@@ -226,10 +228,10 @@ public class JournalProcessorESTests
 
         // Act
         var (contentType, result) = _journalProcessor.ProcessAsync(request);
-        var xmlData = await ReadDataAsync(result);
+        var jsonData = await ReadDataAsync(result);
 
         // Assert
-        Assert.Equal(string.Empty, xmlData);
+        Assert.Equal("[]", jsonData);
     }
 
     [Fact]
@@ -260,7 +262,7 @@ public class JournalProcessorESTests
             To = 987654321
         };
 
-        var validData = "<VeriFactu><Valid>Data</Valid></VeriFactu>";
+        var validData = JsonSerializer.Serialize(new GovernmentAPI { Request = "<VeriFactu><Valid>Request</Valid></VeriFactu>", Response = "<VeriFactu><Valid>Result</Valid></VeriFactu>", Version = "V0" });
         var journals = new List<ftJournalES>
         {
             new()
@@ -282,10 +284,10 @@ public class JournalProcessorESTests
 
         // Act
         var (contentType, result) = _journalProcessor.ProcessAsync(request);
-        var xmlData = await ReadDataAsync(result);
+        var jsonData = await ReadDataAsync(result);
 
         // Assert
-        Assert.Equal(validData, xmlData);
+        Assert.Equal($"[{validData}]", jsonData);
     }
 
     [Fact]
@@ -317,6 +319,7 @@ public class JournalProcessorESTests
     [InlineData(0, 1000)]
     [InlineData(500, 1500)]
     [InlineData(999999, 0)]
+    [InlineData(999999, -20)]
     public async Task ProcessAsync_DifferentTimeRanges_CallsRepositoryWithCorrectParameters(long from, long to)
     {
         // Arrange
@@ -330,13 +333,28 @@ public class JournalProcessorESTests
         var emptyJournals = new List<ftJournalES>().ToAsyncEnumerable();
         _journalESRepositoryMock.Setup(x => x.GetByTimeStampRangeAsync(from, to))
             .Returns(emptyJournals);
+        _journalESRepositoryMock.Setup(x => x.GetEntriesOnOrAfterTimeStampAsync(from, -(int) to))
+            .Returns(emptyJournals);
+        _journalESRepositoryMock.Setup(x => x.GetEntriesOnOrAfterTimeStampAsync(from, null))
+            .Returns(emptyJournals);
 
         // Act
         var (contentType, result) = _journalProcessor.ProcessAsync(request);
         await ReadDataAsync(result); // Consume the result to trigger repository call
 
         // Assert
-        _journalESRepositoryMock.Verify(x => x.GetByTimeStampRangeAsync(from, to), Times.Once);
+        if (to > 0)
+        {
+            _journalESRepositoryMock.Verify(x => x.GetByTimeStampRangeAsync(from, to), Times.Once);
+        }
+        else if (to == 0)
+        {
+            _journalESRepositoryMock.Verify(x => x.GetEntriesOnOrAfterTimeStampAsync(from, null), Times.Once);
+        }
+        else
+        {
+            _journalESRepositoryMock.Verify(x => x.GetEntriesOnOrAfterTimeStampAsync(from, -(int) to), Times.Once);
+        }
     }
 
     [Fact]
@@ -355,7 +373,7 @@ public class JournalProcessorESTests
             {
                 ftJournalESId = Guid.NewGuid(),
                 JournalType = JournalESType.VeriFactu.ToString(),
-                Data = $"<VeriFactu><Entry>{i}</Entry></VeriFactu>"
+                Data = JsonSerializer.Serialize(new GovernmentAPI { Request = $"<VeriFactu><Valid>Request{i}</Valid></VeriFactu>", Response = $"<VeriFactu><Valid>Result{i}</Valid></VeriFactu>", Version = "V0" }, new JsonSerializerOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping })
             }).ToAsyncEnumerable();
 
         _journalESRepositoryMock.Setup(x => x.GetByTimeStampRangeAsync(request.From, request.To))
@@ -363,12 +381,12 @@ public class JournalProcessorESTests
 
         // Act
         var (contentType, result) = _journalProcessor.ProcessAsync(request);
-        var xmlData = await ReadDataAsync(result);
+        var jsonData = await ReadDataAsync(result);
 
         // Assert
         for (int i = 0; i < 100; i++)
         {
-            Assert.Contains($"<Entry>{i}</Entry>", xmlData);
+            Assert.Contains($"<Valid>Request{1}</Valid>", jsonData);
         }
     }
 
