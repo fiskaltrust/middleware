@@ -9,23 +9,22 @@ using fiskaltrust.storage.V0;
 using FluentAssertions;
 using FluentAssertions.Execution;
 using Moq;
-using Newtonsoft.Json;
 using Xunit;
 using fiskaltrust.ifPOS.v2.Cases;
 using Microsoft.Extensions.Logging;
+using fiskaltrust.Middleware.Localization.v2.Storage;
+using System.Text.Json;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.QueuePT.Processors;
 
 public class LifecycleCommandProcessorPTTests
 {
-    private readonly ReceiptProcessor _sut = new(Mock.Of<ILogger<ReceiptProcessor>>(), new LifecycleCommandProcessorPT(new(() => Task.FromResult(Mock.Of<IConfigurationRepository>()))), null!, null!, null!, null!);
+    private readonly ReceiptProcessor _sut = new(Mock.Of<ILogger<ReceiptProcessor>>(), new LifecycleCommandProcessorPT(Mock.Of<ILocalizedQueueStorageProvider>()), null!, null!, null!, null!);
 
     [Theory]
-    [InlineData(ReceiptCase.InitialOperationReceipt0x4001)]
-    [InlineData(ReceiptCase.OutOfOperationReceipt0x4002)]
     [InlineData(ReceiptCase.InitSCUSwitch0x4011)]
     [InlineData(ReceiptCase.FinishSCUSwitch0x4012)]
-    public async Task ProcessReceiptAsync_ShouldReturnEmptyList(ReceiptCase receiptCase)
+    public async Task ProcessReceiptAsync_NoOp_Should_ReturnResponse(ReceiptCase receiptCase)
     {
         var queue = TestHelpers.CreateQueue();
         var queueItem = TestHelpers.CreateQueueItem();
@@ -48,7 +47,9 @@ public class LifecycleCommandProcessorPTTests
         var result = await _sut.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
 
         result.receiptResponse.Should().Be(receiptResponse);
-        result.receiptResponse.ftState.Should().NotBe(0x5054_2000_EEEE_EEEE);
+        result.receiptResponse.ftSignatures.Should().BeEmpty();
+        result.receiptResponse.ftState.Should().Be(0x5054_2000_0000_0000);
+        result.actionJournals.Should().BeEmpty();
     }
 
     [Fact]
@@ -71,21 +72,25 @@ public class LifecycleCommandProcessorPTTests
             ftReceiptIdentification = "receiptIdentification",
             ftReceiptMoment = DateTime.UtcNow,
         };
-        var result = await _sut.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
 
+        var result = await _sut.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
         result.receiptResponse.Should().Be(receiptResponse);
         result.receiptResponse.ftState.Should().Be(0x5054_2000_EEEE_EEEE);
     }
 
-    [Fact(Skip = "broken")]
+    [Fact]
     public async Task InitialOperationReceipt0x4001Async_ShouldReturnActionJournal_InitOperationSignature_AndSetStateInQueue()
     {
         var queue = TestHelpers.CreateQueue();
         var queueItem = TestHelpers.CreateQueueItem();
 
-        var configMock = new Mock<IConfigurationRepository>();
-        configMock.Setup(x => x.InsertOrUpdateQueueAsync(It.IsAny<ftQueue>())).Returns(Task.CompletedTask);
-        var sut = new LifecycleCommandProcessorPT(new(() => Task.FromResult(configMock.Object)));
+        var configMock = new Mock<ILocalizedQueueStorageProvider>();
+        configMock.Setup(x => x.ActivateQueueAsync()).Returns(() =>
+        {
+            queue.StartMoment = DateTime.UtcNow;
+            return Task.CompletedTask;
+        });
+        var sut = new LifecycleCommandProcessorPT(configMock.Object);
 
         var receiptRequest = new ReceiptRequest
         {
@@ -96,8 +101,8 @@ public class LifecycleCommandProcessorPTTests
         {
             ftState = (State) 0x5054_2000_0000_0000,
             ftCashBoxIdentification = "cashBoxIdentification",
-            ftQueueID = Guid.NewGuid(),
-            ftQueueItemID = Guid.NewGuid(),
+            ftQueueID = queue.ftQueueId,
+            ftQueueItemID = queueItem.ftQueueItemId,
             ftQueueRow = 1,
             ftReceiptIdentification = "receiptIdentification",
             ftReceiptMoment = DateTime.UtcNow,
@@ -148,17 +153,17 @@ public class LifecycleCommandProcessorPTTests
         result.actionJournals[0].DataBase64.Should().Be(expectedActionJournal.DataBase64);
         result.actionJournals[0].TimeStamp.Should().Be(expectedActionJournal.TimeStamp);
 
-        var data = JsonConvert.DeserializeObject<ActivateQueuePT>(result.actionJournals[0].DataJson);
+        var data = JsonSerializer.Deserialize<ActivateQueuePT>(result.actionJournals[0].DataJson)!;
         data.CashBoxId.Should().Be(receiptRequest.ftCashBoxID.GetValueOrDefault());
         data.IsStartReceipt.Should().Be(true);
         data.Moment.Should().BeCloseTo(DateTime.UtcNow, 1000);
-        data.QueueId.Should().Be(queueItem.ftQueueId);
+        data.QueueId.Should().Be(receiptResponse.ftQueueID);
         data.Version.Should().Be("V0");
 
-        configMock.Verify(x => x.InsertOrUpdateQueueAsync(queue), Times.Exactly(1));
+        configMock.Verify(x => x.ActivateQueueAsync(), Times.Exactly(1));
     }
 
-    [Fact(Skip = "broken")]
+    [Fact]
     public async Task OutOfOperationReceipt0x4002Async_ShouldReturnActionJournal_InitOperationSignature_AndSetStateInQueue()
     {
         var queue = TestHelpers.CreateQueue();
@@ -166,9 +171,13 @@ public class LifecycleCommandProcessorPTTests
 
         var queueItem = TestHelpers.CreateQueueItem();
 
-        var configMock = new Mock<IConfigurationRepository>();
-        configMock.Setup(x => x.InsertOrUpdateQueueAsync(It.IsAny<ftQueue>())).Returns(Task.CompletedTask);
-        var sut = new LifecycleCommandProcessorPT(new(() => Task.FromResult(configMock.Object)));
+        var configMock = new Mock<ILocalizedQueueStorageProvider>();
+        configMock.Setup(x => x.DeactivateQueueAsync()).Returns(() =>
+        {
+            queue.StopMoment = DateTime.UtcNow;
+            return Task.CompletedTask;
+        });
+        var sut = new LifecycleCommandProcessorPT(configMock.Object);
 
         var receiptRequest = new ReceiptRequest
         {
@@ -179,8 +188,8 @@ public class LifecycleCommandProcessorPTTests
         {
             ftState = (State) 0x5054_2000_0000_0000,
             ftCashBoxIdentification = "cashBoxIdentification",
-            ftQueueID = Guid.NewGuid(),
-            ftQueueItemID = Guid.NewGuid(),
+            ftQueueID = queue.ftQueueId,
+            ftQueueItemID = queueItem.ftQueueItemId,
             ftQueueRow = 1,
             ftReceiptIdentification = "receiptIdentification",
             ftReceiptMoment = DateTime.UtcNow,
@@ -230,81 +239,13 @@ public class LifecycleCommandProcessorPTTests
         result.actionJournals[0].DataBase64.Should().Be(expectedActionJournal.DataBase64);
         result.actionJournals[0].TimeStamp.Should().Be(expectedActionJournal.TimeStamp);
 
-        var data = JsonConvert.DeserializeObject<DeactivateQueuePT>(result.actionJournals[0].DataJson);
+        var data = JsonSerializer.Deserialize<DeactivateQueuePT>(result.actionJournals[0].DataJson)!;
         data.CashBoxId.Should().Be(receiptRequest.ftCashBoxID.GetValueOrDefault());
         data.IsStopReceipt.Should().Be(true);
         data.Moment.Should().BeCloseTo(DateTime.UtcNow, 1000);
-        data.QueueId.Should().Be(queueItem.ftQueueId);
+        data.QueueId.Should().Be(receiptResponse.ftQueueID);
         data.Version.Should().Be("V0");
 
-        configMock.Verify(x => x.InsertOrUpdateQueueAsync(queue), Times.Exactly(1));
-    }
-
-    [Fact]
-    public async Task InitSCUSwitch0x4011Async_ShouldDoNothing()
-    {
-        var queue = TestHelpers.CreateQueue();
-        var queueItem = TestHelpers.CreateQueueItem();
-
-        var configMock = new Mock<IConfigurationRepository>();
-        configMock.Setup(x => x.InsertOrUpdateQueueAsync(It.IsAny<ftQueue>())).Returns(Task.CompletedTask);
-        var sut = new LifecycleCommandProcessorPT(new(() => Task.FromResult(configMock.Object)));
-
-        var receiptRequest = new ReceiptRequest
-        {
-            ftCashBoxID = Guid.NewGuid(),
-            ftReceiptCase = (ReceiptCase) (0x5054_2000_0000_0000 | (long) ReceiptCase.InitialOperationReceipt0x4001)
-        };
-        var receiptResponse = new ReceiptResponse
-        {
-            ftState = (State) 0x5054_2000_0000_0000,
-            ftCashBoxIdentification = "cashBoxIdentification",
-            ftQueueID = Guid.NewGuid(),
-            ftQueueItemID = Guid.NewGuid(),
-            ftQueueRow = 1,
-            ftReceiptIdentification = "receiptIdentification",
-            ftReceiptMoment = DateTime.UtcNow,
-        };
-        var request = new ProcessCommandRequest(queue, receiptRequest, receiptResponse);
-        var result = await sut.InitSCUSwitch0x4011Async(request);
-
-        result.receiptResponse.Should().Be(receiptResponse);
-        result.receiptResponse.ftState.Should().Be(0x5054_2000_0000_0000);
-        result.receiptResponse.ftSignatures.Should().BeEmpty();
-        result.actionJournals.Should().BeEmpty();
-    }
-
-    [Fact]
-    public async Task FinishSCUSwitch0x4012Async_ShouldDoNothing()
-    {
-        var queue = TestHelpers.CreateQueue();
-        var queueItem = TestHelpers.CreateQueueItem();
-
-        var configMock = new Mock<IConfigurationRepository>();
-        configMock.Setup(x => x.InsertOrUpdateQueueAsync(It.IsAny<ftQueue>())).Returns(Task.CompletedTask);
-        var sut = new LifecycleCommandProcessorPT(new(() => Task.FromResult(configMock.Object)));
-
-        var receiptRequest = new ReceiptRequest
-        {
-            ftCashBoxID = Guid.NewGuid(),
-            ftReceiptCase = (ReceiptCase) (0x5054_2000_0000_0000 | (long) ReceiptCase.InitialOperationReceipt0x4001)
-        };
-        var receiptResponse = new ReceiptResponse
-        {
-            ftState = (State) 0x5054_2000_0000_0000,
-            ftCashBoxIdentification = "cashBoxIdentification",
-            ftQueueID = Guid.NewGuid(),
-            ftQueueItemID = Guid.NewGuid(),
-            ftQueueRow = 1,
-            ftReceiptIdentification = "receiptIdentification",
-            ftReceiptMoment = DateTime.UtcNow,
-        };
-        var request = new ProcessCommandRequest(queue, receiptRequest, receiptResponse);
-        var result = await sut.FinishSCUSwitch0x4012Async(request);
-
-        result.receiptResponse.Should().Be(receiptResponse);
-        result.receiptResponse.ftState.Should().Be(0x5054_2000_0000_0000);
-        result.receiptResponse.ftSignatures.Should().BeEmpty();
-        result.actionJournals.Should().BeEmpty();
+        configMock.Verify(x => x.DeactivateQueueAsync(), Times.Exactly(1));
     }
 }

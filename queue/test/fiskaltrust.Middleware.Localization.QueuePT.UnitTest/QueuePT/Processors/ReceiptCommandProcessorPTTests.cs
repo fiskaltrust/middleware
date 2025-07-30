@@ -23,11 +23,10 @@ public class ReceiptCommandProcessorPTTests
     private readonly ReceiptProcessor _sut = new(Mock.Of<ILogger<ReceiptProcessor>>(), null!, new ReceiptCommandProcessorPT(Mock.Of<IPTSSCD>(), new ftQueuePT(), new(() => Task.FromResult(Mock.Of<IMiddlewareQueueItemRepository>()))), null!, null!, null!);
 
     [Theory]
-    [InlineData(ReceiptCase.PaymentTransfer0x0002, Skip = "broken")]
     [InlineData(ReceiptCase.PointOfSaleReceiptWithoutObligation0x0003)]
     [InlineData(ReceiptCase.ECommerce0x0004)]
     [InlineData(ReceiptCase.DeliveryNote0x0005)]
-    public async Task ProcessReceiptAsync_ShouldReturnEmptyList(ReceiptCase receiptCase)
+    public async Task ProcessReceiptAsync_NoOp_Should_ReturnResponse(ReceiptCase receiptCase)
     {
         var receiptRequest = new ReceiptRequest
         {
@@ -44,14 +43,18 @@ public class ReceiptCommandProcessorPTTests
             ftReceiptMoment = DateTime.UtcNow,
         };
         var result = await _sut.ProcessAsync(receiptRequest, receiptResponse, new ftQueue { }, new ftQueueItem { });
-
+        result.receiptResponse.ftSignatures.Should().BeEmpty();
         result.receiptResponse.Should().Be(receiptResponse);
         result.receiptResponse.ftState.Should().Be(0x5054_2000_0000_0000);
     }
 
-    [Fact(Skip = "broken")]
+    [Fact]
     public async Task ProcessReceiptAsync_ShouldReturnError()
     {
+        var queue = TestHelpers.CreateQueue();
+        var queuePT = new ftQueuePT();
+        var scuPT = new ftSignaturCreationUnitPT();
+        var queueItem = TestHelpers.CreateQueueItem();
         var receiptRequest = new ReceiptRequest
         {
             ftReceiptCase = (ReceiptCase) 0
@@ -66,8 +69,8 @@ public class ReceiptCommandProcessorPTTests
             ftReceiptIdentification = "receiptIdentification",
             ftReceiptMoment = DateTime.UtcNow,
         };
-        var result = await _sut.ProcessAsync(receiptRequest, receiptResponse, new ftQueue { }, new ftQueueItem { });
 
+        var result = await _sut.ProcessAsync(receiptRequest, receiptResponse, queue, queueItem);
         result.receiptResponse.Should().Be(receiptResponse);
         result.receiptResponse.ftState.Should().Be(0x5054_2000_EEEE_EEEE);
     }

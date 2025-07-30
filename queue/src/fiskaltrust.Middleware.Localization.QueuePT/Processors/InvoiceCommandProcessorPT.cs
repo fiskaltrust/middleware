@@ -1,158 +1,98 @@
-﻿using fiskaltrust.Middleware.Localization.QueuePT.Interface;
-using fiskaltrust.Middleware.Localization.v2.Interface;
+﻿using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.storage.V0;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueuePT.Factories;
-using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
-using fiskaltrust.SAFT.CLI.SAFTSchemaPT10401;
 using System.Text;
 using fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
-using System.Text.Json;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
+using fiskaltrust.Middleware.Localization.QueuePT.Helpers;
+using fiskaltrust.Middleware.Localization.QueuePT.Constants;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Processors;
 
-public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, ftSignaturCreationUnitPT signaturCreationUnitPT, AsyncLazy<IMiddlewareQueueItemRepository> readOnlyQueueItemRepository) : ProcessorPreparation, IInvoiceCommandProcessor
+public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLazy<IMiddlewareQueueItemRepository> readOnlyQueueItemRepository) : ProcessorPreparation, IInvoiceCommandProcessor
 {
     private readonly IPTSSCD _sscd = sscd;
     private readonly ftQueuePT _queuePT = queuePT;
-#pragma warning disable
-    private readonly ftSignaturCreationUnitPT _signaturCreationUnitPT = signaturCreationUnitPT;
+    private readonly ReceiptReferenceProvider _receiptReferenceProvider = new(readOnlyQueueItemRepository);
+
     protected override AsyncLazy<IMiddlewareQueueItemRepository> _readOnlyQueueItemRepository { get; init; } = readOnlyQueueItemRepository;
 
-    public Task<ProcessCommandResponse> InvoiceUnknown0x1000Async(ProcessCommandRequest request) => WithPreparations(request, async () => new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>()));
+    public async Task<ProcessCommandResponse> InvoiceUnknown0x1000Async(ProcessCommandRequest request) => await PTFallBackOperations.NoOp(request);
 
-    public Task<ProcessCommandResponse> InvoiceB2B0x1002Async(ProcessCommandRequest request) => WithPreparations(request, async () => new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>()));
+    public async Task<ProcessCommandResponse> InvoiceB2B0x1002Async(ProcessCommandRequest request) => await PTFallBackOperations.NoOp(request);
 
-    public Task<ProcessCommandResponse> InvoiceB2G0x1003Async(ProcessCommandRequest request) => WithPreparations(request, async () => new ProcessCommandResponse(request.ReceiptResponse, new List<ftActionJournal>()));
+    public async Task<ProcessCommandResponse> InvoiceB2G0x1003Async(ProcessCommandRequest request) => await PTFallBackOperations.NoOp(request);
 
     public Task<ProcessCommandResponse> InvoiceB2C0x1001Async(ProcessCommandRequest request) => WithPreparations(request, async () =>
     {
-        if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
+        var receiptResponse = request.ReceiptResponse;
+        List<(ReceiptRequest, ReceiptResponse)> receiptReferences = [];
+        if (request.ReceiptRequest.cbPreviousReceiptReference is not null)
         {
-            var receiptReference = await LoadReceiptReferencesToResponse(request.ReceiptRequest, request.ReceiptResponse);
-            var series = StaticNumeratorStorage.InvoiceSeries;
-            series.Numerator++;
-            var invoiceNo = series.Identifier + "/" + series.Numerator!.ToString()!.PadLeft(4, '0');
-            var (response, hash) = await _sscd.ProcessReceiptAsync(new ProcessRequest
+            receiptReferences = await _receiptReferenceProvider.GetReceiptReferencesIfNecessaryAsync(request);
+            if (receiptReferences.Count == 0)
             {
-                ReceiptRequest = request.ReceiptRequest,
-                ReceiptResponse = request.ReceiptResponse,
-            }, invoiceNo, series.LastHash);
-            response.ReceiptResponse.ftReceiptIdentification = invoiceNo;
-            var printHash = new StringBuilder().Append(hash[0]).Append(hash[10]).Append(hash[20]).Append(hash[30]).ToString();
-            var qrCode = PortugalReceiptCalculations.CreateCreditNoteQRCode(printHash, _queuePT.IssuerTIN, _queuePT.TaxRegion, series.ATCUD + "-" + series.Numerator, request.ReceiptRequest, response.ReceiptResponse);
-            AddSignatures(series, response, hash, printHash, qrCode);
-            response.ReceiptResponse.AddSignatureItem(new SignatureItem
-            {
-                Caption = $"Referencia {receiptReference.ftReceiptIdentification}",
-                Data = $"Rasão: Devolução",
-                ftSignatureFormat = SignatureFormat.Text,
-                ftSignatureType = SignatureTypePT.ReferenceForCreditNote.As<SignatureType>(),
-            });
-            series.LastHash = hash;
-            return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
-        }
-
-        if (request.ReceiptRequest.cbPreviousReceiptReference is null)
-        {
-            var series = StaticNumeratorStorage.InvoiceSeries;
-            series.Numerator++;
-            var invoiceNo = series.Identifier + "/" + series.Numerator!.ToString()!.PadLeft(4, '0');
-            ;
-            var (response, hash) = await _sscd.ProcessReceiptAsync(new ProcessRequest
-            {
-                ReceiptRequest = request.ReceiptRequest,
-                ReceiptResponse = request.ReceiptResponse,
-            }, invoiceNo, series.LastHash);
-            response.ReceiptResponse.ftReceiptIdentification = invoiceNo;
-            var printHash = new StringBuilder().Append(hash[0]).Append(hash[10]).Append(hash[20]).Append(hash[30]).ToString();
-            var qrCode = PortugalReceiptCalculations.CreateInvoiceQRCode(printHash, _queuePT.IssuerTIN, _queuePT.TaxRegion, series.ATCUD + "-" + series.Numerator, request.ReceiptRequest, response.ReceiptResponse);
-            AddSignatures(series, response, hash, printHash, qrCode);
-            series.LastHash = hash;
-            return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
-        }
-
-        return await request.ReceiptRequest.cbPreviousReceiptReference.MatchAsync(
-            async single =>
-            {
-                var receiptReference = await LoadReceiptReferencesToResponse(request.ReceiptRequest, request.ReceiptResponse);
-                var series = StaticNumeratorStorage.InvoiceSeries;
-                series.Numerator++;
-                var invoiceNo = series.Identifier + "/" + series.Numerator!.ToString()!.PadLeft(4, '0');
-                var (response, hash) = await _sscd.ProcessReceiptAsync(new ProcessRequest
-                {
-                    ReceiptRequest = request.ReceiptRequest,
-                    ReceiptResponse = request.ReceiptResponse,
-                }, invoiceNo, series.LastHash);
-                response.ReceiptResponse.ftReceiptIdentification = invoiceNo;
-                var printHash = new StringBuilder().Append(hash[0]).Append(hash[10]).Append(hash[20]).Append(hash[30]).ToString();
-                var qrCode = PortugalReceiptCalculations.CreateInvoiceQRCode(printHash, _queuePT.IssuerTIN, _queuePT.TaxRegion, series.ATCUD + "-" + series.Numerator, request.ReceiptRequest, response.ReceiptResponse);
-                AddSignatures(series, response, hash, printHash, qrCode);
-                response.ReceiptResponse.AddSignatureItem(new SignatureItem
-                {
-                    Caption = $"Referencia: Proforma {receiptReference.ftReceiptIdentification}",
-                    Data = $"",
-                    ftSignatureFormat = SignatureFormat.Text,
-                    ftSignatureType = SignatureTypePT.ReferenceForCreditNote.As<SignatureType>(),
-                });
-                series.LastHash = hash;
-                return await Task.FromResult(new ProcessCommandResponse(response.ReceiptResponse, new List<ftActionJournal>())).ConfigureAwait(false);
-            },
-            async _ => throw new NotSupportedException("Grouping of invoices is not supported yet.")
-    );
-    });
-
-    private async Task<ReceiptResponse> LoadReceiptReferencesToResponse(ReceiptRequest request, ReceiptResponse receiptResponse)
-    {
-        if (request.cbPreviousReceiptReference?.IsGroup ?? false)
-        {
-            throw new NotSupportedException("Grouping of invoices is not supported yet.");
-        }
-        var queueItems = (await _readOnlyQueueItemRepository.Value).GetByReceiptReferenceAsync(request.cbPreviousReceiptReference?.SingleValue, request.cbTerminalID);
-        await foreach (var existingQueueItem in queueItems)
-        {
-            if (string.IsNullOrEmpty(existingQueueItem.response))
-            {
-                continue;
+                throw new InvalidOperationException(ErrorMessagesPT.PreviousReceiptReferenceNotFound);
             }
-
-            var referencedResponse = JsonSerializer.Deserialize<ReceiptResponse>(existingQueueItem.response);
+            if (receiptReferences.Count > 1)
+            {
+                throw new NotSupportedException(ErrorMessagesPT.MultipleReceiptReferencesNotSupported);
+            }
             receiptResponse.ftStateData = new
             {
-                ReferencedReceiptResponse = referencedResponse
+                ReferencedReceiptResponse = receiptReferences[0].Item2,
             };
-            return referencedResponse;
         }
-        throw new Exception("No referenced receipt found");
-    }
+
+        if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
+        {
+            var series = StaticNumeratorStorage.CreditNoteSeries;
+            series.Numerator++;
+            receiptResponse.ftReceiptIdentification = series.Identifier + "/" + series.Numerator!.ToString()!.PadLeft(4, '0');
+            var (response, hash) = await _sscd.ProcessReceiptAsync(new ProcessRequest
+            {
+                ReceiptRequest = request.ReceiptRequest,
+                ReceiptResponse = receiptResponse,
+            }, series.LastHash);
+            var printHash = new StringBuilder().Append(hash[0]).Append(hash[10]).Append(hash[20]).Append(hash[30]).ToString();
+            var qrCode = PortugalReceiptCalculations.CreateCreditNoteQRCode(printHash, _queuePT.IssuerTIN, series.ATCUD + "-" + series.Numerator, request.ReceiptRequest, response.ReceiptResponse);
+            AddSignatures(series, response, hash, printHash, qrCode);
+            response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddReferenceSignature(receiptReferences));
+            series.LastHash = hash;
+            return new ProcessCommandResponse(response.ReceiptResponse, []);
+        }
+        else
+        {
+            var series = StaticNumeratorStorage.InvoiceSeries;
+            series.Numerator++;
+            receiptResponse.ftReceiptIdentification = series.Identifier + "/" + series.Numerator!.ToString()!.PadLeft(4, '0');
+            var (response, hash) = await _sscd.ProcessReceiptAsync(new ProcessRequest
+            {
+                ReceiptRequest = request.ReceiptRequest,
+                ReceiptResponse = request.ReceiptResponse,
+            }, series.LastHash);
+            var printHash = new StringBuilder().Append(hash[0]).Append(hash[10]).Append(hash[20]).Append(hash[30]).ToString();
+            var qrCode = PortugalReceiptCalculations.CreateInvoiceQRCode(printHash, _queuePT.IssuerTIN, series.ATCUD + "-" + series.Numerator, request.ReceiptRequest, response.ReceiptResponse);
+            AddSignatures(series, response, hash, printHash, qrCode);
+            if (request.ReceiptRequest.cbPreviousReceiptReference is not null)
+            {
+                response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddProformaReference(receiptReferences));
+            }
+            series.LastHash = hash;
+            return new ProcessCommandResponse(response.ReceiptResponse, []);
+        }
+    });
 
     private static void AddSignatures(NumberSeries series, ProcessResponse response, string hash, string printHash, string qrCode)
     {
-        response.ReceiptResponse.AddSignatureItem(new SignatureItem
-        {
-            Caption = "Hash",
-            Data = hash,
-            ftSignatureFormat = SignatureFormat.Text.WithPosition(SignatureFormatPosition.AfterHeader),
-            ftSignatureType = SignatureTypePT.Hash.As<SignatureType>(),
-        });
-        response.ReceiptResponse.AddSignatureItem(new SignatureItem
-        {
-            Caption = $"{printHash} - Processado por programa certificado",
-            Data = $"No {CertificationPosSystem.SoftwareCertificateNumber}/AT",
-            ftSignatureFormat = SignatureFormat.Text,
-            ftSignatureType = SignatureTypePT.CertificationNo.As<SignatureType>(),
-        });
-        response.ReceiptResponse.AddSignatureItem(new SignatureItem
-        {
-            Caption = "",
-            Data = "ATCUD: " + series.ATCUD + "-" + series.Numerator,
-            ftSignatureFormat = SignatureFormat.Text,
-            ftSignatureType = SignatureTypePT.ATCUD.As<SignatureType>(),
-        });
-        response.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreatePTQRCode(qrCode));
+        response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddHash(hash));
+        response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddCertificateSignature(printHash));
+        response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddATCUD(series));
+        response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.CreatePTQRCode(qrCode));
+        response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddIvaIncluido());
     }
 }
