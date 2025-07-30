@@ -11,6 +11,7 @@ using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.storage.V0;
 using fiskaltrust.storage.V0.MasterData;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
+using fiskaltrust.Middleware.Localization.v2.Models;
 
 namespace fiskaltrust.SAFT.CLI.SAFTSchemaPT10401;
 

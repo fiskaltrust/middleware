@@ -8,7 +8,7 @@ using fiskaltrust.storage.V0;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Factories;
 
-public static class SignaturItemFactory
+public static class SignatureItemFactoryPT
 {
     public static SignatureItem CreateInitialOperationSignature(ftQueue queue)
     {

@@ -1,20 +1,14 @@
-﻿using fiskaltrust.Middleware.Localization.QueuePT.Interface;
-using fiskaltrust.Middleware.Localization.v2.Interface;
+﻿using fiskaltrust.Middleware.Localization.v2.Interface;
 using fiskaltrust.Middleware.Localization.v2;
 using fiskaltrust.storage.V0;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2;
 using fiskaltrust.Middleware.Localization.QueuePT.Factories;
-using fiskaltrust.Middleware.Localization.QueuePT.Models.Cases;
-using fiskaltrust.SAFT.CLI.SAFTSchemaPT10401;
 using System.Text;
 using fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
-using System.Text.Json;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.QueuePT.Helpers;
-using fiskaltrust.Middleware.Contracts.Factories;
-using Azure;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Processors;
 
@@ -66,7 +60,7 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
             var printHash = new StringBuilder().Append(hash[0]).Append(hash[10]).Append(hash[20]).Append(hash[30]).ToString();
             var qrCode = PortugalReceiptCalculations.CreateCreditNoteQRCode(printHash, _queuePT.IssuerTIN, series.ATCUD + "-" + series.Numerator, request.ReceiptRequest, response.ReceiptResponse);
             AddSignatures(series, response, hash, printHash, qrCode);
-            response.ReceiptResponse.AddSignatureItem(SignaturItemFactory.AddReferenceSignature(receiptReferences));
+            response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddReferenceSignature(receiptReferences));
             series.LastHash = hash;
             return new ProcessCommandResponse(response.ReceiptResponse, []);
         }
@@ -85,7 +79,7 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
             AddSignatures(series, response, hash, printHash, qrCode);
             if (request.ReceiptRequest.cbPreviousReceiptReference is not null)
             {
-                response.ReceiptResponse.AddSignatureItem(SignaturItemFactory.AddProformaReference(receiptReferences));
+                response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddProformaReference(receiptReferences));
             }
             series.LastHash = hash;
             return new ProcessCommandResponse(response.ReceiptResponse, []);
@@ -94,10 +88,10 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
 
     private static void AddSignatures(NumberSeries series, ProcessResponse response, string hash, string printHash, string qrCode)
     {
-        response.ReceiptResponse.AddSignatureItem(SignaturItemFactory.AddHash(hash));
-        response.ReceiptResponse.AddSignatureItem(SignaturItemFactory.AddCertificateSignature(printHash));
-        response.ReceiptResponse.AddSignatureItem(SignaturItemFactory.AddATCUD(series));
-        response.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreatePTQRCode(qrCode));
-        response.ReceiptResponse.AddSignatureItem(SignaturItemFactory.AddIvaIncluido());
+        response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddHash(hash));
+        response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddCertificateSignature(printHash));
+        response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddATCUD(series));
+        response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.CreatePTQRCode(qrCode));
+        response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddIvaIncluido());
     }
 }

@@ -13,9 +13,9 @@ public class LifecycleCommandProcessorPT(ILocalizedQueueStorageProvider localize
     public async Task<ProcessCommandResponse> InitialOperationReceipt0x4001Async(ProcessCommandRequest request)
     {
         var (queue, receiptRequest, receiptResponse) = request;
-        var actionJournal = ftActionJournalFactory.CreateInitialOperationActionJournal(receiptRequest, receiptResponse);
+        var actionJournal = ftActionJournalFactoryPT.CreateInitialOperationActionJournal(receiptRequest, receiptResponse);
         await _localizedQueueStorageProvider.ActivateQueueAsync();
-        receiptResponse.AddSignatureItem(SignaturItemFactory.CreateInitialOperationSignature(queue));
+        receiptResponse.AddSignatureItem(SignatureItemFactoryPT.CreateInitialOperationSignature(queue));
         return new ProcessCommandResponse(receiptResponse, [actionJournal]);
     }
 
@@ -23,8 +23,8 @@ public class LifecycleCommandProcessorPT(ILocalizedQueueStorageProvider localize
     {
         var (queue, receiptRequest, receiptResponse) = request;
         await _localizedQueueStorageProvider.DeactivateQueueAsync();
-        var actionJournal = ftActionJournalFactory.CreateOutOfOperationActionJournal(receiptRequest, receiptResponse);
-        receiptResponse.AddSignatureItem(SignaturItemFactory.CreateOutOfOperationSignature(queue));
+        var actionJournal = ftActionJournalFactoryPT.CreateOutOfOperationActionJournal(receiptRequest, receiptResponse);
+        receiptResponse.AddSignatureItem(SignatureItemFactoryPT.CreateOutOfOperationSignature(queue));
         receiptResponse.MarkAsDisabled();
         return new ProcessCommandResponse(receiptResponse, [actionJournal]);
     }

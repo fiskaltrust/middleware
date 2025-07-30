@@ -50,11 +50,11 @@ public class ProtocolCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLa
 
     private static void AddSignatures(NumberSeries series, ProcessResponse response, string hash, string printHash, string qrCode)
     {
-        response.ReceiptResponse.AddSignatureItem(SignaturItemFactory.AddHash(hash));
-        response.ReceiptResponse.AddSignatureItem(SignaturItemFactory.AddCertificateSignature(printHash));
-        response.ReceiptResponse.AddSignatureItem(SignaturItemFactory.AddATCUD(series));
-        response.ReceiptResponse.AddSignatureItem(SignaturItemFactory.AddDocumentoNao());
-        response.ReceiptResponse.AddSignatureItem(SignaturItemFactory.CreatePTQRCode(qrCode));
+        response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddHash(hash));
+        response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddCertificateSignature(printHash));
+        response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddATCUD(series));
+        response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.AddDocumentoNao());
+        response.ReceiptResponse.AddSignatureItem(SignatureItemFactoryPT.CreatePTQRCode(qrCode));
     }
 
     public async Task<ProcessCommandResponse> CopyReceiptPrintExistingReceipt0x3010Async(ProcessCommandRequest request) => await PTFallBackOperations.NoOp(request);
