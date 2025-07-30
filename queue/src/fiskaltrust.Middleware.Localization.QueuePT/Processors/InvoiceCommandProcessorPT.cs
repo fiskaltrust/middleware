@@ -9,6 +9,7 @@ using fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
 using fiskaltrust.Middleware.Contracts.Repositories;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.Localization.QueuePT.Helpers;
+using fiskaltrust.Middleware.Localization.QueuePT.Constants;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Processors;
 
@@ -35,11 +36,11 @@ public class InvoiceCommandProcessorPT(IPTSSCD sscd, ftQueuePT queuePT, AsyncLaz
             receiptReferences = await _receiptReferenceProvider.GetReceiptReferencesIfNecessaryAsync(request);
             if (receiptReferences.Count == 0)
             {
-                throw new InvalidOperationException("The given cbPreviousReceiptReference didn't match with any of the items in the Queue.");
+                throw new InvalidOperationException(ErrorMessagesPT.PreviousReceiptReferenceNotFound);
             }
             if (receiptReferences.Count > 1)
             {
-                throw new NotSupportedException("Multiple receipt references are currently not supported.");
+                throw new NotSupportedException(ErrorMessagesPT.MultipleReceiptReferencesNotSupported);
             }
             receiptResponse.ftStateData = new
             {

@@ -1,5 +1,6 @@
 ﻿using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.ifPOS.v2;
+using fiskaltrust.Middleware.Localization.QueuePT.Constants;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.Helpers;
 
@@ -9,7 +10,7 @@ public class ReceiptRequestValidatorPT
     {
         if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Void))
         {
-            throw new Exception("Void is not supported");
+            throw new Exception(ErrorMessagesPT.VoidNotSupported);
         }
     }
 }
