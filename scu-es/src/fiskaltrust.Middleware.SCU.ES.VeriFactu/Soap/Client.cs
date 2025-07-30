@@ -35,7 +35,7 @@ public class Client : IClient
         {
             Request = requestString,
             Response = await response.Content.ReadAsStringAsync(),
-            Version = GovernmentAPIVersion.V0
+            Version = GovernmentAPISchemaVersion.V0
         };
 
         if (!response.IsSuccessStatusCode || response.Content.Headers.ContentType?.MediaType == "text/html")
@@ -49,7 +49,7 @@ public class Client : IClient
         try
         {
             using var reader = new StringReader(governmentAPI.Response);
-            content = (Envelope<ResponseBody>) serializer.Deserialize(reader)!;
+            content = (Envelope<ResponseBody>)serializer.Deserialize(reader)!;
         }
         catch (Exception ex)
         {

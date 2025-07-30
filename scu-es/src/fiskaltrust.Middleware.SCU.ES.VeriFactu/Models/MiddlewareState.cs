@@ -39,7 +39,7 @@ public class LastReceipt
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
-public enum GovernmentAPIVersion
+public enum GovernmentAPISchemaVersion
 {
     V0
 }
@@ -57,5 +57,5 @@ public class GovernmentAPI
     [JsonPropertyName("Version")]
     [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    public required GovernmentAPIVersion Version { get; set; }
+    public required GovernmentAPISchemaVersion Version { get; set; }
 }
