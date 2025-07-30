@@ -93,6 +93,16 @@ public class MyDataSCU : IGRSSCD
             ProtocolRequest = payload,
             ProtocolResponse = content
         };
+        if (request.ReceiptResponse.ftStateData == null && request.ReceiptRequest.ftCashBoxID == Guid.Parse("31f3defc-275d-4b6e-9f3f-fa09d64c1bb4"))
+        {
+            request.ReceiptResponse.ftStateData = new MiddlewareSCUGRMyDataState
+            {
+                GR = new MiddlewareQueueGRState
+                {
+                    GovernmentApi = governemntApiResponse
+                }
+            };
+        }
 
         if ((int) response.StatusCode >= 500)
         {
@@ -104,7 +114,11 @@ public class MyDataSCU : IGRSSCD
             //    ftSignatureFormat = SignatureFormat.Text,
             //    ftSignatureType = SignatureTypeGR.MyDataInfo.As<SignatureType>()
             //});
-            throw new Exception("Error while sending the request to MyData API. Please check the logs for more details.");
+            request.ReceiptResponse.SetReceiptResponseError("Error while sending the request to MyData API. Please check the logs for more details.");
+            return new ProcessResponse
+            {
+                ReceiptResponse = request.ReceiptResponse
+            };
         }
 
         // TODO in case of a payment transfer with a cbpreviousreceipterference we will update the invoice
@@ -183,17 +197,6 @@ public class MyDataSCU : IGRSSCD
         else
         {
             request.ReceiptResponse.SetReceiptResponseError(content);
-        }
-
-        if (request.ReceiptResponse.ftStateData == null && request.ReceiptRequest.ftCashBoxID == Guid.Parse("31f3defc-275d-4b6e-9f3f-fa09d64c1bb4"))
-        {
-            request.ReceiptResponse.ftStateData = new MiddlewareSCUGRMyDataState
-            {
-                GR = new MiddlewareQueueGRState
-                {
-                    GovernmentApi = governemntApiResponse
-                }
-            };
         }
 
         return new ProcessResponse
