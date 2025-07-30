@@ -83,10 +83,6 @@ public class ReceiptCommandProcessorPTTests
         var queuePT = new ftQueuePT
         {
             IssuerTIN = "123456789",
-            TaxRegion = "PT",
-            ATCUD = "CSDF7T5H0035",
-            SimplifiedInvoiceSeries = "AB2019",
-            SimplifiedInvoiceSeriesNumerator = 34
         };
         var signaturCreationUnitPT = new ftSignaturCreationUnitPT
         {

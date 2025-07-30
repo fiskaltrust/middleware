@@ -1,10 +1,12 @@
-﻿namespace fiskaltrust.Middleware.Localization.QueuePT.Constants;
+﻿using fiskaltrust.ifPOS.v2.Cases;
+
+namespace fiskaltrust.Middleware.Localization.QueuePT.Constants;
 
 public static class ErrorMessagesPT
 {
     public static string UnknownReceiptCase(long caseCode) => $"The given ftReceiptCase 0x{caseCode:x} is not supported. Please refer to docs.fiskaltrust.cloud for supported cases.";
     
-    public static string NotSupportedReceiptCase(long caseCode, string name) => $"The ftReceiptCase {name} - 0x{caseCode:x} is not supported in the QueuePT implementation.";
+    public static string NotSupportedReceiptCase(ReceiptCase caseCode, string name) => $"The ftReceiptCase {name} - 0x{caseCode:x} is not supported in the QueuePT implementation.";
     
     public const string PreviousReceiptReferenceNotFound = "The given cbPreviousReceiptReference didn't match with any of the items in the Queue.";
     
