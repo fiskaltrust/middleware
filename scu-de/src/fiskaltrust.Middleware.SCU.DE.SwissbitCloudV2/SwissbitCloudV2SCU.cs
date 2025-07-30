@@ -35,7 +35,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
             _configuration = configuration;
             _swissbitCloudV2Provider = apiProvider;
             _clientCache = clientCache;
-           
+
         }
 
         public async Task<StartTransactionResponse> StartTransactionAsync(StartTransactionRequest request)
@@ -46,7 +46,8 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                 {
                     throw new Exception($"The client {request.ClientId} is not registered.");
                 }
-                var startTransactionRequest = new TransactionRequestDto() { 
+                var startTransactionRequest = new TransactionRequestDto()
+                {
                     ClientId = request.ClientId,
                     ProcessData = request.ProcessDataBase64 ?? "",
                     ProcessType = request.ProcessType ?? "",
@@ -71,11 +72,12 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                     throw new Exception($"The client {request.ClientId} is not registered.");
                 }
 
-                var updateTransactionRequest = new TransactionRequestDto() { 
+                var updateTransactionRequest = new TransactionRequestDto()
+                {
                     ClientId = request.ClientId,
                     ProcessData = request.ProcessDataBase64,
                     ProcessType = request.ProcessType,
-                    Number = (int) request.TransactionNumber,
+                    Number = (int)request.TransactionNumber,
                 };
                 var updateTransactionResponse = await _swissbitCloudV2Provider.TransactionAsync(TransactionType.UpdateTransaction, updateTransactionRequest);
 
@@ -102,7 +104,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                     ClientId = request.ClientId,
                     ProcessData = request.ProcessDataBase64,
                     ProcessType = request.ProcessType,
-                    Number = (int) request.TransactionNumber,
+                    Number = (int)request.TransactionNumber,
                 };
                 var finishTransactionResponse = await _swissbitCloudV2Provider.TransactionAsync(TransactionType.FinishTransaction, finishTransactionRequest);
 
@@ -120,9 +122,9 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
             try
             {
                 var clientDtoTask = _swissbitCloudV2Provider.GetClientsAsync();
-                var tseResultTask =  _swissbitCloudV2Provider.GetTseStatusAsync();
-                var startedTransactionsTask =  _swissbitCloudV2Provider.GetStartedTransactionsAsync();
-                
+                var tseResultTask = _swissbitCloudV2Provider.GetTseStatusAsync();
+                var startedTransactionsTask = _swissbitCloudV2Provider.GetStartedTransactionsAsync();
+
                 await Task.WhenAll(clientDtoTask, tseResultTask, startedTransactionsTask).ConfigureAwait(false);
 
                 var clientDto = await clientDtoTask;
@@ -135,9 +137,9 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                 var certPublicKey = BitConverter.ToString(cert.GetPublicKey());
                 var certPublicKeyBytes = Encoding.ASCII.GetBytes(certPublicKey);
 
-                var algorithm = cert.SignatureAlgorithm.FriendlyName;
+                var algorithm = tseResult.SignatureAlgorithm;
 
-                var tseInfo= new TseInfo
+                var tseInfo = new TseInfo
                 {
                     CurrentNumberOfClients = tseResult.NumberOfRegisteredClients,
                     CurrentNumberOfStartedTransactions = tseResult.NumberOfStartedTransactions,
@@ -155,11 +157,11 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
                     SignatureAlgorithm = algorithm,
                     CurrentLogMemorySize = tseResult.StorageUsed,
                     CurrentNumberOfSignatures = tseResult.CreatedSignatures,
-                    LogTimeFormat = "unixTime",
+                    LogTimeFormat = tseResult.LogTimeFormat,
                     MaxLogMemorySize = tseResult.StorageCapacity,
                     MaxNumberOfSignatures = long.MaxValue,
-                    CurrentStartedTransactionNumbers = startedTransactions.Select(x => (ulong) x).ToList(),
-                    CurrentState = ((SwissbitCloudV2TseState) Enum.Parse(typeof(SwissbitCloudV2TseState), tseResult.InitializationState, true)).ToTseStateEnum()
+                    CurrentStartedTransactionNumbers = startedTransactions.Select(x => (ulong)x).ToList(),
+                    CurrentState = ((SwissbitCloudV2TseState)Enum.Parse(typeof(SwissbitCloudV2TseState), tseResult.InitializationState, true)).ToTseStateEnum()
                 };
                 LastTseInfo = tseInfo;
 
@@ -192,7 +194,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
 
                 var tseResult = await _swissbitCloudV2Provider.DisableTseAsync();
 
-                return ((SwissbitCloudV2TseState) Enum.Parse(typeof(SwissbitCloudV2TseState), tseResult.InitializationState, true)).ToTseState();
+                return ((SwissbitCloudV2TseState)Enum.Parse(typeof(SwissbitCloudV2TseState), tseResult.InitializationState, true)).ToTseState();
             }
             catch (Exception ex)
             {
@@ -333,7 +335,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
 
                         if (tempStream.Length - exportStateData.ReadPointer < chunkSize)
                         {
-                            chunkSize = (int) tempStream.Length - exportStateData.ReadPointer;
+                            chunkSize = (int)tempStream.Length - exportStateData.ReadPointer;
                         }
                         var buffer = new byte[chunkSize];
                         var len = await tempStream.ReadAsync(buffer, 0, buffer.Length);
@@ -444,14 +446,14 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
         {
             try
             {
-                if (!await _clientCache.IsClientExistent( request.ClientId))
+                if (!await _clientCache.IsClientExistent(request.ClientId))
                 {
                     if (_configuration.MaxClientCount.HasValue && _clientCache.GetClientIds().Count >= _configuration.MaxClientCount.Value)
                     {
                         throw new SwissbitCloudV2Exception($"The client '{request.ClientId}' could not be registered, as the maximum number of permitted clients for this TSS was reached. If you obtained this TSE via fiskaltrust's shop as a Queue-based product, only one client can be registered. Please refer to our product documentation for more details.");
                     }
 
-                    await _swissbitCloudV2Provider.CreateClientAsync(new ClientDto() {  ClientId = request.ClientId});
+                    await _swissbitCloudV2Provider.CreateClientAsync(new ClientDto() { ClientId = request.ClientId });
                     _clientCache.AddClient(request.ClientId);
                 }
                 return new RegisterClientIdResponse
@@ -494,7 +496,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
         {
             return new StartTransactionResponse
             {
-                TransactionNumber = (ulong) transactionResponse.Number,
+                TransactionNumber = (ulong)transactionResponse.Number,
                 TseSerialNumberOctet = _configuration.TseSerialNumber,
                 ClientId = clientId,
                 TimeStamp = transactionResponse.SignatureCreationTime.FromUnixTime(),
@@ -512,7 +514,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
         {
             return new UpdateTransactionResponse
             {
-                TransactionNumber = (ulong) transactionResponse.Number,
+                TransactionNumber = (ulong)transactionResponse.Number,
                 TseSerialNumberOctet = _configuration.TseSerialNumber,
                 ClientId = clientId,
                 ProcessDataBase64 = transactionRequest.ProcessData,
@@ -531,7 +533,7 @@ namespace fiskaltrust.Middleware.SCU.DE.SwissbitCloudV2
         {
             return new FinishTransactionResponse
             {
-                TransactionNumber = (ulong) transactionResponse.Number,
+                TransactionNumber = (ulong)transactionResponse.Number,
                 TseSerialNumberOctet = _configuration.TseSerialNumber,
                 ClientId = clientId,
                 ProcessDataBase64 = transactionRequest.ProcessData,
