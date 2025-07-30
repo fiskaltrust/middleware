@@ -30,7 +30,7 @@ public static class InvoiceStatus
 
 public static class PortugalReceiptCalculations
 {
-    public static string CreateCreditNoteQRCode(string qrCodeHash, string issuerTIN, string taxRegion, string atcud, ReceiptRequest request, ReceiptResponse receiptResponse)
+    public static string CreateCreditNoteQRCode(string qrCodeHash, string issuerTIN, string atcud, ReceiptRequest request, ReceiptResponse receiptResponse)
     {
         var taxGroups = request.cbChargeItems.GroupBy(PTMappings.GetIVATAxCode);
         var normalChargeItems = request.cbChargeItems.Where(x => PTMappings.GetIVATAxCode(x) == "NOR").ToList();
@@ -51,7 +51,7 @@ public static class PortugalReceiptCalculations
             DocumentDate = request.cbReceiptMoment,
             UniqueIdentificationOfTheDocument = receiptResponse.ftReceiptIdentification,
             ATCUD = atcud,
-            TaxCountryRegion = taxRegion,
+            TaxCountryRegion = "PT",
             TaxableBasisOfVAT_ExemptRate = exemptChargeItems.Sum(x => Math.Abs(x.Amount)),
             TaxableBasisOfVAT_ReducedRate = reducedChargeItems.Sum(x => Math.Abs(x.Amount) - Math.Abs(x.VATAmount ?? 0.0m)),
             TotalVAT_ReducedRate = reducedChargeItems.Sum(x => Math.Abs(x.VATAmount ?? 0.0m)),
@@ -67,7 +67,7 @@ public static class PortugalReceiptCalculations
         }.GenerateQRCode();
     }
 
-    public static string CreateInvoiceQRCode(string qrCodeHash, string issuerTIN, string taxRegion, string atcud, ReceiptRequest request, ReceiptResponse receiptResponse)
+    public static string CreateInvoiceQRCode(string qrCodeHash, string issuerTIN, string atcud, ReceiptRequest request, ReceiptResponse receiptResponse)
     {
         var taxGroups = request.cbChargeItems.GroupBy(PTMappings.GetIVATAxCode);
         var normalChargeItems = request.cbChargeItems.Where(x => PTMappings.GetIVATAxCode(x) == "NOR").ToList();
@@ -88,7 +88,7 @@ public static class PortugalReceiptCalculations
             DocumentDate = request.cbReceiptMoment,
             UniqueIdentificationOfTheDocument = receiptResponse.ftReceiptIdentification,
             ATCUD = atcud,
-            TaxCountryRegion = taxRegion,
+            TaxCountryRegion = "PT",
             TaxableBasisOfVAT_ExemptRate = exemptChargeItems.Sum(x => x.Amount),
             TaxableBasisOfVAT_ReducedRate = reducedChargeItems.Sum(x => x.Amount - x.VATAmount ?? 0.0m),
             TotalVAT_ReducedRate = reducedChargeItems.Sum(x => x.VATAmount ?? 0.0m),
@@ -104,7 +104,7 @@ public static class PortugalReceiptCalculations
         }.GenerateQRCode();
     }
 
-    public static string CreateProFormaQRCode(string qrCodeHash, string issuerTIN, string taxRegion, string atcud, ReceiptRequest request, ReceiptResponse receiptResponse)
+    public static string CreateProFormaQRCode(string qrCodeHash, string issuerTIN, string atcud, ReceiptRequest request, ReceiptResponse receiptResponse)
     {
         var taxGroups = request.cbChargeItems.GroupBy(PTMappings.GetIVATAxCode);
         var normalChargeItems = request.cbChargeItems.Where(x => PTMappings.GetIVATAxCode(x) == "NOR").ToList();
@@ -125,7 +125,7 @@ public static class PortugalReceiptCalculations
             DocumentDate = request.cbReceiptMoment,
             UniqueIdentificationOfTheDocument = receiptResponse.ftReceiptIdentification,
             ATCUD = atcud,
-            TaxCountryRegion = taxRegion,
+            TaxCountryRegion = "PT",
             TaxableBasisOfVAT_ExemptRate = exemptChargeItems.Sum(x => x.Amount),
             TaxableBasisOfVAT_ReducedRate = reducedChargeItems.Sum(x => x.Amount - x.VATAmount ?? 0.0m),
             TotalVAT_ReducedRate = reducedChargeItems.Sum(x => x.VATAmount ?? 0.0m),
@@ -137,12 +137,11 @@ public static class PortugalReceiptCalculations
             GrossTotal = request.cbChargeItems.Sum(x => x.Amount),
             Hash = qrCodeHash,
             SoftwareCertificateNumber = CertificationPosSystem.SoftwareCertificateNumber,
-            //OtherInformation = "ftQueueId=" + receiptResponse.ftQueueID + ";ftQueueItemId=" + receiptResponse.ftQueueItemID
+            OtherInformation = "ftQueueId=" + receiptResponse.ftQueueID + ";ftQueueItemId=" + receiptResponse.ftQueueItemID
         }.GenerateQRCode();
     }
 
-#pragma warning disable
-    public static string CreateRGQRCode(string qrCodeHash, string issuerTIN, string taxRegion, string atcud, ReceiptRequest request, ReceiptResponse receiptResponse)
+    public static string CreateRGQRCode(string qrCodeHash, string issuerTIN, string atcud, ReceiptRequest request, ReceiptResponse receiptResponse)
     {
         var taxGroups = request.cbChargeItems.GroupBy(PTMappings.GetIVATAxCode);
         var normalChargeItems = request.cbChargeItems.Where(x => PTMappings.GetIVATAxCode(x) == "NOR").ToList();
@@ -176,11 +175,11 @@ public static class PortugalReceiptCalculations
             GrossTotal = request.cbChargeItems.Sum(x => x.Amount),
             Hash = qrCodeHash,
             SoftwareCertificateNumber = CertificationPosSystem.SoftwareCertificateNumber,
-            //OtherInformation = "ftQueueId=" + receiptResponse.ftQueueID + ";ftQueueItemId=" + receiptResponse.ftQueueItemID
+            OtherInformation = "ftQueueId=" + receiptResponse.ftQueueID + ";ftQueueItemId=" + receiptResponse.ftQueueItemID
         }.GenerateQRCode();
     }
 
-    public static string CreateSimplifiedInvoiceQRCode(string qrCodeHash, string issuerTIN, string taxRegion, string atcud, ReceiptRequest request, ReceiptResponse receiptResponse)
+    public static string CreateSimplifiedInvoiceQRCode(string qrCodeHash, string issuerTIN, string atcud, ReceiptRequest request, ReceiptResponse receiptResponse)
     {
         var taxGroups = request.cbChargeItems.GroupBy(PTMappings.GetIVATAxCode);
         var normalChargeItems = request.cbChargeItems.Where(x => PTMappings.GetIVATAxCode(x) == "NOR").ToList();
@@ -201,7 +200,7 @@ public static class PortugalReceiptCalculations
             DocumentDate = request.cbReceiptMoment,
             UniqueIdentificationOfTheDocument = receiptResponse.ftReceiptIdentification,
             ATCUD = atcud,
-            TaxCountryRegion = taxRegion,
+            TaxCountryRegion = "PT",
             TaxableBasisOfVAT_ExemptRate = exemptChargeItems.Sum(x => x.Amount),
             TaxableBasisOfVAT_ReducedRate = reducedChargeItems.Sum(x => x.Amount - x.VATAmount ?? 0.0m),
             TotalVAT_ReducedRate = reducedChargeItems.Sum(x => x.VATAmount ?? 0.0m),
