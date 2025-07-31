@@ -529,15 +529,6 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                         var currentIndex = startIndex;
                         do
                         {
-                            // Skip SCU if using a backup SCU on the first retry, and the previously used SCU was not a backup one
-                            // TODO Clarify why this is required
-                            // If on the first retry the current scu is a backup scu AND there exists a normal scu AND the scu that we started with is a normal scu
-                            if (retry == 0 && scus[startIndex].scu.IsBackup() && scus.Any(x => !x.scu.IsBackup()) && !scus[startIndex].scu.IsBackup())
-                            {
-                                currentIndex = _sscdProvider.SwitchToNextScu();
-                                continue;
-                            }
-
                             isBackupScuUsed = scus[currentIndex].scu.IsBackup();
 
                             try
