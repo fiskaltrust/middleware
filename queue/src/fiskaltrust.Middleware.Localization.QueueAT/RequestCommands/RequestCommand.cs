@@ -586,7 +586,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 
                             currentIndex = _sscdProvider.SwitchToNextScu();
                         } while (currentIndex != startIndex);
-                    } while (retry++ < _queueATConfiguration.ScuMaxRetries);
+                    } while (retry++ < (_queueATConfiguration?.ScuMaxRetries ?? 0));
                 }
 
                 if (string.IsNullOrWhiteSpace(queueAT.LastSignatureZDA) || string.IsNullOrWhiteSpace(queueAT.LastSignatureCertificateSerialNumber))
