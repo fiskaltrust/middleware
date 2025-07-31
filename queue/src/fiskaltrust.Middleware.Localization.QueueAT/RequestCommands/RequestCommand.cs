@@ -523,12 +523,28 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                     var scus = await _sscdProvider.GetAllInstances();
                     var retry = 0;
 
+                    var currentIndex = await _sscdProvider.GetCurrentlyActiveInstanceIndexAsync();
                     do
                     {
-                        var startIndex = await _sscdProvider.GetCurrentlyActiveInstanceIndexAsync();
-                        var currentIndex = startIndex;
+                        var startIndex = currentIndex;
+
                         do
                         {
+                            // If there exists a normal scu
+                            // and on the first try of the retries in max-scu-retries
+                            // we check for every scu if
+                            // the current scu is a backup scu
+                            // and the scu that we started with is a normal scu
+                            // switch to next scu and skip this one
+                            // 
+                            // Explanation: on the first run if we start with a normal scu skip all backup scus.
+                            if (scus.Any(x => !x.scu.IsBackup()) && retry == 0 && scus[currentIndex].scu.IsBackup() && !scus[startIndex].scu.IsBackup())
+                            {
+                                currentIndex = _sscdProvider.SwitchToNextScu();
+                                continue;
+                            }
+
+
                             isBackupScuUsed = scus[currentIndex].scu.IsBackup();
 
                             try
@@ -586,7 +602,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 
                             currentIndex = _sscdProvider.SwitchToNextScu();
                         } while (currentIndex != startIndex);
-                    } while (retry++ < (_queueATConfiguration?.ScuMaxRetries ?? 0));
+                    } while (retry++ < (_queueATConfiguration?.ScuMaxRetries ?? 3));
                 }
 
                 if (string.IsNullOrWhiteSpace(queueAT.LastSignatureZDA) || string.IsNullOrWhiteSpace(queueAT.LastSignatureCertificateSerialNumber))
