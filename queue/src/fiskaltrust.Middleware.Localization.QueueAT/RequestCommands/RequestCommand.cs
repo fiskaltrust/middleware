@@ -525,25 +525,26 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
 
                     do
                     {
-                        var (scu, sscd, startIndex) = await _sscdProvider.GetCurrentlyActiveInstanceAsync();
+                        var startIndex = await _sscdProvider.GetCurrentlyActiveInstanceIndexAsync();
                         var currentIndex = startIndex;
                         do
                         {
                             // Skip SCU if using a backup SCU on the first retry, and the previously used SCU was not a backup one
                             // TODO Clarify why this is required
-                            if (retry == 0 && scu.IsBackup() && scus.Any(x => !x.IsBackup()) && !scus[startIndex].IsBackup())
+                            // If on the first retry the current scu is a backup scu AND there exists a normal scu AND the scu that we started with is a normal scu
+                            if (retry == 0 && scus[startIndex].scu.IsBackup() && scus.Any(x => !x.scu.IsBackup()) && !scus[startIndex].scu.IsBackup())
                             {
                                 currentIndex = _sscdProvider.SwitchToNextScu();
                                 continue;
                             }
 
-                            isBackupScuUsed = scu.IsBackup();
+                            isBackupScuUsed = scus[currentIndex].scu.IsBackup();
 
                             try
                             {
 #pragma warning disable CS0618
-                                var zda = sscd.ZDA();
-                                var certResponse = sscd.Certificate();
+                                var zda = scus[currentIndex].sscd.ZDA();
+                                var certResponse = scus[currentIndex].sscd.Certificate();
 #pragma warning restore
                                 var cert = new X509CertificateParser().ReadCertificate(certResponse);
                                 var certificateSerialNumber = cert.SerialNumber.ToString(16);
@@ -572,10 +573,10 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                                 var jwsDataToSign = Encoding.UTF8.GetBytes($"{journalAT.JWSHeaderBase64url}.{journalAT.JWSPayloadBase64url}");
 
 #pragma warning disable CS0618
-                                var jwsSignature = sscd.Sign(jwsDataToSign);
+                                var jwsSignature = scus[currentIndex].sscd.Sign(jwsDataToSign);
 #pragma warning restore
                                 journalAT.JWSSignatureBase64url = ConversionHelper.ToBase64UrlString(jwsSignature);
-                                journalAT.ftSignaturCreationUnitId = scu.ftSignaturCreationUnitATId;
+                                journalAT.ftSignaturCreationUnitId = scus[currentIndex].scu.ftSignaturCreationUnitATId;
 
                                 queueAT.ftCashNumerator = cashNumerator;
                                 queueAT.ftCashTotalizer += Math.Round(totalizer, 2);
@@ -589,7 +590,7 @@ namespace fiskaltrust.Middleware.Localization.QueueAT.RequestCommands
                             }
                             catch (Exception ex)
                             {
-                                _logger.LogError(ex, "An error occured while trying to sign a receipt with the SCU {ScuId}.", scu.ftSignaturCreationUnitATId);
+                                _logger.LogError(ex, "An error occured while trying to sign a receipt with the SCU {ScuId}.", scus[currentIndex].scu.ftSignaturCreationUnitATId);
                             }
 
                             currentIndex = _sscdProvider.SwitchToNextScu();
