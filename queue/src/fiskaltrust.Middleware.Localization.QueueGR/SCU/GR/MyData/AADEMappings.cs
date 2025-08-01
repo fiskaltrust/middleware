@@ -306,7 +306,7 @@ public static class AADEMappings
                     //    return InvoiceType.Item71;
             }
         }
-    
+
         throw new Exception("Unknown type of receipt " + receiptRequest.ftReceiptCase.ToString("x"));
     }
 
@@ -353,6 +353,18 @@ public static class AADEMappings
             _ => throw new NotSupportedException($"The invoice type '{invoiceType.GetXmlEnumAttributeValueFromEnum()}' is not supported"),
         };
     }
+
+    public static bool SupportsCounterpart(InvoiceType invoiceType) => invoiceType switch
+    {
+        InvoiceType.Item111 or InvoiceType.Item112 or InvoiceType.Item113 or InvoiceType.Item114 or InvoiceType.Item115 => false,
+        _ => true
+    };
+
+    public static bool SupportsCorrelatedInvoices(InvoiceType invoiceType) => invoiceType switch
+    {
+        InvoiceType.Item111 or InvoiceType.Item112 or InvoiceType.Item113 or InvoiceType.Item114 or InvoiceType.Item115 => false,
+        _ => true
+    };
 
     /// <summary>
     /// Maps ChargeItemCase Nature of VAT to MyData VAT exemption category.

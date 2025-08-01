@@ -214,7 +214,7 @@ public class AADEFactory
             inv.paymentMethods = [.. paymentMethods];
         }
 
-        if (receiptRequest.ContainsCustomerInfo())
+        if (receiptRequest.ContainsCustomerInfo() && AADEMappings.SupportsCounterpart(inv.invoiceHeader.invoiceType))
         {
             var counterpart = GetCounterPart(receiptRequest);
             if (counterpart != null)
@@ -225,7 +225,7 @@ public class AADEFactory
 
         if (receiptRequest.cbPreviousReceiptReference is not null && receiptReferences?.Count > 0)
         {
-            if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
+            if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) && AADEMappings.SupportsCorrelatedInvoices(inv.invoiceHeader.invoiceType))
             {
                 inv.invoiceHeader.correlatedInvoices = receiptReferences.Select(x => GetInvoiceMark(x.Item2)).ToArray();
             }
