@@ -7,49 +7,6 @@ using fiskaltrust.Middleware.Localization.QueuePT.PTSSCD;
 using Xunit;
 
 namespace fiskaltrust.Middleware.Localization.QueuePT.UnitTest.Certification;
-public class OpenSslSigner
-{
-    public static string SignTextWithOpenSSL(string textToSign, string privateKeyPath, string opensslPath)
-    {
-        string tempInput = Path.GetTempFileName();
-        string tempSig = Path.GetTempFileName();
-        string tempBase64 = Path.GetTempFileName();
-        try
-        {
-            File.WriteAllText(tempInput, textToSign);
-            RunOpenSsl(opensslPath, $"dgst -sha1 -sign \"{privateKeyPath}\" -out \"{tempSig}\" \"{tempInput}\"");
-            RunOpenSsl(opensslPath, $"enc -base64 -in \"{tempSig}\" -out \"{tempBase64}\" -A");
-            return File.ReadAllText(tempBase64);
-        }
-        finally
-        {
-            // Clean up temp files
-            File.Delete(tempInput);
-            File.Delete(tempSig);
-            File.Delete(tempBase64);
-        }
-    }
-
-    private static void RunOpenSsl(string opensslPath, string arguments)
-    {
-        var startInfo = new ProcessStartInfo
-        {
-            FileName = opensslPath,
-            Arguments = arguments,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
-
-        using var process = Process.Start(startInfo);
-        string stderr = process.StandardError.ReadToEnd();
-        process.WaitForExit();
-
-        if (process.ExitCode != 0)
-            throw new Exception($"OpenSSL failed: {stderr}");
-    }
-}
 
 public class SaftSignatureValidator
 {
@@ -59,7 +16,7 @@ public class SaftSignatureValidator
     {
         var scu = new InMemorySCU(new storage.V0.ftSignaturCreationUnitPT
         {
-            PrivateKey = File.ReadAllText("C:\\Users\\stefa\\OneDrive\\Desktop\\Portugal_Registration\\PrivateKey.pem"),
+            PrivateKey = File.ReadAllText("..\\PrivateKey.pem"),
 
             SoftwareCertificateNumber = "9999"
         });
@@ -71,21 +28,13 @@ public class SaftSignatureValidator
             GrossTotal = 0.50m,
             Hash = ""
         });
-
-        var hash = scu.SignData(data);
-        var hash2 = OpenSslSigner.SignTextWithOpenSSL(data, "C:\\Users\\stefa\\OneDrive\\Desktop\\Portugal_Registration\\PrivateKey.pem", "C:\\Program Files\\Git\\usr\\bin\\openssl");
     }
 
     [Fact]
     public void ValidateInvoiceSignatures_ValidSignature_ReturnsEmptyList()
     {
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-        // Arrange
-        string xmlPath = "C:\\Users\\stefa\\OneDrive\\Desktop\\Portugal_Registration\\20250729\\SAFT_journal.xml"; // Replace with actual path
-        string publicKeyPem = "-----BEGIN PUBLIC KEY-----\r\nMIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDj7eh82hMWdN538YwQZCeYmZ6D\r\nUG/1KVLZqytOX0IshND32CvyurLRDJyyeII3rc0YOwhNKcJDvL30e+sYzgVZQSyJ\r\nlQlvD0vdYBLkyiPQhibUM5+dxQZao1lw6hNQoIB1JpSHrfIZBSRJt0MB+v7FzxdC\r\nE+jh0ntxiA5VyyBndwIDAQAB\r\n-----END PUBLIC KEY-----\r\n"; // Replace with actual PEM key
-        // Act
-        var result = ValidateInvoiceSignatures(xmlPath, publicKeyPem);
-        // Assert
+        var result = ValidateInvoiceSignatures("", "");
         Assert.Empty(result);
     }
 

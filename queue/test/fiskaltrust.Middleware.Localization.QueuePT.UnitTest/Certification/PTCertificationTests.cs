@@ -38,7 +38,7 @@ public class PTCertificationTests
         var queue = configuration.ftQueues?.First() ?? throw new Exception($"The configuration for {cashBoxId} is empty and therefore not valid.");
         var ptSSCD = new InMemorySCU(new ftSignaturCreationUnitPT
         {
-            PrivateKey = File.ReadAllText("C:\\Users\\stefa\\OneDrive\\Desktop\\Portugal_Registration\\PrivateKey.pem"),
+            PrivateKey = File.ReadAllText("..\\PrivateKey.pem"),
 
             SoftwareCertificateNumber = "9999"
         });
@@ -55,7 +55,7 @@ public class PTCertificationTests
 
     private async Task ExecuteMiddleware(ReceiptRequest receiptRequest, [CallerMemberName] string caller = "")
     {
-        await ExecuteMiddleware(receiptRequest, "C:\\Users\\stefa\\OneDrive\\Desktop\\Portugal_Registration\\Examples", caller);
+        await ExecuteMiddleware(receiptRequest, "..\\Examples", caller);
     }
 
     private async Task<(long ticks, ReceiptResponse receiptResponse)> ExecuteSign(ReceiptRequest receiptRequest)
@@ -107,7 +107,7 @@ public class PTCertificationTests
     {
         var timestamp = DateTime.UtcNow.Ticks;
         //var targetFolder = "/Users/stefan.kert/Desktop/Sources/PT_Certification";
-        var targetFolder = "C:\\Users\\stefa\\OneDrive\\Desktop\\Portugal_Registration\\20250729";
+        var targetFolder = "..\\20250729";
 
         var receiptRequest = PTCertificationExamples.Case_5_9();
         await ExecuteMiddleware(receiptRequest, targetFolder, caller: "Case_5_9");
