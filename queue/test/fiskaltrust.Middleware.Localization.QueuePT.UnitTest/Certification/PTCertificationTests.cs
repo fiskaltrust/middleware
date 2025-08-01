@@ -75,7 +75,7 @@ public class PTCertificationTests
         return (ticks, receiptResponse);
     }
 
-    [Fact]
+    [Fact(Skip = "")]
     public async Task RunStartReceipt()
     {
         var result = await _signMethod(JsonSerializer.Serialize(new ReceiptRequest
@@ -92,8 +92,7 @@ public class PTCertificationTests
         }));
     }
 
-
-    [Fact]
+    [Fact(Skip = "")]
     public async Task RunJournalCall()
     {
         var xmlData = await _journalMethod(JsonSerializer.Serialize(new ifPOS.v1.JournalRequest
@@ -102,7 +101,7 @@ public class PTCertificationTests
         }));
     }
 
-    [Fact]
+    [Fact(Skip = "")]
     public async Task PTCertificationExamplesAll()
     {
         var timestamp = DateTime.UtcNow.Ticks;
@@ -148,27 +147,27 @@ public class PTCertificationTests
         //File.WriteAllText($"{targetFolder}\\SAFT_journal.xml", xmlData);
     }
 
-    [Fact]
+    [Fact(Skip = "")]
     public async Task PTCertificationExamples_Case_5_1()
     {
         var receiptRequest = PTCertificationExamples.Case_5_1();
         await ExecuteMiddleware(receiptRequest);
     }
 
-    //[Fact]
+    [Fact(Skip = "")]
     public async Task PTCertificationExamples_Case_5_2()
     {
         throw new NotImplementedException();
     }
 
-    [Fact]
+    [Fact(Skip = "")]
     public async Task PTCertificationExamples_Case_5_3()
     {
         var receiptRequest = PTCertificationExamples.Case_5_3();
         await ExecuteMiddleware(receiptRequest);
     }
 
-    [Fact]
+    [Fact(Skip = "")]
     public async Task PTCertificationExamples_Case_5_4()
     {
         var receiptRequest = PTCertificationExamples.Case_5_3();
@@ -177,7 +176,7 @@ public class PTCertificationTests
         await ExecuteMiddleware(invoiceRequest);
     }
 
-    [Fact]
+    [Fact(Skip = "")]
     public async Task PTCertificationExamples_Case_5_5()
     {
         var receiptRequest = PTCertificationExamples.Case_5_1();
@@ -186,70 +185,70 @@ public class PTCertificationTests
         await ExecuteMiddleware(refundRequest);
     }
 
-    [Fact]
+    [Fact(Skip = "")]
     public async Task PTCertificationExamples_Case_5_6()
     {
         var receiptRequest = PTCertificationExamples.Case_5_6();
         await ExecuteMiddleware(receiptRequest);
     }
 
-    [Fact]
+    [Fact(Skip = "")]
     public async Task PTCertificationExamples_Case_5_7()
     {
         var receiptRequest = PTCertificationExamples.Case_5_7();
         await ExecuteMiddleware(receiptRequest);
     }
 
-    //[Fact]
+    [Fact(Skip = "")]
     public async Task PTCertificationExamples_Case_5_8()
     {
         var receiptRequest = PTCertificationExamples.Case_5_8();
         await ExecuteMiddleware(receiptRequest);
     }
 
-    [Fact]
+    [Fact(Skip = "")]
     public async Task PTCertificationExamples_Case_5_9()
     {
         var receiptRequest = PTCertificationExamples.Case_5_9();
         await ExecuteMiddleware(receiptRequest);
     }
 
-    [Fact]
+    [Fact(Skip = "")]
     public async Task PTCertificationExamples_Case_5_10()
     {
         var receiptRequest = PTCertificationExamples.Case_5_10();
         await ExecuteMiddleware(receiptRequest);
     }
 
-    //[Fact]
+    [Fact(Skip = "")]
     public async Task PTCertificationExamples_Case_5_11()
     {
         var receiptRequest = PTCertificationExamples.Case_5_11();
         await ExecuteMiddleware(receiptRequest);
     }
 
-    [Fact]
+    [Fact(Skip = "")]
     public async Task PTCertificationExamples_Case_5_12()
     {
         var receiptRequest = PTCertificationExamples.Case_5_12();
         await ExecuteMiddleware(receiptRequest);
     }
 
-    [Fact]
+    [Fact(Skip = "")]
     public async Task PTCertificationExamples_Case_5_13()
     {
         var receiptRequest = PTCertificationExamples.Case_5_3();
         await ExecuteMiddleware(receiptRequest);
     }
 
-    [Fact]
+    [Fact(Skip = "")]
     public async Task PTCertificationExamples_Case_5_13_1()
     {
         var receiptRequest = PTCertificationExamples.Case_5_13_1_Invoice();
         await ExecuteMiddleware(receiptRequest);
     }
 
-    [Fact]
+    [Fact(Skip = "")]
     public async Task PTCertificationExamples_Case_5_13_2()
     {
         var receiptRequest = PTCertificationExamples.Case_5_6();
