@@ -169,7 +169,6 @@ public class MyDataSCU : IGRSSCD
                         request.ReceiptResponse.ftReceiptIdentification += $"{doc.invoice[0].invoiceHeader.series}-{doc.invoice[0].invoiceHeader.aa}";
                         if (request.ReceiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.HandWritten) && request.ReceiptRequest.TryDeserializeftReceiptCaseData<ftReceiptCaseDataPayload>(out var receiptCaseDataPayload))
                         {
-                            request.ReceiptResponse.ftReceiptIdentification = request.ReceiptResponse.ftReceiptIdentification.Replace("ft", "cb");
                             var hash = SHA256.HashData(Encoding.UTF8.GetBytes(receiptCaseDataPayload.GR.MerchantVATID + "-" + receiptCaseDataPayload.GR.Series + "-" + receiptCaseDataPayload.GR.AA + "-" + request.ReceiptRequest.cbReceiptReference + "-" + request.ReceiptRequest.cbReceiptMoment.ToString("yyyy-MM-ddThh:mm:ssZ") + "-" + request.ReceiptRequest.cbChargeItems.Sum(x => x.Amount)));
                             SignatureItemFactoryGR.AddHandwrittenReceiptSignature(request, EncodeToUrlSafeBase64(hash), _sandbox);
                         }

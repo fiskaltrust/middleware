@@ -11,6 +11,7 @@ using fiskaltrust.ifPOS.v2;
 using fiskaltrust.ifPOS.v2.Cases;
 using fiskaltrust.Middleware.Localization.QueueGR.Models.Cases;
 using fiskaltrust.Middleware.Localization.QueueGR.SCU.GR.MyData.Models;
+using fiskaltrust.Middleware.Localization.QueueGR.Validation;
 using fiskaltrust.Middleware.Localization.v2.Helpers;
 using fiskaltrust.Middleware.SCU.GR.MyData.Helpers;
 using fiskaltrust.Middleware.SCU.GR.MyData.Models;
@@ -121,8 +122,11 @@ public class AADEFactory
                 payItem.Amount = Math.Round(payItem.Amount, 2);
                 payItem.Quantity = Math.Round(payItem.Quantity, 2);
             }
-            MyDataAADEValidation.ValidateReceiptRequest(receiptRequest);
-
+            (var valid, var validationError) = ValidationGR.ValidateReceiptRequest(receiptRequest);
+            if (!valid)
+            {
+                throw new Exception(validationError?.ErrorMessage ?? "Invalid receipt request.");
+            }
             var inv = CreateInvoiceDocType(receiptRequest, receiptResponse, receiptReferences);
             var doc = new InvoicesDoc
             {
