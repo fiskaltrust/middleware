@@ -55,7 +55,7 @@ public sealed class CustomRTServerSCU : LegacySCU
         return new RTInfo
         {
             SerialNumber = result.ArrayResponse.FirstOrDefault()?.fiscalBoxId,
-            InfoData = string.Empty //  JsonConvert.SerializeObject(result.ArrayResponse)
+            InfoData = JsonConvert.SerializeObject(result.ArrayResponse)
         };
     }
 
