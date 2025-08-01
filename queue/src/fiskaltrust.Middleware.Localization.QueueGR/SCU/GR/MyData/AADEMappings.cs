@@ -310,18 +310,92 @@ public static class AADEMappings
         throw new Exception("Unknown type of receipt " + receiptRequest.ftReceiptCase.ToString("x"));
     }
 
-    public static int GetVATCategory(ChargeItem chargeItem) => chargeItem.ftChargeItemCase.Vat() switch
+    public static int GetVATCategory(ChargeItem chargeItem)
     {
-        ChargeItemCase.NormalVatRate => MyDataVatCategory.VatRate24, // Normal 24%
-        ChargeItemCase.DiscountedVatRate1 => MyDataVatCategory.VatRate13, // Discounted-1 13&
-        ChargeItemCase.DiscountedVatRate2 => MyDataVatCategory.VatRate6, // Discounted-2 6%
-        ChargeItemCase.SuperReducedVatRate1 => MyDataVatCategory.VatRate17, // Super reduced 1 17%
-        ChargeItemCase.SuperReducedVatRate2 => MyDataVatCategory.VatRate9, // Super reduced 2 9%
-        ChargeItemCase.ParkingVatRate => MyDataVatCategory.VatRate4, // Parking VAT 4%
-        ChargeItemCase.ZeroVatRate => MyDataVatCategory.ExcludingVat, // Zero
-        ChargeItemCase.NotTaxable => MyDataVatCategory.RegistrationsWithoutVat, // Not Taxable
-        ChargeItemCase c => throw new Exception($"The VAT type {c} of ChargeItem with the case {chargeItem.ftChargeItemCase} is not supported."),
-    };
+        if (chargeItem.ftChargeItemCase.Vat() == ChargeItemCase.UnknownService)
+        {
+            return chargeItem.VATRate switch
+            {
+                24m => MyDataVatCategory.VatRate24_Category1,
+                13m => MyDataVatCategory.VatRate13_Category2,
+                6m => MyDataVatCategory.VatRate6_Category3,
+                17m => MyDataVatCategory.VatRate17_Category4,
+                9m => MyDataVatCategory.VatRate9_Category5,
+                4m => MyDataVatCategory.VatRate4_Category6, // TODO maybe we need to distinguish here between 4% Category 6 and 4% Category 10
+                0m => MyDataVatCategory.VatRate0_ExcludingVat_Category7, // TODO maybe we need to distinguish here between ExcludingVat and RegistrationsWithoutVat
+                3m => MyDataVatCategory.VatRate3_Category9, // 3% VAT (ν.5057/2023)
+                _ => throw new Exception($"The VAT Rate {chargeItem.VATRate} with VAT type 0x0000-Unknown of ChargeItem with the case {chargeItem.ftChargeItemCase.ToString("x")} is not supported."),
+            };
+        }
+        else if (chargeItem.ftChargeItemCase.Vat() == ChargeItemCase.NormalVatRate)
+        {
+            if (chargeItem.VATRate == 24m)
+            {
+                return MyDataVatCategory.VatRate24_Category1;
+            }
+            throw new Exception($"The VAT Rate {chargeItem.VATRate} with VAT type {chargeItem.ftChargeItemCase.Vat().ToString("x")} of ChargeItem with the case {chargeItem.ftChargeItemCase.ToString("x")}  is not supported.");
+        }
+        else if (chargeItem.ftChargeItemCase.Vat() == ChargeItemCase.DiscountedVatRate1 || chargeItem.ftChargeItemCase.Vat() == ChargeItemCase.DiscountedVatRate2)
+        {
+            if (chargeItem.VATRate == 13m)
+            {
+                return MyDataVatCategory.VatRate13_Category2; 
+            }
+            if (chargeItem.VATRate == 17m)
+            {
+                return MyDataVatCategory.VatRate17_Category4; 
+            }
+            if (chargeItem.VATRate == 6m)
+            {
+                return MyDataVatCategory.VatRate6_Category3;
+            }
+            if (chargeItem.VATRate == 9m)
+            {
+                return MyDataVatCategory.VatRate9_Category5;
+            }
+            throw new Exception($"The VAT Rate {chargeItem.VATRate} with VAT type {chargeItem.ftChargeItemCase.Vat().ToString("x")} of ChargeItem with the case {chargeItem.ftChargeItemCase.ToString("x")}  is not supported.");
+        }
+        else if (chargeItem.ftChargeItemCase.Vat() == ChargeItemCase.SuperReducedVatRate1 || chargeItem.ftChargeItemCase.Vat() == ChargeItemCase.SuperReducedVatRate2)
+        {
+            if (chargeItem.VATRate == 4m)
+            {
+                return MyDataVatCategory.VatRate4_Category6;
+            }
+            throw new Exception($"The VAT Rate {chargeItem.VATRate} with VAT type {chargeItem.ftChargeItemCase.Vat().ToString("x")} of ChargeItem with the case {chargeItem.ftChargeItemCase.ToString("x")}  is not supported.");
+        }
+        else if (chargeItem.ftChargeItemCase.Vat() == ChargeItemCase.ParkingVatRate)
+        {
+            //if (chargeItem.VATRate == 3m)
+            //{
+            //    return MyDataVatCategory.VatRate3_Category9;
+            //}
+            //else if (chargeItem.VATRate == 4m)
+            //{
+            //    return MyDataVatCategory.VatRate4_Category10;
+            //}
+            throw new Exception($"The VAT Rate {chargeItem.VATRate} with VAT type {chargeItem.ftChargeItemCase.Vat().ToString("x")} of ChargeItem with the case {chargeItem.ftChargeItemCase.ToString("x")}  is not supported.");
+        }
+        else if (chargeItem.ftChargeItemCase.Vat() == ChargeItemCase.ZeroVatRate)
+        {
+            if (chargeItem.VATRate == 0m)
+            {
+                return MyDataVatCategory.VatRate0_ExcludingVat_Category7;
+            }
+            throw new Exception($"When using VAT type ZeroVatRate {chargeItem.ftChargeItemCase.Vat().ToString("x")} the VATRate has to be 0.00.");
+        }
+        else if (chargeItem.ftChargeItemCase.Vat() == ChargeItemCase.NotTaxable)
+        {
+            if (chargeItem.VATRate == 0m)
+            {
+                return MyDataVatCategory.RegistrationsWithoutVat;
+            }
+            throw new Exception($"When using VAT type NotTaxable {chargeItem.ftChargeItemCase.Vat().ToString("x")} the VATRate has to be 0.00.");
+        }
+        else
+        {
+            throw new Exception($"The VAT type {chargeItem.ftChargeItemCase.Vat().ToString("x")} of ChargeItem with the case {chargeItem.ftChargeItemCase} is not supported.");
+        }
+    }
 
     public static int GetPaymentType(PayItem payItem) => payItem.ftPayItemCase.Case() switch
     {

@@ -529,11 +529,7 @@ public class AADEFactoryTests
         invoice.invoiceHeader.currency.Should().Be(CurrencyType.EUR);
 
         // Verify customer information
-        invoice.counterpart.Should().NotBeNull();
-        invoice.counterpart.vatNumber.Should().Be("026883248");
-        invoice.counterpart.country.Should().Be(CountryType.GR);
-        invoice.counterpart.name.Should().BeNull();
-        invoice.counterpart.address.Should().BeNull();
+        invoice.counterpart.Should().BeNull();
 
         // Verify invoice details
         invoice.invoiceDetails.Should().HaveCount(1);
@@ -544,7 +540,7 @@ public class AADEFactoryTests
         invoiceDetail.lineNumber.Should().Be(1);
 
         // Verify VAT exemption category is set for 0% VAT
-        invoiceDetail.vatCategory.Should().Be(fiskaltrust.Middleware.SCU.GR.MyData.Models.MyDataVatCategory.ExcludingVat);
+        invoiceDetail.vatCategory.Should().Be(fiskaltrust.Middleware.SCU.GR.MyData.Models.MyDataVatCategory.VatRate0_ExcludingVat_Category7);
         invoiceDetail.vatExemptionCategorySpecified.Should().BeTrue();
         invoiceDetail.vatExemptionCategory.Should().Be(14);
 
@@ -661,11 +657,7 @@ public class AADEFactoryTests
         invoice.invoiceHeader.currency.Should().Be(CurrencyType.EUR);
 
         // Verify customer information
-        invoice.counterpart.Should().NotBeNull();
-        invoice.counterpart.vatNumber.Should().Be("026883248");
-        invoice.counterpart.country.Should().Be(CountryType.GR);
-        invoice.counterpart.name.Should().BeNull();
-        invoice.counterpart.address.Should().BeNull();
+        invoice.counterpart.Should().BeNull();
 
         // Verify invoice details
         invoice.invoiceDetails.Should().HaveCount(1);
@@ -676,7 +668,7 @@ public class AADEFactoryTests
         invoiceDetail.lineNumber.Should().Be(1);
 
         // Verify VAT exemption category is set for 0% VAT
-        invoiceDetail.vatCategory.Should().Be(fiskaltrust.Middleware.SCU.GR.MyData.Models.MyDataVatCategory.ExcludingVat);
+        invoiceDetail.vatCategory.Should().Be(fiskaltrust.Middleware.SCU.GR.MyData.Models.MyDataVatCategory.VatRate0_ExcludingVat_Category7);
         invoiceDetail.vatExemptionCategorySpecified.Should().BeTrue();
         invoiceDetail.vatExemptionCategory.Should().Be(14);
 

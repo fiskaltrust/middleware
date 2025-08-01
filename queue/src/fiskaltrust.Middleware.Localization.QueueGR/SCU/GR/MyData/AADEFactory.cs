@@ -330,7 +330,7 @@ public class AADEFactory
         if (x.ftChargeItemCase.NatureOfVat() != ChargeItemCaseNatureOfVatGR.UsualVatApplies)
         {
             // In cases of using exempt reasons we will have a zero VAT Rate
-            invoiceRow.vatCategory = MyDataVatCategory.ExcludingVat;
+            invoiceRow.vatCategory = MyDataVatCategory.VatRate0_ExcludingVat_Category7;
             var exemptionCategory = AADEMappings.GetVatExemptionCategory(x);
             if (exemptionCategory.HasValue)
             {
@@ -355,7 +355,7 @@ public class AADEFactory
                     {
                         invoiceRow.vatExemptionCategorySpecified = true;
                         invoiceRow.vatExemptionCategory = 27;
-                        invoiceRow.vatCategory = MyDataVatCategory.ExcludingVat;
+                        invoiceRow.vatCategory = MyDataVatCategory.VatRate0_ExcludingVat_Category7;
                     }
                     else
                     {
