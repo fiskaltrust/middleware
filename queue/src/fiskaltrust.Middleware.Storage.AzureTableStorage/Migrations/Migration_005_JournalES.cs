@@ -15,7 +15,7 @@ namespace fiskaltrust.Middleware.Storage.AzureTableStorage.Migrations
             _queueConfiguration = queueConfiguration;
         }
 
-        public int Version => 2;
+        public int Version => 5;
 
         public async Task ExecuteAsync()
         {

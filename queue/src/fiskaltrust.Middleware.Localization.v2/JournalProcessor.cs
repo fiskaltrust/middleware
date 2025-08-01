@@ -157,7 +157,6 @@ public class JournalProcessor
             _logger.LogError(ex, "An error occured while processing the Journal request.");
         }
         return [];
-
     }
 
     private async IAsyncEnumerable<byte[]> GetFromEntitiesAsync<T>(IMiddlewareRepository<T> repository, JournalRequest request)
@@ -165,7 +164,7 @@ public class JournalProcessor
         IAsyncEnumerable<T> result;
         if (request.To < 0)
         {
-            result = repository.GetEntriesOnOrAfterTimeStampAsync(request.From, take: (int) -request.To);
+            result = repository.GetEntriesOnOrAfterTimeStampAsync(request.From, take: (int)-request.To);
         }
         else if (request.To == 0)
         {
