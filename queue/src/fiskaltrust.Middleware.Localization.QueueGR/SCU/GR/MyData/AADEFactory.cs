@@ -225,9 +225,12 @@ public class AADEFactory
 
         if (receiptRequest.cbPreviousReceiptReference is not null && receiptReferences?.Count > 0)
         {
-            if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) && AADEMappings.SupportsCorrelatedInvoices(inv.invoiceHeader.invoiceType))
+            if (receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund))
             {
-                inv.invoiceHeader.correlatedInvoices = receiptReferences.Select(x => GetInvoiceMark(x.Item2)).ToArray();
+                if (AADEMappings.SupportsCorrelatedInvoices(inv.invoiceHeader.invoiceType))
+                {
+                    inv.invoiceHeader.correlatedInvoices = receiptReferences.Select(x => GetInvoiceMark(x.Item2)).ToArray();
+                }
             }
             else
             {
