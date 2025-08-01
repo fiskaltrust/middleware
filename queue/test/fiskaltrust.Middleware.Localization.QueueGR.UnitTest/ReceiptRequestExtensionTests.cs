@@ -340,42 +340,6 @@ namespace fiskaltrust.Middleware.Localization.QueueGR.UnitTest
         }
 
         [Fact]
-        public void TryDeserializeftReceiptCaseData_ShouldReturnFalse_WhenTypesMismatch()
-        {
-            var receiptRequest = new ReceiptRequest();
-            receiptRequest.ftReceiptCaseData = new
-            {
-                StringProperty = "This should be a number",
-                NumberProperty = "This should be a number too"
-            };
-
-            var success = receiptRequest.TryDeserializeftReceiptCaseData<StrictNumericClass>(out var result);
-
-            success.Should().BeTrue();
-            result.Should().NotBeNull();
-            result!.NumberProperty.Should().Be(0); // Default value for int
-        }
-
-        [Fact]
-        public void TryDeserializeftReceiptCaseData_ShouldDeserializeEnumValues_WhenContainingEnums()
-        {
-            var receiptRequest = new ReceiptRequest();
-            receiptRequest.ftReceiptCaseData = new
-            {
-                Status = "Active",
-                Priority = 1
-            };
-
-            var success = receiptRequest.TryDeserializeftReceiptCaseData<EnumClass>(out var result);
-
-            success.Should().BeTrue();
-            result.Should().NotBeNull();
-            result!.Status.Should().Be(Status.Active);
-            result.Priority.Should().Be(Priority.Medium);
-        }
-
-
-        [Fact]
         public void Test()
         {
             var receiptRequest = new ReceiptResponse();

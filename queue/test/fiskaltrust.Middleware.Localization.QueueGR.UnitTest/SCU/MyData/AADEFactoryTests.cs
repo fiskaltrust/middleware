@@ -49,8 +49,8 @@ public class AADEFactoryTests
         error!.Exception.Message.Should().Be("When using Handwritten receipts the Series must be provided in the ftReceiptCaseData payload.");
     }
 
-    [Fact(Skip = "not applicable")]
-    public void MapToInvoicesDoc_ShouldThrowException_IfHandwritten_FieldsAreDefined_HashPayloadShouldMatch()
+    [Fact]
+    public void MapToInvoicesDoc_Should_Not_ThrowException_IfHandwritten_FieldsAreDefined_HashPayloadShouldMatch()
     {
         var dateTime = new DateTime(2025, 12, 15, 12, 13, 14, DateTimeKind.Utc);
         var receiptReference = Guid.NewGuid().ToString();
@@ -92,7 +92,7 @@ public class AADEFactoryTests
         });
 
         (var action, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
-        error!.Exception.Message.Should().StartWith("The HashPayload does not match the expected value.");
+        error.Should().BeNull();
     }
 
     [Fact]
@@ -464,7 +464,7 @@ public class AADEFactoryTests
                 CustomerVATId = "026883248"
             },
             cbPreviousReceiptReference = "7-1752270167120",
-            ftReceiptCase = (ReceiptCase) 0x4752200000000002,
+            ftReceiptCase = (ReceiptCase) 0x4752200000000001,
             cbChargeItems = new List<ChargeItem>
             {
                 new ChargeItem
@@ -544,9 +544,9 @@ public class AADEFactoryTests
         invoiceDetail.lineNumber.Should().Be(1);
 
         // Verify VAT exemption category is set for 0% VAT
-        invoiceDetail.vatCategory.Should().Be(fiskaltrust.Middleware.SCU.GR.MyData.Models.MyDataVatCategory.RegistrationsWithoutVat);
+        invoiceDetail.vatCategory.Should().Be(fiskaltrust.Middleware.SCU.GR.MyData.Models.MyDataVatCategory.ExcludingVat);
         invoiceDetail.vatExemptionCategorySpecified.Should().BeTrue();
-        
+        invoiceDetail.vatExemptionCategory.Should().Be(14);
 
         // Verify payment methods
         invoice.paymentMethods.Should().HaveCount(1);
@@ -596,7 +596,7 @@ public class AADEFactoryTests
                 CustomerVATId = "026883248"
             },
             cbPreviousReceiptReference = "7-1752270167120",
-            ftReceiptCase = (ReceiptCase) 0x4752200000000002,
+            ftReceiptCase = (ReceiptCase) 0x4752200000000001,
             cbChargeItems = new List<ChargeItem>
             {
                 new ChargeItem
@@ -606,7 +606,7 @@ public class AADEFactoryTests
                     ProductNumber = "004",
                     Quantity = 1,
                     VATRate = 0,
-                    ftChargeItemCase = (ChargeItemCase)0x4752200000000027,
+                    ftChargeItemCase = (ChargeItemCase)0x4752200000001128,
                     Moment = DateTime.Parse("2025-07-25T07:05:21.392Z").ToUniversalTime(),
                     Position = 1,
                     VATAmount = 0,
@@ -676,9 +676,9 @@ public class AADEFactoryTests
         invoiceDetail.lineNumber.Should().Be(1);
 
         // Verify VAT exemption category is set for 0% VAT
-        invoiceDetail.vatCategory.Should().Be(fiskaltrust.Middleware.SCU.GR.MyData.Models.MyDataVatCategory.RegistrationsWithoutVat);
+        invoiceDetail.vatCategory.Should().Be(fiskaltrust.Middleware.SCU.GR.MyData.Models.MyDataVatCategory.ExcludingVat);
         invoiceDetail.vatExemptionCategorySpecified.Should().BeTrue();
-
+        invoiceDetail.vatExemptionCategory.Should().Be(14);
 
         // Verify payment methods
         invoice.paymentMethods.Should().HaveCount(1);

@@ -276,8 +276,8 @@ public class AADEFactory
             var hashPayloadExpected = data.GR.MerchantVATID + "-" + data.GR.Series + "-" + data.GR.AA + "-" + receiptRequest.cbReceiptReference + "-" + receiptRequest.cbReceiptMoment.ToString("yyyy-MM-ddThh:mm:ssZ") + "-" + totalAmount;
             if (hashPayloadExpected != data.GR.HashPayload)
             {
-               // TODO We need to check the payload but we need a fixed format.
-               // throw new Exception($"The HashPayload does not match the expected value. Expected: {hashPayloadExpected}, Actual: {data.GR.HashPayload}");
+                // TODO We need to check the payload but we need a fixed format.
+                // throw new Exception($"The HashPayload does not match the expected value. Expected: {hashPayloadExpected}, Actual: {data.GR.HashPayload}");
             }
         }
 
@@ -291,57 +291,62 @@ public class AADEFactory
         var nextPosition = 1;
         return chargeItems.Select(grouped =>
         {
-            var x = grouped.chargeItem;
+        var x = grouped.chargeItem;
 
-            var vatAmount = x.GetVATAmount();
-            var invoiceRow = new InvoiceRowType
-            {
-                quantity = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -x.Quantity : x.Quantity,
-                lineNumber = (int) x.Position,
-                vatAmount = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -vatAmount : vatAmount,
-                netValue = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -x.Amount - -vatAmount : x.Amount - vatAmount,
-            };
+        var vatAmount = x.GetVATAmount();
+        var invoiceRow = new InvoiceRowType
+        {
+            quantity = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -x.Quantity : x.Quantity,
+            lineNumber = (int) x.Position,
+            vatAmount = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -vatAmount : vatAmount,
+            netValue = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -x.Amount - -vatAmount : x.Amount - vatAmount,
+        };
 
-            if (AADEMappings.GetInvoiceType(receiptRequest) == InvoiceType.Item86)
-            {
-                invoiceRow.quantitySpecified = true;
-            }
+        if (AADEMappings.GetInvoiceType(receiptRequest) == InvoiceType.Item86)
+        {
+            invoiceRow.quantitySpecified = true;
+        }
 
-            if (((int) x.Position) == 0)
-            {
-                invoiceRow.lineNumber = nextPosition++;
-            }
-            else
-            {
-                nextPosition = (int) x.Position + 1;
-            }
+        if (((int) x.Position) == 0)
+        {
+            invoiceRow.lineNumber = nextPosition++;
+        }
+        else
+        {
+            nextPosition = (int) x.Position + 1;
+        }
 
-            if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004))
-            {
-                invoiceRow.itemDescr = x.Description;
-                // Todo change
-                invoiceRow.measurementUnit = 1;
-                invoiceRow.measurementUnitSpecified = true;
-            }
+        if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004))
+        {
+            invoiceRow.itemDescr = x.Description;
+            // Todo change
+            invoiceRow.measurementUnit = 1;
+            invoiceRow.measurementUnitSpecified = true;
+        }
 
-            if (x.ftChargeItemCase.NatureOfVat() != ChargeItemCaseNatureOfVatGR.UsualVatApplies)
+        if (x.ftChargeItemCase.NatureOfVat() != ChargeItemCaseNatureOfVatGR.UsualVatApplies)
+        {
+            // In cases of using exempt reasons we will have a zero VAT Rate
+            invoiceRow.vatCategory = MyDataVatCategory.ExcludingVat;
+            var exemptionCategory = AADEMappings.GetVatExemptionCategory(x);
+            if (exemptionCategory.HasValue)
             {
-                // In cases of using exempt reasons we will have a zero VAT Rate
-                invoiceRow.vatCategory = MyDataVatCategory.ExcludingVat;
-                var exemptionCategory = AADEMappings.GetVatExemptionCategory(x);
-                if (exemptionCategory.HasValue)
-                {
-                    invoiceRow.vatExemptionCategorySpecified = true;
-                    invoiceRow.vatExemptionCategory = exemptionCategory.Value;
-                }
-                else
-                {
-                    throw new Exception($"The VAT exemption for the given Nature 0x{x.ftChargeItemCase.NatureOfVat():x}  is not supported.");
-                }
+                invoiceRow.vatExemptionCategorySpecified = true;
+                invoiceRow.vatExemptionCategory = exemptionCategory.Value;
             }
             else
             {
-                if (x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Voucher))
+                throw new Exception($"The VAT exemption for the given Nature 0x{x.ftChargeItemCase.NatureOfVat():x}  is not supported.");
+            }
+        }
+        else
+        {
+                if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002))
+                {
+                    invoiceRow.vatCategory = MyDataVatCategory.RegistrationsWithoutVat;
+                    invoiceRow.incomeClassification = [AADEMappings.GetIncomeClassificationType(receiptRequest, x)];
+                }
+                else if (x.ftChargeItemCase.IsTypeOfService(ChargeItemCaseTypeOfService.Voucher))
                 {
                     if (x.ftChargeItemCase.IsVat(ChargeItemCase.NotTaxable))
                     {
@@ -354,11 +359,6 @@ public class AADEFactory
                         invoiceRow.recType = 6;
                         invoiceRow.vatCategory = AADEMappings.GetVATCategory(x);
                     }
-                }
-                else if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002))
-                {
-                    invoiceRow.vatCategory = MyDataVatCategory.RegistrationsWithoutVat;
-                    invoiceRow.incomeClassification = [AADEMappings.GetIncomeClassificationType(receiptRequest, x)];
                 }
                 else
                 {
