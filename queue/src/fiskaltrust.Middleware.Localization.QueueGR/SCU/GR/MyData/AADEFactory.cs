@@ -261,7 +261,7 @@ public class AADEFactory
                 throw new Exception("When using Handwritten receipts the MerchantVATID must be provided in the ftReceiptCaseData payload.");
             }
 
-            if (GetAADEVAT(data?.GR?.MerchantVATID) != GetAADEVAT(_masterDataConfiguration.Account.VatId))
+            if (data?.GR?.MerchantVATID != GetAADEVAT(_masterDataConfiguration.Account.VatId))
             {
                 throw new Exception("When using Handwritten receipts the MerchantVATID that is provided must match with the one configured in the Account.");
             }
