@@ -234,6 +234,52 @@ public class AADEFactoryTests
     }
 
     [Fact]
+    public void MapToInvoicesDoc_Should_Not_ThrowException_IfHandwritten_AndMerchantVATMissmatch()
+    {
+        var dateTime = new DateTime(2025, 12, 15, 12, 13, 14, DateTimeKind.Utc);
+        var receiptReference = Guid.NewGuid().ToString();
+        var receiptRequest = new ReceiptRequest
+        {
+            cbTerminalID = "1",
+            Currency = Currency.EUR,
+            cbReceiptMoment = dateTime,
+            cbReceiptReference = receiptReference,
+            ftPosSystemId = Guid.NewGuid(),
+            cbChargeItems = [],
+            cbPayItems = [],
+            ftReceiptCase = ((ReceiptCase) 0x4752_2000_0000_0000).WithCase(ReceiptCase.PointOfSaleReceipt0x0001).WithFlag(ReceiptCaseFlags.HandWritten),
+            ftReceiptCaseData = new
+            {
+                GR = new
+                {
+                    MerchantVATID = "Test",
+                    Series = "test", // This should be defined
+                    AA = 123456789,
+                    HashAlg = "SHA256",
+                    HashPayload = $"WRONG HASHPAYLOAD"
+                }
+            },
+            cbReceiptAmount = 100,
+        };
+        var receiptResponse = new ReceiptResponse
+        {
+            cbReceiptReference = receiptRequest.cbReceiptReference,
+            ftReceiptIdentification = "ft123#"
+        };
+
+        var aadeFactory = new AADEFactory(new storage.V0.MasterData.MasterDataConfiguration
+        {
+            Account = new storage.V0.MasterData.AccountMasterData
+            {
+                VatId = "WRONG_VAT_ID" 
+            },
+        });
+
+        (var action, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
+        error!.Exception.Message.Should().Be("When using Handwritten receipts the MerchantVATID that is provided must match with the one configured in the Account.");
+    }
+
+    [Fact]
     public void MapToInvoiceDoc_ForReceiptRequest_ShouldWork()
     {
         var merchantId = "Test";
@@ -432,7 +478,6 @@ public class AADEFactoryTests
         invoice.issuer.country.Should().Be(CountryType.GR);
         invoice.issuer.branch.Should().Be(0);
     }
-
 
     [Fact]
     public void MapToInvoicesDoc_ForVATExemptReceiptWithCashPayment_ShouldWork_AndReturnClassification()
