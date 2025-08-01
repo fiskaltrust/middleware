@@ -261,7 +261,7 @@ public class AADEFactory
                 throw new Exception("When using Handwritten receipts the MerchantVATID must be provided in the ftReceiptCaseData payload.");
             }
 
-            if (data?.GR?.MerchantVATID != _masterDataConfiguration.Account.VatId)
+            if (GetAADEVAT(data?.GR?.MerchantVATID) != GetAADEVAT(_masterDataConfiguration.Account.VatId))
             {
                 throw new Exception("When using Handwritten receipts the MerchantVATID that is provided must match with the one configured in the Account.");
             }
@@ -299,56 +299,56 @@ public class AADEFactory
         var nextPosition = 1;
         return chargeItems.Select(grouped =>
         {
-        var x = grouped.chargeItem;
+            var x = grouped.chargeItem;
 
-        var vatAmount = x.GetVATAmount();
-        var invoiceRow = new InvoiceRowType
-        {
-            quantity = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -x.Quantity : x.Quantity,
-            lineNumber = (int) x.Position,
-            vatAmount = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -vatAmount : vatAmount,
-            netValue = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -x.Amount - -vatAmount : x.Amount - vatAmount,
-        };
-
-        if (AADEMappings.GetInvoiceType(receiptRequest) == InvoiceType.Item86)
-        {
-            invoiceRow.quantitySpecified = true;
-        }
-
-        if (((int) x.Position) == 0)
-        {
-            invoiceRow.lineNumber = nextPosition++;
-        }
-        else
-        {
-            nextPosition = (int) x.Position + 1;
-        }
-
-        if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004))
-        {
-            invoiceRow.itemDescr = x.Description;
-            // Todo change
-            invoiceRow.measurementUnit = 1;
-            invoiceRow.measurementUnitSpecified = true;
-        }
-
-        if (x.ftChargeItemCase.NatureOfVat() != ChargeItemCaseNatureOfVatGR.UsualVatApplies)
-        {
-            // In cases of using exempt reasons we will have a zero VAT Rate
-            invoiceRow.vatCategory = MyDataVatCategory.VatRate0_ExcludingVat_Category7;
-            var exemptionCategory = AADEMappings.GetVatExemptionCategory(x);
-            if (exemptionCategory.HasValue)
+            var vatAmount = x.GetVATAmount();
+            var invoiceRow = new InvoiceRowType
             {
-                invoiceRow.vatExemptionCategorySpecified = true;
-                invoiceRow.vatExemptionCategory = exemptionCategory.Value;
+                quantity = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -x.Quantity : x.Quantity,
+                lineNumber = (int) x.Position,
+                vatAmount = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -vatAmount : vatAmount,
+                netValue = receiptRequest.ftReceiptCase.IsFlag(ReceiptCaseFlags.Refund) ? -x.Amount - -vatAmount : x.Amount - vatAmount,
+            };
+
+            if (AADEMappings.GetInvoiceType(receiptRequest) == InvoiceType.Item86)
+            {
+                invoiceRow.quantitySpecified = true;
+            }
+
+            if (((int) x.Position) == 0)
+            {
+                invoiceRow.lineNumber = nextPosition++;
             }
             else
             {
-                throw new Exception($"The VAT exemption for the given Nature 0x{x.ftChargeItemCase.NatureOfVat():x}  is not supported.");
+                nextPosition = (int) x.Position + 1;
             }
-        }
-        else
-        {
+
+            if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.Order0x3004))
+            {
+                invoiceRow.itemDescr = x.Description;
+                // Todo change
+                invoiceRow.measurementUnit = 1;
+                invoiceRow.measurementUnitSpecified = true;
+            }
+
+            if (x.ftChargeItemCase.NatureOfVat() != ChargeItemCaseNatureOfVatGR.UsualVatApplies)
+            {
+                // In cases of using exempt reasons we will have a zero VAT Rate
+                invoiceRow.vatCategory = MyDataVatCategory.VatRate0_ExcludingVat_Category7;
+                var exemptionCategory = AADEMappings.GetVatExemptionCategory(x);
+                if (exemptionCategory.HasValue)
+                {
+                    invoiceRow.vatExemptionCategorySpecified = true;
+                    invoiceRow.vatExemptionCategory = exemptionCategory.Value;
+                }
+                else
+                {
+                    throw new Exception($"The VAT exemption for the given Nature 0x{x.ftChargeItemCase.NatureOfVat():x}  is not supported.");
+                }
+            }
+            else
+            {
                 if (receiptRequest.ftReceiptCase.IsCase(ReceiptCase.PaymentTransfer0x0002))
                 {
                     invoiceRow.vatCategory = MyDataVatCategory.RegistrationsWithoutVat;
@@ -583,14 +583,8 @@ public class AADEFactory
         }
     }
 
-    private PartyType CreateIssuer()
+    public static string GetAADEVAT(string issuerVat)
     {
-        var issuerVat = _masterDataConfiguration?.Account?.VatId;
-        var branch = 0;
-        if (!string.IsNullOrEmpty(_masterDataConfiguration?.Outlet?.LocationId) && int.TryParse(_masterDataConfiguration?.Outlet?.LocationId, out var locationId))
-        {
-            branch = locationId;
-        }
         if (issuerVat?.StartsWith("EL") == true)
         {
             issuerVat = issuerVat.Replace("EL", "");
@@ -599,9 +593,20 @@ public class AADEFactory
         {
             issuerVat = issuerVat.Replace("GR", "");
         }
+        return issuerVat;
+    }
+
+    private PartyType CreateIssuer()
+    {
+        var branch = 0;
+        if (!string.IsNullOrEmpty(_masterDataConfiguration?.Outlet?.LocationId) && int.TryParse(_masterDataConfiguration?.Outlet?.LocationId, out var locationId))
+        {
+            branch = locationId;
+        }
+
         return new PartyType
         {
-            vatNumber = issuerVat,
+            vatNumber = GetAADEVAT(_masterDataConfiguration?.Account?.VatId),
             country = CountryType.GR,
             branch = branch
         };
