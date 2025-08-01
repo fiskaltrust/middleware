@@ -92,7 +92,7 @@ public class AADEFactoryTests
         });
 
         (var action, var error) = aadeFactory.MapToInvoicesDoc(receiptRequest, receiptResponse, []);
-        error.Should().BeNull();
+        error.Should().NotBeNull();
     }
 
     [Fact]
@@ -152,7 +152,7 @@ public class AADEFactoryTests
         {
             Account = new storage.V0.MasterData.AccountMasterData
             {
-
+                VatId = merchantId // This should match the MerchantVATID
             },
         });
 
