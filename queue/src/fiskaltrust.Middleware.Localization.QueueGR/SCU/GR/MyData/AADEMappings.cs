@@ -333,7 +333,8 @@ public static class AADEMappings
             {
                 return MyDataVatCategory.VatRate24_Category1;
             }
-            throw new Exception($"The VAT Rate {chargeItem.VATRate} with VAT type {chargeItem.ftChargeItemCase.Vat().ToString("x")} of ChargeItem with the case {chargeItem.ftChargeItemCase.ToString("x")}  is not supported.");
+            // The VAT rate of 25% with VAT type '0000000000000003' used in the charge item for case '4752200000000013' is not supported. Please verify the VAT configuration or use a supported VAT type."
+            throw new Exception($"The Property cbChargeItem.VATRate with the Value '{chargeItem.VATRate}' is invalid for the given Type of VAT '{chargeItem.ftChargeItemCase.Vat().ToString("x")}'.");
         }
         else if (chargeItem.ftChargeItemCase.Vat() == ChargeItemCase.DiscountedVatRate1 || chargeItem.ftChargeItemCase.Vat() == ChargeItemCase.DiscountedVatRate2)
         {
@@ -353,7 +354,7 @@ public static class AADEMappings
             {
                 return MyDataVatCategory.VatRate9_Category5;
             }
-            throw new Exception($"The VAT Rate {chargeItem.VATRate} with VAT type {chargeItem.ftChargeItemCase.Vat().ToString("x")} of ChargeItem with the case {chargeItem.ftChargeItemCase.ToString("x")}  is not supported.");
+            throw new Exception($"The Property cbChargeItem.VATRate with the Value '{chargeItem.VATRate}' is invalid for the given Type of VAT '{chargeItem.ftChargeItemCase.Vat().ToString("x")}'.");
         }
         else if (chargeItem.ftChargeItemCase.Vat() == ChargeItemCase.SuperReducedVatRate1 || chargeItem.ftChargeItemCase.Vat() == ChargeItemCase.SuperReducedVatRate2)
         {
@@ -361,7 +362,7 @@ public static class AADEMappings
             {
                 return MyDataVatCategory.VatRate4_Category6;
             }
-            throw new Exception($"The VAT Rate {chargeItem.VATRate} with VAT type {chargeItem.ftChargeItemCase.Vat().ToString("x")} of ChargeItem with the case {chargeItem.ftChargeItemCase.ToString("x")}  is not supported.");
+            throw new Exception($"The Property cbChargeItem.VATRate with the Value '{chargeItem.VATRate}' is invalid for the given Type of VAT '{chargeItem.ftChargeItemCase.Vat().ToString("x")}'.");
         }
         else if (chargeItem.ftChargeItemCase.Vat() == ChargeItemCase.ParkingVatRate)
         {
@@ -373,7 +374,7 @@ public static class AADEMappings
             //{
             //    return MyDataVatCategory.VatRate4_Category10;
             //}
-            throw new Exception($"The VAT Rate {chargeItem.VATRate} with VAT type {chargeItem.ftChargeItemCase.Vat().ToString("x")} of ChargeItem with the case {chargeItem.ftChargeItemCase.ToString("x")}  is not supported.");
+            throw new Exception($"The Property cbChargeItem.VATRate with the Value '{chargeItem.VATRate}' is invalid for the given Type of VAT ' {chargeItem.ftChargeItemCase.Vat().ToString("x")} '.");
         }
         else if (chargeItem.ftChargeItemCase.Vat() == ChargeItemCase.ZeroVatRate)
         {

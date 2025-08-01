@@ -41,6 +41,16 @@ public class MyDataSCU : IGRSSCD
         _receiptBaseAddress = receiptBaseAddress;
         _sandbox = sandbox;
         _masterDataConfiguration = masterDataConfiguration;
+        if(sandbox && _masterDataConfiguration?.Account?.VatId == null)
+        {
+            _masterDataConfiguration = new MasterDataConfiguration
+            {
+                Account = new AccountMasterData
+                {
+                    VatId = "EL123456789"
+                }
+            };
+        }
         _httpClient = new HttpClient()
         {
             BaseAddress = new Uri(baseAddress)
@@ -53,6 +63,15 @@ public class MyDataSCU : IGRSSCD
 
     public async Task<ProcessResponse> ProcessReceiptAsync(ProcessRequest request, List<(ReceiptRequest, ReceiptResponse)>? receiptReferences = null)
     {
+        if (string.IsNullOrEmpty(_masterDataConfiguration.Account.VatId))
+        {
+            request.ReceiptResponse.SetReceiptResponseError("The VATId is not setup correctly for this Queue. Please check the master data configuration in fiskaltrust.Portal.");
+            return new ProcessResponse
+            {
+                ReceiptResponse = request.ReceiptResponse
+            };
+        }
+
         var aadFactory = new AADEFactory(_masterDataConfiguration);
         (var doc, var error) = aadFactory.MapToInvoicesDoc(request.ReceiptRequest, request.ReceiptResponse, receiptReferences);
         if (doc == null)
